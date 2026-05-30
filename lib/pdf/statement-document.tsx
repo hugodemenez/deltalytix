@@ -137,6 +137,14 @@ function axisTicks(min: number, max: number) {
   return scaleLinear().domain([min, max]).nice(3).ticks(3)
 }
 
+function formatChartDateLabel(label: string) {
+  const parts = label.split("-")
+  if (parts.length === 3 && parts[1] && parts[2]) {
+    return `${parts[1]}-${parts[2]}`
+  }
+  return label
+}
+
 function xTickIndexes(dataLength: number, showEveryLabel?: boolean) {
   if (dataLength <= 0) return []
   if (showEveryLabel || dataLength <= 4) {
@@ -149,12 +157,13 @@ function yAxisAndGrid(yScale: (v: number) => number, min: number, max: number) {
   const plotRight = CHART_W - PAD.right
   const ticks = axisTicks(min, max)
   const zeroY = yScale(0)
+  const hasZeroTick = ticks.some((tick) => Math.abs(tick) < Number.EPSILON)
   return (
     <>
-      {ticks.map((tick) => {
+      {ticks.map((tick, i) => {
         const y = yScale(tick)
         return (
-          <React.Fragment key={tick}>
+          <React.Fragment key={`tick-${i}-${tick}`}>
             <Line
               x1={PAD.left}
               y1={y}
@@ -169,7 +178,7 @@ function yAxisAndGrid(yScale: (v: number) => number, min: number, max: number) {
           </React.Fragment>
         )
       })}
-      {min > 0 || max < 0 ? (
+      {min <= 0 && max >= 0 && !hasZeroTick ? (
         <Line x1={PAD.left} y1={zeroY} x2={plotRight} y2={zeroY} strokeWidth={0.6} stroke={COLORS.axis} />
       ) : null}
     </>
@@ -213,7 +222,7 @@ function LineChartSvg({ data, labels }: { data: PointSeries[]; labels: ChartLabe
       ))}
       {xTickIndexes(data.length).map((i) => (
         <Text key={`x-${i}`} x={xScale(i) - 10} y={CHART_H - 4} style={{ fontSize: 6, fill: COLORS.subtleText }}>
-          {data[i]?.label.slice(5)}
+          {formatChartDateLabel(data[i]?.label ?? "")}
         </Text>
       ))}
     </ChartFrame>
@@ -272,7 +281,7 @@ function BarChartSvg({
             y={CHART_H - 4}
             style={{ fontSize: 6, fill: COLORS.subtleText }}
           >
-            {showEveryLabel ? d.label : d.label.slice(5)}
+            {showEveryLabel ? d.label : formatChartDateLabel(d.label)}
           </Text>
         )
       })}
@@ -285,7 +294,7 @@ function DistributionSvg({
   labels,
 }: {
   distribution: { win: number; breakeven: number; loss: number }
-  labels: ChartLabels & { win: string; breakeven: string; loss: string }
+  labels: ChartLabels & { tradesLabel: string; win: string; breakeven: string; loss: string }
 }) {
   const rows = [
     { label: labels.win, value: distribution.win, color: COLORS.positive },
@@ -310,10 +319,10 @@ function DistributionSvg({
   return (
     <ChartFrame>
       <G transform={`translate(${cx}, ${cy})`}>
-        {pie.map((slice, i) => {
+        {pie.map((slice) => {
           const path = arc(slice)
           return path ? (
-            <Path key={i} d={path} fill={slice.data.color} stroke={COLORS.white} strokeWidth={1} />
+            <Path key={slice.data.label} d={path} fill={slice.data.color} stroke={COLORS.white} strokeWidth={1} />
           ) : null
         })}
       </G>
@@ -321,7 +330,7 @@ function DistributionSvg({
         {String(total)}
       </Text>
       <Text x={cx - 18} y={cy + 10} style={{ fontSize: 6, fill: COLORS.subtleText }}>
-        trades
+        {labels.tradesLabel}
       </Text>
       {rows.map((r, i) => {
         const y = 28 + i * 24
@@ -356,6 +365,7 @@ export interface StatementStrings {
   footerTitle: string
   page: string
   totalTrades: string
+  tradesLabel: string
   grossPnl: string
   netPnl: string
   winRate: string
@@ -443,6 +453,7 @@ export function StatementDocument({
                 distribution={charts.distribution}
                 labels={{
                   noData: strings.noChartsAvailable,
+                  tradesLabel: strings.tradesLabel,
                   win: strings.win,
                   breakeven: strings.breakeven,
                   loss: strings.loss,
