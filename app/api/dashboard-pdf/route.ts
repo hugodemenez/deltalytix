@@ -53,6 +53,7 @@ function buildStrings(t: (key: string) => string): StatementStrings {
     footerTitle: t("share.pdfFooterTitle"),
     page: t("share.pdfPage"),
     totalTrades: t("share.pdfTotalTrades"),
+    tradesLabel: t("weekdayPnl.tooltip.trades"),
     grossPnl: t("share.pdfGrossPnl"),
     netPnl: t("share.pdfNetPnl"),
     winRate: t("share.pdfWinRate"),

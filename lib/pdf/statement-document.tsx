@@ -6,12 +6,14 @@ import {
   Text,
   StyleSheet,
   Svg,
+  G,
   Path,
   Rect,
   Line,
 } from "@react-pdf/renderer"
 import { scaleLinear } from "d3-scale"
-import { line as d3Line } from "d3-shape"
+import { arc as d3Arc, line as d3Line, pie as d3Pie } from "d3-shape"
+import type { PieArcDatum } from "d3-shape"
 import {
   computeChartData,
   computeSummary,
@@ -28,12 +30,16 @@ const COLORS = {
   headerLine: "#434960",
   text: "#181c25",
   mutedText: "#596073",
+  subtleText: "#7a8295",
   cardBg: "#f8fafc",
   cardBorder: "#dfe3ec",
-  positive: "#188c5c",
-  negative: "#c73b44",
-  line: "#2563eb",
+  chartBg: "#ffffff",
+  positive: "#2a9d8f",
+  negative: "#e76f51",
+  neutral: "#64748b",
+  line: "#2a9d8f",
   grid: "#e4e8f0",
+  axis: "#cbd5e1",
   white: "#ffffff",
 }
 
@@ -58,14 +64,21 @@ const styles = StyleSheet.create({
   metricValue: { fontSize: 16, fontFamily: "Helvetica-Bold", marginTop: 8 },
   chartCard: {
     width: "48.5%",
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.chartBg,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
     borderRadius: 8,
-    padding: 10,
+    overflow: "hidden",
   },
-  chartTitle: { fontSize: 10, fontFamily: "Helvetica-Bold", color: "#262b38", marginBottom: 6 },
-  empty: { fontSize: 11, color: COLORS.mutedText, marginTop: 8 },
+  chartHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.cardBorder,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  chartBody: { padding: 10 },
+  chartTitle: { fontSize: 10, fontFamily: "Helvetica-Bold", color: "#262b38" },
+  empty: { fontSize: 10, color: COLORS.mutedText, marginTop: 8 },
   footer: {
     position: "absolute",
     bottom: 16,
@@ -81,7 +94,7 @@ const styles = StyleSheet.create({
 
 const CHART_W = 232
 const CHART_H = 128
-const PAD = { top: 8, right: 8, bottom: 16, left: 34 }
+const PAD = { top: 8, right: 8, bottom: 18, left: 38 }
 
 const fmtMoney = (v: number) => v.toFixed(2)
 const fmtAxis = (v: number) => {
@@ -96,6 +109,22 @@ interface ChartLabels {
   noData: string
 }
 
+interface ChartShellProps {
+  title: string
+  children: React.ReactNode
+}
+
+function ChartShell({ title, children }: ChartShellProps) {
+  return (
+    <View style={styles.chartCard}>
+      <View style={styles.chartHeader}>
+        <Text style={styles.chartTitle}>{title}</Text>
+      </View>
+      <View style={styles.chartBody}>{children}</View>
+    </View>
+  )
+}
+
 function ChartFrame({ children }: { children: React.ReactNode }) {
   return (
     <Svg width={CHART_W} height={CHART_H} viewBox={`0 0 ${CHART_W} ${CHART_H}`}>
@@ -104,20 +133,54 @@ function ChartFrame({ children }: { children: React.ReactNode }) {
   )
 }
 
-function yAxisAndBaseline(yScale: (v: number) => number, min: number, max: number) {
+function axisTicks(min: number, max: number) {
+  return scaleLinear().domain([min, max]).nice(3).ticks(3)
+}
+
+function formatChartDateLabel(label: string) {
+  const parts = label.split("-")
+  if (parts.length === 3 && parts[1] && parts[2]) {
+    return `${parts[1]}-${parts[2]}`
+  }
+  return label
+}
+
+function xTickIndexes(dataLength: number, showEveryLabel?: boolean) {
+  if (dataLength <= 0) return []
+  if (showEveryLabel || dataLength <= 4) {
+    return Array.from({ length: dataLength }, (_v, i) => i)
+  }
+  return [0, Math.floor((dataLength - 1) / 2), dataLength - 1]
+}
+
+function yAxisAndGrid(yScale: (v: number) => number, min: number, max: number) {
   const plotRight = CHART_W - PAD.right
-  const zeroY = min < 0 && max > 0 ? yScale(0) : null
+  const ticks = axisTicks(min, max)
+  const zeroY = yScale(0)
+  const hasZeroTick = ticks.some((tick) => Math.abs(tick) < Number.EPSILON)
   return (
     <>
-      <Text x={2} y={PAD.top + 4} style={{ fontSize: 6, fill: COLORS.mutedText }}>
-        {fmtAxis(max)}
-      </Text>
-      <Text x={2} y={CHART_H - PAD.bottom} style={{ fontSize: 6, fill: COLORS.mutedText }}>
-        {fmtAxis(min)}
-      </Text>
-      {zeroY !== null && (
-        <Line x1={PAD.left} y1={zeroY} x2={plotRight} y2={zeroY} strokeWidth={0.5} stroke={COLORS.grid} />
-      )}
+      {ticks.map((tick, i) => {
+        const y = yScale(tick)
+        return (
+          <React.Fragment key={`tick-${i}-${tick}`}>
+            <Line
+              x1={PAD.left}
+              y1={y}
+              x2={plotRight}
+              y2={y}
+              strokeWidth={tick === 0 ? 0.75 : 0.45}
+              stroke={tick === 0 ? COLORS.axis : COLORS.grid}
+            />
+            <Text x={2} y={y + 2} style={{ fontSize: 6, fill: COLORS.subtleText }}>
+              {fmtAxis(tick)}
+            </Text>
+          </React.Fragment>
+        )
+      })}
+      {min <= 0 && max >= 0 && !hasZeroTick ? (
+        <Line x1={PAD.left} y1={zeroY} x2={plotRight} y2={zeroY} strokeWidth={0.6} stroke={COLORS.axis} />
+      ) : null}
     </>
   )
 }
@@ -129,7 +192,6 @@ function LineChartSvg({ data, labels }: { data: PointSeries[]; labels: ChartLabe
   const values = data.map((d) => d.value)
   const min = Math.min(0, ...values)
   const max = Math.max(0, ...values)
-  const span = max - min || 1
   const xScale = scaleLinear()
     .domain([0, Math.max(1, data.length - 1)])
     .range([PAD.left, CHART_W - PAD.right])
@@ -142,17 +204,27 @@ function LineChartSvg({ data, labels }: { data: PointSeries[]; labels: ChartLabe
 
   return (
     <ChartFrame>
-      {yAxisAndBaseline((v) => yScale(v), min, max)}
-      {path && <Path d={path} strokeWidth={1.2} stroke={COLORS.line} fill="none" />}
-      <Text x={PAD.left} y={CHART_H - 4} style={{ fontSize: 6, fill: COLORS.mutedText }}>
-        {data[0]?.label.slice(5)}
-      </Text>
-      <Text x={CHART_W - PAD.right - 24} y={CHART_H - 4} style={{ fontSize: 6, fill: COLORS.mutedText }}>
-        {data[data.length - 1]?.label.slice(5)}
-      </Text>
-      <Text x={2} y={PAD.top + 4} style={{ fontSize: 6, fill: COLORS.mutedText }}>
-        {fmtAxis(max)}
-      </Text>
+      <Line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={CHART_H - PAD.bottom} strokeWidth={0.45} stroke={COLORS.axis} />
+      {yAxisAndGrid((v) => yScale(v), min, max)}
+      {path && <Path d={path} strokeWidth={1.6} stroke={COLORS.line} fill="none" />}
+      {data.map((d, i) => (
+        i === 0 || i === data.length - 1 ? (
+          <Rect
+            key={`dot-${i}`}
+            x={xScale(i) - 1.7}
+            y={yScale(d.value) - 1.7}
+            width={3.4}
+            height={3.4}
+            rx={1.7}
+            fill={COLORS.line}
+          />
+        ) : null
+      ))}
+      {xTickIndexes(data.length).map((i) => (
+        <Text key={`x-${i}`} x={xScale(i) - 10} y={CHART_H - 4} style={{ fontSize: 6, fill: COLORS.subtleText }}>
+          {formatChartDateLabel(data[i]?.label ?? "")}
+        </Text>
+      ))}
     </ChartFrame>
   )
 }
@@ -177,12 +249,13 @@ function BarChartSvg({
     .range([CHART_H - PAD.bottom, PAD.top])
   const plotWidth = CHART_W - PAD.left - PAD.right
   const step = plotWidth / data.length
-  const barWidth = Math.max(1, step * 0.7)
+  const barWidth = Math.max(2, Math.min(18, step * 0.62))
   const zeroY = yScale(0)
 
   return (
     <ChartFrame>
-      {yAxisAndBaseline((v) => yScale(v), min, max)}
+      <Line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={CHART_H - PAD.bottom} strokeWidth={0.45} stroke={COLORS.axis} />
+      {yAxisAndGrid((v) => yScale(v), min, max)}
       {data.map((d, i) => {
         const x = PAD.left + i * step + (step - barWidth) / 2
         const y = d.value >= 0 ? yScale(d.value) : zeroY
@@ -194,21 +267,24 @@ function BarChartSvg({
             y={y}
             width={barWidth}
             height={height}
+            rx={2}
             fill={d.value >= 0 ? COLORS.positive : COLORS.negative}
           />
         )
       })}
-      {showEveryLabel &&
-        data.map((d, i) => (
+      {xTickIndexes(data.length, showEveryLabel).map((i) => {
+        const d = data[i]
+        return (
           <Text
             key={`l-${i}`}
-            x={PAD.left + i * step + step / 2 - 5}
+            x={PAD.left + i * step + step / 2 - (showEveryLabel ? 5 : 10)}
             y={CHART_H - 4}
-            style={{ fontSize: 6, fill: COLORS.mutedText }}
+            style={{ fontSize: 6, fill: COLORS.subtleText }}
           >
-            {d.label}
+            {showEveryLabel ? d.label : formatChartDateLabel(d.label)}
           </Text>
-        ))}
+        )
+      })}
     </ChartFrame>
   )
 }
@@ -218,33 +294,56 @@ function DistributionSvg({
   labels,
 }: {
   distribution: { win: number; breakeven: number; loss: number }
-  labels: ChartLabels & { win: string; breakeven: string; loss: string }
+  labels: ChartLabels & { tradesLabel: string; win: string; breakeven: string; loss: string }
 }) {
   const rows = [
     { label: labels.win, value: distribution.win, color: COLORS.positive },
-    { label: labels.breakeven, value: distribution.breakeven, color: COLORS.mutedText },
+    { label: labels.breakeven, value: distribution.breakeven, color: COLORS.neutral },
     { label: labels.loss, value: distribution.loss, color: COLORS.negative },
   ]
   const total = rows.reduce((s, r) => s + r.value, 0)
   if (total === 0) {
     return <Text style={styles.empty}>{labels.noData}</Text>
   }
-  const trackLeft = PAD.left
-  const trackWidth = CHART_W - PAD.left - PAD.right
-  const rowH = 30
+  const pie = d3Pie<(typeof rows)[number]>()
+    .value((d) => d.value)
+    .sort(null)
+    .padAngle(0.035)(rows)
+  const arc = d3Arc<PieArcDatum<(typeof rows)[number]>>()
+    .innerRadius(31)
+    .outerRadius(47)
+    .cornerRadius(3)
+  const cx = 66
+  const cy = 58
 
   return (
     <ChartFrame>
+      <G transform={`translate(${cx}, ${cy})`}>
+        {pie.map((slice) => {
+          const path = arc(slice)
+          return path ? (
+            <Path key={slice.data.label} d={path} fill={slice.data.color} stroke={COLORS.white} strokeWidth={1} />
+          ) : null
+        })}
+      </G>
+      <Text x={cx - 14} y={cy - 3} style={{ fontSize: 14, fontFamily: "Helvetica-Bold", fill: COLORS.text }}>
+        {String(total)}
+      </Text>
+      <Text x={cx - 18} y={cy + 10} style={{ fontSize: 6, fill: COLORS.subtleText }}>
+        {labels.tradesLabel}
+      </Text>
       {rows.map((r, i) => {
-        const y = 12 + i * rowH
-        const w = (r.value / total) * trackWidth
+        const y = 28 + i * 24
+        const pct = (r.value / total) * 100
         return (
-          <React.Fragment key={i}>
-            <Text x={2} y={y - 2} style={{ fontSize: 7, fill: COLORS.text }}>
-              {`${r.label}: ${r.value} (${((r.value / total) * 100).toFixed(1)}%)`}
+          <React.Fragment key={`legend-${r.label}`}>
+            <Rect x={130} y={y - 6} width={7} height={7} rx={3.5} fill={r.color} />
+            <Text x={143} y={y} style={{ fontSize: 7, fill: COLORS.text }}>
+              {r.label}
             </Text>
-            <Rect x={trackLeft} y={y} width={trackWidth} height={8} fill={COLORS.grid} />
-            <Rect x={trackLeft} y={y} width={Math.max(0, w)} height={8} fill={r.color} />
+            <Text x={143} y={y + 10} style={{ fontSize: 7, fill: COLORS.subtleText }}>
+              {`${r.value} (${pct.toFixed(1)}%)`}
+            </Text>
           </React.Fragment>
         )
       })}
@@ -266,6 +365,7 @@ export interface StatementStrings {
   footerTitle: string
   page: string
   totalTrades: string
+  tradesLabel: string
   grossPnl: string
   netPnl: string
   winRate: string
@@ -337,32 +437,29 @@ export function StatementDocument({
 
           <Text style={styles.sectionTitle}>{strings.chartsSectionTitle}</Text>
           <View style={styles.cardRow}>
-            <View style={styles.chartCard}>
-              <Text style={styles.chartTitle}>{strings.equityChart}</Text>
+            <ChartShell title={strings.equityChart}>
               <LineChartSvg data={charts.equity} labels={noData} />
-            </View>
-            <View style={styles.chartCard}>
-              <Text style={styles.chartTitle}>{strings.pnlChart}</Text>
+            </ChartShell>
+            <ChartShell title={strings.pnlChart}>
               <BarChartSvg data={charts.dailyPnl} labels={noData} />
-            </View>
+            </ChartShell>
           </View>
           <View style={styles.cardRow}>
-            <View style={styles.chartCard}>
-              <Text style={styles.chartTitle}>{strings.weekdayPnl}</Text>
+            <ChartShell title={strings.weekdayPnl}>
               <BarChartSvg data={charts.weekdayPnl} labels={noData} showEveryLabel />
-            </View>
-            <View style={styles.chartCard}>
-              <Text style={styles.chartTitle}>{strings.tradeDistribution}</Text>
+            </ChartShell>
+            <ChartShell title={strings.tradeDistribution}>
               <DistributionSvg
                 distribution={charts.distribution}
                 labels={{
                   noData: strings.noChartsAvailable,
+                  tradesLabel: strings.tradesLabel,
                   win: strings.win,
                   breakeven: strings.breakeven,
                   loss: strings.loss,
                 }}
               />
-            </View>
+            </ChartShell>
           </View>
         </View>
 
