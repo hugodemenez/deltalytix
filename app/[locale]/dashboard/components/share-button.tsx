@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useMemo, useEffect, forwardRef } from "react"
+import { useState, useMemo, useEffect, useCallback, forwardRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Share, Check, ChevronsUpDown, Copy, Layout, ExternalLink } from "lucide-react"
+import { Share, Check, ChevronsUpDown, Copy, Layout, ExternalLink, Download } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -41,6 +41,7 @@ import { fr } from 'date-fns/locale'
 import { Switch } from "@/components/ui/switch"
 import { useTradesStore } from "../../../../store/trades-store"
 import { useUserStore } from "../../../../store/user-store"
+import { useData } from "@/context/data-provider"
 
 interface ShareButtonProps {
   variant?: "ghost" | "outline" | "secondary"
@@ -118,7 +119,12 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const dateLocale = locale === 'fr' ? fr : undefined
     const isMobile = useIsMobile()
     const user = useUserStore(state => state.user)
+    const timezone = useUserStore(state => state.timezone)
     const trades = useTradesStore(state => state.trades)
+    // The PDF charts are snapshots of the live dashboard widgets, which render
+    // from the data provider's globally-filtered `formattedTrades`. Use the same
+    // source for the summary so the numbers always match the charts.
+    const { formattedTrades, dateRange: globalDateRange, accountNumbers: globalAccountNumbers } = useData()
     const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
     const [open, setOpen] = useState(false)
     const [comboboxOpen, setComboboxOpen] = useState(false)
@@ -127,6 +133,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const [showManager, setShowManager] = useState(false)
     const [shareTitle, setShareTitle] = useState("")
     const [shareAllAccounts, setShareAllAccounts] = useState(true)
+    const [isExporting, setIsExporting] = useState(false)
     const useCompactButton = compact || isMobile
 
     // Get the earliest and latest trade dates
@@ -171,6 +178,33 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       )
     }, [accountNumbers, searchQuery])
 
+    const getFilteredTrades = useCallback(() => {
+      if (!selectedDateRange.from) {
+        return []
+      }
+
+      const fromDate = startOfDay(selectedDateRange.from)
+      const toDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : undefined
+
+      return trades.filter((trade) => {
+        const tradeDate = new Date(trade.entryDate)
+        const hasValidDate = !Number.isNaN(tradeDate.getTime())
+        if (!hasValidDate) {
+          return false
+        }
+
+        return (shareAllAccounts || selectedAccounts.includes(trade.accountNumber)) &&
+          tradeDate >= fromDate &&
+          (!toDate || tradeDate <= toDate)
+      })
+    }, [selectedDateRange.from, selectedDateRange.to, shareAllAccounts, selectedAccounts, trades])
+
+    const showExportError = useCallback((description: string) => {
+      toast.error(t("share.exportPdfErrorTitle"), {
+        description,
+      })
+    }, [t])
+
     const handleShare = async () => {
       try {
         if (!user) {
@@ -194,15 +228,10 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           return
         }
 
+        const filteredTrades = getFilteredTrades()
+
         const fromDate = startOfDay(selectedDateRange.from)
         const toDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : undefined
-
-        const filteredTrades = trades.filter(trade => {
-          const tradeDate = new Date(trade.entryDate)
-          return (shareAllAccounts || selectedAccounts.includes(trade.accountNumber)) &&
-            tradeDate >= fromDate &&
-            (!toDate || tradeDate <= toDate)
-        })
 
         if (filteredTrades.length === 0) {
           toast.error(t('share.error'), {
@@ -347,6 +376,81 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       }
     }
 
+    const handleExportPdf = async () => {
+      if (isExporting) {
+        return
+      }
+      try {
+        // The PDF mirrors the current dashboard, so it uses the same globally
+        // filtered trades the widgets render from.
+        const filteredTrades = formattedTrades
+
+        if (filteredTrades.length === 0) {
+          showExportError(t("share.error.noTrades"))
+          return
+        }
+
+        setIsExporting(true)
+
+        // Generate the PDF on the server. Rendering it in the browser
+        // (html2canvas + jsPDF) exhausted mobile tab memory and triggered tab
+        // reloads; here we only POST the trades already in memory and download
+        // the finished file the server returns.
+        const payload = {
+          locale,
+          timezone,
+          title: shareTitle.trim(),
+          dateRange: globalDateRange?.from
+            ? {
+                from: globalDateRange.from.toISOString(),
+                to: globalDateRange.to ? globalDateRange.to.toISOString() : null,
+              }
+            : null,
+          accountNumbers: globalAccountNumbers,
+          trades: filteredTrades.map((trade) => ({
+            entryDate: trade.entryDate,
+            closeDate: trade.closeDate ?? null,
+            pnl: Number(trade.pnl || 0),
+            commission: Number(trade.commission || 0),
+            accountNumber: trade.accountNumber,
+            side: trade.side ?? null,
+            quantity: Number(trade.quantity || 0),
+            instrument: trade.instrument,
+            timeInPosition: Number(trade.timeInPosition || 0),
+          })),
+        }
+
+        const response = await fetch("/api/dashboard-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+
+        if (!response.ok) {
+          throw new Error(`PDF request failed with status ${response.status}`)
+        }
+
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = url
+        link.download = `dashboard-statement-${format(new Date(), "yyyy-MM-dd")}.pdf`
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(url)
+
+        toast.success(t("share.exportPdfSuccess"), {
+          description: t("share.exportPdfSuccessDescription"),
+        })
+      } catch (error) {
+        console.error("Error exporting dashboard PDF:", error)
+        showExportError(t("share.exportPdfError"))
+      } finally {
+        setIsExporting(false)
+      }
+    }
+
     const handleCopyUrl = async () => {
       try {
         await navigator.clipboard.writeText(shareUrl)
@@ -386,6 +490,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           <Button 
             ref={ref}
             variant={variant}
+            size={size}
             className={cn(
               "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
               useCompactButton ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
@@ -605,6 +710,14 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
               <DialogFooter>
                 {showManager ? null : !shareUrl ? (
                   <div className="w-full flex flex-col sm:flex-row gap-2 sm:gap-4 sm:justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={handleExportPdf}
+                      disabled={isExporting}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      {isExporting ? t("share.exportPdfInProgress") : t("share.exportPdfButton")}
+                    </Button>
                     <Button
                       variant="outline"
                       onClick={() => setShowManager(true)}

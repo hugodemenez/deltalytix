@@ -772,12 +772,16 @@ export default function WidgetCanvas() {
           >
             {currentLayout.map((widget) => {
               const dimensions = widgetDimensions[widget.i]
+              const widgetConfig = WIDGET_REGISTRY[widget.type as WidgetType]
               
               return (
                 <div 
                   key={widget.i} 
                   className="h-full" 
                   data-customizing={isCustomizing}
+                  data-widget-id={widget.i}
+                  data-widget-type={widget.type}
+                  data-widget-category={widgetConfig?.category ?? "other"}
                   style={{
                     width: dimensions.width,
                     height: dimensions.height
