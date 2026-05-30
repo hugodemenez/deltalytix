@@ -52,8 +52,6 @@ interface ShareButtonProps {
   compact?: boolean
 }
 
-// Map each chart widget type to an existing translation key so PDF chart
-// titles stay localized instead of being hardcoded in English.
 // Keys are actual WidgetType values (as emitted by data-widget-type); values
 // are existing translation keys so PDF chart titles stay localized.
 const CHART_WIDGET_LABEL_KEYS = {
@@ -261,17 +259,22 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
             ? t(labelKey as "widgets.types.equityChart")
             : t("share.pdfChartFallbackTitle")
 
-          const canvas = await html2canvas(node, {
-            scale: 2,
-            backgroundColor: "#ffffff",
-            useCORS: true,
-            logging: false,
-          })
+          try {
+            const canvas = await html2canvas(node, {
+              scale: 2,
+              backgroundColor: "#ffffff",
+              useCORS: true,
+              logging: false,
+            })
 
-          snapshots.push({
-            title,
-            imageDataUrl: canvas.toDataURL("image/png"),
-          })
+            snapshots.push({
+              title,
+              imageDataUrl: canvas.toDataURL("image/png"),
+            })
+          } catch (error) {
+            // Skip a chart that fails to render rather than aborting the whole export.
+            console.error(`Failed to capture chart widget "${widgetType}":`, error)
+          }
         }
 
         if (snapshots.length === 0) {
@@ -481,6 +484,11 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       try {
         if (!selectedDateRange.from) {
           showExportError(t('share.error.noStartDate'))
+          return
+        }
+
+        if (!shareAllAccounts && selectedAccounts.length === 0) {
+          showExportError(t('share.error.noAccount'))
           return
         }
 
