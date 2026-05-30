@@ -248,6 +248,31 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       })
 
       try {
+        // Mobile browsers (notably iOS Safari / in-app WebViews) enforce tight
+        // per-tab memory limits. html2canvas at scale 2 plus PNG data URLs across
+        // every widget can exhaust them, which the OS resolves by killing and
+        // reloading the tab — the "freeze then reload" users see. Capture at a
+        // lower scale and emit JPEG (no alpha, far smaller) on small viewports.
+        const isMobileViewport = typeof window !== "undefined" && window.innerWidth < 768
+        const captureScale = isMobileViewport ? 1 : 2
+        const imageMimeType = "image/jpeg"
+        const imageQuality = 0.85
+
+        const renderToDataUrl = async (node: HTMLElement) => {
+          const canvas = await html2canvas(node, {
+            scale: captureScale,
+            backgroundColor: "#ffffff",
+            useCORS: true,
+            logging: false,
+          })
+          const dataUrl = canvas.toDataURL(imageMimeType, imageQuality)
+          // Release the backing store promptly so memory is reclaimed before the
+          // next capture instead of piling up until the whole loop finishes.
+          canvas.width = 0
+          canvas.height = 0
+          return dataUrl
+        }
+
         // Capture every visible chart widget; the PDF renderer flows them
         // across multiple pages, so there is no fixed cap.
         const chartNodes = Array.from(
@@ -266,36 +291,26 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
             : t("share.pdfChartFallbackTitle")
 
           try {
-            const canvas = await html2canvas(node, {
-              scale: 2,
-              backgroundColor: "#ffffff",
-              useCORS: true,
-              logging: false,
-            })
-
             snapshots.push({
               title,
-              imageDataUrl: canvas.toDataURL("image/png"),
+              imageDataUrl: await renderToDataUrl(node),
             })
           } catch (error) {
             // Skip a chart that fails to render rather than aborting the whole export.
             console.error(`Failed to capture chart widget "${widgetType}":`, error)
           }
+
+          // Yield to the event loop so the browser can GC released canvases
+          // between heavy captures and stay responsive.
+          await new Promise((resolve) => setTimeout(resolve, 0))
         }
 
         if (snapshots.length === 0) {
           const dashboardGrid = document.querySelector<HTMLElement>(".react-grid-layout")
           if (dashboardGrid && dashboardGrid.offsetWidth > 0 && dashboardGrid.offsetHeight > 0) {
-            const canvas = await html2canvas(dashboardGrid, {
-              scale: 2,
-              backgroundColor: "#ffffff",
-              useCORS: true,
-              logging: false,
-            })
-
             snapshots.push({
               title: t("share.pdfDashboardSnapshotTitle"),
-              imageDataUrl: canvas.toDataURL("image/png"),
+              imageDataUrl: await renderToDataUrl(dashboardGrid),
             })
           }
         }
@@ -634,7 +649,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           const imageX = cardX + (chartCardWidth - imageWidth) / 2
           const imageY = cardY + 26 + (availableHeight - imageHeight) / 2
 
-          doc.addImage(snapshot.imageDataUrl, "PNG", imageX, imageY, imageWidth, imageHeight, undefined, "FAST")
+          doc.addImage(snapshot.imageDataUrl, "JPEG", imageX, imageY, imageWidth, imageHeight, undefined, "FAST")
         }
 
         const renderChartCards = () => {
