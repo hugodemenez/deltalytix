@@ -70,9 +70,6 @@ const CHART_WIDGET_LABEL_KEYS = {
 
 type ChartWidgetType = keyof typeof CHART_WIDGET_LABEL_KEYS
 
-// Maximum number of chart widgets captured into the PDF chart grid.
-const MAX_PDF_CHARTS = 6
-
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false)
 
@@ -241,11 +238,11 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       })
 
       try {
+        // Capture every visible chart widget; the PDF renderer flows them
+        // across multiple pages, so there is no fixed cap.
         const chartNodes = Array.from(
           document.querySelectorAll<HTMLElement>('[data-widget-category="charts"]'),
-        )
-          .filter((node) => node.offsetWidth > 0 && node.offsetHeight > 0)
-          .slice(0, MAX_PDF_CHARTS)
+        ).filter((node) => node.offsetWidth > 0 && node.offsetHeight > 0)
 
         const snapshots: Array<{ title: string; imageDataUrl: string }> = []
 
