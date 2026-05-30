@@ -42,7 +42,6 @@ import { Switch } from "@/components/ui/switch"
 import { useTradesStore } from "../../../../store/trades-store"
 import { useUserStore } from "../../../../store/user-store"
 import { useData } from "@/context/data-provider"
-import type { WidgetType } from "../types/dashboard"
 
 interface ShareButtonProps {
   variant?: "ghost" | "outline" | "secondary"
@@ -53,26 +52,6 @@ interface ShareButtonProps {
   }
   compact?: boolean
 }
-
-// Keys are actual WidgetType values (as emitted by data-widget-type); values
-// are existing translation keys so PDF chart titles stay localized.
-const CHART_WIDGET_LABEL_KEYS = {
-  equityChart: "widgets.types.equityChart",
-  pnlChart: "widgets.types.pnlChart",
-  timeOfDayChart: "widgets.types.timeOfDay",
-  timeInPositionChart: "widgets.types.timeInPosition",
-  weekdayPnlChart: "widgets.types.weekdayPnl",
-  pnlBySideChart: "widgets.types.pnlBySide",
-  pnlPerContractChart: "widgets.types.pnlPerContract",
-  pnlPerContractDailyChart: "widgets.types.pnlPerContractDaily",
-  tickDistribution: "widgets.types.tickDistribution",
-  commissionsPnl: "widgets.types.commissionsPnl",
-  tradeDistribution: "tradeDistribution.title",
-  dailyTickTarget: "widgets.types.dailyTickTarget",
-  timeRangePerformance: "timeRangePerformance.title",
-} as const satisfies Partial<Record<WidgetType, string>>
-
-type ChartWidgetType = keyof typeof CHART_WIDGET_LABEL_KEYS
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false)
@@ -140,6 +119,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const dateLocale = locale === 'fr' ? fr : undefined
     const isMobile = useIsMobile()
     const user = useUserStore(state => state.user)
+    const timezone = useUserStore(state => state.timezone)
     const trades = useTradesStore(state => state.trades)
     // The PDF charts are snapshots of the live dashboard widgets, which render
     // from the data provider's globally-filtered `formattedTrades`. Use the same
@@ -223,127 +203,6 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       toast.error(t("share.exportPdfErrorTitle"), {
         description,
       })
-    }, [t])
-
-    const captureChartSnapshots = useCallback(async () => {
-      const { default: html2canvas } = await import("html2canvas")
-      const openFixedLayers = Array.from(
-        document.querySelectorAll<HTMLElement>('[data-state="open"]'),
-      ).filter((element) => {
-        const style = window.getComputedStyle(element)
-        if (style.position !== "fixed") {
-          return false
-        }
-
-        return element.getAttribute("role") === "dialog" || Number(style.zIndex || 0) >= 50
-      })
-
-      const previousVisibility = openFixedLayers.map((element) => ({
-        element,
-        visibility: element.style.visibility,
-      }))
-
-      openFixedLayers.forEach((element) => {
-        element.style.visibility = "hidden"
-      })
-
-      try {
-        // Mobile browsers (notably iOS Safari / in-app WebViews) enforce tight
-        // per-tab memory limits. html2canvas at scale 2 plus PNG data URLs across
-        // every widget can exhaust them, which the OS resolves by killing and
-        // reloading the tab — the "freeze then reload" users see. Capture at a
-        // lower scale and emit JPEG (no alpha, far smaller) on small viewports.
-        const isMobileViewport = typeof window !== "undefined" && window.innerWidth < 768
-        const captureScale = isMobileViewport ? 1 : 2
-        const imageMimeType = "image/jpeg"
-        const imageQuality = 0.85
-
-        const renderToDataUrl = async (node: HTMLElement) => {
-          const canvas = await html2canvas(node, {
-            scale: captureScale,
-            backgroundColor: "#ffffff",
-            useCORS: true,
-            logging: false,
-            // Strip transient editor affordances from the cloned DOM only (the
-            // live page is untouched). In customize mode — always-on for mobile —
-            // widget content gets a blur, plus hover/focus reveal a translucent
-            // scrim and drag-handle overlay. None of that belongs in the export
-            // and the blur is what was washing out the captured charts.
-            onclone: (_clonedDoc, clonedNode) => {
-              clonedNode.style.filter = "none"
-              clonedNode.querySelectorAll<HTMLElement>("*").forEach((el) => {
-                el.style.filter = "none"
-                el.style.backdropFilter = "none"
-              })
-              clonedNode
-                .querySelectorAll<HTMLElement>(
-                  '.drag-handle, [class*="group-hover:opacity"], [class*="group-focus-within:opacity"]',
-                )
-                .forEach((el) => {
-                  el.style.opacity = "0"
-                })
-            },
-          })
-          const dataUrl = canvas.toDataURL(imageMimeType, imageQuality)
-          // Release the backing store promptly so memory is reclaimed before the
-          // next capture instead of piling up until the whole loop finishes.
-          canvas.width = 0
-          canvas.height = 0
-          return dataUrl
-        }
-
-        // Capture every visible chart widget; the PDF renderer flows them
-        // across multiple pages, so there is no fixed cap.
-        const chartNodes = Array.from(
-          document.querySelectorAll<HTMLElement>('[data-widget-category="charts"]'),
-        ).filter((node) => node.offsetWidth > 0 && node.offsetHeight > 0)
-
-        const snapshots: Array<{ title: string; imageDataUrl: string }> = []
-
-        for (const node of chartNodes) {
-          const widgetType = node.dataset.widgetType || ""
-          const labelKey = CHART_WIDGET_LABEL_KEYS[widgetType as ChartWidgetType]
-          // All mapped keys are parameter-free; cast to a representative key so
-          // `t` instantiates with a single key instead of an unrepresentable union.
-          const title = labelKey
-            ? t(labelKey as "widgets.types.equityChart")
-            : t("share.pdfChartFallbackTitle")
-
-          try {
-            snapshots.push({
-              title,
-              imageDataUrl: await renderToDataUrl(node),
-            })
-          } catch (error) {
-            // Skip a chart that fails to render rather than aborting the whole export.
-            console.error(`Failed to capture chart widget "${widgetType}":`, error)
-          }
-
-          // Yield to the event loop so the browser can GC released canvases
-          // between heavy captures and stay responsive.
-          await new Promise((resolve) => setTimeout(resolve, 0))
-        }
-
-        if (snapshots.length === 0) {
-          const dashboardGrid = document.querySelector<HTMLElement>(".react-grid-layout")
-          if (dashboardGrid && dashboardGrid.offsetWidth > 0 && dashboardGrid.offsetHeight > 0) {
-            snapshots.push({
-              title: t("share.pdfDashboardSnapshotTitle"),
-              imageDataUrl: await renderToDataUrl(dashboardGrid),
-            })
-          }
-        }
-
-        return snapshots
-      } finally {
-        previousVisibility.forEach(({ element, visibility }) => {
-          if (visibility) {
-            element.style.visibility = visibility
-            return
-          }
-          element.style.removeProperty("visibility")
-        })
-      }
     }, [t])
 
     const handleShare = async () => {
@@ -522,223 +381,65 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         return
       }
       try {
-        // The exported PDF mirrors the current dashboard, so the summary uses the
-        // same globally-filtered trades as the chart snapshots rather than the
-        // share dialog's independent date/account picker.
+        // The PDF mirrors the current dashboard, so it uses the same globally
+        // filtered trades the widgets render from.
         const filteredTrades = formattedTrades
 
         if (filteredTrades.length === 0) {
-          showExportError(t('share.error.noTrades'))
+          showExportError(t("share.error.noTrades"))
           return
         }
 
         setIsExporting(true)
 
-        const chartSnapshots = await captureChartSnapshots()
-        const { jsPDF } = await import("jspdf")
-        const { registerPdfFont } = await import("./pdf-fonts")
-        const doc = new jsPDF({ unit: "pt", format: "a4" })
-        const pdfFont = registerPdfFont(doc)
-        doc.setFont(pdfFont, "normal")
-        const pageWidth = doc.internal.pageSize.getWidth()
-        const pageHeight = doc.internal.pageSize.getHeight()
-        const margin = 40
-        const contentWidth = pageWidth - margin * 2
-        const cardGap = 14
-        let y = 180
-
-        const formatMoney = (value: number) => value.toFixed(2)
-
-        const totalGrossPnl = filteredTrades.reduce((sum, trade) => sum + Number(trade.pnl || 0), 0)
-        const totalNetPnl = filteredTrades.reduce(
-          (sum, trade) => sum + Number(trade.pnl || 0) - Number(trade.commission || 0),
-          0,
-        )
-        const winningTrades = filteredTrades.filter((trade) => Number(trade.pnl || 0) > 0).length
-        const winRate = filteredTrades.length > 0 ? (winningTrades / filteredTrades.length) * 100 : 0
-
-        // Reflect the dashboard's active filters. When no global date filter is
-        // set, derive the span from the trades actually shown so the header stays
-        // truthful about what the summary and charts cover.
-        let rangeFrom = globalDateRange?.from
-        let rangeTo = globalDateRange?.to
-        if (!rangeFrom) {
-          const timestamps = filteredTrades
-            .map((trade) => new Date(trade.entryDate).getTime())
-            .filter((time) => !Number.isNaN(time))
-          if (timestamps.length > 0) {
-            rangeFrom = new Date(Math.min(...timestamps))
-            rangeTo = new Date(Math.max(...timestamps))
-          }
-        }
-        const formattedFromDate = rangeFrom ? format(rangeFrom, "yyyy-MM-dd") : null
-        const formattedToDate = rangeTo ? format(rangeTo, "yyyy-MM-dd") : null
-        const dateRangeLabel = formattedFromDate
-          ? formattedToDate && formattedToDate !== formattedFromDate
-            ? `${formattedFromDate} - ${formattedToDate}`
-            : formattedFromDate
-          : t("share.pdfAllTime")
-
-        const accountLabel = globalAccountNumbers.length > 0
-          ? globalAccountNumbers.join(", ")
-          : t("share.pdfAllAccounts")
-
-        const drawHeader = () => {
-          doc.setFillColor(20, 24, 38)
-          doc.rect(0, 0, pageWidth, 140, "F")
-          doc.setDrawColor(67, 73, 96)
-          doc.setLineWidth(1)
-          doc.line(0, 140, pageWidth, 140)
-
-          doc.setTextColor(255, 255, 255)
-          doc.setFont(pdfFont, "bold")
-          doc.setFontSize(22)
-          doc.text(shareTitle.trim() || t("share.pdfStatementTitle"), margin, 52)
-          doc.setFont(pdfFont, "normal")
-          doc.setFontSize(11)
-          doc.text(t("share.pdfStatementSubtitle"), margin, 72)
-
-          doc.setFontSize(10)
-          doc.text(`${t("share.pdfGeneratedOn")}: ${format(new Date(), "yyyy-MM-dd HH:mm")}`, margin, 98)
-          doc.text(`${t("share.pdfDateRange")}: ${dateRangeLabel}`, margin, 114)
-          doc.text(`${t("share.pdfAccounts")}: ${accountLabel}`, margin, 130)
-
-          doc.setTextColor(35, 39, 47)
+        // Generate the PDF on the server. Rendering it in the browser
+        // (html2canvas + jsPDF) exhausted mobile tab memory and triggered tab
+        // reloads; here we only POST the trades already in memory and download
+        // the finished file the server returns.
+        const payload = {
+          locale,
+          timezone,
+          title: shareTitle.trim(),
+          dateRange: globalDateRange?.from
+            ? {
+                from: globalDateRange.from.toISOString(),
+                to: globalDateRange.to ? globalDateRange.to.toISOString() : null,
+              }
+            : null,
+          accountNumbers: globalAccountNumbers,
+          trades: filteredTrades.map((trade) => ({
+            entryDate: trade.entryDate,
+            closeDate: trade.closeDate ?? null,
+            pnl: Number(trade.pnl || 0),
+            commission: Number(trade.commission || 0),
+            accountNumber: trade.accountNumber,
+            side: trade.side ?? null,
+            quantity: Number(trade.quantity || 0),
+            instrument: trade.instrument,
+            timeInPosition: Number(trade.timeInPosition || 0),
+          })),
         }
 
-        const ensureSpace = (requiredHeight: number) => {
-          if (y + requiredHeight <= pageHeight - margin) {
-            return
-          }
-          doc.addPage()
-          drawHeader()
-          y = 170
+        const response = await fetch("/api/dashboard-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+
+        if (!response.ok) {
+          throw new Error(`PDF request failed with status ${response.status}`)
         }
 
-        const drawMetricCard = (x: number, cardY: number, label: string, value: string, valueColor?: [number, number, number]) => {
-          const cardHeight = 68
-          doc.setFillColor(248, 250, 252)
-          doc.setDrawColor(223, 227, 236)
-          doc.roundedRect(x, cardY, (contentWidth - cardGap) / 2, cardHeight, 8, 8, "FD")
-          doc.setFont(pdfFont, "normal")
-          doc.setFontSize(10)
-          doc.setTextColor(89, 96, 115)
-          doc.text(label, x + 12, cardY + 22)
-          doc.setFont(pdfFont, "bold")
-          doc.setFontSize(16)
-          if (valueColor) {
-            doc.setTextColor(valueColor[0], valueColor[1], valueColor[2])
-          } else {
-            doc.setTextColor(24, 28, 37)
-          }
-          doc.text(value, x + 12, cardY + 48)
-          doc.setTextColor(35, 39, 47)
-        }
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = url
+        link.download = `dashboard-statement-${format(new Date(), "yyyy-MM-dd")}.pdf`
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(url)
 
-        const addSectionTitle = (title: string) => {
-          ensureSpace(28)
-          doc.setFont(pdfFont, "bold")
-          doc.setFontSize(14)
-          doc.setTextColor(24, 28, 37)
-          doc.text(title, margin, y)
-          y += 16
-        }
-
-        const chartCardWidth = (contentWidth - cardGap) / 2
-        const chartCardHeight = 200
-
-        const drawChartCard = (snapshot: { title: string; imageDataUrl: string }, cardX: number, cardY: number) => {
-          doc.setFillColor(255, 255, 255)
-          doc.setDrawColor(223, 227, 236)
-          doc.roundedRect(cardX, cardY, chartCardWidth, chartCardHeight, 8, 8, "FD")
-
-          doc.setFont(pdfFont, "bold")
-          doc.setFontSize(10)
-          doc.setTextColor(38, 43, 56)
-          doc.text(snapshot.title, cardX + 12, cardY + 18)
-
-          const imageProps = doc.getImageProperties(snapshot.imageDataUrl)
-          const availableWidth = chartCardWidth - 20
-          const availableHeight = chartCardHeight - 36
-          const widthRatio = availableWidth / imageProps.width
-          const heightRatio = availableHeight / imageProps.height
-          const ratio = Math.min(widthRatio, heightRatio)
-          const imageWidth = imageProps.width * ratio
-          const imageHeight = imageProps.height * ratio
-          const imageX = cardX + (chartCardWidth - imageWidth) / 2
-          const imageY = cardY + 26 + (availableHeight - imageHeight) / 2
-
-          doc.addImage(snapshot.imageDataUrl, "JPEG", imageX, imageY, imageWidth, imageHeight, undefined, "FAST")
-        }
-
-        const renderChartCards = () => {
-          if (chartSnapshots.length === 0) {
-            ensureSpace(60)
-            doc.setFont(pdfFont, "normal")
-            doc.setFontSize(11)
-            doc.setTextColor(89, 96, 115)
-            doc.text(t("share.pdfNoChartsAvailable"), margin, y + 24)
-            y += 44
-            return
-          }
-
-          // Render two cards per row, paginating one row at a time so that
-          // each card's vertical position is anchored to the live `y` after
-          // any page break (avoids cards drifting off the page boundary).
-          for (let i = 0; i < chartSnapshots.length; i += 2) {
-            ensureSpace(chartCardHeight + cardGap)
-            const rowY = y
-
-            drawChartCard(chartSnapshots[i], margin, rowY)
-
-            const rightSnapshot = chartSnapshots[i + 1]
-            if (rightSnapshot) {
-              drawChartCard(rightSnapshot, margin + chartCardWidth + cardGap, rowY)
-            }
-
-            y = rowY + chartCardHeight + cardGap
-          }
-        }
-
-        drawHeader()
-
-        addSectionTitle(t("share.pdfSummaryTitle"))
-        ensureSpace(160)
-
-        const leftX = margin
-        const rightX = margin + (contentWidth - cardGap) / 2 + cardGap
-        const rowOneY = y + 6
-        const rowTwoY = rowOneY + 82
-        const pnlColor: [number, number, number] = totalNetPnl >= 0 ? [24, 140, 92] : [199, 59, 68]
-
-        drawMetricCard(leftX, rowOneY, t("share.pdfTotalTrades"), String(filteredTrades.length))
-        drawMetricCard(rightX, rowOneY, t("share.pdfWinRate"), `${winRate.toFixed(2)}%`)
-        drawMetricCard(leftX, rowTwoY, t("share.pdfGrossPnl"), formatMoney(totalGrossPnl))
-        drawMetricCard(rightX, rowTwoY, t("share.pdfNetPnl"), formatMoney(totalNetPnl), pnlColor)
-
-        y = rowTwoY + 86
-
-        addSectionTitle(t("share.pdfChartsSectionTitle"))
-        renderChartCards()
-
-        const pageCount = doc.getNumberOfPages()
-        for (let page = 1; page <= pageCount; page++) {
-          doc.setPage(page)
-          doc.setDrawColor(223, 227, 236)
-          doc.line(margin, pageHeight - 30, pageWidth - margin, pageHeight - 30)
-          doc.setFont(pdfFont, "normal")
-          doc.setFontSize(9)
-          doc.setTextColor(120, 126, 145)
-          doc.text(
-            `${t("share.pdfFooterTitle")} • ${t("share.pdfPage")} ${page}/${pageCount}`,
-            margin,
-            pageHeight - 16,
-          )
-        }
-
-        doc.setFont(pdfFont, "bold")
-        doc.setFontSize(10)
-        doc.save(`dashboard-statement-${format(new Date(), "yyyy-MM-dd")}.pdf`)
         toast.success(t("share.exportPdfSuccess"), {
           description: t("share.exportPdfSuccessDescription"),
         })
