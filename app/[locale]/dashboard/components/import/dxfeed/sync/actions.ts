@@ -90,6 +90,25 @@ function buildDxFeedSynchronizationAccountId(propFirmId: string, login: string):
   return `${propFirmId}:${login.trim().toLowerCase()}`
 }
 
+/**
+ * Remove a connection row stored under the legacy bare-login accountId so users
+ * don't end up with a stale duplicate after we re-key connections by prop firm.
+ */
+async function removeLegacyDxFeedSyncAccount(
+  userId: string,
+  login: string,
+  canonicalAccountId: string,
+): Promise<void> {
+  if (login === canonicalAccountId) return
+  await prisma.synchronization.deleteMany({
+    where: {
+      userId,
+      service: 'dxfeed',
+      accountId: login,
+    },
+  })
+}
+
 function buildDxFeedTradeImportKey(
   trade: Pick<Trade, 'accountNumber' | 'entryId' | 'closeId'>,
 ): string {
@@ -286,17 +305,16 @@ export async function authenticateDxFeed(
       propfirmName: data.propfirmName,
     }
 
-    const storeResult = await storeDxFeedToken(
-      JSON.stringify(credentials),
-      buildDxFeedSynchronizationAccountId(propFirm.id, login),
-      {
-        tokenExpiresAt,
-      },
-    )
+    const syncAccountId = buildDxFeedSynchronizationAccountId(propFirm.id, login)
+    const storeResult = await storeDxFeedToken(JSON.stringify(credentials), syncAccountId, {
+      tokenExpiresAt,
+    })
     if (storeResult.error) {
       logger.warn('Failed to store token')
       return { error: DxFeedErrorCode.STORE_TOKEN_FAILED }
     }
+
+    await removeLegacyDxFeedSyncAccount(user.id, login, syncAccountId)
 
     return { success: true }
   } catch (error) {
@@ -640,7 +658,10 @@ export async function getDxFeedTrades(
 
     syncStats.closedTrades = allTrades.length
 
-    if (syncStats.fetchFailures > 0) {
+    // Only abort when every account failed. Partial failures still save the
+    // trades we did fetch; the client surfaces a partial-import warning via
+    // syncStats.fetchFailures.
+    if (syncStats.fetchFailures > 0 && syncStats.fetchFailures >= accounts.length) {
       return {
         error: DxFeedErrorCode.SYNC_FETCH_FAILED,
         errorParams: { failures: syncStats.fetchFailures, total: accounts.length },

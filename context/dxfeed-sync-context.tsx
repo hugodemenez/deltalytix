@@ -62,6 +62,13 @@ function buildSyncSuccessToast(
         tradesCount,
         accountId: syncLabel,
       }),
+      description:
+        stats && stats.fetchFailures > 0
+          ? translate('dxfeedSync.sync.partialFetchWarning', {
+              failures: stats.fetchFailures,
+              total: stats.tradingAccounts,
+            })
+          : undefined,
     }
   }
 
