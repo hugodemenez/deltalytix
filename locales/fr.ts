@@ -1956,7 +1956,14 @@ export default {
   tradovateSync: {
     title: "Synchronisation Compte Tradovate",
     description:
-      "Connectez votre compte Tradovate pour synchroniser automatiquement vos trades en utilisant l'authentification OAuth.",
+      "Connectez votre compte Tradovate via OAuth pour synchroniser vos trades.",
+    importInfo: {
+      title: "Avant de synchroniser",
+      currentDayOnly:
+        "Tradovate ne permet pas d'accéder à l'historique de trading antérieur à la journée actuelle (week-ends et jours fériés non disponibles). Chaque synchronisation n'importe que les trades du jour.",
+      dailySyncReminder:
+        "Configurez une heure de sync quotidienne (ex. après la clôture) sur chaque compte pour importer les trades automatiquement. Sans ça, vous devez synchroniser manuellement le jour même.",
+    },
     environment: "Environnement",
     environments: {
       demo: "Démo (Comptes Propfirms Simulés)",
@@ -2096,7 +2103,7 @@ export default {
       environmentDemo: "Démo",
       dailySyncTimeTitle: "Définir l'heure de sync quotidienne",
       dailySyncTimeDescription:
-        "Configurez l'heure à laquelle ce compte doit se synchroniser automatiquement chaque jour (dans votre heure locale). Laissez vide pour désactiver la synchronisation automatique.",
+        "Comme Tradovate ne fournit que les trades du jour en cours, planifiez une sync quotidienne pour importer automatiquement l'activité de chaque journée. Choisissez une heure dans votre fuseau local (par exemple, après la clôture). Laissez vide pour désactiver la synchronisation automatique.",
       dailySyncTimeLabel: "Heure de sync (heure locale)",
       dailySyncTimePlaceholder: "HH:mm",
       dailySyncTimeTimezoneNote:
@@ -2156,23 +2163,91 @@ export default {
     },
   },
   dxfeedSync: {
-    title: "Synchronisation Compte DxFeed",
+    title: "Synchronisation compte DxFeed",
     description:
-      "Connectez votre compte DxFeed pour synchroniser automatiquement vos trades avec vos identifiants.",
+      "Connectez votre compte DxFeed / Volumetrica pour importer automatiquement vos trades clôturés.",
     connected: "Compte DxFeed connecté avec succès",
     disconnected: "Compte DxFeed déconnecté",
     error: {
-      credentialsRequired: "L'email et le mot de passe sont requis",
-      authFailed: "Échec de l'authentification avec DxFeed",
+      credentialsRequired: "Saisissez votre e-mail et votre mot de passe",
+      propFirmRequired: "Sélectionnez votre propfirm avant de vous connecter",
+      authFailed: "Impossible de se connecter à DxFeed",
+    },
+    errors: {
+      UNKNOWN:
+        "Une erreur s'est produite. Réessayez ou contactez le Support si le problème persiste.",
+      CONFIG_NOT_SET:
+        "DxFeed n'est pas encore configuré sur cette application. Contactez le Support pour l'activer.",
+      PROP_FIRM_REQUIRED: "Sélectionnez votre propfirm dans la liste, puis réessayez.",
+      PROP_FIRM_UNSUPPORTED:
+        "Cette propfirm n'est pas encore disponible dans la liste.",
+      PROP_FIRMS_UNAVAILABLE:
+        "Aucune propfirm n'est disponible pour le moment.",
+      USER_NOT_AUTHENTICATED:
+        "Vous devez être connecté pour lier DxFeed. Connectez-vous puis réessayez.",
+      AUTH_HTTP_ERROR:
+        "DxFeed a refusé la connexion (HTTP {status}). Vérifiez l'e-mail et le mot de passe, ou réessayez plus tard. Détail : {detail}",
+      AUTH_REJECTED: "DxFeed a refusé la connexion : {reason}",
+      AUTH_PROP_FIRM_MISMATCH:
+        "Ces identifiants correspondent à {authPropfirm}, pas à {selectedPropfirm}. Choisissez la bonne firme dans la liste ou utilisez le bon compte.",
+      HISTORICAL_HOST_UNRESOLVED:
+        "Impossible d'atteindre le serveur d'historique des trades pour {propfirm}.",
+      AUTH_UNEXPECTED:
+        "Échec de connexion inattendu. Vérifiez vos identifiants et réessayez.",
+      INVALID_STORED_CREDENTIALS:
+        "Les données de connexion enregistrées sont invalides.",
+      MISSING_PROP_FIRM_RECONNECT:
+        "Cette connexion est obsolète.",
+      NO_TOKEN_RECONNECT:
+        "Cette connexion a expiré.",
+      TOKEN_EXPIRED:
+        "Votre session DxFeed a expiré. Reconnectez-vous avec vos identifiants propfirm pour continuer la synchronisation.",
+      DUPLICATE_TRADES:
+        "Ces trades sont déjà présents dans votre journal.",
+      SYNC_FAILED:
+        "Échec de la synchronisation. Réessayez dans quelques minutes.",
+      SAVE_TRADES_FAILED:
+        "Les trades ont été récupérés mais n'ont pas pu être enregistrés : {detail}",
+      ACCOUNT_ID_REQUIRED:
+        "Identifiant de compte manquant. Actualisez la page et réessayez.",
+      LOAD_SYNCHRONIZATIONS_FAILED:
+        "Impossible de charger vos connexions DxFeed. Actualisez la page.",
+      DELETE_SYNC_FAILED: "Impossible de supprimer cette connexion. Réessayez.",
+      UPDATE_SYNC_TIME_FAILED:
+        "Impossible de mettre à jour l'heure de sync quotidienne. Réessayez.",
+      hintContactSupport:
+        "Ouvrez le Support (menu → Support) et indiquez le nom de votre propfirm si elle n'apparaît pas dans la liste. Nous pouvons ajouter des propfirms sur demande.",
+      hintReconnect:
+        "Supprimez cette connexion, cliquez sur Ajouter, sélectionnez votre propfirm et reconnectez-vous avec vos identifiants DxFeed.",
+      hintPropFirmMismatch:
+        "La propfirm sélectionnée doit correspondre au compte que vous utilisez sur la plateforme de votre propfirm.",
+      hintCheckCredentials:
+        "Utilisez le même e-mail et mot de passe que sur la plateforme de trading de votre propfirm (démo ou live selon votre compte).",
+      SYNC_FETCH_FAILED:
+        "Impossible de charger les trades DxFeed ({failures} sur {total} comptes en échec). Reconnectez-vous et réessayez.",
+      SYNC_ACCOUNTS_UNAVAILABLE:
+        "Impossible de lister vos comptes de trading ({count} enregistrés auparavant). Reconnectez-vous avec la même propfirm.",
+      SYNC_OPEN_ONLY:
+        "DxFeed a renvoyé {raw} position(s) mais aucun trade clôturé pour {accountId}.",
+      SYNC_NO_TRADES_IN_RANGE:
+        "Aucun trade renvoyé par DxFeed pour {accountId} sur la période consultée.",
     },
     addAccount: {
-      title: "Connecter un Compte DxFeed",
+      title: "Connecter un compte DxFeed",
       description:
-        "Entrez vos identifiants DxFeed pour connecter votre compte et synchroniser les trades.",
-      emailLabel: "Email",
-      emailPlaceholder: "Entrez votre email DxFeed",
+        "Choisissez votre propfirm, puis connectez-vous avec les mêmes identifiants que sur sa plateforme.",
+      propFirmLabel: "Propfirm",
+      propFirmPlaceholder: "Sélectionnez votre propfirm",
+      propFirmHint:
+        "Choisissez la propfirm où vous tradez (ex. Miltraders, Phoenix Trader Funding). Les trades sont importés depuis son serveur d'historique—notamment depuis le site DxFeed générique.",
+      noPropFirmsTitle: "Votre propfirm n'est pas encore listée",
+      noPropFirmsDescription:
+        "Seules les propfirms que nous avons configurées apparaissent ici. Contactez le Support avec le nom et le site de votre propfirm pour que nous l'ajoutions.",
+      noPropFirmsAction: "Contacter le Support",
+      emailLabel: "E-mail",
+      emailPlaceholder: "E-mail de connexion à votre propfirm",
       passwordLabel: "Mot de passe",
-      passwordPlaceholder: "Entrez votre mot de passe DxFeed",
+      passwordPlaceholder: "Mot de passe de votre propfirm",
       connecting: "Connexion...",
       connect: "Connecter",
     },
@@ -2180,28 +2255,53 @@ export default {
       error: "Erreur",
       warning: "Attention",
       success: "Succès",
-      syncFailed: "Échec de la synchronisation des trades : {error}",
-      unknownError: "Erreur inconnue",
-      inProgress: "Synchronisation DxFeed en cours pour le compte {accountId}",
+      syncFailed: "{error}",
+      unknownError: "Erreur inconnue pendant la synchronisation",
+      inProgress: "Synchronisation des trades pour {accountId}…",
+      tokenMissing: "Connexion expirée—utilisez Reconnecter pour vous identifier à nouveau",
+      accountNotFound: "Compte introuvable. Actualisez la liste et réessayez.",
+      openOnlyTitle:
+        "Aucun trade clôturé à importer pour {accountId} ({raw} position(s) ouverte(s) ignorée(s))",
+      openOnlyDescription:
+        "Seuls les trades round-trip terminés sont importés. Clôturez une position sur votre plateforme, puis resynchronisez.",
+      noTradesInRangeTitle: "Aucun trade trouvé pour {accountId}",
+      noTradesInRangeDescription:
+        "DxFeed n'a renvoyé aucun historique sur la période. Passez un trade clôturé ou reconnectez-vous si la session a expiré.",
+      partialFetchWarning:
+        "Certains comptes n'ont pas pu être interrogés ({failures}/{total}). Les résultats peuvent être incomplets.",
     },
     multiAccount: {
+      propFirm: "Propfirm",
+      connection: "Connexion",
+      connectionLoginHint: "Identifiant DxFeed utilisé pour la connexion",
+      tradingAccountsCount: "{count} compte(s) de trading",
+      tradingAccountsList: "Comptes de trading sur cette connexion",
+      noTradingAccounts:
+        "Aucun compte de trading détecté pour l'instant. Lancez une synchronisation après vos premiers trades.",
+      syncImportsAllAccounts:
+        "Chaque synchronisation importe les trades clôturés de tous les comptes listés ci-dessous (ex. 50K-001, 50K-002, 100K-001).",
       accountName: "Nom du Compte",
       lastSync: "Dernière Sync",
       tokenStatus: "Statut du Token",
       actions: "Actions",
       expired: "Expiré",
       valid: "Valide",
+      connected: "Connecté",
+      expandTradingAccounts: "Voir {count} compte(s) de trading",
+      collapseTradingAccounts: "Masquer les comptes de trading",
       reconnect: "Reconnecter",
-      delete: "Supprimer",
+      remove: "Retirer",
+      removeConnection: "Retirer la connexion",
+      removeConnectionConfirm:
+        'Retirer la connexion « {accountId} » ? Les trades déjà importés restent dans Deltalytix. Supprimez les comptes ou trades manuellement dans Gestion des données si vous souhaitez les effacer.',
+      connectionRemoved: 'Connexion « {accountId} » retirée.',
+      removeError: 'Échec du retrait de la connexion « {accountId} ».',
+      scheduleSync: "Planifier",
+      editSchedule: "Modifier",
       savedAccounts: "Comptes Enregistrés",
       addNew: "Ajouter",
       syncAll: "Synchroniser Tout",
       noSavedAccounts: "Aucun compte enregistré trouvé",
-      deleteAccount: "Supprimer le Compte",
-      deleteAccountConfirm:
-        'Êtes-vous sûr de vouloir supprimer le compte "{accountId}" ? Cette action est irréversible.',
-      accountDeleted: 'Le compte "{accountId}" a été supprimé avec succès.',
-      deleteError: 'Échec de la suppression du compte "{accountId}".',
       accountsReloaded: "Comptes rechargés avec succès",
       reloadError: "Échec du rechargement des comptes",
       alreadyImportedTrades: "Trades déjà importés",
@@ -2210,9 +2310,11 @@ export default {
       syncCompleteNoNewTradesForAccount:
         "{tradesCount} trades trouvés pour {accountId} mais aucun nouveau trade.",
       syncCompleteNoOrdersForAccount: "Aucun trade trouvé pour {accountId}.",
-      accountsCount: "comptes",
+      accountsCount: "comptes de trading",
       syncedAccounts: "Comptes Synchronisés",
       dailySyncTimeLocal: "Heure de sync quotidienne (Local)",
+      dailySyncSchedule: "Planification de sync quotidienne",
+      dailySyncScheduleNotScheduled: "Non planifiée",
       dailySyncTimeTitle: "Définir l'heure de synchronisation quotidienne",
       dailySyncTimeDescription:
         "Configurez l'heure à laquelle ce compte devrait se synchroniser automatiquement chaque jour (en heure locale). Laissez vide pour désactiver la synchronisation automatique.",
@@ -2240,12 +2342,12 @@ export default {
   "import.type.tradovateSync.description":
     "Synchronisation directe de compte avec Tradovate",
   "import.type.tradovateSync.details":
-    "Synchronisation directe avec votre compte Tradovate. Nécessite une authentification OAuth.",
+    "Connexion OAuth pour importer uniquement les trades Tradovate du jour. Définissez une heure de sync quotidienne sur chaque compte pour capturer chaque journée de trading automatiquement—même lorsque vous n'êtes pas connecté.",
   "import.type.dxfeedSync.name": "DxFeed",
   "import.type.dxfeedSync.description":
     "Synchronisation directe de compte avec DxFeed",
   "import.type.dxfeedSync.details":
-    "Synchronisation directe avec votre compte DxFeed. Nécessite une authentification par identifiants.",
+    "Importez vos trades clôturés depuis votre propfirm (DxFeed / Volumetrica). Sélectionnez la propfirm, puis connectez-vous avec vos identifiants plateforme.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "Import depuis les fichiers Excel ATAS",
   "import.type.atas.details":

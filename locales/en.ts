@@ -1832,7 +1832,14 @@ export default {
   tradovateSync: {
     title: "Tradovate Account Sync",
     description:
-      "Connect your Tradovate account to automatically sync your trades using OAuth authentication.",
+      "Connect your Tradovate account via OAuth to sync your trades.",
+    importInfo: {
+      title: "Before you sync",
+      currentDayOnly:
+        "Tradovate only exposes trades from the current trading day (not available on weekends or holidays). Each sync—manual or scheduled—imports today's orders only; prior days cannot be retrieved.",
+      dailySyncReminder:
+        "Set a daily sync time (e.g. after market close) on each connected account so trades are captured automatically. Without it, you must sync manually that same day.",
+    },
     environment: "Environment",
     environments: {
       demo: "Demo (Propfirms Simulated Accounts)",
@@ -1967,7 +1974,7 @@ export default {
       environmentDemo: "Demo",
       dailySyncTimeTitle: "Set daily sync time",
       dailySyncTimeDescription:
-        "Configure when this account should automatically sync each day (in your local time). Leave empty to disable automatic syncing.",
+        "Because Tradovate only provides the current day's trades, schedule a daily sync so each day's activity is imported automatically. Choose a time in your local timezone (for example, after market close). Leave empty to disable automatic syncing.",
       dailySyncTimeLabel: "Sync time (local time)",
       dailySyncTimePlaceholder: "HH:mm",
       dailySyncTimeTimezoneNote: "Time is in your local timezone ({timezone})",
@@ -2027,21 +2034,87 @@ export default {
   dxfeedSync: {
     title: "DxFeed Account Sync",
     description:
-      "Connect your DxFeed account to automatically sync your trades using your credentials.",
+      "Connect your DxFeed / Volumetrica account to import closed trades automatically.",
     connected: "DxFeed account connected successfully",
     disconnected: "DxFeed account disconnected",
     error: {
-      credentialsRequired: "Email and password are required",
-      authFailed: "Failed to authenticate with DxFeed",
+      credentialsRequired: "Enter your email and password to continue",
+      propFirmRequired: "Select your prop firm before connecting",
+      authFailed: "Could not connect to DxFeed",
+    },
+    errors: {
+      UNKNOWN:
+        "Something went wrong. Try again, or contact Support if the problem continues.",
+      CONFIG_NOT_SET:
+        "DxFeed is not configured on this app yet. Contact Support so we can enable it for your environment.",
+      PROP_FIRM_REQUIRED: "Select your prop firm in the list, then try again.",
+      PROP_FIRM_UNSUPPORTED:
+        "This prop firm is not available in the list yet.",
+      PROP_FIRMS_UNAVAILABLE:
+        "No prop firms are available to connect right now.",
+      USER_NOT_AUTHENTICATED:
+        "You must be signed in to connect DxFeed. Sign in and try again.",
+      AUTH_HTTP_ERROR:
+        "DxFeed rejected the connection (HTTP {status}). Check your email and password, or try again later. Details: {detail}",
+      AUTH_REJECTED: "DxFeed rejected your login: {reason}",
+      AUTH_PROP_FIRM_MISMATCH:
+        "These credentials belong to {authPropfirm}, not {selectedPropfirm}. Select the matching prop firm in the list, or use the correct login.",
+      HISTORICAL_HOST_UNRESOLVED:
+        "We could not reach the trade history server for {propfirm}.",
+      AUTH_UNEXPECTED:
+        "Connection failed unexpectedly. Check your credentials and try again.",
+      INVALID_STORED_CREDENTIALS:
+        "Saved connection data is invalid.",
+      MISSING_PROP_FIRM_RECONNECT:
+        "This connection is outdated.",
+      NO_TOKEN_RECONNECT:
+        "This connection has expired.",
+      TOKEN_EXPIRED:
+        "Your DxFeed session has expired. Reconnect with your prop firm login to continue syncing.",
+      DUPLICATE_TRADES:
+        "These trades are already in your journal.",
+      SYNC_FAILED:
+        "Trade sync failed. Try again in a few minutes.",
+      SAVE_TRADES_FAILED:
+        "Trades were fetched but could not be saved: {detail}",
+      ACCOUNT_ID_REQUIRED: "Account identifier is missing. Refresh the page and try again.",
+      LOAD_SYNCHRONIZATIONS_FAILED:
+        "Could not load your saved DxFeed connections. Refresh the page.",
+      DELETE_SYNC_FAILED: "Could not remove this connection. Try again.",
+      UPDATE_SYNC_TIME_FAILED: "Could not update the daily sync time. Try again.",
+      hintContactSupport:
+        "Open Support (menu → Support) and tell us your prop firm name if it is missing from the list. We can add supported firms on request.",
+      hintReconnect:
+        "Remove this connection, click Add New, select your prop firm, and sign in again with your DxFeed credentials.",
+      hintPropFirmMismatch:
+        "The prop firm in the dropdown must match the account you use on your prop firm's platform.",
+      hintCheckCredentials:
+        "Use the same email and password as on your prop firm's trading platform (demo vs live must match your account type).",
+      SYNC_FETCH_FAILED:
+        "Could not load trades from DxFeed ({failures} of {total} accounts failed). Reconnect and try again.",
+      SYNC_ACCOUNTS_UNAVAILABLE:
+        "Could not list your trading accounts ({count} were saved earlier). Reconnect with the same prop firm.",
+      SYNC_OPEN_ONLY:
+        "DxFeed returned {raw} position(s) but none are closed trades yet for {accountId}.",
+      SYNC_NO_TRADES_IN_RANGE:
+        "No trades returned by DxFeed for {accountId} in the lookback window.",
     },
     addAccount: {
       title: "Connect DxFeed Account",
       description:
-        "Enter your DxFeed credentials to connect your account and sync trades.",
+        "Choose your prop firm, then sign in with the same credentials you use on that firm's platform.",
+      propFirmLabel: "Prop firm",
+      propFirmPlaceholder: "Select your prop firm",
+      propFirmHint:
+        "Pick the firm where you trade (e.g. Miltraders). Trades are imported from that firm's history server—not from the generic DxFeed site.",
+      noPropFirmsTitle: "Your prop firm is not listed yet",
+      noPropFirmsDescription:
+        "We only show firms we have configured. Contact Support with your prop firm name and website so we can add it.",
+      noPropFirmsAction: "Contact Support",
       emailLabel: "Email",
-      emailPlaceholder: "Enter your DxFeed email",
+      emailPlaceholder: "Email from your prop firm login",
       passwordLabel: "Password",
-      passwordPlaceholder: "Enter your DxFeed password",
+      passwordPlaceholder: "Password from your prop firm login",
       connecting: "Connecting...",
       connect: "Connect",
     },
@@ -2049,28 +2122,52 @@ export default {
       error: "Error",
       warning: "Warning",
       success: "Success",
-      syncFailed: "Trade sync failed: {error}",
-      unknownError: "Unknown error",
-      inProgress: "DxFeed sync in progress for account {accountId}",
+      syncFailed: "{error}",
+      unknownError: "Unknown error during sync",
+      inProgress: "Syncing trades for {accountId}…",
+      tokenMissing: "Connection expired—use Reconnect to sign in again",
+      accountNotFound: "Account not found. Refresh the list and try again.",
+      openOnlyTitle:
+        "No closed trades to import for {accountId} ({raw} open position(s) skipped)",
+      openOnlyDescription:
+        "Only completed round-trip trades are imported. Close a position on your platform, then sync again.",
+      noTradesInRangeTitle: "No trades found for {accountId}",
+      noTradesInRangeDescription:
+        "DxFeed returned no trade history for the selected period. Place and close a trade, or reconnect if your session expired.",
+      partialFetchWarning:
+        "Some accounts could not be queried ({failures}/{total}). Results may be incomplete.",
     },
     multiAccount: {
+      propFirm: "Prop firm",
+      connection: "Connection",
+      connectionLoginHint: "DxFeed login used to connect",
+      tradingAccountsCount: "{count} trading account(s)",
+      tradingAccountsList: "Trading accounts on this connection",
+      noTradingAccounts: "No trading accounts detected yet. Run a sync after your first trades.",
+      syncImportsAllAccounts:
+        "Each sync imports closed trades from every trading account listed below (e.g. 50K-001, 50K-002, 100K-001).",
       accountName: "Account Name",
       lastSync: "Last Sync",
       tokenStatus: "Token Status",
       actions: "Actions",
       expired: "Expired",
       valid: "Valid",
+      connected: "Connected",
+      expandTradingAccounts: "View {count} trading account(s)",
+      collapseTradingAccounts: "Hide trading accounts",
       reconnect: "Reconnect",
-      delete: "Delete",
+      remove: "Remove",
+      removeConnection: "Remove connection",
+      removeConnectionConfirm:
+        'Remove the connection "{accountId}"? Already imported trades stay in Deltalytix. Delete accounts or trades manually in Data Management if you want them removed.',
+      connectionRemoved: 'Connection "{accountId}" removed.',
+      removeError: 'Failed to remove connection "{accountId}".',
+      scheduleSync: "Schedule",
+      editSchedule: "Edit",
       savedAccounts: "Saved Accounts",
       addNew: "Add New",
       syncAll: "Sync All",
       noSavedAccounts: "No saved accounts found",
-      deleteAccount: "Delete Account",
-      deleteAccountConfirm:
-        'Are you sure you want to delete the account "{accountId}"? This action cannot be undone.',
-      accountDeleted: 'Account "{accountId}" has been deleted successfully.',
-      deleteError: 'Failed to delete account "{accountId}".',
       accountsReloaded: "Accounts reloaded successfully",
       reloadError: "Failed to reload accounts",
       alreadyImportedTrades: "Trades already imported",
@@ -2079,9 +2176,11 @@ export default {
       syncCompleteNoNewTradesForAccount:
         "Found {tradesCount} trades for {accountId} but no new trades were found.",
       syncCompleteNoOrdersForAccount: "No trades found for {accountId}.",
-      accountsCount: "accounts",
+      accountsCount: "trading accounts",
       syncedAccounts: "Synced Accounts",
       dailySyncTimeLocal: "Daily sync time (Local)",
+      dailySyncSchedule: "Daily sync schedule",
+      dailySyncScheduleNotScheduled: "Not scheduled",
       dailySyncTimeTitle: "Set daily sync time",
       dailySyncTimeDescription:
         "Configure when this account should automatically sync each day (in your local time). Leave empty to disable automatic syncing.",
@@ -2109,12 +2208,12 @@ export default {
   "import.type.tradovateSync.description":
     "Direct account synchronization with Tradovate",
   "import.type.tradovateSync.details":
-    "Direct sync with your Tradovate account. Requires OAuth authentication.",
+    "OAuth connection to import today's Tradovate trades only. Set a daily sync time on each account so every trading day is captured automatically—even when you are not logged in.",
   "import.type.dxfeedSync.name": "DxFeed",
   "import.type.dxfeedSync.description":
     "Direct account synchronization with DxFeed",
   "import.type.dxfeedSync.details":
-    "Direct sync with your DxFeed account. Requires username and password authentication.",
+    "Import closed trades from your prop firm (DxFeed / Volumetrica). Select your firm, then sign in with your platform credentials.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "Import from ATAS Excel files",
   "import.type.atas.details":
