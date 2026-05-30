@@ -504,7 +504,10 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
 
         const chartSnapshots = await captureChartSnapshots()
         const { jsPDF } = await import("jspdf")
+        const { registerPdfFont } = await import("./pdf-fonts")
         const doc = new jsPDF({ unit: "pt", format: "a4" })
+        const pdfFont = registerPdfFont(doc)
+        doc.setFont(pdfFont, "normal")
         const pageWidth = doc.internal.pageSize.getWidth()
         const pageHeight = doc.internal.pageSize.getHeight()
         const margin = 40
@@ -544,10 +547,10 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           doc.line(0, 140, pageWidth, 140)
 
           doc.setTextColor(255, 255, 255)
-          doc.setFont("helvetica", "bold")
+          doc.setFont(pdfFont, "bold")
           doc.setFontSize(22)
           doc.text(shareTitle.trim() || t("share.pdfStatementTitle"), margin, 52)
-          doc.setFont("helvetica", "normal")
+          doc.setFont(pdfFont, "normal")
           doc.setFontSize(11)
           doc.text(t("share.pdfStatementSubtitle"), margin, 72)
 
@@ -573,11 +576,11 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           doc.setFillColor(248, 250, 252)
           doc.setDrawColor(223, 227, 236)
           doc.roundedRect(x, cardY, (contentWidth - cardGap) / 2, cardHeight, 8, 8, "FD")
-          doc.setFont("helvetica", "normal")
+          doc.setFont(pdfFont, "normal")
           doc.setFontSize(10)
           doc.setTextColor(89, 96, 115)
           doc.text(label, x + 12, cardY + 22)
-          doc.setFont("helvetica", "bold")
+          doc.setFont(pdfFont, "bold")
           doc.setFontSize(16)
           if (valueColor) {
             doc.setTextColor(valueColor[0], valueColor[1], valueColor[2])
@@ -590,7 +593,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
 
         const addSectionTitle = (title: string) => {
           ensureSpace(28)
-          doc.setFont("helvetica", "bold")
+          doc.setFont(pdfFont, "bold")
           doc.setFontSize(14)
           doc.setTextColor(24, 28, 37)
           doc.text(title, margin, y)
@@ -605,7 +608,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           doc.setDrawColor(223, 227, 236)
           doc.roundedRect(cardX, cardY, chartCardWidth, chartCardHeight, 8, 8, "FD")
 
-          doc.setFont("helvetica", "bold")
+          doc.setFont(pdfFont, "bold")
           doc.setFontSize(10)
           doc.setTextColor(38, 43, 56)
           doc.text(snapshot.title, cardX + 12, cardY + 18)
@@ -627,7 +630,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         const renderChartCards = () => {
           if (chartSnapshots.length === 0) {
             ensureSpace(60)
-            doc.setFont("helvetica", "normal")
+            doc.setFont(pdfFont, "normal")
             doc.setFontSize(11)
             doc.setTextColor(89, 96, 115)
             doc.text(t("share.pdfNoChartsAvailable"), margin, y + 24)
@@ -679,7 +682,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           doc.setPage(page)
           doc.setDrawColor(223, 227, 236)
           doc.line(margin, pageHeight - 30, pageWidth - margin, pageHeight - 30)
-          doc.setFont("helvetica", "normal")
+          doc.setFont(pdfFont, "normal")
           doc.setFontSize(9)
           doc.setTextColor(120, 126, 145)
           doc.text(
@@ -689,7 +692,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           )
         }
 
-        doc.setFont("helvetica", "bold")
+        doc.setFont(pdfFont, "bold")
         doc.setFontSize(10)
         doc.save(`dashboard-statement-${format(new Date(), "yyyy-MM-dd")}.pdf`)
         toast.success(t("share.exportPdfSuccess"), {
