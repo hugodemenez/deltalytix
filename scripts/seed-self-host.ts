@@ -11,7 +11,18 @@ const LOCAL_USER_EMAIL =
   process.env.LOCAL_DASHBOARD_USER_EMAIL || "local-dashboard@deltalytix.local"
 const LOCAL_ACCOUNT_NUMBER = process.env.LOCAL_DASHBOARD_ACCOUNT_NUMBER || "LOCAL-SIM-001"
 const LOCAL_ACCOUNT_NAME = process.env.LOCAL_DASHBOARD_ACCOUNT_NAME || "Local Simulation"
-const TRADE_DAY_COUNT = Number.parseInt(process.env.LOCAL_DASHBOARD_TRADE_DAYS || "60", 10)
+function parseTradeDayCount(): number {
+  const raw = process.env.LOCAL_DASHBOARD_TRADE_DAYS || "60"
+  const parsed = Number.parseInt(raw, 10)
+
+  if (!Number.isFinite(parsed) || parsed < 1 || parsed > 365) {
+    throw new Error(
+      `LOCAL_DASHBOARD_TRADE_DAYS must be an integer between 1 and 365. Received: ${raw}`,
+    )
+  }
+
+  return parsed
+}
 
 function requireDatabaseUrl(): string {
   const databaseUrl = process.env.DATABASE_URL
@@ -114,8 +125,33 @@ async function upsertTickDetails(prisma: PrismaClient) {
   }
 }
 
+function isLikelyLocalDatabase(databaseUrl: string): boolean {
+  return (
+    databaseUrl.includes("localhost") ||
+    databaseUrl.includes("127.0.0.1") ||
+    databaseUrl.includes("@db:5432/") ||
+    databaseUrl.includes("deltalytix_dev")
+  )
+}
+
 async function main() {
-  const pool = new pg.Pool({ connectionString: requireDatabaseUrl() })
+  const databaseUrl = requireDatabaseUrl()
+  const tradeDayCount = parseTradeDayCount()
+
+  if (!isLikelyLocalDatabase(databaseUrl)) {
+    console.warn(
+      "[seed-self-host] WARNING: DATABASE_URL does not look like a local dev database.",
+    )
+    console.warn(
+      "[seed-self-host] This script deletes and recreates trades/payouts for the local demo account.",
+    )
+  }
+
+  console.warn(
+    "[seed-self-host] Destructive for demo data: trades and payouts for the local account will be replaced.",
+  )
+
+  const pool = new pg.Pool({ connectionString: databaseUrl })
   const adapter = new PrismaPg(pool)
   const prisma = new PrismaClient({ adapter })
 
@@ -171,7 +207,7 @@ async function main() {
       },
     })
 
-    const trades = buildTrades(user.id, TRADE_DAY_COUNT)
+    const trades = buildTrades(user.id, tradeDayCount)
     await prisma.trade.createMany({ data: trades })
 
     await prisma.payout.deleteMany({ where: { accountId: account.id } })
@@ -197,7 +233,7 @@ async function main() {
     })
 
     console.log(
-      `[seed-self-host] Ready: user=${user.id}, account=${account.number}, trades=${trades.length}, days=${TRADE_DAY_COUNT}`,
+      `[seed-self-host] Ready: user=${user.id}, account=${account.number}, trades=${trades.length}, days=${tradeDayCount}`,
     )
   } finally {
     await prisma.$disconnect()
