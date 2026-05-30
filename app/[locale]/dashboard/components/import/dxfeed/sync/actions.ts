@@ -10,7 +10,6 @@ import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
 import {
   coerceDxFeedHistoricalHostForSync,
-  normalizeDxFeedHistoricalHost,
   resolveDxFeedHistoricalHost,
 } from '@/lib/dxfeed-historical-host'
 import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
@@ -20,8 +19,9 @@ import {
 } from '@/lib/dxfeed-token'
 import {
   authPropfirmMatchesSelection,
-  buildHistoricalHostForPropFirm,
   getDxFeedPropFirm,
+  getDxFeedPropFirmByAuthName,
+  getDxFeedPropFirmByHost,
 } from '@/lib/dxfeed-propfirms'
 import type {
   DxFeedLoginRequest,
@@ -76,6 +76,59 @@ function parseStoredCredentials(tokenField: string): DxFeedStoredCredentials | n
   } catch {
     return null
   }
+}
+
+function resolveStoredDxFeedPropFirm(credentials: DxFeedStoredCredentials) {
+  return (
+    getDxFeedPropFirm(credentials.propFirmId) ??
+    getDxFeedPropFirmByAuthName(credentials.propfirmName) ??
+    getDxFeedPropFirmByHost(credentials.historicalHost)
+  )
+}
+
+function buildDxFeedSynchronizationAccountId(propFirmId: string, login: string): string {
+  return `${propFirmId}:${login.trim().toLowerCase()}`
+}
+
+function buildDxFeedTradeImportKey(
+  trade: Pick<Trade, 'accountNumber' | 'entryId' | 'closeId'>,
+): string {
+  return [trade.accountNumber, trade.entryId ?? '', trade.closeId ?? ''].join('|')
+}
+
+async function excludeExistingDxFeedTrades(
+  userId: string,
+  trades: Trade[],
+): Promise<{ newTrades: Trade[]; existingCount: number }> {
+  const entryIds = Array.from(
+    new Set(trades.map((trade) => trade.entryId).filter((value): value is string => !!value)),
+  )
+  const closeIds = Array.from(
+    new Set(trades.map((trade) => trade.closeId).filter((value): value is string => !!value)),
+  )
+  const accountNumbers = Array.from(new Set(trades.map((trade) => trade.accountNumber)))
+
+  if (entryIds.length === 0 || closeIds.length === 0 || accountNumbers.length === 0) {
+    return { newTrades: trades, existingCount: 0 }
+  }
+
+  const existingTrades = await prisma.trade.findMany({
+    where: {
+      userId,
+      entryId: { in: entryIds },
+      closeId: { in: closeIds },
+      accountNumber: { in: accountNumbers },
+    },
+    select: {
+      accountNumber: true,
+      entryId: true,
+      closeId: true,
+    },
+  })
+  const existingKeys = new Set(existingTrades.map(buildDxFeedTradeImportKey))
+  const newTrades = trades.filter((trade) => !existingKeys.has(buildDxFeedTradeImportKey(trade)))
+
+  return { newTrades, existingCount: trades.length - newTrades.length }
 }
 
 function buildHistoricalAuthHeaders(accessToken: string): HeadersInit {
@@ -169,11 +222,11 @@ export async function authenticateDxFeed(
     if (!response.ok) {
       const text = await response.text()
       logger.error(`Auth request failed with status ${response.status}`)
+      logger.debug('Auth failure response:', text?.slice(0, 200))
       return {
         error: DxFeedErrorCode.AUTH_HTTP_ERROR,
         errorParams: {
           status: response.status,
-          detail: text?.slice(0, 200) || response.statusText,
         },
       }
     }
@@ -233,11 +286,16 @@ export async function authenticateDxFeed(
       propfirmName: data.propfirmName,
     }
 
-    const storeResult = await storeDxFeedToken(JSON.stringify(credentials), login, {
-      tokenExpiresAt,
-    })
+    const storeResult = await storeDxFeedToken(
+      JSON.stringify(credentials),
+      buildDxFeedSynchronizationAccountId(propFirm.id, login),
+      {
+        tokenExpiresAt,
+      },
+    )
     if (storeResult.error) {
       logger.warn('Failed to store token')
+      return { error: DxFeedErrorCode.STORE_TOKEN_FAILED }
     }
 
     return { success: true }
@@ -318,7 +376,6 @@ function normalizeDxFeedEpochMs(value: number | null | undefined): number {
 function isClosedDxFeedReportTrade(rt: DxFeedReportTrade): boolean {
   const exitMs = normalizeDxFeedEpochMs(rt.exitDate)
   if (exitMs > 0) return true
-  if (rt.isCloseTrade === true) return true
   return false
 }
 
@@ -361,6 +418,11 @@ function buildTradesFromDxFeedReport(
 
       const entryMs = normalizeDxFeedEpochMs(rt.entryDate)
       const exitMs = normalizeDxFeedEpochMs(rt.exitDate)
+      if (entryMs <= 0 || exitMs <= 0) {
+        openSkipped += 1
+        logger.debug(`Skipping DxFeed trade with invalid dates tradeId=${rt.tradeId}`)
+        continue
+      }
       const entryDate = new Date(entryMs)
       const exitDate = new Date(exitMs)
       const durationSeconds = Math.max(0, Math.round((exitDate.getTime() - entryDate.getTime()) / 1000))
@@ -423,14 +485,23 @@ export async function getDxFeedTrades(
       return { error: DxFeedErrorCode.INVALID_STORED_CREDENTIALS }
     }
 
-    const propFirm = getDxFeedPropFirm(credentials.propFirmId)
+    const propFirm = resolveStoredDxFeedPropFirm(credentials)
     if (!propFirm) {
       return { error: DxFeedErrorCode.MISSING_PROP_FIRM_RECONNECT }
     }
 
-    const { accessToken } = credentials
+    const credentialsForSync: DxFeedStoredCredentials =
+      credentials.propFirmId === propFirm.id
+        ? credentials
+        : {
+            ...credentials,
+            propFirmId: propFirm.id,
+            propfirmName: credentials.propfirmName ?? propFirm.name,
+          }
+
+    const { accessToken } = credentialsForSync
     // Prefer host from connect; remap mistaken trading WSS hosts; fall back to catalog.
-    const historicalHost = coerceDxFeedHistoricalHostForSync(credentials.historicalHost, propFirm)
+    const historicalHost = coerceDxFeedHistoricalHostForSync(credentialsForSync.historicalHost, propFirm)
 
     let userId = options?.userId ?? null
     let syncAccountId: string | null = null
@@ -459,6 +530,12 @@ export async function getDxFeedTrades(
       return { error: DxFeedErrorCode.TOKEN_EXPIRED }
     }
 
+    if (credentialsForSync !== credentials) {
+      const updatedJson = JSON.stringify(credentialsForSync)
+      await updateStoredCredentials(userId, storedTokenJson, updatedJson)
+      storedTokenJson = updatedJson
+    }
+
     logger.info('Fetching DxFeed accounts...')
     const accountsResult = await getDxFeedAccounts(accessToken, historicalHost)
 
@@ -476,7 +553,7 @@ export async function getDxFeedTrades(
     )
     if (accountNumbers.length > 0) {
       const updatedCreds: DxFeedStoredCredentials = {
-        ...credentials,
+        ...credentialsForSync,
         historicalHost,
         accountNumbers,
       }
@@ -494,8 +571,8 @@ export async function getDxFeedTrades(
     }
 
     if (accounts.length === 0) {
-      const cachedAccounts = credentials.accountNumbers?.length ?? 0
-      if (cachedAccounts > 0) {
+      const cachedAccounts = credentialsForSync.accountNumbers?.length ?? 0
+      if (!accountsResult.ok || cachedAccounts > 0) {
         return {
           error: DxFeedErrorCode.SYNC_ACCOUNTS_UNAVAILABLE,
           errorParams: { count: cachedAccounts },
@@ -563,9 +640,7 @@ export async function getDxFeedTrades(
 
     syncStats.closedTrades = allTrades.length
 
-    await updateLastSyncedAt(userId, storedTokenJson)
-
-    if (syncStats.fetchFailures > 0 && syncStats.fetchFailures >= accounts.length) {
+    if (syncStats.fetchFailures > 0) {
       return {
         error: DxFeedErrorCode.SYNC_FETCH_FAILED,
         errorParams: { failures: syncStats.fetchFailures, total: accounts.length },
@@ -575,17 +650,33 @@ export async function getDxFeedTrades(
 
     if (allTrades.length === 0) {
       logger.info(`No closed trades to save: ${JSON.stringify(syncStats)}`)
+      await updateLastSyncedAt(userId, storedTokenJson)
       return { processedTrades: [], savedCount: 0, tradesCount: 0, syncStats }
     }
 
-    logger.info(`Saving ${allTrades.length} trades...`)
-    const saveResult = await saveTradesAction(allTrades, { userId })
+    const { newTrades, existingCount } = await excludeExistingDxFeedTrades(userId, allTrades)
+    if (existingCount > 0) {
+      logger.info(`Skipping ${existingCount} existing DxFeed trades by import key`)
+    }
+
+    if (newTrades.length === 0) {
+      await updateLastSyncedAt(userId, storedTokenJson)
+      return {
+        processedTrades: allTrades,
+        savedCount: 0,
+        tradesCount: allTrades.length,
+        syncStats,
+      }
+    }
+
+    logger.info(`Saving ${newTrades.length} new DxFeed trades...`)
+    const saveResult = await saveTradesAction(newTrades, { userId })
 
     if (saveResult.error) {
       if (saveResult.error === 'DUPLICATE_TRADES') {
         return {
           error: DxFeedErrorCode.DUPLICATE_TRADES,
-          processedTrades: allTrades,
+          processedTrades: newTrades,
           tradesCount: allTrades.length,
           syncStats,
         }
@@ -594,16 +685,17 @@ export async function getDxFeedTrades(
       return {
         error: DxFeedErrorCode.SAVE_TRADES_FAILED,
         errorParams: { detail: saveResult.error },
-        processedTrades: allTrades,
+        processedTrades: newTrades,
         tradesCount: allTrades.length,
         syncStats,
       }
     }
 
     logger.info(`Saved ${saveResult.numberOfTradesAdded} trades`)
+    await updateLastSyncedAt(userId, storedTokenJson)
 
     return {
-      processedTrades: allTrades,
+      processedTrades: newTrades,
       savedCount: saveResult.numberOfTradesAdded,
       tradesCount: allTrades.length,
       syncStats,

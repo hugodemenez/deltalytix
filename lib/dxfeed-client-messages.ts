@@ -12,6 +12,7 @@ const SUPPORT_HINT_CODES: Set<string> = new Set([
   DxFeedErrorCode.PROP_FIRM_UNSUPPORTED,
   DxFeedErrorCode.PROP_FIRMS_UNAVAILABLE,
   DxFeedErrorCode.HISTORICAL_HOST_UNRESOLVED,
+  DxFeedErrorCode.STORE_TOKEN_FAILED,
 ])
 
 const RECONNECT_HINT_CODES: Set<string> = new Set([
@@ -63,7 +64,7 @@ export function formatDxFeedError(
 
   if (error.startsWith('Authentication failed (')) {
     return translate('dxfeedSync.errors.AUTH_HTTP_ERROR', {
-      detail: error.replace('Authentication failed ', ''),
+      status: 'unknown',
     })
   }
 

@@ -46,6 +46,13 @@ function buildSyncSuccessToast(
         tradesCount,
         accountId: syncLabel,
       }),
+      description:
+        stats && stats.fetchFailures > 0
+          ? translate('dxfeedSync.sync.partialFetchWarning', {
+              failures: stats.fetchFailures,
+              total: stats.tradingAccounts,
+            })
+          : undefined,
     }
   }
 
@@ -175,12 +182,15 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
   }, [normalizeSynchronization, t])
 
   const deleteAccount = useCallback(async (accountId: string) => {
-    setAccounts((prev) => prev.filter((acc) => acc.accountId !== accountId))
-    await fetch('/api/dxfeed/synchronizations', {
+    const response = await fetch('/api/dxfeed/synchronizations', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId }),
     })
+    if (!response.ok) {
+      throw new Error(DxFeedErrorCode.DELETE_SYNC_FAILED)
+    }
+    setAccounts((prev) => prev.filter((acc) => acc.accountId !== accountId))
   }, [])
 
   const performSyncForAccount = useCallback(

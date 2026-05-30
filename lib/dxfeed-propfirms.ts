@@ -72,6 +72,22 @@ export function getDxFeedPropFirmByAuthName(
   )
 }
 
+export function getDxFeedPropFirmByHost(
+  host?: string | null,
+): DxFeedPropFirmDefinition | undefined {
+  if (!host) return undefined
+
+  try {
+    const parsed = new URL(host.startsWith('http') ? host : `https://${host}`)
+    const hostname = parsed.hostname.toLowerCase()
+    return DXFEED_PROP_FIRMS.find(
+      (f) => hostname === f.domain || hostname.endsWith(`.${f.domain}`),
+    )
+  } catch {
+    return undefined
+  }
+}
+
 export function getEnabledDxFeedPropFirms(): DxFeedPropFirmDefinition[] {
   return DXFEED_PROP_FIRMS.filter((f) => f.enabled)
 }
