@@ -52,6 +52,12 @@ Create `.env.local` with:
 
 If you see `Cannot connect to the Docker daemon`, run the same command with `sudo`.
 
+### Docker Compose app service
+
+`docker-compose.yml` defaults `LOCAL_DASHBOARD_AUTH_BYPASS` to `false`. To use bypass mode in Docker, set both vars explicitly before starting the app service:
+
+`LOCAL_DASHBOARD_AUTH_BYPASS=true NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS=true docker compose up -d app`
+
 ### Step C: install dependencies
 
 `bun install`
@@ -67,6 +73,8 @@ If you see `Cannot connect to the Docker daemon`, run the same command with `sud
 ### Step F (optional but recommended): seed deterministic demo data
 
 `bun run seed:self-host`
+
+This script replaces trades and payouts for the local demo account. Use only against local/dev databases.
 
 This creates:
 - local user (`local-dashboard-user`)
@@ -114,7 +122,7 @@ Use this sequence for reproducible deploy prep:
 
 ## 6) Notes
 
-- The local bypass mode is for development/self-host bootstrap. Do not enable it in production.
+- The local bypass mode is for development/self-host bootstrap. Do not enable it in production; the app refuses bypass when `NODE_ENV=production` unless `LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION=1` is set intentionally.
 - If you disable bypass, you must configure Supabase env vars and auth providers.
 - `LOCAL_DASHBOARD_USER_ID` can be changed, but keep it stable per environment so seeded/demo data stays consistent.
 

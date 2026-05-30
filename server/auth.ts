@@ -6,58 +6,13 @@ import { prisma } from '@/lib/prisma'
 import { headers } from "next/headers"
 import { User } from '@supabase/supabase-js'
 import {
+  buildLocalDashboardBypassUser,
   getLocalDashboardUserEmail,
   getLocalDashboardUserId,
   isLocalDashboardAuthBypassEnabled,
 } from '@/lib/local-dashboard-auth'
-
-function buildLocalDashboardBypassUser(): User {
-  const localUserId = getLocalDashboardUserId()
-  const localUserEmail = getLocalDashboardUserEmail()
-  const nowIso = new Date().toISOString()
-
-  return {
-    id: localUserId,
-    email: localUserEmail,
-    aud: 'authenticated',
-    role: 'authenticated',
-    email_confirmed_at: nowIso,
-    phone: '',
-    confirmed_at: nowIso,
-    app_metadata: {
-      provider: 'local-dashboard-bypass',
-      providers: ['local-dashboard-bypass'],
-    },
-    user_metadata: {},
-    identities: [],
-    created_at: nowIso,
-    updated_at: nowIso,
-    is_anonymous: false,
-  } as User
-}
-
-async function ensureLocalDashboardUserInDatabase(): Promise<void> {
-  const localUserId = getLocalDashboardUserId()
-  const localUserEmail = getLocalDashboardUserEmail()
-
-  await prisma.user.upsert({
-    where: { id: localUserId },
-    update: {
-      auth_user_id: localUserId,
-      email: localUserEmail,
-    },
-    create: {
-      id: localUserId,
-      auth_user_id: localUserId,
-      email: localUserEmail,
-      language: 'en',
-    },
-  })
-
-  // Keep local dashboard bootstrap ergonomic by ensuring first-time layout exists.
-  const { createDefaultDashboardLayout } = await import('@/server/database')
-  await createDefaultDashboardLayout(localUserId)
-}
+import { createLocalDashboardBypassAuthStub } from '@/lib/local-dashboard-bypass-client'
+import { ensureLocalDashboardUserInDatabase } from '@/server/local-dashboard-bootstrap'
 
 export async function getWebsiteURL() {
   let url =
@@ -101,12 +56,11 @@ export async function createClient() {
   if (isLocalDashboardAuthBypassEnabled()) {
     await ensureLocalDashboardUserInDatabase()
     const localUser = buildLocalDashboardBypassUser()
+    const sharedAuth = createLocalDashboardBypassAuthStub()
 
     return {
       auth: {
-        async getUser() {
-          return { data: { user: localUser }, error: null }
-        },
+        ...sharedAuth,
         async signInWithOtp() {
           return { error: null }
         },
@@ -124,9 +78,6 @@ export async function createClient() {
         },
         async verifyOtp() {
           return { data: { user: localUser, session: null }, error: null }
-        },
-        async signOut() {
-          return { error: null }
         },
         async signInWithOAuth() {
           return { data: { url: '/dashboard' }, error: null }
