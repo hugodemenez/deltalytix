@@ -16,6 +16,7 @@ import { toast } from "sonner"
 interface AddWidgetSheetProps {
   onAddWidget: (type: WidgetType, size?: WidgetSize) => void
   isCustomizing: boolean
+  compact?: boolean
 }
 
 interface PreviewCardProps {
@@ -122,12 +123,13 @@ const PreviewCard = forwardRef<HTMLDivElement, PreviewCardProps>(
 PreviewCard.displayName = "PreviewCard"
 
 export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>(
-  ({ onAddWidget, isCustomizing }, ref) => {
+  ({ onAddWidget, isCustomizing, compact = false }, ref) => {
     const t = useI18n()
     const { isMobile } = useData()
     const [isOpen, setIsOpen] = React.useState(false)
     const [loadedItems, setLoadedItems] = useState<Set<number>>(new Set())
     const [loadingStarted, setLoadingStarted] = useState(false)
+    const useCompactButton = compact || isMobile
 
     const handleAddWidget = (type: WidgetType) => {
       const config = WIDGET_REGISTRY[type]
@@ -211,11 +213,11 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
             variant="ghost"
             className={cn(
               "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
-              isMobile ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
+              useCompactButton ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
             )}
           >
             <Plus className="h-4 w-4 shrink-0" />
-            {!isMobile && (
+            {!useCompactButton && (
               <span className="text-sm font-medium">
                 {t('widgets.addWidget')}
               </span>

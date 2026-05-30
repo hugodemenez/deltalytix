@@ -24,16 +24,21 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd"
 interface FilterCommandMenuProps {
   className?: string
   variant?: "navbar" | "toolbar"
+  compactBreakpoint?: number
 }
 
-export function FilterCommandMenu({ className, variant = "navbar" }: FilterCommandMenuProps) {
+export function FilterCommandMenu({
+  className,
+  variant = "navbar",
+  compactBreakpoint = 768,
+}: FilterCommandMenuProps) {
   const t = useI18n()
   const { isMobile, dateRange, setDateRange, setWeekdayFilter } = useData()
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [inputWidth, setInputWidth] = useState<number | undefined>(undefined)
   const [isParsingDate, setIsParsingDate] = useState(false)
-  const isMobileDevice = useMediaQuery("(max-width: 768px)")
+  const isMobileDevice = useMediaQuery(`(max-width: ${compactBreakpoint}px)`)
   const inputRef = useRef<HTMLInputElement>(null)
   const commandRef = useRef<HTMLDivElement>(null)
   const dateRangeSectionRef = useRef<HTMLDivElement>(null)
@@ -259,14 +264,14 @@ export function FilterCommandMenu({ className, variant = "navbar" }: FilterComma
     <Button
       variant="outline"
       className={cn(
-        "justify-start text-left font-normal",
-        variant === "toolbar" && "h-10 rounded-full",
+        "justify-start text-left font-normal overflow-hidden",
+        variant === "toolbar" && "h-10 rounded-full max-w-full",
         className
       )}
       onClick={() => setOpen(true)}
     >
       <Search className="h-4 w-4 mr-2" />
-      <span className="text-muted-foreground">{t('filters.commandMenu.placeholder')}</span>
+      <span className="text-muted-foreground truncate">{t('filters.commandMenu.searchPlaceholderMobile')}</span>
     </Button>
   )
 
@@ -305,7 +310,7 @@ export function FilterCommandMenu({ className, variant = "navbar" }: FilterComma
   // Trigger on desktop: real input that opens popover and controls search
   const DesktopTriggerInput = (
     <PopoverAnchor asChild>
-      <div className={cn("relative w-[400px]", className)}>
+      <div className={cn("relative w-full max-w-[400px]", className)}>
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
         <Input
           ref={inputRef}
@@ -549,7 +554,7 @@ export function FilterCommandMenu({ className, variant = "navbar" }: FilterComma
       {DesktopTriggerInput}
       <PopoverContent 
         className="p-0" 
-        style={{ width: inputWidth ? `${inputWidth}px` : '400px' }}
+        style={{ width: inputWidth ? `${inputWidth}px` : 'min(400px, calc(100vw - 2rem))' }}
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
         onInteractOutside={(e) => {

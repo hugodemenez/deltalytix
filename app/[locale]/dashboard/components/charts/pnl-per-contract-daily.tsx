@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
-import { usePnLPerContractDailyStore } from "@/store/pnl-per-contract-daily-store";
+import { usePnLPerContractDailyStore } from "@/store/widgets/pnl-per-contract-daily-store";
 import { formatInTimeZone } from "date-fns-tz";
 import { fr, enUS } from "date-fns/locale";
 import { useUserStore } from "@/store/user-store";

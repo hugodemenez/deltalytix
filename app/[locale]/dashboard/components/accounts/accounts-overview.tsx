@@ -66,7 +66,7 @@ import { useTradesStore } from '@/store/trades-store'
 import { useAccountOrderStore } from '@/store/account-order-store'
 import { useAccountsViewPreferenceStore } from '@/store/accounts-view-preference-store'
 import { useAccountsSortingStore } from '@/store/accounts-sorting-store'
-import { savePayoutAction, removeAccountsFromTradesAction } from '@/server/accounts'
+import { removeAccountsFromTradesAction } from '@/server/accounts'
 import { useModalStateStore } from '@/store/modal-state-store'
 import { SortingState } from "@tanstack/react-table"
 import {
@@ -77,8 +77,6 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-  DragStartEvent,
-  DragMoveEvent,
 } from '@dnd-kit/core'
 import { restrictToHorizontalAxis } from '@dnd-kit/modifiers'
 import {
@@ -93,24 +91,12 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-interface DailyMetric {
-  date: Date
-  pnl: number
-  totalBalance: number
-  percentageOfTarget: number
-  isConsistent: boolean
-  payout?: {
-    id: string
-    amount: number
-    date: Date
-    status: string
-  }
-}
 
 interface Payout {
   date: Date
   amount: number
   status: string
+  propfirmSharingPercentage?: number | null
 }
 
 interface PayoutDialogProps {
@@ -122,6 +108,7 @@ interface PayoutDialogProps {
     date: Date
     amount: number
     status: string
+    propfirmSharingPercentage?: number | null
   }
   onSubmit: (payout: Payout) => Promise<void>
   onDelete?: () => Promise<void>
@@ -160,6 +147,38 @@ function getAccountBalance(account: Account) {
   return account.metrics?.currentBalance ?? account.startingBalance ?? 0
 }
 
+function getAccountLifetimeInMonths(account: Account) {
+  const tradeDates = (account.trades ?? [])
+    .map((trade) => toValidDate(trade.entryDate))
+    .filter((date): date is Date => Boolean(date))
+    .sort((a, b) => a.getTime() - b.getTime())
+
+  if (tradeDates.length === 0) return 0
+
+  const firstTradeDate = tradeDates[0]
+  const lastTradeDate = tradeDates[tradeDates.length - 1]
+  const monthSpan =
+    (lastTradeDate.getFullYear() - firstTradeDate.getFullYear()) * 12 +
+    (lastTradeDate.getMonth() - firstTradeDate.getMonth())
+
+  return Math.max(1, monthSpan + 1)
+}
+
+function isMonthlyPayment(account: Account) {
+  if (account.paymentFrequency === "MONTHLY") return true
+  return (account.isRecursively ?? "").toLowerCase() === "monthly"
+}
+
+function getAccountTotalFee(account: Account) {
+  const lifetimeFee = account.activationFees ?? 0
+  const monthlyPrice = account.price ?? account.priceWithPromo ?? 0
+  const monthlyFee = isMonthlyPayment(account)
+    ? getAccountLifetimeInMonths(account) * monthlyPrice
+    : 0
+
+  return lifetimeFee + monthlyFee
+}
+
 function getAccountSortValue(account: Account, ruleId: string) {
   switch (ruleId) {
     case "account":
@@ -172,6 +191,8 @@ function getAccountSortValue(account: Account, ruleId: string) {
       return account.evaluation === false ? 1 : 0
     case "balance":
       return getAccountBalance(account)
+    case "totalFee":
+      return getAccountTotalFee(account)
     case "targetProgress":
       return account.metrics?.progress ?? 0
     case "drawdown":
@@ -358,6 +379,7 @@ function PayoutDialog({
   const [amount, setAmount] = useState<number>(existingPayout?.amount ?? 0)
   const [inputValue, setInputValue] = useState<string>(existingPayout?.amount?.toString() ?? "")
   const [status, setStatus] = useState<string>(existingPayout?.status ?? 'PENDING')
+  const [propfirmSharingPercentage, setPropfirmSharingPercentage] = useState<number | ''>(existingPayout?.propfirmSharingPercentage ?? '')
   const [dateInputValue, setDateInputValue] = useState<string>("")
   const t = useI18n()
   
@@ -370,6 +392,7 @@ function PayoutDialog({
       setAmount(existingPayout.amount)
       setInputValue(existingPayout.amount.toString())
       setStatus(existingPayout.status)
+      setPropfirmSharingPercentage(existingPayout.propfirmSharingPercentage ?? '')
       setDateInputValue(format(existingPayout.date, 'yyyy-MM-dd'))
     } else {
       const today = new Date()
@@ -377,6 +400,7 @@ function PayoutDialog({
       setAmount(0)
       setInputValue("")
       setStatus('PENDING')
+      setPropfirmSharingPercentage('')
       setDateInputValue(format(today, 'yyyy-MM-dd'))
     }
   }, [existingPayout, open])
@@ -654,6 +678,22 @@ function PayoutDialog({
               ))}
             </div>
           </div>
+
+          {/* Prop Firm Sharing % */}
+          <div className="space-y-2">
+            <Label htmlFor="propfirmSharingPercentage">{t('propFirm.payout.propfirmSharingPercentage')}</Label>
+            <Input
+              id="propfirmSharingPercentage"
+              type="number"
+              min={0}
+              max={100}
+              step={0.5}
+              value={propfirmSharingPercentage}
+              onChange={(e) => setPropfirmSharingPercentage(e.target.value === '' ? '' : parseFloat(e.target.value) ?? '')}
+              placeholder="0-100"
+              disabled={isProcessing}
+            />
+          </div>
         </div>
 
         <SheetFooter className="shrink-0 flex-col-reverse sm:flex-row gap-2 pt-4 border-t mt-auto">
@@ -710,7 +750,15 @@ function PayoutDialog({
             </AlertDialog>
           )}
           <Button
-            onClick={() => onSubmit({ date, amount, status })}
+            onClick={() => {
+              const sharing = propfirmSharingPercentage === '' ? undefined : (typeof propfirmSharingPercentage === 'number' ? propfirmSharingPercentage : parseFloat(String(propfirmSharingPercentage)))
+              onSubmit({
+                date,
+                amount,
+                status,
+                propfirmSharingPercentage: sharing !== undefined && !Number.isNaN(sharing) ? sharing : undefined
+              })
+            }}
             disabled={amount <= 0 || isProcessing}
             size="sm"
             className="w-full sm:w-auto"
@@ -744,7 +792,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const isLoading = useUserStore(state => state.isLoading)
   const groups = useUserStore(state => state.groups)
   const accounts = useUserStore(state => state.accounts)
-  const { accountNumbers, setAccountNumbers, deletePayout, deleteAccount, saveAccount, savePayout } = useData()
+  const { accountNumbers, deletePayout, saveAccount, savePayout } = useData()
   const { getOrderedAccounts, reorderAccounts } = useAccountOrderStore()
   const t = useI18n()
   const params = useParams()
@@ -758,6 +806,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
     date: Date;
     amount: number;
     status: string;
+    propfirmSharingPercentage?: number | null;
   } | undefined>()
   const [isDeleting, setIsDeleting] = useState(false)
   const [canDeleteAccount, setCanDeleteAccount] = useState(false)
@@ -778,6 +827,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       { id: "startDate", label: t("accounts.table.startDate") },
       { id: "funded", label: t("accounts.table.funded") },
       { id: "balance", label: t("accounts.table.balance") },
+      { id: "totalFee", label: t("accounts.table.totalFee") },
       { id: "targetProgress", label: t("accounts.table.targetProgress") },
       { id: "drawdown", label: t("accounts.table.drawdownRemaining") },
       { id: "consistency", label: t("propFirm.card.consistency") },
@@ -983,7 +1033,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
           id: selectedPayout.id, // Use existing payout ID
           accountNumber: selectedAccountForTable.number,
           createdAt: selectedPayout.date, // Keep original creation date
-          accountId: selectedAccountForTable.id
+          accountId: selectedAccountForTable.id,
+          propfirmSharingPercentage: payout.propfirmSharingPercentage ?? 0
         })
       } else {
         // Add new payout
@@ -992,7 +1043,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
           id: '', // Will be generated by the server
           accountNumber: selectedAccountForTable.number,
           createdAt: new Date(),
-          accountId: selectedAccountForTable.id
+          accountId: selectedAccountForTable.id,
+          propfirmSharingPercentage: payout.propfirmSharingPercentage ?? 0
         })
       }
       
@@ -1125,14 +1177,14 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
 
 
   return (
-    <Card className="w-full h-full flex flex-col">
+    <Card className="w-full h-full min-w-0 flex flex-col">
       <CardHeader
         className={cn(
           "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === 'small' ? "p-2 h-10" : "p-3 sm:p-4 h-14"
+          size === 'small' ? "p-2 min-h-10" : "p-3 sm:p-4 min-h-14"
         )}
       >
-        <div className="flex items-center justify-between w-full">
+        <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-1.5">
             <CardTitle
               className={cn(
@@ -1156,18 +1208,18 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
               </UITooltip>
             </TooltipProvider>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setAccountGroupBoardOpen(true)}
               className={cn(
                 "gap-1.5",
-                size === "small" ? "h-7 px-2 text-xs" : "h-8"
+                size === "small" ? "h-7 px-2 text-xs" : "h-8 px-2 sm:px-3"
               )}
             >
               <Settings className="h-3.5 w-3.5" />
-              <span className={cn(size === "small" && "sr-only")}>
+              <span className={cn((size === "small") && "sr-only", "hidden min-[420px]:inline")}>
                 {t("filters.manageAccounts")}
               </span>
             </Button>
@@ -1178,18 +1230,18 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                   size="sm"
                   className={cn(
                     "gap-1.5",
-                    size === "small" ? "h-7 px-2 text-xs" : "h-8"
+                    size === "small" ? "h-7 px-2 text-xs" : "h-8 px-2 sm:px-3"
                   )}
                 >
                   <ListOrdered className="h-3.5 w-3.5" />
-                  <span className={cn(size === "small" && "sr-only")}>
+                  <span className={cn((size === "small") && "sr-only", "hidden min-[420px]:inline")}>
                     {sorting.length > 0
                       ? t("table.sortingRules", { count: sorting.length })
                       : t("table.sorting")}
                   </span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-80 p-3">
+              <PopoverContent align="end" className="w-[calc(100vw-2rem)] max-w-80 p-3">
                 <div className="space-y-3">
                   {sorting.length === 0 ? (
                     <div className="text-sm text-muted-foreground">
@@ -1341,15 +1393,15 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       {/* Unconfigured accounts banner */}
       {(unconfiguredAccounts.length > 0 && !isLoading) && (
         <div className="border-b border-orange-200/30 bg-orange-50/40 dark:border-orange-700/30 dark:bg-orange-950/30">
-          <div className="px-4 py-2 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
+          <div className="px-3 py-2 sm:px-4">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex shrink-0 items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
                 <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
                   {t('propFirm.status.needsConfiguration')}:
                 </span>
               </div>
-              <div className="flex gap-2 overflow-x-auto">
+              <div className="flex min-w-0 gap-2 overflow-x-auto pb-1">
                 {unconfiguredAccounts.map((accountNumber, index) => (
                   <div
                     key={accountNumber}
@@ -1540,24 +1592,26 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
           open={!!selectedAccountForTable}
           onOpenChange={(open) => !open && setSelectedAccountForTable(null)}
         >
-          <DialogContent className="max-w-7xl h-[80vh] flex flex-col overflow-y-auto">
-            <DialogHeader className="pb-4 border-b">
-              <div className="flex items-center justify-between">
-                <div>
+          <DialogContent className="flex h-[92dvh] w-[calc(100vw-1rem)] max-w-7xl flex-col overflow-hidden p-0 sm:h-[85vh] sm:w-[calc(100vw-2rem)] sm:p-6">
+            <DialogHeader className="shrink-0 border-b p-4 pb-4 sm:p-0 sm:pb-4">
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 pr-8 sm:pr-0">
                   <DialogTitle>{t('propFirm.configurator.title', { accountNumber: selectedAccountForTable?.number })}</DialogTitle>
                   <DialogDescription>{t('propFirm.configurator.description')}</DialogDescription>
                 </div>
-                <div className="flex items-center gap-2 pr-4">
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:pr-4">
 
                   <Button
                     variant="default"
                     onClick={handleSave}
                     disabled={pendingChanges === null}
+                    className="min-w-0"
                   >
                     {isSaving ? t('common.saving') : t('common.save')}
                   </Button>
                   <Button
                     variant="outline"
+                    className="min-w-0"
                     onClick={() => {
                       setSelectedPayout(undefined)
                       setPayoutDialogOpen(true)
@@ -1572,6 +1626,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                         variant="destructive"
                         size="sm"
                         disabled={isDeleting || !canDeleteAccount}
+                        className="min-w-0"
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
                         {t('propFirm.common.delete')}
@@ -1599,7 +1654,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
               </div>
             </DialogHeader>
 
-            <div className="p-6 pt-4 flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto p-3 pt-4 sm:p-6 sm:pt-4">
               {selectedAccountForTable && (
                 <Tabs
                   defaultValue={selectedAccountForTable.profitTarget === 0 ? "configurator" : "table"}
@@ -1638,7 +1693,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                           id: payout.id,
                           date: new Date(payout.date),
                           amount: payout.amount,
-                          status: payout.status
+                          status: payout.status,
+                          propfirmSharingPercentage: payout.propfirmSharingPercentage ?? undefined
                         })
                         setPayoutDialogOpen(true)
                       }}

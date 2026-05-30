@@ -29,6 +29,28 @@ export function translateWeekday(t: any, day: string): string {
 }
 
 /**
+ * Translates Tradovate fee type keys safely
+ */
+export function translateTradovateFeeType(t: any, key: string): string {
+  switch (key) {
+    case 'commission':
+      return t('tradovateSync.multiAccount.feeTypes.commission')
+    case 'exchangeFee':
+      return t('tradovateSync.multiAccount.feeTypes.exchangeFee')
+    case 'clearingFee':
+      return t('tradovateSync.multiAccount.feeTypes.clearingFee')
+    case 'nfaFee':
+      return t('tradovateSync.multiAccount.feeTypes.nfaFee')
+    case 'brokerageFee':
+      return t('tradovateSync.multiAccount.feeTypes.brokerageFee')
+    case 'orderRoutingFee':
+      return t('tradovateSync.multiAccount.feeTypes.orderRoutingFee')
+    default:
+      return key
+  }
+}
+
+/**
  * Translates weekday PnL keys safely
  */
 export function translateWeekdayPnL(t: any, day: number): string {

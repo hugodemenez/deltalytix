@@ -1,0 +1,15 @@
+---
+title: 'Sync DxFeed : trades retrouves avec un PnL correct'
+description: 'Corrections des syncs vides, sessions expirees et calcul de commission pour les imports DxFeed.'
+date: '2026-05-25'
+status: completed
+completedDate: '2026-05-25'
+---
+
+# Sync DxFeed : trades retrouves avec un PnL correct
+
+La sync DxFeed utilise desormais le **bon serveur d'historique** pour votre prop firm, ce qui corrige les cas ou la sync tournait mais ne ramenait aucun trade malgre des positions fermees.
+
+Quand votre session expire, la connexion passe en **Expire** et la sync vous invite a **Reconnecter** au lieu d'echouer en silence. Les trades importes enregistrent le **PnL brut** et calculent la **commission** a partir de l'ecart brut/net, pour eviter de compter les frais deux fois dans vos totaux.
+
+La sync signale aussi quand DxFeed ne renvoie que des positions ouvertes—elles sont ignorees tant que vous n'avez pas ferme le trade sur votre plateforme et relance une sync.

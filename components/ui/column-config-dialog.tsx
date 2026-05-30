@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Settings, RotateCcw } from "lucide-react"
 import { useI18n } from '@/locales/client'
-import { useTableConfigStore, TableColumnConfig } from '@/store/table-config-store'
+import { useTableConfigStore, TableColumnConfig } from '@/store/widgets/table-config-store'
 import {
   AlertDialog,
   AlertDialogAction,

@@ -11,7 +11,13 @@ import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from 'framer-motion'
 import { useUserStore } from "@/store/user-store"
 
-export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: boolean }) {
+type ActiveFilterTagsProps = {
+  showAccountNumbers: boolean
+  inline?: boolean
+  className?: string
+}
+
+export function ActiveFilterTags({ showAccountNumbers, inline = false, className }: ActiveFilterTagsProps) {
   const { 
     accountNumbers, 
     instruments, 
@@ -191,13 +197,14 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
     return sortedDays.map(day => getWeekdayName(day)).join(', ')
   }
 
-  const hasActiveFilters = 
-    (accountNumbers?.length || 0) > 0 || 
-    (instruments?.length || 0) > 0 || 
-    (dateRange && (dateRange.from || dateRange.to)) || 
-    (pnlRange && (pnlRange.min !== undefined || pnlRange.max !== undefined)) ||
-    (tagFilter?.tags?.length || 0) > 0 ||
-    (weekdayFilter?.days && weekdayFilter.days.length > 0)
+  const hasActiveFilters =
+    Boolean(dateRange?.from) ||
+    pnlRange?.min !== undefined ||
+    pnlRange?.max !== undefined ||
+    Boolean(weekdayFilter?.days?.length) ||
+    Boolean(accountNumbers?.length) ||
+    Boolean(instruments?.length) ||
+    Boolean(tagFilter?.tags?.length)
 
   if (!hasActiveFilters) {
     return null
@@ -206,17 +213,21 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
   return (
     <motion.div
       key="active-filter-tags"
-      initial={{ height: 0, opacity: 0 }}
-      animate={{ height: "auto", opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
+      initial={inline ? { opacity: 0 } : { height: 0, opacity: 0 }}
+      animate={inline ? { opacity: 1 } : { height: "auto", opacity: 1 }}
+      exit={inline ? { opacity: 0 } : { height: 0, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="border-t border-border/40 bg-background/50 overflow-hidden"
+      className={cn(
+        "overflow-hidden",
+        inline ? "w-full" : "border-t border-border/40 bg-background/50",
+        className
+      )}
     >
-      <div className="px-10 py-2">
+      <div className={cn(inline ? "py-1" : "px-10 py-2")}>
         <div className="relative flex items-center overflow-hidden">
           <div 
             ref={scrollRef}
-            className="flex gap-2 overflow-x-auto whitespace-nowrap no-scrollbar pr-8"
+            className="flex gap-2 overflow-x-auto whitespace-nowrap no-scrollbar pr-8 h-7"
           >
             <AnimatePresence mode="popLayout">
               {/* Date Range Badge */}

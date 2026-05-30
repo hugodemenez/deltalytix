@@ -219,7 +219,8 @@ export function computeAccountMetrics(
           id: payout.id,
           amount: payout.amount,
           date: toDate(payout.date)!,
-          status: payout.status
+          status: payout.status,
+          propfirmSharingPercentage: payout.propfirmSharingPercentage ?? undefined
         } : undefined
       }
     }) as NonNullable<Account['dailyMetrics']>

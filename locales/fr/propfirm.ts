@@ -79,6 +79,7 @@ export default {
                 activationFees: 'Frais d\'Activation',
                 balanceRequired: 'Solde Requis',
                 minTradingDays: 'Jours de Trading Minimum pour Paiement',
+                propfirmSharingPercentage: 'Part Prop Firm %',
                 minPnlToCountAsDay: 'P&L Minimum pour Compter comme Jour',
                 propfirmName: 'Nom de la Prop Firm',
                 nextPaymentDate: 'Prochaine Date de Paiement',
@@ -164,6 +165,7 @@ export default {
             yesterday: 'Hier',
             lastWeek: 'La semaine dernière',
             amount: 'Montant',
+            propfirmSharingPercentage: 'Part Prop Firm %',
             status: 'Statut',
             statuses: {
                 pending: 'En Attente',

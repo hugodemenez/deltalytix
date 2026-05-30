@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSyncContext } from '@/context/sync-context'
 import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CheckCircle2, Info, ChevronDown } from 'lucide-react'
@@ -10,6 +9,7 @@ import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { useNotificationStore } from '@/store/notification'
 import { useI18n } from '@/locales/client'
+import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
 
 interface Notification {
   id: string
@@ -52,8 +52,7 @@ export function RithmicSyncNotifications() {
   })
   const [isComplete, setIsComplete] = useState(false)
   const { isCollapsed, setIsCollapsed } = useNotificationStore()
-  const { rithmic } = useSyncContext()
-  const { isConnected } = rithmic
+  const { isConnected } = useRithmicSyncContext()
   const { lastMessage, accountsProgress, currentAccount, selectedAccounts, processingStats } = useRithmicSyncStore()
 
   // Reset complete state when connection is established

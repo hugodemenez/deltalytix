@@ -6,6 +6,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
 import { connection } from "next/server";
 import { ScrollLockFix } from "@/components/scroll-lock-fix";
+import { getRequestOrigin, siteUrl } from "@/lib/site-url";
+import { headers } from "next/headers";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,20 +20,21 @@ export async function generateMetadata({
 }: Props): Promise<Metadata> {
   const params = searchParams ? await searchParams : undefined;
   const ref = (params?.ref as string) ?? "";
+  const requestHeaders = await headers();
 
   // Build the dynamic image URL (works locally & in production)
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? "https://deltalytix.app";
+  const base = getRequestOrigin(requestHeaders);
   const ogUrl = `${base}/api/og${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`;
 
   return {
     title: "Deltalytix",
     description: "Next generation trading dashboard",
-    metadataBase: new URL("https://deltalytix.app"),
+    metadataBase: new URL(base),
     alternates: {
-      canonical: "https://deltalytix.app",
+      canonical: siteUrl("/", base),
       languages: {
-        "en-US": "https://deltalytix.app",
-        "fr-FR": "https://deltalytix.app/fr",
+        "en-US": siteUrl("/", base),
+        "fr-FR": siteUrl("/fr", base),
       },
     },
     // ---------- OPEN GRAPH ----------
@@ -146,6 +149,89 @@ export default async function RootLayout({
               } catch (e) {
                 // Fail silently to avoid blocking render
               }
+            })();
+          `}
+        </Script>
+
+        <Script id="webmcp-tools" strategy="afterInteractive">
+          {`
+            (function() {
+              var modelContext = navigator.modelContext;
+              if (!modelContext) return;
+
+              var registerTool = modelContext.registerTool || modelContext.provideContext;
+              if (typeof registerTool !== 'function') return;
+
+              var abortController = new AbortController();
+              var publicPages = {
+                home: '/',
+                pricing: '/en/pricing',
+                support: '/en/support',
+                updates: '/en/updates',
+                apiCatalog: '/.well-known/api-catalog',
+                agentSkills: '/.well-known/agent-skills/index.json'
+              };
+
+              function register(definition) {
+                try {
+                  return registerTool.call(modelContext, definition, { signal: abortController.signal });
+                } catch (error) {
+                  try {
+                    return registerTool.call(modelContext, { tools: [definition], signal: abortController.signal });
+                  } catch (_) {
+                    return undefined;
+                  }
+                }
+              }
+
+              register({
+                name: 'deltalytix.discover_resources',
+                description: 'Return public Deltalytix discovery resources for agents.',
+                inputSchema: {
+                  type: 'object',
+                  properties: {},
+                  additionalProperties: false
+                },
+                execute: function() {
+                  return {
+                    resources: {
+                      apiCatalog: new URL('/.well-known/api-catalog', location.origin).toString(),
+                      agentSkills: new URL('/.well-known/agent-skills/index.json', location.origin).toString(),
+                      mcpServerCard: new URL('/.well-known/mcp/server-card.json', location.origin).toString(),
+                      oauthProtectedResource: new URL('/.well-known/oauth-protected-resource', location.origin).toString(),
+                      openidConfiguration: new URL('/.well-known/openid-configuration', location.origin).toString()
+                    }
+                  };
+                }
+              });
+
+              register({
+                name: 'deltalytix.navigate',
+                description: 'Navigate to a public Deltalytix page by key.',
+                inputSchema: {
+                  type: 'object',
+                  properties: {
+                    page: {
+                      type: 'string',
+                      enum: Object.keys(publicPages),
+                      description: 'Public Deltalytix page to open.'
+                    }
+                  },
+                  required: ['page'],
+                  additionalProperties: false
+                },
+                execute: function(input) {
+                  var page = input && input.page;
+                  var path = publicPages[page];
+                  if (!path) {
+                    throw new Error('Unknown Deltalytix page: ' + page);
+                  }
+
+                  var url = new URL(path, location.origin).toString();
+                  location.assign(url);
+                  return { url: url };
+                }
+              });
             })();
           `}
         </Script>

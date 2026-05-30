@@ -33,7 +33,7 @@ interface AccountTableProps {
   resetDate?: Date
   hasPendingChanges?: boolean
   onDeletePayout?: (payoutId: string) => Promise<void>
-  onEditPayout?: (payout: { id: string, amount: number, date: Date, status: string }) => void
+  onEditPayout?: (payout: { id: string, amount: number, date: Date, status: string, propfirmSharingPercentage?: number | null }) => void
 }
 
 export function AccountTable({ 
@@ -64,7 +64,7 @@ export function AccountTable({
     return (
       <div className="space-y-4">
         <div className="rounded-md border">
-          <Table>
+          <Table className="min-w-[760px]">
             {renderTableHeader()}
             <TableBody>
               <TableRow>
@@ -283,14 +283,14 @@ export function AccountTable({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-8">
       {resetDate && metricsBeforeReset.length > 0 && (
         <div>
           <div className="mb-2 text-sm font-medium text-muted-foreground">
             {t('propFirm.beforeReset')}
           </div>
           <div className="rounded-md border">
-            <Table>
+            <Table className="min-w-[760px]">
               {renderTableHeader()}
               <TableBody>
                 {(() => {
@@ -318,12 +318,12 @@ export function AccountTable({
 
       {resetDate && (
         <div className="rounded-md border bg-yellow-100/50 dark:bg-yellow-900/20 p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="font-medium">{t('propFirm.resetDate.label')}</div>
               <div className="text-sm text-muted-foreground">{format(resetDate, 'PP', { locale: dateLocale })}</div>
             </div>
-            <div className="text-right">
+            <div className="sm:text-right">
               <div className="text-sm text-muted-foreground">{t('propFirm.startingBalance')}</div>
               <div className="font-medium">${startingBalance.toFixed(2)}</div>
             </div>
@@ -338,7 +338,7 @@ export function AccountTable({
           </div>
         )}
         <div className="rounded-md border">
-          <Table>
+          <Table className="min-w-[760px]">
             {renderTableHeader()}
             <TableBody>
               {(() => {

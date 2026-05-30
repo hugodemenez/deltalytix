@@ -17,7 +17,7 @@ interface AccountSelectionPopoverProps {
   accountNumbers: string[]
   selectedAccounts: string[]
   onToggleAccount: (accountNumber: string) => void
-  t: any
+  t: (key: string) => string
 }
 
 export const AccountSelectionPopover = React.memo(({ 
@@ -28,8 +28,6 @@ export const AccountSelectionPopover = React.memo(({
 }: AccountSelectionPopoverProps) => {
   const [open, setOpen] = React.useState(false)
   const [searchTerm, setSearchTerm] = React.useState('')
-  
-  const maxAccounts = 10 // Hardcoded for performance
   
   // Filter accounts based on search term
   const filteredAccounts = React.useMemo(() => {
@@ -61,7 +59,7 @@ export const AccountSelectionPopover = React.memo(({
           {t('equity.legend.selectAccounts')}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 h-80 p-4" align="start">
+      <PopoverContent className="h-[min(20rem,var(--radix-popover-content-available-height))] w-[min(24rem,calc(100vw-2rem))] p-4" align="start">
         <div className="space-y-3 h-full flex flex-col">
             <div className="space-y-2">
               <div className="flex items-center justify-between">

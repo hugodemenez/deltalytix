@@ -1,0 +1,13 @@
+---
+title: 'NinjaTrader CSV: correct net PnL and currency parsing'
+description: 'Performance imports no longer double-count commission, and money formats parse more reliably.'
+date: '2026-03-21'
+status: completed
+completedDate: '2026-03-21'
+---
+
+# NinjaTrader CSV: correct net PnL and currency parsing
+
+NinjaTrader’s **Profit** column is already net of costs for that row. The performance CSV importer used to add commission again on top, which inflated trade PnL. It now leaves profit as-is and keeps commission as its own field, matching how NinjaTrader’s cumulative net profit steps work.
+
+Currency parsing also moved into a shared helper that handles US and European number styles, parentheses for negatives, and thousand separators more consistently, so fewer rows silently land at zero.

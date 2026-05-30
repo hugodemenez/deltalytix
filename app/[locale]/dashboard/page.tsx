@@ -132,11 +132,14 @@ export default function Home() {
   }, []);
 
   return (
-    <main ref={mainRef}>
-      <Tabs defaultValue="widgets" className="w-full h-full">
+    <main ref={mainRef} className="overflow-x-hidden">
+      <Tabs defaultValue="widgets" className="w-full h-full pt-(--tabs-height,3rem)">
         {/* Fixed TabsList positioned under navbar */}
-        <div ref={tabsListRef} className="sticky bg-background border-b top-(--navbar-height) z-1">
-          <TabsList className="w-full max-w-none">
+        <div
+          ref={tabsListRef}
+          className="fixed inset-x-0 top-(--navbar-height,5rem) z-30 w-full overflow-x-auto border-b bg-background shadow-xs"
+        >
+          <TabsList className="h-12 w-full min-w-max max-w-none rounded-none bg-muted/70 sm:min-w-0">
             <TabsTrigger value="widgets">
               {t("dashboard.tabs.widgets")}
             </TabsTrigger>
@@ -147,15 +150,15 @@ export default function Home() {
           </TabsList>
         </div>
 
-        <TabsContent value="table" className="h-[calc(100vh-var(--navbar-height)-var(--tabs-height)-16px)] p-4">
+        <TabsContent value="table" className="h-[calc(100dvh-var(--navbar-height)-var(--tabs-height)-16px)] min-w-0 p-2 sm:p-4">
           <TradeTableReview />
         </TabsContent>
 
-        <TabsContent value="accounts" className="flex-1 mt-0">
+        <TabsContent value="accounts" className="flex-1 mt-0 min-w-0">
           <AccountsOverview size="large" />
         </TabsContent>
 
-        <TabsContent value="widgets" className="px-4">
+        <TabsContent value="widgets" className="min-w-0 px-2 sm:px-4">
           <WidgetCanvas />
         </TabsContent>
       </Tabs>

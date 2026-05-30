@@ -1,16 +1,17 @@
 "use client"
 
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
+import { Command, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Label } from "@/components/ui/label"
 import { useI18n } from "@/locales/client"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Settings } from "lucide-react"
 import { useModalStateStore } from "../../../../../store/modal-state-store"
 import { useData } from "@/context/data-provider"
 import { useTradesStore } from "../../../../../store/trades-store"
 import { useUserStore } from "../../../../../store/user-store"
+import { cn } from "@/lib/utils"
 
 
 interface AccountFilterProps {
@@ -107,12 +108,13 @@ export function AccountFilter({ showAccountNumbers, className }: AccountFilterPr
       accountNumbers.includes(account.number)
     )
     
-    setAccountNumbers(prev => 
-      allAvailableSelected ? [] : availableAccounts.map(i => i.number)
-    )
+    setAccountNumbers(allAvailableSelected ? [] : availableAccounts.map(i => i.number))
   }
 
-  const isItemDisabled = (item: Account | TradeAccount) => false
+  const isItemDisabled = (_item: Account | TradeAccount) => {
+    void _item
+    return false
+  }
 
   const isItemSelected = (item: Account | TradeAccount): boolean => {
     return accountNumbers.includes(item.number)
@@ -145,7 +147,7 @@ export function AccountFilter({ showAccountNumbers, className }: AccountFilterPr
   }
 
   return (
-    <div className="space-y-2">
+    <div className={cn("space-y-2", className)}>
       <Label className="text-sm font-medium">{t('filters.accounts')}</Label>
       <Command className="rounded-lg border" shouldFilter={false}>
         <div className="border-b">
@@ -157,7 +159,7 @@ export function AccountFilter({ showAccountNumbers, className }: AccountFilterPr
           />
         </div>
         <CommandList>
-          <ScrollArea className="h-[300px]">
+          <ScrollArea className="h-[min(300px,calc(100dvh-12rem))]">
             <CommandGroup>
               <CommandItem
                 onSelect={() => setAccountGroupBoardOpen(true)}

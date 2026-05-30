@@ -29,6 +29,7 @@ type AccountGroupRow = {
   summary: {
     totalBalance: number
     totalPayouts: number
+    totalFee: number
     totalRemainingToTarget: number
     totalRemainingLoss: number
     averageProgress: number
@@ -76,6 +77,38 @@ function getAccountStartDate(account: Account) {
   return dailyDates[0] ?? null
 }
 
+function getAccountLifetimeInMonths(account: Account) {
+  const tradeDates = (account.trades ?? [])
+    .map((trade) => toValidDate(trade.entryDate))
+    .filter((date): date is Date => Boolean(date))
+    .sort((a, b) => a.getTime() - b.getTime())
+
+  if (tradeDates.length === 0) return 0
+
+  const firstTradeDate = tradeDates[0]
+  const lastTradeDate = tradeDates[tradeDates.length - 1]
+  const monthSpan =
+    (lastTradeDate.getFullYear() - firstTradeDate.getFullYear()) * 12 +
+    (lastTradeDate.getMonth() - firstTradeDate.getMonth())
+
+  return Math.max(1, monthSpan + 1)
+}
+
+function isMonthlyPayment(account: Account) {
+  if (account.paymentFrequency === "MONTHLY") return true
+  return (account.isRecursively ?? "").toLowerCase() === "monthly"
+}
+
+function getAccountTotalFee(account: Account) {
+  const lifetimeFee = account.activationFees ?? 0
+  const monthlyPrice = account.price ?? account.priceWithPromo ?? 0
+  const monthlyFee = isMonthlyPayment(account)
+    ? getAccountLifetimeInMonths(account) * monthlyPrice
+    : 0
+
+  return lifetimeFee + monthlyFee
+}
+
 function isGroupRow(row: AccountRow): row is AccountGroupRow {
   return "kind" in row && row.kind === "group"
 }
@@ -87,9 +120,15 @@ function getAccountBalance(account: Account) {
 function getAccountTotalPayouts(account: Account) {
   return (account.payouts ?? [])
     .filter((payout) => payout.status === "PAID" || payout.status === "VALIDATED")
-    .reduce((sum, payout) => sum + payout.amount, 0)
+    .reduce(
+      (sum, payout) => {
+        const propfirmSharingPercentage = payout.propfirmSharingPercentage ?? 0
+        return sum + payout.amount * (1 - propfirmSharingPercentage/100)
+      },
+      0
+    )
 }
-
+  
 function getAccountsSummary(accounts: Account[]) {
   const summary = accounts.reduce(
     (acc, account) => {
@@ -97,6 +136,7 @@ function getAccountsSummary(accounts: Account[]) {
       const metrics = account.metrics
       acc.totalBalance += currentBalance
       acc.totalPayouts += getAccountTotalPayouts(account)
+      acc.totalFee += getAccountTotalFee(account)
       if (metrics?.isConfigured) {
         acc.totalRemainingToTarget += metrics.remainingToTarget ?? 0
         acc.totalRemainingLoss += metrics.remainingLoss ?? 0
@@ -109,6 +149,7 @@ function getAccountsSummary(accounts: Account[]) {
     {
       totalBalance: 0,
       totalPayouts: 0,
+      totalFee: 0,
       totalRemainingToTarget: 0,
       totalRemainingLoss: 0,
       totalProgress: 0,
@@ -120,6 +161,7 @@ function getAccountsSummary(accounts: Account[]) {
   return {
     totalBalance: summary.totalBalance,
     totalPayouts: summary.totalPayouts,
+    totalFee: summary.totalFee,
     totalRemainingToTarget: summary.totalRemainingToTarget,
     totalRemainingLoss: summary.totalRemainingLoss,
     averageProgress:
@@ -298,6 +340,12 @@ function AccountsTableSection({
             ${summary.summary.totalPayouts.toFixed(2)}
           </div>
         )
+      case "totalFee":
+        return (
+          <div className="text-right font-semibold">
+            ${summary.summary.totalFee.toFixed(2)}
+          </div>
+        )
       case "drawdown":
         return (
           <div className="text-right text-sm text-muted-foreground">
@@ -316,91 +364,94 @@ function AccountsTableSection({
   }
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       <div className="overflow-x-auto" ref={tableWrapperRef}>
-        <table className="w-full border-separate border-spacing-0 text-sm">
-        <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b [&_tr]:border-b">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr
-              key={headerGroup.id}
-              className="border-b transition-colors hover:bg-muted/50"
-            >
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l align-middle text-muted-foreground"
-                  style={{ width: header.getSize() }}
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
+        <table
+          className="w-full border-separate border-spacing-0 text-sm"
+          style={{ minWidth: table.getTotalSize() }}
+        >
+          <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b [&_tr]:border-b">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr
+                key={headerGroup.id}
+                className="border-b transition-colors hover:bg-muted/50"
+              >
+                {headerGroup.headers.map((header) => (
+                  <th
+                    key={header.id}
+                    className="whitespace-nowrap px-2 py-2 text-left text-xs font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l align-middle text-muted-foreground sm:px-3 sm:text-sm"
+                    style={{ width: header.getSize() }}
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
                         header.column.columnDef.header,
                         header.getContext()
                       )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody className="bg-background [&_tr:last-child]:border-0">
-          {displayRows.map((entry, rowIndex) => {
-            if (entry.type === "summary") {
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody className="bg-background [&_tr:last-child]:border-0">
+            {displayRows.map((entry, rowIndex) => {
+              if (entry.type === "summary") {
+                return (
+                  <tr
+                    key={entry.summary.id}
+                    className="border-b border-border bg-muted/50 font-semibold"
+                  >
+                    {table.getVisibleLeafColumns().map((column) => (
+                      <td
+                        key={`${entry.summary.id}-${column.id}`}
+                        className="px-2 py-2 text-xs border-r border-border/50 last:border-r-0 first:border-l align-middle sm:px-3 sm:text-sm"
+                        style={{ width: column.getSize() }}
+                      >
+                        {renderSummaryCell(column.id, entry.summary)}
+                      </td>
+                    ))}
+                  </tr>
+                )
+              }
+
+              const row = entry.row
               return (
                 <tr
-                  key={entry.summary.id}
-                className="border-b border-border bg-muted/50 font-semibold"
+                  key={row.id}
+                  className={cn(
+                    "border-b border-border transition-all duration-75 hover:bg-muted/40",
+                    rowIndex % 2 === 1 && "bg-muted/20",
+                    row.getCanExpand() && "bg-muted/30 font-medium",
+                    isDrawdownBreached(row.original) && "opacity-50",
+                    (row.getCanExpand() || row.depth > 0) && "cursor-pointer"
+                  )}
+                  onClick={() => {
+                    if (row.getCanExpand()) {
+                      row.toggleExpanded()
+                    } else if (!isGroupRow(row.original)) {
+                      onSelectAccount(row.original)
+                    }
+                  }}
                 >
-                  {table.getVisibleLeafColumns().map((column) => (
+                  {row.getVisibleCells().map((cell) => (
                     <td
-                      key={`${entry.summary.id}-${column.id}`}
-                      className="px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l align-middle"
-                      style={{ width: column.getSize() }}
+                      key={cell.id}
+                      className={cn(
+                        "px-2 py-2 text-xs border-r border-border/50 last:border-r-0 first:border-l align-middle sm:px-3 sm:text-sm",
+                        row.depth > 0 && cell.column.id === "account" && "pl-6"
+                      )}
+                      style={{ width: cell.column.getSize() }}
                     >
-                      {renderSummaryCell(column.id, entry.summary)}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </td>
                   ))}
                 </tr>
               )
-            }
-
-            const row = entry.row
-            return (
-              <tr
-                key={row.id}
-                className={cn(
-                  "border-b border-border transition-all duration-75 hover:bg-muted/40",
-                  rowIndex % 2 === 1 && "bg-muted/20",
-                  row.getCanExpand() && "bg-muted/30 font-medium",
-                  isDrawdownBreached(row.original) && "opacity-50",
-                  (row.getCanExpand() || row.depth > 0) && "cursor-pointer"
-                )}
-                onClick={() => {
-                  if (row.getCanExpand()) {
-                    row.toggleExpanded()
-                  } else if (!isGroupRow(row.original)) {
-                    onSelectAccount(row.original)
-                  }
-                }}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <td
-                    key={cell.id}
-                    className={cn(
-                      "px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l align-middle",
-                      row.depth > 0 && cell.column.id === "account" && "pl-6"
-                    )}
-                    style={{ width: cell.column.getSize() }}
-                  >
-                    {flexRender(
-                      cell.column.columnDef.cell,
-                      cell.getContext()
-                    )}
-                  </td>
-                ))}
-              </tr>
-            )
-          })}
-        </tbody>
+            })}
+          </tbody>
         </table>
       </div>
       {showScrollHint && (
@@ -599,11 +650,11 @@ export function AccountsTableView({
           const a = isGroupRow(rowA.original)
             ? Number.POSITIVE_INFINITY
             : getAccountStartDate(rowA.original)?.getTime() ??
-              Number.POSITIVE_INFINITY
+            Number.POSITIVE_INFINITY
           const b = isGroupRow(rowB.original)
             ? Number.POSITIVE_INFINITY
             : getAccountStartDate(rowB.original)?.getTime() ??
-              Number.POSITIVE_INFINITY
+            Number.POSITIVE_INFINITY
           return a - b
         },
         size: 140,
@@ -727,6 +778,37 @@ export function AccountsTableView({
         size: 140,
       },
       {
+        id: "totalFee",
+        accessorFn: (row) =>
+          isGroupRow(row) ? row.summary.totalFee : getAccountTotalFee(row),
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("accounts.table.totalFee")}
+          />
+        ),
+        cell: ({ row }) => {
+          const totalFee = isGroupRow(row.original)
+            ? row.original.summary.totalFee
+            : getAccountTotalFee(row.original)
+          return (
+            <div className="text-right font-medium">
+              ${totalFee.toFixed(2)}
+            </div>
+          )
+        },
+        sortingFn: (rowA, rowB) => {
+          const a = isGroupRow(rowA.original)
+            ? rowA.original.summary.totalFee
+            : getAccountTotalFee(rowA.original)
+          const b = isGroupRow(rowB.original)
+            ? rowB.original.summary.totalFee
+            : getAccountTotalFee(rowB.original)
+          return a - b
+        },
+        size: 140,
+      },
+      {
         id: "targetProgress",
         accessorFn: (row) =>
           isGroupRow(row)
@@ -826,15 +908,15 @@ export function AccountsTableView({
                   remainingLoss > (row.original.drawdownThreshold ?? 0) * 0.5
                     ? "text-success"
                     : remainingLoss >
-                        (row.original.drawdownThreshold ?? 0) * 0.2
+                      (row.original.drawdownThreshold ?? 0) * 0.2
                       ? "text-warning"
                       : "text-destructive"
                 )}
               >
                 {remainingLoss > 0
                   ? t("propFirm.card.remainingLoss", {
-                      amount: remainingLoss.toFixed(2),
-                    })
+                    amount: remainingLoss.toFixed(2),
+                  })
                   : t("propFirm.card.drawdownBreached")}
               </span>
             </div>

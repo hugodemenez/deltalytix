@@ -98,7 +98,10 @@ export default function UserMenu() {
             <SubscriptionBadge className="absolute -bottom-1 -right-1 px-1 py-0 text-[10px] leading-3" />
           </div>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56">
+        <DropdownMenuContent
+          align="end"
+          className="max-h-[min(var(--radix-dropdown-menu-content-available-height),calc(100dvh-1rem))] w-56 overflow-y-auto overscroll-contain"
+        >
           <DropdownMenuLabel>{t('dashboard.myAccount')}</DropdownMenuLabel>
           <div className="px-2 py-1.5 text-sm text-muted-foreground">
             {user?.email}
@@ -164,7 +167,7 @@ export default function UserMenu() {
               <span className="ml-2">{t('landing.navbar.toggleTheme')}</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
-              <DropdownMenuSubContent className="w-[200px]">
+              <DropdownMenuSubContent className="max-h-[min(var(--radix-dropdown-menu-content-available-height),calc(100dvh-1rem))] w-[200px] overflow-y-auto overscroll-contain">
                 <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
                   <DropdownMenuRadioItem value="light">
                     <Sun className="mr-2 h-4 w-4" />
@@ -203,8 +206,8 @@ export default function UserMenu() {
               <span>{t('dashboard.language')}</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
-              <DropdownMenuSubContent>
-                <ScrollArea className="h-[64px]">
+              <DropdownMenuSubContent className="max-h-[min(var(--radix-dropdown-menu-content-available-height),calc(100dvh-1rem))] overflow-y-auto overscroll-contain">
+                <ScrollArea className="max-h-32">
                   <DropdownMenuRadioGroup value={currentLocale}>
                     {languages.map((lang) => (
                       <DropdownMenuRadioItem
@@ -228,8 +231,8 @@ export default function UserMenu() {
               <span>{t('dashboard.timezone')}</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
-              <DropdownMenuSubContent>
-                <ScrollArea className="h-[40px] sm:h-[120px]">
+              <DropdownMenuSubContent className="max-h-[min(var(--radix-dropdown-menu-content-available-height),calc(100dvh-1rem))] overflow-y-auto overscroll-contain">
+                <ScrollArea className="max-h-64">
                   <DropdownMenuRadioGroup value={timezone} onValueChange={setTimezone}>
                     {timezones.map((tz) => (
                       <DropdownMenuRadioItem key={tz} value={tz}>

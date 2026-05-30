@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
-import pg from "pg"
 import { Resend } from 'resend'
 import { headers } from 'next/headers'
 
-const pool = new pg.Pool({
+const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
 })
 
-const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -69,7 +67,6 @@ export async function GET(req: Request) {
         { status: 200 }
       )
     }
-
 
     // Process subscribers in batches of 100 (Resend's batch limit)
     const batchSize = 100

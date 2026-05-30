@@ -1,14 +1,12 @@
 import { PrismaClient } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import pg from 'pg'
 import { NextRequest, NextResponse } from 'next/server'
 
 // Create a new PrismaClient instance for this API route
-const pool = new pg.Pool({
+const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
 })
 
-const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
 
 // Common authentication function to use across all methods

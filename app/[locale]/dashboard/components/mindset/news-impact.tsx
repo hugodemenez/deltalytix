@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ImportanceFilter } from "@/app/[locale]/dashboard/components/importance-filter"
 import { useNewsFilterStore } from "@/store/filters/news-filter-store"
 import { CountryFilter } from "@/components/country-filter"
-import { useFinancialEventsStore } from "../../../../../store/financial-events-store"
+import { useFinancialEventsStore } from "../../../../../store/widgets/financial-events-store"
 
 interface NewsImpactProps {
   onNext: () => void

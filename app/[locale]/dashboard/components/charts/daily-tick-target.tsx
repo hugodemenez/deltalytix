@@ -26,7 +26,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { useI18n } from "@/locales/client"
 import { useData } from "@/context/data-provider"
-import { useDailyTickTargetStore } from "@/store/daily-tick-target-store"
+import { useDailyTickTargetStore } from "@/store/widgets/daily-tick-target-store"
 import { useTickDetailsStore } from "@/store/tick-details-store"
 import { useEffect, useState } from "react"
 

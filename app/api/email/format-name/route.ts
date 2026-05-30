@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
-import pg from "pg"
 import { openai } from "@ai-sdk/openai"
 import { generateText, Output } from "ai"
 import { z } from "zod"
 
-const pool = new pg.Pool({
+const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
 })
 
-const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
 
 // Schema for the AI response

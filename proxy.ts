@@ -3,15 +3,94 @@ import { createI18nMiddleware } from "next-international/middleware"
 import { createServerClient } from "@supabase/ssr"
 import { geolocation } from "@vercel/functions"
 import { User } from "@supabase/supabase-js"
+import {
+  homepageMarkdown,
+  linkHeaderValue,
+} from "@/lib/agent-discovery/metadata"
 
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
+const LOCALES = ["en", "fr", "de", "es", "it", "pt", "vi", "hi", "ja", "zh", "yo"]
 
 const I18nMiddleware = createI18nMiddleware({
-  locales: ["en", "fr", "de", "es", "it", "pt", "vi", "hi", "ja", "zh", "yo"],
+  locales: LOCALES,
   defaultLocale: "en",
   urlMappingStrategy: "rewrite",
 })
+
+const HOMEPAGE_PATHS = new Set([
+  "/",
+  "/en",
+  "/fr",
+  "/de",
+  "/es",
+  "/it",
+  "/pt",
+  "/vi",
+  "/hi",
+  "/ja",
+  "/zh",
+  "/yo",
+])
+
+function isHomepage(pathname: string) {
+  return HOMEPAGE_PATHS.has(pathname.replace(/\/$/, "") || "/")
+}
+
+function withoutLocale(pathname: string) {
+  const segments = pathname.split("/")
+  const locale = segments[1]
+
+  if (LOCALES.includes(locale)) {
+    return `/${segments.slice(2).join("/")}`.replace(/\/$/, "") || "/"
+  }
+
+  return pathname.replace(/\/$/, "") || "/"
+}
+
+function isProtectedDashboardPath(pathname: string) {
+  const normalizedPathname = withoutLocale(pathname)
+
+  return (
+    normalizedPathname === "/dashboard" ||
+    normalizedPathname.startsWith("/dashboard/") ||
+    normalizedPathname === "/teams/dashboard" ||
+    normalizedPathname.startsWith("/teams/dashboard/")
+  )
+}
+
+function acceptsMarkdown(request: NextRequest) {
+  return request.headers
+    .get("accept")
+    ?.split(",")
+    .some((value) => value.trim().toLowerCase().startsWith("text/markdown"))
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown error"
+}
+
+function errorIncludes(error: unknown, text: string) {
+  return errorMessage(error).includes(text)
+}
+
+function normalizeSameSite(
+  sameSite: boolean | "lax" | "strict" | "none" | undefined,
+) {
+  if (sameSite === "lax" || sameSite === "strict" || sameSite === "none") {
+    return sameSite
+  }
+
+  return undefined
+}
+
+function addAgentDiscoveryHeaders(response: NextResponse, request: NextRequest) {
+  if (isHomepage(request.nextUrl.pathname)) {
+    response.headers.set("link", linkHeaderValue())
+  }
+
+  return response
+}
 
 async function updateSession(request: NextRequest) {
   // Create a proper NextResponse first
@@ -52,16 +131,17 @@ async function updateSession(request: NextRequest) {
     const authPromise = supabase.auth.getUser()
     const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Auth timeout")), 5000))
 
-    const result = (await Promise.race([authPromise, timeoutPromise])) as any
+    const result = await Promise.race([
+      authPromise,
+      timeoutPromise,
+    ]) as Awaited<ReturnType<typeof supabase.auth.getUser>>
     user = result.data?.user || null
     error = result.error
-  } catch (authError: any) {
+  } catch (authError: unknown) {
     // Handle JSON parsing errors from Supabase API (when API returns HTML instead of JSON)
     if (
-      authError?.message?.includes('Unexpected token') ||
-      authError?.message?.includes('is not valid JSON') ||
-      authError?.originalError?.message?.includes('Unexpected token') ||
-      authError?.originalError?.message?.includes('is not valid JSON')
+      errorIncludes(authError, 'Unexpected token') ||
+      errorIncludes(authError, 'is not valid JSON')
     ) {
       console.error("[Proxy] Supabase API returned non-JSON response:", authError)
       // Don't throw - gracefully handle auth failures by treating as unauthenticated
@@ -83,7 +163,7 @@ async function updateSession(request: NextRequest) {
   } else {
     response.headers.set("x-auth-status", "unauthenticated")
     if (error) {
-      response.headers.set("x-auth-error", (error as any).message || "Unknown error")
+      response.headers.set("x-auth-error", errorMessage(error))
     }
   }
 
@@ -93,10 +173,23 @@ async function updateSession(request: NextRequest) {
 export default async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname
 
+  if (isHomepage(pathname) && acceptsMarkdown(req)) {
+    const markdown = homepageMarkdown(req)
+
+    return new NextResponse(markdown, {
+      headers: {
+        "content-type": "text/markdown; charset=utf-8",
+        "x-markdown-tokens": String(markdown.split(/\s+/).filter(Boolean).length),
+        link: linkHeaderValue(),
+      },
+    })
+  }
+
   // More specific static asset exclusions - must be first!
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/") ||
+    pathname === "/docs/api" ||
     pathname.includes(".") ||
     pathname.includes("/videos/") ||
     pathname === "/favicon.ico" ||
@@ -132,13 +225,13 @@ export default async function proxy(req: NextRequest) {
     // If embedding from a local file (file://), omit CSP entirely so browsers don't block
     if (isLocalFile) {
       response.headers.delete('Content-Security-Policy');
-      return response;
+      return addAgentDiscoveryHeaders(response, req);
     }
 
     // Development: omit CSP entirely to prevent frame-ancestors blocking during local testing
     if (isDev) {
       response.headers.delete('Content-Security-Policy');
-      return response;
+      return addAgentDiscoveryHeaders(response, req);
     }
 
     // Production CSP - more restrictive
@@ -166,7 +259,7 @@ export default async function proxy(req: NextRequest) {
       "form-action 'self';"
     );
     
-    return response;
+    return addAgentDiscoveryHeaders(response, req);
   }
   // Merge responses - copy headers from auth response to i18n response
   authResponse.headers.forEach((value, key) => {
@@ -181,12 +274,12 @@ export default async function proxy(req: NextRequest) {
       expires: cookie.expires,
       httpOnly: cookie.httpOnly,
       secure: cookie.secure,
-      sameSite: cookie.sameSite as any,
+      sameSite: normalizeSameSite(cookie.sameSite),
     })
   })
 
   // Maintenance mode check
-  if (MAINTENANCE_MODE && !pathname.includes("/maintenance") && pathname.includes("/dashboard")) {
+  if (MAINTENANCE_MODE && !pathname.includes("/maintenance") && isProtectedDashboardPath(pathname)) {
     return NextResponse.redirect(new URL("/maintenance", req.url))
   }
 
@@ -206,7 +299,7 @@ export default async function proxy(req: NextRequest) {
 
   // Authentication checks with better error handling
   if (!user || error) {
-    const isPublicRoute = !pathname.includes("/dashboard")
+    const isPublicRoute = !isProtectedDashboardPath(pathname)
     if (!isPublicRoute) {
       const encodedSearchParams = `${pathname.substring(1)}${req.nextUrl.search}`
       const authUrl = new URL("/authentication", req.url)
@@ -252,7 +345,7 @@ export default async function proxy(req: NextRequest) {
     if (geo.countryRegion) {
       response.headers.set("x-user-region", encodeURIComponent(geo.countryRegion))
     }
-  } catch (geoError) {
+  } catch {
     // Fallback to Vercel headers
     const country = req.headers.get("x-vercel-ip-country")
     const city = req.headers.get("x-vercel-ip-city")
@@ -271,7 +364,7 @@ export default async function proxy(req: NextRequest) {
     if (region) response.headers.set("x-user-region", encodeURIComponent(region))
   }
 
-  return response
+  return addAgentDiscoveryHeaders(response, req)
 }
 
 export const config = {

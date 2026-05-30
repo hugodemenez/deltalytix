@@ -179,10 +179,14 @@ async function performDailySync(synchronization: any): Promise<boolean> {
     console.log(`[CRON] Performing daily sync for account ${synchronization.accountId}`);
     
     // Dynamically import the getTradovateTrades action to avoid circular dependencies
-    const { getTradovateTrades } = await import('@/app/[locale]/dashboard/components/import/tradovate/actions');
+    const { getTradovateTrades } = await import('@/app/[locale]/dashboard/components/import/tradovate/sync/actions');
     
-    // Fetch and save trades
-    const result = await getTradovateTrades(synchronization.token, { userId: synchronization.userId });
+    // Use account-level fee config from DB (includedFeeTypes on sync record)
+    const includedFeeTypes = synchronization.includedFeeTypes as Record<string, boolean> | null | undefined
+    const result = await getTradovateTrades(synchronization.token, {
+      userId: synchronization.userId,
+      includedFeeTypes: includedFeeTypes ?? undefined,
+    });
     
     if (result.error) {
       console.error(`[CRON] Failed to sync trades for account ${synchronization.accountId}:`, result.error);

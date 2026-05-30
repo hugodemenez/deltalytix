@@ -211,6 +211,35 @@ export async function deleteShared(slug: string, userId: string) {
   }
 }
 
+export async function updateSharedAccountNumbers(slug: string, userId: string, accountNumbers: string[]) {
+  try {
+    const shared = await prisma.shared.findUnique({
+      where: { slug },
+    })
+
+    if (!shared || shared.userId !== userId) {
+      throw new Error('Unauthorized')
+    }
+
+    const normalizedAccountNumbers = Array.from(
+      new Set(accountNumbers.map(account => account.trim()).filter(Boolean))
+    )
+
+    const updatedShared = await prisma.shared.update({
+      where: { slug },
+      data: {
+        accountNumbers: normalizedAccountNumbers,
+      },
+    })
+
+    revalidatePath('/shared/[slug]', 'page')
+    return updatedShared
+  } catch (error) {
+    console.error('Error updating shared account numbers:', error)
+    throw error
+  }
+}
+
 // Helper function to generate a unique slug
 function generateSlug(length = 10): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'

@@ -1,0 +1,15 @@
+---
+title: 'Dashboard tabs and toolbar on small screens'
+description: 'Tabs stay under the header with smoother scrolling, and the bottom toolbar wraps instead of crowding the edges.'
+date: '2026-05-02'
+status: completed
+completedDate: '2026-05-02'
+---
+
+# Dashboard tabs and toolbar on small screens
+
+The **Widgets**, **Table**, and **Accounts** strip is now **fixed** just below the top bar, with its own horizontal scroll when labels do not all fit. That keeps switching tabs one tap away without the strip drifting away as you scroll your layout.
+
+The **navbar** uses tighter side padding on phones and sits above the tab bar more reliably, so nothing feels clipped behind other layers.
+
+The **floating toolbar** (edit layout, share, add widget, search) was reworked for **narrow windows and phones**: it can **wrap** into multiple rows, respects the screen width with padding, and switches **Edit**, **Share**, and **Add widget** to **icon-only** buttons when space is tight—similar to a small laptop width around 1100px. The **filter** control can stretch across the row so the placeholder text truncates cleanly instead of forcing the whole bar off-screen. If you use **auto-hide** on the toolbar, reveal logic now uses the real toolbar width so edge-hover still feels right.

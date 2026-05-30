@@ -10,7 +10,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { toast } from 'sonner'
 import { RithmicSyncFeedback } from './rithmic-sync-progress'
-import { useSyncContext } from '@/context/sync-context'
 import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 import { saveRithmicData, getRithmicData, clearRithmicData, generateCredentialId, getAllRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
 import { RithmicCredentialsManager } from './rithmic-credentials-manager'
@@ -18,6 +17,7 @@ import { useI18n } from '@/locales/client'
 import Image from 'next/image'
 import { useUserStore } from '@/store/user-store'
 import { setRithmicSynchronization } from './actions'
+import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
 
 interface RithmicCredentials {
   username: string
@@ -33,7 +33,6 @@ interface RithmicSyncConnectionProps {
 
 export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps) {
   const user = useUserStore(state => state.user)
-  const { rithmic } = useSyncContext()
   const { 
     connect, 
     disconnect, 
@@ -41,7 +40,7 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
     handleMessage,
     authenticateAndGetAccounts,
     calculateStartDate
-  } = rithmic
+  } = useRithmicSyncContext()
   
   const {
     selectedAccounts,

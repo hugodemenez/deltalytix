@@ -46,9 +46,10 @@ interface ShareButtonProps {
   variant?: "ghost" | "outline" | "secondary"
   size?: "default" | "sm" | "lg" | "icon"
   currentLayout?: {
-    desktop: Array<Record<string, unknown>>
-    mobile: Array<Record<string, unknown>>
+    desktop: any[]
+    mobile: any[]
   }
+  compact?: boolean
 }
 
 // Map each chart widget type to an existing translation key so PDF chart
@@ -130,7 +131,7 @@ function triggerConfetti() {
 }
 
 export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
-  ({ variant = "ghost", size = "icon", currentLayout }, ref) => {
+  ({ variant = "ghost", size = "icon", currentLayout, compact = false }, ref) => {
     const t = useI18n()
     const locale = useCurrentLocale()
     const dateLocale = locale === 'fr' ? fr : undefined
@@ -145,6 +146,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const [showManager, setShowManager] = useState(false)
     const [shareTitle, setShareTitle] = useState("")
     const [shareAllAccounts, setShareAllAccounts] = useState(true)
+    const useCompactButton = compact || isMobile
 
     // Get the earliest and latest trade dates
     const defaultDateRange = useMemo(() => {
@@ -723,11 +725,11 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
             size={size}
             className={cn(
               "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
-              isMobile ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
+              useCompactButton ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
             )}
           >
             <Share className="h-4 w-4 shrink-0" />
-            {!isMobile && (
+            {!useCompactButton && (
               <span className="text-sm font-medium">
                 {t("share.button")}
               </span>

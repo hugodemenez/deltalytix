@@ -78,8 +78,8 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
 
   return (
     <div className="flex flex-col h-full">
-      <div className="grid md:grid-cols-2 gap-6 h-full min-h-0 p-2">
-        <div className="h-full min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,7fr)] gap-4 lg:gap-6 h-full min-h-0 p-2 min-w-0">
+        <div className="h-[min(42vh,22rem)] lg:h-full min-h-0 min-w-0 shrink-0">
           <Command className="border rounded-lg h-full">
             <div className="flex flex-col h-full">
               <CommandInput 
@@ -128,20 +128,18 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
           </Command>
         </div>
 
-        <div className="h-full min-h-0 overflow-y-auto">
-          {/* <ScrollArea className="h-full"> */}
+        <div className="h-full min-h-0 min-w-0 overflow-y-auto overflow-x-hidden">
             {selectedType !== '' && selectedPlatform && (
               selectedPlatform.customComponent ? (
-                <div className="h-full pr-4">
+                <div className="h-full min-w-0 w-full">
                   {selectedPlatform.customComponent && <selectedPlatform.customComponent setIsOpen={setIsOpen} />}
                 </div>
               ) : (
-                <div className="pr-4">
+                <div className="min-w-0 w-full pr-0 lg:pr-1">
                   <PlatformTutorial selectedPlatform={selectedPlatform} setIsOpen={setIsOpen} />
                 </div>
               )
             )}
-          {/* </ScrollArea> */}
         </div>
       </div>
     </div>

@@ -1,0 +1,13 @@
+---
+title: "Widget courbe d'equity : chargement corrigé"
+description: "La courbe d'equity sur le tableau de bord s'affiche à nouveau quand le widget est présent."
+date: '2026-05-19'
+status: completed
+completedDate: '2026-05-19'
+---
+
+# Widget courbe d'equity : chargement corrige
+
+Si votre mise en page inclut le widget **Courbe d'equity**, la courbe devrait reapparaitre apres connexion au lieu de rester parfois vide. Le chargement attend desormais que la session soit connue et que le widget soit bien sur votre layout, puis se lance en coherence avec ces conditions.
+
+Les liens de vue partagee ne changent pas—la courbe ne se charge toujours pas la ou ce n'est pas prevu. Sur votre propre tableau de bord, l'evolution du compte devrait s'afficher sans astuce de rafraichissement.

@@ -5,6 +5,7 @@ import { useData } from '@/context/data-provider'
 import { toast } from 'sonner'
 import { useI18n } from "@/locales/client"
 import { Synchronization } from '@/prisma/generated/prisma/browser'
+import { DEFAULT_INCLUDED_FEE_TYPES } from '@/app/[locale]/dashboard/components/import/tradovate/sync/fee-types'
 
 interface TradovateSyncContextType {
   // Core sync management
@@ -18,6 +19,10 @@ interface TradovateSyncContextType {
   accounts: Synchronization[]
   loadAccounts: () => Promise<void>
   deleteAccount: (accountId: string) => Promise<void>
+  
+  // Per-account fee config (stored in DB)
+  getIncludedFeeTypesForAccount: (accountId: string) => Record<string, boolean>
+  updateIncludedFeeTypesForAccount: (accountId: string, includedFeeTypes: Record<string, boolean>) => Promise<{ success: boolean; error?: string }>
   
   // Auto-sync functionality
   syncInterval: number
@@ -34,10 +39,19 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
   const [syncInterval, setSyncInterval] = useState(15) // 15 minutes default
   const [enableAutoSync, setEnableAutoSync] = useState(false)
 
+  const getIncludedFeeTypesForAccount = useCallback((accountId: string) => {
+    const account = accounts.find((a) => a.accountId === accountId)
+    const raw = (account as any)?.includedFeeTypes
+    if (raw && typeof raw === 'object') {
+      return { ...DEFAULT_INCLUDED_FEE_TYPES, ...raw } as Record<string, boolean>
+    }
+    return { ...DEFAULT_INCLUDED_FEE_TYPES }
+  }, [accounts])
+
   const t = useI18n()
   const { refreshTradesOnly } = useData()
 
-  // Normalize dates returned from API
+  // Normalize dates and fee config returned from API
   const normalizeSynchronization = useCallback(
     (sync: any): Synchronization => ({
       ...sync,
@@ -46,6 +60,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       dailySyncTime: sync?.dailySyncTime ? new Date(sync.dailySyncTime) : null,
       createdAt: sync?.createdAt ? new Date(sync.createdAt) : new Date(),
       updatedAt: sync?.updatedAt ? new Date(sync.updatedAt) : new Date(),
+      includedFeeTypes: sync?.includedFeeTypes ?? null,
     }),
     []
   )
@@ -69,6 +84,23 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       console.warn('Failed to load Tradovate accounts:', error)
     }
   }, [normalizeSynchronization])
+
+  const updateIncludedFeeTypesForAccount = useCallback(
+    async (accountId: string, includedFeeTypes: Record<string, boolean>) => {
+      const res = await fetch('/api/tradovate/synchronizations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId, includedFeeTypes }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.message || 'Failed to update' }
+      }
+      await loadAccounts()
+      return { success: true }
+    },
+    [loadAccounts]
+  )
 
   const deleteAccount = useCallback(async (accountId: string) => {
     setAccounts(prev => prev.filter(acc => acc.accountId !== accountId))
@@ -256,6 +288,10 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       accounts,
       loadAccounts,
       deleteAccount,
+      
+      // Per-account fee config
+      getIncludedFeeTypesForAccount,
+      updateIncludedFeeTypesForAccount,
       
       // Auto-sync functionality
       syncInterval,

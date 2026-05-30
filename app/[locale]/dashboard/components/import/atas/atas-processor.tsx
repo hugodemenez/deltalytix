@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +40,62 @@ const formatPnl = (
   return { pnl: numericValue };
 };
 
-const parseAtasDate = (dateValue: any, timezone: string): string | undefined => {
+const convertZonedDatePartsToUtcIso = (
+  year: number,
+  month: number,
+  day: number,
+  hours: number,
+  minutes: number,
+  seconds: number,
+  timezone: string
+): string | undefined => {
+  const dateString = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  const tempUTC = new Date(dateString + "Z");
+  const parts = formatter.formatToParts(tempUTC);
+  const tzYear = parseInt(parts.find((p) => p.type === "year")?.value || "0");
+  const tzMonth = parseInt(parts.find((p) => p.type === "month")?.value || "0");
+  const tzDay = parseInt(parts.find((p) => p.type === "day")?.value || "0");
+  const tzHour = parseInt(parts.find((p) => p.type === "hour")?.value || "0");
+  const tzMinute = parseInt(parts.find((p) => p.type === "minute")?.value || "0");
+  const tzSecond = parseInt(parts.find((p) => p.type === "second")?.value || "0");
+
+  const desiredSeconds = hours * 3600 + minutes * 60 + seconds;
+  const actualSeconds = tzHour * 3600 + tzMinute * 60 + tzSecond;
+  const secondsDiff = desiredSeconds - actualSeconds;
+
+  let dayOffset = 0;
+  if (tzYear !== year || tzMonth !== month || tzDay !== day) {
+    const desiredDate = new Date(year, month - 1, day, hours, minutes, seconds);
+    const actualDate = new Date(tzYear, tzMonth - 1, tzDay, tzHour, tzMinute, tzSecond);
+    dayOffset = Math.round((desiredDate.getTime() - actualDate.getTime()) / 1000);
+  }
+
+  const correctUTC = new Date(tempUTC.getTime() + (dayOffset + secondsDiff) * 1000);
+
+  if (isNaN(correctUTC.getTime())) {
+    console.error(`Invalid date created:`, correctUTC);
+    return undefined;
+  }
+
+  return correctUTC.toISOString().replace("Z", "+00:00");
+};
+
+const parseAtasDate = (
+  dateValue: unknown,
+  timezone: string
+): string | undefined => {
   if (!dateValue || String(dateValue).trim() === "") {
     return undefined;
   }
@@ -53,7 +108,12 @@ const parseAtasDate = (dateValue: any, timezone: string): string | undefined => 
     let dateObj: Date | null = null;
     if (dateValue instanceof Date) {
       dateObj = dateValue;
-    } else if (typeof dateValue === "string" && (dateStr.includes("GMT") || dateStr.includes("UTC") || dateStr.match(/^\w{3} \w{3} \d{2} \d{4}/))) {
+    } else if (
+      typeof dateValue === "string" &&
+      (dateStr.includes("GMT") ||
+        dateStr.includes("UTC") ||
+        dateStr.match(/^\w{3} \w{3} \d{2} \d{4}/))
+    ) {
       // Try to parse as a Date object string
       dateObj = new Date(dateStr);
       if (isNaN(dateObj.getTime())) {
@@ -73,63 +133,31 @@ const parseAtasDate = (dateValue: any, timezone: string): string | undefined => 
       const utcMinutes = dateObj.getUTCMinutes();
       const utcSeconds = dateObj.getUTCSeconds();
       
-      // Now treat these UTC components as being in the user's timezone and convert to UTC
-      const dateString = `${utcYear}-${String(utcMonth).padStart(2, "0")}-${String(utcDay).padStart(2, "0")}T${String(utcHours).padStart(2, "0")}:${String(utcMinutes).padStart(2, "0")}:${String(utcSeconds).padStart(2, "0")}`;
-      
-      // Create a formatter for the target timezone
-      const formatter = new Intl.DateTimeFormat("en-CA", {
-        timeZone: timezone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-      });
-      
-      // Create a date assuming these components are UTC
-      const tempUTC = new Date(dateString + "Z");
-      
-      // Format the UTC date in the target timezone to see what it displays as
-      // Use formatToParts to get structured components instead of parsing a string
-      const parts = formatter.formatToParts(tempUTC);
-      const tzYear = parseInt(parts.find(p => p.type === "year")?.value || "0");
-      const tzMonth = parseInt(parts.find(p => p.type === "month")?.value || "0");
-      const tzDay = parseInt(parts.find(p => p.type === "day")?.value || "0");
-      const tzHour = parseInt(parts.find(p => p.type === "hour")?.value || "0");
-      const tzMinute = parseInt(parts.find(p => p.type === "minute")?.value || "0");
-      const tzSecond = parseInt(parts.find(p => p.type === "second")?.value || "0");
-      
-      // Calculate the timezone offset: what we want (utcHours treated as local time) vs what UTC displays as
-      // If we want 15:53:10 in Europe/Paris, and 15:53:10 UTC displays as 17:53:10 in Europe/Paris,
-      // we need to subtract 2 hours from UTC to get 13:53:10 UTC, which displays as 15:53:10 in Europe/Paris
-      // The offset is: desired local time - what UTC displays as = 15:53:10 - 17:53:10 = -2 hours
-      // So we need to ADD this offset to UTC (subtract 2 hours from UTC time)
-      const desiredSeconds = utcHours * 3600 + utcMinutes * 60 + utcSeconds;
-      const actualSeconds = tzHour * 3600 + tzMinute * 60 + tzSecond;
-      const secondsDiff = desiredSeconds - actualSeconds; // This is negative: -7200 seconds
-      
-      // Also account for day rollover
-      let dayOffset = 0;
-      if (tzYear !== utcYear || tzMonth !== utcMonth || tzDay !== utcDay) {
-        const desiredDate = new Date(utcYear, utcMonth - 1, utcDay, utcHours, utcMinutes, utcSeconds);
-        const actualDate = new Date(tzYear, tzMonth - 1, tzDay, tzHour, tzMinute, tzSecond);
-        dayOffset = Math.round((desiredDate.getTime() - actualDate.getTime()) / 1000);
-      }
-      
-      const totalSecondsDiff = dayOffset + secondsDiff;
-      
-      // Adjust: ADD the offset (which is negative) to get the correct UTC time
-      // Example: 15:53:10 UTC + (-7200) = 13:53:10 UTC, which displays as 15:53:10 in Europe/Paris
-      const correctUTC = new Date(tempUTC.getTime() + (totalSecondsDiff * 1000));
-      
-      if (isNaN(correctUTC.getTime())) {
-        console.error(`Invalid date created:`, correctUTC);
-        return undefined;
-      }
-      
-      return correctUTC.toISOString().replace("Z", "+00:00");
+      return convertZonedDatePartsToUtcIso(
+        utcYear,
+        utcMonth,
+        utcDay,
+        utcHours,
+        utcMinutes,
+        utcSeconds,
+        timezone
+      );
+    }
+
+    const localDateMatch = dateStr.match(
+      /^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/
+    );
+
+    if (localDateMatch) {
+      return convertZonedDatePartsToUtcIso(
+        parseInt(localDateMatch[1], 10),
+        parseInt(localDateMatch[2], 10),
+        parseInt(localDateMatch[3], 10),
+        parseInt(localDateMatch[4], 10),
+        parseInt(localDateMatch[5], 10),
+        parseInt(localDateMatch[6] || "0", 10),
+        timezone
+      );
     }
 
     // Check if it's already in ISO format
@@ -174,6 +202,7 @@ export default function AtasProcessor({
   const existingTrades = useTradesStore((state) => state.trades);
   const timezone = useUserStore((state) => state.timezone);
   const [allProcessedTrades, setAllProcessedTrades] = useState<Trade[]>([]);
+  const duplicateCheckTradesRef = useRef<Trade[] | null>(null);
   const [missingCommissions, setMissingCommissions] = useState<{
     [key: string]: number;
   }>({});
@@ -272,6 +301,10 @@ export default function AtasProcessor({
   const processTrades = useCallback(() => {
     const newTrades: Trade[] = [];
     const missingCommissionsTemp: { [key: string]: boolean } = {};
+    // Freeze the duplicate baseline so saving the preview does not make it disappear.
+    const tradesForDuplicateCheck =
+      duplicateCheckTradesRef.current ?? existingTrades;
+    duplicateCheckTradesRef.current = tradesForDuplicateCheck;
 
     csvData.forEach((row) => {
       const item: Partial<Trade> = {};
@@ -317,9 +350,11 @@ export default function AtasProcessor({
                 typeof cellValue === "string" ||
                 typeof cellValue === "number"
               ) {
-                (item as any)[key] = String(cellValue);
+                (item as Partial<Record<keyof Trade, unknown>>)[key] =
+                  String(cellValue);
               } else {
-                (item as any)[key] = cellValue;
+                (item as Partial<Record<keyof Trade, unknown>>)[key] =
+                  cellValue;
               }
           }
         }
@@ -403,7 +438,7 @@ export default function AtasProcessor({
       item.id = generateTradeHash(item);
 
       // Check if trade already exists
-      const existingTrade = existingTrades.find(
+      const existingTrade = tradesForDuplicateCheck.find(
         (trade) =>
           trade.accountNumber === item.accountNumber &&
           trade.instrument === item.instrument &&
@@ -441,6 +476,7 @@ export default function AtasProcessor({
     existingTrades,
     existingCommissions,
     setProcessedTrades,
+    timezone,
     t,
   ]);
 

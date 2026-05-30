@@ -3,7 +3,6 @@
 import { getUserId } from '@/server/auth'
 import { PrismaClient, Trade, Payout } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import pg from 'pg'
 import { computeMetricsForAccounts } from '@/lib/account-metrics'
 import { Account } from '@/context/data-provider'
 import { updateTag } from 'next/cache'
@@ -12,50 +11,13 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-const pool = new pg.Pool({
+const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
 })
-
-const adapter = new PrismaPg(pool)
 
 const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
-
-type GroupedTrades = Record<string, Record<string, Trade[]>>
-
-interface FetchTradesResult {
-  groupedTrades: GroupedTrades;
-  flattenedTrades: Trade[];
-}
-
-export async function fetchGroupedTradesAction(userId: string): Promise<FetchTradesResult> {
-  const trades = await prisma.trade.findMany({
-    where: {
-      userId: userId
-    },
-    orderBy: [
-      { accountNumber: 'asc' },
-      { instrument: 'asc' }
-    ]
-  })
-
-  const groupedTrades = trades.reduce<GroupedTrades>((acc, trade) => {
-    if (!acc[trade.accountNumber]) {
-      acc[trade.accountNumber] = {}
-    }
-    if (!acc[trade.accountNumber][trade.instrument]) {
-      acc[trade.accountNumber][trade.instrument] = []
-    }
-    acc[trade.accountNumber][trade.instrument].push(trade)
-    return acc
-  }, {})
-
-  return {
-    groupedTrades,
-    flattenedTrades: trades
-  }
-}
 
 export async function removeAccountsFromTradesAction(accountNumbers: string[]): Promise<void> {
   const userId = await getUserId()
@@ -105,29 +67,30 @@ export async function deleteInstrumentGroupAction(accountNumber: string, instrum
 
 export async function updateCommissionForGroupAction(accountNumber: string, instrumentGroup: string, newCommission: number): Promise<void> {
   // We have to update the commission for all trades in the group and compute based on the quantity
+  const userId = await getUserId()
   const trades = await prisma.trade.findMany({
     where: {
       accountNumber: accountNumber,
-      instrument: { startsWith: instrumentGroup }
+      instrument: { startsWith: instrumentGroup },
+      userId: userId
     }
   })
-  // For each trade, update the commission
-  for (const trade of trades) {
-    const updatedCommission = newCommission * trade.quantity
-    await prisma.trade.update({
-      where: {
-        id: trade.id
-      },
-      data: {
-        commission: updatedCommission
-      }
-    })
-  }
-  const userId = await getUserId().catch(() => null)
-  if (userId) {
-    updateTag(`trades-${userId}`)
-    updateTag(`user-data-${userId}`)
-  }
+  // Run all commission updates in a transaction for atomicity
+  await prisma.$transaction(
+    trades.map(trade =>
+      prisma.trade.update({
+        where: {
+          id: trade.id,
+          userId: userId
+        },
+        data: {
+          commission: newCommission * trade.quantity
+        }
+      })
+    )
+  )
+  updateTag(`trades-${userId}`)
+  updateTag(`user-data-${userId}`)
 }
 
 export async function renameAccountAction(oldAccountNumber: string, newAccountNumber: string): Promise<void> {
@@ -226,10 +189,10 @@ export async function setupAccountAction(account: Account): Promise<Account> {
 
   // Extract fields that should not be included in the database operation
   // Remove computed fields (metrics, dailyMetrics) and relation fields
-  const { 
-    id, 
-    userId: _, 
-    payouts, 
+  const {
+    id,
+    userId: _,
+    payouts,
     groupId,
     balanceToDate,
     group,
@@ -238,7 +201,7 @@ export async function setupAccountAction(account: Account): Promise<Account> {
     aboveBuffer,
     considerBuffer,
     trades,
-    ...baseAccountData 
+    ...baseAccountData
   } = account
 
   // Only include considerBuffer when explicitly provided to avoid overriding unintentionally
@@ -253,17 +216,17 @@ export async function setupAccountAction(account: Account): Promise<Account> {
     ...(groupId !== undefined &&
       (groupId
         ? {
-            group: {
-              connect: {
-                id: groupId,
-              },
+          group: {
+            connect: {
+              id: groupId,
             },
-          }
+          },
+        }
         : {
-            group: {
-              disconnect: true,
-            },
-          })),
+          group: {
+            disconnect: true,
+          },
+        })),
   }
 
   const accountDataForCreate = {
@@ -271,12 +234,12 @@ export async function setupAccountAction(account: Account): Promise<Account> {
     ...considerBufferUpdate,
     ...(groupId
       ? {
-          group: {
-            connect: {
-              id: groupId,
-            },
+        group: {
+          connect: {
+            id: groupId,
           },
-        }
+        },
+      }
       : {}),
   }
 
@@ -376,7 +339,7 @@ export async function getAccountsAction() {
 }
 
 export async function savePayoutAction(payout: Payout) {
-  
+
   try {
     // First find the account to get its ID
     const userId = await getUserId()
@@ -401,6 +364,7 @@ export async function savePayoutAction(payout: Payout) {
         date: payout.date,
         amount: payout.amount,
         status: payout.status,
+        propfirmSharingPercentage: payout.propfirmSharingPercentage,
         account: {
           connect: {
             id: account.id
@@ -412,6 +376,7 @@ export async function savePayoutAction(payout: Payout) {
         date: payout.date,
         amount: payout.amount,
         status: payout.status,
+        propfirmSharingPercentage: payout.propfirmSharingPercentage,
         account: {
           connect: {
             id: account.id
@@ -516,7 +481,6 @@ export async function checkAndResetAccountsAction() {
   }
 }
 
-
 export async function createAccountAction(accountNumber: string) {
   try {
     const userId = await getUserId()
@@ -561,15 +525,15 @@ export async function calculateAccountBalanceAction(
     });
   }
   const userId = await getUserId()
-  
+
   // Early return if no accounts
   if (accounts.length === 0) {
     return [];
   }
-  
+
   // Collect all account numbers needed
   const accountNumbers = accounts.map(account => account.number);
-  
+
   // Fetch only required fields for better performance
   const trades = await prisma.trade.findMany({
     where: {
@@ -610,20 +574,20 @@ export async function calculateAccountBalanceAction(
  * @returns The calculated balance
  */
 function calculateAccountBalance(
-  account: Account, 
+  account: Account,
   trades: Array<{ accountNumber: string; pnl: number; commission: number }>
 ): number {
   let balance = account.startingBalance || 0;
-  
+
   // Calculate PnL from trades (trades are already filtered by account)
   const tradesPnL = trades.reduce((sum, trade) => sum + (trade.pnl - trade.commission), 0);
   balance += tradesPnL;
-  
+
   // Add payouts
   // const payouts = account.payouts || [];
   // const payoutsSum = payouts.reduce((sum, payout) => sum + payout.amount, 0);
   // balance += payoutsSum;
-  
+
   return balance;
 }
 
