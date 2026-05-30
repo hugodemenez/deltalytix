@@ -41,6 +41,7 @@ import { fr } from 'date-fns/locale'
 import { Switch } from "@/components/ui/switch"
 import { useTradesStore } from "../../../../store/trades-store"
 import { useUserStore } from "../../../../store/user-store"
+import { useData } from "@/context/data-provider"
 import type { WidgetType } from "../types/dashboard"
 
 interface ShareButtonProps {
@@ -140,6 +141,10 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const isMobile = useIsMobile()
     const user = useUserStore(state => state.user)
     const trades = useTradesStore(state => state.trades)
+    // The PDF charts are snapshots of the live dashboard widgets, which render
+    // from the data provider's globally-filtered `formattedTrades`. Use the same
+    // source for the summary so the numbers always match the charts.
+    const { formattedTrades, dateRange: globalDateRange, accountNumbers: globalAccountNumbers } = useData()
     const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
     const [open, setOpen] = useState(false)
     const [comboboxOpen, setComboboxOpen] = useState(false)
@@ -483,17 +488,10 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         return
       }
       try {
-        if (!selectedDateRange.from) {
-          showExportError(t('share.error.noStartDate'))
-          return
-        }
-
-        if (!shareAllAccounts && selectedAccounts.length === 0) {
-          showExportError(t('share.error.noAccount'))
-          return
-        }
-
-        const filteredTrades = getFilteredTrades()
+        // The exported PDF mirrors the current dashboard, so the summary uses the
+        // same globally-filtered trades as the chart snapshots rather than the
+        // share dialog's independent date/account picker.
+        const filteredTrades = formattedTrades
 
         if (filteredTrades.length === 0) {
           showExportError(t('share.error.noTrades'))
@@ -525,19 +523,31 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         const winningTrades = filteredTrades.filter((trade) => Number(trade.pnl || 0) > 0).length
         const winRate = filteredTrades.length > 0 ? (winningTrades / filteredTrades.length) * 100 : 0
 
-        const formattedFromDate = format(selectedDateRange.from, "yyyy-MM-dd")
-        const formattedToDate = selectedDateRange.to
-          ? format(selectedDateRange.to, "yyyy-MM-dd")
-          : null
-        const dateRangeLabel = formattedToDate
-          ? `${formattedFromDate} - ${formattedToDate}`
-          : formattedFromDate
+        // Reflect the dashboard's active filters. When no global date filter is
+        // set, derive the span from the trades actually shown so the header stays
+        // truthful about what the summary and charts cover.
+        let rangeFrom = globalDateRange?.from
+        let rangeTo = globalDateRange?.to
+        if (!rangeFrom) {
+          const timestamps = filteredTrades
+            .map((trade) => new Date(trade.entryDate).getTime())
+            .filter((time) => !Number.isNaN(time))
+          if (timestamps.length > 0) {
+            rangeFrom = new Date(Math.min(...timestamps))
+            rangeTo = new Date(Math.max(...timestamps))
+          }
+        }
+        const formattedFromDate = rangeFrom ? format(rangeFrom, "yyyy-MM-dd") : null
+        const formattedToDate = rangeTo ? format(rangeTo, "yyyy-MM-dd") : null
+        const dateRangeLabel = formattedFromDate
+          ? formattedToDate && formattedToDate !== formattedFromDate
+            ? `${formattedFromDate} - ${formattedToDate}`
+            : formattedFromDate
+          : t("share.pdfAllTime")
 
-        const accountLabel = shareAllAccounts
-          ? t("share.pdfAllAccounts")
-          : selectedAccounts.length > 0
-            ? selectedAccounts.join(", ")
-            : t("share.pdfAllAccounts")
+        const accountLabel = globalAccountNumbers.length > 0
+          ? globalAccountNumbers.join(", ")
+          : t("share.pdfAllAccounts")
 
         const drawHeader = () => {
           doc.setFillColor(20, 24, 38)

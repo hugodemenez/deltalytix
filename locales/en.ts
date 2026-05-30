@@ -1253,6 +1253,7 @@ export default {
   "share.pdfDateRange": "Date range",
   "share.pdfAccounts": "Accounts",
   "share.pdfAllAccounts": "All accounts",
+  "share.pdfAllTime": "All time",
   "share.pdfSummaryTitle": "Performance Summary",
   "share.pdfChartsSectionTitle": "Chart Snapshot",
   "share.pdfNoChartsAvailable": "No chart widgets were found on this dashboard layout.",

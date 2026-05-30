@@ -1175,6 +1175,7 @@ export default {
   "share.pdfDateRange": "Période",
   "share.pdfAccounts": "Comptes",
   "share.pdfAllAccounts": "Tous les comptes",
+  "share.pdfAllTime": "Toute la période",
   "share.pdfSummaryTitle": "Résumé des performances",
   "share.pdfChartsSectionTitle": "Aperçu des graphiques",
   "share.pdfNoChartsAvailable": "Aucun widget graphique trouvé dans cette mise en page dashboard.",
