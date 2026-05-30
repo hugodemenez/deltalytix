@@ -264,6 +264,25 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
             backgroundColor: "#ffffff",
             useCORS: true,
             logging: false,
+            // Strip transient editor affordances from the cloned DOM only (the
+            // live page is untouched). In customize mode — always-on for mobile —
+            // widget content gets a blur, plus hover/focus reveal a translucent
+            // scrim and drag-handle overlay. None of that belongs in the export
+            // and the blur is what was washing out the captured charts.
+            onclone: (_clonedDoc, clonedNode) => {
+              clonedNode.style.filter = "none"
+              clonedNode.querySelectorAll<HTMLElement>("*").forEach((el) => {
+                el.style.filter = "none"
+                el.style.backdropFilter = "none"
+              })
+              clonedNode
+                .querySelectorAll<HTMLElement>(
+                  '.drag-handle, [class*="group-hover:opacity"], [class*="group-focus-within:opacity"]',
+                )
+                .forEach((el) => {
+                  el.style.opacity = "0"
+                })
+            },
           })
           const dataUrl = canvas.toDataURL(imageMimeType, imageQuality)
           // Release the backing store promptly so memory is reclaimed before the
