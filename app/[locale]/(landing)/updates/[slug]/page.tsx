@@ -92,20 +92,18 @@ export async function generateMetadata({
           url,
           siteName: "Deltalytix",
           locale: locale,
-          images: [
-            {
-              url: siteUrl(`/${locale}/updates/${slug}/opengraph-image`),
-              width: 1200,
-              height: 630,
-              alt: meta.title,
-            },
-          ],
+          // The og:image is injected automatically from the colocated
+          // opengraph-image.tsx route. We intentionally do not hardcode the URL
+          // here: because that route lives inside the (landing) route group,
+          // Next.js appends a content hash to its public path
+          // (e.g. /opengraph-image-1uk6iz), so a hand-written
+          // `/opengraph-image` URL would resolve to the not-found route.
         },
         twitter: {
           card: "summary_large_image",
           title: meta.title,
           description: meta.description,
-          images: [siteUrl(`/${locale}/updates/${slug}/opengraph-image`)],
+          // twitter:image is also derived from opengraph-image.tsx.
         },
       };
     } catch (postError) {
