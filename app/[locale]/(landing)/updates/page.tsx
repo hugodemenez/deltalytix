@@ -1,6 +1,7 @@
 import React from 'react'
 import { setStaticParamsLocale } from 'next-international/server'
 import { getI18n } from '@/locales/server'
+import { getStaticParams } from '@/locales/server'
 import CompletedTimeline from '../components/completed-timeline'
 import { getAllPosts } from '@/lib/posts'
 import { getLatestVideoFromPlaylist } from '@/app/[locale]/admin/actions/youtube'
@@ -11,11 +12,11 @@ interface PageProps {
   }>
 }
 
-// Render dynamically so the locale is always resolved from the current request
-// (cookie -> rewrite middleware -> params.locale). With the "rewrite" url mapping
-// strategy the browser URL has no locale segment, so a statically cached version
-// would be served regardless of the selected language, breaking the switcher.
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
+
+export function generateStaticParams() {
+  return getStaticParams()
+}
 
 export default async function UpdatesPage(props: PageProps) {
   const params = await props.params;
