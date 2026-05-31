@@ -5,6 +5,7 @@
 .cursor
 WARP.md
 .github/instructions/
+codex-pr-context/
 
 # dependencies
 /node_modules

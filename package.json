@@ -10,8 +10,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "screenshot:dashboard": "node scripts/screenshot-dashboard.js"
+    "screenshot:dashboard": "node scripts/screenshot-dashboard.js",
+    "codex:setup": "bash .codex/setup.sh",
+    "codex:review-pr": "bash .codex/review-pr.sh"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.10",
@@ -179,6 +182,7 @@
     "tailwindcss": "^4.1.16",
     "ts-node": "^10.9.2",
     "tw-animate-css": "latest",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "^4.1.7"
   }
 }
