@@ -3,25 +3,10 @@ import createMDX from '@next/mdx';
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  async redirects() {
-    return [
-      {
-        source: '/updates',
-        destination: '/en/updates',
-        permanent: false,
-      },
-      {
-        source: '/updates/:slug',
-        destination: '/en/updates/:slug',
-        permanent: false,
-      },
-      {
-        source: '/shared/:slug',
-        destination: '/en/shared/:slug',
-        permanent: false,
-      },
-    ];
-  },
+  // NOTE: Do not add hardcoded /en redirects for localized routes (e.g. /updates
+  // -> /en/updates). next.config redirects run before middleware, so they force a
+  // single locale and prevent the i18n middleware from routing by the user's
+  // selected language. Locale routing is handled entirely by the i18n middleware.
   // cacheComponents: true, // Enable Cache Components (Next.js 16+)
   images: {
     remotePatterns: [

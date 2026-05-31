@@ -26,6 +26,10 @@ interface PageProps {
   params: ParamsInput;
 }
 
+// These posts are static MDX content, so prerender them at build time. URLs
+// are resolved from the build-time site origin (siteUrl/getSiteOrigin, which
+// reads NEXT_PUBLIC_BASE_URL / VERCEL_URL), avoiding any request-time
+// dependency that would force dynamic rendering.
 export const dynamic = "force-static";
 export const dynamicParams = false;
 
@@ -92,20 +96,18 @@ export async function generateMetadata({
           url,
           siteName: "Deltalytix",
           locale: locale,
-          images: [
-            {
-              url: siteUrl(`/${locale}/updates/${slug}/opengraph-image`),
-              width: 1200,
-              height: 630,
-              alt: meta.title,
-            },
-          ],
+          // The og:image is injected automatically from the colocated
+          // opengraph-image.tsx route and resolved against metadataBase. We do
+          // not hardcode the URL: that route lives inside the (landing) route
+          // group, so Next.js publishes it at a hashed path
+          // (e.g. /opengraph-image-1uk6iz?<version>), and a hand-written
+          // `/opengraph-image` URL resolves to the not-found route instead.
         },
         twitter: {
           card: "summary_large_image",
           title: meta.title,
           description: meta.description,
-          images: [siteUrl(`/${locale}/updates/${slug}/opengraph-image`)],
+          // twitter:image is also derived from opengraph-image.tsx.
         },
       };
     } catch (postError) {
@@ -179,7 +181,7 @@ export default async function Page({ params }: PageProps) {
     author: {
       "@type": "Organization",
       name: "Deltalytix",
-      url: siteUrl(),
+      url: siteUrl("/"),
     },
     publisher: {
       "@type": "Organization",

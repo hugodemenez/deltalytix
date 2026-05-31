@@ -1,0 +1,17 @@
+{
+  "name": "Deltalytix",
+  "install": "npm install && npx prisma generate",
+  "ports": [
+    {
+      "name": "next",
+      "port": 3000
+    }
+  ],
+  "terminals": [
+    {
+      "name": "next-dev",
+      "command": "npm run dev",
+      "description": "Next.js development server"
+    }
+  ]
+}
