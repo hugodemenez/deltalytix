@@ -10,8 +10,7 @@ import { setStaticParamsLocale } from "next-international/server";
 import { getStaticParams as getLocaleStaticParams } from "@/locales/server";
 import { MdxSidebar } from "@/components/mdx-sidebar";
 import { UpdatesNavigation } from "@/components/updates-navigation";
-import { getRequestOrigin, siteUrl } from "@/lib/site-url";
-import { headers } from "next/headers";
+import { siteUrl } from "@/lib/site-url";
 
 type ParamsInput =
   | {
@@ -27,10 +26,12 @@ interface PageProps {
   params: ParamsInput;
 }
 
-// Rendered dynamically so OpenGraph/canonical URLs reference the host actually
-// serving the page (e.g. preview deployments self-reference) via
-// getRequestOrigin(headers), which is incompatible with force-static.
-export const dynamic = "force-dynamic";
+// These posts are static MDX content, so prerender them at build time. URLs
+// are resolved from the build-time site origin (siteUrl/getSiteOrigin, which
+// reads NEXT_PUBLIC_BASE_URL / VERCEL_URL), avoiding any request-time
+// dependency that would force dynamic rendering.
+export const dynamic = "force-static";
+export const dynamicParams = false;
 
 // Generate static paths for all posts in all locales
 export async function generateStaticParams() {
@@ -74,8 +75,7 @@ export async function generateMetadata({
         };
       const { meta } = post;
 
-      const origin = getRequestOrigin(await headers());
-      const url = siteUrl(`/${locale}/updates/${slug}`, origin);
+      const url = siteUrl(`/${locale}/updates/${slug}`);
 
       return {
         title: meta.title,
@@ -83,8 +83,8 @@ export async function generateMetadata({
         alternates: {
           canonical: url,
           languages: {
-            en: siteUrl(`/en/updates/${slug}`, origin),
-            fr: siteUrl(`/fr/updates/${slug}`, origin),
+            en: siteUrl(`/en/updates/${slug}`),
+            fr: siteUrl(`/fr/updates/${slug}`),
           },
         },
         openGraph: {
@@ -97,9 +97,8 @@ export async function generateMetadata({
           siteName: "Deltalytix",
           locale: locale,
           // The og:image is injected automatically from the colocated
-          // opengraph-image.tsx route and resolved against metadataBase (the
-          // request origin), so it self-references the serving host. We do not
-          // hardcode the URL: that route lives inside the (landing) route
+          // opengraph-image.tsx route and resolved against metadataBase. We do
+          // not hardcode the URL: that route lives inside the (landing) route
           // group, so Next.js publishes it at a hashed path
           // (e.g. /opengraph-image-1uk6iz?<version>), and a hand-written
           // `/opengraph-image` URL resolves to the not-found route instead.
@@ -168,8 +167,7 @@ export default async function Page({ params }: PageProps) {
   const { previous, next } = adjacentPosts;
   const { meta, content } = post;
   const formattedDate = format(new Date(meta.date), "MMMM d, yyyy");
-  const origin = getRequestOrigin(await headers());
-  const url = siteUrl(`/${locale}/updates/${slug}`, origin);
+  const url = siteUrl(`/${locale}/updates/${slug}`);
 
   // Prepare JSON-LD structured data
   const jsonLd = {
@@ -183,14 +181,14 @@ export default async function Page({ params }: PageProps) {
     author: {
       "@type": "Organization",
       name: "Deltalytix",
-      url: siteUrl("/", origin),
+      url: siteUrl("/"),
     },
     publisher: {
       "@type": "Organization",
       name: "Deltalytix",
       logo: {
         "@type": "ImageObject",
-        url: siteUrl("/logo.png", origin),
+        url: siteUrl("/logo.png"),
       },
     },
     mainEntityOfPage: {
