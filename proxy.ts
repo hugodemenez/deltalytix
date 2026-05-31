@@ -261,8 +261,13 @@ export default async function proxy(req: NextRequest) {
     
     return addAgentDiscoveryHeaders(response, req);
   }
-  // Merge responses - copy headers from auth response to i18n response
+  // Merge responses - copy headers from auth response to i18n response.
+  // Skip "set-cookie": overwriting it would clobber the Next-Locale cookie that
+  // the i18n middleware sets to persist the selected language. Auth cookies are
+  // merged separately below via the cookies API (which appends rather than
+  // replaces), so the locale cookie survives.
   authResponse.headers.forEach((value, key) => {
+    if (key.toLowerCase() === "set-cookie") return
     response.headers.set(key, value)
   })
 
