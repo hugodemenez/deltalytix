@@ -15,7 +15,7 @@ const LOCALES = ["en", "fr", "de", "es", "it", "pt", "vi", "hi", "ja", "zh", "yo
 const I18nMiddleware = createI18nMiddleware({
   locales: LOCALES,
   defaultLocale: "en",
-  urlMappingStrategy: "rewrite",
+  urlMappingStrategy: "redirect",
 })
 
 const HOMEPAGE_PATHS = new Set([
