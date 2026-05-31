@@ -206,6 +206,24 @@ export default async function proxy(req: NextRequest) {
   // Apply i18n middleware first
   const response = I18nMiddleware(req)
 
+  // next-international persists the locale in the Next-Locale cookie without an
+  // explicit path, so the browser scopes it to the directory of the request URL.
+  // When the language is switched from a nested route the change-locale helper
+  // navigates to e.g. /fr/updates, and the cookie ends up scoped to "/fr" - it is
+  // then never sent for the locale-less URLs the app actually uses (rewrite
+  // strategy), so the choice neither applies nor persists. Re-set it with an
+  // explicit path "/" using the resolved locale exposed via the X-Next-Locale
+  // header so the selection sticks across every route.
+  const resolvedLocale = response.headers.get("X-Next-Locale")
+  if (resolvedLocale) {
+    response.cookies.set("Next-Locale", resolvedLocale, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    })
+  }
+
 
   // Then update session
   const { response: authResponse, user, error } = await updateSession(req)
