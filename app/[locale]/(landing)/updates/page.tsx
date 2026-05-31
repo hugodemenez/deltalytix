@@ -1,5 +1,6 @@
 import React from 'react'
-import { getI18n } from '@/locales/server'
+import { setStaticParamsLocale } from 'next-international/server'
+import { getI18n, getStaticParams } from '@/locales/server'
 import CompletedTimeline from '../components/completed-timeline'
 import { getAllPosts } from '@/lib/posts'
 import { getLatestVideoFromPlaylist } from '@/app/[locale]/admin/actions/youtube'
@@ -10,12 +11,21 @@ interface PageProps {
   }>
 }
 
+// Revalidate hourly so the latest weekly video stays fresh
+export const revalidate = 3600
+
+export function generateStaticParams() {
+  return getStaticParams()
+}
+
 export default async function UpdatesPage(props: PageProps) {
   const params = await props.params;
 
   const {
     locale
   } = params;
+
+  setStaticParamsLocale(locale)
 
   const t = await getI18n()
   const posts = await getAllPosts(locale)
