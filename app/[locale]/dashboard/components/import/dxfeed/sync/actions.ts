@@ -20,8 +20,7 @@ import {
 import {
   authPropfirmMatchesSelection,
   getDxFeedPropFirm,
-  getDxFeedPropFirmByAuthName,
-  getDxFeedPropFirmByHost,
+  resolveDxFeedPropFirmFromStored,
 } from '@/lib/dxfeed-propfirms'
 import type {
   DxFeedLoginRequest,
@@ -78,14 +77,6 @@ function parseStoredCredentials(tokenField: string): DxFeedStoredCredentials | n
   }
 }
 
-function resolveStoredDxFeedPropFirm(credentials: DxFeedStoredCredentials) {
-  return (
-    getDxFeedPropFirm(credentials.propFirmId) ??
-    getDxFeedPropFirmByAuthName(credentials.propfirmName) ??
-    getDxFeedPropFirmByHost(credentials.historicalHost)
-  )
-}
-
 function buildDxFeedSynchronizationAccountId(propFirmId: string, login: string): string {
   return `${propFirmId}:${login.trim().toLowerCase()}`
 }
@@ -93,18 +84,20 @@ function buildDxFeedSynchronizationAccountId(propFirmId: string, login: string):
 /**
  * Remove a connection row stored under the legacy bare-login accountId so users
  * don't end up with a stale duplicate after we re-key connections by prop firm.
+ * Matches case-insensitively because the canonical id lower-cases the login,
+ * while legacy rows kept the raw login casing.
  */
 async function removeLegacyDxFeedSyncAccount(
   userId: string,
   login: string,
   canonicalAccountId: string,
 ): Promise<void> {
-  if (login === canonicalAccountId) return
   await prisma.synchronization.deleteMany({
     where: {
       userId,
       service: 'dxfeed',
-      accountId: login,
+      accountId: { equals: login.trim(), mode: 'insensitive' },
+      NOT: { accountId: canonicalAccountId },
     },
   })
 }
@@ -503,7 +496,7 @@ export async function getDxFeedTrades(
       return { error: DxFeedErrorCode.INVALID_STORED_CREDENTIALS }
     }
 
-    const propFirm = resolveStoredDxFeedPropFirm(credentials)
+    const propFirm = resolveDxFeedPropFirmFromStored(credentials)
     if (!propFirm) {
       return { error: DxFeedErrorCode.MISSING_PROP_FIRM_RECONNECT }
     }

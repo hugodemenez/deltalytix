@@ -88,6 +88,23 @@ export function getDxFeedPropFirmByHost(
   }
 }
 
+/**
+ * Resolve a prop firm from stored credentials, preferring the explicit id and
+ * falling back to the auth name and then the historical host. Shared by the sync
+ * action and the synchronizations API route so resolution stays consistent.
+ */
+export function resolveDxFeedPropFirmFromStored(input: {
+  propFirmId?: string | null
+  propfirmName?: string | null
+  historicalHost?: string | null
+}): DxFeedPropFirmDefinition | undefined {
+  return (
+    getDxFeedPropFirm(input.propFirmId) ??
+    getDxFeedPropFirmByAuthName(input.propfirmName) ??
+    getDxFeedPropFirmByHost(input.historicalHost)
+  )
+}
+
 export function getEnabledDxFeedPropFirms(): DxFeedPropFirmDefinition[] {
   return DXFEED_PROP_FIRMS.filter((f) => f.enabled)
 }
