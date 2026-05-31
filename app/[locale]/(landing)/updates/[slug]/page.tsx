@@ -10,7 +10,8 @@ import { setStaticParamsLocale } from "next-international/server";
 import { getStaticParams as getLocaleStaticParams } from "@/locales/server";
 import { MdxSidebar } from "@/components/mdx-sidebar";
 import { UpdatesNavigation } from "@/components/updates-navigation";
-import { siteUrl } from "@/lib/site-url";
+import { getRequestOrigin, siteUrl } from "@/lib/site-url";
+import { headers } from "next/headers";
 
 type ParamsInput =
   | {
@@ -26,8 +27,10 @@ interface PageProps {
   params: ParamsInput;
 }
 
-export const dynamic = "force-static";
-export const dynamicParams = false;
+// Rendered dynamically so OpenGraph/canonical URLs reference the host actually
+// serving the page (e.g. preview deployments self-reference) via
+// getRequestOrigin(headers), which is incompatible with force-static.
+export const dynamic = "force-dynamic";
 
 // Generate static paths for all posts in all locales
 export async function generateStaticParams() {
@@ -71,7 +74,8 @@ export async function generateMetadata({
         };
       const { meta } = post;
 
-      const url = siteUrl(`/${locale}/updates/${slug}`);
+      const origin = getRequestOrigin(await headers());
+      const url = siteUrl(`/${locale}/updates/${slug}`, origin);
 
       return {
         title: meta.title,
@@ -79,8 +83,8 @@ export async function generateMetadata({
         alternates: {
           canonical: url,
           languages: {
-            en: siteUrl(`/en/updates/${slug}`),
-            fr: siteUrl(`/fr/updates/${slug}`),
+            en: siteUrl(`/en/updates/${slug}`, origin),
+            fr: siteUrl(`/fr/updates/${slug}`, origin),
           },
         },
         openGraph: {
@@ -94,7 +98,7 @@ export async function generateMetadata({
           locale: locale,
           images: [
             {
-              url: siteUrl(`/${locale}/updates/${slug}/opengraph-image`),
+              url: siteUrl(`/${locale}/updates/${slug}/opengraph-image`, origin),
               width: 1200,
               height: 630,
               alt: meta.title,
@@ -105,7 +109,7 @@ export async function generateMetadata({
           card: "summary_large_image",
           title: meta.title,
           description: meta.description,
-          images: [siteUrl(`/${locale}/updates/${slug}/opengraph-image`)],
+          images: [siteUrl(`/${locale}/updates/${slug}/opengraph-image`, origin)],
         },
       };
     } catch (postError) {
@@ -165,7 +169,8 @@ export default async function Page({ params }: PageProps) {
   const { previous, next } = adjacentPosts;
   const { meta, content } = post;
   const formattedDate = format(new Date(meta.date), "MMMM d, yyyy");
-  const url = siteUrl(`/${locale}/updates/${slug}`);
+  const origin = getRequestOrigin(await headers());
+  const url = siteUrl(`/${locale}/updates/${slug}`, origin);
 
   // Prepare JSON-LD structured data
   const jsonLd = {
@@ -179,14 +184,14 @@ export default async function Page({ params }: PageProps) {
     author: {
       "@type": "Organization",
       name: "Deltalytix",
-      url: siteUrl(),
+      url: siteUrl("/", origin),
     },
     publisher: {
       "@type": "Organization",
       name: "Deltalytix",
       logo: {
         "@type": "ImageObject",
-        url: siteUrl("/logo.png"),
+        url: siteUrl("/logo.png", origin),
       },
     },
     mainEntityOfPage: {
