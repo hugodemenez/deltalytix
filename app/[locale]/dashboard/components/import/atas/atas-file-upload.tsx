@@ -2,7 +2,7 @@
 
 import React, { useCallback, useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { ImportType } from "../import-type-selection";
 import { Progress } from "@/components/ui/progress";
 import { XIcon, FileIcon, AlertCircle, ArrowUpCircle } from "lucide-react";
@@ -69,14 +69,37 @@ const normalizeAtasHeaderKey = (header: string): string =>
 const normalizeAtasHeader = (header: string): string =>
   ATAS_HEADER_MAPPINGS[normalizeAtasHeaderKey(header)] || header.trim();
 
-const parseAtasWorkbook = (data: ArrayBuffer): string[][] => {
-  const workbook = XLSX.read(data, { type: "array", cellDates: true });
-  const journalSheetName = ATAS_JOURNAL_SHEET_NAMES.find(
-    (sheetName) => workbook.Sheets[sheetName],
-  );
-  const journalSheet = journalSheetName
-    ? workbook.Sheets[journalSheetName]
-    : undefined;
+const formatAtasDateCell = (date: Date): string => {
+  const pad = (value: number) => value.toString().padStart(2, "0");
+
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+  ].join("-") + ` ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
+
+const formatAtasCell = (value: ExcelJS.CellValue): string => {
+  if (value == null) return "";
+  if (value instanceof Date) return formatAtasDateCell(value);
+  if (typeof value === "object") {
+    if ("text" in value) return String(value.text ?? "");
+    if ("result" in value) return String(value.result ?? "");
+    if ("richText" in value) {
+      return value.richText.map((part) => part.text).join("");
+    }
+    if ("hyperlink" in value) return String(value.hyperlink ?? "");
+  }
+
+  return String(value);
+};
+
+const parseAtasWorkbook = async (data: ArrayBuffer): Promise<string[][]> => {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(data);
+  const journalSheet = ATAS_JOURNAL_SHEET_NAMES
+    .map((sheetName) => workbook.getWorksheet(sheetName))
+    .find((sheet) => !!sheet);
 
   if (!journalSheet) {
     throw new Error(
@@ -84,15 +107,14 @@ const parseAtasWorkbook = (data: ArrayBuffer): string[][] => {
     );
   }
 
-  const jsonData = XLSX.utils
-    .sheet_to_json<string[]>(journalSheet, {
-      header: 1,
-      defval: "",
-      raw: false,
-      blankrows: false,
-      dateNF: "yyyy-mm-dd hh:mm:ss",
-    })
-    .map((row) => row.map((cell) => String(cell ?? "")));
+  const jsonData: string[][] = [];
+  journalSheet.eachRow({ includeEmpty: false }, (row) => {
+    const cells: string[] = [];
+    const values = Array.isArray(row.values) ? row.values.slice(1) : [];
+
+    values.forEach((cell) => cells.push(formatAtasCell(cell as ExcelJS.CellValue)));
+    jsonData.push(cells);
+  });
 
   if (jsonData.length === 0) {
     throw new Error("The Journal sheet appears to be empty.");
@@ -143,10 +165,9 @@ export default function AtasFileUpload({
       return new Promise<void>((resolve, reject) => {
         // Check if the file is an Excel file
         if (
-          !file.name.toLowerCase().endsWith(".xlsx") &&
-          !file.name.toLowerCase().endsWith(".xls")
+          !file.name.toLowerCase().endsWith(".xlsx")
         ) {
-          reject(new Error("Please upload an Excel file (.xlsx or .xls)"));
+          reject(new Error("Please upload an Excel file (.xlsx)"));
           return;
         }
 
@@ -154,7 +175,9 @@ export default function AtasFileUpload({
 
         reader.onload = async (e) => {
           try {
-            const fileData = parseAtasWorkbook(e.target?.result as ArrayBuffer);
+            const fileData = await parseAtasWorkbook(
+              e.target?.result as ArrayBuffer,
+            );
 
             setParsedFiles((prevFiles) => {
               const newFiles = [...prevFiles];
@@ -208,7 +231,6 @@ export default function AtasFileUpload({
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
         ".xlsx",
       ],
-      "application/vnd.ms-excel": [".xls"],
     },
   });
 
