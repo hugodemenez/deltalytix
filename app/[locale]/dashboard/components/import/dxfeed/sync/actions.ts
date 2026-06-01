@@ -49,20 +49,10 @@ const DXFEED_HISTORY_LOOKBACK_DAYS = Math.max(
 
 // Retry configuration for the historical report API, which rate limits
 // requests with HTTP 429 ("Too many requests").
-const DXFEED_MAX_RETRIES = Math.max(0, Number(process.env.DXFEED_MAX_RETRIES ?? '4'))
-const DXFEED_RETRY_BASE_DELAY_MS = Math.max(
-  100,
-  Number(process.env.DXFEED_RETRY_BASE_DELAY_MS ?? '1000'),
-)
-const DXFEED_MAX_RETRY_DELAY_MS = Math.max(
-  DXFEED_RETRY_BASE_DELAY_MS,
-  Number(process.env.DXFEED_MAX_RETRY_DELAY_MS ?? '30000'),
-)
-// Small pause between per-account requests to avoid tripping the rate limit
-// in the first place when an account list is large.
-const DXFEED_INTER_ACCOUNT_DELAY_MS = Math.max(
+const DXFEED_MAX_RETRIES = Math.max(0, Number(process.env.DXFEED_MAX_RETRIES ?? '3'))
+const DXFEED_RETRY_DELAY_MS = Math.max(
   0,
-  Number(process.env.DXFEED_INTER_ACCOUNT_DELAY_MS ?? '250'),
+  Number(process.env.DXFEED_RETRY_DELAY_MS ?? '2000'),
 )
 
 const logger = {
@@ -109,32 +99,11 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Parse a `Retry-After` header value. Per the HTTP spec it may be either a
- * number of seconds or an HTTP date. Returns the delay in milliseconds, or
- * null when the value is missing or unparseable.
- */
-function parseRetryAfterMs(headerValue: string | null): number | null {
-  if (!headerValue) return null
-
-  const seconds = Number(headerValue)
-  if (Number.isFinite(seconds)) {
-    return Math.max(0, seconds * 1000)
-  }
-
-  const dateMs = Date.parse(headerValue)
-  if (!Number.isNaN(dateMs)) {
-    return Math.max(0, dateMs - Date.now())
-  }
-
-  return null
-}
-
-/**
- * `fetch` wrapper that retries on rate limiting (429) and transient server
- * errors (502/503/504) using exponential backoff with jitter. When the server
- * provides a `Retry-After` header it takes precedence over the computed
- * backoff. Any other response (success or non-retryable error) is returned
- * as-is so the caller keeps full control over handling.
+ * `fetch` wrapper that retries on rate limiting (429). When the server sends a
+ * numeric `Retry-After` header we wait exactly that long; otherwise we fall
+ * back to a simple exponential backoff. Every 429 is logged with its full
+ * headers so we can learn DxFeed's actual rate-limit contract. Any other
+ * response is returned as-is.
  */
 async function fetchWithRetry(
   url: string,
@@ -142,39 +111,27 @@ async function fetchWithRetry(
   options: { label?: string } = {},
 ): Promise<Response> {
   const label = options.label ? ` for ${options.label}` : ''
-  let attempt = 0
 
-  while (true) {
+  for (let attempt = 0; ; attempt++) {
     const response = await fetch(url, init)
 
-    const isRetryable =
-      response.status === 429 ||
-      response.status === 502 ||
-      response.status === 503 ||
-      response.status === 504
-
-    if (!isRetryable || attempt >= DXFEED_MAX_RETRIES) {
+    if (response.status !== 429 || attempt >= DXFEED_MAX_RETRIES) {
       return response
     }
 
-    const retryAfterMs = parseRetryAfterMs(response.headers.get('Retry-After'))
-    const backoffMs = Math.min(
-      DXFEED_MAX_RETRY_DELAY_MS,
-      DXFEED_RETRY_BASE_DELAY_MS * 2 ** attempt,
-    )
-    // Jitter avoids synchronized retries when several accounts get throttled
-    // at the same time.
-    const jitterMs = Math.floor(Math.random() * 250)
-    const delayMs = Math.min(
-      DXFEED_MAX_RETRY_DELAY_MS,
-      (retryAfterMs ?? backoffMs) + jitterMs,
+    const retryAfter = response.headers.get('Retry-After')
+    const headers = Object.fromEntries(response.headers.entries())
+    logger.warn(
+      `Rate limited (429)${label} [attempt ${attempt + 1}/${DXFEED_MAX_RETRIES}]. ` +
+        `Retry-After=${retryAfter ?? 'none'}; headers=${JSON.stringify(headers)}`,
     )
 
-    attempt += 1
-    logger.warn(
-      `Rate limited / transient error${label} (status ${response.status}); ` +
-        `retrying in ${delayMs}ms (attempt ${attempt}/${DXFEED_MAX_RETRIES})`,
-    )
+    const retryAfterSeconds = Number(retryAfter)
+    const delayMs =
+      retryAfter && Number.isFinite(retryAfterSeconds)
+        ? retryAfterSeconds * 1000
+        : DXFEED_RETRY_DELAY_MS * 2 ** attempt
+
     await sleep(delayMs)
   }
 }
@@ -605,14 +562,7 @@ export async function getDxFeedTrades(
 
     const allTrades: Trade[] = []
 
-    for (let i = 0; i < accounts.length; i++) {
-      const account = accounts[i]
-      // Throttle between accounts to reduce the chance of hitting the rate
-      // limit; retries below handle the cases where we still get a 429.
-      if (i > 0 && DXFEED_INTER_ACCOUNT_DELAY_MS > 0) {
-        await sleep(DXFEED_INTER_ACCOUNT_DELAY_MS)
-      }
-
+    for (const account of accounts) {
       const accountLabel = account.accountHeader || account.accountReference || account.accountId.toString()
       const historicalAccountId = account.accountReference || account.accountId.toString()
 
