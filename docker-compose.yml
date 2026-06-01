@@ -47,6 +47,13 @@ services:
     environment:
       ENV: container
       DATABASE_URL: postgresql://${POSTGRES_USER:-devuser}:${POSTGRES_PASSWORD:-devpass}@db:5432/${POSTGRES_DB:-deltalytix_dev}
+      # Local dashboard auth bypass (opt-in; defaults to disabled for safety)
+      LOCAL_DASHBOARD_AUTH_BYPASS: ${LOCAL_DASHBOARD_AUTH_BYPASS:-false}
+      NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS: ${NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS:-false}
+      LOCAL_DASHBOARD_USER_ID: ${LOCAL_DASHBOARD_USER_ID:-local-dashboard-user}
+      NEXT_PUBLIC_LOCAL_DASHBOARD_USER_ID: ${NEXT_PUBLIC_LOCAL_DASHBOARD_USER_ID:-local-dashboard-user}
+      LOCAL_DASHBOARD_USER_EMAIL: ${LOCAL_DASHBOARD_USER_EMAIL:-local-dashboard@deltalytix.local}
+      NEXT_PUBLIC_LOCAL_DASHBOARD_USER_EMAIL: ${NEXT_PUBLIC_LOCAL_DASHBOARD_USER_EMAIL:-local-dashboard@deltalytix.local}
     depends_on:
       db:
         condition: service_healthy

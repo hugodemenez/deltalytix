@@ -18,6 +18,17 @@
 
 ---
 
+## Self-hosting
+
+For a dedicated self-host/local-agent setup guide, read [`SELF_HOSTING.md`](./SELF_HOSTING.md).
+
+It includes:
+- dashboard-only local auth bypass mode
+- deterministic demo data seeding for default layout charts
+- copy/paste health checks and deploy checklist
+
+---
+
 ## ✨ Key Features
 
   <div align="center">
