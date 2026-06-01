@@ -487,6 +487,9 @@ export type TagScalarFieldEnum = (typeof TagScalarFieldEnum)[keyof typeof TagSca
 export const NewsletterScalarFieldEnum = {
   email: 'email',
   isActive: 'isActive',
+  weeklySummaryEnabled: 'weeklySummaryEnabled',
+  monthlyStatsEnabled: 'monthlyStatsEnabled',
+  renewalNoticeEnabled: 'renewalNoticeEnabled',
   firstName: 'firstName',
   lastName: 'lastName'
 } as const

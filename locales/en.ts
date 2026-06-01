@@ -1758,8 +1758,19 @@ export default {
     preferences: {
       title: "Newsletter Preferences",
       description: "Manage your email preferences and subscription settings",
-      comingSoon:
-        "Additional newsletter preferences management features coming soon.",
+      missingEmail:
+        "Add your email in the URL to manage preferences (example: ?email=you@example.com).",
+      authRequired: "Please sign in to manage your newsletter preferences.",
+      statusLabel: "Newsletter Subscription",
+      weeklySummaryLabel: "Deltalytix Weekly Updates",
+      monthlyStatsLabel: "Monthly Stats Update",
+      renewalNoticeLabel: "Renewals Notification",
+      save: "Save Preferences",
+      loading: "Loading preferences...",
+      saving: "Saving...",
+      saved: "Preferences saved successfully.",
+      loadError: "Failed to load preferences. Please try again.",
+      saveError: "Failed to save preferences. Please try again.",
     },
     admin: {
       inferNames: "Infer Names",

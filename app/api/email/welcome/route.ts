@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server"
-import { PrismaClient } from "@/prisma/generated/prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
+import { prisma } from "@/lib/prisma"
+import { normalizeNewsletterEmail } from "@/lib/newsletter-email"
 import { Resend } from 'resend'
 import WelcomeEmail from '@/components/emails/welcome'
 import { getLatestVideoFromPlaylist } from "@/app/[locale]/admin/actions/youtube"
 
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = new PrismaClient({ adapter })
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: Request) {
@@ -36,23 +31,25 @@ export async function POST(req: Request) {
     const firstName = fullName.split(' ')[0] || 'trader'
     const lastName = fullName.split(' ')[1] || ''
 
+    const email = normalizeNewsletterEmail(record.email)
+
     // Add email to newsletter list
     await prisma.newsletter.upsert({
-      where: { email: record.email },
+      where: { email },
       update: { isActive: true },
       create: {
-        email: record.email,
+        email,
         firstName: firstName,
         lastName: lastName,
         isActive: true
       }
     })
 
-    const unsubscribeUrl = `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(record.email)}`
+    const unsubscribeUrl = `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(email)}`
 
     // Check user language preference from database
     const user = await prisma.user.findUnique({
-      where: { email: record.email }
+      where: { email },
     })
     const userLanguage = user?.language || 'en'
     let youtubeId = 'ZBrIZpCh_7Q'
