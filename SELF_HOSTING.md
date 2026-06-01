@@ -45,6 +45,9 @@ Create `.env.local` with:
 `LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local`
 `NEXT_PUBLIC_LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local`
 `NEXT_PUBLIC_SITE_URL=http://localhost:3000`
+`STRIPE_SECRET_KEY=sk_test_dummy`
+
+The dummy Stripe key is only for dashboard-only local validation. It prevents Stripe client initialization from blocking dashboard data loading; billing flows still require real Stripe configuration.
 
 ### Step B: start Postgres
 
@@ -108,7 +111,23 @@ Expected:
 - `HTTP/1.1 307 Temporary Redirect`
 - `location: /dashboard`
 
-## 5) What agents should do before deploy
+## 5) Visual verification
+
+After seeding demo data, verify that the default dashboard renders the local simulation account and recent trades.
+
+The Widgets tab should show the seeded chart layout, including trade distribution, P/L vs commissions, equity, and account selector data for `LOCAL-SIM-001`.
+
+![Self-hosted dashboard widgets with demo trades](public/img/self-hosting/dashboard-widgets.png)
+
+The Table tab should show recent demo trades and pagination.
+
+![Self-hosted dashboard trade table with demo trades](public/img/self-hosting/dashboard-table.png)
+
+The Accounts tab should show the local simulation account, balance, drawdown, consistency, and trading-day metrics.
+
+![Self-hosted dashboard local simulation account](public/img/self-hosting/dashboard-accounts.png)
+
+## 6) What agents should do before deploy
 
 Use this sequence for reproducible deploy prep:
 
@@ -120,9 +139,8 @@ Use this sequence for reproducible deploy prep:
 6. Run manual dashboard verification on default layout
 7. Commit, push, and open/update PR
 
-## 6) Notes
+## 7) Notes
 
 - The local bypass mode is for development/self-host bootstrap. Do not enable it in production; the app refuses bypass when `NODE_ENV=production` unless `LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION=1` is set intentionally.
 - If you disable bypass, you must configure Supabase env vars and auth providers.
 - `LOCAL_DASHBOARD_USER_ID` can be changed, but keep it stable per environment so seeded/demo data stays consistent.
-
