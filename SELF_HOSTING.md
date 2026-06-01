@@ -45,9 +45,8 @@ Create `.env.local` with:
 `LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local`
 `NEXT_PUBLIC_LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local`
 `NEXT_PUBLIC_SITE_URL=http://localhost:3000`
-`STRIPE_SECRET_KEY=sk_test_dummy`
 
-The dummy Stripe key is only for dashboard-only local validation. It prevents Stripe client initialization from blocking dashboard data loading; billing flows still require real Stripe configuration.
+Dashboard bypass mode skips Stripe subscription lookups. Billing flows still require real Stripe configuration.
 
 ### Step B: start Postgres
 

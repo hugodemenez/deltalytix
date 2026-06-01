@@ -1,7 +1,6 @@
 services:
   db:
     image: postgres:16
-    container_name: deltalytix-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-devuser}
@@ -20,11 +19,11 @@ services:
   # This is used to migrate the database
   migrate:
     image: oven/bun:1
-    container_name: deltalytix-migrate
     working_dir: /app
     restart: "no"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-devuser}:${POSTGRES_PASSWORD:-devpass}@db:5432/${POSTGRES_DB:-deltalytix_dev}
+      DIRECT_URL: postgresql://${POSTGRES_USER:-devuser}:${POSTGRES_PASSWORD:-devpass}@db:5432/${POSTGRES_DB:-deltalytix_dev}
     volumes:
       - ./:/app
     depends_on:
@@ -41,12 +40,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.bun
-    container_name: deltalytix-app
     working_dir: /app
     restart: unless-stopped
     environment:
       ENV: container
       DATABASE_URL: postgresql://${POSTGRES_USER:-devuser}:${POSTGRES_PASSWORD:-devpass}@db:5432/${POSTGRES_DB:-deltalytix_dev}
+      DIRECT_URL: postgresql://${POSTGRES_USER:-devuser}:${POSTGRES_PASSWORD:-devpass}@db:5432/${POSTGRES_DB:-deltalytix_dev}
       # Local dashboard auth bypass (opt-in; defaults to disabled for safety)
       LOCAL_DASHBOARD_AUTH_BYPASS: ${LOCAL_DASHBOARD_AUTH_BYPASS:-false}
       NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS: ${NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS:-false}

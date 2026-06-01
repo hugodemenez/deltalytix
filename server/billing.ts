@@ -6,6 +6,7 @@ import { PrismaClient } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { stripe } from '@/server/stripe'
 import Stripe from 'stripe'
+import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -63,6 +64,11 @@ export type SubscriptionWithPrice = {
 
 export async function getSubscriptionData() {
   console.debug('getSubscriptionData')
+
+  if (isLocalDashboardAuthBypassEnabled()) {
+    return null
+  }
+
   const supabase = await createClient()
 
   try {
