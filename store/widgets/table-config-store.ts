@@ -18,7 +18,7 @@ export interface TableConfig {
   columnFilters: ColumnFiltersState
   pageSize: number
   groupingGranularity: number
-  groupingMode: 'time' | 'instrument' | 'account'
+  groupingMode: 'time' | 'instrument' | 'account' | 'creationDate'
 }
 
 interface TableConfigState {

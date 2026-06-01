@@ -330,7 +330,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
     tableConfig?.groupingGranularity || 0,
   );
   const [groupingMode, setGroupingMode] = useState<
-    "time" | "instrument" | "account"
+    "time" | "instrument" | "account" | "creationDate"
   >(tableConfig?.groupingMode || "time");
   const [selectedTrades, setSelectedTrades] = useState<string[]>([]);
   const [showPoints, setShowPoints] = useState(false);
@@ -409,7 +409,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   };
 
   const handleGroupingModeChange = (
-    newMode: "time" | "instrument" | "account",
+    newMode: "time" | "instrument" | "account" | "creationDate",
   ) => {
     setGroupingMode(newMode);
     updateGroupingMode("trade-table", newMode);
@@ -516,7 +516,9 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           ? `instrument-${trade.instrument}`
           : groupingMode === "account"
             ? `account-${trade.accountNumber}`
-            : `${trade.instrument}-${roundedEntryDate.toISOString()}`;
+            : groupingMode === "creationDate"
+              ? `creationDate-${new Date(trade.createdAt).toDateString()}`
+              : `${trade.instrument}-${roundedEntryDate.toISOString()}`;
 
       const key = trade.groupId ? `${trade.groupId}` : autoGroupKey;
 
@@ -1335,9 +1337,9 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             {config?.groupTrades !== false && (
               <Select
                 value={groupingMode}
-                onValueChange={(value: "time" | "instrument" | "account") =>
-                  handleGroupingModeChange(value)
-                }
+                onValueChange={(
+                  value: "time" | "instrument" | "account" | "creationDate",
+                ) => handleGroupingModeChange(value)}
               >
                 <SelectTrigger className="w-full min-w-0 max-w-full xl:w-[180px] xl:max-w-[250px]">
                   <SelectValue
@@ -1354,6 +1356,9 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                   </SelectItem>
                   <SelectItem value="account">
                     {t("trade-table.groupingMode.account")}
+                  </SelectItem>
+                  <SelectItem value="creationDate">
+                    {t("trade-table.groupingMode.creationDate")}
                   </SelectItem>
                 </SelectContent>
               </Select>

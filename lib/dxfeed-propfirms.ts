@@ -44,6 +44,24 @@ export const DXFEED_PROP_FIRMS: DxFeedPropFirmDefinition[] = [
     tradingSubdomain: 'trading-volumetrica',
     enabled: true,
   },
+  {
+    id: 'swissfirmup',
+    name: 'SwissFirmUp',
+    website: 'https://volumetrica.swissfirmup.com',
+    domain: 'swissfirmup.com',
+    historicalSubdomain: 'volumetrica',
+    tradingSubdomain: 'trading-volumetrica',
+    enabled: true,
+  },
+  {
+    id: 'phidiaspropfirm',
+    name: 'Phidias Prop Firm',
+    website: 'https://dxfeed.phidiaspropfirm.com',
+    domain: 'phidiaspropfirm.com',
+    historicalSubdomain: 'dxfeed',
+    tradingSubdomain: 'trading-volumetrica',
+    enabled: true,
+  },
   // More Volumetrica-based firms can be added once their domain pattern is confirmed.
 ]
 

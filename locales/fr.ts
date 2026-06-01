@@ -1419,6 +1419,7 @@ export default {
       time: "Par heure",
       instrument: "Par instrument",
       account: "Par compte",
+      creationDate: "Par date de création",
     },
     groupTrades: "Grouper les trades",
     ungroupTrades: "Dégrouper les trades",
