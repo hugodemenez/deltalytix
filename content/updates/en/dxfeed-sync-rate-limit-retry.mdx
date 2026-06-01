@@ -1,0 +1,13 @@
+---
+title: 'DxFeed sync: automatic retry when rate limited'
+description: 'DxFeed imports wait and retry instead of failing when the history server returns too many requests.'
+date: '2026-06-01'
+status: completed
+completedDate: '2026-06-01'
+---
+
+# DxFeed sync: automatic retry when rate limited
+
+DxFeed sync now handles **rate limiting** from the history server instead of stopping mid-import. When the API responds with a "too many requests" error, Deltalytix waits—using the server's suggested delay when available—and tries again automatically.
+
+This matters most during large historical imports or when syncing several accounts back to back. You should see fewer failed syncs that require starting over from scratch.

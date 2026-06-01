@@ -1,0 +1,13 @@
+---
+title: 'Sync DxFeed : nouvelle tentative automatique en cas de limite'
+description: 'Les imports DxFeed patientent et réessayent au lieu d''échouer quand le serveur d''historique limite les requêtes.'
+date: '2026-06-01'
+status: completed
+completedDate: '2026-06-01'
+---
+
+# Sync DxFeed : nouvelle tentative automatique en cas de limite
+
+La sync DxFeed gère désormais les **limites de débit** du serveur d'historique au lieu de s'arrêter en plein import. Quand l'API renvoie une erreur « trop de requêtes », Deltalytix attend—en utilisant le délai suggéré par le serveur quand il est disponible—puis réessaie automatiquement.
+
+C'est surtout utile lors de gros imports historiques ou quand vous synchronisez plusieurs comptes d'affilée. Vous devriez voir moins de syncs échouées nécessitant de tout relancer depuis le début.
