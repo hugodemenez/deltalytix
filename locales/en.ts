@@ -1094,6 +1094,7 @@ export default {
       time: "By time",
       instrument: "By instrument",
       account: "By account",
+      creationDate: "By creation date",
     },
     groupTrades: "Group trades",
     ungroupTrades: "Ungroup trades",
