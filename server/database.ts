@@ -122,10 +122,16 @@ export async function saveTradesAction(
       }
     }
 
-    // Use revalidateTag (not updateTag) so this works both from Server Actions
-    // and from Route Handlers (e.g. /api/dxfeed/sync, /api/thor/store).
-    // updateTag can only be called from within a Server Action.
-    revalidateTag(`trades-${userId}`, { expire: 0 })
+    // Prefer updateTag: in a Server Action context (e.g. client-side import)
+    // it expires AND immediately refreshes the cache, so the caller reads its
+    // own writes without a separate refetch. updateTag throws when called from
+    // a Route Handler (e.g. /api/dxfeed/sync, /api/thor/store), so fall back to
+    // revalidateTag there — that's expected, not an error.
+    try {
+      updateTag(`trades-${userId}`)
+    } catch {
+      revalidateTag(`trades-${userId}`, { expire: 0 })
+    }
 
     return {
       error: result.count === 0 ? 'NO_TRADES_ADDED' : false,
