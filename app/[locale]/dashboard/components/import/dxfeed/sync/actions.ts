@@ -47,6 +47,14 @@ const DXFEED_HISTORY_LOOKBACK_DAYS = Math.max(
   Number(process.env.DXFEED_HISTORY_LOOKBACK_DAYS ?? '364'),
 )
 
+// Retry configuration for the historical report API, which rate limits
+// requests with HTTP 429 ("Too many requests").
+const DXFEED_MAX_RETRIES = Math.max(0, Number(process.env.DXFEED_MAX_RETRIES ?? '3'))
+const DXFEED_RETRY_DELAY_MS = Math.max(
+  0,
+  Number(process.env.DXFEED_RETRY_DELAY_MS ?? '2000'),
+)
+
 const logger = {
   debug: (message: string, data?: any) => {
     if (IS_DEV) console.log(`[DXFEED-DEBUG] ${message}`, data ?? '')
@@ -83,6 +91,48 @@ function buildHistoricalAuthHeaders(accessToken: string): HeadersInit {
     // The report API expects the raw tradingRestReportToken, not a Bearer token.
     'Authorization': accessToken,
     'Accept': 'application/json',
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * `fetch` wrapper that retries on rate limiting (429). When the server sends a
+ * numeric `Retry-After` header we wait exactly that long; otherwise we fall
+ * back to a simple exponential backoff. Every 429 is logged with its full
+ * headers so we can learn DxFeed's actual rate-limit contract. Any other
+ * response is returned as-is.
+ */
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  options: { label?: string } = {},
+): Promise<Response> {
+  const label = options.label ? ` for ${options.label}` : ''
+
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(url, init)
+
+    if (response.status !== 429 || attempt >= DXFEED_MAX_RETRIES) {
+      return response
+    }
+
+    const retryAfter = response.headers.get('Retry-After')
+    const headers = Object.fromEntries(response.headers.entries())
+    logger.warn(
+      `Rate limited (429)${label} [attempt ${attempt + 1}/${DXFEED_MAX_RETRIES}]. ` +
+        `Retry-After=${retryAfter ?? 'none'}; headers=${JSON.stringify(headers)}`,
+    )
+
+    const retryAfterSeconds = Number(retryAfter)
+    const delayMs =
+      retryAfter && Number.isFinite(retryAfterSeconds)
+        ? retryAfterSeconds * 1000
+        : DXFEED_RETRY_DELAY_MS * 2 ** attempt
+
+    await sleep(delayMs)
   }
 }
 
@@ -266,9 +316,11 @@ export async function getDxFeedAccounts(
 
     logger.debug('Fetching accounts from:', url)
 
-    const response = await fetch(url, {
-      headers: buildHistoricalAuthHeaders(accessToken),
-    })
+    const response = await fetchWithRetry(
+      url,
+      { headers: buildHistoricalAuthHeaders(accessToken) },
+      { label: 'account list' },
+    )
 
     if (!response.ok) {
       const text = await response.text()
@@ -523,9 +575,11 @@ export async function getDxFeedTrades(
       tradesUrl.searchParams.set('startDt', startDt.toISOString())
       tradesUrl.searchParams.set('endDt', endDt.toISOString())
 
-      const response = await fetch(tradesUrl.toString(), {
-        headers: buildHistoricalAuthHeaders(accessToken),
-      })
+      const response = await fetchWithRetry(
+        tradesUrl.toString(),
+        { headers: buildHistoricalAuthHeaders(accessToken) },
+        { label: `account ${accountLabel}` },
+      )
 
       if (!response.ok) {
         const text = await response.text()
