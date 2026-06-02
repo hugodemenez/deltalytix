@@ -2,7 +2,8 @@
 
 import React, { useCallback, useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
-import ExcelJS from "exceljs";
+import readExcelFile from "read-excel-file/browser";
+import type { CellValue } from "read-excel-file/browser";
 import { ImportType } from "../import-type-selection";
 import { Progress } from "@/components/ui/progress";
 import { XIcon, FileIcon, AlertCircle, ArrowUpCircle } from "lucide-react";
@@ -61,7 +62,8 @@ const ATAS_HEADER_MAPPINGS: Record<string, string> = {
 
 const normalizeAtasHeaderKey = (header: string): string =>
   header
-    .replace(/\u200B/g, "")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/[\u00A0\u202F]/g, " ")
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");
@@ -79,27 +81,21 @@ const formatAtasDateCell = (date: Date): string => {
   ].join("-") + ` ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
 
-const formatAtasCell = (value: ExcelJS.CellValue): string => {
+const formatAtasCell = (value: CellValue | null): string => {
   if (value == null) return "";
   if (value instanceof Date) return formatAtasDateCell(value);
-  if (typeof value === "object") {
-    if ("text" in value) return String(value.text ?? "");
-    if ("result" in value) return String(value.result ?? "");
-    if ("richText" in value) {
-      return value.richText.map((part) => part.text).join("");
-    }
-    if ("hyperlink" in value) return String(value.hyperlink ?? "");
-  }
 
   return String(value);
 };
 
 const parseAtasWorkbook = async (data: ArrayBuffer): Promise<string[][]> => {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(data);
-  const journalSheet = ATAS_JOURNAL_SHEET_NAMES
-    .map((sheetName) => workbook.getWorksheet(sheetName))
-    .find((sheet) => !!sheet);
+  const sheets = await readExcelFile(data);
+  const journalSheet = sheets.find(({ sheet }) =>
+    ATAS_JOURNAL_SHEET_NAMES.some(
+      (sheetName) =>
+        normalizeAtasHeaderKey(sheetName) === normalizeAtasHeaderKey(sheet),
+    ),
+  );
 
   if (!journalSheet) {
     throw new Error(
@@ -107,14 +103,9 @@ const parseAtasWorkbook = async (data: ArrayBuffer): Promise<string[][]> => {
     );
   }
 
-  const jsonData: string[][] = [];
-  journalSheet.eachRow({ includeEmpty: false }, (row) => {
-    const cells: string[] = [];
-    const values = Array.isArray(row.values) ? row.values.slice(1) : [];
-
-    values.forEach((cell) => cells.push(formatAtasCell(cell as ExcelJS.CellValue)));
-    jsonData.push(cells);
-  });
+  const jsonData = journalSheet.data
+    .map((row) => row.map(formatAtasCell))
+    .filter((row) => row.some((cell) => cell !== ""));
 
   if (jsonData.length === 0) {
     throw new Error("The Journal sheet appears to be empty.");
