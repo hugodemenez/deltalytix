@@ -567,10 +567,10 @@ export default {
     "Glissez et déposez votre fichier Excel ici",
   "import.upload.clickToBrowseExcel": "ou cliquez pour parcourir",
   "import.upload.excelFormat":
-    'Supporte les fichiers .xlsx et .xls avec la feuille "Journal"',
+    'Supporte les fichiers .xlsx avec une feuille "Journal" ou "Journal commercial"',
   "import.upload.excelNote": "Téléchargement de fichier Excel",
   "import.upload.excelNoteDescription":
-    'Assurez-vous que votre fichier Excel contient une feuille nommée "Journal" avec les colonnes requises : Account, Instrument, Open time, Open price, Open volume, Close time, Close price, Close volume, PnL.',
+    "Assurez-vous que votre fichier .xlsx contient les colonnes ATAS requises. Les cellules date Excel ne contiennent pas de fuseau horaire ; les horaires importes peuvent donc dependre du fuseau de l'appareil qui effectue l'import.",
   "import.upload.dropHere": "Déposez vos fichiers ici",
   "import.upload.weWillHandle": "Nous nous occupons du reste",
   "import.upload.uploadedFiles": "Fichiers téléchargés :",
