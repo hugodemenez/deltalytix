@@ -2,6 +2,20 @@
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 
+// Tradovate access tokens live 90 minutes and Tradovate advises renewing ~15 min
+// before expiry. We only renew once a token is within this window of expiring,
+// instead of renewing every token on every run. At a 10-min cron cadence this
+// still gives each token at least two chances to renew before it lapses, while
+// cutting the number of renewal calls (and the per-IP rate-limit pressure they
+// create) roughly 9x.
+const TOKEN_RENEWAL_WINDOW_MS = 25 * 60 * 1000;
+
+// Tradovate's rate limits are scoped PER IP, not per account, so every user's
+// renewal call from this cron shares a single ~5,000 req/hour budget (with
+// per-second/per-minute sub-limits). Cap how many Tradovate requests we fire at
+// once so a large user base can't burst past those limits in a single run.
+const MAX_TRADOVATE_CONCURRENCY = 5;
+
 /**
  * Helper function to check if current time matches the configured daily sync time
  * @param dailySyncTime The configured sync time from database
@@ -61,32 +75,42 @@ export async function GET(request: NextRequest) {
     let tokenRenewals = 0;
     let dailySyncs = 0;
 
-    const promises = validSynchronizations.map(async (synchronization) => {
+    const now = Date.now();
+
+    // Build a task per sync, but only call Tradovate when there is something to do:
+    // renew the token only if it is approaching expiry, and run the daily sync only
+    // within its configured window. Tasks are then executed with bounded concurrency
+    // so we never burst the shared per-IP rate limit.
+    const tasks = validSynchronizations.map((synchronization) => async () => {
       let renewed = false;
       let synced = false;
-      
-      // Always attempt renewal for each token
-      renewed = await renewUserToken(synchronization);
-      
-      // Check if we should perform daily sync
+
+      const expiresAt = synchronization.tokenExpiresAt!.getTime();
+      const needsRenewal = expiresAt - now <= TOKEN_RENEWAL_WINDOW_MS;
+      if (needsRenewal) {
+        renewed = await renewUserToken(synchronization);
+      }
+
       if (shouldPerformDailySync(synchronization.dailySyncTime)) {
         synced = await performDailySync(synchronization);
       }
-      
+
       return { renewed, synced };
     });
 
-    const results = await Promise.allSettled(promises);
-    
+    const results = await runWithConcurrency(tasks, MAX_TRADOVATE_CONCURRENCY);
+
     results.forEach((result) => {
       if (result.status === 'fulfilled' && result.value) {
         if (result.value.renewed) tokenRenewals++;
         if (result.value.synced) dailySyncs++;
       }
     });
-    
-    return Response.json({ 
-      success: true, 
+
+    console.log(`[CRON] Tradovate cron: ${synchronizations.length} syncs scanned, ${tokenRenewals} tokens renewed, ${dailySyncs} daily syncs`);
+
+    return Response.json({
+      success: true,
       processed: synchronizations.length,
       tokenRenewals,
       dailySyncs
@@ -227,4 +251,36 @@ async function performDailySync(synchronization: any): Promise<boolean> {
     console.error(`[CRON] Error during daily sync for account ${synchronization.accountId}:`, error);
     return false;
   }
+}
+
+/**
+ * Runs the given async tasks with at most `limit` of them in flight at once,
+ * returning results in the original order. Behaves like Promise.allSettled but
+ * throttled, so a large batch of Tradovate calls can't all fire simultaneously
+ * and trip the shared per-IP rate limit.
+ */
+async function runWithConcurrency<T>(
+  tasks: Array<() => Promise<T>>,
+  limit: number
+): Promise<PromiseSettledResult<T>[]> {
+  const results: PromiseSettledResult<T>[] = new Array(tasks.length);
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < tasks.length) {
+      const index = cursor++;
+      try {
+        results[index] = { status: 'fulfilled', value: await tasks[index]() };
+      } catch (reason) {
+        results[index] = { status: 'rejected', reason };
+      }
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.max(1, Math.min(limit, tasks.length)) },
+    () => worker()
+  );
+  await Promise.all(workers);
+  return results;
 }
