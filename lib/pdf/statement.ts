@@ -63,22 +63,36 @@ export function computeSummary(trades: PdfTrade[]): SummaryMetrics {
   }
 }
 
-// Buckets net pnl by day. The equity curve uses entryDate (matching the live
-// equity-chart widget); the calendar/daily views use closeDate (matching
-// formatCalendarData in lib/utils). Both honour the user's timezone.
+// Buckets net pnl by day. The equity curve uses entryDate in the user's
+// timezone (matching the live equity chart's client-side fallback).
 function bucketByDay(
   trades: PdfTrade[],
-  dateKey: "entryDate" | "closeDate",
+  dateKey: "entryDate",
   timezone: string,
 ): Map<string, number> {
   const buckets = new Map<string, number>()
   for (const trade of trades) {
-    const source = dateKey === "closeDate" ? trade.closeDate || trade.entryDate : trade.entryDate
+    const source = trade[dateKey]
     const time = new Date(source).getTime()
     if (Number.isNaN(time)) {
       continue
     }
     const day = formatInTimeZone(new Date(source), timezone, "yyyy-MM-dd")
+    buckets.set(day, (buckets.get(day) ?? 0) + netPnl(trade))
+  }
+  return buckets
+}
+
+// Mirrors formatCalendarData in lib/utils: the live Daily P&L, Weekday P&L,
+// and calendar widgets bucket trades by entryDate formatted in UTC.
+function bucketByDashboardCalendarDay(trades: PdfTrade[]): Map<string, number> {
+  const buckets = new Map<string, number>()
+  for (const trade of trades) {
+    const time = new Date(trade.entryDate).getTime()
+    if (Number.isNaN(time)) {
+      continue
+    }
+    const day = formatInTimeZone(new Date(trade.entryDate), "UTC", "yyyy-MM-dd")
     buckets.set(day, (buckets.get(day) ?? 0) + netPnl(trade))
   }
   return buckets
@@ -94,8 +108,8 @@ export function computeChartData(trades: PdfTrade[], timezone: string): Statemen
     return { label: day, value: cumulative }
   })
 
-  // Daily net pnl by closeDate bucket, chronological.
-  const dailyBuckets = bucketByDay(trades, "closeDate", timezone)
+  // Daily net pnl by dashboard calendar bucket, chronological.
+  const dailyBuckets = bucketByDashboardCalendarDay(trades)
   const dailyDays = [...dailyBuckets.keys()].sort()
   const dailyPnl: PointSeries[] = dailyDays.map((day) => ({
     label: day,
