@@ -91,85 +91,88 @@ export async function createShared(data: SharedParams): Promise<string> {
 
 export async function getShared(slug: string): Promise<{params: SharedParams, trades: Trade[], groups: GroupWithAccounts[]} | null> {
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      const shared = await tx.shared.findUnique({
-        where: { slug },
-      })
-
-      if (!shared) {
-        return null
-      }
-
-      // Update view count
-      await tx.shared.update({
-        where: { slug },
-        data: {
-          viewCount: {
-            increment: 1,
-          },
-        },
-      })
-
-      // Parse the date range
-      const dateRange = shared.dateRange as unknown as DateRange
-      if (!dateRange?.from) {
-        throw new Error('Invalid date range: from date is required')
-      }
-      const fromDate = new Date(dateRange.from)
-      const toDate = dateRange.to ? new Date(dateRange.to) : undefined
-
-      // Parallel fetch of trades, tick details, and groups
-      const [trades, tickDetails, groups] = await Promise.all([
-        tx.trade.findMany({
-          where: {
-            userId: shared.userId,
-            ...(shared.accountNumbers.length > 0 && {
-              accountNumber: {
-                in: shared.accountNumbers,
-              },
-            }),
-            entryDate: {
-              gte: fromDate.toISOString(),
-              ...(toDate && { lte: toDate.toISOString() })
-            }
-          },
-          orderBy: {
-            entryDate: 'desc',
-          },
-        }),
-        tx.tickDetails.findMany(),
-        tx.group.findMany({
-          where: {
-            userId: shared.userId,
-          },
-          include: {
-            accounts: true,
-          },
-        })
-      ])
-
-      return {
-        params: {
-          userId: shared.userId,
-          title: shared.title || undefined,
-          description: shared.description || undefined,
-          isPublic: shared.isPublic,
-          accountNumbers: shared.accountNumbers,
-          dateRange: {
-            from: fromDate,
-            ...(toDate && { to: toDate })
-          },
-          desktop: shared.desktop as any[],
-          mobile: shared.mobile as any[],
-          expiresAt: shared.expiresAt || undefined,
-          tickDetails,
-        },
-        trades,
-        groups,
-      }
+    // Note: these reads are intentionally not wrapped in an interactive
+    // transaction. The heavy queries (trades and the full tickDetails table)
+    // can exceed the default 5s transaction timeout (P2028), and a public
+    // read-only view does not require cross-query snapshot isolation.
+    const shared = await prisma.shared.findUnique({
+      where: { slug },
     })
 
-    return result
+    if (!shared) {
+      return null
+    }
+
+    // Parse the date range
+    const dateRange = shared.dateRange as unknown as DateRange
+    if (!dateRange?.from) {
+      throw new Error('Invalid date range: from date is required')
+    }
+    const fromDate = new Date(dateRange.from)
+    const toDate = dateRange.to ? new Date(dateRange.to) : undefined
+
+    // Parallel fetch of trades, tick details, and groups
+    const [trades, tickDetails, groups] = await Promise.all([
+      prisma.trade.findMany({
+        where: {
+          userId: shared.userId,
+          ...(shared.accountNumbers.length > 0 && {
+            accountNumber: {
+              in: shared.accountNumbers,
+            },
+          }),
+          entryDate: {
+            gte: fromDate.toISOString(),
+            ...(toDate && { lte: toDate.toISOString() })
+          }
+        },
+        orderBy: {
+          entryDate: 'desc',
+        },
+      }),
+      prisma.tickDetails.findMany(),
+      prisma.group.findMany({
+        where: {
+          userId: shared.userId,
+        },
+        include: {
+          accounts: true,
+        },
+      })
+    ])
+
+    // Increment the view count without blocking the response or failing the
+    // fetch if it errors out.
+    prisma.shared.update({
+      where: { slug },
+      data: {
+        viewCount: {
+          increment: 1,
+        },
+      },
+    }).catch((error) => {
+      console.error('[getShared] Failed to increment view count:', error)
+    })
+
+    return {
+      params: {
+        userId: shared.userId,
+        title: shared.title || undefined,
+        description: shared.description || undefined,
+        isPublic: shared.isPublic,
+        accountNumbers: shared.accountNumbers,
+        dateRange: {
+          from: fromDate,
+          ...(toDate && { to: toDate })
+        },
+        desktop: shared.desktop as any[],
+        mobile: shared.mobile as any[],
+        expiresAt: shared.expiresAt || undefined,
+        tickDetails,
+      },
+      trades,
+      groups,
+    }
   } catch (error) {
     console.error('[getShared] Error:', error)
     return null

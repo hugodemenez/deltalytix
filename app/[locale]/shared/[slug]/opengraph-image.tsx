@@ -14,9 +14,10 @@ export const contentType = "image/png"
 export const runtime = 'nodejs'
 export const revalidate = 3600 // 1 hour
 
-export default async function Image({ params }: { params: { slug: string } }) {
+export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
     try {
-        const sharedData = await getShared(params.slug)
+        const { slug } = await params
+        const sharedData = await getShared(slug)
         if (!sharedData) {
             return new Response("Shared data not found", { status: 404 })
         }
