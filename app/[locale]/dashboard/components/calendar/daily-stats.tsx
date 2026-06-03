@@ -16,10 +16,7 @@ interface DailyStatsProps {
   isWeekly?: boolean;
 }
 
-const formatCurrency = (value: number | undefined | null) => {
-  if (value == null) return '$0.00'
-  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
+import { formatCurrencyFixed2 as formatCurrency } from "@/shared/format-currency"
 
 const formatDuration = (seconds: number) => {
   const hours = Math.floor(seconds / 3600)

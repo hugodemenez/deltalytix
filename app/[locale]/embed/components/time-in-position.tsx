@@ -12,12 +12,7 @@ type TradeLike = {
   timeInPosition: number // seconds
 }
 
-function formatTime(minutes: number) {
-  const hours = Math.floor(minutes / 60)
-  const mins = Math.round(minutes % 60)
-  if (hours > 0) return mins > 0 ? `${hours}h${mins}m` : `${hours}h`
-  return `${mins}m`
-}
+import { formatMinutesToHoursMinutes as formatTime } from "@/shared/format-time"
 
 export default function TimeInPositionByHourChart({ trades }: { trades: TradeLike[] }) {
   const t = useI18n()

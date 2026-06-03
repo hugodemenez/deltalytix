@@ -54,16 +54,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const formatCurrency = (value: number) => {
-  const absValue = Math.abs(value);
-  if (absValue >= 1000000) {
-    return `${value < 0 ? "-" : ""}$${(absValue / 1000000).toFixed(1)}M`;
-  }
-  if (absValue >= 1000) {
-    return `${value < 0 ? "-" : ""}$${(absValue / 1000).toFixed(1)}k`;
-  }
-  return `${value < 0 ? "-" : ""}$${absValue.toFixed(0)}`;
-};
+import { formatCurrencyCompact as formatCurrency } from "@/shared/format-currency";
 
 const positiveColor = "hsl(var(--chart-2))"; // Green color
 const negativeColor = "hsl(var(--chart-loss))"; // Orangish color

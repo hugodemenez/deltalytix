@@ -33,8 +33,7 @@ interface WeekdayPNLChartProps {
   size?: WidgetSize;
 }
 
-const formatCurrency = (value: number) =>
-  value.toLocaleString("en-US", { style: "currency", currency: "USD" });
+import { formatCurrencyUSD as formatCurrency } from "@/shared/format-currency";
 
 const chartConfig = {
   pnl: {

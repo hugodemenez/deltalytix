@@ -45,9 +45,7 @@ interface EquityChartMessageProps {
   totalTrades: number;
 }
 
-// Optimized constants
-const formatCurrency = (value: number) =>
-  `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+import { formatCurrencyFixed2 as formatCurrency } from "@/shared/format-currency";
 
 // Reduced color array for better performance
 const ACCOUNT_COLORS = [

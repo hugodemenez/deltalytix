@@ -38,8 +38,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const formatCurrency = (value: number) =>
-  value.toLocaleString("en-US", { style: "currency", currency: "USD" });
+import { formatCurrencyUSD as formatCurrency } from "@/shared/format-currency";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   const t = useI18n();

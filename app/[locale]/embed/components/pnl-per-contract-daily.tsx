@@ -19,9 +19,7 @@ type TradeLike = {
   entryDate: string | Date
 }
 
-function formatCurrency(value: number) {
-  return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
-}
+import { formatCurrencyUSD as formatCurrency } from "@/shared/format-currency"
 
 export default function PnLPerContractDailyChartEmbed({ trades, instrument }: { trades: TradeLike[], instrument: string }) {
   const t = useI18n()

@@ -27,9 +27,7 @@ type TradeLike = {
   commission?: number;
 };
 
-function formatCurrency(value: number) {
-  return value.toLocaleString("en-US", { style: "currency", currency: "USD" });
-}
+import { formatCurrencyUSD as formatCurrency } from "@/shared/format-currency";
 
 export default function PnLBySideChartEmbed({
   trades,

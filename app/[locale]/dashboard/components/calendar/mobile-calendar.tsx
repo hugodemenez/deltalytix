@@ -13,16 +13,7 @@ import { Card, CardTitle } from "@/components/ui/card"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { useUserStore } from "../../../../../store/user-store"
 
-function formatCurrency(value: number): string {
-  const absValue = Math.abs(value);
-  if (absValue >= 1000000) {
-    return `${(value / 1000000).toFixed(1)}M`;
-  }
-  if (absValue >= 1000) {
-    return `${(value / 1000).toFixed(1)}K`;
-  }
-  return value.toFixed(0);
-}
+import { formatNumberCompact as formatCurrency } from "@/shared/format-number"
 
 // Generates an array of 42 YYYY-MM-DD date strings for the calendar grid,
 // ensuring calculations respect the target timezone.

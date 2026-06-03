@@ -70,9 +70,7 @@ interface ChartDataPoint {
   [key: `payoutAmount_${string}`]: number; // Payout amount for each account
 }
 
-// Optimized constants
-const formatCurrency = (value: number) =>
-  `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+import { formatCurrencyFixed2 as formatCurrency } from "@/shared/format-currency";
 
 // Map account numbers to theme-aware chart colors defined in globals.css
 function getChartColorByIndex(index: number): string {

@@ -14,17 +14,7 @@ type TradeLike = {
   quantity: number
 }
 
-function formatCurrency(value: number) {
-  // Handle NaN and invalid numbers
-  if (!isFinite(value) || isNaN(value)) {
-    return '$0'
-  }
-  
-  const abs = Math.abs(value)
-  if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}$${(abs / 1_000_000).toFixed(1)}M`
-  if (abs >= 1_000) return `${value < 0 ? '-' : ''}$${(abs / 1_000).toFixed(1)}k`
-  return `${value < 0 ? '-' : ''}$${abs.toFixed(0)}`
-}
+import { formatCurrencyCompactSafe as formatCurrency } from "@/shared/format-currency"
 
 export default function PnLPerContractChartEmbed({ trades }: { trades: TradeLike[] }) {
   const t = useI18n()

@@ -18,15 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-// Format currency with $ symbol (always USD)
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value)
-}
+import { formatCurrencyUSDWhole as formatCurrency } from '@/shared/format-currency'
 
 function renderPropfirmCard(
   propfirmName: string,

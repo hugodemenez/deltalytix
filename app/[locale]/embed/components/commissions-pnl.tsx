@@ -17,6 +17,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useI18n } from "@/locales/client";
+import { formatCurrencyUSD } from "@/shared/format-currency";
 
 export default function CommissionsPnLEmbed({
   trades,
@@ -51,8 +52,7 @@ export default function CommissionsPnLEmbed({
     ];
   }, [trades, t]);
 
-  const formatCurrency = (v: number) =>
-    v.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  const formatCurrency = formatCurrencyUSD;
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {

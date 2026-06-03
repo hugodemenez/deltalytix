@@ -6,6 +6,7 @@ import { useData } from "@/context/data-provider"
 import { Clock, PiggyBank, Award, BarChart, Info } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn, calculateStatistics } from "@/lib/utils"
+import { formatCurrencyLocale } from "@/shared/format-currency"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { Progress } from "@/components/ui/progress"
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
@@ -34,19 +35,7 @@ export default function StatisticsWidget({ size = 'medium', dayData }: Statistic
   const locale = useCurrentLocale()
 
   // Number formatter for currency with thousands separators based on locale
-  const formatCurrency = (value: number) => {
-    const formatted = new Intl.NumberFormat(locale === 'fr' ? 'fr-FR' : 'en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value)
-    
-    // Always use $ symbol with proper spacing for French
-    if (locale === 'fr') {
-      return `${formatted} $`
-    } else {
-      return `$${formatted}`
-    }
-  }
+  const formatCurrency = (value: number) => formatCurrencyLocale(value, locale)
 
   // Calculate statistics - either for a specific day or for all data
   const statistics = React.useMemo(() => {

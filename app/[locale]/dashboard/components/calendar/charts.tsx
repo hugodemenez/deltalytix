@@ -33,10 +33,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-const formatCurrency = (value: number | undefined | null) => {
-  if (value == null) return '$0.00'
-  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
+import { formatCurrencyFixed2 as formatCurrency } from "@/shared/format-currency"
 
 export function Charts({ dayData, isWeekly = false }: ChartsProps) {
   const { effectiveTheme } = useTheme()

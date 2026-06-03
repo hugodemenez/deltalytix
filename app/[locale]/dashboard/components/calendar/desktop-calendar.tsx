@@ -67,15 +67,7 @@ function getCalendarDays(monthStart: Date, monthEnd: Date, weekStartsOnMonday: b
   return [...days, ...additionalDays].slice(0, 42)
 }
 
-const formatCurrency = (value: number, options?: { minimumFractionDigits?: number; maximumFractionDigits?: number }) => {
-  const formatted = value.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: options?.minimumFractionDigits ?? 0,
-    maximumFractionDigits: options?.maximumFractionDigits ?? 0
-  })
-  return formatted
-}
+import { formatCurrencyUSDWhole as formatCurrency } from "@/shared/format-currency"
 
 const truncateAccountNumber = (accountNumber: string, maxLength: number = 15): string => {
   if (accountNumber.length <= maxLength) {

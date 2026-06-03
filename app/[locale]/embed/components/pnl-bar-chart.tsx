@@ -27,14 +27,7 @@ export type EmbedTrade = {
   commission?: number;
 };
 
-function formatCurrency(value: number) {
-  const abs = Math.abs(value);
-  if (abs >= 1_000_000)
-    return `${value < 0 ? "-" : ""}$${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000)
-    return `${value < 0 ? "-" : ""}$${(abs / 1_000).toFixed(1)}k`;
-  return `${value < 0 ? "-" : ""}$${abs.toFixed(0)}`;
-}
+import { formatCurrencyCompact as formatCurrency } from "@/shared/format-currency";
 
 export default function DailyPnLChartEmbed({
   trades,
