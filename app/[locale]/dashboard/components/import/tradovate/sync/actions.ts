@@ -331,7 +331,6 @@ async function getFillPairs(accessToken: string): Promise<TradovateFillPair[]> {
 
 // Helper function to fetch multiple fills by IDs in batch with fallback
 async function getFillsByIds(accessToken: string, fillIds: number[]): Promise<any[]> {
-  console.warn('getFillsByIds')
   try {
     if (fillIds.length === 0) return []
     
@@ -343,8 +342,6 @@ async function getFillsByIds(accessToken: string, fillIds: number[]): Promise<an
     // Process in batches of 5 IDs
     for (let i = 0; i < fillIds.length; i += BATCH_SIZE) {
       const batch = fillIds.slice(i, i + BATCH_SIZE)
-      
-      console.warn('batch', JSON.stringify(batch))
       try {
         // Use GET with comma-separated IDs as per Tradovate API docs
         const idsParam = batch.join(',')
@@ -437,7 +434,6 @@ async function getOrdersByIds(accessToken: string, orderIds: number[]): Promise<
     if (orderIds.length === 0) return []
     
     const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
-    console.warn('getOrdersByIds', JSON.stringify(orderIds))
     const BATCH_SIZE = 5 // Limit batch size to 5 IDs at a time
     
     const orders: any[] = []
@@ -445,8 +441,7 @@ async function getOrdersByIds(accessToken: string, orderIds: number[]): Promise<
     // Process in batches of 5 IDs
     for (let i = 0; i < orderIds.length; i += BATCH_SIZE) {
       const batch = orderIds.slice(i, i + BATCH_SIZE)
-      console.warn('batch orders', JSON.stringify(batch))
-      
+
       try {
         // Use GET with comma-separated IDs as per Tradovate API docs
         const idsParam = batch.join(',')
