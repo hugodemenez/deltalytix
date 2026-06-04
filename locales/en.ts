@@ -1997,6 +1997,8 @@ export default {
       reloadError: "Failed to reload accounts",
       dailySyncTimeLocal: "Daily sync time (Local)",
       environmentDemo: "Demo",
+      environmentLive: "Live",
+      environmentSelectLabel: "Environment for new connection",
       dailySyncTimeTitle: "Set daily sync time",
       dailySyncTimeDescription:
         "Because Tradovate only provides the current day's trades, schedule a daily sync so each day's activity is imported automatically. Choose a time in your local timezone (for example, after market close). Leave empty to disable automatic syncing.",

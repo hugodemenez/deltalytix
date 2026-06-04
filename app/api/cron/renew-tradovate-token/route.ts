@@ -186,6 +186,7 @@ async function performDailySync(synchronization: any): Promise<boolean> {
     const result = await getTradovateTrades(synchronization.token, {
       userId: synchronization.userId,
       includedFeeTypes: includedFeeTypes ?? undefined,
+      environment: synchronization.environment === 'live' ? 'live' : 'demo',
     });
     
     if (result.error) {
