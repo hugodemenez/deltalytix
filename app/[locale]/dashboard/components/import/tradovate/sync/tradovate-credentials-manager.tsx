@@ -374,11 +374,13 @@ export function TradovateCredentialsManager() {
           </TableHeader>
           <TableBody>
             {accounts.map((account) => {
-              const isExpired =
-                !account.token ||
-                (account.tokenExpiresAt
-                  ? new Date(account.tokenExpiresAt).getTime() <= Date.now()
-                  : false);
+              // The badge reflects token presence rather than a frozen
+              // expiry timestamp. The token is kept alive in the DB by the
+              // renewal cron (which nulls it out if renewal fails), and the
+              // sync path re-reads the live DB, so comparing the page-load
+              // snapshot against Date.now() only produced false "expired"
+              // states while the page sat open.
+              const isExpired = !account.token;
 
               return (
                 <TableRow key={account.accountId}>
