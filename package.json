@@ -6,13 +6,13 @@
   "license": "CC-BY-NC-4.0",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "ts-node scripts/generate-routes.ts && npx prisma generate",
+    "prebuild": "node --experimental-strip-types scripts/generate-routes.ts && npx prisma generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "screenshot:dashboard": "node scripts/screenshot-dashboard.js",
-    "seed:self-host": "bun scripts/seed-self-host.ts"
+    "seed:self-host": "node --experimental-strip-types scripts/seed-self-host.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.10",
