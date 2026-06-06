@@ -1,36 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer"
 import React from "react"
-import enMessages from "@/locales/en"
-import frMessages from "@/locales/fr"
 import { JournalDocument, type JournalStrings } from "@/lib/pdf/journal-document"
 import {
-  sanitizeJournalTrades,
+  clampJournalText,
+  MAX_JOURNAL_TRADES,
+  parseDateKey,
   type ExportJournalPdfPayload,
 } from "@/lib/pdf/journal"
+import { makePdfTranslator } from "@/lib/pdf/locale"
+import { sanitizeTrades } from "@/lib/pdf/statement"
 
 export const maxDuration = 60
-
-const MESSAGES = { en: enMessages, fr: frMessages } as const
-
-function makeTranslator(locale: "en" | "fr") {
-  const catalog = MESSAGES[locale] ?? MESSAGES.en
-  return (key: string): string => {
-    const flat = (catalog as Record<string, unknown>)[key]
-    if (typeof flat === "string") {
-      return flat
-    }
-    let node: unknown = catalog
-    for (const part of key.split(".")) {
-      if (node && typeof node === "object" && part in (node as Record<string, unknown>)) {
-        node = (node as Record<string, unknown>)[part]
-      } else {
-        return key
-      }
-    }
-    return typeof node === "string" ? node : key
-  }
-}
 
 function buildStrings(t: (key: string) => string): JournalStrings {
   return {
@@ -53,24 +34,24 @@ function buildStrings(t: (key: string) => string): JournalStrings {
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as Partial<ExportJournalPdfPayload>
-    const date = typeof body.date === "string" ? body.date : ""
-    const journalText = typeof body.journalText === "string" ? body.journalText : ""
+    const date = parseDateKey(body.date)
 
     if (!date) {
-      return NextResponse.json({ error: "missing-date" }, { status: 400 })
+      return NextResponse.json({ error: "invalid-date" }, { status: 400 })
     }
 
     const locale: "en" | "fr" = body.locale === "fr" ? "fr" : "en"
+    const trades = sanitizeTrades(body.trades).slice(0, MAX_JOURNAL_TRADES)
     const payload: ExportJournalPdfPayload = {
       locale,
       date,
       emotionValue: Number(body.emotionValue ?? 0),
       selectedNewsCount: Number(body.selectedNewsCount ?? 0),
-      journalText,
-      trades: sanitizeJournalTrades(body.trades),
+      journalText: clampJournalText(body.journalText),
+      trades,
     }
 
-    const t = makeTranslator(locale)
+    const t = makePdfTranslator(locale)
     const strings = buildStrings(t)
 
     const element = React.createElement(JournalDocument, {

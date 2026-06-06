@@ -87,7 +87,8 @@ export function Journaling({
         }),
       })
 
-      if (!response.ok) {
+      const contentType = response.headers.get("Content-Type")
+      if (!response.ok || !contentType?.includes("application/pdf")) {
         throw new Error(`PDF request failed with status ${response.status}`)
       }
 

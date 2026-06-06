@@ -1,12 +1,15 @@
 import React from "react"
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer"
-import { computeJournalSummary, type ExportJournalPdfPayload } from "./journal"
+import {
+  computeJournalSummary,
+  JOURNAL_EMOTION_MAX,
+  type ExportJournalPdfPayload,
+} from "./journal"
 
 const COLORS = {
   headerBg: "#141826",
   text: "#181c25",
   mutedText: "#596073",
-  cardBg: "#f8fafc",
   cardBorder: "#dfe3ec",
   white: "#ffffff",
 }
@@ -69,24 +72,31 @@ export function JournalDocument({
     "{count}",
     String(payload.selectedNewsCount),
   )
+  const journalParagraphs = (payload.journalText.trim() || "-").split(/\n/)
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={styles.page} wrap>
         <View style={styles.header} fixed>
           <Text style={styles.headerTitle}>{strings.title}</Text>
           <Text style={styles.headerMeta}>{`${strings.selectDate}: ${payload.date}`}</Text>
           <Text style={styles.headerMeta}>
-            {`${strings.emotionTitle}: ${payload.emotionValue}/100`}
+            {`${strings.emotionTitle}: ${payload.emotionValue}/${JOURNAL_EMOTION_MAX}`}
           </Text>
           <Text style={styles.headerMeta}>{selectedNewsLabel}</Text>
         </View>
 
         <View style={styles.body}>
           <Text style={styles.sectionTitle}>{strings.entrySectionTitle}</Text>
-          <Text style={styles.bodyText}>{payload.journalText.trim() || "-"}</Text>
+          {journalParagraphs.map((paragraph, index) => (
+            <Text key={`journal-line-${index}`} style={styles.bodyText}>
+              {paragraph || " "}
+            </Text>
+          ))}
 
-          <Text style={styles.sectionTitle}>{strings.tradeSummaryTitle}</Text>
+          <Text style={styles.sectionTitle} break>
+            {strings.tradeSummaryTitle}
+          </Text>
           <Text style={styles.summaryRow}>
             {`${strings.tradesCount}: ${summary.tradesCount}`}
           </Text>
@@ -102,9 +112,11 @@ export function JournalDocument({
 
           {payload.trades.length > 0 ? (
             <>
-              <Text style={styles.sectionTitle}>{strings.tradeDetailsTitle}</Text>
+              <Text style={styles.sectionTitle} break>
+                {strings.tradeDetailsTitle}
+              </Text>
               {payload.trades.map((trade, index) => (
-                <Text key={`${trade.instrument}-${index}`} style={styles.tradeLine}>
+                <Text key={`trade-${index}`} style={styles.tradeLine}>
                   {`${index + 1}. ${trade.instrument} | ${trade.side ?? "-"} | Qty ${trade.quantity} | PnL ${fmtMoney(trade.pnl)} | Commission ${fmtMoney(trade.commission)}`}
                 </Text>
               ))}
