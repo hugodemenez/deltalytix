@@ -2126,6 +2126,8 @@ export default {
       reloadError: "Échec du rechargement des comptes",
       dailySyncTimeLocal: "Heure de sync quotidienne (locale)",
       environmentDemo: "Démo",
+      environmentLive: "Réel",
+      environmentSelectLabel: "Environnement pour la nouvelle connexion",
       dailySyncTimeTitle: "Définir l'heure de sync quotidienne",
       dailySyncTimeDescription:
         "Comme Tradovate ne fournit que les trades du jour en cours, planifiez une sync quotidienne pour importer automatiquement l'activité de chaque journée. Choisissez une heure dans votre fuseau local (par exemple, après la clôture). Laissez vide pour désactiver la synchronisation automatique.",

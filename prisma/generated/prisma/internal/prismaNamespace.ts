@@ -2890,7 +2890,8 @@ export const SynchronizationScalarFieldEnum = {
   token: 'token',
   tokenExpiresAt: 'tokenExpiresAt',
   dailySyncTime: 'dailySyncTime',
-  includedFeeTypes: 'includedFeeTypes'
+  includedFeeTypes: 'includedFeeTypes',
+  environment: 'environment'
 } as const
 
 export type SynchronizationScalarFieldEnum = (typeof SynchronizationScalarFieldEnum)[keyof typeof SynchronizationScalarFieldEnum]

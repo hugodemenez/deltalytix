@@ -27,9 +27,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use account-level fee config from DB (stored in sync record)
+    // Use account-level fee config and environment from DB (stored in sync record)
     const syncResult = await getTradovateTrades(tokenResult.accessToken, {
       includedFeeTypes: tokenResult.includedFeeTypes,
+      environment: tokenResult.environment,
     });
     if (syncResult.error) {
       return NextResponse.json(
