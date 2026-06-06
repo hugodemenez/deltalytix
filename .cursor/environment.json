@@ -1,0 +1,4 @@
+{
+  "install": "npm install && npx prisma generate && sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 ffmpeg",
+  "start": "bash scripts/docker-bootstrap.sh"
+}
