@@ -5,6 +5,7 @@ import { format } from "date-fns"
 import { formatInTimeZone } from 'date-fns-tz'
 import { StatisticsProps } from "@/app/[locale]/dashboard/types/statistics"
 import { Account } from "@/context/data-provider"
+import { BreakevenRange } from "@/types/breakeven"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -28,7 +29,7 @@ export function parsePositionTime(timeInSeconds: number): string {
   return formattedTime;
 }
 
-export function calculateStatistics(trades: Trade[], accounts: Account[] = []): StatisticsProps {
+export function calculateStatistics(trades: Trade[], accounts: Account[] = [], breakevenRange?: BreakevenRange): StatisticsProps {
   if (!trades.length) {
     return {
       cumulativeFees: 0,
@@ -83,17 +84,22 @@ export function calculateStatistics(trades: Trade[], accounts: Account[] = []): 
     nbPayouts: 0,
   };
 
+  const beMin = breakevenRange?.min ?? 0;
+  const beMax = breakevenRange?.max ?? 0;
+
   const statistics = trades.reduce((acc: StatisticsProps, trade: Trade) => {
     const pnl = trade.pnl;
+    const commission = trade.commission || 0;
+    const netPnl = pnl - commission;
     
     acc.nbTrades++;
     acc.cumulativePnl += pnl;
-    acc.cumulativeFees += trade.commission;
+    acc.cumulativeFees += commission;
     acc.totalPositionTime += trade.timeInPosition;
 
-    if (pnl === 0) {
+    if (netPnl >= beMin && netPnl <= beMax) {
       acc.nbBe++;
-    } else if (pnl > 0) {
+    } else if (netPnl > beMax) {
       acc.nbWin++;
       acc.winningStreak++;
       acc.grossWin += pnl;
@@ -103,8 +109,7 @@ export function calculateStatistics(trades: Trade[], accounts: Account[] = []): 
       acc.grossLosses += Math.abs(pnl);
     }
 
-    const totalTrades = acc.nbWin + acc.nbLoss;
-    acc.winRate = totalTrades > 0 ? (acc.nbWin / totalTrades) * 100 : 0;
+    acc.winRate = acc.nbTrades > 0 ? (acc.nbWin / acc.nbTrades) * 100 : 0;
 
     return acc;
   }, initialStatistics);
