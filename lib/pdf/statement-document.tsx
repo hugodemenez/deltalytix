@@ -14,6 +14,7 @@ import {
 import { scaleLinear } from "d3-scale"
 import { arc as d3Arc, line as d3Line, pie as d3Pie } from "d3-shape"
 import type { PieArcDatum } from "d3-shape"
+import { DEFAULT_BREAKEVEN_RANGE } from "@/types/breakeven"
 import {
   computeChartData,
   computeSummary,
@@ -389,8 +390,9 @@ export function StatementDocument({
   strings: StatementStrings
   generatedAt: string
 }) {
-  const summary = computeSummary(payload.trades)
-  const charts = computeChartData(payload.trades, payload.timezone)
+  const breakevenRange = payload.breakevenRange ?? DEFAULT_BREAKEVEN_RANGE
+  const summary = computeSummary(payload.trades, breakevenRange)
+  const charts = computeChartData(payload.trades, payload.timezone, breakevenRange)
   const { dateRangeLabel, accountLabel } = resolveHeaderLabels(
     payload,
     strings.allTime,

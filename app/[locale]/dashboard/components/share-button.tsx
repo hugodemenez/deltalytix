@@ -42,6 +42,7 @@ import { Switch } from "@/components/ui/switch"
 import { useTradesStore } from "../../../../store/trades-store"
 import { useUserStore } from "../../../../store/user-store"
 import { useData } from "@/context/data-provider"
+import { useBreakevenStore } from "@/store/widgets/breakeven-store"
 
 interface ShareButtonProps {
   variant?: "ghost" | "outline" | "secondary"
@@ -125,6 +126,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     // from the data provider's globally-filtered `formattedTrades`. Use the same
     // source for the summary so the numbers always match the charts.
     const { formattedTrades, dateRange: globalDateRange, accountNumbers: globalAccountNumbers } = useData()
+    const breakevenRange = useBreakevenStore((state) => state.range)
     const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
     const [open, setOpen] = useState(false)
     const [comboboxOpen, setComboboxOpen] = useState(false)
@@ -407,6 +409,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
               }
             : null,
           accountNumbers: globalAccountNumbers,
+          breakevenRange,
           trades: filteredTrades.map((trade) => ({
             entryDate: trade.entryDate,
             closeDate: trade.closeDate ?? null,

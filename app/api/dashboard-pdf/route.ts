@@ -6,6 +6,7 @@ import enMessages from "@/locales/en"
 import frMessages from "@/locales/fr"
 import { StatementDocument, type StatementStrings } from "@/lib/pdf/statement-document"
 import type { ExportPdfPayload, PdfTrade } from "@/lib/pdf/statement"
+import { DEFAULT_BREAKEVEN_RANGE, type BreakevenRange } from "@/types/breakeven"
 
 // Generate the dashboard PDF on the server. Moving rendering off the client
 // avoids the mobile tab-reload/out-of-memory failures that html2canvas caused:
@@ -67,6 +68,19 @@ function buildStrings(t: (key: string) => string): StatementStrings {
   }
 }
 
+function sanitizeBreakevenRange(input: unknown): BreakevenRange {
+  if (!input || typeof input !== "object") {
+    return DEFAULT_BREAKEVEN_RANGE
+  }
+  const range = input as Record<string, unknown>
+  const min = Number(range.min)
+  const max = Number(range.max)
+  if (!Number.isFinite(min) || !Number.isFinite(max) || min > max) {
+    return DEFAULT_BREAKEVEN_RANGE
+  }
+  return { min, max }
+}
+
 function sanitizeTrades(input: unknown): PdfTrade[] {
   if (!Array.isArray(input)) {
     return []
@@ -105,6 +119,7 @@ export async function POST(request: NextRequest) {
       title: typeof body.title === "string" ? body.title : "",
       dateRange: body.dateRange ?? null,
       accountNumbers: Array.isArray(body.accountNumbers) ? body.accountNumbers.map(String) : [],
+      breakevenRange: sanitizeBreakevenRange(body.breakevenRange),
       trades,
     }
 
