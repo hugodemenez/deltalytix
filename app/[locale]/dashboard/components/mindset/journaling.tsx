@@ -1,7 +1,8 @@
 "use client"
 
+import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { useI18n } from "@/locales/client"
+import { useCurrentLocale, useI18n } from "@/locales/client"
 import { EmotionSelector } from "./emotion-selector"
 import { DayTagSelector } from "./day-tag-selector"
 import { FinancialEvent, Trade } from "@/prisma/generated/prisma/browser"
@@ -9,6 +10,7 @@ import { TiptapEditor } from "@/components/tiptap-editor"
 import { format } from "date-fns"
 import { Download } from "lucide-react"
 import { toast } from "sonner"
+import { tradeMatchesDateKey } from "@/lib/trades/trade-matches-date"
 
 interface JournalingProps {
   content: string
@@ -24,9 +26,16 @@ interface JournalingProps {
   onApplyTagToAll: (tag: string) => Promise<void>
 }
 
-export function Journaling({ 
-  content, 
-  onChange, 
+function getPlainTextFromHtml(html: string) {
+  if (!html) return ""
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, "text/html")
+  return doc.body.textContent?.trim() ?? ""
+}
+
+export function Journaling({
+  content,
+  onChange,
   onSave,
   emotionValue,
   onEmotionChange,
@@ -38,140 +47,92 @@ export function Journaling({
   onApplyTagToAll,
 }: JournalingProps) {
   const t = useI18n()
+  const locale = useCurrentLocale()
+  const [isExporting, setIsExporting] = useState(false)
   const formattedDay = format(date, "yyyy-MM-dd")
 
-  const getPlainTextFromHtml = (html: string) => {
-    if (!html) return ""
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(html, "text/html")
-    return doc.body.textContent?.trim() ?? ""
-  }
-
-  const getTradesForSelectedDay = () => {
-    return trades.filter((trade) => {
-      const entryMatches = trade.entryDate?.startsWith(formattedDay)
-      const closeMatches = trade.closeDate?.startsWith(formattedDay)
-      return entryMatches || closeMatches
-    })
-  }
+  const tradesForDay = useMemo(
+    () => trades.filter((trade) => tradeMatchesDateKey(trade, formattedDay)),
+    [trades, formattedDay],
+  )
 
   const handleExportPdf = async () => {
+    if (isExporting) {
+      return
+    }
+
     try {
-      const { jsPDF } = await import("jspdf")
+      setIsExporting(true)
 
-      const doc = new jsPDF({ unit: "pt", format: "a4" })
-      const pageWidth = doc.internal.pageSize.getWidth()
-      const pageHeight = doc.internal.pageSize.getHeight()
-      const margin = 40
-      const maxWidth = pageWidth - margin * 2
-      const lineHeight = 16
-      let y = margin
+      const response = await fetch("/api/journal-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          locale,
+          date: formattedDay,
+          emotionValue,
+          selectedNewsCount: selectedNews.length,
+          journalText: getPlainTextFromHtml(content),
+          trades: tradesForDay.map((trade) => ({
+            entryDate: trade.entryDate,
+            closeDate: trade.closeDate ?? null,
+            pnl: Number(trade.pnl || 0),
+            commission: Number(trade.commission || 0),
+            accountNumber: trade.accountNumber,
+            side: trade.side ?? null,
+            quantity: Number(trade.quantity || 0),
+            instrument: trade.instrument,
+            timeInPosition: Number(trade.timeInPosition || 0),
+          })),
+        }),
+      })
 
-      const addWrappedText = (text: string, fontSize = 11) => {
-        doc.setFontSize(fontSize)
-        const lines = doc.splitTextToSize(text || "-", maxWidth)
-        lines.forEach((line: string) => {
-          if (y > pageHeight - margin) {
-            doc.addPage()
-            y = margin
-          }
-          doc.text(line, margin, y)
-          y += lineHeight
-        })
+      if (!response.ok) {
+        throw new Error(`PDF request failed with status ${response.status}`)
       }
 
-      const addSectionTitle = (title: string) => {
-        if (y > pageHeight - margin * 2) {
-          doc.addPage()
-          y = margin
-        }
-        y += 8
-        doc.setFontSize(14)
-        doc.setFont("helvetica", "bold")
-        doc.text(title, margin, y)
-        y += lineHeight
-        doc.setFont("helvetica", "normal")
-      }
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `journal-entry-${formattedDay}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
 
-      const dayTrades = getTradesForSelectedDay()
-      const totalGrossPnl = dayTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0)
-      const totalCommission = dayTrades.reduce(
-        (sum, trade) => sum + (trade.commission || 0),
-        0,
-      )
-      const totalNetPnl = totalGrossPnl - totalCommission
-
-      const journalText = getPlainTextFromHtml(content)
-      const selectedNewsCount = selectedNews.length
-
-      doc.setFontSize(18)
-      doc.setFont("helvetica", "bold")
-      doc.text(t("mindset.journaling.title"), margin, y)
-      y += 26
-      doc.setFont("helvetica", "normal")
-
-      addWrappedText(`${t("mindset.selectDate")}: ${formattedDay}`)
-      addWrappedText(`${t("mindset.emotion.title")}: ${emotionValue}/100`)
-      addWrappedText(`${t("mindset.editor.news.selectedCount", { count: selectedNewsCount })}`)
-
-      addSectionTitle(t("mindset.journaling.entrySectionTitle"))
-      addWrappedText(journalText)
-
-      addSectionTitle(t("mindset.journaling.tradeSummaryTitle"))
-      addWrappedText(`${t("mindset.tradingStats.tradesCount")}: ${dayTrades.length}`)
-      addWrappedText(`${t("mindset.tradingStats.totalPnL")}: ${totalGrossPnl.toFixed(2)}`)
-      addWrappedText(`${t("mindset.tradingStats.commission")}: ${totalCommission.toFixed(2)}`)
-      addWrappedText(`${t("mindset.tradingStats.netPnL")}: ${totalNetPnl.toFixed(2)}`)
-
-      if (dayTrades.length > 0) {
-        addSectionTitle(t("mindset.journaling.tradeDetailsTitle"))
-        dayTrades.forEach((trade, index) => {
-          const line =
-            `${index + 1}. ${trade.instrument} | ${trade.side ?? "-"} | ` +
-            `Qty ${trade.quantity} | PnL ${trade.pnl.toFixed(2)} | ` +
-            `Commission ${trade.commission.toFixed(2)}`
-          addWrappedText(line)
-        })
-      }
-
-      doc.save(`journal-entry-${formattedDay}.pdf`)
       toast.success(t("mindset.journaling.exportPdfSuccess"))
     } catch (error) {
       console.error("Failed to export journal PDF:", error)
       toast.error(t("mindset.journaling.exportPdfError"))
+    } finally {
+      setIsExporting(false)
     }
   }
 
   return (
     <div className="h-full flex flex-col">
       <div className="flex-none">
-        <h3 className="text-sm font-medium mb-2">{t('mindset.emotion.title')}</h3>
-        <EmotionSelector
-          value={emotionValue}
-          onChange={onEmotionChange}
-        />
+        <h3 className="text-sm font-medium mb-2">{t("mindset.emotion.title")}</h3>
+        <EmotionSelector value={emotionValue} onChange={onEmotionChange} />
       </div>
 
       <div className="flex-none mt-6">
-        <DayTagSelector
-          trades={trades}
-          date={date}
-          onApplyTagToAll={onApplyTagToAll}
-        />
+        <DayTagSelector trades={trades} date={date} onApplyTagToAll={onApplyTagToAll} />
       </div>
 
       <div className="flex-1 min-h-0 mt-6 flex flex-col">
-          <TiptapEditor
-            content={content}
-            onChange={onChange}
-            placeholder={t('mindset.journaling.placeholder')}
-            width="100%"
-            height="100%"
-            events={events}
-            selectedNews={selectedNews}
-            onNewsSelection={onNewsSelection}
-            date={date}
-          />
+        <TiptapEditor
+          content={content}
+          onChange={onChange}
+          placeholder={t("mindset.journaling.placeholder")}
+          width="100%"
+          height="100%"
+          events={events}
+          selectedNews={selectedNews}
+          onNewsSelection={onNewsSelection}
+          date={date}
+        />
       </div>
 
       <div className="flex-none flex gap-4 mt-6">
@@ -179,17 +140,15 @@ export function Journaling({
           variant="outline"
           onClick={handleExportPdf}
           className="w-full"
+          disabled={isExporting}
         >
           <Download className="mr-2 h-4 w-4" />
-          {t('mindset.journaling.exportPdf')}
+          {isExporting ? t("share.exportPdfInProgress") : t("mindset.journaling.exportPdf")}
         </Button>
-        <Button
-          onClick={onSave}
-          className="w-full"
-        >
-          {t('mindset.journaling.save')}
+        <Button onClick={onSave} className="w-full">
+          {t("mindset.journaling.save")}
         </Button>
       </div>
     </div>
   )
-} 
+}

@@ -26,6 +26,7 @@ import { useMoodStore } from "@/store/widgets/mood-store"
 import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
 import { useTradesStore } from "@/store/trades-store"
 import { useCurrentLocale } from "@/locales/client"
+import { tradeMatchesDateKey } from "@/lib/trades/trade-matches-date"
 import { FinancialEvent } from "@/prisma/generated/prisma/browser"
 
 interface MindsetWidgetProps {
@@ -116,13 +117,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       const dateKey = format(selectedDate, 'yyyy-MM-dd')
       
       // Find all trades for this day
-      const tradesForDay = trades.filter(trade => {
-        const entryDate = trade.entryDate
-        const closeDate = trade.closeDate
-        const entryMatches = entryDate && (entryDate === dateKey || entryDate.startsWith(dateKey))
-        const closeMatches = closeDate && (closeDate === dateKey || closeDate.startsWith(dateKey))
-        return entryMatches || closeMatches
-      })
+      const tradesForDay = trades.filter((trade) => tradeMatchesDateKey(trade, dateKey))
       
       const tradeIds = tradesForDay.map(trade => trade.id)
       
