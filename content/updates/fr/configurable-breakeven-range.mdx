@@ -1,0 +1,15 @@
+---
+title: 'Réglages : plage breakeven configurable'
+description: 'Définissez ce qui compte comme trade breakeven pour que le taux de réussite et la répartition reflètent votre façon de trader.'
+date: '2026-06-06'
+status: completed
+completedDate: '2026-06-07'
+---
+
+# Réglages : plage breakeven configurable
+
+Les **Réglages** incluent une section **Préférences de trading** où vous pouvez définir une **plage breakeven**—la bande de P&L net (après commissions) qui compte comme breakeven plutôt que gain ou perte. Par exemple, -10 à 10 classe comme breakeven tout trade entre -10 $ et +10 $ net.
+
+Cette plage s'applique partout sur le dashboard : **statistiques**, **répartition des trades** et **stats du calendrier** l'utilisent pour les comptes gain/perte/breakeven et le taux de réussite. Votre choix est enregistré dans le navigateur, et vous pouvez revenir à la valeur par défaut (exactement 0 $) à tout moment.
+
+Quand vous **exportez un relevé PDF** depuis la fenêtre Partager, le résumé et le graphique de répartition utilisent la même plage, pour que le fichier corresponde à l'écran. Les widgets embarqués de **répartition des trades** acceptent aussi les paramètres d'URL `beMin` et `beMax` si vous voulez la même logique sur un embed partagé.
