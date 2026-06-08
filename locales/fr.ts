@@ -2223,12 +2223,14 @@ export default {
       USER_NOT_AUTHENTICATED:
         "Vous devez être connecté pour lier DxFeed. Connectez-vous puis réessayez.",
       AUTH_HTTP_ERROR:
-        "DxFeed a refusé la connexion (HTTP {status}). Vérifiez l'e-mail et le mot de passe, ou réessayez plus tard. Détail : {detail}",
+        "DxFeed a refusé la connexion (HTTP {status}). Vérifiez l'e-mail et le mot de passe, ou réessayez plus tard.",
       AUTH_REJECTED: "DxFeed a refusé la connexion : {reason}",
       AUTH_PROP_FIRM_MISMATCH:
         "Ces identifiants correspondent à {authPropfirm}, pas à {selectedPropfirm}. Choisissez la bonne firme dans la liste ou utilisez le bon compte.",
       HISTORICAL_HOST_UNRESOLVED:
         "Impossible d'atteindre le serveur d'historique des trades pour {propfirm}.",
+      STORE_TOKEN_FAILED:
+        "DxFeed est connecté, mais la connexion n'a pas pu être enregistrée.",
       AUTH_UNEXPECTED:
         "Échec de connexion inattendu. Vérifiez vos identifiants et réessayez.",
       INVALID_STORED_CREDENTIALS:

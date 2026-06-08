@@ -7,7 +7,7 @@ import {
 } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/actions'
 import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
 import { coerceDxFeedHistoricalHostForSync } from '@/lib/dxfeed-historical-host'
-import { getDxFeedPropFirm } from '@/lib/dxfeed-propfirms'
+import { resolveDxFeedPropFirmFromStored } from '@/lib/dxfeed-propfirms'
 import { isDxFeedTokenExpired } from '@/lib/dxfeed-token'
 
 export async function GET() {
@@ -39,7 +39,7 @@ export async function GET() {
               propfirmName?: string
             }
 
-            const firm = getDxFeedPropFirm(parsed.propFirmId)
+            const firm = resolveDxFeedPropFirmFromStored(parsed)
             propFirmName = firm?.name ?? parsed.propfirmName ?? null
 
             if (Array.isArray(parsed.accountNumbers)) {

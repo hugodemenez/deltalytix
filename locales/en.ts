@@ -2092,12 +2092,14 @@ export default {
       USER_NOT_AUTHENTICATED:
         "You must be signed in to connect DxFeed. Sign in and try again.",
       AUTH_HTTP_ERROR:
-        "DxFeed rejected the connection (HTTP {status}). Check your email and password, or try again later. Details: {detail}",
+        "DxFeed rejected the connection (HTTP {status}). Check your email and password, or try again later.",
       AUTH_REJECTED: "DxFeed rejected your login: {reason}",
       AUTH_PROP_FIRM_MISMATCH:
         "These credentials belong to {authPropfirm}, not {selectedPropfirm}. Select the matching prop firm in the list, or use the correct login.",
       HISTORICAL_HOST_UNRESOLVED:
         "We could not reach the trade history server for {propfirm}.",
+      STORE_TOKEN_FAILED:
+        "DxFeed connected, but we could not save the connection.",
       AUTH_UNEXPECTED:
         "Connection failed unexpectedly. Check your credentials and try again.",
       INVALID_STORED_CREDENTIALS:

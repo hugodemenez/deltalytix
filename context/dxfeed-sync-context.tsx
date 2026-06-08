@@ -29,6 +29,17 @@ function buildSyncLabel(account: DxFeedSyncAccount, t: unknown): string {
   return account.accountId
 }
 
+function buildPartialFetchWarning(
+  translate: (key: string, params?: Record<string, string | number>) => string,
+  stats?: DxFeedSyncStats,
+): string | undefined {
+  if (!stats || stats.fetchFailures <= 0) return undefined
+  return translate('dxfeedSync.sync.partialFetchWarning', {
+    failures: stats.fetchFailures,
+    total: stats.tradingAccounts,
+  })
+}
+
 function buildSyncSuccessToast(
   t: unknown,
   syncLabel: string,
@@ -46,6 +57,7 @@ function buildSyncSuccessToast(
         tradesCount,
         accountId: syncLabel,
       }),
+      description: buildPartialFetchWarning(translate, stats),
     }
   }
 
@@ -55,6 +67,7 @@ function buildSyncSuccessToast(
         tradesCount,
         accountId: syncLabel,
       }),
+      description: buildPartialFetchWarning(translate, stats),
     }
   }
 
@@ -80,13 +93,7 @@ function buildSyncSuccessToast(
     title: translate('dxfeedSync.multiAccount.syncCompleteNoOrdersForAccount', {
       accountId: syncLabel,
     }),
-    description:
-      stats && stats.fetchFailures > 0
-        ? translate('dxfeedSync.sync.partialFetchWarning', {
-            failures: stats.fetchFailures,
-            total: stats.tradingAccounts,
-          })
-        : undefined,
+    description: buildPartialFetchWarning(translate, stats),
   }
 }
 /** Client-safe subset of Synchronization (token stripped, replaced with hasToken) */
@@ -175,12 +182,15 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
   }, [normalizeSynchronization, t])
 
   const deleteAccount = useCallback(async (accountId: string) => {
-    setAccounts((prev) => prev.filter((acc) => acc.accountId !== accountId))
-    await fetch('/api/dxfeed/synchronizations', {
+    const response = await fetch('/api/dxfeed/synchronizations', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId }),
     })
+    if (!response.ok) {
+      throw new Error(DxFeedErrorCode.DELETE_SYNC_FAILED)
+    }
+    setAccounts((prev) => prev.filter((acc) => acc.accountId !== accountId))
   }, [])
 
   const performSyncForAccount = useCallback(
