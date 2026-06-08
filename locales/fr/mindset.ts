@@ -11,6 +11,12 @@ export default {
     loadError: 'Erreur',
     loadErrorDescription: 'Échec du chargement des données d\'état d\'esprit. Veuillez réessayer.',
     noEntries: 'Aucune entrée trouvée pour les 30 derniers jours',
+    exportAllPdf: 'Exporter toutes les entrées',
+    exportAllPdfSuccess: 'L\'export du journal a été téléchargé avec succès.',
+    exportAllPdfError: 'Échec de l\'export des entrées du journal.',
+    exportAllPdfNoEntries: 'Aucune entrée de journal enregistrée à exporter.',
+    exportAllPdfEntriesCount: '{count} entrées',
+    exportAllPdfNoNotes: 'Aucune note',
     addEntry: 'Ajouter une entrée',
     selectDate: 'Sélectionner une date',
     edit: 'Modifier',
@@ -81,12 +87,7 @@ export default {
       placeholder: 'Écrivez vos pensées et réflexions sur votre trading ici...',
       save: 'Enregistrer',
       editorPlaceholder: 'Commencez à écrire...',
-      exportPdf: 'Exporter en PDF',
-      exportPdfSuccess: 'Le PDF du journal a été exporté avec succès.',
-      exportPdfError: 'Échec de l\'export du PDF du journal.',
-      entrySectionTitle: 'Entrée de journal',
-      tradeSummaryTitle: 'Résumé de trading',
-      tradeDetailsTitle: 'Détails des trades'
+      entrySectionTitle: 'Notes'
     },
     tags: {
       title: 'Tags de Session',

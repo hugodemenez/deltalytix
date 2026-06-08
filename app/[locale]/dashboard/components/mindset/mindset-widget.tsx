@@ -7,7 +7,7 @@ import { Journaling } from "./journaling"
 import { Timeline } from "./timeline"
 import { MindsetSummary } from "./mindset-summary"
 import { useI18n } from "@/locales/client"
-import { Info, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react"
+import { Info, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   Tooltip as UITooltip,
@@ -27,6 +27,7 @@ import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
 import { useTradesStore } from "@/store/trades-store"
 import { useCurrentLocale } from "@/locales/client"
 import { tradeMatchesDateKey } from "@/lib/trades/trade-matches-date"
+import { htmlToPlainText } from "@/lib/journal/html-to-plain-text"
 import { FinancialEvent } from "@/prisma/generated/prisma/browser"
 
 interface MindsetWidgetProps {
@@ -42,6 +43,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [isEditing, setIsEditing] = useState(true)
   const [isTimelineVisible, setIsTimelineVisible] = useState(true)
+  const [isExporting, setIsExporting] = useState(false)
   const moods = useMoodStore(state => state.moods)
   const setMoods = useMoodStore(state => state.setMoods)
   const financialEvents = useFinancialEventsStore(state => state.events)
@@ -274,6 +276,65 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     setIsTimelineVisible(!isTimelineVisible)
   }
 
+  const handleExportAllPdf = async () => {
+    if (isExporting) {
+      return
+    }
+
+    const savedEntries = (moods ?? [])
+      .filter((mood) => mood?.day)
+      .map((mood) => {
+        const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
+        return {
+          date: format(moodDate, "yyyy-MM-dd"),
+          emotionValue: mood.emotionValue ?? 0,
+          selectedNewsCount: mood.selectedNews?.length ?? 0,
+          journalText: htmlToPlainText(mood.journalContent ?? ""),
+        }
+      })
+      .sort((a, b) => a.date.localeCompare(b.date))
+
+    if (savedEntries.length === 0) {
+      toast.error(t("mindset.exportAllPdfNoEntries"))
+      return
+    }
+
+    try {
+      setIsExporting(true)
+
+      const response = await fetch("/api/journal-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          locale,
+          entries: savedEntries,
+        }),
+      })
+
+      const contentType = response.headers.get("Content-Type")
+      if (!response.ok || !contentType?.includes("application/pdf")) {
+        throw new Error(`PDF request failed with status ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `journal-export-${format(new Date(), "yyyy-MM-dd")}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+
+      toast.success(t("mindset.exportAllPdfSuccess"))
+    } catch (error) {
+      console.error("Failed to export journal PDF:", error)
+      toast.error(t("mindset.exportAllPdfError"))
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   const steps = [
     {
       title: t('mindset.journaling.title'),
@@ -336,6 +397,28 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
             </TooltipProvider>
           </div>
           <div className="flex items-center gap-2">
+            <TooltipProvider>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleExportAllPdf}
+                    disabled={isExporting}
+                    className="h-6 w-6"
+                  >
+                    <Download className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>
+                    {isExporting
+                      ? t("share.exportPdfInProgress")
+                      : t("mindset.exportAllPdf")}
+                  </p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
             <div className="flex items-center gap-1.5">
               {steps.map((_, index) => (
                 <div

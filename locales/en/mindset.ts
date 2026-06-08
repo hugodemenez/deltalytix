@@ -11,6 +11,12 @@ export default {
     loadError: 'Error',
     loadErrorDescription: 'Failed to load mindset data. Please try again.',
     noEntries: 'No entries found for the last 30 days',
+    exportAllPdf: 'Export all entries',
+    exportAllPdfSuccess: 'Journal export downloaded successfully.',
+    exportAllPdfError: 'Failed to export journal entries.',
+    exportAllPdfNoEntries: 'No saved journal entries to export.',
+    exportAllPdfEntriesCount: '{count} entries',
+    exportAllPdfNoNotes: 'No notes',
     addEntry: 'Add Entry',
     selectDate: 'Select Date',
     edit: 'Edit',
@@ -81,12 +87,7 @@ export default {
       placeholder: 'Write your trading thoughts and reflections here...',
       save: 'Save Entry',
       editorPlaceholder: 'Start writing...',
-      exportPdf: 'Export PDF',
-      exportPdfSuccess: 'Journal PDF exported successfully.',
-      exportPdfError: 'Failed to export journal PDF.',
-      entrySectionTitle: 'Journal Entry',
-      tradeSummaryTitle: 'Trading Summary',
-      tradeDetailsTitle: 'Trade Details'
+      entrySectionTitle: 'Notes'
     },
     tags: {
       title: 'Session Tags',

@@ -1,26 +1,20 @@
-import type { PdfTrade } from "./statement"
-
 export type JournalPdfLocale = "en" | "fr"
 
 export const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
-export const MAX_JOURNAL_TEXT_LENGTH = 50_000
-export const MAX_JOURNAL_TRADES = 500
+export const MAX_JOURNAL_ENTRIES = 500
+export const MAX_JOURNAL_TEXT_LENGTH = 10_000
 export const JOURNAL_EMOTION_MAX = 95
 
-export interface ExportJournalPdfPayload {
-  locale: JournalPdfLocale
+export interface JournalDayEntry {
   date: string
   emotionValue: number
   selectedNewsCount: number
   journalText: string
-  trades: PdfTrade[]
 }
 
-export interface JournalSummary {
-  tradesCount: number
-  totalGrossPnl: number
-  totalCommission: number
-  totalNetPnl: number
+export interface ExportJournalPdfPayload {
+  locale: JournalPdfLocale
+  entries: JournalDayEntry[]
 }
 
 export function parseDateKey(input: unknown): string | null {
@@ -37,13 +31,32 @@ export function clampJournalText(input: unknown): string {
   return input.slice(0, MAX_JOURNAL_TEXT_LENGTH)
 }
 
-export function computeJournalSummary(trades: PdfTrade[]): JournalSummary {
-  const totalGrossPnl = trades.reduce((sum, trade) => sum + Number(trade.pnl || 0), 0)
-  const totalCommission = trades.reduce((sum, trade) => sum + Number(trade.commission || 0), 0)
-  return {
-    tradesCount: trades.length,
-    totalGrossPnl,
-    totalCommission,
-    totalNetPnl: totalGrossPnl - totalCommission,
+export function sanitizeJournalEntries(input: unknown): JournalDayEntry[] {
+  if (!Array.isArray(input)) {
+    return []
   }
+
+  const entries: JournalDayEntry[] = []
+  for (const raw of input) {
+    if (entries.length >= MAX_JOURNAL_ENTRIES) {
+      break
+    }
+    const item = raw as Record<string, unknown>
+    const date = parseDateKey(item.date)
+    if (!date) {
+      continue
+    }
+    entries.push({
+      date,
+      emotionValue: Number(item.emotionValue ?? 0),
+      selectedNewsCount: Number(item.selectedNewsCount ?? 0),
+      journalText: clampJournalText(item.journalText),
+    })
+  }
+
+  return sortJournalEntries(entries)
+}
+
+export function sortJournalEntries(entries: JournalDayEntry[]): JournalDayEntry[] {
+  return [...entries].sort((a, b) => a.date.localeCompare(b.date))
 }

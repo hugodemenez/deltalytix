@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest"
 import {
   clampJournalText,
-  computeJournalSummary,
   MAX_JOURNAL_TEXT_LENGTH,
   parseDateKey,
+  sanitizeJournalEntries,
+  sortJournalEntries,
 } from "./journal"
-import type { PdfTrade } from "./statement"
 
 describe("journal PDF helpers", () => {
   it("accepts valid yyyy-MM-dd date keys", () => {
@@ -23,37 +23,26 @@ describe("journal PDF helpers", () => {
     expect(clampJournalText(longText)).toHaveLength(MAX_JOURNAL_TEXT_LENGTH)
   })
 
-  it("computes gross, commission, and net totals", () => {
-    const trades: PdfTrade[] = [
-      {
-        entryDate: "2026-06-06T10:00:00.000Z",
-        closeDate: null,
-        pnl: 100,
-        commission: 10,
-        accountNumber: "A1",
-        side: "long",
-        quantity: 1,
-        instrument: "ES",
-        timeInPosition: 60,
-      },
-      {
-        entryDate: "2026-06-06T11:00:00.000Z",
-        closeDate: null,
-        pnl: -50,
-        commission: 5,
-        accountNumber: "A1",
-        side: "short",
-        quantity: 1,
-        instrument: "NQ",
-        timeInPosition: 30,
-      },
-    ]
+  it("sorts entries chronologically", () => {
+    expect(
+      sortJournalEntries([
+        { date: "2026-06-08", emotionValue: 50, selectedNewsCount: 0, journalText: "b" },
+        { date: "2026-06-06", emotionValue: 40, selectedNewsCount: 1, journalText: "a" },
+      ]),
+    ).toEqual([
+      { date: "2026-06-06", emotionValue: 40, selectedNewsCount: 1, journalText: "a" },
+      { date: "2026-06-08", emotionValue: 50, selectedNewsCount: 0, journalText: "b" },
+    ])
+  })
 
-    expect(computeJournalSummary(trades)).toEqual({
-      tradesCount: 2,
-      totalGrossPnl: 50,
-      totalCommission: 15,
-      totalNetPnl: 35,
-    })
+  it("sanitizes and drops invalid entry dates", () => {
+    expect(
+      sanitizeJournalEntries([
+        { date: "2026-06-06", emotionValue: 75, selectedNewsCount: 2, journalText: "Good day" },
+        { date: "invalid", emotionValue: 10, selectedNewsCount: 0, journalText: "skip me" },
+      ]),
+    ).toEqual([
+      { date: "2026-06-06", emotionValue: 75, selectedNewsCount: 2, journalText: "Good day" },
+    ])
   })
 })

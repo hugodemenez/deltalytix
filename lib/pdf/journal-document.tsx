@@ -1,7 +1,6 @@
 import React from "react"
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer"
 import {
-  computeJournalSummary,
   JOURNAL_EMOTION_MAX,
   type ExportJournalPdfPayload,
 } from "./journal"
@@ -25,10 +24,16 @@ const styles = StyleSheet.create({
   headerTitle: { color: COLORS.white, fontSize: 22, fontFamily: "Helvetica-Bold" },
   headerMeta: { color: "#aeb4c6", fontSize: 10, marginTop: 6 },
   body: { paddingHorizontal: 40, paddingTop: 20 },
-  sectionTitle: { fontSize: 14, fontFamily: "Helvetica-Bold", marginTop: 16, marginBottom: 8 },
-  bodyText: { fontSize: 11, lineHeight: 1.5, color: COLORS.text },
-  summaryRow: { fontSize: 11, marginBottom: 4, color: COLORS.text },
-  tradeLine: { fontSize: 10, marginBottom: 4, color: COLORS.mutedText },
+  dayTitle: {
+    fontSize: 15,
+    fontFamily: "Helvetica-Bold",
+    marginTop: 18,
+    marginBottom: 6,
+    color: COLORS.text,
+  },
+  dayMeta: { fontSize: 10, marginBottom: 4, color: COLORS.mutedText },
+  sectionTitle: { fontSize: 12, fontFamily: "Helvetica-Bold", marginTop: 8, marginBottom: 6 },
+  bodyText: { fontSize: 11, lineHeight: 1.5, color: COLORS.text, marginBottom: 4 },
   footer: {
     position: "absolute",
     bottom: 16,
@@ -42,20 +47,13 @@ const styles = StyleSheet.create({
   },
 })
 
-const fmtMoney = (value: number) => value.toFixed(2)
-
 export interface JournalStrings {
   title: string
-  selectDate: string
+  entriesCount: string
   emotionTitle: string
   selectedNewsCount: string
   entrySectionTitle: string
-  tradeSummaryTitle: string
-  tradeDetailsTitle: string
-  tradesCount: string
-  totalPnL: string
-  commission: string
-  netPnL: string
+  noNotes: string
   footerTitle: string
   page: string
 }
@@ -63,65 +61,52 @@ export interface JournalStrings {
 export function JournalDocument({
   payload,
   strings,
+  generatedAt,
 }: {
   payload: ExportJournalPdfPayload
   strings: JournalStrings
+  generatedAt: string
 }) {
-  const summary = computeJournalSummary(payload.trades)
-  const selectedNewsLabel = strings.selectedNewsCount.replace(
+  const entriesCountLabel = strings.entriesCount.replace(
     "{count}",
-    String(payload.selectedNewsCount),
+    String(payload.entries.length),
   )
-  const journalParagraphs = (payload.journalText.trim() || "-").split(/\n/)
 
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
         <View style={styles.header} fixed>
           <Text style={styles.headerTitle}>{strings.title}</Text>
-          <Text style={styles.headerMeta}>{`${strings.selectDate}: ${payload.date}`}</Text>
-          <Text style={styles.headerMeta}>
-            {`${strings.emotionTitle}: ${payload.emotionValue}/${JOURNAL_EMOTION_MAX}`}
-          </Text>
-          <Text style={styles.headerMeta}>{selectedNewsLabel}</Text>
+          <Text style={styles.headerMeta}>{entriesCountLabel}</Text>
+          <Text style={styles.headerMeta}>{generatedAt}</Text>
         </View>
 
         <View style={styles.body}>
-          <Text style={styles.sectionTitle}>{strings.entrySectionTitle}</Text>
-          {journalParagraphs.map((paragraph, index) => (
-            <Text key={`journal-line-${index}`} style={styles.bodyText}>
-              {paragraph || " "}
-            </Text>
-          ))}
+          {payload.entries.map((entry, index) => {
+            const selectedNewsLabel = strings.selectedNewsCount.replace(
+              "{count}",
+              String(entry.selectedNewsCount),
+            )
+            const journalParagraphs = (entry.journalText.trim() || strings.noNotes).split(/\n/)
 
-          <Text style={styles.sectionTitle} break>
-            {strings.tradeSummaryTitle}
-          </Text>
-          <Text style={styles.summaryRow}>
-            {`${strings.tradesCount}: ${summary.tradesCount}`}
-          </Text>
-          <Text style={styles.summaryRow}>
-            {`${strings.totalPnL}: ${fmtMoney(summary.totalGrossPnl)}`}
-          </Text>
-          <Text style={styles.summaryRow}>
-            {`${strings.commission}: ${fmtMoney(summary.totalCommission)}`}
-          </Text>
-          <Text style={styles.summaryRow}>
-            {`${strings.netPnL}: ${fmtMoney(summary.totalNetPnl)}`}
-          </Text>
-
-          {payload.trades.length > 0 ? (
-            <>
-              <Text style={styles.sectionTitle} break>
-                {strings.tradeDetailsTitle}
-              </Text>
-              {payload.trades.map((trade, index) => (
-                <Text key={`trade-${index}`} style={styles.tradeLine}>
-                  {`${index + 1}. ${trade.instrument} | ${trade.side ?? "-"} | Qty ${trade.quantity} | PnL ${fmtMoney(trade.pnl)} | Commission ${fmtMoney(trade.commission)}`}
+            return (
+              <View key={entry.date} wrap={false}>
+                <Text style={styles.dayTitle} break={index > 0}>
+                  {entry.date}
                 </Text>
-              ))}
-            </>
-          ) : null}
+                <Text style={styles.dayMeta}>
+                  {`${strings.emotionTitle}: ${entry.emotionValue}/${JOURNAL_EMOTION_MAX}`}
+                </Text>
+                <Text style={styles.dayMeta}>{selectedNewsLabel}</Text>
+                <Text style={styles.sectionTitle}>{strings.entrySectionTitle}</Text>
+                {journalParagraphs.map((paragraph, paragraphIndex) => (
+                  <Text key={`${entry.date}-${paragraphIndex}`} style={styles.bodyText}>
+                    {paragraph || " "}
+                  </Text>
+                ))}
+              </View>
+            )
+          })}
         </View>
 
         <Text
