@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Plus, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/locales/client'
+import { tradeMatchesDateKey } from '@/lib/trades/trade-matches-date'
 import {
   Tooltip,
   TooltipContent,
@@ -47,14 +48,7 @@ export function DayTagSelector({ trades, date, onApplyTagToAll }: DayTagSelector
   // Get trades for the selected date
   const tradesForDay = useMemo(() => {
     const dateKey = format(date, 'yyyy-MM-dd')
-    return trades.filter(trade => {
-      const entryDate = trade.entryDate
-      const closeDate = trade.closeDate
-      // Check if the date matches (handling both exact match and date with time)
-      const entryMatches = entryDate && (entryDate === dateKey || entryDate.startsWith(dateKey))
-      const closeMatches = closeDate && (closeDate === dateKey || closeDate.startsWith(dateKey))
-      return entryMatches || closeMatches
-    })
+    return trades.filter((trade) => tradeMatchesDateKey(trade, dateKey))
   }, [trades, date])
 
   // Calculate tag statistics
