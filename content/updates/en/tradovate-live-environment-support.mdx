@@ -1,0 +1,15 @@
+---
+title: 'Tradovate sync: connect live accounts'
+description: 'Choose Demo or Live when linking Tradovate, and see each account environment in the credentials table.'
+date: '2026-06-06'
+status: completed
+completedDate: '2026-06-07'
+---
+
+# Tradovate sync: connect live accounts
+
+Tradovate sync is no longer limited to demo accounts. When you add a new connection under **Import → Tradovate sync**, pick **Demo** or **Live** before starting OAuth. The choice is stored with the account, and scheduled daily syncs use the correct Tradovate API for that environment.
+
+The credentials table now shows each account's real environment—**Live** in amber, **Demo** in blue. Reconnecting an account keeps its original environment so you do not accidentally swap demo and live tokens.
+
+The connection status badge is also more reliable: it reflects whether a token is present instead of comparing a stale expiry timestamp, so accounts no longer flip to "expired" just because the page has been open for a while.

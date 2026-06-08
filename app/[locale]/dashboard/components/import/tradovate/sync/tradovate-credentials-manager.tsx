@@ -25,12 +25,20 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useI18n } from "@/locales/client";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   initiateTradovateOAuth,
   updateDailySyncTimeAction,
+  type TradovateEnvironment,
 } from "./actions";
 import { TRADOVATE_FEE_TYPE_KEYS } from "./fee-types";
 import { translateTradovateFeeType } from "@/lib/translation-utils";
@@ -58,6 +66,8 @@ export function TradovateCredentialsManager() {
   const [isReloading, setIsReloading] = useState(false);
   const [dailySyncTime, setDailySyncTime] = useState<string>("");
   const [isSavingTime, setIsSavingTime] = useState(false);
+  const [newEnvironment, setNewEnvironment] =
+    useState<TradovateEnvironment>("demo");
   const t = useI18n();
   const tradovateStore = useTradovateSyncStore();
 
@@ -79,29 +89,37 @@ export function TradovateCredentialsManager() {
     [t],
   );
 
-  const handleStartOAuth = useCallback(async (accountId: string = "default") => {
-    try {
-      setIsLoading(true);
-      const result = await initiateTradovateOAuth(accountId);
-      if (result.error || !result.authUrl || !result.state) {
+  const handleStartOAuth = useCallback(
+    async (
+      accountId: string = "default",
+      environment: TradovateEnvironment = "demo",
+    ) => {
+      try {
+        setIsLoading(true);
+        // Keep the store's environment in sync so the callback flow can reference it
+        tradovateStore.setEnvironment(environment);
+        const result = await initiateTradovateOAuth(accountId, environment);
+        if (result.error || !result.authUrl || !result.state) {
+          toast.error(t("tradovateSync.error.oauthInit"));
+          return;
+        }
+
+        // Store the state for verification
+        tradovateStore.setOAuthState(result.state);
+
+        // Also store in sessionStorage as backup
+        sessionStorage.setItem("tradovate_oauth_state", result.state);
+
+        // Redirect to Tradovate OAuth
+        window.location.href = result.authUrl;
+      } catch (error) {
         toast.error(t("tradovateSync.error.oauthInit"));
-        return;
+      } finally {
+        setIsLoading(false);
       }
-
-      // Store the state for verification
-      tradovateStore.setOAuthState(result.state);
-
-      // Also store in sessionStorage as backup
-      sessionStorage.setItem("tradovate_oauth_state", result.state);
-
-      // Redirect to Tradovate OAuth
-      window.location.href = result.authUrl;
-    } catch (error) {
-      toast.error(t("tradovateSync.error.oauthInit"));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [t, tradovateStore]);
+    },
+    [t, tradovateStore],
+  );
 
   function formatDate(dateString: string) {
     return new Date(dateString).toLocaleString();
@@ -294,8 +312,31 @@ export function TradovateCredentialsManager() {
               <RefreshCw className="h-4 w-4 mr-2" />
               {t("tradovateSync.multiAccount.syncAll")}
             </Button>
+            <Select
+              value={newEnvironment}
+              onValueChange={(value) =>
+                setNewEnvironment(value as TradovateEnvironment)
+              }
+            >
+              <SelectTrigger
+                className="h-8 w-[110px]"
+                aria-label={t(
+                  "tradovateSync.multiAccount.environmentSelectLabel",
+                )}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="demo">
+                  {t("tradovateSync.multiAccount.environmentDemo")}
+                </SelectItem>
+                <SelectItem value="live">
+                  {t("tradovateSync.multiAccount.environmentLive")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
             <Button
-              onClick={() => handleStartOAuth()}
+              onClick={() => handleStartOAuth("default", newEnvironment)}
               disabled={isLoading}
               size="sm"
               className="h-8"
@@ -333,11 +374,13 @@ export function TradovateCredentialsManager() {
           </TableHeader>
           <TableBody>
             {accounts.map((account) => {
-              const isExpired =
-                !account.token ||
-                (account.tokenExpiresAt
-                  ? new Date(account.tokenExpiresAt).getTime() <= Date.now()
-                  : false);
+              // The badge reflects token presence rather than a frozen
+              // expiry timestamp. The token is kept alive in the DB by the
+              // renewal cron (which nulls it out if renewal fails), and the
+              // sync path re-reads the live DB, so comparing the page-load
+              // snapshot against Date.now() only produced false "expired"
+              // states while the page sat open.
+              const isExpired = !account.token;
 
               return (
                 <TableRow key={account.accountId}>
@@ -347,12 +390,14 @@ export function TradovateCredentialsManager() {
                 <TableCell>
                   <span
                     className={`px-2 py-1 rounded text-xs ${
-                      false
-                      ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                      account.environment === "live"
+                        ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
                         : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                     }`}
                   >
-                    {t("tradovateSync.multiAccount.environmentDemo")}
+                    {account.environment === "live"
+                      ? t("tradovateSync.multiAccount.environmentLive")
+                      : t("tradovateSync.multiAccount.environmentDemo")}
                   </span>
                 </TableCell>
                 <TableCell>{formatDate(account.lastSyncedAt.toISOString())}</TableCell>
@@ -385,7 +430,12 @@ export function TradovateCredentialsManager() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleStartOAuth(account.accountId)}
+                        onClick={() =>
+                          handleStartOAuth(
+                            account.accountId,
+                            account.environment === "live" ? "live" : "demo",
+                          )
+                        }
                         className="h-8"
                       >
                         {t("tradovateSync.multiAccount.reconnect")}

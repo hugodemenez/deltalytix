@@ -1,0 +1,15 @@
+---
+title: 'Sync Tradovate : connecter des comptes live'
+description: 'Choisissez Demo ou Live lors de la connexion Tradovate, et voyez l''environnement de chaque compte dans le tableau.'
+date: '2026-06-06'
+status: completed
+completedDate: '2026-06-07'
+---
+
+# Sync Tradovate : connecter des comptes live
+
+La sync Tradovate n'est plus limitée aux comptes demo. Quand vous ajoutez une connexion dans **Import → Sync Tradovate**, choisissez **Demo** ou **Live** avant de lancer OAuth. Le choix est enregistré avec le compte, et la sync quotidienne planifiée utilise la bonne API Tradovate pour cet environnement.
+
+Le tableau des identifiants affiche l'environnement réel de chaque compte—**Live** en ambre, **Demo** en bleu. Reconnecter un compte conserve son environnement d'origine, pour éviter d'échanger par erreur les tokens demo et live.
+
+Le badge de statut de connexion est aussi plus fiable : il indique si un token est présent plutôt que de comparer un horodatage d'expiration figé, donc un compte ne passe plus à « expiré » simplement parce que la page est restée ouverte longtemps.

@@ -35,6 +35,7 @@ export type SynchronizationMinAggregateOutputType = {
   token: string | null
   tokenExpiresAt: Date | null
   dailySyncTime: Date | null
+  environment: string | null
 }
 
 export type SynchronizationMaxAggregateOutputType = {
@@ -48,6 +49,7 @@ export type SynchronizationMaxAggregateOutputType = {
   token: string | null
   tokenExpiresAt: Date | null
   dailySyncTime: Date | null
+  environment: string | null
 }
 
 export type SynchronizationCountAggregateOutputType = {
@@ -62,6 +64,7 @@ export type SynchronizationCountAggregateOutputType = {
   tokenExpiresAt: number
   dailySyncTime: number
   includedFeeTypes: number
+  environment: number
   _all: number
 }
 
@@ -77,6 +80,7 @@ export type SynchronizationMinAggregateInputType = {
   token?: true
   tokenExpiresAt?: true
   dailySyncTime?: true
+  environment?: true
 }
 
 export type SynchronizationMaxAggregateInputType = {
@@ -90,6 +94,7 @@ export type SynchronizationMaxAggregateInputType = {
   token?: true
   tokenExpiresAt?: true
   dailySyncTime?: true
+  environment?: true
 }
 
 export type SynchronizationCountAggregateInputType = {
@@ -104,6 +109,7 @@ export type SynchronizationCountAggregateInputType = {
   tokenExpiresAt?: true
   dailySyncTime?: true
   includedFeeTypes?: true
+  environment?: true
   _all?: true
 }
 
@@ -191,6 +197,7 @@ export type SynchronizationGroupByOutputType = {
   tokenExpiresAt: Date | null
   dailySyncTime: Date | null
   includedFeeTypes: runtime.JsonValue | null
+  environment: string
   _count: SynchronizationCountAggregateOutputType | null
   _min: SynchronizationMinAggregateOutputType | null
   _max: SynchronizationMaxAggregateOutputType | null
@@ -226,6 +233,7 @@ export type SynchronizationWhereInput = {
   tokenExpiresAt?: Prisma.DateTimeNullableFilter<"Synchronization"> | Date | string | null
   dailySyncTime?: Prisma.DateTimeNullableFilter<"Synchronization"> | Date | string | null
   includedFeeTypes?: Prisma.JsonNullableFilter<"Synchronization">
+  environment?: Prisma.StringFilter<"Synchronization"> | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }
 
@@ -241,6 +249,7 @@ export type SynchronizationOrderByWithRelationInput = {
   tokenExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   dailySyncTime?: Prisma.SortOrderInput | Prisma.SortOrder
   includedFeeTypes?: Prisma.SortOrderInput | Prisma.SortOrder
+  environment?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
 }
 
@@ -260,6 +269,7 @@ export type SynchronizationWhereUniqueInput = Prisma.AtLeast<{
   tokenExpiresAt?: Prisma.DateTimeNullableFilter<"Synchronization"> | Date | string | null
   dailySyncTime?: Prisma.DateTimeNullableFilter<"Synchronization"> | Date | string | null
   includedFeeTypes?: Prisma.JsonNullableFilter<"Synchronization">
+  environment?: Prisma.StringFilter<"Synchronization"> | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }, "id" | "userId_service_accountId">
 
@@ -275,6 +285,7 @@ export type SynchronizationOrderByWithAggregationInput = {
   tokenExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   dailySyncTime?: Prisma.SortOrderInput | Prisma.SortOrder
   includedFeeTypes?: Prisma.SortOrderInput | Prisma.SortOrder
+  environment?: Prisma.SortOrder
   _count?: Prisma.SynchronizationCountOrderByAggregateInput
   _max?: Prisma.SynchronizationMaxOrderByAggregateInput
   _min?: Prisma.SynchronizationMinOrderByAggregateInput
@@ -295,6 +306,7 @@ export type SynchronizationScalarWhereWithAggregatesInput = {
   tokenExpiresAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Synchronization"> | Date | string | null
   dailySyncTime?: Prisma.DateTimeNullableWithAggregatesFilter<"Synchronization"> | Date | string | null
   includedFeeTypes?: Prisma.JsonNullableWithAggregatesFilter<"Synchronization">
+  environment?: Prisma.StringWithAggregatesFilter<"Synchronization"> | string
 }
 
 export type SynchronizationCreateInput = {
@@ -308,6 +320,7 @@ export type SynchronizationCreateInput = {
   tokenExpiresAt?: Date | string | null
   dailySyncTime?: Date | string | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: string
   user: Prisma.UserCreateNestedOneWithoutSynchronizationsInput
 }
 
@@ -323,6 +336,7 @@ export type SynchronizationUncheckedCreateInput = {
   tokenExpiresAt?: Date | string | null
   dailySyncTime?: Date | string | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: string
 }
 
 export type SynchronizationUpdateInput = {
@@ -336,6 +350,7 @@ export type SynchronizationUpdateInput = {
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.StringFieldUpdateOperationsInput | string
   user?: Prisma.UserUpdateOneRequiredWithoutSynchronizationsNestedInput
 }
 
@@ -351,6 +366,7 @@ export type SynchronizationUncheckedUpdateInput = {
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type SynchronizationCreateManyInput = {
@@ -365,6 +381,7 @@ export type SynchronizationCreateManyInput = {
   tokenExpiresAt?: Date | string | null
   dailySyncTime?: Date | string | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: string
 }
 
 export type SynchronizationUpdateManyMutationInput = {
@@ -378,6 +395,7 @@ export type SynchronizationUpdateManyMutationInput = {
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type SynchronizationUncheckedUpdateManyInput = {
@@ -392,6 +410,7 @@ export type SynchronizationUncheckedUpdateManyInput = {
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type SynchronizationListRelationFilter = {
@@ -422,6 +441,7 @@ export type SynchronizationCountOrderByAggregateInput = {
   tokenExpiresAt?: Prisma.SortOrder
   dailySyncTime?: Prisma.SortOrder
   includedFeeTypes?: Prisma.SortOrder
+  environment?: Prisma.SortOrder
 }
 
 export type SynchronizationMaxOrderByAggregateInput = {
@@ -435,6 +455,7 @@ export type SynchronizationMaxOrderByAggregateInput = {
   token?: Prisma.SortOrder
   tokenExpiresAt?: Prisma.SortOrder
   dailySyncTime?: Prisma.SortOrder
+  environment?: Prisma.SortOrder
 }
 
 export type SynchronizationMinOrderByAggregateInput = {
@@ -448,6 +469,7 @@ export type SynchronizationMinOrderByAggregateInput = {
   token?: Prisma.SortOrder
   tokenExpiresAt?: Prisma.SortOrder
   dailySyncTime?: Prisma.SortOrder
+  environment?: Prisma.SortOrder
 }
 
 export type SynchronizationCreateNestedManyWithoutUserInput = {
@@ -503,6 +525,7 @@ export type SynchronizationCreateWithoutUserInput = {
   tokenExpiresAt?: Date | string | null
   dailySyncTime?: Date | string | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: string
 }
 
 export type SynchronizationUncheckedCreateWithoutUserInput = {
@@ -516,6 +539,7 @@ export type SynchronizationUncheckedCreateWithoutUserInput = {
   tokenExpiresAt?: Date | string | null
   dailySyncTime?: Date | string | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: string
 }
 
 export type SynchronizationCreateOrConnectWithoutUserInput = {
@@ -559,6 +583,7 @@ export type SynchronizationScalarWhereInput = {
   tokenExpiresAt?: Prisma.DateTimeNullableFilter<"Synchronization"> | Date | string | null
   dailySyncTime?: Prisma.DateTimeNullableFilter<"Synchronization"> | Date | string | null
   includedFeeTypes?: Prisma.JsonNullableFilter<"Synchronization">
+  environment?: Prisma.StringFilter<"Synchronization"> | string
 }
 
 export type SynchronizationCreateManyUserInput = {
@@ -572,6 +597,7 @@ export type SynchronizationCreateManyUserInput = {
   tokenExpiresAt?: Date | string | null
   dailySyncTime?: Date | string | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: string
 }
 
 export type SynchronizationUpdateWithoutUserInput = {
@@ -585,6 +611,7 @@ export type SynchronizationUpdateWithoutUserInput = {
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type SynchronizationUncheckedUpdateWithoutUserInput = {
@@ -598,6 +625,7 @@ export type SynchronizationUncheckedUpdateWithoutUserInput = {
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type SynchronizationUncheckedUpdateManyWithoutUserInput = {
@@ -611,6 +639,7 @@ export type SynchronizationUncheckedUpdateManyWithoutUserInput = {
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 
@@ -627,6 +656,7 @@ export type SynchronizationSelect<ExtArgs extends runtime.Types.Extensions.Inter
   tokenExpiresAt?: boolean
   dailySyncTime?: boolean
   includedFeeTypes?: boolean
+  environment?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["synchronization"]>
 
@@ -642,6 +672,7 @@ export type SynchronizationSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   tokenExpiresAt?: boolean
   dailySyncTime?: boolean
   includedFeeTypes?: boolean
+  environment?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["synchronization"]>
 
@@ -657,6 +688,7 @@ export type SynchronizationSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   tokenExpiresAt?: boolean
   dailySyncTime?: boolean
   includedFeeTypes?: boolean
+  environment?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["synchronization"]>
 
@@ -672,9 +704,10 @@ export type SynchronizationSelectScalar = {
   tokenExpiresAt?: boolean
   dailySyncTime?: boolean
   includedFeeTypes?: boolean
+  environment?: boolean
 }
 
-export type SynchronizationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "service" | "accountId" | "lastSyncedAt" | "createdAt" | "updatedAt" | "token" | "tokenExpiresAt" | "dailySyncTime" | "includedFeeTypes", ExtArgs["result"]["synchronization"]>
+export type SynchronizationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "service" | "accountId" | "lastSyncedAt" | "createdAt" | "updatedAt" | "token" | "tokenExpiresAt" | "dailySyncTime" | "includedFeeTypes" | "environment", ExtArgs["result"]["synchronization"]>
 export type SynchronizationInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -702,6 +735,7 @@ export type $SynchronizationPayload<ExtArgs extends runtime.Types.Extensions.Int
     tokenExpiresAt: Date | null
     dailySyncTime: Date | null
     includedFeeTypes: runtime.JsonValue | null
+    environment: string
   }, ExtArgs["result"]["synchronization"]>
   composites: {}
 }
@@ -1137,6 +1171,7 @@ export interface SynchronizationFieldRefs {
   readonly tokenExpiresAt: Prisma.FieldRef<"Synchronization", 'DateTime'>
   readonly dailySyncTime: Prisma.FieldRef<"Synchronization", 'DateTime'>
   readonly includedFeeTypes: Prisma.FieldRef<"Synchronization", 'Json'>
+  readonly environment: Prisma.FieldRef<"Synchronization", 'String'>
 }
     
 

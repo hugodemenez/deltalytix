@@ -1,4 +1,9 @@
 import { formatInTimeZone } from "date-fns-tz"
+import {
+  type BreakevenRange,
+  DEFAULT_BREAKEVEN_RANGE,
+  classifyTradeOutcome,
+} from "@/types/breakeven"
 
 // Slim trade shape the client sends to the PDF route. It mirrors the fields the
 // dashboard's summary and charts actually read, so the server can reproduce the
@@ -24,6 +29,7 @@ export interface ExportPdfPayload {
   title: string
   dateRange: { from: string | null; to: string | null } | null
   accountNumbers: string[]
+  breakevenRange?: BreakevenRange
   trades: PdfTrade[]
 }
 
@@ -48,13 +54,36 @@ export interface StatementChartData {
 
 const netPnl = (trade: PdfTrade) => Number(trade.pnl || 0) - Number(trade.commission || 0)
 
-// Mirrors the existing client summary in share-button.tsx: winRate is based on
-// gross pnl > 0, gross is the sum of pnl, net subtracts commissions.
-export function computeSummary(trades: PdfTrade[]): SummaryMetrics {
+function computeTradeDistribution(
+  trades: PdfTrade[],
+  breakevenRange: BreakevenRange = DEFAULT_BREAKEVEN_RANGE,
+): { win: number; breakeven: number; loss: number } {
+  let win = 0
+  let loss = 0
+  let breakeven = 0
+  for (const trade of trades) {
+    const outcome = classifyTradeOutcome(netPnl(trade), breakevenRange)
+    if (outcome === "win") {
+      win += 1
+    } else if (outcome === "loss") {
+      loss += 1
+    } else {
+      breakeven += 1
+    }
+  }
+  return { win, breakeven, loss }
+}
+
+// Mirrors calculateStatistics in lib/utils: win rate and distribution use net
+// pnl with the user's configured breakeven range.
+export function computeSummary(
+  trades: PdfTrade[],
+  breakevenRange: BreakevenRange = DEFAULT_BREAKEVEN_RANGE,
+): SummaryMetrics {
   const totalGrossPnl = trades.reduce((sum, t) => sum + Number(t.pnl || 0), 0)
   const totalNetPnl = trades.reduce((sum, t) => sum + netPnl(t), 0)
-  const winningTrades = trades.filter((t) => Number(t.pnl || 0) > 0).length
-  const winRate = trades.length > 0 ? (winningTrades / trades.length) * 100 : 0
+  const { win } = computeTradeDistribution(trades, breakevenRange)
+  const winRate = trades.length > 0 ? (win / trades.length) * 100 : 0
   return {
     totalTrades: trades.length,
     winRate,
@@ -63,17 +92,16 @@ export function computeSummary(trades: PdfTrade[]): SummaryMetrics {
   }
 }
 
-// Buckets net pnl by day. The equity curve uses entryDate (matching the live
-// equity-chart widget); the calendar/daily views use closeDate (matching
-// formatCalendarData in lib/utils). Both honour the user's timezone.
+// Buckets net pnl by day. The equity curve uses entryDate in the user's
+// timezone (matching the live equity chart's client-side fallback).
 function bucketByDay(
   trades: PdfTrade[],
-  dateKey: "entryDate" | "closeDate",
+  dateKey: "entryDate",
   timezone: string,
 ): Map<string, number> {
   const buckets = new Map<string, number>()
   for (const trade of trades) {
-    const source = dateKey === "closeDate" ? trade.closeDate || trade.entryDate : trade.entryDate
+    const source = trade[dateKey]
     const time = new Date(source).getTime()
     if (Number.isNaN(time)) {
       continue
@@ -84,7 +112,26 @@ function bucketByDay(
   return buckets
 }
 
-export function computeChartData(trades: PdfTrade[], timezone: string): StatementChartData {
+// Mirrors formatCalendarData in lib/utils: the live Daily P&L, Weekday P&L,
+// and calendar widgets bucket trades by entryDate formatted in UTC.
+function bucketByDashboardCalendarDay(trades: PdfTrade[]): Map<string, number> {
+  const buckets = new Map<string, number>()
+  for (const trade of trades) {
+    const time = new Date(trade.entryDate).getTime()
+    if (Number.isNaN(time)) {
+      continue
+    }
+    const day = formatInTimeZone(new Date(trade.entryDate), "UTC", "yyyy-MM-dd")
+    buckets.set(day, (buckets.get(day) ?? 0) + netPnl(trade))
+  }
+  return buckets
+}
+
+export function computeChartData(
+  trades: PdfTrade[],
+  timezone: string,
+  breakevenRange: BreakevenRange = DEFAULT_BREAKEVEN_RANGE,
+): StatementChartData {
   // Equity: cumulative net pnl per day, in chronological order.
   const equityBuckets = bucketByDay(trades, "entryDate", timezone)
   const equityDays = [...equityBuckets.keys()].sort()
@@ -94,8 +141,8 @@ export function computeChartData(trades: PdfTrade[], timezone: string): Statemen
     return { label: day, value: cumulative }
   })
 
-  // Daily net pnl by closeDate bucket, chronological.
-  const dailyBuckets = bucketByDay(trades, "closeDate", timezone)
+  // Daily net pnl by dashboard calendar bucket, chronological.
+  const dailyBuckets = bucketByDashboardCalendarDay(trades)
   const dailyDays = [...dailyBuckets.keys()].sort()
   const dailyPnl: PointSeries[] = dailyDays.map((day) => ({
     label: day,
@@ -118,23 +165,9 @@ export function computeChartData(trades: PdfTrade[], timezone: string): Statemen
     return { label: weekdayLabels[i], value: count > 0 ? total / count : 0 }
   })
 
-  // Distribution by gross pnl, matching calculateStatistics in lib/utils (and
-  // the summary winRate), which bucket on trade.pnl rather than net.
-  let win = 0
-  let loss = 0
-  let breakeven = 0
-  for (const trade of trades) {
-    const pnl = Number(trade.pnl || 0)
-    if (pnl > 0) {
-      win += 1
-    } else if (pnl < 0) {
-      loss += 1
-    } else {
-      breakeven += 1
-    }
-  }
+  const distribution = computeTradeDistribution(trades, breakevenRange)
 
-  return { equity, dailyPnl, weekdayPnl, distribution: { win, breakeven, loss } }
+  return { equity, dailyPnl, weekdayPnl, distribution }
 }
 
 // Resolve a localized date-range / account label for the PDF header, mirroring
