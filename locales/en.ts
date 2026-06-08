@@ -569,10 +569,10 @@ export default {
   "import.upload.dragAndDropExcel": "Drag and drop your Excel file here",
   "import.upload.clickToBrowseExcel": "or click to browse",
   "import.upload.excelFormat":
-    'Supports .xlsx files with a "Journal" or "Journal commercial" sheet',
+    'Supports .xlsx and .xls files with "Journal" sheet',
   "import.upload.excelNote": "Excel File Upload",
   "import.upload.excelNoteDescription":
-    'Make sure your .xlsx file contains the required ATAS columns. Excel date cells do not include timezone metadata, so imported trade times may depend on the timezone of the device doing the import.',
+    'Make sure your Excel file contains a sheet named "Journal" with the required columns: Account, Instrument, Open time, Open price, Open volume, Close time, Close price, Close volume, PnL.',
   "import.upload.dropHere": "Drop your files here",
   "import.upload.weWillHandle": "We'll handle the rest",
   "import.upload.uploadedFiles": "Uploaded Files:",

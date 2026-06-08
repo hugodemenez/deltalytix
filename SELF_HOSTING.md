@@ -11,8 +11,7 @@ It covers:
 ## 1) Prerequisites
 
 - Docker + Docker Compose (recommended for Postgres)
-- Bun (`bun --version`)
-- Node.js 20+ (fallback if needed)
+- Node.js 20+ and npm
 - A free local TCP port for the app (`3000`) and Postgres (`5432`)
 
 ### Where demo trades are stored
@@ -30,7 +29,14 @@ Your `.env.local` should point at that instance:
 
 Use the same `devuser` / `devpass` credentials defined in `docker-compose.yml` defaults.
 
-If Docker is unavailable, you can install Postgres directly on the host (for example via `apt install postgresql`), but prefer Docker so setup matches this guide and the compose file.
+If Docker is unavailable, install Postgres on the host instead:
+
+`sudo apt-get install -y postgresql postgresql-client`
+`sudo pg_ctlcluster 16 main start`
+`sudo -u postgres psql -c "CREATE USER devuser WITH PASSWORD 'devpass' CREATEDB;"`
+`sudo -u postgres psql -c "CREATE DATABASE deltalytix_dev OWNER devuser;"`
+
+Prefer Docker when possible so setup matches this guide and the compose file.
 
 ### Agent shells with a pre-set `DATABASE_URL`
 
@@ -96,11 +102,11 @@ Apply migrations non-interactively (after `db` is healthy):
 
 `LOCAL_DASHBOARD_AUTH_BYPASS=true NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS=true docker compose up -d app`
 
-For local dashboard work, the recommended path is **`db` in Docker + app on the host** (`bun run dev`), not the production `app` container.
+For local dashboard work, the recommended path is **`db` in Docker + app on the host** (`npm run dev`), not the production `app` container.
 
 ### Step C: install dependencies
 
-`bun install`
+`npm install`
 
 ### Step D: generate Prisma client
 
@@ -114,7 +120,7 @@ For local dashboard work, the recommended path is **`db` in Docker + app on the 
 
 `unset DATABASE_URL DIRECT_URL`
 `set -a && source .env.local && set +a`
-`bun run seed:self-host`
+`npm run seed:self-host`
 
 This script replaces trades and payouts for the local demo account. Use only against local/dev databases.
 
@@ -126,7 +132,7 @@ This creates:
 
 ### Step G: run the app
 
-`bun run dev --hostname 0.0.0.0 --port 3000`
+`npm run dev -- --hostname 0.0.0.0 --port 3000`
 
 Open `http://localhost:3000/dashboard`.
 
@@ -179,12 +185,13 @@ On GitHub, open the file in the PR branch and use **Download** or the raw view l
 Use this sequence for reproducible deploy prep:
 
 1. `git fetch origin beta && git rebase origin/beta`
-2. `bun install`
+2. `npm install`
 3. `DIRECT_URL=... npx prisma db push` (or migrations in your environment)
-4. `bun run seed:self-host` (for non-empty local validation)
-5. Run targeted checks needed for your changes
-6. Run manual dashboard verification on default layout
-7. Commit, push, and open/update PR
+4. `npm run seed:self-host` (for non-empty local validation)
+5. `OPENAI_API_KEY=dummy npm run build` (full build + typecheck)
+6. Run targeted checks needed for your changes
+7. Run manual dashboard verification on default layout
+8. Commit, push, and open/update PR
 
 ## 7) Notes
 
