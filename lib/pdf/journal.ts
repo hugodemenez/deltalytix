@@ -3,7 +3,6 @@ export type JournalPdfLocale = "en" | "fr"
 export const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 export const MAX_JOURNAL_ENTRIES = 500
 export const MAX_JOURNAL_TEXT_LENGTH = 10_000
-// Display scale for PDF export (selector stores 0–95 in steps of 5).
 export const JOURNAL_EMOTION_MAX = 100
 
 export interface JournalDayEntry {
