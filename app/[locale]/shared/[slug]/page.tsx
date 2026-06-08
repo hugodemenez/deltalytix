@@ -1,9 +1,12 @@
 import type { Metadata } from "next"
+import { cache } from "react"
 import { notFound } from "next/navigation"
 import { getShared } from "@/server/shared"
 import { SharedPageClient } from "./shared-page-client"
 import { getRequestOrigin, siteUrl } from "@/lib/site-url"
 import { headers } from "next/headers"
+
+const getCachedShared = cache(getShared)
 
 interface SharedPageProps {
   params: Promise<{
@@ -19,7 +22,7 @@ export async function generateMetadata({ params }: SharedPageProps): Promise<Met
   let sharedData: Awaited<ReturnType<typeof getShared>> = null
 
   try {
-    sharedData = await getShared(slug)
+    sharedData = await getCachedShared(slug)
   } catch (error) {
     console.error("Error loading shared metadata:", error)
   }
@@ -60,17 +63,13 @@ export async function generateMetadata({ params }: SharedPageProps): Promise<Met
   }
 }
 
-// Main page component - Server Component
 export default async function SharedPage({ params }: SharedPageProps) {
-  // Await the params Promise
   const resolvedParams = await params
-  // Fetch shared data on the server
-  const sharedData = await getShared(resolvedParams.slug)
+  const sharedData = await getCachedShared(resolvedParams.slug)
   
   if (!sharedData) {
     notFound()
   }
 
-  // Pass the resolved params and fetched data to the client component
   return <SharedPageClient params={resolvedParams} initialData={sharedData} />
 }
