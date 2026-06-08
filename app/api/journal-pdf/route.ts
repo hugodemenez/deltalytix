@@ -15,9 +15,10 @@ function buildStrings(t: (key: string) => string): JournalStrings {
   return {
     title: t("mindset.journaling.title"),
     entriesCount: t("mindset.exportAllPdfEntriesCount"),
-    emotionTitle: t("mindset.emotion.title"),
-    selectedNewsCount: t("mindset.editor.news.selectedCount"),
-    entrySectionTitle: t("mindset.journaling.entrySectionTitle"),
+    tableDate: t("mindset.exportAllPdfTableDate"),
+    tableEmotion: t("mindset.exportAllPdfTableEmotion"),
+    tableNews: t("mindset.exportAllPdfTableNews"),
+    tableNotes: t("mindset.exportAllPdfTableNotes"),
     noNotes: t("mindset.exportAllPdfNoNotes"),
     footerTitle: t("share.pdfFooterTitle"),
     page: t("share.pdfPage"),
