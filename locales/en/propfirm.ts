@@ -44,7 +44,19 @@ export default {
                 noResults: 'No results found',
                 noAccountSizes: 'No account sizes found',
                 clear: 'Clear Template',
-                target: 'Target'
+                target: 'Target',
+                myTemplates: 'My Templates',
+                saveAsTemplate: 'Save as template',
+                saveAsTemplateDescription: 'Save the current configuration as a reusable template stored on this device.',
+                saveDialogTitle: 'Save as template',
+                saveDialogDescription: 'Give your template a name so you can quickly reuse this configuration later.',
+                sizeLabel: 'Account size label (optional)',
+                sizePlaceholder: 'e.g. 50K, Funded 100K...',
+                deleteTemplate: 'Delete template',
+                saveSuccess: 'Template saved',
+                saveSuccessDescription: '"{name}" has been saved to your templates.',
+                deleteSuccess: 'Template deleted',
+                deleteSuccessDescription: '"{name}" has been removed from your templates.'
             },
             sections: {
                 basicInfo: 'Basic Account Info',
