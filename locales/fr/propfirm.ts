@@ -44,7 +44,19 @@ export default {
                 noResults: 'Aucun résultat trouvé',
                 noAccountSizes: 'Aucune taille de compte trouvée',
                 clear: 'Effacer le Modèle',
-                target: 'Objectif'
+                target: 'Objectif',
+                myTemplates: 'Mes Modèles',
+                saveAsTemplate: 'Enregistrer comme modèle',
+                saveAsTemplateDescription: 'Enregistrez la configuration actuelle comme modèle réutilisable stocké sur cet appareil.',
+                saveDialogTitle: 'Enregistrer comme modèle',
+                saveDialogDescription: 'Donnez un nom à votre modèle pour réutiliser rapidement cette configuration plus tard.',
+                sizeLabel: 'Libellé de la taille de compte (optionnel)',
+                sizePlaceholder: 'ex. 50K, Funded 100K...',
+                deleteTemplate: 'Supprimer le modèle',
+                saveSuccess: 'Modèle enregistré',
+                saveSuccessDescription: '« {name} » a été ajouté à vos modèles.',
+                deleteSuccess: 'Modèle supprimé',
+                deleteSuccessDescription: '« {name} » a été retiré de vos modèles.'
             },
             sections: {
                 basicInfo: 'Informations de Base du Compte',
