@@ -179,6 +179,7 @@
     "tailwindcss": "^4.1.16",
     "ts-node": "^10.9.2",
     "tw-animate-css": "latest",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "^4.1.8"
   }
 }

@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { unstable_cache } from 'next/cache'
 import { defaultLayouts } from '@/lib/default-layouts'
 import { formatTimestamp } from '@/lib/date-utils'
-import { v5 as uuidv5 } from 'uuid'
+import { generateTradeUUID, getBrokerTradeUpdateData, getStableBrokerTradeKey } from '@/lib/trade-persistence'
 
 type TradeError =
   | 'DUPLICATE_TRADES'
@@ -39,36 +39,6 @@ export async function revalidateCache(tags: string[]) {
   console.log(`[revalidateCache] Completed cache invalidation for ${tags.length} tags`)
 }
 
-// Namespace UUID for deterministic trade ID generation
-const TRADE_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
-
-/**
- * Generates a deterministic UUID v5 from all trade fields
- * This ensures the same trade always gets the same UUID
- */
-function generateTradeUUID(trade: Partial<Trade>): string {
-  // Create a deterministic string from all trade fields
-  const tradeSignature = [
-    trade.userId || '',
-    trade.accountNumber || '',
-    trade.instrument || '',
-    trade.entryDate || '',
-    trade.closeDate || '',
-    trade.entryPrice || '',
-    trade.closePrice || '',
-    (trade.quantity || 0).toString(),
-    trade.entryId || '',
-    trade.closeId || '',
-    (trade.timeInPosition || 0).toString(),
-    trade.side || '',
-    (trade.pnl || 0).toString(),
-    (trade.commission || 0).toString(),
-  ].join('|')
-  
-  // Generate UUID v5 from the signature
-  return uuidv5(tradeSignature, TRADE_NAMESPACE)
-}
-
 export async function saveTradesAction(
   data: Trade[],
   options?: { userId?: string }
@@ -90,17 +60,81 @@ export async function saveTradesAction(
       return {
         ...trade,
         userId: userId,
-        id: generateTradeUUID({...trade, userId: userId}), // Generate a unique ID for the trade using UUID v5 based on all trade properties
+        id: generateTradeUUID({...trade, userId: userId}),
       } as Trade
     })
 
-    const result = await prisma.trade.createMany({
-      data: userAssignedTrades,
-      skipDuplicates: true
+    const brokerTradeKeys = userAssignedTrades
+      .map(trade => getStableBrokerTradeKey(trade))
+      .filter((key): key is string => key !== null)
+
+    const existingBrokerTradesByKey = new Map<string, { id: string }>()
+
+    if (brokerTradeKeys.length > 0) {
+      const candidateAccountNumbers = [...new Set(userAssignedTrades.map(trade => trade.accountNumber))]
+      const candidateEntryIds = [...new Set(userAssignedTrades.map(trade => trade.entryId).filter((id): id is string => Boolean(id)))]
+      const candidateCloseIds = [...new Set(userAssignedTrades.map(trade => trade.closeId).filter((id): id is string => Boolean(id)))]
+
+      const existingBrokerTrades = await prisma.trade.findMany({
+        where: {
+          userId,
+          accountNumber: { in: candidateAccountNumbers },
+          entryId: { in: candidateEntryIds },
+          closeId: { in: candidateCloseIds },
+        },
+        select: {
+          id: true,
+          userId: true,
+          accountNumber: true,
+          entryId: true,
+          closeId: true,
+        },
+      })
+
+      existingBrokerTrades.forEach(trade => {
+        const key = getStableBrokerTradeKey(trade)
+        if (key) {
+          existingBrokerTradesByKey.set(key, { id: trade.id })
+        }
+      })
+    }
+
+    const tradesToUpdate = userAssignedTrades.filter(trade => {
+      const key = getStableBrokerTradeKey(trade)
+      return key ? existingBrokerTradesByKey.has(key) : false
     })
 
+    if (tradesToUpdate.length > 0) {
+      await prisma.$transaction(
+        tradesToUpdate.map(trade => {
+          const key = getStableBrokerTradeKey(trade)
+          const existingTrade = key ? existingBrokerTradesByKey.get(key) : undefined
+          if (!existingTrade) {
+            throw new Error('Existing broker trade missing during update preparation')
+          }
+
+          return prisma.trade.update({
+            where: { id: existingTrade.id },
+            data: getBrokerTradeUpdateData(trade),
+          })
+        }),
+      )
+    }
+
+    const tradesToCreate = userAssignedTrades.filter(trade => {
+      const key = getStableBrokerTradeKey(trade)
+      return key ? !existingBrokerTradesByKey.has(key) : true
+    })
+
+    const result = tradesToCreate.length > 0
+      ? await prisma.trade.createMany({
+        data: tradesToCreate,
+        skipDuplicates: true
+      })
+      : { count: 0 }
+
     // Log potential duplicates if no trades were added
-    if (result.count === 0) {
+    if (result.count === 0 && tradesToUpdate.length === 0) {
       console.log('[saveTrades] No trades added. Checking for duplicates:', { attempted: data.length })
       const tradeIds = userAssignedTrades.map(trade => trade.id)
       const existingTrades = await prisma.trade.findMany({
@@ -134,7 +168,7 @@ export async function saveTradesAction(
     }
 
     return {
-      error: result.count === 0 ? 'NO_TRADES_ADDED' : false,
+      error: result.count === 0 && tradesToUpdate.length === 0 ? 'NO_TRADES_ADDED' : false,
       numberOfTradesAdded: result.count
     }
   } catch (error) {
