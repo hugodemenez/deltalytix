@@ -7,21 +7,43 @@
 -- credentials JSON (token column). Rows whose token is not a JSON object or has
 -- no propFirmId are left untouched (handled at sync/auth time instead).
 
--- 1. Drop legacy rows that would collide with an already-migrated row for the
---    same user (otherwise the rename below would violate the unique index).
+-- 1. Collapse every group of rows that map to the same canonical accountId down
+--    to a single row, so the rename below can never hit the unique index. This
+--    covers legacy-vs-already-migrated collisions as well as two legacy rows that
+--    only differ by login casing (the old unique index was case-sensitive).
+--    The surviving row prefers one already in canonical form, then the most
+--    recently synced.
+WITH ranked AS (
+  SELECT
+    "id",
+    CASE
+      WHEN "accountId" LIKE (("token"::jsonb ->> 'propFirmId') || ':%')
+        THEN "accountId"
+      ELSE ("token"::jsonb ->> 'propFirmId') || ':' || lower(btrim("accountId"))
+    END AS canonical_id,
+    ROW_NUMBER() OVER (
+      PARTITION BY
+        "userId",
+        CASE
+          WHEN "accountId" LIKE (("token"::jsonb ->> 'propFirmId') || ':%')
+            THEN "accountId"
+          ELSE ("token"::jsonb ->> 'propFirmId') || ':' || lower(btrim("accountId"))
+        END
+      ORDER BY
+        (CASE WHEN "accountId" LIKE (("token"::jsonb ->> 'propFirmId') || ':%') THEN 0 ELSE 1 END),
+        "lastSyncedAt" DESC,
+        "updatedAt" DESC
+    ) AS rn
+  FROM "public"."Synchronization"
+  WHERE "service" = 'dxfeed'
+    AND "token" LIKE '{%'
+    AND ("token"::jsonb ->> 'propFirmId') IS NOT NULL
+    AND ("token"::jsonb ->> 'propFirmId') <> ''
+)
 DELETE FROM "public"."Synchronization" s
-WHERE s."service" = 'dxfeed'
-  AND s."token" LIKE '{%'
-  AND (s."token"::jsonb ->> 'propFirmId') IS NOT NULL
-  AND (s."token"::jsonb ->> 'propFirmId') <> ''
-  AND s."accountId" NOT LIKE ((s."token"::jsonb ->> 'propFirmId') || ':%')
-  AND EXISTS (
-    SELECT 1
-    FROM "public"."Synchronization" t
-    WHERE t."userId" = s."userId"
-      AND t."service" = 'dxfeed'
-      AND t."accountId" = (s."token"::jsonb ->> 'propFirmId') || ':' || lower(btrim(s."accountId"))
-  );
+USING ranked r
+WHERE s."id" = r."id"
+  AND r.rn > 1;
 
 -- 2. Re-key the remaining legacy rows to the prop-firm-scoped accountId.
 UPDATE "public"."Synchronization" s
