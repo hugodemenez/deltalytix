@@ -10,4 +10,8 @@ completedDate: '2026-05-19'
 
 If you import trades from **ATAS** using the Excel journal export, uploads should fail less often on files that used to choke the old reader. The importer now looks for the **Journal** sheet, skips blank rows more cleanly, and checks that every required column is there before you move on.
 
+The importer currently supports `.xlsx` workbooks only. It accepts **Journal** and **Journal commercial** sheet names.
+
+One caveat: Excel date cells do not include timezone metadata. If an ATAS export stores open or close times as Excel date values rather than text, imported trade times can depend on the timezone of the device doing the import.
+
 When something is off, you get a direct message—missing sheet, empty journal, or column names that do not match—instead of a vague parse error. That makes it faster to fix the export on the ATAS side and try again from **Dashboard → Import → ATAS**.

@@ -6,12 +6,13 @@
   "license": "CC-BY-NC-4.0",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "ts-node scripts/generate-routes.ts && npx prisma generate",
+    "prebuild": "node --experimental-strip-types scripts/generate-routes.ts && npx prisma generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "screenshot:dashboard": "node scripts/screenshot-dashboard.js"
+    "screenshot:dashboard": "node scripts/screenshot-dashboard.js",
+    "seed:self-host": "bun scripts/seed-self-host.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.10",
@@ -133,6 +134,7 @@
     "react-icons": "^5.5.0",
     "react-resizable-panels": "^2.1.9",
     "react-zoom-pan-pinch": "^3.7.0",
+    "read-excel-file": "9.0.10",
     "recharts": "^2.15.4",
     "rehype-autolink-headings": "^7.1.0",
     "rehype-img-size": "^1.0.1",
@@ -153,7 +155,6 @@
     "use-stick-to-bottom": "^1.1.1",
     "uuid": "^13.0.0",
     "vaul": "^1.1.2",
-    "xlsx": "^0.18.5",
     "yjs": "^13.6.23",
     "youtube-transcript": "^1.2.1",
     "zod": "^4.1.12",

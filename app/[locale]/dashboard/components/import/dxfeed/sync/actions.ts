@@ -494,19 +494,23 @@ export async function getDxFeedTrades(
       }
       userId = user.id
     }
+    if (!userId) {
+      return { error: DxFeedErrorCode.USER_NOT_AUTHENTICATED }
+    }
+    const resolvedUserId = userId
 
     let storedTokenJson = initialTokenJson
     const baseUrl = historicalHost.endsWith('/') ? historicalHost.slice(0, -1) : historicalHost
 
     const syncRow = await prisma.synchronization.findFirst({
-      where: { userId, service: 'dxfeed', token: initialTokenJson },
+      where: { userId: resolvedUserId, service: 'dxfeed', token: initialTokenJson },
       select: { accountId: true, tokenExpiresAt: true },
     })
     syncAccountId = syncRow?.accountId ?? null
 
     if (isDxFeedTokenExpired(syncRow?.tokenExpiresAt)) {
       if (syncAccountId) {
-        await markDxFeedTokenExpired(userId, syncAccountId)
+        await markDxFeedTokenExpired(resolvedUserId, syncAccountId)
       }
       return { error: DxFeedErrorCode.TOKEN_EXPIRED }
     }
@@ -516,7 +520,7 @@ export async function getDxFeedTrades(
 
     if (!accountsResult.ok && accountsResult.unauthorized) {
       if (syncAccountId) {
-        await markDxFeedTokenExpired(userId, syncAccountId)
+        await markDxFeedTokenExpired(resolvedUserId, syncAccountId)
       }
       return { error: DxFeedErrorCode.TOKEN_EXPIRED }
     }
@@ -533,7 +537,7 @@ export async function getDxFeedTrades(
         accountNumbers,
       }
       const updatedJson = JSON.stringify(updatedCreds)
-      await updateStoredCredentials(userId, storedTokenJson, updatedJson)
+      await updateStoredCredentials(resolvedUserId, storedTokenJson, updatedJson)
       storedTokenJson = updatedJson
     }
 
@@ -554,7 +558,7 @@ export async function getDxFeedTrades(
           syncStats,
         }
       }
-      await updateLastSyncedAt(userId, storedTokenJson)
+      await updateLastSyncedAt(resolvedUserId, storedTokenJson)
       return { processedTrades: [], savedCount: 0, tradesCount: 0, syncStats }
     }
 
@@ -585,7 +589,7 @@ export async function getDxFeedTrades(
         const text = await response.text()
         if (response.status === 401 || response.status === 403) {
           if (syncAccountId) {
-            await markDxFeedTokenExpired(userId, syncAccountId)
+            await markDxFeedTokenExpired(resolvedUserId, syncAccountId)
           }
           return { error: DxFeedErrorCode.TOKEN_EXPIRED, syncStats }
         }
@@ -610,14 +614,18 @@ export async function getDxFeedTrades(
 
       logger.info(`Received ${reportTrades.length} trades for account ${accountLabel}`)
 
-      const { trades, openSkipped } = buildTradesFromDxFeedReport(reportTrades, accountLabel, userId)
+      const { trades, openSkipped } = buildTradesFromDxFeedReport(
+        reportTrades,
+        accountLabel,
+        resolvedUserId,
+      )
       syncStats.openTradesSkipped += openSkipped
       allTrades.push(...trades)
     }
 
     syncStats.closedTrades = allTrades.length
 
-    await updateLastSyncedAt(userId, storedTokenJson)
+    await updateLastSyncedAt(resolvedUserId, storedTokenJson)
 
     if (syncStats.fetchFailures > 0 && syncStats.fetchFailures >= accounts.length) {
       return {
@@ -633,7 +641,7 @@ export async function getDxFeedTrades(
     }
 
     logger.info(`Saving ${allTrades.length} trades...`)
-    const saveResult = await saveTradesAction(allTrades, { userId })
+    const saveResult = await saveTradesAction(allTrades, { userId: resolvedUserId })
 
     if (saveResult.error) {
       if (saveResult.error === 'DUPLICATE_TRADES') {
