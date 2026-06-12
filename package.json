@@ -12,7 +12,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "screenshot:dashboard": "node scripts/screenshot-dashboard.js",
-    "seed:self-host": "npx tsx scripts/seed-self-host.ts"
+    "seed:self-host": "node --experimental-strip-types scripts/seed-self-host.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.10",
