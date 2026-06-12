@@ -1,6 +1,6 @@
 {
   "name": "Deltalytix",
-  "install": "npm install && npx prisma generate && sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 ffmpeg postgresql postgresql-client",
+  "install": "curl -fsSL https://bun.sh/install | bash && export PATH=\"$HOME/.bun/bin:$PATH\" && bun install && bunx prisma generate && sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 ffmpeg postgresql postgresql-client",
   "start": "bash scripts/docker-bootstrap.sh",
   "ports": [
     {
@@ -11,7 +11,7 @@
   "terminals": [
     {
       "name": "next-dev",
-      "command": "npm run dev",
+      "command": "bun run dev",
       "description": "Next.js development server"
     }
   ]
