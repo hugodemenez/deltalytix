@@ -64,4 +64,4 @@ datafeeds/
 **/market/**
 
 # Lock files
-*.lock
+!bun.lock

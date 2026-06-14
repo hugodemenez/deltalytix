@@ -5,6 +5,14 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { headers } from "next/headers"
 import { User } from '@supabase/supabase-js'
+import {
+  buildLocalDashboardBypassUser,
+  getLocalDashboardUserEmail,
+  getLocalDashboardUserId,
+  isLocalDashboardAuthBypassEnabled,
+} from '@/lib/local-dashboard-auth'
+import { createLocalDashboardBypassAuthStub } from '@/lib/local-dashboard-bypass-client'
+import { ensureLocalDashboardUserInDatabase } from '@/server/local-dashboard-bootstrap'
 
 export async function getWebsiteURL() {
   let url =
@@ -45,6 +53,48 @@ function handleAuthError(error: any): never {
 }
 
 export async function createClient() {
+  if (isLocalDashboardAuthBypassEnabled()) {
+    await ensureLocalDashboardUserInDatabase()
+    const localUser = buildLocalDashboardBypassUser()
+    const sharedAuth = createLocalDashboardBypassAuthStub()
+
+    return {
+      auth: {
+        ...sharedAuth,
+        async signInWithOtp() {
+          return { error: null }
+        },
+        async signInWithPassword() {
+          return { data: { user: localUser, session: null }, error: null }
+        },
+        async signUp() {
+          return { data: { user: localUser, session: null }, error: null }
+        },
+        async resetPasswordForEmail() {
+          return { error: null }
+        },
+        async updateUser() {
+          return { data: { user: localUser }, error: null }
+        },
+        async verifyOtp() {
+          return { data: { user: localUser, session: null }, error: null }
+        },
+        async signInWithOAuth() {
+          return { data: { url: '/dashboard' }, error: null }
+        },
+        async linkIdentity() {
+          return { data: { url: '/dashboard' }, error: null }
+        },
+        async unlinkIdentity() {
+          return { error: null }
+        },
+        async getUserIdentities() {
+          return { data: [], error: null }
+        },
+      },
+    } as ReturnType<typeof createServerClient>
+  }
+
   const cookieStore = await cookies()
 
   return createServerClient(
@@ -530,6 +580,11 @@ export async function verifyOtp(email: string, token: string, type: 'email' | 's
 
 // Optimized function that uses middleware data when available
 export async function getUserId(): Promise<string> {
+  if (isLocalDashboardAuthBypassEnabled()) {
+    await ensureLocalDashboardUserInDatabase()
+    return getLocalDashboardUserId()
+  }
+
   // First try to get user ID from middleware headers
   const headersList = await headers()
   const userIdFromMiddleware = headersList.get("x-user-id")
@@ -559,6 +614,10 @@ export async function getUserId(): Promise<string> {
 }
 
 export async function getUserEmail(): Promise<string> {
+  if (isLocalDashboardAuthBypassEnabled()) {
+    return getLocalDashboardUserEmail()
+  }
+
   const headersList = await headers()
   const userEmail = headersList.get("x-user-email")
   console.log("[Auth] getUserEmail FROM HEADERS", userEmail)
