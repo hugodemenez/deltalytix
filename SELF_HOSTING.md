@@ -1,193 +1,121 @@
 # Self-hosting Guide
 
-This guide is for running Deltalytix on your own infrastructure with the least friction, especially for automation agents.
-
-It covers:
-- local development bootstrap
-- dashboard-only mode without Supabase auth (recommended for local work)
-- deterministic demo data seeding
-- a deploy checklist
+Agent-focused runbook for local dashboard development. See also [`AGENTS.md`](./AGENTS.md) for copy-paste commands and definition of done.
 
 ## 1) Prerequisites
 
-- Docker + Docker Compose (recommended for Postgres)
+- Docker + Docker Compose (Postgres)
 - Bun (`bun --version`)
-- Node.js 20+ (fallback if needed)
-- A free local TCP port for the app (`3000`) and Postgres (`5432`)
+- Ports `3000` (app) and `5432` (Postgres)
 
-### Where demo trades are stored
+## 2) Quickstart (recommended)
 
-Use **Docker Postgres** as the default path:
+From the repo root:
 
-`docker compose up -d db`
-
-This creates a named volume (`deltalytix-postgres`) and exposes Postgres on `localhost:5432`. All seeded trades, accounts, and payouts live in that volume until you run `docker compose down -v`.
-
-Your `.env.local` should point at that instance:
-
-`DATABASE_URL=postgresql://devuser:<password>@localhost:5432/deltalytix_dev`
-`DIRECT_URL=postgresql://devuser:<password>@localhost:5432/deltalytix_dev`
-
-Use the same `devuser` / `devpass` credentials defined in `docker-compose.yml` defaults.
-
-If Docker is unavailable, you can install Postgres directly on the host (for example via `apt install postgresql`), but prefer Docker so setup matches this guide and the compose file.
-
-### Agent shells with a pre-set `DATABASE_URL`
-
-Some cloud/agent environments inject a remote `DATABASE_URL`. Dotenv does not override existing shell variables. Before seeding or running Prisma against local Docker Postgres, run:
-
-`unset DATABASE_URL DIRECT_URL`
-`set -a && source .env.local && set +a`
-
-## 2) Choose your mode
-
-### Recommended for local agent work: Dashboard bypass mode
-
-Use this mode when you want to work on dashboard features without full auth setup.
-
-- No Supabase login required
-- Deterministic local user ID/email
-- `/dashboard` opens directly
-- `/authentication` redirects to `/dashboard`
-
-### Full auth mode (production-like)
-
-Use this only when you need to test OAuth/session behavior. For that, also configure Supabase keys and providers from `.env.example`.
-
-## 3) Local bootstrap (dashboard bypass mode)
-
-### Step A: create your env file
-
-Create `.env.local` with:
-
-`DATABASE_URL=postgresql://devuser:<password>@localhost:5432/deltalytix_dev`
-`DIRECT_URL=postgresql://devuser:<password>@localhost:5432/deltalytix_dev`
-
-Use the same `devuser` / `devpass` credentials defined in `docker-compose.yml` defaults.
-`LOCAL_DASHBOARD_AUTH_BYPASS=true`
-`NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS=true`
-`LOCAL_DASHBOARD_USER_ID=local-dashboard-user`
-`NEXT_PUBLIC_LOCAL_DASHBOARD_USER_ID=local-dashboard-user`
-`LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local`
-`NEXT_PUBLIC_LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local`
-`NEXT_PUBLIC_SITE_URL=http://localhost:3000`
-
-Dashboard bypass mode skips Stripe subscription lookups. Billing flows still require real Stripe configuration.
-
-### Step B: start Postgres (Docker)
-
-`docker compose up -d db`
-
-Verify the container is healthy:
-
-`docker compose ps`
-
-If you see `Cannot connect to the Docker daemon`, run the same command with `sudo`.
-
-On restricted VMs, Docker may need `--storage-driver=vfs` and `--iptables=false` when starting `dockerd`. Run `bash scripts/docker-bootstrap.sh` (also wired in `.cursor/environment.json` for cloud agents).
-
-### Docker Compose migrate + app services
-
-Apply migrations non-interactively (after `db` is healthy):
-
-`docker compose run --rm migrate`
-
-`docker-compose.yml` defaults `LOCAL_DASHBOARD_AUTH_BYPASS` to `false`. To use bypass mode in the Docker app service, set both vars explicitly:
-
-`LOCAL_DASHBOARD_AUTH_BYPASS=true NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS=true docker compose up -d app`
-
-For local dashboard work, the recommended path is **`db` in Docker + app on the host** (`bun run dev`), not the production `app` container.
-
-### Step C: install dependencies
-
-`bun install`
-
-### Step D: generate Prisma client
-
-`npx prisma generate`
-
-### Step E: initialize schema
-
-`DIRECT_URL=postgresql://devuser:<password>@localhost:5432/deltalytix_dev npx prisma db push`
-
-### Step F (optional but recommended): seed deterministic demo data
-
-`unset DATABASE_URL DIRECT_URL`
-`set -a && source .env.local && set +a`
-`bun run seed:self-host`
-
-This script replaces trades and payouts for the local demo account. Use only against local/dev databases.
-
-This creates:
-- local user (`local-dashboard-user`)
-- local account (`LOCAL-SIM-001`)
-- tick details for ES/MES/NQ/MNQ
-- recent trades and payouts for charts/widgets
-
-### Step G: run the app
-
-`bun run dev --hostname 0.0.0.0 --port 3000`
+```bash
+bash scripts/self-host-quickstart.sh
+bun run dev --hostname 0.0.0.0 --port 3000
+```
 
 Open `http://localhost:3000/dashboard`.
 
-## 4) Quick health checks
+The script:
+1. starts Postgres with `sudo docker compose up -d db` when needed
+2. writes `.env.local` with dashboard bypass vars
+3. runs `bun install`, `bunx prisma generate`, `bunx prisma db push`, `bun run seed:self-host`
 
-These checks are useful for agents before continuing with feature work.
+## 3) Manual bootstrap (dashboard bypass mode)
 
-1. Dashboard is accessible:
+### Step A: `.env.local`
 
-`curl -s -o /dev/null -D - http://localhost:3000/dashboard | sed -n '1,10p'`
+```env
+DATABASE_URL=postgresql://devuser:devpass@localhost:5432/deltalytix_dev # pragma: allowlist secret
+DIRECT_URL=postgresql://devuser:devpass@localhost:5432/deltalytix_dev # pragma: allowlist secret
+LOCAL_DASHBOARD_AUTH_BYPASS=true
+NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS=true
+LOCAL_DASHBOARD_USER_ID=local-dashboard-user
+NEXT_PUBLIC_LOCAL_DASHBOARD_USER_ID=local-dashboard-user
+LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local
+NEXT_PUBLIC_LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+OPENAI_API_KEY=dummy
+```
 
-Expected headers include:
-- `x-auth-status: authenticated`
-- `x-user-id: local-dashboard-user`
+Credentials match `docker-compose.yml` defaults (`devuser` / `devpass`).
 
-2. Auth route redirects:
+### Step B: Postgres in Docker
 
-`curl -s -o /dev/null -D - "http://localhost:3000/authentication?next=dashboard" | sed -n '1,8p'`
+```bash
+sudo docker compose up -d db
+sudo docker compose ps
+```
 
-Expected:
-- `HTTP/1.1 307 Temporary Redirect`
-- `location: /dashboard`
+If Docker is not running: `bash scripts/docker-bootstrap.sh` (restricted VMs may need `vfs` storage and `--iptables=false`).
+
+### Step C: host setup
+
+```bash
+unset DATABASE_URL DIRECT_URL
+set -a && source .env.local && set +a
+bun install
+bunx prisma generate
+bunx prisma db push
+bun run seed:self-host
+bun run dev --hostname 0.0.0.0 --port 3000
+```
+
+**Schema init:** use `bunx prisma db push` on the host (primary path for agents).
+
+`sudo docker compose run --rm migrate` is optional and only works when the `migrate` container can resolve the `db` hostname (often fails on restricted agent VMs).
+
+### Step D: full Docker app (optional)
+
+`docker-compose.yml` defaults bypass to `false`. To run the production image locally:
+
+```bash
+LOCAL_DASHBOARD_AUTH_BYPASS=true NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS=true sudo docker compose up -d app
+```
+
+For dashboard feature work, prefer **Postgres in Docker + app on the host** (`bun run dev`).
+
+## 4) Health checks
+
+```bash
+curl -s -o /dev/null -D - http://localhost:3000/dashboard | sed -n '1,10p'
+# expect: x-auth-status: authenticated, x-user-id: local-dashboard-user
+
+curl -s -o /dev/null -D - "http://localhost:3000/authentication?next=dashboard" | sed -n '1,8p'
+# expect: HTTP/1.1 307, location: /dashboard
+```
+
+Build gate:
+
+```bash
+OPENAI_API_KEY=dummy bun run build
+```
 
 ## 5) Visual verification
 
-After seeding demo data, verify that the default dashboard renders the local simulation account and recent trades.
-
-The Widgets tab should show the seeded chart layout, including trade distribution, P/L vs commissions, equity, and account selector data for `LOCAL-SIM-001`.
+After seeding, the dashboard should show account `LOCAL-SIM-001` with demo trades.
 
 ![Self-hosted dashboard widgets with demo trades](public/img/self-hosting/dashboard-widgets.png)
-
-The Table tab should show recent demo trades and pagination.
-
 ![Self-hosted dashboard trade table with demo trades](public/img/self-hosting/dashboard-table.png)
-
-The Accounts tab should show the local simulation account, balance, drawdown, consistency, and trading-day metrics.
-
 ![Self-hosted dashboard local simulation account](public/img/self-hosting/dashboard-accounts.png)
 
-### Demo walkthrough video
+Demo video: `public/img/self-hosting/dashboard-demo.mp4`
 
-A full dashboard walkthrough (Widgets → Table → Accounts) with seeded `LOCAL-SIM-001` demo trades:
-
-Relative asset path: `public/img/self-hosting/dashboard-demo.mp4`
-
-On GitHub, open the file in the PR branch and use **Download** or the raw view link for the MP4.
-
-## 6) What agents should do before deploy
-
-Use this sequence for reproducible deploy prep:
+## 6) Agent pre-deploy checklist
 
 1. `git fetch origin beta && git rebase origin/beta`
-2. `bun install`
-3. `DIRECT_URL=... npx prisma db push` (or migrations in your environment)
-4. `bun run seed:self-host` (for non-empty local validation)
-5. Run targeted checks needed for your changes
-6. Run manual dashboard verification on default layout
-7. Commit, push, and open/update PR
+2. `bash scripts/self-host-quickstart.sh` (or manual steps above)
+3. `OPENAI_API_KEY=dummy bun run build`
+4. Dashboard health checks (section 4)
+5. Commit, push, open/update PR
 
 ## 7) Notes
 
-- The local bypass mode is for development/self-host bootstrap. Do not enable it in production; the app refuses bypass when `NODE_ENV=production` unless `LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION=1` is set intentionally.
-- If you disable bypass, you must configure Supabase env vars and auth providers.
-- `LOCAL_DASHBOARD_USER_ID` can be changed, but keep it stable per environment so seeded/demo data stays consistent.
+- Bypass mode is for development/self-host only. Production refuses bypass unless `LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION=1` is set intentionally.
+- Without bypass, configure Supabase vars from `.env.example`.
+- `bun run seed:self-host` replaces trades/payouts for the local demo account — dev databases only.
+- ATAS import uses `read-excel-file@9.0.10` (do not re-add abandoned npm `xlsx`).
+- Cloud/agent shells with a pre-set `DATABASE_URL`: `unset DATABASE_URL DIRECT_URL` before `source .env.local`.

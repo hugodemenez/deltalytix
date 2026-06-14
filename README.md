@@ -20,7 +20,9 @@
 
 ## Self-hosting
 
-For a dedicated self-host/local-agent setup guide, read [`SELF_HOSTING.md`](./SELF_HOSTING.md).
+For AI agents and local bootstrap, start with [`AGENTS.md`](./AGENTS.md).
+
+For the full runbook, read [`SELF_HOSTING.md`](./SELF_HOSTING.md).
 
 It includes:
 - dashboard-only local auth bypass mode
