@@ -6,6 +6,8 @@ import { GroupWithAccounts } from './groups'
 import { getCurrentLocale } from '@/locales/server'
 import { prisma } from '@/lib/prisma'
 import { createClient, getUserId } from './auth'
+import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
+import { ensureLocalDashboardUserInDatabase } from '@/server/local-dashboard-bootstrap'
 import { Account, Group } from '@/context/data-provider'
 import { revalidateTag, unstable_cache } from 'next/cache'
 
@@ -52,6 +54,22 @@ export async function loadSharedData(slug: string): Promise<SharedDataResponse> 
   }
 } 
 
+
+async function resolveUserData(
+  userId: string,
+  userData: User | null,
+): Promise<User | null> {
+  if (userData || !isLocalDashboardAuthBypassEnabled()) {
+    return userData
+  }
+
+  await ensureLocalDashboardUserInDatabase()
+  revalidateTag(`user-data-${userId}`, { expire: 0 })
+
+  return prisma.user.findUnique({
+    where: { id: userId },
+  })
+}
 
 export async function getUserData(forceRefresh: boolean = false): Promise<{
   userData: User | null;
@@ -106,7 +124,7 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
     console.log(`[getUserData] Force refresh completed in ${(performance.now() - start).toFixed(2)}ms`)
 
     return {
-      userData,
+      userData: await resolveUserData(userId, userData),
       subscription,
       tickDetails,
       tags,
@@ -171,7 +189,7 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
   ])
 
   return {
-    userData: core.userData,
+    userData: await resolveUserData(userId, core.userData),
     subscription: core.subscription,
     tickDetails: core.tickDetails,
     tags,
