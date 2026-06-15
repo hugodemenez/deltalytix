@@ -800,7 +800,7 @@ export async function handleTradovateCallback(code: string, state: string): Prom
     )
     if (storeResult.error) {
       logger.warn('Failed to store token in database:', storeResult.error)
-      // Continue anyway - token is still valid for this session
+      return { error: storeResult.error }
     }
     
     return {
