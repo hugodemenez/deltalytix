@@ -11,8 +11,8 @@
   "terminals": [
     {
       "name": "next-dev",
-      "command": "bun run dev",
-      "description": "Next.js development server"
+      "command": "bash scripts/self-host-quickstart.sh && bun run dev --hostname 0.0.0.0 --port 3000",
+      "description": "Bootstrap local Postgres + start Next.js dev server"
     }
   ]
 }

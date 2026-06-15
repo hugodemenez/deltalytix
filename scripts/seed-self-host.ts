@@ -1,4 +1,5 @@
 import "dotenv/config"
+import "../lib/load-env-local"
 
 import { randomUUID } from "crypto"
 import { PrismaPg } from "@prisma/adapter-pg"
