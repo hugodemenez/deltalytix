@@ -27,5 +27,3 @@ export function loadEnvLocal(): void {
     )
   }
 }
-
-loadEnvLocal()
