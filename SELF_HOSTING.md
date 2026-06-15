@@ -124,4 +124,4 @@ Demo video: `public/img/self-hosting/dashboard-demo.mp4`
 - Without bypass, configure Supabase vars from `.env.example`.
 - `bun run seed:self-host` replaces trades/payouts for the local demo account — dev databases only.
 - ATAS import uses `read-excel-file@9.0.10` (do not re-add abandoned npm `xlsx`).
-- Cloud/agent shells with a pre-set `DATABASE_URL`: `unset DATABASE_URL DIRECT_URL` before `source .env.local`. At app startup, `lib/load-env-local.ts` also loads `.env.local` with `override: true` so local Docker Postgres wins over injected remote URLs.
+- Cloud/agent shells with a pre-set `DATABASE_URL`: `unset DATABASE_URL DIRECT_URL` before `source .env.local`. At app startup, `lib/load-env-local.node.ts` also loads `.env.local` with `override: true` so local Docker Postgres wins over injected remote URLs.

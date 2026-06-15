@@ -1,6 +1,8 @@
-import "@/lib/load-env-local"
+import { loadEnvLocal } from "@/lib/load-env-local.node"
 import { PrismaClient } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+
+loadEnvLocal()
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined

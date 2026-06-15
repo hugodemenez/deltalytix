@@ -48,7 +48,7 @@ OPENAI_API_KEY=dummy
 
 If the shell already exports `DATABASE_URL`, run `unset DATABASE_URL DIRECT_URL` before sourcing `.env.local`.
 
-At runtime, `lib/load-env-local.ts` loads `.env.local` with `override: true` so cloud-injected remote database URLs do not win over local Docker Postgres.
+At runtime, `lib/load-env-local.node.ts` loads `.env.local` with `override: true` so cloud-injected remote database URLs do not win over local Docker Postgres.
 
 ## Definition of done (local dashboard work)
 
