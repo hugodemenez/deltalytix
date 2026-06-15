@@ -14,7 +14,7 @@ From the repo root:
 
 ```bash
 bash scripts/self-host-quickstart.sh
-bun run dev --hostname 0.0.0.0 --port 3000
+bash scripts/dev.sh
 ```
 
 Open `http://localhost:3000/dashboard`.
@@ -62,6 +62,12 @@ bunx prisma generate
 bunx prisma db push
 bun run seed:self-host
 bun run dev --hostname 0.0.0.0 --port 3000
+```
+
+Or use the wrapper (adds Bun to PATH automatically):
+
+```bash
+bash scripts/dev.sh
 ```
 
 **Schema init:** use `bunx prisma db push` on the host (primary path for agents).
