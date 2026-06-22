@@ -351,10 +351,10 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px]">
                   <DialogHeader>
-                    <DialogTitle>
+                    <DialogTitle className="text-balance">
                       {editingTag ? t('widgets.tags.editTag') : t('widgets.tags.addTag')}
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="text-pretty">
                       {t('widgets.tags.description')}
                     </DialogDescription>
                   </DialogHeader>
@@ -587,4 +587,4 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
       </AlertDialog>
     </>
   )
-} 
+}
