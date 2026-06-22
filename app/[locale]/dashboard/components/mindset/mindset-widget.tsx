@@ -459,7 +459,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         {/* Timeline with animation */}
         <div 
           className={cn(
-            "relative transition-all duration-300 ease-out-quart",
+            "relative transition-[width] duration-300 ease-out-quart motion-reduce:transition-none",
             isTimelineVisible ? "w-auto" : "w-0 overflow-hidden"
           )}
         >
@@ -546,4 +546,4 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       </CardContent>
     </Card>
   )
-} 
+}
