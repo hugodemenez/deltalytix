@@ -265,7 +265,7 @@ export default function WeekdayPNLChart({
                 dataKey="pnl"
                 radius={[3, 3, 0, 0]}
                 maxBarSize={size === "small" ? 25 : 40}
-                className="transition-all duration-300 ease-in-out"
+                className="transition-opacity duration-300 ease-out"
                 opacity={weekdayFilter.days && weekdayFilter.days.length > 0 ? 0.3 : 1}
               >
                 {weekdayData.map((entry) => (
@@ -273,7 +273,7 @@ export default function WeekdayPNLChart({
                     key={`cell-${entry.day}`}
                     fill={getColor(entry.pnl)}
                     className={cn(
-                      "transition-all duration-300 ease-in-out",
+                      "transition-[opacity,filter,box-shadow] duration-300 ease-out",
                       weekdayFilter.days && weekdayFilter.days.includes(entry.day) && "ring-2 ring-primary ring-offset-2"
                     )}
                   />
