@@ -24,7 +24,7 @@ export default function AveragePositionTimeCard({ size = 'medium' }: AveragePosi
       <Card className="h-full">
         <div className="flex items-center justify-center h-full gap-1.5">
           <Clock className="h-3 w-3 text-muted-foreground" />
-          <div className="font-medium text-sm">{averagePositionTime}</div>
+          <div className="font-medium text-sm tabular-nums">{averagePositionTime}</div>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
