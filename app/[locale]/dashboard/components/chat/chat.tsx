@@ -87,7 +87,7 @@ const ResumeScrollButton = () => {
   }, [scrollToBottom]);
 
   return (
-    <AnimatePresence>
+    <AnimatePresence initial={false}>
       {!isAtBottom && (
         <motion.div
           className="absolute bottom-20 right-4 z-10"
