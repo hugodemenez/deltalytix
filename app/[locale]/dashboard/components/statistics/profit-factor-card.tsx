@@ -23,7 +23,7 @@ export default function ProfitFactorCard({ size = 'medium' }: ProfitFactorCardPr
       <Card className="h-full">
         <div className="flex items-center justify-center h-full gap-1.5">
           <Scale className="h-3 w-3 text-blue-500" />
-          <div className="font-medium text-sm">{profitFactor.toFixed(2)}</div>
+          <div className="font-medium text-sm tabular-nums">{profitFactor.toFixed(2)}</div>
           <TooltipProvider delayDuration={100}>
             <Tooltip>
               <TooltipTrigger asChild>
