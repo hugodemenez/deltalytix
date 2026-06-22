@@ -264,8 +264,8 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{t('widgets.dailyTickTarget.setTarget')}</DialogTitle>
-                  <DialogDescription>
+                  <DialogTitle className="text-balance">{t('widgets.dailyTickTarget.setTarget')}</DialogTitle>
+                  <DialogDescription className="text-pretty">
                     {t('widgets.dailyTickTarget.setTargetDescription')}
                   </DialogDescription>
                 </DialogHeader>
@@ -433,4 +433,4 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
       </CardContent>
     </Card>
   )
-} 
+}
