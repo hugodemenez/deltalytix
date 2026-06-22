@@ -280,7 +280,7 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
                 fill={chartConfig.avgPnl.color}
                 radius={[3, 3, 0, 0]}
                 maxBarSize={size === 'small' ? 25 : 40}
-                className="transition-all duration-300 ease-in-out"
+                className="transition-opacity duration-300 ease-out"
                 opacity={timeRange.range ? 0.3 : 1}
               >
                 {chartData.map((entry) => (
@@ -297,4 +297,4 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
       </CardContent>
     </Card>
   )
-} 
+}
