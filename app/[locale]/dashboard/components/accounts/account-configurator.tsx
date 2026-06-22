@@ -6,6 +6,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon, X, Trash2, Check, ChevronsUpDown, Info, SearchCheck, Bookmark } from "lucide-react"
 // Tooltips replaced by Popovers
@@ -76,6 +86,7 @@ export function AccountConfigurator({
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
   const [templateFirmName, setTemplateFirmName] = useState("")
   const [templateSizeName, setTemplateSizeName] = useState("")
+  const [templateToDelete, setTemplateToDelete] = useState<CustomPropfirmTemplate | null>(null)
 
   // Resolve the effective value of an account field (pending change wins over saved value)
   const getEffective = <K extends keyof Account>(field: K, fallback: NonNullable<Account[K]>): NonNullable<Account[K]> => {
@@ -162,6 +173,7 @@ export function AccountConfigurator({
       considerBuffer: c.considerBuffer,
     }
     setPendingChanges(newChanges)
+    setSelectedAccountSize("")
     setSelectedTemplateId(template.id)
   }
 
@@ -175,6 +187,19 @@ export function AccountConfigurator({
     const firmName = templateFirmName.trim()
     if (!firmName) return
     const sizeName = templateSizeName.trim()
+    const normalizedSizeName = sizeName || getEffective('accountSizeName', '')
+
+    const isDuplicate = customTemplates.some(
+      (template) =>
+        template.firmName.trim().toLowerCase() === firmName.toLowerCase() &&
+        template.sizeName.trim().toLowerCase() === normalizedSizeName.trim().toLowerCase()
+    )
+    if (isDuplicate) {
+      toast.error(t('propFirm.configurator.template.duplicateError'), {
+        description: t('propFirm.configurator.template.duplicateErrorDescription', { name: firmName }),
+      })
+      return
+    }
 
     const config: CustomPropfirmTemplateConfig = {
       propfirm: firmName,
@@ -216,6 +241,7 @@ export function AccountConfigurator({
     if (selectedTemplateId === template.id) {
       setSelectedTemplateId(null)
     }
+    setTemplateToDelete(null)
     toast.success(t('propFirm.configurator.template.deleteSuccess'), {
       description: t('propFirm.configurator.template.deleteSuccessDescription', { name: template.firmName }),
     })
@@ -227,6 +253,7 @@ export function AccountConfigurator({
       [field]: value
     }
     setPendingChanges(newChanges)
+    setSelectedTemplateId(null)
   }
 
   const handleCreateGroup = async () => {
@@ -374,7 +401,7 @@ export function AccountConfigurator({
                           className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleDeleteTemplate(tpl)
+                            setTemplateToDelete(tpl)
                           }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -466,6 +493,7 @@ export function AccountConfigurator({
             className="mt-4"
             onClick={() => {
               setSelectedAccountSize("")
+              setSelectedTemplateId(null)
               const clearedChanges: Partial<Account> = {
                 propfirm: "",
                 accountSize: "",
@@ -474,6 +502,7 @@ export function AccountConfigurator({
                 profitTarget: 0,
                 drawdownThreshold: 0,
                 buffer: 0,
+                considerBuffer: true,
                 consistencyPercentage: 30,
                 trailingDrawdown: false,
                 trailingStopProfit: 0,
@@ -1268,6 +1297,39 @@ export function AccountConfigurator({
           </DialogContent>
         </Dialog>
       </div>
+
+      <AlertDialog
+        open={!!templateToDelete}
+        onOpenChange={(open) => {
+          if (!open) setTemplateToDelete(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('propFirm.configurator.template.deleteConfirm')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('propFirm.configurator.template.deleteConfirmDescription', {
+                name: templateToDelete?.firmName ?? '',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setTemplateToDelete(null)}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (templateToDelete) {
+                  handleDeleteTemplate(templateToDelete)
+                }
+              }}
+            >
+              {t('propFirm.configurator.template.deleteConfirmButton')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

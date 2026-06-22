@@ -64,6 +64,80 @@ function generateId(): string {
   return `tpl_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
 }
 
+function toNumber(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback
+}
+
+function toString(value: unknown, fallback: string): string {
+  return typeof value === "string" ? value : fallback
+}
+
+function toBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback
+}
+
+export function normalizeTemplateConfig(
+  raw: unknown
+): CustomPropfirmTemplateConfig | null {
+  if (!raw || typeof raw !== "object") return null
+
+  const config = raw as Record<string, unknown>
+  const propfirm = toString(config.propfirm, "").trim()
+  if (!propfirm) return null
+
+  return {
+    propfirm,
+    startingBalance: toNumber(config.startingBalance, 0),
+    profitTarget: toNumber(config.profitTarget, 0),
+    drawdownThreshold: toNumber(config.drawdownThreshold, 0),
+    consistencyPercentage: toNumber(config.consistencyPercentage, 100),
+    trailingDrawdown: toBoolean(config.trailingDrawdown, false),
+    trailingStopProfit: toNumber(config.trailingStopProfit, 0),
+    accountSize: toString(config.accountSize, ""),
+    accountSizeName: toString(config.accountSizeName, ""),
+    price: toNumber(config.price, 0),
+    priceWithPromo: toNumber(config.priceWithPromo, 0),
+    evaluation: toBoolean(config.evaluation, false),
+    minDays: toNumber(config.minDays, 0),
+    dailyLoss: toNumber(config.dailyLoss, 0),
+    rulesDailyLoss: toString(config.rulesDailyLoss, "No"),
+    trailing: toString(config.trailing, "Static"),
+    tradingNewsAllowed: toBoolean(config.tradingNewsAllowed, false),
+    activationFees: toNumber(config.activationFees, 0),
+    isRecursively: toString(config.isRecursively, "No"),
+    balanceRequired: toNumber(config.balanceRequired, 0),
+    minTradingDaysForPayout: toNumber(config.minTradingDaysForPayout, 0),
+    minPnlToCountAsDay: toNumber(config.minPnlToCountAsDay, 0),
+    buffer: toNumber(config.buffer, 0),
+    considerBuffer: toBoolean(config.considerBuffer, true),
+  }
+}
+
+function normalizeTemplates(templates: unknown): CustomPropfirmTemplate[] {
+  if (!Array.isArray(templates)) return []
+
+  return templates
+    .map((template) => {
+      if (!template || typeof template !== "object") return null
+
+      const raw = template as Record<string, unknown>
+      const config = normalizeTemplateConfig(raw.config)
+      if (!config) return null
+
+      const id = toString(raw.id, "")
+      if (!id) return null
+
+      return {
+        id,
+        firmName: toString(raw.firmName, config.propfirm).trim() || config.propfirm,
+        sizeName: toString(raw.sizeName, ""),
+        createdAt: toNumber(raw.createdAt, Date.now()),
+        config,
+      }
+    })
+    .filter((template): template is CustomPropfirmTemplate => template !== null)
+}
+
 export const useCustomPropfirmTemplatesStore =
   create<CustomPropfirmTemplatesStore>()(
     persist(
@@ -94,6 +168,17 @@ export const useCustomPropfirmTemplatesStore =
         name: "custom-propfirm-templates-store",
         storage: createJSONStorage(() => localStorage),
         version: 1,
+        migrate: (persistedState) => {
+          if (!persistedState || typeof persistedState !== "object") {
+            return { templates: [] }
+          }
+
+          const state = persistedState as Partial<CustomPropfirmTemplatesStore>
+          return {
+            ...state,
+            templates: normalizeTemplates(state.templates),
+          }
+        },
       }
     )
   )
