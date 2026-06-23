@@ -29,6 +29,7 @@ import PdfUpload from "./ibkr-pdf/pdf-upload";
 import PdfProcessing from "./ibkr-pdf/pdf-processing";
 import AtasFileUpload from "./atas/atas-file-upload";
 import { generateTradeHash } from "@/lib/utils";
+import { isLocalDashboardAuthBypassEnabled } from "@/lib/local-dashboard-auth";
 import { createTradeWithDefaults } from "@/lib/trade-factory";
 
 type ColumnConfig = {
@@ -75,7 +76,8 @@ export default function ImportButton() {
 
   const handleSave = useCallback(async () => {
     console.log("[ImportButton] First:", processedTrades);
-    if (!user || !supabaseUser) {
+    const bypassEnabled = isLocalDashboardAuthBypassEnabled();
+    if (!bypassEnabled && (!user || !supabaseUser)) {
       toast.error(t("import.error.auth"), {
         description: t("import.error.authDescription"),
       });

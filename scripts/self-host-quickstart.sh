@@ -4,11 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-if ! command -v bun >/dev/null 2>&1; then
-  echo "[self-host] Installing Bun..."
-  curl -fsSL https://bun.sh/install | bash
-fi
-export PATH="$HOME/.bun/bin:$PATH"
+# shellcheck source=scripts/ensure-bun.sh
+source "$ROOT_DIR/scripts/ensure-bun.sh"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "[self-host] docker not found. Install Docker or use host Postgres (see SELF_HOSTING.md)."
@@ -66,4 +63,4 @@ echo "[self-host] Seeding demo data"
 bun run seed:self-host
 
 echo "[self-host] Ready. Start the app with:"
-echo "  bun run dev --hostname 0.0.0.0 --port 3000"
+echo "  bash scripts/dev.sh"

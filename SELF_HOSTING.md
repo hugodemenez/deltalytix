@@ -14,7 +14,7 @@ From the repo root:
 
 ```bash
 bash scripts/self-host-quickstart.sh
-bun run dev --hostname 0.0.0.0 --port 3000
+bash scripts/dev.sh
 ```
 
 Open `http://localhost:3000/dashboard`.
@@ -62,6 +62,12 @@ bunx prisma generate
 bunx prisma db push
 bun run seed:self-host
 bun run dev --hostname 0.0.0.0 --port 3000
+```
+
+Or use the wrapper (adds Bun to PATH automatically):
+
+```bash
+bash scripts/dev.sh
 ```
 
 **Schema init:** use `bunx prisma db push` on the host (primary path for agents).
@@ -118,4 +124,4 @@ Demo video: `public/img/self-hosting/dashboard-demo.mp4`
 - Without bypass, configure Supabase vars from `.env.example`.
 - `bun run seed:self-host` replaces trades/payouts for the local demo account — dev databases only.
 - ATAS import uses `read-excel-file@9.0.10` (do not re-add abandoned npm `xlsx`).
-- Cloud/agent shells with a pre-set `DATABASE_URL`: `unset DATABASE_URL DIRECT_URL` before `source .env.local`.
+- Cloud/agent shells with a pre-set `DATABASE_URL`: `unset DATABASE_URL DIRECT_URL` before `source .env.local`. At app startup, `lib/load-env-local.node.ts` also loads `.env.local` with `override: true` so local Docker Postgres wins over injected remote URLs.

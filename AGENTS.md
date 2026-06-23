@@ -6,13 +6,15 @@ Operational guide for AI coding agents working in this repository.
 
 Use **Bun** (`bun install`, `bun run dev`, `bun run build`, `bun run seed:self-host`).
 
+If `bun: command not found`, either run `export PATH="$HOME/.bun/bin:$PATH"` or use `bash scripts/dev.sh` / `bash scripts/self-host-quickstart.sh` (they install Bun and fix PATH).
+
 ## Self-host quickstart (dashboard bypass mode)
 
 Run from the repo root:
 
 ```bash
 bash scripts/self-host-quickstart.sh
-bun run dev --hostname 0.0.0.0 --port 3000
+bash scripts/dev.sh
 ```
 
 Full details: [`SELF_HOSTING.md`](./SELF_HOSTING.md)
@@ -45,6 +47,8 @@ OPENAI_API_KEY=dummy
 ```
 
 If the shell already exports `DATABASE_URL`, run `unset DATABASE_URL DIRECT_URL` before sourcing `.env.local`.
+
+At runtime, `lib/load-env-local.node.ts` loads `.env.local` with `override: true` so cloud-injected remote database URLs do not win over local Docker Postgres.
 
 ## Definition of done (local dashboard work)
 
