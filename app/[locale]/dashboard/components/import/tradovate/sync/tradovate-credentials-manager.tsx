@@ -44,6 +44,7 @@ import { TRADOVATE_FEE_TYPE_KEYS } from "./fee-types";
 import { translateTradovateFeeType } from "@/lib/translation-utils";
 import { useTradovateSyncStore } from "@/store/tradovate-sync-store";
 import { useTradovateSyncContext } from "@/context/tradovate-sync-context";
+import { isTradovateTokenExpired } from "@/lib/tradovate-token";
 
 export function TradovateCredentialsManager() {
   const {
@@ -374,13 +375,10 @@ export function TradovateCredentialsManager() {
           </TableHeader>
           <TableBody>
             {accounts.map((account) => {
-              // The badge reflects token presence rather than a frozen
-              // expiry timestamp. The token is kept alive in the DB by the
-              // renewal cron (which nulls it out if renewal fails), and the
-              // sync path re-reads the live DB, so comparing the page-load
-              // snapshot against Date.now() only produced false "expired"
-              // states while the page sat open.
-              const isExpired = !account.token;
+              const isExpired = isTradovateTokenExpired(
+                account.token,
+                account.tokenExpiresAt,
+              );
 
               return (
                 <TableRow key={account.accountId}>

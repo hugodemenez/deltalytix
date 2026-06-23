@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { useI18n } from "@/locales/client"
 import { Synchronization } from '@/prisma/generated/prisma/browser'
 import { DEFAULT_INCLUDED_FEE_TYPES } from '@/app/[locale]/dashboard/components/import/tradovate/sync/fee-types'
+import { isTradovateTokenExpired } from '@/lib/tradovate-token'
 
 interface TradovateSyncContextType {
   // Core sync management
@@ -119,7 +120,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       return { success: false, message: errorMsg }
     }
 
-    if (!account.token) {
+    if (isTradovateTokenExpired(account.token, account.tokenExpiresAt)) {
       const errorMsg = `Token for account ${accountId} is expired`
       return { success: false, message: errorMsg }
     }
@@ -127,7 +128,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
     try {
       const runSync = async () => {
         console.log('Starting sync for account:', accountId)
-        if (!account.token) {
+        if (isTradovateTokenExpired(account.token, account.tokenExpiresAt)) {
           const errorMsg = `Token for account ${accountId} is expired`
           return errorMsg
         }
@@ -210,7 +211,9 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
     setIsAutoSyncing(true)
     
     try {
-      const validAccounts = accounts.filter(acc => acc.token)
+      const validAccounts = accounts.filter(
+        (acc) => !isTradovateTokenExpired(acc.token, acc.tokenExpiresAt),
+      )
       if (validAccounts.length === 0) {
         return
       }
@@ -238,8 +241,8 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       
       // Check each account's last sync time
       for (const account of accounts) {
-        // If we don't have a token, skip this account
-        if (!account.token) continue
+        // If we don't have a valid token, skip this account
+        if (isTradovateTokenExpired(account.token, account.tokenExpiresAt)) continue
 
         const lastSyncTime = new Date(account.lastSyncedAt).getTime()
         const minutesSinceLastSync = (now - lastSyncTime) / (1000 * 60)
