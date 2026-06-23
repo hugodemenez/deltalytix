@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/locales/client";
+import { formatAtasExcelDateCell } from "@/lib/atas-date";
 import { Step } from "../import-button";
 
 interface AtasFileUploadProps {
@@ -71,19 +72,9 @@ const normalizeAtasHeaderKey = (header: string): string =>
 const normalizeAtasHeader = (header: string): string =>
   ATAS_HEADER_MAPPINGS[normalizeAtasHeaderKey(header)] || header.trim();
 
-const formatAtasDateCell = (date: Date): string => {
-  const pad = (value: number) => value.toString().padStart(2, "0");
-
-  return [
-    date.getFullYear(),
-    pad(date.getMonth() + 1),
-    pad(date.getDate()),
-  ].join("-") + ` ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-};
-
 const formatAtasCell = (value: CellValue | null): string => {
   if (value == null) return "";
-  if (value instanceof Date) return formatAtasDateCell(value);
+  if (value instanceof Date) return formatAtasExcelDateCell(value);
 
   return String(value);
 };
