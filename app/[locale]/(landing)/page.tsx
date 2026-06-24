@@ -28,8 +28,6 @@ const OpenSource = nextDynamic(() => import("./components/open-source"), {
 
 export const dynamic = "force-static";
 
-export const dynamic = "force-static";
-
 export function generateStaticParams() {
   return getStaticParams();
 }
