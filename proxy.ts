@@ -64,6 +64,53 @@ function isProtectedDashboardPath(pathname: string) {
   )
 }
 
+// Routes that skip Supabase auth for performance. Must NOT include /authentication:
+// logged-in users visiting /authentication?next=... must run updateSession() so the
+// proxy can redirect them to the dashboard (see AGENTS.md health check).
+const PUBLIC_MARKETING_PATHS = new Set([
+  "/about",
+  "/pricing",
+  "/support",
+  "/updates",
+  "/terms",
+  "/privacy",
+  "/disclaimers",
+  "/propfirms",
+  "/referral",
+  "/newsletter",
+  "/maintenance",
+])
+
+function isPublicRoute(pathname: string) {
+  if (isHomepage(pathname)) {
+    return true
+  }
+
+  const normalizedPathname = withoutLocale(pathname)
+
+  if (PUBLIC_MARKETING_PATHS.has(normalizedPathname)) {
+    return true
+  }
+
+  if (normalizedPathname === "/teams") {
+    return true
+  }
+
+  return false
+}
+
+function createUnauthenticatedSession(request: NextRequest) {
+  const response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
+
+  response.headers.set("x-auth-status", "unauthenticated")
+
+  return { response, user: null as User | null, error: null }
+}
+
 function acceptsMarkdown(request: NextRequest) {
   return request.headers
     .get("accept")
@@ -245,8 +292,10 @@ export default async function proxy(req: NextRequest) {
   }
 
 
-  // Then update session
-  const { response: authResponse, user, error } = await updateSession(req)
+  // Skip Supabase auth on public marketing routes to avoid unnecessary round-trips
+  const { response: authResponse, user, error } = isPublicRoute(pathname)
+    ? createUnauthenticatedSession(req)
+    : await updateSession(req)
 
   // Embed route check
   if (pathname.includes("/embed")) {
@@ -342,8 +391,7 @@ export default async function proxy(req: NextRequest) {
 
   // Authentication checks with better error handling
   if (!user || error) {
-    const isPublicRoute = !isProtectedDashboardPath(pathname)
-    if (!isPublicRoute) {
+    if (isProtectedDashboardPath(pathname)) {
       const encodedSearchParams = `${pathname.substring(1)}${req.nextUrl.search}`
       const authUrl = new URL("/authentication", req.url)
 

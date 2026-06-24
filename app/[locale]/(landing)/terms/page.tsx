@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useI18n } from '@/locales/client';
+import { useI18n } from '@/locales/landing-client';
 
 export default function TermsOfService() {
   const t = useI18n();

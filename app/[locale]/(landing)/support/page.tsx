@@ -35,7 +35,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { Response } from '@/components/ai-elements/response';
 import { GlobeIcon, RefreshCcwIcon } from 'lucide-react';
-import { useI18n } from '@/locales/client';
+import { useI18n } from '@/locales/landing-client';
 import {
   Source,
   Sources,
