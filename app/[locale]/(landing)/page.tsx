@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import nextDynamic from "next/dynamic";
 import Partners from "./components/partners";
 import { setStaticParamsLocale } from "next-international/server";
 import Hero from "./components/hero";
 import { getStaticParams } from "@/locales/server";
-import { siteUrl } from "@/lib/site-url";
+import { getRequestOrigin, siteUrl } from "@/lib/site-url";
 import {
   FAQSectionSkeleton,
   FeaturesSectionSkeleton,
@@ -43,7 +44,9 @@ export async function generateMetadata({
     return {};
   }
 
-  const ogImageUrl = siteUrl(`/api/og?ref=${encodeURIComponent(ref)}`);
+  const requestHeaders = await headers();
+  const origin = getRequestOrigin(requestHeaders);
+  const ogImageUrl = siteUrl(`/api/og?ref=${encodeURIComponent(ref)}`, origin);
 
   return {
     openGraph: {
