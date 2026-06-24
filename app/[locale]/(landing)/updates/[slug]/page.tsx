@@ -78,7 +78,8 @@ export async function generateMetadata({
 
       const url = siteUrl(`/${locale}/updates/${slug}`);
       const dateLocale = locale === "fr" ? fr : enUS;
-      const formattedShareDate = format(new Date(meta.date), "MMMM d, yyyy", {
+      const shareDateFormat = locale === "fr" ? "d MMMM yyyy" : "MMMM d, yyyy";
+      const formattedShareDate = format(new Date(meta.date), shareDateFormat, {
         locale: dateLocale,
       });
       const shareTitleLabel = locale === "fr" ? "Changements" : "Changelog";
