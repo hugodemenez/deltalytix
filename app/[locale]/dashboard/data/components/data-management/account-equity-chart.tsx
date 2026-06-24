@@ -166,6 +166,7 @@ export function AccountEquityChart({
           drawdownThreshold,
           drawdownLevel
         )
+        runningBalance = balance
 
         dailyPoints.push({
           date: format(currentDate, "yyyy-MM-dd"),

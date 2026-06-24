@@ -227,6 +227,7 @@ export function computeAccountMetrics(
         drawdownThreshold,
         dailyDrawdownLevel
       )
+      dailyRunningBalance = totalBalance
 
       return {
         date: new Date(date),

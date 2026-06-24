@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "screenshot:dashboard": "node scripts/screenshot-dashboard.js",
     "seed:self-host": "bun scripts/seed-self-host.ts"
   },

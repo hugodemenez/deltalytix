@@ -101,4 +101,17 @@ describe('computeAccountMetrics drawdown floor', () => {
     expect(result.metrics.remainingLoss).toBe(0)
     expect(result.dailyMetrics.at(-1)?.totalBalance).toBe(112_000)
   })
+
+  it('propagates clamped balance into subsequent daily metrics', () => {
+    const trades = [
+      { accountNumber: 'TEST', entryDate: '2025-01-01', pnl: -4_000, commission: 0 },
+      { accountNumber: 'TEST', entryDate: '2025-01-02', pnl: 1_000, commission: 0 },
+    ]
+
+    const result = computeAccountMetrics(baseAccount as any, trades as any)
+
+    expect(result.dailyMetrics).toHaveLength(2)
+    expect(result.dailyMetrics[0]?.totalBalance).toBe(97_000)
+    expect(result.dailyMetrics[1]?.totalBalance).toBe(98_000)
+  })
 })
