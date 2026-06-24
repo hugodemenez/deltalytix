@@ -53,12 +53,8 @@ export function ScrollLockFix() {
       attributeFilter: ["style", "class"],
     });
 
-    // Also check periodically (fallback)
-    const interval = setInterval(removePadding, 50);
-
     return () => {
       observer.disconnect();
-      clearInterval(interval);
     };
   }, []);
 
