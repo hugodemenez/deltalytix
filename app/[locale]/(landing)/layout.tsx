@@ -3,6 +3,7 @@ import Navbar from "./components/navbar";
 import Footer from "./components/footer";
 import { ThemeProvider } from "@/context/theme-provider";
 import { I18nProviderClient } from "@/locales/landing-client";
+import { ConsentBanner } from "@/components/consent-banner";
 
 import { Metadata } from 'next';
 
@@ -40,6 +41,7 @@ export default async function RootLayout(
   return (
     <ThemeProvider>
       <I18nProviderClient locale={locale}>
+        <ConsentBanner />
         <div className="px-2 sm:px-6 lg:px-32">
           <Toaster />
           <Navbar />

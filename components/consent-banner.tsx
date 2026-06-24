@@ -21,7 +21,8 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { motion, AnimatePresence } from "framer-motion"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import { useI18n } from "@/locales/client"
+import { useI18n as useFullI18n } from "@/locales/client"
+import { useI18n as useLandingI18n } from "@/locales/landing-client"
 
 interface ConsentSettings {
   analytics_storage: boolean;
@@ -34,8 +35,9 @@ interface ConsentSettings {
 }
 
 
-export function ConsentBanner() {
-  const t = useI18n()
+type ConsentTranslator = ReturnType<typeof useFullI18n>
+
+function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
   const [isVisible, setIsVisible] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
   const [settings, setSettings] = useState<ConsentSettings>({
@@ -334,4 +336,14 @@ export function ConsentBanner() {
       </motion.div>
     </AnimatePresence>
   )
-} 
+}
+
+export function ConsentBanner() {
+  const t = useFullI18n()
+  return <ConsentBannerContent t={t} />
+}
+
+export function LandingConsentBanner() {
+  const t = useLandingI18n()
+  return <ConsentBannerContent t={t} />
+}

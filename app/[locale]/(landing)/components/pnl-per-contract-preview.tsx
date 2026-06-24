@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { useI18n } from "@/locales/client"
+import { useI18n } from "@/locales/landing-client"
 
 type TradeLike = {
   instrument?: string

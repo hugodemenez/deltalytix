@@ -2,6 +2,7 @@
 
 import { Octokit } from '@octokit/rest'
 import { unstable_cache } from 'next/cache'
+import { GITHUB_REPO_NAME, GITHUB_REPO_OWNER } from '@/lib/github-repo'
 
 const REQUEST_TIMEOUT_MS = 8000
 const MAX_RETRIES = 2
@@ -13,9 +14,6 @@ const octokit = new Octokit({
     timeout: REQUEST_TIMEOUT_MS
   }
 })
-
-const REPO_OWNER = process.env.NEXT_PUBLIC_REPO_OWNER || 'hugodemenez'
-const REPO_NAME = process.env.NEXT_PUBLIC_REPO_NAME || 'deltalytix'
 
 interface GithubData {
   repoData: {
@@ -89,8 +87,8 @@ const getCachedGithubData = unstable_cache(
       // Fetch repository data
       const repoResponse = await withRetry('repo data', () =>
         octokit.repos.get({
-          owner: REPO_OWNER,
-          repo: REPO_NAME,
+          owner: GITHUB_REPO_OWNER,
+          repo: GITHUB_REPO_NAME,
         })
       )
 
@@ -114,8 +112,8 @@ const getCachedGithubData = unstable_cache(
         try {
           const commitsResponse = await withRetry(`commits page ${page}`, () =>
             octokit.repos.listCommits({
-              owner: REPO_OWNER,
-              repo: REPO_NAME,
+              owner: GITHUB_REPO_OWNER,
+              repo: GITHUB_REPO_NAME,
               per_page: perPage,
               page: page,
               since: activityStartDate.toISOString(),
@@ -147,8 +145,8 @@ const getCachedGithubData = unstable_cache(
       try {
         const latestCommitResponse = await withRetry('latest commit', () =>
           octokit.repos.listCommits({
-            owner: REPO_OWNER,
-            repo: REPO_NAME,
+            owner: GITHUB_REPO_OWNER,
+            repo: GITHUB_REPO_NAME,
             per_page: 1,
             page: 1,
             sha: defaultBranch
@@ -245,7 +243,7 @@ const getCachedGithubData = unstable_cache(
       // Return fallback data instead of throwing
       return {
         repoData: {
-          name: REPO_NAME,
+          name: GITHUB_REPO_NAME,
           description: 'A trading analytics platform',
           language: 'TypeScript',
           license: { spdx_id: 'MIT' },
@@ -290,7 +288,7 @@ const getCachedGithubData = unstable_cache(
     }
   },
   // Cache key
-  [`github-data-${REPO_OWNER}-${REPO_NAME}`],
+  [`github-data-${GITHUB_REPO_OWNER}-${GITHUB_REPO_NAME}`],
   {
     tags: [`github-data`],
     revalidate: 3600 // Revalidate every hour (3600 seconds)

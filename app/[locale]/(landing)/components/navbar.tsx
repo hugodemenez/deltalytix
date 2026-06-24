@@ -25,10 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useCurrentLocale } from '@/locales/landing-client'
 import { LanguageSelector } from "@/components/ui/language-selector"
-
-const REPO_OWNER = process.env.NEXT_PUBLIC_REPO_OWNER || "default_owner";
-const REPO_NAME = process.env.NEXT_PUBLIC_REPO_NAME || "default_repo";
-const GITHUB_REPO_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}`;
+import { GITHUB_REPO_URL } from "@/lib/github-repo";
 
 const ListItem = React.forwardRef<
     React.ComponentRef<"a">,

@@ -13,9 +13,10 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns"
+import { enUS, fr } from "date-fns/locale"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { useI18n } from "@/locales/client"
+import { useCurrentLocale, useI18n } from "@/locales/landing-client"
 import { translateWeekday } from "@/lib/translation-utils"
 
 type CalendarDayEntry = {
@@ -35,8 +36,8 @@ const WEEKDAYS = [
   'calendar.weekdays.sat',
 ] as const
 
-function formatCurrency(value: number) {
-  return value.toLocaleString('en-US', {
+function formatCurrency(value: number, locale: string) {
+  return value.toLocaleString(locale === "fr" ? "fr-FR" : "en-US", {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 0,
@@ -96,6 +97,8 @@ function buildDemoCalendarData(): PreviewCalendarData {
 
 function LandingCalendarPreview({ calendarData }: { calendarData: PreviewCalendarData }) {
   const t = useI18n()
+  const locale = useCurrentLocale()
+  const dateLocale = locale === "fr" ? fr : enUS
   const currentDate = useMemo(() => new Date(), [])
 
   const monthStart = startOfMonth(currentDate)
@@ -126,7 +129,7 @@ function LandingCalendarPreview({ calendarData }: { calendarData: PreviewCalenda
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center gap-3">
           <CardTitle className="text-base sm:text-lg font-semibold truncate capitalize">
-            {format(currentDate, 'MMMM yyyy')}
+            {format(currentDate, 'MMMM yyyy', { locale: dateLocale })}
           </CardTitle>
           <div
             className={cn(
@@ -136,7 +139,7 @@ function LandingCalendarPreview({ calendarData }: { calendarData: PreviewCalenda
                 : "text-red-600 dark:text-red-400"
             )}
           >
-            {formatCurrency(monthlyTotal)}
+            {formatCurrency(monthlyTotal, locale)}
           </div>
         </div>
       </CardHeader>
@@ -195,7 +198,7 @@ function LandingCalendarPreview({ calendarData }: { calendarData: PreviewCalenda
                           !isCurrentMonth && "opacity-50"
                         )}
                       >
-                        {formatCurrency(dayData.pnl)}
+                        {formatCurrency(dayData.pnl, locale)}
                       </div>
                     ) : (
                       <div
@@ -237,7 +240,7 @@ function LandingCalendarPreview({ calendarData }: { calendarData: PreviewCalenda
                             : "text-red-600 dark:text-red-400"
                         )}
                       >
-                        {formatCurrency(weeklyTotal)}
+                        {formatCurrency(weeklyTotal, locale)}
                       </div>
                     </div>
                   )

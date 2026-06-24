@@ -4,6 +4,7 @@ import pricing from "./fr/pricing";
 import faq from "./fr/faq";
 import terms from "./fr/terms";
 import referral from "./fr/referral";
+import featurePreview from "./fr/feature-preview";
 
 export default {
   ...shared,
@@ -12,6 +13,7 @@ export default {
   ...faq,
   ...terms,
   ...referral,
+  ...featurePreview,
   "footer.heading": "Pied de page",
   "footer.description": "Analyses avancées pour les traders modernes.",
   "footer.product.title": "Produit",

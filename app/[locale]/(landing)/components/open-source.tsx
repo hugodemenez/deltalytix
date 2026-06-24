@@ -16,9 +16,7 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getI18n } from "@/locales/server";
 import { CachedGithubData } from "./cached-github-data";
-
-const REPO_OWNER = process.env.NEXT_PUBLIC_REPO_OWNER || "default_owner";
-const REPO_NAME = process.env.NEXT_PUBLIC_REPO_NAME || "default_repo";
+import { GITHUB_REPO_URL } from "@/lib/github-repo";
 
 export default async function OpenSource() {
   const t = await getI18n();
@@ -57,9 +55,9 @@ export default async function OpenSource() {
               index === 1 ? (
                 <React.Fragment key={index}>
                   <a
-                    href={`https://github.com/${REPO_OWNER}/${REPO_NAME}`}
+                    href={GITHUB_REPO_URL}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="underline"
                   >
                     code
@@ -121,7 +119,7 @@ export default async function OpenSource() {
                     <a
                       href={process.env.NEXT_PUBLIC_DISCORD_INVITATION}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                     >
                       {t("landing.accordion.community.button")}
                     </a>

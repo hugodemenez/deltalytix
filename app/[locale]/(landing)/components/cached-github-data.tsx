@@ -9,9 +9,7 @@ import {
 import { ChartSSR } from "./chart-ssr";
 import { getGithubData } from "../actions/github-data";
 import { cacheLife } from "next/cache";
-
-const REPO_OWNER = process.env.NEXT_PUBLIC_REPO_OWNER || "default_owner";
-const REPO_NAME = process.env.NEXT_PUBLIC_REPO_NAME || "default_repo";
+import { GITHUB_REPO_NAME, GITHUB_REPO_URL } from "@/lib/github-repo";
 
 interface GithubStats {
   repository: {
@@ -36,39 +34,44 @@ const formatTimeAgo = (dateString: string) => {
   return `${seconds} second${seconds !== 1 ? "s" : ""} ago`;
 };
 
-export async function CachedGithubData() {
-  "use cache";
-  cacheLife("hours");
+function getValidChartData(stats: GithubStats["stats"] | undefined) {
+  if (!stats || stats.length === 0) {
+    const now = new Date();
+    const fallbackStats: { value: number; date: Date }[] = [];
 
-  const { repoData, githubStats, stars, lastCommit } = await getGithubData();
+    for (let i = 11; i >= 0; i--) {
+      const weekDate = new Date(now);
+      weekDate.setDate(now.getDate() - i * 7);
+      weekDate.setDate(weekDate.getDate() - weekDate.getDay());
+      weekDate.setHours(0, 0, 0, 0);
 
-  const getValidChartData = (stats: GithubStats["stats"] | undefined) => {
-    if (!stats || stats.length === 0) {
-      const now = new Date();
-      const fallbackStats: { value: number; date: Date }[] = [];
-
-      for (let i = 11; i >= 0; i--) {
-        const weekDate = new Date(now);
-        weekDate.setDate(now.getDate() - i * 7);
-        weekDate.setDate(weekDate.getDate() - weekDate.getDay());
-        weekDate.setHours(0, 0, 0, 0);
-
-        fallbackStats.push({
-          value: i === 6 ? 1 : 0,
-          date: new Date(weekDate.getTime()),
-        });
-      }
-
-      return fallbackStats;
+      fallbackStats.push({
+        value: i === 6 ? 1 : 0,
+        date: new Date(weekDate.getTime()),
+      });
     }
-    return stats;
-  };
 
+    return fallbackStats;
+  }
+  return stats;
+}
+
+function GithubStatsCard({
+  repoData,
+  githubStats,
+  stars,
+  lastCommit,
+}: {
+  repoData: Awaited<ReturnType<typeof getGithubData>>["repoData"];
+  githubStats: Awaited<ReturnType<typeof getGithubData>>["githubStats"];
+  stars: number;
+  lastCommit: Awaited<ReturnType<typeof getGithubData>>["lastCommit"];
+}) {
   return (
     <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
       <CardHeader className="border-b border-border pb-3 md:pb-4 mb-3 md:mb-4">
         <CardTitle className="font-medium text-base md:text-lg lg:text-xl text-primary">
-          {repoData?.name}
+          {repoData?.name ?? GITHUB_REPO_NAME}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -127,10 +130,10 @@ export async function CachedGithubData() {
           </p>
         </div>
         <a
-          href={`https://github.com/${REPO_OWNER}/${REPO_NAME}`}
+          href={GITHUB_REPO_URL}
           className="border border-border flex justify-center h-7 md:h-8 leading-[28px] md:leading-[30px] text-muted-foreground mt-3 md:mt-4"
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
         >
           <div className="bg-background pl-2 pr-3 text-xs md:text-sm flex items-center space-x-2 border-r border-border">
             <StarIcon className="w-3 h-3 md:w-4 md:h-4" />
@@ -147,4 +150,53 @@ export async function CachedGithubData() {
       </CardContent>
     </Card>
   );
+}
+
+function GithubStatsFallback() {
+  return (
+    <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
+      <CardHeader className="border-b border-border pb-3 md:pb-4 mb-3 md:mb-4">
+        <CardTitle className="font-medium text-base md:text-lg lg:text-xl text-primary">
+          {GITHUB_REPO_NAME}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground mb-4">
+          GitHub stats are temporarily unavailable.
+        </p>
+        <a
+          href={GITHUB_REPO_URL}
+          className="border border-border flex justify-center h-7 md:h-8 leading-[28px] md:leading-[30px] text-muted-foreground"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <div className="bg-background pl-2 pr-3 text-xs md:text-sm flex items-center space-x-2 border-r border-border">
+            <StarIcon className="w-3 h-3 md:w-4 md:h-4" />
+            <span className="font-medium">Star</span>
+          </div>
+        </a>
+      </CardContent>
+    </Card>
+  );
+}
+
+export async function CachedGithubData() {
+  "use cache";
+  cacheLife("hours");
+
+  try {
+    const { repoData, githubStats, stars, lastCommit } = await getGithubData();
+
+    return (
+      <GithubStatsCard
+        repoData={repoData}
+        githubStats={githubStats}
+        stars={stars}
+        lastCommit={lastCommit}
+      />
+    );
+  } catch (error) {
+    console.error("[CachedGithubData] Failed to load GitHub stats:", error);
+    return <GithubStatsFallback />;
+  }
 }

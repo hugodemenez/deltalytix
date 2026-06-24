@@ -1,6 +1,7 @@
 
 import { ThemeProvider } from "@/context/theme-provider";
 import { Metadata } from 'next';
+import { I18nProviderClient } from "@/locales/client";
 
 type Locale = 'en' | 'fr';
 
@@ -20,13 +21,19 @@ export async function generateMetadata(props: { params: Promise<{ locale: Locale
 }
 
 export default async function TeamLayout({
-  children
+  children,
+  params,
 }: {
-  children: React.ReactNode,
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
 }) {
+  const { locale } = await params;
+
   return (
-    <ThemeProvider>
-      {children}
-    </ThemeProvider>
+    <I18nProviderClient locale={locale}>
+      <ThemeProvider>
+        {children}
+      </ThemeProvider>
+    </I18nProviderClient>
   );
 }
