@@ -331,6 +331,8 @@ export const AccountScalarFieldEnum = {
   trailingDrawdown: 'trailingDrawdown',
   trailingStopProfit: 'trailingStopProfit',
   resetDate: 'resetDate',
+  bursted: 'bursted',
+  breachDate: 'breachDate',
   consistencyPercentage: 'consistencyPercentage',
   groupId: 'groupId',
   accountSize: 'accountSize',

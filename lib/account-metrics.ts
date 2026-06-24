@@ -3,6 +3,7 @@
 import type { Trade as PrismaTrade } from '@/prisma/generated/prisma/browser'
 import type { Account } from '@/context/data-provider'
 import { clampBalanceAtDrawdownFloor, computeDrawdownLevel } from '@/lib/account-drawdown'
+import { filterTradesForBurstedAccount } from '@/lib/account-breach'
 
 export type AccountMetrics = {
   // Balance and progress
@@ -56,7 +57,7 @@ export function computeAccountMetrics(
   allTrades: PrismaTrade[]
 ): { balanceToDate: number; metrics: NonNullable<Account['metrics']>; dailyMetrics: NonNullable<Account['dailyMetrics']>; trades: PrismaTrade[]; aboveBuffer: number } {
   const resetDate = toDate(account.resetDate)
-  const relevantTrades = allTrades.filter(t => {
+  const relevantTrades = filterTradesForBurstedAccount(account, allTrades).filter(t => {
     if (t.accountNumber !== account.number) return false
     const entryDate = toDate(t.entryDate)
     if (!entryDate) return false

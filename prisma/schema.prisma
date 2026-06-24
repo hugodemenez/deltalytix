@@ -296,6 +296,8 @@ model Account {
   trailingDrawdown                Boolean           @default(false)
   trailingStopProfit              Float?
   resetDate                       DateTime?
+  bursted                         Boolean           @default(false)
+  breachDate                      DateTime?
   consistencyPercentage           Float?            @default(30)
   groupId                         String?
   accountSize                     String?
