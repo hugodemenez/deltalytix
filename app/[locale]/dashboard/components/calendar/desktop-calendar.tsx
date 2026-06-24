@@ -144,7 +144,7 @@ function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impact
           className={cn(
             "h-4 px-1.5 text-[8px] sm:text-[9px] font-medium cursor-pointer relative z-0 w-auto justify-center items-center gap-1",
             badgeStyles[highestImportance as keyof typeof badgeStyles],
-            "transition-all duration-200 ease-in-out",
+            "transition-[background-color,color,border-color,box-shadow,transform] duration-200 ease-in-out motion-reduce:transition-none",
             "hover:scale-110 hover:shadow-md",
             "active:scale-95"
           )}
@@ -186,7 +186,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
           className={cn(
             "h-4 px-1.5 text-[8px] sm:text-[9px] font-medium cursor-pointer relative z-0 w-auto justify-center items-center gap-1",
             "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900/30",
-            "transition-all duration-200 ease-in-out",
+            "transition-[background-color,color,border-color,box-shadow,transform] duration-200 ease-in-out motion-reduce:transition-none",
             "hover:scale-110 hover:shadow-md",
             "active:scale-95"
           )}
@@ -220,7 +220,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
             {renewals.map((account, index) => (
               <div 
                 key={account.id} 
-                className="group relative p-3 sm:p-4 rounded-lg border bg-card hover:bg-muted/50 hover:border-border transition-all duration-200 hover:shadow-xs"
+                className="group relative p-3 sm:p-4 rounded-lg border bg-card hover:bg-muted/50 hover:border-border transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-xs motion-reduce:transition-none"
               >
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-3">
                   {/* Account Info */}
@@ -597,7 +597,7 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
                   <React.Fragment key={dateString}>
                     <div
                       className={cn(
-                        "h-full flex flex-col cursor-pointer transition-all rounded-none p-1",
+                        "h-full flex flex-col cursor-pointer transition-[background-color,color,box-shadow] motion-reduce:transition-none rounded-none p-1",
                         "ring-1 ring-border hover:ring-primary hover:z-10",
                         dayData && dayData.pnl >= 0
                           ? "bg-green-50 dark:bg-green-900/20"

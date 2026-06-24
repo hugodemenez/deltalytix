@@ -1474,7 +1474,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                       className={cn(
                         "relative border-l-4 rounded-r-lg",
                         groupColorClass,
-                        "transition-all duration-200 hover:shadow-md"
+                        "transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-md motion-reduce:transition-none"
                       )}
                     >
                       {/* Group header with subtle styling */}
@@ -1529,7 +1529,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                     <div
                       className={cn(
                         "relative border-l-4 border-gray-200/50 bg-gray-50/30 dark:border-gray-700/30 dark:bg-gray-900/20 rounded-r-lg",
-                        "transition-all duration-200 hover:shadow-md"
+                        "transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-md motion-reduce:transition-none"
                       )}
                     >
                       {/* Ungrouped header */}

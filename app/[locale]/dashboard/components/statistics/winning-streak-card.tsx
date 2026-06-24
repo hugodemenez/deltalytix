@@ -23,7 +23,7 @@ export default function WinningStreakCard({ size = 'medium' }: WinningStreakCard
       <Card className="h-full">
         <div className="flex items-center justify-center h-full gap-1.5">
           <Award className="h-3 w-3 text-yellow-500" />
-          <div className="font-medium text-sm">{winningStreak}</div>
+          <div className="font-medium text-sm tabular-nums">{winningStreak}</div>
           <TooltipProvider delayDuration={100}>
             <Tooltip>
               <TooltipTrigger asChild>

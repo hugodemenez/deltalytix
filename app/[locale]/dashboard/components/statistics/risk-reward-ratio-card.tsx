@@ -55,7 +55,7 @@ export default function RiskRewardRatioCard({ size = 'tiny' }: RiskRewardRatioCa
       <div className="flex flex-col items-center justify-center h-full gap-2 p-2">
         <div className="flex items-center gap-1.5">
           <Scale className="h-3 w-3 text-primary" />
-          <span className="font-medium text-sm">RR {riskRewardRatio}</span>
+          <span className="font-medium text-sm tabular-nums">RR {riskRewardRatio}</span>
           <TooltipProvider delayDuration={100}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -79,7 +79,7 @@ export default function RiskRewardRatioCard({ size = 'tiny' }: RiskRewardRatioCa
               </div>
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={5}>
-              <div className="text-xs space-y-0.5">
+              <div className="text-xs space-y-0.5 tabular-nums">
                 <div className="text-green-500">Avg. Win: ${avgWin.toFixed(2)}</div>
                 <div className="text-red-500">Avg. Loss: ${avgLoss.toFixed(2)}</div>
               </div>
@@ -89,4 +89,4 @@ export default function RiskRewardRatioCard({ size = 'tiny' }: RiskRewardRatioCa
       </div>
     </Card>
   )
-} 
+}

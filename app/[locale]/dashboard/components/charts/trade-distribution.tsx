@@ -145,7 +145,7 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
                   <Cell 
                     key={`cell-${index}`} 
                     fill={entry.color}
-                    className="transition-all duration-300 ease-in-out hover:opacity-80 dark:brightness-90"
+                    className="transition-opacity duration-300 ease-out hover:opacity-80 dark:brightness-90"
                   />
                 ))}
                 <Label
@@ -206,4 +206,4 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
       </CardContent>
     </Card>
   )
-} 
+}

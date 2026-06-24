@@ -288,7 +288,7 @@ const OptimizedTooltip = React.memo(
               <span className="text-[0.70rem] uppercase text-muted-foreground">
                 {t("equity.tooltip.totalEquity")}
               </span>
-              <span className="font-bold text-foreground">
+              <span className="font-bold text-foreground tabular-nums">
                 {formatCurrency(data.equity || 0)}
               </span>
             </div>
@@ -342,7 +342,7 @@ const OptimizedTooltip = React.memo(
             <span className="text-[0.70rem] uppercase text-muted-foreground">
               {t("equity.tooltip.totalEquity")}
             </span>
-            <span className="font-bold text-foreground">
+            <span className="font-bold text-foreground tabular-nums">
               {formatCurrency(data.equity || 0)}
             </span>
           </div>
@@ -364,7 +364,7 @@ const OptimizedTooltip = React.memo(
                           generateAccountColor(account),
                       }}
                     />
-                    <span className="text-sm text-foreground">
+                    <span className="text-sm text-foreground tabular-nums">
                       {t("equity.tooltip.accountReset", { account })}
                     </span>
                   </div>
@@ -537,13 +537,13 @@ const AccountsLegend = React.memo(
                       style={{ backgroundColor: color}}
                         ></span>
                       </span>
-                      <span className="text-xs text-muted-foreground leading-tight">
+                      <span className="text-xs text-muted-foreground leading-tight tabular-nums">
                         {formatCurrency(equity)}
                       </span>
                       <div className="min-h-3.5 flex flex-col">
                         {hasPayout && (
                           <span
-                            className="text-xs leading-tight"
+                            className="text-xs leading-tight tabular-nums"
                             style={{ color: getPayoutColors(payoutStatus).fg }}
                           >
                             {t("equity.legend.payout")}:{" "}
