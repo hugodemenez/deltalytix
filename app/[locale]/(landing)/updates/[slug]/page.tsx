@@ -81,7 +81,8 @@ export async function generateMetadata({
       const formattedShareDate = format(new Date(meta.date), "MMMM d, yyyy", {
         locale: dateLocale,
       });
-      const shareTitle = `Changelog · ${formattedShareDate}`;
+      const shareTitleLabel = locale === "fr" ? "Changements" : "Changelog";
+      const shareTitle = `${shareTitleLabel} · ${formattedShareDate}`;
 
       return {
         title: meta.title,
