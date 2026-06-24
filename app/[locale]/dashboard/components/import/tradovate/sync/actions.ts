@@ -1543,6 +1543,10 @@ export async function getTradovateTrades(
       }
       userId = user.id
     }
+    if (!userId) {
+      return { error: 'User not authenticated' }
+    }
+    const resolvedUserId = userId
 
     const apiBaseUrl = getApiBaseUrl(environment)
 
@@ -1554,7 +1558,7 @@ export async function getTradovateTrades(
     // Means there are no trades to import
     if (fillPairs.length === 0) {
       logger.info('No fill pairs returned from Tradovate')
-      await updateLastSyncedAt(userId, accessToken)
+      await updateLastSyncedAt(resolvedUserId, accessToken)
       return { processedTrades: [], savedCount: 0, ordersCount: 0 }
     }
 
@@ -1653,9 +1657,17 @@ export async function getTradovateTrades(
     logger.info(`Fetched ${tickDetails.length} tick details`)
 
     // Build trades using fill pairs with account resolution
-    const processedTrades = await buildTradesFromFillPairs(fillPairs, contracts, fillsById, ordersById, accountsById, userId, tickDetails)
+    const processedTrades = await buildTradesFromFillPairs(
+      fillPairs,
+      contracts,
+      fillsById,
+      ordersById,
+      accountsById,
+      resolvedUserId,
+      tickDetails,
+    )
     
-    await updateLastSyncedAt(userId, accessToken)
+    await updateLastSyncedAt(resolvedUserId, accessToken)
 
     if (processedTrades.length === 0) {
       logger.info('No trades could be created from fill pairs')
@@ -1664,7 +1676,7 @@ export async function getTradovateTrades(
 
     // Save trades to database
     logger.info(`Attempting to save ${processedTrades.length} fill pair trades to database`)
-    const saveResult = await saveTradesAction(processedTrades, { userId })
+    const saveResult = await saveTradesAction(processedTrades, { userId: resolvedUserId })
     
     if (saveResult.error) {
       if (saveResult.error === "DUPLICATE_TRADES") {

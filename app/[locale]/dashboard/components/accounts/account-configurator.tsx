@@ -6,8 +6,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon, X, Trash2, Check, ChevronsUpDown, Info, SearchCheck } from "lucide-react"
+import { CalendarIcon, X, Trash2, Check, ChevronsUpDown, Info, SearchCheck, Bookmark } from "lucide-react"
 // Tooltips replaced by Popovers
 import { format, Locale } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -27,6 +37,11 @@ import { useUserStore } from '@/store/user-store'
 import { Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Command, CommandList, CommandGroup, CommandItem } from "@/components/ui/command"
+import {
+  useCustomPropfirmTemplatesStore,
+  type CustomPropfirmTemplate,
+  type CustomPropfirmTemplateConfig,
+} from '@/store/custom-propfirm-templates-store'
 
 interface AccountConfiguratorProps {
   account: Account
@@ -62,6 +77,24 @@ export function AccountConfigurator({
   const [isCreatingGroup, setIsCreatingGroup] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const accountSizeInputRef = useRef<HTMLInputElement>(null)
+
+  // Custom (user-defined) prop firm templates persisted in local storage
+  const customTemplates = useCustomPropfirmTemplatesStore(state => state.templates)
+  const addCustomTemplate = useCustomPropfirmTemplatesStore(state => state.addTemplate)
+  const removeCustomTemplate = useCustomPropfirmTemplatesStore(state => state.removeTemplate)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
+  const [templateFirmName, setTemplateFirmName] = useState("")
+  const [templateSizeName, setTemplateSizeName] = useState("")
+  const [templateToDelete, setTemplateToDelete] = useState<CustomPropfirmTemplate | null>(null)
+
+  // Resolve the effective value of an account field (pending change wins over saved value)
+  const getEffective = <K extends keyof Account>(field: K, fallback: NonNullable<Account[K]>): NonNullable<Account[K]> => {
+    const value = (pendingChanges && field in pendingChanges)
+      ? pendingChanges[field]
+      : account[field]
+    return (value ?? fallback) as NonNullable<Account[K]>
+  }
 
   const effectiveConsistency =
     pendingChanges?.consistencyPercentage ??
@@ -108,6 +141,110 @@ export function AccountConfigurator({
     }
 
     setPendingChanges(newChanges)
+    setSelectedTemplateId(null)
+  }
+
+  const handleCustomTemplateChange = (template: CustomPropfirmTemplate) => {
+    const c = template.config
+    const newChanges: Partial<Account> = {
+      propfirm: c.propfirm,
+      startingBalance: c.startingBalance,
+      profitTarget: c.profitTarget,
+      drawdownThreshold: c.drawdownThreshold,
+      consistencyPercentage: c.consistencyPercentage,
+      trailingDrawdown: c.trailingDrawdown,
+      trailingStopProfit: c.trailingStopProfit,
+      accountSize: c.accountSize,
+      accountSizeName: c.accountSizeName,
+      price: c.price,
+      priceWithPromo: c.priceWithPromo,
+      evaluation: c.evaluation,
+      minDays: c.minDays,
+      dailyLoss: c.dailyLoss,
+      rulesDailyLoss: c.rulesDailyLoss,
+      trailing: c.trailing,
+      tradingNewsAllowed: c.tradingNewsAllowed,
+      activationFees: c.activationFees,
+      isRecursively: c.isRecursively,
+      balanceRequired: c.balanceRequired,
+      minTradingDaysForPayout: c.minTradingDaysForPayout,
+      minPnlToCountAsDay: c.minPnlToCountAsDay,
+      buffer: c.buffer,
+      considerBuffer: c.considerBuffer,
+    }
+    setPendingChanges(newChanges)
+    setSelectedAccountSize("")
+    setSelectedTemplateId(template.id)
+  }
+
+  const openSaveTemplateDialog = () => {
+    setTemplateFirmName(getEffective('propfirm', ''))
+    setTemplateSizeName(getEffective('accountSizeName', ''))
+    setSaveTemplateOpen(true)
+  }
+
+  const handleSaveTemplate = () => {
+    const firmName = templateFirmName.trim()
+    if (!firmName) return
+    const sizeName = templateSizeName.trim()
+    const normalizedSizeName = sizeName || getEffective('accountSizeName', '')
+
+    const isDuplicate = customTemplates.some(
+      (template) =>
+        template.firmName.trim().toLowerCase() === firmName.toLowerCase() &&
+        template.sizeName.trim().toLowerCase() === normalizedSizeName.trim().toLowerCase()
+    )
+    if (isDuplicate) {
+      toast.error(t('propFirm.configurator.template.duplicateError'), {
+        description: t('propFirm.configurator.template.duplicateErrorDescription', { name: firmName }),
+      })
+      return
+    }
+
+    const config: CustomPropfirmTemplateConfig = {
+      propfirm: firmName,
+      startingBalance: getEffective('startingBalance', 0),
+      profitTarget: getEffective('profitTarget', 0),
+      drawdownThreshold: getEffective('drawdownThreshold', 0),
+      consistencyPercentage: getEffective('consistencyPercentage', 100),
+      trailingDrawdown: getEffective('trailingDrawdown', false),
+      trailingStopProfit: getEffective('trailingStopProfit', 0),
+      accountSize: getEffective('accountSize', ''),
+      accountSizeName: sizeName || getEffective('accountSizeName', ''),
+      price: getEffective('price', 0),
+      priceWithPromo: getEffective('priceWithPromo', 0),
+      evaluation: getEffective('evaluation', false),
+      minDays: getEffective('minDays', 0),
+      dailyLoss: getEffective('dailyLoss', 0),
+      rulesDailyLoss: getEffective('rulesDailyLoss', 'No'),
+      trailing: getEffective('trailing', 'Static'),
+      tradingNewsAllowed: getEffective('tradingNewsAllowed', false),
+      activationFees: getEffective('activationFees', 0),
+      isRecursively: getEffective('isRecursively', 'No'),
+      balanceRequired: getEffective('balanceRequired', 0),
+      minTradingDaysForPayout: getEffective('minTradingDaysForPayout', 0),
+      minPnlToCountAsDay: getEffective('minPnlToCountAsDay', 0),
+      buffer: getEffective('buffer', 0),
+      considerBuffer: getEffective('considerBuffer', true),
+    }
+
+    const created = addCustomTemplate({ firmName, sizeName, config })
+    setSelectedTemplateId(created.id)
+    setSaveTemplateOpen(false)
+    toast.success(t('propFirm.configurator.template.saveSuccess'), {
+      description: t('propFirm.configurator.template.saveSuccessDescription', { name: firmName }),
+    })
+  }
+
+  const handleDeleteTemplate = (template: CustomPropfirmTemplate) => {
+    removeCustomTemplate(template.id)
+    if (selectedTemplateId === template.id) {
+      setSelectedTemplateId(null)
+    }
+    setTemplateToDelete(null)
+    toast.success(t('propFirm.configurator.template.deleteSuccess'), {
+      description: t('propFirm.configurator.template.deleteSuccessDescription', { name: template.firmName }),
+    })
   }
 
   const handleInputChange = (field: keyof Account, value: any) => {
@@ -116,6 +253,7 @@ export function AccountConfigurator({
       [field]: value
     }
     setPendingChanges(newChanges)
+    setSelectedTemplateId(null)
   }
 
   const handleCreateGroup = async () => {
@@ -231,7 +369,54 @@ export function AccountConfigurator({
             </Button>
           )}
         </div>
-        
+
+        {/* User-defined templates */}
+        {customTemplates.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Bookmark className="h-4 w-4 text-muted-foreground" />
+              <h4 className="text-sm font-medium">{t('propFirm.configurator.template.myTemplates')}</h4>
+            </div>
+            <div className="relative">
+              <Carousel opts={{ align: "start", loop: false }} className="w-full">
+                <CarouselContent>
+                  {customTemplates.map((tpl) => (
+                    <CarouselItem key={tpl.id} className="basis-1/2 xl:basis-1/5">
+                      <Card
+                        className={cn(
+                          "relative cursor-pointer hover:bg-muted/50 transition-colors",
+                          selectedTemplateId === tpl.id && "border-primary ring-1 ring-primary"
+                        )}
+                        onClick={() => handleCustomTemplateChange(tpl)}
+                      >
+                        <CardHeader className="pr-8">
+                          <CardTitle className="whitespace-nowrap text-sm truncate">{tpl.firmName}</CardTitle>
+                          {tpl.sizeName && (
+                            <CardDescription className="text-xs truncate">{tpl.sizeName}</CardDescription>
+                          )}
+                        </CardHeader>
+                        <button
+                          type="button"
+                          aria-label={t('propFirm.configurator.template.deleteTemplate')}
+                          className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setTemplateToDelete(tpl)
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </Card>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="left-0" />
+                <CarouselNext className="right-0" />
+              </Carousel>
+            </div>
+          </div>
+        )}
+
         <div className="relative">
           <Carousel
             opts={{
@@ -308,6 +493,7 @@ export function AccountConfigurator({
             className="mt-4"
             onClick={() => {
               setSelectedAccountSize("")
+              setSelectedTemplateId(null)
               const clearedChanges: Partial<Account> = {
                 propfirm: "",
                 accountSize: "",
@@ -316,6 +502,7 @@ export function AccountConfigurator({
                 profitTarget: 0,
                 drawdownThreshold: 0,
                 buffer: 0,
+                considerBuffer: true,
                 consistencyPercentage: 30,
                 trailingDrawdown: false,
                 trailingStopProfit: 0,
@@ -1051,6 +1238,98 @@ export function AccountConfigurator({
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+
+      {/* Create a reusable template from the current configuration */}
+      <div className="flex flex-col gap-2 rounded-lg border bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <h3 className="text-sm font-medium">{t('propFirm.configurator.template.saveAsTemplate')}</h3>
+          <p className="text-sm text-muted-foreground">{t('propFirm.configurator.template.saveAsTemplateDescription')}</p>
+        </div>
+        <Dialog open={saveTemplateOpen} onOpenChange={setSaveTemplateOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="shrink-0" onClick={openSaveTemplateDialog}>
+              <Bookmark className="mr-2 h-4 w-4" />
+              {t('propFirm.configurator.template.saveAsTemplate')}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[480px]">
+            <DialogHeader>
+              <DialogTitle>{t('propFirm.configurator.template.saveDialogTitle')}</DialogTitle>
+              <DialogDescription>{t('propFirm.configurator.template.saveDialogDescription')}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="flex flex-col gap-2">
+                <Label>{t('propFirm.configurator.fields.propfirmName')}</Label>
+                <Input
+                  value={templateFirmName}
+                  onChange={(e) => setTemplateFirmName(e.target.value)}
+                  placeholder={t('propFirm.configurator.fields.propfirmName')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && templateFirmName.trim()) {
+                      handleSaveTemplate()
+                    }
+                  }}
+                  autoFocus
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>{t('propFirm.configurator.template.sizeLabel')}</Label>
+                <Input
+                  value={templateSizeName}
+                  onChange={(e) => setTemplateSizeName(e.target.value)}
+                  placeholder={t('propFirm.configurator.template.sizePlaceholder')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && templateFirmName.trim()) {
+                      handleSaveTemplate()
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSaveTemplateOpen(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button onClick={handleSaveTemplate} disabled={!templateFirmName.trim()}>
+                {t('common.save')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <AlertDialog
+        open={!!templateToDelete}
+        onOpenChange={(open) => {
+          if (!open) setTemplateToDelete(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('propFirm.configurator.template.deleteConfirm')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('propFirm.configurator.template.deleteConfirmDescription', {
+                name: templateToDelete?.firmName ?? '',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setTemplateToDelete(null)}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (templateToDelete) {
+                  handleDeleteTemplate(templateToDelete)
+                }
+              }}
+            >
+              {t('propFirm.configurator.template.deleteConfirmButton')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

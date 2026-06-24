@@ -1,0 +1,15 @@
+---
+title: 'Self-host Deltalytix with a local dashboard'
+description: 'Run the full app locally with Postgres, demo data, and dashboard access without Supabase sign-in.'
+date: '2026-06-08'
+status: completed
+completedDate: '2026-06-23'
+---
+
+# Self-host Deltalytix with a local dashboard
+
+Self-hosting is now documented end to end. The **self-host quickstart** script spins up Postgres, applies the schema, seeds a demo account (**LOCAL-SIM-001**), and writes a `.env.local` you can use right away. **`SELF_HOSTING.md`** and **`AGENTS.md`** walk through Docker, env vars, and what to expect when you run the stack on your machine.
+
+With **local dashboard auth bypass** enabled, **`/dashboard`** loads without Supabase login and **`/authentication`** redirects you there instead. Trade **import** and save work in this mode, so you can exercise the full journal workflow offline or in a private deployment.
+
+Bypass mode is meant for **local development and self-hosted setups**, not production SaaS. Production refuses to start with bypass unless you explicitly opt in via the documented override.

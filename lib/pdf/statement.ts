@@ -33,6 +33,26 @@ export interface ExportPdfPayload {
   trades: PdfTrade[]
 }
 
+export function sanitizeTrades(input: unknown): PdfTrade[] {
+  if (!Array.isArray(input)) {
+    return []
+  }
+  return input.map((raw) => {
+    const trade = raw as Record<string, unknown>
+    return {
+      entryDate: String(trade.entryDate ?? ""),
+      closeDate: trade.closeDate != null ? String(trade.closeDate) : null,
+      pnl: Number(trade.pnl ?? 0),
+      commission: Number(trade.commission ?? 0),
+      accountNumber: String(trade.accountNumber ?? ""),
+      side: trade.side != null ? String(trade.side) : null,
+      quantity: Number(trade.quantity ?? 0),
+      instrument: String(trade.instrument ?? ""),
+      timeInPosition: Number(trade.timeInPosition ?? 0),
+    }
+  })
+}
+
 export interface SummaryMetrics {
   totalTrades: number
   winRate: number

@@ -1,0 +1,15 @@
+---
+title: 'Auto-hébergez Deltalytix avec un tableau de bord local'
+description: 'Lancez l’app en local avec Postgres, des données de démo et l’accès au tableau de bord sans connexion Supabase.'
+date: '2026-06-08'
+status: completed
+completedDate: '2026-06-23'
+---
+
+# Auto-hébergez Deltalytix avec un tableau de bord local
+
+L’auto-hébergement est maintenant documenté de bout en bout. Le script **quickstart self-host** démarre Postgres, applique le schéma, injecte un compte de démo (**LOCAL-SIM-001**) et génère un `.env.local` prêt à l’emploi. **`SELF_HOSTING.md`** et **`AGENTS.md`** détaillent Docker, les variables d’environnement et le fonctionnement sur votre machine.
+
+Avec le **bypass d’auth locale** activé, **`/dashboard`** s’ouvre sans connexion Supabase et **`/authentication`** vous y redirige. L’**import** et l’enregistrement des trades fonctionnent dans ce mode, pour tester tout le journal en local ou sur un déploiement privé.
+
+Ce mode vise le **développement local et l’auto-hébergement**, pas la production SaaS. La production refuse le bypass sauf opt-in explicite documenté.

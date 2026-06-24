@@ -21,9 +21,9 @@ interface JournalingProps {
   onApplyTagToAll: (tag: string) => Promise<void>
 }
 
-export function Journaling({ 
-  content, 
-  onChange, 
+export function Journaling({
+  content,
+  onChange,
   onSave,
   emotionValue,
   onEmotionChange,
@@ -39,43 +39,33 @@ export function Journaling({
   return (
     <div className="h-full flex flex-col">
       <div className="flex-none">
-        <h3 className="text-sm font-medium mb-2">{t('mindset.emotion.title')}</h3>
-        <EmotionSelector
-          value={emotionValue}
-          onChange={onEmotionChange}
-        />
+        <h3 className="text-sm font-medium mb-2">{t("mindset.emotion.title")}</h3>
+        <EmotionSelector value={emotionValue} onChange={onEmotionChange} />
       </div>
 
       <div className="flex-none mt-6">
-        <DayTagSelector
-          trades={trades}
-          date={date}
-          onApplyTagToAll={onApplyTagToAll}
-        />
+        <DayTagSelector trades={trades} date={date} onApplyTagToAll={onApplyTagToAll} />
       </div>
 
       <div className="flex-1 min-h-0 mt-6 flex flex-col">
-          <TiptapEditor
-            content={content}
-            onChange={onChange}
-            placeholder={t('mindset.journaling.placeholder')}
-            width="100%"
-            height="100%"
-            events={events}
-            selectedNews={selectedNews}
-            onNewsSelection={onNewsSelection}
-            date={date}
-          />
+        <TiptapEditor
+          content={content}
+          onChange={onChange}
+          placeholder={t("mindset.journaling.placeholder")}
+          width="100%"
+          height="100%"
+          events={events}
+          selectedNews={selectedNews}
+          onNewsSelection={onNewsSelection}
+          date={date}
+        />
       </div>
 
       <div className="flex-none flex gap-4 mt-6">
-        <Button
-          onClick={onSave}
-          className="w-full"
-        >
-          {t('mindset.journaling.save')}
+        <Button onClick={onSave} className="w-full">
+          {t("mindset.journaling.save")}
         </Button>
       </div>
     </div>
   )
-} 
+}

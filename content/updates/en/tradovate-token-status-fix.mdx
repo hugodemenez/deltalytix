@@ -1,0 +1,15 @@
+---
+title: 'Tradovate token status no longer shows false “expired”'
+description: 'Connection badges reflect whether a token exists, not a stale expiry snapshot from an old page load.'
+date: '2026-06-08'
+status: completed
+completedDate: '2026-06-23'
+---
+
+# Tradovate token status no longer shows false “expired”
+
+On **Dashboard → Import → Tradovate sync**, the **Token Status** badge now reflects whether a token is actually stored—not whether an old `tokenExpiresAt` timestamp on the page has passed. Leaving the sync screen open for a while should no longer flip a healthy connection to **Expired** while the server still holds a valid token.
+
+When renewal really fails and the token is cleared, you still see **Expired** with **Reconnect** to sign in again. The table also refreshes when you return to the tab and after a failed sync, so status stays closer to what the backend knows.
+
+Demo and **Live** environment badges are unchanged; this fix is about trusting what you see before you hit sync.
