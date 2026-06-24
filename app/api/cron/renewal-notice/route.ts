@@ -6,7 +6,10 @@ import { headers } from 'next/headers'
 import { format, subDays, isEqual, startOfDay } from 'date-fns'
 import { enUS, fr } from 'date-fns/locale'
 import RenewalNoticeEmail from '@/components/emails/renewal-notice'
-import { normalizeNewsletterEmail } from '@/lib/newsletter-email'
+import {
+  createNewsletterUnsubscribeUrl,
+  normalizeNewsletterEmail,
+} from '@/lib/newsletter-email'
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -158,15 +161,20 @@ export async function GET(req: Request) {
         email: {
           in: candidateEmails
         },
-        isActive: true,
-        renewalNoticeEnabled: true,
       },
       select: {
         email: true,
+        isActive: true,
+        renewalNoticeEnabled: true,
       }
     })
 
-    const allowedEmails = new Set(renewalPreferences.map(pref => pref.email))
+    const renewalPreferenceByEmail = new Map(
+      renewalPreferences.map(pref => [
+        normalizeNewsletterEmail(pref.email),
+        pref,
+      ])
+    )
 
     let successCount = 0
     let errorCount = 0
@@ -178,7 +186,8 @@ export async function GET(req: Request) {
       if (!account.user?.email) return
 
       const normalizedEmail = normalizeNewsletterEmail(account.user.email)
-      if (!allowedEmails.has(normalizedEmail)) return
+      const preference = renewalPreferenceByEmail.get(normalizedEmail)
+      if (preference && (!preference.isActive || !preference.renewalNoticeEnabled)) return
 
       const existing = userAccountsMap.get(normalizedEmail) || []
       userAccountsMap.set(normalizedEmail, [...existing, account])
@@ -186,7 +195,7 @@ export async function GET(req: Request) {
 
     if (userAccountsMap.size === 0) {
       return NextResponse.json(
-        { message: 'No users with active renewal notice preferences found' },
+        { message: 'No users with enabled renewal notice preferences found' },
         { status: 200 }
       )
     }
@@ -210,7 +219,7 @@ export async function GET(req: Request) {
             const propFirmName = account.propfirm || 'Unknown Prop Firm'
             const frequency = account.paymentFrequency || 'monthly'
             
-            const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings/notifications`
+            const unsubscribeUrl = createNewsletterUnsubscribeUrl(userEmail)
 
             const { data, error } = await resend.emails.send({
               from: 'Deltalytix Renewals <renewals@eu.updates.deltalytix.app>',

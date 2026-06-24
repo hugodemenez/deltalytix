@@ -12,8 +12,8 @@ interface EmotionSelectorProps {
 export function EmotionSelector({ value, onChange }: EmotionSelectorProps) {
   const t = useI18n()
 
-  // Create 20 steps for granular mood selection
-  const moodData = Array.from({ length: 20 }, (_, i) => ({
+  // 21 steps from 0 to 100 in increments of 5
+  const moodData = Array.from({ length: 21 }, (_, i) => ({
     key: i,
   }))
 
@@ -24,8 +24,8 @@ export function EmotionSelector({ value, onChange }: EmotionSelectorProps) {
         <Tracker
           data={moodData}
           hoverEffect={true}
-          valueIndex={Math.max(0, Math.min(19, Math.round(value / 5)))}
-          onSelectionChange={(index) => onChange(index * 5)} // Convert 0-19 to 0-95 with steps of 5
+          valueIndex={Math.max(0, Math.min(20, Math.round(value / 5)))}
+          onSelectionChange={(index) => onChange(index * 5)}
           className="flex-1"
         />
         <Smile className="h-6 w-6 text-muted-foreground" />

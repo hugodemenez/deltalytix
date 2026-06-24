@@ -6,12 +6,13 @@
   "license": "CC-BY-NC-4.0",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "ts-node scripts/generate-routes.ts && npx prisma generate",
+    "prebuild": "node --experimental-strip-types scripts/generate-routes.ts && npx prisma generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "screenshot:dashboard": "node scripts/screenshot-dashboard.js"
+    "screenshot:dashboard": "node scripts/screenshot-dashboard.js",
+    "seed:self-host": "bun scripts/seed-self-host.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.10",
@@ -56,6 +57,7 @@
     "@radix-ui/react-use-controllable-state": "^1.2.2",
     "@react-email/components": "^0.5.7",
     "@react-email/render": "^1.4.0",
+    "@react-pdf/renderer": "^4.5.1",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@tailwindcss/cli": "^4.1.16",
@@ -95,6 +97,8 @@
     "cmdk": "^1.1.1",
     "csv-parse": "^5.6.0",
     "d3": "^7.9.0",
+    "d3-scale": "^4.0.2",
+    "d3-shape": "^3.2.0",
     "date-fns": "^3.6.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^17.2.3",
@@ -102,9 +106,7 @@
     "framer-motion": "^11.18.2",
     "gray-matter": "^4.0.3",
     "hotkeys-js": "^3.13.15",
-    "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",
-    "jspdf": "^3.0.3",
     "ldrs": "^1.1.9",
     "lucide-react": "^0.544.0",
     "mdx": "^0.3.1",
@@ -132,6 +134,7 @@
     "react-icons": "^5.5.0",
     "react-resizable-panels": "^2.1.9",
     "react-zoom-pan-pinch": "^3.7.0",
+    "read-excel-file": "9.0.10",
     "recharts": "^2.15.4",
     "rehype-autolink-headings": "^7.1.0",
     "rehype-img-size": "^1.0.1",
@@ -152,7 +155,6 @@
     "use-stick-to-bottom": "^1.1.1",
     "uuid": "^13.0.0",
     "vaul": "^1.1.2",
-    "xlsx": "^0.18.5",
     "yjs": "^13.6.23",
     "youtube-transcript": "^1.2.1",
     "zod": "^4.1.12",
@@ -161,6 +163,8 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.16",
     "@types/d3": "^7.4.3",
+    "@types/d3-scale": "^4.0.9",
+    "@types/d3-shape": "^3.1.8",
     "@types/ms": "^2.1.0",
     "@types/node": "^25.0.3",
     "@types/papaparse": "^5.3.15",
@@ -176,6 +180,7 @@
     "tailwindcss": "^4.1.16",
     "ts-node": "^10.9.2",
     "tw-animate-css": "latest",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "^4.1.7"
   }
 }

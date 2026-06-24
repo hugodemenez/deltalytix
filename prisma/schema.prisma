@@ -159,6 +159,7 @@ model Synchronization {
   tokenExpiresAt   DateTime?
   dailySyncTime    DateTime?
   includedFeeTypes Json?
+  environment      String    @default("demo")
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, service, accountId])

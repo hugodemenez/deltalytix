@@ -1,5 +1,7 @@
 import React from 'react'
+import { setStaticParamsLocale } from 'next-international/server'
 import { getI18n } from '@/locales/server'
+import { getStaticParams as getLocaleStaticParams } from '@/locales/server'
 import CompletedTimeline from '../components/completed-timeline'
 import { getAllPosts } from '@/lib/posts'
 import { getLatestVideoFromPlaylist } from '@/app/[locale]/admin/actions/youtube'
@@ -10,12 +12,20 @@ interface PageProps {
   }>
 }
 
+export const revalidate = 3600
+
+export function generateStaticParams() {
+  return getLocaleStaticParams()
+}
+
 export default async function UpdatesPage(props: PageProps) {
   const params = await props.params;
 
   const {
     locale
   } = params;
+
+  setStaticParamsLocale(locale)
 
   const t = await getI18n()
   const posts = await getAllPosts(locale)

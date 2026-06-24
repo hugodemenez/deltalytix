@@ -60,12 +60,39 @@ const logger = {
 }
 
 
-// Environment URLs - demo only
+export type TradovateEnvironment = 'demo' | 'live'
+
+// Environment URLs - OAuth authorization is shared, API host differs per environment
 const TRADOVATE_ENVIRONMENTS = {
   demo: {
     auth: 'https://trader.tradovate.com', // OAuth authorization
     api: 'https://demo.tradovateapi.com'   // API calls
+  },
+  live: {
+    auth: 'https://trader.tradovate.com', // OAuth authorization
+    api: 'https://live.tradovateapi.com'   // API calls
   }
+} as const
+
+// Resolve the API base URL for a given environment, defaulting to demo for safety
+function getApiBaseUrl(environment: TradovateEnvironment = 'demo'): string {
+  return TRADOVATE_ENVIRONMENTS[environment]?.api ?? TRADOVATE_ENVIRONMENTS.demo.api
+}
+
+// Normalize an arbitrary value into a valid environment
+function normalizeEnvironment(value: unknown): TradovateEnvironment {
+  return value === 'live' ? 'live' : 'demo'
+}
+
+// The OAuth state is encoded as `${environment}.${randomHex}` so the environment
+// chosen at initiation survives the redirect and is recoverable in the callback.
+function encodeOAuthState(environment: TradovateEnvironment, nonce: string): string {
+  return `${environment}.${nonce}`
+}
+
+function decodeEnvironmentFromState(state: string): TradovateEnvironment {
+  const [prefix] = state.split('.')
+  return normalizeEnvironment(prefix)
 }
 
 interface TradovateAccount {
@@ -183,9 +210,9 @@ interface TradovateTradesResult {
 }
 
 // Helper function to fetch contract details
-async function getContractById(accessToken: string, contractId: number): Promise<TradovateContract | null> {
+async function getContractById(accessToken: string, contractId: number, environment: TradovateEnvironment = 'demo'): Promise<TradovateContract | null> {
   try {
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    const apiBaseUrl = getApiBaseUrl(environment)
     const params = new URLSearchParams({ id: String(contractId) }).toString()
     const response = await fetch(`${apiBaseUrl}/v1/contract/item?${params}`, {
       headers: {
@@ -207,11 +234,11 @@ async function getContractById(accessToken: string, contractId: number): Promise
 }
 
 // Helper function to fetch multiple fill fees by IDs in batch with fallback
-async function getFillFeesByIds(accessToken: string, fillIds: number[]): Promise<TradovateFillFee[]> {
+async function getFillFeesByIds(accessToken: string, fillIds: number[], environment: TradovateEnvironment = 'demo'): Promise<TradovateFillFee[]> {
   try {
     if (fillIds.length === 0) return []
-    
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+
+    const apiBaseUrl = getApiBaseUrl(environment)
     const BATCH_SIZE = 5 // Limit batch size to 5 IDs at a time
     
     const fees: TradovateFillFee[] = []
@@ -240,7 +267,7 @@ async function getFillFeesByIds(accessToken: string, fillIds: number[]): Promise
           // Fallback to individual requests for this batch
           const batchPromises = batch.map(async (fillId) => {
             try {
-              const fee = await getFillFeeById(accessToken, fillId)
+              const fee = await getFillFeeById(accessToken, fillId, environment)
               return fee
             } catch (error) {
               logger.warn(`Failed to fetch fill fee ${fillId}:`, error)
@@ -282,9 +309,9 @@ async function getFillFeesByIds(accessToken: string, fillIds: number[]): Promise
 }
 
 // Helper function to fetch fill fees (kept for backward compatibility)
-async function getFillFeeById(accessToken: string, fillId: number): Promise<TradovateFillFee | null> {
+async function getFillFeeById(accessToken: string, fillId: number, environment: TradovateEnvironment = 'demo'): Promise<TradovateFillFee | null> {
   try {
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    const apiBaseUrl = getApiBaseUrl(environment)
     const params = new URLSearchParams({ id: String(fillId) }).toString()
     const response = await fetch(`${apiBaseUrl}/v1/fillFee/item?${params}`, {
       headers: {
@@ -306,9 +333,9 @@ async function getFillFeeById(accessToken: string, fillId: number): Promise<Trad
 }
 
 // Helper function to fetch fill pairs
-async function getFillPairs(accessToken: string): Promise<TradovateFillPair[]> {
+async function getFillPairs(accessToken: string, environment: TradovateEnvironment = 'demo'): Promise<TradovateFillPair[]> {
   try {
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    const apiBaseUrl = getApiBaseUrl(environment)
     const response = await fetch(`${apiBaseUrl}/v1/fillPair/list`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -330,12 +357,12 @@ async function getFillPairs(accessToken: string): Promise<TradovateFillPair[]> {
 }
 
 // Helper function to fetch multiple fills by IDs in batch with fallback
-async function getFillsByIds(accessToken: string, fillIds: number[]): Promise<any[]> {
+async function getFillsByIds(accessToken: string, fillIds: number[], environment: TradovateEnvironment = 'demo'): Promise<any[]> {
   console.warn('getFillsByIds')
   try {
     if (fillIds.length === 0) return []
-    
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+
+    const apiBaseUrl = getApiBaseUrl(environment)
     const BATCH_SIZE = 5 // Limit batch size to 5 IDs at a time
     
     const fills: any[] = []
@@ -408,9 +435,9 @@ async function getFillsByIds(accessToken: string, fillIds: number[]): Promise<an
 }
 
 // Helper function to fetch individual fill details (kept for backward compatibility)
-async function getFillById(accessToken: string, fillId: number): Promise<any | null> {
+async function getFillById(accessToken: string, fillId: number, environment: TradovateEnvironment = 'demo'): Promise<any | null> {
   try {
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    const apiBaseUrl = getApiBaseUrl(environment)
     const params = new URLSearchParams({ id: String(fillId) }).toString()
     const response = await fetch(`${apiBaseUrl}/v1/fill/item?${params}`, {
       headers: {
@@ -432,11 +459,11 @@ async function getFillById(accessToken: string, fillId: number): Promise<any | n
 }
 
 // Helper function to fetch multiple orders by IDs in batch with fallback
-async function getOrdersByIds(accessToken: string, orderIds: number[]): Promise<any[]> {
+async function getOrdersByIds(accessToken: string, orderIds: number[], environment: TradovateEnvironment = 'demo'): Promise<any[]> {
   try {
     if (orderIds.length === 0) return []
-    
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+
+    const apiBaseUrl = getApiBaseUrl(environment)
     console.warn('getOrdersByIds', JSON.stringify(orderIds))
     const BATCH_SIZE = 5 // Limit batch size to 5 IDs at a time
     
@@ -484,7 +511,7 @@ async function getOrdersByIds(accessToken: string, orderIds: number[]): Promise<
         // Fallback to individual requests for this batch
         const batchPromises = batch.map(async (orderId) => {
           try {
-            const order = await getOrderById(accessToken, orderId)
+            const order = await getOrderById(accessToken, orderId, environment)
             return order
           } catch (error) {
             logger.warn(`Failed to fetch order ${orderId}:`, error)
@@ -510,9 +537,9 @@ async function getOrdersByIds(accessToken: string, orderIds: number[]): Promise<
 }
 
 // Helper function to fetch order details by orderId (kept for backward compatibility)
-async function getOrderById(accessToken: string, orderId: number): Promise<any | null> {
+async function getOrderById(accessToken: string, orderId: number, environment: TradovateEnvironment = 'demo'): Promise<any | null> {
   try {
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    const apiBaseUrl = getApiBaseUrl(environment)
     const params = new URLSearchParams({ id: String(orderId) }).toString()
     const response = await fetch(`${apiBaseUrl}/v1/order/item?${params}`, {
       headers: {
@@ -550,8 +577,8 @@ interface TradovateUserListResponse {
   data?: TradovateUser[]
 }
 
-export async function getTradovateUsername(accessToken: string): Promise<string> {
-  const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.auth
+export async function getTradovateUsername(accessToken: string, environment: TradovateEnvironment = 'demo'): Promise<string> {
+  const apiBaseUrl = getApiBaseUrl(environment)
   const response = await fetch(`${apiBaseUrl}/v1/user/list`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -584,9 +611,12 @@ export async function getTradovateUsername(accessToken: string): Promise<string>
 }
 
 
-export async function initiateTradovateOAuth(accountId: string = 'default'): Promise<TradovateOAuthResult> {
+export async function initiateTradovateOAuth(
+  accountId: string = 'default',
+  environment: TradovateEnvironment = 'demo'
+): Promise<TradovateOAuthResult> {
   try {
-    console.log('Initiating Tradovate OAuth (demo only)...')
+    console.log(`Initiating Tradovate OAuth (${environment})...`)
     console.log('Environment variables check:', {
       hasClientId: !!TRADOVATE_CLIENT_ID,
       hasRedirectUri: !!TRADOVATE_REDIRECT_URI,
@@ -602,9 +632,11 @@ export async function initiateTradovateOAuth(accountId: string = 'default'): Pro
       return { error: 'Tradovate OAuth credentials not configured' }
     }
 
-    // Generate state parameter for security
-    const state = crypto.randomBytes(32).toString('hex')
-    console.log('Generated OAuth state:', state.substring(0, 8) + '...')
+    // Generate state parameter for security, encoding the chosen environment so it
+    // can be recovered in the callback (the state round-trips through the redirect)
+    const nonce = crypto.randomBytes(32).toString('hex')
+    const state = encodeOAuthState(environment, nonce)
+    console.log('Generated OAuth state:', state.substring(0, 16) + '...')
     
     // Verify user is authenticated
     const supabase = await createClient()
@@ -617,9 +649,9 @@ export async function initiateTradovateOAuth(accountId: string = 'default'): Pro
 
     console.log('User authenticated:', { userId: user.id })
 
-    // Build OAuth URL using demo environment
-    const authBaseUrl = TRADOVATE_ENVIRONMENTS.demo.auth
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    // Build OAuth URL for the selected environment
+    const authBaseUrl = TRADOVATE_ENVIRONMENTS[environment].auth
+    const apiBaseUrl = TRADOVATE_ENVIRONMENTS[environment].api
     console.log('Using auth URL:', authBaseUrl)
     console.log('Using API URL:', apiBaseUrl)
     
@@ -643,8 +675,8 @@ export async function initiateTradovateOAuth(accountId: string = 'default'): Pro
   }
 }
 
-export async function getPropfirmName(accessToken: string): Promise<string> {
-  const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+export async function getPropfirmName(accessToken: string, environment: TradovateEnvironment = 'demo'): Promise<string> {
+  const apiBaseUrl = getApiBaseUrl(environment)
   const response = await fetch(`${apiBaseUrl}/v1/organization/list`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -666,10 +698,12 @@ export async function getPropfirmName(accessToken: string): Promise<string> {
 
 export async function handleTradovateCallback(code: string, state: string): Promise<TradovateOAuthResult> {
   try {
-    console.log('Processing Tradovate OAuth callback (demo only):', { 
-      hasCode: !!code, 
+    // Recover the environment chosen at initiation from the state parameter
+    const environment = decodeEnvironmentFromState(state)
+    console.log(`Processing Tradovate OAuth callback (${environment}):`, {
+      hasCode: !!code,
       hasState: !!state,
-      state: state?.substring(0, 8) + '...'
+      state: state?.substring(0, 16) + '...'
     })
 
     // Validate environment variables first
@@ -690,9 +724,9 @@ export async function handleTradovateCallback(code: string, state: string): Prom
       return { error: 'User not authenticated' }
     }
 
-    // Exchange code for tokens using demo environment
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
-    console.log('Exchanging code for tokens:', { apiBaseUrl, userId: user.id })
+    // Exchange code for tokens using the selected environment
+    const apiBaseUrl = TRADOVATE_ENVIRONMENTS[environment].api
+    console.log('Exchanging code for tokens:', { apiBaseUrl, environment, userId: user.id })
     
     const tokenResponse = await fetch(`${apiBaseUrl}/auth/oauthtoken`, {
       method: 'POST',
@@ -755,13 +789,13 @@ export async function handleTradovateCallback(code: string, state: string): Prom
     const expiresAt = formatDateForAPI(new Date(Date.now() + (tokens.expires_in * 1000)))
     
     // Get account information from the token to determine accountId
-    // API provides an endpoint https://demo.tradovateapi.com/v1/auth/me
-    const propfirm = await getPropfirmName(tokens.access_token)
+    // API provides an endpoint https://{env}.tradovateapi.com/v1/auth/me
+    const propfirm = await getPropfirmName(tokens.access_token, environment)
     // Store token in database
     const storeResult = await storeTradovateToken(
       tokens.access_token,
       expiresAt,
-      'demo', //Environment default to demo for now
+      environment,
       propfirm //accountId
     )
     if (storeResult.error) {
@@ -785,9 +819,9 @@ export async function handleTradovateCallback(code: string, state: string): Prom
 }
 
 // New function using Tradovate's renewAccessToken endpoint
-export async function renewTradovateAccessToken(accessToken: string, environment: 'demo' | 'live' = 'demo'): Promise<TradovateOAuthResult> {
+export async function renewTradovateAccessToken(accessToken: string, environment: TradovateEnvironment = 'demo'): Promise<TradovateOAuthResult> {
   try {
-    const apiBaseUrl = environment === 'demo' ? TRADOVATE_ENVIRONMENTS.demo.api : 'https://live.tradovateapi.com'
+    const apiBaseUrl = getApiBaseUrl(environment)
     
     const renewal = await fetch(`${apiBaseUrl}/auth/renewAccessToken`, {
       method: 'GET',
@@ -837,7 +871,7 @@ export async function renewTradovateAccessToken(accessToken: string, environment
 }
 
 // Keep the old function for backward compatibility (OAuth refresh)
-export async function refreshTradovateToken(refreshToken: string): Promise<TradovateOAuthResult> {
+export async function refreshTradovateToken(refreshToken: string, environment: TradovateEnvironment = 'demo'): Promise<TradovateOAuthResult> {
   try {
     if (!TRADOVATE_CLIENT_ID || !TRADOVATE_CLIENT_SECRET) {
       return { error: 'Tradovate OAuth credentials not configured' }
@@ -851,7 +885,7 @@ export async function refreshTradovateToken(refreshToken: string): Promise<Trado
       return { error: 'User not authenticated' }
     }
 
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    const apiBaseUrl = getApiBaseUrl(environment)
     const tokenResponse = await fetch(`${apiBaseUrl}/auth/oauthtoken`, {
       method: 'POST',
       headers: {
@@ -910,10 +944,10 @@ export async function refreshTradovateToken(refreshToken: string): Promise<Trado
 }
 
 // Test authentication with demo user list endpoint
-export async function testTradovateAuth(accessToken: string) {
+export async function testTradovateAuth(accessToken: string, environment: TradovateEnvironment = 'demo') {
   try {
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
-    console.log('Testing Tradovate authentication with demo user list endpoint')
+    const apiBaseUrl = getApiBaseUrl(environment)
+    console.log(`Testing Tradovate authentication with ${environment} user list endpoint`)
     
     const response = await fetch(`${apiBaseUrl}/v1/user/list`, {
       headers: {
@@ -943,10 +977,10 @@ export async function testTradovateAuth(accessToken: string) {
   }
 }
 
-export async function getTradovateAccounts(accessToken: string): Promise<TradovateAccountsResult> {
+export async function getTradovateAccounts(accessToken: string, environment: TradovateEnvironment = 'demo'): Promise<TradovateAccountsResult> {
   try {
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
-    console.log('Fetching Tradovate accounts (demo only):', { 
+    const apiBaseUrl = getApiBaseUrl(environment)
+    console.log(`Fetching Tradovate accounts (${environment}):`, {
       apiBaseUrl,
       hasToken: !!accessToken,
       tokenPrefix: accessToken?.substring(0, 10) + '...'
@@ -980,7 +1014,7 @@ export async function getTradovateAccounts(accessToken: string): Promise<Tradova
     
     if (!Array.isArray(accounts) || accounts.length === 0) {
       console.log('No accounts returned from Tradovate')
-      return { error: 'No accounts found on demo environment' }
+      return { error: `No accounts found on ${environment} environment` }
     }
 
     console.log('Final accounts result:', {
@@ -1188,7 +1222,7 @@ async function buildTradesFromFillPairs(
 export async function storeTradovateToken(
   accessToken: string,
   expiresAt: string,
-  environment: 'demo' | 'live' = 'demo',
+  environment: TradovateEnvironment = 'demo',
   accountId: string = 'default'
 ) {
   try {
@@ -1211,6 +1245,7 @@ export async function storeTradovateToken(
       update: {
         token: accessToken,
         tokenExpiresAt: new Date(expiresAt),
+        environment,
         lastSyncedAt: new Date(),
         updatedAt: new Date()
       },
@@ -1220,6 +1255,7 @@ export async function storeTradovateToken(
         accountId: accountId,
         token: accessToken,
         tokenExpiresAt: new Date(expiresAt),
+        environment,
         lastSyncedAt: new Date()
       }
     })
@@ -1266,7 +1302,7 @@ export async function getTradovateToken(accountId: string = 'default') {
     return {
       accessToken: syncData.token,
       expiresAt: syncData.tokenExpiresAt?.toISOString() || '',
-      environment: 'demo', // Default to demo for now
+      environment: normalizeEnvironment(syncData.environment),
       accountId: syncData.accountId,
       includedFeeTypes: includedFeeTypes ?? undefined
     }
@@ -1369,7 +1405,7 @@ export async function setCustomTradovateToken(
   accessToken: string,
   expiresAt: string,
   accountId: string = 'custom',
-  environment: 'demo' | 'live' = 'demo'
+  environment: TradovateEnvironment = 'demo'
 ) {
   try {
     const supabase = await createClient()
@@ -1418,7 +1454,7 @@ export async function setCustomTradovateToken(
 // Function to test a custom access token without storing it
 export async function testCustomTradovateToken(
   accessToken: string,
-  environment: 'demo' | 'live' = 'demo'
+  environment: TradovateEnvironment = 'demo'
 ) {
   try {
     // Validate token format (basic check)
@@ -1427,7 +1463,7 @@ export async function testCustomTradovateToken(
     }
 
     // Test the token by making a simple API call
-    const apiBaseUrl = environment === 'demo' ? TRADOVATE_ENVIRONMENTS.demo.api : 'https://live.tradovateapi.com'
+    const apiBaseUrl = getApiBaseUrl(environment)
     
     const response = await fetch(`${apiBaseUrl}/v1/user/list`, {
       headers: {
@@ -1487,12 +1523,13 @@ async function updateLastSyncedAt(userId: string, accessToken: string) {
   
 export async function getTradovateTrades(
   accessToken: string,
-  options?: { userId?: string; includeAllFees?: boolean; includedFeeTypes?: TradovateIncludedFeeTypes }
+  options?: { userId?: string; includeAllFees?: boolean; includedFeeTypes?: TradovateIncludedFeeTypes; environment?: TradovateEnvironment }
 ): Promise<TradovateTradesResult> {
   try {
     // If we are on the server
     // Identify user by access token
-    logger.info('Fetching Tradovate fill pairs for improved trade building (demo only)')
+    const environment = normalizeEnvironment(options?.environment)
+    logger.info(`Fetching Tradovate fill pairs for improved trade building (${environment})`)
     const includedFeeTypes: TradovateIncludedFeeTypes | boolean =
       options?.includedFeeTypes ?? (options?.includeAllFees ? true : DEFAULT_INCLUDED_FEE_TYPES)
 
@@ -1506,18 +1543,22 @@ export async function getTradovateTrades(
       }
       userId = user.id
     }
+    if (!userId) {
+      return { error: 'User not authenticated' }
+    }
+    const resolvedUserId = userId
 
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    const apiBaseUrl = getApiBaseUrl(environment)
 
     // Fetch fill pairs which are trades
     logger.info('Fetching fill pairs...')
-    const fillPairs = await getFillPairs(accessToken)
+    const fillPairs = await getFillPairs(accessToken, environment)
     logger.info(`Received ${fillPairs.length} fill pairs from Tradovate`)
     
     // Means there are no trades to import
     if (fillPairs.length === 0) {
       logger.info('No fill pairs returned from Tradovate')
-      await updateLastSyncedAt(userId, accessToken)
+      await updateLastSyncedAt(resolvedUserId, accessToken)
       return { processedTrades: [], savedCount: 0, ordersCount: 0 }
     }
 
@@ -1545,8 +1586,8 @@ export async function getTradovateTrades(
 
     // Step 2: Fetch all fills and fees in parallel batches
     const [allFills, allFees] = await Promise.all([
-      getFillsByIds(accessToken, Array.from(allFillIds)),
-      getFillFeesByIds(accessToken, Array.from(allFillIds))
+      getFillsByIds(accessToken, Array.from(allFillIds), environment),
+      getFillFeesByIds(accessToken, Array.from(allFillIds), environment)
     ])
 
     logger.info(`Fetched ${allFills.length} fills and ${allFees.length} fees in batch`)
@@ -1579,7 +1620,7 @@ export async function getTradovateTrades(
     const contracts = new Map<number, TradovateContract>()
     const contractPromises = Array.from(uniqueContractIds).map(async (contractId) => {
       try {
-        const contract = await getContractById(accessToken, contractId)
+        const contract = await getContractById(accessToken, contractId, environment)
         if (contract) {
           contracts.set(contractId, contract)
           logger.debug(`Contract ${contractId}: ${contract.name} (${contract.symbol})`)
@@ -1603,7 +1644,7 @@ export async function getTradovateTrades(
     logger.info(`Fetching ${sellOrderIds.size} sell order details for account resolution`)
 
     // Fetch only sell order details in batch
-    const sellOrders = await getOrdersByIds(accessToken, Array.from(sellOrderIds))
+    const sellOrders = await getOrdersByIds(accessToken, Array.from(sellOrderIds), environment)
     const ordersById = new Map<number, any>()
     sellOrders.forEach(order => {
       ordersById.set(order.id, order)
@@ -1616,9 +1657,17 @@ export async function getTradovateTrades(
     logger.info(`Fetched ${tickDetails.length} tick details`)
 
     // Build trades using fill pairs with account resolution
-    const processedTrades = await buildTradesFromFillPairs(fillPairs, contracts, fillsById, ordersById, accountsById, userId, tickDetails)
+    const processedTrades = await buildTradesFromFillPairs(
+      fillPairs,
+      contracts,
+      fillsById,
+      ordersById,
+      accountsById,
+      resolvedUserId,
+      tickDetails,
+    )
     
-    await updateLastSyncedAt(userId, accessToken)
+    await updateLastSyncedAt(resolvedUserId, accessToken)
 
     if (processedTrades.length === 0) {
       logger.info('No trades could be created from fill pairs')
@@ -1627,7 +1676,7 @@ export async function getTradovateTrades(
 
     // Save trades to database
     logger.info(`Attempting to save ${processedTrades.length} fill pair trades to database`)
-    const saveResult = await saveTradesAction(processedTrades, { userId })
+    const saveResult = await saveTradesAction(processedTrades, { userId: resolvedUserId })
     
     if (saveResult.error) {
       if (saveResult.error === "DUPLICATE_TRADES") {

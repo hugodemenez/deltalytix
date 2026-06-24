@@ -1,0 +1,15 @@
+---
+title: 'DxFeed sync: trades load again with correct PnL'
+description: 'Fixed empty syncs, expired sessions, and commission math for DxFeed imports.'
+date: '2026-05-25'
+status: completed
+completedDate: '2026-05-25'
+---
+
+# DxFeed sync: trades load again with correct PnL
+
+DxFeed sync now talks to the **correct history server** for your prop firm, which fixes cases where sync ran but returned no trades even though you had closed positions.
+
+When your session expires, the connection is marked **Expired** and sync prompts you to **Reconnect** instead of failing quietly. Imported trades now store **gross PnL** in the trade row and derive **commission** from the difference between gross and net, so fees are not counted twice in your dashboard totals.
+
+Sync also explains when DxFeed only returns open positions—those are skipped until you close the trade on your platform and sync again.

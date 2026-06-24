@@ -2,7 +2,8 @@
 
 # AI rules file
 .cursorrules
-.cursor
+.cursor/*
+!.cursor/environment.json
 WARP.md
 .github/instructions/
 
@@ -36,6 +37,7 @@ yarn-error.log*
 
 # env files
 .env
+.env*.local
 
 # vercel
 .vercel
@@ -63,4 +65,4 @@ datafeeds/
 **/market/**
 
 # Lock files
-*.lock
+!bun.lock

@@ -1,6 +1,8 @@
 const FALLBACK_SITE_HOST = "deltalytix.app";
 const FALLBACK_SITE_ORIGIN = `https://${FALLBACK_SITE_HOST}`;
-const TRUSTED_HOST_SUFFIXES = [`.${FALLBACK_SITE_HOST}`];
+// `.vercel.app` is trusted so preview deployments self-reference (OG/metadata
+// only). Trade-off: the app will reflect any *.vercel.app Host header.
+const TRUSTED_HOST_SUFFIXES = [`.${FALLBACK_SITE_HOST}`, ".vercel.app"];
 
 type HeaderLike = {
   get(name: string): string | null;

@@ -1,0 +1,15 @@
+---
+title: 'Settings: configurable breakeven range'
+description: 'Define what counts as a breakeven trade so win rate and distribution match how you actually trade.'
+date: '2026-06-06'
+status: completed
+completedDate: '2026-06-07'
+---
+
+# Settings: configurable breakeven range
+
+**Settings** now has a **Trading Preferences** section where you can set a **breakeven range**—the net P&L band (after commissions) that should count as breakeven instead of a win or loss. For example, setting -10 to 10 treats any trade between -$10 and +$10 net as breakeven.
+
+That range flows through the dashboard: **statistics**, **trade distribution**, and **calendar day stats** all use it for win/loss/breakeven counts and win rate. Your choice is saved in the browser, and you can reset to the default (exactly $0) anytime.
+
+When you **export a PDF statement** from the Share dialog, the summary and trade distribution chart use the same range, so the file matches what you see on screen. Embeddable **trade distribution** widgets also accept optional `beMin` and `beMax` URL parameters if you want the same logic on a shared embed.

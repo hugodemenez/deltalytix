@@ -7,6 +7,11 @@ import {
   homepageMarkdown,
   linkHeaderValue,
 } from "@/lib/agent-discovery/metadata"
+import {
+  getLocalDashboardUserEmail,
+  getLocalDashboardUserId,
+  isLocalDashboardAuthBypassEnabled,
+} from "@/lib/local-dashboard-auth"
 
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
@@ -15,7 +20,7 @@ const LOCALES = ["en", "fr", "de", "es", "it", "pt", "vi", "hi", "ja", "zh", "yo
 const I18nMiddleware = createI18nMiddleware({
   locales: LOCALES,
   defaultLocale: "en",
-  urlMappingStrategy: "rewrite",
+  urlMappingStrategy: "redirect",
 })
 
 const HOMEPAGE_PATHS = new Set([
@@ -99,6 +104,21 @@ async function updateSession(request: NextRequest) {
       headers: request.headers,
     },
   })
+
+  if (isLocalDashboardAuthBypassEnabled()) {
+    const localUserId = getLocalDashboardUserId()
+    const localUserEmail = getLocalDashboardUserEmail()
+
+    response.headers.set("x-user-id", localUserId)
+    response.headers.set("x-user-email", localUserEmail)
+    response.headers.set("x-auth-status", "authenticated")
+
+    return {
+      response,
+      user: { id: localUserId, email: localUserEmail } as unknown as User,
+      error: null,
+    }
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -206,6 +226,24 @@ export default async function proxy(req: NextRequest) {
   // Apply i18n middleware first
   const response = I18nMiddleware(req)
 
+  // next-international persists the locale in the Next-Locale cookie without an
+  // explicit path, so the browser scopes it to the directory of the request URL.
+  // When the language is switched from a nested route the change-locale helper
+  // navigates to e.g. /fr/updates, and the cookie ends up scoped to "/fr" - it is
+  // then never sent for the locale-less URLs the app actually uses (rewrite
+  // strategy), so the choice neither applies nor persists. Re-set it with an
+  // explicit path "/" using the resolved locale exposed via the X-Next-Locale
+  // header so the selection sticks across every route.
+  const resolvedLocale = response.headers.get("X-Next-Locale")
+  if (resolvedLocale) {
+    response.cookies.set("Next-Locale", resolvedLocale, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    })
+  }
+
 
   // Then update session
   const { response: authResponse, user, error } = await updateSession(req)
@@ -261,8 +299,13 @@ export default async function proxy(req: NextRequest) {
     
     return addAgentDiscoveryHeaders(response, req);
   }
-  // Merge responses - copy headers from auth response to i18n response
+  // Merge responses - copy headers from auth response to i18n response.
+  // Skip "set-cookie": overwriting it would clobber the Next-Locale cookie that
+  // the i18n middleware sets to persist the selected language. Auth cookies are
+  // merged separately below via the cookies API (which appends rather than
+  // replaces), so the locale cookie survives.
   authResponse.headers.forEach((value, key) => {
+    if (key.toLowerCase() === "set-cookie") return
     response.headers.set(key, value)
   })
 

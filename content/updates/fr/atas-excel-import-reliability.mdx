@@ -1,0 +1,17 @@
+---
+title: 'Import ATAS Excel : lecture des classeurs plus fiable'
+description: 'Les imports du journal ATAS tolerent mieux les vrais fichiers Excel, avec des erreurs plus claires.'
+date: '2026-05-19'
+status: completed
+completedDate: '2026-05-19'
+---
+
+# Import ATAS Excel : lecture des classeurs plus fiable
+
+Si vous importez vos trades **ATAS** via l'export Excel du journal, les fichiers qui bloquaient avant devraient passer plus souvent. L'import cherche la feuille **Journal**, ignore mieux les lignes vides et verifie que toutes les colonnes obligatoires sont la avant la suite.
+
+L'import prend actuellement en charge uniquement les classeurs `.xlsx`. Il accepte les feuilles **Journal** et **Journal commercial**.
+
+Attention : les cellules date Excel ne contiennent pas de fuseau horaire. Si un export ATAS stocke les heures d'ouverture ou de cloture comme des dates Excel plutot que comme du texte, les horaires importes peuvent dependre du fuseau de l'appareil qui effectue l'import.
+
+En cas de probleme, le message est explicite—feuille manquante, journal vide ou colonnes qui ne correspondent pas—au lieu d'une erreur de parsing vague. Vous corrigez l'export dans ATAS et vous relancez depuis **Tableau de bord → Import → ATAS**.

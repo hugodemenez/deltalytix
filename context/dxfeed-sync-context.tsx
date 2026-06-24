@@ -4,6 +4,91 @@ import { createContext, useContext, useEffect, useState, useRef, useCallback, Re
 import { useData } from '@/context/data-provider'
 import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
+import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
+import { formatDxFeedError, getDxFeedErrorToastContent } from '@/lib/dxfeed-client-messages'
+import { runToastWithCopy, showToastWithCopy } from '@/lib/toast-copy'
+import type { DxFeedSyncStats } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/dxfeed-types'
+
+interface DxFeedSyncApiPayload {
+  success?: boolean
+  message?: string
+  errorParams?: Record<string, string | number>
+  savedCount?: number
+  tradesCount?: number
+  syncStats?: DxFeedSyncStats
+}
+
+function buildSyncLabel(account: DxFeedSyncAccount, t: unknown): string {
+  const translate = t as (key: string, params?: Record<string, string | number>) => string
+  const tradingCount = account.accountNumbers.length
+  if (account.propFirmName) {
+    return tradingCount > 0
+      ? `${account.propFirmName} (${tradingCount} ${translate('dxfeedSync.multiAccount.accountsCount')})`
+      : account.propFirmName
+  }
+  return account.accountId
+}
+
+function buildSyncSuccessToast(
+  t: unknown,
+  syncLabel: string,
+  payload: DxFeedSyncApiPayload,
+): { title: string; description?: string } {
+  const translate = t as (key: string, params?: Record<string, string | number>) => string
+  const savedCount = payload.savedCount ?? 0
+  const tradesCount = payload.tradesCount ?? 0
+  const stats = payload.syncStats
+
+  if (savedCount > 0) {
+    return {
+      title: translate('dxfeedSync.multiAccount.syncCompleteForAccount', {
+        savedCount,
+        tradesCount,
+        accountId: syncLabel,
+      }),
+    }
+  }
+
+  if (tradesCount > 0) {
+    return {
+      title: translate('dxfeedSync.multiAccount.syncCompleteNoNewTradesForAccount', {
+        tradesCount,
+        accountId: syncLabel,
+      }),
+    }
+  }
+
+  if (stats && stats.rawTrades > 0 && stats.closedTrades === 0) {
+    return {
+      title: translate('dxfeedSync.sync.openOnlyTitle', {
+        accountId: syncLabel,
+        raw: stats.rawTrades,
+        open: stats.openTradesSkipped,
+      }),
+      description: translate('dxfeedSync.sync.openOnlyDescription'),
+    }
+  }
+
+  if (stats && stats.rawTrades === 0 && stats.fetchFailures === 0) {
+    return {
+      title: translate('dxfeedSync.sync.noTradesInRangeTitle', { accountId: syncLabel }),
+      description: translate('dxfeedSync.sync.noTradesInRangeDescription'),
+    }
+  }
+
+  return {
+    title: translate('dxfeedSync.multiAccount.syncCompleteNoOrdersForAccount', {
+      accountId: syncLabel,
+    }),
+    description:
+      stats && stats.fetchFailures > 0
+        ? translate('dxfeedSync.sync.partialFetchWarning', {
+            failures: stats.fetchFailures,
+            total: stats.tradingAccounts,
+          })
+        : undefined,
+  }
+}
 /** Client-safe subset of Synchronization (token stripped, replaced with hasToken) */
 export interface DxFeedSyncAccount {
   id: string
@@ -11,6 +96,9 @@ export interface DxFeedSyncAccount {
   service: string
   accountId: string
   hasToken: boolean
+  /** True when saved credentials exist but the DxFeed session is no longer valid */
+  tokenExpired?: boolean
+  propFirmName?: string | null
   accountNumbers: string[]
   lastSyncedAt: Date
   tokenExpiresAt: Date | null
@@ -51,6 +139,8 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
       service: sync.service,
       accountId: sync.accountId,
       hasToken: !!sync.hasToken,
+      tokenExpired: !!sync.tokenExpired,
+      propFirmName: sync.propFirmName ?? null,
       accountNumbers: Array.isArray(sync.accountNumbers) ? sync.accountNumbers : [],
       lastSyncedAt: sync?.lastSyncedAt ? new Date(sync.lastSyncedAt) : new Date(),
       tokenExpiresAt: sync?.tokenExpiresAt ? new Date(sync.tokenExpiresAt) : null,
@@ -77,8 +167,12 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
       setAccounts(data.map(normalizeSynchronization))
     } catch (error) {
       console.warn('Failed to load DxFeed accounts:', error)
+      showToastWithCopy('error', formatDxFeedError(t, 'LOAD_SYNCHRONIZATIONS_FAILED'), {
+        description: t('dxfeedSync.errors.hintContactSupport'),
+        copyLabel: t('common.copy'),
+      })
     }
-  }, [normalizeSynchronization])
+  }, [normalizeSynchronization, t])
 
   const deleteAccount = useCallback(async (accountId: string) => {
     setAccounts((prev) => prev.filter((acc) => acc.accountId !== accountId))
@@ -93,75 +187,79 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
     async (accountId: string) => {
       const account = accounts.find((acc) => acc.accountId === accountId)
       if (!account) {
-        return { success: false, message: `Account ${accountId} not found` }
+        return { success: false, message: t('dxfeedSync.sync.accountNotFound') }
       }
 
-      if (!account.hasToken) {
-        return { success: false, message: `Token for account ${accountId} is missing` }
+      if (account.tokenExpired || !account.hasToken) {
+        return { success: false, message: t('dxfeedSync.sync.tokenMissing') }
       }
 
       try {
-        const runSync = async () => {
-          const response = await fetch('/api/dxfeed/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accountId }),
-          })
+        const syncLabel = buildSyncLabel(account, t)
 
-          const payload = await response.json()
-
-          if (payload?.message === 'DUPLICATE_TRADES') {
-            return t('dxfeedSync.multiAccount.alreadyImportedTrades')
-          }
-
-          if (!response.ok || !payload?.success) {
-            throw new Error(payload?.message || `Sync error for account ${accountId}`)
-          }
-
-          const savedCount = payload.savedCount || 0
-          const tradesCount = payload.tradesCount || 0
-
-          let successMessage: string
-          if (savedCount > 0) {
-            successMessage = t('dxfeedSync.multiAccount.syncCompleteForAccount', {
-              savedCount,
-              tradesCount,
-              accountId,
+        const message = await runToastWithCopy(
+          async () => {
+            const response = await fetch('/api/dxfeed/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ accountId }),
             })
-          } else if (tradesCount > 0) {
-            successMessage = t('dxfeedSync.multiAccount.syncCompleteNoNewTradesForAccount', {
-              tradesCount,
-              accountId,
-            })
-          } else {
-            successMessage = t('dxfeedSync.multiAccount.syncCompleteNoOrdersForAccount', {
-              accountId,
-            })
-          }
 
-          await loadAccounts()
-          await refreshTradesOnly({ force: false })
+            const payload = (await response.json()) as DxFeedSyncApiPayload
 
-          return successMessage
-        }
+            if (
+              payload?.message === DxFeedErrorCode.DUPLICATE_TRADES ||
+              payload?.message === 'DUPLICATE_TRADES'
+            ) {
+              await loadAccounts()
+              await refreshTradesOnly({ force: false })
+              return {
+                title: t('dxfeedSync.multiAccount.alreadyImportedTrades'),
+              }
+            }
 
-        const promise = runSync()
-        toast.promise(promise, {
-          loading: t('dxfeedSync.sync.inProgress', { accountId }),
-          success: (msg: string) => msg,
-          error: (e) =>
-            t('dxfeedSync.sync.syncFailed', {
-              error: e instanceof Error ? e.message : t('dxfeedSync.sync.unknownError'),
-            }),
-        })
-        const message: string = await promise
-        return { success: true, message }
+            if (!response.ok || !payload?.success) {
+              const err = new Error(payload?.message || DxFeedErrorCode.SYNC_FAILED) as Error & {
+                errorParams?: Record<string, string | number>
+              }
+              err.errorParams = payload?.errorParams
+              throw err
+            }
+
+            await loadAccounts()
+            await refreshTradesOnly({ force: false })
+
+            return buildSyncSuccessToast(t, syncLabel, payload)
+          },
+          {
+            loading: t('dxfeedSync.sync.inProgress', { accountId: syncLabel }),
+            success: (result) => result,
+            error: (e) => {
+              const code =
+                e instanceof Error ? e.message : DxFeedErrorCode.SYNC_FAILED
+              const params =
+                e instanceof Error && 'errorParams' in e
+                  ? (e as Error & { errorParams?: Record<string, string | number> }).errorParams
+                  : undefined
+              if (code === DxFeedErrorCode.TOKEN_EXPIRED) {
+                void loadAccounts()
+              }
+              return getDxFeedErrorToastContent(t, code, params)
+            },
+            copyLabel: t('common.copy'),
+          },
+        )
+
+        return { success: true, message: message.title }
       } catch (error) {
-        const errorMsg = `Sync error for account ${accountId}: ${
-          error instanceof Error ? error.message : t('dxfeedSync.sync.unknownError')
-        }`
+        const code =
+          error instanceof Error ? error.message : DxFeedErrorCode.SYNC_FAILED
+        const params =
+          error instanceof Error && 'errorParams' in error
+            ? (error as Error & { errorParams?: Record<string, string | number> }).errorParams
+            : undefined
         console.error('Sync error:', error)
-        return { success: false, message: errorMsg }
+        return { success: false, message: formatDxFeedError(t, code, params) }
       }
     },
     [accounts, t, refreshTradesOnly, loadAccounts],
@@ -174,7 +272,7 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
     setIsAutoSyncing(true)
 
     try {
-      const validAccounts = accounts.filter((acc) => acc.hasToken)
+      const validAccounts = accounts.filter((acc) => acc.hasToken && !acc.tokenExpired)
       if (validAccounts.length === 0) return
 
       for (const account of validAccounts) {
