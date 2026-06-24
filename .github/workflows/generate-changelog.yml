@@ -12,6 +12,10 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: generate-changelog-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: false
+
 jobs:
   generate-changelog:
     runs-on: ubuntu-latest
@@ -32,6 +36,10 @@ jobs:
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             PR_NUMBER="${{ inputs.pr_number }}"
+            if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+              echo "::error::pr_number must be a numeric PR number, got: $PR_NUMBER"
+              exit 1
+            fi
             PR_JSON=$(gh pr view "$PR_NUMBER" --json number,baseRefName,headRefName,baseRefOid,headRefOid,url)
           else
             PR_NUMBER="${{ github.event.pull_request.number }}"
@@ -85,6 +93,7 @@ jobs:
           HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
           HEAD_REF: ${{ steps.pr.outputs.head_ref }}
           BASE_REF: ${{ steps.pr.outputs.base_ref }}
+          REPO_OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
 
@@ -95,8 +104,14 @@ jobs:
             exit 0
           fi
 
-          if gh pr list --head "$BRANCH_NAME" --base "$HEAD_REF" --state open --json number --jq '.[0].number' | grep -q .; then
-            echo "An open changelog PR already exists for PR #${PR_NUMBER}. Skipping generation."
+          EXISTING_PR=$(gh pr list \
+            --head "${REPO_OWNER}:${BRANCH_NAME}" \
+            --base "$HEAD_REF" \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')
+          if [ -n "$EXISTING_PR" ]; then
+            echo "An open changelog PR already exists for PR #${PR_NUMBER} (#${EXISTING_PR}). Skipping generation."
             exit 0
           fi
 
