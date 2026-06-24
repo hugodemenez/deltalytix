@@ -2,6 +2,7 @@
 // These functions can be used on both server and client for consistent results.
 import type { Trade as PrismaTrade } from '@/prisma/generated/prisma/browser'
 import type { Account } from '@/context/data-provider'
+import { clampBalanceAtDrawdownFloor, computeDrawdownLevel } from '@/lib/account-drawdown'
 
 export type AccountMetrics = {
   // Balance and progress
@@ -153,21 +154,24 @@ export function computeAccountMetrics(
     if (runningBalance > highestBalance) highestBalance = runningBalance
   }
   const totalPayouts = validPayouts.reduce((s, p) => s + p.amount, 0)
-  const currentBalance = runningBalance - totalPayouts
+  const rawCurrentBalance = runningBalance - totalPayouts
+  const startingBalance = account.startingBalance || 0
+  const drawdownThreshold = account.drawdownThreshold || 0
 
-  let drawdownLevel: number
-  if (account.trailingDrawdown) {
-    const profitMade = Math.max(0, highestBalance - (account.startingBalance || 0))
-    if (account.trailingStopProfit && profitMade >= account.trailingStopProfit) {
-      drawdownLevel = ((account.startingBalance || 0) + account.trailingStopProfit) - (account.drawdownThreshold || 0)
-    } else {
-      drawdownLevel = highestBalance - (account.drawdownThreshold || 0)
-    }
-  } else {
-    drawdownLevel = (account.startingBalance || 0) - (account.drawdownThreshold || 0)
-  }
+  const drawdownLevel = computeDrawdownLevel({
+    startingBalance,
+    drawdownThreshold,
+    trailingDrawdown: account.trailingDrawdown,
+    trailingStopProfit: account.trailingStopProfit,
+    highestBalance,
+  })
+  const currentBalance = clampBalanceAtDrawdownFloor(
+    rawCurrentBalance,
+    drawdownThreshold,
+    drawdownLevel
+  )
   const remainingLoss = Math.max(0, currentBalance - drawdownLevel)
-  const dd = account.drawdownThreshold || 0
+  const dd = drawdownThreshold
   const drawdownProgress = dd > 0 ? (((dd) - remainingLoss) / dd) * 100 : 0
 
   const currentProfit = currentBalance - (account.startingBalance || 0)
@@ -193,12 +197,14 @@ export function computeAccountMetrics(
   filteredTrades.forEach(t => allDates.add(toDate(t.entryDate)!.toISOString().split('T')[0]))
   ;(account.payouts || []).forEach(p => allDates.add(toDate(p.date)!.toISOString().split('T')[0]))
 
-  let dailyRunningBalance = account.startingBalance || 0
+  let dailyRunningBalance = startingBalance
+  let dailyHighestBalance = startingBalance
   const dailyMetrics: NonNullable<Account['dailyMetrics']> = Array.from(allDates)
     .sort()
     .map(date => {
       const dailyTradesPnL = dailyPnL[date] || 0
       dailyRunningBalance += dailyTradesPnL
+      dailyHighestBalance = Math.max(dailyHighestBalance, dailyRunningBalance)
 
       const dayConsistent = totalProfit <= 0
         ? true
@@ -209,10 +215,23 @@ export function computeAccountMetrics(
         dailyRunningBalance -= payout.amount
       }
 
+      const dailyDrawdownLevel = computeDrawdownLevel({
+        startingBalance,
+        drawdownThreshold,
+        trailingDrawdown: account.trailingDrawdown,
+        trailingStopProfit: account.trailingStopProfit,
+        highestBalance: dailyHighestBalance,
+      })
+      const totalBalance = clampBalanceAtDrawdownFloor(
+        dailyRunningBalance,
+        drawdownThreshold,
+        dailyDrawdownLevel
+      )
+
       return {
         date: new Date(date),
         pnl: dailyTradesPnL,
-        totalBalance: dailyRunningBalance,
+        totalBalance,
         percentageOfTarget: pt > 0 ? (totalProfit / pt) * 100 : 0,
         isConsistent: dayConsistent,
         payout: payout ? {

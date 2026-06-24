@@ -9,6 +9,7 @@ import {
   ChartTooltip,
 } from "@/components/ui/chart"
 import { cn } from "@/lib/utils"
+import { clampBalanceAtDrawdownFloor, computeDrawdownLevel } from "@/lib/account-drawdown"
 
 const chartConfig = {
   balance: {
@@ -134,47 +135,44 @@ export function AccountEquityChart({
     ) => {
       const currentDate = new Date(startDate)
       let runningBalance = initialBalance
-      let maxBalanceToDate = initialBalance
-      let maxDrawdownLevel = initialBalance - drawdownThreshold
-      let hasReachedStopProfit = false
-      const stopProfitBalance = initialBalance + trailingStopProfit
+      let highestBalance = initialBalance
 
       while (currentDate <= endDate) {
         const dayEvents = events.filter(event =>
           event.date.toDateString() === currentDate.toDateString()
         )
 
-        // Find payout event for this day if any
         const payoutEvent = dayEvents.find(event => event.isPayout)
+        const tradeTotal = dayEvents
+          .filter(event => !event.isPayout)
+          .reduce((sum, event) => sum + event.amount, 0)
+        const payoutTotal = dayEvents
+          .filter(event => event.isPayout)
+          .reduce((sum, event) => sum + event.amount, 0)
 
-        const dayTotal = dayEvents.reduce((sum, event) => sum + event.amount, 0)
-        runningBalance += dayTotal
+        runningBalance += tradeTotal
+        highestBalance = Math.max(highestBalance, runningBalance)
+        runningBalance += payoutTotal
 
-        // Calculate current profit relative to initial balance
-        const currentProfit = runningBalance - initialBalance
-
-        if (trailingDrawdown) {
-          if (trailingStopProfit > 0 && currentProfit >= trailingStopProfit) {
-            // If we've reached stop profit, lock the drawdown level
-            if (!hasReachedStopProfit) {
-              hasReachedStopProfit = true
-              maxDrawdownLevel = initialBalance + trailingStopProfit - drawdownThreshold
-            }
-          } else if (!hasReachedStopProfit) {
-            // Only update drawdown level if we haven't reached stop profit
-            if (runningBalance > maxBalanceToDate) {
-              maxBalanceToDate = runningBalance
-              maxDrawdownLevel = maxBalanceToDate - drawdownThreshold
-            }
-          }
-        }
+        const drawdownLevel = computeDrawdownLevel({
+          startingBalance: initialBalance,
+          drawdownThreshold,
+          trailingDrawdown,
+          trailingStopProfit,
+          highestBalance,
+        })
+        const balance = clampBalanceAtDrawdownFloor(
+          runningBalance,
+          drawdownThreshold,
+          drawdownLevel
+        )
 
         dailyPoints.push({
           date: format(currentDate, "yyyy-MM-dd"),
-          balance: runningBalance,
+          balance,
           target: initialBalance + profitTarget,
-          drawdownLevel: maxDrawdownLevel,
-          balanceFormatted: `$${runningBalance.toLocaleString()}`,
+          drawdownLevel,
+          balanceFormatted: `$${balance.toLocaleString()}`,
           isPayout: !!payoutEvent,
           payoutStatus: (payoutEvent as ChartEvent | undefined)?.payoutStatus,
           isAfterReset
