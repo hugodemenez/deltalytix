@@ -1,0 +1,15 @@
+---
+title: 'Le statut de token Tradovate n’affiche plus « expiré » à tort'
+description: 'Les badges reflètent la présence du token, pas une date d’expiration figée au chargement de la page.'
+date: '2026-06-08'
+status: completed
+completedDate: '2026-06-23'
+---
+
+# Le statut de token Tradovate n’affiche plus « expiré » à tort
+
+Dans **Tableau de bord → Import → Synchronisation Tradovate**, le badge **Statut du token** indique désormais si un token est réellement enregistré—et non si un ancien horodatage `tokenExpiresAt` affiché sur la page est dépassé. Laisser l’écran ouvert ne devrait plus passer une connexion saine en **Expiré** tant que le serveur conserve un token valide.
+
+Quand le renouvellement échoue vraiment et que le token est supprimé, vous voyez toujours **Expiré** avec **Reconnecter**. Le tableau se rafraîchit aussi au retour sur l’onglet et après un échec de sync, pour coller à l’état côté serveur.
+
+Les badges **Démo** et **Live** sont inchangés ; ce correctif concerne la confiance dans le statut avant de lancer une sync.
