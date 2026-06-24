@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import Navbar from "./components/navbar";
 import Footer from "./components/footer";
 import { ThemeProvider } from "@/context/theme-provider";
+import { I18nProviderClient } from "@/locales/landing-client";
 
 import { Metadata } from 'next';
 
@@ -38,6 +39,7 @@ export default async function RootLayout(
 
   return (
     <ThemeProvider>
+      <I18nProviderClient locale={locale}>
         <div className="px-2 sm:px-6 lg:px-32">
           <Toaster />
           <Navbar />
@@ -46,6 +48,7 @@ export default async function RootLayout(
           </div>
           <Footer />
         </div>
+      </I18nProviderClient>
     </ThemeProvider>
   );
 }

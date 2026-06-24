@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { User, Bot, Target, AlertTriangle, CheckCircle } from "lucide-react"
-import { useI18n } from "@/locales/client"
+import { useI18n } from "@/locales/landing-client"
 
 interface Message {
   id: string
