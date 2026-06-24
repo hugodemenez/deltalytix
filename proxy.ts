@@ -64,6 +64,9 @@ function isProtectedDashboardPath(pathname: string) {
   )
 }
 
+// Routes that skip Supabase auth for performance. Must NOT include /authentication:
+// logged-in users visiting /authentication?next=... must run updateSession() so the
+// proxy can redirect them to the dashboard (see AGENTS.md health check).
 const PUBLIC_MARKETING_PATHS = new Set([
   "/about",
   "/pricing",
@@ -76,7 +79,6 @@ const PUBLIC_MARKETING_PATHS = new Set([
   "/referral",
   "/newsletter",
   "/maintenance",
-  "/authentication",
 ])
 
 function isPublicRoute(pathname: string) {
