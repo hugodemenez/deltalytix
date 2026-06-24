@@ -1,32 +1,11 @@
-import nextDynamic from "next/dynamic";
+import Features from "./components/features";
+import OpenSource from "./components/open-source";
+import PricingPage from "./pricing/page";
 import Partners from "./components/partners";
+import FAQ from "./components/faq";
 import { setStaticParamsLocale } from "next-international/server";
 import Hero from "./components/hero";
 import { getStaticParams } from "@/locales/server";
-import {
-  FAQSectionSkeleton,
-  FeaturesSectionSkeleton,
-  OpenSourceSectionSkeleton,
-  PricingSectionSkeleton,
-} from "./components/section-skeletons";
-
-const Features = nextDynamic(() => import("./components/features"), {
-  loading: () => <FeaturesSectionSkeleton />,
-});
-
-const PricingPage = nextDynamic(() => import("./pricing/page"), {
-  loading: () => <PricingSectionSkeleton />,
-});
-
-const FAQ = nextDynamic(() => import("./components/faq"), {
-  loading: () => <FAQSectionSkeleton />,
-});
-
-const OpenSource = nextDynamic(() => import("./components/open-source"), {
-  loading: () => <OpenSourceSectionSkeleton />,
-});
-
-export const dynamic = "force-static";
 
 export function generateStaticParams() {
   return getStaticParams();
