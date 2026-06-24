@@ -4,115 +4,97 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
-import { connection } from "next/server";
 import { ScrollLockFix } from "@/components/scroll-lock-fix";
-import { getRequestOrigin, siteUrl } from "@/lib/site-url";
-import { headers } from "next/headers";
+import { getSiteOrigin, siteUrl } from "@/lib/site-url";
 
 const inter = Inter({ subsets: ["latin"] });
+const metadataBase = new URL(getSiteOrigin());
 
-type Props = {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-};
+export const metadata: Metadata = {
+  title: "Deltalytix",
+  description: "Next generation trading dashboard",
+  metadataBase,
+  alternates: {
+    canonical: siteUrl("/"),
+    languages: {
+      "en-US": siteUrl("/"),
+      "fr-FR": siteUrl("/fr"),
+    },
+  },
+  // ---------- OPEN GRAPH ----------
+  openGraph: {
+    title: "Deltalytix",
+    description:
+      "Deltalytix is a next generation trading dashboard that provides real-time insights and analytics for traders.",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Deltalytix Open Graph Image",
+      },
+    ],
+  },
 
-export async function generateMetadata({
-  searchParams,
-}: Props): Promise<Metadata> {
-  const params = searchParams ? await searchParams : undefined;
-  const ref = (params?.ref as string) ?? "";
-  const requestHeaders = await headers();
-
-  // Build the dynamic image URL (works locally & in production)
-  const base = getRequestOrigin(requestHeaders);
-  const ogUrl = `${base}/api/og${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`;
-
-  return {
+  // ---------- TWITTER ----------
+  twitter: {
+    card: "summary_large_image",
     title: "Deltalytix",
     description: "Next generation trading dashboard",
-    metadataBase: new URL(base),
-    alternates: {
-      canonical: siteUrl("/", base),
-      languages: {
-        "en-US": siteUrl("/", base),
-        "fr-FR": siteUrl("/fr", base),
+    images: ["/twitter-image.png"],
+  },
+
+  // ---------- ICONS ----------
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "32x32" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+    other: [
+      { rel: "mask-icon", url: "/safari-pinned-tab.svg", color: "#000000" },
+      {
+        rel: "android-chrome",
+        sizes: "192x192",
+        url: "/android-chrome-192x192.png",
       },
-    },
-    // ---------- OPEN GRAPH ----------
-    openGraph: {
-      title: "Deltalytix",
-      description:
-        "Deltalytix is a next generation trading dashboard that provides real-time insights and analytics for traders.",
-      images: [
-        {
-          url: ref ? ogUrl : "/opengraph-image.png", // dynamic when ref exists
-          width: 1200,
-          height: 630,
-          alt: "Deltalytix Open Graph Image",
-        },
-      ],
-    },
+      {
+        rel: "android-chrome",
+        sizes: "512x512",
+        url: "/android-chrome-512x512.png",
+      },
+    ],
+  },
 
-    // ---------- TWITTER ----------
-    twitter: {
-      card: "summary_large_image",
-      title: "Deltalytix",
-      description: "Next generation trading dashboard",
-      images: [ref ? ogUrl : "/twitter-image.png"],
-    },
+  // ---------- PWA ----------
+  manifest: "/site.webmanifest",
 
-    // ---------- ICONS ----------
-    icons: {
-      icon: [
-        { url: "/favicon.ico", sizes: "any" },
-        { url: "/icon.png", type: "image/png", sizes: "32x32" },
-      ],
-      apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
-      other: [
-        { rel: "mask-icon", url: "/safari-pinned-tab.svg", color: "#000000" },
-        {
-          rel: "android-chrome",
-          sizes: "192x192",
-          url: "/android-chrome-192x192.png",
-        },
-        {
-          rel: "android-chrome",
-          sizes: "512x512",
-          url: "/android-chrome-512x512.png",
-        },
-      ],
-    },
-
-    // ---------- PWA ----------
-    manifest: "/site.webmanifest",
-
-    // ---------- ROBOTS ----------
-    robots: {
+  // ---------- ROBOTS ----------
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
       index: true,
       follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        "max-video-preview": -1,
-        "max-image-preview": "large",
-        "max-snippet": -1,
-      },
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
     },
+  },
 
-    // ---------- OTHER ----------
-    other: { google: "notranslate" },
-    authors: [{ name: "Hugo DEMENEZ" }],
-    creator: "Hugo DEMENEZ",
-    publisher: "Hugo DEMENEZ",
-    formatDetection: { email: false, address: false, telephone: false },
-  };
-}
+  // ---------- OTHER ----------
+  other: { google: "notranslate" },
+  authors: [{ name: "Hugo DEMENEZ" }],
+  creator: "Hugo DEMENEZ",
+  publisher: "Hugo DEMENEZ",
+  formatDetection: { email: false, address: false, telephone: false },
+};
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await connection();
   return (
     <html
       lang="en"

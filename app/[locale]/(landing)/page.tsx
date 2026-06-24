@@ -7,6 +7,8 @@ import { setStaticParamsLocale } from "next-international/server";
 import Hero from "./components/hero";
 import { getStaticParams } from "@/locales/server";
 
+export const dynamic = "force-static";
+
 export function generateStaticParams() {
   return getStaticParams();
 }
