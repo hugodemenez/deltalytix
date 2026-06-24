@@ -48,6 +48,9 @@ export async function GET(req: Request) {
       where: {
         isActive: {
           equals: true
+        },
+        weeklySummaryEnabled: {
+          equals: true
         }
       }
     })

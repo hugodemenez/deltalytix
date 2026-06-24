@@ -7,6 +7,10 @@ import NewsletterEmail from '@/components/emails/new-feature'
 import { revalidatePath } from "next/cache"
 import { parse } from "csv-parse"
 import { render } from "@react-email/render"
+import {
+  createNewsletterUnsubscribeUrl,
+  normalizeNewsletterEmail,
+} from "@/lib/newsletter-email"
 
 // Initialize PrismaClient outside of the actions
 const adapter = new PrismaPg({
@@ -68,13 +72,16 @@ export async function importSubscribers(file: File) {
 
     // Extract emails from the records
     const emails = records
-      .map(record => record.email)
-      .filter(Boolean) // Remove any undefined or empty values
+      .map(record => record.email ? normalizeNewsletterEmail(record.email) : "")
+      .filter(Boolean)
     
-    // Filter out invalid emails
-    const validEmails = emails.filter(email => {
-      return email && email.includes("@") && email.includes(".")
-    })
+    const validEmails = Array.from(
+      new Set(
+        emails.filter(email => {
+          return email && email.includes("@") && email.includes(".")
+        })
+      )
+    )
 
     // Batch upsert subscribers
     await prisma.$transaction(
