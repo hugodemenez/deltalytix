@@ -1,0 +1,15 @@
+---
+title: 'ATAS Excel imports preserve wall-clock trade times'
+description: 'Excel date cells in ATAS workbooks now import using the time shown in the file, not your browser timezone.'
+date: '2026-06-08'
+status: completed
+completedDate: '2026-06-23'
+---
+
+# ATAS Excel imports preserve wall-clock trade times
+
+When ATAS exports open and close times as **Excel date cells** in a `.xlsx` journal, imports now read the **wall-clock time from the file** instead of shifting by your browser’s local timezone. Entry and exit times should match what you see in ATAS and line up with your **profile timezone** on charts, filters, and the trade table.
+
+The importer still expects the **Journal** or **Journal commercial** sheet and `.xlsx` workbooks. If something is wrong with the file, you get the same direct errors as before from **Dashboard → Import → ATAS**.
+
+If your export uses plain text dates instead of Excel cells, behavior is unchanged.

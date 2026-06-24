@@ -1,0 +1,15 @@
+---
+title: 'Les imports ATAS Excel conservent l’heure affichée dans le fichier'
+description: 'Les cellules date Excel des classeurs ATAS utilisent l’heure du fichier, pas le fuseau du navigateur.'
+date: '2026-06-08'
+status: completed
+completedDate: '2026-06-23'
+---
+
+# Les imports ATAS Excel conservent l’heure affichée dans le fichier
+
+Quand ATAS exporte les heures d’ouverture et de clôture en **cellules date Excel** dans un journal `.xlsx`, l’import lit désormais **l’heure telle qu’affichée dans le fichier** au lieu de la décaler selon le fuseau local du navigateur. Les horaires d’entrée et de sortie doivent correspondre à ATAS et à votre **fuseau horaire de profil** sur les graphiques, filtres et le tableau des trades.
+
+L’import attend toujours la feuille **Journal** ou **Journal commercial** et des fichiers `.xlsx`. En cas de problème, les mêmes messages explicites s’affichent depuis **Tableau de bord → Import → ATAS**.
+
+Si l’export utilise des dates en texte brut plutôt que des cellules Excel, le comportement est inchangé.
