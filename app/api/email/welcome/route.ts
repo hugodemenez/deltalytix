@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { normalizeNewsletterEmail } from "@/lib/newsletter-email"
+import {
+  createNewsletterUnsubscribeUrl,
+  normalizeNewsletterEmail,
+} from "@/lib/newsletter-email"
 import { Resend } from 'resend'
 import WelcomeEmail from '@/components/emails/welcome'
 import { getLatestVideoFromPlaylist } from "@/app/[locale]/admin/actions/youtube"
@@ -45,7 +48,7 @@ export async function POST(req: Request) {
       }
     })
 
-    const unsubscribeUrl = `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(email)}`
+    const unsubscribeUrl = createNewsletterUnsubscribeUrl(email)
 
     // Check user language preference from database
     const user = await prisma.user.findUnique({

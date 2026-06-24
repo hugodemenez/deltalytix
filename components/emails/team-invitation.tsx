@@ -12,6 +12,7 @@ import {
   Tailwind,
   Text,
 } from '@react-email/components';
+import { createNewsletterUnsubscribeUrl } from '@/lib/newsletter-email';
 
 interface TeamInvitationEmailProps {
   email: string;
@@ -60,7 +61,7 @@ export default function TeamInvitationEmail({
   const lang = language === "en" ? "en" : "fr";
   const t = content[lang];
   const unsubscribeUrl = email
-    ? `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(email)}`
+    ? createNewsletterUnsubscribeUrl(email)
     : '#';
 
   return (
@@ -131,4 +132,4 @@ export default function TeamInvitationEmail({
       </Tailwind>
     </Html>
   );
-} 
+}

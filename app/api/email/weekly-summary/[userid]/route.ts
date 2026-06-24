@@ -6,6 +6,7 @@ import { render } from "@react-email/render"
 import { generateTradingAnalysis } from "./actions/analysis"
 import { getUserData, computeTradingStats } from "./actions/user-data"
 import { Resend } from "resend"
+import { createNewsletterUnsubscribeUrl } from "@/lib/newsletter-email"
 
 export async function POST(req: Request, props: { params: Promise<{ userid: string }> }) {
   const params = await props.params;
@@ -53,13 +54,7 @@ export async function POST(req: Request, props: { params: Promise<{ userid: stri
       user.language as 'fr' | 'en'
     )
 
-    // Ensure URL has protocol
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-    const apiUrl = baseUrl.startsWith('http') 
-      ? baseUrl 
-      : `http://${baseUrl}`
-
-    const unsubscribeUrl = `${apiUrl}/api/email/unsubscribe?email=${encodeURIComponent(user.email)}`
+    const unsubscribeUrl = createNewsletterUnsubscribeUrl(user.email)
 
     const weeklyStatsEmailHtml = await render(
       TraderStatsEmail({

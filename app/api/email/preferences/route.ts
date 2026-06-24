@@ -6,14 +6,12 @@ import { createClient } from "@/server/auth"
 type NewsletterPreferences = {
   isActive: boolean
   weeklySummaryEnabled: boolean
-  monthlyStatsEnabled: boolean
   renewalNoticeEnabled: boolean
 }
 
 const preferenceBooleanFields = [
   "isActive",
   "weeklySummaryEnabled",
-  "monthlyStatsEnabled",
   "renewalNoticeEnabled",
 ] as const satisfies ReadonlyArray<keyof NewsletterPreferences>
 
@@ -74,13 +72,17 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const newsletter = await prisma.newsletter.findUnique({
-      where: { email },
+    const newsletter = await prisma.newsletter.findFirst({
+      where: {
+        email: {
+          equals: email,
+          mode: "insensitive",
+        },
+      },
       select: {
         email: true,
         isActive: true,
         weeklySummaryEnabled: true,
-        monthlyStatsEnabled: true,
         renewalNoticeEnabled: true,
       },
     })
@@ -89,7 +91,6 @@ export async function GET(request: Request) {
       email,
       isActive: newsletter?.isActive ?? true,
       weeklySummaryEnabled: newsletter?.weeklySummaryEnabled ?? true,
-      monthlyStatsEnabled: newsletter?.monthlyStatsEnabled ?? true,
       renewalNoticeEnabled: newsletter?.renewalNoticeEnabled ?? true,
     })
   } catch (error) {
@@ -131,21 +132,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const updated = await prisma.newsletter.upsert({
-      where: { email },
-      update: dataToUpdate,
-      create: {
-        email,
-        ...dataToUpdate,
+    const existing = await prisma.newsletter.findFirst({
+      where: {
+        email: {
+          equals: email,
+          mode: "insensitive",
+        },
       },
       select: {
         email: true,
-        isActive: true,
-        weeklySummaryEnabled: true,
-        monthlyStatsEnabled: true,
-        renewalNoticeEnabled: true,
       },
     })
+
+    const updated = existing
+      ? await prisma.newsletter.update({
+          where: { email: existing.email },
+          data: {
+            email,
+            ...dataToUpdate,
+          },
+          select: {
+            email: true,
+            isActive: true,
+            weeklySummaryEnabled: true,
+            renewalNoticeEnabled: true,
+          },
+        })
+      : await prisma.newsletter.create({
+          data: {
+            email,
+            ...dataToUpdate,
+          },
+          select: {
+            email: true,
+            isActive: true,
+            weeklySummaryEnabled: true,
+            renewalNoticeEnabled: true,
+          },
+        })
 
     return NextResponse.json(updated)
   } catch (error) {

@@ -5,6 +5,7 @@ import { Resend } from "resend"
 import { prisma } from "@/lib/prisma"
 import { createClient, type User } from "@supabase/supabase-js"
 import { render } from "@react-email/render"
+import { createNewsletterUnsubscribeUrl } from "@/lib/newsletter-email"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -87,7 +88,7 @@ export async function getDefaultTemplateProps(template: EmailTemplate): Promise<
         youtubeId: "ZBrIZpCh_7Q",
         introMessage: "Sample intro message",
         features: ["Feature 1", "Feature 2"],
-        unsubscribeUrl: "https://deltalytix.app/api/email/unsubscribe?email=user%40example.com",
+        unsubscribeUrl: createNewsletterUnsubscribeUrl("user@example.com"),
       }
     case "renewal-notice":
       return {
@@ -99,7 +100,7 @@ export async function getDefaultTemplateProps(template: EmailTemplate): Promise<
         daysUntilRenewal: 7,
         paymentFrequency: "monthly",
         language: "en",
-        unsubscribeUrl: "https://deltalytix.app/api/email/unsubscribe?email=user%40example.com",
+        unsubscribeUrl: createNewsletterUnsubscribeUrl("user@example.com"),
       }
     case "team-invitation":
       return {
@@ -320,7 +321,7 @@ export async function sendEmailsToUsers(
     for (const batch of batches) {
       try {
         const emailBatch = batch.map((user) => {
-          const unsubscribeUrl = `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(user.email)}`
+          const unsubscribeUrl = createNewsletterUnsubscribeUrl(user.email)
           const mergedProps: TemplateProps = {
             ...customProps,
             firstName: user.firstName,

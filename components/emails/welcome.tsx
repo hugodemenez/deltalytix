@@ -13,6 +13,7 @@ import {
   Tailwind,
   Text,
 } from '@react-email/components';
+import { createNewsletterUnsubscribeUrl } from '@/lib/newsletter-email';
 
 interface WelcomeEmailProps {
   firstName: string;
@@ -25,7 +26,7 @@ export default function WelcomeEmail({ firstName = 'trader', email, language, yo
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || '';
   const thumbnailUrl = `${baseUrl}/api/email/thumbnail/${youtubeId}/maxresdefault`;
   const unsubscribeUrl = email 
-    ? `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(email)}`
+    ? createNewsletterUnsubscribeUrl(email)
     : '#';
 
   if (language === 'fr') {

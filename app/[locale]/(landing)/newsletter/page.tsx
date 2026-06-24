@@ -52,7 +52,6 @@ export default async function NewsletterPage(
               authRequired: t("preferences.authRequired"),
               statusLabel: t("preferences.statusLabel"),
               weeklySummaryLabel: t("preferences.weeklySummaryLabel"),
-              monthlyStatsLabel: t("preferences.monthlyStatsLabel"),
               renewalNoticeLabel: t("preferences.renewalNoticeLabel"),
               save: t("preferences.save"),
               loading: t("preferences.loading"),

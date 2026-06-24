@@ -10,7 +10,6 @@ import { Loader2 } from "lucide-react"
 type NewsletterPreferences = {
   isActive: boolean
   weeklySummaryEnabled: boolean
-  monthlyStatsEnabled: boolean
   renewalNoticeEnabled: boolean
 }
 
@@ -23,7 +22,6 @@ type NewsletterPreferencesFormProps = {
     authRequired: string
     statusLabel: string
     weeklySummaryLabel: string
-    monthlyStatsLabel: string
     renewalNoticeLabel: string
     save: string
     loading: string
@@ -37,7 +35,6 @@ type NewsletterPreferencesFormProps = {
 const defaultPreferences: NewsletterPreferences = {
   isActive: true,
   weeklySummaryEnabled: true,
-  monthlyStatsEnabled: true,
   renewalNoticeEnabled: true,
 }
 
@@ -56,7 +53,6 @@ export function NewsletterPreferencesForm({
 
   useEffect(() => {
     if (!email) {
-      setPreferences(defaultPreferences)
       return
     }
 
@@ -90,7 +86,6 @@ export function NewsletterPreferencesForm({
         setPreferences({
           isActive: data.isActive,
           weeklySummaryEnabled: data.weeklySummaryEnabled,
-          monthlyStatsEnabled: data.monthlyStatsEnabled,
           renewalNoticeEnabled: data.renewalNoticeEnabled,
         })
       } catch {
@@ -201,23 +196,6 @@ export function NewsletterPreferencesForm({
                   setPreferences((prev) => ({
                     ...(prev ?? defaultPreferences),
                     weeklySummaryEnabled: checked,
-                  }))
-                }
-              />
-            </div>
-
-            <div className="flex items-center justify-between rounded-md border p-3">
-              <Label htmlFor="monthly-stats" className="text-sm sm:text-base">
-                {copy.monthlyStatsLabel}
-              </Label>
-              <Switch
-                id="monthly-stats"
-                checked={preferences.monthlyStatsEnabled}
-                disabled={isLoading || isSaving}
-                onCheckedChange={(checked) =>
-                  setPreferences((prev) => ({
-                    ...(prev ?? defaultPreferences),
-                    monthlyStatsEnabled: checked,
                   }))
                 }
               />
