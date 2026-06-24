@@ -19,6 +19,13 @@ const nextConfig: NextConfig = {
   experimental: {
     useCache: true,
     mdxRs: true,
+    optimizePackageImports: [
+      'lucide-react',
+      'date-fns',
+      'recharts',
+      'framer-motion',
+      'motion',
+    ],
   },
   outputFileTracingIncludes: {
     '/*': [

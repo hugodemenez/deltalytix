@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Logo } from "@/components/logo"
-import { Moon, Sun, FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu, Globe, Laptop, Crown, Github } from "lucide-react"
-import { SiGithub } from "react-icons/si";
+import { Moon, Sun, FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu, Globe, Laptop, Crown } from "lucide-react"
 import { motion, AnimatePresence } from "motion/react"
 import {
     NavigationMenu,
@@ -20,12 +19,16 @@ import {
 } from "@/components/ui/navigation-menu"
 import { useTheme } from '@/context/theme-provider'
 import { cn } from '@/lib/utils'
-import { useChangeLocale, useI18n } from "@/locales/client"
+import { useChangeLocale, useI18n } from "@/locales/landing-client"
 import { useRouter, usePathname } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { useCurrentLocale } from '@/locales/client'
+import { useCurrentLocale } from '@/locales/landing-client'
 import { LanguageSelector } from "@/components/ui/language-selector"
+
+const REPO_OWNER = process.env.NEXT_PUBLIC_REPO_OWNER || "default_owner";
+const REPO_NAME = process.env.NEXT_PUBLIC_REPO_NAME || "default_repo";
+const GITHUB_REPO_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}`;
 
 const ListItem = React.forwardRef<
     React.ComponentRef<"a">,
@@ -55,6 +58,20 @@ const ListItem = React.forwardRef<
     )
 })
 ListItem.displayName = "ListItem"
+
+function GithubIcon({ className }: { className?: string }) {
+    return (
+        <svg
+            role="img"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+            className={className}
+            fill="currentColor"
+        >
+            <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+        </svg>
+    )
+}
 
 const MobileNavItem = ({ href, children, onClick, className }: { href: string; children: React.ReactNode; onClick?: () => void, className?: string }) => (
     <li>
@@ -236,9 +253,9 @@ export default function Component() {
             title: t('landing.navbar.developers'),
             children: [
                 {
-                    path: "https://github.com/hugodemenez/deltalytix",
+                    path: GITHUB_REPO_URL,
                     title: t('landing.navbar.openSource'),
-                    icon: <SiGithub className="h-4 w-4" />,
+                    icon: <GithubIcon className="h-4 w-4" />,
                 },
                 {
                     path: "https://www.youtube.com/@hugodemenez",
@@ -342,7 +359,7 @@ export default function Component() {
                                 <NavigationMenuTrigger className='bg-transparent'>{t('landing.navbar.developers')}</NavigationMenuTrigger>
                                 <NavigationMenuContent onMouseEnter={() => setHoveredItem('developers')} onMouseLeave={() => setHoveredItem(null)}>
                                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] list-none">
-                                        <ListItem href="https://github.com/hugodemenez/deltalytix" title={t('landing.navbar.openSource')} icon={<SiGithub className="h-4 w-4" />}>
+                                        <ListItem href={GITHUB_REPO_URL} title={t('landing.navbar.openSource')} icon={<GithubIcon className="h-4 w-4" />}>
                                             {t('landing.navbar.openSourceDescription')}
                                         </ListItem>
                                         <ListItem href="https://www.youtube.com/@hugodemenez" title="YouTube" icon={<FileText className="h-4 w-4" />}>
