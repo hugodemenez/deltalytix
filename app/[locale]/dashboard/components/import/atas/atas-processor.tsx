@@ -16,29 +16,11 @@ import { generateTradeHash } from "@/lib/utils";
 import { PlatformProcessorProps } from "../config/platforms";
 import { TradeTableReview } from "../../tables/trade-table-review";
 import { createTradeWithDefaults } from "@/lib/trade-factory";
-
-const formatPnl = (
-  pnl: string | undefined
-): { pnl: number; error?: string } => {
-  if (!pnl || String(pnl).trim() === "") {
-    console.warn("Invalid PNL value:", pnl);
-    return { pnl: 0, error: "Invalid PNL value" };
-  }
-
-  let formattedPnl = String(pnl).trim();
-
-  // Remove any currency symbols and commas
-  formattedPnl = formattedPnl.replace(/[$,€£]/g, "");
-
-  const numericValue = parseFloat(formattedPnl);
-
-  if (isNaN(numericValue)) {
-    console.warn("Unable to parse PNL value:", pnl);
-    return { pnl: 0, error: "Unable to parse PNL value" };
-  }
-
-  return { pnl: numericValue };
-};
+import {
+  formatCurrencyValue,
+  formatPriceValue,
+  parseLocalizedNumber,
+} from "@/lib/ninjatrader-number-parser";
 
 const convertZonedDatePartsToUtcIso = (
   year: number,
@@ -309,6 +291,7 @@ export default function AtasProcessor({
     csvData.forEach((row) => {
       const item: Partial<Trade> = {};
       let quantity = 0;
+      let shouldSkipTrade = false;
 
       headers.forEach((header, index) => {
         if (atasMappings[header]) {
@@ -317,12 +300,21 @@ export default function AtasProcessor({
 
           switch (key) {
             case "quantity":
-              quantity = Math.abs(parseFloat(String(cellValue)) || 0);
+              const { value: parsedQuantity, error: quantityError } =
+                parseLocalizedNumber(cellValue);
+              if (quantityError) {
+                console.warn("Unable to parse ATAS quantity:", cellValue);
+                shouldSkipTrade = true;
+                return;
+              }
+              quantity = Math.abs(parsedQuantity);
               item[key] = quantity;
               break;
             case "pnl":
-              const { pnl, error } = formatPnl(cellValue);
+              const { pnl, error } = formatCurrencyValue(cellValue);
               if (error) {
+                console.warn("Unable to parse ATAS PNL value:", cellValue);
+                shouldSkipTrade = true;
                 return;
               }
               item[key] = pnl;
@@ -334,9 +326,13 @@ export default function AtasProcessor({
             case "entryPrice":
             case "closePrice":
               if (cellValue) {
-                // Convert to string and remove commas
-                const priceString = String(cellValue).replace(/,/g, "");
-                item[key] = priceString;
+                const { price, error: priceError } = formatPriceValue(cellValue);
+                if (priceError) {
+                  console.warn("Unable to parse ATAS price:", cellValue);
+                  shouldSkipTrade = true;
+                  return;
+                }
+                item[key] = price.toString();
               } else {
                 item[key] = "0";
               }
@@ -360,6 +356,10 @@ export default function AtasProcessor({
         }
       });
 
+      if (shouldSkipTrade) {
+        return;
+      }
+
       if (!item.entryDate || !item.closeDate) {
         console.warn("Missing required dates");
         return;
@@ -374,10 +374,18 @@ export default function AtasProcessor({
 
       // Validate that open and close quantities match (for complete trades)
       const closeQuantityIndex = headers.findIndex((h) => h === "Close volume");
-      const closeQuantity =
+      const closeQuantityResult =
         closeQuantityIndex >= 0
-          ? Math.abs(parseFloat(String(row[closeQuantityIndex])) || 0)
-          : 0;
+          ? parseLocalizedNumber(row[closeQuantityIndex])
+          : { value: 0 };
+      if (closeQuantityResult.error) {
+        console.warn(
+          "Unable to parse ATAS close quantity:",
+          row[closeQuantityIndex]
+        );
+        return;
+      }
+      const closeQuantity = Math.abs(closeQuantityResult.value || 0);
 
       if (quantity !== closeQuantity) {
         console.warn(
@@ -387,12 +395,12 @@ export default function AtasProcessor({
       }
 
       // Determine trade side based on quantity sign in the original data
-      const originalOpenVolume = parseFloat(
-        String(row[headers.findIndex((h) => h === "Open volume")] || "0")
-      );
-      const originalCloseVolume = parseFloat(
-        String(row[headers.findIndex((h) => h === "Close volume")] || "0")
-      );
+      const originalOpenVolume = parseLocalizedNumber(
+        row[headers.findIndex((h) => h === "Open volume")] || "0"
+      ).value;
+      const originalCloseVolume = parseLocalizedNumber(
+        row[headers.findIndex((h) => h === "Close volume")] || "0"
+      ).value;
 
       if (originalOpenVolume > 0 && originalCloseVolume < 0) {
         item.side = "long";
