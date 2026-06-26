@@ -14,6 +14,7 @@ import pg from "pg"
 
 import { loadEnvLocal } from "../lib/load-env-local.node"
 import { formatCalendarData } from "../lib/utils"
+import type { CalendarData } from "../app/[locale]/dashboard/types/calendar"
 import type { Trade } from "../prisma/generated/prisma/browser"
 import { PrismaClient } from "../prisma/generated/prisma/client"
 
@@ -65,8 +66,7 @@ function utcCalendarDay(trade: Trade): string {
 
 function calendarDayForTrade(
   trade: Trade,
-  timezone: string,
-  calendarData: ReturnType<typeof formatCalendarData>,
+  calendarData: CalendarData,
 ): string | null {
   for (const [day, entry] of Object.entries(calendarData)) {
     if (entry.trades.some((t) => t.entryDate === trade.entryDate)) {
@@ -106,7 +106,7 @@ function runLogicChecks(trades: Trade[]) {
       if (!trade) continue
 
       const tableDate = tableEntryDate(trade, timezone)
-      const calendarDate = calendarDayForTrade(trade, timezone, calendarData)
+      const calendarDate = calendarDayForTrade(trade, calendarData)
       const oldUtcDay = utcCalendarDay(trade)
       const ok = tableDate === calendarDate
 
