@@ -16,6 +16,11 @@ export default {
     tier: 'Tier {level}',
     maxTierReached: 'Maximum tier reached!',
     howItWorks: 'How it works',
+    og: {
+      joinLabel: 'Join with a referral code',
+      tagline: 'Next generation trading dashboard',
+      alt: 'Deltalytix Referral',
+    },
     landing: {
       title: 'Referral Program',
       subtitle: 'Invite friends and earn rewards when they subscribe to Plus',

@@ -1,37 +1,45 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { setStaticParamsLocale } from "next-international/server";
+import { getReferralOgCopy } from "@/lib/og/referral-copy";
 import { isValidReferralSlug } from "@/lib/referral-url";
-import { getRequestOrigin, siteUrl } from "@/lib/site-url";
+import { siteUrl } from "@/lib/site-url";
 
 type PageProps = {
   params: Promise<{ locale: string; ref: string }>;
 };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { ref } = await params;
+  const { locale, ref } = await params;
 
   if (!isValidReferralSlug(ref)) {
     return {};
   }
 
-  const requestHeaders = await headers();
-  const origin = getRequestOrigin(requestHeaders);
-  const ogImageUrl = siteUrl(`/api/og?ref=${encodeURIComponent(ref)}`, origin);
+  setStaticParamsLocale(locale);
+  const copy = await getReferralOgCopy(locale);
+  const url = siteUrl(`/${locale}/ref/${encodeURIComponent(ref)}`);
+  const openGraphLocale = locale === "fr" ? "fr_FR" : "en_US";
 
   return {
+    title: copy.joinLabel,
+    description: copy.tagline,
+    alternates: {
+      canonical: url,
+    },
     openGraph: {
-      images: [
-        {
-          url: ogImageUrl,
-          width: 1200,
-          height: 630,
-          alt: "Deltalytix Open Graph Image",
-        },
-      ],
+      title: copy.joinLabel,
+      description: copy.tagline,
+      url,
+      siteName: "Deltalytix",
+      locale: openGraphLocale,
+      // og:image is injected automatically from colocated opengraph-image.tsx.
     },
     twitter: {
-      images: [ogImageUrl],
+      card: "summary_large_image",
+      title: copy.joinLabel,
+      description: copy.tagline,
+      // twitter:image is also derived from opengraph-image.tsx.
     },
   };
 }
