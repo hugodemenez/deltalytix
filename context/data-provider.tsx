@@ -969,8 +969,8 @@ export const DataProvider: React.FC<{
   }, [formattedTrades, accounts, breakevenRange]);
 
   const calendarData = useMemo(
-    () => formatCalendarData(formattedTrades, accounts),
-    [formattedTrades, accounts]
+    () => formatCalendarData(formattedTrades, accounts, timezone),
+    [formattedTrades, accounts, timezone]
   );
 
 

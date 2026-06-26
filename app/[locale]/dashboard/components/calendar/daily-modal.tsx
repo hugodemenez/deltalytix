@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { fr, enUS } from "date-fns/locale";
 import {
   Dialog,
@@ -71,10 +71,12 @@ export function CalendarModal({
   React.useEffect(() => {
     if (selectedDate) {
       setFormattedDate(
-        format(selectedDate, "MMMM d, yyyy", { locale: dateLocale }),
+        formatInTimeZone(selectedDate, timezone, "MMMM d, yyyy", {
+          locale: dateLocale,
+        }),
       );
     }
-  }, [selectedDate]);
+  }, [selectedDate, timezone, dateLocale]);
 
   if (!selectedDate) return null;
 
