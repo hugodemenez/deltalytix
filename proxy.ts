@@ -96,6 +96,10 @@ function isPublicRoute(pathname: string) {
     return true
   }
 
+  if (normalizedPathname.startsWith("/ref/")) {
+    return true
+  }
+
   return false
 }
 
@@ -415,8 +419,10 @@ export default async function proxy(req: NextRequest) {
     }
   }
 
-  // Geolocation handling with better error handling
-  const skipGeoCookie = isPublicRoute(pathname)
+  // Skip geo cookies on cacheable landing/referral routes only (not all marketing pages).
+  const normalizedPathname = withoutLocale(pathname)
+  const skipGeoCookie =
+    isHomepage(pathname) || normalizedPathname.startsWith("/ref/")
 
   try {
     const geo = geolocation(req)

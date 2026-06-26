@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { siteUrl } from "@/lib/site-url";
+import { isValidReferralSlug } from "@/lib/referral-url";
+import { getRequestOrigin, siteUrl } from "@/lib/site-url";
 
 type PageProps = {
   params: Promise<{ locale: string; ref: string }>;
@@ -8,7 +10,14 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { ref } = await params;
-  const ogImageUrl = siteUrl(`/api/og?ref=${encodeURIComponent(ref)}`);
+
+  if (!isValidReferralSlug(ref)) {
+    return {};
+  }
+
+  const requestHeaders = await headers();
+  const origin = getRequestOrigin(requestHeaders);
+  const ogImageUrl = siteUrl(`/api/og?ref=${encodeURIComponent(ref)}`, origin);
 
   return {
     openGraph: {
@@ -29,5 +38,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ReferralLandingPage({ params }: PageProps) {
   const { locale, ref } = await params;
+
+  if (!isValidReferralSlug(ref)) {
+    redirect(`/${locale}`);
+  }
+
   redirect(`/${locale}?ref=${encodeURIComponent(ref)}`);
 }
