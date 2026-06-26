@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { buildReferralShareUrl } from '@/lib/referral-url'
+import { getSiteOrigin } from '@/lib/site-url'
 
 interface ReferralData {
   referral: {
@@ -71,11 +72,14 @@ export default function ReferralButton() {
     }
   }
 
+  const getShareOrigin = () =>
+    typeof window !== 'undefined' ? getSiteOrigin(window.location.origin) : getSiteOrigin()
+
   const copyReferralCode = async () => {
     if (!referralData?.referral.slug) return
 
     const referralUrl = buildReferralShareUrl(
-      window.location.origin,
+      getShareOrigin(),
       locale,
       referralData.referral.slug,
     )
@@ -158,7 +162,7 @@ export default function ReferralButton() {
                 <div className="flex-1 px-3 py-2 bg-muted rounded-md text-sm break-all">
                   {typeof window !== 'undefined'
                     ? buildReferralShareUrl(
-                        window.location.origin,
+                        getShareOrigin(),
                         locale,
                         referralData.referral.slug,
                       )
