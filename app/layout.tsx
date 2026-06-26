@@ -219,7 +219,7 @@ export default function RootLayout({
         </Script>
 
         {/* Prevent Google Translate DOM manipulation */}
-        <Script id="prevent-google-translate" strategy="beforeInteractive">
+        <Script id="prevent-google-translate" strategy="afterInteractive">
           {`
             // Function to prevent Google Translate from modifying the DOM
             function preventGoogleTranslate() {

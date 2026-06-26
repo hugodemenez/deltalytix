@@ -1,4 +1,17 @@
 {
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "deltalytix.app"
+        }
+      ],
+      "destination": "https://www.deltalytix.app/en",
+      "permanent": true
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron/investing?lang=fr&db=true",

@@ -25,7 +25,6 @@ export default function Partners() {
                             alt="NinjaTrader"
                             fill
                             className="object-contain filter dark:brightness-0 dark:invert"
-                            priority
                         />
                     </a>
                     <a className="relative w-full h-12 flex items-center justify-center">
@@ -34,7 +33,6 @@ export default function Partners() {
                             alt="Rithmic"
                             fill
                             className="object-contain"
-                            priority
                         />
                     </a>
                 </div>
