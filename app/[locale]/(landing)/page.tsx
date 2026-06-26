@@ -1,11 +1,8 @@
-import type { Metadata } from "next";
-import { headers } from "next/headers";
 import nextDynamic from "next/dynamic";
 import Partners from "./components/partners";
 import { setStaticParamsLocale } from "next-international/server";
 import Hero from "./components/hero";
 import { getStaticParams } from "@/locales/server";
-import { getRequestOrigin, siteUrl } from "@/lib/site-url";
 import {
   FAQSectionSkeleton,
   FeaturesSectionSkeleton,
@@ -29,40 +26,10 @@ const OpenSource = nextDynamic(() => import("./components/open-source"), {
   loading: () => <OpenSourceSectionSkeleton />,
 });
 
+export const dynamic = "force-static";
+
 export function generateStaticParams() {
   return getStaticParams();
-}
-
-export async function generateMetadata({
-  searchParams,
-}: {
-  searchParams: Promise<{ ref?: string }>;
-}): Promise<Metadata> {
-  const { ref } = await searchParams;
-
-  if (!ref) {
-    return {};
-  }
-
-  const requestHeaders = await headers();
-  const origin = getRequestOrigin(requestHeaders);
-  const ogImageUrl = siteUrl(`/api/og?ref=${encodeURIComponent(ref)}`, origin);
-
-  return {
-    openGraph: {
-      images: [
-        {
-          url: ogImageUrl,
-          width: 1200,
-          height: 630,
-          alt: "Deltalytix Open Graph Image",
-        },
-      ],
-    },
-    twitter: {
-      images: [ogImageUrl],
-    },
-  };
 }
 
 export default async function LandingPage({

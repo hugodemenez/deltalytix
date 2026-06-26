@@ -416,17 +416,21 @@ export default async function proxy(req: NextRequest) {
   }
 
   // Geolocation handling with better error handling
+  const skipGeoCookie = isPublicRoute(pathname)
+
   try {
     const geo = geolocation(req)
 
     if (geo.country) {
       response.headers.set("x-user-country", geo.country)
-      response.cookies.set("user-country", geo.country, {
-        path: "/",
-        maxAge: 60 * 60 * 24, // 24 hours
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-      })
+      if (!skipGeoCookie) {
+        response.cookies.set("user-country", geo.country, {
+          path: "/",
+          maxAge: 60 * 60 * 24, // 24 hours
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+        })
+      }
     }
 
     if (geo.city) {
@@ -444,12 +448,14 @@ export default async function proxy(req: NextRequest) {
 
     if (country) {
       response.headers.set("x-user-country", country)
-      response.cookies.set("user-country", country, {
-        path: "/",
-        maxAge: 60 * 60 * 24,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-      })
+      if (!skipGeoCookie) {
+        response.cookies.set("user-country", country, {
+          path: "/",
+          maxAge: 60 * 60 * 24,
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+        })
+      }
     }
     if (city) response.headers.set("x-user-city", encodeURIComponent(city))
     if (region) response.headers.set("x-user-region", encodeURIComponent(region))
