@@ -5,6 +5,7 @@ import { getAllPosts, getAdjacentPosts } from "@/lib/mdx";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { format } from "date-fns";
+import { enUS, fr } from "date-fns/locale";
 import Script from "next/script";
 import { setStaticParamsLocale } from "next-international/server";
 import { getStaticParams as getLocaleStaticParams } from "@/locales/server";
@@ -76,6 +77,13 @@ export async function generateMetadata({
       const { meta } = post;
 
       const url = siteUrl(`/${locale}/updates/${slug}`);
+      const dateLocale = locale === "fr" ? fr : enUS;
+      const shareDateFormat = locale === "fr" ? "d MMMM yyyy" : "MMMM d, yyyy";
+      const formattedShareDate = format(new Date(meta.date), shareDateFormat, {
+        locale: dateLocale,
+      });
+      const shareTitleLabel = locale === "fr" ? "Changements" : "Changelog";
+      const shareTitle = `${shareTitleLabel} · ${formattedShareDate}`;
 
       return {
         title: meta.title,
@@ -88,7 +96,7 @@ export async function generateMetadata({
           },
         },
         openGraph: {
-          title: meta.title,
+          title: shareTitle,
           description: meta.description,
           type: "article",
           publishedTime: meta.date,
@@ -105,7 +113,7 @@ export async function generateMetadata({
         },
         twitter: {
           card: "summary_large_image",
-          title: meta.title,
+          title: shareTitle,
           description: meta.description,
           // twitter:image is also derived from opengraph-image.tsx.
         },
