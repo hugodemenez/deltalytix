@@ -582,7 +582,7 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
             </div>
             <div className="grid grid-cols-8 auto-rows-fr rounded-lg h-[calc(100%-20px)]">
               {calendarDays.map((date, index) => {
-                const dateString = format(date, 'yyyy-MM-dd')
+                const dateString = formatInTimeZone(date, timezone, 'yyyy-MM-dd')
                 const dayData = calendarData[dateString]
                 // Check if it's the last day of the week (Saturday for Sunday start, Sunday for Monday start)
                 const isLastDayOfWeek = weekStartsOnMonday ? getDay(date) === 0 : getDay(date) === 6
@@ -710,7 +710,7 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
           if (!open) setSelectedDate(null)
         }}
         selectedDate={selectedDate}
-        dayData={selectedDate ? calendarData[format(selectedDate, 'yyyy-MM-dd', { locale: dateLocale })] : undefined}
+        dayData={selectedDate ? calendarData[formatInTimeZone(selectedDate, timezone, 'yyyy-MM-dd')] : undefined}
         isLoading={isLoading}
       />
       <WeeklyModal

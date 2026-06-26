@@ -19,9 +19,9 @@ describe('PDF statement chart data', () => {
 
     const chartData = computeChartData(trades, 'Europe/Paris')
 
-    expect(chartData.dailyPnl).toEqual([{ label: '2026-05-10', value: 90 }])
-    expect(chartData.weekdayPnl.find((point) => point.label === 'Sun')?.value).toBe(90)
-    expect(chartData.weekdayPnl.find((point) => point.label === 'Mon')?.value).toBe(0)
+    expect(chartData.dailyPnl).toEqual([{ label: '2026-05-11', value: 90 }])
+    expect(chartData.weekdayPnl.find((point) => point.label === 'Mon')?.value).toBe(90)
+    expect(chartData.weekdayPnl.find((point) => point.label === 'Sun')?.value).toBe(0)
   })
 
   it('classifies trade distribution using the configured breakeven range on net pnl', () => {

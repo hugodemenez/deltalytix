@@ -2,6 +2,7 @@
 
 import React from "react"
 import { format, eachWeekOfInterval, getWeek, getMonth, getYear, addDays, startOfYear, endOfYear } from "date-fns"
+import { formatInTimeZone } from "date-fns-tz"
 import { fr, enUS } from 'date-fns/locale'
 import { cn } from "@/lib/utils"
 import { Trade } from "@/prisma/generated/prisma/browser"
@@ -35,6 +36,7 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
   const t = useI18n()
   const locale = useCurrentLocale()
   const dateLocale = locale === 'fr' ? fr : enUS
+  const timezone = useUserStore((state) => state.timezone)
 
   const yearStartDate = startOfYear(new Date(year, 0, 1));
   const yearEndDate = endOfYear(new Date(year, 0, 1));
@@ -50,7 +52,7 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
     for (let d = 0; d < 7; d++) {
       const day = new Date(weekStart)
       day.setDate(day.getDate() + d)
-      const key = format(day, 'yyyy-MM-dd', { locale: dateLocale })
+      const key = formatInTimeZone(day, timezone, 'yyyy-MM-dd')
       if (calendarData[key]) total += calendarData[key].pnl
     }
     return total
@@ -61,7 +63,7 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
     for (let d = 0; d < 7; d++) {
       const day = new Date(weekStart)
       day.setDate(day.getDate() + d)
-      const key = format(day, 'yyyy-MM-dd', { locale: dateLocale })
+      const key = formatInTimeZone(day, timezone, 'yyyy-MM-dd')
       if (calendarData[key]) {
         tradesByDay[key] = {
           trades: calendarData[key].trades,
