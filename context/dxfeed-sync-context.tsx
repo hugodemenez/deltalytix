@@ -98,6 +98,8 @@ export interface DxFeedSyncAccount {
   hasToken: boolean
   /** True when saved credentials exist but the DxFeed session is no longer valid */
   tokenExpired?: boolean
+  /** True when stored credentials are missing prop firm metadata and need reconnect */
+  needsReconnect?: boolean
   propFirmName?: string | null
   accountNumbers: string[]
   lastSyncedAt: Date
@@ -140,6 +142,7 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
       accountId: sync.accountId,
       hasToken: !!sync.hasToken,
       tokenExpired: !!sync.tokenExpired,
+      needsReconnect: !!sync.needsReconnect,
       propFirmName: sync.propFirmName ?? null,
       accountNumbers: Array.isArray(sync.accountNumbers) ? sync.accountNumbers : [],
       lastSyncedAt: sync?.lastSyncedAt ? new Date(sync.lastSyncedAt) : new Date(),
@@ -170,6 +173,7 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
       showToastWithCopy('error', formatDxFeedError(t, 'LOAD_SYNCHRONIZATIONS_FAILED'), {
         description: t('dxfeedSync.errors.hintContactSupport'),
         copyLabel: t('common.copy'),
+        copiedLabel: t('common.copied'),
       })
     }
   }, [normalizeSynchronization, t])
@@ -190,7 +194,7 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
         return { success: false, message: t('dxfeedSync.sync.accountNotFound') }
       }
 
-      if (account.tokenExpired || !account.hasToken) {
+      if (account.tokenExpired || account.needsReconnect || !account.hasToken) {
         return { success: false, message: t('dxfeedSync.sync.tokenMissing') }
       }
 
@@ -241,12 +245,18 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
                 e instanceof Error && 'errorParams' in e
                   ? (e as Error & { errorParams?: Record<string, string | number> }).errorParams
                   : undefined
-              if (code === DxFeedErrorCode.TOKEN_EXPIRED) {
+              if (
+                code === DxFeedErrorCode.TOKEN_EXPIRED ||
+                code === DxFeedErrorCode.MISSING_PROP_FIRM_RECONNECT ||
+                code === DxFeedErrorCode.NO_TOKEN_RECONNECT ||
+                code === DxFeedErrorCode.INVALID_STORED_CREDENTIALS
+              ) {
                 void loadAccounts()
               }
               return getDxFeedErrorToastContent(t, code, params)
             },
             copyLabel: t('common.copy'),
+            copiedLabel: t('common.copied'),
           },
         )
 
@@ -272,7 +282,9 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
     setIsAutoSyncing(true)
 
     try {
-      const validAccounts = accounts.filter((acc) => acc.hasToken && !acc.tokenExpired)
+      const validAccounts = accounts.filter(
+        (acc) => acc.hasToken && !acc.tokenExpired && !acc.needsReconnect,
+      )
       if (validAccounts.length === 0) return
 
       for (const account of validAccounts) {

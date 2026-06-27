@@ -7,8 +7,12 @@ import {
 } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/actions'
 import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
 import { coerceDxFeedHistoricalHostForSync } from '@/lib/dxfeed-historical-host'
-import { getDxFeedPropFirm } from '@/lib/dxfeed-propfirms'
 import { isDxFeedTokenExpired } from '@/lib/dxfeed-token'
+import {
+  isDxFeedStoredCredentialsOutdated,
+  parseDxFeedStoredCredentials,
+  resolveDxFeedPropFirmFromStoredCredentials,
+} from '@/lib/dxfeed-stored-credentials'
 
 export async function GET() {
   try {
@@ -26,21 +30,18 @@ export async function GET() {
         let propFirmName: string | null = null
         let tokenExpired = false
         let apiUnauthorized = false
+        let needsReconnect = false
 
         if (token) {
           tokenExpired = isDxFeedTokenExpired(tokenExpiresAt)
 
-          try {
-            const parsed = JSON.parse(token) as {
-              accessToken?: string
-              historicalHost?: string
-              accountNumbers?: string[]
-              propFirmId?: string
-              propfirmName?: string
-            }
-
-            const firm = getDxFeedPropFirm(parsed.propFirmId)
+          const parsed = parseDxFeedStoredCredentials(token)
+          if (!parsed) {
+            needsReconnect = true
+          } else {
+            const firm = resolveDxFeedPropFirmFromStoredCredentials(parsed)
             propFirmName = firm?.name ?? parsed.propfirmName ?? null
+            needsReconnect = isDxFeedStoredCredentialsOutdated(parsed)
 
             if (Array.isArray(parsed.accountNumbers)) {
               accountNumbers = parsed.accountNumbers
@@ -48,6 +49,7 @@ export async function GET() {
 
             if (
               !tokenExpired &&
+              !needsReconnect &&
               accountNumbers.length === 0 &&
               typeof parsed.accessToken === 'string' &&
               typeof parsed.historicalHost === 'string' &&
@@ -73,11 +75,9 @@ export async function GET() {
                 )
               }
             }
-          } catch {
-            /* ignore parse errors */
           }
 
-          if (apiUnauthorized) {
+          if (apiUnauthorized || needsReconnect) {
             tokenExpired = true
           }
         }
@@ -89,6 +89,7 @@ export async function GET() {
           tokenExpiresAt,
           hasToken: connectionActive,
           tokenExpired: !!token && tokenExpired,
+          needsReconnect,
           propFirmName,
           accountNumbers,
         }
