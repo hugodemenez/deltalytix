@@ -1,6 +1,6 @@
 "use client";
 
-import { useI18n } from "@/locales/client";
+import { useI18n } from "@/locales/landing-client";
 
 export default function FAQ() {
   const t = useI18n();

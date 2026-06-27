@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import Navbar from "./components/navbar";
 import Footer from "./components/footer";
 import { ThemeProvider } from "@/context/theme-provider";
+import { I18nProviderClient } from "@/locales/landing-client";
 import { ConsentBanner } from "@/components/consent-banner";
 
 import { Metadata } from 'next';
@@ -34,19 +35,21 @@ export default async function RootLayout(
     params
   } = props;
   
-  await params;
+  const { locale } = await params;
 
   return (
     <ThemeProvider>
-      <ConsentBanner />
-      <div className="px-2 sm:px-6 lg:px-32">
-        <Toaster />
-        <Navbar />
-        <div className="mt-8 sm:mt-20 max-w-(--breakpoint-xl) mx-auto">
-          {children}
+      <I18nProviderClient locale={locale}>
+        <ConsentBanner />
+        <div className="px-2 sm:px-6 lg:px-32">
+          <Toaster />
+          <Navbar />
+          <div className="mt-8 sm:mt-20 max-w-(--breakpoint-xl) mx-auto">
+            {children}
+          </div>
+          <Footer />
         </div>
-        <Footer />
-      </div>
+      </I18nProviderClient>
     </ThemeProvider>
   );
 }

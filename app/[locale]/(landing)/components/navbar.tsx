@@ -19,11 +19,11 @@ import {
 } from "@/components/ui/navigation-menu"
 import { useTheme } from '@/context/theme-provider'
 import { cn } from '@/lib/utils'
-import { useChangeLocale, useI18n } from "@/locales/client"
+import { useChangeLocale, useI18n } from "@/locales/landing-client"
 import { useRouter, usePathname } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { useCurrentLocale } from '@/locales/client'
+import { useCurrentLocale } from '@/locales/landing-client'
 import { LanguageSelector } from "@/components/ui/language-selector"
 import { GITHUB_REPO_URL } from "@/lib/github-repo";
 
