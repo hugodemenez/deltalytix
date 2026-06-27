@@ -134,17 +134,23 @@ export default function Component() {
         }
     }, [isOpen])
 
-    // Lock/unlock body scroll when mobile menu is open
+    // Lock body scroll when mobile menu is open without changing scroll position
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            document.body.style.overflow = isOpen ? 'hidden' : ''
-        }
-        
-        // Cleanup on unmount
+        if (typeof window === 'undefined' || !isOpen) return
+
+        const { body, documentElement } = document
+        const previousBodyOverflow = body.style.overflow
+        const previousHtmlOverflow = documentElement.style.overflow
+        const previousBodyTouchAction = body.style.touchAction
+
+        body.style.overflow = 'hidden'
+        documentElement.style.overflow = 'hidden'
+        body.style.touchAction = 'none'
+
         return () => {
-            if (typeof window !== 'undefined') {
-                document.body.style.overflow = ''
-            }
+            body.style.overflow = previousBodyOverflow
+            documentElement.style.overflow = previousHtmlOverflow
+            body.style.touchAction = previousBodyTouchAction
         }
     }, [isOpen])
 
@@ -432,7 +438,7 @@ export default function Component() {
 
             {isOpen && (
                 <motion.div
-                    className="fixed bg-background -top-[2px] right-0 left-0 bottom-0 h-screen z-50 px-2"
+                    className="mobile-nav-overlay fixed inset-0 z-50 flex flex-col bg-background px-2 overscroll-none"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 20 }}
@@ -482,11 +488,11 @@ export default function Component() {
                         </motion.button>
                     </motion.div>
 
-                    <div className="h-screen pb-[150px] overflow-auto">
+                    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-[calc(150px+env(safe-area-inset-bottom,0px))]">
                         <motion.ul
                             initial="hidden"
                             animate="show"
-                            className="px-3 pt-8 text-xl text-[#878787] space-y-8 mb-8 overflow-auto"
+                            className="px-3 pt-8 text-xl text-[#878787] space-y-8 mb-8"
                             variants={listVariant}
                         >
                             {links.map(({ path, title, children }, index) => {
@@ -730,9 +736,9 @@ export default function Component() {
                 </motion.div>
             )}
 
-            {/* Mobile navbar overlay */}
+            {/* Mobile navbar backdrop — covers area behind Safari bottom tab bar */}
             {isOpen && (
-                <div className="fixed inset-0 bg-background z-40" />
+                <div className="mobile-nav-overlay fixed inset-0 bg-background z-40" aria-hidden="true" />
             )}
         </>
     )
