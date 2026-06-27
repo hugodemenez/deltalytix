@@ -1,0 +1,13 @@
+---
+title: 'A faster landing page'
+description: 'The homepage loads quicker, with less layout shift and lighter previews.'
+date: '2026-06-24'
+status: completed
+completedDate: '2026-06-27'
+---
+
+# A faster landing page
+
+The public landing page got a broad performance pass. The homepage is served from a static edge cache, the hero video defers loading until it's actually in view, and heavy sections load on demand with placeholders so the page becomes interactive sooner.
+
+We also fixed the hero swapping between its poster image and the video, which used to cause a visible jump on load. The calendar and PnL previews are lighter too, since they no longer pull in full dashboard embeds.
