@@ -53,6 +53,7 @@ import { useParams } from 'next/navigation'
 import { AccountCard } from './account-card'
 import { AccountConfigurator } from './account-configurator'
 import { AccountsTableView } from './accounts-table-view'
+import { RithmicBalancesDebugPanel } from './rithmic-balances-debug-panel'
 import { AlertDialogAction, AlertDialogCancel, AlertDialogFooter, AlertDialogDescription, AlertDialogTitle, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 import {
@@ -837,6 +838,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
     balancesByAccountId,
     isLoading: rithmicBalancesLoading,
     hasCredentials: hasRithmicCredentials,
+    debug: rithmicBalancesDebug,
     refresh: refreshRithmicBalances,
   } = useRithmicBalances()
   const rithmicLinkedAccountNumbers = useMemo(
@@ -1425,6 +1427,13 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                 </span>
               </Button>
             )}
+            <RithmicBalancesDebugPanel
+              debug={rithmicBalancesDebug}
+              accounts={filteredAccounts}
+              isLoading={rithmicBalancesLoading}
+              onRefresh={refreshRithmicBalances}
+              className={cn(size === "small" ? "h-7 px-2" : "h-8")}
+            />
             <Tabs value={view} onValueChange={(value) => setView(value as "cards" | "table")}>
               <TabsList
                 className={cn(

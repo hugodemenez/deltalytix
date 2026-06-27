@@ -27,11 +27,14 @@ export type FetchRithmicBalancesResult =
       success: true
       balances: RithmicAccountBalance[]
       rateLimitInfo?: RithmicRateLimitInfo
+      httpStatus: number
+      message?: string
     }
   | {
       success: false
       rateLimited: boolean
       message: string
+      httpStatus?: number
     }
 
 function getRithmicProtocols() {
@@ -85,6 +88,7 @@ export async function fetchRithmicBalances(
       success: false,
       rateLimited: true,
       message: data.detail || "Rate limit exceeded",
+      httpStatus: response.status,
     }
   }
 
@@ -94,6 +98,7 @@ export async function fetchRithmicBalances(
       success: false,
       rateLimited: false,
       message: data?.message || data?.detail || "Failed to fetch balances",
+      httpStatus: response.status,
     }
   }
 
@@ -101,6 +106,8 @@ export async function fetchRithmicBalances(
     success: true,
     balances: data.balances ?? [],
     rateLimitInfo: data.rate_limit_info,
+    httpStatus: response.status,
+    message: data.message,
   }
 }
 

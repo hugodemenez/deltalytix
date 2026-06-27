@@ -4,9 +4,51 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { getAllRithmicData } from "@/lib/rithmic-storage"
 import {
   fetchRithmicBalances,
+  getPrimaryRithmicBalance,
   getRithmicApiBaseUrl,
   RithmicAccountBalance,
 } from "@/lib/rithmic-api"
+
+export interface RithmicBalanceFetchAttempt {
+  credentialId: string
+  username: string
+  server_type: string
+  location: string
+  success: boolean
+  rateLimited?: boolean
+  httpStatus?: number
+  message?: string
+  balanceCount?: number
+  accountIds?: string[]
+  rateLimitInfo?: {
+    remaining_attempts: number
+    minutes_until_reset: number
+  }
+}
+
+export interface RithmicBalancesDebugInfo {
+  generatedAt: string
+  apiHost: string | undefined
+  apiBaseUrl: string | null
+  credentialSetCount: number
+  credentialSets: Array<{
+    id: string
+    username: string
+    server_type: string
+    location: string
+    selectedAccounts: string[]
+    allAccounts?: boolean
+  }>
+  linkedAccountNumbers: string[]
+  fetchAttempts: RithmicBalanceFetchAttempt[]
+  balancesByAccountId: Record<string, RithmicAccountBalance>
+  balanceCount: number
+  isLoading: boolean
+  error: string | null
+  rateLimited: boolean
+  lastFetchedAt: string | null
+  skippedReason?: string
+}
 
 export interface RithmicBalancesState {
   balancesByAccountId: Record<string, RithmicAccountBalance>
@@ -15,7 +57,42 @@ export interface RithmicBalancesState {
   rateLimited: boolean
   lastFetchedAt: Date | null
   hasCredentials: boolean
+  debug: RithmicBalancesDebugInfo
   refresh: () => Promise<void>
+}
+
+function buildDebugSnapshot(
+  overrides: Omit<Partial<RithmicBalancesDebugInfo>, "lastFetchedAt"> & {
+    balancesByAccountId: Record<string, RithmicAccountBalance>
+    isLoading: boolean
+    error: string | null
+    rateLimited: boolean
+    lastFetchedAt: Date | null
+  }
+): RithmicBalancesDebugInfo {
+  const credentialSets = Object.values(getAllRithmicData())
+  const linkedAccountNumbers = credentialSets.flatMap((set) => set.selectedAccounts)
+  const { lastFetchedAt, ...rest } = overrides
+
+  return {
+    generatedAt: new Date().toISOString(),
+    apiHost: process.env.NEXT_PUBLIC_RITHMIC_API_URL,
+    apiBaseUrl: getRithmicApiBaseUrl(),
+    credentialSetCount: credentialSets.length,
+    credentialSets: credentialSets.map((set) => ({
+      id: set.id,
+      username: set.credentials.username,
+      server_type: set.credentials.server_type,
+      location: set.credentials.location,
+      selectedAccounts: set.selectedAccounts,
+      allAccounts: set.allAccounts,
+    })),
+    linkedAccountNumbers,
+    fetchAttempts: [],
+    balanceCount: Object.keys(overrides.balancesByAccountId).length,
+    ...rest,
+    lastFetchedAt: lastFetchedAt?.toISOString() ?? null,
+  }
 }
 
 export function useRithmicBalances(): RithmicBalancesState {
@@ -27,17 +104,55 @@ export function useRithmicBalances(): RithmicBalancesState {
   const [rateLimited, setRateLimited] = useState(false)
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null)
   const [hasCredentials, setHasCredentials] = useState(false)
+  const [debug, setDebug] = useState<RithmicBalancesDebugInfo>(() =>
+    buildDebugSnapshot({
+      balancesByAccountId: {},
+      isLoading: false,
+      error: null,
+      rateLimited: false,
+      lastFetchedAt: null,
+    })
+  )
   const fetchIdRef = useRef(0)
 
   const refresh = useCallback(async () => {
-    if (!getRithmicApiBaseUrl()) return
-
+    const apiBaseUrl = getRithmicApiBaseUrl()
     const credentialSets = Object.values(getAllRithmicData())
     setHasCredentials(credentialSets.length > 0)
+
+    if (!apiBaseUrl) {
+      setBalancesByAccountId({})
+      setError("Rithmic API URL is not configured")
+      setRateLimited(false)
+      setDebug(
+        buildDebugSnapshot({
+          balancesByAccountId: {},
+          isLoading: false,
+          error: "Rithmic API URL is not configured",
+          rateLimited: false,
+          lastFetchedAt: null,
+          skippedReason: "NEXT_PUBLIC_RITHMIC_API_URL is missing",
+          fetchAttempts: [],
+        })
+      )
+      return
+    }
+
     if (credentialSets.length === 0) {
       setBalancesByAccountId({})
       setError(null)
       setRateLimited(false)
+      setDebug(
+        buildDebugSnapshot({
+          balancesByAccountId: {},
+          isLoading: false,
+          error: null,
+          rateLimited: false,
+          lastFetchedAt: null,
+          skippedReason: "No Rithmic credentials in localStorage",
+          fetchAttempts: [],
+        })
+      )
       return
     }
 
@@ -47,6 +162,9 @@ export function useRithmicBalances(): RithmicBalancesState {
     setRateLimited(false)
 
     const merged: Record<string, RithmicAccountBalance> = {}
+    const fetchAttempts: RithmicBalanceFetchAttempt[] = []
+    let latestError: string | null = null
+    let latestRateLimited = false
 
     try {
       for (const credentialSet of credentialSets) {
@@ -54,15 +172,32 @@ export function useRithmicBalances(): RithmicBalancesState {
 
         if (fetchId !== fetchIdRef.current) return
 
+        const attempt: RithmicBalanceFetchAttempt = {
+          credentialId: credentialSet.id,
+          username: credentialSet.credentials.username,
+          server_type: credentialSet.credentials.server_type,
+          location: credentialSet.credentials.location,
+          success: result.success,
+          httpStatus: result.httpStatus,
+          message: result.success ? result.message : result.message,
+        }
+
         if (!result.success) {
+          attempt.rateLimited = result.rateLimited
+          latestError = result.message
           if (result.rateLimited) {
-            setRateLimited(true)
-            setError(result.message)
+            latestRateLimited = true
+            fetchAttempts.push(attempt)
             break
           }
-          setError(result.message)
+          fetchAttempts.push(attempt)
           continue
         }
+
+        attempt.balanceCount = result.balances.length
+        attempt.accountIds = result.balances.map((balance) => balance.account_id)
+        attempt.rateLimitInfo = result.rateLimitInfo
+        fetchAttempts.push(attempt)
 
         for (const balance of result.balances) {
           merged[balance.account_id] = balance
@@ -70,12 +205,38 @@ export function useRithmicBalances(): RithmicBalancesState {
       }
 
       if (fetchId === fetchIdRef.current) {
+        const fetchedAt = new Date()
         setBalancesByAccountId(merged)
-        setLastFetchedAt(new Date())
+        setLastFetchedAt(fetchedAt)
+        setError(latestError)
+        setRateLimited(latestRateLimited)
+        setDebug(
+          buildDebugSnapshot({
+            balancesByAccountId: merged,
+            isLoading: false,
+            error: latestError,
+            rateLimited: latestRateLimited,
+            lastFetchedAt: fetchedAt,
+            fetchAttempts,
+          })
+        )
       }
     } catch (err) {
       if (fetchId === fetchIdRef.current) {
-        setError(err instanceof Error ? err.message : "Failed to fetch balances")
+        const message =
+          err instanceof Error ? err.message : "Failed to fetch balances"
+        setError(message)
+        setDebug(
+          buildDebugSnapshot({
+            balancesByAccountId: merged,
+            isLoading: false,
+            error: message,
+            rateLimited: latestRateLimited,
+            lastFetchedAt: null,
+            fetchAttempts,
+            skippedReason: "Unexpected error during fetch",
+          })
+        )
       }
     } finally {
       if (fetchId === fetchIdRef.current) {
@@ -95,6 +256,7 @@ export function useRithmicBalances(): RithmicBalancesState {
     rateLimited,
     lastFetchedAt,
     hasCredentials,
+    debug,
     refresh,
   }
 }
@@ -115,4 +277,50 @@ export function getRithmicLinkedAccountNumbers(): Set<string> {
     }
   }
   return numbers
+}
+
+export function buildRithmicBalancesDebugReport(
+  debug: RithmicBalancesDebugInfo,
+  dashboardAccountNumbers: string[]
+): string {
+  const linkedSet = new Set(debug.linkedAccountNumbers)
+  const balanceIds = new Set(Object.keys(debug.balancesByAccountId))
+  const dashboardSet = new Set(dashboardAccountNumbers)
+
+  const accountDiagnostics = dashboardAccountNumbers.map((accountNumber) => {
+    const inLinked = linkedSet.has(accountNumber)
+    const inBalances = balanceIds.has(accountNumber)
+    const balanceEntry = debug.balancesByAccountId[accountNumber]
+    const primaryBalance = balanceEntry
+      ? getPrimaryRithmicBalance(balanceEntry)
+      : null
+
+    return {
+      accountNumber,
+      inLinkedAccounts: inLinked,
+      inFetchedBalances: inBalances,
+      showRithmicBalance: inLinked || inBalances,
+      primaryBalance,
+      rawBalance: balanceEntry ?? null,
+    }
+  })
+
+  const unmatchedLinked = debug.linkedAccountNumbers.filter(
+    (id) => !dashboardSet.has(id)
+  )
+  const fetchedNotInDashboard = Object.keys(debug.balancesByAccountId).filter(
+    (id) => !dashboardSet.has(id)
+  )
+
+  return JSON.stringify(
+    {
+      ...debug,
+      dashboardAccountNumbers,
+      accountDiagnostics,
+      unmatchedLinked,
+      fetchedNotInDashboard,
+    },
+    null,
+    2
+  )
 }
