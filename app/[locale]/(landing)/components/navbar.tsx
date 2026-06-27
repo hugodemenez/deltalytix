@@ -564,7 +564,7 @@ export default function Component() {
                             })}
 
                             <motion.li
-                                className="mt-auto border-t"
+                                className="mt-auto border-t pt-8"
                                 variants={itemVariant}
                             >
                                 <motion.div
@@ -572,7 +572,7 @@ export default function Component() {
                                     transition={{ duration: 0.2 }}
                                 >
                                     <Link
-                                        className="block w-full py-8 text-xl text-primary rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                        className="block w-full min-h-11 text-xl text-primary rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                         href="/authentication"
                                         onClick={closeMenu}
                                     >
