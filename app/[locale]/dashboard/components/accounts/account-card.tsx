@@ -112,7 +112,7 @@ export function AccountCard({
               <span className={cn(
                 "font-medium truncate ml-2",
                 size === 'small' || size === 'small-long' ? "text-xs" : "text-sm"
-              )}>${rithmicBalance.toFixed(2)}</span>
+              )}>{Number.isFinite(rithmicBalance) ? `$${rithmicBalance.toFixed(2)}` : "—"}</span>
             ) : (
               <span className="text-xs text-muted-foreground">—</span>
             )}

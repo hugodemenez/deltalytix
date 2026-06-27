@@ -843,7 +843,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   } = useRithmicBalances()
   const rithmicLinkedAccountNumbers = useMemo(
     () => getRithmicLinkedAccountNumbers(),
-    [hasRithmicCredentials]
+    [hasRithmicCredentials, rithmicBalancesDebug.credentialSetCount]
   )
 
   const getRithmicBalanceProps = useCallback(

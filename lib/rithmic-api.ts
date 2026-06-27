@@ -65,7 +65,8 @@ export function parseRithmicRateLimitMessage(detail: string) {
 }
 
 export async function fetchRithmicBalances(
-  credentials: RithmicBalanceCredentials
+  credentials: RithmicBalanceCredentials,
+  options?: { signal?: AbortSignal }
 ): Promise<FetchRithmicBalancesResult> {
   const baseUrl = getRithmicApiBaseUrl()
   if (!baseUrl) {
@@ -80,6 +81,7 @@ export async function fetchRithmicBalances(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(credentials),
+    signal: options?.signal,
   })
 
   if (response.status === 429) {
@@ -112,8 +114,39 @@ export async function fetchRithmicBalances(
 }
 
 export function getPrimaryRithmicBalance(balance: RithmicAccountBalance): number | null {
-  if (typeof balance.account_balance === "number") return balance.account_balance
-  if (typeof balance.cash_on_hand === "number") return balance.cash_on_hand
-  if (typeof balance.margin_balance === "number") return balance.margin_balance
+  const accountBalance = toNumericBalance(balance.account_balance)
+  if (accountBalance != null) return accountBalance
+  const cashOnHand = toNumericBalance(balance.cash_on_hand)
+  if (cashOnHand != null) return cashOnHand
+  const marginBalance = toNumericBalance(balance.margin_balance)
+  if (marginBalance != null) return marginBalance
   return null
+}
+
+function toNumericBalance(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
+}
+
+export function normalizeRithmicAccountBalance(
+  balance: RithmicAccountBalance
+): RithmicAccountBalance | null {
+  const accountId = String(balance.account_id ?? "").trim()
+  if (!accountId) return null
+
+  return {
+    ...balance,
+    account_id: accountId,
+    account_balance: toNumericBalance(balance.account_balance) ?? undefined,
+    cash_on_hand: toNumericBalance(balance.cash_on_hand) ?? undefined,
+    margin_balance: toNumericBalance(balance.margin_balance) ?? undefined,
+    available_buying_power:
+      toNumericBalance(balance.available_buying_power) ?? undefined,
+    open_pnl: toNumericBalance(balance.open_pnl) ?? undefined,
+    closed_pnl: toNumericBalance(balance.closed_pnl) ?? undefined,
+  }
 }

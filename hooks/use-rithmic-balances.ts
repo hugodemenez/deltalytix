@@ -1,11 +1,12 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { getAllRithmicData } from "@/lib/rithmic-storage"
+import { getAllRithmicData, RITHMIC_STORAGE_UPDATED_EVENT } from "@/lib/rithmic-storage"
 import {
   fetchRithmicBalances,
   getPrimaryRithmicBalance,
   getRithmicApiBaseUrl,
+  normalizeRithmicAccountBalance,
   RithmicAccountBalance,
 } from "@/lib/rithmic-api"
 
@@ -114,8 +115,13 @@ export function useRithmicBalances(): RithmicBalancesState {
     })
   )
   const fetchIdRef = useRef(0)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const refresh = useCallback(async () => {
+    abortControllerRef.current?.abort()
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+
     const apiBaseUrl = getRithmicApiBaseUrl()
     const credentialSets = Object.values(getAllRithmicData())
     setHasCredentials(credentialSets.length > 0)
@@ -168,7 +174,11 @@ export function useRithmicBalances(): RithmicBalancesState {
 
     try {
       for (const credentialSet of credentialSets) {
-        const result = await fetchRithmicBalances(credentialSet.credentials)
+        if (abortController.signal.aborted) return
+
+        const result = await fetchRithmicBalances(credentialSet.credentials, {
+          signal: abortController.signal,
+        })
 
         if (fetchId !== fetchIdRef.current) return
 
@@ -200,7 +210,9 @@ export function useRithmicBalances(): RithmicBalancesState {
         fetchAttempts.push(attempt)
 
         for (const balance of result.balances) {
-          merged[balance.account_id] = balance
+          const normalized = normalizeRithmicAccountBalance(balance)
+          if (!normalized) continue
+          merged[normalized.account_id] = normalized
         }
       }
 
@@ -222,6 +234,7 @@ export function useRithmicBalances(): RithmicBalancesState {
         )
       }
     } catch (err) {
+      if (abortController.signal.aborted) return
       if (fetchId === fetchIdRef.current) {
         const message =
           err instanceof Error ? err.message : "Failed to fetch balances"
@@ -242,11 +255,26 @@ export function useRithmicBalances(): RithmicBalancesState {
       if (fetchId === fetchIdRef.current) {
         setIsLoading(false)
       }
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null
+      }
     }
   }, [])
 
   useEffect(() => {
     void refresh()
+  }, [refresh])
+
+  useEffect(() => {
+    const handleStorageUpdate = () => {
+      void refresh()
+    }
+
+    window.addEventListener(RITHMIC_STORAGE_UPDATED_EVENT, handleStorageUpdate)
+    return () => {
+      window.removeEventListener(RITHMIC_STORAGE_UPDATED_EVENT, handleStorageUpdate)
+      abortControllerRef.current?.abort()
+    }
   }, [refresh])
 
   return {
@@ -283,44 +311,62 @@ export function buildRithmicBalancesDebugReport(
   debug: RithmicBalancesDebugInfo,
   dashboardAccountNumbers: string[]
 ): string {
-  const linkedSet = new Set(debug.linkedAccountNumbers)
-  const balanceIds = new Set(Object.keys(debug.balancesByAccountId))
-  const dashboardSet = new Set(dashboardAccountNumbers)
+  try {
+    const linkedSet = new Set(debug.linkedAccountNumbers ?? [])
+    const balanceIds = new Set(Object.keys(debug.balancesByAccountId ?? {}))
+    const dashboardSet = new Set(dashboardAccountNumbers)
 
-  const accountDiagnostics = dashboardAccountNumbers.map((accountNumber) => {
-    const inLinked = linkedSet.has(accountNumber)
-    const inBalances = balanceIds.has(accountNumber)
-    const balanceEntry = debug.balancesByAccountId[accountNumber]
-    const primaryBalance = balanceEntry
-      ? getPrimaryRithmicBalance(balanceEntry)
-      : null
+    const accountDiagnostics = dashboardAccountNumbers.map((accountNumber) => {
+      const inLinked = linkedSet.has(accountNumber)
+      const inBalances = balanceIds.has(accountNumber)
+      const balanceEntry = debug.balancesByAccountId?.[accountNumber]
+      const primaryBalance = balanceEntry
+        ? getPrimaryRithmicBalance(balanceEntry)
+        : null
 
-    return {
-      accountNumber,
-      inLinkedAccounts: inLinked,
-      inFetchedBalances: inBalances,
-      showRithmicBalance: inLinked || inBalances,
-      primaryBalance,
-      rawBalance: balanceEntry ?? null,
-    }
-  })
+      return {
+        accountNumber,
+        inLinkedAccounts: inLinked,
+        inFetchedBalances: inBalances,
+        showRithmicBalance: inLinked || inBalances,
+        primaryBalance,
+        rawBalance: balanceEntry ?? null,
+      }
+    })
 
-  const unmatchedLinked = debug.linkedAccountNumbers.filter(
-    (id) => !dashboardSet.has(id)
-  )
-  const fetchedNotInDashboard = Object.keys(debug.balancesByAccountId).filter(
-    (id) => !dashboardSet.has(id)
-  )
+    const unmatchedLinked = (debug.linkedAccountNumbers ?? []).filter(
+      (id) => !dashboardSet.has(id)
+    )
+    const fetchedNotInDashboard = Object.keys(debug.balancesByAccountId ?? {}).filter(
+      (id) => !dashboardSet.has(id)
+    )
 
-  return JSON.stringify(
-    {
-      ...debug,
-      dashboardAccountNumbers,
-      accountDiagnostics,
-      unmatchedLinked,
-      fetchedNotInDashboard,
-    },
-    null,
-    2
-  )
+    return JSON.stringify(
+      {
+        ...debug,
+        dashboardAccountNumbers,
+        accountDiagnostics,
+        unmatchedLinked,
+        fetchedNotInDashboard,
+      },
+      null,
+      2
+    )
+  } catch (error) {
+    return JSON.stringify(
+      {
+        error: "Failed to build debug report",
+        message: error instanceof Error ? error.message : String(error),
+        debug,
+        dashboardAccountNumbers,
+      },
+      null,
+      2
+    )
+  }
+}
+
+export function formatRithmicBalanceAmount(value: number | null | undefined): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—"
+  return `$${value.toFixed(2)}`
 }
