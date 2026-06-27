@@ -64,6 +64,42 @@ export function parseRithmicRateLimitMessage(detail: string) {
     : { max: "2", period: "15", wait: "12" }
 }
 
+type PydanticLikeError = {
+  type?: string
+  loc?: unknown
+  msg?: string
+  input?: unknown
+}
+
+export function formatRithmicApiErrorMessage(
+  value: unknown,
+  fallback = "Unknown error"
+): string {
+  if (value == null || value === "") return fallback
+  if (typeof value === "string") return value
+  if (Array.isArray(value)) {
+    const parts = value
+      .map((item) => formatRithmicApiErrorMessage(item, ""))
+      .filter((part) => part.length > 0)
+    return parts.length > 0 ? parts.join("; ") : fallback
+  }
+  if (typeof value === "object") {
+    const err = value as PydanticLikeError
+    if (typeof err.msg === "string") {
+      const loc = Array.isArray(err.loc)
+        ? err.loc.map((part) => String(part)).join(".")
+        : ""
+      return loc ? `${loc}: ${err.msg}` : err.msg
+    }
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return fallback
+    }
+  }
+  return String(value)
+}
+
 export async function fetchRithmicBalances(
   credentials: RithmicBalanceCredentials,
   options?: { signal?: AbortSignal }
@@ -86,10 +122,14 @@ export async function fetchRithmicBalances(
 
   if (response.status === 429) {
     const data = await response.json().catch(() => ({}))
+    const detailMessage = formatRithmicApiErrorMessage(
+      data.detail,
+      "Rate limit exceeded"
+    )
     return {
       success: false,
       rateLimited: true,
-      message: data.detail || "Rate limit exceeded",
+      message: detailMessage,
       httpStatus: response.status,
     }
   }
@@ -99,7 +139,10 @@ export async function fetchRithmicBalances(
     return {
       success: false,
       rateLimited: false,
-      message: data?.message || data?.detail || "Failed to fetch balances",
+      message: formatRithmicApiErrorMessage(
+        data?.message ?? data?.detail,
+        "Failed to fetch balances"
+      ),
       httpStatus: response.status,
     }
   }
@@ -109,7 +152,7 @@ export async function fetchRithmicBalances(
     balances: data.balances ?? [],
     rateLimitInfo: data.rate_limit_info,
     httpStatus: response.status,
-    message: data.message,
+    message: formatRithmicApiErrorMessage(data.message, ""),
   }
 }
 

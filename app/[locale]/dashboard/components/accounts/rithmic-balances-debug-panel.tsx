@@ -18,7 +18,10 @@ import {
   formatRithmicBalanceAmount,
   RithmicBalancesDebugInfo,
 } from "@/hooks/use-rithmic-balances"
-import { getPrimaryRithmicBalance } from "@/lib/rithmic-api"
+import {
+  formatRithmicApiErrorMessage,
+  getPrimaryRithmicBalance,
+} from "@/lib/rithmic-api"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -196,7 +199,9 @@ function RithmicBalancesDebugBody({
               </div>
             )}
             {debug.error && (
-              <div className="text-destructive">error: {debug.error}</div>
+              <div className="text-destructive">
+                error: {formatRithmicApiErrorMessage(debug.error)}
+              </div>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
@@ -248,7 +253,11 @@ function RithmicBalancesDebugBody({
                     status: {attempt.httpStatus ?? "?"} · success:{" "}
                     {String(attempt.success)}
                   </div>
-                  {attempt.message && <div>message: {attempt.message}</div>}
+                  {attempt.message && (
+                    <div>
+                      message: {formatRithmicApiErrorMessage(attempt.message)}
+                    </div>
+                  )}
                   {attempt.balanceCount != null && (
                     <div>balances: {attempt.balanceCount}</div>
                   )}
