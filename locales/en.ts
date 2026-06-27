@@ -1717,8 +1717,23 @@ export default {
     preferences: {
       title: "Newsletter Preferences",
       description: "Manage your email preferences and subscription settings",
-      comingSoon:
-        "Additional newsletter preferences management features coming soon.",
+      dashboardDescription:
+        "Control which marketing and product emails you receive from Deltalytix.",
+      missingEmail:
+        "Use the secure link from your email to manage preferences, or sign in to your dashboard settings.",
+      authRequired: "Please sign in to manage your newsletter preferences.",
+      invalidToken:
+        "This preferences link is invalid or has expired. Use the latest link from your email or sign in.",
+      statusLabel: "Newsletter Subscription",
+      weeklySummaryLabel: "Deltalytix Weekly Updates",
+      monthlyStatsLabel: "Monthly Stats Update",
+      renewalNoticeLabel: "Renewals Notification",
+      save: "Save Preferences",
+      loading: "Loading preferences...",
+      saving: "Saving...",
+      saved: "Preferences saved successfully.",
+      loadError: "Failed to load preferences. Please try again.",
+      saveError: "Failed to save preferences. Please try again.",
     },
     admin: {
       inferNames: "Infer Names",

@@ -1830,8 +1830,24 @@ export default {
     preferences: {
       title: "Préférences Newsletter",
       description: "Gérez vos préférences email et paramètres d'abonnement",
-      comingSoon:
-        "Les fonctionnalités de gestion des préférences de la newsletter arrivent bientôt.",
+      dashboardDescription:
+        "Contrôlez les emails marketing et produit que vous recevez de Deltalytix.",
+      missingEmail:
+        "Utilisez le lien sécurisé reçu par email pour gérer vos préférences, ou connectez-vous aux paramètres du tableau de bord.",
+      authRequired:
+        "Veuillez vous connecter pour gérer vos préférences newsletter.",
+      invalidToken:
+        "Ce lien de préférences est invalide ou expiré. Utilisez le dernier lien reçu par email ou connectez-vous.",
+      statusLabel: "Abonnement Newsletter",
+      weeklySummaryLabel: "Mises à jour hebdomadaires Deltalytix",
+      monthlyStatsLabel: "Mise à jour mensuelle des statistiques",
+      renewalNoticeLabel: "Notifications de renouvellement",
+      save: "Enregistrer les préférences",
+      loading: "Chargement des préférences...",
+      saving: "Enregistrement...",
+      saved: "Préférences enregistrées avec succès.",
+      loadError: "Impossible de charger les préférences. Veuillez réessayer.",
+      saveError: "Impossible d'enregistrer les préférences. Veuillez réessayer.",
     },
     admin: {
       inferNames: "Inférer les Noms",

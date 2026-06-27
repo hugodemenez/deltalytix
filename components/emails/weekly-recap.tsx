@@ -15,6 +15,7 @@ import {
   Tailwind,
   Text,
 } from '@react-email/components';
+import { createNewsletterUnsubscribeUrl } from '@/lib/newsletter-email';
 
 interface TraderStatsEmailProps {
   email: string;
@@ -340,7 +341,7 @@ export default function TraderStatsEmail({
   const t = translations[language as keyof typeof translations] || translations.fr;
 
   const unsubscribeUrl = email
-    ? `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(email)}`
+    ? createNewsletterUnsubscribeUrl(email)
     : '#';
 
   // Calculate win rate percentage

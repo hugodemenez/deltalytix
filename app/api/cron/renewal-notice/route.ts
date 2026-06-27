@@ -6,6 +6,10 @@ import { headers } from 'next/headers'
 import { format, subDays, isEqual, startOfDay } from 'date-fns'
 import { enUS, fr } from 'date-fns/locale'
 import RenewalNoticeEmail from '@/components/emails/renewal-notice'
+import {
+  createNewsletterUnsubscribeUrl,
+  normalizeNewsletterEmail,
+} from '@/lib/newsletter-email'
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -136,6 +140,42 @@ export async function GET(req: Request) {
       )
     }
 
+    const candidateEmails = Array.from(
+      new Set(
+        accountsToNotify
+          .map(account => account.user?.email)
+          .filter((email): email is string => Boolean(email))
+          .map(normalizeNewsletterEmail)
+      )
+    )
+
+    if (candidateEmails.length === 0) {
+      return NextResponse.json(
+        { message: 'No users with email addresses to notify' },
+        { status: 200 }
+      )
+    }
+
+    const renewalPreferences = await prisma.newsletter.findMany({
+      where: {
+        email: {
+          in: candidateEmails
+        },
+      },
+      select: {
+        email: true,
+        isActive: true,
+        renewalNoticeEnabled: true,
+      }
+    })
+
+    const renewalPreferenceByEmail = new Map(
+      renewalPreferences.map(pref => [
+        normalizeNewsletterEmail(pref.email),
+        pref,
+      ])
+    )
+
     let successCount = 0
     let errorCount = 0
     
@@ -143,16 +183,29 @@ export async function GET(req: Request) {
     const userAccountsMap = new Map<string, typeof accountsToNotify>()
     
     accountsToNotify.forEach(account => {
-      if (account.user?.email) {
-        const existing = userAccountsMap.get(account.user.email) || []
-        userAccountsMap.set(account.user.email, [...existing, account])
-      }
+      if (!account.user?.email) return
+
+      const normalizedEmail = normalizeNewsletterEmail(account.user.email)
+      const preference = renewalPreferenceByEmail.get(normalizedEmail)
+      if (preference && (!preference.isActive || !preference.renewalNoticeEnabled)) return
+
+      const existing = userAccountsMap.get(normalizedEmail) || []
+      userAccountsMap.set(normalizedEmail, [...existing, account])
     })
 
+    if (userAccountsMap.size === 0) {
+      return NextResponse.json(
+        { message: 'No users with enabled renewal notice preferences found' },
+        { status: 200 }
+      )
+    }
+
     // Send emails to each user
-    for (const [userEmail, userAccounts] of userAccountsMap) {
+    for (const [, userAccounts] of userAccountsMap) {
+      const user = userAccounts[0].user!
+      const userEmail = user.email!
+
       try {
-        const user = userAccounts[0].user!
         const userLanguage = user.language || 'en'
         const locale = getDateLocale(userLanguage)
         
@@ -166,7 +219,7 @@ export async function GET(req: Request) {
             const propFirmName = account.propfirm || 'Unknown Prop Firm'
             const frequency = account.paymentFrequency || 'monthly'
             
-            const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings/notifications`
+            const unsubscribeUrl = createNewsletterUnsubscribeUrl(userEmail)
 
             const { data, error } = await resend.emails.send({
               from: 'Deltalytix Renewals <renewals@eu.updates.deltalytix.app>',

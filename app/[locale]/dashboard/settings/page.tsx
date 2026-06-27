@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useI18n } from "@/locales/client"
+import { useI18n, useScopedI18n } from "@/locales/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -62,6 +62,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { LinkedAccounts } from "@/components/linked-accounts"
+import { NewsletterPreferencesForm } from "@/app/[locale]/(landing)/newsletter/preferences-form"
 
 type Locale = 'en' | 'fr'
 
@@ -80,6 +81,7 @@ const timezones = [
 
 export default function SettingsPage() {
   const t = useI18n()
+  const newsletterT = useScopedI18n('newsletter')
   const changeLocale = useChangeLocale()
   const currentLocale = useCurrentLocale()
   const { theme, setTheme, intensity, setIntensity } = useTheme()
@@ -490,6 +492,27 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <NewsletterPreferencesForm
+          isAuthenticated
+          copy={{
+            title: newsletterT("preferences.title"),
+            description: newsletterT("preferences.dashboardDescription"),
+            missingEmail: newsletterT("preferences.missingEmail"),
+            authRequired: newsletterT("preferences.authRequired"),
+            invalidToken: newsletterT("preferences.invalidToken"),
+            statusLabel: newsletterT("preferences.statusLabel"),
+            weeklySummaryLabel: newsletterT("preferences.weeklySummaryLabel"),
+            monthlyStatsLabel: newsletterT("preferences.monthlyStatsLabel"),
+            renewalNoticeLabel: newsletterT("preferences.renewalNoticeLabel"),
+            save: newsletterT("preferences.save"),
+            loading: newsletterT("preferences.loading"),
+            saving: newsletterT("preferences.saving"),
+            saved: newsletterT("preferences.saved"),
+            loadError: newsletterT("preferences.loadError"),
+            saveError: newsletterT("preferences.saveError"),
+          }}
+        />
 
         {/* Team Section */}
         <Card>

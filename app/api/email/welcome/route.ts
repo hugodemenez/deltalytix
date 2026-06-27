@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server"
-import { PrismaClient } from "@/prisma/generated/prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
+import { prisma } from "@/lib/prisma"
+import {
+  createNewsletterUnsubscribeUrl,
+  normalizeNewsletterEmail,
+} from "@/lib/newsletter-email"
 import { Resend } from 'resend'
 import WelcomeEmail from '@/components/emails/welcome'
 import { getLatestVideoFromPlaylist } from "@/app/[locale]/admin/actions/youtube"
 
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = new PrismaClient({ adapter })
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: Request) {
@@ -36,23 +34,25 @@ export async function POST(req: Request) {
     const firstName = fullName.split(' ')[0] || 'trader'
     const lastName = fullName.split(' ')[1] || ''
 
+    const email = normalizeNewsletterEmail(record.email)
+
     // Add email to newsletter list
     await prisma.newsletter.upsert({
-      where: { email: record.email },
+      where: { email },
       update: { isActive: true },
       create: {
-        email: record.email,
+        email,
         firstName: firstName,
         lastName: lastName,
         isActive: true
       }
     })
 
-    const unsubscribeUrl = `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(record.email)}`
+    const unsubscribeUrl = createNewsletterUnsubscribeUrl(email)
 
     // Check user language preference from database
     const user = await prisma.user.findUnique({
-      where: { email: record.email }
+      where: { email },
     })
     const userLanguage = user?.language || 'en'
     let youtubeId = 'ZBrIZpCh_7Q'
@@ -63,10 +63,10 @@ export async function POST(req: Request) {
     // Use react prop instead of rendering to HTML
     const { data, error } = await resend.emails.send({
       from: 'Deltalytix <welcome@eu.updates.deltalytix.app>',
-      to: record.email,
+      to: email,
       subject: userLanguage === 'fr' ? 'Bienvenue sur Deltalytix' : 'Welcome to Deltalytix',
-      react: WelcomeEmail({ firstName, email: record.email, language: userLanguage, youtubeId: youtubeId || 'ZBrIZpCh_7Q' }),
-      replyTo: 'hugo.demenez@deltalytix.app',
+      react: WelcomeEmail({ firstName, email, language: userLanguage, youtubeId: youtubeId || 'ZBrIZpCh_7Q' }),
+      replyTo: '[REDACTED]',
       headers: {
         'List-Unsubscribe': `<${unsubscribeUrl}>`,
         'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
@@ -95,4 +95,3 @@ export async function POST(req: Request) {
     )
   }
 }
-

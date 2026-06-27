@@ -1,13 +1,7 @@
 'use server'
 
-import { PrismaClient } from "@/prisma/generated/prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = new PrismaClient({ adapter })
+import { prisma } from "@/lib/prisma"
+import { normalizeNewsletterEmail } from "@/lib/newsletter-email"
 
 interface UserData {
   user: {
@@ -19,6 +13,7 @@ interface UserData {
     email: string
     firstName: string | null
     isActive: boolean
+    weeklySummaryEnabled: boolean
   }
   trades: {
     id: string
@@ -53,11 +48,15 @@ export async function getUserData(userId: string): Promise<UserData> {
   }
 
   const newsletter = await prisma.newsletter.findUnique({
-    where: { email: user.email },
+    where: { email: normalizeNewsletterEmail(user.email) },
   })
 
   if (!newsletter || !newsletter.isActive) {
     throw new Error(`Newsletter subscription not found or inactive for email: ${user.email}`)
+  }
+
+  if (!newsletter.weeklySummaryEnabled) {
+    throw new Error(`Weekly summary disabled for email: ${user.email}`)
   }
 
   const trades = await prisma.trade.findMany({
@@ -84,7 +83,8 @@ export async function getUserData(userId: string): Promise<UserData> {
     newsletter: {
       email: newsletter.email,
       firstName: newsletter.firstName,
-      isActive: newsletter.isActive
+      isActive: newsletter.isActive,
+      weeklySummaryEnabled: newsletter.weeklySummaryEnabled,
     },
     trades: last14DaysTrades
   }
