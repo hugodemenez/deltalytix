@@ -5,6 +5,8 @@ export default {
         card: {
             unnamedAccount: 'Compte sans nom',
             balance: 'Solde',
+            rithmicBalance: 'Solde Rithmic',
+            rithmicBalanceLoading: 'Récupération du solde Rithmic…',
             target: 'Objectif',
             remainingToTarget: 'Reste à atteindre',
             drawdown: 'Perte maximale',

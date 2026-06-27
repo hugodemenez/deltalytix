@@ -19,7 +19,11 @@ import { Progress } from "@/components/ui/progress"
 import { useAccountOrderStore } from "@/store/account-order-store"
 import { useAccountsGroupExpansionStore } from "../../../../../store/accounts-group-expansion-store"
 import { DataTableColumnHeader } from "../tables/column-header"
-import { CheckCircle, ChevronDown, ChevronRight, XCircle } from "lucide-react"
+import { CheckCircle, ChevronDown, ChevronRight, Loader2, XCircle } from "lucide-react"
+import {
+  getPrimaryRithmicBalance,
+  RithmicAccountBalance,
+} from "@/lib/rithmic-api"
 
 type AccountGroupRow = {
   kind: "group"
@@ -35,6 +39,8 @@ type AccountGroupRow = {
     averageProgress: number
     configuredCount: number
     fundedCount: number
+    totalRithmicBalance: number
+    rithmicBalanceCount: number
   }
 }
 
@@ -53,6 +59,9 @@ interface AccountsTableViewProps {
   onSelectAccount: (account: Account) => void
   sorting: SortingState
   onSortingChange: OnChangeFn<SortingState>
+  rithmicBalancesByAccountId?: Record<string, RithmicAccountBalance>
+  rithmicBalancesLoading?: boolean
+  showRithmicBalances?: boolean
 }
 
 function toValidDate(value: Date | string | null | undefined) {
@@ -129,7 +138,19 @@ function getAccountTotalPayouts(account: Account) {
     )
 }
   
-function getAccountsSummary(accounts: Account[]) {
+function getRithmicBalanceValue(
+  account: Account,
+  balancesByAccountId: Record<string, RithmicAccountBalance>
+): number | null {
+  const balance = balancesByAccountId[account.number ?? ""]
+  if (!balance) return null
+  return getPrimaryRithmicBalance(balance)
+}
+
+function getAccountsSummary(
+  accounts: Account[],
+  balancesByAccountId: Record<string, RithmicAccountBalance> = {}
+) {
   const summary = accounts.reduce(
     (acc, account) => {
       const currentBalance = getAccountBalance(account)
@@ -137,6 +158,11 @@ function getAccountsSummary(accounts: Account[]) {
       acc.totalBalance += currentBalance
       acc.totalPayouts += getAccountTotalPayouts(account)
       acc.totalFee += getAccountTotalFee(account)
+      const rithmicBalance = getRithmicBalanceValue(account, balancesByAccountId)
+      if (rithmicBalance != null) {
+        acc.totalRithmicBalance += rithmicBalance
+        acc.rithmicBalanceCount += 1
+      }
       if (metrics?.isConfigured) {
         acc.totalRemainingToTarget += metrics.remainingToTarget ?? 0
         acc.totalRemainingLoss += metrics.remainingLoss ?? 0
@@ -155,6 +181,8 @@ function getAccountsSummary(accounts: Account[]) {
       totalProgress: 0,
       configuredCount: 0,
       fundedCount: 0,
+      totalRithmicBalance: 0,
+      rithmicBalanceCount: 0,
     }
   )
 
@@ -170,6 +198,8 @@ function getAccountsSummary(accounts: Account[]) {
         : 0,
     configuredCount: summary.configuredCount,
     fundedCount: summary.fundedCount,
+    totalRithmicBalance: summary.totalRithmicBalance,
+    rithmicBalanceCount: summary.rithmicBalanceCount,
   }
 }
 
@@ -307,6 +337,14 @@ function AccountsTableSection({
           <div className="text-right font-semibold">
             ${summary.summary.totalBalance.toFixed(2)}
           </div>
+        )
+      case "rithmicBalance":
+        return summary.summary.rithmicBalanceCount > 0 ? (
+          <div className="text-right font-semibold">
+            ${summary.summary.totalRithmicBalance.toFixed(2)}
+          </div>
+        ) : (
+          <div className="text-right text-sm text-muted-foreground">—</div>
         )
       case "targetProgress": {
         const isConfigured = summary.summary.configuredCount > 0
@@ -481,6 +519,9 @@ export function AccountsTableView({
   onSelectAccount,
   sorting,
   onSortingChange,
+  rithmicBalancesByAccountId = {},
+  rithmicBalancesLoading = false,
+  showRithmicBalances = false,
 }: AccountsTableViewProps) {
   const t = useI18n()
   const currentLocale = useCurrentLocale()
@@ -744,6 +785,65 @@ export function AccountsTableView({
         },
         size: 120,
       },
+      ...(showRithmicBalances
+        ? [
+            {
+              id: "rithmicBalance",
+              accessorFn: (row: AccountRow) =>
+                isGroupRow(row)
+                  ? row.summary.totalRithmicBalance
+                  : getRithmicBalanceValue(row, rithmicBalancesByAccountId) ?? -1,
+              header: ({ column }: { column: any }) => (
+                <DataTableColumnHeader
+                  column={column}
+                  title={t("accounts.table.rithmicBalance")}
+                />
+              ),
+              cell: ({ row }: { row: any }) => {
+                if (isGroupRow(row.original)) {
+                  return row.original.summary.rithmicBalanceCount > 0 ? (
+                    <div className="text-right font-medium">
+                      ${row.original.summary.totalRithmicBalance.toFixed(2)}
+                    </div>
+                  ) : (
+                    <div className="text-right text-sm text-muted-foreground">—</div>
+                  )
+                }
+
+                const rithmicBalance = getRithmicBalanceValue(
+                  row.original,
+                  rithmicBalancesByAccountId
+                )
+
+                if (rithmicBalancesLoading && rithmicBalance == null) {
+                  return (
+                    <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    </div>
+                  )
+                }
+
+                return rithmicBalance != null ? (
+                  <div className="text-right font-medium">
+                    ${rithmicBalance.toFixed(2)}
+                  </div>
+                ) : (
+                  <div className="text-right text-sm text-muted-foreground">—</div>
+                )
+              },
+              sortingFn: (rowA: any, rowB: any) => {
+                const a = isGroupRow(rowA.original)
+                  ? rowA.original.summary.totalRithmicBalance
+                  : getRithmicBalanceValue(rowA.original, rithmicBalancesByAccountId) ?? -1
+                const b = isGroupRow(rowB.original)
+                  ? rowB.original.summary.totalRithmicBalance
+                  : getRithmicBalanceValue(rowB.original, rithmicBalancesByAccountId) ?? -1
+                return a - b
+              },
+              size: 140,
+            } satisfies ColumnDef<AccountRow>,
+          ]
+        : []),
       {
         id: "totalPayout",
         accessorFn: (row) =>
@@ -1096,7 +1196,7 @@ export function AccountsTableView({
         size: 140,
       },
     ],
-    [t, dateFormatter]
+    [t, dateFormatter, showRithmicBalances, rithmicBalancesByAccountId, rithmicBalancesLoading]
   )
 
   const groupedAccounts = useMemo(() => {
@@ -1112,7 +1212,7 @@ export function AccountsTableView({
         id: groupId,
         name: groupName,
         accounts: groupAccounts,
-        summary: getAccountsSummary(groupAccounts),
+        summary: getAccountsSummary(groupAccounts, rithmicBalancesByAccountId),
       }
     }
 
@@ -1142,17 +1242,17 @@ export function AccountsTableView({
     if (ungroupedRow) rows.push(ungroupedRow)
 
     return rows
-  }, [accounts, groups, getOrderedAccounts, t])
+  }, [accounts, groups, getOrderedAccounts, t, rithmicBalancesByAccountId])
 
   const totalSummary = useMemo<SummaryRow | null>(() => {
     if (accounts.length === 0) return null
     return {
       id: "accounts-total",
       label: t("accounts.table.total"),
-      summary: getAccountsSummary(accounts),
+      summary: getAccountsSummary(accounts, rithmicBalancesByAccountId),
       accountCount: accounts.length,
     }
-  }, [accounts, t])
+  }, [accounts, t, rithmicBalancesByAccountId])
 
   return (
     <div className="space-y-6">

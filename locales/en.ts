@@ -1496,6 +1496,10 @@ export default {
       description:
         "Maximum {max} attempts allowed per {period} minutes. Please wait {wait} minutes before trying again.",
     },
+    balances: {
+      refresh: "Refresh balances",
+      refreshTitle: "Refresh Rithmic account balances",
+    },
     searchAccounts: "Search accounts by ID or FCM ID",
     credentials: {
       updated: "Credentials Updated",
@@ -2326,6 +2330,7 @@ export default {
   "accounts.table.fundedYes": "Funded account",
   "accounts.table.fundedNo": "Challenge account",
   "accounts.table.balance": "Balance",
+  "accounts.table.rithmicBalance": "Rithmic balance",
   "accounts.table.totalPayout": "Total payout",
   "accounts.table.totalFee": "Total fee",
   "accounts.table.group": "Group",

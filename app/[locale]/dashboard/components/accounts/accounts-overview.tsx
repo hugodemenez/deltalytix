@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
@@ -38,6 +38,7 @@ import {
   GripVertical,
   LayoutGrid,
   Table,
+  RefreshCw,
 } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { format, Locale } from "date-fns"
@@ -69,6 +70,11 @@ import { useAccountsSortingStore } from '@/store/accounts-sorting-store'
 import { removeAccountsFromTradesAction } from '@/server/accounts'
 import { useModalStateStore } from '@/store/modal-state-store'
 import { SortingState } from "@tanstack/react-table"
+import {
+  getRithmicLinkedAccountNumbers,
+  useRithmicBalances,
+} from "@/hooks/use-rithmic-balances"
+import { getPrimaryRithmicBalance } from "@/lib/rithmic-api"
 import {
   DndContext,
   closestCenter,
@@ -307,13 +313,19 @@ interface DraggableAccountCardProps {
   onClick: () => void
   size: WidgetSize
   isDragDisabled?: boolean
+  rithmicBalance?: number | null
+  rithmicBalanceLoading?: boolean
+  showRithmicBalance?: boolean
 }
 
 function DraggableAccountCard({ 
   account, 
   onClick, 
   size,
-  isDragDisabled = false 
+  isDragDisabled = false,
+  rithmicBalance = null,
+  rithmicBalanceLoading = false,
+  showRithmicBalance = false,
 }: DraggableAccountCardProps) {
   const {
     attributes,
@@ -347,6 +359,9 @@ function DraggableAccountCard({
           account={account}
           onClick={onClick}
           size={size}
+          rithmicBalance={rithmicBalance}
+          rithmicBalanceLoading={rithmicBalanceLoading}
+          showRithmicBalance={showRithmicBalance}
         />
         {!isDragDisabled && (
           <div
@@ -818,6 +833,44 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const [sortingMenuOpen, setSortingMenuOpen] = useState(false)
   const [pendingSortId, setPendingSortId] = useState("")
   const shouldUpdateSelectedAccount = useRef(false)
+  const {
+    balancesByAccountId,
+    isLoading: rithmicBalancesLoading,
+    hasCredentials: hasRithmicCredentials,
+    refresh: refreshRithmicBalances,
+  } = useRithmicBalances()
+  const rithmicLinkedAccountNumbers = useMemo(
+    () => getRithmicLinkedAccountNumbers(),
+    [hasRithmicCredentials]
+  )
+
+  const getRithmicBalanceProps = useCallback(
+    (account: Account) => {
+      const accountNumber = account.number ?? ""
+      const showRithmicBalance =
+        hasRithmicCredentials &&
+        (rithmicLinkedAccountNumbers.has(accountNumber) ||
+          accountNumber in balancesByAccountId)
+      const balanceEntry = balancesByAccountId[accountNumber]
+
+      return {
+        showRithmicBalance,
+        rithmicBalance: balanceEntry
+          ? getPrimaryRithmicBalance(balanceEntry)
+          : null,
+        rithmicBalanceLoading:
+          rithmicBalancesLoading &&
+          showRithmicBalance &&
+          balanceEntry == null,
+      }
+    },
+    [
+      balancesByAccountId,
+      hasRithmicCredentials,
+      rithmicBalancesLoading,
+      rithmicLinkedAccountNumbers,
+    ]
+  )
 
   const sortOptions = useMemo<SortOption[]>(
     () => [
@@ -1353,6 +1406,25 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                 </div>
               </PopoverContent>
             </Popover>
+            {hasRithmicCredentials && (
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(size === "small" ? "h-7 px-2" : "h-8")}
+                onClick={() => void refreshRithmicBalances()}
+                disabled={rithmicBalancesLoading}
+                title={t("rithmic.balances.refreshTitle")}
+              >
+                {rithmicBalancesLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                <span className={cn("ml-1.5", size === "small" && "sr-only")}>
+                  {t("rithmic.balances.refresh")}
+                </span>
+              </Button>
+            )}
             <Tabs value={view} onValueChange={(value) => setView(value as "cards" | "table")}>
               <TabsList
                 className={cn(
@@ -1510,6 +1582,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                                     account={account as Account}
                                     onClick={() => setSelectedAccountForTable(account as Account)}
                                     size={size}
+                                    {...getRithmicBalanceProps(account as Account)}
                                   />
                                 )
                               }).filter(Boolean)}
@@ -1565,6 +1638,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                                     account={account as Account}
                                     onClick={() => setSelectedAccountForTable(account as Account)}
                                     size={size}
+                                    {...getRithmicBalanceProps(account as Account)}
                                   />
                                 )
                               }).filter(Boolean)}
@@ -1584,6 +1658,9 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
               onSelectAccount={(account) => setSelectedAccountForTable(account)}
               sorting={sorting}
               onSortingChange={setSorting}
+              rithmicBalancesByAccountId={balancesByAccountId}
+              rithmicBalancesLoading={rithmicBalancesLoading}
+              showRithmicBalances={hasRithmicCredentials}
             />
           )}
         </div>

@@ -1106,6 +1106,10 @@ export default {
       description:
         "Maximum {max} tentatives autorisées par {period} minutes. Veuillez attendre {wait} minutes avant de réessayer.",
     },
+    balances: {
+      refresh: "Actualiser les soldes",
+      refreshTitle: "Actualiser les soldes des comptes Rithmic",
+    },
   },
   "import.type.topstep.name": "Topstep",
   "import.type.topstep.description":
@@ -2487,6 +2491,7 @@ export default {
   "accounts.table.fundedYes": "Compte financé",
   "accounts.table.fundedNo": "Compte de challenge",
   "accounts.table.balance": "Solde",
+  "accounts.table.rithmicBalance": "Solde Rithmic",
   "accounts.table.totalPayout": "Total des payouts",
   "accounts.table.totalFee": "Coût total",
   "accounts.table.group": "Groupe",
