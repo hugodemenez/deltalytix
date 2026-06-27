@@ -80,6 +80,8 @@ curl -s -o /dev/null -D - "http://localhost:3000/authentication?next=dashboard" 
 
 ## Before opening a PR
 
+Open PRs against **`beta`** (not `main`). `main` is production; feature work lands on `beta` first.
+
 1. `git fetch origin beta && git rebase origin/beta`
 2. `bun install`
 3. `bunx prisma db push` (with local `.env.local` loaded)
