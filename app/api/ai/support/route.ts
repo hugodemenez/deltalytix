@@ -1,4 +1,5 @@
 import { createAgentUIStreamResponse, type UIMessage } from "ai";
+import { hasUnsupportedFileUrls } from "@/lib/ai/convert-file-ui-parts";
 import { supportAgent } from "@/lib/ai/support-agent";
 
 export const maxDuration = 30;
@@ -7,13 +8,36 @@ export async function POST(req: Request) {
   try {
     const { messages }: { messages: UIMessage[] } = await req.json();
 
-    if (messages[0]?.role === "assistant") {
-      messages.shift();
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return new Response(JSON.stringify({ error: "No messages provided" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (hasUnsupportedFileUrls(messages)) {
+      return new Response(
+        JSON.stringify({
+          error: "Invalid file attachments",
+          message:
+            "Attachments must be uploaded as images. Please remove and re-attach your files.",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const uiMessages = [...messages];
+
+    if (uiMessages[0]?.role === "assistant") {
+      uiMessages.shift();
     }
 
     return createAgentUIStreamResponse({
       agent: supportAgent,
-      uiMessages: messages,
+      uiMessages: uiMessages,
       sendReasoning: true,
       onStepFinish: (step) => {
         console.log(

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { convertFileUIPartsToDataURLs } from "@/lib/ai/convert-file-ui-parts";
 import type { ChatStatus, FileUIPart } from "ai";
 import {
   ImageIcon,
@@ -401,14 +402,14 @@ export const PromptInput = ({
     }
   };
 
-  const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
+  const handleSubmit: FormEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault();
 
-    const files: FileUIPart[] = items.map(({ ...item }) => ({
-      ...item,
-    }));
+    const form = event.currentTarget;
+    const rawFiles: FileUIPart[] = items.map(({ id: _id, ...item }) => item);
+    const files = await convertFileUIPartsToDataURLs(rawFiles);
 
-    onSubmit({ text: event.currentTarget.message.value, files }, event);
+    onSubmit({ text: form.message.value, files }, event);
   };
 
   const ctx = useMemo<AttachmentsContext>(

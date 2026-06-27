@@ -436,7 +436,7 @@ const ChatBotDemo = () => {
           </CardContent>
         </Card>
 
-        <PromptInput onSubmit={handleSubmit} globalDrop multiple>
+        <PromptInput accept="image/*" onSubmit={handleSubmit} globalDrop multiple>
           <PromptInputBody>
             <PromptInputAttachments>
               {(attachment) => <PromptInputAttachment data={attachment} />}
