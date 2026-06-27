@@ -29,7 +29,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { Response } from '@/components/ai-elements/response';
 import { GlobeIcon, HeadsetIcon, RefreshCcwIcon } from 'lucide-react';
-import { useI18n } from '@/locales/landing-client';
+import { useI18n } from '@/locales/client';
 import {
   Source,
   Sources,

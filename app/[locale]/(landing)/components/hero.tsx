@@ -1,5 +1,5 @@
 'use client'
-import { useI18n } from "@/locales/landing-client";
+import { useI18n } from "@/locales/client";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";

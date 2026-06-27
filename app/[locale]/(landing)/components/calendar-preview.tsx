@@ -16,7 +16,7 @@ import {
 import { enUS, fr } from "date-fns/locale"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { useCurrentLocale, useI18n } from "@/locales/landing-client"
+import { useCurrentLocale, useI18n } from "@/locales/client"
 import { translateWeekday } from "@/lib/translation-utils"
 
 type CalendarDayEntry = {

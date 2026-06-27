@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { Logo } from '../../../../components/logo'
-import { useI18n } from "@/locales/landing-client"
+import { useI18n } from "@/locales/client"
 
 export default function Footer() {
   const t = useI18n()

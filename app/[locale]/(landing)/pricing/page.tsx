@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import PricingPlans from "@/components/pricing-plans";
-import { useI18n } from "@/locales/landing-client";
+import { useI18n } from "@/locales/client";
 import { getReferralCode } from "@/lib/referral-storage";
 
 export default function PricingPage() {

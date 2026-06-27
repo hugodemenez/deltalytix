@@ -1,5 +1,5 @@
 'use client'
-import { useI18n } from '@/locales/landing-client'
+import { useI18n } from '@/locales/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function DisclaimersPage() {

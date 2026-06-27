@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Gift, Users, Trophy, Sparkles, CheckCircle2, AlertCircle } from "lucide-react"
-import { useI18n } from "@/locales/landing-client"
+import { useI18n } from "@/locales/client"
 
 export default function ReferralPage() {
   const t = useI18n()
