@@ -6,20 +6,24 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "@/lib/utils";
 
 const ROW_HEIGHT_ESTIMATE = 44;
+const ROW_HEIGHT_ESTIMATE_COMPACT = 36;
 const VIRTUAL_OVERSCAN = 10;
 
 interface TradeTableVirtualBodyProps<TData> {
   table: Table<TData>;
   scrollElementRef: React.RefObject<HTMLDivElement | null>;
   columnCount: number;
+  compact?: boolean;
 }
 
 function TradeTableBodyRow<TData>({
   row,
   rowIndex,
+  compact = false,
 }: {
   row: Row<TData>;
   rowIndex: number;
+  compact?: boolean;
 }) {
   return (
     <tr
@@ -40,7 +44,10 @@ function TradeTableBodyRow<TData>({
         <td
           key={cell.id}
           className={cn(
-            "p-4 align-middle [&:has([role=checkbox])]:pr-0 whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l group-hover:border-border",
+            "align-middle [&:has([role=checkbox])]:pr-0 whitespace-nowrap border-r border-border/50 last:border-r-0 first:border-l group-hover:border-border",
+            compact
+              ? "px-2 py-1.5 text-xs"
+              : "p-4 px-3 py-2 text-sm",
             row.getIsSelected() && "border-border",
           )}
           style={{ width: cell.column.getSize() }}
@@ -56,13 +63,15 @@ export function TradeTableVirtualBody<TData>({
   table,
   scrollElementRef,
   columnCount,
+  compact = false,
 }: TradeTableVirtualBodyProps<TData>) {
   const { rows } = table.getRowModel();
 
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollElementRef.current,
-    estimateSize: () => ROW_HEIGHT_ESTIMATE,
+    estimateSize: () =>
+      compact ? ROW_HEIGHT_ESTIMATE_COMPACT : ROW_HEIGHT_ESTIMATE,
     overscan: VIRTUAL_OVERSCAN,
   });
 
@@ -101,7 +110,12 @@ export function TradeTableVirtualBody<TData>({
       {virtualRows.map((virtualRow) => {
         const row = rows[virtualRow.index];
         return (
-          <TradeTableBodyRow key={row.id} row={row} rowIndex={virtualRow.index} />
+          <TradeTableBodyRow
+            key={row.id}
+            row={row}
+            rowIndex={virtualRow.index}
+            compact={compact}
+          />
         );
       })}
       {paddingBottom > 0 && (
