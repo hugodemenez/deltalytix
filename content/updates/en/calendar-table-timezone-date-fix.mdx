@@ -4,10 +4,15 @@ description: 'Trades taken overnight no longer show up on the wrong calendar day
 date: '2026-06-24'
 status: completed
 completedDate: '2026-06-27'
+image: '/updates/pr-249/calendar-table-timezone-date-fix-widgets.png'
 ---
 
 # Calendar and table now agree on your trade dates
 
+![Calendar widget using your profile timezone](/updates/pr-249/calendar-table-timezone-date-fix-widgets.png)
+
 Some trades—especially positions opened late in the evening—could show up on the wrong day in the calendar and agenda while the trade table showed the correct date. The calendar was bucketing days in a different timezone than the one the table used for display.
+
+![Trade table dates aligned with the calendar](/updates/pr-249/calendar-table-timezone-date-fix-table.png)
 
 Both views now use your profile timezone consistently, so a trade always lands on the same day everywhere: the calendar, the weekly view, the daily modal, and the table. The PnL totals you see per day in the calendar line up with what's in the table.
