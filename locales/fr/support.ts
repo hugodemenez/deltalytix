@@ -47,6 +47,8 @@ export default {
     suggestionBug: "Signaler un bug ou un problème",
     suggestionHuman: "Parler à un humain",
     tool: {
+      searchingDocs:
+        "Recherche dans la documentation produit...",
       preparingRequest:
         "Préparation de votre demande de support pour notre équipe...",
       requestError:
