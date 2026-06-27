@@ -60,8 +60,8 @@ export function PlatformTutorial({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-lg sm:text-2xl font-bold">
           {selectedPlatform.videoUrl
             ? t("import.type.tutorial.title")
             : t("import.type.tutorial.title").replace("Video", " ")}

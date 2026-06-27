@@ -92,14 +92,10 @@ export default function Navbar() {
             inline
             className="hidden md:block flex-1 min-w-0"
           />
-          <div className="flex items-center space-x-4">
-            <div className='hidden md:flex gap-x-4'>
-              <ImportButton />
-            </div>
-            <div className="flex items-center gap-2">
-              <ReferralButton />
-              <UserMenu />
-            </div>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <ImportButton compact />
+            <ReferralButton />
+            <UserMenu />
           </div>
         </div>
       </nav>

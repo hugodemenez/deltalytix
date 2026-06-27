@@ -309,6 +309,11 @@ export default {
   "import.table.pnl": "PnL",
   "import.table.side": "Side",
   "import.table.showingFirst": "Showing first {count} of {total} trades",
+  "import.type.mobile.step": "Step {current} of {total}",
+  "import.type.mobile.choosePlatform": "Choose a platform",
+  "import.type.mobile.backToPlatforms": "Platforms",
+  "import.type.mobile.connectAccount": "Connect your account",
+  "import.type.mobile.learnHow": "Learn how to import",
   "import.type.search": "Search import types...",
   "import.type.noResults": "No import types found.",
   "import.type.category.directSync": "Direct Account Sync",
@@ -527,6 +532,7 @@ export default {
   "chat.noTradesAvailable": "No trades available",
   "import.type.rithmicWeekendWarning":
     "Rithmic services are not available during weekends",
+  "import.type.rithmicWeekendWarningShort": "Unavailable on weekends",
   "import.account.selectAccount": "Select Account",
   "import.account.selectAccountDescription":
     "Choose an existing account or add a new one",
