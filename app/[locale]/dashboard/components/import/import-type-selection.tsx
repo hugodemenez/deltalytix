@@ -141,7 +141,8 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
       <Command className="border rounded-lg h-full">
         <div className="flex flex-col h-full">
           <CommandInput
-            className="h-auto rounded-none shrink-0"
+            autoFocus={false}
+            className="h-auto rounded-none shrink-0 text-base sm:text-sm"
             placeholder={t('import.type.search')}
             value={searchQuery}
             onValueChange={setSearchQuery}

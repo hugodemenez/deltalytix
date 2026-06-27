@@ -441,7 +441,10 @@ export default function ImportButton({ compact = false }: { compact?: boolean })
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen} >
-        <DialogContent className="flex flex-col w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-[90vw] lg:max-w-[80vw] h-[calc(100dvh-1rem)] sm:h-[85vh] lg:h-[80vh] p-0 gap-0">
+        <DialogContent
+          className="flex flex-col w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-[90vw] lg:max-w-[80vw] h-[calc(100dvh-1rem)] sm:h-[85vh] lg:h-[80vh] p-0 gap-0"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
           <ImportDialogHeader step={step} importType={importType} />
 
           <div className="flex-1 overflow-hidden p-3 sm:p-6 min-h-0">{renderStep()}</div>
