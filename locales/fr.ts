@@ -560,6 +560,7 @@ export default {
   "chat.noTradesAvailable": "Aucun trade disponible",
   "import.type.rithmicWeekendWarning":
     "Les services Rithmic ne sont pas disponibles pendant les weekends",
+  "import.type.rithmicWeekendWarningShort": "Indisponible le week-end",
   "import.account.selectAccount": "Sélectionner un compte",
   "import.account.selectAccountDescription":
     "Choisissez un compte existant ou ajoutez-en un nouveau",
