@@ -16,6 +16,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { buildReferralShareUrl } from '@/lib/referral-url'
+import { getSiteOrigin } from '@/lib/site-url'
 
 interface ReferralData {
   referral: {
@@ -70,10 +72,17 @@ export default function ReferralButton() {
     }
   }
 
+  const getShareOrigin = () =>
+    typeof window !== 'undefined' ? getSiteOrigin(window.location.origin) : getSiteOrigin()
+
   const copyReferralCode = async () => {
     if (!referralData?.referral.slug) return
 
-    const referralUrl = `${window.location.origin}?ref=${referralData.referral.slug}`
+    const referralUrl = buildReferralShareUrl(
+      getShareOrigin(),
+      locale,
+      referralData.referral.slug,
+    )
     
     try {
       await navigator.clipboard.writeText(referralUrl)
@@ -151,7 +160,13 @@ export default function ReferralButton() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex-1 px-3 py-2 bg-muted rounded-md text-sm break-all">
-                  {typeof window !== 'undefined' ? `${window.location.origin}?ref=${referralData.referral.slug}` : referralData.referral.slug}
+                  {typeof window !== 'undefined'
+                    ? buildReferralShareUrl(
+                        getShareOrigin(),
+                        locale,
+                        referralData.referral.slug,
+                      )
+                    : referralData.referral.slug}
                 </div>
                 <Button
                   size="sm"
