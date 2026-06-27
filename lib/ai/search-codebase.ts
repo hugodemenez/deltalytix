@@ -1,9 +1,5 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { access, readFile, stat } from "node:fs/promises";
 import path from "node:path";
-
-const execFileAsync = promisify(execFile);
 
 const REPO_ROOT = process.cwd();
 
@@ -27,10 +23,6 @@ const MAX_RESULTS = 12;
 const MAX_SNIPPET_CHARS = 600;
 
 const SEARCHABLE_FILE_PATTERN = /\.(md|mdx|ts)$/i;
-
-/** Ripgrep is unavailable on Vercel serverless; use Node fs there and in production. */
-const PREFER_NODE_FS_SEARCH =
-  process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
 
 export type CodebaseSearchMatch = {
   file: string;
@@ -73,82 +65,6 @@ function buildFallbackSearchPaths(): string[] {
   return [CONTENT_ROOT, ...LOCALE_DOC_FILES, ...ROOT_MARKDOWN_FILES];
 }
 
-async function searchWithRipgrep(
-  query: string,
-  searchPaths: string[],
-): Promise<CodebaseSearchMatch[] | null> {
-  if (PREFER_NODE_FS_SEARCH) {
-    return null;
-  }
-
-  try {
-    const { stdout } = await execFileAsync(
-      "rg",
-      [
-        "-i",
-        "--json",
-        "-m",
-        String(MAX_RESULTS),
-        "--context",
-        "1",
-        "--glob",
-        "*.md",
-        "--glob",
-        "*.mdx",
-        "--glob",
-        "*.ts",
-        query,
-        ...searchPaths,
-      ],
-      {
-        cwd: REPO_ROOT,
-        maxBuffer: 10 * 1024 * 1024,
-      },
-    );
-
-    const matches: CodebaseSearchMatch[] = [];
-    const seen = new Set<string>();
-
-    for (const line of stdout.split("\n")) {
-      if (!line.trim()) continue;
-
-      let event: { type?: string; data?: Record<string, unknown> };
-      try {
-        event = JSON.parse(line);
-      } catch {
-        continue;
-      }
-
-      if (event.type !== "match" || !event.data) continue;
-
-      const pathData = event.data.path as string | { text?: string } | undefined;
-      const filePath =
-        typeof pathData === "string" ? pathData : String(pathData?.text ?? "");
-      const lineNumber = Number(event.data.line_number ?? 0);
-      const lines = (event.data.lines as { text?: string } | undefined)?.text;
-
-      if (!filePath || !lineNumber || !lines) continue;
-      if (!isSearchableFile(filePath)) continue;
-
-      const key = `${filePath}:${lineNumber}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-
-      matches.push({
-        file: filePath,
-        line: lineNumber,
-        snippet: normalizeSnippet(lines),
-      });
-
-      if (matches.length >= MAX_RESULTS) break;
-    }
-
-    return matches;
-  } catch {
-    return null;
-  }
-}
-
 async function searchFile(
   relativePath: string,
   pattern: RegExp,
@@ -173,7 +89,7 @@ async function searchFile(
   }
 }
 
-async function searchWithNodeFs(
+async function searchFiles(
   query: string,
   searchPaths: string[],
 ): Promise<CodebaseSearchMatch[]> {
@@ -244,8 +160,7 @@ async function runSearch(
     return [];
   }
 
-  const ripgrepMatches = await searchWithRipgrep(query, existingPaths);
-  return ripgrepMatches ?? (await searchWithNodeFs(query, existingPaths));
+  return searchFiles(query, existingPaths);
 }
 
 export async function searchCodebase(
