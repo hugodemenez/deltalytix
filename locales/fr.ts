@@ -351,6 +351,11 @@ export default {
   "import.table.side": "Position",
   "import.table.showingFirst":
     "Affichage des {count} premiers trades sur {total}",
+  "import.type.mobile.step": "Étape {current} sur {total}",
+  "import.type.mobile.choosePlatform": "Choisir une plateforme",
+  "import.type.mobile.backToPlatforms": "Plateformes",
+  "import.type.mobile.connectAccount": "Connecter votre compte",
+  "import.type.mobile.learnHow": "Apprendre à importer",
   "import.type.search": "Rechercher des types d'import...",
   "import.type.noResults": "Aucun type d'import trouvé.",
   "import.type.category.directSync": "Synchronisation Directe",

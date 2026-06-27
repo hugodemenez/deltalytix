@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge"
 import { CommandItem } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle, ChevronRight } from "lucide-react"
 import Image from "next/image"
 import { PlatformConfig } from "../config/platforms"
 import { useI18n } from "@/locales/client"
@@ -15,6 +15,7 @@ interface PlatformItemProps {
   onHover: (category: string) => void
   onLeave: () => void
   isWeekend: boolean
+  showNavigateHint?: boolean
 }
 
 export function PlatformItem({
@@ -23,7 +24,8 @@ export function PlatformItem({
   onSelect,
   onHover,
   onLeave,
-  isWeekend
+  isWeekend,
+  showNavigateHint = false,
 }: PlatformItemProps) {
   const t = useI18n()
 
@@ -92,6 +94,9 @@ export function PlatformItem({
             {t(platform.description as keyof typeof t)}
           </div>
         </div>
+        {showNavigateHint && !platform.isDisabled && !platform.isComingSoon && (
+          <ChevronRight className="h-4 w-4 shrink-0 self-center text-muted-foreground" aria-hidden="true" />
+        )}
       </CommandItem>
     </div>
   )
