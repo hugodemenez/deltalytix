@@ -42,6 +42,12 @@ export default {
     copy: "Copier",
     retry: "Réessayer",
   },
+  "support.title": "Assistant Support",
+  "support.generating": "Génération de la réponse…",
+  "support.suggestions.import": "Aide pour importer des trades",
+  "support.suggestions.billing": "Question sur la facturation ou l'abonnement",
+  "support.suggestions.bug": "Signaler un bug ou un problème",
+  "support.suggestions.human": "Parler à un humain",
   support: {
     greeting:
       "Bienvenue dans l'Assistant Support Deltalytix ! Je suis là pour vous aider à rassembler tous les détails nécessaires concernant votre problème ou votre question. Mon objectif est de collecter le bon contexte pour que votre message puisse être transmis efficacement à notre équipe de support client, qui vous recontactera par email.",

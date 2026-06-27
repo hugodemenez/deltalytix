@@ -41,6 +41,12 @@ export default {
     copy: "Copy",
     retry: "Retry",
   },
+  "support.title": "Support Assistant",
+  "support.generating": "Generating response…",
+  "support.suggestions.import": "Help with importing trades",
+  "support.suggestions.billing": "Billing or subscription question",
+  "support.suggestions.bug": "Report a bug or issue",
+  "support.suggestions.human": "Talk to a human",
   support: {
     greeting:
       "Welcome to the Deltalytix Support Assistant! I'm here to help you gather all the necessary details about your issue or question. My goal is to collect the right context so your message can be efficiently forwarded to our customer support team, who will follow up with you by email.",
