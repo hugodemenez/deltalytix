@@ -1,18 +1,23 @@
-import { motion } from "motion/react";
+import type React from "react"
+import { Bubble, BubbleContent } from "@/components/ui/bubble"
+import { Message, MessageContent } from "@/components/ui/message"
+import { Response } from "@/components/ai-elements/response"
 
 export function UserMessage({ children }: { children: React.ReactNode }) {
+  const content =
+    typeof children === "string" ? (
+      <Response>{children}</Response>
+    ) : (
+      children
+    )
+
   return (
-    <motion.div
-      className="flex w-full mb-3 justify-end"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-    >
-      <div className="max-w-[80%] overflow-hidden">
-        <div className="p-3 rounded-lg rounded-br-none break-words overflow-hidden bg-primary text-primary-foreground">
-          <div className="text-pretty">{children}</div>
-        </div>
-      </div>
-    </motion.div>
+    <Message align="end" className="py-1">
+      <MessageContent>
+        <Bubble variant="default" align="end">
+          <BubbleContent>{content}</BubbleContent>
+        </Bubble>
+      </MessageContent>
+    </Message>
   )
 }

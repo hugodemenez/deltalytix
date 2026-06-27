@@ -15,6 +15,7 @@
   "/[locale]/pricing",
   "/[locale]/privacy",
   "/[locale]/propfirms",
+  "/[locale]/ref/[ref]",
   "/[locale]/referral",
   "/[locale]/shared/[slug]",
   "/[locale]/support",

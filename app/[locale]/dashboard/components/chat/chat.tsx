@@ -1,11 +1,19 @@
 "use client";
 
 import type React from "react";
-import { useRef, useState, useEffect, useMemo, useCallback } from "react";
-import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, ChevronDown, MessageSquare, Loader2 } from "lucide-react";
+import { RotateCcw, MessageSquare } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from "@/components/ui/message-scroller";
+import { Marker, MarkerContent } from "@/components/ui/marker";
 import { motion, AnimatePresence } from "framer-motion";
 import type { UIMessage } from "ai";
 import { useChat } from "@ai-sdk/react";
@@ -77,47 +85,18 @@ function useMessageVirtualization(messages: UIMessage[]) {
   };
 }
 
-// Resume Scroll Button Component using StickToBottom context
-const ResumeScrollButton = () => {
+// Add new message type components
+const ThinkingMessage = () => {
   const t = useI18n();
-  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
-
-  const handleScrollToBottom = useCallback(() => {
-    scrollToBottom();
-  }, [scrollToBottom]);
-
   return (
-    <AnimatePresence initial={false}>
-      {!isAtBottom && (
-        <motion.div
-          className="absolute bottom-20 right-4 z-10"
-          initial={{ opacity: 0, y: 20, scale: 0.8 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.8 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-        >
-          <Button
-            onClick={handleScrollToBottom}
-            size="sm"
-            className="shadow-lg hover:shadow-xl transition-shadow"
-            variant="secondary"
-          >
-            <ChevronDown className="h-4 w-4 mr-1" />
-            {t("chat.overlay.resumeScroll")}
-          </Button>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <Marker>
+      <MarkerContent className="shimmer">
+        {t("chat.aiThinking")}
+      </MarkerContent>
+    </Marker>
   );
 };
 
-// Add new message type components
-const ThinkingMessage = () => (
-  <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
-    <Loader2 className="h-4 w-4 animate-spin" />
-    <span>Thinking...</span>
-  </div>
-);
 
 const FirstMessageLoading = () => {
   const t = useI18n();
@@ -135,7 +114,6 @@ const ToolCallMessage = ({
   toolName,
   args,
   state,
-  output,
 }: {
   toolName: string;
   args: any;
@@ -143,28 +121,32 @@ const ToolCallMessage = ({
   output?: any;
 }) => {
   const isLoading = state === "call" || state === "partial-call";
+  const label = state === "result" || state === "output-available"
+    ? `Completed ${toolName}`
+    : state === "partial-call"
+      ? `Preparing ${toolName}...`
+      : `Calling ${toolName}...`;
+
   return (
-    <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
-      {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-      <div className="flex flex-col">
-        <span>
-          {state === "result"
-            ? `Completed ${toolName}`
-            : state === "partial-call"
-              ? `Preparing ${toolName}...`
-              : `Calling ${toolName}...`}
-        </span>
-        {args && (
-          <span className="text-xs opacity-70">
-            {Object.entries(args).map(([key, value]) => (
-              <span key={key} className="mr-2">
-                {key}: {JSON.stringify(value)}
-              </span>
-            ))}
-          </span>
-        )}
-      </div>
-    </div>
+    <Marker variant={isLoading ? "default" : "border"}>
+      {isLoading && (
+        <MarkerContent className="shimmer">{label}</MarkerContent>
+      )}
+      {!isLoading && (
+        <MarkerContent>
+          {label}
+          {args && (
+            <span className="mt-1 block text-xs opacity-70">
+              {Object.entries(args).map(([key, value]) => (
+                <span key={key} className="mr-2">
+                  {key}: {JSON.stringify(value)}
+                </span>
+              ))}
+            </span>
+          )}
+        </MarkerContent>
+      )}
+    </Marker>
   );
 };
 
@@ -343,21 +325,18 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
   }, [setMessages, setStoredMessages, setIsStarted]);
 
   return (
-    <Card className="h-full flex flex-col bg-background relative overflow-clip">
-      <ChatHeader
-        title="AI Assistant"
-        onReset={handleReset}
-        isLoading={isProcessingResponse}
-        size={size}
-      />
-      <CardContent className="flex-1 flex flex-col min-h-0 p-0 relative">
-        <StickToBottom
-          className="flex-1 min-h-0 w-full overflow-y-auto"
-          initial="smooth"
-          resize="smooth"
-          role="log"
-        >
-          <StickToBottom.Content className="p-4">
+    <MessageScrollerProvider autoScroll>
+      <Card className="h-full flex flex-col bg-background relative overflow-clip">
+        <ChatHeader
+          title="AI Assistant"
+          onReset={handleReset}
+          isLoading={isProcessingResponse}
+          size={size}
+        />
+        <CardContent className="flex-1 flex flex-col min-h-0 p-0 relative">
+          <MessageScroller className="flex-1 min-h-0">
+            <MessageScrollerViewport>
+              <MessageScrollerContent className="p-4" aria-busy={isProcessingResponse}>
             {hasMoreMessages && (
               <div className="text-center mb-4">
                 <Button
@@ -420,6 +399,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                   return null;
                 }
 
+                const messageContent = (() => {
                 switch (message.role) {
                   case "user":
                     return (
@@ -648,12 +628,24 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                   default:
                     return null;
                 }
+                })();
+
+                if (!messageContent) return null;
+
+                return (
+                  <MessageScrollerItem
+                    key={message.id}
+                    scrollAnchor={message.role === "user"}
+                  >
+                    {messageContent}
+                  </MessageScrollerItem>
+                );
               })}
             </AnimatePresence>
-          </StickToBottom.Content>
-
-          <ResumeScrollButton />
-        </StickToBottom>
+              </MessageScrollerContent>
+            </MessageScrollerViewport>
+            <MessageScrollerButton />
+          </MessageScroller>
 
         <ChatInput
           onSend={() => {
@@ -714,5 +706,6 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
         </div>
       )}
     </Card>
+    </MessageScrollerProvider>
   );
 }

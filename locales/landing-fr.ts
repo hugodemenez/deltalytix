@@ -83,6 +83,14 @@ export default {
     joinDiscord: "Rejoindre la Communauté Discord",
     discordDescription:
       "Obtenez une aide instantanée de notre communauté de traders et développeurs.",
+    title: "Assistant Support",
+    generating: "Génération de la réponse…",
+    suggestions: {
+      import: "Aide pour importer des trades",
+      billing: "Question sur la facturation ou l'abonnement",
+      bug: "Signaler un bug ou un problème",
+      human: "Parler à un humain",
+    },
     tool: {
       preparingRequest:
         "Préparation de votre demande de support pour notre équipe...",

@@ -79,6 +79,14 @@ export default {
     joinDiscord: "Join Discord Community",
     discordDescription:
       "Get instant help from our community of traders and developers.",
+    title: "Support Assistant",
+    generating: "Generating response…",
+    suggestions: {
+      import: "Help with importing trades",
+      billing: "Billing or subscription question",
+      bug: "Report a bug or issue",
+      human: "Talk to a human",
+    },
     tool: {
       preparingRequest: "Preparing your support request for our team...",
       requestError: "There was an error while preparing your support request.",
