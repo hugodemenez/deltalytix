@@ -9,13 +9,7 @@ import {
   PromptInputAttachment,
   PromptInputAttachments,
   PromptInputBody,
-  PromptInputButton,
   type PromptInputMessage,
-  PromptInputModelSelect,
-  PromptInputModelSelectContent,
-  PromptInputModelSelectItem,
-  PromptInputModelSelectTrigger,
-  PromptInputModelSelectValue,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputToolbar,
@@ -28,7 +22,7 @@ import {
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { Response } from '@/components/ai-elements/response';
-import { GlobeIcon, HeadsetIcon, RefreshCcwIcon } from 'lucide-react';
+import { HeadsetIcon, RefreshCcwIcon } from 'lucide-react';
 import { useI18n } from '@/locales/landing-client';
 import {
   Source,
@@ -93,17 +87,6 @@ type askForEmailFormToolUIPart = ToolUIPart<{
   };
 }>;
 
-const models = [
-  {
-    name: 'GPT 4o',
-    value: 'openai/gpt-4o',
-  },
-  {
-    name: 'Deepseek R1',
-    value: 'deepseek/deepseek-r1',
-  },
-];
-
 const getErrorMessage = (error: any, t: any) => {
   if (
     error?.message?.includes('Free credits temporarily have rate limits') ||
@@ -138,8 +121,6 @@ const preprocessContent = (content: string) => {
 const ChatBotDemo = () => {
   const t = useI18n();
   const [input, setInput] = useState('');
-  const [model, setModel] = useState<string>(models[0].value);
-  const [webSearch, setWebSearch] = useState(false);
   const { messages, sendMessage, status, setMessages } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/ai/support',
@@ -197,31 +178,15 @@ const ChatBotDemo = () => {
       return;
     }
 
-    sendMessage(
-      {
-        text: message.text || 'Sent with attachments',
-        files: message.files,
-      },
-      {
-        body: {
-          model,
-          webSearch,
-        },
-      },
-    );
+    sendMessage({
+      text: message.text || 'Sent with attachments',
+      files: message.files,
+    });
     setInput('');
   };
 
   const sendWithOptions = (text: string) => {
-    sendMessage(
-      { text },
-      {
-        body: {
-          model,
-          webSearch,
-        },
-      },
-    );
+    sendMessage({ text });
   };
 
   const isBusy = status === 'submitted' || status === 'streaming';
@@ -343,6 +308,21 @@ const ChatBotDemo = () => {
                                 <ReasoningContent>{part.text}</ReasoningContent>
                               </Reasoning>
                             );
+                          case 'tool-searchCodebase': {
+                            switch (part.state) {
+                              case 'input-available':
+                              case 'input-streaming':
+                                return (
+                                  <Marker key={`${message.id}-${i}`}>
+                                    <MarkerContent className="shimmer">
+                                      {t('support.tool.searchingDocs')}
+                                    </MarkerContent>
+                                  </Marker>
+                                );
+                              default:
+                                return null;
+                            }
+                          }
                           case 'tool-askForEmailForm': {
                             switch (part.state) {
                               case 'input-available':
@@ -469,25 +449,6 @@ const ChatBotDemo = () => {
                   <PromptInputActionAddAttachments />
                 </PromptInputActionMenuContent>
               </PromptInputActionMenu>
-              <PromptInputButton
-                variant={webSearch ? 'default' : 'ghost'}
-                onClick={() => setWebSearch(!webSearch)}
-              >
-                <GlobeIcon size={16} />
-                <span>{t('support.search')}</span>
-              </PromptInputButton>
-              <PromptInputModelSelect onValueChange={setModel} value={model}>
-                <PromptInputModelSelectTrigger>
-                  <PromptInputModelSelectValue />
-                </PromptInputModelSelectTrigger>
-                <PromptInputModelSelectContent>
-                  {models.map((item) => (
-                    <PromptInputModelSelectItem key={item.value} value={item.value}>
-                      {item.name}
-                    </PromptInputModelSelectItem>
-                  ))}
-                </PromptInputModelSelectContent>
-              </PromptInputModelSelect>
             </PromptInputTools>
             <PromptInputSubmit disabled={!input && !status} status={status} />
           </PromptInputToolbar>
