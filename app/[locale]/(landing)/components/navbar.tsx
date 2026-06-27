@@ -370,8 +370,12 @@ export default function Component() {
                             </NavigationMenuItem>
                         </NavigationMenuList>
                         <Separator orientation="vertical" className="h-6 mx-4" />
-                        <Button variant="ghost" className="text-sm font-medium hover:text-accent-foreground" asChild>
-                            <Link href={"/authentication"}>{t('landing.navbar.signIn')}</Link>
+                        <Button
+                            variant="ghost"
+                            className="h-14 rounded-none px-4 text-sm font-medium hover:text-accent-foreground"
+                            asChild
+                        >
+                            <Link href="/authentication">{t('landing.navbar.signIn')}</Link>
                         </Button>
                     </NavigationMenu>
                 </div>
@@ -560,16 +564,21 @@ export default function Component() {
                             })}
 
                             <motion.li
-                                className="mt-auto border-t pt-8"
+                                className="mt-auto border-t"
                                 variants={itemVariant}
                             >
-                                <Link
-                                    className="text-xl text-primary"
-                                    href="/authentication"
-                                    onClick={closeMenu}
+                                <motion.div
+                                    whileHover={{ x: 4 }}
+                                    transition={{ duration: 0.2 }}
                                 >
-                                    {t('landing.navbar.signIn')}
-                                </Link>
+                                    <Link
+                                        className="block w-full py-8 text-xl text-primary rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                        href="/authentication"
+                                        onClick={closeMenu}
+                                    >
+                                        {t('landing.navbar.signIn')}
+                                    </Link>
+                                </motion.div>
                             </motion.li>
 
                             <motion.li variants={itemVariant}>
