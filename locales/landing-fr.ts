@@ -42,16 +42,17 @@ export default {
     copy: "Copier",
     retry: "Réessayer",
   },
-  "support.title": "Assistant Support",
+  "support.pageTitle": "Assistant Support",
   "support.generating": "Génération de la réponse…",
-  "support.suggestions.import": "Aide pour importer des trades",
-  "support.suggestions.billing": "Question sur la facturation ou l'abonnement",
-  "support.suggestions.bug": "Signaler un bug ou un problème",
-  "support.suggestions.human": "Parler à un humain",
+  "support.suggestionImport": "Aide pour importer des trades",
+  "support.suggestionBilling": "Question sur la facturation ou l'abonnement",
+  "support.suggestionBug": "Signaler un bug ou un problème",
+  "support.suggestionHuman": "Parler à un humain",
+  "support.inputPlaceholder": "Décrivez votre problème ici…",
   support: {
     greeting:
       "Bienvenue dans l'Assistant Support Deltalytix ! Je suis là pour vous aider à rassembler tous les détails nécessaires concernant votre problème ou votre question. Mon objectif est de collecter le bon contexte pour que votre message puisse être transmis efficacement à notre équipe de support client, qui vous recontactera par email.",
-    inputPlaceholder: "Décrivez votre problème ou votre question ici...",
+    inputPlaceholder: "Décrivez votre problème ici…",
     search: "Rechercher",
     retry: "Réessayer",
     copied: "Copié dans le presse-papiers",
@@ -89,14 +90,12 @@ export default {
     joinDiscord: "Rejoindre la Communauté Discord",
     discordDescription:
       "Obtenez une aide instantanée de notre communauté de traders et développeurs.",
-    title: "Assistant Support",
+    pageTitle: "Assistant Support",
     generating: "Génération de la réponse…",
-    suggestions: {
-      import: "Aide pour importer des trades",
-      billing: "Question sur la facturation ou l'abonnement",
-      bug: "Signaler un bug ou un problème",
-      human: "Parler à un humain",
-    },
+    suggestionImport: "Aide pour importer des trades",
+    suggestionBilling: "Question sur la facturation ou l'abonnement",
+    suggestionBug: "Signaler un bug ou un problème",
+    suggestionHuman: "Parler à un humain",
     tool: {
       preparingRequest:
         "Préparation de votre demande de support pour notre équipe...",

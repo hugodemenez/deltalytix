@@ -164,10 +164,10 @@ const ChatBotDemo = () => {
 
   const suggestions = useMemo(
     () => [
-      t('support.suggestions.import'),
-      t('support.suggestions.billing'),
-      t('support.suggestions.bug'),
-      t('support.suggestions.human'),
+      t('support.suggestionImport'),
+      t('support.suggestionBilling'),
+      t('support.suggestionBug'),
+      t('support.suggestionHuman'),
     ],
     [t],
   );
@@ -234,7 +234,7 @@ const ChatBotDemo = () => {
           <CardHeader className="gap-1 border-b py-4">
             <CardTitle className="flex items-center gap-2 text-lg">
               <HeadsetIcon className="size-5 text-primary" />
-              {t('support.title')}
+              {t('support.pageTitle')}
             </CardTitle>
           </CardHeader>
 
