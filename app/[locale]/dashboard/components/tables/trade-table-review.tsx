@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useData } from "@/context/data-provider";
 import {
   ColumnDef,
@@ -100,6 +100,7 @@ import {
 import { EditableTimeCell } from "./editable-time-cell";
 import { EditableInstrumentCell } from "./editable-instrument-cell";
 import { BulkEditPanel } from "./bulk-edit-panel";
+import { TradeTableVirtualBody } from "./trade-table-virtual-body";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { DASHBOARD_COMPACT_BREAKPOINT } from "../../types/dashboard";
 
@@ -1256,6 +1257,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   // Note: This only controls the Card header, not the table column headers
   const showHeader = config?.showHeader !== false;
   const isCompactScreen = useMediaQuery(`(max-width: ${DASHBOARD_COMPACT_BREAKPOINT}px)`);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Visible columns are used for rendering header/body/footer so hidden columns don't create gaps
   const visibleColumns = table.getVisibleLeafColumns();
@@ -1422,7 +1424,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
         </div>
       </CardHeader>
       )}
-      <CardContent className="flex-1 min-h-0 overflow-auto p-0">
+      <CardContent ref={tableContainerRef} className="flex-1 min-h-0 overflow-auto p-0">
         <div className="relative w-full min-w-max">
           <table
             className="w-full border-separate border-spacing-0 caption-bottom text-sm"
@@ -1452,54 +1454,11 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                 ))}
               </thead>
 
-            <tbody className="bg-background [&_tr:last-child]:border-0">
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row, rowIndex) => (
-                  <React.Fragment key={row.id}>
-                    <tr
-                      data-state={row.getIsSelected() && "selected"}
-                      className={cn(
-                        "border-b border-border transition-colors duration-75 hover:bg-muted/40 group",
-                        row.getIsSelected() && "bg-accent/50 hover:bg-accent data-[state=selected]:bg-muted",
-                        row.getIsExpanded()
-                          ? "bg-muted/60"
-                          : row.getCanExpand()
-                            ? "bg-background"
-                            : "bg-muted/30",
-                        rowIndex % 2 === 1 &&
-                          !row.getIsSelected() &&
-                          "bg-muted/20",
-                      )}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <td
-                          key={cell.id}
-                          className={cn(
-                            "p-4 align-middle [&:has([role=checkbox])]:pr-0 whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l group-hover:border-border",
-                            row.getIsSelected() && "border-border",
-                          )}
-                          style={{ width: cell.column.getSize() }}
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  </React.Fragment>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={visibleColumns.length}
-                    className="p-4 align-middle [&:has([role=checkbox])]:pr-0 h-24 text-center"
-                  >
-                    No results.
-                  </td>
-                </tr>
-              )}
-            </tbody>
+            <TradeTableVirtualBody
+              table={table}
+              scrollElementRef={tableContainerRef}
+              columnCount={visibleColumns.length}
+            />
             <tfoot className="sticky bottom-0 z-10 bg-muted/90 backdrop-blur-xs border-t-2 border-border">
               <tr className="border-b transition-colors">
                 {visibleColumns.map((column, index) => {

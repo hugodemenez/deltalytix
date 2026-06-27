@@ -64,6 +64,7 @@
     "@tailwindcss/cli": "^4.1.16",
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.14.4",
     "@tiptap/core": "^3.8.0",
     "@tiptap/extension-bubble-menu": "^3.8.0",
     "@tiptap/extension-collaboration": "^3.8.0",
