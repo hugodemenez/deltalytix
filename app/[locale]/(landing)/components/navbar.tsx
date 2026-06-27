@@ -134,48 +134,23 @@ export default function Component() {
         }
     }, [isOpen])
 
-    // Lock/unlock body scroll when mobile menu is open (position:fixed works reliably on iOS Safari)
+    // Lock body scroll when mobile menu is open without changing scroll position
     useEffect(() => {
-        if (typeof window === 'undefined') return
+        if (typeof window === 'undefined' || !isOpen) return
 
         const { body, documentElement } = document
+        const previousBodyOverflow = body.style.overflow
+        const previousHtmlOverflow = documentElement.style.overflow
+        const previousBodyTouchAction = body.style.touchAction
 
-        if (isOpen) {
-            const scrollY = window.scrollY
-            body.dataset.mobileNavbarScrollY = String(scrollY)
-            body.style.position = 'fixed'
-            body.style.top = `-${scrollY}px`
-            body.style.left = '0'
-            body.style.right = '0'
-            body.style.width = '100%'
-            body.style.overflow = 'hidden'
-            documentElement.style.overflow = 'hidden'
-        } else {
-            const scrollY = Number(body.dataset.mobileNavbarScrollY ?? '0')
-            body.style.position = ''
-            body.style.top = ''
-            body.style.left = ''
-            body.style.right = ''
-            body.style.width = ''
-            body.style.overflow = ''
-            documentElement.style.overflow = ''
-            delete body.dataset.mobileNavbarScrollY
-            window.scrollTo(0, scrollY)
-        }
+        body.style.overflow = 'hidden'
+        documentElement.style.overflow = 'hidden'
+        body.style.touchAction = 'none'
 
         return () => {
-            const scrollY = Number(body.dataset.mobileNavbarScrollY ?? '0')
-            body.style.position = ''
-            body.style.top = ''
-            body.style.left = ''
-            body.style.right = ''
-            body.style.width = ''
-            body.style.overflow = ''
-            documentElement.style.overflow = ''
-            delete body.dataset.mobileNavbarScrollY
-            if (scrollY > 0) {
-                window.scrollTo(0, scrollY)
-            }
+            body.style.overflow = previousBodyOverflow
+            documentElement.style.overflow = previousHtmlOverflow
+            body.style.touchAction = previousBodyTouchAction
         }
     }, [isOpen])
 
