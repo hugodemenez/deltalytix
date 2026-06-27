@@ -35,7 +35,6 @@ export default async function RootLayout(
     params
   } = props;
   
-  // Await the params since it's now a Promise in Next.js 15
   const { locale } = await params;
 
   return (

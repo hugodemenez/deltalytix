@@ -12,7 +12,7 @@ export default {
   "calendar.noTrades": "Aucun trade",
   embed: {
     pnlPerContract: {
-      title: "P&L Net Moyen par Contrat",
+      title: "P/L net moyen par contrat",
     },
   },
 } as const;
