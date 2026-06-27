@@ -19,6 +19,13 @@ export const searchCodebaseTool = tool({
   execute: async ({ query, locale }) => {
     const result = await searchCodebase(query, { locale });
 
+    console.log("[searchCodebase]", {
+      query,
+      locale,
+      matchCount: result.matchCount,
+      sampleFiles: result.matches.slice(0, 3).map((match) => match.file),
+    });
+
     if (result.matchCount === 0) {
       return {
         found: false,

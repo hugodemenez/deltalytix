@@ -6,6 +6,21 @@ const REPO_ROOT = process.cwd();
 /** Product documentation and user-facing copy only — not full locale aggregates. */
 const CONTENT_ROOT = "content" as const;
 
+export const SUPPORT_SEARCH_TRACE_INCLUDES = [
+  "./content/**/*",
+  "./locales/en/support.ts",
+  "./locales/fr/support.ts",
+  "./locales/en/faq.ts",
+  "./locales/fr/faq.ts",
+  "./locales/en/chat.ts",
+  "./locales/fr/chat.ts",
+  "./locales/en/landing.ts",
+  "./locales/fr/landing.ts",
+  "./README.md",
+  "./SELF_HOSTING.md",
+  "./AGENTS.md",
+] as const;
+
 const LOCALE_DOC_FILES = [
   "locales/en/support.ts",
   "locales/fr/support.ts",
@@ -23,6 +38,44 @@ const MAX_RESULTS = 12;
 const MAX_SNIPPET_CHARS = 600;
 
 const SEARCHABLE_FILE_PATTERN = /\.(md|mdx|ts)$/i;
+
+const SEARCH_STOP_WORDS = new Set([
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "for",
+  "to",
+  "how",
+  "what",
+  "when",
+  "where",
+  "why",
+  "is",
+  "are",
+  "was",
+  "were",
+  "do",
+  "does",
+  "did",
+  "can",
+  "could",
+  "should",
+  "would",
+  "about",
+  "with",
+  "from",
+  "into",
+  "documentation",
+  "docs",
+  "guide",
+  "help",
+  "setup",
+  "instructions",
+  "information",
+  "details",
+]);
 
 export type CodebaseSearchMatch = {
   file: string;
@@ -65,20 +118,96 @@ function buildFallbackSearchPaths(): string[] {
   return [CONTENT_ROOT, ...LOCALE_DOC_FILES, ...ROOT_MARKDOWN_FILES];
 }
 
+function parseSearchTerms(query: string): string[] {
+  const rawTerms = query
+    .trim()
+    .split(/\s+/)
+    .map((term) => term.replace(/[^\p{L}\p{N}_-]/gu, ""))
+    .filter((term) => term.length >= 2);
+
+  const terms = [
+    ...new Set(rawTerms.filter((term) => !SEARCH_STOP_WORDS.has(term.toLowerCase()))),
+  ];
+
+  return terms.length > 0 ? terms : rawTerms.slice(0, 1);
+}
+
+function fileContainsAllTerms(content: string, terms: string[]): boolean {
+  const lowerContent = content.toLowerCase();
+  return terms.every((term) => lowerContent.includes(term.toLowerCase()));
+}
+
+function fileNameContainsAllTerms(relativePath: string, terms: string[]): boolean {
+  const slug = path
+    .basename(relativePath, path.extname(relativePath))
+    .toLowerCase()
+    .replace(/-/g, " ");
+  return terms.every((term) => slug.includes(term.toLowerCase()));
+}
+
+function fileMatchesTerms(relativePath: string, content: string, terms: string[]): boolean {
+  return (
+    fileContainsAllTerms(content, terms) || fileNameContainsAllTerms(relativePath, terms)
+  );
+}
+
+const GENERIC_SEARCH_TERMS = new Set([
+  "firm",
+  "sync",
+  "account",
+  "import",
+  "trade",
+  "trades",
+  "selection",
+  "support",
+  "connection",
+  "dashboard",
+]);
+
+function pickPrimarySearchTerm(terms: string[]): string {
+  const distinctiveTerms = terms.filter(
+    (term) => !GENERIC_SEARCH_TERMS.has(term.toLowerCase()),
+  );
+  return distinctiveTerms[0] ?? terms[0];
+}
+
+function lineMatchedTermCount(line: string, terms: string[]): number {
+  const lowerLine = line.toLowerCase();
+  return terms.filter((term) => lowerLine.includes(term.toLowerCase())).length;
+}
+
 async function searchFile(
   relativePath: string,
-  pattern: RegExp,
+  terms: string[],
   matches: CodebaseSearchMatch[],
 ): Promise<void> {
-  if (matches.length >= MAX_RESULTS) return;
+  if (matches.length >= MAX_RESULTS || terms.length === 0) return;
 
   const absolutePath = path.join(REPO_ROOT, relativePath);
-  const content = await readFile(absolutePath, "utf8");
+
+  let content: string;
+  try {
+    content = await readFile(absolutePath, "utf8");
+  } catch {
+    return;
+  }
+
+  if (!fileMatchesTerms(relativePath, content, terms)) {
+    return;
+  }
+
   const lines = content.split("\n");
+  const lineMatches: Array<{ index: number; score: number }> = [];
 
   for (let index = 0; index < lines.length; index += 1) {
-    if (!pattern.test(lines[index])) continue;
+    const score = lineMatchedTermCount(lines[index], terms);
+    if (score === 0) continue;
+    lineMatches.push({ index, score });
+  }
 
+  lineMatches.sort((left, right) => right.score - left.score);
+
+  for (const { index } of lineMatches) {
     matches.push({
       file: relativePath,
       line: index + 1,
@@ -90,10 +219,9 @@ async function searchFile(
 }
 
 async function searchFiles(
-  query: string,
+  terms: string[],
   searchPaths: string[],
 ): Promise<CodebaseSearchMatch[]> {
-  const pattern = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
   const matches: CodebaseSearchMatch[] = [];
 
   async function walk(dir: string): Promise<void> {
@@ -118,7 +246,7 @@ async function searchFiles(
 
       if (!isSearchableFile(relativePath)) continue;
 
-      await searchFile(relativePath, pattern, matches);
+      await searchFile(relativePath, terms, matches);
     }
   }
 
@@ -131,7 +259,7 @@ async function searchFiles(
       const fileStat = await stat(absolutePath);
       if (fileStat.isFile()) {
         if (isSearchableFile(searchPath)) {
-          await searchFile(searchPath, pattern, matches);
+          await searchFile(searchPath, terms, matches);
         }
         continue;
       }
@@ -157,10 +285,21 @@ async function runSearch(
   }
 
   if (existingPaths.length === 0) {
+    console.warn("[searchCodebase] No searchable paths found", {
+      cwd: REPO_ROOT,
+      requestedPaths: searchPaths,
+    });
     return [];
   }
 
-  return searchFiles(query, existingPaths);
+  const terms = parseSearchTerms(query);
+  let matches = await searchFiles(terms, existingPaths);
+
+  if (matches.length === 0 && terms.length > 1) {
+    matches = await searchFiles([pickPrimarySearchTerm(terms)], existingPaths);
+  }
+
+  return matches;
 }
 
 export async function searchCodebase(
