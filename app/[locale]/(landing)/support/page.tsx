@@ -64,10 +64,19 @@ import { Marker, MarkerContent } from '@/components/ui/marker';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+
+const DISCORD_INVITE_URL = process.env.NEXT_PUBLIC_DISCORD_INVITATION;
+
+function DiscordIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z" />
+    </svg>
+  );
+}
 
 type askForEmailFormToolInput = {
   summary: string;
@@ -216,42 +225,17 @@ const ChatBotDemo = () => {
   };
 
   const isBusy = status === 'submitted' || status === 'streaming';
-  const showSuggestions = messages.length <= 1 && !isBusy;
+  const showStarterActions = messages.length <= 1 && !isBusy;
 
   return (
     <MessageScrollerProvider autoScroll>
       <div className="mx-auto flex size-full h-[calc(100vh-64px)] max-w-4xl flex-col gap-4 p-4 sm:p-6">
-        <a
-          href={process.env.NEXT_PUBLIC_DISCORD_INVITATION || '#'}
-          target="_blank"
-          rel="noreferrer"
-          className="group block cursor-pointer rounded-lg border border-blue-200 bg-linear-to-r from-blue-50 to-indigo-50 p-4 transition-colors duration-150 hover:border-blue-300 hover:bg-blue-100 dark:border-blue-800 dark:from-blue-950/20 dark:to-indigo-950/20 dark:hover:border-blue-700 dark:hover:bg-blue-900/30"
-        >
-          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="flex-1">
-              <h3 className="mb-1 text-lg font-semibold text-blue-900 dark:text-blue-100">
-                {t('support.joinDiscord')}
-              </h3>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                {t('support.discordDescription')}
-              </p>
-            </div>
-            <div className="text-gray-400 transition-colors duration-150 group-hover:text-gray-600 dark:group-hover:text-gray-200">
-              <span className="sr-only">Discord</span>
-              <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z" />
-              </svg>
-            </div>
-          </div>
-        </a>
-
         <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0">
           <CardHeader className="gap-1 border-b py-4">
             <CardTitle className="flex items-center gap-2 text-lg">
               <HeadsetIcon className="size-5 text-primary" />
               {t('support.title')}
             </CardTitle>
-            <CardDescription>{t('support.description')}</CardDescription>
           </CardHeader>
 
           <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
@@ -415,6 +399,29 @@ const ChatBotDemo = () => {
                     </MessageScrollerItem>
                   ))}
 
+                  {showStarterActions && DISCORD_INVITE_URL && (
+                    <MessageScrollerItem>
+                      <ChatMessage align="start">
+                        <MessageContent>
+                          <div className="flex max-w-sm flex-col gap-2">
+                            <a
+                              href={DISCORD_INVITE_URL}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex w-fit items-center gap-2.5 rounded-xl bg-[#5865F2] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#4752C4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5865F2]/60 focus-visible:ring-offset-2"
+                            >
+                              <DiscordIcon className="size-5 shrink-0" />
+                              {t('support.joinDiscord')}
+                            </a>
+                            <p className="text-xs text-muted-foreground">
+                              {t('support.discordDescription')}
+                            </p>
+                          </div>
+                        </MessageContent>
+                      </ChatMessage>
+                    </MessageScrollerItem>
+                  )}
+
                   {status === 'submitted' && (
                     <Marker>
                       <MarkerContent className="shimmer">
@@ -427,7 +434,7 @@ const ChatBotDemo = () => {
               <MessageScrollerButton />
             </MessageScroller>
 
-            {showSuggestions && (
+            {showStarterActions && (
               <div className="border-t px-4 py-3">
                 <Suggestions>
                   {suggestions.map((suggestion) => (
