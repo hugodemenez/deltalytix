@@ -49,7 +49,7 @@ export type Step =
   | "complete"
   | "process-file";
 
-export default function ImportButton() {
+export default function ImportButton({ compact = false }: { compact?: boolean }) {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [step, setStep] = useState<Step>("select-import-type");
   const [importType, setImportType] = useState<ImportType>("");
@@ -425,20 +425,26 @@ export default function ImportButton() {
       <Button
         onClick={() => setIsOpen(true)}
         variant="default"
-        className={cn("justify-start text-left font-normal w-full")}
+        className={cn(
+          "justify-center font-normal shrink-0",
+          compact
+            ? "h-9 w-9 p-0 rounded-md md:justify-start md:text-left md:w-auto md:h-10 md:px-4 md:py-2"
+            : "justify-start text-left w-full h-10 px-4 py-2"
+        )}
         id="import-data"
+        aria-label={t("import.button")}
         onMouseEnter={() => uploadIconRef.current?.startAnimation()}
         onMouseLeave={() => uploadIconRef.current?.stopAnimation()}
       >
-        <UploadIcon ref={uploadIconRef} className="h-4 w-4 mr-2" />
-        <span className="hidden md:block">{t("import.button")}</span>
+        <UploadIcon ref={uploadIconRef} className={cn("h-4 w-4", compact ? "md:mr-2" : "mr-2")} />
+        <span className={compact ? "hidden md:inline" : "inline"}>{t("import.button")}</span>
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen} >
-        <DialogContent className="flex flex-col max-w-[80vw] h-[80vh] p-0">
+        <DialogContent className="flex flex-col w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-[90vw] lg:max-w-[80vw] h-[calc(100dvh-1rem)] sm:h-[85vh] lg:h-[80vh] p-0 gap-0">
           <ImportDialogHeader step={step} importType={importType} />
 
-          <div className="flex-1 overflow-hidden p-6">{renderStep()}</div>
+          <div className="flex-1 overflow-hidden p-3 sm:p-6 min-h-0">{renderStep()}</div>
 
           <ImportDialogFooter
             step={step}

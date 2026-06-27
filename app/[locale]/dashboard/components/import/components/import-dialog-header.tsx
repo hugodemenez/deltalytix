@@ -22,8 +22,8 @@ export function ImportDialogHeader({ step, importType }: ImportDialogHeaderProps
   const totalSteps = platform.steps.length
 
   return (
-    <DialogHeader className="flex-none p-6 border-b space-y-4">
-      <DialogTitle>{t((currentStep?.title || 'import.title') as any, { count: 1 })}</DialogTitle>
+    <DialogHeader className="flex-none p-4 sm:p-6 border-b space-y-3 sm:space-y-4">
+      <DialogTitle className="text-base sm:text-lg pr-8">{t((currentStep?.title || 'import.title') as any, { count: 1 })}</DialogTitle>
       <DialogDescription className="text-sm text-muted-foreground">
         {t((currentStep?.description || 'import.description') as any, { count: 1 })}
       </DialogDescription>
@@ -32,16 +32,22 @@ export function ImportDialogHeader({ step, importType }: ImportDialogHeaderProps
           <div 
             className="bg-primary h-2 rounded-full transition-all duration-300 ease-in-out"
             style={{ 
-              width: `${(currentStepIndex / (totalSteps - 1)) * 100}%`
+              width: `${totalSteps > 1 ? (currentStepIndex / (totalSteps - 1)) * 100 : 100}%`
             }}
           />
         </div>
-        <div className="flex justify-between text-xs text-muted-foreground px-1">
+        <div className="md:hidden text-xs text-primary font-medium">
+          {t((currentStep?.title || 'import.title') as any, { count: 1 })}
+          <span className="text-muted-foreground font-normal">
+            {' '}({currentStepIndex + 1}/{totalSteps})
+          </span>
+        </div>
+        <div className="hidden md:flex justify-between text-xs text-muted-foreground px-1 gap-2 overflow-x-auto">
           {platform.steps.map((s, index) => (
             <div 
               key={s.id}
               className={cn(
-                "transition-colors whitespace-nowrap",
+                "transition-colors whitespace-nowrap shrink-0",
                 currentStepIndex >= index && "text-primary font-medium"
               )}
             >
