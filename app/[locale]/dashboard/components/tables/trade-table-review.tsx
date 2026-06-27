@@ -26,6 +26,8 @@ import {
   Search,
   Filter,
   X,
+  MoreHorizontal,
+  Settings,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Trade } from "@/prisma/generated/prisma/browser";
@@ -101,8 +103,7 @@ import { EditableTimeCell } from "./editable-time-cell";
 import { EditableInstrumentCell } from "./editable-instrument-cell";
 import { BulkEditPanel } from "./bulk-edit-panel";
 import { TradeTableVirtualBody } from "./trade-table-virtual-body";
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { DASHBOARD_COMPACT_BREAKPOINT } from "../../types/dashboard";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Custom Tags Header Component
 function TagsColumnHeader() {
@@ -706,14 +707,14 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           return (
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={row.getToggleExpandedHandler()}
-              className="hover:bg-transparent"
+              className="h-7 w-7 hover:bg-transparent sm:h-8 sm:w-8"
             >
               {row.getIsExpanded() ? (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               ) : (
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               )}
             </Button>
           );
@@ -739,7 +740,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
               <div className="flex items-center gap-1">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <div className="flex items-center justify-center w-fit min-w-6 px-2 h-6 rounded-full bg-muted text-xs font-medium cursor-pointer hover:bg-muted/80 transition-colors">
+                    <div className="flex items-center justify-center w-fit min-w-5 px-1.5 h-5 rounded-full bg-muted text-[10px] font-medium cursor-pointer hover:bg-muted/80 transition-colors sm:min-w-6 sm:px-2 sm:h-6 sm:text-xs">
                       {accounts.length === 1
                         ? `${accounts[0].slice(0, 2)}${accounts[0].slice(-2)}`
                         : `+${accounts.length}`}
@@ -1097,7 +1098,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
               : [trade.id];
           return (
             <div className="flex gap-2">
-              <div className="relative h-10 w-10">
+              <div className="relative h-7 w-7 sm:h-10 sm:w-10">
                 <TradeImageEditor trade={trade} tradeIds={tradeIds} />
               </div>
             </div>
@@ -1256,8 +1257,15 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   // Determine if Card header should be shown (default to true if not specified)
   // Note: This only controls the Card header, not the table column headers
   const showHeader = config?.showHeader !== false;
-  const isCompactScreen = useMediaQuery(`(max-width: ${DASHBOARD_COMPACT_BREAKPOINT}px)`);
+  const isMobile = useIsMobile();
   const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  const columnConfigTrigger = isMobile ? (
+    <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
+      <Settings className="h-4 w-4" />
+      <span className="sr-only">{t("trade-table.resetConfig")}</span>
+    </Button>
+  ) : undefined;
 
   // Visible columns are used for rendering header/body/footer so hidden columns don't create gaps
   const visibleColumns = table.getVisibleLeafColumns();
@@ -1268,30 +1276,35 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
       style={cardStyle}
     >
       {showHeader && (
-        <CardHeader className="border-b shrink-0 p-3 sm:p-4">
-        <div className="flex w-full min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <CardTitle className="line-clamp-1 text-base">
-              {t("trade-table.title")}
-            </CardTitle>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>{t("trade-table.description")}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+        <CardHeader className="border-b shrink-0 p-2 sm:p-4">
+        <div className="flex w-full min-w-0 flex-col gap-2 sm:gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 items-center justify-between gap-1.5">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <CardTitle className="line-clamp-1 text-sm sm:text-base">
+                {t("trade-table.title")}
+              </CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>{t("trade-table.description")}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            {isMobile && !config?.disableColumnConfig && (
+              <ColumnConfigDialog tableId="trade-table" trigger={columnConfigTrigger} />
+            )}
           </div>
-          <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:w-auto xl:flex-wrap xl:items-center xl:justify-end">
+          <div className="grid w-full min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-2 sm:gap-2 xl:flex xl:w-auto xl:flex-wrap xl:items-center xl:justify-end">
             {selectedTrades.length > 0 && (
               <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="destructive"
-                    className="h-10 w-full max-w-full font-normal whitespace-nowrap xl:w-auto"
+                    className="col-span-2 h-8 w-full max-w-full text-xs font-normal whitespace-nowrap sm:col-span-1 sm:h-10 sm:text-sm xl:w-auto"
                     onClick={() => setShowDeleteDialog(true)}
                   >
                     <Trash className="mr-2 h-4 w-4" />
@@ -1321,7 +1334,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             {config?.groupTrades !== false && selectedTrades.length >= 2 && (
               <Button
                 variant="outline"
-                className="h-10 w-full max-w-full font-normal whitespace-nowrap xl:w-auto"
+                className="col-span-2 h-8 w-full max-w-full text-xs font-normal whitespace-nowrap sm:col-span-1 sm:h-10 sm:text-sm xl:w-auto"
                 onClick={handleGroupTrades}
               >
                 {t("trade-table.groupTrades")}
@@ -1330,7 +1343,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             {config?.groupTrades !== false && selectedTrades.length > 0 && (
               <Button
                 variant="outline"
-                className="h-10 w-full max-w-full font-normal whitespace-nowrap xl:w-auto"
+                className="col-span-2 h-8 w-full max-w-full text-xs font-normal whitespace-nowrap sm:col-span-1 sm:h-10 sm:text-sm xl:w-auto"
                 onClick={handleUngroupTrades}
               >
                 {t("trade-table.ungroupTrades")}
@@ -1343,7 +1356,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                   value: "time" | "instrument" | "account" | "creationDate",
                 ) => handleGroupingModeChange(value)}
               >
-                <SelectTrigger className="w-full min-w-0 max-w-full xl:w-[180px] xl:max-w-[250px]">
+                <SelectTrigger className="h-8 w-full min-w-0 max-w-full text-xs sm:h-10 sm:text-sm xl:w-[180px] xl:max-w-[250px]">
                   <SelectValue
                     placeholder={t("trade-table.groupingMode.label")}
                     className="truncate"
@@ -1373,7 +1386,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                 }
                 disabled={groupingMode !== "time"}
               >
-                <SelectTrigger className="w-full min-w-0 max-w-full xl:w-[180px] xl:max-w-[250px]">
+                <SelectTrigger className="h-8 w-full min-w-0 max-w-full text-xs sm:h-10 sm:text-sm xl:w-[180px] xl:max-w-[250px]">
                   <div className="flex items-center w-full">
                     <TooltipProvider>
                       <Tooltip>
@@ -1417,8 +1430,8 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                 </SelectContent>
               </Select>
             )}
-            {!config?.disableColumnConfig && (
-              <ColumnConfigDialog tableId="trade-table" />
+            {!config?.disableColumnConfig && !isMobile && (
+              <ColumnConfigDialog tableId="trade-table" trigger={columnConfigTrigger} />
             )}
           </div>
         </div>
@@ -1439,7 +1452,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                     {headerGroup.headers.map((header) => (
                       <th
                         key={header.id}
-                        className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l h-12 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                        className="whitespace-nowrap px-2 py-1 text-left text-xs font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l h-8 sm:h-12 sm:px-3 sm:py-2 sm:text-sm align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0"
                         style={{ width: header.getSize() }}
                       >
                         {header.isPlaceholder
@@ -1458,6 +1471,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
               table={table}
               scrollElementRef={tableContainerRef}
               columnCount={visibleColumns.length}
+              compact={isMobile}
             />
             <tfoot className="sticky bottom-0 z-10 bg-muted/90 backdrop-blur-xs border-t-2 border-border">
               <tr className="border-b transition-colors">
@@ -1479,7 +1493,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                       <td
                         key={columnId || index}
                         className={cn(
-                          "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm font-semibold border-r border-border/50 last:border-r-0 first:border-l",
+                          "px-2 py-1.5 align-middle whitespace-nowrap text-xs font-semibold border-r border-border/50 last:border-r-0 first:border-l sm:px-3 sm:py-2 sm:text-sm",
                         )}
                         style={{ width: column.getSize() }}
                       >
@@ -1494,7 +1508,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                       <td
                         key={columnId || index}
                         className={cn(
-                          "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm border-r border-border/50 last:border-r-0",
+                          "px-2 py-1.5 align-middle whitespace-nowrap text-xs border-r border-border/50 last:border-r-0 sm:px-3 sm:py-2 sm:text-sm",
                         )}
                       style={{ width: column.getSize() }}
                       />
@@ -1507,7 +1521,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                       <td
                         key={columnId}
                         className={cn(
-                          "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm font-semibold text-right border-r border-border/50 last:border-r-0",
+                          "px-2 py-1.5 align-middle whitespace-nowrap text-xs font-semibold text-right border-r border-border/50 last:border-r-0 sm:px-3 sm:py-2 sm:text-sm",
                         )}
                       style={{ width: column.getSize() }}
                       >
@@ -1527,7 +1541,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                       <td
                         key={columnId}
                         className={cn(
-                          "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm font-semibold text-right border-r border-border/50 last:border-r-0",
+                          "px-2 py-1.5 align-middle whitespace-nowrap text-xs font-semibold text-right border-r border-border/50 last:border-r-0 sm:px-3 sm:py-2 sm:text-sm",
                         )}
                       style={{ width: column.getSize() }}
                       >
@@ -1541,7 +1555,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                       <td
                         key={columnId}
                         className={cn(
-                          "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm font-semibold text-right border-r border-border/50 last:border-r-0",
+                          "px-2 py-1.5 align-middle whitespace-nowrap text-xs font-semibold text-right border-r border-border/50 last:border-r-0 sm:px-3 sm:py-2 sm:text-sm",
                         )}
                       style={{ width: column.getSize() }}
                       >
@@ -1555,7 +1569,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                     <td
                       key={columnId || index}
                       className={cn(
-                        "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm border-r border-border/50 last:border-r-0",
+                        "px-2 py-1.5 align-middle whitespace-nowrap text-xs border-r border-border/50 last:border-r-0 sm:px-3 sm:py-2 sm:text-sm",
                       )}
                       style={{ width: column.getSize() }}
                     />
@@ -1566,76 +1580,123 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           </table>
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col items-start gap-3 border-t bg-background px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="text-sm text-muted-foreground">
+      <CardFooter className="flex shrink-0 items-center justify-between gap-2 border-t bg-background px-2 py-1.5 sm:px-4 sm:py-3">
+        <div className="text-xs text-muted-foreground sm:text-sm">
           {t("trade-table.totalTrades", { count: groupedTrades.length })}
         </div>
-        <div className="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap lg:w-auto lg:justify-end">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             variant="outline"
-            size="sm"
-            className="min-w-0"
+            size="icon"
+            className="h-7 w-7 sm:h-8 sm:w-8"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
             aria-label={t("trade-table.previous")}
           >
             <ChevronLeft className="h-4 w-4" />
-            {!isCompactScreen && t("trade-table.previous")}
           </Button>
-          <span className="col-span-2 text-center text-sm whitespace-nowrap sm:col-span-1 sm:text-left">
-            {t("trade-table.pageInfo", {
-              current: table.getState().pagination.pageIndex + 1,
-              total: table.getPageCount(),
-            })}
+          <span className="min-w-[4.5rem] text-center text-xs whitespace-nowrap sm:text-sm">
+            {isMobile
+              ? `${table.getState().pagination.pageIndex + 1}/${table.getPageCount()}`
+              : t("trade-table.pageInfo", {
+                  current: table.getState().pagination.pageIndex + 1,
+                  total: table.getPageCount(),
+                })}
           </span>
           <Button
             variant="outline"
-            size="sm"
-            className="min-w-0"
+            size="icon"
+            className="h-7 w-7 sm:h-8 sm:w-8"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
             aria-label={t("trade-table.next")}
           >
-            {!isCompactScreen && t("trade-table.next")}
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="min-w-0 sm:flex-none"
-            onClick={() => {
-              const newPageSize = pageSize + 10;
-              handlePageSizeChange(newPageSize);
-              table.setPageSize(newPageSize);
-            }}
-          >
-            {t("trade-table.pageSize")}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="min-w-0 sm:w-[180px]"
-            onClick={() => {
-              handlePageSizeChange(50);
-              table.resetPageSize();
-              table.setPageIndex(0);
-            }}
-          >
-            {t("trade-table.resetPageSize")}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="min-w-0 sm:flex-none"
-            onClick={() => {
-              const maxPageSize = groupedTrades.length;
-              handlePageSizeChange(maxPageSize);
-              table.setPageSize(maxPageSize);
-              table.setPageIndex(0);
-            }}
-          >
-            {t("trade-table.maxPageSize")}
-          </Button>
+          {isMobile ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 sm:h-8 sm:w-8"
+                  aria-label={t("trade-table.pageSize")}
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    const newPageSize = pageSize + 10;
+                    handlePageSizeChange(newPageSize);
+                    table.setPageSize(newPageSize);
+                  }}
+                >
+                  {t("trade-table.pageSize")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    handlePageSizeChange(50);
+                    table.resetPageSize();
+                    table.setPageIndex(0);
+                  }}
+                >
+                  {t("trade-table.resetPageSize")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    const maxPageSize = groupedTrades.length;
+                    handlePageSizeChange(maxPageSize);
+                    table.setPageSize(maxPageSize);
+                    table.setPageIndex(0);
+                  }}
+                >
+                  {t("trade-table.maxPageSize")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden min-w-0 sm:inline-flex"
+                onClick={() => {
+                  const newPageSize = pageSize + 10;
+                  handlePageSizeChange(newPageSize);
+                  table.setPageSize(newPageSize);
+                }}
+              >
+                {t("trade-table.pageSize")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden min-w-0 sm:inline-flex"
+                onClick={() => {
+                  handlePageSizeChange(50);
+                  table.resetPageSize();
+                  table.setPageIndex(0);
+                }}
+              >
+                {t("trade-table.resetPageSize")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden min-w-0 sm:inline-flex"
+                onClick={() => {
+                  const maxPageSize = groupedTrades.length;
+                  handlePageSizeChange(maxPageSize);
+                  table.setPageSize(maxPageSize);
+                  table.setPageIndex(0);
+                }}
+              >
+                {t("trade-table.maxPageSize")}
+              </Button>
+            </>
+          )}
         </div>
       </CardFooter>
 
