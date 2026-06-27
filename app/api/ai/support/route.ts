@@ -14,6 +14,7 @@ export async function POST(req: Request) {
     return createAgentUIStreamResponse({
       agent: supportAgent,
       uiMessages: messages,
+      sendReasoning: true,
       onStepFinish: (step) => {
         console.log(
           "[Support Agent] Step finished:",

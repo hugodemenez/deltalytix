@@ -34,8 +34,13 @@ Remember: search before you guess. Escalate when human support is the right path
 export const supportAgent = new ToolLoopAgent({
   model: SUPPORT_AGENT_MODEL,
   instructions: SUPPORT_AGENT_INSTRUCTIONS,
-  temperature: 0.3,
   stopWhen: stepCountIs(8),
+  providerOptions: {
+    openai: {
+      reasoningEffort: "low",
+      reasoningSummary: "auto",
+    },
+  },
   tools: {
     searchCodebase: searchCodebaseTool,
     askForEmailForm,

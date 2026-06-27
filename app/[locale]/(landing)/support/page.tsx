@@ -293,11 +293,16 @@ const ChatBotDemo = () => {
                               </Fragment>
                             );
                           }
-                          case 'reasoning':
+                          case 'reasoning': {
+                            if (!part.text?.trim()) {
+                              return null;
+                            }
+
                             return (
                               <Reasoning
                                 key={`${message.id}-${i}`}
                                 className="w-full"
+                                disableAutoClose
                                 isStreaming={
                                   status === 'streaming' &&
                                   i === message.parts.length - 1 &&
@@ -308,6 +313,7 @@ const ChatBotDemo = () => {
                                 <ReasoningContent>{part.text}</ReasoningContent>
                               </Reasoning>
                             );
+                          }
                           case 'tool-searchCodebase': {
                             switch (part.state) {
                               case 'input-available':
