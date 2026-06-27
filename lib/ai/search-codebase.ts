@@ -1,18 +1,36 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 const execFileAsync = promisify(execFile);
 
 const REPO_ROOT = process.cwd();
 
-const SEARCH_ROOTS = ["content", "locales"] as const;
+/** Product documentation and user-facing copy only — not full locale aggregates. */
+const CONTENT_ROOT = "content" as const;
+
+const LOCALE_DOC_FILES = [
+  "locales/en/support.ts",
+  "locales/fr/support.ts",
+  "locales/en/faq.ts",
+  "locales/fr/faq.ts",
+  "locales/en/chat.ts",
+  "locales/fr/chat.ts",
+  "locales/en/landing.ts",
+  "locales/fr/landing.ts",
+] as const;
 
 const ROOT_MARKDOWN_FILES = ["README.md", "SELF_HOSTING.md", "AGENTS.md"] as const;
 
 const MAX_RESULTS = 12;
 const MAX_SNIPPET_CHARS = 600;
+
+const SEARCHABLE_FILE_PATTERN = /\.(md|mdx|ts)$/i;
+
+/** Ripgrep is unavailable on Vercel serverless; use Node fs there and in production. */
+const PREFER_NODE_FS_SEARCH =
+  process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
 
 export type CodebaseSearchMatch = {
   file: string;
@@ -32,10 +50,14 @@ function normalizeSnippet(text: string): string {
 
 function localeContentPath(locale?: string): string | undefined {
   if (locale === "en" || locale === "fr") {
-    return path.join("content", "updates", locale);
+    return path.join(CONTENT_ROOT, "updates", locale);
   }
 
   return undefined;
+}
+
+function isSearchableFile(relativePath: string): boolean {
+  return SEARCHABLE_FILE_PATTERN.test(relativePath);
 }
 
 async function fileExists(filePath: string): Promise<boolean> {
@@ -47,10 +69,18 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
+function buildFallbackSearchPaths(): string[] {
+  return [CONTENT_ROOT, ...LOCALE_DOC_FILES, ...ROOT_MARKDOWN_FILES];
+}
+
 async function searchWithRipgrep(
   query: string,
   searchPaths: string[],
 ): Promise<CodebaseSearchMatch[] | null> {
+  if (PREFER_NODE_FS_SEARCH) {
+    return null;
+  }
+
   try {
     const { stdout } = await execFileAsync(
       "rg",
@@ -98,6 +128,7 @@ async function searchWithRipgrep(
       const lines = (event.data.lines as { text?: string } | undefined)?.text;
 
       if (!filePath || !lineNumber || !lines) continue;
+      if (!isSearchableFile(filePath)) continue;
 
       const key = `${filePath}:${lineNumber}`;
       if (seen.has(key)) continue;
@@ -115,6 +146,30 @@ async function searchWithRipgrep(
     return matches;
   } catch {
     return null;
+  }
+}
+
+async function searchFile(
+  relativePath: string,
+  pattern: RegExp,
+  matches: CodebaseSearchMatch[],
+): Promise<void> {
+  if (matches.length >= MAX_RESULTS) return;
+
+  const absolutePath = path.join(REPO_ROOT, relativePath);
+  const content = await readFile(absolutePath, "utf8");
+  const lines = content.split("\n");
+
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!pattern.test(lines[index])) continue;
+
+    matches.push({
+      file: relativePath,
+      line: index + 1,
+      snippet: normalizeSnippet(lines[index]),
+    });
+
+    if (matches.length >= MAX_RESULTS) break;
   }
 }
 
@@ -145,45 +200,26 @@ async function searchWithNodeFs(
         continue;
       }
 
-      if (!/\.(md|mdx|ts)$/i.test(entry.name)) continue;
+      if (!isSearchableFile(relativePath)) continue;
 
-      const absolutePath = path.join(REPO_ROOT, relativePath);
-      const content = await readFile(absolutePath, "utf8");
-      const lines = content.split("\n");
-
-      for (let index = 0; index < lines.length; index += 1) {
-        if (!pattern.test(lines[index])) continue;
-
-        matches.push({
-          file: relativePath,
-          line: index + 1,
-          snippet: normalizeSnippet(lines[index]),
-        });
-
-        if (matches.length >= MAX_RESULTS) break;
-      }
+      await searchFile(relativePath, pattern, matches);
     }
   }
 
   for (const searchPath of searchPaths) {
+    if (matches.length >= MAX_RESULTS) break;
+
     const absolutePath = path.join(REPO_ROOT, searchPath);
-    const stats = await import("node:fs/promises").then((fs) => fs.stat(absolutePath));
 
-    if (stats.isFile()) {
-      const content = await readFile(absolutePath, "utf8");
-      const lines = content.split("\n");
-
-      for (let index = 0; index < lines.length; index += 1) {
-        if (!pattern.test(lines[index])) continue;
-
-        matches.push({
-          file: searchPath,
-          line: index + 1,
-          snippet: normalizeSnippet(lines[index]),
-        });
-
-        if (matches.length >= MAX_RESULTS) break;
+    try {
+      const fileStat = await stat(absolutePath);
+      if (fileStat.isFile()) {
+        if (isSearchableFile(searchPath)) {
+          await searchFile(searchPath, pattern, matches);
+        }
+        continue;
       }
+    } catch {
       continue;
     }
 
@@ -191,6 +227,25 @@ async function searchWithNodeFs(
   }
 
   return matches;
+}
+
+async function runSearch(
+  query: string,
+  searchPaths: string[],
+): Promise<CodebaseSearchMatch[]> {
+  const existingPaths: string[] = [];
+  for (const searchPath of searchPaths) {
+    if (await fileExists(path.join(REPO_ROOT, searchPath))) {
+      existingPaths.push(searchPath);
+    }
+  }
+
+  if (existingPaths.length === 0) {
+    return [];
+  }
+
+  const ripgrepMatches = await searchWithRipgrep(query, existingPaths);
+  return ripgrepMatches ?? (await searchWithNodeFs(query, existingPaths));
 }
 
 export async function searchCodebase(
@@ -203,35 +258,16 @@ export async function searchCodebase(
   }
 
   const localePath = localeContentPath(options?.locale);
-  const fallbackPaths = [...SEARCH_ROOTS, ...ROOT_MARKDOWN_FILES].filter(
-    (value, index, array) => array.indexOf(value) === index,
-  );
-
-  const existingLocalePaths: string[] = [];
-  if (localePath && (await fileExists(path.join(REPO_ROOT, localePath)))) {
-    existingLocalePaths.push(localePath);
-  }
-
-  const existingFallbackPaths: string[] = [];
-  for (const searchPath of fallbackPaths) {
-    if (await fileExists(path.join(REPO_ROOT, searchPath))) {
-      existingFallbackPaths.push(searchPath);
-    }
-  }
+  const fallbackPaths = buildFallbackSearchPaths();
 
   let matches: CodebaseSearchMatch[] = [];
 
-  if (existingLocalePaths.length > 0) {
-    const localeMatches = await searchWithRipgrep(trimmedQuery, existingLocalePaths);
-    matches =
-      localeMatches ?? (await searchWithNodeFs(trimmedQuery, existingLocalePaths));
+  if (localePath) {
+    matches = await runSearch(trimmedQuery, [localePath]);
   }
 
-  if (matches.length === 0 && existingFallbackPaths.length > 0) {
-    const fallbackMatches = await searchWithRipgrep(trimmedQuery, existingFallbackPaths);
-    matches =
-      fallbackMatches ??
-      (await searchWithNodeFs(trimmedQuery, existingFallbackPaths));
+  if (matches.length === 0) {
+    matches = await runSearch(trimmedQuery, fallbackPaths);
   }
 
   return {

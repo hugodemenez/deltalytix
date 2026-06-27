@@ -1,14 +1,41 @@
 import { createAgentUIStreamResponse, type UIMessage } from "ai";
 import { supportAgent } from "@/lib/ai/support-agent";
+import { supportChatRequestSchema } from "./schema";
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
-    const { messages }: { messages: UIMessage[] } = await req.json();
+    const body = await req.json();
+    const parsed = supportChatRequestSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return new Response(
+        JSON.stringify({
+          error: "Invalid request",
+          details: parsed.error.flatten(),
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const messages = [...parsed.data.messages] as UIMessage[];
 
     if (messages[0]?.role === "assistant") {
       messages.shift();
+    }
+
+    if (messages.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "No user messages provided" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
 
     return createAgentUIStreamResponse({
