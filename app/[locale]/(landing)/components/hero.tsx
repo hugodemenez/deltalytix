@@ -24,6 +24,9 @@ export default function Hero() {
       ? "/videos/demo_dark.mp4"
       : "/videos/demo_white.mp4";
 
+  const mediaAspectClass =
+    effectiveTheme === "dark" ? "aspect-[2120/1080]" : "aspect-[2108/1080]";
+
   useEffect(() => {
     const container = videoContainerRef.current;
     if (!container) return;
@@ -92,21 +95,22 @@ export default function Hero() {
         </div>
         <div
           ref={videoContainerRef}
-          className="flex w-full items-center justify-center  relative  rounded-lg"
+          className="flex w-full items-center justify-center relative rounded-lg"
         >
-          <div className="relative w-full h-full">
+          <div className={`relative w-full ${mediaAspectClass} rounded-[14.5867px]`}>
             <span className="absolute inset-[-12px] md:inset-[-24px] bg-[rgba(50,169,151,0.15)] dark:bg-[hsl(var(--chart-1)/0.15)] rounded-[14.5867px] -z-10 animate-pulse"></span>
             <span className="absolute inset-[-4px] md:inset-[-8px] bg-[rgba(50,169,151,0.25)] dark:bg-[hsl(var(--chart-1)/0.25)] rounded-[14.5867px] -z-20 animate-pulse"></span>
             <span className="absolute inset-0 shadow-[0_9.1167px_13.675px_-2.735px_rgba(0,0,0,0.1),0_3.64667px_5.47px_-3.64667px_rgba(0,0,0,0.1)] md:shadow-[0_18.2333px_27.35px_-5.47px_rgba(0,0,0,0.1),0_7.29333px_10.94px_-7.29333px_rgba(0,0,0,0.1)] dark:shadow-[0_9.1167px_13.675px_-2.735px_hsl(var(--chart-1)/0.1),0_3.64667px_5.47px_-3.64667px_hsl(var(--chart-1)/0.1)] md:dark:shadow-[0_18.2333px_27.35px_-5.47px_hsl(var(--chart-1)/0.1),0_7.29333px_10.94px_-7.29333px_hsl(var(--chart-1)/0.1)] rounded-[14.5867px] -z-30"></span>
-            {!videoLoaded && !videoError && (
+            {!videoError && (
               <img
                 src={posterSrc}
                 alt=""
-                className="w-full aspect-video rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] dark:border-gray-800 object-cover"
+                aria-hidden={videoLoaded}
+                className={`absolute inset-0 h-full w-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] object-cover dark:border-gray-800 transition-opacity duration-300 ${videoLoaded ? "opacity-0" : "opacity-100"}`}
               />
             )}
             {videoError && (
-              <div className="w-full aspect-video flex items-center justify-center bg-gray-100 dark:bg-black rounded-lg">
+              <div className="absolute inset-0 flex items-center justify-center rounded-[14.5867px] bg-gray-100 dark:bg-black">
                 <p className="text-red-500">Failed to load video</p>
               </div>
             )}
@@ -117,7 +121,7 @@ export default function Hero() {
               muted
               autoPlay
               playsInline
-              className={`w-full h-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] dark:border-gray-800 ${videoLoaded ? "block" : "hidden"}`}
+              className={`absolute inset-0 h-full w-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] object-cover transition-opacity duration-300 dark:border-gray-800 ${videoLoaded && !videoError ? "opacity-100" : "opacity-0"}`}
               poster={posterSrc}
               onLoadedData={handleVideoLoad}
               onError={handleVideoError}
