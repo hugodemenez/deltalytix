@@ -4,6 +4,8 @@
 .cursorrules
 .cursor/*
 !.cursor/environment.json
+!.cursor/rules/
+!.cursor/rules/**
 WARP.md
 .github/instructions/
 
