@@ -2,6 +2,8 @@ import { ImageResponse } from "next/og"
 import { getPost, getAllPosts } from "@/lib/mdx"
 import type { ReactElement } from "react"
 import { getStaticParams as getLocaleStaticParams } from '@/locales/server'
+import { enUS, fr } from "date-fns/locale"
+import { formatDateOnly } from "@/lib/format-date-only"
 
 export const alt = "Deltalytix Update"
 export const size = {
@@ -45,12 +47,10 @@ export default async function Image({
 
         const { meta } = post
 
-        // Format the date
-        const date = new Date(meta.date)
-        const formattedDate = date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
+        const dateLocale = locale === "fr" ? fr : enUS
+        const dateFormat = locale === "fr" ? "d MMMM yyyy" : "MMMM d, yyyy"
+        const formattedDate = formatDateOnly(meta.date, dateFormat, {
+            locale: dateLocale,
         })
 
         const element = (

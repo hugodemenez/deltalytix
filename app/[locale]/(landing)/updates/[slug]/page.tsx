@@ -4,8 +4,8 @@ import { Metadata } from "next";
 import { getAllPosts, getAdjacentPosts } from "@/lib/mdx";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { format } from "date-fns";
 import { enUS, fr } from "date-fns/locale";
+import { formatDateOnly } from "@/lib/format-date-only";
 import Script from "next/script";
 import { setStaticParamsLocale } from "next-international/server";
 import { getStaticParams as getLocaleStaticParams } from "@/locales/server";
@@ -79,7 +79,7 @@ export async function generateMetadata({
       const url = siteUrl(`/${locale}/updates/${slug}`);
       const dateLocale = locale === "fr" ? fr : enUS;
       const shareDateFormat = locale === "fr" ? "d MMMM yyyy" : "MMMM d, yyyy";
-      const formattedShareDate = format(new Date(meta.date), shareDateFormat, {
+      const formattedShareDate = formatDateOnly(meta.date, shareDateFormat, {
         locale: dateLocale,
       });
       const shareTitleLabel = locale === "fr" ? "Changements" : "Changelog";
@@ -174,7 +174,11 @@ export default async function Page({ params }: PageProps) {
 
   const { previous, next } = adjacentPosts;
   const { meta, content } = post;
-  const formattedDate = format(new Date(meta.date), "MMMM d, yyyy");
+  const pageDateLocale = locale === "fr" ? fr : enUS;
+  const pageDateFormat = locale === "fr" ? "d MMMM yyyy" : "MMMM d, yyyy";
+  const formattedDate = formatDateOnly(meta.date, pageDateFormat, {
+    locale: pageDateLocale,
+  });
   const url = siteUrl(`/${locale}/updates/${slug}`);
 
   // Prepare JSON-LD structured data
