@@ -14,19 +14,9 @@ const OUTPUTS = [
     suffix: "desktop",
   },
   {
-    locale: "en",
-    viewport: { width: 390, height: 844, deviceScaleFactor: 3, isMobile: true },
-    suffix: "mobile",
-  },
-  {
     locale: "fr",
     viewport: { width: 1280, height: 900, deviceScaleFactor: 2 },
     suffix: "desktop",
-  },
-  {
-    locale: "fr",
-    viewport: { width: 390, height: 844, deviceScaleFactor: 3, isMobile: true },
-    suffix: "mobile",
   },
 ];
 
