@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
       '**/node_modules/.prisma/client/**',
     ],
     // Runtime fs search in /api/ai/support — keep docs in the serverless bundle.
-    '/app/api/ai/support/route': [...SUPPORT_SEARCH_TRACE_INCLUDES],
+    '/api/ai/support': [...SUPPORT_SEARCH_TRACE_INCLUDES],
   },
 }
 

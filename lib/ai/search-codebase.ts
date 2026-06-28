@@ -1,4 +1,5 @@
-import { access, readFile, stat } from "node:fs/promises";
+import type { Dirent } from "node:fs";
+import { access, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 const REPO_ROOT = process.cwd();
@@ -38,6 +39,10 @@ const MAX_RESULTS = 12;
 const MAX_SNIPPET_CHARS = 600;
 
 const SEARCHABLE_FILE_PATTERN = /\.(md|mdx|ts)$/i;
+
+function shouldLogSearchDebug(): boolean {
+  return process.env.NODE_ENV !== "production" && process.env.SUPPORT_SEARCH_DEBUG !== "0";
+}
 
 const SEARCH_STOP_WORDS = new Set([
   "a",
@@ -230,8 +235,18 @@ async function searchFiles(
     const absoluteDir = path.join(REPO_ROOT, dir);
     if (!(await fileExists(absoluteDir))) return;
 
-    const { readdir } = await import("node:fs/promises");
-    const entries = await readdir(absoluteDir, { withFileTypes: true });
+    let entries: Dirent[];
+    try {
+      entries = await readdir(absoluteDir, { withFileTypes: true });
+    } catch (error) {
+      if (shouldLogSearchDebug()) {
+        console.warn("[searchCodebase] Skipping unreadable directory", {
+          dir,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      return;
+    }
 
     for (const entry of entries) {
       if (matches.length >= MAX_RESULTS) break;

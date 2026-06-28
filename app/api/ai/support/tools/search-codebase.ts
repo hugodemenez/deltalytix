@@ -2,6 +2,9 @@ import { tool } from "ai";
 import { z } from "zod";
 import { searchCodebase } from "@/lib/ai/search-codebase";
 
+const shouldLogSupportSearchDebug =
+  process.env.NODE_ENV !== "production" && process.env.SUPPORT_SEARCH_DEBUG !== "0";
+
 export const searchCodebaseTool = tool({
   description:
     "Search Deltalytix product documentation, release notes, locale strings, and self-hosting guides in the repository. Use this before answering questions about features, imports, billing, dashboard behavior, or setup.",
@@ -19,12 +22,14 @@ export const searchCodebaseTool = tool({
   execute: async ({ query, locale }) => {
     const result = await searchCodebase(query, { locale });
 
-    console.log("[searchCodebase]", {
-      query,
-      locale,
-      matchCount: result.matchCount,
-      sampleFiles: result.matches.slice(0, 3).map((match) => match.file),
-    });
+    if (shouldLogSupportSearchDebug) {
+      console.log("[searchCodebase]", {
+        query,
+        locale,
+        matchCount: result.matchCount,
+        sampleFiles: result.matches.slice(0, 3).map((match) => match.file),
+      });
+    }
 
     if (result.matchCount === 0) {
       return {
