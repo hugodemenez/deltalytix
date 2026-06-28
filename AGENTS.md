@@ -72,6 +72,76 @@ curl -s -o /dev/null -D - "http://localhost:3000/authentication?next=dashboard" 
 - `sudo docker compose run --rm schema-push` only when Compose service DNS works (`db` resolves inside containers)
 - Restricted VMs: `bash scripts/docker-bootstrap.sh` before Docker commands
 
+## EC2 self-host (SSM — no SSH key)
+
+The demo/production EC2 instance is managed with **AWS Systems Manager Session Manager**. Agents with AWS credentials do **not** need the `.pem` key.
+
+| Setting | Value |
+|---|---|
+| Instance ID | `i-0343addd1ab65ff12` (override with `EC2_INSTANCE_ID`) |
+| App path on server | `/opt/deltalytix` |
+| Public URL | `http://13.36.171.174:3000/dashboard` (IP may change without Elastic IP) |
+| IAM instance profile | `deltalytix-ec2-ssm-profile` |
+| Stack | `sudo docker compose` (Postgres + production app image) |
+
+### Run a remote command (preferred for agents)
+
+```bash
+export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY}"
+export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
+export AWS_DEFAULT_REGION="${AWS_REGION}"
+
+bash scripts/ec2-ssm-exec.sh 'cd /opt/deltalytix && sudo docker compose ps'
+
+# long-running (rebuild)
+bash scripts/ec2-ssm-exec.sh --wait 'cd /opt/deltalytix && sudo docker compose up --build -d app'
+```
+
+Or use the AWS CLI directly:
+
+```bash
+CMD_ID=$(aws ssm send-command \
+  --instance-ids i-0343addd1ab65ff12 \
+  --document-name AWS-RunShellScript \
+  --parameters 'commands=["cd /opt/deltalytix && sudo docker compose ps"]' \
+  --query Command.CommandId --output text)
+
+aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id i-0343addd1ab65ff12
+```
+
+### Interactive shell (optional)
+
+Requires [Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) installed locally:
+
+```bash
+aws ssm start-session --target i-0343addd1ab65ff12
+```
+
+### Deploy after editing on the server
+
+```bash
+cd /opt/deltalytix
+# edit files, or: git pull origin beta
+sudo docker compose up --build -d app
+```
+
+Use `.env` for Docker (not `.env.local`). Rebuild after any `NEXT_PUBLIC_*` change.
+
+Self-host bypass on the demo server requires in `.env`:
+
+```env
+LOCAL_DASHBOARD_AUTH_BYPASS=true
+NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS=true
+LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION=1
+```
+
+### Health check from outside
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" http://13.36.171.174:3000/en/dashboard
+# expect: 200
+```
+
 ## Security constraints
 
 - **Never** enable `LOCAL_DASHBOARD_AUTH_BYPASS` in production unless `LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION=1` is set intentionally
