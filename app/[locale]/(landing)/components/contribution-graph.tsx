@@ -16,6 +16,9 @@ const LEVEL_COLORS = [
   "bg-[#216e39] dark:bg-[#39d353]",
 ] as const;
 
+const WEEK_CELL_CLASS =
+  "flex-1 min-w-[5px] sm:min-w-[6px] md:min-w-[8px] lg:min-w-[10px]";
+
 export function ContributionGraph({
   data,
 }: {
@@ -32,13 +35,13 @@ export function ContributionGraph({
   const canGoForward = year < maxYear;
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-3">
+    <div className="w-full min-w-0">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => setYear((current) => current - 1)}
           disabled={!canGoBack}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
           aria-label="Previous year"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -48,21 +51,21 @@ export function ContributionGraph({
           type="button"
           onClick={() => setYear((current) => current + 1)}
           disabled={!canGoForward}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
           aria-label="Next year"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="overflow-x-auto pb-1">
-        <div className="inline-block min-w-full">
-          <div
-            className="grid mb-1"
-            style={{
-              gridTemplateColumns: `repeat(${yearData.weekCount}, minmax(0, 1fr))`,
-            }}
-          >
+      <div className="overflow-x-auto overscroll-x-contain touch-pan-x pb-1">
+        <div
+          className="w-full min-w-[280px] sm:min-w-0"
+          style={{
+            minWidth: `max(100%, ${yearData.weekCount * 6}px)`,
+          }}
+        >
+          <div className={`mb-1 flex gap-[2px] sm:gap-[3px]`}>
             {Array.from({ length: yearData.weekCount }).map((_, weekIndex) => {
               const label = yearData.monthLabels.find(
                 (entry) => entry.weekIndex === weekIndex
@@ -72,7 +75,7 @@ export function ContributionGraph({
               return (
                 <div
                   key={weekIndex}
-                  className={`text-[10px] leading-none ${
+                  className={`${WEEK_CELL_CLASS} truncate text-[9px] leading-none sm:text-[10px] ${
                     isVisible ? "text-muted-foreground" : "text-transparent"
                   }`}
                 >
@@ -83,10 +86,7 @@ export function ContributionGraph({
           </div>
 
           <div
-            className="grid gap-[3px]"
-            style={{
-              gridTemplateColumns: `repeat(${yearData.weekCount}, minmax(0, 1fr))`,
-            }}
+            className="flex gap-[2px] sm:gap-[3px]"
             role="img"
             aria-label={`${yearData.totalContributions} commits in ${year}`}
           >
@@ -96,7 +96,7 @@ export function ContributionGraph({
                 return (
                   <div
                     key={weekIndex}
-                    className="h-[16px] rounded-[2px] opacity-0 pointer-events-none"
+                    className={`${WEEK_CELL_CLASS} h-3 max-h-3 rounded-[2px] opacity-0 sm:h-4 sm:max-h-4 md:h-[16px] md:max-h-[16px]`}
                     aria-hidden
                   />
                 );
@@ -108,7 +108,7 @@ export function ContributionGraph({
               return (
                 <div
                   key={weekIndex}
-                  className={`h-[16px] rounded-[2px] ${LEVEL_COLORS[level]}`}
+                  className={`${WEEK_CELL_CLASS} h-3 max-h-3 rounded-[2px] sm:h-4 sm:max-h-4 md:h-[16px] md:max-h-[16px] ${LEVEL_COLORS[level]}`}
                   title={formatWeekTitle(weekStart, count)}
                 />
               );
@@ -117,11 +117,12 @@ export function ContributionGraph({
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground mt-3">
+      <p className="mt-3 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">
           {Intl.NumberFormat("en").format(yearData.totalContributions)}
         </span>{" "}
         commits in {year}
+        <span className="hidden sm:inline"> · main &amp; beta</span>
       </p>
     </div>
   );

@@ -90,7 +90,7 @@ function GithubStatsCard({
             </span>
           </div>
         </div>
-        <div className="mt-4 md:mt-6">
+        <div className="mt-4 md:mt-6 min-w-0">
           <ContributionGraph data={githubStats.contributionGraph} />
           <p className="text-muted-foreground text-xs md:text-sm mt-2">
             Last commit{" "}
@@ -152,7 +152,7 @@ function GithubStatsFallback() {
 
 export async function CachedGithubData() {
   "use cache";
-  cacheLife("hours");
+  cacheLife("weeks");
 
   try {
     const { repoData, githubStats, stars, lastCommit } = await getGithubData();
