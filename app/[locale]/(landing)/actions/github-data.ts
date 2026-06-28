@@ -3,10 +3,15 @@
 import { Octokit } from '@octokit/rest'
 import { unstable_cache } from 'next/cache'
 import { GITHUB_REPO_NAME, GITHUB_REPO_OWNER } from '@/lib/github-repo'
+import {
+  buildContributionGraph,
+  type ContributionGraphData,
+} from '../components/contribution-graph'
 
 const REQUEST_TIMEOUT_MS = 8000
 const MAX_RETRIES = 2
 const RETRY_BASE_DELAY_MS = 400
+const WEEKS_TO_SHOW = 26
 
 const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
@@ -31,7 +36,7 @@ interface GithubData {
       forks: { totalCount: number };
       commits: { history: { totalCount: number } };
     };
-    stats: { value: number; date: Date }[];
+    contributionGraph: ContributionGraphData;
   };
   stars: number;
   lastCommit: {
@@ -96,7 +101,7 @@ const getCachedGithubData = unstable_cache(
 
       // Get the repository creation date as the starting point
       const today = new Date()
-      const weeksToShow = 12
+      const weeksToShow = WEEKS_TO_SHOW
       const activityStartDate = new Date(today)
       activityStartDate.setDate(today.getDate() - (weeksToShow * 7))
       
@@ -108,7 +113,7 @@ const getCachedGithubData = unstable_cache(
       const perPage = 100
       let hasMoreCommits = true
       
-      while (hasMoreCommits && page <= 5) { // Limit to 500 commits
+      while (hasMoreCommits && page <= 10) { // Limit to 1000 commits
         try {
           const commitsResponse = await withRetry(`commits page ${page}`, () =>
             octokit.repos.listCommits({
@@ -164,50 +169,17 @@ const getCachedGithubData = unstable_cache(
         }
       }
 
-                    // Process commits into weekly activity data (like the original)
-       const weeklyCommits = new Map<string, number>()
-       
+       const dailyCommits = new Map<string, number>()
+
        allCommits.forEach(commit => {
          if (commit.commit?.author?.date) {
            const commitDate = new Date(commit.commit.author.date)
-           // Get the start of the week (Sunday)
-           const weekStart = new Date(commitDate)
-           weekStart.setDate(commitDate.getDate() - commitDate.getDay())
-           weekStart.setHours(0, 0, 0, 0)
-           
-           const weekKey = weekStart.toISOString().split('T')[0]
-           weeklyCommits.set(weekKey, (weeklyCommits.get(weekKey) || 0) + 1)
+           const dateKey = commitDate.toISOString().split('T')[0]
+           dailyCommits.set(dateKey, (dailyCommits.get(dateKey) || 0) + 1)
          }
        })
 
-       // Create weekly data points for the last 12 weeks (like the original)
-       const stats: { value: number; date: Date }[] = []
-       
-       for (let i = weeksToShow - 1; i >= 0; i--) {
-         const weekDate = new Date(today)
-         weekDate.setDate(today.getDate() - (i * 7))
-         // Get start of week (Sunday)
-         weekDate.setDate(weekDate.getDate() - weekDate.getDay())
-         weekDate.setHours(0, 0, 0, 0)
-         
-         const weekKey = weekDate.toISOString().split('T')[0]
-         const commitCount = weeklyCommits.get(weekKey) || 0
-         
-         stats.push({
-           value: commitCount,
-           date: new Date(weekDate.getTime())
-         })
-       }
-
-       // If no stats, create fallback 12-week dataset
-       if (stats.every(s => s.value === 0)) {
-         // Keep the structure but ensure we have some visual data
-         for (let i = 0; i < stats.length; i++) {
-           if (i === Math.floor(stats.length / 2)) {
-             stats[i].value = 1 // Add a small activity spike for visual appeal
-           }
-         }
-       }
+       const contributionGraph = buildContributionGraph(dailyCommits, weeksToShow)
 
       const githubData: GithubData = {
         repoData: {
@@ -223,9 +195,9 @@ const getCachedGithubData = unstable_cache(
           repository: {
             stargazers: { totalCount: repoData.stargazers_count },
             forks: { totalCount: repoData.forks_count },
-            commits: { history: { totalCount: allCommits.length } }, // Using actual commit count from all branches
+            commits: { history: { totalCount: allCommits.length } },
           },
-          stats,
+          contributionGraph,
         },
         stars: repoData.stargazers_count,
         lastCommit: {
@@ -255,26 +227,9 @@ const getCachedGithubData = unstable_cache(
            repository: {
              stargazers: { totalCount: 0 },
              forks: { totalCount: 0 },
-             commits: { history: { totalCount: 0 } }, // All branches commit count
+             commits: { history: { totalCount: 0 } },
            },
-                                   stats: (() => {
-             const now = new Date()
-             const stats: { value: number; date: Date }[] = []
-             
-             // Create 12 weeks of fallback data (like the original)
-             for (let i = 11; i >= 0; i--) {
-               const weekDate = new Date(now)
-               weekDate.setDate(now.getDate() - (i * 7))
-               weekDate.setDate(weekDate.getDate() - weekDate.getDay()) // Start of week
-               weekDate.setHours(0, 0, 0, 0)
-               
-               stats.push({ 
-                 value: i === 6 ? 1 : 0, // Small spike in the middle for visual appeal
-                 date: new Date(weekDate.getTime()) 
-               })
-             }
-             return stats
-           })(),
+           contributionGraph: buildContributionGraph(new Map(), WEEKS_TO_SHOW),
          },
         stars: 0,
         lastCommit: {
