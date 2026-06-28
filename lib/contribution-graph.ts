@@ -5,7 +5,6 @@ export interface CommitRecord {
 
 export interface DayActivity {
   date: string;
-  label: string;
   count: number;
 }
 
@@ -25,8 +24,7 @@ export interface WeekDetail {
 
 export interface MonthLabel {
   weekIndex: number;
-  label: string;
-  position: "top" | "bottom";
+  month: number;
 }
 
 export interface WeeklyYearData {
@@ -46,7 +44,8 @@ export interface ContributionGraphData {
   defaultYear: number;
 }
 
-const KEY_MONTHS = new Set([0, 2, 5, 8, 11]);
+/** Quarter markers keep mobile labels readable without crowding the axis. */
+const KEY_MONTHS = new Set([0, 3, 6, 9]);
 
 function startOfDay(date: Date): Date {
   const d = new Date(date);
@@ -95,7 +94,6 @@ function countToLevel(count: number, maxCount: number): number {
 
 function buildSparseMonthLabels(weekStarts: Date[]): MonthLabel[] {
   const labels: MonthLabel[] = [];
-  let labelIndex = 0;
 
   weekStarts.forEach((weekStart, weekIndex) => {
     const month = weekStart.getMonth();
@@ -103,12 +101,7 @@ function buildSparseMonthLabels(weekStarts: Date[]): MonthLabel[] {
     const isNewMonth = !previousWeek || previousWeek.getMonth() !== month;
 
     if (KEY_MONTHS.has(month) && isNewMonth) {
-      labels.push({
-        weekIndex,
-        label: weekStart.toLocaleDateString("en-US", { month: "short" }),
-        position: labelIndex % 2 === 0 ? "top" : "bottom",
-      });
-      labelIndex++;
+      labels.push({ weekIndex, month });
     }
   });
 
@@ -165,18 +158,10 @@ function buildWeekDetail(
 
   const days: DayActivity[] = Array.from(dayCounts.entries())
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([date, dayCount]) => {
-      const parsed = new Date(`${date}T00:00:00`);
-      return {
-        date,
-        label: parsed.toLocaleDateString("en-US", {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        }),
-        count: dayCount,
-      };
-    });
+    .map(([date, dayCount]) => ({
+      date,
+      count: dayCount,
+    }));
 
   const contributors: ContributorActivity[] = Array.from(
     contributorCounts.entries()
@@ -249,19 +234,31 @@ export function buildContributionGraphData(
   };
 }
 
-export function formatWeekRange(detail: WeekDetail): string {
+export function formatWeekRange(detail: WeekDetail, locale: string): string {
   const start = new Date(`${detail.weekStart}T00:00:00`);
   const end = new Date(`${detail.weekEnd}T00:00:00`);
 
-  const startLabel = start.toLocaleDateString("en-US", {
+  const startLabel = start.toLocaleDateString(locale, {
     month: "short",
     day: "numeric",
   });
-  const endLabel = end.toLocaleDateString("en-US", {
+  const endLabel = end.toLocaleDateString(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 
   return `${startLabel} – ${endLabel}`;
+}
+
+export function formatMonthLabel(month: number, locale: string): string {
+  return new Date(2024, month, 1).toLocaleDateString(locale, { month: "short" });
+}
+
+export function formatDayLabel(date: string, locale: string): string {
+  return new Date(`${date}T00:00:00`).toLocaleDateString(locale, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 }

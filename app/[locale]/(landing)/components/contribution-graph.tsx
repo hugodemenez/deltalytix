@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useCurrentLocale, useI18n } from "@/locales/landing-client";
 import {
   type ContributionGraphData,
   type WeekDetail,
+  formatDayLabel,
+  formatMonthLabel,
   formatWeekRange,
 } from "@/lib/contribution-graph";
 
@@ -16,17 +19,24 @@ const LEVEL_COLORS = [
   "bg-[#216e39] dark:bg-[#39d353]",
 ] as const;
 
+const UPCOMING_WEEK_COLOR = "bg-muted/70 dark:bg-muted/40";
+
 function WeekDetailOverlay({
   detail,
   anchorRect,
+  locale,
   onClose,
+  t,
 }: {
   detail: WeekDetail;
   anchorRect: DOMRect;
+  locale: string;
   onClose: () => void;
+  t: ReturnType<typeof useI18n>;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: 0, top: 0 });
+  const weekRange = formatWeekRange(detail, locale);
 
   useEffect(() => {
     const panelWidth = overlayRef.current?.offsetWidth ?? 224;
@@ -40,11 +50,18 @@ function WeekDetailOverlay({
     setPosition({ left, top });
   }, [anchorRect]);
 
+  const commitLabel =
+    detail.count === 0
+      ? t("landing.openSource.contributionGraph.noCommits")
+      : detail.count === 1
+        ? t("landing.openSource.contributionGraph.oneCommit")
+        : t("landing.openSource.contributionGraph.nCommits", { count: detail.count });
+
   return (
     <>
       <button
         type="button"
-        aria-label="Close week details"
+        aria-label={t("landing.openSource.contributionGraph.closeWeekDetails")}
         className="fixed inset-0 z-40 cursor-default bg-transparent"
         onClick={onClose}
       />
@@ -57,28 +74,28 @@ function WeekDetailOverlay({
           transform: "translateX(-50%)",
         }}
         role="dialog"
-        aria-label={`Week details for ${formatWeekRange(detail)}`}
+        aria-label={t("landing.openSource.contributionGraph.weekDetails", {
+          range: weekRange,
+        })}
       >
-        <p className="font-medium text-foreground">{formatWeekRange(detail)}</p>
-        <p className="mt-1 text-muted-foreground">
-          {detail.count === 0
-            ? "No commits"
-            : detail.count === 1
-              ? "1 commit"
-              : `${detail.count} commits`}
-        </p>
+        <p className="font-medium text-foreground">{weekRange}</p>
+        <p className="mt-1 text-muted-foreground">{commitLabel}</p>
 
         {detail.days.length > 0 && (
           <div className="mt-3">
             <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Active days
+              {t("landing.openSource.contributionGraph.activeDays")}
             </p>
             <ul className="space-y-1">
               {detail.days.map((day) => (
                 <li key={day.date} className="flex items-center justify-between gap-2">
-                  <span>{day.label}</span>
+                  <span>{formatDayLabel(day.date, locale)}</span>
                   <span className="text-muted-foreground">
-                    {day.count === 1 ? "1 commit" : `${day.count} commits`}
+                    {day.count === 1
+                      ? t("landing.openSource.contributionGraph.oneCommit")
+                      : t("landing.openSource.contributionGraph.nCommits", {
+                          count: day.count,
+                        })}
                   </span>
                 </li>
               ))}
@@ -89,7 +106,7 @@ function WeekDetailOverlay({
         {detail.contributors.length > 0 && (
           <div className="mt-3">
             <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Contributors
+              {t("landing.openSource.contributionGraph.contributors")}
             </p>
             <ul className="space-y-1">
               {detail.contributors.map((contributor) => (
@@ -111,36 +128,28 @@ function WeekDetailOverlay({
   );
 }
 
-function MonthLabelRow({
+function MonthAxis({
   weekCount,
-  visibleWeekCount,
   monthLabels,
-  position,
+  locale,
 }: {
   weekCount: number;
-  visibleWeekCount: number;
   monthLabels: ContributionGraphData["years"][number]["monthLabels"];
-  position: "top" | "bottom";
+  locale: string;
 }) {
-  const labelsForPosition = monthLabels.filter((label) => label.position === position);
-
   return (
-    <div className="flex w-full gap-px">
-      {Array.from({ length: weekCount }).map((_, weekIndex) => {
-        const label = labelsForPosition.find((entry) => entry.weekIndex === weekIndex);
-        const isVisible = weekIndex < visibleWeekCount;
-
-        return (
-          <div
-            key={weekIndex}
-            className={`flex-1 basis-0 overflow-hidden text-center text-[8px] leading-none sm:text-[9px] md:text-[10px] ${
-              position === "top" ? "mb-0.5 h-2.5" : "mt-0.5 h-2.5"
-            } ${isVisible && label ? "text-muted-foreground" : "text-transparent"}`}
-          >
-            {label?.label ?? ""}
-          </div>
-        );
-      })}
+    <div className="relative mb-1.5 h-4 w-full overflow-visible sm:h-5">
+      {monthLabels.map(({ weekIndex, month }) => (
+        <span
+          key={`${weekIndex}-${month}`}
+          className="absolute top-0 whitespace-nowrap text-[10px] font-medium leading-none text-foreground/70 sm:text-xs"
+          style={{
+            left: `${(weekIndex / Math.max(weekCount - 1, 1)) * 100}%`,
+          }}
+        >
+          {formatMonthLabel(month, locale)}
+        </span>
+      ))}
     </div>
   );
 }
@@ -150,6 +159,8 @@ export function ContributionGraph({
 }: {
   data: ContributionGraphData;
 }) {
+  const t = useI18n();
+  const locale = useCurrentLocale();
   const minYear = data.availableYears[0] ?? data.defaultYear;
   const maxYear = data.availableYears[data.availableYears.length - 1] ?? data.defaultYear;
   const [year, setYear] = useState(data.defaultYear);
@@ -204,7 +215,7 @@ export function ContributionGraph({
           onClick={() => setYear((current) => current - 1)}
           disabled={!canGoBack}
           className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
-          aria-label="Previous year"
+          aria-label={t("landing.openSource.contributionGraph.previousYear")}
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -214,34 +225,36 @@ export function ContributionGraph({
           onClick={() => setYear((current) => current + 1)}
           disabled={!canGoForward}
           className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-30"
-          aria-label="Next year"
+          aria-label={t("landing.openSource.contributionGraph.nextYear")}
         >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="w-full">
-        <MonthLabelRow
+      <div className="w-full overflow-visible">
+        <MonthAxis
           weekCount={yearData.weekCount}
-          visibleWeekCount={yearData.visibleWeekCount}
           monthLabels={yearData.monthLabels}
-          position="top"
+          locale={locale}
         />
 
         <div
           className="flex w-full gap-px"
           role="img"
-          aria-label={`${yearData.totalContributions} commits in ${year}`}
+          aria-label={t("landing.openSource.contributionGraph.commitsInYear", {
+            count: yearData.totalContributions.toLocaleString(locale),
+            year,
+          })}
         >
           {yearData.levels.map((level, weekIndex) => {
-            const isVisible = weekIndex < yearData.visibleWeekCount;
+            const isPastOrCurrent = weekIndex < yearData.visibleWeekCount;
             const isActive = activeWeek === weekIndex;
 
-            if (!isVisible) {
+            if (!isPastOrCurrent) {
               return (
                 <div
                   key={weekIndex}
-                  className="h-3 flex-1 basis-0 rounded-[1px] opacity-0 sm:h-3.5 md:h-4"
+                  className={`h-3 flex-1 basis-0 rounded-[1px] sm:h-3.5 md:h-4 ${UPCOMING_WEEK_COLOR}`}
                   aria-hidden
                 />
               );
@@ -251,7 +264,10 @@ export function ContributionGraph({
               <button
                 key={weekIndex}
                 type="button"
-                aria-label={`Week ${weekIndex + 1}, ${yearData.counts[weekIndex]} commits`}
+                aria-label={t("landing.openSource.contributionGraph.weekAria", {
+                  week: weekIndex + 1,
+                  count: yearData.counts[weekIndex],
+                })}
                 aria-pressed={isActive}
                 className={`h-3 flex-1 basis-0 rounded-[1px] sm:h-3.5 md:h-4 ${LEVEL_COLORS[level]} ${
                   isActive ? "ring-1 ring-primary ring-offset-1 ring-offset-background" : ""
@@ -261,29 +277,27 @@ export function ContributionGraph({
             );
           })}
         </div>
-
-        <MonthLabelRow
-          weekCount={yearData.weekCount}
-          visibleWeekCount={yearData.visibleWeekCount}
-          monthLabels={yearData.monthLabels}
-          position="bottom"
-        />
       </div>
 
       {activeDetail && anchorRect && (
         <WeekDetailOverlay
           detail={activeDetail}
           anchorRect={anchorRect}
+          locale={locale}
           onClose={closeOverlay}
+          t={t}
         />
       )}
 
       <p className="mt-3 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">
-          {Intl.NumberFormat("en").format(yearData.totalContributions)}
-        </span>{" "}
-        commits in {year}
-        <span className="hidden sm:inline"> · main &amp; beta</span>
+        {t("landing.openSource.contributionGraph.commitsInYear", {
+          count: Intl.NumberFormat(locale).format(yearData.totalContributions),
+          year,
+        })}
+        <span className="hidden sm:inline">
+          {" "}
+          · {t("landing.openSource.contributionGraph.branches")}
+        </span>
       </p>
     </div>
   );
