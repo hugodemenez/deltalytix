@@ -31,6 +31,26 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Prisma + Next.js page data collection need these at build time (runtime URLs come from compose).
+ARG DATABASE_URL=postgresql://devuser:devpass@localhost:5432/deltalytix_dev
+ARG DIRECT_URL=postgresql://devuser:devpass@localhost:5432/deltalytix_dev
+ARG OPENAI_API_KEY=dummy
+ARG RESEND_API_KEY=re_dummy_build
+ARG NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy
+ARG SUPABASE_SERVICE_KEY=dummy
+ARG ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
+ARG STRIPE_SECRET_KEY=sk_test_dummy
+ENV DATABASE_URL=$DATABASE_URL \
+    DIRECT_URL=$DIRECT_URL \
+    OPENAI_API_KEY=$OPENAI_API_KEY \
+    RESEND_API_KEY=$RESEND_API_KEY \
+    NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
+    SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY \
+    ENCRYPTION_KEY=$ENCRYPTION_KEY \
+    STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY
+
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
 # Uncomment the following line in case you want to disable telemetry during the build.

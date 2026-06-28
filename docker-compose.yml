@@ -35,12 +35,31 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.bun
+      args:
+        DATABASE_URL: postgresql://${POSTGRES_USER:-devuser}:${POSTGRES_PASSWORD:-devpass}@db:5432/${POSTGRES_DB:-deltalytix_dev}
+        DIRECT_URL: postgresql://${POSTGRES_USER:-devuser}:${POSTGRES_PASSWORD:-devpass}@db:5432/${POSTGRES_DB:-deltalytix_dev}
+        OPENAI_API_KEY: ${OPENAI_API_KEY:-dummy}
+        RESEND_API_KEY: ${RESEND_API_KEY:-re_dummy}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-https://dummy.supabase.co}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-dummy}
+        SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:-dummy}
+        ENCRYPTION_KEY: ${ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef}
+        STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_dummy}
     working_dir: /app
     restart: unless-stopped
     environment:
       ENV: container
       DATABASE_URL: postgresql://${POSTGRES_USER:-devuser}:${POSTGRES_PASSWORD:-devpass}@db:5432/${POSTGRES_DB:-deltalytix_dev}
       DIRECT_URL: postgresql://${POSTGRES_USER:-devuser}:${POSTGRES_PASSWORD:-devpass}@db:5432/${POSTGRES_DB:-deltalytix_dev}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-dummy}
+      RESEND_API_KEY: ${RESEND_API_KEY:-re_dummy}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-https://dummy.supabase.co}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-dummy}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:-dummy}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_dummy}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION: ${LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION:-1}
       # Local dashboard auth bypass (opt-in; defaults to disabled for safety)
       LOCAL_DASHBOARD_AUTH_BYPASS: ${LOCAL_DASHBOARD_AUTH_BYPASS:-false}
       NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS: ${NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS:-false}
