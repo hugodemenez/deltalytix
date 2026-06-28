@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { useCurrentLocale, useI18n } from "@/locales/landing-client"
 import { translateWeekday } from "@/lib/translation-utils"
+import { sumLandingCalendarMonthPnl } from "@/lib/landing-calendar-monthly-total"
 
 type CalendarDayEntry = {
   pnl: number
@@ -108,12 +109,10 @@ function LandingCalendarPreview({ calendarData }: { calendarData: PreviewCalenda
     [monthStart, monthEnd]
   )
 
-  const monthlyTotal = useMemo(() => {
-    return Object.entries(calendarData).reduce((total, [dateString, dayData]) => {
-      const date = new Date(dateString)
-      return isSameMonth(date, currentDate) ? total + dayData.pnl : total
-    }, 0)
-  }, [calendarData, currentDate])
+  const monthlyTotal = useMemo(
+    () => sumLandingCalendarMonthPnl(calendarDays, calendarData, currentDate),
+    [calendarDays, calendarData, currentDate],
+  )
 
   const calculateWeeklyTotal = (index: number) => {
     const startOfWeekIndex = index - 6
