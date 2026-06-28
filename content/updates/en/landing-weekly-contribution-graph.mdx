@@ -1,0 +1,27 @@
+---
+title: 'Landing page: weekly repo activity graph'
+description: 'The open-source card now shows a full-year weekly commit graph with year navigation, tap-for-details, and localized labels.'
+date: '2026-06-28'
+status: completed
+completedDate: '2026-06-28'
+image: '/updates/pr-269/en/landing-contribution-graph-desktop.png'
+---
+
+# Landing page: weekly repo activity graph
+
+![Weekly contribution graph on desktop](/updates/pr-269/en/landing-contribution-graph-desktop.png)
+
+The **Open and Transparent** section on the landing page now includes a GitHub-style activity graph for the public repository—redesigned as a **weekly** view instead of a daily heatmap or line chart.
+
+![Weekly contribution graph on mobile](/updates/pr-269/en/landing-contribution-graph-mobile.png)
+
+## What changed
+
+- **One bar per week** across the full calendar year, with no horizontal scrolling on mobile
+- **Quarter month labels** (Jan, Apr, Jul, Oct) that stay readable on small screens
+- **Muted gray bars** for upcoming weeks so you can see the rest of the year at a glance
+- **Year navigation** to browse activity from the repo’s first year through today
+- **Tap any week** to open a detail panel with active days and contributors
+- **main & beta only** — commits are deduplicated by SHA across both integration branches
+
+Activity data is cached weekly to keep the landing page fast while staying reasonably up to date.
