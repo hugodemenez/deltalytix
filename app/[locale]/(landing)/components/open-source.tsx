@@ -35,7 +35,7 @@ export default async function OpenSource() {
             <Skeleton key={index} className="h-4 w-16" />
           ))}
         </div>
-        <Skeleton className="h-[100px] md:h-[130px] w-full mb-4" />
+        <Skeleton className="h-[120px] w-full mb-4" />
         <Skeleton className="h-4 w-48 mb-4" />
         <Skeleton className="h-8 w-full" />
       </CardContent>

@@ -1,0 +1,25 @@
+---
+title: 'Page d''accueil : graphique d''activité hebdomadaire du dépôt'
+description: 'La carte open source affiche désormais un graphique de commits hebdomadaire sur l''année, avec navigation par année, détails au toucher et libellés localisés.'
+date: '2026-06-28'
+status: completed
+completedDate: '2026-06-28'
+image: '/updates/pr-269/fr/landing-contribution-graph-desktop.png'
+---
+
+# Page d'accueil : graphique d'activité hebdomadaire du dépôt
+
+![Graphique d'activité hebdomadaire sur desktop](/updates/pr-269/fr/landing-contribution-graph-desktop.png)
+
+La section **Ouvert et Transparent** de la page d'accueil inclut désormais un graphique d'activité pour le dépôt public — repensé en vue **hebdomadaire** plutôt qu'en heatmap journalière ou courbe.
+
+## Ce qui change
+
+- **Une barre par semaine** sur toute l'année civile, sans défilement horizontal sur mobile
+- **Libellés de mois trimestriels** (janv., avr., juil., oct.) lisibles sur petit écran
+- **Barres grises atténuées** pour les semaines à venir, afin de visualiser le reste de l'année
+- **Navigation par année** pour parcourir l'activité depuis la création du dépôt jusqu'à aujourd'hui
+- **Toucher une semaine** ouvre un panneau avec les jours actifs et les contributeurs
+- **main & beta uniquement** — les commits sont dédupliqués par SHA sur les deux branches d'intégration
+
+Les données d'activité sont mises en cache chaque semaine pour garder la page d'accueil rapide tout en restant à jour.

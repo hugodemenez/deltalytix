@@ -126,6 +126,20 @@ export default {
         openSource: {
             title: 'Ouvert et Transparent',
             description: 'Nous croyons en la transparence totale. Notre code source est ouvert à tous pour inspection, audit et vérification - garantissant les plus hauts standards de sécurité et de fiabilité.',
+            contributionGraph: {
+                previousYear: 'Année précédente',
+                nextYear: 'Année suivante',
+                closeWeekDetails: 'Fermer les détails de la semaine',
+                weekDetails: 'Détails de la semaine du {range}',
+                noCommits: 'Aucun commit',
+                oneCommit: '1 commit',
+                nCommits: '{count} commits',
+                activeDays: 'Jours actifs',
+                contributors: 'Contributeurs',
+                commitsInYear: '{count} commits en {year}',
+                branches: 'main & beta',
+                weekAria: 'Semaine {week}, {count} commits',
+            },
         },
         accordion: {
             openSource: {
