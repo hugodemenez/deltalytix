@@ -110,8 +110,8 @@ function LandingCalendarPreview({ calendarData }: { calendarData: PreviewCalenda
   )
 
   const monthlyTotal = useMemo(
-    () => sumLandingCalendarMonthPnl(calendarDays, calendarData, currentDate),
-    [calendarDays, calendarData, currentDate],
+    () => sumLandingCalendarMonthPnl(calendarData, currentDate),
+    [calendarData, currentDate],
   )
 
   const calculateWeeklyTotal = (index: number) => {

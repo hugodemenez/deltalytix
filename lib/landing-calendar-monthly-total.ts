@@ -1,17 +1,17 @@
-import { format, isSameMonth } from "date-fns"
+import { format } from "date-fns"
 
 type CalendarDayEntry = {
   pnl: number
 }
 
+/** Sum all P/L in calendarData for the given month (local yyyy-MM), independent of grid layout. */
 export function sumLandingCalendarMonthPnl(
-  calendarDays: Date[],
   calendarData: Record<string, CalendarDayEntry>,
   monthDate: Date,
 ): number {
-  return calendarDays.reduce((total, day) => {
-    if (!isSameMonth(day, monthDate)) return total
-    const dayData = calendarData[format(day, "yyyy-MM-dd")]
-    return total + (dayData?.pnl ?? 0)
+  const monthKey = format(monthDate, "yyyy-MM")
+
+  return Object.entries(calendarData).reduce((total, [dateKey, dayData]) => {
+    return dateKey.startsWith(monthKey) ? total + dayData.pnl : total
   }, 0)
 }
