@@ -2,19 +2,26 @@ import type { User } from "@supabase/supabase-js"
 
 const TRUTHY_VALUES = new Set(["1", "true", "yes", "on"])
 
+const isServer = typeof window === "undefined"
+
 function isTruthy(value: string | undefined): boolean {
   if (!value) return false
   return TRUTHY_VALUES.has(value.toLowerCase())
 }
 
 function isBypassRequestedFromEnv(): boolean {
-  return (
-    isTruthy(process.env.LOCAL_DASHBOARD_AUTH_BYPASS) ||
-    isTruthy(process.env.NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS)
-  )
+  if (isServer) {
+    return isTruthy(process.env.LOCAL_DASHBOARD_AUTH_BYPASS)
+  }
+
+  return isTruthy(process.env.NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS)
 }
 
 function assertBypassAllowedInCurrentEnvironment(): void {
+  if (!isServer) {
+    return
+  }
+
   if (process.env.NODE_ENV !== "production") {
     return
   }
