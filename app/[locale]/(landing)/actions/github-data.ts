@@ -4,14 +4,15 @@ import { Octokit } from '@octokit/rest'
 import { unstable_cache } from 'next/cache'
 import { GITHUB_REPO_NAME, GITHUB_REPO_OWNER } from '@/lib/github-repo'
 import {
-  buildContributionGraph,
+  buildContributionGraphData,
   type ContributionGraphData,
-} from '../components/contribution-graph'
+} from '@/lib/contribution-graph'
 
 const REQUEST_TIMEOUT_MS = 8000
 const MAX_RETRIES = 2
 const RETRY_BASE_DELAY_MS = 400
-const WEEKS_TO_SHOW = 26
+const MAX_BRANCHES = 50
+const MAX_PAGES_PER_BRANCH = 20
 
 const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
@@ -19,6 +20,14 @@ const octokit = new Octokit({
     timeout: REQUEST_TIMEOUT_MS
   }
 })
+
+interface GithubCommit {
+  sha: string
+  commit: {
+    author?: { date?: string } | null
+    committer?: { date?: string } | null
+  }
+}
 
 interface GithubData {
   repoData: {
@@ -29,6 +38,7 @@ interface GithubData {
     stargazers_count: number;
     forks_count: number;
     updated_at: string;
+    created_at: string;
   };
   githubStats: {
     repository: {
@@ -85,11 +95,101 @@ const withRetry = async <T>(label: string, fn: () => Promise<T>) => {
   }
 }
 
-// Cached function to fetch all GitHub data in a single operation
+async function fetchAllBranchCommits(since: Date): Promise<GithubCommit[]> {
+  const branchesResponse = await withRetry('branches', () =>
+    octokit.repos.listBranches({
+      owner: GITHUB_REPO_OWNER,
+      repo: GITHUB_REPO_NAME,
+      per_page: 100,
+    })
+  )
+
+  const seenShas = new Set<string>()
+  const allCommits: GithubCommit[] = []
+
+  for (const branch of branchesResponse.data.slice(0, MAX_BRANCHES)) {
+    let page = 1
+    let hasMoreCommits = true
+
+    while (hasMoreCommits && page <= MAX_PAGES_PER_BRANCH) {
+      try {
+        const commitsResponse = await withRetry(`commits ${branch.name} page ${page}`, () =>
+          octokit.repos.listCommits({
+            owner: GITHUB_REPO_OWNER,
+            repo: GITHUB_REPO_NAME,
+            sha: branch.name,
+            per_page: 100,
+            page,
+            since: since.toISOString(),
+          })
+        )
+
+        if (commitsResponse.data.length === 0) {
+          hasMoreCommits = false
+        } else {
+          for (const commit of commitsResponse.data) {
+            if (commit.sha && !seenShas.has(commit.sha)) {
+              seenShas.add(commit.sha)
+              allCommits.push(commit as GithubCommit)
+            }
+          }
+          page++
+          if (commitsResponse.data.length < 100) {
+            hasMoreCommits = false
+          }
+        }
+      } catch (error) {
+        console.log(`Error fetching commits from ${branch.name} page ${page}:`, error)
+        hasMoreCommits = false
+      }
+    }
+  }
+
+  return allCommits
+}
+
+function buildDailyCommitCounts(commits: GithubCommit[]): Map<string, number> {
+  const dailyCommits = new Map<string, number>()
+
+  commits.forEach((commit) => {
+    const dateString =
+      commit.commit?.author?.date ?? commit.commit?.committer?.date
+    if (!dateString) return
+
+    const dateKey = new Date(dateString).toISOString().split('T')[0]
+    dailyCommits.set(dateKey, (dailyCommits.get(dateKey) || 0) + 1)
+  })
+
+  return dailyCommits
+}
+
+function getLatestCommitDate(commits: GithubCommit[]): string {
+  if (commits.length === 0) return new Date().toISOString()
+
+  const latestCommit = commits.reduce((latest, commit) => {
+    const commitDate = new Date(
+      commit.commit?.committer?.date ??
+        commit.commit?.author?.date ??
+        0
+    )
+    const latestDate = new Date(
+      latest.commit?.committer?.date ??
+        latest.commit?.author?.date ??
+        0
+    )
+    return commitDate > latestDate ? commit : latest
+  })
+
+  return (
+    latestCommit.commit?.committer?.date ??
+    latestCommit.commit?.author?.date ??
+    new Date().toISOString()
+  )
+}
+
 const getCachedGithubData = unstable_cache(
   async (): Promise<GithubData> => {
     try {
-      // Fetch repository data
       const repoResponse = await withRetry('repo data', () =>
         octokit.repos.get({
           owner: GITHUB_REPO_OWNER,
@@ -98,88 +198,19 @@ const getCachedGithubData = unstable_cache(
       )
 
       const repoData = repoResponse.data
-
-      // Get the repository creation date as the starting point
       const today = new Date()
-      const weeksToShow = WEEKS_TO_SHOW
-      const activityStartDate = new Date(today)
-      activityStartDate.setDate(today.getDate() - (weeksToShow * 7))
-      
-      const defaultBranch = repoData.default_branch || 'main'
+      const createdAt = new Date(repoData.created_at)
+      const firstYear = createdAt.getFullYear()
+      const lastYear = today.getFullYear()
 
-      // Get commits from default branch to build weekly activity chart
-      const allCommits: any[] = []
-      let page = 1
-      const perPage = 100
-      let hasMoreCommits = true
-      
-      while (hasMoreCommits && page <= 10) { // Limit to 1000 commits
-        try {
-          const commitsResponse = await withRetry(`commits page ${page}`, () =>
-            octokit.repos.listCommits({
-              owner: GITHUB_REPO_OWNER,
-              repo: GITHUB_REPO_NAME,
-              per_page: perPage,
-              page: page,
-              since: activityStartDate.toISOString(),
-              sha: defaultBranch
-            })
-          )
-          
-          if (commitsResponse.data.length === 0) {
-            hasMoreCommits = false
-          } else {
-            commitsResponse.data.forEach(commit => {
-              if (commit.sha) {
-                allCommits.push(commit)
-              }
-            })
-            page++
-            if (commitsResponse.data.length < perPage) {
-              hasMoreCommits = false
-            }
-          }
-        } catch (error) {
-          console.log(`Error fetching commits from ${defaultBranch} page ${page}:`, error)
-          hasMoreCommits = false
-        }
-      }
-
-      // Find the most recent commit across all branches
-      let latestCommit: any = null
-      try {
-        const latestCommitResponse = await withRetry('latest commit', () =>
-          octokit.repos.listCommits({
-            owner: GITHUB_REPO_OWNER,
-            repo: GITHUB_REPO_NAME,
-            per_page: 1,
-            page: 1,
-            sha: defaultBranch
-          })
-        )
-        latestCommit = latestCommitResponse.data[0] ?? null
-      } catch (error) {
-        console.log(`Error fetching latest commit from ${defaultBranch}:`, error)
-        if (allCommits.length > 0) {
-          latestCommit = allCommits.reduce((latest, commit) => {
-            const commitDate = new Date(commit.commit.committer.date)
-            const latestDate = latest ? new Date(latest.commit.committer.date) : new Date(0)
-            return commitDate > latestDate ? commit : latest
-          })
-        }
-      }
-
-       const dailyCommits = new Map<string, number>()
-
-       allCommits.forEach(commit => {
-         if (commit.commit?.author?.date) {
-           const commitDate = new Date(commit.commit.author.date)
-           const dateKey = commitDate.toISOString().split('T')[0]
-           dailyCommits.set(dateKey, (dailyCommits.get(dateKey) || 0) + 1)
-         }
-       })
-
-       const contributionGraph = buildContributionGraph(dailyCommits, weeksToShow)
+      const allCommits = await fetchAllBranchCommits(createdAt)
+      const dailyCommits = buildDailyCommitCounts(allCommits)
+      const contributionGraph = buildContributionGraphData(
+        dailyCommits,
+        firstYear,
+        lastYear,
+        today
+      )
 
       const githubData: GithubData = {
         repoData: {
@@ -190,6 +221,7 @@ const getCachedGithubData = unstable_cache(
           stargazers_count: repoData.stargazers_count,
           forks_count: repoData.forks_count,
           updated_at: repoData.updated_at,
+          created_at: repoData.created_at,
         },
         githubStats: {
           repository: {
@@ -203,7 +235,7 @@ const getCachedGithubData = unstable_cache(
         lastCommit: {
           commit: {
             committer: {
-              date: latestCommit?.commit?.committer?.date || new Date().toISOString(),
+              date: getLatestCommitDate(allCommits),
             },
           },
         },
@@ -212,7 +244,9 @@ const getCachedGithubData = unstable_cache(
     } catch (error) {
       console.error('Error fetching GitHub data:', error)
 
-      // Return fallback data instead of throwing
+      const today = new Date()
+      const fallbackYear = today.getFullYear()
+
       return {
         repoData: {
           name: GITHUB_REPO_NAME,
@@ -222,15 +256,21 @@ const getCachedGithubData = unstable_cache(
           stargazers_count: 0,
           forks_count: 0,
           updated_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
         },
-                 githubStats: {
-           repository: {
-             stargazers: { totalCount: 0 },
-             forks: { totalCount: 0 },
-             commits: { history: { totalCount: 0 } },
-           },
-           contributionGraph: buildContributionGraph(new Map(), WEEKS_TO_SHOW),
-         },
+        githubStats: {
+          repository: {
+            stargazers: { totalCount: 0 },
+            forks: { totalCount: 0 },
+            commits: { history: { totalCount: 0 } },
+          },
+          contributionGraph: buildContributionGraphData(
+            new Map(),
+            fallbackYear,
+            fallbackYear,
+            today
+          ),
+        },
         stars: 0,
         lastCommit: {
           commit: {
@@ -242,11 +282,10 @@ const getCachedGithubData = unstable_cache(
       }
     }
   },
-  // Cache key
   [`github-data-${GITHUB_REPO_OWNER}-${GITHUB_REPO_NAME}`],
   {
     tags: [`github-data`],
-    revalidate: 3600 // Revalidate every hour (3600 seconds)
+    revalidate: 3600
   }
 )
 
