@@ -127,6 +127,39 @@ sudo docker compose up --build -d app
 
 Use `.env` for Docker (not `.env.local`). Rebuild after any `NEXT_PUBLIC_*` change.
 
+### Codex CLI on EC2
+
+Install (already run on the demo server; re-run after reprovisioning):
+
+```bash
+# From repo checkout on EC2, or pipe script via SSM:
+bash scripts/ec2-ssm-exec.sh --wait 'sudo bash -s' < scripts/ec2-codex-setup.sh
+```
+
+Or on the server: `sudo bash scripts/ec2-codex-setup.sh`
+
+**Login (you must do this once, interactively):** EC2 has no browser. Use **device code** auth:
+
+1. In ChatGPT → **Settings → Security**, enable **Device code authorization** (workspace admins enable it for the workspace).
+2. SSH to the instance as `ubuntu` (SSM SSH config or PEM).
+3. Run:
+
+```bash
+codex login --device-auth
+```
+
+4. Open the printed URL on your laptop/phone, sign in to ChatGPT, enter the one-time code.
+
+**Alternatives:**
+
+- **Copy auth from your laptop** (after `codex login` locally): `scp ~/.codex/auth.json ubuntu@<host>:~/.codex/auth.json`
+- **SSH port forward** (browser login): `ssh -L 1455:localhost:1455 deltalytix-ec2` then run `codex login` in that session.
+- **API key** (usage-based, not ChatGPT subscription): `printenv OPENAI_API_KEY | codex login --with-api-key`
+
+Verify: `codex login status`
+
+**Codex App remote SSH:** On your laptop, set `[features] remote_connections = true` in `~/.codex/config.toml`, add the EC2 host to `~/.ssh/config`, then **Settings → Connections** → open `/opt/deltalytix`.
+
 Self-host bypass on the demo server requires in `.env`:
 
 ```env
