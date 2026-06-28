@@ -53,9 +53,7 @@ export function Toolbar({
   const { isMobile } = useData()
   const { settings, setAutoHide } = useToolbarSettingsStore()
   const isCompactScreen = useMediaQuery(`(max-width: ${DASHBOARD_COMPACT_BREAKPOINT}px)`)
-  const [isConsentVisible, setIsConsentVisible] = useState(
-    typeof document !== "undefined" && document.body.hasAttribute("data-consent-banner")
-  )
+  const [isConsentVisible, setIsConsentVisible] = useState(false)
 
   // Handle auto-hide toggle with proper state management
   const handleAutoHideToggle = () => {

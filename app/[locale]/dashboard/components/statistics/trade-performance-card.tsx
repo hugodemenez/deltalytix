@@ -31,17 +31,17 @@ export default function TradePerformanceCard({ size = 'medium' }: TradePerforman
         <div className="flex items-center justify-center h-full gap-1.5">
           <div className="flex items-center gap-1">
             <TrendingUp className="h-3 w-3 text-green-500" />
-            <span className="font-medium text-sm">{winRate}%</span>
+            <span className="font-medium text-sm tabular-nums">{winRate}%</span>
           </div>
           <span className="text-muted-foreground">/</span>
           <div className="flex items-center gap-1">
             <Minus className="h-3 w-3 text-yellow-500" />
-            <span className="font-medium text-sm">{beRate}%</span>
+            <span className="font-medium text-sm tabular-nums">{beRate}%</span>
           </div>
           <span className="text-muted-foreground">/</span>
           <div className="flex items-center gap-1">
             <TrendingDown className="h-3 w-3 text-red-500" />
-            <span className="font-medium text-sm">{lossRate}%</span>
+            <span className="font-medium text-sm tabular-nums">{lossRate}%</span>
           </div>
           <TooltipProvider delayDuration={100}>
             <Tooltip>

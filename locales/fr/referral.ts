@@ -16,6 +16,11 @@ export default {
     tier: 'Niveau {level}',
     maxTierReached: 'Niveau maximum atteint !',
     howItWorks: 'Comment ça marche',
+    og: {
+      joinLabel: 'Rejoignez avec un code de parrainage',
+      tagline: 'Journal de trading nouvelle génération',
+      alt: 'Parrainage Deltalytix',
+    },
     landing: {
       title: 'Programme de Parrainage',
       subtitle: 'Invitez des amis et gagnez des récompenses lorsqu\'ils s\'abonnent à Plus',

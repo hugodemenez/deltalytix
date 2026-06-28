@@ -138,7 +138,11 @@ export function calculateStatistics(trades: Trade[], accounts: Account[] = [], b
   return statistics;
 }
 
-export function formatCalendarData(trades: Trade[], accounts: Account[] = []) {
+export function formatCalendarData(
+  trades: Trade[],
+  accounts: Account[] = [],
+  timezone: string,
+) {
   // // Create a map of accounts for quick lookup
   // const accountMap = new Map(accounts.map(account => [account.number, account]));
 
@@ -154,8 +158,11 @@ export function formatCalendarData(trades: Trade[], accounts: Account[] = []) {
   // });
 
   return trades.reduce((acc: any, trade: Trade) => {
-    // Parse the date and format it in UTC to ensure consistency across timezones
-    const date = formatInTimeZone(new Date(trade.entryDate), 'UTC', 'yyyy-MM-dd')
+    const date = formatInTimeZone(
+      new Date(trade.entryDate),
+      timezone,
+      "yyyy-MM-dd",
+    )
     
     if (!acc[date]) {
       acc[date] = { pnl: 0, tradeNumber: 0, longNumber: 0, shortNumber: 0, trades: [] }

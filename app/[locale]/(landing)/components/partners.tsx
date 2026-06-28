@@ -1,7 +1,7 @@
 'use client'
 import Image from 'next/image'
 import { useTheme } from '@/context/theme-provider'
-import { useI18n } from '@/locales/client'
+import { useI18n } from '@/locales/landing-client'
 
 export default function Partners() {
     const { effectiveTheme } = useTheme()

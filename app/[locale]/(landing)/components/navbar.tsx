@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Logo } from "@/components/logo"
-import { Moon, Sun, FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu, Globe, Laptop, Crown, Github } from "lucide-react"
-import { SiGithub } from "react-icons/si";
+import { FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu, Globe, Laptop, Sun, Moon, Crown } from "lucide-react"
 import { motion, AnimatePresence } from "motion/react"
 import {
     NavigationMenu,
@@ -20,12 +19,14 @@ import {
 } from "@/components/ui/navigation-menu"
 import { useTheme } from '@/context/theme-provider'
 import { cn } from '@/lib/utils'
-import { useChangeLocale, useI18n } from "@/locales/client"
+import { useChangeLocale, useI18n } from "@/locales/landing-client"
 import { useRouter, usePathname } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { useCurrentLocale } from '@/locales/client'
+import { useCurrentLocale } from '@/locales/landing-client'
 import { LanguageSelector } from "@/components/ui/language-selector"
+import { GITHUB_REPO_URL } from "@/lib/github-repo";
+import { ThemeToggleIcon } from "@/components/theme-toggle-icon";
 
 const ListItem = React.forwardRef<
     React.ComponentRef<"a">,
@@ -55,6 +56,20 @@ const ListItem = React.forwardRef<
     )
 })
 ListItem.displayName = "ListItem"
+
+function GithubIcon({ className }: { className?: string }) {
+    return (
+        <svg
+            role="img"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+            className={className}
+            fill="currentColor"
+        >
+            <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+        </svg>
+    )
+}
 
 const MobileNavItem = ({ href, children, onClick, className }: { href: string; children: React.ReactNode; onClick?: () => void, className?: string }) => (
     <li>
@@ -120,17 +135,23 @@ export default function Component() {
         }
     }, [isOpen])
 
-    // Lock/unlock body scroll when mobile menu is open
+    // Lock body scroll when mobile menu is open without changing scroll position
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            document.body.style.overflow = isOpen ? 'hidden' : ''
-        }
-        
-        // Cleanup on unmount
+        if (typeof window === 'undefined' || !isOpen) return
+
+        const { body, documentElement } = document
+        const previousBodyOverflow = body.style.overflow
+        const previousHtmlOverflow = documentElement.style.overflow
+        const previousBodyTouchAction = body.style.touchAction
+
+        body.style.overflow = 'hidden'
+        documentElement.style.overflow = 'hidden'
+        body.style.touchAction = 'none'
+
         return () => {
-            if (typeof window !== 'undefined') {
-                document.body.style.overflow = ''
-            }
+            body.style.overflow = previousBodyOverflow
+            documentElement.style.overflow = previousHtmlOverflow
+            body.style.touchAction = previousBodyTouchAction
         }
     }, [isOpen])
 
@@ -180,18 +201,6 @@ export default function Component() {
         setLanguageOpen(false)
     }
 
-    const getThemeIcon = () => {
-        if (theme === 'light') return <Sun className="h-5 w-5" />;
-        if (theme === 'dark') return <Moon className="h-5 w-5" />;
-        // For 'system' theme, we need to check the actual applied theme
-        if (typeof window !== 'undefined') {
-            const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            return isDarkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />;
-        }
-        // Fallback to Laptop icon if we can't determine
-        return <Laptop className="h-5 w-5" />;
-    };
-
     const links = [
         {
             title: t('landing.navbar.features'),
@@ -236,9 +245,9 @@ export default function Component() {
             title: t('landing.navbar.developers'),
             children: [
                 {
-                    path: "https://github.com/hugodemenez/deltalytix",
+                    path: GITHUB_REPO_URL,
                     title: t('landing.navbar.openSource'),
-                    icon: <SiGithub className="h-4 w-4" />,
+                    icon: <GithubIcon className="h-4 w-4" />,
                 },
                 {
                     path: "https://www.youtube.com/@hugodemenez",
@@ -342,7 +351,7 @@ export default function Component() {
                                 <NavigationMenuTrigger className='bg-transparent'>{t('landing.navbar.developers')}</NavigationMenuTrigger>
                                 <NavigationMenuContent onMouseEnter={() => setHoveredItem('developers')} onMouseLeave={() => setHoveredItem(null)}>
                                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] list-none">
-                                        <ListItem href="https://github.com/hugodemenez/deltalytix" title={t('landing.navbar.openSource')} icon={<SiGithub className="h-4 w-4" />}>
+                                        <ListItem href={GITHUB_REPO_URL} title={t('landing.navbar.openSource')} icon={<GithubIcon className="h-4 w-4" />}>
                                             {t('landing.navbar.openSourceDescription')}
                                         </ListItem>
                                         <ListItem href="https://www.youtube.com/@hugodemenez" title="YouTube" icon={<FileText className="h-4 w-4" />}>
@@ -356,8 +365,12 @@ export default function Component() {
                             </NavigationMenuItem>
                         </NavigationMenuList>
                         <Separator orientation="vertical" className="h-6 mx-4" />
-                        <Button variant="ghost" className="text-sm font-medium hover:text-accent-foreground" asChild>
-                            <Link href={"/authentication"}>{t('landing.navbar.signIn')}</Link>
+                        <Button
+                            variant="ghost"
+                            className="h-14 rounded-none px-4 text-sm font-medium hover:text-accent-foreground"
+                            asChild
+                        >
+                            <Link href="/authentication">{t('landing.navbar.signIn')}</Link>
                         </Button>
                     </NavigationMenu>
                 </div>
@@ -367,7 +380,7 @@ export default function Component() {
                     <Popover modal>
                         <PopoverTrigger asChild>
                             <Button variant="ghost" className="hidden lg:inline-flex h-9 w-9 px-0">
-                                {getThemeIcon()}
+                                <ThemeToggleIcon className="h-5 w-5" />
                                 <span className="sr-only">{t('landing.navbar.toggleTheme')}</span>
                             </Button>
                         </PopoverTrigger>
@@ -414,7 +427,7 @@ export default function Component() {
 
             {isOpen && (
                 <motion.div
-                    className="fixed bg-background -top-[2px] right-0 left-0 bottom-0 h-screen z-50 px-2"
+                    className="mobile-nav-overlay fixed inset-0 z-50 flex flex-col bg-background px-2 overscroll-none"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 20 }}
@@ -464,11 +477,11 @@ export default function Component() {
                         </motion.button>
                     </motion.div>
 
-                    <div className="h-screen pb-[150px] overflow-auto">
+                    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-[calc(150px+env(safe-area-inset-bottom,0px))]">
                         <motion.ul
                             initial="hidden"
                             animate="show"
-                            className="px-3 pt-8 text-xl text-[#878787] space-y-8 mb-8 overflow-auto"
+                            className="px-3 pt-8 text-xl text-[#878787] space-y-8 mb-8"
                             variants={listVariant}
                         >
                             {links.map(({ path, title, children }, index) => {
@@ -549,13 +562,18 @@ export default function Component() {
                                 className="mt-auto border-t pt-8"
                                 variants={itemVariant}
                             >
-                                <Link
-                                    className="text-xl text-primary"
-                                    href="/authentication"
-                                    onClick={closeMenu}
+                                <motion.div
+                                    whileHover={{ x: 4 }}
+                                    transition={{ duration: 0.2 }}
                                 >
-                                    {t('landing.navbar.signIn')}
-                                </Link>
+                                    <Link
+                                        className="block w-full min-h-11 text-xl text-primary rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                        href="/authentication"
+                                        onClick={closeMenu}
+                                    >
+                                        {t('landing.navbar.signIn')}
+                                    </Link>
+                                </motion.div>
                             </motion.li>
 
                             <motion.li variants={itemVariant}>
@@ -586,7 +604,7 @@ export default function Component() {
                                                                 }}
                                                                 className="flex items-center justify-center"
                                                             >
-                                                                {getThemeIcon()}
+                                                                <ThemeToggleIcon className="h-5 w-5" />
                                                             </motion.div>
                                                         </AnimatePresence>
                                                     </div>
@@ -707,9 +725,9 @@ export default function Component() {
                 </motion.div>
             )}
 
-            {/* Mobile navbar overlay */}
+            {/* Mobile navbar backdrop — covers area behind Safari bottom tab bar */}
             {isOpen && (
-                <div className="fixed inset-0 bg-background z-40" />
+                <div className="mobile-nav-overlay fixed inset-0 bg-background z-40" aria-hidden="true" />
             )}
         </>
     )

@@ -133,15 +133,18 @@ function bucketByDay(
 }
 
 // Mirrors formatCalendarData in lib/utils: the live Daily P&L, Weekday P&L,
-// and calendar widgets bucket trades by entryDate formatted in UTC.
-function bucketByDashboardCalendarDay(trades: PdfTrade[]): Map<string, number> {
+// and calendar widgets bucket trades by entryDate in the user's timezone.
+function bucketByDashboardCalendarDay(
+  trades: PdfTrade[],
+  timezone: string,
+): Map<string, number> {
   const buckets = new Map<string, number>()
   for (const trade of trades) {
     const time = new Date(trade.entryDate).getTime()
     if (Number.isNaN(time)) {
       continue
     }
-    const day = formatInTimeZone(new Date(trade.entryDate), "UTC", "yyyy-MM-dd")
+    const day = formatInTimeZone(new Date(trade.entryDate), timezone, "yyyy-MM-dd")
     buckets.set(day, (buckets.get(day) ?? 0) + netPnl(trade))
   }
   return buckets
@@ -162,7 +165,7 @@ export function computeChartData(
   })
 
   // Daily net pnl by dashboard calendar bucket, chronological.
-  const dailyBuckets = bucketByDashboardCalendarDay(trades)
+  const dailyBuckets = bucketByDashboardCalendarDay(trades, timezone)
   const dailyDays = [...dailyBuckets.keys()].sort()
   const dailyPnl: PointSeries[] = dailyDays.map((day) => ({
     label: day,

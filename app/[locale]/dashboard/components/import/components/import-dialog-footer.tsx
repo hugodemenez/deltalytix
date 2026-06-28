@@ -42,13 +42,13 @@ export function ImportDialogFooter({
   }
 
   return (
-    <div className="flex-none p-4 border-t bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60 h-[68px]">
-      <div className="flex justify-end items-center gap-4">
+    <div className="flex-none p-3 sm:p-4 border-t bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60">
+      <div className="flex justify-end items-center gap-2 sm:gap-4">
         {currentStepIndex > 0 && (
           <Button 
             variant="outline" 
             onClick={onBack}
-            className="w-fit min-w-[100px]"
+            className="w-fit min-w-[80px] sm:min-w-[100px]"
           >
             {t('import.button.back')}
           </Button>
@@ -56,7 +56,7 @@ export function ImportDialogFooter({
         <Button 
           onClick={onNext}
           className={cn(
-            "w-fit min-w-[100px]",
+            "w-fit min-w-[80px] sm:min-w-[100px]",
             (currentStepIndex === 0 && (importType === 'rithmic-sync' || importType === 'tradovate-sync' || importType === 'dxfeed-sync')) && "invisible"
           )}
           disabled={isNextDisabled}

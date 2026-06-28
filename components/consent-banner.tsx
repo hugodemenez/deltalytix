@@ -34,8 +34,9 @@ interface ConsentSettings {
 }
 
 
-export function ConsentBanner() {
-  const t = useI18n()
+type ConsentTranslator = ReturnType<typeof useI18n>
+
+function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
   const [isVisible, setIsVisible] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
   const [settings, setSettings] = useState<ConsentSettings>({
@@ -334,4 +335,9 @@ export function ConsentBanner() {
       </motion.div>
     </AnimatePresence>
   )
-} 
+}
+
+export function ConsentBanner() {
+  const t = useI18n()
+  return <ConsentBannerContent t={t} />
+}

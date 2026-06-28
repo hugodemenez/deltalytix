@@ -1,0 +1,11 @@
+---
+description: Git branch and pull request workflow for this repository
+alwaysApply: true
+---
+
+# Git workflow
+
+- **Default integration branch:** `beta` (not `main`)
+- **Feature branches:** branch from `beta`; rebase onto `origin/beta` before opening a PR
+- **Pull requests:** always target **`beta`** as the base branch unless the user explicitly asks for a different base (e.g. a `beta → main` release PR)
+- **Do not** assume `main` is the PR base — `main` is production; day-to-day work merges into `beta` first

@@ -241,7 +241,7 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
                 dataKey="pnl"
                 radius={[3, 3, 0, 0]}
                 maxBarSize={size === "small" ? 25 : 40}
-                className="transition-all duration-300 ease-in-out"
+                className="transition-opacity duration-300 ease-out"
               >
                 {chartData.map((entry, index) => (
                   <Cell

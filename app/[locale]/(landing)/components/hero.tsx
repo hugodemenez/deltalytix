@@ -1,25 +1,58 @@
 'use client'
-import { useI18n } from "@/locales/client";
+import { useI18n } from "@/locales/landing-client";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useRef, useState } from "react";
 import { useTheme } from "@/context/theme-provider";
 
 export default function Hero() {
   const t = useI18n();
   const { theme, effectiveTheme } = useTheme();
+  const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
+
+  // Read from the DOM class (set by the blocking init-theme script) so the
+  // correct media is chosen before React state hydrates.
+  const resolvedTheme =
+    typeof document !== "undefined" &&
+    document.documentElement.classList.contains("dark")
+      ? "dark"
+      : effectiveTheme;
+
+  const videoSrc =
+    resolvedTheme === "dark"
+      ? "/videos/demo_dark.mp4"
+      : "/videos/demo_white.mp4";
+
+  useEffect(() => {
+    const container = videoContainerRef.current;
+    if (!container) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldLoadVideo(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "400px 0px", threshold: 0 }
+    );
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     setVideoLoaded(false);
     setVideoError(false);
 
-    if (videoRef.current) {
+    if (shouldLoadVideo && videoRef.current) {
       videoRef.current.load();
     }
-  }, [theme, effectiveTheme]);
+  }, [theme, effectiveTheme, shouldLoadVideo]);
 
   const handleVideoLoad = () => {
     setVideoLoaded(true);
@@ -28,6 +61,7 @@ export default function Hero() {
   const handleVideoError = () => {
     setVideoError(true);
   };
+
   return (
     <div className="container px-4 md:px-6 mx-auto">
       <div className="flex flex-col w-full gap-y-24">
@@ -59,45 +93,49 @@ export default function Hero() {
             </Link>
           </div>
         </div>
-        <div className="flex w-full items-center justify-center  relative  rounded-lg">
-          <div className="relative w-full h-full">
+        <div
+          ref={videoContainerRef}
+          className="flex w-full items-center justify-center relative rounded-lg"
+        >
+          <div className="relative w-full aspect-[2108/1080] dark:aspect-[2120/1080] rounded-[14.5867px]">
             <span className="absolute inset-[-12px] md:inset-[-24px] bg-[rgba(50,169,151,0.15)] dark:bg-[hsl(var(--chart-1)/0.15)] rounded-[14.5867px] -z-10 animate-pulse"></span>
             <span className="absolute inset-[-4px] md:inset-[-8px] bg-[rgba(50,169,151,0.25)] dark:bg-[hsl(var(--chart-1)/0.25)] rounded-[14.5867px] -z-20 animate-pulse"></span>
             <span className="absolute inset-0 shadow-[0_9.1167px_13.675px_-2.735px_rgba(0,0,0,0.1),0_3.64667px_5.47px_-3.64667px_rgba(0,0,0,0.1)] md:shadow-[0_18.2333px_27.35px_-5.47px_rgba(0,0,0,0.1),0_7.29333px_10.94px_-7.29333px_rgba(0,0,0,0.1)] dark:shadow-[0_9.1167px_13.675px_-2.735px_hsl(var(--chart-1)/0.1),0_3.64667px_5.47px_-3.64667px_hsl(var(--chart-1)/0.1)] md:dark:shadow-[0_18.2333px_27.35px_-5.47px_hsl(var(--chart-1)/0.1),0_7.29333px_10.94px_-7.29333px_hsl(var(--chart-1)/0.1)] rounded-[14.5867px] -z-30"></span>
-            {!videoLoaded && !videoError && (
-              <div className="w-full aspect-video flex items-center justify-center bg-gray-100 dark:bg-black rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] dark:border-gray-800">
-                <Skeleton className="w-full aspect-video rounded-[14.5867px]" />
-              </div>
+            {!videoError && (
+              <>
+                <img
+                  src="/videos/demo_white_poster.png"
+                  alt=""
+                  aria-hidden={videoLoaded}
+                  className={`absolute inset-0 h-full w-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] object-cover dark:border-gray-800 transition-opacity duration-300 dark:hidden ${videoLoaded ? "opacity-0" : "opacity-100"}`}
+                />
+                <img
+                  src="/videos/demo_dark_poster.png"
+                  alt=""
+                  aria-hidden={videoLoaded}
+                  className={`absolute inset-0 hidden h-full w-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] object-cover dark:border-gray-800 transition-opacity duration-300 dark:block ${videoLoaded ? "opacity-0" : "opacity-100"}`}
+                />
+              </>
             )}
             {videoError && (
-              <div className="w-full aspect-video flex items-center justify-center bg-gray-100 dark:bg-black rounded-lg">
+              <div className="absolute inset-0 flex items-center justify-center rounded-[14.5867px] bg-gray-100 dark:bg-black">
                 <p className="text-red-500">Failed to load video</p>
               </div>
             )}
             <video
               ref={videoRef}
-              preload="metadata"
+              preload="none"
               loop
               muted
               autoPlay
               playsInline
-              className={`w-full h-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] dark:border-gray-800 ${videoLoaded ? "block" : "hidden"}`}
-              poster={
-                effectiveTheme === "dark"
-                  ? "/videos/demo_dark_poster.png"
-                  : "/videos/demo_white_poster.png"
-              }
+              className={`absolute inset-0 h-full w-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] object-cover transition-opacity duration-300 dark:border-gray-800 ${videoLoaded && !videoError ? "opacity-100" : "opacity-0"}`}
               onLoadedData={handleVideoLoad}
               onError={handleVideoError}
             >
-              <source
-                src={
-                  effectiveTheme === "dark"
-                    ? "/videos/demo_dark.mp4"
-                    : "/videos/demo_white.mp4"
-                }
-                type="video/mp4"
-              />
+              {shouldLoadVideo && (
+                <source src={videoSrc} type="video/mp4" />
+              )}
             </video>
           </div>
         </div>
