@@ -62,6 +62,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { LinkedAccounts } from "@/components/linked-accounts"
+import { ThemeToggleIcon } from "@/components/theme-toggle-icon"
 
 type Locale = 'en' | 'fr'
 
@@ -113,16 +114,6 @@ export default function SettingsPage() {
   const handleThemeChange = (value: string) => {
     setTheme(value as "light" | "dark" | "system")
   }
-
-  const getThemeIcon = () => {
-    if (theme === 'light') return <Sun className="h-4 w-4" />;
-    if (theme === 'dark') return <Moon className="h-4 w-4" />;
-    if (typeof window !== 'undefined') {
-      const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      return isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />;
-    }
-    return <Laptop className="h-4 w-4" />;
-  };
 
   // Load user teams on component mount
   useEffect(() => {
@@ -234,7 +225,7 @@ export default function SettingsPage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="w-[200px] justify-start">
-                      {getThemeIcon()}
+                      <ThemeToggleIcon />
                       <span className="ml-2">
                         {theme === 'light' ? 'Light' : theme === 'dark' ? 'Dark' : 'System'}
                       </span>

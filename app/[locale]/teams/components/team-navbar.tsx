@@ -24,6 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { LanguageSelector } from "@/components/ui/language-selector"
 import { Badge } from "@/components/ui/badge"
+import { ThemeToggleIcon } from "@/components/theme-toggle-icon"
 
 const ListItem = React.forwardRef<
     React.ComponentRef<"a">,
@@ -112,18 +113,6 @@ export default function TeamNavbar() {
         setLanguageOpen(false)
     }
 
-    const getThemeIcon = () => {
-        if (theme === 'light') return <Sun className="h-5 w-5" />;
-        if (theme === 'dark') return <Moon className="h-5 w-5" />;
-        // For 'system' theme, we need to check the actual applied theme
-        if (typeof window !== 'undefined') {
-            const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            return isDarkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />;
-        }
-        // Fallback to Laptop icon if we can't determine
-        return <Laptop className="h-5 w-5" />;
-    };
-
     const MobileNavContent = ({ onLinkClick }: { onLinkClick: () => void }) => (
         <nav className="flex flex-col space-y-4">
             <Accordion type="single" collapsible className="w-full">
@@ -158,7 +147,7 @@ export default function TeamNavbar() {
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button variant="ghost" className="w-full justify-start">
-                            {getThemeIcon()}
+                            <ThemeToggleIcon className="h-5 w-5" />
                             <span className="ml-2">{t('teams.navbar.theme.change')}</span>
                         </Button>
                     </PopoverTrigger>
@@ -270,7 +259,7 @@ export default function TeamNavbar() {
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button variant="ghost" className="hidden lg:inline-flex h-9 w-9 px-0">
-                                {getThemeIcon()}
+                                <ThemeToggleIcon className="h-5 w-5" />
                                 <span className="sr-only">Toggle theme</span>
                             </Button>
                         </PopoverTrigger>

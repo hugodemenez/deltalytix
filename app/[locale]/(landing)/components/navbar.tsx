@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Logo } from "@/components/logo"
-import { Moon, Sun, FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu, Globe, Laptop, Crown } from "lucide-react"
+import { FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu, Globe, Laptop, Sun, Moon, Crown } from "lucide-react"
 import { motion, AnimatePresence } from "motion/react"
 import {
     NavigationMenu,
@@ -26,6 +26,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useCurrentLocale } from '@/locales/landing-client'
 import { LanguageSelector } from "@/components/ui/language-selector"
 import { GITHUB_REPO_URL } from "@/lib/github-repo";
+import { ThemeToggleIcon } from "@/components/theme-toggle-icon";
 
 const ListItem = React.forwardRef<
     React.ComponentRef<"a">,
@@ -199,18 +200,6 @@ export default function Component() {
         changeLocale(value as "en" | "fr")
         setLanguageOpen(false)
     }
-
-    const getThemeIcon = () => {
-        if (theme === 'light') return <Sun className="h-5 w-5" />;
-        if (theme === 'dark') return <Moon className="h-5 w-5" />;
-        // For 'system' theme, we need to check the actual applied theme
-        if (typeof window !== 'undefined') {
-            const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            return isDarkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />;
-        }
-        // Fallback to Laptop icon if we can't determine
-        return <Laptop className="h-5 w-5" />;
-    };
 
     const links = [
         {
@@ -391,7 +380,7 @@ export default function Component() {
                     <Popover modal>
                         <PopoverTrigger asChild>
                             <Button variant="ghost" className="hidden lg:inline-flex h-9 w-9 px-0">
-                                {getThemeIcon()}
+                                <ThemeToggleIcon className="h-5 w-5" />
                                 <span className="sr-only">{t('landing.navbar.toggleTheme')}</span>
                             </Button>
                         </PopoverTrigger>
@@ -615,7 +604,7 @@ export default function Component() {
                                                                 }}
                                                                 className="flex items-center justify-center"
                                                             >
-                                                                {getThemeIcon()}
+                                                                <ThemeToggleIcon className="h-5 w-5" />
                                                             </motion.div>
                                                         </AnimatePresence>
                                                     </div>

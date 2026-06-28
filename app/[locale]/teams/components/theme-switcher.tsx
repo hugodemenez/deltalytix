@@ -13,6 +13,7 @@ import { Slider } from "@/components/ui/slider"
 import { Sun, Moon, Laptop } from "lucide-react"
 import { useTheme } from '@/context/theme-provider'
 import { useI18n } from "@/locales/client"
+import { ThemeToggleIcon } from '@/components/theme-toggle-icon'
 
 export function ThemeSwitcher() {
   const { theme, setTheme, intensity, setIntensity } = useTheme()
@@ -22,23 +23,11 @@ export function ThemeSwitcher() {
     setTheme(value as "light" | "dark" | "system")
   }
 
-  const getThemeIcon = () => {
-    if (theme === 'light') return <Sun className="h-4 w-4" />
-    if (theme === 'dark') return <Moon className="h-4 w-4" />
-    // For 'system' theme, we need to check the actual applied theme
-    if (typeof window !== 'undefined') {
-      const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
-      return isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />
-    }
-    // Fallback to Laptop icon if we can't determine
-    return <Laptop className="h-4 w-4" />
-  }
-
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="h-8 w-8">
-          {getThemeIcon()}
+          <ThemeToggleIcon />
           <span className="sr-only">{t('landing.navbar.toggleTheme')}</span>
         </Button>
       </PopoverTrigger>
