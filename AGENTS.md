@@ -69,7 +69,7 @@ curl -s -o /dev/null -D - "http://localhost:3000/authentication?next=dashboard" 
 
 - Start Postgres: `sudo docker compose up -d db` (use `sudo` when the daemon requires it)
 - Initialize schema on the **host**: `bunx prisma db push` (preferred for agent VMs)
-- `sudo docker compose run --rm migrate` only when Compose service DNS works (`db` resolves inside containers)
+- `sudo docker compose run --rm schema-push` only when Compose service DNS works (`db` resolves inside containers)
 - Restricted VMs: `bash scripts/docker-bootstrap.sh` before Docker commands
 
 ## Security constraints
