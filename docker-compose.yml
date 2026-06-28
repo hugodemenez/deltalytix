@@ -29,7 +29,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "bunx prisma migrate deploy"
+    command: sh -c "bunx prisma db push"
 
   app:
     build:
