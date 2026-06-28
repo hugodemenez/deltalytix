@@ -241,8 +241,9 @@ export function Toolbar({
 
             <FilterCommandMenu
               variant="toolbar"
-              className={cn(useCompactLayout ? "min-w-0 flex-1 basis-full sm:basis-44" : "w-auto")}
+              className={cn(useCompactLayout ? "w-10 p-0" : "w-auto")}
               compactBreakpoint={DASHBOARD_COMPACT_BREAKPOINT}
+              compact={useCompactLayout}
             />
 
             {isCustomizing && (
@@ -330,4 +331,4 @@ export function Toolbar({
       </ContextMenuContent>
     </ContextMenu>
   )
-} 
+}
