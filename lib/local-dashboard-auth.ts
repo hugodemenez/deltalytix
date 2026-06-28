@@ -19,7 +19,10 @@ function assertBypassAllowedInCurrentEnvironment(): void {
     return
   }
 
-  if (isTruthy(process.env.LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION)) {
+  if (
+    isTruthy(process.env.LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION) ||
+    isTruthy(process.env.NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION)
+  ) {
     return
   }
 
