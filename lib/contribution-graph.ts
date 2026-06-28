@@ -1,11 +1,42 @@
+export interface CommitRecord {
+  date: string;
+  authorName: string;
+}
+
+export interface DayActivity {
+  date: string;
+  label: string;
+  count: number;
+}
+
+export interface ContributorActivity {
+  name: string;
+  count: number;
+}
+
+export interface WeekDetail {
+  weekIndex: number;
+  weekStart: string;
+  weekEnd: string;
+  count: number;
+  days: DayActivity[];
+  contributors: ContributorActivity[];
+}
+
+export interface MonthLabel {
+  weekIndex: number;
+  label: string;
+  position: "top" | "bottom";
+}
+
 export interface WeeklyYearData {
   year: number;
   weekCount: number;
   counts: number[];
   levels: number[];
-  monthLabels: { weekIndex: number; label: string }[];
+  monthLabels: MonthLabel[];
+  weekDetails: WeekDetail[];
   totalContributions: number;
-  /** Weeks to render for this year (future weeks are omitted in the current year). */
   visibleWeekCount: number;
 }
 
@@ -15,13 +46,19 @@ export interface ContributionGraphData {
   defaultYear: number;
 }
 
+const KEY_MONTHS = new Set([0, 2, 5, 8, 11]);
+
 function startOfDay(date: Date): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   return d;
 }
 
-function getYearWeekStarts(year: number): Date[] {
+function toDateKey(date: Date): string {
+  return date.toISOString().split("T")[0];
+}
+
+export function getYearWeekStarts(year: number): Date[] {
   const jan1 = startOfDay(new Date(year, 0, 1));
   const dec31 = startOfDay(new Date(year, 11, 31));
 
@@ -56,34 +93,22 @@ function countToLevel(count: number, maxCount: number): number {
   return 4;
 }
 
-function countCommitsInWeek(
-  weekStart: Date,
-  year: number,
-  dailyCounts: Map<string, number>
-): number {
-  let total = 0;
-  for (let day = 0; day < 7; day++) {
-    const date = new Date(weekStart);
-    date.setDate(weekStart.getDate() + day);
-    if (date.getFullYear() !== year) continue;
-    const dateKey = date.toISOString().split("T")[0];
-    total += dailyCounts.get(dateKey) ?? 0;
-  }
-  return total;
-}
-
-function buildMonthLabels(weekStarts: Date[]): { weekIndex: number; label: string }[] {
-  const labels: { weekIndex: number; label: string }[] = [];
-  let lastMonth = -1;
+function buildSparseMonthLabels(weekStarts: Date[]): MonthLabel[] {
+  const labels: MonthLabel[] = [];
+  let labelIndex = 0;
 
   weekStarts.forEach((weekStart, weekIndex) => {
     const month = weekStart.getMonth();
-    if (month !== lastMonth) {
+    const previousWeek = weekIndex > 0 ? weekStarts[weekIndex - 1] : null;
+    const isNewMonth = !previousWeek || previousWeek.getMonth() !== month;
+
+    if (KEY_MONTHS.has(month) && isNewMonth) {
       labels.push({
         weekIndex,
         label: weekStart.toLocaleDateString("en-US", { month: "short" }),
+        position: labelIndex % 2 === 0 ? "top" : "bottom",
       });
-      lastMonth = month;
+      labelIndex++;
     }
   });
 
@@ -112,16 +137,75 @@ function getVisibleWeekCount(
   return visible;
 }
 
+function buildWeekDetail(
+  weekStart: Date,
+  weekIndex: number,
+  year: number,
+  commits: CommitRecord[]
+): WeekDetail {
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+
+  const dayCounts = new Map<string, number>();
+  const contributorCounts = new Map<string, number>();
+  let count = 0;
+
+  for (const commit of commits) {
+    const commitDate = startOfDay(new Date(`${commit.date}T00:00:00`));
+    if (commitDate < weekStart || commitDate > weekEnd) continue;
+    if (commitDate.getFullYear() !== year) continue;
+
+    count++;
+    dayCounts.set(commit.date, (dayCounts.get(commit.date) ?? 0) + 1);
+    contributorCounts.set(
+      commit.authorName,
+      (contributorCounts.get(commit.authorName) ?? 0) + 1
+    );
+  }
+
+  const days: DayActivity[] = Array.from(dayCounts.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([date, dayCount]) => {
+      const parsed = new Date(`${date}T00:00:00`);
+      return {
+        date,
+        label: parsed.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        }),
+        count: dayCount,
+      };
+    });
+
+  const contributors: ContributorActivity[] = Array.from(
+    contributorCounts.entries()
+  )
+    .map(([name, contributorCount]) => ({ name, count: contributorCount }))
+    .sort((left, right) => right.count - left.count);
+
+  return {
+    weekIndex,
+    weekStart: toDateKey(weekStart),
+    weekEnd: toDateKey(weekEnd),
+    count,
+    days,
+    contributors,
+  };
+}
+
 export function buildWeeklyYearGraph(
-  dailyCounts: Map<string, number>,
+  commits: CommitRecord[],
   year: number,
   today = new Date()
 ): WeeklyYearData {
   const weekStarts = getYearWeekStarts(year);
   const weekCount = weekStarts.length;
-  const counts = weekStarts.map((weekStart) =>
-    countCommitsInWeek(weekStart, year, dailyCounts)
+
+  const weekDetails = weekStarts.map((weekStart, weekIndex) =>
+    buildWeekDetail(weekStart, weekIndex, year, commits)
   );
+  const counts = weekDetails.map((detail) => detail.count);
 
   const visibleWeekCount = getVisibleWeekCount(year, weekStarts, today);
   const visibleCounts = counts.slice(0, visibleWeekCount);
@@ -137,14 +221,15 @@ export function buildWeeklyYearGraph(
     weekCount,
     counts,
     levels,
-    monthLabels: buildMonthLabels(weekStarts),
+    monthLabels: buildSparseMonthLabels(weekStarts),
+    weekDetails,
     totalContributions,
     visibleWeekCount,
   };
 }
 
 export function buildContributionGraphData(
-  dailyCounts: Map<string, number>,
+  commits: CommitRecord[],
   firstYear: number,
   lastYear: number,
   today = new Date()
@@ -154,7 +239,7 @@ export function buildContributionGraphData(
 
   for (let year = firstYear; year <= lastYear; year++) {
     availableYears.push(year);
-    years[year] = buildWeeklyYearGraph(dailyCounts, year, today);
+    years[year] = buildWeeklyYearGraph(commits, year, today);
   }
 
   return {
@@ -164,30 +249,19 @@ export function buildContributionGraphData(
   };
 }
 
-export function getWeekStartDate(year: number, weekIndex: number): Date {
-  return getYearWeekStarts(year)[weekIndex] ?? new Date(year, 0, 1);
-}
+export function formatWeekRange(detail: WeekDetail): string {
+  const start = new Date(`${detail.weekStart}T00:00:00`);
+  const end = new Date(`${detail.weekEnd}T00:00:00`);
 
-export function formatWeekTitle(weekStart: Date, count: number): string {
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-
-  const countLabel =
-    count === 0
-      ? "No commits"
-      : count === 1
-        ? "1 commit"
-        : `${count} commits`;
-
-  const startLabel = weekStart.toLocaleDateString("en-US", {
+  const startLabel = start.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   });
-  const endLabel = weekEnd.toLocaleDateString("en-US", {
+  const endLabel = end.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 
-  return `Week of ${startLabel} – ${endLabel}: ${countLabel}`;
+  return `${startLabel} – ${endLabel}`;
 }

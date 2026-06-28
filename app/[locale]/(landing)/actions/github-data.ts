@@ -5,6 +5,7 @@ import { unstable_cache } from 'next/cache'
 import { GITHUB_REPO_NAME, GITHUB_REPO_OWNER } from '@/lib/github-repo'
 import {
   buildContributionGraphData,
+  type CommitRecord,
   type ContributionGraphData,
 } from '@/lib/contribution-graph'
 
@@ -25,8 +26,9 @@ const octokit = new Octokit({
 
 interface GithubCommit {
   sha: string
+  author?: { login?: string | null } | null
   commit: {
-    author?: { date?: string } | null
+    author?: { name?: string; date?: string; email?: string } | null
     committer?: { date?: string } | null
   }
 }
@@ -142,19 +144,24 @@ async function fetchTrackedBranchCommits(since: Date): Promise<GithubCommit[]> {
   return allCommits
 }
 
-function buildDailyCommitCounts(commits: GithubCommit[]): Map<string, number> {
-  const dailyCommits = new Map<string, number>()
+function buildCommitRecords(commits: GithubCommit[]): CommitRecord[] {
+  const records: CommitRecord[] = []
 
   commits.forEach((commit) => {
     const dateString =
       commit.commit?.author?.date ?? commit.commit?.committer?.date
     if (!dateString) return
 
-    const dateKey = new Date(dateString).toISOString().split('T')[0]
-    dailyCommits.set(dateKey, (dailyCommits.get(dateKey) || 0) + 1)
+    records.push({
+      date: new Date(dateString).toISOString().split('T')[0],
+      authorName:
+        commit.author?.login ??
+        commit.commit?.author?.name ??
+        'Unknown',
+    })
   })
 
-  return dailyCommits
+  return records
 }
 
 function getLatestCommitDate(commits: GithubCommit[]): string {
@@ -206,9 +213,9 @@ async function fetchGithubData(): Promise<GithubData> {
     const lastYear = today.getFullYear()
 
     const allCommits = await fetchTrackedBranchCommits(createdAt)
-    const dailyCommits = buildDailyCommitCounts(allCommits)
+    const commitRecords = buildCommitRecords(allCommits)
     const contributionGraph = buildContributionGraphData(
-      dailyCommits,
+      commitRecords,
       firstYear,
       lastYear,
       today
@@ -266,7 +273,7 @@ async function fetchGithubData(): Promise<GithubData> {
           commits: { history: { totalCount: 0 } },
         },
         contributionGraph: buildContributionGraphData(
-          new Map(),
+          [],
           fallbackYear,
           fallbackYear,
           today
