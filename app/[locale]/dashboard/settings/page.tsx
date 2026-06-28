@@ -62,6 +62,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { LinkedAccounts } from "@/components/linked-accounts"
+import { SupportedCurrency, supportedCurrencies } from "@/lib/currency"
 
 type Locale = 'en' | 'fr'
 
@@ -86,6 +87,8 @@ export default function SettingsPage() {
   const user = useUserStore(state => state.supabaseUser)
   const timezone = useUserStore(state => state.timezone)
   const setTimezone = useUserStore(state => state.setTimezone)
+  const baseCurrency = useUserStore(state => state.baseCurrency)
+  const setBaseCurrency = useUserStore(state => state.setBaseCurrency)
   
   const breakevenRange = useBreakevenStore(state => state.range)
   const setBreakevenRange = useBreakevenStore(state => state.setRange)
@@ -109,6 +112,16 @@ export default function SettingsPage() {
     { value: 'en', label: 'English' },
     { value: 'fr', label: 'Français' },
   ]
+
+  const currencyLabels: Record<SupportedCurrency, string> = {
+    USD: "USD ($)",
+    EUR: "EUR (€)",
+    GBP: "GBP (£)",
+    JPY: "JPY (¥)",
+    CAD: "CAD (C$)",
+    AUD: "AUD (A$)",
+    CHF: "CHF (CHF)",
+  }
 
   const handleThemeChange = (value: string) => {
     setTheme(value as "light" | "dark" | "system")
@@ -331,6 +344,40 @@ export default function SettingsPage() {
                         ))}
                       </DropdownMenuRadioGroup>
                     </ScrollArea>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Currency Settings */}
+            <div>
+              <Label className="text-base font-medium flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Base Currency
+              </Label>
+              <div className="mt-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-[200px] justify-start">
+                      {currencyLabels[baseCurrency]}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuRadioGroup
+                      value={baseCurrency}
+                      onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
+                    >
+                      {supportedCurrencies.map((currency) => (
+                        <DropdownMenuRadioItem
+                          key={currency}
+                          value={currency}
+                        >
+                          {currencyLabels[currency]}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
