@@ -34,7 +34,7 @@ Remember: search before you guess. Escalate when human support is the right path
 export const supportAgent = new ToolLoopAgent({
   model: SUPPORT_AGENT_MODEL,
   instructions: SUPPORT_AGENT_INSTRUCTIONS,
-  stopWhen: stepCountIs(8),
+  stopWhen: stepCountIs(4),
   providerOptions: {
     openai: {
       reasoningEffort: "low",

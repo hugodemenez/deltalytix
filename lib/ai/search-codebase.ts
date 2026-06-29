@@ -9,10 +9,13 @@ const REPO_ROOT = process.cwd();
 
 const SEARCH_ROOTS = ["content", "locales"] as const;
 
-const ROOT_MARKDOWN_FILES = ["README.md", "SELF_HOSTING.md", "AGENTS.md"] as const;
+const ROOT_MARKDOWN_FILES = ["README.md", "SELF_HOSTING.md"] as const;
 
 const MAX_RESULTS = 12;
 const MAX_SNIPPET_CHARS = 600;
+const MAX_QUERY_CHARS = 120;
+const MAX_FILE_BYTES = 256 * 1024;
+const SEARCH_TIMEOUT_MS = 2_000;
 
 export type CodebaseSearchMatch = {
   file: string;
@@ -57,22 +60,28 @@ async function searchWithRipgrep(
       [
         "-i",
         "--json",
+        "--fixed-strings",
         "-m",
         String(MAX_RESULTS),
         "--context",
         "1",
+        "--max-filesize",
+        String(MAX_FILE_BYTES),
         "--glob",
         "*.md",
         "--glob",
         "*.mdx",
         "--glob",
         "*.ts",
+        "--",
         query,
         ...searchPaths,
       ],
       {
         cwd: REPO_ROOT,
-        maxBuffer: 10 * 1024 * 1024,
+        maxBuffer: 1024 * 1024,
+        timeout: SEARCH_TIMEOUT_MS,
+        killSignal: "SIGKILL",
       },
     );
 
@@ -113,7 +122,12 @@ async function searchWithRipgrep(
     }
 
     return matches;
-  } catch {
+  } catch (error) {
+    const searchError = error as { code?: number | string };
+    if (searchError.code === 1 || searchError.code === "1") {
+      return [];
+    }
+
     return null;
   }
 }
@@ -148,6 +162,9 @@ async function searchWithNodeFs(
       if (!/\.(md|mdx|ts)$/i.test(entry.name)) continue;
 
       const absolutePath = path.join(REPO_ROOT, relativePath);
+      const stats = await import("node:fs/promises").then((fs) => fs.stat(absolutePath));
+      if (stats.size > MAX_FILE_BYTES) continue;
+
       const content = await readFile(absolutePath, "utf8");
       const lines = content.split("\n");
 
@@ -170,6 +187,8 @@ async function searchWithNodeFs(
     const stats = await import("node:fs/promises").then((fs) => fs.stat(absolutePath));
 
     if (stats.isFile()) {
+      if (stats.size > MAX_FILE_BYTES) continue;
+
       const content = await readFile(absolutePath, "utf8");
       const lines = content.split("\n");
 
@@ -198,7 +217,7 @@ export async function searchCodebase(
   options?: { locale?: "en" | "fr" },
 ): Promise<CodebaseSearchResult> {
   const trimmedQuery = query.trim();
-  if (!trimmedQuery) {
+  if (!trimmedQuery || trimmedQuery.length > MAX_QUERY_CHARS) {
     return { query: trimmedQuery, matchCount: 0, matches: [] };
   }
 

@@ -1,20 +1,37 @@
-import { createAgentUIStreamResponse, type UIMessage } from "ai";
+import { createAgentUIStreamResponse } from "ai";
 import { supportAgent } from "@/lib/ai/support-agent";
+import {
+  checkSupportRateLimit,
+  getSupportClientKey,
+  parseSupportRequest,
+  supportApiErrorResponse,
+} from "@/lib/ai/support-api-guard";
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
-    const { messages }: { messages: UIMessage[] } = await req.json();
+    const rateLimit = checkSupportRateLimit(getSupportClientKey(req));
+    if (!rateLimit.allowed) {
+      return supportApiErrorResponse({
+        ok: false,
+        status: 429,
+        type: "rate_limit_exceeded",
+        message:
+          "We are experiencing high demand. Please try again in a few minutes or contact support directly.",
+        retryAfter: rateLimit.retryAfter,
+      });
+    }
 
-    if (messages[0]?.role === "assistant") {
-      messages.shift();
+    const parsedRequest = await parseSupportRequest(req);
+    if (!parsedRequest.ok) {
+      return supportApiErrorResponse(parsedRequest);
     }
 
     return createAgentUIStreamResponse({
       agent: supportAgent,
-      uiMessages: messages,
-      sendReasoning: true,
+      uiMessages: parsedRequest.messages,
+      sendReasoning: false,
       onStepFinish: (step) => {
         console.log(
           "[Support Agent] Step finished:",
