@@ -17,8 +17,6 @@ const OP = 420;
 const COLORS = {
   bg: [0.035, 0.035, 0.043, 1],
   teal: [0.18, 0.6, 0.529, 1],
-  tealDim: [0.18, 0.6, 0.529, 0.18],
-  grid: [0.14, 0.14, 0.16, 1],
 };
 
 const EASE = {
@@ -49,18 +47,8 @@ function fill(color, slot = null) {
   return { ty: "fl", c: slot ? { sid: slot } : { a: 0, k: color }, o: staticVal(100) };
 }
 
-function stroke(color, width = 2) {
-  return { ty: "st", c: staticVal(color), o: staticVal(100), w: staticVal(width), lc: 2, lj: 2 };
-}
-
 function rect(w, h) {
   return { ty: "rc", p: staticVal([0, 0]), s: staticVal([w, h]), r: staticVal(0) };
-}
-
-function path(vertices, closed = true) {
-  const n = vertices.length;
-  const z = Array(n).fill([0, 0]);
-  return { ty: "sh", ks: staticVal({ i: z, o: z, v: vertices, c: closed }) };
 }
 
 function shapeGroup(name, items, transform) {
@@ -180,47 +168,31 @@ function buildAnimation() {
     ks: { o: fadeIn(118, 175) },
   }));
 
-  // Chapter 2 — equity curve + stats (175–295)
-  const pts = [
-    [0, 180], [100, 155], [200, 168], [300, 125], [400, 108], [500, 118],
-    [600, 78], [700, 62], [800, 74], [900, 45], [1000, 32], [1100, 0],
-  ];
-  const curve = [];
-  for (let i = 0; i < 4; i++) {
-    curve.push(shapeGroup(`grid-${i}`, [rect(1100, 1), fill(COLORS.grid)], groupTransform(-550, i * 55 - 82)));
-  }
-  curve.push(shapeGroup("area", [path([...pts, [1100, 200], [0, 200]]), fill(COLORS.tealDim)], groupTransform(-550, 0)));
-  curve.push(shapeGroup("stroke", [
-    path(pts, false),
-    stroke(COLORS.teal, 3),
-    {
-      ty: "tm",
-      s: staticVal(0),
-      e: {
-        a: 1,
-        k: [
-          { t: 180, s: [0], ...EASE.travel },
-          { t: 240, s: [100], ...EASE.settle },
-        ],
+  // Chapter 2 — real dashboard screenshot (175–295)
+  const dash = ASSETS.find((a) => a.id === "img_dashboard");
+  if (dash) {
+    const fitScale = Math.round((1720 / dash.w) * 100);
+    layers.push(imageLayer("dashboard", "img_dashboard", [dash.w / 2, dash.h / 2], [W / 2, 560], {
+      ip: 178,
+      ks: {
+        o: fadeIn(178, 295),
+        p: {
+          a: 1,
+          k: [
+            { t: 178, s: [W / 2, 580, 0], ...EASE.entrance },
+            { t: 210, s: [W / 2, 560, 0], ...EASE.settle },
+          ],
+        },
+        s: {
+          a: 1,
+          k: [
+            { t: 178, s: [fitScale * 0.9, fitScale * 0.9, 100], ...EASE.entrance },
+            { t: 210, s: [fitScale, fitScale, 100], ...EASE.settle },
+          ],
+        },
       },
-      o: staticVal(0),
-    },
-  ], groupTransform(-550, 0)));
-
-  layers.push(shapeLayer("equity-curve", curve, {
-    ip: 172,
-    ks: { p: staticVal([W / 2, 420, 0]), o: fadeIn(172, 295) },
-  }));
-
-  layers.push(imageLayer("stats", "img_stats", [550, 60], [W / 2, 580], {
-    ip: 200,
-    ks: popIn(200, 295),
-  }));
-
-  layers.push(imageLayer("chips", "img_chips", [348, 20], [W / 2, 690], {
-    ip: 258,
-    ks: popIn(258, 295),
-  }));
+    }));
+  }
 
   // Chapter 3 — CTA lockup (295–420)
   layers.push(logoImage("logo-final", 302, 240, 42));

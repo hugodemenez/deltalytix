@@ -28,6 +28,7 @@ gitignore
 Thumbs.db
 canvaskit.wasm
 render-frames/
+assets/demo_dark.mp4
 
 # Skills
 .claude

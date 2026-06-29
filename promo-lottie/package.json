@@ -9,7 +9,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "postinstall": "node scripts/copy-canvaskit.mjs",
-    "generate:deltalytix-promo": "node scripts/generate-visual-assets.mjs && node scripts/generate-deltalytix-promo.mjs",
+    "generate:deltalytix-promo": "node scripts/extract-dashboard-screenshot.mjs && node scripts/generate-visual-assets.mjs && node scripts/generate-deltalytix-promo.mjs",
     "verify:deltalytix-promo": "node scripts/verify-skottie.mjs",
     "render:deltalytix-promo": "node scripts/render-mp4.mjs"
   },

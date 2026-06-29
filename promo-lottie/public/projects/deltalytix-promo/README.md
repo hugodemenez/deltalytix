@@ -48,9 +48,8 @@ public/projects/deltalytix-promo/scene-1/
   subline.png
   brand-name.png
   brand-tagline.png
-  cta-button.png
-  deltalytix-promo.mp4 # 7s MP4 export (1280×720 @ 60fps)
-  frames/              # verification stills (generated)
+  dashboard-screenshot.png  # real UI capture from beta demo video
+  logo-mark.png
 ```
 
 ## Use in Deltalytix

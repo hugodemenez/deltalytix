@@ -36,15 +36,9 @@
     "p": "cta-button.png"
   },
   {
-    "id": "img_stats",
-    "w": 1100,
-    "h": 120,
-    "p": "stats-panel.png"
-  },
-  {
-    "id": "img_chips",
-    "w": 696,
-    "h": 40,
-    "p": "feature-chips.png"
+    "id": "img_dashboard",
+    "w": 1600,
+    "h": 815,
+    "p": "dashboard-screenshot.png"
   }
 ]
