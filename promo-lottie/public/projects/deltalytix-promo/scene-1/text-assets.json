@@ -1,5 +1,11 @@
 [
   {
+    "id": "img_logo",
+    "w": 400,
+    "h": 400,
+    "p": "logo-mark.png"
+  },
+  {
     "id": "img_headline",
     "w": 1200,
     "h": 80,
@@ -25,8 +31,20 @@
   },
   {
     "id": "img_cta",
-    "w": 240,
-    "h": 48,
+    "w": 260,
+    "h": 52,
     "p": "cta-button.png"
+  },
+  {
+    "id": "img_stats",
+    "w": 1100,
+    "h": 120,
+    "p": "stats-panel.png"
+  },
+  {
+    "id": "img_chips",
+    "w": 696,
+    "h": 40,
+    "p": "feature-chips.png"
   }
 ]

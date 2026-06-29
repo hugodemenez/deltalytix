@@ -17,14 +17,19 @@ const OUT_MP4 = join(SCENE_DIR, "deltalytix-promo.mp4");
 const SCALE = Number(process.env.RENDER_SCALE ?? 1280 / 1920);
 const BATCH = 70;
 
+function loadAssets() {
+  const manifest = JSON.parse(readFileSync(join(SCENE_DIR, "text-assets.json"), "utf8"));
+  const assets = {};
+  for (const { p } of manifest) {
+    const fp = join(SCENE_DIR, p);
+    if (existsSync(fp)) assets[p] = readFileSync(fp);
+  }
+  return assets;
+}
+
 function loadAnim(CanvasKit) {
   const json = readFileSync(SCENE, "utf8");
-  const assets = {};
-  for (const name of ["headline.png", "subline.png", "brand-name.png", "brand-tagline.png", "cta-button.png"]) {
-    const p = join(SCENE_DIR, name);
-    if (existsSync(p)) assets[name] = readFileSync(p);
-  }
-  const anim = CanvasKit.MakeManagedAnimation(json, assets);
+  const anim = CanvasKit.MakeManagedAnimation(json, loadAssets());
   if (!anim) throw new Error("MakeManagedAnimation returned null");
   return anim;
 }
