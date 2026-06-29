@@ -74,7 +74,36 @@ const sizeToGrid = (size: WidgetSize, isSmallScreen = false): { w: number, h: nu
   }
 }
 
-// Add a function to get grid dimensions based on widget type and size
+// Pick the largest allowed size so widgets fill the carousel slide.
+function getCarouselWidgetSize(
+  config: (typeof WIDGET_REGISTRY)[keyof typeof WIDGET_REGISTRY],
+  widget: Widget
+): WidgetSize {
+  if (config.requiresFullWidth) {
+    return config.defaultSize
+  }
+  if (config.allowedSizes.length === 1) {
+    return config.allowedSizes[0]
+  }
+
+  const preferredOrder: WidgetSize[] = [
+    'extra-large',
+    'large',
+    'medium',
+    'small-long',
+    'small',
+    'tiny',
+  ]
+
+  for (const size of preferredOrder) {
+    if (config.allowedSizes.includes(size)) {
+      return size
+    }
+  }
+
+  return widget.size as WidgetSize
+}
+
 const getWidgetGrid = (type: WidgetType, size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
   const config = WIDGET_REGISTRY[type]
   if (!config) {
@@ -716,14 +745,14 @@ export default function WidgetCanvas() {
     const config = WIDGET_REGISTRY[widget.type as keyof typeof WIDGET_REGISTRY]
 
     const effectiveSize = (() => {
+      if (forCarousel) {
+        return getCarouselWidgetSize(config, widget)
+      }
       if (config.requiresFullWidth) {
         return config.defaultSize
       }
       if (config.allowedSizes.length === 1) {
         return config.allowedSizes[0]
-      }
-      if (forCarousel && widget.size !== 'tiny') {
-        return 'large' as WidgetSize
       }
       if (isMobile && widget.size !== 'tiny') {
         return 'small' as WidgetSize
@@ -749,7 +778,7 @@ export default function WidgetCanvas() {
 
     return (
       <div
-        className="h-full"
+        className="flex h-full min-h-0 flex-col"
         data-widget-id={widget.i}
         data-widget-type={widget.type}
         data-widget-category={widgetConfig?.category ?? "other"}
@@ -761,7 +790,9 @@ export default function WidgetCanvas() {
           size={widget.size}
           currentType={widget.type}
         >
-          {renderWidget(widget, forCarousel)}
+          <div className={forCarousel ? "h-full min-h-0" : undefined}>
+            {renderWidget(widget, forCarousel)}
+          </div>
         </WidgetWrapper>
       </div>
     )
@@ -770,7 +801,7 @@ export default function WidgetCanvas() {
   return (
     <div className={cn(
       "relative w-full",
-      useMobileCarousel ? "mt-0" : "mt-6 pb-16 min-h-screen",
+      useMobileCarousel ? "mt-0 h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem))] overflow-hidden" : "mt-6 pb-16 min-h-screen",
     )}>
       <Toolbar 
         onAddWidget={addWidget}
