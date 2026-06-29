@@ -1,0 +1,12 @@
+{
+  "controls": [
+    {
+      "sid": "bgColor",
+      "label": "Background color"
+    },
+    {
+      "sid": "accentColor",
+      "label": "Accent color (teal)"
+    }
+  ]
+}

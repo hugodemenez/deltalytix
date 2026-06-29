@@ -1,0 +1,32 @@
+[
+  {
+    "id": "img_headline",
+    "w": 1200,
+    "h": 80,
+    "p": "headline.png"
+  },
+  {
+    "id": "img_subline",
+    "w": 900,
+    "h": 40,
+    "p": "subline.png"
+  },
+  {
+    "id": "img_brand",
+    "w": 700,
+    "h": 90,
+    "p": "brand-name.png"
+  },
+  {
+    "id": "img_tagline",
+    "w": 700,
+    "h": 36,
+    "p": "brand-tagline.png"
+  },
+  {
+    "id": "img_cta",
+    "w": 240,
+    "h": 48,
+    "p": "cta-button.png"
+  }
+]
