@@ -185,14 +185,6 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
     setIsSizePopoverOpen(false)
   }
 
-  // Add touch event handlers for mobile
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (isCustomizing) {
-      // Prevent default touch behavior when customizing
-      e.preventDefault()
-    }
-  }
-
   const isValidSize = (widgetType: WidgetType, size: WidgetSize) => {
     const config = WIDGET_REGISTRY[widgetType]
     if (!config) return true // Allow any size for deprecated widgets
@@ -204,19 +196,17 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
     return config.allowedSizes.includes(size)
   }
 
+  const showDesktopCustomizeUi = isCustomizing && !isMobile
+
   return (
     <div 
       ref={widgetRef}
       className="relative h-full w-full rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group isolate animate-[fadeIn_1.5s_ease-in-out] overflow-clip"
-      onTouchStart={handleTouchStart}
     >
-      <div className={cn("h-full w-full", 
-        isCustomizing && "group-hover:blur-[2px]",
-        isCustomizing && isMobile && "blur-[2px]"
-      )}>
+      <div className={cn("h-full w-full", showDesktopCustomizeUi && "group-hover:blur-[2px]")}>
         {children}
       </div>
-      {isCustomizing && (
+      {showDesktopCustomizeUi && (
         <>
           <div className="absolute inset-0 border-2 border-dashed border-transparent group-hover:border-accent group-focus-within:border-accent transition-colors duration-200" />
           <div className="absolute inset-0 bg-background/50 dark:bg-background/70 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200" />
@@ -731,7 +721,7 @@ export default function WidgetCanvas() {
     })
   }, [user?.id, layouts, setLayouts, saveDashboardLayout, t, toast])
 
-  const useMobileCarousel = isMobile && !isCustomizing
+  const useMobileCarousel = isMobile
 
   // Define renderWidget with all dependencies
   const renderWidget = useCallback((widget: Widget, forCarousel = false) => {
@@ -764,14 +754,13 @@ export default function WidgetCanvas() {
   }, [isMobile, removeWidget]);
 
   useEffect(() => {
-    if (isCustomizing) {
+    if (isCustomizing && !isMobile) {
       document.addEventListener('click', handleOutsideClick)
       return () => document.removeEventListener('click', handleOutsideClick)
     }
-  }, [isCustomizing, handleOutsideClick]);
+  }, [isCustomizing, isMobile, handleOutsideClick]);
 
-  // Add auto-scroll functionality for mobile
-  useAutoScroll(isMobile && isCustomizing)
+  useAutoScroll(!isMobile && isCustomizing)
 
   const renderWidgetCard = useCallback((widget: Widget, forCarousel = false) => {
     const widgetConfig = WIDGET_REGISTRY[widget.type as WidgetType]
@@ -820,6 +809,9 @@ export default function WidgetCanvas() {
             <MobileWidgetCarousel
               widgets={currentLayout}
               renderWidget={(widget) => renderWidgetCard(widget, true)}
+              isCustomizing={isCustomizing}
+              onRemoveWidget={removeWidget}
+              onChangeWidgetSize={changeWidgetSize}
             />
           ) : (
             <ResponsiveGridLayout
