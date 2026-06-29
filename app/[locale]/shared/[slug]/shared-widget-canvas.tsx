@@ -78,6 +78,35 @@ const generateResponsiveLayout = (widgets: Widget[]) => {
   return layouts
 }
 
+function getCarouselWidgetSize(
+  config: (typeof WIDGET_REGISTRY)[keyof typeof WIDGET_REGISTRY],
+  widget: Widget
+): WidgetSize {
+  if (config.requiresFullWidth) {
+    return config.defaultSize
+  }
+  if (config.allowedSizes.length === 1) {
+    return config.allowedSizes[0]
+  }
+
+  const preferredOrder: WidgetSize[] = [
+    'extra-large',
+    'large',
+    'medium',
+    'small-long',
+    'small',
+    'tiny',
+  ]
+
+  for (const size of preferredOrder) {
+    if (config.allowedSizes.includes(size)) {
+      return size
+    }
+  }
+
+  return widget.size
+}
+
 export function SharedWidgetCanvas() {
   const { isMobile } = useData()
   const ResponsiveGridLayout = useMemo(() => WidthProvider(Responsive), [])
@@ -94,14 +123,14 @@ export function SharedWidgetCanvas() {
     const config = WIDGET_REGISTRY[widget.type as keyof typeof WIDGET_REGISTRY]
 
     const effectiveSize = (() => {
+      if (forCarousel) {
+        return getCarouselWidgetSize(config, widget)
+      }
       if (config.requiresFullWidth) {
         return config.defaultSize
       }
       if (config.allowedSizes.length === 1) {
         return config.allowedSizes[0]
-      }
-      if (forCarousel && widget.size !== 'tiny') {
-        return 'large' as WidgetSize
       }
       if (isMobile && widget.size !== 'tiny') {
         return 'small' as WidgetSize
@@ -127,13 +156,15 @@ export function SharedWidgetCanvas() {
   }, [activeLayout, isMobile])
 
   const renderWidgetCard = (widget: Widget, forCarousel = false) => (
-    <div className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)]">
-      {renderWidget(widget, forCarousel)}
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)]">
+      <div className={forCarousel ? "h-full min-h-0" : undefined}>
+        {renderWidget(widget, forCarousel)}
+      </div>
     </div>
   )
 
   return (
-    <div className={isMobile ? "relative mt-0" : "relative mt-6"}>
+    <div className={isMobile ? "relative mt-0 h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem))] overflow-hidden" : "relative mt-6"}>
       <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-9999" />
       {isMobile ? (
         <MobileWidgetCarousel

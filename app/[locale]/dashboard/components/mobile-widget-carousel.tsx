@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Carousel,
   CarouselContent,
@@ -9,6 +9,9 @@ import {
 } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
 import { Widget } from "../types/dashboard"
+
+const MOBILE_CAROUSEL_HEIGHT =
+  "calc(100dvh - var(--navbar-height, 5rem) - var(--tabs-height, 3rem))"
 
 interface MobileWidgetCarouselProps {
   widgets: Widget[]
@@ -28,13 +31,35 @@ export function MobileWidgetCarousel({
   renderWidget,
   className,
 }: MobileWidgetCarouselProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const [api, setApi] = useState<CarouselApi>()
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [slideHeight, setSlideHeight] = useState(0)
 
   const sortedWidgets = useMemo(
     () => sortWidgetsForCarousel(widgets),
     [widgets]
   )
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const updateHeight = () => {
+      setSlideHeight(container.clientHeight)
+    }
+
+    updateHeight()
+
+    const resizeObserver = new ResizeObserver(updateHeight)
+    resizeObserver.observe(container)
+    window.addEventListener("resize", updateHeight)
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener("resize", updateHeight)
+    }
+  }, [])
 
   const onSelect = useCallback(() => {
     if (!api) return
@@ -55,44 +80,55 @@ export function MobileWidgetCarousel({
   }, [api, onSelect])
 
   useEffect(() => {
-    if (!api) return
+    if (!api || slideHeight === 0) return
     api.reInit()
-  }, [api, sortedWidgets.length])
+  }, [api, slideHeight, sortedWidgets.length])
 
   if (sortedWidgets.length === 0) {
     return null
   }
 
+  const slideStyle =
+    slideHeight > 0
+      ? { flex: `0 0 ${slideHeight}px`, height: slideHeight, minHeight: slideHeight }
+      : undefined
+
   return (
     <div
+      ref={containerRef}
       className={cn(
-        "relative h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem))] w-full",
+        "relative w-full overflow-hidden touch-pan-y",
         className
       )}
+      style={{ height: MOBILE_CAROUSEL_HEIGHT }}
     >
-      <Carousel
-        orientation="vertical"
-        opts={{
-          loop: false,
-          align: "start",
-          watchDrag: () => window.innerWidth < 768,
-        }}
-        setApi={setApi}
-        className="h-full w-full"
-      >
-        <CarouselContent className="h-full flex-col -mt-0 [&>div]:h-full">
-          {sortedWidgets.map((widget) => (
-            <CarouselItem
-              key={widget.i}
-              className="h-full basis-full pt-0"
-            >
-              <div className="h-full w-full px-1 pb-20">
-                {renderWidget(widget)}
-              </div>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-      </Carousel>
+      {slideHeight > 0 && (
+        <Carousel
+          orientation="vertical"
+          opts={{
+            loop: false,
+            align: "start",
+            axis: "y",
+            watchDrag: () => window.innerWidth < 768,
+          }}
+          setApi={setApi}
+          className="h-full w-full [&>div]:h-full [&>div]:touch-pan-y"
+        >
+          <CarouselContent className="-mt-0 flex-col">
+            {sortedWidgets.map((widget) => (
+              <CarouselItem
+                key={widget.i}
+                className="min-h-0 shrink-0 grow-0 basis-auto pt-0"
+                style={slideStyle}
+              >
+                <div className="h-full w-full min-h-0 px-2 pb-24">
+                  {renderWidget(widget)}
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+      )}
 
       {sortedWidgets.length > 1 && (
         <div
