@@ -90,21 +90,6 @@ export function Toolbar({
     return () => observer.disconnect()
   }, [])
 
-  // Measure toolbar height
-  useEffect(() => {
-    if (toolbarRef.current) {
-      const resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          setToolbarHeight(entry.contentRect.height)
-        }
-      })
-
-      resizeObserver.observe(toolbarRef.current)
-
-      return () => resizeObserver.disconnect()
-    }
-  }, [])
-
   // Handle auto-hide functionality
   useEffect(() => {
     if (autoHideTimeoutRef.current) {
@@ -183,6 +168,31 @@ export function Toolbar({
 
   const useCompactLayout = isMobile || isCompactScreen
   const isVisible = !settings.autoHide || isHovered || isPinnedVisible
+
+  useEffect(() => {
+    const toolbar = toolbarRef.current
+    if (!toolbar) return
+
+    const updateToolbarMetrics = () => {
+      const rect = toolbar.getBoundingClientRect()
+      setToolbarHeight(rect.height)
+      document.documentElement.style.setProperty(
+        "--mobile-toolbar-top",
+        `${window.innerHeight - rect.top}px`
+      )
+    }
+
+    updateToolbarMetrics()
+
+    const resizeObserver = new ResizeObserver(updateToolbarMetrics)
+    resizeObserver.observe(toolbar)
+    window.addEventListener("resize", updateToolbarMetrics)
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener("resize", updateToolbarMetrics)
+    }
+  }, [isConsentVisible, isVisible])
 
   return (
     <ContextMenu>
