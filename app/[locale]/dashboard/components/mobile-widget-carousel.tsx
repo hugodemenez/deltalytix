@@ -1,13 +1,8 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { X, Maximize2 } from "lucide-react"
+import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,8 +16,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
-import { WIDGET_REGISTRY } from "../config/widget-registry"
-import { Widget, WidgetSize, WidgetType } from "../types/dashboard"
+import { Widget } from "../types/dashboard"
 
 const MOBILE_CAROUSEL_HEIGHT =
   "calc(100dvh - var(--navbar-height, 5rem) - var(--tabs-height, 3rem))"
@@ -33,7 +27,6 @@ interface MobileWidgetCarouselProps {
   className?: string
   isCustomizing?: boolean
   onRemoveWidget?: (widgetId: string) => void
-  onChangeWidgetSize?: (widgetId: string, size: WidgetSize) => void
 }
 
 function sortWidgetsForCarousel(widgets: Widget[]): Widget[] {
@@ -43,26 +36,17 @@ function sortWidgetsForCarousel(widgets: Widget[]): Widget[] {
   })
 }
 
-function isValidMobileSize(widgetType: WidgetType, size: WidgetSize) {
-  const config = WIDGET_REGISTRY[widgetType]
-  if (!config) return true
-  if (size === "small" || size === "small-long") return false
-  return config.allowedSizes.includes(size)
-}
-
 export function MobileWidgetCarousel({
   widgets,
   renderWidget,
   className,
   isCustomizing = false,
   onRemoveWidget,
-  onChangeWidgetSize,
 }: MobileWidgetCarouselProps) {
   const t = useI18n()
   const scrollerRef = useRef<HTMLDivElement>(null)
   const slideRefs = useRef<(HTMLDivElement | null)[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [isSizePopoverOpen, setIsSizePopoverOpen] = useState(false)
 
   const sortedWidgets = useMemo(
     () => sortWidgetsForCarousel(widgets),
@@ -113,30 +97,13 @@ export function MobileWidgetCarousel({
     return () => observer.disconnect()
   }, [sortedWidgets])
 
-  useEffect(() => {
-    if (!isCustomizing) {
-      setIsSizePopoverOpen(false)
-    }
-  }, [isCustomizing])
-
   const scrollToIndex = useCallback((index: number) => {
     slideRefs.current[index]?.scrollIntoView({ behavior: "smooth", block: "start" })
   }, [])
 
-  const handleSizeChange = useCallback(
-    (size: WidgetSize) => {
-      if (!activeWidget || !onChangeWidgetSize) return
-      onChangeWidgetSize(activeWidget.i, size)
-      setIsSizePopoverOpen(false)
-    },
-    [activeWidget, onChangeWidgetSize]
-  )
-
   if (sortedWidgets.length === 0) {
     return null
   }
-
-  const showTopBar = sortedWidgets.length > 1 || isCustomizing
 
   return (
     <div
@@ -163,106 +130,57 @@ export function MobileWidgetCarousel({
         ))}
       </div>
 
-      {showTopBar && (
-        <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center px-3">
-          <div className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-background/80 px-2 py-1.5 shadow-sm backdrop-blur-sm">
-            {isCustomizing && activeWidget && (
-              <>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0 rounded-full"
-                      aria-label={t("widgets.removeWidget")}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{t("widgets.removeWidgetConfirm")}</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {t("widgets.removeWidgetDescription")}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{t("widgets.cancel")}</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => onRemoveWidget?.(activeWidget.i)}>
-                        {t("widgets.removeWidget")}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+      {isCustomizing && activeWidget && (
+        <div className="pointer-events-none absolute top-3 left-3 z-10">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="pointer-events-auto h-8 w-8 rounded-full bg-background/80 shadow-sm backdrop-blur-sm"
+                aria-label={t("widgets.removeWidget")}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("widgets.removeWidgetConfirm")}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t("widgets.removeWidgetDescription")}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t("widgets.cancel")}</AlertDialogCancel>
+                <AlertDialogAction onClick={() => onRemoveWidget?.(activeWidget.i)}>
+                  {t("widgets.removeWidget")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
 
-                <Popover open={isSizePopoverOpen} onOpenChange={setIsSizePopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0 rounded-full"
-                      aria-label={t("widgets.changeSize")}
-                    >
-                      <Maximize2 className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-56 p-2" align="start">
-                    <div className="flex flex-col gap-1">
-                      {(["tiny", "medium", "large"] as const).map((option) => (
-                        <Button
-                          key={option}
-                          variant={activeWidget.size === option ? "secondary" : "ghost"}
-                          className="w-full justify-start"
-                          onClick={() => handleSizeChange(option)}
-                          disabled={
-                            !isValidMobileSize(activeWidget.type, option) ||
-                            activeWidget.size === option
-                          }
-                        >
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={cn(
-                                "rounded",
-                                option === "tiny" && "h-4 w-4",
-                                option === "medium" && "h-4 w-8",
-                                option === "large" && "h-4 w-12",
-                                activeWidget.size === option ? "bg-primary" : "bg-muted"
-                              )}
-                            />
-                            <span>
-                              {option === "tiny" && t("widgets.size.mobile.small")}
-                              {option === "medium" && t("widgets.size.mobile.medium")}
-                              {option === "large" && t("widgets.size.mobile.large")}
-                            </span>
-                          </div>
-                        </Button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-                {sortedWidgets.length > 1 && (
-                  <div className="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden />
-                )}
-              </>
-            )}
-
-            {sortedWidgets.length > 1 &&
-              sortedWidgets.map((widget, index) => (
-                <button
-                  key={widget.i}
-                  type="button"
-                  aria-label={`Widget ${index + 1}`}
-                  className={cn(
-                    "h-1.5 rounded-full transition-all",
-                    index === currentIndex
-                      ? "w-4 bg-primary"
-                      : "w-1.5 bg-muted-foreground/40"
-                  )}
-                  onClick={() => scrollToIndex(index)}
-                />
-              ))}
-          </div>
+      {sortedWidgets.length > 1 && (
+        <div
+          className="pointer-events-none fixed inset-x-3 z-20 flex items-end gap-1"
+          style={{ bottom: "var(--mobile-toolbar-top, 5.5rem)" }}
+          aria-hidden
+        >
+          {sortedWidgets.map((widget, index) => (
+            <button
+              key={widget.i}
+              type="button"
+              aria-label={`Widget ${index + 1}`}
+              className={cn(
+                "pointer-events-auto flex-1 rounded-full transition-all",
+                index === currentIndex
+                  ? "h-[3px] bg-primary"
+                  : "h-0.5 bg-muted-foreground/35"
+              )}
+              onClick={() => scrollToIndex(index)}
+            />
+          ))}
         </div>
       )}
     </div>
