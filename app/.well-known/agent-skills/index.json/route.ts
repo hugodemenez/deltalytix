@@ -3,6 +3,7 @@ import {
   absoluteUrl,
   deltalytixSkillDigest,
 } from "@/lib/agent-discovery/metadata";
+import { changelogMediaSkillDigest } from "@/lib/agent-skills/changelog-media";
 
 export async function GET(request: NextRequest) {
   return NextResponse.json({
@@ -18,6 +19,17 @@ export async function GET(request: NextRequest) {
           request,
         ),
         digest: deltalytixSkillDigest,
+      },
+      {
+        name: "deltalytix-changelog-media",
+        type: "skill-md",
+        description:
+          "Capture localized Playwright screenshots and demo videos for changelog entries and wire them into MDX.",
+        url: absoluteUrl(
+          "/.well-known/agent-skills/changelog-media/SKILL.md",
+          request,
+        ),
+        digest: changelogMediaSkillDigest,
       },
     ],
   });

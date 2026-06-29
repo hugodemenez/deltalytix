@@ -136,6 +136,10 @@ jobs:
             Create separate entries for distinct features/changes. 
             Write in both English and French (create files in both directories).
             
+            After creating changelog MDX files, follow the changelog media skill at
+            /.well-known/agent-skills/changelog-media/SKILL.md to capture localized
+            screenshots/videos and wire them into each entry (image frontmatter + body media).
+            
             Only create changelog files - do not modify any other files." --model auto
 
           if [ -z "$(git status --porcelain content/updates/)" ]; then
