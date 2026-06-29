@@ -410,6 +410,7 @@ export const PromptInput = ({
     const files = await convertFileUIPartsToDataURLs(rawFiles);
 
     onSubmit({ text: form.message.value, files }, event);
+    clear();
   };
 
   const ctx = useMemo<AttachmentsContext>(
