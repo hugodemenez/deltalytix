@@ -27,6 +27,7 @@ gitignore
 .DS_Store
 Thumbs.db
 canvaskit.wasm
+render-frames/
 
 # Skills
 .claude

@@ -35,6 +35,7 @@ Pin a frame: `?frame=120`, `?frame=210`, `?frame=419`
 ```bash
 npm run generate:deltalytix-promo   # text PNGs + lottie.json
 npm run verify:deltalytix-promo      # Skottie frame export check
+npm run render:deltalytix-promo       # export deltalytix-promo.mp4 (1280×720)
 ```
 
 ## Files
@@ -48,6 +49,7 @@ public/projects/deltalytix-promo/scene-1/
   brand-name.png
   brand-tagline.png
   cta-button.png
+  deltalytix-promo.mp4 # 7s MP4 export (1280×720 @ 60fps)
   frames/              # verification stills (generated)
 ```
 
