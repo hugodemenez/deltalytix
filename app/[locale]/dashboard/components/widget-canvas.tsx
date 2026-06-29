@@ -399,6 +399,7 @@ export default function WidgetCanvas() {
   const { isMobile, saveDashboardLayout } = useData()
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [isUserAction, setIsUserAction] = useState(false)
+  const [mobileActiveWidget, setMobileActiveWidget] = useState<Widget | null>(null)
   const t = useI18n()
 
   // Add this state to track if the layout change is from user interaction
@@ -721,6 +722,10 @@ export default function WidgetCanvas() {
     })
   }, [user?.id, layouts, setLayouts, saveDashboardLayout, t, toast])
 
+  const handleMobileActiveWidgetChange = useCallback((widget: Widget | null) => {
+    setMobileActiveWidget(widget)
+  }, [])
+
   const useMobileCarousel = isMobile
 
   // Define renderWidget with all dependencies
@@ -801,6 +806,8 @@ export default function WidgetCanvas() {
         currentLayout={layouts || { desktop: [], mobile: [] }}
         onRemoveAll={removeAllWidgets}
         onRestoreDefaults={restoreDefaultLayout}
+        mobileActiveWidget={mobileActiveWidget}
+        onRemoveWidget={removeWidget}
       />
       {layouts && (
         <div className="relative">
@@ -809,9 +816,7 @@ export default function WidgetCanvas() {
             <MobileWidgetCarousel
               widgets={currentLayout}
               renderWidget={(widget) => renderWidgetCard(widget, true)}
-              isCustomizing={isCustomizing}
-              onRemoveWidget={removeWidget}
-              onRemoveAll={removeAllWidgets}
+              onActiveWidgetChange={handleMobileActiveWidgetChange}
             />
           ) : (
             <ResponsiveGridLayout
