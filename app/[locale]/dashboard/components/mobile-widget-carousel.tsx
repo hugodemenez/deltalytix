@@ -1,23 +1,8 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
-import { useI18n } from "@/locales/client"
 import { useCarouselGestureLock } from "@/hooks/use-carousel-gesture-lock"
-import { getWidgetDisplayName } from "../lib/widget-display-name"
 import { Widget } from "../types/dashboard"
 
 const MOBILE_CAROUSEL_HEIGHT =
@@ -27,9 +12,7 @@ interface MobileWidgetCarouselProps {
   widgets: Widget[]
   renderWidget: (widget: Widget) => React.ReactNode
   className?: string
-  isCustomizing?: boolean
-  onRemoveWidget?: (widgetId: string) => void
-  onRemoveAll?: () => void | Promise<void>
+  onActiveWidgetChange?: (widget: Widget | null) => void
 }
 
 function sortWidgetsForCarousel(widgets: Widget[]): Widget[] {
@@ -43,11 +26,8 @@ export function MobileWidgetCarousel({
   widgets,
   renderWidget,
   className,
-  isCustomizing = false,
-  onRemoveWidget,
-  onRemoveAll,
+  onActiveWidgetChange,
 }: MobileWidgetCarouselProps) {
-  const t = useI18n()
   const scrollerRef = useRef<HTMLDivElement>(null)
   const slideRefs = useRef<(HTMLDivElement | null)[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -57,10 +37,7 @@ export function MobileWidgetCarousel({
     [widgets]
   )
 
-  const activeWidget = sortedWidgets[currentIndex]
-  const activeWidgetName = activeWidget
-    ? getWidgetDisplayName(t, activeWidget.type)
-    : ""
+  const activeWidget = sortedWidgets[currentIndex] ?? null
 
   useEffect(() => {
     slideRefs.current = slideRefs.current.slice(0, sortedWidgets.length)
@@ -68,6 +45,10 @@ export function MobileWidgetCarousel({
       setCurrentIndex(Math.max(0, sortedWidgets.length - 1))
     }
   }, [sortedWidgets.length, currentIndex])
+
+  useEffect(() => {
+    onActiveWidgetChange?.(activeWidget)
+  }, [activeWidget, onActiveWidgetChange])
 
   useEffect(() => {
     const scroller = scrollerRef.current
@@ -138,50 +119,6 @@ export function MobileWidgetCarousel({
           </div>
         ))}
       </div>
-
-      {isCustomizing && activeWidget && (
-        <div className="pointer-events-none absolute top-3 left-3 z-10">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="pointer-events-auto h-8 w-8 rounded-full bg-background/80 shadow-sm backdrop-blur-sm"
-                aria-label={t("widgets.mobile.deleteDialogTitle")}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{t("widgets.mobile.deleteDialogTitle")}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t("widgets.mobile.deleteDialogDescription")}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
-                <AlertDialogAction
-                  className="w-full"
-                  onClick={() => onRemoveWidget?.(activeWidget.i)}
-                >
-                  {t("widgets.mobile.deleteWidgetNamed", {
-                    widgetName: activeWidgetName,
-                  })}
-                </AlertDialogAction>
-                <AlertDialogAction
-                  className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={() => onRemoveAll?.()}
-                >
-                  {t("widgets.deleteAll")}
-                </AlertDialogAction>
-                <AlertDialogCancel className="w-full">
-                  {t("widgets.cancel")}
-                </AlertDialogCancel>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      )}
 
       {sortedWidgets.length > 1 && (
         <div
