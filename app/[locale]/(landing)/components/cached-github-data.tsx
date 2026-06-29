@@ -6,19 +6,10 @@ import {
   GitFork,
   Activity,
 } from "lucide-react";
-import { ChartSSR } from "./chart-ssr";
+import { ContributionGraph } from "./contribution-graph";
 import { getGithubData } from "../actions/github-data";
 import { cacheLife } from "next/cache";
 import { GITHUB_REPO_NAME, GITHUB_REPO_URL } from "@/lib/github-repo";
-
-interface GithubStats {
-  repository: {
-    stargazers: { totalCount: number };
-    forks: { totalCount: number };
-    commits: { history: { totalCount: number } };
-  };
-  stats: { value: number; date: Date }[];
-}
 
 const formatTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
@@ -33,28 +24,6 @@ const formatTimeAgo = (dateString: string) => {
   if (minutes > 0) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
   return `${seconds} second${seconds !== 1 ? "s" : ""} ago`;
 };
-
-function getValidChartData(stats: GithubStats["stats"] | undefined) {
-  if (!stats || stats.length === 0) {
-    const now = new Date();
-    const fallbackStats: { value: number; date: Date }[] = [];
-
-    for (let i = 11; i >= 0; i--) {
-      const weekDate = new Date(now);
-      weekDate.setDate(now.getDate() - i * 7);
-      weekDate.setDate(weekDate.getDate() - weekDate.getDay());
-      weekDate.setHours(0, 0, 0, 0);
-
-      fallbackStats.push({
-        value: i === 6 ? 1 : 0,
-        date: new Date(weekDate.getTime()),
-      });
-    }
-
-    return fallbackStats;
-  }
-  return stats;
-}
 
 function GithubStatsCard({
   repoData,
@@ -121,9 +90,10 @@ function GithubStatsCard({
             </span>
           </div>
         </div>
-        <div className="pb-6 md:pb-10 mt-6 md:mt-10 h-[100px] md:h-[130px]">
-          <ChartSSR data={getValidChartData(githubStats?.stats)} />
-          <p className="text-muted-foreground text-xs md:text-sm mt-2 md:mt-4">
+        <div className="mt-4 md:mt-6 min-w-0">
+          <ContributionGraph data={githubStats.contributionGraph} />
+          <p className="text-muted-foreground text-xs md:text-sm mt-2">
+            Last commit{" "}
             {formatTimeAgo(
               lastCommit?.commit.committer.date || new Date().toISOString()
             )}
@@ -182,7 +152,7 @@ function GithubStatsFallback() {
 
 export async function CachedGithubData() {
   "use cache";
-  cacheLife("hours");
+  cacheLife("weeks");
 
   try {
     const { repoData, githubStats, stars, lastCommit } = await getGithubData();

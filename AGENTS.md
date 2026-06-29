@@ -65,11 +65,28 @@ curl -s -o /dev/null -D - "http://localhost:3000/authentication?next=dashboard" 
 # expect: HTTP/1.1 307, location: /dashboard
 ```
 
+## Changelog media captures
+
+When adding or updating changelog entries under `content/updates/`, capture localized screenshots/videos with Playwright.
+
+Skill doc: [`lib/agent-skills/changelog-media.md`](./lib/agent-skills/changelog-media.md)  
+Discovery URL: `/.well-known/agent-skills/changelog-media/SKILL.md`
+
+Quick start:
+
+```bash
+cp scripts/changelog-media/recipes/template.mjs scripts/changelog-media/recipes/pr-XXX.mjs
+# edit recipe assets, then:
+bun run capture:changelog-media -- pr-XXX
+```
+
+Assets land in `public/updates/<batch>/{en,fr}/`. Wire EN MDX to `/updates/<batch>/en/...` and FR MDX to `/updates/<batch>/fr/...`.
+
 ## Docker notes
 
 - Start Postgres: `sudo docker compose up -d db` (use `sudo` when the daemon requires it)
 - Initialize schema on the **host**: `bunx prisma db push` (preferred for agent VMs)
-- `sudo docker compose run --rm migrate` only when Compose service DNS works (`db` resolves inside containers)
+- `sudo docker compose run --rm schema-push` only when Compose service DNS works (`db` resolves inside containers)
 - Restricted VMs: `bash scripts/docker-bootstrap.sh` before Docker commands
 
 ## Security constraints

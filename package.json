@@ -12,6 +12,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "screenshot:dashboard": "node scripts/screenshot-dashboard.js",
+    "capture:changelog-media": "node scripts/capture-changelog-media.mjs",
     "capture:changelog-pr-249": "node scripts/capture-changelog-pr-249.mjs",
     "seed:self-host": "bun scripts/seed-self-host.ts"
   },

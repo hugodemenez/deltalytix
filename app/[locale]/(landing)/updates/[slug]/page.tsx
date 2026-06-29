@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { getAllPosts, getAdjacentPosts } from "@/lib/mdx";
 import { Badge } from "@/components/ui/badge";
-import Image from "next/image";
 import { enUS, fr } from "date-fns/locale";
 import { formatDateOnly } from "@/lib/format-date-only";
 import Script from "next/script";
@@ -248,20 +247,6 @@ export default async function Page({ params }: PageProps) {
             </Badge>
           </div>
         </div>
-
-        {meta.image && (
-          <div className="mb-8 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-            <Image
-              src={meta.image}
-              alt={meta.title}
-              width={1200}
-              height={600}
-              className="w-full h-auto"
-              priority
-              itemProp="image"
-            />
-          </div>
-        )}
 
         <div
           className="prose prose-neutral dark:prose-invert max-w-none

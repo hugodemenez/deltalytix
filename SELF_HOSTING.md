@@ -72,15 +72,22 @@ bash scripts/dev.sh
 
 **Schema init:** use `bunx prisma db push` on the host (primary path for agents).
 
-`sudo docker compose run --rm migrate` is optional and only works when the `migrate` container can resolve the `db` hostname (often fails on restricted agent VMs).
+`sudo docker compose run --rm schema-push` is optional and only works when the `schema-push` container can resolve the `db` hostname (often fails on restricted agent VMs).
 
 ### Step D: full Docker app (optional)
 
 `docker-compose.yml` defaults bypass to `false`. To run the production image locally:
 
 ```bash
-LOCAL_DASHBOARD_AUTH_BYPASS=true NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS=true sudo docker compose up -d app
+LOCAL_DASHBOARD_AUTH_BYPASS=true \
+NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS=true \
+LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION=1 \
+sudo docker compose up --build -d app
 ```
+
+`NEXT_PUBLIC_*` values are baked into the client bundle at **build** time. After changing them, rebuild the app image (`docker compose up --build -d app`).
+
+The `schema-push` compose service runs `prisma db push` for self-host/bootstrap only. It does **not** apply versioned migrations (`prisma migrate deploy`). Use host `bunx prisma db push` or `migrate deploy` for production migration workflows.
 
 For dashboard feature work, prefer **Postgres in Docker + app on the host** (`bun run dev`).
 

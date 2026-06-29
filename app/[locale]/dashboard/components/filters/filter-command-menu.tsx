@@ -25,12 +25,14 @@ interface FilterCommandMenuProps {
   className?: string
   variant?: "navbar" | "toolbar"
   compactBreakpoint?: number
+  compact?: boolean
 }
 
 export function FilterCommandMenu({
   className,
   variant = "navbar",
   compactBreakpoint = 768,
+  compact = false,
 }: FilterCommandMenuProps) {
   const t = useI18n()
   const { isMobile, dateRange, setDateRange, setWeekdayFilter } = useData()
@@ -262,16 +264,22 @@ export function FilterCommandMenu({
   // Trigger on mobile: button that opens drawer
   const MobileTriggerButton = (
     <Button
-      variant="outline"
+      variant={compact ? "ghost" : "outline"}
       className={cn(
-        "justify-start text-left font-normal overflow-hidden",
+        "font-normal overflow-hidden",
+        compact
+          ? "h-10 w-10 shrink-0 rounded-full p-0"
+          : "justify-start text-left",
         variant === "toolbar" && "h-10 rounded-full max-w-full",
         className
       )}
       onClick={() => setOpen(true)}
+      aria-label={compact ? t('filters.commandMenu.searchPlaceholderMobile') : undefined}
     >
-      <Search className="h-4 w-4 mr-2" />
-      <span className="text-muted-foreground truncate">{t('filters.commandMenu.searchPlaceholderMobile')}</span>
+      <Search className={cn("h-4 w-4", !compact && "mr-2")} />
+      {!compact && (
+        <span className="text-muted-foreground truncate">{t('filters.commandMenu.searchPlaceholderMobile')}</span>
+      )}
     </Button>
   )
 
@@ -574,4 +582,3 @@ export function FilterCommandMenu({
     </Popover>
   )
 }
-
