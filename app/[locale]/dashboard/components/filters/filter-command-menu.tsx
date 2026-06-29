@@ -274,6 +274,7 @@ export function FilterCommandMenu({
         className
       )}
       onClick={() => setOpen(true)}
+      aria-label={compact ? t('filters.commandMenu.searchPlaceholderMobile') : undefined}
     >
       <Search className={cn("h-4 w-4", !compact && "mr-2")} />
       {!compact && (
