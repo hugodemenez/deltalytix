@@ -158,7 +158,7 @@ export default function Home() {
           <AccountsOverview size="large" />
         </TabsContent>
 
-        <TabsContent value="widgets" className="min-w-0 px-2 sm:px-4">
+        <TabsContent value="widgets" className="min-w-0 px-0 sm:px-4">
           <WidgetCanvas />
         </TabsContent>
       </Tabs>
