@@ -132,7 +132,7 @@ export function MobileWidgetCarousel({
             className="w-full shrink-0 snap-start snap-always"
             style={{ height: MOBILE_CAROUSEL_HEIGHT, scrollSnapStop: "always" }}
           >
-            <div className="h-full w-full min-h-0 px-2 pb-24">
+            <div className="h-full w-full min-h-0 pl-1 pr-3 pb-24">
               {renderWidget(widget)}
             </div>
           </div>
@@ -185,8 +185,7 @@ export function MobileWidgetCarousel({
 
       {sortedWidgets.length > 1 && (
         <div
-          className="pointer-events-none fixed inset-x-3 z-20 flex items-end gap-1"
-          style={{ bottom: "var(--mobile-toolbar-top, 5.5rem)" }}
+          className="pointer-events-none absolute inset-y-0 right-1 z-20 flex w-2 flex-col justify-center gap-1 py-4"
           aria-hidden
         >
           {sortedWidgets.map((widget, index) => (
@@ -195,10 +194,10 @@ export function MobileWidgetCarousel({
               type="button"
               aria-label={`Widget ${index + 1}`}
               className={cn(
-                "pointer-events-auto flex-1 rounded-full transition-all",
+                "pointer-events-auto min-h-0 flex-1 rounded-full transition-all",
                 index === currentIndex
-                  ? "h-[3px] bg-primary"
-                  : "h-0.5 bg-muted-foreground/35"
+                  ? "w-[3px] bg-primary"
+                  : "w-0.5 bg-muted-foreground/35"
               )}
               onClick={() => scrollToIndex(index)}
             />
