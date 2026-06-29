@@ -811,6 +811,7 @@ export default function WidgetCanvas() {
               renderWidget={(widget) => renderWidgetCard(widget, true)}
               isCustomizing={isCustomizing}
               onRemoveWidget={removeWidget}
+              onRemoveAll={removeAllWidgets}
             />
           ) : (
             <ResponsiveGridLayout
