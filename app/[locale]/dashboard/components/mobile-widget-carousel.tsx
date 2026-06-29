@@ -1,12 +1,6 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  type CarouselApi,
-} from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
 import { Widget } from "../types/dashboard"
 
@@ -31,10 +25,9 @@ export function MobileWidgetCarousel({
   renderWidget,
   className,
 }: MobileWidgetCarouselProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [api, setApi] = useState<CarouselApi>()
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const slideRefs = useRef<(HTMLDivElement | null)[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [slideHeight, setSlideHeight] = useState(0)
 
   const sortedWidgets = useMemo(
     () => sortWidgetsForCarousel(widgets),
@@ -42,93 +35,76 @@ export function MobileWidgetCarousel({
   )
 
   useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
+    slideRefs.current = slideRefs.current.slice(0, sortedWidgets.length)
+  }, [sortedWidgets.length])
 
-    const updateHeight = () => {
-      setSlideHeight(container.clientHeight)
-    }
+  useEffect(() => {
+    const scroller = scrollerRef.current
+    if (!scroller || sortedWidgets.length === 0) return
 
-    updateHeight()
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let bestIndex = -1
+        let bestRatio = 0
 
-    const resizeObserver = new ResizeObserver(updateHeight)
-    resizeObserver.observe(container)
-    window.addEventListener("resize", updateHeight)
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue
+          const index = slideRefs.current.findIndex((el) => el === entry.target)
+          if (index >= 0 && entry.intersectionRatio > bestRatio) {
+            bestRatio = entry.intersectionRatio
+            bestIndex = index
+          }
+        }
 
-    return () => {
-      resizeObserver.disconnect()
-      window.removeEventListener("resize", updateHeight)
-    }
+        if (bestIndex >= 0) {
+          setCurrentIndex(bestIndex)
+        }
+      },
+      {
+        root: scroller,
+        threshold: [0.5, 0.75, 1],
+      }
+    )
+
+    slideRefs.current.forEach((el) => {
+      if (el) observer.observe(el)
+    })
+
+    return () => observer.disconnect()
+  }, [sortedWidgets])
+
+  const scrollToIndex = useCallback((index: number) => {
+    slideRefs.current[index]?.scrollIntoView({ behavior: "smooth", block: "start" })
   }, [])
-
-  const onSelect = useCallback(() => {
-    if (!api) return
-    setCurrentIndex(api.selectedScrollSnap())
-  }, [api])
-
-  useEffect(() => {
-    if (!api) return
-
-    onSelect()
-    api.on("select", onSelect)
-    api.on("reInit", onSelect)
-
-    return () => {
-      api.off("select", onSelect)
-      api.off("reInit", onSelect)
-    }
-  }, [api, onSelect])
-
-  useEffect(() => {
-    if (!api || slideHeight === 0) return
-    api.reInit()
-  }, [api, slideHeight, sortedWidgets.length])
 
   if (sortedWidgets.length === 0) {
     return null
   }
 
-  const slideStyle =
-    slideHeight > 0
-      ? { flex: `0 0 ${slideHeight}px`, height: slideHeight, minHeight: slideHeight }
-      : undefined
-
   return (
     <div
-      ref={containerRef}
-      className={cn(
-        "relative w-full overflow-hidden touch-pan-y",
-        className
-      )}
+      className={cn("relative w-full overflow-hidden", className)}
       style={{ height: MOBILE_CAROUSEL_HEIGHT }}
     >
-      {slideHeight > 0 && (
-        <Carousel
-          orientation="vertical"
-          opts={{
-            loop: false,
-            align: "start",
-            axis: "y",
-            watchDrag: () => window.innerWidth < 768,
-          }}
-          setApi={setApi}
-          className="h-full w-full [&>div]:h-full [&>div]:touch-pan-y"
-        >
-          <CarouselContent className="-mt-0 flex-col">
-            {sortedWidgets.map((widget) => (
-              <CarouselItem
-                key={widget.i}
-                className="min-h-0 shrink-0 grow-0 basis-auto pt-0"
-                style={slideStyle}
-              >
-                <div className="h-full w-full min-h-0 px-2 pb-24">
-                  {renderWidget(widget)}
-                </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
-      )}
+      <div
+        ref={scrollerRef}
+        className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+      >
+        {sortedWidgets.map((widget, index) => (
+          <div
+            key={widget.i}
+            ref={(el) => {
+              slideRefs.current[index] = el
+            }}
+            className="w-full shrink-0 snap-start snap-always"
+            style={{ height: MOBILE_CAROUSEL_HEIGHT, scrollSnapStop: "always" }}
+          >
+            <div className="h-full w-full min-h-0 px-2 pb-24">
+              {renderWidget(widget)}
+            </div>
+          </div>
+        ))}
+      </div>
 
       {sortedWidgets.length > 1 && (
         <div
@@ -147,7 +123,7 @@ export function MobileWidgetCarousel({
                     ? "w-4 bg-primary"
                     : "w-1.5 bg-muted-foreground/40"
                 )}
-                onClick={() => api?.scrollTo(index)}
+                onClick={() => scrollToIndex(index)}
               />
             ))}
           </div>
