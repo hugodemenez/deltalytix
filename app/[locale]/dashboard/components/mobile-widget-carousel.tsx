@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
+import { useCarouselGestureLock } from "@/hooks/use-carousel-gesture-lock"
 import { Widget } from "../types/dashboard"
 
 const MOBILE_CAROUSEL_HEIGHT =
@@ -101,6 +102,8 @@ export function MobileWidgetCarousel({
     slideRefs.current[index]?.scrollIntoView({ behavior: "smooth", block: "start" })
   }, [])
 
+  useCarouselGestureLock(scrollerRef)
+
   if (sortedWidgets.length === 0) {
     return null
   }
@@ -112,7 +115,7 @@ export function MobileWidgetCarousel({
     >
       <div
         ref={scrollerRef}
-        className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+        className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]"
       >
         {sortedWidgets.map((widget, index) => (
           <div
