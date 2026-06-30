@@ -8,6 +8,9 @@ export const searchCodebaseTool = tool({
   inputSchema: z.object({
     query: z
       .string()
+      .trim()
+      .min(1)
+      .max(120)
       .describe(
         "Keywords or a short phrase describing what to look up, e.g. 'import CSV trades' or 'Tradovate sync'",
       ),
