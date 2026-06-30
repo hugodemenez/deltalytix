@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Responsive, WidthProvider } from 'react-grid-layout'
+import { Responsive, WidthProvider, type Layout } from 'react-grid-layout'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -18,13 +18,15 @@ import { useI18n } from "@/locales/client"
 import { WIDGET_REGISTRY, getWidgetComponent } from '../config/widget-registry'
 import { useAutoScroll } from '../../../../hooks/use-auto-scroll'
 import { cn } from '@/lib/utils'
-import { Widget, WidgetType, WidgetSize, LayoutItem } from '../types/dashboard'
+import { Widget, WidgetType, WidgetSize } from '../types/dashboard'
 import { Toolbar } from './toolbar'
 import { MobileWidgetCarousel } from './mobile-widget-carousel'
 import { useUserStore, DashboardLayoutWithWidgets } from '../../../../store/user-store'
 import { toast } from "sonner"
 import { defaultLayouts } from "@/lib/default-layouts"
 import { Prisma, DashboardLayout } from "@/prisma/generated/prisma/browser"
+
+const ResponsiveGridLayout = WidthProvider(Responsive)
 
 // Helper function to convert internal layout to Prisma type
 const toPrismaLayout = (layout: DashboardLayoutWithWidgets): DashboardLayout => {
@@ -185,6 +187,17 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
     setIsSizePopoverOpen(false)
   }
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as Element | null
+    if (isCustomizing) {
+      if (target?.closest("button, a, input, textarea, select, [role='button']")) {
+        return
+      }
+
+      e.preventDefault()
+    }
+  }
+
   const isValidSize = (widgetType: WidgetType, size: WidgetSize) => {
     const config = WIDGET_REGISTRY[widgetType]
     if (!config) return true // Allow any size for deprecated widgets
@@ -196,27 +209,52 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
     return config.allowedSizes.includes(size)
   }
 
-  const showDesktopCustomizeUi = isCustomizing && !isMobile
-
   return (
     <div 
       ref={widgetRef}
       className="relative h-full w-full rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group isolate animate-[fadeIn_1.5s_ease-in-out] overflow-clip"
+      onTouchStart={handleTouchStart}
     >
-      <div className={cn("h-full w-full", showDesktopCustomizeUi && "group-hover:blur-[2px]")}>
+      <div
+        className={cn(
+          "h-full w-full",
+          isCustomizing && "group-hover:blur-[2px]",
+          isCustomizing && isMobile && "blur-[2px]"
+        )}
+      >
         {children}
       </div>
-      {showDesktopCustomizeUi && (
+      {isCustomizing && (
         <>
-          <div className="absolute inset-0 border-2 border-dashed border-transparent group-hover:border-accent group-focus-within:border-accent transition-colors duration-200" />
-          <div className="absolute inset-0 bg-background/50 dark:bg-background/70 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200" />
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 drag-handle cursor-grab active:cursor-grabbing">
+          <div
+            className={cn(
+              "absolute inset-0 border-2 border-dashed border-transparent transition-colors duration-200 group-hover:border-accent group-focus-within:border-accent",
+              isMobile && "border-accent"
+            )}
+          />
+          <div
+            className={cn(
+              "absolute inset-0 bg-background/50 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-background/70",
+              isMobile && "opacity-100"
+            )}
+          />
+          <div
+            className={cn(
+              "drag-handle absolute inset-0 flex cursor-grab items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100 active:cursor-grabbing",
+              isMobile && "opacity-100"
+            )}
+          >
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
               <GripVertical className="h-6 w-4" />
               <p className="text-sm font-medium">{t('widgets.dragToMove')}</p>
             </div>
           </div>
-          <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-10">
+          <div
+            className={cn(
+              "absolute right-2 top-2 z-10 flex gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100",
+              isMobile && "opacity-100"
+            )}
+          >
             <Popover open={isSizePopoverOpen} onOpenChange={setIsSizePopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -405,9 +443,6 @@ export default function WidgetCanvas() {
   // Add this state to track if the layout change is from user interaction
   const activeLayout = useMemo(() => isMobile ? 'mobile' : 'desktop', [isMobile])
   
-  // Move all memoized values up, out of conditional rendering paths
-  const ResponsiveGridLayout = useMemo(() => WidthProvider(Responsive), [])
-
   // Group all useMemo hooks together
   const widgetDimensions = useMemo(() => {
     if (!layouts?.[activeLayout]) return {}
@@ -451,7 +486,7 @@ export default function WidgetCanvas() {
   }, [setIsCustomizing])
 
   // Update handleLayoutChange with proper type handling and all dependencies
-  const handleLayoutChange = useCallback((layout: LayoutItem[], allLayouts: any) => {
+  const handleLayoutChange = useCallback((layout: Layout[]) => {
     if (!user?.id || !isCustomizing || !setLayouts || !layouts) return;
 
     try {
@@ -726,7 +761,7 @@ export default function WidgetCanvas() {
     setMobileActiveWidget(widget)
   }, [])
 
-  const useMobileCarousel = isMobile
+  const useMobileCarousel = isMobile && !isCustomizing
 
   // Define renderWidget with all dependencies
   const renderWidget = useCallback((widget: Widget, forCarousel = false) => {
@@ -759,13 +794,13 @@ export default function WidgetCanvas() {
   }, [isMobile, removeWidget]);
 
   useEffect(() => {
-    if (isCustomizing && !isMobile) {
+    if (isCustomizing) {
       document.addEventListener('click', handleOutsideClick)
       return () => document.removeEventListener('click', handleOutsideClick)
     }
-  }, [isCustomizing, isMobile, handleOutsideClick]);
+  }, [isCustomizing, handleOutsideClick]);
 
-  useAutoScroll(!isMobile && isCustomizing)
+  useAutoScroll(isMobile && isCustomizing)
 
   const renderWidgetCard = useCallback((widget: Widget, forCarousel = false) => {
     const widgetConfig = WIDGET_REGISTRY[widget.type as WidgetType]
@@ -795,7 +830,7 @@ export default function WidgetCanvas() {
   return (
     <div className={cn(
       "relative w-full",
-      useMobileCarousel ? "mt-0 h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem))] overflow-hidden" : "mt-6 pb-16 min-h-screen",
+      useMobileCarousel ? "mt-0 overflow-hidden" : "mt-6 pb-16 min-h-screen",
     )}>
       <Toolbar 
         onAddWidget={addWidget}
@@ -817,6 +852,7 @@ export default function WidgetCanvas() {
               widgets={currentLayout}
               renderWidget={(widget) => renderWidgetCard(widget, true)}
               onActiveWidgetChange={handleMobileActiveWidgetChange}
+              bottomInset="var(--mobile-toolbar-top, 7rem)"
             />
           ) : (
             <ResponsiveGridLayout

@@ -12,6 +12,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { useI18n } from "@/locales/client"
+import { translateWithParams } from '@/lib/translation-utils'
 import { platforms, PlatformConfig, PlatformType } from './config/platforms'
 import { PlatformItem } from './components/platform-item'
 import { PlatformTutorial } from './components/platform-tutorial'
@@ -55,7 +56,7 @@ function MobileStepIndicator({
   return (
     <div className="shrink-0 pb-3 border-b">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {t('import.type.mobile.step', { current: step, total })}
+        {translateWithParams(t, 'import.type.mobile.step', { current: step, total })}
       </p>
       <p className="mt-1 text-base font-semibold">{label}</p>
     </div>
@@ -76,14 +77,33 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
   }, [setSelectedType, lastSelectedType])
 
   useEffect(() => {
+    let isMounted = true
+    const syncMobileView = (view: 'list' | 'details') => {
+      queueMicrotask(() => {
+        if (isMounted) {
+          setMobileView(view)
+        }
+      })
+    }
+
     if (!selectedType) {
-      setMobileView('list')
-      setHasEnteredDetails(false)
-      return
+      syncMobileView('list')
+      queueMicrotask(() => {
+        if (isMounted) {
+          setHasEnteredDetails(false)
+        }
+      })
+      return () => {
+        isMounted = false
+      }
     }
 
     if (isMobile && hasEnteredDetails) {
-      setMobileView('details')
+      syncMobileView('details')
+    }
+
+    return () => {
+      isMounted = false
     }
   }, [selectedType, isMobile, hasEnteredDetails])
 

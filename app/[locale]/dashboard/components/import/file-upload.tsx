@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
+import { translateWithParams } from "@/lib/translation-utils"
 import { platforms } from './config/platforms'
 import { Step } from './import-button'
 
@@ -216,7 +217,7 @@ export default function FileUpload({
                 <div className="flex flex-col">
                   <span className="text-sm font-medium">{file.name}</span>
                   <span className="text-xs text-muted-foreground">
-                    {t('import.upload.fileSize', { size: (file.size / 1024).toFixed(1) })}
+                    {translateWithParams(t, 'import.upload.fileSize', { size: (file.size / 1024).toFixed(1) })}
                   </span>
                 </div>
               </div>

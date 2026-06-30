@@ -1316,6 +1316,10 @@ export default {
   "widgets.share": "Share",
   "widgets.add": "Add",
   "widgets.filter": "Filter",
+  "widgets.carousel.label": "Dashboard widgets",
+  "widgets.carousel.indicators": "Widget navigation",
+  "widgets.carousel.goTo": "Show {widget}, {index} of {total}",
+  "widgets.carousel.position": "{widget}, {index} of {total}",
   "widgets.deprecated": {
     title: "Deprecated Widget",
     description: "This widget type is no longer supported",

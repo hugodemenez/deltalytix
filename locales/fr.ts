@@ -885,6 +885,10 @@ export default {
   "widgets.share": "Partager",
   "widgets.add": "Ajouter",
   "widgets.filter": "Filtrer",
+  "widgets.carousel.label": "Widgets du tableau de bord",
+  "widgets.carousel.indicators": "Navigation des widgets",
+  "widgets.carousel.goTo": "Afficher {widget}, {index} sur {total}",
+  "widgets.carousel.position": "{widget}, {index} sur {total}",
   "widgets.deprecated": {
     title: "Widget Obsolète",
     description: "Ce type de widget n'est plus pris en charge",

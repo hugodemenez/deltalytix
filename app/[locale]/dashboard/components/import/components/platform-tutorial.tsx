@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { PlatformConfig } from "../config/platforms";
 import { useI18n } from "@/locales/client";
+import { translateWithParams } from "@/lib/translation-utils";
 import { Button } from "@/components/ui/button";
 
 interface PlatformTutorialProps {
@@ -104,10 +105,10 @@ export function PlatformTutorial({
           </div>
           <p className="text-sm text-muted-foreground">
             {selectedPlatform.videoUrl
-              ? t("import.type.tutorial.description", {
+              ? translateWithParams(t, "import.type.tutorial.description", {
                   platform: selectedPlatform.type.split("-").join(" "),
                 })
-              : t("import.type.tutorial.notAvailable", {
+              : translateWithParams(t, "import.type.tutorial.notAvailable", {
                   platform: selectedPlatform.type.split("-").join(" "),
                 })}
           </p>

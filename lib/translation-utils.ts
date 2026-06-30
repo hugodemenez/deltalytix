@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 /**
  * Utility functions to handle complex union types in translations
  * This prevents TypeScript "Expression produces a union type that is too complex to represent" errors
@@ -10,6 +12,17 @@
  */
 export function safeTranslate(t: any, key: string): string {
   return t(key as any)
+}
+
+export function translateWithParams(
+  t: any,
+  key: string,
+  params: Record<string, string | number>
+): string {
+  return Object.entries(params).reduce(
+    (message, [name, value]) => message.replaceAll(`{${name}}`, String(value)),
+    safeTranslate(t, key)
+  )
 }
 
 /**

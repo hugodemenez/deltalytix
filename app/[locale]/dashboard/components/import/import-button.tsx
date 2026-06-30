@@ -22,6 +22,7 @@ import { ImportDialogFooter } from "./components/import-dialog-footer";
 import { platforms } from "./config/platforms";
 import { FormatPreview } from "./components/format-preview";
 import { cn } from "@/lib/utils";
+import { translateWithParams } from "@/lib/translation-utils";
 import { useUserStore } from "@/store/user-store";
 import { useTradesStore } from "@/store/trades-store";
 import { usePdfProcessingStore } from "@/store/pdf-processing-store";
@@ -73,6 +74,19 @@ export default function ImportButton({ compact = false }: { compact?: boolean })
   const setTradesStore = useTradesStore((state) => state.setTrades);
   const { refreshTradesOnly } = useData();
   const t = useI18n();
+
+  const resetImportState = useCallback(() => {
+    setImportType("");
+    setStep("select-import-type");
+    setRawCsvData([]);
+    setCsvData([]);
+    setHeaders([]);
+    setMappings({});
+    setAccountNumbers([]);
+    setNewAccountNumber("");
+    setProcessedTrades([]);
+    setError(null);
+  }, []);
 
   const handleSave = useCallback(async () => {
     console.log("[ImportButton] First:", processedTrades);
@@ -152,7 +166,7 @@ export default function ImportButton({ compact = false }: { compact?: boolean })
       }
       // Show success message
       toast.success(t("import.success"), {
-        description: t("import.successDescription", {
+        description: translateWithParams(t, "import.successDescription", {
           numberOfTradesAdded: result.numberOfTradesAdded,
         }),
       });
@@ -167,20 +181,7 @@ export default function ImportButton({ compact = false }: { compact?: boolean })
     } finally {
       setIsSaving(false);
     }
-  }, [processedTrades, accountNumbers, selectedAccountNumbers, importType, user, supabaseUser, t, refreshTradesOnly]);
-
-  const resetImportState = () => {
-    setImportType("");
-    setStep("select-import-type");
-    setRawCsvData([]);
-    setCsvData([]);
-    setHeaders([]);
-    setMappings({});
-    setAccountNumbers([]);
-    setNewAccountNumber("");
-    setProcessedTrades([]);
-    setError(null);
-  };
+  }, [processedTrades, accountNumbers, selectedAccountNumbers, importType, user, supabaseUser, t, refreshTradesOnly, resetImportState]);
 
   const handleNextStep = useCallback(async () => {
     const platform =

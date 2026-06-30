@@ -118,12 +118,19 @@ const Carousel = React.forwardRef<
         return
       }
 
-      onSelect(api)
       api.on("reInit", onSelect)
       api.on("select", onSelect)
+      let isMounted = true
+      queueMicrotask(() => {
+        if (isMounted) {
+          onSelect(api)
+        }
+      })
 
       return () => {
+        isMounted = false
         api?.off("select", onSelect)
+        api?.off("reInit", onSelect)
       }
     }, [api, onSelect])
 
@@ -145,6 +152,7 @@ const Carousel = React.forwardRef<
           ref={ref}
           onKeyDownCapture={handleKeyDown}
           className={cn("relative", className)}
+          data-carousel-interactive
           role="region"
           aria-roledescription="carousel"
           {...props}
