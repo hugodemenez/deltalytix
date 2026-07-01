@@ -21,6 +21,7 @@ import {
 import {
   parseDxFeedStoredCredentials,
   resolveDxFeedPropFirmFromStoredCredentials,
+  withDxFeedAccountNumbers,
   withResolvedDxFeedPropFirmId,
 } from '@/lib/dxfeed-stored-credentials'
 import {
@@ -532,11 +533,11 @@ export async function getDxFeedTrades(
       (a) => a.accountHeader || a.accountReference || a.accountId.toString(),
     )
     if (accountNumbers.length > 0) {
-      const updatedCreds: DxFeedStoredCredentials = {
-        ...credentials,
+      const updatedCreds = withDxFeedAccountNumbers(
+        migratedCredentials,
         historicalHost,
         accountNumbers,
-      }
+      )
       const updatedJson = JSON.stringify(updatedCreds)
       await updateStoredCredentials(resolvedUserId, storedTokenJson, updatedJson)
       storedTokenJson = updatedJson

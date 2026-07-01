@@ -78,3 +78,15 @@ export function withResolvedDxFeedPropFirmId(
     propfirmName: credentials.propfirmName ?? firm.name,
   }
 }
+
+export function withDxFeedAccountNumbers(
+  credentials: DxFeedStoredCredentials,
+  historicalHost: string,
+  accountNumbers: string[],
+): DxFeedStoredCredentials {
+  return {
+    ...credentials,
+    historicalHost,
+    accountNumbers,
+  }
+}

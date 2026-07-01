@@ -3,6 +3,8 @@ import {
   isDxFeedStoredCredentialsOutdated,
   parseDxFeedStoredCredentials,
   resolveDxFeedPropFirmFromStoredCredentials,
+  withDxFeedAccountNumbers,
+  withResolvedDxFeedPropFirmId,
 } from './dxfeed-stored-credentials'
 
 describe('dxfeed-stored-credentials', () => {
@@ -40,5 +42,31 @@ describe('dxfeed-stored-credentials', () => {
 
     expect(resolveDxFeedPropFirmFromStoredCredentials(credentials)).toBeUndefined()
     expect(isDxFeedStoredCredentialsOutdated(credentials)).toBe(true)
+  })
+
+  it('preserves migrated prop firm metadata when account numbers are refreshed', () => {
+    const historicalHost = 'https://volumetrica.miltraders.com' // pragma: allowlist secret
+    const legacyCredentials = {
+      accessToken: 'token',
+      historicalHost,
+    }
+    const propFirm = resolveDxFeedPropFirmFromStoredCredentials(legacyCredentials)
+
+    expect(propFirm?.id).toBe('miltraders')
+
+    const migratedCredentials = withResolvedDxFeedPropFirmId(legacyCredentials, propFirm!)
+    const refreshedCredentials = withDxFeedAccountNumbers(
+      migratedCredentials,
+      historicalHost,
+      ['A-100', 'A-200'],
+    )
+
+    expect(refreshedCredentials).toEqual({
+      accessToken: 'token',
+      historicalHost,
+      accountNumbers: ['A-100', 'A-200'],
+      propFirmId: 'miltraders',
+      propfirmName: 'Miltraders',
+    })
   })
 })
