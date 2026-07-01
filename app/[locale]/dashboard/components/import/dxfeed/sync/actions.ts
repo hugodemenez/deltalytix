@@ -19,6 +19,11 @@ import {
   resolveDxFeedTokenExpiresAt,
 } from '@/lib/dxfeed-token'
 import {
+  parseDxFeedStoredCredentials,
+  resolveDxFeedPropFirmFromStoredCredentials,
+  withResolvedDxFeedPropFirmId,
+} from '@/lib/dxfeed-stored-credentials'
+import {
   authPropfirmMatchesSelection,
   buildHistoricalHostForPropFirm,
   getDxFeedPropFirm,
@@ -70,21 +75,7 @@ const logger = {
   },
 }
 
-/**
- * Parse the JSON stored in the Synchronization.token field
- * back into { accessToken, historicalHost }.
- */
-function parseStoredCredentials(tokenField: string): DxFeedStoredCredentials | null {
-  try {
-    const parsed = JSON.parse(tokenField)
-    if (parsed.accessToken && parsed.historicalHost) {
-      return parsed as DxFeedStoredCredentials
-    }
-    return null
-  } catch {
-    return null
-  }
-}
+const parseStoredCredentials = parseDxFeedStoredCredentials
 
 function buildHistoricalAuthHeaders(accessToken: string): HeadersInit {
   return {
@@ -475,14 +466,18 @@ export async function getDxFeedTrades(
       return { error: DxFeedErrorCode.INVALID_STORED_CREDENTIALS }
     }
 
-    const propFirm = getDxFeedPropFirm(credentials.propFirmId)
+    const propFirm = resolveDxFeedPropFirmFromStoredCredentials(credentials)
     if (!propFirm) {
       return { error: DxFeedErrorCode.MISSING_PROP_FIRM_RECONNECT }
     }
 
-    const { accessToken } = credentials
+    const migratedCredentials = withResolvedDxFeedPropFirmId(credentials, propFirm)
+    const { accessToken } = migratedCredentials
     // Prefer host from connect; remap mistaken trading WSS hosts; fall back to catalog.
-    const historicalHost = coerceDxFeedHistoricalHostForSync(credentials.historicalHost, propFirm)
+    const historicalHost = coerceDxFeedHistoricalHostForSync(
+      migratedCredentials.historicalHost,
+      propFirm,
+    )
 
     let userId = options?.userId ?? null
     let syncAccountId: string | null = null
@@ -500,10 +495,16 @@ export async function getDxFeedTrades(
     const resolvedUserId = userId
 
     let storedTokenJson = initialTokenJson
+    const migratedTokenJson = JSON.stringify(migratedCredentials)
+    if (migratedTokenJson !== initialTokenJson) {
+      storedTokenJson = migratedTokenJson
+      await updateStoredCredentials(resolvedUserId, initialTokenJson, migratedTokenJson)
+    }
+
     const baseUrl = historicalHost.endsWith('/') ? historicalHost.slice(0, -1) : historicalHost
 
     const syncRow = await prisma.synchronization.findFirst({
-      where: { userId: resolvedUserId, service: 'dxfeed', token: initialTokenJson },
+      where: { userId: resolvedUserId, service: 'dxfeed', token: storedTokenJson },
       select: { accountId: true, tokenExpiresAt: true },
     })
     syncAccountId = syncRow?.accountId ?? null

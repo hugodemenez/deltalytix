@@ -994,6 +994,7 @@ export default {
     create: "Créer",
     retry: "Réessayer",
     copy: "Copier",
+    copied: "Copié dans le presse-papiers",
     loading: "Chargement",
   },
   rithmic: {
@@ -2271,6 +2272,7 @@ export default {
       tokenStatus: "Statut du Token",
       actions: "Actions",
       expired: "Expiré",
+      reconnectRequired: "Reconnexion requise",
       valid: "Valide",
       connected: "Connecté",
       expandTradingAccounts: "Voir {count} compte(s) de trading",
