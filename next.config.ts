@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import createMDX from '@next/mdx';
+import { SUPPORT_SEARCH_TRACE_INCLUDES } from './lib/ai/search-codebase';
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -35,6 +36,8 @@ const nextConfig: NextConfig = {
     '/app/api/**': [  // For App Router API routes (your auth callback)
       '**/node_modules/.prisma/client/**',
     ],
+    // Runtime fs search in /api/ai/support — keep docs in the serverless bundle.
+    '/api/ai/support': [...SUPPORT_SEARCH_TRACE_INCLUDES],
   },
 }
 

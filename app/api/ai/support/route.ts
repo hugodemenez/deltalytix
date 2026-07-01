@@ -1,18 +1,42 @@
 import { createAgentUIStreamResponse, type UIMessage } from "ai";
 import { hasUnsupportedFileUrls } from "@/lib/ai/convert-file-ui-parts";
 import { supportAgent } from "@/lib/ai/support-agent";
+import {
+  hasUserMessage,
+  stripInitialAssistantGreeting,
+  supportChatRequestSchema,
+} from "./schema";
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
-    const { messages }: { messages: UIMessage[] } = await req.json();
+    const body = await req.json();
+    const parsed = supportChatRequestSchema.safeParse(body);
 
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return new Response(JSON.stringify({ error: "No messages provided" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (!parsed.success) {
+      return new Response(
+        JSON.stringify({
+          error: "Invalid request",
+          details: parsed.error.flatten(),
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const messages = stripInitialAssistantGreeting(parsed.data.messages);
+
+    if (!hasUserMessage(messages)) {
+      return new Response(
+        JSON.stringify({ error: "No user messages provided" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
 
     if (hasUnsupportedFileUrls(messages)) {
@@ -29,15 +53,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const uiMessages = [...messages];
-
-    if (uiMessages[0]?.role === "assistant") {
-      uiMessages.shift();
-    }
-
     return createAgentUIStreamResponse({
       agent: supportAgent,
-      uiMessages: uiMessages,
+      uiMessages: messages as UIMessage[],
       sendReasoning: true,
       onStepFinish: (step) => {
         console.log(

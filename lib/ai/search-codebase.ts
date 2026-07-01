@@ -1,18 +1,86 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import { access, readFile } from "node:fs/promises";
+import type { Dirent } from "node:fs";
+import { access, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
-
-const execFileAsync = promisify(execFile);
 
 const REPO_ROOT = process.cwd();
 
-const SEARCH_ROOTS = ["content", "locales"] as const;
+/** Product documentation and user-facing copy only — not full locale aggregates. */
+const CONTENT_ROOT = "content" as const;
+
+export const SUPPORT_SEARCH_TRACE_INCLUDES = [
+  "./content/**/*",
+  "./locales/en/support.ts",
+  "./locales/fr/support.ts",
+  "./locales/en/faq.ts",
+  "./locales/fr/faq.ts",
+  "./locales/en/chat.ts",
+  "./locales/fr/chat.ts",
+  "./locales/en/landing.ts",
+  "./locales/fr/landing.ts",
+  "./README.md",
+  "./SELF_HOSTING.md",
+  "./AGENTS.md",
+] as const;
+
+const LOCALE_DOC_FILES = [
+  "locales/en/support.ts",
+  "locales/fr/support.ts",
+  "locales/en/faq.ts",
+  "locales/fr/faq.ts",
+  "locales/en/chat.ts",
+  "locales/fr/chat.ts",
+  "locales/en/landing.ts",
+  "locales/fr/landing.ts",
+] as const;
 
 const ROOT_MARKDOWN_FILES = ["README.md", "SELF_HOSTING.md", "AGENTS.md"] as const;
 
 const MAX_RESULTS = 12;
 const MAX_SNIPPET_CHARS = 600;
+
+const SEARCHABLE_FILE_PATTERN = /\.(md|mdx|ts)$/i;
+
+function shouldLogSearchDebug(): boolean {
+  return process.env.NODE_ENV !== "production" && process.env.SUPPORT_SEARCH_DEBUG !== "0";
+}
+
+const SEARCH_STOP_WORDS = new Set([
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "for",
+  "to",
+  "how",
+  "what",
+  "when",
+  "where",
+  "why",
+  "is",
+  "are",
+  "was",
+  "were",
+  "do",
+  "does",
+  "did",
+  "can",
+  "could",
+  "should",
+  "would",
+  "about",
+  "with",
+  "from",
+  "into",
+  "documentation",
+  "docs",
+  "guide",
+  "help",
+  "setup",
+  "instructions",
+  "information",
+  "details",
+]);
 
 export type CodebaseSearchMatch = {
   file: string;
@@ -32,10 +100,14 @@ function normalizeSnippet(text: string): string {
 
 function localeContentPath(locale?: string): string | undefined {
   if (locale === "en" || locale === "fr") {
-    return path.join("content", "updates", locale);
+    return path.join(CONTENT_ROOT, "updates", locale);
   }
 
   return undefined;
+}
+
+function isSearchableFile(relativePath: string): boolean {
+  return SEARCHABLE_FILE_PATTERN.test(relativePath);
 }
 
 async function fileExists(filePath: string): Promise<boolean> {
@@ -47,82 +119,114 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
-async function searchWithRipgrep(
-  query: string,
-  searchPaths: string[],
-): Promise<CodebaseSearchMatch[] | null> {
+function buildFallbackSearchPaths(): string[] {
+  return [CONTENT_ROOT, ...LOCALE_DOC_FILES, ...ROOT_MARKDOWN_FILES];
+}
+
+function parseSearchTerms(query: string): string[] {
+  const rawTerms = query
+    .trim()
+    .split(/\s+/)
+    .map((term) => term.replace(/[^\p{L}\p{N}_-]/gu, ""))
+    .filter((term) => term.length >= 2);
+
+  const terms = [
+    ...new Set(rawTerms.filter((term) => !SEARCH_STOP_WORDS.has(term.toLowerCase()))),
+  ];
+
+  return terms.length > 0 ? terms : rawTerms.slice(0, 1);
+}
+
+function fileContainsAllTerms(content: string, terms: string[]): boolean {
+  const lowerContent = content.toLowerCase();
+  return terms.every((term) => lowerContent.includes(term.toLowerCase()));
+}
+
+function fileNameContainsAllTerms(relativePath: string, terms: string[]): boolean {
+  const slug = path
+    .basename(relativePath, path.extname(relativePath))
+    .toLowerCase()
+    .replace(/-/g, " ");
+  return terms.every((term) => slug.includes(term.toLowerCase()));
+}
+
+function fileMatchesTerms(relativePath: string, content: string, terms: string[]): boolean {
+  return (
+    fileContainsAllTerms(content, terms) || fileNameContainsAllTerms(relativePath, terms)
+  );
+}
+
+const GENERIC_SEARCH_TERMS = new Set([
+  "firm",
+  "sync",
+  "account",
+  "import",
+  "trade",
+  "trades",
+  "selection",
+  "support",
+  "connection",
+  "dashboard",
+]);
+
+function pickPrimarySearchTerm(terms: string[]): string {
+  const distinctiveTerms = terms.filter(
+    (term) => !GENERIC_SEARCH_TERMS.has(term.toLowerCase()),
+  );
+  return distinctiveTerms[0] ?? terms[0];
+}
+
+function lineMatchedTermCount(line: string, terms: string[]): number {
+  const lowerLine = line.toLowerCase();
+  return terms.filter((term) => lowerLine.includes(term.toLowerCase())).length;
+}
+
+async function searchFile(
+  relativePath: string,
+  terms: string[],
+  matches: CodebaseSearchMatch[],
+): Promise<void> {
+  if (matches.length >= MAX_RESULTS || terms.length === 0) return;
+
+  const absolutePath = path.join(REPO_ROOT, relativePath);
+
+  let content: string;
   try {
-    const { stdout } = await execFileAsync(
-      "rg",
-      [
-        "-i",
-        "--json",
-        "-m",
-        String(MAX_RESULTS),
-        "--context",
-        "1",
-        "--glob",
-        "*.md",
-        "--glob",
-        "*.mdx",
-        "--glob",
-        "*.ts",
-        query,
-        ...searchPaths,
-      ],
-      {
-        cwd: REPO_ROOT,
-        maxBuffer: 10 * 1024 * 1024,
-      },
-    );
-
-    const matches: CodebaseSearchMatch[] = [];
-    const seen = new Set<string>();
-
-    for (const line of stdout.split("\n")) {
-      if (!line.trim()) continue;
-
-      let event: { type?: string; data?: Record<string, unknown> };
-      try {
-        event = JSON.parse(line);
-      } catch {
-        continue;
-      }
-
-      if (event.type !== "match" || !event.data) continue;
-
-      const pathData = event.data.path as string | { text?: string } | undefined;
-      const filePath =
-        typeof pathData === "string" ? pathData : String(pathData?.text ?? "");
-      const lineNumber = Number(event.data.line_number ?? 0);
-      const lines = (event.data.lines as { text?: string } | undefined)?.text;
-
-      if (!filePath || !lineNumber || !lines) continue;
-
-      const key = `${filePath}:${lineNumber}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-
-      matches.push({
-        file: filePath,
-        line: lineNumber,
-        snippet: normalizeSnippet(lines),
-      });
-
-      if (matches.length >= MAX_RESULTS) break;
-    }
-
-    return matches;
+    content = await readFile(absolutePath, "utf8");
   } catch {
-    return null;
+    return;
+  }
+
+  if (!fileMatchesTerms(relativePath, content, terms)) {
+    return;
+  }
+
+  const lines = content.split("\n");
+  const lineMatches: Array<{ index: number; score: number }> = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const score = lineMatchedTermCount(lines[index], terms);
+    if (score === 0) continue;
+    lineMatches.push({ index, score });
+  }
+
+  lineMatches.sort((left, right) => right.score - left.score);
+
+  for (const { index } of lineMatches) {
+    matches.push({
+      file: relativePath,
+      line: index + 1,
+      snippet: normalizeSnippet(lines[index]),
+    });
+
+    if (matches.length >= MAX_RESULTS) break;
   }
 }
 
-async function searchWithNodeFs(
-  query: string,
+async function searchFiles(
+  terms: string[],
   searchPaths: string[],
 ): Promise<CodebaseSearchMatch[]> {
-  const pattern = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
   const matches: CodebaseSearchMatch[] = [];
 
   async function walk(dir: string): Promise<void> {
@@ -131,8 +235,18 @@ async function searchWithNodeFs(
     const absoluteDir = path.join(REPO_ROOT, dir);
     if (!(await fileExists(absoluteDir))) return;
 
-    const { readdir } = await import("node:fs/promises");
-    const entries = await readdir(absoluteDir, { withFileTypes: true });
+    let entries: Dirent[];
+    try {
+      entries = await readdir(absoluteDir, { withFileTypes: true });
+    } catch (error) {
+      if (shouldLogSearchDebug()) {
+        console.warn("[searchCodebase] Skipping unreadable directory", {
+          dir,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      return;
+    }
 
     for (const entry of entries) {
       if (matches.length >= MAX_RESULTS) break;
@@ -145,49 +259,59 @@ async function searchWithNodeFs(
         continue;
       }
 
-      if (!/\.(md|mdx|ts)$/i.test(entry.name)) continue;
+      if (!isSearchableFile(relativePath)) continue;
 
-      const absolutePath = path.join(REPO_ROOT, relativePath);
-      const content = await readFile(absolutePath, "utf8");
-      const lines = content.split("\n");
-
-      for (let index = 0; index < lines.length; index += 1) {
-        if (!pattern.test(lines[index])) continue;
-
-        matches.push({
-          file: relativePath,
-          line: index + 1,
-          snippet: normalizeSnippet(lines[index]),
-        });
-
-        if (matches.length >= MAX_RESULTS) break;
-      }
+      await searchFile(relativePath, terms, matches);
     }
   }
 
   for (const searchPath of searchPaths) {
+    if (matches.length >= MAX_RESULTS) break;
+
     const absolutePath = path.join(REPO_ROOT, searchPath);
-    const stats = await import("node:fs/promises").then((fs) => fs.stat(absolutePath));
 
-    if (stats.isFile()) {
-      const content = await readFile(absolutePath, "utf8");
-      const lines = content.split("\n");
-
-      for (let index = 0; index < lines.length; index += 1) {
-        if (!pattern.test(lines[index])) continue;
-
-        matches.push({
-          file: searchPath,
-          line: index + 1,
-          snippet: normalizeSnippet(lines[index]),
-        });
-
-        if (matches.length >= MAX_RESULTS) break;
+    try {
+      const fileStat = await stat(absolutePath);
+      if (fileStat.isFile()) {
+        if (isSearchableFile(searchPath)) {
+          await searchFile(searchPath, terms, matches);
+        }
+        continue;
       }
+    } catch {
       continue;
     }
 
     await walk(searchPath);
+  }
+
+  return matches;
+}
+
+async function runSearch(
+  query: string,
+  searchPaths: string[],
+): Promise<CodebaseSearchMatch[]> {
+  const existingPaths: string[] = [];
+  for (const searchPath of searchPaths) {
+    if (await fileExists(path.join(REPO_ROOT, searchPath))) {
+      existingPaths.push(searchPath);
+    }
+  }
+
+  if (existingPaths.length === 0) {
+    console.warn("[searchCodebase] No searchable paths found", {
+      cwd: REPO_ROOT,
+      requestedPaths: searchPaths,
+    });
+    return [];
+  }
+
+  const terms = parseSearchTerms(query);
+  let matches = await searchFiles(terms, existingPaths);
+
+  if (matches.length === 0 && terms.length > 1) {
+    matches = await searchFiles([pickPrimarySearchTerm(terms)], existingPaths);
   }
 
   return matches;
@@ -203,35 +327,16 @@ export async function searchCodebase(
   }
 
   const localePath = localeContentPath(options?.locale);
-  const fallbackPaths = [...SEARCH_ROOTS, ...ROOT_MARKDOWN_FILES].filter(
-    (value, index, array) => array.indexOf(value) === index,
-  );
-
-  const existingLocalePaths: string[] = [];
-  if (localePath && (await fileExists(path.join(REPO_ROOT, localePath)))) {
-    existingLocalePaths.push(localePath);
-  }
-
-  const existingFallbackPaths: string[] = [];
-  for (const searchPath of fallbackPaths) {
-    if (await fileExists(path.join(REPO_ROOT, searchPath))) {
-      existingFallbackPaths.push(searchPath);
-    }
-  }
+  const fallbackPaths = buildFallbackSearchPaths();
 
   let matches: CodebaseSearchMatch[] = [];
 
-  if (existingLocalePaths.length > 0) {
-    const localeMatches = await searchWithRipgrep(trimmedQuery, existingLocalePaths);
-    matches =
-      localeMatches ?? (await searchWithNodeFs(trimmedQuery, existingLocalePaths));
+  if (localePath) {
+    matches = await runSearch(trimmedQuery, [localePath]);
   }
 
-  if (matches.length === 0 && existingFallbackPaths.length > 0) {
-    const fallbackMatches = await searchWithRipgrep(trimmedQuery, existingFallbackPaths);
-    matches =
-      fallbackMatches ??
-      (await searchWithNodeFs(trimmedQuery, existingFallbackPaths));
+  if (matches.length === 0) {
+    matches = await runSearch(trimmedQuery, fallbackPaths);
   }
 
   return {
