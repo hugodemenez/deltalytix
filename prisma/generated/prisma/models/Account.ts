@@ -88,6 +88,8 @@ export type AccountMinAggregateOutputType = {
   trailingDrawdown: boolean | null
   trailingStopProfit: number | null
   resetDate: Date | null
+  bursted: boolean | null
+  breachDate: Date | null
   consistencyPercentage: number | null
   groupId: string | null
   accountSize: string | null
@@ -136,6 +138,8 @@ export type AccountMaxAggregateOutputType = {
   trailingDrawdown: boolean | null
   trailingStopProfit: number | null
   resetDate: Date | null
+  bursted: boolean | null
+  breachDate: Date | null
   consistencyPercentage: number | null
   groupId: string | null
   accountSize: string | null
@@ -184,6 +188,8 @@ export type AccountCountAggregateOutputType = {
   trailingDrawdown: number
   trailingStopProfit: number
   resetDate: number
+  bursted: number
+  breachDate: number
   consistencyPercentage: number
   groupId: number
   accountSize: number
@@ -282,6 +288,8 @@ export type AccountMinAggregateInputType = {
   trailingDrawdown?: true
   trailingStopProfit?: true
   resetDate?: true
+  bursted?: true
+  breachDate?: true
   consistencyPercentage?: true
   groupId?: true
   accountSize?: true
@@ -330,6 +338,8 @@ export type AccountMaxAggregateInputType = {
   trailingDrawdown?: true
   trailingStopProfit?: true
   resetDate?: true
+  bursted?: true
+  breachDate?: true
   consistencyPercentage?: true
   groupId?: true
   accountSize?: true
@@ -378,6 +388,8 @@ export type AccountCountAggregateInputType = {
   trailingDrawdown?: true
   trailingStopProfit?: true
   resetDate?: true
+  bursted?: true
+  breachDate?: true
   consistencyPercentage?: true
   groupId?: true
   accountSize?: true
@@ -513,6 +525,8 @@ export type AccountGroupByOutputType = {
   trailingDrawdown: boolean
   trailingStopProfit: number | null
   resetDate: Date | null
+  bursted: boolean
+  breachDate: Date | null
   consistencyPercentage: number | null
   groupId: string | null
   accountSize: string | null
@@ -552,7 +566,7 @@ export type AccountGroupByOutputType = {
   _max: AccountMaxAggregateOutputType | null
 }
 
-type GetAccountGroupByPayload<T extends AccountGroupByArgs> = Prisma.PrismaPromise<
+export type GetAccountGroupByPayload<T extends AccountGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<AccountGroupByOutputType, T['by']> &
       {
@@ -584,6 +598,8 @@ export type AccountWhereInput = {
   trailingDrawdown?: Prisma.BoolFilter<"Account"> | boolean
   trailingStopProfit?: Prisma.FloatNullableFilter<"Account"> | number | null
   resetDate?: Prisma.DateTimeNullableFilter<"Account"> | Date | string | null
+  bursted?: Prisma.BoolFilter<"Account"> | boolean
+  breachDate?: Prisma.DateTimeNullableFilter<"Account"> | Date | string | null
   consistencyPercentage?: Prisma.FloatNullableFilter<"Account"> | number | null
   groupId?: Prisma.StringNullableFilter<"Account"> | string | null
   accountSize?: Prisma.StringNullableFilter<"Account"> | string | null
@@ -635,6 +651,8 @@ export type AccountOrderByWithRelationInput = {
   trailingDrawdown?: Prisma.SortOrder
   trailingStopProfit?: Prisma.SortOrderInput | Prisma.SortOrder
   resetDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  bursted?: Prisma.SortOrder
+  breachDate?: Prisma.SortOrderInput | Prisma.SortOrder
   consistencyPercentage?: Prisma.SortOrderInput | Prisma.SortOrder
   groupId?: Prisma.SortOrderInput | Prisma.SortOrder
   accountSize?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -690,6 +708,8 @@ export type AccountWhereUniqueInput = Prisma.AtLeast<{
   trailingDrawdown?: Prisma.BoolFilter<"Account"> | boolean
   trailingStopProfit?: Prisma.FloatNullableFilter<"Account"> | number | null
   resetDate?: Prisma.DateTimeNullableFilter<"Account"> | Date | string | null
+  bursted?: Prisma.BoolFilter<"Account"> | boolean
+  breachDate?: Prisma.DateTimeNullableFilter<"Account"> | Date | string | null
   consistencyPercentage?: Prisma.FloatNullableFilter<"Account"> | number | null
   groupId?: Prisma.StringNullableFilter<"Account"> | string | null
   accountSize?: Prisma.StringNullableFilter<"Account"> | string | null
@@ -741,6 +761,8 @@ export type AccountOrderByWithAggregationInput = {
   trailingDrawdown?: Prisma.SortOrder
   trailingStopProfit?: Prisma.SortOrderInput | Prisma.SortOrder
   resetDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  bursted?: Prisma.SortOrder
+  breachDate?: Prisma.SortOrderInput | Prisma.SortOrder
   consistencyPercentage?: Prisma.SortOrderInput | Prisma.SortOrder
   groupId?: Prisma.SortOrderInput | Prisma.SortOrder
   accountSize?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -797,6 +819,8 @@ export type AccountScalarWhereWithAggregatesInput = {
   trailingDrawdown?: Prisma.BoolWithAggregatesFilter<"Account"> | boolean
   trailingStopProfit?: Prisma.FloatNullableWithAggregatesFilter<"Account"> | number | null
   resetDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Account"> | Date | string | null
+  bursted?: Prisma.BoolWithAggregatesFilter<"Account"> | boolean
+  breachDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Account"> | Date | string | null
   consistencyPercentage?: Prisma.FloatNullableWithAggregatesFilter<"Account"> | number | null
   groupId?: Prisma.StringNullableWithAggregatesFilter<"Account"> | string | null
   accountSize?: Prisma.StringNullableWithAggregatesFilter<"Account"> | string | null
@@ -844,6 +868,8 @@ export type AccountCreateInput = {
   trailingDrawdown?: boolean
   trailingStopProfit?: number | null
   resetDate?: Date | string | null
+  bursted?: boolean
+  breachDate?: Date | string | null
   consistencyPercentage?: number | null
   accountSize?: string | null
   accountSizeName?: string | null
@@ -894,6 +920,8 @@ export type AccountUncheckedCreateInput = {
   trailingDrawdown?: boolean
   trailingStopProfit?: number | null
   resetDate?: Date | string | null
+  bursted?: boolean
+  breachDate?: Date | string | null
   consistencyPercentage?: number | null
   groupId?: string | null
   accountSize?: string | null
@@ -942,6 +970,8 @@ export type AccountUpdateInput = {
   trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
   trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bursted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  breachDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountSizeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -992,6 +1022,8 @@ export type AccountUncheckedUpdateInput = {
   trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
   trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bursted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  breachDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1041,6 +1073,8 @@ export type AccountCreateManyInput = {
   trailingDrawdown?: boolean
   trailingStopProfit?: number | null
   resetDate?: Date | string | null
+  bursted?: boolean
+  breachDate?: Date | string | null
   consistencyPercentage?: number | null
   groupId?: string | null
   accountSize?: string | null
@@ -1088,6 +1122,8 @@ export type AccountUpdateManyMutationInput = {
   trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
   trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bursted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  breachDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountSizeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1135,6 +1171,8 @@ export type AccountUncheckedUpdateManyInput = {
   trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
   trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bursted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  breachDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1198,6 +1236,8 @@ export type AccountCountOrderByAggregateInput = {
   trailingDrawdown?: Prisma.SortOrder
   trailingStopProfit?: Prisma.SortOrder
   resetDate?: Prisma.SortOrder
+  bursted?: Prisma.SortOrder
+  breachDate?: Prisma.SortOrder
   consistencyPercentage?: Prisma.SortOrder
   groupId?: Prisma.SortOrder
   accountSize?: Prisma.SortOrder
@@ -1270,6 +1310,8 @@ export type AccountMaxOrderByAggregateInput = {
   trailingDrawdown?: Prisma.SortOrder
   trailingStopProfit?: Prisma.SortOrder
   resetDate?: Prisma.SortOrder
+  bursted?: Prisma.SortOrder
+  breachDate?: Prisma.SortOrder
   consistencyPercentage?: Prisma.SortOrder
   groupId?: Prisma.SortOrder
   accountSize?: Prisma.SortOrder
@@ -1318,6 +1360,8 @@ export type AccountMinOrderByAggregateInput = {
   trailingDrawdown?: Prisma.SortOrder
   trailingStopProfit?: Prisma.SortOrder
   resetDate?: Prisma.SortOrder
+  bursted?: Prisma.SortOrder
+  breachDate?: Prisma.SortOrder
   consistencyPercentage?: Prisma.SortOrder
   groupId?: Prisma.SortOrder
   accountSize?: Prisma.SortOrder
@@ -1516,6 +1560,8 @@ export type AccountCreateWithoutUserInput = {
   trailingDrawdown?: boolean
   trailingStopProfit?: number | null
   resetDate?: Date | string | null
+  bursted?: boolean
+  breachDate?: Date | string | null
   consistencyPercentage?: number | null
   accountSize?: string | null
   accountSizeName?: string | null
@@ -1564,6 +1610,8 @@ export type AccountUncheckedCreateWithoutUserInput = {
   trailingDrawdown?: boolean
   trailingStopProfit?: number | null
   resetDate?: Date | string | null
+  bursted?: boolean
+  breachDate?: Date | string | null
   consistencyPercentage?: number | null
   groupId?: string | null
   accountSize?: string | null
@@ -1642,6 +1690,8 @@ export type AccountScalarWhereInput = {
   trailingDrawdown?: Prisma.BoolFilter<"Account"> | boolean
   trailingStopProfit?: Prisma.FloatNullableFilter<"Account"> | number | null
   resetDate?: Prisma.DateTimeNullableFilter<"Account"> | Date | string | null
+  bursted?: Prisma.BoolFilter<"Account"> | boolean
+  breachDate?: Prisma.DateTimeNullableFilter<"Account"> | Date | string | null
   consistencyPercentage?: Prisma.FloatNullableFilter<"Account"> | number | null
   groupId?: Prisma.StringNullableFilter<"Account"> | string | null
   accountSize?: Prisma.StringNullableFilter<"Account"> | string | null
@@ -1689,6 +1739,8 @@ export type AccountCreateWithoutGroupInput = {
   trailingDrawdown?: boolean
   trailingStopProfit?: number | null
   resetDate?: Date | string | null
+  bursted?: boolean
+  breachDate?: Date | string | null
   consistencyPercentage?: number | null
   accountSize?: string | null
   accountSizeName?: string | null
@@ -1738,6 +1790,8 @@ export type AccountUncheckedCreateWithoutGroupInput = {
   trailingDrawdown?: boolean
   trailingStopProfit?: number | null
   resetDate?: Date | string | null
+  bursted?: boolean
+  breachDate?: Date | string | null
   consistencyPercentage?: number | null
   accountSize?: string | null
   accountSizeName?: string | null
@@ -1811,6 +1865,8 @@ export type AccountCreateWithoutPayoutsInput = {
   trailingDrawdown?: boolean
   trailingStopProfit?: number | null
   resetDate?: Date | string | null
+  bursted?: boolean
+  breachDate?: Date | string | null
   consistencyPercentage?: number | null
   accountSize?: string | null
   accountSizeName?: string | null
@@ -1860,6 +1916,8 @@ export type AccountUncheckedCreateWithoutPayoutsInput = {
   trailingDrawdown?: boolean
   trailingStopProfit?: number | null
   resetDate?: Date | string | null
+  bursted?: boolean
+  breachDate?: Date | string | null
   consistencyPercentage?: number | null
   groupId?: string | null
   accountSize?: string | null
@@ -1923,6 +1981,8 @@ export type AccountUpdateWithoutPayoutsInput = {
   trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
   trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bursted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  breachDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountSizeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1972,6 +2032,8 @@ export type AccountUncheckedUpdateWithoutPayoutsInput = {
   trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
   trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bursted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  breachDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2019,6 +2081,8 @@ export type AccountCreateManyUserInput = {
   trailingDrawdown?: boolean
   trailingStopProfit?: number | null
   resetDate?: Date | string | null
+  bursted?: boolean
+  breachDate?: Date | string | null
   consistencyPercentage?: number | null
   groupId?: string | null
   accountSize?: string | null
@@ -2066,6 +2130,8 @@ export type AccountUpdateWithoutUserInput = {
   trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
   trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bursted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  breachDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountSizeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2114,6 +2180,8 @@ export type AccountUncheckedUpdateWithoutUserInput = {
   trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
   trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bursted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  breachDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2162,6 +2230,8 @@ export type AccountUncheckedUpdateManyWithoutUserInput = {
   trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
   trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bursted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  breachDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2210,6 +2280,8 @@ export type AccountCreateManyGroupInput = {
   trailingDrawdown?: boolean
   trailingStopProfit?: number | null
   resetDate?: Date | string | null
+  bursted?: boolean
+  breachDate?: Date | string | null
   consistencyPercentage?: number | null
   accountSize?: string | null
   accountSizeName?: string | null
@@ -2256,6 +2328,8 @@ export type AccountUpdateWithoutGroupInput = {
   trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
   trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bursted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  breachDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountSizeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2305,6 +2379,8 @@ export type AccountUncheckedUpdateWithoutGroupInput = {
   trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
   trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bursted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  breachDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountSizeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2353,6 +2429,8 @@ export type AccountUncheckedUpdateManyWithoutGroupInput = {
   trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
   trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  bursted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  breachDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountSizeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2431,6 +2509,8 @@ export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   trailingDrawdown?: boolean
   trailingStopProfit?: boolean
   resetDate?: boolean
+  bursted?: boolean
+  breachDate?: boolean
   consistencyPercentage?: boolean
   groupId?: boolean
   accountSize?: boolean
@@ -2483,6 +2563,8 @@ export type AccountSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   trailingDrawdown?: boolean
   trailingStopProfit?: boolean
   resetDate?: boolean
+  bursted?: boolean
+  breachDate?: boolean
   consistencyPercentage?: boolean
   groupId?: boolean
   accountSize?: boolean
@@ -2533,6 +2615,8 @@ export type AccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   trailingDrawdown?: boolean
   trailingStopProfit?: boolean
   resetDate?: boolean
+  bursted?: boolean
+  breachDate?: boolean
   consistencyPercentage?: boolean
   groupId?: boolean
   accountSize?: boolean
@@ -2583,6 +2667,8 @@ export type AccountSelectScalar = {
   trailingDrawdown?: boolean
   trailingStopProfit?: boolean
   resetDate?: boolean
+  bursted?: boolean
+  breachDate?: boolean
   consistencyPercentage?: boolean
   groupId?: boolean
   accountSize?: boolean
@@ -2617,7 +2703,7 @@ export type AccountSelectScalar = {
   shouldConsiderTradesBeforeReset?: boolean
 }
 
-export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "propfirm" | "drawdownThreshold" | "profitTarget" | "isPerformance" | "userId" | "createdAt" | "startingBalance" | "payoutCount" | "trailingDrawdown" | "trailingStopProfit" | "resetDate" | "consistencyPercentage" | "groupId" | "accountSize" | "accountSizeName" | "activationFees" | "balanceRequired" | "dailyLoss" | "evaluation" | "isRecursively" | "maxFundedAccounts" | "maxPayout" | "minDays" | "minPayout" | "minTradingDaysForPayout" | "payoutBonus" | "payoutPolicy" | "price" | "priceWithPromo" | "profitSharing" | "rulesDailyLoss" | "tradingNewsAllowed" | "trailing" | "autoRenewal" | "nextPaymentDate" | "paymentFrequency" | "promoPercentage" | "promoType" | "renewalNotice" | "minPnlToCountAsDay" | "buffer" | "considerBuffer" | "shouldConsiderTradesBeforeReset", ExtArgs["result"]["account"]>
+export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "propfirm" | "drawdownThreshold" | "profitTarget" | "isPerformance" | "userId" | "createdAt" | "startingBalance" | "payoutCount" | "trailingDrawdown" | "trailingStopProfit" | "resetDate" | "bursted" | "breachDate" | "consistencyPercentage" | "groupId" | "accountSize" | "accountSizeName" | "activationFees" | "balanceRequired" | "dailyLoss" | "evaluation" | "isRecursively" | "maxFundedAccounts" | "maxPayout" | "minDays" | "minPayout" | "minTradingDaysForPayout" | "payoutBonus" | "payoutPolicy" | "price" | "priceWithPromo" | "profitSharing" | "rulesDailyLoss" | "tradingNewsAllowed" | "trailing" | "autoRenewal" | "nextPaymentDate" | "paymentFrequency" | "promoPercentage" | "promoType" | "renewalNotice" | "minPnlToCountAsDay" | "buffer" | "considerBuffer" | "shouldConsiderTradesBeforeReset", ExtArgs["result"]["account"]>
 export type AccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   group?: boolean | Prisma.Account$groupArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -2654,6 +2740,8 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     trailingDrawdown: boolean
     trailingStopProfit: number | null
     resetDate: Date | null
+    bursted: boolean
+    breachDate: Date | null
     consistencyPercentage: number | null
     groupId: string | null
     accountSize: string | null
@@ -3125,6 +3213,8 @@ export interface AccountFieldRefs {
   readonly trailingDrawdown: Prisma.FieldRef<"Account", 'Boolean'>
   readonly trailingStopProfit: Prisma.FieldRef<"Account", 'Float'>
   readonly resetDate: Prisma.FieldRef<"Account", 'DateTime'>
+  readonly bursted: Prisma.FieldRef<"Account", 'Boolean'>
+  readonly breachDate: Prisma.FieldRef<"Account", 'DateTime'>
   readonly consistencyPercentage: Prisma.FieldRef<"Account", 'Float'>
   readonly groupId: Prisma.FieldRef<"Account", 'String'>
   readonly accountSize: Prisma.FieldRef<"Account", 'String'>
@@ -3353,6 +3443,11 @@ export type AccountFindManyArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * Skip the first `n` Accounts.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of Accounts.
+   */
   distinct?: Prisma.AccountScalarFieldEnum | Prisma.AccountScalarFieldEnum[]
 }
 

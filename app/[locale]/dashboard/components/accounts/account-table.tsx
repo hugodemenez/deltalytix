@@ -293,23 +293,12 @@ export function AccountTable({
             <Table className="min-w-[760px]">
               {renderTableHeader()}
               <TableBody>
-                {(() => {
-                  let runningBalance = startingBalance
-                  return metricsBeforeReset.map(metric => {
-                    runningBalance += metric.pnl
-                    if (metric.payout?.status === 'PAID') {
-                      runningBalance -= metric.payout.amount
-                    }
-                    return renderMetricRow(metric, runningBalance, totalPnLBefore)
-                  })
-                })()}
-                {renderTotalRow(metricsBeforeReset, totalPnLBefore, metricsBeforeReset.reduce((balance, metric) => {
-                  balance += metric.pnl
-                  if (metric.payout?.status === 'PAID') {
-                    balance -= metric.payout.amount
-                  }
-                  return balance
-                }, startingBalance))}
+                {metricsBeforeReset.map(metric => renderMetricRow(metric, metric.totalBalance, totalPnLBefore))}
+                {renderTotalRow(
+                  metricsBeforeReset,
+                  totalPnLBefore,
+                  metricsBeforeReset.at(-1)?.totalBalance ?? startingBalance
+                )}
               </TableBody>
             </Table>
           </div>
@@ -341,23 +330,12 @@ export function AccountTable({
           <Table className="min-w-[760px]">
             {renderTableHeader()}
             <TableBody>
-              {(() => {
-                let runningBalance = startingBalance
-                return metricsAfterReset.map(metric => {
-                  runningBalance += metric.pnl
-                  if (metric.payout?.status === 'PAID') {
-                    runningBalance -= metric.payout.amount
-                  }
-                  return renderMetricRow(metric, runningBalance, totalPnLAfter)
-                })
-              })()}
-              {renderTotalRow(metricsAfterReset, totalPnLAfter, metricsAfterReset.reduce((balance, metric) => {
-                balance += metric.pnl
-                if (metric.payout?.status === 'PAID') {
-                  balance -= metric.payout.amount
-                }
-                return balance
-              }, startingBalance))}
+              {metricsAfterReset.map(metric => renderMetricRow(metric, metric.totalBalance, totalPnLAfter))}
+              {renderTotalRow(
+                metricsAfterReset,
+                totalPnLAfter,
+                metricsAfterReset.at(-1)?.totalBalance ?? startingBalance
+              )}
             </TableBody>
           </Table>
         </div>

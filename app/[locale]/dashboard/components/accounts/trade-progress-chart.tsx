@@ -7,6 +7,7 @@ import { useI18n } from "@/locales/client"
 import { useMemo } from "react"
 import { Account } from "@/context/data-provider"
 import { useTradesStore } from "@/store/trades-store"
+import { clampBalanceAtDrawdownFloor, computeDrawdownLevel } from "@/lib/account-drawdown"
 
 // Add interface for event type
 interface ChartEvent {
@@ -113,29 +114,22 @@ export function TradeProgressChart({
       highestBalance = startingBalance
     } else {
       const prevBalance = index > 0 ? acc[index - 1].balance : startingBalance
-      balance = prevBalance + event.amount
+      const rawBalance = prevBalance + event.amount
       
       // Calculate highest balance up to this point
       const previousHighest = index > 0 ? acc[index - 1].highestBalance : startingBalance
-      highestBalance = event.isPayout ? previousHighest : Math.max(previousHighest, balance)
+      highestBalance = event.isPayout ? previousHighest : Math.max(previousHighest, rawBalance)
+      balance = rawBalance
     }
     
-    // Calculate drawdown level based on trailing or fixed drawdown
-    let drawdownLevel
-    if (trailingDrawdown) {
-      const profitMade = Math.max(0, highestBalance - startingBalance)
-      
-      // If we've hit trailing stop profit, lock the drawdown to that level
-      if (trailingStopProfit && profitMade >= trailingStopProfit) {
-        drawdownLevel = (startingBalance + trailingStopProfit) - drawdownThreshold
-      } else {
-        // Otherwise, drawdown level trails the highest balance
-        drawdownLevel = highestBalance - drawdownThreshold
-      }
-    } else {
-      // Fixed drawdown - always relative to starting balance
-      drawdownLevel = startingBalance - drawdownThreshold
-    }
+    const drawdownLevel = computeDrawdownLevel({
+      startingBalance,
+      drawdownThreshold,
+      trailingDrawdown,
+      trailingStopProfit,
+      highestBalance,
+    })
+    balance = clampBalanceAtDrawdownFloor(balance, drawdownThreshold, drawdownLevel)
 
     return [...acc, {
       tradeIndex: index + 1,

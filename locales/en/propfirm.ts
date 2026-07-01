@@ -10,6 +10,7 @@ export default {
             drawdown: 'Drawdown',
             remainingLoss: '${amount} remaining',
             drawdownBreached: 'Drawdown breached',
+            bursted: 'Bursted',
             maxLoss: 'Max Loss: ${amount}',
             needsConfiguration: 'Account needs to be configured',
             daysBeforeNextPayment: ' days before next payment',
@@ -166,6 +167,16 @@ export default {
             info: 'The date when the account balance will be reset',
             shouldConsiderTradesBeforeReset: 'Include trades before reset date',
             shouldConsiderTradesBeforeResetTooltip: 'When enabled, trades before the reset date will be included in calculations and charts. When disabled, only trades after the reset date will be considered.'
+        },
+        bursted: {
+            promptTitle: 'Account breached with continued trading',
+            promptDescription:
+                'Account {accountNumber} breached its drawdown on {breachDate}, but later trades were imported. Did you reset this account?',
+            resetDateLabel: 'Reset date for the new evaluation',
+            pickResetDate: 'Pick a reset date',
+            confirmReset: 'Yes, set reset date',
+            markBursted: 'No, mark as bursted',
+            dismiss: 'Ask me later',
         },
         noResetDate: 'No reset date',
         resetDateDescription: 'The date when the account balance will be reset',

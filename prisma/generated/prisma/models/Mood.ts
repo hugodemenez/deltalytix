@@ -226,7 +226,7 @@ export type MoodGroupByOutputType = {
   _max: MoodMaxAggregateOutputType | null
 }
 
-type GetMoodGroupByPayload<T extends MoodGroupByArgs> = Prisma.PrismaPromise<
+export type GetMoodGroupByPayload<T extends MoodGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<MoodGroupByOutputType, T['by']> &
       {
@@ -1383,6 +1383,11 @@ export type MoodFindManyArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
    * Skip the first `n` Moods.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of Moods.
+   */
   distinct?: Prisma.MoodScalarFieldEnum | Prisma.MoodScalarFieldEnum[]
 }
 

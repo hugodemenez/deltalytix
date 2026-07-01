@@ -10,6 +10,7 @@ export default {
             drawdown: 'Perte maximale',
             remainingLoss: '${amount} restant',
             drawdownBreached: 'Perte maximale dépassée',
+            bursted: 'Compte éclaté',
             maxLoss: 'Perte max : ${amount}',
             needsConfiguration: 'Le compte doit être configuré',
             daysBeforeNextPayment: ' jours avant le prochain paiement',
@@ -166,6 +167,16 @@ export default {
             info: 'La date à laquelle le solde du compte sera réinitialisé',
             shouldConsiderTradesBeforeReset: 'Inclure les trades avant la date de réinitialisation',
             shouldConsiderTradesBeforeResetTooltip: 'Quand activé, les trades avant la date de réinitialisation seront inclus dans les calculs et graphiques. Quand désactivé, seuls les trades après la date de réinitialisation seront pris en compte.'
+        },
+        bursted: {
+            promptTitle: 'Compte en breach avec trades ultérieurs',
+            promptDescription:
+                'Le compte {accountNumber} a dépassé son drawdown le {breachDate}, mais des trades plus récents ont été importés. Avez-vous réinitialisé ce compte ?',
+            resetDateLabel: 'Date de réinitialisation pour la nouvelle évaluation',
+            pickResetDate: 'Choisir une date de réinitialisation',
+            confirmReset: 'Oui, définir la date de réinitialisation',
+            markBursted: 'Non, marquer comme éclaté',
+            dismiss: 'Me le redemander plus tard',
         },
         noResetDate: 'Pas de date de réinitialisation',
         resetDateDescription: 'La date à laquelle le solde du compte sera réinitialisé',
