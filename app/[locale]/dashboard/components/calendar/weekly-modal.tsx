@@ -80,7 +80,7 @@ export function WeeklyModal({
             <TabsTrigger value="charts">{t('calendar.modal.charts')}</TabsTrigger>
           </TabsList>
           <TabsContent value="charts" className="grow overflow-auto p-6 pt-2">
-            <Charts dayData={weeklyData} isWeekly={true} />
+            <Charts dayData={weeklyData} isWeekly={true} isLoading={isLoading} />
           </TabsContent>
         </Tabs>
       </DialogContent>
