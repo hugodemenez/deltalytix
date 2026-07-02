@@ -1,6 +1,7 @@
 type ReferralOgCopy = {
   joinLabel: string;
   tagline: string;
+  cta: string;
   alt: string;
 };
 

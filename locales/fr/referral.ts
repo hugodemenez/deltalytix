@@ -19,7 +19,8 @@ export default {
     og: {
       joinLabel: 'Rejoignez avec un code de parrainage',
       tagline: 'Journal de trading nouvelle génération',
-      alt: 'Parrainage Deltalytix',
+      cta: 'Inscrivez-vous avec le code →',
+      alt: 'Parrainage Deltalytix — Inscrivez-vous avec le code',
     },
     landing: {
       title: 'Programme de Parrainage',

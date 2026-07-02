@@ -4,6 +4,7 @@ import { getShared } from "@/server/shared"
 import { SharedPageClient } from "./shared-page-client"
 import { getRequestOrigin, siteUrl } from "@/lib/site-url"
 import { headers } from "next/headers"
+import { truncateForSocialDescription } from "@/lib/og/site-metadata"
 
 interface SharedPageProps {
   params: Promise<{
@@ -24,10 +25,11 @@ export async function generateMetadata({ params }: SharedPageProps): Promise<Met
     console.error("Error loading shared metadata:", error)
   }
 
-  const title = sharedData?.params.title || "Shared Trading Performance"
-  const description =
+  const title = sharedData?.params.title || "Shared Trading Performance | Deltalytix"
+  const description = truncateForSocialDescription(
     sharedData?.params.description ||
-    "View this shared Deltalytix trading performance dashboard."
+      "View this shared Deltalytix trading performance dashboard.",
+  )
   const url = siteUrl(`/${locale}/shared/${slug}`, origin)
 
   return {
