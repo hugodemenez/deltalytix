@@ -14,12 +14,21 @@ import {
   ChartContainer,
 } from "@/components/ui/chart"
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
+import {
+  BarChartLoadingSkeleton,
+  ComposedChartLoadingSkeleton,
+  LOADING_MOCK_CALENDAR_DISTRIBUTION,
+  LOADING_MOCK_CALENDAR_EQUITY,
+} from "@/app/[locale]/dashboard/components/charts/chart-loading-skeleton"
 import { useTheme } from "@/context/theme-provider"
+import { useData } from "@/context/data-provider"
 import { useI18n, useCurrentLocale } from '@/locales/client'
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface ChartsProps {
   dayData: CalendarEntry | undefined;
   isWeekly?: boolean;
+  isLoading?: boolean;
 }
 
 const chartConfig = {
@@ -38,11 +47,13 @@ const formatCurrency = (value: number | undefined | null) => {
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-export function Charts({ dayData, isWeekly = false }: ChartsProps) {
+export function Charts({ dayData, isWeekly = false, isLoading }: ChartsProps) {
   const { effectiveTheme } = useTheme()
   const isDarkMode = effectiveTheme === 'dark'
   const t = useI18n()
   const locale = useCurrentLocale()
+  const { isLoading: globalIsLoading } = useData()
+  const showLoading = isLoading || (globalIsLoading && dayData === undefined)
   
   // Calculate data for charts
   const { accountPnL, equityChartData, chartData, totalPnL, calculateCommonDomain } = React.useMemo(() => {
@@ -124,6 +135,51 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
       calculateCommonDomain
     };
   }, [dayData?.trades, locale]);
+
+  if (showLoading) {
+    return (
+      <div className="space-y-4">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="text-base md:text-lg">
+              {isWeekly ? t('calendar.charts.weeklyEquityVariation') : t('calendar.charts.equityVariation')}
+            </CardTitle>
+            <CardDescription className="text-xs md:text-sm">
+              <Skeleton className="h-4 w-36" />
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="h-[200px] md:h-[250px]">
+            <ComposedChartLoadingSkeleton
+              data={LOADING_MOCK_CALENDAR_EQUITY}
+              xDataKey="time"
+              barDataKey="pnl"
+              lineDataKey="balance"
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="text-base md:text-lg">
+              {isWeekly ? t('calendar.charts.weeklyPnlDistribution') : t('calendar.charts.dailyPnlDistribution')}
+            </CardTitle>
+            <CardDescription className="text-xs md:text-sm">
+              <Skeleton className="h-4 w-44" />
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="h-[250px] md:h-[300px] pb-8 md:pb-16">
+            <BarChartLoadingSkeleton
+              data={LOADING_MOCK_CALENDAR_DISTRIBUTION}
+              xDataKey="name"
+              yDataKey="value"
+              showReferenceLine={true}
+              marginVariant="calendar"
+            />
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   if (!dayData?.trades?.length) {
     return (

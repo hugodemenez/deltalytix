@@ -26,6 +26,10 @@ import {
 import { useI18n } from "@/locales/client";
 import { Button } from "@/components/ui/button";
 import { useTickDetailsStore } from "@/store/tick-details-store";
+import {
+  BarChartLoadingSkeleton,
+  LOADING_MOCK_TICKS,
+} from "./chart-loading-skeleton";
 
 interface TickDistributionProps {
   size?: WidgetSize;
@@ -97,7 +101,8 @@ const formatCount = (value: number) => {
 export default function TickDistributionChart({
   size = "medium",
 }: TickDistributionProps) {
-  const { formattedTrades: trades, tickFilter, setTickFilter } = useData();
+  const { formattedTrades: trades, tickFilter, setTickFilter, isLoading } =
+    useData();
   const tickDetails = useTickDetailsStore((state) => state.tickDetails);
   const t = useI18n();
 
@@ -201,6 +206,20 @@ export default function TickDistributionChart({
         )}
       >
         <div className={cn("w-full h-full")}>
+          {isLoading ? (
+            <BarChartLoadingSkeleton
+              size={size}
+              data={LOADING_MOCK_TICKS}
+              xDataKey="ticks"
+              yDataKey="count"
+              yAxisWidth={45}
+              showReferenceLine={false}
+              domain={[
+                0,
+                Math.max(...LOADING_MOCK_TICKS.map((d) => d.count)) * 1.1,
+              ]}
+            />
+          ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
@@ -287,6 +306,7 @@ export default function TickDistributionChart({
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          )}
         </div>
       </CardContent>
     </Card>

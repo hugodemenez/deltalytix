@@ -50,6 +50,10 @@ import { useEquityChartStore } from "@/store/widgets/equity-chart-store";
 import { useEquityChartDataStore } from "@/store/widgets/equity-chart-data-store";
 import { Payout as PrismaPayout } from "@/prisma/generated/prisma/browser";
 import { AccountSelectionPopover } from "./account-selection-popover";
+import {
+  LineChartLoadingSkeleton,
+  LOADING_MOCK_EQUITY,
+} from "./chart-loading-skeleton";
 import { usePathname } from "next/navigation";
 
 interface EquityChartProps {
@@ -948,11 +952,13 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
         <div className="w-full h-full flex flex-col">
           <div className="flex-1 min-h-0">
             {isLoading ? (
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="text-muted-foreground text-sm">
-                  {t("equity.loading")}
-                </div>
-              </div>
+              <LineChartLoadingSkeleton
+                size={size}
+                data={LOADING_MOCK_EQUITY}
+                xDataKey="date"
+                yDataKey="equity"
+                showReferenceLine={true}
+              />
             ) : (
               <ChartContainer config={chartConfig} className="w-full h-full">
                 <ResponsiveContainer width="100%" height="100%">
