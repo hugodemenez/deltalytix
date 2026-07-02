@@ -772,7 +772,7 @@ export default function WidgetCanvas() {
 
     return (
       <div
-        className="flex h-full min-h-0 flex-col"
+        className={cn("h-full", forCarousel && "flex min-h-0 flex-col")}
         data-widget-id={widget.i}
         data-widget-type={widget.type}
         data-widget-category={widgetConfig?.category ?? "other"}
@@ -784,7 +784,7 @@ export default function WidgetCanvas() {
           size={widget.size}
           currentType={widget.type}
         >
-          <div className={forCarousel ? "h-full min-h-0" : undefined}>
+          <div className="h-full min-h-0">
             {renderWidget(widget, forCarousel)}
           </div>
         </WidgetWrapper>
