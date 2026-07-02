@@ -28,6 +28,10 @@ import { useI18n } from "@/locales/client";
 import { formatInTimeZone } from "date-fns-tz";
 import { Button } from "@/components/ui/button";
 import { useUserStore } from "../../../../../store/user-store";
+import {
+  BarChartLoadingSkeleton,
+  LOADING_MOCK_HOURLY,
+} from "./chart-loading-skeleton";
 
 interface TimeOfDayTradeChartProps {
   size?: WidgetSize;
@@ -46,7 +50,12 @@ const formatCurrency = (value: number) =>
 export default function TimeOfDayTradeChart({
   size = "medium",
 }: TimeOfDayTradeChartProps) {
-  const { formattedTrades: trades, hourFilter, setHourFilter } = useData();
+  const {
+    formattedTrades: trades,
+    hourFilter,
+    setHourFilter,
+    isLoading,
+  } = useData();
   const timezone = useUserStore((state) => state.timezone);
   const [activeHour, setActiveHour] = React.useState<number | null>(null);
   const t = useI18n();
@@ -194,6 +203,17 @@ export default function TimeOfDayTradeChart({
         )}
       >
         <div className="w-full h-full cursor-pointer" onClick={handleClick}>
+          {isLoading ? (
+            <BarChartLoadingSkeleton
+              size={size}
+              data={LOADING_MOCK_HOURLY}
+              xDataKey="hour"
+              yDataKey="avgPnl"
+              marginVariant="hourly"
+              yAxisWidth={45}
+              xTickCount={8}
+            />
+          ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
@@ -266,6 +286,7 @@ export default function TimeOfDayTradeChart({
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -23,6 +23,10 @@ import { Trade } from "@/prisma/generated/prisma/browser";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
 import { formatInTimeZone } from "date-fns-tz";
+import {
+  BarChartLoadingSkeleton,
+  LOADING_MOCK_HOURLY_QUANTITY,
+} from "./chart-loading-skeleton";
 
 interface ContractQuantityChartProps {
   size?: WidgetSize;
@@ -38,7 +42,7 @@ const chartConfig = {
 export default function ContractQuantityChart({
   size = "medium",
 }: ContractQuantityChartProps) {
-  const { formattedTrades: trades } = useData();
+  const { formattedTrades: trades, isLoading } = useData();
   const t = useI18n();
 
   const chartData = React.useMemo(() => {
@@ -100,6 +104,19 @@ export default function ContractQuantityChart({
         <CardDescription>{t("contracts.description")}</CardDescription>
       </CardHeader>
       <CardContent className="px-2 sm:p-6">
+        {isLoading ? (
+          <div className="aspect-auto h-[350px] w-full">
+            <BarChartLoadingSkeleton
+              size={size}
+              data={LOADING_MOCK_HOURLY_QUANTITY}
+              xDataKey="hour"
+              yDataKey="totalQuantity"
+              marginVariant="hourly"
+              yAxisWidth={45}
+              xTickCount={8}
+            />
+          </div>
+        ) : (
         <ChartContainer
           config={chartConfig}
           className="aspect-auto h-[350px] w-full"
@@ -150,6 +167,7 @@ export default function ContractQuantityChart({
             </Bar>
           </BarChart>
         </ChartContainer>
+        )}
       </CardContent>
     </Card>
   );

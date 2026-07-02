@@ -26,6 +26,10 @@ import {
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
 import { formatInTimeZone } from "date-fns-tz";
+import {
+  BarChartLoadingSkeleton,
+  LOADING_MOCK_HOURLY_TIME,
+} from "./chart-loading-skeleton";
 
 interface TimeInPositionChartProps {
   size?: WidgetSize;
@@ -50,7 +54,7 @@ const formatTime = (minutes: number) => {
 export default function TimeInPositionChart({
   size = "medium",
 }: TimeInPositionChartProps) {
-  const { formattedTrades: trades } = useData();
+  const { formattedTrades: trades, isLoading } = useData();
   const t = useI18n();
 
   const chartData = React.useMemo(() => {
@@ -169,6 +173,17 @@ export default function TimeInPositionChart({
         )}
       >
         <div className={cn("w-full h-full")}>
+          {isLoading ? (
+            <BarChartLoadingSkeleton
+              size={size}
+              data={LOADING_MOCK_HOURLY_TIME}
+              xDataKey="hour"
+              yDataKey="avgTimeInPosition"
+              marginVariant="hourly"
+              yAxisWidth={45}
+              xTickCount={8}
+            />
+          ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
@@ -232,6 +247,7 @@ export default function TimeInPositionChart({
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          )}
         </div>
       </CardContent>
     </Card>
