@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: SharedPageProps): Promise<Met
     console.error("Error loading shared metadata:", error)
   }
 
-  const title = sharedData?.params.title || "Shared Trading Performance | Deltalytix"
+  const title = sharedData?.params.title || "Shared Trading Performance"
   const description = truncateForSocialDescription(
     sharedData?.params.description ||
       "View this shared Deltalytix trading performance dashboard.",
