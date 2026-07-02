@@ -20,6 +20,7 @@ import { useAutoScroll } from '../../../../hooks/use-auto-scroll'
 import { cn } from '@/lib/utils'
 import { Widget, WidgetType, WidgetSize, LayoutItem } from '../types/dashboard'
 import { Toolbar } from './toolbar'
+import { MobileWidgetCarousel } from './mobile-widget-carousel'
 import { useUserStore, DashboardLayoutWithWidgets } from '../../../../store/user-store'
 import { toast } from "sonner"
 import { defaultLayouts } from "@/lib/default-layouts"
@@ -73,7 +74,36 @@ const sizeToGrid = (size: WidgetSize, isSmallScreen = false): { w: number, h: nu
   }
 }
 
-// Add a function to get grid dimensions based on widget type and size
+// Pick the largest allowed size so widgets fill the carousel slide.
+function getCarouselWidgetSize(
+  config: (typeof WIDGET_REGISTRY)[keyof typeof WIDGET_REGISTRY],
+  widget: Widget
+): WidgetSize {
+  if (config.requiresFullWidth) {
+    return config.defaultSize
+  }
+  if (config.allowedSizes.length === 1) {
+    return config.allowedSizes[0]
+  }
+
+  const preferredOrder: WidgetSize[] = [
+    'extra-large',
+    'large',
+    'medium',
+    'small-long',
+    'small',
+    'tiny',
+  ]
+
+  for (const size of preferredOrder) {
+    if (config.allowedSizes.includes(size)) {
+      return size
+    }
+  }
+
+  return widget.size as WidgetSize
+}
+
 const getWidgetGrid = (type: WidgetType, size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
   const config = WIDGET_REGISTRY[type]
   if (!config) {
@@ -155,14 +185,6 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
     setIsSizePopoverOpen(false)
   }
 
-  // Add touch event handlers for mobile
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (isCustomizing) {
-      // Prevent default touch behavior when customizing
-      e.preventDefault()
-    }
-  }
-
   const isValidSize = (widgetType: WidgetType, size: WidgetSize) => {
     const config = WIDGET_REGISTRY[widgetType]
     if (!config) return true // Allow any size for deprecated widgets
@@ -174,19 +196,17 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
     return config.allowedSizes.includes(size)
   }
 
+  const showDesktopCustomizeUi = isCustomizing && !isMobile
+
   return (
     <div 
       ref={widgetRef}
       className="relative h-full w-full rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group isolate animate-[fadeIn_1.5s_ease-in-out] overflow-clip"
-      onTouchStart={handleTouchStart}
     >
-      <div className={cn("h-full w-full", 
-        isCustomizing && "group-hover:blur-[2px]",
-        isCustomizing && isMobile && "blur-[2px]"
-      )}>
+      <div className={cn("h-full w-full", showDesktopCustomizeUi && "group-hover:blur-[2px]")}>
         {children}
       </div>
-      {isCustomizing && (
+      {showDesktopCustomizeUi && (
         <>
           <div className="absolute inset-0 border-2 border-dashed border-transparent group-hover:border-accent group-focus-within:border-accent transition-colors duration-200" />
           <div className="absolute inset-0 bg-background/50 dark:bg-background/70 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200" />
@@ -374,11 +394,12 @@ function getWidgetDimensions(widget: Widget, isMobile: boolean) {
 type WidgetDimensions = { w: number; h: number; width: string; height: string }
 
 export default function WidgetCanvas() {
-  const { isMobile, dashboardLayout:layouts, setDashboardLayout:setLayouts } = useUserStore(state => state)
-  const  user = useUserStore(state => state.user)
-  const { saveDashboardLayout } = useData()
+  const { dashboardLayout: layouts, setDashboardLayout: setLayouts } = useUserStore(state => state)
+  const user = useUserStore(state => state.user)
+  const { isMobile, saveDashboardLayout } = useData()
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [isUserAction, setIsUserAction] = useState(false)
+  const [mobileActiveWidget, setMobileActiveWidget] = useState<Widget | null>(null)
   const t = useI18n()
 
   // Add this state to track if the layout change is from user interaction
@@ -701,8 +722,14 @@ export default function WidgetCanvas() {
     })
   }, [user?.id, layouts, setLayouts, saveDashboardLayout, t, toast])
 
+  const handleMobileActiveWidgetChange = useCallback((widget: Widget | null) => {
+    setMobileActiveWidget(widget)
+  }, [])
+
+  const useMobileCarousel = isMobile
+
   // Define renderWidget with all dependencies
-  const renderWidget = useCallback((widget: Widget) => {
+  const renderWidget = useCallback((widget: Widget, forCarousel = false) => {
     // Ensure widget.type is a valid WidgetType
     if (!Object.keys(WIDGET_REGISTRY).includes(widget.type)) {
       return (
@@ -712,8 +739,10 @@ export default function WidgetCanvas() {
 
     const config = WIDGET_REGISTRY[widget.type as keyof typeof WIDGET_REGISTRY]
 
-    // For charts, ensure size is at least small-long
     const effectiveSize = (() => {
+      if (forCarousel) {
+        return getCarouselWidgetSize(config, widget)
+      }
       if (config.requiresFullWidth) {
         return config.defaultSize
       }
@@ -730,18 +759,43 @@ export default function WidgetCanvas() {
   }, [isMobile, removeWidget]);
 
   useEffect(() => {
-    if (isCustomizing) {
+    if (isCustomizing && !isMobile) {
       document.addEventListener('click', handleOutsideClick)
       return () => document.removeEventListener('click', handleOutsideClick)
     }
-  }, [isCustomizing, handleOutsideClick]);
+  }, [isCustomizing, isMobile, handleOutsideClick]);
 
-  // Add auto-scroll functionality for mobile
-  useAutoScroll(isMobile && isCustomizing)
+  useAutoScroll(!isMobile && isCustomizing)
+
+  const renderWidgetCard = useCallback((widget: Widget, forCarousel = false) => {
+    const widgetConfig = WIDGET_REGISTRY[widget.type as WidgetType]
+
+    return (
+      <div
+        className={cn("h-full", forCarousel && "flex min-h-0 flex-col")}
+        data-widget-id={widget.i}
+        data-widget-type={widget.type}
+        data-widget-category={widgetConfig?.category ?? "other"}
+      >
+        <WidgetWrapper
+          onRemove={() => removeWidget(widget.i)}
+          onChangeSize={(size) => changeWidgetSize(widget.i, size)}
+          isCustomizing={isCustomizing}
+          size={widget.size}
+          currentType={widget.type}
+        >
+          <div className="h-full min-h-0">
+            {renderWidget(widget, forCarousel)}
+          </div>
+        </WidgetWrapper>
+      </div>
+    )
+  }, [changeWidgetSize, isCustomizing, removeWidget, renderWidget])
 
   return (
     <div className={cn(
-      "relative mt-6 pb-16 w-full min-h-screen",
+      "relative w-full",
+      useMobileCarousel ? "mt-0 h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem))] overflow-hidden" : "mt-6 pb-16 min-h-screen",
     )}>
       <Toolbar 
         onAddWidget={addWidget}
@@ -752,54 +806,55 @@ export default function WidgetCanvas() {
         currentLayout={layouts || { desktop: [], mobile: [] }}
         onRemoveAll={removeAllWidgets}
         onRestoreDefaults={restoreDefaultLayout}
+        mobileActiveWidget={mobileActiveWidget}
+        onRemoveWidget={removeWidget}
       />
       {layouts && (
         <div className="relative">
           <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-9999" />
-          <ResponsiveGridLayout
-            layouts={responsiveLayout}
-            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-            cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
-            rowHeight={isMobile ? 65 : 70}
-            isDraggable={isCustomizing}
-            isResizable={false}
-            draggableHandle=".drag-handle"
-            onDragStart={() => setIsUserAction(true)}
-            onLayoutChange={handleLayoutChange}
-            margin={[16, 16]}
-            containerPadding={[0, 0]}
-            useCSSTransforms={true}
-          >
-            {currentLayout.map((widget) => {
-              const dimensions = widgetDimensions[widget.i]
-              const widgetConfig = WIDGET_REGISTRY[widget.type as WidgetType]
-              
-              return (
-                <div 
-                  key={widget.i} 
-                  className="h-full" 
-                  data-customizing={isCustomizing}
-                  data-widget-id={widget.i}
-                  data-widget-type={widget.type}
-                  data-widget-category={widgetConfig?.category ?? "other"}
-                  style={{
-                    width: dimensions.width,
-                    height: dimensions.height
-                  }}
-                >
-                  <WidgetWrapper
-                    onRemove={() => removeWidget(widget.i)}
-                    onChangeSize={(size) => changeWidgetSize(widget.i, size)}
-                    isCustomizing={isCustomizing}
-                    size={widget.size}
-                    currentType={widget.type}
+          {useMobileCarousel ? (
+            <MobileWidgetCarousel
+              widgets={currentLayout}
+              renderWidget={(widget) => renderWidgetCard(widget, true)}
+              onActiveWidgetChange={handleMobileActiveWidgetChange}
+            />
+          ) : (
+            <ResponsiveGridLayout
+              layouts={responsiveLayout}
+              breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+              cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
+              rowHeight={isMobile ? 65 : 70}
+              isDraggable={isCustomizing}
+              isResizable={false}
+              draggableHandle=".drag-handle"
+              onDragStart={() => setIsUserAction(true)}
+              onLayoutChange={handleLayoutChange}
+              margin={[16, 16]}
+              containerPadding={[0, 0]}
+              useCSSTransforms={true}
+            >
+              {currentLayout.map((widget) => {
+                const dimensions = widgetDimensions[widget.i]
+
+                return (
+                  <div
+                    key={widget.i}
+                    className="h-full"
+                    data-customizing={isCustomizing}
+                    data-widget-id={widget.i}
+                    data-widget-type={widget.type}
+                    data-widget-category={WIDGET_REGISTRY[widget.type as WidgetType]?.category ?? "other"}
+                    style={{
+                      width: dimensions.width,
+                      height: dimensions.height
+                    }}
                   >
-                    {renderWidget(widget)}
-                  </WidgetWrapper>
-                </div>
-              )
-            })}
-          </ResponsiveGridLayout>
+                    {renderWidgetCard(widget)}
+                  </div>
+                )
+              })}
+            </ResponsiveGridLayout>
+          )}
         </div>
       )}
     </div>
