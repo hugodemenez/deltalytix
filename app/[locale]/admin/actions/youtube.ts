@@ -60,7 +60,7 @@ export async function fetchTranscriptServer(videoId: string): Promise<string | n
     console.error('Error fetching YouTube transcript:', error)
     return null
   }
-} 
+}
 
 export async function getLatestVideoFromPlaylist(): Promise<string | null> {
   try {
@@ -68,7 +68,6 @@ export async function getLatestVideoFromPlaylist(): Promise<string | null> {
     const apiKey = process.env.YOUTUBE_API_KEY;
     
     if (!apiKey) {
-      console.error('YouTube API key not found in environment variables');
       return null;
     }
     
@@ -160,7 +159,6 @@ export async function getAllVideosFromPlaylistAction(): Promise<Map<string, Play
     const apiKey = process.env.YOUTUBE_API_KEY;
     
     if (!apiKey) {
-      console.error('YouTube API key not found in environment variables');
       return null;
     }
     
@@ -237,4 +235,4 @@ export async function findVideoIdForPostDateAction(postDate: string): Promise<st
     console.error('Error finding video for post date:', error);
     return null;
   }
-} 
+}

@@ -1,7 +1,7 @@
-import { getPost } from "@/lib/mdx";
+import { getAllPostMetadata, getPost, getPostMetadata } from "@/lib/mdx";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
-import { getAllPosts, getAdjacentPosts } from "@/lib/mdx";
+import { getAdjacentPosts } from "@/lib/mdx";
 import { Badge } from "@/components/ui/badge";
 import { enUS, fr } from "date-fns/locale";
 import { formatDateOnly } from "@/lib/format-date-only";
@@ -39,7 +39,7 @@ export async function generateStaticParams() {
   const paths: Array<{ locale: string; slug: string }> = [];
 
   for (const locale of locales) {
-    const posts = await getAllPosts(locale);
+    const posts = await getAllPostMetadata(locale);
     paths.push(
       ...posts.map((post) => ({
         locale,
@@ -67,7 +67,7 @@ export async function generateMetadata({
     setStaticParamsLocale(locale);
 
     try {
-      const post = await getPost(slug, locale);
+      const post = await getPostMetadata(slug, locale);
       if (!post)
         return {
           title: "Not Found",

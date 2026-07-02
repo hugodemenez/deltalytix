@@ -18,7 +18,13 @@ export const getPostBySlug = cache(async function(
 
   // For French locale and completed posts, try to find matching YouTube video
   let youtubeVideoId = data.youtubeVideoId;
-  if (locale === 'fr' && data.status === 'completed' && data.completedDate && !youtubeVideoId) {
+  if (
+    locale === 'fr' &&
+    data.status === 'completed' &&
+    data.completedDate &&
+    !youtubeVideoId &&
+    process.env.YOUTUBE_API_KEY
+  ) {
     try {
       youtubeVideoId = await findVideoIdForPostDateAction(data.completedDate);
     } catch (error) {
@@ -78,4 +84,4 @@ export async function generateStaticParams() {
   }
 
   return paths
-} 
+}
