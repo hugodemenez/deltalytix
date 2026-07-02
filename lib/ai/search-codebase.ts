@@ -2,8 +2,6 @@ import type { Dirent } from "node:fs";
 import { access, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
-const REPO_ROOT = process.cwd();
-
 /** Product documentation and user-facing copy only — not full locale aggregates. */
 const CONTENT_ROOT = "content" as const;
 
@@ -98,6 +96,10 @@ function normalizeSnippet(text: string): string {
   return text.replace(/\s+/g, " ").trim().slice(0, MAX_SNIPPET_CHARS);
 }
 
+function repoPath(...segments: string[]): string {
+  return path.join(/*turbopackIgnore: true*/ process.cwd(), ...segments);
+}
+
 function localeContentPath(locale?: string): string | undefined {
   if (locale === "en" || locale === "fr") {
     return path.join(CONTENT_ROOT, "updates", locale);
@@ -188,7 +190,7 @@ async function searchFile(
 ): Promise<void> {
   if (matches.length >= MAX_RESULTS || terms.length === 0) return;
 
-  const absolutePath = path.join(REPO_ROOT, relativePath);
+  const absolutePath = repoPath(relativePath);
 
   let content: string;
   try {
@@ -232,7 +234,7 @@ async function searchFiles(
   async function walk(dir: string): Promise<void> {
     if (matches.length >= MAX_RESULTS) return;
 
-    const absoluteDir = path.join(REPO_ROOT, dir);
+    const absoluteDir = repoPath(dir);
     if (!(await fileExists(absoluteDir))) return;
 
     let entries: Dirent[];
@@ -268,7 +270,7 @@ async function searchFiles(
   for (const searchPath of searchPaths) {
     if (matches.length >= MAX_RESULTS) break;
 
-    const absolutePath = path.join(REPO_ROOT, searchPath);
+    const absolutePath = repoPath(searchPath);
 
     try {
       const fileStat = await stat(absolutePath);
@@ -294,14 +296,14 @@ async function runSearch(
 ): Promise<CodebaseSearchMatch[]> {
   const existingPaths: string[] = [];
   for (const searchPath of searchPaths) {
-    if (await fileExists(path.join(REPO_ROOT, searchPath))) {
+    if (await fileExists(repoPath(searchPath))) {
       existingPaths.push(searchPath);
     }
   }
 
   if (existingPaths.length === 0) {
     console.warn("[searchCodebase] No searchable paths found", {
-      cwd: REPO_ROOT,
+      cwd: repoPath(),
       requestedPaths: searchPaths,
     });
     return [];
