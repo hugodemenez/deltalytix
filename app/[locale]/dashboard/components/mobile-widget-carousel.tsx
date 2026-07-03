@@ -13,6 +13,7 @@ interface MobileWidgetCarouselProps {
   renderWidget: (widget: Widget) => React.ReactNode
   className?: string
   onActiveWidgetChange?: (widget: Widget | null) => void
+  slideHeight?: string
 }
 
 function sortWidgetsForCarousel(widgets: Widget[]): Widget[] {
@@ -27,6 +28,7 @@ export function MobileWidgetCarousel({
   renderWidget,
   className,
   onActiveWidgetChange,
+  slideHeight = MOBILE_CAROUSEL_HEIGHT,
 }: MobileWidgetCarouselProps) {
   const t = useI18n()
   const scrollerRef = useRef<HTMLDivElement>(null)
@@ -110,7 +112,7 @@ export function MobileWidgetCarousel({
   return (
     <div
       className={cn("relative w-full overflow-hidden", className)}
-      style={{ height: MOBILE_CAROUSEL_HEIGHT }}
+      style={{ height: slideHeight }}
     >
       <div className="flex h-full w-full">
         <div
@@ -129,7 +131,7 @@ export function MobileWidgetCarousel({
                 slideRefs.current[index] = el
               }}
               className="w-full shrink-0 snap-start snap-always"
-              style={{ height: MOBILE_CAROUSEL_HEIGHT, scrollSnapStop: "always" }}
+              style={{ height: slideHeight, scrollSnapStop: "always" }}
               role="tabpanel"
               aria-label={getWidgetDisplayName(t, widget.type)}
               aria-hidden={index !== currentIndex}
@@ -163,16 +165,22 @@ export function MobileWidgetCarousel({
                     total: sortedWidgets.length,
                     widgetName,
                   })}
-                  className="flex min-h-11 min-w-11 flex-1 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className={cn(
+                    "flex min-h-11 min-w-11 flex-1 items-center justify-center rounded-full transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    index === currentIndex
+                      ? "bg-primary/10"
+                      : "bg-muted/40 hover:bg-muted/60"
+                  )}
                   onClick={() => scrollToIndex(index)}
                 >
                   <span
                     aria-hidden
                     className={cn(
-                      "block min-h-2 flex-1 rounded-full transition-all",
+                      "block min-h-6 w-2 rounded-full transition-all",
                       index === currentIndex
-                        ? "w-[3px] bg-primary"
-                        : "w-0.5 bg-muted-foreground/35"
+                        ? "bg-primary"
+                        : "bg-muted-foreground/45"
                     )}
                   />
                 </button>

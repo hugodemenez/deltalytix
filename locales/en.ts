@@ -744,6 +744,11 @@ export default {
   "widgets.mobile.deleteWidgetNamed": "Delete {widgetName}",
   "widgets.mobile.carouselNavigation": "Widget navigation",
   "widgets.mobile.carouselGoTo": "Go to {widgetName} ({index} of {total})",
+  "widgets.shared.unavailableTitle": "Widget unavailable",
+  "widgets.shared.unavailableDescription":
+    "This widget type is not supported in shared dashboard views.",
+  "widgets.shared.unavailableHint":
+    "Ask the dashboard owner to update their layout if you expected to see it here.",
   "widgets.tags.title": "Tags",
   "widgets.tags.addTag": "Add Tag",
   "widgets.tags.editTag": "Edit Tag",

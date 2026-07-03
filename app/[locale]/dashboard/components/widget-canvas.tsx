@@ -194,6 +194,7 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
+                  aria-label={t('widgets.changeSize')}
                 >
                   <Maximize2 className="h-4 w-4" />
                 </Button>

@@ -751,6 +751,11 @@ export default {
   "widgets.mobile.deleteWidgetNamed": "Supprimer {widgetName}",
   "widgets.mobile.carouselNavigation": "Navigation des widgets",
   "widgets.mobile.carouselGoTo": "Aller à {widgetName} ({index} sur {total})",
+  "widgets.shared.unavailableTitle": "Widget indisponible",
+  "widgets.shared.unavailableDescription":
+    "Ce type de widget n'est pas pris en charge dans les tableaux de bord partagés.",
+  "widgets.shared.unavailableHint":
+    "Demandez au propriétaire du tableau de bord de mettre à jour sa disposition si vous vous attendiez à le voir ici.",
   "calendar.week": "Semaine",
   "calendar.weekdays.sun": "Dim",
   "calendar.weekdays.mon": "Lun",

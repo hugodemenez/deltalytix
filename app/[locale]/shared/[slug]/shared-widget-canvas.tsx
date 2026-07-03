@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useData } from '@/context/data-provider'
 import { useI18n } from '@/locales/client'
 import { defaultLayouts } from '@/lib/default-layouts'
-import { getCarouselWidgetSize, MOBILE_CAROUSEL_HEIGHT } from '@/lib/widget-carousel'
+import { getCarouselWidgetSize, MOBILE_CAROUSEL_VIEWPORT_HEIGHT } from '@/lib/widget-carousel'
 
 
 // Update sizeToGrid to handle responsive sizes (copy from widget-canvas.tsx)
@@ -87,11 +87,14 @@ function SharedUnsupportedWidget() {
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>{t('widgets.deprecated.title')}</CardTitle>
+        <CardTitle>{t('widgets.shared.unavailableTitle')}</CardTitle>
       </CardHeader>
-      <CardContent className="flex items-center justify-center">
-        <p className="text-muted-foreground text-center">
-          {t('widgets.deprecated.description')}
+      <CardContent className="flex flex-col items-center justify-center gap-2 px-4 text-center">
+        <p className="text-muted-foreground">
+          {t('widgets.shared.unavailableDescription')}
+        </p>
+        <p className="text-sm text-muted-foreground/80">
+          {t('widgets.shared.unavailableHint')}
         </p>
       </CardContent>
     </Card>
@@ -157,13 +160,14 @@ export function SharedWidgetCanvas() {
   return (
     <div
       className={isMobile ? "relative mt-0 overflow-hidden" : "relative mt-6"}
-      style={isMobile ? { height: MOBILE_CAROUSEL_HEIGHT } : undefined}
+      style={isMobile ? { height: MOBILE_CAROUSEL_VIEWPORT_HEIGHT } : undefined}
     >
       <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-9999" />
       {isMobile ? (
         <MobileWidgetCarousel
           widgets={transformedLayout}
           renderWidget={(widget) => renderWidgetCard(widget, true)}
+          slideHeight={MOBILE_CAROUSEL_VIEWPORT_HEIGHT}
         />
       ) : (
         <ResponsiveGridLayout

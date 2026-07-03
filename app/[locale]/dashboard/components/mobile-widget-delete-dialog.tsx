@@ -65,7 +65,7 @@ export function MobileWidgetDeleteDialog({
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
             <AlertDialogAction
-              className="w-full"
+              className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={!activeWidget}
               onClick={() => activeWidget && onRemoveWidget(activeWidget.i)}
             >
@@ -73,15 +73,15 @@ export function MobileWidgetDeleteDialog({
                 ? t("widgets.mobile.deleteWidgetNamed", { widgetName })
                 : t("widgets.removeWidget")}
             </AlertDialogAction>
+            <AlertDialogCancel className="w-full">{t("widgets.cancel")}</AlertDialogCancel>
             <Button
               type="button"
-              variant="destructive"
-              className="w-full"
+              variant="ghost"
+              className="w-full text-sm text-muted-foreground hover:text-destructive"
               onClick={() => setDeleteAllOpen(true)}
             >
               {t("widgets.deleteAll")}
             </Button>
-            <AlertDialogCancel className="w-full">{t("widgets.cancel")}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
