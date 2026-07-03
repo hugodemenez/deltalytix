@@ -103,6 +103,15 @@ function isPublicRoute(pathname: string) {
   return false
 }
 
+function hasSupabaseAuthCookies(request: NextRequest) {
+  return request.cookies
+    .getAll()
+    .some(
+      (cookie) =>
+        cookie.name.startsWith("sb-") && cookie.name.includes("-auth-token"),
+    )
+}
+
 function createUnauthenticatedSession(request: NextRequest) {
   const response = NextResponse.next({
     request: {
@@ -171,6 +180,11 @@ async function updateSession(request: NextRequest) {
     }
   }
 
+  // No Supabase session cookies — visitor cannot be authenticated; skip network call.
+  if (!hasSupabaseAuthCookies(request)) {
+    return createUnauthenticatedSession(request)
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -198,14 +212,33 @@ async function updateSession(request: NextRequest) {
   let error: unknown = null
 
   try {
-    // Add timeout to prevent hanging requests
-    const authPromise = supabase.auth.getUser()
-    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Auth timeout")), 5000))
+    const authPromise =
+      typeof supabase.auth.getClaims === "function"
+        ? supabase.auth.getClaims().then((result) => {
+            const claims = result.data?.claims
+            if (claims?.sub && !result.error) {
+              return {
+                data: {
+                  user: {
+                    id: claims.sub,
+                    email: claims.email,
+                  } as User,
+                },
+                error: result.error,
+              }
+            }
+            return { data: { user: null }, error: result.error }
+          })
+        : supabase.auth.getUser()
 
-    const result = await Promise.race([
-      authPromise,
-      timeoutPromise,
-    ]) as Awaited<ReturnType<typeof supabase.auth.getUser>>
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Auth timeout")), 3000),
+    )
+
+    const result = (await Promise.race([authPromise, timeoutPromise])) as {
+      data?: { user?: User | null }
+      error: unknown
+    }
     user = result.data?.user || null
     error = result.error
   } catch (authError: unknown) {
