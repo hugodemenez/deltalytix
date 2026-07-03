@@ -1,4 +1,5 @@
 {
+  "framework": "nextjs",
   "crons": [
     {
       "path": "/api/cron/investing?lang=fr&db=true",
