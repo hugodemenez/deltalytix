@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
+import { DonutChartLoadingSkeleton } from "./chart-loading-skeleton";
 
 interface CommissionsPnLChartProps {
   size?: WidgetSize;
@@ -46,7 +47,7 @@ const formatCurrency = (value: number) =>
 export default function CommissionsPnLChart({
   size = "medium",
 }: CommissionsPnLChartProps) {
-  const { formattedTrades: trades } = useData();
+  const { formattedTrades: trades, isLoading } = useData();
   const t = useI18n();
 
 
@@ -161,6 +162,9 @@ export default function CommissionsPnLChart({
         )}
       >
         <div className="w-full h-full">
+          {isLoading ? (
+            <DonutChartLoadingSkeleton size={size} />
+          ) : (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -234,6 +238,7 @@ export default function CommissionsPnLChart({
               />
             </PieChart>
           </ResponsiveContainer>
+          )}
         </div>
       </CardContent>
     </Card>
