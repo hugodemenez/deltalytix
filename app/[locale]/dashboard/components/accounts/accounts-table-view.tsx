@@ -214,6 +214,7 @@ function AccountsTableSection({
   )
   const isDrawdownBreached = (row: AccountRow) => {
     if (isGroupRow(row)) return false
+    if (row.bursted) return true
     const drawdownThreshold = row.drawdownThreshold ?? 0
     const remainingLoss = row.metrics?.remainingLoss
     return drawdownThreshold > 0 && remainingLoss !== undefined && remainingLoss <= 0
@@ -913,7 +914,9 @@ export function AccountsTableView({
                       : "text-destructive"
                 )}
               >
-                {remainingLoss > 0
+                {row.original.bursted
+                  ? t("propFirm.card.bursted")
+                  : remainingLoss > 0
                   ? t("propFirm.card.remainingLoss", {
                     amount: remainingLoss.toFixed(2),
                   })

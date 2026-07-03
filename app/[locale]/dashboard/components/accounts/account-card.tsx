@@ -25,12 +25,14 @@ export function AccountCard({ account, onClick, size = 'large' }: AccountCardPro
   const progress = metrics?.progress ?? 0
   const drawdownProgress = metrics?.drawdownProgress ?? 0
   const remainingLoss = metrics?.remainingLoss ?? 0
+  const isBursted = account.bursted === true
 
   return (
     <Card
       className={cn(
         "flex flex-col cursor-pointer hover:border-primary/50 transition-colors shadow-xs hover:shadow-md",
-        size === 'small' || size === 'small-long' ? "w-72" : "w-96"
+        size === 'small' || size === 'small-long' ? "w-72" : "w-96",
+        isBursted && "opacity-60"
       )}
       onClick={onClick}
     >
@@ -129,7 +131,9 @@ export function AccountCard({ account, onClick, size = 'large' }: AccountCardPro
                   remainingLoss > account.drawdownThreshold * 0.5 ? "text-success" :
                     remainingLoss > account.drawdownThreshold * 0.2 ? "text-warning" : "text-destructive"
                 )}>
-                  {remainingLoss > 0
+                  {isBursted
+                    ? t('propFirm.card.bursted')
+                    : remainingLoss > 0
                     ? t('propFirm.card.remainingLoss', { amount: remainingLoss.toFixed(2) })
                     : t('propFirm.card.drawdownBreached')}
                 </span>

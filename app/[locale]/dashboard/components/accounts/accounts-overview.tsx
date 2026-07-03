@@ -52,6 +52,7 @@ import { useParams } from 'next/navigation'
 import { AccountCard } from './account-card'
 import { AccountConfigurator } from './account-configurator'
 import { AccountsTableView } from './accounts-table-view'
+import { AccountBreachPrompt } from './account-breach-prompt'
 import { AlertDialogAction, AlertDialogCancel, AlertDialogFooter, AlertDialogDescription, AlertDialogTitle, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 import {
@@ -1153,7 +1154,11 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         minTradingDaysForPayout: pendingChanges?.minTradingDaysForPayout ?? selectedAccountForTable.minTradingDaysForPayout,
         groupId: 'groupId' in pendingChanges 
           ? (pendingChanges.groupId ?? null)
-          : (selectedAccountForTable.groupId ?? null)
+          : (selectedAccountForTable.groupId ?? null),
+        bursted: pendingChanges?.bursted ?? selectedAccountForTable.bursted ?? false,
+        breachDate: 'breachDate' in pendingChanges
+          ? (pendingChanges.breachDate instanceof Date ? pendingChanges.breachDate : null)
+          : selectedAccountForTable.breachDate ?? null,
       }
       await saveAccount(accountUpdate)
 
@@ -1177,6 +1182,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
 
 
   return (
+    <>
+      <AccountBreachPrompt accounts={accounts} trades={trades} saveAccount={saveAccount} />
     <Card className="w-full h-full min-w-0 flex flex-col">
       <CardHeader
         className={cn(
@@ -1731,5 +1738,6 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         isDeleting={isDeletingPayout}
       />
     </Card>
+    </>
   )
-} 
+}
