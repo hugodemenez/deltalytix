@@ -232,7 +232,7 @@ export type SharedGroupByOutputType = {
   _max: SharedMaxAggregateOutputType | null
 }
 
-export type GetSharedGroupByPayload<T extends SharedGroupByArgs> = Prisma.PrismaPromise<
+type GetSharedGroupByPayload<T extends SharedGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<SharedGroupByOutputType, T['by']> &
       {
@@ -1207,11 +1207,6 @@ export type SharedFindManyArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * Skip the first `n` Shareds.
    */
   skip?: number
-  /**
-   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-   * 
-   * Filter by unique combinations of Shareds.
-   */
   distinct?: Prisma.SharedScalarFieldEnum | Prisma.SharedScalarFieldEnum[]
 }
 

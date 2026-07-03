@@ -250,7 +250,7 @@ export type HistoricalDataGroupByOutputType = {
   _max: HistoricalDataMaxAggregateOutputType | null
 }
 
-export type GetHistoricalDataGroupByPayload<T extends HistoricalDataGroupByArgs> = Prisma.PrismaPromise<
+type GetHistoricalDataGroupByPayload<T extends HistoricalDataGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<HistoricalDataGroupByOutputType, T['by']> &
       {
@@ -1197,11 +1197,6 @@ export type HistoricalDataFindManyArgs<ExtArgs extends runtime.Types.Extensions.
    * Skip the first `n` HistoricalData.
    */
   skip?: number
-  /**
-   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-   * 
-   * Filter by unique combinations of HistoricalData.
-   */
   distinct?: Prisma.HistoricalDataScalarFieldEnum | Prisma.HistoricalDataScalarFieldEnum[]
 }
 

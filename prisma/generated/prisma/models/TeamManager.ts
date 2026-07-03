@@ -165,7 +165,7 @@ export type TeamManagerGroupByOutputType = {
   _max: TeamManagerMaxAggregateOutputType | null
 }
 
-export type GetTeamManagerGroupByPayload<T extends TeamManagerGroupByArgs> = Prisma.PrismaPromise<
+type GetTeamManagerGroupByPayload<T extends TeamManagerGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<TeamManagerGroupByOutputType, T['by']> &
       {
@@ -1163,11 +1163,6 @@ export type TeamManagerFindManyArgs<ExtArgs extends runtime.Types.Extensions.Int
    * Skip the first `n` TeamManagers.
    */
   skip?: number
-  /**
-   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-   * 
-   * Filter by unique combinations of TeamManagers.
-   */
   distinct?: Prisma.TeamManagerScalarFieldEnum | Prisma.TeamManagerScalarFieldEnum[]
 }
 

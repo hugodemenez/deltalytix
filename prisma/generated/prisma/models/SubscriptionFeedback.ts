@@ -165,7 +165,7 @@ export type SubscriptionFeedbackGroupByOutputType = {
   _max: SubscriptionFeedbackMaxAggregateOutputType | null
 }
 
-export type GetSubscriptionFeedbackGroupByPayload<T extends SubscriptionFeedbackGroupByArgs> = Prisma.PrismaPromise<
+type GetSubscriptionFeedbackGroupByPayload<T extends SubscriptionFeedbackGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<SubscriptionFeedbackGroupByOutputType, T['by']> &
       {
@@ -982,11 +982,6 @@ export type SubscriptionFeedbackFindManyArgs<ExtArgs extends runtime.Types.Exten
    * Skip the first `n` SubscriptionFeedbacks.
    */
   skip?: number
-  /**
-   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-   * 
-   * Filter by unique combinations of SubscriptionFeedbacks.
-   */
   distinct?: Prisma.SubscriptionFeedbackScalarFieldEnum | Prisma.SubscriptionFeedbackScalarFieldEnum[]
 }
 
