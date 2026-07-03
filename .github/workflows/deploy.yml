@@ -72,38 +72,14 @@ jobs:
           set_env RESEND_API_KEY "dummy"
           set_env STRIPE_SECRET_KEY "dummy"
 
-      - name: Pull env
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ env.VERCEL_PROJECT_ID }}
-        run: |
-          bunx vercel pull --yes --token "$VERCEL_TOKEN"
-
       - name: Push Prisma schema to Supabase
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: bunx prisma db push --accept-data-loss
 
-      - name: Generate Prisma client
-        env:
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: bunx prisma generate
-
-      - name: Build with Vercel CLI
+      - name: Deploy to Vercel (production)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ env.VERCEL_PROJECT_ID }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-          OPENAI_API_KEY: dummy
-          RESEND_API_KEY: dummy
-          STRIPE_SECRET_KEY: dummy
-        run: bunx vercel build --prod --token "$VERCEL_TOKEN"
-
-      - name: Deploy prebuilt to Vercel (production)
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ env.VERCEL_PROJECT_ID }}
-        run: bunx vercel deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN"
+        run: bunx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
