@@ -71,7 +71,7 @@ jobs:
           set_env RESEND_API_KEY "dummy"
           set_env STRIPE_SECRET_KEY "dummy"
 
-      - name: Pull env and build
+      - name: Pull env
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -89,17 +89,20 @@ jobs:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: bunx prisma generate
 
-      - name: Build
-        env:
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-          OPENAI_API_KEY: dummy
-          RESEND_API_KEY: dummy
-          STRIPE_SECRET_KEY: dummy
-        run: bun run build
-
-      - name: Deploy to Vercel (production)
+      - name: Build with Vercel CLI
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ env.VERCEL_PROJECT_ID }}
-        run: bunx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          OPENAI_API_KEY: dummy
+          RESEND_API_KEY: dummy
+          STRIPE_SECRET_KEY: dummy
+        run: bunx vercel build --prod --token "$VERCEL_TOKEN"
+
+      - name: Deploy prebuilt to Vercel (production)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ env.VERCEL_PROJECT_ID }}
+        run: bunx vercel deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN"
