@@ -16,15 +16,57 @@ export function detectPlatform(
   userAgent: string,
   platform: string,
   maxTouchPoints: number,
+  touchSupport = false,
+  uaPlatform?: string,
 ): Platform {
   const isIOS =
+    uaPlatform === "iOS" ||
     /iPad|iPhone|iPod/.test(userAgent) ||
-    (platform === "MacIntel" && maxTouchPoints > 1)
+    platform === "iPhone" ||
+    platform === "iPad" ||
+    platform === "iPod" ||
+    (platform === "MacIntel" && maxTouchPoints > 1) ||
+    (touchSupport && /Macintosh/.test(userAgent) && maxTouchPoints > 1)
 
   if (isIOS) return "ios"
-  if (/Android/i.test(userAgent)) return "android"
+
+  if (uaPlatform === "Android" || /Android/i.test(userAgent)) return "android"
+
   if (/Mac/.test(platform)) return "macos"
+
   return "desktop"
+}
+
+function resolveIOSMailboxTarget(domain: string): MailboxTarget {
+  if (domain === "gmail.com" || domain === "googlemail.com") {
+    return { primary: "googlegmail://", fallback: "message://" }
+  }
+
+  if (
+    domain.endsWith("outlook.com") ||
+    domain.endsWith("hotmail.com") ||
+    domain.endsWith("live.com") ||
+    domain.endsWith("msn.com") ||
+    domain.endsWith("office365.com") ||
+    domain.endsWith("outlook.fr") ||
+    domain.endsWith("outlook.de")
+  ) {
+    return { primary: "ms-outlook://", fallback: "message://" }
+  }
+
+  if (
+    domain.endsWith("proton.me") ||
+    domain.endsWith("protonmail.com") ||
+    domain.endsWith("pm.me")
+  ) {
+    return { primary: "protonmail://", fallback: "message://" }
+  }
+
+  if (domain.endsWith("yahoo.com") || domain.endsWith("yahoo.fr")) {
+    return { primary: "ymail://mail/", fallback: "message://" }
+  }
+
+  return { primary: "message://" }
 }
 
 export function resolveMailboxTarget(
@@ -34,8 +76,12 @@ export function resolveMailboxTarget(
   const domain = getEmailDomain(email)
   if (!domain) return null
 
-  const isMobileNative = platform === "ios" || platform === "android"
-  const opensNativeMail = platform === "ios" || platform === "macos"
+  if (platform === "ios") {
+    return resolveIOSMailboxTarget(domain)
+  }
+
+  const isMobileNative = platform === "android"
+  const opensNativeMail = platform === "macos"
 
   if (domain === "gmail.com" || domain === "googlemail.com") {
     if (isMobileNative) {
@@ -126,7 +172,7 @@ export function resolveMailboxTarget(
     }
   }
 
-  if (platform === "ios" || platform === "macos") {
+  if (platform === "macos") {
     return { primary: "message://" }
   }
 
@@ -149,31 +195,60 @@ function openUrl(url: string, newTab: boolean) {
   window.location.assign(url)
 }
 
+function openWithFallback(
+  primary: string,
+  fallback: string,
+  webFallbackInNewTab: boolean,
+) {
+  let leftPage = false
+  const markLeft = () => {
+    leftPage = true
+  }
+
+  window.addEventListener("pagehide", markLeft, { once: true })
+  window.addEventListener("blur", markLeft, { once: true })
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "hidden") {
+      markLeft()
+    }
+  }
+
+  document.addEventListener("visibilitychange", onVisibilityChange)
+  window.location.assign(primary)
+
+  window.setTimeout(() => {
+    document.removeEventListener("visibilitychange", onVisibilityChange)
+    if (!leftPage) {
+      openUrl(fallback, webFallbackInNewTab)
+    }
+  }, 1200)
+}
+
 export function openMailbox(email: string): MailboxOpenResult {
   if (typeof window === "undefined") return "manual-check"
+
+  const navigatorWithHints = navigator as Navigator & {
+    userAgentData?: { platform?: string }
+  }
 
   const platform = detectPlatform(
     navigator.userAgent,
     navigator.platform,
     navigator.maxTouchPoints,
+    "ontouchend" in document,
+    navigatorWithHints.userAgentData?.platform,
   )
   const target = resolveMailboxTarget(email, platform)
 
   if (!target) return "manual-check"
 
   if (target.fallback) {
-    const openedAt = Date.now()
-    openUrl(target.primary, false)
-
-    window.setTimeout(() => {
-      if (
-        document.visibilityState === "visible" &&
-        Date.now() - openedAt < 2000
-      ) {
-        openUrl(target.fallback!, Boolean(target.openInNewTab))
-      }
-    }, 750)
-
+    openWithFallback(
+      target.primary,
+      target.fallback,
+      Boolean(target.openInNewTab),
+    )
     return "opened"
   }
 

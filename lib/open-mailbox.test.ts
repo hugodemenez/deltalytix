@@ -1,5 +1,40 @@
 import { describe, expect, it } from "vitest"
-import { resolveMailboxTarget } from "./open-mailbox"
+import { detectPlatform, resolveMailboxTarget } from "./open-mailbox"
+
+describe("detectPlatform", () => {
+  it("detects iPhone Safari", () => {
+    expect(
+      detectPlatform(
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+        "iPhone",
+        5,
+      ),
+    ).toBe("ios")
+  })
+
+  it("detects iPad in desktop mode", () => {
+    expect(
+      detectPlatform(
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+        "MacIntel",
+        5,
+        true,
+      ),
+    ).toBe("ios")
+  })
+
+  it("detects iOS from userAgentData platform hint", () => {
+    expect(
+      detectPlatform(
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+        "MacIntel",
+        0,
+        false,
+        "iOS",
+      ),
+    ).toBe("ios")
+  })
+})
 
 describe("resolveMailboxTarget", () => {
   it("opens Apple Mail inbox on iOS for unknown domains", () => {
@@ -14,11 +49,17 @@ describe("resolveMailboxTarget", () => {
     })
   })
 
-  it("opens Gmail app with web fallback on iOS", () => {
+  it("opens Gmail app with Apple Mail fallback on iOS", () => {
     expect(resolveMailboxTarget("user@gmail.com", "ios")).toEqual({
       primary: "googlegmail://",
-      fallback: "https://mail.google.com/mail/u/0/#inbox",
-      openInNewTab: true,
+      fallback: "message://",
+    })
+  })
+
+  it("opens Proton app with Apple Mail fallback on iOS", () => {
+    expect(resolveMailboxTarget("user@proton.me", "ios")).toEqual({
+      primary: "protonmail://",
+      fallback: "message://",
     })
   })
 
