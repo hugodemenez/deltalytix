@@ -3,7 +3,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TradeTableReview } from "./components/tables/trade-table-review";
 import { AccountsOverview } from "./components/accounts/accounts-overview";
-import { AnalysisOverview } from "./components/analysis/analysis-overview";
 import WidgetCanvas from "./components/widget-canvas";
 import { useEffect, useRef } from "react";
 import { useI18n } from "@/locales/client";
@@ -147,9 +146,6 @@ export default function Home() {
             <TabsTrigger value="accounts">
               {t("dashboard.tabs.accounts")}
             </TabsTrigger>
-            <TabsTrigger value="analysis">
-              {t("dashboard.tabs.analysis")}
-            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -159,10 +155,6 @@ export default function Home() {
 
         <TabsContent value="accounts" className="h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem)-16px)] min-w-0 mt-0">
           <AccountsOverview size="large" />
-        </TabsContent>
-
-        <TabsContent value="analysis" className="h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem)-16px)] min-w-0 overflow-y-auto p-2 sm:p-4">
-          <AnalysisOverview />
         </TabsContent>
 
         <TabsContent value="widgets" className="min-w-0 overflow-hidden px-0 max-md:h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem))] sm:px-4">
