@@ -83,9 +83,13 @@ jobs:
         run: bunx prisma db push --accept-data-loss
 
       - name: Generate Prisma client
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: bunx prisma generate
 
       - name: Build
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: bun run build
 
       - name: Deploy to Vercel (production)
