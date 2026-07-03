@@ -742,6 +742,8 @@ export default {
   "widgets.mobile.deleteDialogDescription":
     "Choose which widgets to remove from your dashboard.",
   "widgets.mobile.deleteWidgetNamed": "Delete {widgetName}",
+  "widgets.mobile.carouselNavigation": "Widget navigation",
+  "widgets.mobile.carouselGoTo": "Go to {widgetName} ({index} of {total})",
   "widgets.tags.title": "Tags",
   "widgets.tags.addTag": "Add Tag",
   "widgets.tags.editTag": "Edit Tag",

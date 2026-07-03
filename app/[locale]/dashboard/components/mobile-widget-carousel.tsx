@@ -3,10 +3,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { useCarouselGestureLock } from "@/hooks/use-carousel-gesture-lock"
+import { useI18n } from "@/locales/client"
+import { getWidgetDisplayName } from "../lib/widget-display-name"
 import { Widget } from "../types/dashboard"
 
 const MOBILE_CAROUSEL_HEIGHT =
-  "calc(100dvh - var(--navbar-height, 5rem) - var(--tabs-height, 3rem))"
+  "calc(100dvh - var(--navbar-height, 5rem) - var(--tabs-height, 3rem) - var(--mobile-toolbar-top, 5.5rem))"
 
 interface MobileWidgetCarouselProps {
   widgets: Widget[]
@@ -28,6 +30,7 @@ export function MobileWidgetCarousel({
   className,
   onActiveWidgetChange,
 }: MobileWidgetCarouselProps) {
+  const t = useI18n()
   const scrollerRef = useRef<HTMLDivElement>(null)
   const slideRefs = useRef<(HTMLDivElement | null)[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -108,13 +111,17 @@ export function MobileWidgetCarousel({
           {sortedWidgets.map((widget, index) => (
             <div
               key={widget.i}
+              id={`mobile-widget-slide-${widget.i}`}
               ref={(el) => {
                 slideRefs.current[index] = el
               }}
               className="w-full shrink-0 snap-start snap-always"
               style={{ height: MOBILE_CAROUSEL_HEIGHT, scrollSnapStop: "always" }}
+              role="tabpanel"
+              aria-label={getWidgetDisplayName(t, widget.type)}
+              aria-hidden={index !== currentIndex}
             >
-              <div className="h-full w-full min-h-0 px-2 pb-24">
+              <div className="h-full w-full min-h-0 px-2 pb-2">
                 {renderWidget(widget)}
               </div>
             </div>
@@ -123,29 +130,41 @@ export function MobileWidgetCarousel({
 
         {sortedWidgets.length > 1 && (
           <div
-            className="flex h-full w-2.5 shrink-0 flex-col items-center gap-1 py-4 pr-0.5"
-            role="scrollbar"
+            className="flex h-full w-11 shrink-0 flex-col items-center gap-0 py-4 pr-1"
+            role="tablist"
             aria-orientation="vertical"
-            aria-valuemin={1}
-            aria-valuemax={sortedWidgets.length}
-            aria-valuenow={currentIndex + 1}
-            aria-label="Widget position"
+            aria-label={t("widgets.mobile.carouselNavigation")}
           >
-            {sortedWidgets.map((widget, index) => (
-              <button
-                key={widget.i}
-                type="button"
-                aria-label={`Widget ${index + 1}`}
-                aria-current={index === currentIndex ? "true" : undefined}
-                className={cn(
-                  "min-h-0 flex-1 rounded-full transition-all",
-                  index === currentIndex
-                    ? "w-[3px] bg-primary"
-                    : "w-0.5 bg-muted-foreground/35"
-                )}
-                onClick={() => scrollToIndex(index)}
-              />
-            ))}
+            {sortedWidgets.map((widget, index) => {
+              const widgetName = getWidgetDisplayName(t, widget.type)
+
+              return (
+                <button
+                  key={widget.i}
+                  type="button"
+                  role="tab"
+                  aria-selected={index === currentIndex}
+                  aria-controls={`mobile-widget-slide-${widget.i}`}
+                  aria-label={t("widgets.mobile.carouselGoTo", {
+                    index: index + 1,
+                    total: sortedWidgets.length,
+                    widgetName,
+                  })}
+                  className="flex min-h-11 min-w-11 flex-1 items-center justify-center"
+                  onClick={() => scrollToIndex(index)}
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "block min-h-2 flex-1 rounded-full transition-all",
+                      index === currentIndex
+                        ? "w-[3px] bg-primary"
+                        : "w-0.5 bg-muted-foreground/35"
+                    )}
+                  />
+                </button>
+              )
+            })}
           </div>
         )}
       </div>

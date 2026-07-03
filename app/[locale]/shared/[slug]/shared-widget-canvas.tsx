@@ -164,7 +164,7 @@ export function SharedWidgetCanvas() {
   )
 
   return (
-    <div className={isMobile ? "relative mt-0 h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem))] overflow-hidden" : "relative mt-6"}>
+    <div className={isMobile ? "relative mt-0 h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem)-var(--mobile-toolbar-top,5.5rem))] overflow-hidden" : "relative mt-6"}>
       <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-9999" />
       {isMobile ? (
         <MobileWidgetCarousel

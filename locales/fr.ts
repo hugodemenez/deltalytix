@@ -749,6 +749,8 @@ export default {
   "widgets.mobile.deleteDialogDescription":
     "Choisissez les widgets à supprimer de votre tableau de bord.",
   "widgets.mobile.deleteWidgetNamed": "Supprimer {widgetName}",
+  "widgets.mobile.carouselNavigation": "Navigation des widgets",
+  "widgets.mobile.carouselGoTo": "Aller à {widgetName} ({index} sur {total})",
   "calendar.week": "Semaine",
   "calendar.weekdays.sun": "Dim",
   "calendar.weekdays.mon": "Lun",

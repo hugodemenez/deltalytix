@@ -5,12 +5,13 @@ const GESTURE_THRESHOLD_PX = 8
 const HORIZONTAL_SCRUB_RATIO = 1.25
 
 const CHART_SELECTOR = "[data-chart], [data-carousel-interactive]"
+const NESTED_CAROUSEL_SELECTOR = '[aria-roledescription="carousel"]'
 
 /** Elements where horizontal drag should not scroll the carousel (charts, inputs, etc.) */
 const INTERACTIVE_SELECTOR =
   `${CHART_SELECTOR}, [data-scrollable="true"], button, a, input, textarea, select, [role="slider"], [contenteditable="true"]`
 
-type GestureMode = "undecided" | "carousel" | "interactive"
+type GestureMode = "undecided" | "carousel" | "pass-through" | "lock"
 
 function canScrollInDirection(element: HTMLElement, deltaY: number) {
   const { scrollTop, scrollHeight, clientHeight } = element
@@ -32,18 +33,21 @@ export function useCarouselGestureLock(
       startX: number
       startY: number
       fromChart: boolean
+      fromNestedCarousel: boolean
       fromInteractive: boolean
     } = {
       mode: "undecided",
       startX: 0,
       startY: 0,
       fromChart: false,
+      fromNestedCarousel: false,
       fromInteractive: false,
     }
 
     const reset = () => {
       gesture.mode = "undecided"
       gesture.fromChart = false
+      gesture.fromNestedCarousel = false
       gesture.fromInteractive = false
     }
 
@@ -56,6 +60,7 @@ export function useCarouselGestureLock(
       gesture.startX = touch.clientX
       gesture.startY = touch.clientY
       gesture.fromChart = !!target?.closest(CHART_SELECTOR)
+      gesture.fromNestedCarousel = !!target?.closest(NESTED_CAROUSEL_SELECTOR)
       gesture.fromInteractive = !!target?.closest(INTERACTIVE_SELECTOR)
     }
 
@@ -63,7 +68,11 @@ export function useCarouselGestureLock(
       const touch = event.touches[0]
       if (!touch) return
 
-      if (gesture.mode === "interactive") {
+      if (gesture.mode === "pass-through") {
+        return
+      }
+
+      if (gesture.mode === "lock") {
         event.preventDefault()
         return
       }
@@ -90,7 +99,16 @@ export function useCarouselGestureLock(
         absDy > GESTURE_THRESHOLD_PX &&
         canScrollInDirection(scrollable, dy)
       ) {
-        gesture.mode = "interactive"
+        gesture.mode = "pass-through"
+        return
+      }
+
+      if (
+        gesture.fromNestedCarousel &&
+        absDx > GESTURE_THRESHOLD_PX &&
+        absDx > absDy
+      ) {
+        gesture.mode = "pass-through"
         return
       }
 
@@ -99,7 +117,7 @@ export function useCarouselGestureLock(
           absDx > absDy * HORIZONTAL_SCRUB_RATIO && absDx > GESTURE_THRESHOLD_PX
 
         if (isHorizontalScrub) {
-          gesture.mode = "interactive"
+          gesture.mode = "lock"
           event.preventDefault()
           return
         }
@@ -114,8 +132,7 @@ export function useCarouselGestureLock(
           return
         }
 
-        gesture.mode = "interactive"
-        event.preventDefault()
+        gesture.mode = "pass-through"
         return
       }
 
@@ -124,8 +141,7 @@ export function useCarouselGestureLock(
         return
       }
 
-      gesture.mode = "interactive"
-      event.preventDefault()
+      gesture.mode = "pass-through"
     }
 
     scroller.addEventListener("touchstart", onTouchStart, { passive: true, capture: true })
