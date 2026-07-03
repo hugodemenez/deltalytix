@@ -180,7 +180,7 @@ export function MobileWidgetCarousel({
                       "block min-h-6 w-2 rounded-full transition-all",
                       index === currentIndex
                         ? "bg-primary"
-                        : "bg-muted-foreground/45"
+                        : "bg-muted-foreground/60"
                     )}
                   />
                 </button>

@@ -177,6 +177,7 @@ export default {
   "dashboard.teams.accessUpdated": "Access updated successfully",
   "dashboard.teams.onlyAdminCanManage": "Only admins can manage users",
   "dashboard.teams.managerExists": "Manager already exists",
+  "dashboard.skipToContent": "Skip to main content",
   "dashboard.tabs.table": "Table",
   "dashboard.tabs.accounts": "Accounts",
   "dashboard.tabs.widgets": "Widgets",

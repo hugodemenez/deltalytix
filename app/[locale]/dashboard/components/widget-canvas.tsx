@@ -787,7 +787,7 @@ export default function WidgetCanvas() {
       />
       {layouts && (
         <div className="relative">
-          <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-9999" />
+          <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-50" />
           {useMobileCarousel ? (
             <MobileWidgetCarousel
               widgets={currentLayout}

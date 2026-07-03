@@ -95,15 +95,15 @@ export function MobileWidgetDeleteDialog({
                 ? t("widgets.mobile.deleteWidgetNamed", { widgetName })
                 : t("widgets.removeWidget")}
             </AlertDialogAction>
-            <AlertDialogCancel className="w-full">{t("widgets.cancel")}</AlertDialogCancel>
             <Button
               type="button"
               variant="ghost"
-              className="w-full text-sm text-muted-foreground hover:text-destructive"
+              className="w-full text-sm text-destructive/70 hover:text-destructive"
               onClick={openDeleteAllConfirm}
             >
               {t("widgets.deleteAll")}
             </Button>
+            <AlertDialogCancel className="w-full">{t("widgets.cancel")}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

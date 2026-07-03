@@ -23,8 +23,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   ContextMenu,
+  ContextMenuCheckboxItem,
   ContextMenuContent,
-  ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { useState, useEffect, useRef } from "react"
@@ -339,21 +339,12 @@ export function Toolbar({
       </ContextMenuTrigger>
 
       <ContextMenuContent className="w-48">
-        <ContextMenuItem
-          onClick={handleAutoHideToggle}
+        <ContextMenuCheckboxItem
+          checked={settings.autoHide}
+          onCheckedChange={handleAutoHideToggle}
         >
-          <div className="flex items-center gap-2">
-            <div className={cn(
-              "w-4 h-4 rounded border-2 flex items-center justify-center",
-              settings.autoHide ? "bg-primary border-primary" : "border-muted-foreground"
-            )}>
-              {settings.autoHide && (
-                <div className="w-2 h-2 bg-background rounded-sm" />
-              )}
-            </div>
-            <span className="text-sm">{t('toolbar.autoHide')}</span>
-          </div>
-        </ContextMenuItem>
+          {t('toolbar.autoHide')}
+        </ContextMenuCheckboxItem>
       </ContextMenuContent>
     </ContextMenu>
   )

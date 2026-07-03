@@ -180,6 +180,7 @@ export default {
   "dashboard.teams.onlyAdminCanManage":
     "Seuls les administrateurs peuvent gérer les utilisateurs",
   "dashboard.teams.managerExists": "Le gestionnaire existe déjà",
+  "dashboard.skipToContent": "Aller au contenu principal",
   "dashboard.tabs.table": "Tableau",
   "dashboard.tabs.accounts": "Comptes",
   "dashboard.tabs.widgets": "Widgets",

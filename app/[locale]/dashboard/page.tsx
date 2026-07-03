@@ -131,7 +131,18 @@ export default function Home() {
   }, []);
 
   return (
-    <main ref={mainRef} className="overflow-x-hidden">
+    <main
+      ref={mainRef}
+      id="dashboard-content"
+      tabIndex={-1}
+      className="overflow-x-hidden"
+    >
+      <a
+        href="#dashboard-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-md focus:ring-2 focus:ring-ring"
+      >
+        {t("dashboard.skipToContent")}
+      </a>
       <Tabs defaultValue="widgets" className="w-full h-full pt-(--tabs-height,3rem)">
         {/* Fixed TabsList positioned under navbar */}
         <div

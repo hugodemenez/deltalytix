@@ -93,7 +93,7 @@ function SharedUnsupportedWidget() {
         <p className="text-muted-foreground">
           {t('widgets.shared.unavailableDescription')}
         </p>
-        <p className="text-sm text-muted-foreground/80">
+        <p className="text-sm text-muted-foreground">
           {t('widgets.shared.unavailableHint')}
         </p>
       </CardContent>
