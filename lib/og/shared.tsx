@@ -78,7 +78,7 @@ export function OgCtaButton({
         padding: "18px 32px",
         borderRadius: 999,
         background: accentColor,
-        boxShadow: `0 12px 40px ${accentColor}66`,
+        boxShadow: `0 4px 20px ${accentColor}44`,
       }}
     >
       <span
@@ -140,7 +140,7 @@ export function MarketingOgImage({
           left: -60,
           width: 320,
           height: 320,
-          background: "radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, rgba(10, 10, 10, 0) 70%)",
+          background: `radial-gradient(circle, ${accentColor}40 0%, rgba(10, 10, 10, 0) 70%)`,
           display: "flex",
         }}
       />

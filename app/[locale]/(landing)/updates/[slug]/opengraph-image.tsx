@@ -5,6 +5,7 @@ import { enUS, fr } from "date-fns/locale"
 import { formatDateOnly } from "@/lib/format-date-only"
 import { OgCtaButton, ogImageCacheHeaders } from "@/lib/og/shared"
 import { getUpdatesOgCopy } from "@/lib/og/site-metadata"
+import { OG_COLORS, OG_PADDING, OG_TRACKING } from "@/lib/og/tokens"
 
 export const alt = "Deltalytix Update"
 export const size = {
@@ -46,9 +47,9 @@ export default async function Image({
                     display: "flex",
                     width: "100%",
                     height: "100%",
-                    background: "#000000",
+                    background: OG_COLORS.background,
                     fontFamily: "system-ui, -apple-system, sans-serif",
-                    padding: "80px",
+                    padding: `${OG_PADDING}px`,
                     flexDirection: "column",
                     justifyContent: "space-between",
                     alignItems: "flex-start",
@@ -63,15 +64,15 @@ export default async function Image({
                     }}
                 >
                     <svg viewBox="0 0 255 255" xmlns="http://www.w3.org/2000/svg" style={{ width: "32px", height: "32px" }}>
-                        <path fillRule="evenodd" clipRule="evenodd" d="M159 63L127.5 0V255H255L236.5 218H159V63Z" fill="#FFFFFF" />
-                        <path fillRule="evenodd" clipRule="evenodd" d="M-3.05176e-05 255L127.5 -5.96519e-06L127.5 255L-3.05176e-05 255ZM64 217L121 104L121 217L64 217Z" fill="#FFFFFF" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M159 63L127.5 0V255H255L236.5 218H159V63Z" fill={OG_COLORS.foreground} />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M-3.05176e-05 255L127.5 -5.96519e-06L127.5 255L-3.05176e-05 255ZM64 217L121 104L121 217L64 217Z" fill={OG_COLORS.foreground} />
                     </svg>
                     <span
                         style={{
                             fontSize: "24px",
                             fontWeight: "600",
-                            color: "#FFFFFF",
-                            letterSpacing: "-0.01em",
+                            color: OG_COLORS.foreground,
+                            letterSpacing: OG_TRACKING.snug,
                         }}
                     >
                         Deltalytix
@@ -91,10 +92,10 @@ export default async function Image({
                         style={{
                             fontSize: "56px",
                             fontWeight: "700",
-                            color: "#FFFFFF",
+                            color: OG_COLORS.foreground,
                             margin: "0",
                             lineHeight: "1.15",
-                            letterSpacing: "-0.025em",
+                            letterSpacing: OG_TRACKING.tight,
                         }}
                     >
                         {meta.title}
@@ -114,13 +115,13 @@ export default async function Image({
                         style={{
                             fontSize: "18px",
                             fontWeight: "400",
-                            color: "#6B7280",
-                            letterSpacing: "0.01em",
+                            color: OG_COLORS.muted,
+                            letterSpacing: OG_TRACKING.wide,
                         }}
                     >
                         {formattedDate}
                     </span>
-                    <OgCtaButton label={updatesCopy.cta} accentColor="#14B8A6" />
+                    <OgCtaButton label={updatesCopy.cta} accentColor={OG_COLORS.accent} />
                 </div>
             </div>
         ) as ReactElement
