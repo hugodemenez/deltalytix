@@ -61,6 +61,7 @@ interface AccountsTableViewProps {
   onSortingChange: OnChangeFn<SortingState>
   rithmicBalancesByAccountId?: Record<string, RithmicAccountBalance>
   rithmicBalancesLoading?: boolean
+  rithmicLinkedAccountNumbers?: Set<string>
   showRithmicBalances?: boolean
 }
 
@@ -521,6 +522,7 @@ export function AccountsTableView({
   onSortingChange,
   rithmicBalancesByAccountId = {},
   rithmicBalancesLoading = false,
+  rithmicLinkedAccountNumbers = new Set<string>(),
   showRithmicBalances = false,
 }: AccountsTableViewProps) {
   const t = useI18n()
@@ -815,7 +817,12 @@ export function AccountsTableView({
                   rithmicBalancesByAccountId
                 )
 
-                if (rithmicBalancesLoading && rithmicBalance == null) {
+                const accountNumber = row.original.number ?? ""
+                if (
+                  rithmicBalancesLoading &&
+                  rithmicBalance == null &&
+                  rithmicLinkedAccountNumbers.has(accountNumber)
+                ) {
                   return (
                     <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -1196,7 +1203,14 @@ export function AccountsTableView({
         size: 140,
       },
     ],
-    [t, dateFormatter, showRithmicBalances, rithmicBalancesByAccountId, rithmicBalancesLoading]
+    [
+      t,
+      dateFormatter,
+      showRithmicBalances,
+      rithmicBalancesByAccountId,
+      rithmicBalancesLoading,
+      rithmicLinkedAccountNumbers,
+    ]
   )
 
   const groupedAccounts = useMemo(() => {

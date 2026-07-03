@@ -71,10 +71,7 @@ import { useAccountsSortingStore } from '@/store/accounts-sorting-store'
 import { removeAccountsFromTradesAction } from '@/server/accounts'
 import { useModalStateStore } from '@/store/modal-state-store'
 import { SortingState } from "@tanstack/react-table"
-import {
-  getRithmicLinkedAccountNumbers,
-  useRithmicBalances,
-} from "@/hooks/use-rithmic-balances"
+import { useRithmicBalances } from "@/hooks/use-rithmic-balances"
 import { getPrimaryRithmicBalance } from "@/lib/rithmic-api"
 import {
   DndContext,
@@ -842,8 +839,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
     refresh: refreshRithmicBalances,
   } = useRithmicBalances()
   const rithmicLinkedAccountNumbers = useMemo(
-    () => getRithmicLinkedAccountNumbers(),
-    [hasRithmicCredentials, rithmicBalancesDebug.credentialSetCount]
+    () => new Set(rithmicBalancesDebug.linkedAccountNumbers),
+    [rithmicBalancesDebug.linkedAccountNumbers]
   )
 
   const getRithmicBalanceProps = useCallback(
@@ -1669,6 +1666,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
               onSortingChange={setSorting}
               rithmicBalancesByAccountId={balancesByAccountId}
               rithmicBalancesLoading={rithmicBalancesLoading}
+              rithmicLinkedAccountNumbers={rithmicLinkedAccountNumbers}
               showRithmicBalances={hasRithmicCredentials}
             />
           )}
