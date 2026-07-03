@@ -207,7 +207,7 @@ export type FinancialEventGroupByOutputType = {
   _max: FinancialEventMaxAggregateOutputType | null
 }
 
-type GetFinancialEventGroupByPayload<T extends FinancialEventGroupByArgs> = Prisma.PrismaPromise<
+export type GetFinancialEventGroupByPayload<T extends FinancialEventGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<FinancialEventGroupByOutputType, T['by']> &
       {
@@ -1158,6 +1158,11 @@ export type FinancialEventFindManyArgs<ExtArgs extends runtime.Types.Extensions.
    * Skip the first `n` FinancialEvents.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of FinancialEvents.
+   */
   distinct?: Prisma.FinancialEventScalarFieldEnum | Prisma.FinancialEventScalarFieldEnum[]
 }
 

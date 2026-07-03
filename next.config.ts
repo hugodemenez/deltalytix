@@ -44,8 +44,6 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     cpus: buildWorkers,
-    parallelServerCompiles: true,
-    parallelServerBuildTraces: true,
     useCache: true,
     mdxRs: true,
     optimizePackageImports: [
