@@ -36,9 +36,21 @@ jobs:
             echo "Vercel project already exists: $VERCEL_PROJECT_NAME"
           fi
 
+      - name: Link project and capture project ID
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          bunx vercel link --project "$VERCEL_PROJECT_NAME" --yes --token "$VERCEL_TOKEN"
+          # Extract project ID from .vercel/project.json
+          PROJECT_ID=$(node -p "require('./.vercel/project.json').projectId")
+          echo "VERCEL_PROJECT_ID=$PROJECT_ID" >> "$GITHUB_ENV"
+
       - name: Set Vercel env vars
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ env.VERCEL_PROJECT_ID }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -57,12 +69,12 @@ jobs:
           set_env RESEND_API_KEY "dummy"
           set_env STRIPE_SECRET_KEY "dummy"
 
-      - name: Link project and pull env
+      - name: Pull env and build
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ env.VERCEL_PROJECT_ID }}
         run: |
-          bunx vercel link --project "$VERCEL_PROJECT_NAME" --yes --token "$VERCEL_TOKEN"
           bunx vercel env pull --yes --token "$VERCEL_TOKEN"
 
       - name: Push Prisma schema to Supabase
@@ -79,4 +91,6 @@ jobs:
       - name: Deploy to Vercel (production)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ env.VERCEL_PROJECT_ID }}
         run: bunx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
