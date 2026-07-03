@@ -3,6 +3,7 @@ export default {
         title: 'Votre journal de trading.',
         description: 'Deltalytix est un journal de trading web pour traders futures permettant de stocker, explorer et comprendre leur historique de trading.',
         cta: 'Commencer maintenant',
+        demoVideo: 'Vidéo de démonstration du produit',
         updates: 'Dernières mises à jour du produit →',
         partners: {
             title: 'Nos Partenaires',
