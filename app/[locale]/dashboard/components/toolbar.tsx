@@ -270,6 +270,7 @@ export function Toolbar({
                       className={cn(
                         "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
                       )}
+                      aria-label={t('widgets.restoreDefaults')}
                       title={t('widgets.restoreDefaults')}
                     >
                       <RotateCcw className="h-4 w-4" />

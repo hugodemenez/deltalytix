@@ -3,12 +3,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { useCarouselGestureLock } from "@/hooks/use-carousel-gesture-lock"
+import { MOBILE_CAROUSEL_HEIGHT } from "@/lib/widget-carousel"
 import { useI18n } from "@/locales/client"
 import { getWidgetDisplayName } from "../lib/widget-display-name"
 import { Widget } from "../types/dashboard"
-
-const MOBILE_CAROUSEL_HEIGHT =
-  "calc(100dvh - var(--navbar-height, 5rem) - var(--tabs-height, 3rem) - var(--mobile-toolbar-top, 5.5rem))"
 
 interface MobileWidgetCarouselProps {
   widgets: Widget[]
@@ -40,14 +38,19 @@ export function MobileWidgetCarousel({
     [widgets]
   )
 
+  const widgetIds = useMemo(
+    () => sortedWidgets.map((widget) => widget.i).join(","),
+    [sortedWidgets]
+  )
+
   const activeWidget = sortedWidgets[currentIndex] ?? null
 
   useEffect(() => {
     slideRefs.current = slideRefs.current.slice(0, sortedWidgets.length)
-    if (currentIndex >= sortedWidgets.length) {
-      setCurrentIndex(Math.max(0, sortedWidgets.length - 1))
-    }
-  }, [sortedWidgets.length, currentIndex])
+    setCurrentIndex((index) =>
+      index >= sortedWidgets.length ? Math.max(0, sortedWidgets.length - 1) : index
+    )
+  }, [sortedWidgets.length, widgetIds])
 
   useEffect(() => {
     onActiveWidgetChange?.(activeWidget)
@@ -64,8 +67,9 @@ export function MobileWidgetCarousel({
 
         for (const entry of entries) {
           if (!entry.isIntersecting) continue
-          const index = slideRefs.current.findIndex((el) => el === entry.target)
-          if (index >= 0 && entry.intersectionRatio > bestRatio) {
+          const index = Number((entry.target as HTMLElement).dataset.slideIndex)
+          if (Number.isNaN(index) || index < 0) continue
+          if (entry.intersectionRatio > bestRatio) {
             bestRatio = entry.intersectionRatio
             bestIndex = index
           }
@@ -77,7 +81,7 @@ export function MobileWidgetCarousel({
       },
       {
         root: scroller,
-        threshold: [0.5, 0.75, 1],
+        threshold: [0.25, 0.5, 0.75, 1],
       }
     )
 
@@ -86,10 +90,15 @@ export function MobileWidgetCarousel({
     })
 
     return () => observer.disconnect()
-  }, [sortedWidgets])
+  }, [sortedWidgets, widgetIds])
 
   const scrollToIndex = useCallback((index: number) => {
-    slideRefs.current[index]?.scrollIntoView({ behavior: "smooth", block: "start" })
+    const scroller = scrollerRef.current
+    if (!scroller) return
+    scroller.scrollTo({
+      top: index * scroller.clientHeight,
+      behavior: "smooth",
+    })
   }, [])
 
   useCarouselGestureLock(scrollerRef)
@@ -107,11 +116,15 @@ export function MobileWidgetCarousel({
         <div
           ref={scrollerRef}
           className="h-full min-w-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          role="region"
+          aria-roledescription="carousel"
+          aria-label={t("widgets.mobile.carouselNavigation")}
         >
           {sortedWidgets.map((widget, index) => (
             <div
               key={widget.i}
               id={`mobile-widget-slide-${widget.i}`}
+              data-slide-index={index}
               ref={(el) => {
                 slideRefs.current[index] = el
               }}
@@ -150,7 +163,7 @@ export function MobileWidgetCarousel({
                     total: sortedWidgets.length,
                     widgetName,
                   })}
-                  className="flex min-h-11 min-w-11 flex-1 items-center justify-center"
+                  className="flex min-h-11 min-w-11 flex-1 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   onClick={() => scrollToIndex(index)}
                 >
                   <span

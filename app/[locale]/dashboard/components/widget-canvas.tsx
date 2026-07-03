@@ -24,6 +24,7 @@ import { MobileWidgetCarousel } from './mobile-widget-carousel'
 import { useUserStore, DashboardLayoutWithWidgets } from '../../../../store/user-store'
 import { toast } from "sonner"
 import { defaultLayouts } from "@/lib/default-layouts"
+import { getCarouselWidgetSize, MOBILE_CAROUSEL_HEIGHT } from "@/lib/widget-carousel"
 import { Prisma, DashboardLayout } from "@/prisma/generated/prisma/browser"
 
 // Helper function to convert internal layout to Prisma type
@@ -72,36 +73,6 @@ const sizeToGrid = (size: WidgetSize, isSmallScreen = false): { w: number, h: nu
     default:
       return { w: 6, h: 4 }
   }
-}
-
-// Pick the largest allowed size so widgets fill the carousel slide.
-function getCarouselWidgetSize(
-  config: (typeof WIDGET_REGISTRY)[keyof typeof WIDGET_REGISTRY],
-  widget: Widget
-): WidgetSize {
-  if (config.requiresFullWidth) {
-    return config.defaultSize
-  }
-  if (config.allowedSizes.length === 1) {
-    return config.allowedSizes[0]
-  }
-
-  const preferredOrder: WidgetSize[] = [
-    'extra-large',
-    'large',
-    'medium',
-    'small-long',
-    'small',
-    'tiny',
-  ]
-
-  for (const size of preferredOrder) {
-    if (config.allowedSizes.includes(size)) {
-      return size
-    }
-  }
-
-  return widget.size as WidgetSize
 }
 
 const getWidgetGrid = (type: WidgetType, size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
@@ -196,19 +167,17 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
     return config.allowedSizes.includes(size)
   }
 
+  const showDesktopCustomizeUi = isCustomizing && !isMobile
+
   return (
     <div 
       ref={widgetRef}
       className="relative h-full w-full rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group isolate animate-[fadeIn_1.5s_ease-in-out] overflow-clip"
     >
-      <div className={cn(
-        "h-full w-full",
-        isCustomizing && "group-hover:blur-[2px]",
-        isCustomizing && isMobile && "blur-[2px]"
-      )}>
+      <div className={cn("h-full w-full", showDesktopCustomizeUi && "group-hover:blur-[2px]")}>
         {children}
       </div>
-      {isCustomizing && (
+      {showDesktopCustomizeUi && (
         <>
           <div className="absolute inset-0 border-2 border-dashed border-transparent group-hover:border-accent group-focus-within:border-accent transition-colors duration-200" />
           <div className="absolute inset-0 bg-background/50 dark:bg-background/70 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200" />
@@ -358,6 +327,7 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
                 <Button
                   variant="destructive"
                   size="icon"
+                  aria-label={t('widgets.removeWidget')}
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
@@ -728,7 +698,7 @@ export default function WidgetCanvas() {
     setMobileActiveWidget(widget)
   }, [])
 
-  const useMobileCarousel = isMobile && !isCustomizing
+  const useMobileCarousel = isMobile
 
   // Define renderWidget with all dependencies
   const renderWidget = useCallback((widget: Widget, forCarousel = false) => {
@@ -761,13 +731,13 @@ export default function WidgetCanvas() {
   }, [isMobile, removeWidget]);
 
   useEffect(() => {
-    if (isCustomizing) {
+    if (isCustomizing && !isMobile) {
       document.addEventListener('click', handleOutsideClick)
       return () => document.removeEventListener('click', handleOutsideClick)
     }
-  }, [isCustomizing, handleOutsideClick]);
+  }, [isCustomizing, isMobile, handleOutsideClick]);
 
-  useAutoScroll(isMobile && isCustomizing)
+  useAutoScroll(!isMobile && isCustomizing)
 
   const renderWidgetCard = useCallback((widget: Widget, forCarousel = false) => {
     const widgetConfig = WIDGET_REGISTRY[widget.type as WidgetType]
@@ -795,10 +765,13 @@ export default function WidgetCanvas() {
   }, [changeWidgetSize, isCustomizing, removeWidget, renderWidget])
 
   return (
-    <div className={cn(
-      "relative w-full",
-      useMobileCarousel ? "mt-0 h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem)-var(--mobile-toolbar-top,5.5rem))] overflow-hidden" : "mt-6 pb-16 min-h-screen",
-    )}>
+    <div
+      className={cn(
+        "relative w-full",
+        useMobileCarousel ? "mt-0 overflow-hidden" : "mt-6 pb-16 min-h-screen",
+      )}
+      style={useMobileCarousel ? { height: MOBILE_CAROUSEL_HEIGHT } : undefined}
+    >
       <Toolbar 
         onAddWidget={addWidget}
         isCustomizing={isCustomizing}

@@ -150,15 +150,15 @@ export default function Home() {
           </TabsList>
         </div>
 
-        <TabsContent value="table" className="h-[calc(100dvh-var(--navbar-height)-var(--tabs-height)-16px)] min-w-0 p-2 sm:p-4">
+        <TabsContent value="table" className="h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem)-16px)] min-w-0 p-2 sm:p-4">
           <TradeTableReview />
         </TabsContent>
 
-        <TabsContent value="accounts" className="flex-1 mt-0 min-w-0">
+        <TabsContent value="accounts" className="h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem)-16px)] min-w-0 mt-0">
           <AccountsOverview size="large" />
         </TabsContent>
 
-        <TabsContent value="widgets" className="min-w-0 overflow-hidden px-0 max-md:h-[calc(100dvh-var(--navbar-height)-var(--tabs-height))] sm:px-4">
+        <TabsContent value="widgets" className="min-w-0 overflow-hidden px-0 max-md:h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem))] sm:px-4">
           <WidgetCanvas />
         </TabsContent>
       </Tabs>

@@ -5,8 +5,11 @@ import { Responsive, WidthProvider } from 'react-grid-layout'
 import { WIDGET_REGISTRY, getWidgetComponent } from '@/app/[locale]/dashboard/config/widget-registry'
 import { MobileWidgetCarousel } from '@/app/[locale]/dashboard/components/mobile-widget-carousel'
 import { Widget, WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useData } from '@/context/data-provider'
+import { useI18n } from '@/locales/client'
 import { defaultLayouts } from '@/lib/default-layouts'
+import { getCarouselWidgetSize, MOBILE_CAROUSEL_HEIGHT } from '@/lib/widget-carousel'
 
 
 // Update sizeToGrid to handle responsive sizes (copy from widget-canvas.tsx)
@@ -78,33 +81,21 @@ const generateResponsiveLayout = (widgets: Widget[]) => {
   return layouts
 }
 
-function getCarouselWidgetSize(
-  config: (typeof WIDGET_REGISTRY)[keyof typeof WIDGET_REGISTRY],
-  widget: Widget
-): WidgetSize {
-  if (config.requiresFullWidth) {
-    return config.defaultSize
-  }
-  if (config.allowedSizes.length === 1) {
-    return config.allowedSizes[0]
-  }
+function SharedUnsupportedWidget() {
+  const t = useI18n()
 
-  const preferredOrder: WidgetSize[] = [
-    'extra-large',
-    'large',
-    'medium',
-    'small-long',
-    'small',
-    'tiny',
-  ]
-
-  for (const size of preferredOrder) {
-    if (config.allowedSizes.includes(size)) {
-      return size
-    }
-  }
-
-  return widget.size
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>{t('widgets.deprecated.title')}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex items-center justify-center">
+        <p className="text-muted-foreground text-center">
+          {t('widgets.deprecated.description')}
+        </p>
+      </CardContent>
+    </Card>
+  )
 }
 
 export function SharedWidgetCanvas() {
@@ -117,7 +108,7 @@ export function SharedWidgetCanvas() {
   const renderWidget = (widget: Widget, forCarousel = false) => {
     // Ensure widget.type is a valid WidgetType
     if (!Object.keys(WIDGET_REGISTRY).includes(widget.type)) {
-      return null // Skip invalid widgets in shared view
+      return <SharedUnsupportedWidget />
     }
 
     const config = WIDGET_REGISTRY[widget.type as keyof typeof WIDGET_REGISTRY]
@@ -164,7 +155,10 @@ export function SharedWidgetCanvas() {
   )
 
   return (
-    <div className={isMobile ? "relative mt-0 h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem)-var(--mobile-toolbar-top,5.5rem))] overflow-hidden" : "relative mt-6"}>
+    <div
+      className={isMobile ? "relative mt-0 overflow-hidden" : "relative mt-6"}
+      style={isMobile ? { height: MOBILE_CAROUSEL_HEIGHT } : undefined}
+    >
       <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-9999" />
       {isMobile ? (
         <MobileWidgetCarousel
