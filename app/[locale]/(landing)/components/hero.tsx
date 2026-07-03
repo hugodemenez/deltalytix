@@ -10,10 +10,16 @@ function GetStartedLinkContent({ children }: { children: React.ReactNode }) {
   const { pending } = useLinkStatus();
 
   return (
-    <span className="relative inline-flex items-center justify-center font-medium text-sm text-white">
+    <span
+      className="relative inline-flex items-center justify-center font-medium text-sm text-white"
+      aria-busy={pending}
+    >
       <span className={pending ? "invisible" : undefined}>{children}</span>
       {pending && (
-        <Loader2 className="absolute h-4 w-4 animate-spin" aria-hidden />
+        <>
+          <Loader2 className="absolute h-4 w-4 animate-spin" aria-hidden />
+          <span className="sr-only">Loading…</span>
+        </>
       )}
     </span>
   );
@@ -141,6 +147,7 @@ export default function Hero() {
               muted
               autoPlay
               playsInline
+              aria-label={t("landing.demoVideo")}
               className={`absolute inset-0 h-full w-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] object-cover transition-opacity duration-300 dark:border-gray-800 ${videoLoaded && !videoError ? "opacity-100" : "opacity-0"}`}
               onLoadedData={handleVideoLoad}
               onError={handleVideoError}

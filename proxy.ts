@@ -104,12 +104,11 @@ function isPublicRoute(pathname: string) {
 }
 
 function hasSupabaseAuthCookies(request: NextRequest) {
-  return request.cookies
-    .getAll()
-    .some(
-      (cookie) =>
-        cookie.name.startsWith("sb-") && cookie.name.includes("-auth-token"),
-    )
+  return request.cookies.getAll().some((cookie) => {
+    if (!cookie.name.startsWith("sb-")) return false
+    // Session token only — exclude PKCE verifier cookies (e.g. auth-token-code-verifier).
+    return /-auth-token(\.\d+)?$/.test(cookie.name)
+  })
 }
 
 function createUnauthenticatedSession(request: NextRequest) {
@@ -157,7 +156,10 @@ function addAgentDiscoveryHeaders(response: NextResponse, request: NextRequest) 
   return response
 }
 
-async function updateSession(request: NextRequest) {
+async function updateSession(
+  request: NextRequest,
+  options?: { requireServerAuth?: boolean },
+) {
   // Create a proper NextResponse first
   const response = NextResponse.next({
     request: {
@@ -212,9 +214,13 @@ async function updateSession(request: NextRequest) {
   let error: unknown = null
 
   try {
-    const authPromise =
-      typeof supabase.auth.getClaims === "function"
-        ? supabase.auth.getClaims().then((result) => {
+    const useServerAuth =
+      options?.requireServerAuth ||
+      typeof supabase.auth.getClaims !== "function"
+
+    const authPromise = useServerAuth
+      ? supabase.auth.getUser()
+      : supabase.auth.getClaims().then((result) => {
             const claims = result.data?.claims
             if (claims?.sub && !result.error) {
               return {
@@ -229,7 +235,6 @@ async function updateSession(request: NextRequest) {
             }
             return { data: { user: null }, error: result.error }
           })
-        : supabase.auth.getUser()
 
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error("Auth timeout")), 3000),
@@ -332,7 +337,9 @@ export default async function proxy(req: NextRequest) {
   // Skip Supabase auth on public marketing routes to avoid unnecessary round-trips
   const { response: authResponse, user, error } = isPublicRoute(pathname)
     ? createUnauthenticatedSession(req)
-    : await updateSession(req)
+    : await updateSession(req, {
+        requireServerAuth: pathname.includes("/admin"),
+      })
 
   // Embed route check
   if (pathname.includes("/embed")) {
