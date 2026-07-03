@@ -1,7 +1,6 @@
 import type { NextConfig } from 'next';
 import createMDX from '@next/mdx';
 import os from 'os';
-import path from 'path';
 import { SUPPORT_SEARCH_TRACE_INCLUDES } from './lib/ai/search-codebase';
 
 const detectedBuildWorkers =
@@ -17,10 +16,6 @@ const buildWorkers =
   Number.isFinite(configuredBuildWorkers) && configuredBuildWorkers > 0
     ? configuredBuildWorkers
     : defaultBuildWorkers;
-
-const fontConfigDir = path.join(process.cwd(), 'config/fontconfig');
-process.env.FONTCONFIG_PATH ??= fontConfigDir;
-process.env.FONTCONFIG_FILE ??= path.join(fontConfigDir, 'fonts.conf');
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -44,9 +39,6 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     cpus: buildWorkers,
-    webpackBuildWorker: true,
-    parallelServerCompiles: true,
-    parallelServerBuildTraces: true,
     useCache: true,
     mdxRs: true,
     optimizePackageImports: [

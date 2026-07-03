@@ -6,6 +6,11 @@ import { cache } from 'react'
 
 const postsDirectory = path.join(process.cwd(), 'content/updates')
 
+type PostMetadataEntry = NonNullable<Awaited<ReturnType<typeof getPostMetadata>>>
+type AllPostMetadata = PostMetadataEntry[]
+
+const allPostMetadataByLocale = new Map<string, Promise<AllPostMetadata>>()
+
 function getPostPath(slug: string, locale: string) {
   return path.join(postsDirectory, locale, `${slug}.mdx`)
 }
@@ -39,7 +44,7 @@ export const getPostMetadata = cache(async (slug: string, locale: string) => {
   }
 })
 
-export const getAllPostMetadata = cache(async (locale: string) => {
+async function loadAllPostMetadata(locale: string): Promise<AllPostMetadata> {
   const localeDirectory = path.join(postsDirectory, locale)
 
   try {
@@ -51,12 +56,21 @@ export const getAllPostMetadata = cache(async (locale: string) => {
     )
 
     return posts
-      .filter((post): post is NonNullable<typeof post> => post !== null)
+      .filter((post): post is PostMetadataEntry => post !== null)
       .sort((a, b) => new Date(b.meta.date).getTime() - new Date(a.meta.date).getTime())
   } catch (error) {
     console.error(`Error reading posts directory: ${localeDirectory}`, error)
     return []
   }
+}
+
+export const getAllPostMetadata = cache(async (locale: string) => {
+  let promise = allPostMetadataByLocale.get(locale)
+  if (!promise) {
+    promise = loadAllPostMetadata(locale)
+    allPostMetadataByLocale.set(locale, promise)
+  }
+  return promise
 })
 
 // Cache the MDX compilation results

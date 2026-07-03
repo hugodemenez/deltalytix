@@ -68,20 +68,3 @@ export const getPostsByStatus = cache(async function(
   const posts = await getAllPosts(locale)
   return posts.filter(post => post.meta.status === status)
 })
-
-export async function generateStaticParams() {
-  const locales = ['en', 'fr']
-  const paths: { params: { locale: string; slug: string } }[] = []
-
-  for (const locale of locales) {
-    const posts = await getAllPosts(locale)
-    paths.push(...posts.map((post) => ({
-      params: {
-        locale,
-        slug: post.meta.slug,
-      },
-    })))
-  }
-
-  return paths
-}
