@@ -73,7 +73,8 @@ export async function getLatestVideoFromPlaylist(): Promise<string | null> {
     
     // Get all items from the playlist
     const response = await fetch(
-      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=50&playlistId=${playlistId}&key=${apiKey}`
+      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=50&playlistId=${playlistId}&key=${apiKey}`,
+      { cache: 'force-cache' }
     );
     
     if (!response.ok) {
@@ -130,6 +131,8 @@ interface YouTubePlaylistResponse {
   items: YouTubePlaylistItem[];
 }
 
+let playlistMapPromise: Promise<Map<string, PlaylistVideo> | null> | null = null
+
 /**
  * Get the week number and year for a given date
  */
@@ -153,7 +156,7 @@ function isSameWeek(date1: Date, date2: Date): boolean {
  * Fetch all videos from the Deltalytix YouTube playlist
  * Returns a map of video IDs indexed by publish date
  */
-export async function getAllVideosFromPlaylistAction(): Promise<Map<string, PlaylistVideo> | null> {
+async function fetchPlaylistMap(): Promise<Map<string, PlaylistVideo> | null> {
   try {
     const playlistId = 'PLHyK_WJWO5vcsSKePM0GvJmeY5QRBW40S';
     const apiKey = process.env.YOUTUBE_API_KEY;
@@ -206,6 +209,18 @@ export async function getAllVideosFromPlaylistAction(): Promise<Map<string, Play
   }
 }
 
+export async function getAllVideosFromPlaylistAction(): Promise<Map<string, PlaylistVideo> | null> {
+  if (!playlistMapPromise) {
+    playlistMapPromise = fetchPlaylistMap().then((result) => {
+      if (result === null) {
+        playlistMapPromise = null
+      }
+      return result
+    })
+  }
+  return playlistMapPromise
+}
+
 /**
  * Find the YouTube video ID that matches a given post date (same week)
  * This should be called at build time to match videos to posts
@@ -224,12 +239,16 @@ export async function findVideoIdForPostDateAction(postDate: string): Promise<st
     for (const [, video] of videoMap.entries()) {
       const videoDate = new Date(video.publishedAt);
       if (isSameWeek(postDateObj, videoDate)) {
-        console.log(`Matched post date ${postDate} with video published on ${video.publishedAt} (${video.title})`);
+        if (process.env.DEBUG_YOUTUBE_MATCHING) {
+          console.log(`Matched post date ${postDate} with video published on ${video.publishedAt} (${video.title})`);
+        }
         return video.videoId;
       }
     }
     
-    console.log(`No video found for post date ${postDate}`);
+    if (process.env.DEBUG_YOUTUBE_MATCHING) {
+      console.log(`No video found for post date ${postDate}`);
+    }
     return null;
   } catch (error) {
     console.error('Error finding video for post date:', error);

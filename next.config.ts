@@ -44,7 +44,6 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     cpus: buildWorkers,
-    webpackBuildWorker: true,
     parallelServerCompiles: true,
     parallelServerBuildTraces: true,
     useCache: true,

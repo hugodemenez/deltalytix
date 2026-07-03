@@ -1,5 +1,4 @@
-import { getAllPostMetadata, getPostMetadata } from "@/lib/mdx"
-import { getStaticParams as getLocaleStaticParams } from '@/locales/server'
+import { getPostMetadata } from "@/lib/mdx"
 import { enUS, fr } from "date-fns/locale"
 import { formatDateOnly } from "@/lib/format-date-only"
 import path from "path"
@@ -14,6 +13,8 @@ export const contentType = "image/png"
 // Route segment configuration - these are specialized Route Handlers
 export const runtime = 'nodejs'
 export const revalidate = 3600 // 1 hour
+
+const sharpPromise = import("sharp")
 
 function escapeXml(value: string) {
     return value
@@ -61,7 +62,7 @@ async function renderOgPng(title: string, formattedDate: string) {
     const fontConfigDir = path.join(process.cwd(), "config/fontconfig")
     process.env.FONTCONFIG_PATH ??= fontConfigDir
     process.env.FONTCONFIG_FILE ??= path.join(fontConfigDir, "fonts.conf")
-    const sharp = (await import("sharp")).default
+    const sharp = (await sharpPromise).default
     const titleLines = wrapText(title, 28, 4)
     const titleSvg = titleLines
         .map((line, index) => (
@@ -84,22 +85,6 @@ async function renderOgPng(title: string, formattedDate: string) {
 </svg>`
 
     return sharp(Buffer.from(svg)).png().toBuffer()
-}
-
-// Generate static paths for all posts in all locales
-export async function generateStaticParams() {
-    const locales = getLocaleStaticParams().map((entry) => entry.locale)
-    const paths: Array<{ locale: string; slug: string }> = []
-
-    for (const locale of locales) {
-        const posts = await getAllPostMetadata(locale)
-        paths.push(...posts.map((post) => ({
-            locale,
-            slug: post.slug,
-        })))
-    }
-
-    return paths
 }
 
 export default async function Image({ 
