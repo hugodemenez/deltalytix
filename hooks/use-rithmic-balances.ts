@@ -116,6 +116,13 @@ export function useRithmicBalances(): RithmicBalancesState {
   )
   const fetchIdRef = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const balancesRef = useRef(balancesByAccountId)
+  const lastFetchedAtRef = useRef(lastFetchedAt)
+
+  useEffect(() => {
+    balancesRef.current = balancesByAccountId
+    lastFetchedAtRef.current = lastFetchedAt
+  }, [balancesByAccountId, lastFetchedAt])
 
   const refresh = useCallback(async () => {
     abortControllerRef.current?.abort()
@@ -217,14 +224,18 @@ export function useRithmicBalances(): RithmicBalancesState {
       }
 
       if (fetchId === fetchIdRef.current) {
-        const fetchedAt = new Date()
-        setBalancesByAccountId(merged)
-        setLastFetchedAt(fetchedAt)
+        const anySucceeded = fetchAttempts.some((attempt) => attempt.success)
+        const balancesToShow = anySucceeded ? merged : balancesRef.current
+        const fetchedAt = anySucceeded ? new Date() : lastFetchedAtRef.current
+        setBalancesByAccountId(balancesToShow)
+        if (anySucceeded) {
+          setLastFetchedAt(fetchedAt)
+        }
         setError(latestError)
         setRateLimited(latestRateLimited)
         setDebug(
           buildDebugSnapshot({
-            balancesByAccountId: merged,
+            balancesByAccountId: balancesToShow,
             isLoading: false,
             error: latestError,
             rateLimited: latestRateLimited,
@@ -238,14 +249,21 @@ export function useRithmicBalances(): RithmicBalancesState {
       if (fetchId === fetchIdRef.current) {
         const message =
           err instanceof Error ? err.message : "Failed to fetch balances"
+        const anySucceeded = fetchAttempts.some((attempt) => attempt.success)
+        const balancesToShow = anySucceeded ? merged : balancesRef.current
+        const fetchedAt = anySucceeded ? new Date() : lastFetchedAtRef.current
+        setBalancesByAccountId(balancesToShow)
+        if (anySucceeded) {
+          setLastFetchedAt(fetchedAt)
+        }
         setError(message)
         setDebug(
           buildDebugSnapshot({
-            balancesByAccountId: merged,
+            balancesByAccountId: balancesToShow,
             isLoading: false,
             error: message,
             rateLimited: latestRateLimited,
-            lastFetchedAt: null,
+            lastFetchedAt: fetchedAt,
             fetchAttempts,
             skippedReason: "Unexpected error during fetch",
           })
@@ -294,17 +312,6 @@ export function isRithmicLinkedAccount(
   balancesByAccountId: Record<string, RithmicAccountBalance>
 ): boolean {
   return accountNumber in balancesByAccountId
-}
-
-export function getRithmicLinkedAccountNumbers(): Set<string> {
-  const credentialSets = Object.values(getAllRithmicData())
-  const numbers = new Set<string>()
-  for (const credentialSet of credentialSets) {
-    for (const accountId of credentialSet.selectedAccounts) {
-      numbers.add(accountId)
-    }
-  }
-  return numbers
 }
 
 export function buildRithmicBalancesDebugReport(
