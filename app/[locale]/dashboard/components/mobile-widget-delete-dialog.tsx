@@ -33,14 +33,36 @@ export function MobileWidgetDeleteDialog({
   compact = false,
 }: MobileWidgetDeleteDialogProps) {
   const t = useI18n()
+  const [mainOpen, setMainOpen] = useState(false)
   const [deleteAllOpen, setDeleteAllOpen] = useState(false)
   const widgetName = activeWidget
     ? getWidgetDisplayName(t, activeWidget.type)
     : ""
 
+  const closeAll = () => {
+    setMainOpen(false)
+    setDeleteAllOpen(false)
+  }
+
+  const handleRemoveWidget = () => {
+    if (!activeWidget) return
+    onRemoveWidget(activeWidget.i)
+    closeAll()
+  }
+
+  const handleRemoveAll = async () => {
+    await onRemoveAll()
+    closeAll()
+  }
+
+  const openDeleteAllConfirm = () => {
+    setMainOpen(false)
+    setDeleteAllOpen(true)
+  }
+
   return (
     <>
-      <AlertDialog>
+      <AlertDialog open={mainOpen} onOpenChange={setMainOpen}>
         <AlertDialogTrigger asChild>
           <Button
             variant="destructive"
@@ -67,7 +89,7 @@ export function MobileWidgetDeleteDialog({
             <AlertDialogAction
               className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={!activeWidget}
-              onClick={() => activeWidget && onRemoveWidget(activeWidget.i)}
+              onClick={handleRemoveWidget}
             >
               {activeWidget
                 ? t("widgets.mobile.deleteWidgetNamed", { widgetName })
@@ -78,7 +100,7 @@ export function MobileWidgetDeleteDialog({
               type="button"
               variant="ghost"
               className="w-full text-sm text-muted-foreground hover:text-destructive"
-              onClick={() => setDeleteAllOpen(true)}
+              onClick={openDeleteAllConfirm}
             >
               {t("widgets.deleteAll")}
             </Button>
@@ -97,7 +119,7 @@ export function MobileWidgetDeleteDialog({
           <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
             <AlertDialogAction
               className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => onRemoveAll()}
+              onClick={handleRemoveAll}
             >
               {t("widgets.confirmDeleteAll")}
             </AlertDialogAction>
