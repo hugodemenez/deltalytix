@@ -90,6 +90,9 @@ jobs:
       - name: Build
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          OPENAI_API_KEY: dummy
+          RESEND_API_KEY: dummy
+          STRIPE_SECRET_KEY: dummy
         run: bun run build
 
       - name: Deploy to Vercel (production)
