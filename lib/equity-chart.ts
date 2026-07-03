@@ -54,6 +54,7 @@ export interface ChartDataPoint {
 
 interface ChartEvent {
   date: Date;
+  dateKey: string;
   amount: number;
   isPayout: boolean;
   isReset?: boolean;
@@ -280,25 +281,13 @@ export function computeEquityChartData(
       ? allDates.filter((_, index) => index % 2 === 0)
       : allDates;
 
-  const tradesMap = new Map<string, EquityChartTradeInput[]>();
-
-  finalFilteredTrades.forEach((trade) => {
-    const dateKey = formatInTimeZone(
-      new Date(trade.entryDate),
-      params.timezone,
-      "yyyy-MM-dd"
-    );
-    if (!tradesMap.has(dateKey)) {
-      tradesMap.set(dateKey, []);
-    }
-    tradesMap.get(dateKey)!.push(trade);
-  });
-
   const allEvents: ChartEvent[] = [];
 
   finalFilteredTrades.forEach((trade) => {
+    const date = new Date(trade.entryDate);
     allEvents.push({
-      date: new Date(trade.entryDate),
+      date,
+      dateKey: formatInTimeZone(date, params.timezone, "yyyy-MM-dd"),
       amount: trade.pnl - (trade.commission || 0),
       isPayout: false,
       isReset: false,
@@ -311,8 +300,10 @@ export function computeEquityChartData(
     if (!account) return;
 
     account.payouts?.forEach((payout) => {
+      const date = new Date(payout.date);
       allEvents.push({
-        date: new Date(payout.date),
+        date,
+        dateKey: formatInTimeZone(date, params.timezone, "yyyy-MM-dd"),
         amount: ["PENDING", "VALIDATED", "PAID"].includes(payout.status)
           ? -payout.amount
           : 0,
@@ -324,8 +315,10 @@ export function computeEquityChartData(
     });
 
     if (account.resetDate) {
+      const date = new Date(account.resetDate);
       allEvents.push({
-        date: new Date(account.resetDate),
+        date,
+        dateKey: formatInTimeZone(date, params.timezone, "yyyy-MM-dd"),
         amount: 0,
         isPayout: false,
         isReset: true,
@@ -335,6 +328,23 @@ export function computeEquityChartData(
   });
 
   allEvents.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  // Index events by day and account so the daily loop below is O(1) per
+  // lookup instead of re-scanning (and re-formatting) every event per day.
+  const eventsByDayAndAccount = new Map<string, Map<string, ChartEvent[]>>();
+  allEvents.forEach((event) => {
+    let dayMap = eventsByDayAndAccount.get(event.dateKey);
+    if (!dayMap) {
+      dayMap = new Map();
+      eventsByDayAndAccount.set(event.dateKey, dayMap);
+    }
+    let accountEvents = dayMap.get(event.accountNumber);
+    if (!accountEvents) {
+      accountEvents = [];
+      dayMap.set(event.accountNumber, accountEvents);
+    }
+    accountEvents.push(event);
+  });
 
   const accountEquities: Record<string, number> = {};
   const accountFirstActivity: Record<string, string | null> = {};
@@ -365,10 +375,7 @@ export function computeEquityChartData(
       });
     }
 
-    const dateEvents = allEvents.filter(
-      (event) =>
-        formatInTimeZone(event.date, params.timezone, "yyyy-MM-dd") === dateKey
-    );
+    const dateEventsByAccount = eventsByDayAndAccount.get(dateKey);
 
     for (const accountNumber of limitedAccountNumbers) {
       if (
@@ -378,9 +385,7 @@ export function computeEquityChartData(
         continue;
       }
 
-      const accountEvents = dateEvents.filter(
-        (event) => event.accountNumber === accountNumber
-      );
+      const accountEvents = dateEventsByAccount?.get(accountNumber) ?? [];
 
       accountEvents.forEach((event) => {
         if (event.isReset) {
