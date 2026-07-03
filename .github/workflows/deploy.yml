@@ -67,6 +67,7 @@ jobs:
           set_env NEXT_PUBLIC_SUPABASE_ANON_KEY "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
           set_env SUPABASE_SERVICE_KEY "$SUPABASE_SERVICE_KEY"
           set_env ENCRYPTION_KEY "$ENCRYPTION_KEY"
+          set_env NEXT_PUBLIC_SITE_URL "https://deltalytix-one.vercel.app"
           set_env OPENAI_API_KEY "dummy"
           set_env RESEND_API_KEY "dummy"
           set_env STRIPE_SECRET_KEY "dummy"
