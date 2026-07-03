@@ -1,9 +1,23 @@
 'use client'
 import { useI18n } from "@/locales/landing-client";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useTheme } from "@/context/theme-provider";
+
+function GetStartedLinkContent({ children }: { children: React.ReactNode }) {
+  const { pending } = useLinkStatus();
+
+  return (
+    <span className="relative inline-flex items-center justify-center font-medium text-sm text-white">
+      <span className={pending ? "invisible" : undefined}>{children}</span>
+      {pending && (
+        <Loader2 className="absolute h-4 w-4 animate-spin" aria-hidden />
+      )}
+    </span>
+  );
+}
 
 export default function Hero() {
   const t = useI18n();
@@ -87,9 +101,7 @@ export default function Hero() {
               href={"/dashboard"}
               className="flex justify-center items-center px-8 py-2.5 h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200"
             >
-              <span className="font-medium text-sm text-white">
-                {t("landing.cta")}
-              </span>
+              <GetStartedLinkContent>{t("landing.cta")}</GetStartedLinkContent>
             </Link>
           </div>
         </div>
