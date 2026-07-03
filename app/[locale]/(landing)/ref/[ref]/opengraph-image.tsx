@@ -29,5 +29,6 @@ export default async function Image({
     ref,
     joinLabel: copy.joinLabel,
     tagline: copy.tagline,
+    cta: copy.cta,
   });
 }

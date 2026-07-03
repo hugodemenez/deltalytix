@@ -4,6 +4,8 @@ import type { ReactElement } from "react"
 import { getStaticParams as getLocaleStaticParams } from '@/locales/server'
 import { enUS, fr } from "date-fns/locale"
 import { formatDateOnly } from "@/lib/format-date-only"
+import { OgCtaButton, ogImageCacheHeaders } from "@/lib/og/shared"
+import { getUpdatesOgCopy } from "@/lib/og/site-metadata"
 
 export const alt = "Deltalytix Update"
 export const size = {
@@ -52,6 +54,8 @@ export default async function Image({
         const formattedDate = formatDateOnly(meta.date, dateFormat, {
             locale: dateLocale,
         })
+
+        const updatesCopy = getUpdatesOgCopy(locale)
 
         const element = (
             <div
@@ -114,11 +118,13 @@ export default async function Image({
                     </h1>
                 </div>
 
-                {/* Bottom section with date */}
+                {/* Bottom section with date and CTA */}
                 <div
                     style={{
                         display: "flex",
+                        width: "100%",
                         alignItems: "center",
+                        justifyContent: "space-between",
                     }}
                 >
                     <span
@@ -131,17 +137,14 @@ export default async function Image({
                     >
                         {formattedDate}
                     </span>
+                    <OgCtaButton label={updatesCopy.cta} accentColor="#14B8A6" />
                 </div>
             </div>
         ) as ReactElement
 
         return new ImageResponse(element, {
             ...size,
-            headers: {
-                "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=3600",
-                "CDN-Cache-Control": "public, max-age=3600",
-                "Vercel-CDN-Cache-Control": "public, max-age=3600",
-            },
+            headers: ogImageCacheHeaders,
         })
     } catch (e: unknown) {
         console.log(e instanceof Error ? e.message : "Unknown error")
