@@ -1,0 +1,67 @@
+name: Sync upstream
+
+on:
+  schedule:
+    # Check for upstream changes daily at 06:00 UTC
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    name: Sync from upstream
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Add upstream remote
+        run: git remote add upstream https://github.com/hugodemenez/deltalytix.git
+
+      - name: Fetch upstream
+        run: git fetch upstream
+
+      - name: Check for new commits
+        id: check
+        run: |
+          UPSTREAM="upstream/main"
+          LOCAL="origin/main"
+          LOCAL_SHA=$(git rev-parse "$LOCAL")
+          UPSTREAM_SHA=$(git rev-parse "$UPSTREAM")
+
+          if [ "$LOCAL_SHA" = "$UPSTREAM_SHA" ]; then
+            echo "No new upstream commits (both at $LOCAL_SHA)"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Upstream has new commits ($UPSTREAM_SHA vs local $LOCAL_SHA)"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create sync branch and PR
+        if: steps.check.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="sync/upstream-$(date -u +%Y%m%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git merge upstream/main --no-edit
+          git push origin "$BRANCH"
+
+          PR_BODY="Automated sync from upstream \`hugodemenez/deltalytix\` branch \`beta\`.
+
+          Review the changes before merging. Resolve any conflicts manually if the merge did not complete cleanly."
+
+          gh pr create \
+            --title "Sync upstream ($(date -u +%Y-%m-%d))" \
+            --body "$PR_BODY" \
+            --base main \
+            --head "$BRANCH" \
+            --label "upstream-sync"

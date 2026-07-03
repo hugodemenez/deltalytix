@@ -1,0 +1,82 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Setup Vercel project and deploy
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_PROJECT_NAME: ${{ github.event.repository.name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Create Vercel project if it does not exist
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          if ! bunx vercel project ls --token "$VERCEL_TOKEN" 2>/dev/null | grep -q "$VERCEL_PROJECT_NAME"; then
+            echo "Creating Vercel project: $VERCEL_PROJECT_NAME"
+            bunx vercel project add "$VERCEL_PROJECT_NAME" --token "$VERCEL_TOKEN"
+          else
+            echo "Vercel project already exists: $VERCEL_PROJECT_NAME"
+          fi
+
+      - name: Set Vercel env vars
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+        run: |
+          set_env() {
+            echo "$2" | bunx vercel env add "$1" production --token "$VERCEL_TOKEN" 2>/dev/null || true
+          }
+          set_env DATABASE_URL "$DATABASE_URL"
+          set_env NEXT_PUBLIC_SUPABASE_URL "$NEXT_PUBLIC_SUPABASE_URL"
+          set_env NEXT_PUBLIC_SUPABASE_ANON_KEY "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          set_env SUPABASE_SERVICE_KEY "$SUPABASE_SERVICE_KEY"
+          set_env ENCRYPTION_KEY "$ENCRYPTION_KEY"
+          set_env OPENAI_API_KEY "dummy"
+          set_env RESEND_API_KEY "dummy"
+          set_env STRIPE_SECRET_KEY "dummy"
+
+      - name: Link project and pull env
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          bunx vercel link --project "$VERCEL_PROJECT_NAME" --yes --token "$VERCEL_TOKEN"
+          bunx vercel env pull --yes --token "$VERCEL_TOKEN"
+
+      - name: Push Prisma schema to Supabase
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: bunx prisma db push --accept-data-loss
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Build
+        run: bun run build
+
+      - name: Deploy to Vercel (production)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: bunx vercel deploy --prod --yes --token "$VERCEL_TOKEN"

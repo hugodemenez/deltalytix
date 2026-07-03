@@ -11,7 +11,9 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        hostname: 'fhvmtnvjiotzztimdxbi.supabase.co',
+        hostname: process.env.NEXT_PUBLIC_SUPABASE_URL
+          ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+          : 'fhvmtnvjiotzztimdxbi.supabase.co',
       },
     ],
   },
