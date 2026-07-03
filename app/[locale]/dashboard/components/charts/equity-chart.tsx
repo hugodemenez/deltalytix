@@ -958,6 +958,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
                 xDataKey="date"
                 yDataKey="equity"
                 showReferenceLine={true}
+                loadingLabel={t("equity.loading")}
               />
             ) : (
               <ChartContainer config={chartConfig} className="w-full h-full">

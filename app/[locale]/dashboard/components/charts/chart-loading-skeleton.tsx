@@ -21,6 +21,31 @@ import { cn } from "@/lib/utils";
 import type { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 
 const MUTED_BAR_FILL = "hsl(var(--muted-foreground) / 0.35)";
+const DEFAULT_LOADING_LABEL = "Loading chart data...";
+
+interface ChartLoadingContainerProps {
+  children: React.ReactNode;
+  loadingLabel?: string;
+  className?: string;
+}
+
+function ChartLoadingContainer({
+  children,
+  loadingLabel = DEFAULT_LOADING_LABEL,
+  className,
+}: ChartLoadingContainerProps) {
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      aria-label={loadingLabel}
+      className={cn("w-full h-full relative", className)}
+    >
+      <span className="sr-only">{loadingLabel}</span>
+      {children}
+    </div>
+  );
+}
 
 export type ChartMarginVariant = "default" | "hourly" | "calendar";
 
@@ -132,6 +157,7 @@ interface BarChartLoadingSkeletonProps {
   maxBarSize?: number;
   domain?: [number, number];
   xTickCount?: number;
+  loadingLabel?: string;
 }
 
 export function BarChartLoadingSkeleton({
@@ -145,6 +171,7 @@ export function BarChartLoadingSkeleton({
   maxBarSize,
   domain,
   xTickCount = 6,
+  loadingLabel,
 }: BarChartLoadingSkeletonProps) {
   const margin = getChartMargins(size, marginVariant);
   const { xAxisHeight } = getAxisDimensions(size, yAxisWidth);
@@ -153,7 +180,10 @@ export function BarChartLoadingSkeleton({
   const barSize = maxBarSize ?? (size === "small" ? 25 : 40);
 
   return (
-    <div className={cn("w-full h-full animate-pulse relative")}>
+    <ChartLoadingContainer
+      loadingLabel={loadingLabel}
+      className="animate-pulse"
+    >
       <ChartAxisSkeletonOverlay
         size={size}
         margin={margin}
@@ -199,7 +229,7 @@ export function BarChartLoadingSkeleton({
           </Bar>
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </ChartLoadingContainer>
   );
 }
 
@@ -209,6 +239,7 @@ interface LineChartLoadingSkeletonProps {
   xDataKey: string;
   yDataKey: string;
   showReferenceLine?: boolean;
+  loadingLabel?: string;
 }
 
 export function LineChartLoadingSkeleton({
@@ -217,12 +248,16 @@ export function LineChartLoadingSkeleton({
   xDataKey,
   yDataKey,
   showReferenceLine = true,
+  loadingLabel,
 }: LineChartLoadingSkeletonProps) {
   const margin = getChartMargins(size);
   const { yAxisWidth, xAxisHeight } = getAxisDimensions(size);
 
   return (
-    <div className={cn("w-full h-full animate-pulse relative")}>
+    <ChartLoadingContainer
+      loadingLabel={loadingLabel}
+      className="animate-pulse"
+    >
       <ChartAxisSkeletonOverlay
         size={size}
         margin={margin}
@@ -268,16 +303,18 @@ export function LineChartLoadingSkeleton({
           />
         </LineChart>
       </ResponsiveContainer>
-    </div>
+    </ChartLoadingContainer>
   );
 }
 
 interface DonutChartLoadingSkeletonProps {
   size?: WidgetSize;
+  loadingLabel?: string;
 }
 
 export function DonutChartLoadingSkeleton({
   size = "medium",
+  loadingLabel,
 }: DonutChartLoadingSkeletonProps) {
   const mockData = [
     { name: "a", value: 55 },
@@ -286,7 +323,10 @@ export function DonutChartLoadingSkeleton({
   ];
 
   return (
-    <div className={cn("w-full h-full animate-pulse relative flex flex-col")}>
+    <ChartLoadingContainer
+      loadingLabel={loadingLabel}
+      className="animate-pulse flex flex-col"
+    >
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -323,7 +363,7 @@ export function DonutChartLoadingSkeleton({
           />
         ))}
       </div>
-    </div>
+    </ChartLoadingContainer>
   );
 }
 
@@ -333,6 +373,7 @@ interface ComposedChartLoadingSkeletonProps {
   xDataKey: string;
   barDataKey: string;
   lineDataKey: string;
+  loadingLabel?: string;
 }
 
 export function ComposedChartLoadingSkeleton({
@@ -341,12 +382,16 @@ export function ComposedChartLoadingSkeleton({
   xDataKey,
   barDataKey,
   lineDataKey,
+  loadingLabel,
 }: ComposedChartLoadingSkeletonProps) {
-  const margin = { left: 10, right: 8, top: 8, bottom: 35 };
+  const margin = getChartMargins(size, "calendar");
   const { yAxisWidth, xAxisHeight } = getAxisDimensions(size);
 
   return (
-    <div className={cn("w-full h-full animate-pulse relative")}>
+    <ChartLoadingContainer
+      loadingLabel={loadingLabel}
+      className="animate-pulse"
+    >
       <ChartAxisSkeletonOverlay
         size={size}
         margin={margin}
@@ -396,7 +441,7 @@ export function ComposedChartLoadingSkeleton({
           />
         </ComposedChart>
       </ResponsiveContainer>
-    </div>
+    </ChartLoadingContainer>
   );
 }
 

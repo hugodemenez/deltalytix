@@ -53,11 +53,12 @@ export function Charts({ dayData, isWeekly = false, isLoading }: ChartsProps) {
   const t = useI18n()
   const locale = useCurrentLocale()
   const { isLoading: globalIsLoading } = useData()
-  const showLoading = isLoading || (globalIsLoading && dayData === undefined)
+  const showLoading =
+    dayData === undefined && (isLoading === true || globalIsLoading)
   
   // Calculate data for charts
   const { accountPnL, equityChartData, chartData, totalPnL, calculateCommonDomain } = React.useMemo(() => {
-    if (!dayData?.trades?.length) {
+    if (showLoading || !dayData?.trades?.length) {
       return {
         accountPnL: {},
         equityChartData: [],
@@ -134,7 +135,7 @@ export function Charts({ dayData, isWeekly = false, isLoading }: ChartsProps) {
       totalPnL,
       calculateCommonDomain
     };
-  }, [dayData?.trades, locale]);
+  }, [showLoading, dayData?.trades, locale]);
 
   if (showLoading) {
     return (
@@ -154,6 +155,7 @@ export function Charts({ dayData, isWeekly = false, isLoading }: ChartsProps) {
               xDataKey="time"
               barDataKey="pnl"
               lineDataKey="balance"
+              loadingLabel={t("equity.loading")}
             />
           </CardContent>
         </Card>
@@ -174,6 +176,7 @@ export function Charts({ dayData, isWeekly = false, isLoading }: ChartsProps) {
               yDataKey="value"
               showReferenceLine={true}
               marginVariant="calendar"
+              loadingLabel={t("equity.loading")}
             />
           </CardContent>
         </Card>
