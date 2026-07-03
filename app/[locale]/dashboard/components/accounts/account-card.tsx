@@ -7,14 +7,25 @@ import { useI18n } from "@/locales/client"
 import { TradeProgressChart } from "./trade-progress-chart"
 import { Account } from "@/context/data-provider"
 import { WidgetSize } from '../../types/dashboard'
+import { Loader2 } from "lucide-react"
 
 interface AccountCardProps {
   account: Account
   onClick?: () => void
   size?: WidgetSize
+  rithmicBalance?: number | null
+  rithmicBalanceLoading?: boolean
+  showRithmicBalance?: boolean
 }
 
-export function AccountCard({ account, onClick, size = 'large' }: AccountCardProps) {
+export function AccountCard({
+  account,
+  onClick,
+  size = 'large',
+  rithmicBalance = null,
+  rithmicBalanceLoading = false,
+  showRithmicBalance = false,
+}: AccountCardProps) {
   const t = useI18n()
   
   // Extract metrics from account (computed server-side)
@@ -86,6 +97,27 @@ export function AccountCard({ account, onClick, size = 'large' }: AccountCardPro
             size === 'small' || size === 'small-long' ? "text-sm" : "text-base"
           )}>${currentBalance.toFixed(2)}</span>
         </div>
+        {showRithmicBalance && (
+          <div className="flex justify-between items-baseline">
+            <span className={cn(
+              "text-muted-foreground",
+              size === 'small' || size === 'small-long' ? "text-xs" : "text-xs"
+            )}>{t('propFirm.card.rithmicBalance')}</span>
+            {rithmicBalanceLoading ? (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                {t('propFirm.card.rithmicBalanceLoading')}
+              </span>
+            ) : rithmicBalance != null ? (
+              <span className={cn(
+                "font-medium truncate ml-2",
+                size === 'small' || size === 'small-long' ? "text-xs" : "text-sm"
+              )}>{Number.isFinite(rithmicBalance) ? `$${rithmicBalance.toFixed(2)}` : "—"}</span>
+            ) : (
+              <span className="text-xs text-muted-foreground">—</span>
+            )}
+          </div>
+        )}
         {isConfigured ? (
           <div className={cn(
             size === 'small' || size === 'small-long' ? "space-y-1.5" : "space-y-2"
