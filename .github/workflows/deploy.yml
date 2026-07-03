@@ -77,7 +77,7 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ env.VERCEL_PROJECT_ID }}
         run: |
-          bunx vercel env pull --yes --token "$VERCEL_TOKEN"
+          bunx vercel pull --yes --token "$VERCEL_TOKEN"
 
       - name: Push Prisma schema to Supabase
         env:
