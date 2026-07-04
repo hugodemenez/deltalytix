@@ -1,32 +1,54 @@
-'use server'
 import { createClient, ensureUserInDatabase } from '@/server/auth'
+import { type EmailOtpType } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-// The client you created from the Server-Side Auth instructions
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const type = searchParams.get('type') // 'recovery' for password reset
-  // if "next" is in param, use it as the redirect URL
+  const token_hash = searchParams.get('token_hash')
+  const type = searchParams.get('type') as EmailOtpType | null
   const next = searchParams.get('next')
   const action = searchParams.get('action')
   const locale = searchParams.get('locale') || undefined
 
-  // Add debugging for Edge
+  // Resolve the base URL for redirects
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const isLocalEnv = process.env.NODE_ENV === 'development'
+  const baseUrl = isLocalEnv
+    ? origin
+    : `https://${forwardedHost || origin}`
+
+  // Build the redirect path helper
+  const redirectTo = (path: string) => {
+    if (isLocalEnv) return NextResponse.redirect(new URL(path, origin))
+    return NextResponse.redirect(`${baseUrl}${path}`)
+  }
+
+  // Helper to redirect to dashboard or the specified next path
+  const redirectToDashboard = (locale?: string) => {
+    let decodedNext: string | null = null
+    if (next) {
+      decodedNext = decodeURIComponent(next)
+    }
+    if (decodedNext) {
+      if (isLocalEnv) return NextResponse.redirect(new URL(decodedNext, origin))
+      return NextResponse.redirect(`https://${forwardedHost}${decodedNext.startsWith('/') ? '' : '/'}${decodedNext}`)
+    }
+    if (isLocalEnv) return NextResponse.redirect(`${origin}${next ?? '/dashboard'}`)
+    return NextResponse.redirect(`${baseUrl}${next ?? '/dashboard'}`)
+  }
+
   console.log('Auth callback debug:', {
-    userAgent: request.headers.get('user-agent'),
-    origin,
     hasCode: !!code,
+    hasTokenHash: !!token_hash,
+    type,
     next,
-    action
+    action,
+    locale,
   })
 
-  // Redirect to the decoded 'next' URL if it exists, otherwise to the homepage
-  let decodedNext: string | null = null;
-  if (next) {
-    decodedNext = decodeURIComponent(next)
-  }
   if (code) {
+    // PKCE flow: exchange authorization code for session (OAuth, password-based)
     try {
       const supabase = await createClient()
       const { error } = await supabase.auth.exchangeCodeForSession(code)
@@ -34,27 +56,15 @@ export async function GET(request: Request) {
       if (!error) {
         // Handle password recovery redirect
         if (type === 'recovery') {
-          const forwardedHost = request.headers.get('x-forwarded-host')
-          const isLocalEnv = process.env.NODE_ENV === 'development'
-          const baseUrl = isLocalEnv
-            ? `${origin}/dashboard/settings`
-            : `https://${forwardedHost || origin}/dashboard/settings`
-          const redirectUrl = `${baseUrl}?passwordReset=true`
-          return NextResponse.redirect(redirectUrl)
+          return redirectTo('/dashboard/settings?passwordReset=true')
         }
 
         // Handle identity linking redirect
         if (action === 'link') {
-          const forwardedHost = request.headers.get('x-forwarded-host')
-          const isLocalEnv = process.env.NODE_ENV === 'development'
-          const baseUrl = isLocalEnv
-            ? `${origin}/dashboard/settings`
-            : `https://${forwardedHost || origin}/dashboard/settings`
-          const redirectUrl = `${baseUrl}?linked=true`
-          return NextResponse.redirect(redirectUrl)
+          return redirectTo('/dashboard/settings?linked=true')
         }
 
-        // Ensure DB user exists and persist locale before redirecting
+        // Ensure DB user exists and persist locale
         try {
           const { data: { user } } = await supabase.auth.getUser()
           if (user) {
@@ -62,33 +72,14 @@ export async function GET(request: Request) {
           }
         } catch (e) {
           console.error('Auth callback ensureUserInDatabase error:', e)
-          // Non-fatal: continue redirect
         }
 
-        const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
-        const isLocalEnv = process.env.NODE_ENV === 'development'
-        if (isLocalEnv) {
-          // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
-          if (decodedNext) {
-            return NextResponse.redirect(new URL(decodedNext, origin))
-          }
-          return NextResponse.redirect(`${origin}${next ?? '/dashboard'}`)
-        } else if (forwardedHost) {
-          if (decodedNext) {
-            return NextResponse.redirect(new URL(decodedNext, `https://${forwardedHost}`))
-          }
-          return NextResponse.redirect(`https://${forwardedHost}${next ?? '/dashboard'}`)
-        } else {
-          if (decodedNext) {
-            return NextResponse.redirect(new URL(decodedNext, origin))
-          }
-          return NextResponse.redirect(`${origin}${next ?? '/dashboard'}`)
-        }
-      } else {
-        console.log('Auth callback error:', error)
+        return redirectToDashboard()
       }
+
+      console.error('Auth callback exchangeCodeForSession error:', error)
+      return redirectTo(`/authentication?auth_error=exchange_failed&error_description=${encodeURIComponent(error.message)}`)
     } catch (error: any) {
-      // Handle JSON parsing errors from Supabase API
       if (
         error?.message?.includes('Unexpected token') ||
         error?.message?.includes('is not valid JSON') ||
@@ -96,13 +87,52 @@ export async function GET(request: Request) {
         error?.originalError?.message?.includes('is not valid JSON')
       ) {
         console.error('[Auth Callback] Supabase API returned non-JSON response:', error)
-        // Redirect to auth page with error message
-        return NextResponse.redirect(`${origin}/authentication?error=service_unavailable`)
+        return redirectTo('/authentication?auth_error=service_unavailable')
       }
       console.error('Auth callback unexpected error:', error)
+      return redirectTo(`/authentication?auth_error=unexpected&error_description=${encodeURIComponent(error?.message || 'Unknown error')}`)
     }
   }
 
-  // return the user to the authentication page
-  return NextResponse.redirect(`${origin}/authentication`)
+  if (token_hash && type) {
+    // Magic link / OTP flow: verify the token hash
+    try {
+      const supabase = await createClient()
+      const { error } = await supabase.auth.verifyOtp({
+        type,
+        token_hash,
+      })
+
+      if (!error) {
+        // Handle password recovery
+        if (type === 'recovery') {
+          return redirectTo('/dashboard/settings?passwordReset=true')
+        }
+
+        // Ensure DB user exists and persist locale
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            await ensureUserInDatabase(user, locale)
+          }
+        } catch (e) {
+          console.error('Auth callback ensureUserInDatabase error:', e)
+        }
+
+        return redirectToDashboard()
+      }
+
+      console.error('Auth callback verifyOtp error:', error)
+      return redirectTo(`/authentication?auth_error=verification_failed&error_description=${encodeURIComponent(error.message)}`)
+    } catch (error: any) {
+      console.error('Auth callback verifyOtp unexpected error:', error)
+      return redirectTo(`/authentication?auth_error=verification_error&error_description=${encodeURIComponent(error?.message || 'Unknown error')}`)
+    }
+  }
+
+  // No valid auth parameters found
+  console.error('Auth callback: no code or token_hash found in URL', {
+    searchParams: Object.fromEntries(searchParams.entries()),
+  })
+  return redirectTo(`/authentication?auth_error=missing_params`)
 }
