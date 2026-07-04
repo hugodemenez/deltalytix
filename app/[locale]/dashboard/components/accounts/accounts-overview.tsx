@@ -53,6 +53,7 @@ import { useParams } from 'next/navigation'
 import { AccountCard } from './account-card'
 import { AccountConfigurator } from './account-configurator'
 import { AccountsTableView } from './accounts-table-view'
+import { MobileAccountCardsCarousel } from './mobile-account-cards-carousel'
 import { RithmicBalancesDebugPanel } from './rithmic-balances-debug-panel'
 import { AlertDialogAction, AlertDialogCancel, AlertDialogFooter, AlertDialogDescription, AlertDialogTitle, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { AlertDialog } from '@/components/ui/alert-dialog'
@@ -805,7 +806,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const isLoading = useUserStore(state => state.isLoading)
   const groups = useUserStore(state => state.groups)
   const accounts = useUserStore(state => state.accounts)
-  const { accountNumbers, deletePayout, saveAccount, savePayout } = useData()
+  const { accountNumbers, deletePayout, saveAccount, savePayout, isMobile } = useData()
   const { getOrderedAccounts, reorderAccounts } = useAccountOrderStore()
   const t = useI18n()
   const params = useParams()
@@ -1064,6 +1065,47 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       sortedUngroupedAccounts: sortedUngrouped,
     }
   }, [filteredAccounts, getOrderedAccounts, groups, sorting])
+
+  const mobileCarouselItems = useMemo(() => {
+    const items: Array<{
+      id: string
+      label: string
+      groupName: string | null
+      account: Account
+    }> = []
+
+    for (const { group, accounts } of sortedGroupEntries) {
+      for (const account of accounts) {
+        if (!account.number) continue
+        items.push({
+          id: account.number,
+          label: account.propfirm
+            ? `${account.propfirm} (${account.number})`
+            : account.number,
+          groupName: group.name,
+          account: account as Account,
+        })
+      }
+    }
+
+    for (const account of sortedUngroupedAccounts) {
+      if (!account.number) continue
+      items.push({
+        id: account.number,
+        label: account.propfirm
+          ? `${account.propfirm} (${account.number})`
+          : account.number,
+        groupName: null,
+        account: account as Account,
+      })
+    }
+
+    return items
+  }, [sortedGroupEntries, sortedUngroupedAccounts])
+
+  const useMobileAccountCarousel = isMobile && view === "cards"
+  const mobileCarouselOrientation =
+    size === "extra-large" ? "horizontal" : "vertical"
 
   const dailyMetrics = useMemo(() => {
     if (!selectedAccountForTable) return []
@@ -1524,9 +1566,39 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       <CardContent
         className={cn(
           "flex-1 overflow-hidden",
-          view === "table" && "p-0"
+          view === "table" && "p-0",
+          useMobileAccountCarousel && "flex min-h-0 flex-col p-0"
         )}
       >
+        {useMobileAccountCarousel ? (
+          <MobileAccountCardsCarousel
+            items={mobileCarouselItems}
+            orientation={mobileCarouselOrientation}
+            renderSlide={(item, index) => {
+              const slide = mobileCarouselItems[index]
+              if (!slide) return null
+
+              return (
+                <div className="flex h-full min-h-0 flex-col gap-2">
+                  {slide.groupName && (
+                    <p className="shrink-0 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {slide.groupName}
+                    </p>
+                  )}
+                  <div className="min-h-0 flex-1">
+                    <AccountCard
+                      account={slide.account}
+                      onClick={() => setSelectedAccountForTable(slide.account)}
+                      size="extra-large"
+                      layout="carousel"
+                      {...getRithmicBalanceProps(slide.account)}
+                    />
+                  </div>
+                </div>
+              )
+            }}
+          />
+        ) : (
         <div
           className="flex-1 overflow-y-auto h-full"
         >
@@ -1671,6 +1743,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
             />
           )}
         </div>
+        )}
 
         <Dialog
           open={!!selectedAccountForTable}

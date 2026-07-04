@@ -2365,6 +2365,8 @@ export default {
   "calendar.maxDD": "Max DD",
   "accounts.view.charts": "Charts",
   "accounts.view.table": "Table",
+  "accounts.mobile.carouselNavigation": "Account navigation",
+  "accounts.mobile.carouselGoTo": "Go to {accountName} ({index} of {total})",
   "accounts.table.account": "Account",
   "accounts.table.propfirm": "Prop firm",
   "accounts.table.startDate": "Start date",

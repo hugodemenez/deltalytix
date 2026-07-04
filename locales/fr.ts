@@ -2527,6 +2527,8 @@ export default {
   "calendar.maxDD": "Max DD",
   "accounts.view.charts": "Graphiques",
   "accounts.view.table": "Tableau",
+  "accounts.mobile.carouselNavigation": "Navigation des comptes",
+  "accounts.mobile.carouselGoTo": "Aller à {accountName} ({index} sur {total})",
   "accounts.table.account": "Compte",
   "accounts.table.propfirm": "Prop firm",
   "accounts.table.startDate": "Date de début",

@@ -13,6 +13,7 @@ interface AccountCardProps {
   account: Account
   onClick?: () => void
   size?: WidgetSize
+  layout?: 'default' | 'carousel'
   rithmicBalance?: number | null
   rithmicBalanceLoading?: boolean
   showRithmicBalance?: boolean
@@ -22,6 +23,7 @@ export function AccountCard({
   account,
   onClick,
   size = 'large',
+  layout = 'default',
   rithmicBalance = null,
   rithmicBalanceLoading = false,
   showRithmicBalance = false,
@@ -37,11 +39,18 @@ export function AccountCard({
   const drawdownProgress = metrics?.drawdownProgress ?? 0
   const remainingLoss = metrics?.remainingLoss ?? 0
 
+  const isCarouselLayout = layout === 'carousel'
+  const showChart = size === 'large' || size === 'extra-large'
+
   return (
     <Card
       className={cn(
         "flex flex-col cursor-pointer hover:border-primary/50 transition-colors shadow-xs hover:shadow-md",
-        size === 'small' || size === 'small-long' ? "w-72" : "w-96"
+        isCarouselLayout
+          ? "h-full w-full max-w-full min-h-0"
+          : size === 'small' || size === 'small-long'
+            ? "w-72"
+            : "w-96"
       )}
       onClick={onClick}
     >
@@ -85,7 +94,11 @@ export function AccountCard({
       </CardHeader>
       <CardContent className={cn(
         "flex-1 pt-0",
-        size === 'small' || size === 'small-long' ? "p-2 space-y-1.5" : "p-3 space-y-2"
+        isCarouselLayout
+          ? "flex min-h-0 flex-col overflow-hidden p-3"
+          : size === 'small' || size === 'small-long'
+            ? "p-2 space-y-1.5"
+            : "p-3 space-y-2"
       )}>
         <div className="flex justify-between items-baseline">
           <span className={cn(
@@ -120,12 +133,17 @@ export function AccountCard({
         )}
         {isConfigured ? (
           <div className={cn(
-            size === 'small' || size === 'small-long' ? "space-y-1.5" : "space-y-2"
+            isCarouselLayout
+              ? "flex min-h-0 flex-1 flex-col gap-2"
+              : size === 'small' || size === 'small-long'
+                ? "space-y-1.5"
+                : "space-y-2"
           )}>
             {/* Trade Progress Chart - only show for larger sizes */}
-            {(size === 'large' || size === 'extra-large') && account.payouts && (
+            {showChart && account.payouts && (
               <TradeProgressChart
                 account={account}
+                fillHeight={isCarouselLayout}
               />
             )}
 
