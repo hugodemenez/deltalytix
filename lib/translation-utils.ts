@@ -29,6 +29,22 @@ export function translateWeekday(t: any, day: string): string {
 }
 
 /**
+ * Translates short weekday keys safely (unambiguous two-letter labels for mobile)
+ */
+export function translateWeekdayShort(t: any, day: string): string {
+  switch (day) {
+    case 'calendar.weekdays.sun': return t('calendar.weekdays.sunShort')
+    case 'calendar.weekdays.mon': return t('calendar.weekdays.monShort')
+    case 'calendar.weekdays.tue': return t('calendar.weekdays.tueShort')
+    case 'calendar.weekdays.wed': return t('calendar.weekdays.wedShort')
+    case 'calendar.weekdays.thu': return t('calendar.weekdays.thuShort')
+    case 'calendar.weekdays.fri': return t('calendar.weekdays.friShort')
+    case 'calendar.weekdays.sat': return t('calendar.weekdays.satShort')
+    default: return day
+  }
+}
+
+/**
  * Translates Tradovate fee type keys safely
  */
 export function translateTradovateFeeType(t: any, key: string): string {

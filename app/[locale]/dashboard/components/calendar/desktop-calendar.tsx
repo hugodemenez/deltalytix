@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 import { FinancialEvent } from "@/prisma/generated/prisma/browser"
 import { CalendarModal } from "./daily-modal"
 import { useI18n, useCurrentLocale } from "@/locales/client"
-import { translateWeekday } from "@/lib/translation-utils"
+import { translateWeekday, translateWeekdayShort } from "@/lib/translation-utils"
 import { WeeklyModal } from "./weekly-modal"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
@@ -67,25 +67,30 @@ function getCalendarDays(monthStart: Date, monthEnd: Date, weekStartsOnMonday: b
   return [...days, ...additionalDays].slice(0, 42)
 }
 
-const formatCurrency = (value: number, options?: { minimumFractionDigits?: number; maximumFractionDigits?: number }) => {
+const formatCurrency = (value: number, options?: { minimumFractionDigits?: number; maximumFractionDigits?: number; signed?: boolean }) => {
   const formatted = value.toLocaleString('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: options?.minimumFractionDigits ?? 0,
     maximumFractionDigits: options?.maximumFractionDigits ?? 0
   })
+  if (options?.signed && value > 0) {
+    return `+${formatted}`
+  }
   return formatted
 }
 
 const formatCurrencyCompact = (value: number) => {
   const absValue = Math.abs(value)
   if (absValue >= 1_000_000) {
-    return `$${(value / 1_000_000).toFixed(1)}M`
+    const result = `$${(value / 1_000_000).toFixed(1)}M`
+    return value > 0 ? `+${result}` : result
   }
   if (absValue >= 1_000) {
-    return `$${(value / 1_000).toFixed(1)}K`
+    const result = `$${(value / 1_000).toFixed(1)}K`
+    return value > 0 ? `+${result}` : result
   }
-  return formatCurrency(value)
+  return formatCurrency(value, { signed: true })
 }
 
 function ResponsiveCurrency({
@@ -100,7 +105,7 @@ function ResponsiveCurrency({
   return (
     <>
       <span className={cn("sm:hidden", className)}>{formatCurrencyCompact(value)}</span>
-      <span className={cn("hidden sm:inline", className)}>{formatCurrency(value, options)}</span>
+      <span className={cn("hidden sm:inline", className)}>{formatCurrency(value, { ...options, signed: true })}</span>
     </>
   )
 }
@@ -213,7 +218,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
           variant="outline"
           className={cn(
             "h-4 px-1.5 text-[8px] sm:text-[9px] font-medium cursor-pointer relative z-0 w-auto justify-center items-center gap-1",
-            "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900/30",
+            "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 dark:bg-primary/15 dark:border-primary/30 dark:hover:bg-primary/25",
             "transition-[background-color,color,border-color,box-shadow,transform] duration-200 ease-in-out motion-reduce:transition-none",
             "hover:scale-110 hover:shadow-md",
             "active:scale-95"
@@ -321,7 +326,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
   )
 }
 
-export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false }: CalendarPnlProps) {
+export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobile = false }: CalendarPnlProps) {
   const accounts = useUserStore(state => state.accounts)
   const groups = useUserStore(state => state.groups)
   const t = useI18n()
@@ -601,7 +606,7 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
             <div className="grid grid-cols-7 sm:grid-cols-8 gap-x-px mb-0.5 sm:mb-1">
               {WEEKDAYS.map((day) => (
                 <div key={day} className="text-center font-medium text-[8px] sm:text-[11px] text-muted-foreground truncate px-px">
-                  <span className="sm:hidden">{translateWeekday(t, day).charAt(0)}</span>
+                  <span className="sm:hidden">{translateWeekdayShort(t, day)}</span>
                   <span className="hidden sm:inline">{translateWeekday(t, day)}</span>
                 </div>
               ))}
@@ -624,10 +629,12 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
 
                 return (
                   <React.Fragment key={dateString}>
-                    <div
+                    <button
+                      type="button"
+                      aria-label={formatInTimeZone(date, timezone, 'EEEE, MMMM d, yyyy', { locale: dateLocale })}
                       className={cn(
-                        "h-full flex flex-col cursor-pointer transition-[background-color,color,box-shadow] motion-reduce:transition-none rounded-none p-0.5 sm:p-1 min-h-[44px] sm:min-h-0",
-                        "ring-1 ring-border hover:ring-primary hover:z-10",
+                        "h-full w-full flex flex-col text-left cursor-pointer transition-[background-color,color,box-shadow] motion-reduce:transition-none rounded-none p-0.5 sm:p-1 min-h-[44px] sm:min-h-0",
+                        "ring-1 ring-border hover:ring-primary hover:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                         dayData && dayData.pnl >= 0
                           ? "bg-green-50 dark:bg-green-900/20"
                           : dayData && dayData.pnl < 0
@@ -673,7 +680,7 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
                           )}>$0</div>
                         )}
                         <div className={cn(
-                          "text-[6px] sm:text-[9px] text-muted-foreground truncate text-center leading-tight",
+                          "text-[8px] sm:text-[9px] text-muted-foreground truncate text-center leading-tight",
                           !isCurrentMonth && "opacity-50"
                         )}>
                           {dayData
@@ -704,14 +711,16 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
                           </>
                         )}
                       </div>
-                    </div>
+                    </button>
                     {isLastDayOfWeek && (() => {
                       const weeklyTotal = calculateWeeklyTotal(index, calendarDays, calendarData)
                       return (
-                        <div
+                        <button
+                          type="button"
+                          aria-label={`${t('calendar.weekdays.weekly')}, ${formatInTimeZone(date, timezone, 'MMMM d, yyyy', { locale: dateLocale })}`}
                           className={cn(
-                            "hidden sm:flex h-full items-center justify-center rounded-none cursor-pointer",
-                            "ring-1 ring-border hover:ring-primary hover:z-10",
+                            "hidden sm:flex h-full w-full items-center justify-center rounded-none cursor-pointer",
+                            "ring-1 ring-border hover:ring-primary hover:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                             index === 6 && "rounded-tr-lg",
                             index === 41 && "rounded-br-lg"
                           )}
@@ -723,9 +732,9 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
                               ? "text-green-600 dark:text-green-400"
                               : "text-red-600 dark:text-red-400"
                           )}>
-                            {formatCurrency(weeklyTotal)}
+                            {formatCurrency(weeklyTotal, { signed: true })}
                           </div>
-                        </div>
+                        </button>
                       )
                     })()}
                   </React.Fragment>
@@ -775,6 +784,8 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
             <Button
               variant={viewMode === 'daily' ? 'default' : 'ghost'}
               size="sm"
+              aria-pressed={viewMode === 'daily'}
+              aria-label={t('calendar.viewMode.daily')}
               className={cn(
                 "h-7 flex-1 sm:flex-none px-2 transition-colors",
                 viewMode === 'daily' && "bg-primary text-primary-foreground shadow-sm font-semibold"
@@ -787,6 +798,8 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
             <Button
               variant={viewMode === 'weekly' ? 'default' : 'ghost'}
               size="sm"
+              aria-pressed={viewMode === 'weekly'}
+              aria-label={t('calendar.viewMode.weekly')}
               className={cn(
                 "h-7 flex-1 sm:flex-none px-2 transition-colors",
                 viewMode === 'weekly' && "bg-primary text-primary-foreground shadow-sm font-semibold"

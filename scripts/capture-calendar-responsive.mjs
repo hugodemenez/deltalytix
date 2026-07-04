@@ -8,6 +8,7 @@ import path from 'path'
 import { chromium } from 'playwright-core'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+const READY_MARKER = process.env.CALENDAR_CAPTURE_READY_MARKER || 'LOCAL-SIM-001'
 const OUT_DIR = path.join(process.cwd(), 'public', 'updates', 'calendar-responsive-preview')
 
 const VIEWPORTS = [
@@ -32,10 +33,11 @@ async function waitForDashboard(page) {
   })
   await dismissCookies(page)
   await page.waitForFunction(
-    () => {
+    (marker) => {
       const text = document.body?.innerText ?? ''
-      return text.includes('LOCAL-SIM-001')
+      return text.includes(marker)
     },
+    READY_MARKER,
     { timeout: 90_000 },
   )
   await page.waitForTimeout(2000)
