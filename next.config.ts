@@ -19,6 +19,8 @@ const buildWorkers =
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // playwright-core reads browsers.json at import time; keep it external + traced for cron scraping.
+  serverExternalPackages: ['playwright-core', '@vercel/sandbox'],
   allowedDevOrigins: ["13.36.171.174"],
   // NOTE: Do not add hardcoded /en redirects for localized routes (e.g. /updates
   // -> /en/updates). next.config redirects run before middleware, so they force a
@@ -52,6 +54,9 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/app/api/**': [
       './prisma/generated/prisma/**',
+    ],
+    '/api/cron/investing': [
+      './node_modules/playwright-core/**',
     ],
     // Runtime fs search in /api/ai/support — keep docs in the serverless bundle.
     '/api/ai/support': [...SUPPORT_SEARCH_TRACE_INCLUDES],
