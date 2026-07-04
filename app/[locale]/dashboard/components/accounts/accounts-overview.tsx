@@ -54,6 +54,12 @@ import { AccountCard } from './account-card'
 import { AccountConfigurator } from './account-configurator'
 import { AccountsTableView } from './accounts-table-view'
 import { MobileAccountCardsCarousel } from './mobile-account-cards-carousel'
+import {
+  MobileAccountGroupsCarousel,
+  type AccountGroupCarouselGroup,
+  type MobileAccountGroupsCarouselHandle,
+} from './mobile-account-groups-carousel'
+import { AccountsToolbar } from './accounts-toolbar'
 import { RithmicBalancesDebugPanel } from './rithmic-balances-debug-panel'
 import { AlertDialogAction, AlertDialogCancel, AlertDialogFooter, AlertDialogDescription, AlertDialogTitle, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { AlertDialog } from '@/components/ui/alert-dialog'
@@ -1103,9 +1109,67 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
     return items
   }, [sortedGroupEntries, sortedUngroupedAccounts])
 
+  const mobileCarouselGroups = useMemo<AccountGroupCarouselGroup[]>(() => {
+    const carouselGroups: AccountGroupCarouselGroup[] = []
+
+    for (const { group, accounts } of sortedGroupEntries) {
+      const groupAccounts = accounts
+        .filter((account) => account.number)
+        .map((account) => ({
+          id: account.number as string,
+          label: account.propfirm
+            ? `${account.propfirm} (${account.number})`
+            : (account.number as string),
+          account: account as Account,
+        }))
+      if (groupAccounts.length === 0) continue
+      carouselGroups.push({
+        id: group.id,
+        name: group.name,
+        accounts: groupAccounts,
+      })
+    }
+
+    const ungroupedAccounts = sortedUngroupedAccounts
+      .filter((account) => account.number)
+      .map((account) => ({
+        id: account.number as string,
+        label: account.propfirm
+          ? `${account.propfirm} (${account.number})`
+          : (account.number as string),
+        account: account as Account,
+      }))
+    if (ungroupedAccounts.length > 0) {
+      carouselGroups.push({
+        id: "ungrouped",
+        name: t('propFirm.ungrouped'),
+        accounts: ungroupedAccounts,
+      })
+    }
+
+    return carouselGroups
+  }, [sortedGroupEntries, sortedUngroupedAccounts, t])
+
+  const mobileSearchItems = useMemo(
+    () =>
+      mobileCarouselItems.map((item) => ({
+        id: item.id,
+        label: item.label,
+        groupName: item.groupName,
+      })),
+    [mobileCarouselItems]
+  )
+
+  const groupsCarouselRef = useRef<MobileAccountGroupsCarouselHandle>(null)
+
+  const handleSearchSelectAccount = useCallback((accountId: string) => {
+    groupsCarouselRef.current?.scrollToAccount(accountId)
+  }, [])
+
   const useMobileAccountCarousel = isMobile && view === "cards"
-  const mobileCarouselOrientation =
-    size === "extra-large" ? "horizontal" : "vertical"
+  // Inside the widget carousel (extra-large), vertical swipes navigate widgets,
+  // so the accounts fall back to a flat horizontal carousel there.
+  const isEmbeddedInWidgetCarousel = size === "extra-large"
 
   const dailyMetrics = useMemo(() => {
     if (!selectedAccountForTable) return []
@@ -1571,33 +1635,60 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         )}
       >
         {useMobileAccountCarousel ? (
-          <MobileAccountCardsCarousel
-            items={mobileCarouselItems}
-            orientation={mobileCarouselOrientation}
-            renderSlide={(item, index) => {
-              const slide = mobileCarouselItems[index]
-              if (!slide) return null
+          isEmbeddedInWidgetCarousel ? (
+            <MobileAccountCardsCarousel
+              items={mobileCarouselItems}
+              orientation="horizontal"
+              renderSlide={(item, index) => {
+                const slide = mobileCarouselItems[index]
+                if (!slide) return null
 
-              return (
-                <div className="flex h-full min-h-0 flex-col gap-2">
-                  {slide.groupName && (
-                    <p className="shrink-0 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {slide.groupName}
-                    </p>
-                  )}
-                  <div className="min-h-0 flex-1">
+                return (
+                  <div className="flex h-full min-h-0 flex-col gap-2">
+                    {slide.groupName && (
+                      <p className="shrink-0 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {slide.groupName}
+                      </p>
+                    )}
+                    <div className="min-h-0 flex-1">
+                      <AccountCard
+                        account={slide.account}
+                        onClick={() => setSelectedAccountForTable(slide.account)}
+                        size="extra-large"
+                        layout="carousel"
+                        {...getRithmicBalanceProps(slide.account)}
+                      />
+                    </div>
+                  </div>
+                )
+              }}
+            />
+          ) : (
+            <>
+              <div
+                className="min-h-0 flex-1"
+                style={{ paddingBottom: "var(--accounts-toolbar-height, 4.5rem)" }}
+              >
+                <MobileAccountGroupsCarousel
+                  ref={groupsCarouselRef}
+                  groups={mobileCarouselGroups}
+                  renderAccount={(item) => (
                     <AccountCard
-                      account={slide.account}
-                      onClick={() => setSelectedAccountForTable(slide.account)}
+                      account={item.account}
+                      onClick={() => setSelectedAccountForTable(item.account)}
                       size="extra-large"
                       layout="carousel"
-                      {...getRithmicBalanceProps(slide.account)}
+                      {...getRithmicBalanceProps(item.account)}
                     />
-                  </div>
-                </div>
-              )
-            }}
-          />
+                  )}
+                />
+              </div>
+              <AccountsToolbar
+                searchItems={mobileSearchItems}
+                onSelectAccount={handleSearchSelectAccount}
+              />
+            </>
+          )
         ) : (
         <div
           className="flex-1 overflow-y-auto h-full"

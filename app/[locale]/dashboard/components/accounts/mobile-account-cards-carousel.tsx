@@ -196,44 +196,19 @@ export function MobileAccountCardsCarousel({
         )}
 
         {items.length > 1 && !isVertical && (
-          <div
-            className="flex h-11 shrink-0 items-center justify-center gap-2 px-2"
-            role="tablist"
-            aria-orientation="horizontal"
-            aria-label={t("accounts.mobile.carouselNavigation")}
-          >
-            {items.map((item, index) => (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={index === currentIndex}
-                aria-controls={`mobile-account-slide-${item.id}`}
-                aria-label={t("accounts.mobile.carouselGoTo", {
-                  index: index + 1,
-                  total: items.length,
-                  accountName: item.label,
-                })}
-                className={cn(
-                  "flex h-8 min-w-8 items-center justify-center rounded-full transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  index === currentIndex
-                    ? "bg-primary/10"
-                    : "bg-muted/40 hover:bg-muted/60"
-                )}
-                onClick={() => scrollToIndex(index)}
-              >
-                <span
-                  aria-hidden
-                  className={cn(
-                    "block h-2 min-w-6 rounded-full transition-all",
-                    index === currentIndex
-                      ? "bg-primary"
-                      : "bg-muted-foreground/60"
-                  )}
-                />
-              </button>
-            ))}
+          <div className="flex h-8 shrink-0 items-center justify-center px-2">
+            <span className="sr-only" aria-live="polite">
+              {t("accounts.mobile.accountPosition", {
+                index: currentIndex + 1,
+                total: items.length,
+              })}
+            </span>
+            <span
+              aria-hidden
+              className="text-xs font-medium tabular-nums text-muted-foreground"
+            >
+              {currentIndex + 1}/{items.length}
+            </span>
           </div>
         )}
       </div>
