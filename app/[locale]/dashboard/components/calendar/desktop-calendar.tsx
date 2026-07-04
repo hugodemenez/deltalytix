@@ -16,6 +16,13 @@ import { useI18n, useCurrentLocale } from "@/locales/client"
 import { translateWeekday, translateWeekdayShort } from "@/lib/translation-utils"
 import { WeeklyModal } from "./weekly-modal"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
 import { ImportanceFilter } from "@/app/[locale]/dashboard/components/importance-filter"
 import { CountryFilter } from "@/components/country-filter"
@@ -27,6 +34,7 @@ import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
 import { useUserStore } from "@/store/user-store"
 import { Account } from "@/context/data-provider"
 import { HIDDEN_GROUP_NAME } from "../filters/account-group-board"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 
 const WEEKDAYS_SUNDAY_START = [
@@ -151,7 +159,70 @@ const getEventImportanceStars = (importance: string): ImpactLevel => {
   }
 }
 
+function CalendarResponsiveOverlay({
+  trigger,
+  popoverClassName,
+  popoverAlign = "start",
+  popoverSide = "right",
+  popoverSideOffset = 5,
+  drawerTitle,
+  drawerDescription,
+  children,
+}: {
+  trigger: (props: { onClick?: () => void }) => React.ReactNode
+  popoverClassName?: string
+  popoverAlign?: "start" | "center" | "end"
+  popoverSide?: "top" | "right" | "bottom" | "left"
+  popoverSideOffset?: number
+  drawerTitle?: string
+  drawerDescription?: string
+  children: React.ReactNode
+}) {
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const isDesktop = useMediaQuery("(min-width: 640px)")
+
+  if (isDesktop) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          {trigger({})}
+        </PopoverTrigger>
+        <PopoverContent
+          className={popoverClassName}
+          align={popoverAlign}
+          side={popoverSide}
+          sideOffset={popoverSideOffset}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {children}
+        </PopoverContent>
+      </Popover>
+    )
+  }
+
+  return (
+    <>
+      {trigger({ onClick: () => setDrawerOpen(true) })}
+      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <DrawerContent
+          className="max-h-[85vh]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {(drawerTitle || drawerDescription) && (
+            <DrawerHeader className="text-left">
+              {drawerTitle && <DrawerTitle>{drawerTitle}</DrawerTitle>}
+              {drawerDescription && <DrawerDescription>{drawerDescription}</DrawerDescription>}
+            </DrawerHeader>
+          )}
+          <div className="overflow-y-auto px-4 pb-6">{children}</div>
+        </DrawerContent>
+      </Drawer>
+    </>
+  )
+}
+
 function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impactLevels: ImpactLevel[] }) {
+  const t = useI18n()
   // Filter events by impact level
   const filteredEvents = events.filter(e => impactLevels.includes(getEventImportanceStars(e.importance)))
   if (filteredEvents.length === 0) return null
@@ -170,8 +241,11 @@ function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impact
   }
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <CalendarResponsiveOverlay
+      popoverClassName="w-[400px] p-0 z-50"
+      drawerTitle={t('calendar.events.title')}
+      drawerDescription={String(filteredEvents.length)}
+      trigger={({ onClick }) => (
         <Badge
           variant="outline"
           className={cn(
@@ -181,39 +255,126 @@ function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impact
             "hover:scale-110 hover:shadow-md",
             "active:scale-95"
           )}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            onClick?.()
+          }}
         >
           <Newspaper className="h-2.5 w-2.5" />
           {filteredEvents.length}
         </Badge>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[400px] p-0 z-50"
-        align="start"
-        side="right"
-        sideOffset={5}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <HourlyFinancialTimeline
-          date={filteredEvents.length > 0 ? new Date(filteredEvents[0].date) : new Date()}
-          events={filteredEvents}
-          className="h-[400px]"
-          preventScrollPropagation={true}
-        />
-      </PopoverContent>
-    </Popover>
+      )}
+    >
+      <HourlyFinancialTimeline
+        date={filteredEvents.length > 0 ? new Date(filteredEvents[0].date) : new Date()}
+        events={filteredEvents}
+        className="h-[400px] max-sm:h-[50vh]"
+        preventScrollPropagation={true}
+      />
+    </CalendarResponsiveOverlay>
+  )
+}
+
+function RenewalBadgeContent({ renewals }: { renewals: Account[] }) {
+  const t = useI18n()
+
+  return (
+    <div className="p-4 sm:p-6">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-4 sm:mb-6">
+        <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900">
+          <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">{t('propFirm.renewal.title')}</h3>
+          <p className="text-xs text-muted-foreground">{renewals.length} {renewals.length === 1 ? t('propFirm.renewal.account') : t('propFirm.renewal.accounts')}</p>
+        </div>
+      </div>
+
+      {/* Account List with max height and scrolling */}
+      <div className="space-y-2 sm:space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+        {renewals.map((account) => (
+          <div
+            key={account.id}
+            className="group relative p-3 sm:p-4 rounded-lg border bg-card hover:bg-muted/50 hover:border-border transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-xs motion-reduce:transition-none"
+          >
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-3">
+              {/* Account Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
+                  {account.propfirm ? (
+                    <>
+                      <div className="font-semibold text-sm text-foreground truncate">
+                        {account.propfirm}
+                      </div>
+                      <div className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full inline-block w-fit">
+                        <span className="block" title={account.number}>
+                          {truncateAccountNumber(account.number, 12)}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="font-semibold text-sm text-foreground">
+                      <span className="block" title={account.number}>
+                        {truncateAccountNumber(account.number, 18)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
+                  <div className="px-2 py-1 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-md font-medium whitespace-nowrap">
+                    {account.paymentFrequency?.toLowerCase()} {t('propFirm.renewal.frequency')}
+                  </div>
+                  {account.autoRenewal && (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-md whitespace-nowrap">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full shrink-0"></div>
+                      <span className="text-xs font-medium">{t('propFirm.renewal.notification')}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Price */}
+              <div className="text-left sm:text-right shrink-0">
+                <div className="font-bold text-base sm:text-lg text-blue-600 dark:text-blue-400 mb-1">
+                  {account.price != null && formatCurrency(account.price, { maximumFractionDigits: 2 })}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {account.paymentFrequency?.toLowerCase()}
+                </div>
+              </div>
+            </div>
+
+            {/* Subtle hover effect line */}
+            <div className="absolute bottom-0 left-3 right-3 sm:left-4 sm:right-4 h-0.5 bg-linear-to-r from-blue-500/0 via-blue-500/50 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      {renewals.length > 0 && (
+        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 text-xs text-muted-foreground">
+            <span>{t('propFirm.renewal.totalAccounts')}: {renewals.length}</span>
+            <span className="truncate">
+              {t('propFirm.renewal.nextRenewal')}: {renewals[0]?.nextPaymentDate ? format(new Date(renewals[0].nextPaymentDate), 'MMM dd, yyyy') : 'N/A'}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
 function RenewalBadge({ renewals }: { renewals: Account[] }) {
-  
-  const t = useI18n()
-
   if (renewals.length === 0) return null
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <CalendarResponsiveOverlay
+      popoverClassName="w-[320px] sm:w-[380px] md:w-[420px] max-w-[90vw] p-0 z-50 border shadow-lg bg-card"
+      popoverSideOffset={8}
+      trigger={({ onClick }) => (
         <Badge
           variant="outline"
           className={cn(
@@ -223,106 +384,18 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
             "hover:scale-110 hover:shadow-md",
             "active:scale-95"
           )}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            onClick?.()
+          }}
         >
           <Calendar className="h-2.5 w-2.5" />
           {renewals.length}
         </Badge>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[320px] sm:w-[380px] md:w-[420px] max-w-[90vw] p-0 z-50 border shadow-lg bg-card"
-        align="start"
-        side="right"
-        sideOffset={8}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-4 sm:p-6">
-          {/* Header */}
-          <div className="flex items-center gap-2 mb-4 sm:mb-6">
-            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900">
-              <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">{t('propFirm.renewal.title')}</h3>
-              <p className="text-xs text-muted-foreground">{renewals.length} {renewals.length === 1 ? t('propFirm.renewal.account') : t('propFirm.renewal.accounts')}</p>
-            </div>
-          </div>
-
-          {/* Account List with max height and scrolling */}
-          <div className="space-y-2 sm:space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-            {renewals.map((account, index) => (
-              <div 
-                key={account.id} 
-                className="group relative p-3 sm:p-4 rounded-lg border bg-card hover:bg-muted/50 hover:border-border transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-xs motion-reduce:transition-none"
-              >
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-3">
-                  {/* Account Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
-                      {account.propfirm ? (
-                        <>
-                          <div className="font-semibold text-sm text-foreground truncate">
-                            {account.propfirm}
-                          </div>
-                          <div className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full inline-block w-fit">
-                            <span className="block" title={account.number}>
-                              {truncateAccountNumber(account.number, 12)}
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="font-semibold text-sm text-foreground">
-                          <span className="block" title={account.number}>
-                            {truncateAccountNumber(account.number, 18)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
-                      <div className="px-2 py-1 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-md font-medium whitespace-nowrap">
-                        {account.paymentFrequency?.toLowerCase()} {t('propFirm.renewal.frequency')}
-                      </div>
-                      {account.autoRenewal && (
-                        <div className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-md whitespace-nowrap">
-                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full shrink-0"></div>
-                          <span className="text-xs font-medium">{t('propFirm.renewal.notification')}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Price */}
-                  <div className="text-left sm:text-right shrink-0">
-                    <div className="font-bold text-base sm:text-lg text-blue-600 dark:text-blue-400 mb-1">
-                      {account.price != null && formatCurrency(account.price, { maximumFractionDigits: 2 })}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {account.paymentFrequency?.toLowerCase()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Subtle hover effect line */}
-                <div className="absolute bottom-0 left-3 right-3 sm:left-4 sm:right-4 h-0.5 bg-linear-to-r from-blue-500/0 via-blue-500/50 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-              </div>
-            ))}
-          </div>
-
-          {/* Footer */}
-          {renewals.length > 0 && (
-            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 text-xs text-muted-foreground">
-                <span>{t('propFirm.renewal.totalAccounts')}: {renewals.length}</span>
-                <span className="truncate">
-                  {t('propFirm.renewal.nextRenewal')}: {renewals[0]?.nextPaymentDate ? format(new Date(renewals[0].nextPaymentDate), 'MMM dd, yyyy') : 'N/A'}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
+      )}
+    >
+      <RenewalBadgeContent renewals={renewals} />
+    </CalendarResponsiveOverlay>
   )
 }
 
