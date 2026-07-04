@@ -72,6 +72,11 @@ jobs:
           set_env RESEND_API_KEY "dummy"
           set_env STRIPE_SECRET_KEY "dummy"
 
+      - name: Push Prisma schema to Supabase
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: bunx prisma db push --accept-data-loss
+
       - name: Deploy to Vercel (production)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
