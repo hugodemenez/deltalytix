@@ -43,7 +43,16 @@ async function waitForDashboard(page) {
   await page.waitForTimeout(2000)
 }
 
-async function scrollToCalendar(page) {
+async function scrollToCalendar(page, isMobileCarousel) {
+  if (isMobileCarousel) {
+    const calendarTab = page.getByRole('tab', { name: /calendar/i }).first()
+    if ((await calendarTab.count()) > 0) {
+      await calendarTab.click({ force: true })
+      await page.waitForTimeout(1500)
+      return
+    }
+  }
+
   const calendarTitle = page.locator('[data-widget-type="calendarWidget"], .react-grid-item').filter({
     has: page.getByText(/calendar view/i),
   }).first()
@@ -61,12 +70,20 @@ async function scrollToCalendar(page) {
   await page.waitForTimeout(1500)
 }
 
-async function captureCalendarWidget(page, viewportName) {
-  const widget = page.locator('.react-grid-item').filter({
-    has: page.getByText(/calendar view/i),
-  }).first()
+async function captureCalendarWidget(page, viewportName, isMobileCarousel) {
+  let target
+  if (isMobileCarousel) {
+    const slide = page.locator('[id^="mobile-widget-slide-"]').filter({
+      has: page.getByText(/daily view|weekly view/i),
+    }).first()
+    target = (await slide.count()) > 0 ? slide : page.locator('body')
+  } else {
+    const widget = page.locator('.react-grid-item').filter({
+      has: page.getByText(/calendar view/i),
+    }).first()
+    target = (await widget.count()) > 0 ? widget : page.locator('body')
+  }
 
-  const target = (await widget.count()) > 0 ? widget : page.locator('body')
   const outPath = path.join(OUT_DIR, `${viewportName}.png`)
   await target.screenshot({ path: outPath, type: 'png' })
   console.log(`Saved ${outPath}`)
@@ -84,8 +101,8 @@ async function main() {
       locale: 'en-US',
     })
     await waitForDashboard(page)
-    await scrollToCalendar(page)
-    await captureCalendarWidget(page, vp.name)
+    await scrollToCalendar(page, vp.width < 640)
+    await captureCalendarWidget(page, vp.name, vp.width < 640)
     await page.close()
   }
 

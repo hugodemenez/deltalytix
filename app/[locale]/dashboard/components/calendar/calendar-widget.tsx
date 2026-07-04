@@ -1,7 +1,7 @@
 'use client'
 
 import React from "react"
-import ResponsiveCalendarPnl from "./desktop-calendar"
+import ResponsiveCalendarPnl from "./responsive-calendar"
 import { useData } from "@/context/data-provider"
 
 export default function CalendarPnl() {

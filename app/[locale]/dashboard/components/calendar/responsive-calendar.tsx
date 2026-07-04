@@ -82,13 +82,12 @@ const formatCurrency = (value: number, options?: { minimumFractionDigits?: numbe
 
 const formatCurrencyCompact = (value: number) => {
   const absValue = Math.abs(value)
+  const sign = value > 0 ? '+' : value < 0 ? '-' : ''
   if (absValue >= 1_000_000) {
-    const result = `$${(value / 1_000_000).toFixed(1)}M`
-    return value > 0 ? `+${result}` : result
+    return `${sign}$${(absValue / 1_000_000).toFixed(1)}M`
   }
   if (absValue >= 1_000) {
-    const result = `$${(value / 1_000).toFixed(1)}K`
-    return value > 0 ? `+${result}` : result
+    return `${sign}$${(absValue / 1_000).toFixed(1)}K`
   }
   return formatCurrency(value, { signed: true })
 }
@@ -298,12 +297,15 @@ function RenewalBadgeContent({ renewals }: { renewals: Account[] }) {
 }
 
 function RenewalBadge({ renewals }: { renewals: Account[] }) {
+  const t = useI18n()
+
   if (renewals.length === 0) return null
 
   return (
     <CalendarResponsiveOverlay
       popoverClassName="w-[320px] sm:w-[380px] md:w-[420px] max-w-[90vw] p-0 z-50 border shadow-lg bg-card"
       popoverSideOffset={8}
+      drawerTitle={t('propFirm.renewal.title')}
       trigger={({ onClick }) => (
         <Badge
           variant="outline"
@@ -605,15 +607,18 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
       </CardHeader>
       <CardContent className="flex-1 min-h-0 p-1 sm:p-4">
         {viewMode === 'daily' ? (
-          <>
-            <div className="grid grid-cols-7 sm:grid-cols-8 gap-x-px mb-0.5 sm:mb-1">
+          <div
+            role="grid"
+            aria-label={formatInTimeZone(currentDate, timezone, 'MMMM yyyy', { locale: dateLocale })}
+          >
+            <div role="row" className="grid grid-cols-7 sm:grid-cols-8 gap-x-px mb-0.5 sm:mb-1">
               {WEEKDAYS.map((day) => (
-                <div key={day} className="text-center font-medium text-[8px] sm:text-[11px] text-muted-foreground truncate px-px">
+                <div key={day} role="columnheader" className="text-center font-medium text-[10px] sm:text-[11px] text-muted-foreground truncate px-px">
                   <span className="sm:hidden">{translateWeekdayShort(day, locale)}</span>
                   <span className="hidden sm:inline">{translateWeekday(t, day)}</span>
                 </div>
               ))}
-              <div className="hidden sm:block text-center font-medium text-[11px] text-muted-foreground">
+              <div role="columnheader" className="hidden sm:block text-center font-medium text-[11px] text-muted-foreground">
                 {t('calendar.weekdays.weekly')}
               </div>
             </div>
@@ -632,12 +637,10 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
 
                 return (
                   <React.Fragment key={dateString}>
-                    <button
-                      type="button"
-                      aria-label={formatInTimeZone(date, timezone, 'EEEE, MMMM d, yyyy', { locale: dateLocale })}
+                    <div
                       className={cn(
-                        "h-full w-full flex flex-col text-left cursor-pointer transition-[background-color,color,box-shadow] motion-reduce:transition-none rounded-none p-0.5 sm:p-1 min-h-[44px] sm:min-h-0",
-                        "ring-1 ring-border hover:ring-primary hover:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                        "relative h-full w-full text-left transition-[background-color,color,box-shadow] motion-reduce:transition-none rounded-none min-h-[44px] sm:min-h-0",
+                        "ring-1 ring-border hover:ring-primary hover:z-10",
                         dayData && dayData.pnl >= 0
                           ? "bg-green-50 dark:bg-green-900/20"
                           : dayData && dayData.pnl < 0
@@ -648,71 +651,78 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
                         index === 0 && "rounded-tl-lg",
                         index === 35 && "rounded-bl-lg",
                       )}
-                      onClick={() => setSelectedDate(date)}
                     >
-                      <div className="flex justify-between items-start gap-0">
-                        <span className={cn(
-                          "text-[8px] sm:text-[11px] font-medium min-w-[12px] sm:min-w-[14px] text-center leading-none",
-                          isToday(date) && "text-primary font-semibold",
-                          !isCurrentMonth && "opacity-50"
-                        )}>
-                          {format(date, 'd')}
-                        </span>
-                        <div className="flex flex-col gap-px">
-                          {dateEvents.length > 0 && <EventBadge events={dateEvents} impactLevels={impactLevels} />}
-                          {dateRenewals.length > 0 && <RenewalBadge renewals={dateRenewals} />}
-                        </div>
-                      </div>
-                      <div className="flex-1 flex flex-col justify-end gap-px sm:gap-0.5 min-h-0">
-                        {dayData ? (
-                          <div className={cn(
-                            "text-[8px] sm:text-[11px] font-semibold truncate text-center leading-tight",
-                            dayData.pnl >= 0
-                              ? "text-green-600 dark:text-green-400"
-                              : "text-red-600 dark:text-red-400",
+                      <button
+                        type="button"
+                        aria-label={formatInTimeZone(date, timezone, 'EEEE, MMMM d, yyyy', { locale: dateLocale })}
+                        className="absolute inset-0 cursor-pointer rounded-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                        onClick={() => setSelectedDate(date)}
+                      />
+                      <div className="relative h-full flex flex-col pointer-events-none p-0.5 sm:p-1">
+                        <div className="flex justify-between items-start gap-0">
+                          <span className={cn(
+                            "text-[10px] sm:text-[11px] font-medium min-w-[12px] sm:min-w-[14px] text-center leading-none",
+                            isToday(date) && "text-primary font-semibold",
                             !isCurrentMonth && "opacity-50"
                           )}>
-                            <ResponsiveCurrency value={dayData.pnl} />
+                            {format(date, 'd')}
+                          </span>
+                          <div className="pointer-events-auto relative z-10 flex flex-col gap-px">
+                            {dateEvents.length > 0 && <EventBadge events={dateEvents} impactLevels={impactLevels} />}
+                            {dateRenewals.length > 0 && <RenewalBadge renewals={dateRenewals} />}
                           </div>
-                        ) : (
-                          <div className={cn(
-                            "text-[8px] sm:text-[11px] font-semibold invisible text-center",
-                            !isCurrentMonth && "opacity-50"
-                          )}>$0</div>
-                        )}
-                        <div className={cn(
-                          "text-[8px] sm:text-[9px] text-muted-foreground truncate text-center leading-tight",
-                          !isCurrentMonth && "opacity-50"
-                        )}>
-                          {dayData
-                            ? (
-                              <>
-                                <span className="sm:hidden">{dayData.tradeNumber}</span>
-                                <span className="hidden sm:inline">
-                                  {`${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}`}
-                                </span>
-                              </>
-                            )
-                            : <span className="hidden sm:inline">{t('calendar.noTrades')}</span>}
                         </div>
-                        {dayData && showMaxProfitAndDrawdown && (
-                          <>
+                        <div className="flex-1 flex flex-col justify-end gap-px sm:gap-0.5 min-h-0">
+                          {dayData ? (
                             <div className={cn(
-                              "hidden sm:block text-[9px] text-green-600 dark:text-green-400 truncate text-center",
+                              "text-[10px] sm:text-[11px] font-semibold truncate text-center leading-tight",
+                              dayData.pnl >= 0
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-red-600 dark:text-red-400",
                               !isCurrentMonth && "opacity-50"
                             )}>
-                              {t('calendar.maxProfit')}: {formatCurrency(maxProfit)}
+                              <ResponsiveCurrency value={dayData.pnl} />
                             </div>
+                          ) : (
                             <div className={cn(
-                              "hidden sm:block text-[9px] text-red-600 dark:text-red-400 truncate text-center",
+                              "text-[10px] sm:text-[11px] font-semibold invisible text-center",
                               !isCurrentMonth && "opacity-50"
-                            )}>
-                              {t('calendar.maxDD')}: -{formatCurrency(maxDrawdown)}
-                            </div>
-                          </>
-                        )}
+                            )}>$0</div>
+                          )}
+                          <div className={cn(
+                            "text-[10px] sm:text-[9px] text-muted-foreground truncate text-center leading-tight",
+                            !isCurrentMonth && "opacity-50"
+                          )}>
+                            {dayData
+                              ? (
+                                <>
+                                  <span className="sm:hidden">{dayData.tradeNumber}</span>
+                                  <span className="hidden sm:inline">
+                                    {`${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}`}
+                                  </span>
+                                </>
+                              )
+                              : <span className="hidden sm:inline">{t('calendar.noTrades')}</span>}
+                          </div>
+                          {dayData && showMaxProfitAndDrawdown && (
+                            <>
+                              <div className={cn(
+                                "hidden sm:block text-[9px] text-green-600 dark:text-green-400 truncate text-center",
+                                !isCurrentMonth && "opacity-50"
+                              )}>
+                                {t('calendar.maxProfit')}: {formatCurrency(maxProfit)}
+                              </div>
+                              <div className={cn(
+                                "hidden sm:block text-[9px] text-red-600 dark:text-red-400 truncate text-center",
+                                !isCurrentMonth && "opacity-50"
+                              )}>
+                                {t('calendar.maxDD')}: -{formatCurrency(maxDrawdown)}
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </button>
+                    </div>
                     {isLastDayOfWeek && (() => {
                       const weeklyTotal = calculateWeeklyTotal(index, calendarDays, calendarData)
                       return (
@@ -742,7 +752,7 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
                 )
               })}
             </div>
-          </>
+          </div>
         ) : (
           <WeeklyCalendarPnl
             calendarData={calendarData}
@@ -783,13 +793,14 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
           {/* View Mode Toggle */}
           <div className="flex items-center justify-end gap-1 border rounded-md p-0.5 bg-muted w-full sm:w-auto">
             <Button
+              type="button"
               variant={viewMode === 'daily' ? 'default' : 'ghost'}
               size="sm"
               aria-pressed={viewMode === 'daily'}
               aria-label={t('calendar.viewMode.daily')}
               className={cn(
-                "h-7 flex-1 sm:flex-none px-2 transition-colors",
-                viewMode === 'daily' && "bg-primary text-primary-foreground shadow-sm font-semibold"
+                "h-7 flex-1 sm:flex-none px-2 transition-colors font-semibold",
+                viewMode === 'daily' && "bg-primary text-primary-foreground shadow-sm"
               )}
               onClick={() => setViewMode('daily')}
             >
@@ -797,13 +808,14 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
               <span className="text-xs hidden sm:inline">{t('calendar.viewMode.daily')}</span>
             </Button>
             <Button
+              type="button"
               variant={viewMode === 'weekly' ? 'default' : 'ghost'}
               size="sm"
               aria-pressed={viewMode === 'weekly'}
               aria-label={t('calendar.viewMode.weekly')}
               className={cn(
-                "h-7 flex-1 sm:flex-none px-2 transition-colors",
-                viewMode === 'weekly' && "bg-primary text-primary-foreground shadow-sm font-semibold"
+                "h-7 flex-1 sm:flex-none px-2 transition-colors font-semibold",
+                viewMode === 'weekly' && "bg-primary text-primary-foreground shadow-sm"
               )}
               onClick={() => setViewMode('weekly')}
             >

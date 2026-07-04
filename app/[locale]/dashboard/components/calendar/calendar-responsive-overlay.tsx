@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from "react"
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Drawer,
@@ -30,6 +31,7 @@ export function CalendarResponsiveOverlay({
   popoverSideOffset = 5,
   drawerTitle,
   drawerDescription,
+  drawerFallbackTitle = "Details",
   children,
 }: {
   trigger: (props: { onClick?: () => void }) => React.ReactNode
@@ -39,6 +41,7 @@ export function CalendarResponsiveOverlay({
   popoverSideOffset?: number
   drawerTitle?: string
   drawerDescription?: string
+  drawerFallbackTitle?: string
   children: React.ReactNode
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -69,6 +72,7 @@ export function CalendarResponsiveOverlay({
       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DrawerContent
           className="max-h-[85vh]"
+          {...(!drawerDescription ? { "aria-describedby": undefined } : {})}
           onClick={(e) => e.stopPropagation()}
           onPointerDownOutside={(e) => {
             e.preventDefault()
@@ -77,6 +81,11 @@ export function CalendarResponsiveOverlay({
           }}
           onInteractOutside={(e) => e.preventDefault()}
         >
+          {!drawerTitle && (
+            <VisuallyHidden asChild>
+              <DrawerTitle>{drawerFallbackTitle}</DrawerTitle>
+            </VisuallyHidden>
+          )}
           {(drawerTitle || drawerDescription) && (
             <DrawerHeader className="text-left">
               {drawerTitle && <DrawerTitle>{drawerTitle}</DrawerTitle>}

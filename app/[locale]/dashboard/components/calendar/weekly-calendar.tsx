@@ -32,13 +32,12 @@ const formatCurrency = (value: number, options?: { signed?: boolean }) => {
 
 const formatCurrencyCompact = (value: number) => {
   const absValue = Math.abs(value)
+  const sign = value > 0 ? '+' : value < 0 ? '-' : ''
   if (absValue >= 1_000_000) {
-    const result = `$${(value / 1_000_000).toFixed(1)}M`
-    return value > 0 ? `+${result}` : result
+    return `${sign}$${(absValue / 1_000_000).toFixed(1)}M`
   }
   if (absValue >= 1_000) {
-    const result = `$${(value / 1_000).toFixed(1)}K`
-    return value > 0 ? `+${result}` : result
+    return `${sign}$${(absValue / 1_000).toFixed(1)}K`
   }
   return formatCurrency(value, { signed: true })
 }
@@ -106,7 +105,7 @@ function WeekDetailContent({
                     </div>
                     <div className={cn(
                       "text-sm font-semibold",
-                      dayPnl > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                      dayPnl > 0 ? "text-green-600 dark:text-green-400" : dayPnl < 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
                     )}>
                       {formatCurrency(dayPnl, { signed: true })}
                     </div>
@@ -127,7 +126,7 @@ function WeekDetailContent({
                         </div>
                         <div className={cn(
                           "text-sm font-semibold",
-                          trade.pnl > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                          trade.pnl > 0 ? "text-green-600 dark:text-green-400" : trade.pnl < 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
                         )}>
                           {formatCurrency(trade.pnl, { signed: true })}
                         </div>
@@ -226,11 +225,11 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
               const monthlyPnl = getMonthPnl(i)
               return (
                 <div key={i} className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
-                  <div className="text-center text-[9px] sm:text-xs font-medium text-muted-foreground truncate">
+                  <div className="text-center text-[10px] sm:text-xs font-medium text-muted-foreground truncate">
                     {format(new Date(year, i, 1), 'MMM', { locale: dateLocale })}
                   </div>
                   <div className={cn(
-                    "text-center text-[9px] sm:text-xs font-semibold px-0.5 sm:px-1 py-0.5 rounded transition-colors truncate",
+                    "text-center text-[10px] sm:text-xs font-semibold px-0.5 sm:px-1 py-0.5 rounded transition-colors truncate",
                     monthlyPnl > 0
                       ? "text-green-700 dark:text-green-400 bg-green-50/50 dark:bg-green-950/30"
                       : monthlyPnl < 0
@@ -306,7 +305,7 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
                             <span className="hidden sm:block text-[10px] font-medium text-muted-foreground leading-none">
                               {weekNumber}
                             </span>
-                            <span className="text-[9px] sm:text-xs font-bold leading-tight truncate max-w-full px-0.5">
+                            <span className="text-[10px] sm:text-xs font-bold leading-tight truncate max-w-full px-0.5">
                               <ResponsiveCurrency value={pnl} />
                             </span>
                           </button>
