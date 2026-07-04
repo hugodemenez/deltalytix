@@ -547,18 +547,6 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
       }
     }
 
-    // For database unreachable errors (P1001), do NOT sign out the user.
-    // The user is already authenticated by Supabase - a transient DB error
-    // should not destroy their session. The user record sync can be retried
-    // on the next request.
-    if (error instanceof Error && 'code' in error) {
-      const prismaError = error as { code?: string }
-      if (prismaError.code === 'P1001') {
-        console.error('[ensureUserInDatabase] Database unreachable (P1001) - skipping user sync, session preserved')
-        throw error
-      }
-    }
-
     // For any other unexpected errors, log out the user
     console.log('[ensureUserInDatabase] ERROR: Critical database error - signing out user');
     await signOut();
