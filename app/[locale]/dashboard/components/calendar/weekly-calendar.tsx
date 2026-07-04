@@ -77,8 +77,8 @@ function WeekDetailContent({
   t: ReturnType<typeof useI18n>
 }) {
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-4 sm:hidden">
+    <div className="sm:p-4">
+      <div className="hidden sm:flex items-center justify-between mb-4">
         <h4 className="font-semibold text-sm">
           {format(weekStart, 'MMM d', { locale: dateLocale })} - {format(addDays(weekStart, 6), 'MMM d, yyyy', { locale: dateLocale })}
         </h4>
