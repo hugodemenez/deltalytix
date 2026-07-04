@@ -16,7 +16,7 @@ import { useI18n, useCurrentLocale } from "@/locales/client"
 import { translateWeekday, translateWeekdayShort } from "@/lib/translation-utils"
 import { WeeklyModal } from "./weekly-modal"
 import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
-import { CalendarResponsiveOverlay } from "./calendar-responsive-overlay"
+import { CalendarResponsiveOverlay, shouldSuppressCalendarActivation } from "./calendar-responsive-overlay"
 import { ImportanceFilter } from "@/app/[locale]/dashboard/components/importance-filter"
 import { CountryFilter } from "@/components/country-filter"
 import { useNewsFilterStore } from "@/store/filters/news-filter-store"
@@ -649,6 +649,7 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
                         index === 35 && "rounded-bl-lg",
                       )}
                       onClick={() => {
+                        if (shouldSuppressCalendarActivation()) return
                         setSelectedDate(date)
                       }}
                     >
@@ -727,7 +728,10 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
                             index === 6 && "rounded-tr-lg",
                             index === 41 && "rounded-br-lg"
                           )}
-                          onClick={() => setSelectedWeekDate(date)}
+                          onClick={() => {
+                            if (shouldSuppressCalendarActivation()) return
+                            setSelectedWeekDate(date)
+                          }}
                         >
                           <div className={cn(
                             "text-[11px] font-semibold truncate px-0.5",
