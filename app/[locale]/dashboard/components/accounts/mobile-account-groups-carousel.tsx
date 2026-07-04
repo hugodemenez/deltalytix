@@ -192,18 +192,37 @@ export const MobileAccountGroupsCarousel = React.forwardRef<
         const group = groups[groupIndex]
         const horizontalScroller = horizontalScrollerRefs.current[group.id]
 
+        const scrollHorizontal = () => {
+          if (horizontalScroller && accountIndex >= 0) {
+            horizontalScroller.scrollTo({
+              left: accountIndex * horizontalScroller.clientWidth,
+              behavior: "smooth",
+            })
+          }
+        }
+
         if (verticalScroller) {
           verticalScroller.scrollTo({
             top: groupIndex * verticalScroller.clientHeight,
             behavior: "smooth",
           })
-        }
 
-        if (horizontalScroller && accountIndex >= 0) {
-          horizontalScroller.scrollTo({
-            left: accountIndex * horizontalScroller.clientWidth,
-            behavior: "smooth",
-          })
+          // Wait for the vertical scroll to settle before scrolling horizontally
+          // so the target group's horizontal scroller is laid out and measurable.
+          const onVerticalScrollEnd = () => {
+            verticalScroller.removeEventListener("scrollend", onVerticalScrollEnd)
+            requestAnimationFrame(scrollHorizontal)
+          }
+
+          if ("onscrollend" in verticalScroller) {
+            verticalScroller.addEventListener("scrollend", onVerticalScrollEnd, {
+              once: true,
+            })
+          } else {
+            window.setTimeout(scrollHorizontal, 350)
+          }
+        } else {
+          scrollHorizontal()
         }
       },
     }),
@@ -247,7 +266,6 @@ export const MobileAccountGroupsCarousel = React.forwardRef<
                 }}
                 className="flex h-full min-h-0 w-full shrink-0 snap-start snap-always flex-col px-2 pb-2"
                 style={{ scrollSnapStop: "always" }}
-                role="tabpanel"
                 aria-label={group.name}
                 aria-hidden={groupIndex !== currentGroupIndex}
               >
@@ -295,7 +313,6 @@ export const MobileAccountGroupsCarousel = React.forwardRef<
                       }}
                       className="h-full w-full min-w-full shrink-0 snap-start snap-always"
                       style={{ scrollSnapStop: "always" }}
-                      role="tabpanel"
                       aria-label={item.label}
                       aria-hidden={index !== accountIndex}
                     >
@@ -313,16 +330,14 @@ export const MobileAccountGroupsCarousel = React.forwardRef<
         {groups.length > 1 && (
           <div
             className="flex h-full w-11 shrink-0 flex-col items-center gap-0 py-4 pr-1"
-            role="tablist"
-            aria-orientation="vertical"
+            role="group"
             aria-label={t("accounts.mobile.groupNavigation")}
           >
             {groups.map((group, index) => (
               <button
                 key={group.id}
                 type="button"
-                role="tab"
-                aria-selected={index === currentGroupIndex}
+                aria-current={index === currentGroupIndex ? "true" : undefined}
                 aria-controls={`mobile-account-group-slide-${group.id}`}
                 aria-label={t("accounts.mobile.groupGoTo", {
                   index: index + 1,

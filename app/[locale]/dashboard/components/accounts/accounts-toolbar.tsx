@@ -111,7 +111,7 @@ export function AccountsToolbar({
         <div className="flex items-center justify-center bg-background/95 border shadow-lg rounded-3xl px-2.5 py-2 gap-2">
           <Button
             variant="ghost"
-            className="h-10 w-10 rounded-full p-0 transition-transform active:scale-95"
+            className="h-10 w-10 rounded-full p-0 transition-[transform] duration-150 active:scale-95"
             aria-label={t("accounts.toolbar.searchAccounts")}
             title={t("accounts.toolbar.searchAccounts")}
             onClick={() => setSearchOpen(true)}
@@ -123,7 +123,7 @@ export function AccountsToolbar({
 
           <Button
             variant="ghost"
-            className="h-10 w-10 rounded-full p-0 transition-transform active:scale-95"
+            className="h-10 w-10 rounded-full p-0 transition-[transform] duration-150 active:scale-95"
             aria-label={t("accounts.toolbar.createGroup")}
             title={t("accounts.toolbar.createGroup")}
             onClick={() => setCreateGroupOpen(true)}
@@ -133,7 +133,7 @@ export function AccountsToolbar({
 
           <Button
             variant="ghost"
-            className="h-10 w-10 rounded-full p-0 transition-transform active:scale-95"
+            className="h-10 w-10 rounded-full p-0 transition-[transform] duration-150 active:scale-95"
             aria-label={t("accounts.toolbar.editGroups")}
             title={t("accounts.toolbar.editGroups")}
             onClick={() => setAccountGroupBoardOpen(true)}
@@ -177,7 +177,7 @@ export function AccountsToolbar({
             >
               {t("common.cancel")}
             </Button>
-            <Button onClick={() => void handleCreateGroup()} disabled={isCreating}>
+            <Button onClick={() => void handleCreateGroup()} disabled={isCreating || !groupName.trim()}>
               {isCreating ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (

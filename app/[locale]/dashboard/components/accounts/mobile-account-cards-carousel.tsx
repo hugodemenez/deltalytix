@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useCallback, useEffect, useRef, useState } from "react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useCarouselGestureLock } from "@/hooks/use-carousel-gesture-lock"
 import { useI18n } from "@/locales/client"
@@ -137,7 +138,6 @@ export function MobileAccountCardsCarousel({
                 isVertical ? "h-full w-full" : "h-full w-full min-w-full"
               )}
               style={{ scrollSnapStop: "always" }}
-              role="tabpanel"
               aria-label={item.label}
               aria-hidden={index !== currentIndex}
             >
@@ -156,16 +156,14 @@ export function MobileAccountCardsCarousel({
         {items.length > 1 && isVertical && (
           <div
             className="flex h-full w-11 shrink-0 flex-col items-center gap-0 py-4 pr-1"
-            role="tablist"
-            aria-orientation="vertical"
+            role="group"
             aria-label={t("accounts.mobile.carouselNavigation")}
           >
             {items.map((item, index) => (
               <button
                 key={item.id}
                 type="button"
-                role="tab"
-                aria-selected={index === currentIndex}
+                aria-current={index === currentIndex ? "true" : undefined}
                 aria-controls={`mobile-account-slide-${item.id}`}
                 aria-label={t("accounts.mobile.carouselGoTo", {
                   index: index + 1,
@@ -196,7 +194,26 @@ export function MobileAccountCardsCarousel({
         )}
 
         {items.length > 1 && !isVertical && (
-          <div className="flex h-8 shrink-0 items-center justify-center px-2">
+          <div
+            className="flex h-8 shrink-0 items-center justify-center gap-2 px-2"
+            role="group"
+            aria-label={t("accounts.mobile.carouselNavigation")}
+          >
+            <button
+              type="button"
+              className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-full transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                currentIndex === 0
+                  ? "text-muted-foreground/40"
+                  : "text-muted-foreground hover:bg-muted/60"
+              )}
+              aria-label={t("accounts.mobile.carouselPrevious")}
+              disabled={currentIndex === 0}
+              onClick={() => scrollToIndex(currentIndex - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden />
+            </button>
             <span className="sr-only" aria-live="polite">
               {t("accounts.mobile.accountPosition", {
                 index: currentIndex + 1,
@@ -205,10 +222,25 @@ export function MobileAccountCardsCarousel({
             </span>
             <span
               aria-hidden
-              className="text-xs font-medium tabular-nums text-muted-foreground"
+              className="min-w-[2.5rem] text-center text-xs font-medium tabular-nums text-muted-foreground"
             >
               {currentIndex + 1}/{items.length}
             </span>
+            <button
+              type="button"
+              className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-full transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                currentIndex === items.length - 1
+                  ? "text-muted-foreground/40"
+                  : "text-muted-foreground hover:bg-muted/60"
+              )}
+              aria-label={t("accounts.mobile.carouselNext")}
+              disabled={currentIndex === items.length - 1}
+              onClick={() => scrollToIndex(currentIndex + 1)}
+            >
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </button>
           </div>
         )}
       </div>

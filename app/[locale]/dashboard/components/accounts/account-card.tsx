@@ -41,6 +41,17 @@ export function AccountCard({
 
   const isCarouselLayout = layout === 'carousel'
   const showChart = size === 'large' || size === 'extra-large'
+  const accountLabel = account.propfirm
+    ? `${account.propfirm} (${account.number})`
+    : account.number || t('propFirm.card.unnamedAccount')
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!onClick) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onClick()
+    }
+  }
 
   return (
     <Card
@@ -52,7 +63,11 @@ export function AccountCard({
             ? "w-72"
             : "w-96"
       )}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? t("accounts.card.openAccount", { accountName: accountLabel }) : undefined}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
     >
       <CardHeader className={cn(
         "flex-none pb-2",

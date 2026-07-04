@@ -240,6 +240,7 @@ function DraggableAccountCard({
   rithmicBalanceLoading = false,
   showRithmicBalance = false,
 }: DraggableAccountCardProps) {
+  const t = useI18n()
   const {
     attributes,
     listeners,
@@ -277,13 +278,17 @@ function DraggableAccountCard({
           showRithmicBalance={showRithmicBalance}
         />
         {!isDragDisabled && (
-          <div
+          <button
+            type="button"
             {...attributes}
             {...listeners}
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded bg-background/80 backdrop-blur-xs border"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded bg-background/80 backdrop-blur-xs border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            aria-label={t("accounts.mobile.reorderAccount", {
+              accountNumber: account.number ?? "",
+            })}
           >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </div>
+          </button>
         )}
       </div>
     </div>

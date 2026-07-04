@@ -9,6 +9,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
+import { DialogTitle } from "@/components/ui/dialog"
 import { useI18n } from "@/locales/client"
 
 export interface AccountSearchItem {
@@ -67,6 +68,9 @@ export function AccountSearchCommand({
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
+      <DialogTitle className="sr-only">
+        {t("accounts.toolbar.searchAccounts")}
+      </DialogTitle>
       <CommandInput placeholder={t("accounts.toolbar.searchPlaceholder")} />
       <CommandList>
         <CommandEmpty>{t("accounts.toolbar.noResults")}</CommandEmpty>

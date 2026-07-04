@@ -174,7 +174,7 @@ export function AccountsSortMenu({
           <Button
             variant="ghost"
             className={cn(
-              "h-10 w-10 rounded-full p-0 transition-transform active:scale-95 relative",
+              "h-10 w-10 rounded-full p-0 transition-[transform] duration-150 active:scale-95 relative",
               className
             )}
             aria-label={t("table.sorting")}
