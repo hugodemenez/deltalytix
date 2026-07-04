@@ -15,7 +15,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { useUserStore } from "../../../../../store/user-store"
-import { CalendarResponsiveOverlay, shouldSuppressCalendarActivation } from "./calendar-responsive-overlay"
+import { CalendarResponsiveOverlay } from "./calendar-responsive-overlay"
 
 const formatCurrency = (value: number, options?: { signed?: boolean }) => {
   const formatted = value.toLocaleString('en-US', {
@@ -300,7 +300,6 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
                             )}
                             onClick={(e) => {
                               e.stopPropagation()
-                              if (shouldSuppressCalendarActivation()) return
                               onClick?.()
                             }}
                           >

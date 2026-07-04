@@ -11,16 +11,15 @@ import {
 } from "@/components/ui/drawer"
 import { useMediaQuery } from "@/hooks/use-media-query"
 
-const DISMISS_SUPPRESS_MS = 400
-let suppressCalendarActivationUntil = 0
-
-/** Blocks ghost clicks that reach calendar cells right after a drawer overlay dismiss. */
-export function shouldSuppressCalendarActivation(): boolean {
-  return Date.now() < suppressCalendarActivationUntil
-}
-
-function markCalendarOverlayDismissed() {
-  suppressCalendarActivationUntil = Date.now() + DISMISS_SUPPRESS_MS
+function suppressNextClick() {
+  const handler = (e: MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+  window.addEventListener('click', handler, { capture: true, once: true })
+  window.setTimeout(() => {
+    window.removeEventListener('click', handler, { capture: true })
+  }, 300)
 }
 
 export function CalendarResponsiveOverlay({
@@ -66,17 +65,17 @@ export function CalendarResponsiveOverlay({
 
   return (
     <>
-      {trigger({ onClick: () => {
-        if (shouldSuppressCalendarActivation()) return
-        setDrawerOpen(true)
-      }})}
-      <Drawer open={drawerOpen} onOpenChange={(open) => {
-        setDrawerOpen(open)
-        if (!open) markCalendarOverlayDismissed()
-      }}>
+      {trigger({ onClick: () => setDrawerOpen(true) })}
+      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DrawerContent
           className="max-h-[85vh]"
           onClick={(e) => e.stopPropagation()}
+          onPointerDownOutside={(e) => {
+            e.preventDefault()
+            suppressNextClick()
+            requestAnimationFrame(() => setDrawerOpen(false))
+          }}
+          onInteractOutside={(e) => e.preventDefault()}
         >
           {(drawerTitle || drawerDescription) && (
             <DrawerHeader className="text-left">
