@@ -28,20 +28,34 @@ export function translateWeekday(t: any, day: string): string {
   }
 }
 
+const WEEKDAY_SHORT_LABELS: Record<string, Record<string, string>> = {
+  en: {
+    'calendar.weekdays.sun': 'Su',
+    'calendar.weekdays.mon': 'Mo',
+    'calendar.weekdays.tue': 'Tu',
+    'calendar.weekdays.wed': 'We',
+    'calendar.weekdays.thu': 'Th',
+    'calendar.weekdays.fri': 'Fr',
+    'calendar.weekdays.sat': 'Sa',
+  },
+  fr: {
+    'calendar.weekdays.sun': 'Di',
+    'calendar.weekdays.mon': 'Lu',
+    'calendar.weekdays.tue': 'Ma',
+    'calendar.weekdays.wed': 'Me',
+    'calendar.weekdays.thu': 'Je',
+    'calendar.weekdays.fri': 'Ve',
+    'calendar.weekdays.sat': 'Sa',
+  },
+}
+
 /**
- * Translates short weekday keys safely (unambiguous two-letter labels for mobile)
+ * Unambiguous two-letter weekday labels for mobile calendar headers.
+ * Uses a static map to avoid pushing next-international locale types past TS limits.
  */
-export function translateWeekdayShort(t: any, day: string): string {
-  switch (day) {
-    case 'calendar.weekdays.sun': return t('calendar.weekdays.sunShort')
-    case 'calendar.weekdays.mon': return t('calendar.weekdays.monShort')
-    case 'calendar.weekdays.tue': return t('calendar.weekdays.tueShort')
-    case 'calendar.weekdays.wed': return t('calendar.weekdays.wedShort')
-    case 'calendar.weekdays.thu': return t('calendar.weekdays.thuShort')
-    case 'calendar.weekdays.fri': return t('calendar.weekdays.friShort')
-    case 'calendar.weekdays.sat': return t('calendar.weekdays.satShort')
-    default: return day
-  }
+export function translateWeekdayShort(day: string, locale: string): string {
+  const labels = WEEKDAY_SHORT_LABELS[locale] ?? WEEKDAY_SHORT_LABELS.en
+  return labels[day] ?? day
 }
 
 /**

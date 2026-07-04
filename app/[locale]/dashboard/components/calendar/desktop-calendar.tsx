@@ -606,7 +606,7 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
             <div className="grid grid-cols-7 sm:grid-cols-8 gap-x-px mb-0.5 sm:mb-1">
               {WEEKDAYS.map((day) => (
                 <div key={day} className="text-center font-medium text-[8px] sm:text-[11px] text-muted-foreground truncate px-px">
-                  <span className="sm:hidden">{translateWeekdayShort(t, day)}</span>
+                  <span className="sm:hidden">{translateWeekdayShort(day, locale)}</span>
                   <span className="hidden sm:inline">{translateWeekday(t, day)}</span>
                 </div>
               ))}
