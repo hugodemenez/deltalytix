@@ -17,11 +17,11 @@ import { useData } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
 import { useModalStateStore } from "@/store/modal-state-store"
-import { FilterCommandMenu } from "../filters/filter-command-menu"
 import {
   AccountSearchCommand,
   type AccountSearchItem,
 } from "./account-search-command"
+import { AccountsSortMenu } from "./accounts-sort-menu"
 
 interface AccountsToolbarProps {
   searchItems: AccountSearchItem[]
@@ -119,11 +119,7 @@ export function AccountsToolbar({
             <Search className="h-4 w-4" />
           </Button>
 
-          <FilterCommandMenu
-            variant="toolbar"
-            compact
-            className="w-10 p-0"
-          />
+          <AccountsSortMenu variant="toolbar" />
 
           <Button
             variant="ghost"
