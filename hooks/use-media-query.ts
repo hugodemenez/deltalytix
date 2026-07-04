@@ -1,32 +1,23 @@
 'use client'
 
-import { useState, useEffect, startTransition } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false)
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      const media = window.matchMedia(query)
+      media.addEventListener('change', onStoreChange)
+      return () => media.removeEventListener('change', onStoreChange)
+    },
+    [query]
+  )
 
-  useEffect(() => {
-    const media = window.matchMedia(query)
-    
-    // Set initial value using startTransition
-    startTransition(() => {
-      setMatches(media.matches)
-    })
-
-    // Update matches when media query changes
-    function listener(e: MediaQueryListEvent) {
-      startTransition(() => {
-        setMatches(e.matches)
-      })
-    }
-
-    // Modern browsers
-    media.addEventListener('change', listener)
-
-    return () => {
-      media.removeEventListener('change', listener)
-    }
-  }, [query])
-
-  return matches
+  return useSyncExternalStore(
+    subscribe,
+    // Correct value on the very first client render, so components that
+    // branch on it (e.g. popover vs drawer) don't flash the wrong variant.
+    () => window.matchMedia(query).matches,
+    // Server snapshot: no window; React reconciles after hydration.
+    () => false
+  )
 }
