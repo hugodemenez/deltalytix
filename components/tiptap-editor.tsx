@@ -358,7 +358,8 @@ export function TiptapEditor({
     editorProps: {
       attributes: {
         class: cn(
-          "prose prose-sm sm:prose lg:prose-sm xl:prose mx-auto focus:outline-none",
+          // text-lg on mobile prevents iOS Safari zoom-on-focus (same pattern as Input/chat)
+          "prose text-lg sm:text-sm sm:prose lg:prose-sm xl:prose mx-auto focus:outline-none",
           "h-full p-2",
           // Typography styles
           "[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mt-3 [&_h1]:mb-2",
