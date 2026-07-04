@@ -180,6 +180,7 @@ export default {
   "dashboard.teams.onlyAdminCanManage":
     "Seuls les administrateurs peuvent gérer les utilisateurs",
   "dashboard.teams.managerExists": "Le gestionnaire existe déjà",
+  "dashboard.skipToContent": "Aller au contenu principal",
   "dashboard.tabs.table": "Tableau",
   "dashboard.tabs.accounts": "Comptes",
   "dashboard.tabs.widgets": "Widgets",
@@ -738,6 +739,24 @@ export default {
   "widgets.types.moodSelector": "Sélecteur d'humeur",
   "widgets.types.chat": "Chat",
   "widgets.types.marketNews": "Actualités du marché",
+  "widgets.types.tagWidget": "Gestion des tags",
+  "widgets.types.profitFactor": "Facteur de profit",
+  "widgets.types.riskRewardRatio": "Ratio risque/rendement",
+  "widgets.types.propFirm": "Comptes",
+  "widgets.types.tradeDistribution": "Distribution des trades",
+  "widgets.types.timeRangePerformance": "Performance par durée",
+  "widgets.types.mindsetWidget": "État d'esprit",
+  "widgets.mobile.deleteDialogTitle": "Supprimer le widget",
+  "widgets.mobile.deleteDialogDescription":
+    "Choisissez les widgets à supprimer de votre tableau de bord.",
+  "widgets.mobile.deleteWidgetNamed": "Supprimer {widgetName}",
+  "widgets.mobile.carouselNavigation": "Navigation des widgets",
+  "widgets.mobile.carouselGoTo": "Aller à {widgetName} ({index} sur {total})",
+  "widgets.shared.unavailableTitle": "Widget indisponible",
+  "widgets.shared.unavailableDescription":
+    "Ce type de widget n'est pas pris en charge dans les tableaux de bord partagés.",
+  "widgets.shared.unavailableHint":
+    "Demandez au propriétaire du tableau de bord de mettre à jour sa disposition si vous vous attendiez à le voir ici.",
   "calendar.week": "Semaine",
   "calendar.weekdays.sun": "Dim",
   "calendar.weekdays.mon": "Lun",
