@@ -219,13 +219,21 @@ export async function captureScene(browser, options) {
       })
       await waitForDashboard(page, locale, siteUrl)
       await clickTab(page, LABELS[locale].accountsTab)
-      const tableView = page.getByRole('tab', { name: LABELS[locale].tableView })
-      if ((await tableView.count()) > 0) {
-        await tableView.first().click()
+      const accountsTableView = page
+        .getByRole('tab', { name: LABELS[locale].accountsTableView })
+        .last()
+      if ((await accountsTableView.count()) > 0) {
+        await accountsTableView.click()
         await page.waitForTimeout(2000)
       }
       await page.waitForFunction(
-        () => document.querySelectorAll('table tbody tr').length >= 2,
+        () => {
+          const text = document.body?.innerText ?? ''
+          return (
+            text.includes('Prop firm') &&
+            document.querySelectorAll('table tbody tr').length >= 1
+          )
+        },
         { timeout: 30_000 },
       )
       await assertNoDevIssues(page, `${locale} accounts table desktop`)

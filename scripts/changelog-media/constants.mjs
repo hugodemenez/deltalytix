@@ -42,6 +42,7 @@ export const LABELS = {
     supportAssistant: /support assistant/i,
     chartsView: /^charts$/i,
     tableView: /^table$/i,
+    accountsTableView: /^table$/i,
   },
   fr: {
     acceptCookies: /tout accepter/i,
@@ -54,6 +55,7 @@ export const LABELS = {
     supportAssistant: /assistant support/i,
     chartsView: /^graphiques$/i,
     tableView: /^tableau$/i,
+    accountsTableView: /^tableau$/i,
   },
 }
 

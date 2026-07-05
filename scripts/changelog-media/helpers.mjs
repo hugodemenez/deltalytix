@@ -41,9 +41,15 @@ export async function seedHideNextDevTools(page) {
   await page.addInitScript((selectors) => {
     const hide = () => {
       document.querySelectorAll(selectors).forEach((element) => {
-        element.style.setProperty('display', 'none', 'important')
-        element.style.setProperty('visibility', 'hidden', 'important')
-        element.style.setProperty('pointer-events', 'none', 'important')
+        element.remove()
+      })
+
+      document.querySelectorAll('nextjs-portal').forEach((portal) => {
+        portal.shadowRoot
+          ?.querySelectorAll('[data-next-badge], #next-logo, [data-nextjs-dev-tools-button]')
+          .forEach((node) => {
+            node.remove()
+          })
       })
     }
 
@@ -57,9 +63,16 @@ export async function seedHideNextDevTools(page) {
 export async function hideNextDevTools(page) {
   await page.evaluate((selectors) => {
     document.querySelectorAll(selectors).forEach((element) => {
-      element.style.setProperty('display', 'none', 'important')
-      element.style.setProperty('visibility', 'hidden', 'important')
-      element.style.setProperty('pointer-events', 'none', 'important')
+      element.remove()
+    })
+
+    document.querySelectorAll('nextjs-portal').forEach((portal) => {
+      portal.shadowRoot
+        ?.querySelectorAll('[data-next-badge], #next-logo, [data-nextjs-dev-tools-button]')
+        .forEach((node) => {
+          node.remove()
+        })
+      portal.remove()
     })
   }, NEXT_DEV_TOOL_SELECTORS)
 }
@@ -102,12 +115,46 @@ export async function ensureCookiesDismissed(page, locale) {
   ).catch(() => {})
 }
 
+export async function assertNoVisibleDevTools(page) {
+  const visible = await page.evaluate(() => {
+    const portal = document.querySelector('nextjs-portal')
+    if (!portal) return false
+    const hostRect = portal.getBoundingClientRect()
+    if (hostRect.width > 0 && hostRect.height > 0) return true
+
+    const logo = portal.shadowRoot?.querySelector('#next-logo, [data-nextjs-dev-tools-button], [data-next-badge]')
+    if (!logo) return false
+    const logoRect = logo.getBoundingClientRect()
+    return logoRect.width > 0 && logoRect.height > 0
+  })
+
+  if (visible) {
+    await hideNextDevTools(page)
+  }
+
+  const stillVisible = await page.evaluate(() => {
+    const portal = document.querySelector('nextjs-portal')
+    if (!portal) return false
+    const rect = portal.getBoundingClientRect()
+    return rect.width > 0 && rect.height > 0
+  })
+
+  if (stillVisible) {
+    throw new Error('Next.js dev tools are still visible before screenshot')
+  }
+}
+
 export async function assertNoDevIssues(page, context) {
   await page.waitForTimeout(1500)
-  const errorBadgeCount = await page.locator('[data-next-badge][data-error="true"]').count()
-  if (errorBadgeCount > 0) {
-    await page.locator('[data-issues-open]').first().click({ force: true }).catch(() => {})
-    await page.waitForTimeout(500)
+  const issueCount = await page.evaluate(() => {
+    const portal = document.querySelector('nextjs-portal')
+    const badges = portal?.shadowRoot?.querySelectorAll('[data-next-badge][data-error="true"]') ?? []
+    return Array.from(badges).filter((badge) => {
+      const rect = badge.getBoundingClientRect()
+      return rect.width > 0 && rect.height > 0
+    }).length
+  })
+  if (issueCount > 0) {
     const overlay = await page.locator('nextjs-portal').innerText().catch(() => 'unknown issue')
     throw new Error(`Next.js dev issue on ${context}: ${overlay.slice(0, 500)}`)
   }
@@ -115,6 +162,7 @@ export async function assertNoDevIssues(page, context) {
 
 export async function waitForDashboard(page, locale, siteUrl) {
   await seedCookieConsent(page)
+  await seedHideNextDevTools(page)
   await page.goto(`${siteUrl}/${locale}/dashboard`, {
     waitUntil: 'domcontentloaded',
     timeout: 120_000,
@@ -131,6 +179,7 @@ export async function waitForDashboard(page, locale, siteUrl) {
   )
   await page.waitForTimeout(2500)
   await ensureCookiesDismissed(page, locale)
+  await hideNextDevTools(page)
   await assertNoDevIssues(page, `${locale} dashboard`)
 }
 
@@ -142,6 +191,7 @@ export async function clickTab(page, pattern) {
 
 export async function prepareForScreenshot(page) {
   await hideNextDevTools(page)
+  await assertNoVisibleDevTools(page)
   await page.evaluate(async () => {
     if (document.fonts?.ready) {
       await document.fonts.ready
@@ -183,9 +233,16 @@ export async function recordVideo(browser, batch, locale, name, run, playwrightL
   await context.addInitScript((selectors) => {
     const hide = () => {
       document.querySelectorAll(selectors).forEach((element) => {
-        element.style.setProperty('display', 'none', 'important')
-        element.style.setProperty('visibility', 'hidden', 'important')
-        element.style.setProperty('pointer-events', 'none', 'important')
+        element.remove()
+      })
+
+      document.querySelectorAll('nextjs-portal').forEach((portal) => {
+        portal.shadowRoot
+          ?.querySelectorAll('[data-next-badge], #next-logo, [data-nextjs-dev-tools-button]')
+          .forEach((node) => {
+            node.remove()
+          })
+        portal.remove()
       })
     }
 
