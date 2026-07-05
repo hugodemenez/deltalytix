@@ -1,9 +1,10 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { FolderCog, FolderPlus, Loader2, Search } from "lucide-react"
+import { FolderCog, FolderPlus, LayoutGrid, Loader2, Search, Table } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
   DialogContent,
@@ -26,12 +27,16 @@ import { AccountsSortMenu } from "./accounts-sort-menu"
 interface AccountsToolbarProps {
   searchItems: AccountSearchItem[]
   onSelectAccount: (accountId: string) => void
+  view?: "cards" | "table"
+  onViewChange?: (view: "cards" | "table") => void
   className?: string
 }
 
 export function AccountsToolbar({
   searchItems,
   onSelectAccount,
+  view,
+  onViewChange,
   className,
 }: AccountsToolbarProps) {
   const t = useI18n()
@@ -99,6 +104,34 @@ export function AccountsToolbar({
     }
   }, [groupName, saveGroup, t, handleCreateGroupOpenChange])
 
+  const viewSwitch = view && onViewChange ? (
+    <Tabs
+      value={view}
+      onValueChange={(value) => onViewChange(value as "cards" | "table")}
+    >
+      <TabsList className="h-10 gap-1 rounded-full px-1">
+        <TabsTrigger
+          value="cards"
+          className="h-8 w-9 rounded-full p-0"
+          aria-label={t("accounts.view.charts")}
+          title={t("accounts.view.charts")}
+        >
+          <LayoutGrid className="h-4 w-4" />
+          <span className="sr-only">{t("accounts.view.charts")}</span>
+        </TabsTrigger>
+        <TabsTrigger
+          value="table"
+          className="h-8 w-9 rounded-full p-0"
+          aria-label={t("accounts.view.table")}
+          title={t("accounts.view.table")}
+        >
+          <Table className="h-4 w-4" />
+          <span className="sr-only">{t("accounts.view.table")}</span>
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
+  ) : null
+
   return (
     <>
       <div
@@ -109,6 +142,8 @@ export function AccountsToolbar({
         )}
       >
         <div className="flex items-center justify-center bg-background/95 border shadow-lg rounded-3xl px-2.5 py-2 gap-2">
+          {viewSwitch}
+
           <Button
             variant="ghost"
             className="h-10 w-10 rounded-full p-0 transition-[transform] duration-150 active:scale-95"
