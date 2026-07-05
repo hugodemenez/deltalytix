@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { execSync } from 'child_process'
-import { LABELS } from './constants.mjs'
+import { LABELS, viewport } from './constants.mjs'
 
 const COOKIE_CONSENT_VALUE = JSON.stringify({
   analytics_storage: true,
@@ -30,10 +30,6 @@ export async function seedCookieConsent(page) {
   }, COOKIE_CONSENT_VALUE)
 }
 
-/**
- * @param {import('playwright-core').Browser} browser
- * @param {import('playwright-core').BrowserContextOptions} [options]
- */
 export async function newCapturePage(browser, options = {}) {
   const page = await browser.newPage(options)
   await seedCookieConsent(page)
@@ -109,21 +105,40 @@ export async function clickTab(page, pattern) {
   await page.waitForTimeout(1500)
 }
 
+export async function prepareForScreenshot(page) {
+  await page.evaluate(async () => {
+    if (document.fonts?.ready) {
+      await document.fonts.ready
+    }
+  })
+  await page.waitForTimeout(300)
+}
+
 export async function screenshot(page, batch, locale, name) {
   await ensureCookiesDismissed(page, locale)
+  await prepareForScreenshot(page)
   const out = path.join(outputDir(batch, locale), `${name}.png`)
-  await page.screenshot({ path: out, type: 'png', fullPage: false })
+  await page.screenshot({
+    path: out,
+    type: 'png',
+    fullPage: false,
+    scale: 'device',
+    animations: 'disabled',
+  })
   console.log('Saved', out)
   return out
 }
 
 export async function recordVideo(browser, batch, locale, name, run, playwrightLocale) {
+  const videoContext = viewport('desktop')
+  const recordWidth = videoContext.viewport.width
+  const recordHeight = videoContext.viewport.height
   const context = await browser.newContext({
     locale: playwrightLocale,
-    viewport: { width: 1280, height: 720 },
+    ...videoContext,
     recordVideo: {
       dir: outputDir(batch, locale),
-      size: { width: 1280, height: 720 },
+      size: { width: recordWidth, height: recordHeight },
     },
   })
   await context.addInitScript((consentValue) => {

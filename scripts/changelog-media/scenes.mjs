@@ -8,7 +8,7 @@ import {
   screenshot,
   waitForDashboard,
 } from './helpers.mjs'
-import { LABELS } from './constants.mjs'
+import { LABELS, viewport } from './constants.mjs'
 
 /** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile'} ChangelogScene */
 
@@ -23,7 +23,7 @@ export async function captureScene(browser, options) {
     case 'landing-hero': {
       const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 1440, height: 900 },
+        ...viewport('desktop'),
       })
       await page.goto(`${siteUrl}/${locale}`, { waitUntil: 'networkidle', timeout: 120_000 })
       await dismissCookies(page, locale)
@@ -38,7 +38,7 @@ export async function captureScene(browser, options) {
     case 'landing-contribution-graph': {
       const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 1440, height: 900 },
+        ...viewport('desktop'),
       })
       await page.goto(`${siteUrl}/${locale}`, { waitUntil: 'networkidle', timeout: 120_000 })
       await dismissCookies(page, locale)
@@ -69,9 +69,7 @@ export async function captureScene(browser, options) {
     case 'import-mobile': {
       const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 390, height: 844 },
-        isMobile: true,
-        hasTouch: true,
+        ...viewport('mobile'),
       })
       await waitForDashboard(page, locale, siteUrl)
       const importBtn = page.getByRole('button', { name: LABELS[locale].import })
@@ -88,7 +86,7 @@ export async function captureScene(browser, options) {
     case 'support': {
       const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 1280, height: 900 },
+        ...viewport('desktop'),
       })
       await page.goto(`${siteUrl}/${locale}/support`, { waitUntil: 'networkidle', timeout: 120_000 })
       await dismissCookies(page, locale)
@@ -104,9 +102,7 @@ export async function captureScene(browser, options) {
     case 'trade-table-mobile': {
       const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 390, height: 844 },
-        isMobile: true,
-        hasTouch: true,
+        ...viewport('mobile'),
       })
       await waitForDashboard(page, locale, siteUrl)
       await clickTab(page, LABELS[locale].tableTab)
@@ -124,7 +120,7 @@ export async function captureScene(browser, options) {
     case 'trade-table-desktop': {
       const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 1440, height: 900 },
+        ...viewport('desktop'),
       })
       await waitForDashboard(page, locale, siteUrl)
       await clickTab(page, LABELS[locale].tableTab)
@@ -168,7 +164,7 @@ export async function captureScene(browser, options) {
     case 'calendar-widgets': {
       const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 1440, height: 900 },
+        ...viewport('desktop'),
       })
       await waitForDashboard(page, locale, siteUrl)
       const calendarHeading = page.getByText(LABELS[locale].calendarView).first()
@@ -187,7 +183,7 @@ export async function captureScene(browser, options) {
     case 'calendar-table': {
       const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 1440, height: 900 },
+        ...viewport('desktop'),
       })
       await waitForDashboard(page, locale, siteUrl)
       await clickTab(page, LABELS[locale].tableTab)
@@ -205,9 +201,7 @@ export async function captureScene(browser, options) {
     case 'accounts-mobile': {
       const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 390, height: 844 },
-        isMobile: true,
-        hasTouch: true,
+        ...viewport('mobile'),
       })
       await waitForDashboard(page, locale, siteUrl)
       await clickTab(page, LABELS[locale].accountsTab)
@@ -221,7 +215,7 @@ export async function captureScene(browser, options) {
     case 'accounts-table-desktop': {
       const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 1440, height: 900 },
+        ...viewport('desktop'),
       })
       await waitForDashboard(page, locale, siteUrl)
       await clickTab(page, LABELS[locale].accountsTab)
@@ -243,9 +237,7 @@ export async function captureScene(browser, options) {
     case 'widgets-mobile': {
       const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 390, height: 844 },
-        isMobile: true,
-        hasTouch: true,
+        ...viewport('mobile'),
       })
       await waitForDashboard(page, locale, siteUrl)
       await clickTab(page, LABELS[locale].widgetsTab)

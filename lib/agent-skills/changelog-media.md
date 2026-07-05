@@ -19,6 +19,8 @@ Capture localized screenshots and short demo videos for Deltalytix changelog (`c
 
 The capture helpers **pre-seed `cookieConsent` in localStorage** and click **Accept all** / **Tout accepter** before every screenshot so the consent banner never appears in shipped assets.
 
+Screenshots use **2× device pixel ratio** (`deviceScaleFactor: 2`, `scale: 'device'`) so a 1440×900 desktop capture saves at 2880×1800. Override with `CHANGELOG_DEVICE_SCALE=3` if you need even sharper assets.
+
 Health check:
 
 ```bash
