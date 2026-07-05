@@ -1521,7 +1521,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
           </div>
         ) : (
           <div
-            className="min-h-0 flex-1 overflow-y-auto"
+            className="min-h-0 flex-1"
             style={{ paddingBottom: "var(--accounts-toolbar-height, 4.5rem)" }}
           >
             {accountsTableView}
@@ -1651,11 +1651,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
               )
             }}
           />
-        ) : (
-        <div
-          className="flex-1 overflow-y-auto h-full"
-        >
-          {view === "cards" ? (
+        ) : view === "cards" ? (
+          <div className="flex-1 overflow-y-auto h-full">
             <div className="mt-4">
               <div className="space-y-6">
                 {sortedGroupEntries.map(({ group, accounts: orderedAccounts }, groupIndex) => {
@@ -1782,10 +1779,11 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                 })()}
               </div>
             </div>
-          ) : (
-            accountsTableView
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="h-full min-h-0">
+            {accountsTableView}
+          </div>
         )}
       </CardContent>
 
