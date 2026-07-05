@@ -2369,6 +2369,8 @@ export default {
   "accounts.mobile.carouselGoTo": "Go to {accountName} ({index} of {total})",
   "accounts.mobile.groupNavigation": "Group navigation",
   "accounts.mobile.groupGoTo": "Go to group {groupName} ({index} of {total})",
+  "accounts.mobile.selectGroup": "Select group",
+  "accounts.mobile.groupOption": "{groupName} ({count} accounts)",
   "accounts.mobile.accountPosition": "Account {index} of {total}",
   "accounts.mobile.carouselPrevious": "Previous account",
   "accounts.mobile.carouselNext": "Next account",

@@ -2531,6 +2531,8 @@ export default {
   "accounts.mobile.carouselGoTo": "Aller à {accountName} ({index} sur {total})",
   "accounts.mobile.groupNavigation": "Navigation des groupes",
   "accounts.mobile.groupGoTo": "Aller au groupe {groupName} ({index} sur {total})",
+  "accounts.mobile.selectGroup": "Sélectionner un groupe",
+  "accounts.mobile.groupOption": "{groupName} ({count} comptes)",
   "accounts.mobile.accountPosition": "Compte {index} sur {total}",
   "accounts.mobile.carouselPrevious": "Compte précédent",
   "accounts.mobile.carouselNext": "Compte suivant",
