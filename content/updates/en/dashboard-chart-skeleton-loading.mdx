@@ -1,0 +1,16 @@
+---
+title: 'Skeleton loading for dashboard charts'
+description: 'Charts now show a muted placeholder layout while data loads, instead of blank space or a spinner.'
+date: '2026-06-29'
+status: completed
+completedDate: '2026-07-05'
+image: '/updates/pr-288/en/dashboard-chart-skeleton-loading.png'
+---
+
+# Skeleton loading for dashboard charts
+
+![Dashboard calendar widget while charts load](/updates/pr-288/en/dashboard-chart-skeleton-loading.png)
+
+Dashboard charts—including bar charts, line charts, donuts, and the calendar analytics—now show a skeleton layout while data is loading. You see the shape of the chart (axes, grid, placeholder bars or lines) instead of an empty box or centered loading text.
+
+The skeleton mirrors each chart's real layout, so there's less visual jump when data arrives. Calendar modals keep showing cached charts during a refresh and only skeleton the parts still fetching.

@@ -8,7 +8,7 @@ import {
 } from './helpers.mjs'
 import { LABELS } from './constants.mjs'
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile'} ChangelogScene */
 
 /**
  * @param {import('playwright-core').Browser} browser
@@ -27,6 +27,22 @@ export async function captureScene(browser, options) {
       await dismissCookies(page, locale)
       await page.waitForTimeout(3000)
       await assertNoDevIssues(page, `${locale} landing`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'landing-contribution-graph': {
+      const page = await browser.newPage({
+        locale: playwrightLocale,
+        viewport: { width: 1440, height: 900 },
+      })
+      await page.goto(`${siteUrl}/${locale}`, { waitUntil: 'networkidle', timeout: 120_000 })
+      await dismissCookies(page, locale)
+      const section = page.locator('#open-source')
+      await section.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(3000)
+      await assertNoDevIssues(page, `${locale} contribution graph`)
       await screenshot(page, batch, locale, file)
       await page.close()
       return
@@ -176,6 +192,60 @@ export async function captureScene(browser, options) {
       )
       await page.waitForTimeout(1200)
       await assertNoDevIssues(page, `${locale} calendar table`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'accounts-mobile': {
+      const page = await browser.newPage({
+        locale: playwrightLocale,
+        viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      await clickTab(page, LABELS[locale].accountsTab)
+      await page.waitForTimeout(2500)
+      await assertNoDevIssues(page, `${locale} accounts mobile`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'accounts-table-desktop': {
+      const page = await browser.newPage({
+        locale: playwrightLocale,
+        viewport: { width: 1440, height: 900 },
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      await clickTab(page, LABELS[locale].accountsTab)
+      const tableView = page.getByRole('tab', { name: LABELS[locale].tableView })
+      if ((await tableView.count()) > 0) {
+        await tableView.first().click()
+        await page.waitForTimeout(2000)
+      }
+      await page.waitForFunction(
+        () => document.querySelectorAll('table tbody tr').length >= 2,
+        { timeout: 30_000 },
+      )
+      await assertNoDevIssues(page, `${locale} accounts table desktop`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'widgets-mobile': {
+      const page = await browser.newPage({
+        locale: playwrightLocale,
+        viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      await clickTab(page, LABELS[locale].widgetsTab)
+      await page.waitForTimeout(2500)
+      await assertNoDevIssues(page, `${locale} widgets mobile`)
       await screenshot(page, batch, locale, file)
       await page.close()
       return
