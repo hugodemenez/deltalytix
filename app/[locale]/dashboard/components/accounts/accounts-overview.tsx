@@ -1492,43 +1492,48 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   if (isMobileTab) {
     return (
       <div className="flex h-full min-h-0 w-full flex-col">
-        <div className="flex shrink-0 items-center justify-between gap-2 px-2 pb-1">
-          {hasRithmicCredentials ? rithmicRefreshButton : <div />}
-          {chartsTableToggle}
-        </div>
+        {hasRithmicCredentials && (
+          <div className="flex shrink-0 items-center justify-end gap-2 px-2 pb-1">
+            {rithmicRefreshButton}
+          </div>
+        )}
 
         {unconfiguredAccountsBanner}
 
         {view === "cards" ? (
-          <>
-            <div
-              className="min-h-0 flex-1"
-              style={{ paddingBottom: "var(--accounts-toolbar-height, 4.5rem)" }}
-            >
-              <MobileAccountGroupsCarousel
-                ref={groupsCarouselRef}
-                groups={mobileCarouselGroups}
-                renderAccount={(item) => (
-                  <AccountCard
-                    account={item.account}
-                    onClick={() => setSelectedAccountForTable(item.account)}
-                    size="extra-large"
-                    layout="carousel"
-                    {...getRithmicBalanceProps(item.account)}
-                  />
-                )}
-              />
-            </div>
-            <AccountsToolbar
-              searchItems={mobileSearchItems}
-              onSelectAccount={handleSearchSelectAccount}
+          <div
+            className="min-h-0 flex-1"
+            style={{ paddingBottom: "var(--accounts-toolbar-height, 4.5rem)" }}
+          >
+            <MobileAccountGroupsCarousel
+              ref={groupsCarouselRef}
+              groups={mobileCarouselGroups}
+              renderAccount={(item) => (
+                <AccountCard
+                  account={item.account}
+                  onClick={() => setSelectedAccountForTable(item.account)}
+                  size="extra-large"
+                  layout="carousel"
+                  {...getRithmicBalanceProps(item.account)}
+                />
+              )}
             />
-          </>
+          </div>
         ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div
+            className="min-h-0 flex-1 overflow-y-auto"
+            style={{ paddingBottom: "var(--accounts-toolbar-height, 4.5rem)" }}
+          >
             {accountsTableView}
           </div>
         )}
+
+        <AccountsToolbar
+          searchItems={mobileSearchItems}
+          onSelectAccount={handleSearchSelectAccount}
+          view={view}
+          onViewChange={setView}
+        />
 
         {dialogs}
       </div>
