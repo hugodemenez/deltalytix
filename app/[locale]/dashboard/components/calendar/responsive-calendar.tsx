@@ -13,10 +13,10 @@ import { cn } from "@/lib/utils"
 import { FinancialEvent } from "@/prisma/generated/prisma/browser"
 import { CalendarModal } from "./daily-modal"
 import { useI18n, useCurrentLocale } from "@/locales/client"
-import { translateWeekday } from "@/lib/translation-utils"
+import { translateWeekday, translateWeekdayShort } from "@/lib/translation-utils"
 import { WeeklyModal } from "./weekly-modal"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
+import { CalendarResponsiveOverlay } from "./calendar-responsive-overlay"
 import { ImportanceFilter } from "@/app/[locale]/dashboard/components/importance-filter"
 import { CountryFilter } from "@/components/country-filter"
 import { useNewsFilterStore } from "@/store/filters/news-filter-store"
@@ -67,14 +67,46 @@ function getCalendarDays(monthStart: Date, monthEnd: Date, weekStartsOnMonday: b
   return [...days, ...additionalDays].slice(0, 42)
 }
 
-const formatCurrency = (value: number, options?: { minimumFractionDigits?: number; maximumFractionDigits?: number }) => {
+const formatCurrency = (value: number, options?: { minimumFractionDigits?: number; maximumFractionDigits?: number; signed?: boolean }) => {
   const formatted = value.toLocaleString('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: options?.minimumFractionDigits ?? 0,
     maximumFractionDigits: options?.maximumFractionDigits ?? 0
   })
+  if (options?.signed && value > 0) {
+    return `+${formatted}`
+  }
   return formatted
+}
+
+const formatCurrencyCompact = (value: number) => {
+  const absValue = Math.abs(value)
+  const sign = value > 0 ? '+' : value < 0 ? '-' : ''
+  if (absValue >= 1_000_000) {
+    return `${sign}$${(absValue / 1_000_000).toFixed(1)}M`
+  }
+  if (absValue >= 1_000) {
+    return `${sign}$${(absValue / 1_000).toFixed(1)}K`
+  }
+  return formatCurrency(value, { signed: true })
+}
+
+function ResponsiveCurrency({
+  value,
+  className,
+  options,
+}: {
+  value: number
+  className?: string
+  options?: { minimumFractionDigits?: number; maximumFractionDigits?: number }
+}) {
+  return (
+    <>
+      <span className={cn("sm:hidden", className)}>{formatCurrencyCompact(value)}</span>
+      <span className={cn("hidden sm:inline", className)}>{formatCurrency(value, { ...options, signed: true })}</span>
+    </>
+  )
 }
 
 const truncateAccountNumber = (accountNumber: string, maxLength: number = 15): string => {
@@ -119,6 +151,7 @@ const getEventImportanceStars = (importance: string): ImpactLevel => {
 }
 
 function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impactLevels: ImpactLevel[] }) {
+  const t = useI18n()
   // Filter events by impact level
   const filteredEvents = events.filter(e => impactLevels.includes(getEventImportanceStars(e.importance)))
   if (filteredEvents.length === 0) return null
@@ -137,8 +170,11 @@ function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impact
   }
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <CalendarResponsiveOverlay
+      popoverClassName="w-[400px] p-0 z-50"
+      drawerTitle={t('calendar.events.title')}
+      drawerDescription={String(filteredEvents.length)}
+      trigger={({ onClick }) => (
         <Badge
           variant="outline"
           className={cn(
@@ -148,152 +184,154 @@ function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impact
             "hover:scale-110 hover:shadow-md",
             "active:scale-95"
           )}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            onClick?.()
+          }}
         >
           <Newspaper className="h-2.5 w-2.5" />
           {filteredEvents.length}
         </Badge>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[400px] p-0 z-50"
-        align="start"
-        side="right"
-        sideOffset={5}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <HourlyFinancialTimeline
-          date={filteredEvents.length > 0 ? new Date(filteredEvents[0].date) : new Date()}
-          events={filteredEvents}
-          className="h-[400px]"
-          preventScrollPropagation={true}
-        />
-      </PopoverContent>
-    </Popover>
+      )}
+    >
+      <HourlyFinancialTimeline
+        date={filteredEvents.length > 0 ? new Date(filteredEvents[0].date) : new Date()}
+        events={filteredEvents}
+        className="h-[400px] max-sm:h-[50vh]"
+        preventScrollPropagation={true}
+      />
+    </CalendarResponsiveOverlay>
+  )
+}
+
+function RenewalBadgeContent({ renewals }: { renewals: Account[] }) {
+  const t = useI18n()
+
+  return (
+    <div className="p-4 sm:p-6">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-4 sm:mb-6">
+        <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900">
+          <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">{t('propFirm.renewal.title')}</h3>
+          <p className="text-xs text-muted-foreground">{renewals.length} {renewals.length === 1 ? t('propFirm.renewal.account') : t('propFirm.renewal.accounts')}</p>
+        </div>
+      </div>
+
+      {/* Account List with max height and scrolling */}
+      <div className="space-y-2 sm:space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+        {renewals.map((account) => (
+          <div
+            key={account.id}
+            className="group relative p-3 sm:p-4 rounded-lg border bg-card hover:bg-muted/50 hover:border-border transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-xs motion-reduce:transition-none"
+          >
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-3">
+              {/* Account Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
+                  {account.propfirm ? (
+                    <>
+                      <div className="font-semibold text-sm text-foreground truncate">
+                        {account.propfirm}
+                      </div>
+                      <div className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full inline-block w-fit">
+                        <span className="block" title={account.number}>
+                          {truncateAccountNumber(account.number, 12)}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="font-semibold text-sm text-foreground">
+                      <span className="block" title={account.number}>
+                        {truncateAccountNumber(account.number, 18)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
+                  <div className="px-2 py-1 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-md font-medium whitespace-nowrap">
+                    {account.paymentFrequency?.toLowerCase()} {t('propFirm.renewal.frequency')}
+                  </div>
+                  {account.autoRenewal && (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-md whitespace-nowrap">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full shrink-0"></div>
+                      <span className="text-xs font-medium">{t('propFirm.renewal.notification')}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Price */}
+              <div className="text-left sm:text-right shrink-0">
+                <div className="font-bold text-base sm:text-lg text-blue-600 dark:text-blue-400 mb-1">
+                  {account.price != null && formatCurrency(account.price, { maximumFractionDigits: 2 })}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {account.paymentFrequency?.toLowerCase()}
+                </div>
+              </div>
+            </div>
+
+            {/* Subtle hover effect line */}
+            <div className="absolute bottom-0 left-3 right-3 sm:left-4 sm:right-4 h-0.5 bg-linear-to-r from-blue-500/0 via-blue-500/50 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      {renewals.length > 0 && (
+        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 text-xs text-muted-foreground">
+            <span>{t('propFirm.renewal.totalAccounts')}: {renewals.length}</span>
+            <span className="truncate">
+              {t('propFirm.renewal.nextRenewal')}: {renewals[0]?.nextPaymentDate ? format(new Date(renewals[0].nextPaymentDate), 'MMM dd, yyyy') : 'N/A'}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
 function RenewalBadge({ renewals }: { renewals: Account[] }) {
-  
   const t = useI18n()
 
   if (renewals.length === 0) return null
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <CalendarResponsiveOverlay
+      popoverClassName="w-[320px] sm:w-[380px] md:w-[420px] max-w-[90vw] p-0 z-50 border shadow-lg bg-card"
+      popoverSideOffset={8}
+      drawerTitle={t('propFirm.renewal.title')}
+      trigger={({ onClick }) => (
         <Badge
           variant="outline"
           className={cn(
             "h-4 px-1.5 text-[8px] sm:text-[9px] font-medium cursor-pointer relative z-0 w-auto justify-center items-center gap-1",
-            "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900/30",
+            "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 dark:bg-primary/15 dark:border-primary/30 dark:hover:bg-primary/25",
             "transition-[background-color,color,border-color,box-shadow,transform] duration-200 ease-in-out motion-reduce:transition-none",
             "hover:scale-110 hover:shadow-md",
             "active:scale-95"
           )}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            onClick?.()
+          }}
         >
           <Calendar className="h-2.5 w-2.5" />
           {renewals.length}
         </Badge>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[320px] sm:w-[380px] md:w-[420px] max-w-[90vw] p-0 z-50 border shadow-lg bg-card"
-        align="start"
-        side="right"
-        sideOffset={8}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-4 sm:p-6">
-          {/* Header */}
-          <div className="flex items-center gap-2 mb-4 sm:mb-6">
-            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900">
-              <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">{t('propFirm.renewal.title')}</h3>
-              <p className="text-xs text-muted-foreground">{renewals.length} {renewals.length === 1 ? t('propFirm.renewal.account') : t('propFirm.renewal.accounts')}</p>
-            </div>
-          </div>
-
-          {/* Account List with max height and scrolling */}
-          <div className="space-y-2 sm:space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-            {renewals.map((account, index) => (
-              <div 
-                key={account.id} 
-                className="group relative p-3 sm:p-4 rounded-lg border bg-card hover:bg-muted/50 hover:border-border transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-xs motion-reduce:transition-none"
-              >
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-3">
-                  {/* Account Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
-                      {account.propfirm ? (
-                        <>
-                          <div className="font-semibold text-sm text-foreground truncate">
-                            {account.propfirm}
-                          </div>
-                          <div className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full inline-block w-fit">
-                            <span className="block" title={account.number}>
-                              {truncateAccountNumber(account.number, 12)}
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="font-semibold text-sm text-foreground">
-                          <span className="block" title={account.number}>
-                            {truncateAccountNumber(account.number, 18)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
-                      <div className="px-2 py-1 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-md font-medium whitespace-nowrap">
-                        {account.paymentFrequency?.toLowerCase()} {t('propFirm.renewal.frequency')}
-                      </div>
-                      {account.autoRenewal && (
-                        <div className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-md whitespace-nowrap">
-                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full shrink-0"></div>
-                          <span className="text-xs font-medium">{t('propFirm.renewal.notification')}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Price */}
-                  <div className="text-left sm:text-right shrink-0">
-                    <div className="font-bold text-base sm:text-lg text-blue-600 dark:text-blue-400 mb-1">
-                      {account.price != null && formatCurrency(account.price, { maximumFractionDigits: 2 })}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {account.paymentFrequency?.toLowerCase()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Subtle hover effect line */}
-                <div className="absolute bottom-0 left-3 right-3 sm:left-4 sm:right-4 h-0.5 bg-linear-to-r from-blue-500/0 via-blue-500/50 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-              </div>
-            ))}
-          </div>
-
-          {/* Footer */}
-          {renewals.length > 0 && (
-            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 text-xs text-muted-foreground">
-                <span>{t('propFirm.renewal.totalAccounts')}: {renewals.length}</span>
-                <span className="truncate">
-                  {t('propFirm.renewal.nextRenewal')}: {renewals[0]?.nextPaymentDate ? format(new Date(renewals[0].nextPaymentDate), 'MMM dd, yyyy') : 'N/A'}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
+      )}
+    >
+      <RenewalBadgeContent renewals={renewals} />
+    </CalendarResponsiveOverlay>
   )
 }
 
-export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false }: CalendarPnlProps) {
+export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobile = false }: CalendarPnlProps) {
   const accounts = useUserStore(state => state.accounts)
   const groups = useUserStore(state => state.groups)
   const t = useI18n()
@@ -510,24 +548,24 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
   return (
     <Card className="h-full flex flex-col">
       <CardHeader
-        className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]"
+        className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between space-y-0 border-b shrink-0 p-2 sm:p-4 min-h-[56px]"
       >
-        <div className="flex items-center gap-3">
-          <CardTitle className="text-base sm:text-lg font-semibold truncate capitalize">
+        <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 min-w-0">
+          <CardTitle className="text-sm sm:text-lg font-semibold truncate capitalize">
             {viewMode === 'daily'
               ? formatInTimeZone(currentDate, timezone, 'MMMM yyyy', { locale: dateLocale })
               : formatInTimeZone(currentDate, timezone, 'yyyy', { locale: dateLocale })}
           </CardTitle>
           <div className={cn(
-            "text-sm sm:text-base font-semibold truncate",
+            "text-xs sm:text-base font-semibold shrink-0",
             (viewMode === 'daily' ? monthlyTotal : yearTotal) >= 0
               ? "text-green-600 dark:text-green-400"
               : "text-red-600 dark:text-red-400"
           )}>
-            {formatCurrency(viewMode === 'daily' ? monthlyTotal : yearTotal)}
+            <ResponsiveCurrency value={viewMode === 'daily' ? monthlyTotal : yearTotal} />
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
           {/* Impact Level Filter */}
           <div className={cn("flex items-center gap-2", hideFiltersOnMobile && "max-sm:hidden")}>
             <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
@@ -545,7 +583,7 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
             onValueChange={setSelectedCountries}
             className={cn("h-8", hideFiltersOnMobile && "max-sm:hidden")}
           />
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 sm:gap-1.5">
             <Button
               variant="outline"
               size="icon"
@@ -567,20 +605,24 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 p-1.5 sm:p-4">
+      <CardContent className="flex-1 min-h-0 p-1 sm:p-4">
         {viewMode === 'daily' ? (
-          <>
-            <div className="grid grid-cols-8 gap-x-px mb-1">
+          <div
+            role="grid"
+            aria-label={formatInTimeZone(currentDate, timezone, 'MMMM yyyy', { locale: dateLocale })}
+          >
+            <div role="row" className="grid grid-cols-7 sm:grid-cols-8 gap-x-px mb-0.5 sm:mb-1">
               {WEEKDAYS.map((day) => (
-                <div key={day} className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
-                  {translateWeekday(t, day)}
+                <div key={day} role="columnheader" className="text-center font-medium text-[10px] sm:text-[11px] text-muted-foreground truncate px-px">
+                  <span className="sm:hidden">{translateWeekdayShort(day, locale)}</span>
+                  <span className="hidden sm:inline">{translateWeekday(t, day)}</span>
                 </div>
               ))}
-              <div className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
+              <div role="columnheader" className="hidden sm:block text-center font-medium text-[11px] text-muted-foreground">
                 {t('calendar.weekdays.weekly')}
               </div>
             </div>
-            <div className="grid grid-cols-8 auto-rows-fr rounded-lg h-[calc(100%-20px)]">
+            <div className="grid grid-cols-7 sm:grid-cols-8 auto-rows-fr rounded-lg h-[calc(100%-16px)] sm:h-[calc(100%-20px)]">
               {calendarDays.map((date, index) => {
                 const dateString = formatInTimeZone(date, timezone, 'yyyy-MM-dd')
                 const dayData = calendarData[dateString]
@@ -597,7 +639,7 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
                   <React.Fragment key={dateString}>
                     <div
                       className={cn(
-                        "h-full flex flex-col cursor-pointer transition-[background-color,color,box-shadow] motion-reduce:transition-none rounded-none p-1",
+                        "relative h-full w-full text-left transition-[background-color,color,box-shadow] motion-reduce:transition-none rounded-none min-h-[44px] sm:min-h-0",
                         "ring-1 ring-border hover:ring-primary hover:z-10",
                         dayData && dayData.pnl >= 0
                           ? "bg-green-50 dark:bg-green-900/20"
@@ -609,94 +651,108 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
                         index === 0 && "rounded-tl-lg",
                         index === 35 && "rounded-bl-lg",
                       )}
-                      onClick={() => {
-                        setSelectedDate(date)
-                      }}
                     >
-                      <div className="flex justify-between items-start gap-0.5">
-                        <span className={cn(
-                          "text-[9px] sm:text-[11px] font-medium min-w-[14px] text-center",
-                          isToday(date) && "text-primary font-semibold",
-                          !isCurrentMonth && "opacity-50"
-                        )}>
-                          {format(date, 'd')}
-                        </span>
-                        <div className="flex flex-col gap-0.5">
-                          {dateEvents.length > 0 && <EventBadge events={dateEvents} impactLevels={impactLevels} />}
-                          {dateRenewals.length > 0 && <RenewalBadge renewals={dateRenewals} />}
-                        </div>
-                      </div>
-                      <div className="flex-1 flex flex-col justify-end gap-0.5">
-                        {dayData ? (
-                          <div className={cn(
-                            "text-[9px] sm:text-[11px] font-semibold truncate text-center",
-                            dayData.pnl >= 0
-                              ? "text-green-600 dark:text-green-400"
-                              : "text-red-600 dark:text-red-400",
+                      <button
+                        type="button"
+                        aria-label={formatInTimeZone(date, timezone, 'EEEE, MMMM d, yyyy', { locale: dateLocale })}
+                        className="absolute inset-0 cursor-pointer rounded-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                        onClick={() => setSelectedDate(date)}
+                      />
+                      <div className="relative h-full flex flex-col pointer-events-none p-0.5 sm:p-1">
+                        <div className="flex justify-between items-start gap-0">
+                          <span className={cn(
+                            "text-[10px] sm:text-[11px] font-medium min-w-[12px] sm:min-w-[14px] text-center leading-none",
+                            isToday(date) && "text-primary font-semibold",
                             !isCurrentMonth && "opacity-50"
                           )}>
-                            {formatCurrency(dayData.pnl)}
+                            {format(date, 'd')}
+                          </span>
+                          <div className="pointer-events-auto relative z-10 flex flex-col gap-px">
+                            {dateEvents.length > 0 && <EventBadge events={dateEvents} impactLevels={impactLevels} />}
+                            {dateRenewals.length > 0 && <RenewalBadge renewals={dateRenewals} />}
                           </div>
-                        ) : (
-                          <div className={cn(
-                            "text-[9px] sm:text-[11px] font-semibold invisible text-center",
-                            !isCurrentMonth && "opacity-50"
-                          )}>$0</div>
-                        )}
-                        <div className={cn(
-                          "text-[7px] sm:text-[9px] text-muted-foreground truncate text-center",
-                          !isCurrentMonth && "opacity-50"
-                        )}>
-                          {dayData
-                            ? `${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}`
-                            : t('calendar.noTrades')}
                         </div>
-                        {dayData && showMaxProfitAndDrawdown && (
-                          <>
+                        <div className="flex-1 flex flex-col justify-end gap-px sm:gap-0.5 min-h-0">
+                          {dayData ? (
                             <div className={cn(
-                              "text-[7px] sm:text-[9px] text-green-600 dark:text-green-400 truncate text-center",
+                              "text-[10px] sm:text-[11px] font-semibold truncate text-center leading-tight",
+                              dayData.pnl >= 0
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-red-600 dark:text-red-400",
                               !isCurrentMonth && "opacity-50"
                             )}>
-                              {t('calendar.maxProfit')}: {formatCurrency(maxProfit)}
+                              <ResponsiveCurrency value={dayData.pnl} />
                             </div>
+                          ) : (
                             <div className={cn(
-                              "text-[7px] sm:text-[9px] text-red-600 dark:text-red-400 truncate text-center",
+                              "text-[10px] sm:text-[11px] font-semibold invisible text-center",
                               !isCurrentMonth && "opacity-50"
-                            )}>
-                              {t('calendar.maxDD')}: -{formatCurrency(maxDrawdown)}
-                            </div>
-                          </>
-                        )}
+                            )}>$0</div>
+                          )}
+                          <div className={cn(
+                            "text-[10px] sm:text-[9px] text-muted-foreground truncate text-center leading-tight",
+                            !isCurrentMonth && "opacity-50"
+                          )}>
+                            {dayData
+                              ? (
+                                <>
+                                  <span className="sm:hidden">{dayData.tradeNumber}</span>
+                                  <span className="hidden sm:inline">
+                                    {`${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}`}
+                                  </span>
+                                </>
+                              )
+                              : <span className="hidden sm:inline">{t('calendar.noTrades')}</span>}
+                          </div>
+                          {dayData && showMaxProfitAndDrawdown && (
+                            <>
+                              <div className={cn(
+                                "hidden sm:block text-[9px] text-green-600 dark:text-green-400 truncate text-center",
+                                !isCurrentMonth && "opacity-50"
+                              )}>
+                                {t('calendar.maxProfit')}: {formatCurrency(maxProfit)}
+                              </div>
+                              <div className={cn(
+                                "hidden sm:block text-[9px] text-red-600 dark:text-red-400 truncate text-center",
+                                !isCurrentMonth && "opacity-50"
+                              )}>
+                                {t('calendar.maxDD')}: -{formatCurrency(maxDrawdown)}
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                     {isLastDayOfWeek && (() => {
                       const weeklyTotal = calculateWeeklyTotal(index, calendarDays, calendarData)
                       return (
-                        <div
+                        <button
+                          type="button"
+                          aria-label={`${t('calendar.weekdays.weekly')}, ${formatInTimeZone(date, timezone, 'MMMM d, yyyy', { locale: dateLocale })}`}
                           className={cn(
-                            "h-full flex items-center justify-center rounded-none cursor-pointer",
-                            "ring-1 ring-border hover:ring-primary hover:z-10",
+                            "hidden sm:flex h-full w-full items-center justify-center rounded-none cursor-pointer",
+                            "ring-1 ring-border hover:ring-primary hover:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                             index === 6 && "rounded-tr-lg",
                             index === 41 && "rounded-br-lg"
                           )}
                           onClick={() => setSelectedWeekDate(date)}
                         >
                           <div className={cn(
-                            "text-[9px] sm:text-[11px] font-semibold truncate px-0.5",
+                            "text-[11px] font-semibold truncate px-0.5",
                             weeklyTotal >= 0
                               ? "text-green-600 dark:text-green-400"
                               : "text-red-600 dark:text-red-400"
                           )}>
-                            {formatCurrency(weeklyTotal)}
+                            {formatCurrency(weeklyTotal, { signed: true })}
                           </div>
-                        </div>
+                        </button>
                       )
                     })()}
                   </React.Fragment>
                 )
               })}
             </div>
-          </>
+          </div>
         ) : (
           <WeeklyCalendarPnl
             calendarData={calendarData}
@@ -722,9 +778,9 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
         calendarData={calendarData}
         isLoading={isLoading}
       />
-      <CardFooter className="flex justify-end">
-        <div className="flex items-center justify-between gap-4 w-full">
-          <div className="flex items-center gap-2">
+      <CardFooter className="flex justify-end p-2 sm:p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between w-full">
+          <div className="hidden sm:flex items-center gap-2">
             <span className="text-xs sm:text-sm text-muted-foreground">
               {t('calendar.viewOptions.showMaxProfitAndDD')}
             </span>
@@ -735,30 +791,36 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
             />
           </div>
           {/* View Mode Toggle */}
-          <div className="flex items-center gap-1 border rounded-md p-0.5 bg-muted">
+          <div className="flex items-center justify-end gap-1 border rounded-md p-0.5 bg-muted w-full sm:w-auto">
             <Button
+              type="button"
               variant={viewMode === 'daily' ? 'default' : 'ghost'}
               size="sm"
+              aria-pressed={viewMode === 'daily'}
+              aria-label={t('calendar.viewMode.daily')}
               className={cn(
-                "h-7 px-2 transition-colors",
-                viewMode === 'daily' && "bg-primary text-primary-foreground shadow-sm font-semibold"
+                "h-7 flex-1 sm:flex-none px-2 transition-colors font-semibold",
+                viewMode === 'daily' && "bg-primary text-primary-foreground shadow-sm"
               )}
               onClick={() => setViewMode('daily')}
             >
-              <Calendar className="h-4 w-4 mr-1" />
-              <span className="text-xs">{t('calendar.viewMode.daily')}</span>
+              <Calendar className="h-4 w-4 sm:mr-1" />
+              <span className="text-xs hidden sm:inline">{t('calendar.viewMode.daily')}</span>
             </Button>
             <Button
+              type="button"
               variant={viewMode === 'weekly' ? 'default' : 'ghost'}
               size="sm"
+              aria-pressed={viewMode === 'weekly'}
+              aria-label={t('calendar.viewMode.weekly')}
               className={cn(
-                "h-7 px-2 transition-colors",
-                viewMode === 'weekly' && "bg-primary text-primary-foreground shadow-sm font-semibold"
+                "h-7 flex-1 sm:flex-none px-2 transition-colors font-semibold",
+                viewMode === 'weekly' && "bg-primary text-primary-foreground shadow-sm"
               )}
               onClick={() => setViewMode('weekly')}
             >
-              <CalendarDays className="h-4 w-4 mr-1" />
-              <span className="text-xs">{t('calendar.viewMode.weekly')}</span>
+              <CalendarDays className="h-4 w-4 sm:mr-1" />
+              <span className="text-xs hidden sm:inline">{t('calendar.viewMode.weekly')}</span>
             </Button>
           </div>
         </div>

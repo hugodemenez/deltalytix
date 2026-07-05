@@ -1,7 +1,8 @@
 import { ImageResponse } from "next/og"
 import { getShared } from "@/server/shared"
 import type { ReactElement } from "react"
-import { Logo } from "@/components/logo"
+import { OgCtaButton, ogImageCacheHeaders } from "@/lib/og/shared"
+import { getSharedOgCopy } from "@/lib/og/site-metadata"
 
 export const alt = "Shared Trading Performance"
 export const size = {
@@ -14,9 +15,10 @@ export const contentType = "image/png"
 export const runtime = 'nodejs'
 export const revalidate = 3600 // 1 hour
 
-export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
+export default async function Image({ params }: { params: Promise<{ slug: string; locale: string }> }) {
     try {
-        const { slug } = await params
+        const { slug, locale } = await params
+        const sharedCopy = getSharedOgCopy(locale)
         const sharedData = await getShared(slug)
         if (!sharedData) {
             return new Response("Shared data not found", { status: 404 })
@@ -662,6 +664,16 @@ export default async function Image({ params }: { params: Promise<{ slug: string
                 <div
                     style={{
                         position: "absolute",
+                        bottom: "32px",
+                        left: "32px",
+                        display: "flex",
+                    }}
+                >
+                    <OgCtaButton label={sharedCopy.cta} accentColor={primaryColor} />
+                </div>
+                <div
+                    style={{
+                        position: "absolute",
                         top: "0",
                         right: "0",
                         width: "200px",
@@ -679,11 +691,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
 
         return new ImageResponse(element, {
             ...size,
-            headers: {
-                "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=3600",
-                "CDN-Cache-Control": "public, max-age=3600", 
-                "Vercel-CDN-Cache-Control": "public, max-age=3600",
-            },
+            headers: ogImageCacheHeaders,
         })
     } catch (e: unknown) {
         console.log(e instanceof Error ? e.message : "Unknown error")

@@ -31,6 +31,7 @@ export default {
         signInWithDiscord: 'Discord',
         signInWithGoogle: 'Google',
         openMailbox: 'Ouvrir la Boîte Mail',
+        openMailboxManualCheck: 'Consultez votre boîte de réception pour l\'e-mail de connexion Deltalytix.',
         resendIn: 'Renvoyer dans',
         resendEmail: 'Renvoyer l\'Email',
         verificationCode: 'Code de Vérification',

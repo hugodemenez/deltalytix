@@ -34,11 +34,13 @@ interface ChartDataPoint {
 interface TradeProgressChartProps {
   account: Account
   className?: string
+  fillHeight?: boolean
 }
 
 export function TradeProgressChart({
   account,
-  className
+  className,
+  fillHeight = false,
 }: TradeProgressChartProps) {
   const t = useI18n()
   
@@ -200,10 +202,18 @@ export function TradeProgressChart({
   }
 
   return (
-    <div className="w-full space-y-2">
+    <div
+      className={cn(
+        "w-full",
+        fillHeight ? "flex min-h-0 flex-1 flex-col" : "space-y-2"
+      )}
+    >
       <ChartContainer
         config={chartConfig}
-        className={cn("h-[200px] w-full", className)}
+        className={cn(
+          fillHeight ? "min-h-[120px] w-full flex-1" : "h-[200px] w-full",
+          className
+        )}
       >
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">

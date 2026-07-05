@@ -6,13 +6,18 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
 import { ScrollLockFix } from "@/components/scroll-lock-fix";
 import { getSiteOrigin, siteUrl } from "@/lib/site-url";
+import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
 
 const inter = Inter({ subsets: ["latin"] });
 const metadataBase = new URL(getSiteOrigin());
+const defaultSiteCopy = getSiteMetadataCopy("en");
 
 export const metadata: Metadata = {
-  title: "Deltalytix",
-  description: "Next generation trading dashboard",
+  title: {
+    default: defaultSiteCopy.title,
+    template: "%s | Deltalytix",
+  },
+  description: defaultSiteCopy.description,
   metadataBase,
   alternates: {
     canonical: siteUrl("/"),
@@ -23,25 +28,17 @@ export const metadata: Metadata = {
   },
   // ---------- OPEN GRAPH ----------
   openGraph: {
-    title: "Deltalytix",
-    description:
-      "Deltalytix is a next generation trading dashboard that provides real-time insights and analytics for traders.",
-    images: [
-      {
-        url: "/opengraph-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Deltalytix Open Graph Image",
-      },
-    ],
+    title: defaultSiteCopy.title,
+    description: defaultSiteCopy.description,
+    // og:image is injected automatically from colocated opengraph-image.tsx.
   },
 
   // ---------- TWITTER ----------
   twitter: {
     card: "summary_large_image",
-    title: "Deltalytix",
-    description: "Next generation trading dashboard",
-    images: ["/twitter-image.png"],
+    title: defaultSiteCopy.title,
+    description: defaultSiteCopy.description,
+    // twitter:image is derived from opengraph-image.tsx.
   },
 
   // ---------- ICONS ----------

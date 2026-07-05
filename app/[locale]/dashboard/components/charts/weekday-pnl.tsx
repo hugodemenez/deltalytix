@@ -26,6 +26,10 @@ import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
 import { translateWeekdayPnL } from "@/lib/translation-utils";
 import { Button } from "@/components/ui/button";
+import {
+  BarChartLoadingSkeleton,
+  LOADING_MOCK_WEEKDAY,
+} from "./chart-loading-skeleton";
 
 const daysOfWeek = [0, 1, 2, 3, 4, 5, 6]; // Sunday = 0, Saturday = 6
 
@@ -46,7 +50,8 @@ const chartConfig = {
 export default function WeekdayPNLChart({
   size = "medium",
 }: WeekdayPNLChartProps) {
-  const { calendarData, weekdayFilter, setWeekdayFilter } = useData();
+  const { calendarData, weekdayFilter, setWeekdayFilter, isLoading } =
+    useData();
   const [darkMode, setDarkMode] = React.useState(false);
   const [activeDay, setActiveDay] = React.useState<number | null>(null);
   const t = useI18n();
@@ -215,6 +220,16 @@ export default function WeekdayPNLChart({
         )}
       >
         <div className="w-full h-full cursor-pointer" onClick={handleClick}>
+          {isLoading ? (
+            <BarChartLoadingSkeleton
+              size={size}
+              data={LOADING_MOCK_WEEKDAY}
+              xDataKey="day"
+              yDataKey="pnl"
+              yAxisWidth={45}
+              xTickCount={7}
+            />
+          ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={weekdayData}
@@ -281,6 +296,7 @@ export default function WeekdayPNLChart({
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          )}
         </div>
       </CardContent>
     </Card>

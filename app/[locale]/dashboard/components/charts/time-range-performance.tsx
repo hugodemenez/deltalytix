@@ -18,6 +18,10 @@ import { Trade } from "@/prisma/generated/prisma/browser"
 import { Button } from "@/components/ui/button"
 import { ChartConfig } from "@/components/ui/chart"
 import { getTimeRangeKey } from "@/lib/time-range"
+import {
+  BarChartLoadingSkeleton,
+  LOADING_MOCK_TIME_RANGE,
+} from "./chart-loading-skeleton"
 
 interface TimeRangePerformanceChartProps {
   size?: WidgetSize
@@ -51,7 +55,7 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRangePerformanceChartProps) {
-  const { formattedTrades: trades, timeRange, setTimeRange } = useData()
+  const { formattedTrades: trades, timeRange, setTimeRange, isLoading } = useData()
   const t = useI18n()
   const [activeRange, setActiveRange] = React.useState<string | null>(null)
 
@@ -218,6 +222,16 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
           className="w-full h-full cursor-pointer" 
           onClick={handleClick}
         >
+          {isLoading ? (
+            <BarChartLoadingSkeleton
+              size={size}
+              data={LOADING_MOCK_TIME_RANGE}
+              xDataKey="range"
+              yDataKey="avgPnl"
+              yAxisWidth={45}
+              showReferenceLine
+            />
+          ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
@@ -293,6 +307,7 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          )}
         </div>
       </CardContent>
     </Card>

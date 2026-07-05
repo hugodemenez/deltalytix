@@ -14,6 +14,7 @@ import {
   PromptInputTextarea,
   PromptInputToolbar,
   PromptInputTools,
+  usePromptInputAttachments,
 } from '@/components/ai-elements/prompt-input';
 import {
   Actions,
@@ -118,6 +119,24 @@ const preprocessContent = (content: string) => {
   return { content: contentWithoutThink, think };
 };
 
+const ATTACHMENT_ONLY_PLACEHOLDER = 'Sent with attachments';
+
+function SupportPromptSubmit({
+  input,
+  status,
+}: {
+  input: string;
+  status: ReturnType<typeof useChat>['status'];
+}) {
+  const attachments = usePromptInputAttachments();
+  const canSend =
+    Boolean(input.trim()) || attachments.files.length > 0;
+
+  return (
+    <PromptInputSubmit disabled={!canSend} status={status} />
+  );
+}
+
 const ChatBotDemo = () => {
   const t = useI18n();
   const [input, setInput] = useState('');
@@ -171,17 +190,21 @@ const ChatBotDemo = () => {
   }, [messages.length, setMessages, t]);
 
   const handleSubmit = (message: PromptInputMessage) => {
-    const hasText = Boolean(message.text);
+    const hasText = Boolean(message.text?.trim());
     const hasAttachments = Boolean(message.files?.length);
 
     if (!(hasText || hasAttachments)) {
       return;
     }
 
-    sendMessage({
-      text: message.text || 'Sent with attachments',
-      files: message.files,
-    });
+    if (hasText) {
+      sendMessage({
+        text: message.text!,
+        ...(hasAttachments ? { files: message.files } : {}),
+      });
+    } else {
+      sendMessage({ files: message.files! });
+    }
     setInput('');
   };
 
@@ -232,11 +255,53 @@ const ChatBotDemo = () => {
 
                       {message.parts.map((part, i) => {
                         switch (part.type) {
+                          case 'file': {
+                            if (!part.mediaType?.startsWith('image/') || !part.url) {
+                              return null;
+                            }
+
+                            const isUser = message.role === 'user';
+
+                            return (
+                              <ChatMessage key={`${message.id}-${i}`} align={isUser ? 'end' : 'start'}>
+                                <MessageContent>
+                                  <Bubble
+                                    variant={isUser ? 'default' : 'muted'}
+                                    align={isUser ? 'end' : 'start'}
+                                  >
+                                    <BubbleContent>
+                                      <img
+                                        alt={part.filename || 'attachment'}
+                                        className="max-h-96 max-w-full rounded-lg object-contain"
+                                        src={part.url}
+                                      />
+                                    </BubbleContent>
+                                  </Bubble>
+                                </MessageContent>
+                              </ChatMessage>
+                            );
+                          }
                           case 'text': {
                             const { content: contentWithoutThink, think } = preprocessContent(
                               part.text,
                             );
                             const isUser = message.role === 'user';
+
+                            if (
+                              isUser &&
+                              !contentWithoutThink.trim() &&
+                              message.parts.some((p) => p.type === 'file')
+                            ) {
+                              return null;
+                            }
+
+                            if (
+                              isUser &&
+                              contentWithoutThink.trim() === ATTACHMENT_ONLY_PLACEHOLDER &&
+                              message.parts.some((p) => p.type === 'file')
+                            ) {
+                              return null;
+                            }
 
                             return (
                               <Fragment key={`${message.id}-${i}`}>
@@ -436,7 +501,7 @@ const ChatBotDemo = () => {
           </CardContent>
         </Card>
 
-        <PromptInput onSubmit={handleSubmit} globalDrop multiple>
+        <PromptInput accept="image/*" onSubmit={handleSubmit} globalDrop multiple>
           <PromptInputBody>
             <PromptInputAttachments>
               {(attachment) => <PromptInputAttachment data={attachment} />}
@@ -456,7 +521,7 @@ const ChatBotDemo = () => {
                 </PromptInputActionMenuContent>
               </PromptInputActionMenu>
             </PromptInputTools>
-            <PromptInputSubmit disabled={!input && !status} status={status} />
+            <SupportPromptSubmit input={input} status={status} />
           </PromptInputToolbar>
         </PromptInput>
       </div>

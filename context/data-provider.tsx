@@ -64,7 +64,7 @@ import { useEquityChartDataStore } from "@/store/widgets/equity-chart-data-store
 import { useStripeSubscriptionStore } from "@/store/stripe-subscription-store";
 import { useBreakevenStore } from "@/store/widgets/breakeven-store";
 import { getSubscriptionData } from "@/server/billing";
-import { getEquityChartDataAction } from "@/server/equity-chart";
+import { computeEquityChartData } from "@/lib/equity-chart";
 import { defaultLayouts } from "@/lib/default-layouts";
 import { getTimeRangeKey } from "@/lib/time-range";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -360,56 +360,88 @@ export const DataProvider: React.FC<{
   const [tagFilter, setTagFilter] = useState<TagFilter>({ tags: [] });
   const [isFirstConnection, setIsFirstConnection] = useState(false);
 
-  const fetchEquityChartData = useCallback(async () => {
-    setEquityChartLoading(true);
-    try {
-      const result = await getEquityChartDataAction({
-        instruments,
-        accountNumbers,
-        dateRange:
-          dateRange?.from && dateRange?.to
-            ? {
-                from: dateRange.from.toISOString(),
-                to: dateRange.to.toISOString(),
-              }
-            : undefined,
-        pnlRange,
-        tickRange,
-        timeRange,
-        tickFilter,
-        weekdayFilter,
-        hourFilter,
-        tagFilter,
-        timezone,
-        showIndividual: equityChartConfig.showIndividual,
-        maxAccounts: 8,
-        dataSampling: equityChartConfig.dataSampling,
-        selectedAccounts: equityChartConfig.selectedAccountsToDisplay ?? [],
-      });
-      setEquityChartData(result);
-    } catch (error) {
-      console.error("[DataProvider] Failed to fetch equity chart data:", error);
-      setEquityChartData({ chartData: [], accountNumbers: [] });
-    } finally {
-      setEquityChartLoading(false);
+  const equityChartParams = useMemo(
+    () => ({
+      instruments,
+      accountNumbers,
+      dateRange:
+        dateRange?.from && dateRange?.to
+          ? {
+              from: dateRange.from.toISOString(),
+              to: dateRange.to.toISOString(),
+            }
+          : undefined,
+      pnlRange,
+      tickRange,
+      timeRange,
+      tickFilter,
+      weekdayFilter,
+      hourFilter,
+      tagFilter,
+      timezone,
+      showIndividual: equityChartConfig.showIndividual,
+      maxAccounts: 8,
+      dataSampling: equityChartConfig.dataSampling,
+      selectedAccounts: equityChartConfig.selectedAccountsToDisplay ?? [],
+    }),
+    [
+      instruments,
+      accountNumbers,
+      dateRange,
+      pnlRange,
+      tickRange,
+      timeRange,
+      tickFilter,
+      weekdayFilter,
+      hourFilter,
+      tagFilter,
+      timezone,
+      equityChartConfig.showIndividual,
+      equityChartConfig.dataSampling,
+      equityChartConfig.selectedAccountsToDisplay,
+    ]
+  );
+
+  const computedEquityChartData = useMemo(() => {
+    if (isSharedView || !hasEquityChartWidget) {
+      return { chartData: [], accountNumbers: [] };
     }
+
+    return computeEquityChartData(
+      trades.map((t) => ({
+        entryDate: t.entryDate,
+        accountNumber: t.accountNumber,
+        instrument: t.instrument,
+        pnl: t.pnl,
+        commission: t.commission,
+        timeInPosition: t.timeInPosition,
+        tags: t.tags,
+      })),
+      accounts.map((a) => ({
+        number: a.number,
+        groupId: a.groupId,
+        startingBalance: a.startingBalance,
+        resetDate: a.resetDate,
+        payouts: (a.payouts ?? []).map((p) => ({
+          date: p.date,
+          amount: p.amount,
+          status: p.status,
+        })),
+      })),
+      groups.map((g) => ({
+        id: g.id,
+        name: g.name,
+        accounts: (g.accounts ?? []).map((a) => ({ number: a.number })),
+      })),
+      equityChartParams
+    );
   }, [
-    instruments,
-    accountNumbers,
-    dateRange,
-    pnlRange,
-    tickRange,
-    timeRange,
-    tickFilter,
-    weekdayFilter,
-    hourFilter,
-    tagFilter,
-    timezone,
-    equityChartConfig.showIndividual,
-    equityChartConfig.dataSampling,
-    equityChartConfig.selectedAccountsToDisplay,
-    setEquityChartData,
-    setEquityChartLoading,
+    isSharedView,
+    hasEquityChartWidget,
+    trades,
+    accounts,
+    groups,
+    equityChartParams,
   ]);
 
   // Load data from the server
@@ -583,14 +615,26 @@ export const DataProvider: React.FC<{
   }, [isSharedView]); // Only depend on isSharedView
 
   useEffect(() => {
-    if (isSharedView || !supabaseUser?.id || !hasEquityChartWidget) return;
-
-    void fetchEquityChartData();
+    if (isSharedView || !hasEquityChartWidget) return;
+    setEquityChartData({
+      chartData: computedEquityChartData.chartData,
+      accountNumbers: computedEquityChartData.accountNumbers,
+    });
   }, [
     isSharedView,
-    supabaseUser?.id,
     hasEquityChartWidget,
-    fetchEquityChartData,
+    computedEquityChartData,
+    setEquityChartData,
+  ]);
+
+  useEffect(() => {
+    if (isSharedView || !hasEquityChartWidget) return;
+    setEquityChartLoading(isLoading);
+  }, [
+    isSharedView,
+    hasEquityChartWidget,
+    isLoading,
+    setEquityChartLoading,
   ]);
 
   // Persist language changes without blocking UI
@@ -734,9 +778,6 @@ export const DataProvider: React.FC<{
           includeStripe: true,
           withLoading: false,
         });
-        if (hasEquityChartWidget) {
-          await fetchEquityChartData();
-        }
         console.log("[refreshAllData] Successfully refreshed trades and user data");
       } catch (error) {
         console.error("Error refreshing all data:", error);
@@ -744,7 +785,7 @@ export const DataProvider: React.FC<{
         setIsLoading(false);
       }
     },
-    [refreshTradesOnly, refreshUserDataOnly, supabaseUser?.id, hasEquityChartWidget, fetchEquityChartData]
+    [refreshTradesOnly, refreshUserDataOnly, supabaseUser?.id]
   );
 
   // Dev-only: persist trades store into IndexedDB so reloads avoid DB hits

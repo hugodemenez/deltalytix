@@ -16,6 +16,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useI18n } from "@/locales/client"
+import { DonutChartLoadingSkeleton } from "./chart-loading-skeleton"
 
 interface TradeDistributionProps {
   size?: WidgetSize
@@ -66,7 +67,7 @@ const CustomTooltip = ({ active, payload }: TooltipProps) => {
 };
 
 export default function TradeDistributionChart({ size = 'medium' }: TradeDistributionProps) {
-  const { statistics: { nbWin, nbLoss, nbBe, nbTrades } } = useData()
+  const { statistics: { nbWin, nbLoss, nbBe, nbTrades }, isLoading } = useData()
   const t = useI18n()
 
   const chartData = React.useMemo(() => {
@@ -126,6 +127,9 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
         )}
       >
         <div className="w-full h-full">
+          {isLoading ? (
+            <DonutChartLoadingSkeleton size={size} />
+          ) : (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -202,6 +206,7 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
               />
             </PieChart>
           </ResponsiveContainer>
+          )}
         </div>
       </CardContent>
     </Card>

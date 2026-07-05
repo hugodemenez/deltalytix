@@ -32,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 // Link removed; unauthenticated users can't reach settings
 import { useAuthPreferenceStore } from "@/store/auth-preference-store"
+import { openMailbox } from "@/lib/open-mailbox"
 
 const formSchema = z.object({
     email: z.string().email(),
@@ -324,39 +325,10 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
     function openMailClient() {
         const email = form.getValues('email')
-        const domain = email.split('@')[1]?.toLowerCase()
+        const result = openMailbox(email)
 
-        if (domain?.includes('gmail.com')) {
-            window.open('https://mail.google.com', '_blank', 'noopener,noreferrer')
-        } else if (
-            domain?.includes('outlook.com') || 
-            domain?.includes('hotmail.com') || 
-            domain?.includes('live.com') ||
-            domain?.includes('msn.com') ||
-            domain?.includes('office365.com')
-        ) {
-            window.open('https://outlook.live.com', '_blank', 'noopener,noreferrer')
-        } else if (
-            domain?.includes('proton.me') || 
-            domain?.includes('protonmail.com') || 
-            domain?.includes('pm.me')
-        ) {
-            window.open('https://mail.proton.me', '_blank', 'noopener,noreferrer')
-        } else if (
-            domain?.includes('icloud.com') || 
-            domain?.includes('me.com') || 
-            domain?.includes('mac.com')
-        ) {
-            window.open('https://www.icloud.com/mail', '_blank', 'noopener,noreferrer')
-        } else if (domain?.includes('yahoo.com')) {
-            window.open('https://mail.yahoo.com', '_blank', 'noopener,noreferrer')
-        } else if (domain?.includes('aol.com')) {
-            window.open('https://mail.aol.com', '_blank', 'noopener,noreferrer')
-        } else if (domain?.includes('zoho.com')) {
-            window.open('https://mail.zoho.com', '_blank', 'noopener,noreferrer')
-        } else {
-            // Default to mailto: for unknown domains
-            window.location.href = `mailto:${email}`
+        if (result === 'manual-check') {
+            toast.info(t('auth.openMailboxManualCheck'))
         }
     }
 

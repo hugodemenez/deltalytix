@@ -57,6 +57,12 @@ async function main() {
   const recipe = await loadRecipe(batch)
   const siteUrl = process.env.SITE_URL || SITE_URL
 
+  if (process.env.CHANGELOG_MEDIA_CAPTURE !== '1') {
+    console.warn(
+      '[changelog-media] Tip: restart the dev server with CHANGELOG_MEDIA_CAPTURE=1 to disable the Next.js dev indicator in next.config.',
+    )
+  }
+
   fs.mkdirSync(outputRoot(batch), { recursive: true })
 
   const browser = await chromium.launch({

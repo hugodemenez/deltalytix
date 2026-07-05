@@ -13,6 +13,13 @@ export interface RithmicCredentialSet {
 }
 
 const STORAGE_KEY = 'rithmic_sync_data'
+export const RITHMIC_STORAGE_KEY = STORAGE_KEY
+export const RITHMIC_STORAGE_UPDATED_EVENT = 'rithmic-storage-updated'
+
+function notifyRithmicStorageUpdated() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent(RITHMIC_STORAGE_UPDATED_EVENT))
+}
 
 export function saveRithmicData(data: RithmicCredentialSet): void {
   try {
@@ -25,6 +32,7 @@ export function saveRithmicData(data: RithmicCredentialSet): void {
       }
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedData))
+    notifyRithmicStorageUpdated()
   } catch (error) {
     console.error('Failed to save Rithmic data:', error)
   }
@@ -87,6 +95,7 @@ export function clearRithmicData(id?: string): void {
     } else {
       localStorage.removeItem(STORAGE_KEY)
     }
+    notifyRithmicStorageUpdated()
   } catch (error) {
     console.error('Failed to clear Rithmic data:', error)
   }
@@ -105,9 +114,8 @@ export function updateLastSyncTime(id: string): void {
     console.error('Failed to update last sync time:', error)
   }
 }
-
-// Helper to generate a unique ID for new credential sets
-// Uses username as the ID since synchronizations use username as accountId
+// Helper to generate a unique ID for new credential sets.
+// Uses username as the ID since synchronizations use username as accountId.
 export function generateCredentialId(username: string): string {
   if (!username) {
     // Fallback for edge cases (should not happen in normal flow)

@@ -1,0 +1,16 @@
+---
+title: 'Chargement squelette pour les graphiques du tableau de bord'
+description: 'Les graphiques affichent une mise en page atténuée pendant le chargement, au lieu d''un espace vide ou d''un spinner.'
+date: '2026-06-29'
+status: completed
+completedDate: '2026-07-05'
+image: '/updates/pr-288/fr/dashboard-chart-skeleton-loading.png'
+---
+
+# Chargement squelette pour les graphiques du tableau de bord
+
+![Widget calendrier du tableau de bord pendant le chargement des graphiques](/updates/pr-288/fr/dashboard-chart-skeleton-loading.png)
+
+Les graphiques du tableau de bord—histogrammes, courbes, donuts et analyses du calendrier—affichent désormais un squelette pendant le chargement des données. Vous voyez la forme du graphique (axes, grille, barres ou lignes factices) plutôt qu'une zone vide ou un texte de chargement centré.
+
+Le squelette reprend la mise en page réelle de chaque graphique, pour limiter le saut visuel à l'arrivée des données. Les modales du calendrier conservent les graphiques en cache pendant un rafraîchissement et n'affichent le squelette que pour les parties encore en cours de chargement.

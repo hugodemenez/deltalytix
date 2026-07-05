@@ -130,7 +130,7 @@ export function CalendarModal({
             )}
             <DailyStats dayData={dayData} isWeekly={false} />
             {/* <DailyMood dayData={dayData} isWeekly={false} selectedDate={selectedDate} /> */}
-            <Charts dayData={dayData} />
+            <Charts dayData={dayData} isLoading={isLoading} />
           </TabsContent>
         </Tabs>
       </DialogContent>
