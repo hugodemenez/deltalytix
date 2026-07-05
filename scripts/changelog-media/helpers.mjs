@@ -30,9 +30,44 @@ export async function seedCookieConsent(page) {
   }, COOKIE_CONSENT_VALUE)
 }
 
+const NEXT_DEV_TOOL_SELECTORS = [
+  'nextjs-portal',
+  'next-route-announcer',
+  '#__next-build-watcher',
+].join(', ')
+
+/** Keep the Next.js dev tools badge/menu out of changelog screenshots. */
+export async function seedHideNextDevTools(page) {
+  await page.addInitScript((selectors) => {
+    const hide = () => {
+      document.querySelectorAll(selectors).forEach((element) => {
+        element.style.setProperty('display', 'none', 'important')
+        element.style.setProperty('visibility', 'hidden', 'important')
+        element.style.setProperty('pointer-events', 'none', 'important')
+      })
+    }
+
+    hide()
+
+    const observer = new MutationObserver(hide)
+    observer.observe(document.documentElement, { childList: true, subtree: true })
+  }, NEXT_DEV_TOOL_SELECTORS)
+}
+
+export async function hideNextDevTools(page) {
+  await page.evaluate((selectors) => {
+    document.querySelectorAll(selectors).forEach((element) => {
+      element.style.setProperty('display', 'none', 'important')
+      element.style.setProperty('visibility', 'hidden', 'important')
+      element.style.setProperty('pointer-events', 'none', 'important')
+    })
+  }, NEXT_DEV_TOOL_SELECTORS)
+}
+
 export async function newCapturePage(browser, options = {}) {
   const page = await browser.newPage(options)
   await seedCookieConsent(page)
+  await seedHideNextDevTools(page)
   return page
 }
 
@@ -106,6 +141,7 @@ export async function clickTab(page, pattern) {
 }
 
 export async function prepareForScreenshot(page) {
+  await hideNextDevTools(page)
   await page.evaluate(async () => {
     if (document.fonts?.ready) {
       await document.fonts.ready
@@ -144,6 +180,20 @@ export async function recordVideo(browser, batch, locale, name, run, playwrightL
   await context.addInitScript((consentValue) => {
     window.localStorage.setItem('cookieConsent', consentValue)
   }, COOKIE_CONSENT_VALUE)
+  await context.addInitScript((selectors) => {
+    const hide = () => {
+      document.querySelectorAll(selectors).forEach((element) => {
+        element.style.setProperty('display', 'none', 'important')
+        element.style.setProperty('visibility', 'hidden', 'important')
+        element.style.setProperty('pointer-events', 'none', 'important')
+      })
+    }
+
+    hide()
+
+    const observer = new MutationObserver(hide)
+    observer.observe(document.documentElement, { childList: true, subtree: true })
+  }, NEXT_DEV_TOOL_SELECTORS)
   const page = await context.newPage()
   await run(page)
   const video = page.video()
