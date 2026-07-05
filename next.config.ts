@@ -19,6 +19,8 @@ const buildWorkers =
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Hide the Next.js dev indicator during changelog media capture (see lib/agent-skills/changelog-media.md).
+  ...(process.env.CHANGELOG_MEDIA_CAPTURE === '1' ? { devIndicators: false as const } : {}),
   // playwright-core reads browsers.json at import time; keep it external + traced for cron scraping.
   serverExternalPackages: ['playwright-core', '@vercel/sandbox'],
   allowedDevOrigins: ["13.36.171.174"],
