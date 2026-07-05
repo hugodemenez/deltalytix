@@ -1,15 +1,20 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import {
-  CommandDialog,
+  Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
-import { DialogTitle } from "@/components/ui/dialog"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import { useI18n } from "@/locales/client"
 
 export interface AccountSearchItem {
@@ -34,6 +39,7 @@ export function AccountSearchCommand({
   onSelect,
 }: AccountSearchCommandProps) {
   const t = useI18n()
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const groupedItems = useMemo(() => {
     const groups = new Map<string, AccountSearchItem[]>()
@@ -61,33 +67,52 @@ export function AccountSearchCommand({
     }))
   }, [items, t])
 
+  useEffect(() => {
+    if (!open) return
+    const frame = requestAnimationFrame(() => {
+      inputRef.current?.focus()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [open])
+
   const handleSelect = (accountId: string) => {
     onSelect(accountId)
     onOpenChange(false)
   }
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <DialogTitle className="sr-only">
-        {t("accounts.toolbar.searchAccounts")}
-      </DialogTitle>
-      <CommandInput placeholder={t("accounts.toolbar.searchPlaceholder")} />
-      <CommandList>
-        <CommandEmpty>{t("accounts.toolbar.noResults")}</CommandEmpty>
-        {groupedItems.map((group) => (
-          <CommandGroup key={group.key} heading={group.heading}>
-            {group.items.map((item) => (
-              <CommandItem
-                key={item.id}
-                value={`${item.label} ${item.id}`}
-                onSelect={() => handleSelect(item.id)}
-              >
-                {item.label}
-              </CommandItem>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent
+        className="max-h-[85dvh] flex flex-col"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
+        <DrawerHeader className="shrink-0 text-left">
+          <DrawerTitle>{t("accounts.toolbar.searchAccounts")}</DrawerTitle>
+        </DrawerHeader>
+
+        <Command className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-none border-t bg-background **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 **:[[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 **:[[cmdk-input]]:h-12 **:[[cmdk-item]]:px-2 **:[[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
+          <CommandInput
+            ref={inputRef}
+            placeholder={t("accounts.toolbar.searchPlaceholder")}
+          />
+          <CommandList className="max-h-[min(60dvh,28rem)]">
+            <CommandEmpty>{t("accounts.toolbar.noResults")}</CommandEmpty>
+            {groupedItems.map((group) => (
+              <CommandGroup key={group.key} heading={group.heading}>
+                {group.items.map((item) => (
+                  <CommandItem
+                    key={item.id}
+                    value={`${item.label} ${item.id}`}
+                    onSelect={() => handleSelect(item.id)}
+                  >
+                    {item.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
             ))}
-          </CommandGroup>
-        ))}
-      </CommandList>
-    </CommandDialog>
+          </CommandList>
+        </Command>
+      </DrawerContent>
+    </Drawer>
   )
 }
