@@ -17,6 +17,8 @@ Capture localized screenshots and short demo videos for Deltalytix changelog (`c
 5. Playwright Chromium available: `npx playwright-core install chromium`
 6. `ffmpeg` installed (for `.webm` → `.mp4` conversion)
 
+The capture helpers **pre-seed `cookieConsent` in localStorage** and click **Accept all** / **Tout accepter** before every screenshot so the consent banner never appears in shipped assets.
+
 Health check:
 
 ```bash

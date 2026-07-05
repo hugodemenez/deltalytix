@@ -2,6 +2,8 @@ import {
   assertNoDevIssues,
   clickTab,
   dismissCookies,
+  ensureCookiesDismissed,
+  newCapturePage,
   recordVideo,
   screenshot,
   waitForDashboard,
@@ -19,13 +21,14 @@ export async function captureScene(browser, options) {
 
   switch (scene) {
     case 'landing-hero': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
         viewport: { width: 1440, height: 900 },
       })
       await page.goto(`${siteUrl}/${locale}`, { waitUntil: 'networkidle', timeout: 120_000 })
       await dismissCookies(page, locale)
       await page.waitForTimeout(3000)
+      await ensureCookiesDismissed(page, locale)
       await assertNoDevIssues(page, `${locale} landing`)
       await screenshot(page, batch, locale, file)
       await page.close()
@@ -33,7 +36,7 @@ export async function captureScene(browser, options) {
     }
 
     case 'landing-contribution-graph': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
         viewport: { width: 1440, height: 900 },
       })
@@ -42,6 +45,7 @@ export async function captureScene(browser, options) {
       const section = page.locator('#open-source')
       await section.scrollIntoViewIfNeeded()
       await page.waitForTimeout(3000)
+      await ensureCookiesDismissed(page, locale)
       await assertNoDevIssues(page, `${locale} contribution graph`)
       await screenshot(page, batch, locale, file)
       await page.close()
@@ -63,7 +67,7 @@ export async function captureScene(browser, options) {
     }
 
     case 'import-mobile': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
         viewport: { width: 390, height: 844 },
         isMobile: true,
@@ -82,13 +86,14 @@ export async function captureScene(browser, options) {
     }
 
     case 'support': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
         viewport: { width: 1280, height: 900 },
       })
       await page.goto(`${siteUrl}/${locale}/support`, { waitUntil: 'networkidle', timeout: 120_000 })
       await dismissCookies(page, locale)
       await page.waitForTimeout(2500)
+      await ensureCookiesDismissed(page, locale)
       await page.getByText(LABELS[locale].supportAssistant).first().waitFor({ timeout: 15_000 })
       await assertNoDevIssues(page, `${locale} support`)
       await screenshot(page, batch, locale, file)
@@ -97,7 +102,7 @@ export async function captureScene(browser, options) {
     }
 
     case 'trade-table-mobile': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
         viewport: { width: 390, height: 844 },
         isMobile: true,
@@ -117,7 +122,7 @@ export async function captureScene(browser, options) {
     }
 
     case 'trade-table-desktop': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
         viewport: { width: 1440, height: 900 },
       })
@@ -161,7 +166,7 @@ export async function captureScene(browser, options) {
     }
 
     case 'calendar-widgets': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
         viewport: { width: 1440, height: 900 },
       })
@@ -180,7 +185,7 @@ export async function captureScene(browser, options) {
     }
 
     case 'calendar-table': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
         viewport: { width: 1440, height: 900 },
       })
@@ -198,7 +203,7 @@ export async function captureScene(browser, options) {
     }
 
     case 'accounts-mobile': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
         viewport: { width: 390, height: 844 },
         isMobile: true,
@@ -214,7 +219,7 @@ export async function captureScene(browser, options) {
     }
 
     case 'accounts-table-desktop': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
         viewport: { width: 1440, height: 900 },
       })
@@ -236,7 +241,7 @@ export async function captureScene(browser, options) {
     }
 
     case 'widgets-mobile': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
         viewport: { width: 390, height: 844 },
         isMobile: true,

@@ -3,6 +3,16 @@ import path from 'path'
 import { execSync } from 'child_process'
 import { LABELS } from './constants.mjs'
 
+const COOKIE_CONSENT_VALUE = JSON.stringify({
+  analytics_storage: true,
+  ad_storage: true,
+  ad_user_data: true,
+  ad_personalization: true,
+  functionality_storage: true,
+  personalization_storage: true,
+  security_storage: true,
+})
+
 export function outputRoot(batch) {
   return path.join(process.cwd(), 'public', 'updates', batch)
 }
@@ -13,12 +23,52 @@ export function outputDir(batch, locale) {
   return dir
 }
 
+/** Seed consent before navigation so the banner never renders. */
+export async function seedCookieConsent(page) {
+  await page.addInitScript((consentValue) => {
+    window.localStorage.setItem('cookieConsent', consentValue)
+  }, COOKIE_CONSENT_VALUE)
+}
+
+/**
+ * @param {import('playwright-core').Browser} browser
+ * @param {import('playwright-core').BrowserContextOptions} [options]
+ */
+export async function newCapturePage(browser, options = {}) {
+  const page = await browser.newPage(options)
+  await seedCookieConsent(page)
+  return page
+}
+
 export async function dismissCookies(page, locale) {
   const accept = page.getByRole('button', { name: LABELS[locale].acceptCookies })
-  if ((await accept.count()) > 0) {
-    await accept.first().click({ force: true })
-    await page.waitForTimeout(600)
+  try {
+    const button = accept.first()
+    await button.waitFor({ state: 'visible', timeout: 8_000 })
+    await button.click({ force: true })
+    await page.waitForFunction(
+      () => !document.body.hasAttribute('data-consent-banner'),
+      { timeout: 5_000 },
+    )
+    await page.waitForTimeout(400)
+    return
+  } catch {
+    // Banner may already be dismissed via seeded localStorage.
   }
+
+  await page.evaluate((consentValue) => {
+    window.localStorage.setItem('cookieConsent', consentValue)
+    document.body.removeAttribute('data-consent-banner')
+  }, COOKIE_CONSENT_VALUE)
+  await page.waitForTimeout(400)
+}
+
+export async function ensureCookiesDismissed(page, locale) {
+  await dismissCookies(page, locale)
+  await page.waitForFunction(
+    () => !document.body.hasAttribute('data-consent-banner'),
+    { timeout: 5_000 },
+  ).catch(() => {})
 }
 
 export async function assertNoDevIssues(page, context) {
@@ -33,6 +83,7 @@ export async function assertNoDevIssues(page, context) {
 }
 
 export async function waitForDashboard(page, locale, siteUrl) {
+  await seedCookieConsent(page)
   await page.goto(`${siteUrl}/${locale}/dashboard`, {
     waitUntil: 'domcontentloaded',
     timeout: 120_000,
@@ -42,11 +93,13 @@ export async function waitForDashboard(page, locale, siteUrl) {
     () => {
       const text = document.body?.innerText ?? ''
       const charts = document.querySelectorAll('svg.recharts-surface').length
-      return text.includes('LOCAL-SIM-001') && charts >= 3
+      const minCharts = window.innerWidth < 768 ? 1 : 3
+      return text.includes('LOCAL-SIM-001') && charts >= minCharts
     },
     { timeout: 90_000 },
   )
   await page.waitForTimeout(2500)
+  await ensureCookiesDismissed(page, locale)
   await assertNoDevIssues(page, `${locale} dashboard`)
 }
 
@@ -57,6 +110,7 @@ export async function clickTab(page, pattern) {
 }
 
 export async function screenshot(page, batch, locale, name) {
+  await ensureCookiesDismissed(page, locale)
   const out = path.join(outputDir(batch, locale), `${name}.png`)
   await page.screenshot({ path: out, type: 'png', fullPage: false })
   console.log('Saved', out)
@@ -72,6 +126,9 @@ export async function recordVideo(browser, batch, locale, name, run, playwrightL
       size: { width: 1280, height: 720 },
     },
   })
+  await context.addInitScript((consentValue) => {
+    window.localStorage.setItem('cookieConsent', consentValue)
+  }, COOKIE_CONSENT_VALUE)
   const page = await context.newPage()
   await run(page)
   const video = page.video()
