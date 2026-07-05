@@ -101,7 +101,11 @@ export default function Modals() {
       
       {/* Account Group Board */}
       <Sheet open={accountGroupBoardOpen} onOpenChange={setAccountGroupBoardOpen}>
-        <SheetContent side="right" className="w-[90vw] sm:w-[800px] sm:max-w-[800px] overflow-y-auto">
+        <SheetContent
+          side="right"
+          className="w-[90vw] sm:w-[800px] sm:max-w-[800px] overflow-y-auto"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
           <SheetHeader>
             <SheetTitle>{t('filters.manageAccounts')}</SheetTitle>
             <SheetDescription>

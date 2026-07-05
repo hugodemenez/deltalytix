@@ -403,8 +403,8 @@ function AccountsTableSection({
   }
 
   return (
-    <div className="relative min-w-0">
-      <div className="overflow-x-auto" ref={tableWrapperRef}>
+    <div className="relative h-full min-h-0 min-w-0">
+      <div className="h-full min-h-0 overflow-auto" ref={tableWrapperRef}>
         <table
           className="w-full border-separate border-spacing-0 text-sm"
           style={{ minWidth: table.getTotalSize() }}
@@ -1269,7 +1269,7 @@ export function AccountsTableView({
   }, [accounts, t, rithmicBalancesByAccountId])
 
   return (
-    <div className="space-y-6">
+    <div className="h-full min-h-0">
       <AccountsTableSection
         rows={groupedAccounts}
         onSelectAccount={onSelectAccount}
