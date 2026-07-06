@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
 
 // Chart data point shape from server (dynamic keys for account equities, payouts, etc.)
 export type EquityChartDataPoint = {
@@ -34,29 +33,17 @@ const initialState = {
   accountNumbers: [] as string[],
 };
 
-export const useEquityChartDataStore = create<EquityChartDataStore>()(
-  persist(
-    (set) => ({
-      ...initialState,
-      isLoading: false,
+export const useEquityChartDataStore = create<EquityChartDataStore>()((set) => ({
+  ...initialState,
+  isLoading: false,
 
-      setData: (result) =>
-        set({
-          chartData: result.chartData,
-          accountNumbers: result.accountNumbers,
-        }),
-
-      setIsLoading: (loading) => set({ isLoading: loading }),
-
-      reset: () => set({ ...initialState }),
+  setData: (result) =>
+    set({
+      chartData: result.chartData,
+      accountNumbers: result.accountNumbers,
     }),
-    {
-      name: "equity-chart-data-store",
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        chartData: state.chartData,
-        accountNumbers: state.accountNumbers,
-      }),
-    }
-  )
-);
+
+  setIsLoading: (loading) => set({ isLoading: loading }),
+
+  reset: () => set({ ...initialState, isLoading: false }),
+}));

@@ -6,13 +6,14 @@
   "license": "CC-BY-NC-4.0",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node --experimental-strip-types scripts/generate-routes.ts && npx prisma generate",
+    "prebuild": "node --experimental-strip-types scripts/generate-routes.ts && bunx prisma generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "screenshot:dashboard": "node scripts/screenshot-dashboard.js",
     "capture:changelog-media": "node scripts/capture-changelog-media.mjs",
+    "capture:calendar-responsive": "node scripts/capture-calendar-responsive.mjs",
     "capture:changelog-pr-249": "node scripts/capture-changelog-pr-249.mjs",
     "seed:self-host": "bun scripts/seed-self-host.ts"
   },

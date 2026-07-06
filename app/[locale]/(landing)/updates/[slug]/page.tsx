@@ -1,7 +1,7 @@
-import { getPost } from "@/lib/mdx";
+import { getAllPostMetadata, getPost, getPostMetadata } from "@/lib/mdx";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
-import { getAllPosts, getAdjacentPosts } from "@/lib/mdx";
+import { getAdjacentPosts } from "@/lib/mdx";
 import { Badge } from "@/components/ui/badge";
 import { enUS, fr } from "date-fns/locale";
 import { formatDateOnly } from "@/lib/format-date-only";
@@ -11,6 +11,7 @@ import { getStaticParams as getLocaleStaticParams } from "@/locales/server";
 import { MdxSidebar } from "@/components/mdx-sidebar";
 import { UpdatesNavigation } from "@/components/updates-navigation";
 import { siteUrl } from "@/lib/site-url";
+import { truncateForSocialDescription } from "@/lib/og/site-metadata";
 
 type ParamsInput =
   | {
@@ -39,7 +40,7 @@ export async function generateStaticParams() {
   const paths: Array<{ locale: string; slug: string }> = [];
 
   for (const locale of locales) {
-    const posts = await getAllPosts(locale);
+    const posts = await getAllPostMetadata(locale);
     paths.push(
       ...posts.map((post) => ({
         locale,
@@ -67,7 +68,7 @@ export async function generateMetadata({
     setStaticParamsLocale(locale);
 
     try {
-      const post = await getPost(slug, locale);
+      const post = await getPostMetadata(slug, locale);
       if (!post)
         return {
           title: "Not Found",
@@ -82,11 +83,12 @@ export async function generateMetadata({
         locale: dateLocale,
       });
       const shareTitleLabel = locale === "fr" ? "Changements" : "Changelog";
-      const shareTitle = `${shareTitleLabel} · ${formattedShareDate}`;
+      const shareTitle = `${shareTitleLabel} · ${formattedShareDate} | Deltalytix`;
+      const description = truncateForSocialDescription(meta.description);
 
       return {
         title: meta.title,
-        description: meta.description,
+        description,
         alternates: {
           canonical: url,
           languages: {
@@ -96,7 +98,7 @@ export async function generateMetadata({
         },
         openGraph: {
           title: shareTitle,
-          description: meta.description,
+          description,
           type: "article",
           publishedTime: meta.date,
           modifiedTime: meta.updatedAt || meta.date,
@@ -113,7 +115,7 @@ export async function generateMetadata({
         twitter: {
           card: "summary_large_image",
           title: shareTitle,
-          description: meta.description,
+          description,
           // twitter:image is also derived from opengraph-image.tsx.
         },
       };

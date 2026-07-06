@@ -2,13 +2,15 @@ import {
   assertNoDevIssues,
   clickTab,
   dismissCookies,
+  ensureCookiesDismissed,
+  newCapturePage,
   recordVideo,
   screenshot,
   waitForDashboard,
 } from './helpers.mjs'
-import { LABELS } from './constants.mjs'
+import { LABELS, viewport } from './constants.mjs'
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile'} ChangelogScene */
 
 /**
  * @param {import('playwright-core').Browser} browser
@@ -19,14 +21,32 @@ export async function captureScene(browser, options) {
 
   switch (scene) {
     case 'landing-hero': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 1440, height: 900 },
+        ...viewport('desktop'),
       })
       await page.goto(`${siteUrl}/${locale}`, { waitUntil: 'networkidle', timeout: 120_000 })
       await dismissCookies(page, locale)
       await page.waitForTimeout(3000)
+      await ensureCookiesDismissed(page, locale)
       await assertNoDevIssues(page, `${locale} landing`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'landing-contribution-graph': {
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await page.goto(`${siteUrl}/${locale}`, { waitUntil: 'networkidle', timeout: 120_000 })
+      await dismissCookies(page, locale)
+      const section = page.locator('#open-source')
+      await section.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(3000)
+      await ensureCookiesDismissed(page, locale)
+      await assertNoDevIssues(page, `${locale} contribution graph`)
       await screenshot(page, batch, locale, file)
       await page.close()
       return
@@ -47,11 +67,9 @@ export async function captureScene(browser, options) {
     }
 
     case 'import-mobile': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 390, height: 844 },
-        isMobile: true,
-        hasTouch: true,
+        ...viewport('mobile'),
       })
       await waitForDashboard(page, locale, siteUrl)
       const importBtn = page.getByRole('button', { name: LABELS[locale].import })
@@ -66,13 +84,14 @@ export async function captureScene(browser, options) {
     }
 
     case 'support': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 1280, height: 900 },
+        ...viewport('desktop'),
       })
       await page.goto(`${siteUrl}/${locale}/support`, { waitUntil: 'networkidle', timeout: 120_000 })
       await dismissCookies(page, locale)
       await page.waitForTimeout(2500)
+      await ensureCookiesDismissed(page, locale)
       await page.getByText(LABELS[locale].supportAssistant).first().waitFor({ timeout: 15_000 })
       await assertNoDevIssues(page, `${locale} support`)
       await screenshot(page, batch, locale, file)
@@ -81,11 +100,9 @@ export async function captureScene(browser, options) {
     }
 
     case 'trade-table-mobile': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 390, height: 844 },
-        isMobile: true,
-        hasTouch: true,
+        ...viewport('mobile'),
       })
       await waitForDashboard(page, locale, siteUrl)
       await clickTab(page, LABELS[locale].tableTab)
@@ -101,9 +118,9 @@ export async function captureScene(browser, options) {
     }
 
     case 'trade-table-desktop': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 1440, height: 900 },
+        ...viewport('desktop'),
       })
       await waitForDashboard(page, locale, siteUrl)
       await clickTab(page, LABELS[locale].tableTab)
@@ -145,9 +162,9 @@ export async function captureScene(browser, options) {
     }
 
     case 'calendar-widgets': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 1440, height: 900 },
+        ...viewport('desktop'),
       })
       await waitForDashboard(page, locale, siteUrl)
       const calendarHeading = page.getByText(LABELS[locale].calendarView).first()
@@ -164,9 +181,9 @@ export async function captureScene(browser, options) {
     }
 
     case 'calendar-table': {
-      const page = await browser.newPage({
+      const page = await newCapturePage(browser, {
         locale: playwrightLocale,
-        viewport: { width: 1440, height: 900 },
+        ...viewport('desktop'),
       })
       await waitForDashboard(page, locale, siteUrl)
       await clickTab(page, LABELS[locale].tableTab)
@@ -176,6 +193,64 @@ export async function captureScene(browser, options) {
       )
       await page.waitForTimeout(1200)
       await assertNoDevIssues(page, `${locale} calendar table`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'accounts-mobile': {
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('mobile'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      await clickTab(page, LABELS[locale].accountsTab)
+      await page.waitForTimeout(2500)
+      await assertNoDevIssues(page, `${locale} accounts mobile`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'accounts-table-desktop': {
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      await clickTab(page, LABELS[locale].accountsTab)
+      const accountsTableView = page
+        .getByRole('tab', { name: LABELS[locale].accountsTableView })
+        .last()
+      if ((await accountsTableView.count()) > 0) {
+        await accountsTableView.click()
+        await page.waitForTimeout(2000)
+      }
+      await page.waitForFunction(
+        () => {
+          const text = document.body?.innerText ?? ''
+          return (
+            text.includes('Prop firm') &&
+            document.querySelectorAll('table tbody tr').length >= 1
+          )
+        },
+        { timeout: 30_000 },
+      )
+      await assertNoDevIssues(page, `${locale} accounts table desktop`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'widgets-mobile': {
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('mobile'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      await clickTab(page, LABELS[locale].widgetsTab)
+      await page.waitForTimeout(2500)
+      await assertNoDevIssues(page, `${locale} widgets mobile`)
       await screenshot(page, batch, locale, file)
       await page.close()
       return

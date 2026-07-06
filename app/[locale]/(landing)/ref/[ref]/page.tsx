@@ -2,14 +2,10 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { isValidReferralSlug } from "@/lib/referral-url";
 import { siteUrl } from "@/lib/site-url";
+import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
 
 type PageProps = {
   params: Promise<{ locale: string; ref: string }>;
-};
-
-const SHARE_DESCRIPTIONS: Record<string, string> = {
-  en: "Centralize and visualize your trading performance across multiple brokers. Track, analyze, and improve your trading journey with powerful analytics.",
-  fr: "Centralisez et visualisez vos performances de trading à travers différents brokers. Suivez, analysez et améliorez votre parcours de trading avec des analyses puissantes.",
 };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -19,18 +15,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {};
   }
 
-  const description = SHARE_DESCRIPTIONS[locale] ?? SHARE_DESCRIPTIONS.en;
+  const siteCopy = getSiteMetadataCopy(locale);
+  const title = locale === "fr"
+    ? `Rejoignez Deltalytix avec le code ${ref.toUpperCase()}`
+    : `Join Deltalytix with Referral Code ${ref.toUpperCase()}`;
+  const description = siteCopy.description;
   const url = siteUrl(`/${locale}/ref/${encodeURIComponent(ref)}`);
   const openGraphLocale = locale === "fr" ? "fr_FR" : "en_US";
 
   return {
-    title: "Deltalytix",
+    title,
     description,
     alternates: {
       canonical: url,
     },
     openGraph: {
-      title: "Deltalytix",
+      title,
       description,
       url,
       siteName: "Deltalytix",
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
     twitter: {
       card: "summary_large_image",
-      title: "Deltalytix",
+      title,
       description,
       // twitter:image is also derived from opengraph-image.tsx.
     },

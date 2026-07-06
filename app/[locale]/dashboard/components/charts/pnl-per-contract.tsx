@@ -25,6 +25,10 @@ import {
 } from "@/components/ui/tooltip";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
+import {
+  BarChartLoadingSkeleton,
+  LOADING_MOCK_AVERAGE_PNL,
+} from "./chart-loading-skeleton";
 
 interface PnLPerContractChartProps {
   size?: WidgetSize;
@@ -89,7 +93,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function PnLPerContractChart({
   size = "medium",
 }: PnLPerContractChartProps) {
-  const { formattedTrades: trades } = useData();
+  const { formattedTrades: trades, isLoading } = useData();
   const t = useI18n();
 
   const chartData = React.useMemo(() => {
@@ -194,67 +198,80 @@ export default function PnLPerContractChart({
         )}
       >
         <div className={cn("w-full h-full")}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={
-                size === "small"
-                  ? { left: 10, right: 4, top: 4, bottom: 20 }
-                  : { left: 10, right: 8, top: 8, bottom: 24 }
-              }
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                className="text-border dark:opacity-[0.12] opacity-[0.2]"
-              />
-              <XAxis
-                dataKey="instrument"
-                tickLine={false}
-                axisLine={false}
-                height={size === "small" ? 20 : 24}
-                tickMargin={size === "small" ? 4 : 8}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-                angle={size === "small" ? -45 : -45}
-                textAnchor="end"
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={60}
-                tickMargin={4}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-                tickFormatter={formatCurrency}
-                domain={[Math.min(minPnL * 1.1, 0), Math.max(maxPnL * 1.1, 0)]}
-              />
-              <ReferenceLine y={0} stroke="hsl(var(--border))" />
-              <Tooltip
-                content={<CustomTooltip />}
-                wrapperStyle={{
-                  fontSize: size === "small" ? "10px" : "12px",
-                  zIndex: 1000,
-                }}
-              />
-              <Bar
-                dataKey="averagePnl"
-                radius={[3, 3, 0, 0]}
-                maxBarSize={size === "small" ? 25 : 40}
-                className="transition-opacity duration-300 ease-out"
+          {isLoading ? (
+            <BarChartLoadingSkeleton
+              size={size}
+              data={LOADING_MOCK_AVERAGE_PNL}
+              xDataKey="instrument"
+              yDataKey="averagePnl"
+              showReferenceLine
+            />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={
+                  size === "small"
+                    ? { left: 10, right: 4, top: 4, bottom: 20 }
+                    : { left: 10, right: 8, top: 8, bottom: 24 }
+                }
               >
-                {chartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={getColor(entry.averagePnl)}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  className="text-border dark:opacity-[0.12] opacity-[0.2]"
+                />
+                <XAxis
+                  dataKey="instrument"
+                  tickLine={false}
+                  axisLine={false}
+                  height={size === "small" ? 20 : 24}
+                  tickMargin={size === "small" ? 4 : 8}
+                  tick={{
+                    fontSize: size === "small" ? 9 : 11,
+                    fill: "currentColor",
+                  }}
+                  angle={size === "small" ? -45 : -45}
+                  textAnchor="end"
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  width={60}
+                  tickMargin={4}
+                  tick={{
+                    fontSize: size === "small" ? 9 : 11,
+                    fill: "currentColor",
+                  }}
+                  tickFormatter={formatCurrency}
+                  domain={[
+                    Math.min(minPnL * 1.1, 0),
+                    Math.max(maxPnL * 1.1, 0),
+                  ]}
+                />
+                <ReferenceLine y={0} stroke="hsl(var(--border))" />
+                <Tooltip
+                  content={<CustomTooltip />}
+                  wrapperStyle={{
+                    fontSize: size === "small" ? "10px" : "12px",
+                    zIndex: 1000,
+                  }}
+                />
+                <Bar
+                  dataKey="averagePnl"
+                  radius={[3, 3, 0, 0]}
+                  maxBarSize={size === "small" ? 25 : 40}
+                  className="transition-opacity duration-300 ease-out"
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={getColor(entry.averagePnl)}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -3,6 +3,7 @@ export default {
         title: 'Master your trading journey.',
         description: 'Deltalytix is a trading dashboard for futures traders to store, explore and understand their track-record.',
         cta: 'Get Started',
+        demoVideo: 'Product demo video',
         updates: 'Latest Product Updates →',
         partners: {
             title: 'Our Partners',
