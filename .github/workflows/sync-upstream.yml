@@ -51,6 +51,7 @@ jobs:
           BRANCH="sync/upstream-$(date -u +%Y%m%d)"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${{ secrets.SYNC_PAT }}@github.com/${{ github.repository }}.git"
           git checkout -b "$BRANCH"
           git merge upstream/main --no-edit
           git push origin "$BRANCH"
