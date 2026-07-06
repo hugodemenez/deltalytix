@@ -51,8 +51,13 @@ jobs:
           git checkout -b "$BRANCH"
           git merge upstream/main --no-edit
           # Remove files we don't want in the fork
-          if [ -f .github/workflows/code-review.yml ]; then
-            git rm .github/workflows/code-review.yml
+          # Remove files we don't want in the fork
+          for f in code-review.yml generate-changelog.yml; do
+            if [ -f ".github/workflows/$f" ]; then
+              git rm ".github/workflows/$f"
+            fi
+          done
+          if ! git diff --cached --quiet; then
             git commit --amend --no-edit
           fi
           git push origin "$BRANCH"
