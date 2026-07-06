@@ -6,6 +6,7 @@ import {
   fetchRithmicBalances,
   getPrimaryRithmicBalance,
   getRithmicApiBaseUrl,
+  getRithmicApiHost,
   normalizeRithmicAccountBalance,
   RithmicAccountBalance,
 } from "@/lib/rithmic-api"
@@ -30,7 +31,7 @@ export interface RithmicBalanceFetchAttempt {
 export interface RithmicBalancesDebugInfo {
   generatedAt: string
   apiHost: string | undefined
-  apiBaseUrl: string | null
+  apiBaseUrl: string
   credentialSetCount: number
   credentialSets: Array<{
     id: string
@@ -77,7 +78,7 @@ function buildDebugSnapshot(
 
   return {
     generatedAt: new Date().toISOString(),
-    apiHost: process.env.NEXT_PUBLIC_RITHMIC_API_URL,
+    apiHost: getRithmicApiHost(),
     apiBaseUrl: getRithmicApiBaseUrl(),
     credentialSetCount: credentialSets.length,
     credentialSets: credentialSets.map((set) => ({
@@ -129,27 +130,8 @@ export function useRithmicBalances(): RithmicBalancesState {
     const abortController = new AbortController()
     abortControllerRef.current = abortController
 
-    const apiBaseUrl = getRithmicApiBaseUrl()
     const credentialSets = Object.values(getAllRithmicData())
     setHasCredentials(credentialSets.length > 0)
-
-    if (!apiBaseUrl) {
-      setBalancesByAccountId({})
-      setError("Rithmic API URL is not configured")
-      setRateLimited(false)
-      setDebug(
-        buildDebugSnapshot({
-          balancesByAccountId: {},
-          isLoading: false,
-          error: "Rithmic API URL is not configured",
-          rateLimited: false,
-          lastFetchedAt: null,
-          skippedReason: "NEXT_PUBLIC_RITHMIC_API_URL is missing",
-          fetchAttempts: [],
-        })
-      )
-      return
-    }
 
     if (credentialSets.length === 0) {
       setBalancesByAccountId({})

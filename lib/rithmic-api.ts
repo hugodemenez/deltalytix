@@ -37,22 +37,42 @@ export type FetchRithmicBalancesResult =
       httpStatus?: number
     }
 
-function getRithmicProtocols() {
-  const isLocalhost =
-    process.env.NEXT_PUBLIC_RITHMIC_API_URL?.includes("localhost")
+export const DEFAULT_RITHMIC_API_HOST = "api-beta.deltalytix.app"
+
+export function getRithmicApiHost(): string {
+  const configured = process.env.NEXT_PUBLIC_RITHMIC_API_URL?.trim()
+  if (!configured) return DEFAULT_RITHMIC_API_HOST
+  return configured.replace(/^https?:\/\//, "").replace(/\/$/, "")
+}
+
+export function isLocalRithmicApiHost(host = getRithmicApiHost()): boolean {
+  return host.includes("localhost")
+}
+
+export function getRithmicProtocols(host = getRithmicApiHost()) {
+  const isLocalhost = isLocalRithmicApiHost(host)
   if (typeof window === "undefined") {
-    return { http: "https:" }
+    return { http: "https:", ws: "wss:" as const }
   }
   return {
     http: isLocalhost ? window.location.protocol : "https:",
+    ws: isLocalhost
+      ? window.location.protocol === "https:"
+        ? ("wss:" as const)
+        : ("ws:" as const)
+      : ("wss:" as const),
   }
 }
 
-export function getRithmicApiBaseUrl(): string | null {
-  const host = process.env.NEXT_PUBLIC_RITHMIC_API_URL
-  if (!host) return null
-  const { http } = getRithmicProtocols()
+export function getRithmicApiBaseUrl(): string {
+  const host = getRithmicApiHost()
+  const { http } = getRithmicProtocols(host)
   return `${http}//${host}`
+}
+
+export function resolveRithmicWebSocketUrl(baseUrl: string): string {
+  const { ws } = getRithmicProtocols()
+  return baseUrl.replace("ws://your-domain", `${ws}//${getRithmicApiHost()}`)
 }
 
 export function parseRithmicRateLimitMessage(detail: string) {
@@ -105,13 +125,6 @@ export async function fetchRithmicBalances(
   options?: { signal?: AbortSignal }
 ): Promise<FetchRithmicBalancesResult> {
   const baseUrl = getRithmicApiBaseUrl()
-  if (!baseUrl) {
-    return {
-      success: false,
-      rateLimited: false,
-      message: "Rithmic API URL is not configured",
-    }
-  }
 
   const response = await fetch(`${baseUrl}/balances`, {
     method: "POST",

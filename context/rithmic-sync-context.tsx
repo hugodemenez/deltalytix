@@ -16,6 +16,10 @@ import { useRithmicSyncStore } from "@/store/rithmic-sync-store";
 import { useTradesStore } from "@/store/trades-store";
 import { getUserId } from "@/server/auth";
 import { useUserStore } from "@/store/user-store";
+import {
+  getRithmicApiBaseUrl,
+  resolveRithmicWebSocketUrl,
+} from "@/lib/rithmic-api";
 
 interface RithmicCredentials {
   username: string;
@@ -505,30 +509,9 @@ export function RithmicSyncContextProvider({
     ]
   );
 
-  // Extract common protocol logic
-  const getProtocols = useCallback(() => {
-    const isLocalhost =
-      process.env.NEXT_PUBLIC_RITHMIC_API_URL?.includes("localhost");
-    return {
-      http: isLocalhost ? window.location.protocol : "https:",
-      ws: isLocalhost
-        ? window.location.protocol === "https:"
-          ? "wss:"
-          : "ws:"
-        : "wss:",
-    };
-  }, []);
-
-  // Extract WebSocket URL construction
   const getWebSocketUrl = useCallback(
-    (baseUrl: string) => {
-      const { ws } = getProtocols();
-      return baseUrl.replace(
-        "ws://your-domain",
-        `${ws}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}`
-      );
-    },
-    [getProtocols]
+    (baseUrl: string) => resolveRithmicWebSocketUrl(baseUrl),
+    []
   );
 
   // Run a sync for a credential
@@ -556,23 +539,16 @@ export function RithmicSyncContextProvider({
       setIsAutoSyncing(true);
 
       try {
-        // Authenticate and get accounts
-        const { http } = getProtocols();
-
         // Make fetch request to get accounts
         const response = (await Promise.race([
-          fetch(
-            `${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-
-              body: JSON.stringify({
-                ...savedData.credentials,
-                userId: userId,
-              }),
-            }
-          ),
+          fetch(`${getRithmicApiBaseUrl()}/accounts`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...savedData.credentials,
+              userId: userId,
+            }),
+          }),
           new Promise((_, reject) =>
             setTimeout(
               () => reject(new Error("Auto-sync operation timed out")),
@@ -696,7 +672,6 @@ export function RithmicSyncContextProvider({
       isAutoSyncing,
       connect,
       handleMessage,
-      getProtocols,
       getWebSocketUrl,
       t,
       resetProcessingState,
@@ -709,17 +684,13 @@ export function RithmicSyncContextProvider({
   // Update authenticateAndGetAccounts to return a rate limit response object
   const authenticateAndGetAccounts = useCallback(
     async (credentials: RithmicCredentials) => {
-      const { http } = getProtocols();
-      const response = await fetch(
-        `${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(credentials),
-        }
-      );
+      const response = await fetch(`${getRithmicApiBaseUrl()}/accounts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(credentials),
+      });
 
       // Handle rate limit error specifically
       if (response.status === 429) {
@@ -754,7 +725,7 @@ export function RithmicSyncContextProvider({
         accounts: data.accounts,
       };
     },
-    [getProtocols, getWebSocketUrl, t]
+    [getWebSocketUrl, t]
   );
 
   // Add calculateStartDate function

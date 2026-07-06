@@ -18,6 +18,7 @@ import Image from 'next/image'
 import { useUserStore } from '@/store/user-store'
 import { setRithmicSynchronization } from './actions'
 import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
+import { getRithmicApiBaseUrl } from '@/lib/rithmic-api'
 
 interface RithmicCredentials {
   username: string
@@ -62,9 +63,7 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
   // Local fetchServerConfigs function
   const fetchServerConfigs = useCallback(async () => {
     try {
-      const isLocalhost = process.env.NEXT_PUBLIC_RITHMIC_API_URL?.includes('localhost')
-      const http = isLocalhost ? window.location.protocol : 'https:'
-      const response = await fetch(`${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/servers`)
+      const response = await fetch(`${getRithmicApiBaseUrl()}/servers`)
       const data = await response.json()
 
       if (data.success) {
