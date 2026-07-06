@@ -1,8 +1,14 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from "react"
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek, addDays, isSameDay, getYear } from "date-fns"
-import { formatInTimeZone } from 'date-fns-tz'
+import { format, addMonths, subMonths, isSameMonth, getDay, getYear } from "date-fns"
+import {
+  calendarDateKeyFromZoned,
+  getCalendarGridDays,
+  isTodayInTimezone,
+  toUserZonedTime,
+  zonedMonthInterval,
+} from "@/lib/calendar-timezone"
 import { fr, enUS } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Newspaper, Calendar, CalendarDays } from "lucide-react"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -49,23 +55,6 @@ const WEEKDAYS_MONDAY_START = [
   'calendar.weekdays.sun'
 ] as const
 
-
-function getCalendarDays(monthStart: Date, monthEnd: Date, weekStartsOnMonday: boolean = false) {
-  const weekStartsOn = weekStartsOnMonday ? 1 : 0
-  const startDate = startOfWeek(monthStart, { weekStartsOn })
-  const endDate = endOfWeek(monthEnd, { weekStartsOn })
-  const days = eachDayOfInterval({ start: startDate, end: endDate })
-
-  if (days.length === 42) return days
-
-  const lastDay = days[days.length - 1]
-  const additionalDays = eachDayOfInterval({
-    start: addDays(lastDay, 1),
-    end: addDays(startDate, 41)
-  })
-
-  return [...days, ...additionalDays].slice(0, 42)
-}
 
 const formatCurrency = (value: number, options?: { minimumFractionDigits?: number; maximumFractionDigits?: number; signed?: boolean }) => {
   const formatted = value.toLocaleString('en-US', {
@@ -341,21 +330,18 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
   const dateLocale = locale === 'fr' ? fr : enUS
   const weekStartsOnMonday = locale === 'fr'
   const WEEKDAYS = weekStartsOnMonday ? WEEKDAYS_MONDAY_START : WEEKDAYS_SUNDAY_START
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState(() => toUserZonedTime(new Date(), timezone))
   const [isLoading, setIsLoading] = useState(false)
   const [monthEvents, setMonthEvents] = useState<FinancialEvent[]>([])
-  const [calendarDays, setCalendarDays] = useState<Date[]>([])
 
-  // Memoize monthStart and monthEnd calculations
-  const { monthStart, monthEnd } = React.useMemo(() => ({
-    monthStart: startOfMonth(currentDate),
-    monthEnd: endOfMonth(currentDate)
-  }), [currentDate])
-
-  // Update calendarDays when currentDate changes
   useEffect(() => {
-    setCalendarDays(getCalendarDays(monthStart, monthEnd, weekStartsOnMonday))
-  }, [currentDate, monthStart, monthEnd, weekStartsOnMonday])
+    setCurrentDate(toUserZonedTime(new Date(), timezone))
+  }, [timezone])
+
+  const calendarDays = useMemo(
+    () => getCalendarGridDays(currentDate, weekStartsOnMonday),
+    [currentDate, weekStartsOnMonday],
+  )
 
   // Use the calendar view store
   const {
@@ -377,16 +363,15 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
 
   // Update monthEvents when currentDate or financialEvents change
   useEffect(() => {
-    const monthStart = startOfMonth(currentDate)
-    const monthEnd = endOfMonth(currentDate)
+    const { startUtc, endUtc } = zonedMonthInterval(currentDate, timezone)
 
     const filteredEvents = userFinancialEvents.filter(event => {
       const eventDate = new Date(event.date)
-      return eventDate >= monthStart && eventDate <= monthEnd && event.lang === locale
+      return eventDate >= startUtc && eventDate <= endUtc && event.lang === locale
     })
 
     setMonthEvents(filteredEvents)
-  }, [currentDate, userFinancialEvents, locale])
+  }, [currentDate, userFinancialEvents, locale, timezone])
 
   const handlePrevMonth = React.useCallback(() => {
     setCurrentDate(subMonths(currentDate, 1))
@@ -414,9 +399,7 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
     monthEvents.forEach(event => {
       if (!event.date) return;
       try {
-        const eventDateObj = new Date(event.date);
-        eventDateObj.setHours(0, 0, 0, 0);
-        const dateKey = formatInTimeZone(eventDateObj, timezone, 'yyyy-MM-dd');
+        const dateKey = calendarDateKeyFromZoned(toUserZonedTime(new Date(event.date), timezone));
         if (!map.has(dateKey)) {
           map.set(dateKey, []);
         }
@@ -437,9 +420,9 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
     accounts.forEach(account => {
       if (hiddenAccountIds.has(account.id) || !account.nextPaymentDate) return;
       try {
-        const renewalDateObj = new Date(account.nextPaymentDate);
-        renewalDateObj.setHours(0, 0, 0, 0);
-        const dateKey = formatInTimeZone(renewalDateObj, timezone, 'yyyy-MM-dd');
+        const dateKey = calendarDateKeyFromZoned(
+          toUserZonedTime(new Date(account.nextPaymentDate), timezone),
+        );
         if (!map.has(dateKey)) {
           map.set(dateKey, []);
         }
@@ -517,9 +500,9 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
 
   // Memoize monthly and yearly totals
   const monthlyTotal = useMemo(() => {
+    const currentMonthKey = format(currentDate, 'yyyy-MM')
     return Object.entries(calendarData).reduce((total, [dateString, dayData]) => {
-      const date = new Date(dateString)
-      if (isSameMonth(date, currentDate)) {
+      if (dateString.startsWith(currentMonthKey)) {
         return total + dayData.pnl
       }
       return total
@@ -527,9 +510,9 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
   }, [calendarData, currentDate])
 
   const yearTotal = useMemo(() => {
+    const currentYear = format(currentDate, 'yyyy')
     return Object.entries(calendarData).reduce((total, [dateString, dayData]) => {
-      const date = new Date(dateString)
-      if (getYear(date) === getYear(currentDate)) {
+      if (dateString.startsWith(currentYear)) {
         return total + dayData.pnl
       }
       return total
@@ -540,10 +523,10 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
     const startOfWeekIndex = index - 6
     const weekDays = calendarDays.slice(startOfWeekIndex, index + 1)
     return weekDays.reduce((total, day) => {
-      const dayData = calendarData[formatInTimeZone(day, timezone, 'yyyy-MM-dd')]
+      const dayData = calendarData[calendarDateKeyFromZoned(day)]
       return total + (dayData ? dayData.pnl : 0)
     }, 0)
-  }, [timezone])
+  }, [])
 
   return (
     <Card className="h-full flex flex-col">
@@ -553,8 +536,8 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
         <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 min-w-0">
           <CardTitle className="text-sm sm:text-lg font-semibold truncate capitalize">
             {viewMode === 'daily'
-              ? formatInTimeZone(currentDate, timezone, 'MMMM yyyy', { locale: dateLocale })
-              : formatInTimeZone(currentDate, timezone, 'yyyy', { locale: dateLocale })}
+              ? format(currentDate, 'MMMM yyyy', { locale: dateLocale })
+              : format(currentDate, 'yyyy', { locale: dateLocale })}
           </CardTitle>
           <div className={cn(
             "text-xs sm:text-base font-semibold shrink-0",
@@ -609,7 +592,7 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
         {viewMode === 'daily' ? (
           <div
             role="grid"
-            aria-label={formatInTimeZone(currentDate, timezone, 'MMMM yyyy', { locale: dateLocale })}
+            aria-label={format(currentDate, 'MMMM yyyy', { locale: dateLocale })}
           >
             <div role="row" className="grid grid-cols-7 sm:grid-cols-8 gap-x-px mb-0.5 sm:mb-1">
               {WEEKDAYS.map((day) => (
@@ -624,7 +607,7 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
             </div>
             <div className="grid grid-cols-7 sm:grid-cols-8 auto-rows-fr rounded-lg h-[calc(100%-16px)] sm:h-[calc(100%-20px)]">
               {calendarDays.map((date, index) => {
-                const dateString = formatInTimeZone(date, timezone, 'yyyy-MM-dd')
+                const dateString = calendarDateKeyFromZoned(date)
                 const dayData = calendarData[dateString]
                 // Check if it's the last day of the week (Saturday for Sunday start, Sunday for Monday start)
                 const isLastDayOfWeek = weekStartsOnMonday ? getDay(date) === 0 : getDay(date) === 6
@@ -647,14 +630,14 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
                             ? "bg-red-50 dark:bg-red-900/20"
                             : "bg-card",
                         !isCurrentMonth && "",
-                        isToday(date) && "ring-blue-500 bg-blue-500/5 z-10",
+                        isTodayInTimezone(date, timezone) && "ring-blue-500 bg-blue-500/5 z-10",
                         index === 0 && "rounded-tl-lg",
                         index === 35 && "rounded-bl-lg",
                       )}
                     >
                       <button
                         type="button"
-                        aria-label={formatInTimeZone(date, timezone, 'EEEE, MMMM d, yyyy', { locale: dateLocale })}
+                        aria-label={format(date, 'EEEE, MMMM d, yyyy', { locale: dateLocale })}
                         className="absolute inset-0 cursor-pointer rounded-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                         onClick={() => setSelectedDate(date)}
                       />
@@ -662,7 +645,7 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
                         <div className="flex justify-between items-start gap-0">
                           <span className={cn(
                             "text-[10px] sm:text-[11px] font-medium min-w-[12px] sm:min-w-[14px] text-center leading-none",
-                            isToday(date) && "text-primary font-semibold",
+                            isTodayInTimezone(date, timezone) && "text-primary font-semibold",
                             !isCurrentMonth && "opacity-50"
                           )}>
                             {format(date, 'd')}
@@ -728,7 +711,7 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
                       return (
                         <button
                           type="button"
-                          aria-label={`${t('calendar.weekdays.weekly')}, ${formatInTimeZone(date, timezone, 'MMMM d, yyyy', { locale: dateLocale })}`}
+                          aria-label={`${t('calendar.weekdays.weekly')}, ${format(date, 'MMMM d, yyyy', { locale: dateLocale })}`}
                           className={cn(
                             "hidden sm:flex h-full w-full items-center justify-center rounded-none cursor-pointer",
                             "ring-1 ring-border hover:ring-primary hover:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
@@ -766,7 +749,7 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
           if (!open) setSelectedDate(null)
         }}
         selectedDate={selectedDate}
-        dayData={selectedDate ? calendarData[formatInTimeZone(selectedDate, timezone, 'yyyy-MM-dd')] : undefined}
+        dayData={selectedDate ? calendarData[calendarDateKeyFromZoned(selectedDate)] : undefined}
         isLoading={isLoading}
       />
       <WeeklyModal
