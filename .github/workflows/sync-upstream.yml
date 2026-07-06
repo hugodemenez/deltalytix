@@ -50,6 +50,11 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
           git merge upstream/main --no-edit
+          # Remove files we don't want in the fork
+          if [ -f .github/workflows/code-review.yml ]; then
+            git rm .github/workflows/code-review.yml
+            git commit --amend --no-edit
+          fi
           git push origin "$BRANCH"
 
           PR_BODY="Automated sync from upstream \`hugodemenez/deltalytix\` branch \`beta\`.
