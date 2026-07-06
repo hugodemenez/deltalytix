@@ -37,7 +37,7 @@ export type FetchRithmicBalancesResult =
       httpStatus?: number
     }
 
-export const DEFAULT_RITHMIC_API_HOST = "api-beta.deltalytix.app"
+export const DEFAULT_RITHMIC_API_HOST = "rithmic.api.deltalytix.app" // pragma: allowlist secret
 
 export function getRithmicApiHost(): string {
   const configured = process.env.NEXT_PUBLIC_RITHMIC_API_URL?.trim()
