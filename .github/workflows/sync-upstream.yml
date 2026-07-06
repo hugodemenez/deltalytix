@@ -9,7 +9,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  workflows: write
 
 jobs:
   sync:
@@ -47,7 +46,7 @@ jobs:
       - name: Create sync branch and PR
         if: steps.check.outputs.has_changes == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.SYNC_PAT }}
         run: |
           BRANCH="sync/upstream-$(date -u +%Y%m%d)"
           git config user.name "github-actions[bot]"
