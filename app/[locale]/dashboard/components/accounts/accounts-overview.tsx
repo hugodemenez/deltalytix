@@ -1,30 +1,18 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  ArrowDown,
-  ArrowUp,
   CalendarIcon,
   Info,
-  ListOrdered,
   Plus,
-  X,
   Clock,
   CheckCircle,
   XCircle,
@@ -38,6 +26,7 @@ import {
   GripVertical,
   LayoutGrid,
   Table,
+  RefreshCw,
 } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { format, Locale } from "date-fns"
@@ -52,6 +41,14 @@ import { useParams } from 'next/navigation'
 import { AccountCard } from './account-card'
 import { AccountConfigurator } from './account-configurator'
 import { AccountsTableView } from './accounts-table-view'
+import { MobileAccountCardsCarousel } from './mobile-account-cards-carousel'
+import {
+  MobileAccountGroupsCarousel,
+  type AccountGroupCarouselGroup,
+  type MobileAccountGroupsCarouselHandle,
+} from './mobile-account-groups-carousel'
+import { AccountsToolbar } from './accounts-toolbar'
+import { AccountsSortMenu } from './accounts-sort-menu'
 import { AlertDialogAction, AlertDialogCancel, AlertDialogFooter, AlertDialogDescription, AlertDialogTitle, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 import {
@@ -68,7 +65,8 @@ import { useAccountsViewPreferenceStore } from '@/store/accounts-view-preference
 import { useAccountsSortingStore } from '@/store/accounts-sorting-store'
 import { removeAccountsFromTradesAction } from '@/server/accounts'
 import { useModalStateStore } from '@/store/modal-state-store'
-import { SortingState } from "@tanstack/react-table"
+import { useRithmicBalances } from "@/hooks/use-rithmic-balances"
+import { getPrimaryRithmicBalance } from "@/lib/rithmic-api"
 import {
   DndContext,
   closestCenter,
@@ -83,7 +81,6 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import {
@@ -114,11 +111,6 @@ interface PayoutDialogProps {
   onDelete?: () => Promise<void>
   isLoading?: boolean
   isDeleting?: boolean
-}
-
-type SortOption = {
-  id: string
-  label: string
 }
 
 function toValidDate(value: Date | string | null | undefined) {
@@ -223,79 +215,6 @@ function compareSortValues(a: unknown, b: unknown, desc: boolean) {
   return desc ? -result : result
 }
 
-function SortRuleItem({
-  sort,
-  label,
-  reorderLabel,
-  toggleLabel,
-  removeLabel,
-  onToggleDirection,
-  onRemove,
-}: {
-  sort: SortingState[number]
-  label: string
-  reorderLabel: string
-  toggleLabel: string
-  removeLabel: string
-  onToggleDirection: () => void
-  onRemove: () => void
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: sort.id })
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "flex items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-sm",
-        isDragging && "opacity-70 shadow-sm"
-      )}
-    >
-      <button
-        type="button"
-        className="cursor-grab text-muted-foreground active:cursor-grabbing"
-        {...attributes}
-        {...listeners}
-        aria-label={reorderLabel}
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <span className="flex-1 truncate">{label}</span>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={onToggleDirection}
-        className="h-7 w-7"
-        aria-label={toggleLabel}
-      >
-        {sort.desc ? (
-          <ArrowDown className="h-4 w-4" />
-        ) : (
-          <ArrowUp className="h-4 w-4" />
-        )}
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={onRemove}
-        className="h-7 w-7 text-muted-foreground hover:text-foreground"
-        aria-label={removeLabel}
-      >
-        <X className="h-4 w-4" />
-      </Button>
-    </div>
-  )
-}
-
-
-
 const localeMap: { [key: string]: Locale } = {
   en: enUS,
   fr: fr
@@ -307,14 +226,21 @@ interface DraggableAccountCardProps {
   onClick: () => void
   size: WidgetSize
   isDragDisabled?: boolean
+  rithmicBalance?: number | null
+  rithmicBalanceLoading?: boolean
+  showRithmicBalance?: boolean
 }
 
 function DraggableAccountCard({ 
   account, 
   onClick, 
   size,
-  isDragDisabled = false 
+  isDragDisabled = false,
+  rithmicBalance = null,
+  rithmicBalanceLoading = false,
+  showRithmicBalance = false,
 }: DraggableAccountCardProps) {
+  const t = useI18n()
   const {
     attributes,
     listeners,
@@ -347,15 +273,22 @@ function DraggableAccountCard({
           account={account}
           onClick={onClick}
           size={size}
+          rithmicBalance={rithmicBalance}
+          rithmicBalanceLoading={rithmicBalanceLoading}
+          showRithmicBalance={showRithmicBalance}
         />
         {!isDragDisabled && (
-          <div
+          <button
+            type="button"
             {...attributes}
             {...listeners}
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded bg-background/80 backdrop-blur-xs border"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded bg-background/80 backdrop-blur-xs border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            aria-label={t("accounts.mobile.reorderAccount", {
+              accountNumber: account.number ?? "",
+            })}
           >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </div>
+          </button>
         )}
       </div>
     </div>
@@ -792,7 +725,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const isLoading = useUserStore(state => state.isLoading)
   const groups = useUserStore(state => state.groups)
   const accounts = useUserStore(state => state.accounts)
-  const { accountNumbers, deletePayout, saveAccount, savePayout } = useData()
+  const { accountNumbers, deletePayout, saveAccount, savePayout, isMobile } = useData()
   const { getOrderedAccounts, reorderAccounts } = useAccountOrderStore()
   const t = useI18n()
   const params = useParams()
@@ -814,32 +747,46 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const [pendingChanges, setPendingChanges] = useState<Partial<Account> | null>(null)
   const [isSavingPayout, setIsSavingPayout] = useState(false)
   const [isDeletingPayout, setIsDeletingPayout] = useState(false)
-  const { sorting, setSorting, clearSorting } = useAccountsSortingStore()
-  const [sortingMenuOpen, setSortingMenuOpen] = useState(false)
-  const [pendingSortId, setPendingSortId] = useState("")
+  const { sorting, setSorting } = useAccountsSortingStore()
   const shouldUpdateSelectedAccount = useRef(false)
-
-  const sortOptions = useMemo<SortOption[]>(
-    () => [
-      { id: "group", label: t("accounts.table.group") },
-      { id: "account", label: t("accounts.table.account") },
-      { id: "propfirm", label: t("accounts.table.propfirm") },
-      { id: "startDate", label: t("accounts.table.startDate") },
-      { id: "funded", label: t("accounts.table.funded") },
-      { id: "balance", label: t("accounts.table.balance") },
-      { id: "totalFee", label: t("accounts.table.totalFee") },
-      { id: "targetProgress", label: t("accounts.table.targetProgress") },
-      { id: "drawdown", label: t("accounts.table.drawdownRemaining") },
-      { id: "consistency", label: t("propFirm.card.consistency") },
-      { id: "maxDailyProfit", label: t("propFirm.card.highestDailyProfit") },
-      { id: "tradingDays", label: t("propFirm.card.tradingDays") },
-    ],
-    [t]
+  const {
+    balancesByAccountId,
+    isLoading: rithmicBalancesLoading,
+    hasCredentials: hasRithmicCredentials,
+    debug: rithmicBalancesDebug,
+    refresh: refreshRithmicBalances,
+  } = useRithmicBalances()
+  const rithmicLinkedAccountNumbers = useMemo(
+    () => new Set(rithmicBalancesDebug.linkedAccountNumbers),
+    [rithmicBalancesDebug.linkedAccountNumbers]
   )
 
-  const availableSortOptions = useMemo(
-    () => sortOptions.filter((option) => !sorting.some((rule) => rule.id === option.id)),
-    [sortOptions, sorting]
+  const getRithmicBalanceProps = useCallback(
+    (account: Account) => {
+      const accountNumber = account.number ?? ""
+      const showRithmicBalance =
+        hasRithmicCredentials &&
+        (rithmicLinkedAccountNumbers.has(accountNumber) ||
+          accountNumber in balancesByAccountId)
+      const balanceEntry = balancesByAccountId[accountNumber]
+
+      return {
+        showRithmicBalance,
+        rithmicBalance: balanceEntry
+          ? getPrimaryRithmicBalance(balanceEntry)
+          : null,
+        rithmicBalanceLoading:
+          rithmicBalancesLoading &&
+          showRithmicBalance &&
+          balanceEntry == null,
+      }
+    },
+    [
+      balancesByAccountId,
+      hasRithmicCredentials,
+      rithmicBalancesLoading,
+      rithmicLinkedAccountNumbers,
+    ]
   )
 
   // Drag and drop sensors
@@ -1013,6 +960,106 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
     }
   }, [filteredAccounts, getOrderedAccounts, groups, sorting])
 
+  const mobileCarouselItems = useMemo(() => {
+    const items: Array<{
+      id: string
+      label: string
+      groupName: string | null
+      account: Account
+    }> = []
+
+    for (const { group, accounts } of sortedGroupEntries) {
+      for (const account of accounts) {
+        if (!account.number) continue
+        items.push({
+          id: account.number,
+          label: account.propfirm
+            ? `${account.propfirm} (${account.number})`
+            : account.number,
+          groupName: group.name,
+          account: account as Account,
+        })
+      }
+    }
+
+    for (const account of sortedUngroupedAccounts) {
+      if (!account.number) continue
+      items.push({
+        id: account.number,
+        label: account.propfirm
+          ? `${account.propfirm} (${account.number})`
+          : account.number,
+        groupName: null,
+        account: account as Account,
+      })
+    }
+
+    return items
+  }, [sortedGroupEntries, sortedUngroupedAccounts])
+
+  const mobileCarouselGroups = useMemo<AccountGroupCarouselGroup[]>(() => {
+    const carouselGroups: AccountGroupCarouselGroup[] = []
+
+    for (const { group, accounts } of sortedGroupEntries) {
+      const groupAccounts = accounts
+        .filter((account) => account.number)
+        .map((account) => ({
+          id: account.number as string,
+          label: account.propfirm
+            ? `${account.propfirm} (${account.number})`
+            : (account.number as string),
+          account: account as Account,
+        }))
+      if (groupAccounts.length === 0) continue
+      carouselGroups.push({
+        id: group.id,
+        name: group.name,
+        accounts: groupAccounts,
+      })
+    }
+
+    const ungroupedAccounts = sortedUngroupedAccounts
+      .filter((account) => account.number)
+      .map((account) => ({
+        id: account.number as string,
+        label: account.propfirm
+          ? `${account.propfirm} (${account.number})`
+          : (account.number as string),
+        account: account as Account,
+      }))
+    if (ungroupedAccounts.length > 0) {
+      carouselGroups.push({
+        id: "ungrouped",
+        name: t('propFirm.ungrouped'),
+        accounts: ungroupedAccounts,
+      })
+    }
+
+    return carouselGroups
+  }, [sortedGroupEntries, sortedUngroupedAccounts, t])
+
+  const mobileSearchItems = useMemo(
+    () =>
+      mobileCarouselItems.map((item) => ({
+        id: item.id,
+        label: item.label,
+        groupName: item.groupName,
+      })),
+    [mobileCarouselItems]
+  )
+
+  const groupsCarouselRef = useRef<MobileAccountGroupsCarouselHandle>(null)
+
+  const handleSearchSelectAccount = useCallback((accountId: string) => {
+    groupsCarouselRef.current?.scrollToAccount(accountId)
+  }, [])
+
+  const useMobileAccountCarousel = isMobile && view === "cards"
+  // Inside the widget carousel (extra-large), vertical swipes navigate widgets,
+  // so the accounts fall back to a flat horizontal carousel there.
+  const isEmbeddedInWidgetCarousel = size === "extra-large"
+  const isMobileTab = isMobile && !isEmbeddedInWidgetCarousel
+
   const dailyMetrics = useMemo(() => {
     if (!selectedAccountForTable) return []
     // Use pre-computed daily metrics from account
@@ -1176,6 +1223,323 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   }
 
 
+  const chartsTableToggle = (
+    <Tabs value={view} onValueChange={(value) => setView(value as "cards" | "table")}>
+      <TabsList
+        className={cn(
+          "gap-1",
+          size === "small" ? "h-7 px-1" : "h-8 px-1"
+        )}
+      >
+        <TabsTrigger
+          value="cards"
+          className={cn(
+            "gap-1.5",
+            size === "small" ? "h-6 px-2 text-xs" : "h-7"
+          )}
+        >
+          <LayoutGrid className="h-3.5 w-3.5" />
+          <span className={cn(size === "small" && "sr-only")}>
+            {t("accounts.view.charts")}
+          </span>
+        </TabsTrigger>
+        <TabsTrigger
+          value="table"
+          className={cn(
+            "gap-1.5",
+            size === "small" ? "h-6 px-2 text-xs" : "h-7"
+          )}
+        >
+          <Table className="h-3.5 w-3.5" />
+          <span className={cn(size === "small" && "sr-only")}>
+            {t("accounts.view.table")}
+          </span>
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
+  )
+
+  const rithmicRefreshButton = (
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-8"
+      onClick={() => void refreshRithmicBalances()}
+      disabled={rithmicBalancesLoading}
+      title={t("rithmic.balances.refreshTitle")}
+    >
+      {rithmicBalancesLoading ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <RefreshCw className="h-3.5 w-3.5" />
+      )}
+      <span className="ml-1.5 sr-only">
+        {t("rithmic.balances.refresh")}
+      </span>
+    </Button>
+  )
+
+  const unconfiguredAccountsBanner = (unconfiguredAccounts.length > 0 && !isLoading) && (
+    <div className="border-b border-orange-200/30 bg-orange-50/40 dark:border-orange-700/30 dark:bg-orange-950/30">
+      <div className="px-3 py-2 sm:px-4">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+            <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
+              {t('propFirm.status.needsConfiguration')}:
+            </span>
+          </div>
+          <div className="flex min-w-0 gap-2 overflow-x-auto pb-1">
+            {unconfiguredAccounts.map((accountNumber) => (
+              <div
+                key={accountNumber}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-orange-100 dark:bg-orange-900/50"
+              >
+                <span className="text-xs font-medium text-orange-800 dark:text-orange-200">
+                  {accountNumber}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 w-5 p-0 hover:bg-orange-200 dark:hover:bg-orange-800/50"
+                  onClick={() => {
+                    const tempAccount = {
+                      id: '',
+                      userId: user?.id || '',
+                      number: accountNumber,
+                      propfirm: '',
+                      startingBalance: 0,
+                      profitTarget: 0,
+                      drawdownThreshold: 0,
+                      consistencyPercentage: 30,
+                      resetDate: null,
+                      payouts: [],
+                      balanceToDate: 0
+                    }
+                    setSelectedAccountForTable(tempAccount as any)
+                  }}
+                >
+                  <Settings className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  const accountsTableView = (
+    <AccountsTableView
+      accounts={filteredAccounts}
+      groups={groups}
+      onSelectAccount={(account) => setSelectedAccountForTable(account)}
+      sorting={sorting}
+      onSortingChange={setSorting}
+      rithmicBalancesByAccountId={balancesByAccountId}
+      rithmicBalancesLoading={rithmicBalancesLoading}
+      rithmicLinkedAccountNumbers={rithmicLinkedAccountNumbers}
+      showRithmicBalances={hasRithmicCredentials}
+    />
+  )
+
+  const dialogs = (
+    <>
+      <Dialog
+        open={!!selectedAccountForTable}
+        onOpenChange={(open) => !open && setSelectedAccountForTable(null)}
+      >
+        <DialogContent className="flex h-[92dvh] w-[calc(100vw-1rem)] max-w-7xl flex-col overflow-hidden p-0 sm:h-[85vh] sm:w-[calc(100vw-2rem)] sm:p-6">
+          <DialogHeader className="shrink-0 border-b p-4 pb-4 sm:p-0 sm:pb-4">
+            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 pr-8 sm:pr-0">
+                <DialogTitle>{t('propFirm.configurator.title', { accountNumber: selectedAccountForTable?.number })}</DialogTitle>
+                <DialogDescription>{t('propFirm.configurator.description')}</DialogDescription>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:pr-4">
+
+                <Button
+                  variant="default"
+                  onClick={handleSave}
+                  disabled={pendingChanges === null}
+                  className="min-w-0"
+                >
+                  {isSaving ? t('common.saving') : t('common.save')}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="min-w-0"
+                  onClick={() => {
+                    setSelectedPayout(undefined)
+                    setPayoutDialogOpen(true)
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {t('propFirm.payout.add')}
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={isDeleting || !canDeleteAccount}
+                      className="min-w-0"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {t('propFirm.common.delete')}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>{t('propFirm.delete.title')}</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {t('propFirm.delete.description', { account: selectedAccountForTable?.number })}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>{t('propFirm.common.cancel')}</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDelete}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {isDeleting ? t('propFirm.common.deleting') : t('propFirm.common.delete')}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-3 pt-4 sm:p-6 sm:pt-4">
+            {selectedAccountForTable && (
+              <Tabs
+                defaultValue={selectedAccountForTable.profitTarget === 0 ? "configurator" : "table"}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="table">{t('propFirm.table.title')}</TabsTrigger>
+                  <TabsTrigger value="configurator">{t('propFirm.table.configurator')}</TabsTrigger>
+                </TabsList>
+                <TabsContent value="table" className="mt-4">
+                  <AccountTable
+                    accountNumber={selectedAccountForTable.number}
+                    startingBalance={selectedAccountForTable.startingBalance}
+                    profitTarget={selectedAccountForTable.profitTarget}
+                    dailyMetrics={dailyMetrics}
+                    consistencyPercentage={selectedAccountForTable.consistencyPercentage ?? 30}
+                    resetDate={selectedAccountForTable.resetDate ? new Date(selectedAccountForTable.resetDate) : undefined}
+                    onDeletePayout={async (payoutId) => {
+                      try {
+                        await deletePayout(payoutId)
+
+                        shouldUpdateSelectedAccount.current = true
+
+                        toast.success(t('propFirm.payout.deleteSuccess'), {
+                          description: t('propFirm.payout.deleteSuccessDescription'),
+                        })
+                      } catch (error) {
+                        console.error('Failed to delete payout:', error)
+                        toast.error(t('propFirm.payout.deleteError'), {
+                          description: t('propFirm.payout.deleteErrorDescription'),
+                        })
+                      }
+                    }}
+                    onEditPayout={(payout) => {
+                      setSelectedPayout({
+                        id: payout.id,
+                        date: new Date(payout.date),
+                        amount: payout.amount,
+                        status: payout.status,
+                        propfirmSharingPercentage: payout.propfirmSharingPercentage ?? undefined
+                      })
+                      setPayoutDialogOpen(true)
+                    }}
+                  />
+                </TabsContent>
+                <TabsContent value="configurator" className="mt-4">
+                  <AccountConfigurator
+                    account={selectedAccountForTable}
+                    pendingChanges={pendingChanges as Partial<Account> | null}
+                    setPendingChanges={setPendingChanges}
+                    isSaving={isSaving}
+                  />
+                </TabsContent>
+              </Tabs>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <PayoutDialog
+        open={payoutDialogOpen}
+        onOpenChange={(open) => {
+          setPayoutDialogOpen(open)
+          if (!open) {
+            setSelectedPayout(undefined)
+          }
+        }}
+        accountNumber={selectedAccountForTable?.number ?? ''}
+        existingPayout={selectedPayout}
+        onSubmit={handleAddPayout}
+        onDelete={selectedPayout ? handleDeletePayout : undefined}
+        isLoading={isSavingPayout}
+        isDeleting={isDeletingPayout}
+      />
+    </>
+  )
+
+  if (isMobileTab) {
+    return (
+      <div className="flex h-full min-h-0 w-full flex-col">
+        {hasRithmicCredentials && (
+          <div className="flex shrink-0 items-center justify-end gap-2 px-2 pb-1">
+            {rithmicRefreshButton}
+          </div>
+        )}
+
+        {unconfiguredAccountsBanner}
+
+        {view === "cards" ? (
+          <div
+            className="min-h-0 flex-1"
+            style={{ paddingBottom: "var(--accounts-toolbar-height, 4.5rem)" }}
+          >
+            <MobileAccountGroupsCarousel
+              ref={groupsCarouselRef}
+              groups={mobileCarouselGroups}
+              renderAccount={(item) => (
+                <AccountCard
+                  account={item.account}
+                  onClick={() => setSelectedAccountForTable(item.account)}
+                  size="extra-large"
+                  layout="carousel"
+                  {...getRithmicBalanceProps(item.account)}
+                />
+              )}
+            />
+          </div>
+        ) : (
+          <div
+            className="min-h-0 flex-1"
+            style={{ paddingBottom: "var(--accounts-toolbar-height, 4.5rem)" }}
+          >
+            {accountsTableView}
+          </div>
+        )}
+
+        <AccountsToolbar
+          searchItems={mobileSearchItems}
+          onSelectAccount={handleSearchSelectAccount}
+          view={view}
+          onViewChange={setView}
+        />
+
+        {dialogs}
+      </div>
+    )
+  }
+
   return (
     <Card className="w-full h-full min-w-0 flex flex-col">
       <CardHeader
@@ -1223,236 +1587,72 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                 {t("filters.manageAccounts")}
               </span>
             </Button>
-            <Popover open={sortingMenuOpen} onOpenChange={setSortingMenuOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    "gap-1.5",
-                    size === "small" ? "h-7 px-2 text-xs" : "h-8 px-2 sm:px-3"
-                  )}
-                >
-                  <ListOrdered className="h-3.5 w-3.5" />
-                  <span className={cn((size === "small") && "sr-only", "hidden min-[420px]:inline")}>
-                    {sorting.length > 0
-                      ? t("table.sortingRules", { count: sorting.length })
-                      : t("table.sorting")}
-                  </span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-[calc(100vw-2rem)] max-w-80 p-3">
-                <div className="space-y-3">
-                  {sorting.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">
-                      {t("table.noSorting")}
-                    </div>
-                  ) : (
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={(event: DragEndEvent) => {
-                        const { active, over } = event
-                        if (!over || active.id === over.id) return
-                        const oldIndex = sorting.findIndex(
-                          (rule) => rule.id === active.id
-                        )
-                        const newIndex = sorting.findIndex(
-                          (rule) => rule.id === over.id
-                        )
-                        if (oldIndex === -1 || newIndex === -1) return
-                        setSorting((prev) => arrayMove(prev, oldIndex, newIndex))
-                      }}
-                    >
-                      <SortableContext
-                        items={sorting.map((rule) => rule.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                          {sorting.map((rule) => {
-                            const label =
-                              sortOptions.find(
-                                (option) => option.id === rule.id
-                              )?.label ?? rule.id
-                            return (
-                              <SortRuleItem
-                                key={rule.id}
-                                sort={rule}
-                                label={label}
-                                reorderLabel={t("table.reorderSort")}
-                                toggleLabel={
-                                  rule.desc
-                                    ? t("table.sortDescending")
-                                    : t("table.sortAscending")
-                                }
-                                removeLabel={t("table.removeSort")}
-                                onToggleDirection={() =>
-                                  setSorting((prev) =>
-                                    prev.map((item) =>
-                                      item.id === rule.id
-                                        ? { ...item, desc: !item.desc }
-                                        : item
-                                    )
-                                  )
-                                }
-                                onRemove={() =>
-                                  setSorting((prev) =>
-                                    prev.filter((item) => item.id !== rule.id)
-                                  )
-                                }
-                              />
-                            )
-                          })}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={pendingSortId}
-                      onValueChange={(value) => {
-                        const nextValue = value === "__none" ? "" : value
-                        setPendingSortId(nextValue)
-                        if (nextValue) {
-                          setSorting((prev) => [
-                            ...prev,
-                            { id: nextValue, desc: false },
-                          ])
-                          setPendingSortId("")
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="h-8 flex-1">
-                        <SelectValue placeholder={t("table.pickSortColumn")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableSortOptions.length === 0 ? (
-                          <SelectItem value="__none" disabled>
-                            {t("table.noMoreSortOptions")}
-                          </SelectItem>
-                        ) : (
-                          availableSortOptions.map((option) => (
-                            <SelectItem key={option.id} value={option.id}>
-                              {option.label}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearSorting}
-                      disabled={sorting.length === 0}
-                    >
-                      {t("table.clearSorting")}
-                    </Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-            <Tabs value={view} onValueChange={(value) => setView(value as "cards" | "table")}>
-              <TabsList
-                className={cn(
-                  "gap-1",
-                  size === "small" ? "h-7 px-1" : "h-8 px-1"
-                )}
+            <AccountsSortMenu variant="header" size={size} />
+            {hasRithmicCredentials && (
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(size === "small" ? "h-7 px-2" : "h-8")}
+                onClick={() => void refreshRithmicBalances()}
+                disabled={rithmicBalancesLoading}
+                title={t("rithmic.balances.refreshTitle")}
               >
-                <TabsTrigger
-                  value="cards"
-                  className={cn(
-                    "gap-1.5",
-                    size === "small" ? "h-6 px-2 text-xs" : "h-7"
-                  )}
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  <span className={cn(size === "small" && "sr-only")}>
-                    {t("accounts.view.charts")}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="table"
-                  className={cn(
-                    "gap-1.5",
-                    size === "small" ? "h-6 px-2 text-xs" : "h-7"
-                  )}
-                >
-                  <Table className="h-3.5 w-3.5" />
-                  <span className={cn(size === "small" && "sr-only")}>
-                    {t("accounts.view.table")}
-                  </span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+                {rithmicBalancesLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                <span className={cn("ml-1.5", size === "small" && "sr-only")}>
+                  {t("rithmic.balances.refresh")}
+                </span>
+              </Button>
+            )}
+            {chartsTableToggle}
           </div>
         </div>
       </CardHeader>
 
-      {/* Unconfigured accounts banner */}
-      {(unconfiguredAccounts.length > 0 && !isLoading) && (
-        <div className="border-b border-orange-200/30 bg-orange-50/40 dark:border-orange-700/30 dark:bg-orange-950/30">
-          <div className="px-3 py-2 sm:px-4">
-            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex shrink-0 items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
-                <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
-                  {t('propFirm.status.needsConfiguration')}:
-                </span>
-              </div>
-              <div className="flex min-w-0 gap-2 overflow-x-auto pb-1">
-                {unconfiguredAccounts.map((accountNumber, index) => (
-                  <div
-                    key={accountNumber}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-orange-100 dark:bg-orange-900/50"
-                  >
-                    <span className="text-xs font-medium text-orange-800 dark:text-orange-200">
-                      {accountNumber}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 w-5 p-0 hover:bg-orange-200 dark:hover:bg-orange-800/50"
-                      onClick={() => {
-                        // Create a minimal account object for configuration
-                        const tempAccount = {
-                          id: '',
-                          userId: user?.id || '',
-                          number: accountNumber,
-                          propfirm: '',
-                          startingBalance: 0,
-                          profitTarget: 0,
-                          drawdownThreshold: 0,
-                          consistencyPercentage: 30,
-                          resetDate: null,
-                          payouts: [],
-                          balanceToDate: 0
-                        }
-                        // Use type assertion to work around the type issues
-                        setSelectedAccountForTable(tempAccount as any)
-                      }}
-                    >
-                      <Settings className="h-3 w-3 text-orange-600 dark:text-orange-400" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {unconfiguredAccountsBanner}
 
       <CardContent
         className={cn(
           "flex-1 overflow-hidden",
-          view === "table" && "p-0"
+          view === "table" && "p-0",
+          useMobileAccountCarousel && "flex min-h-0 flex-col p-0"
         )}
       >
-        <div
-          className="flex-1 overflow-y-auto h-full"
-        >
-          {view === "cards" ? (
+        {useMobileAccountCarousel ? (
+          // Only reachable in the widget-carousel context: the mobile tab
+          // returns its cardless layout earlier.
+          <MobileAccountCardsCarousel
+            items={mobileCarouselItems}
+            orientation="horizontal"
+            renderSlide={(item, index) => {
+              const slide = mobileCarouselItems[index]
+              if (!slide) return null
+
+              return (
+                <div className="flex h-full min-h-0 flex-col gap-2">
+                  {slide.groupName && (
+                    <p className="shrink-0 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {slide.groupName}
+                    </p>
+                  )}
+                  <div className="min-h-0 flex-1">
+                    <AccountCard
+                      account={slide.account}
+                      onClick={() => setSelectedAccountForTable(slide.account)}
+                      size="extra-large"
+                      layout="carousel"
+                      {...getRithmicBalanceProps(slide.account)}
+                    />
+                  </div>
+                </div>
+              )
+            }}
+          />
+        ) : view === "cards" ? (
+          <div className="flex-1 overflow-y-auto h-full">
             <div className="mt-4">
               <div className="space-y-6">
                 {sortedGroupEntries.map(({ group, accounts: orderedAccounts }, groupIndex) => {
@@ -1510,6 +1710,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                                     account={account as Account}
                                     onClick={() => setSelectedAccountForTable(account as Account)}
                                     size={size}
+                                    {...getRithmicBalanceProps(account as Account)}
                                   />
                                 )
                               }).filter(Boolean)}
@@ -1565,6 +1766,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                                     account={account as Account}
                                     onClick={() => setSelectedAccountForTable(account as Account)}
                                     size={size}
+                                    {...getRithmicBalanceProps(account as Account)}
                                   />
                                 )
                               }).filter(Boolean)}
@@ -1577,159 +1779,15 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                 })()}
               </div>
             </div>
-          ) : (
-            <AccountsTableView
-              accounts={filteredAccounts}
-              groups={groups}
-              onSelectAccount={(account) => setSelectedAccountForTable(account)}
-              sorting={sorting}
-              onSortingChange={setSorting}
-            />
-          )}
-        </div>
-
-        <Dialog
-          open={!!selectedAccountForTable}
-          onOpenChange={(open) => !open && setSelectedAccountForTable(null)}
-        >
-          <DialogContent className="flex h-[92dvh] w-[calc(100vw-1rem)] max-w-7xl flex-col overflow-hidden p-0 sm:h-[85vh] sm:w-[calc(100vw-2rem)] sm:p-6">
-            <DialogHeader className="shrink-0 border-b p-4 pb-4 sm:p-0 sm:pb-4">
-              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0 pr-8 sm:pr-0">
-                  <DialogTitle>{t('propFirm.configurator.title', { accountNumber: selectedAccountForTable?.number })}</DialogTitle>
-                  <DialogDescription>{t('propFirm.configurator.description')}</DialogDescription>
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:pr-4">
-
-                  <Button
-                    variant="default"
-                    onClick={handleSave}
-                    disabled={pendingChanges === null}
-                    className="min-w-0"
-                  >
-                    {isSaving ? t('common.saving') : t('common.save')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="min-w-0"
-                    onClick={() => {
-                      setSelectedPayout(undefined)
-                      setPayoutDialogOpen(true)
-                    }}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    {t('propFirm.payout.add')}
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        disabled={isDeleting || !canDeleteAccount}
-                        className="min-w-0"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        {t('propFirm.common.delete')}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>{t('propFirm.delete.title')}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {t('propFirm.delete.description', { account: selectedAccountForTable?.number })}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>{t('propFirm.common.cancel')}</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDelete}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          {isDeleting ? t('propFirm.common.deleting') : t('propFirm.common.delete')}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-            </DialogHeader>
-
-            <div className="flex-1 overflow-y-auto p-3 pt-4 sm:p-6 sm:pt-4">
-              {selectedAccountForTable && (
-                <Tabs
-                  defaultValue={selectedAccountForTable.profitTarget === 0 ? "configurator" : "table"}
-                  className="w-full"
-                >
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="table">{t('propFirm.table.title')}</TabsTrigger>
-                    <TabsTrigger value="configurator">{t('propFirm.table.configurator')}</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="table" className="mt-4">
-                    <AccountTable
-                      accountNumber={selectedAccountForTable.number}
-                      startingBalance={selectedAccountForTable.startingBalance}
-                      profitTarget={selectedAccountForTable.profitTarget}
-                      dailyMetrics={dailyMetrics}
-                      consistencyPercentage={selectedAccountForTable.consistencyPercentage ?? 30}
-                      resetDate={selectedAccountForTable.resetDate ? new Date(selectedAccountForTable.resetDate) : undefined}
-                      onDeletePayout={async (payoutId) => {
-                        try {
-                          await deletePayout(payoutId)
-
-                          shouldUpdateSelectedAccount.current = true
-
-                          toast.success(t('propFirm.payout.deleteSuccess'), {
-                            description: t('propFirm.payout.deleteSuccessDescription'),
-                          })
-                        } catch (error) {
-                          console.error('Failed to delete payout:', error)
-                          toast.error(t('propFirm.payout.deleteError'), {
-                            description: t('propFirm.payout.deleteErrorDescription'),
-                          })
-                        }
-                      }}
-                      onEditPayout={(payout) => {
-                        setSelectedPayout({
-                          id: payout.id,
-                          date: new Date(payout.date),
-                          amount: payout.amount,
-                          status: payout.status,
-                          propfirmSharingPercentage: payout.propfirmSharingPercentage ?? undefined
-                        })
-                        setPayoutDialogOpen(true)
-                      }}
-                    />
-                  </TabsContent>
-                  <TabsContent value="configurator" className="mt-4">
-                    <AccountConfigurator
-                      account={selectedAccountForTable}
-                      pendingChanges={pendingChanges as Partial<Account> | null}
-                      setPendingChanges={setPendingChanges}
-                      isSaving={isSaving}
-                    />
-                  </TabsContent>
-                </Tabs>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        ) : (
+          <div className="h-full min-h-0">
+            {accountsTableView}
+          </div>
+        )}
       </CardContent>
 
-      <PayoutDialog
-        open={payoutDialogOpen}
-        onOpenChange={(open) => {
-          setPayoutDialogOpen(open)
-          if (!open) {
-            setSelectedPayout(undefined)
-          }
-        }}
-        accountNumber={selectedAccountForTable?.number ?? ''}
-        existingPayout={selectedPayout}
-        onSubmit={handleAddPayout}
-        onDelete={selectedPayout ? handleDeletePayout : undefined}
-        isLoading={isSavingPayout}
-        isDeleting={isDeletingPayout}
-      />
+      {dialogs}
     </Card>
   )
-} 
+}

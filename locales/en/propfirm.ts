@@ -5,6 +5,8 @@ export default {
         card: {
             unnamedAccount: 'Unnamed Account',
             balance: 'Balance',
+            rithmicBalance: 'Rithmic balance',
+            rithmicBalanceLoading: 'Fetching Rithmic balance…',
             target: 'Target',
             remainingToTarget: 'Remaining to Target',
             drawdown: 'Drawdown',

@@ -19,7 +19,8 @@ export default {
     og: {
       joinLabel: 'Join with a referral code',
       tagline: 'Next generation trading dashboard',
-      alt: 'Deltalytix Referral',
+      cta: 'Sign Up with Code →',
+      alt: 'Deltalytix referral — Sign Up with Code',
     },
     landing: {
       title: 'Referral Program',

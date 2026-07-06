@@ -27,6 +27,10 @@ import { useI18n, useCurrentLocale } from "@/locales/client";
 import { formatInTimeZone } from "date-fns-tz";
 import { fr, enUS } from "date-fns/locale";
 import { useUserStore } from "@/store/user-store";
+import {
+  BarChartLoadingSkeleton,
+  LOADING_MOCK_DATE_PNL,
+} from "./chart-loading-skeleton";
 
 interface PNLChartProps {
   size?: WidgetSize;
@@ -102,7 +106,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
 };
 
 export default function PNLChart({ size = "medium" }: PNLChartProps) {
-  const { calendarData } = useData();
+  const { calendarData, isLoading } = useData();
   const t = useI18n();
   const locale = useCurrentLocale();
   const { timezone } = useUserStore();
@@ -195,63 +199,73 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
         )}
       >
         <div className={cn("w-full h-full")}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={getChartMargins()}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                className="text-border dark:opacity-[0.12] opacity-[0.2]"
-              />
-              <XAxis
-                dataKey="date"
-                tickLine={false}
-                axisLine={false}
-                height={size === "small" ? 20 : 24}
-                tickMargin={size === "small" ? 4 : 8}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-                minTickGap={size === "small" ? 30 : 50}
-                tickFormatter={(value) => {
-                  const date = new Date(value + "T00:00:00Z");
-                  return formatInTimeZone(date, timezone, "MMM d", {
-                    locale: dateLocale,
-                  });
-                }}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={60}
-                tickMargin={4}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-                tickFormatter={formatCurrency}
-              />
-              <Tooltip
-                content={<CustomTooltip />}
-                wrapperStyle={{
-                  fontSize: size === "small" ? "10px" : "12px",
-                  zIndex: 1000,
-                }}
-              />
-              <Bar
-                dataKey="pnl"
-                radius={[3, 3, 0, 0]}
-                maxBarSize={size === "small" ? 25 : 40}
-                className="transition-opacity duration-300 ease-out"
-              >
-                {chartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.pnl >= 0 ? positiveColor : negativeColor}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          {isLoading ? (
+            <BarChartLoadingSkeleton
+              size={size}
+              data={LOADING_MOCK_DATE_PNL}
+              xDataKey="date"
+              yDataKey="pnl"
+              marginVariant="default"
+            />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={getChartMargins()}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  className="text-border dark:opacity-[0.12] opacity-[0.2]"
+                />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  height={size === "small" ? 20 : 24}
+                  tickMargin={size === "small" ? 4 : 8}
+                  tick={{
+                    fontSize: size === "small" ? 9 : 11,
+                    fill: "currentColor",
+                  }}
+                  minTickGap={size === "small" ? 30 : 50}
+                  tickFormatter={(value) => {
+                    const date = new Date(value + "T00:00:00Z");
+                    return formatInTimeZone(date, timezone, "MMM d", {
+                      locale: dateLocale,
+                    });
+                  }}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  width={60}
+                  tickMargin={4}
+                  tick={{
+                    fontSize: size === "small" ? 9 : 11,
+                    fill: "currentColor",
+                  }}
+                  tickFormatter={formatCurrency}
+                />
+                <Tooltip
+                  content={<CustomTooltip />}
+                  wrapperStyle={{
+                    fontSize: size === "small" ? "10px" : "12px",
+                    zIndex: 1000,
+                  }}
+                />
+                <Bar
+                  dataKey="pnl"
+                  radius={[3, 3, 0, 0]}
+                  maxBarSize={size === "small" ? 25 : 40}
+                  className="transition-opacity duration-300 ease-out"
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.pnl >= 0 ? positiveColor : negativeColor}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </CardContent>
     </Card>

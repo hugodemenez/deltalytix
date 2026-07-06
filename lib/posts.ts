@@ -18,7 +18,13 @@ export const getPostBySlug = cache(async function(
 
   // For French locale and completed posts, try to find matching YouTube video
   let youtubeVideoId = data.youtubeVideoId;
-  if (locale === 'fr' && data.status === 'completed' && data.completedDate && !youtubeVideoId) {
+  if (
+    locale === 'fr' &&
+    data.status === 'completed' &&
+    data.completedDate &&
+    !youtubeVideoId &&
+    process.env.YOUTUBE_API_KEY
+  ) {
     try {
       youtubeVideoId = await findVideoIdForPostDateAction(data.completedDate);
     } catch (error) {
@@ -62,20 +68,3 @@ export const getPostsByStatus = cache(async function(
   const posts = await getAllPosts(locale)
   return posts.filter(post => post.meta.status === status)
 })
-
-export async function generateStaticParams() {
-  const locales = ['en', 'fr']
-  const paths: { params: { locale: string; slug: string } }[] = []
-
-  for (const locale of locales) {
-    const posts = await getAllPosts(locale)
-    paths.push(...posts.map((post) => ({
-      params: {
-        locale,
-        slug: post.meta.slug,
-      },
-    })))
-  }
-
-  return paths
-} 

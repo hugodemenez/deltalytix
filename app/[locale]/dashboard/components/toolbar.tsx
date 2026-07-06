@@ -8,7 +8,8 @@ import { Pencil, Trash2, RotateCcw } from "lucide-react"
 import { ShareButton } from "./share-button"
 import { AddWidgetSheet } from "./add-widget-sheet"
 import { FilterCommandMenu } from "./filters/filter-command-menu"
-import { DASHBOARD_COMPACT_BREAKPOINT, WidgetType, WidgetSize, Layouts } from "../types/dashboard"
+import { DASHBOARD_COMPACT_BREAKPOINT, WidgetType, WidgetSize, Layouts, Widget } from "../types/dashboard"
+import { MobileWidgetDeleteDialog } from "./mobile-widget-delete-dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,8 +23,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   ContextMenu,
+  ContextMenuCheckboxItem,
   ContextMenuContent,
-  ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { useState, useEffect, useRef } from "react"
@@ -39,6 +40,8 @@ interface ToolbarProps {
   currentLayout: Layouts
   onRemoveAll: () => void
   onRestoreDefaults: () => void
+  mobileActiveWidget?: Widget | null
+  onRemoveWidget?: (widgetId: string) => void
 }
 
 export function Toolbar({
@@ -47,7 +50,9 @@ export function Toolbar({
   onEditToggle,
   currentLayout,
   onRemoveAll,
-  onRestoreDefaults
+  onRestoreDefaults,
+  mobileActiveWidget = null,
+  onRemoveWidget,
 }: ToolbarProps) {
   const t = useI18n()
   const { isMobile } = useData()
@@ -88,21 +93,6 @@ export function Toolbar({
     })
 
     return () => observer.disconnect()
-  }, [])
-
-  // Measure toolbar height
-  useEffect(() => {
-    if (toolbarRef.current) {
-      const resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          setToolbarHeight(entry.contentRect.height)
-        }
-      })
-
-      resizeObserver.observe(toolbarRef.current)
-
-      return () => resizeObserver.disconnect()
-    }
   }, [])
 
   // Handle auto-hide functionality
@@ -184,6 +174,31 @@ export function Toolbar({
   const useCompactLayout = isMobile || isCompactScreen
   const isVisible = !settings.autoHide || isHovered || isPinnedVisible
 
+  useEffect(() => {
+    const toolbar = toolbarRef.current
+    if (!toolbar) return
+
+    const updateToolbarMetrics = () => {
+      const rect = toolbar.getBoundingClientRect()
+      setToolbarHeight(rect.height)
+      document.documentElement.style.setProperty(
+        "--mobile-toolbar-top",
+        `${window.innerHeight - rect.top}px`
+      )
+    }
+
+    updateToolbarMetrics()
+
+    const resizeObserver = new ResizeObserver(updateToolbarMetrics)
+    resizeObserver.observe(toolbar)
+    window.addEventListener("resize", updateToolbarMetrics)
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener("resize", updateToolbarMetrics)
+    }
+  }, [isConsentVisible, isVisible])
+
   return (
     <ContextMenu>
       <ContextMenuTrigger>
@@ -255,6 +270,7 @@ export function Toolbar({
                       className={cn(
                         "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
                       )}
+                      aria-label={t('widgets.restoreDefaults')}
                       title={t('widgets.restoreDefaults')}
                     >
                       <RotateCcw className="h-4 w-4" />
@@ -276,36 +292,46 @@ export function Toolbar({
                   </AlertDialogContent>
                 </AlertDialog>
 
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      className={cn(
-                        "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
-                      )}
-                      title={t('widgets.deleteAll')}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{t('widgets.deleteAllConfirmTitle')}</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {t('widgets.deleteAllConfirmDescription')}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={onRemoveAll}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                {isMobile && onRemoveWidget ? (
+                  <MobileWidgetDeleteDialog
+                    activeWidget={mobileActiveWidget}
+                    onRemoveWidget={onRemoveWidget}
+                    onRemoveAll={onRemoveAll}
+                    compact={useCompactLayout}
+                  />
+                ) : (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        className={cn(
+                          "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
+                        )}
+                        aria-label={t('widgets.deleteAll')}
+                        title={t('widgets.deleteAll')}
                       >
-                        {t('widgets.confirmDeleteAll')}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t('widgets.deleteAllConfirmTitle')}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t('widgets.deleteAllConfirmDescription')}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={onRemoveAll}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {t('widgets.confirmDeleteAll')}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
             )}
           </motion.div>
@@ -313,21 +339,12 @@ export function Toolbar({
       </ContextMenuTrigger>
 
       <ContextMenuContent className="w-48">
-        <ContextMenuItem
-          onClick={handleAutoHideToggle}
+        <ContextMenuCheckboxItem
+          checked={settings.autoHide}
+          onCheckedChange={handleAutoHideToggle}
         >
-          <div className="flex items-center gap-2">
-            <div className={cn(
-              "w-4 h-4 rounded border-2 flex items-center justify-center",
-              settings.autoHide ? "bg-primary border-primary" : "border-muted-foreground"
-            )}>
-              {settings.autoHide && (
-                <div className="w-2 h-2 bg-background rounded-sm" />
-              )}
-            </div>
-            <span className="text-sm">{t('toolbar.autoHide')}</span>
-          </div>
-        </ContextMenuItem>
+          {t('toolbar.autoHide')}
+        </ContextMenuCheckboxItem>
       </ContextMenuContent>
     </ContextMenu>
   )

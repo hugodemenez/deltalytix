@@ -3,7 +3,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TradeTableReview } from "./components/tables/trade-table-review";
 import { AccountsOverview } from "./components/accounts/accounts-overview";
-import { AnalysisOverview } from "./components/analysis/analysis-overview";
 import WidgetCanvas from "./components/widget-canvas";
 import { useEffect, useRef } from "react";
 import { useI18n } from "@/locales/client";
@@ -132,7 +131,18 @@ export default function Home() {
   }, []);
 
   return (
-    <main ref={mainRef} className="overflow-x-hidden">
+    <main
+      ref={mainRef}
+      id="dashboard-content"
+      tabIndex={-1}
+      className="overflow-x-hidden"
+    >
+      <a
+        href="#dashboard-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-md focus:ring-2 focus:ring-ring"
+      >
+        {t("dashboard.skipToContent")}
+      </a>
       <Tabs defaultValue="widgets" className="w-full h-full pt-(--tabs-height,3rem)">
         {/* Fixed TabsList positioned under navbar */}
         <div
@@ -150,15 +160,15 @@ export default function Home() {
           </TabsList>
         </div>
 
-        <TabsContent value="table" className="h-[calc(100dvh-var(--navbar-height)-var(--tabs-height)-16px)] min-w-0 p-2 sm:p-4">
+        <TabsContent value="table" className="h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem)-16px)] min-w-0 p-2 sm:p-4">
           <TradeTableReview />
         </TabsContent>
 
-        <TabsContent value="accounts" className="flex-1 mt-0 min-w-0">
+        <TabsContent value="accounts" className="h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem)-16px)] min-w-0 mt-0">
           <AccountsOverview size="large" />
         </TabsContent>
 
-        <TabsContent value="widgets" className="min-w-0 px-2 sm:px-4">
+        <TabsContent value="widgets" className="min-w-0 overflow-hidden px-0 max-md:h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem))] sm:px-4">
           <WidgetCanvas />
         </TabsContent>
       </Tabs>

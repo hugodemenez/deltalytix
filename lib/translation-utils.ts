@@ -28,6 +28,36 @@ export function translateWeekday(t: any, day: string): string {
   }
 }
 
+const WEEKDAY_SHORT_LABELS: Record<string, Record<string, string>> = {
+  en: {
+    'calendar.weekdays.sun': 'Su',
+    'calendar.weekdays.mon': 'Mo',
+    'calendar.weekdays.tue': 'Tu',
+    'calendar.weekdays.wed': 'We',
+    'calendar.weekdays.thu': 'Th',
+    'calendar.weekdays.fri': 'Fr',
+    'calendar.weekdays.sat': 'Sa',
+  },
+  fr: {
+    'calendar.weekdays.sun': 'Di',
+    'calendar.weekdays.mon': 'Lu',
+    'calendar.weekdays.tue': 'Ma',
+    'calendar.weekdays.wed': 'Me',
+    'calendar.weekdays.thu': 'Je',
+    'calendar.weekdays.fri': 'Ve',
+    'calendar.weekdays.sat': 'Sa',
+  },
+}
+
+/**
+ * Unambiguous two-letter weekday labels for mobile calendar headers.
+ * Uses a static map to avoid pushing next-international locale types past TS limits.
+ */
+export function translateWeekdayShort(day: string, locale: string): string {
+  const labels = WEEKDAY_SHORT_LABELS[locale] ?? WEEKDAY_SHORT_LABELS.en
+  return labels[day] ?? day
+}
+
 /**
  * Translates Tradovate fee type keys safely
  */

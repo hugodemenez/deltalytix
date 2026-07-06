@@ -2,20 +2,30 @@
 import { AuthProfileButton } from "../components/auth-profile-button";
 import TeamNavbar from "../components/team-navbar";
 import { Metadata } from 'next';
+import { truncateForSocialDescription } from "@/lib/og/site-metadata";
 
 type Locale = 'en' | 'fr';
 
+const TEAM_TITLES: Record<Locale, string> = {
+  en: "Deltalytix Enterprise — Team Trading Analytics Platform",
+  fr: "Deltalytix Enterprise — Analyses de trading pour équipes",
+};
+
+const TEAM_DESCRIPTIONS: Record<Locale, string> = {
+  en:
+    "Enterprise trading analytics for fund managers and prop firms. Monitor traders, track performance, and make data-driven decisions.",
+  fr:
+    "Analyses de trading entreprise pour gestionnaires de fonds et prop firms. Suivez les traders et pilotez vos décisions.",
+};
+
 export async function generateMetadata(props: { params: Promise<{ locale: Locale }> }): Promise<Metadata> {
   const params = await props.params;
-  const descriptions: Record<Locale, string> = {
-    en: 'Enterprise trading analytics platform for fund managers and proprietary trading firms. Monitor multiple traders, track performance, and make data-driven decisions.',
-    fr: 'Plateforme d\'analyses de trading entreprise pour les gestionnaires de fonds et les firmes de trading propriétaire. Surveillez plusieurs traders, suivez les performances et prenez des décisions basées sur les données.',
-  };
-
-  const description = descriptions[params.locale] || descriptions.en;
+  const description = truncateForSocialDescription(
+    TEAM_DESCRIPTIONS[params.locale] || TEAM_DESCRIPTIONS.en,
+  );
 
   return {
-    title: 'Deltalytix Enterprise',
+    title: TEAM_TITLES[params.locale] || TEAM_TITLES.en,
     description,
   };
 }

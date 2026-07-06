@@ -24,9 +24,13 @@
  */
 
 import { Sandbox } from "@vercel/sandbox";
-import { chromium } from 'playwright-core';
 import { z } from 'zod/v3';
 import ms from 'ms';
+
+async function getChromium() {
+  const { chromium } = await import('playwright-core');
+  return chromium;
+}
 
 export async function retryWithBackoff<T>(fn: () => Promise<T>, retries = 3) {
   let delay = 1000;
@@ -155,6 +159,7 @@ export async function scrapeWithSandbox(
       const { sandbox, webSocketDebuggerUrl } = await createBrowserSandbox();
       
       try {
+        const chromium = await getChromium();
         const browser = await chromium.connectOverCDP(webSocketDebuggerUrl);
         const context = await browser.newContext({
           userAgent: options.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -200,6 +205,7 @@ export async function scrapeWithSandbox(
     // Fallback for development - use local Playwright
     console.log('Development mode: Using local Playwright browser...');
     try {
+      const chromium = await getChromium();
       const browser = await chromium.launch({
         headless: true
       });

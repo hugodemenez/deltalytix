@@ -13,9 +13,22 @@ Capture localized screenshots and short demo videos for Deltalytix changelog (`c
 1. Local env with dashboard bypass (see repo `AGENTS.md`).
 2. Postgres running and schema applied: `bunx prisma db push`
 3. Demo data seeded: `bun run seed:self-host`
-4. Dev server on port 3000: `bash scripts/dev.sh`
+4. Dev server on port 3000 with Next.js dev tools disabled:
+
+```bash
+CHANGELOG_MEDIA_CAPTURE=1 bash scripts/dev.sh
+```
+
+This sets `devIndicators: false` in `next.config.ts` so the floating Next.js dev badge/menu never mounts. The capture script also hides `nextjs-portal` via CSS as a fallback when reusing an existing dev server.
+
 5. Playwright Chromium available: `npx playwright-core install chromium`
 6. `ffmpeg` installed (for `.webm` → `.mp4` conversion)
+
+The capture helpers **pre-seed `cookieConsent` in localStorage** and click **Accept all** / **Tout accepter** before every screenshot so the consent banner never appears in shipped assets.
+
+**Next.js dev tools** are suppressed two ways: start the dev server with `CHANGELOG_MEDIA_CAPTURE=1` (disables `devIndicators` in Next config), and Playwright hides `nextjs-portal` / `next-route-announcer` before each capture. The script still **fails** if a compile/runtime error overlay is open (`1 Issue`, `12 Issues`, etc.) — fix the underlying error and re-run; do not ship screenshots with the red error badge.
+
+Screenshots use **2× device pixel ratio** (`deviceScaleFactor: 2`, `scale: 'device'`) so a 1440×900 desktop capture saves at 2880×1800. Override with `CHANGELOG_DEVICE_SCALE=3` if you need even sharper assets.
 
 Health check:
 
@@ -119,13 +132,13 @@ Rules:
 
 ### 4. Verify captures are clean
 
-The capture script fails if a Next.js dev error badge (`1 Issue`) is visible. If capture fails:
+The capture script fails if a Next.js dev error badge (`1 Issue`, `12 Issues`, etc.) is visible. If capture fails:
 
 1. Open the page in the browser and check the dev overlay.
 2. Fix hydration mismatches (never read `window` / `document` during render).
 3. Re-run the capture script.
 
-Do **not** ship screenshots that include the red Next.js dev indicator.
+Do **not** ship screenshots that include the red Next.js error indicator or the floating **N** dev-tools menu. Use `CHANGELOG_MEDIA_CAPTURE=1 bash scripts/dev.sh` before capturing so the indicator does not mount.
 
 ## File map
 
@@ -157,7 +170,8 @@ Entries wired in:
 ## Definition of done
 
 1. Recipe exists for the batch.
-2. `bun run capture:changelog-media -- <batch>` completes with no dev overlay errors.
-3. Each new EN/FR MDX entry has `image:` in frontmatter and ≥1 media element in the body.
-4. Media paths use the correct locale subdirectory (`en` or `fr`).
-5. Assets are committed under `public/updates/<batch>/`.
+2. Dev server was started with `CHANGELOG_MEDIA_CAPTURE=1`.
+3. `bun run capture:changelog-media -- <batch>` completes with no dev overlay errors.
+4. Each new EN/FR MDX entry has `image:` in frontmatter and ≥1 media element in the body.
+5. Media paths use the correct locale subdirectory (`en` or `fr`).
+6. Assets are committed under `public/updates/<batch>/`.

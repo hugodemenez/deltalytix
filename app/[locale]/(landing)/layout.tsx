@@ -6,21 +6,31 @@ import { I18nProviderClient } from "@/locales/landing-client";
 import { ConsentBanner } from "@/components/consent-banner";
 
 import { Metadata } from 'next';
+import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
 
 type Locale = 'en' | 'fr';
+const TITLE_TEMPLATE = "%s | Deltalytix";
 
 export async function generateMetadata(props: { params: Promise<{ locale: Locale }> }): Promise<Metadata> {
   const params = await props.params;
-  const descriptions: Record<Locale, string> = {
-    en: 'Centralize and visualize your trading performance across multiple brokers. Track, analyze, and improve your trading journey with powerful analytics.',
-    fr: 'Centralisez et visualisez vos performances de trading à travers différents brokers. Suivez, analysez et améliorez votre parcours de trading avec des analyses puissantes.',
-  };
-
-  const description = descriptions[params.locale] || descriptions.en;
+  const copy = getSiteMetadataCopy(params.locale);
 
   return {
-    title: 'Deltalytix',
-    description,
+    title: {
+      absolute: copy.title,
+      template: TITLE_TEMPLATE,
+    },
+    description: copy.description,
+    openGraph: {
+      title: copy.title,
+      description: copy.description,
+      locale: params.locale === "fr" ? "fr_FR" : "en_US",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: copy.title,
+      description: copy.description,
+    },
   };
 }
 
