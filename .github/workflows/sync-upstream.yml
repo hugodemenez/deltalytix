@@ -30,16 +30,11 @@ jobs:
       - name: Check for new commits
         id: check
         run: |
-          UPSTREAM="upstream/main"
-          LOCAL="origin/main"
-          LOCAL_SHA=$(git rev-parse "$LOCAL")
-          UPSTREAM_SHA=$(git rev-parse "$UPSTREAM")
-
-          if [ "$LOCAL_SHA" = "$UPSTREAM_SHA" ]; then
-            echo "No new upstream commits (both at $LOCAL_SHA)"
+          if git merge-base --is-ancestor upstream/main origin/main; then
+            echo "No new upstream commits (upstream/main is already in origin/main)"
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Upstream has new commits ($UPSTREAM_SHA vs local $LOCAL_SHA)"
+            echo "Upstream has new commits to sync"
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
           fi
 
