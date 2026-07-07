@@ -48,11 +48,21 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.SYNC_PAT_CLASSIC }}
         run: |
+          set -euo pipefail
+
           BRANCH="sync/upstream-$(date -u +%Y%m%d)"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
-          git merge upstream/main --no-edit
+
+          # Merge upstream changes
+          PRE_MERGE=$(git rev-parse HEAD)
+          git merge upstream/main --no-edit || {
+            echo "Merge conflict detected. Manual resolution required."
+            exit 1
+          }
+          POST_MERGE=$(git rev-parse HEAD)
+
           # Remove files we don't want in the fork
           for f in code-review.yml generate-changelog.yml; do
             if [ -f ".github/workflows/$f" ]; then
@@ -60,8 +70,15 @@ jobs:
             fi
           done
           if ! git diff --cached --quiet; then
-            git commit --amend --no-edit
+            git commit --amend --no-edit || true
           fi
+
+          # If no commits differ from main, skip PR creation
+          if git diff --quiet "origin/main..HEAD"; then
+            echo "No new changes compared to main; nothing to sync."
+            exit 0
+          fi
+
           git push origin "$BRANCH"
 
           PR_BODY="Automated sync from upstream \`hugodemenez/deltalytix\` branch \`beta\`.
