@@ -45,6 +45,8 @@ jobs:
 
       - name: Create sync branch and PR
         if: steps.check.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           BRANCH="sync/upstream-$(date -u +%Y%m%d)"
           git config user.name "github-actions[bot]"
