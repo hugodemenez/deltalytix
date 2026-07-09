@@ -1,0 +1,16 @@
+{
+  "name": "deltalytix-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Native desktop shell for Deltalytix (Native SDK + WebView)",
+  "scripts": {
+    "doctor": "native doctor --manifest app.zon",
+    "dev": "zig build dev",
+    "build": "zig build",
+    "run": "zig build run",
+    "test": "zig build test"
+  },
+  "devDependencies": {
+    "@native-sdk/cli": "^0.4.1"
+  }
+}

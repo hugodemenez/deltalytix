@@ -1,0 +1,4 @@
+node_modules/
+zig-out/
+.zig-cache/
+third_party/

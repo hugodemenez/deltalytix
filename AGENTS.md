@@ -89,6 +89,17 @@ Assets land in `public/updates/<batch>/{en,fr}/`. Wire EN MDX to `/updates/<batc
 - `sudo docker compose run --rm schema-push` only when Compose service DNS works (`db` resolves inside containers)
 - Restricted VMs: `bash scripts/docker-bootstrap.sh` before Docker commands
 
+## Desktop shell (Native SDK WebView)
+
+Experimental native desktop wrapper in `desktop/`. Requires Zig 0.16+, GTK4/WebKitGTK on Linux.
+
+```bash
+bash scripts/desktop-dev.sh
+# or: bun run dev:desktop
+```
+
+See [`desktop/README.md`](./desktop/README.md).
+
 ## Security constraints
 
 - **Never** enable `LOCAL_DASHBOARD_AUTH_BYPASS` in production unless `LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION=1` is set intentionally
