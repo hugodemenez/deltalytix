@@ -38,9 +38,12 @@ jobs:
             x86_64) zig_arch="x86_64" ;;
             *) echo "Unsupported macOS arch: $arch" >&2; exit 1 ;;
           esac
+          zig_root="$HOME/.local/zig-0.16"
+          mkdir -p "$zig_root"
           curl -fsSL "https://ziglang.org/download/0.16.0/zig-${zig_arch}-macos-0.16.0.tar.xz" -o /tmp/zig.tar.xz
-          sudo tar -xJf /tmp/zig.tar.xz -C /usr/local --strip-components=1
-          zig version
+          tar -xJf /tmp/zig.tar.xz -C "$zig_root" --strip-components=1
+          echo "$zig_root" >> "$GITHUB_PATH"
+          "$zig_root/zig" version
 
       - name: Install root dependencies (sharp for icon export)
         run: bun install --frozen-lockfile
