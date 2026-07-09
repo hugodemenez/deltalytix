@@ -1,91 +1,94 @@
 # Deltalytix Desktop (Native SDK WebView)
 
-Native desktop shell for Deltalytix using [Vercel Native SDK](https://github.com/vercel-labs/native). The shell opens a real OS window with a WebView that loads the existing Next.js app — no UI rewrite required.
+Native desktop shell for Deltalytix using [Vercel Native SDK](https://github.com/vercel-labs/native). The shell opens a real OS window with a WebView that loads **https://www.deltalytix.app/dashboard** by default.
 
 ## How it works
 
-- **Dev:** `zig build dev` starts the repo’s Next.js dev server (`bun run dev` on port 3000) and opens a native window at `http://127.0.0.1:3000/dashboard`.
-- **Run:** `zig build run` opens the shell against an already-running server (local or remote via env vars).
+- **Production (default):** `zig build run` opens a native window pointed at `https://www.deltalytix.app/dashboard`.
+- **Dev:** `zig build dev` starts the repo’s local Next.js server and opens `http://127.0.0.1:3000/dashboard` instead.
 
-Deltalytix is server-rendered (`output: "standalone"`), so this shell loads the live Next.js server rather than bundling static assets.
+Deltalytix is server-rendered (`output: "standalone"`), so the shell loads the live web app — no static export bundle.
+
+## App icon
+
+The desktop icon is generated from the same source as the site favicon: [`app/icon.svg`](../app/icon.svg).
+
+```bash
+bun run generate:desktop-icon
+```
+
+This writes `desktop/assets/icon.png` (1024×1024). `desktop/assets/icon.svg` is a copy of the source SVG for reference.
 
 ## Prerequisites
 
 | Tool | Version | Notes |
 |------|---------|-------|
 | [Zig](https://ziglang.org/download/0.16.0/) | 0.16+ | Required to build the native binary |
-| [Bun](https://bun.sh) | latest | Runs the Next.js app (repo root) |
+| [Bun](https://bun.sh) | latest | Local dev + icon generation |
 | Node.js | 18+ | Installs `@native-sdk/cli` in `desktop/` |
 
-**Linux:** install WebKitGTK 6 and GTK4 dev packages:
+**Linux:** `sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev`
+
+**macOS:** Xcode command line tools (system WebKit).
 
 ```bash
-sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev
+cd desktop && npm run doctor
 ```
 
-**macOS:** uses the system WebKit framework (Xcode command line tools).
+## Quick start (local dev)
 
-Run `npm run doctor` inside `desktop/` to verify your environment.
-
-## Quick start
-
-From the **repo root** (with Postgres + `.env.local` set up per `AGENTS.md`):
+From the repo root (with Postgres + `.env.local` per `AGENTS.md`):
 
 ```bash
 bash scripts/desktop-dev.sh
 ```
 
-Or manually:
+## Build a macOS `.dmg`
+
+**Requires a Mac** (`hdiutil` is used to create the disk image).
 
 ```bash
-cd desktop
-npm install
-zig build dev
+bash scripts/desktop-package-macos.sh
+# or: cd desktop && npm run package:macos-dmg
 ```
 
-The native window should open on the dashboard. Use the host **View → Reload** menu (or platform shortcut) to refresh the WebView.
+Outputs land in `desktop/zig-out/package/`:
+
+- `deltalytix-desktop-0.1.0-macos-ReleaseFast.app`
+- `deltalytix-desktop-0.1.0-macos-ReleaseFast.dmg`
+
+### CI artifact
+
+The [`desktop-macos`](../.github/workflows/desktop-macos.yml) workflow builds the `.dmg` on `macos-latest`. On PRs that touch `desktop/`, download the artifact from the GitHub Actions run.
 
 ## Environment variables
 
 | Variable | Purpose |
 |----------|---------|
-| `NATIVE_SDK_FRONTEND_URL` | Set automatically by `zig build dev`; override to load a different URL |
-| `DELTALYTIX_DESKTOP_URL` | Manual override, e.g. `https://your-hosted-deltalytix.com/dashboard` |
-
-Example — point at production while testing the shell locally:
-
-```bash
-DELTALYTIX_DESKTOP_URL=https://deltalytix.com/dashboard zig build run
-```
+| `NATIVE_SDK_FRONTEND_URL` | Set by `zig build dev` to the local dashboard URL |
+| `DELTALYTIX_DESKTOP_URL` | Override the loaded URL (default: `https://www.deltalytix.app/dashboard`) |
 
 ## Commands
 
 Inside `desktop/`:
 
 ```bash
-npm run doctor   # check Zig, WebKit, GTK, etc.
-zig build dev    # Next.js dev server + native window
-zig build run    # native window only (server must already be running)
-zig build test   # Zig unit tests
-zig build package -Dpackage-target=linux   # package binary (platform-specific)
+npm run doctor
+zig build dev
+zig build run
+zig build test
+zig build package -Doptimize=ReleaseFast -Dpackage-target=macos -Dpackage-archive=true
 ```
 
 ## Auth notes
 
-Supabase OAuth redirects must allow your local URL (`http://127.0.0.1:3000`). For self-host dev, `LOCAL_DASHBOARD_AUTH_BYPASS=true` in `.env.local` skips sign-in (see `AGENTS.md`).
+Production loads the real sign-in flow from deltalytix.app. For local dev, use `LOCAL_DASHBOARD_AUTH_BYPASS=true` in `.env.local` (see `AGENTS.md`).
 
-External links (billing, docs) open in the system browser (`external_links = system_browser` in `app.zon`).
-
-## Limitations (spike)
-
-- No offline mode — requires a running Next.js server.
-- Linux uses the software renderer + WebKitGTK; macOS is the best-supported platform.
-- App icon in `assets/icon.png` is a placeholder; replace with Deltalytix branding.
-- Mobile targets (iOS/Android) are experimental in Native SDK and not configured here.
+External links (Stripe, OAuth) open in the system browser.
 
 ## Native SDK path
 
-The build resolves the SDK from `desktop/node_modules/@native-sdk/cli`. Override if needed:
+Resolved from `desktop/node_modules/@native-sdk/cli`. Override if needed:
 
 ```bash
 zig build dev -Dnative-sdk-path=/path/to/native-sdk

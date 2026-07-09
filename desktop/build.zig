@@ -41,6 +41,7 @@ pub fn build(b: *std.Build) void {
     const cef_dir_override = b.option([]const u8, "cef-dir", "Override CEF root directory for Chromium builds");
     const cef_auto_install_override = b.option(bool, "cef-auto-install", "Override app.zon CEF auto-install setting");
     const package_target = b.option(PackageTarget, "package-target", "Package target: macos, windows, linux") orelse .macos;
+    const package_archive = b.option(bool, "package-archive", "Create a platform archive (.dmg on macOS)") orelse false;
     const native_sdk_path = b.option([]const u8, "native-sdk-path", "Path to the Native SDK framework checkout") orelse default_native_sdk_path;
     const optimize_name = @tagName(optimize);
     const selected_platform: PlatformOption = switch (platform_option) {
@@ -122,6 +123,7 @@ pub fn build(b: *std.Build) void {
     package.addFileArg(exe.getEmittedBin());
     package.addArgs(&.{ "--web-engine", @tagName(web_engine), "--cef-dir", cef_dir });
     if (cef_auto_install) package.addArg("--cef-auto-install");
+    if (package_archive) package.addArg("--archive");
     package.step.dependOn(&exe.step);
     const package_step = b.step("package", "Create a local package artifact");
     package_step.dependOn(&package.step);

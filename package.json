@@ -16,6 +16,7 @@
     "capture:changelog-media": "node scripts/capture-changelog-media.mjs",
     "capture:calendar-responsive": "node scripts/capture-calendar-responsive.mjs",
     "capture:changelog-pr-249": "node scripts/capture-changelog-pr-249.mjs",
+    "generate:desktop-icon": "node scripts/generate-desktop-icon.mjs",
     "seed:self-host": "bun scripts/seed-self-host.ts"
   },
   "dependencies": {

@@ -91,12 +91,14 @@ Assets land in `public/updates/<batch>/{en,fr}/`. Wire EN MDX to `/updates/<batc
 
 ## Desktop shell (Native SDK WebView)
 
-Experimental native desktop wrapper in `desktop/`. Requires Zig 0.16+, GTK4/WebKitGTK on Linux.
+Experimental native desktop wrapper in `desktop/`. Loads **https://www.deltalytix.app/dashboard** by default; local dev uses `bash scripts/desktop-dev.sh`. Requires Zig 0.16+, GTK4/WebKitGTK on Linux.
 
 ```bash
 bash scripts/desktop-dev.sh
 # or: bun run dev:desktop
 ```
+
+macOS `.dmg`: `bash scripts/desktop-package-macos.sh` (Mac only) or the `desktop-macos` GitHub Actions workflow artifact.
 
 See [`desktop/README.md`](./desktop/README.md).
 

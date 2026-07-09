@@ -1,0 +1,50 @@
+name: Desktop macOS DMG
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - 'app/icon.svg'
+      - 'scripts/desktop-*.sh'
+      - 'scripts/generate-desktop-icon.mjs'
+      - '.github/workflows/desktop-macos.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package-dmg:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install Zig 0.16
+        run: |
+          curl -fsSL "https://ziglang.org/download/0.16.0/zig-macos-$(uname -m)-0.16.0.tar.xz" -o /tmp/zig.tar.xz
+          sudo tar -xJf /tmp/zig.tar.xz -C /usr/local --strip-components=1
+          zig version
+
+      - name: Install root dependencies (sharp for icon export)
+        run: bun install --frozen-lockfile
+
+      - name: Build macOS .dmg
+        run: bash scripts/desktop-package-macos.sh
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deltalytix-desktop-macos-dmg
+          path: desktop/zig-out/package/*.dmg
+          if-no-files-found: error

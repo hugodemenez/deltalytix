@@ -8,7 +8,8 @@
     "dev": "zig build dev",
     "build": "zig build",
     "run": "zig build run",
-    "test": "zig build test"
+    "test": "zig build test",
+    "package:macos-dmg": "bash ../scripts/desktop-package-macos.sh"
   },
   "devDependencies": {
     "@native-sdk/cli": "^0.4.1"

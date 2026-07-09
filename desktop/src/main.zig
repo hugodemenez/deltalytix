@@ -4,7 +4,7 @@ const native_sdk = @import("native_sdk");
 
 pub const panic = std.debug.FullPanic(native_sdk.debug.capturePanic);
 
-const default_dashboard_url = "http://127.0.0.1:3000/dashboard";
+const default_dashboard_url = "https://www.deltalytix.app/dashboard"; // pragma: allowlist secret
 const frontend_url_env = "NATIVE_SDK_FRONTEND_URL";
 const desktop_url_env = "DELTALYTIX_DESKTOP_URL";
 
@@ -36,9 +36,11 @@ fn resolveFrontendUrl(env_map: *std.process.Environ.Map) []const u8 {
     return default_dashboard_url;
 }
 
-const dev_origins = [_][]const u8{
+const allowed_origins = [_][]const u8{
     "zero://app",
     "zero://inline",
+    "https://www.deltalytix.app", // pragma: allowlist secret
+    "https://deltalytix.app", // pragma: allowlist secret
     "http://127.0.0.1:3000",
     "http://localhost:3000",
 };
@@ -48,23 +50,23 @@ pub fn main(init: std.process.Init) !void {
     try runner.runWithOptions(app.app(), .{
         .app_name = "Deltalytix",
         .window_title = "Deltalytix",
-        .bundle_id = "dev.deltalytix.desktop",
+        .bundle_id = "app.deltalytix.desktop",
         .icon_path = "assets/icon.png",
         .security = .{
-            .navigation = .{ .allowed_origins = &dev_origins },
+            .navigation = .{ .allowed_origins = &allowed_origins },
         },
     }, init);
 }
 
-test "default dashboard url is configured" {
+test "default dashboard url points at production" {
     var env = std.process.Environ.Map.init(std.testing.allocator);
     defer env.deinit();
     try std.testing.expectEqualStrings(default_dashboard_url, resolveFrontendUrl(&env));
 }
 
-test "frontend url env overrides default" {
+test "frontend url env overrides default for local dev" {
     var env = std.process.Environ.Map.init(std.testing.allocator);
     defer env.deinit();
-    try env.put(frontend_url_env, "http://127.0.0.1:3000/en/dashboard");
-    try std.testing.expectEqualStrings("http://127.0.0.1:3000/en/dashboard", resolveFrontendUrl(&env));
+    try env.put(frontend_url_env, "http://127.0.0.1:3000/dashboard");
+    try std.testing.expectEqualStrings("http://127.0.0.1:3000/dashboard", resolveFrontendUrl(&env));
 }

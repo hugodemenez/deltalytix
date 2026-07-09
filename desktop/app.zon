@@ -1,5 +1,5 @@
 .{
-    .id = "dev.deltalytix.desktop",
+    .id = "app.deltalytix.desktop",
     .name = "deltalytix-desktop",
     .display_name = "Deltalytix",
     .description = "Deltalytix trading journal in a native desktop shell.",
@@ -21,6 +21,8 @@
             .allowed_origins = .{
                 "zero://app",
                 "zero://inline",
+                "https://www.deltalytix.app", // pragma: allowlist secret
+                "https://deltalytix.app", // pragma: allowlist secret
                 "http://127.0.0.1:3000",
                 "http://localhost:3000",
             },
