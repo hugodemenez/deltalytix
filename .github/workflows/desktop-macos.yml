@@ -32,7 +32,13 @@ jobs:
 
       - name: Install Zig 0.16
         run: |
-          curl -fsSL "https://ziglang.org/download/0.16.0/zig-macos-$(uname -m)-0.16.0.tar.xz" -o /tmp/zig.tar.xz
+          arch="$(uname -m)"
+          case "$arch" in
+            arm64) zig_arch="aarch64" ;;
+            x86_64) zig_arch="x86_64" ;;
+            *) echo "Unsupported macOS arch: $arch" >&2; exit 1 ;;
+          esac
+          curl -fsSL "https://ziglang.org/download/0.16.0/zig-${zig_arch}-macos-0.16.0.tar.xz" -o /tmp/zig.tar.xz
           sudo tar -xJf /tmp/zig.tar.xz -C /usr/local --strip-components=1
           zig version
 
