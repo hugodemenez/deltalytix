@@ -1,0 +1,24 @@
+{
+  "name": "deltalytix-ios",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Capacitor WebView shell for Deltalytix iOS",
+  "scripts": {
+    "sync": "cap sync ios",
+    "open": "cap open ios",
+    "run:sim": "cap run ios",
+    "doctor": "cap doctor"
+  },
+  "dependencies": {
+    "@capacitor/app": "^7.0.1",
+    "@capacitor/browser": "^7.0.1",
+    "@capacitor/core": "^7.2.0",
+    "@capacitor/ios": "^7.2.0",
+    "@capacitor/splash-screen": "^7.0.1",
+    "@capacitor/status-bar": "^7.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.2.0",
+    "typescript": "^5.8.3"
+  }
+}

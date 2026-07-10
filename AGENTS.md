@@ -105,3 +105,15 @@ Open PRs against **`beta`** (not `main`). `main` is production; feature work lan
 4. `bun run seed:self-host`
 5. `OPENAI_API_KEY=dummy bun run build`
 6. Run dashboard health checks above
+
+## iOS WebView shell (spike)
+
+Capacitor shell under `ios/capacitor/` loads the hosted dashboard (same model as desktop PR #292).
+
+```bash
+bash scripts/ios-bootstrap.sh   # Mac: install pods + sync Xcode project
+cd ios/capacitor && bun run open
+```
+
+Details: [`ios/README.md`](./ios/README.md) · Auth/deep links: [`ios/docs/auth-deep-links.md`](./ios/docs/auth-deep-links.md)
+

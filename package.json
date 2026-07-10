@@ -15,7 +15,9 @@
     "capture:changelog-media": "node scripts/capture-changelog-media.mjs",
     "capture:calendar-responsive": "node scripts/capture-calendar-responsive.mjs",
     "capture:changelog-pr-249": "node scripts/capture-changelog-pr-249.mjs",
-    "seed:self-host": "bun scripts/seed-self-host.ts"
+    "seed:self-host": "bun scripts/seed-self-host.ts",
+    "ios:bootstrap": "bash scripts/ios-bootstrap.sh",
+    "ios:open": "cd ios/capacitor && bun run open"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.10",
