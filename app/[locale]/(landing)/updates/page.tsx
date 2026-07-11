@@ -112,15 +112,10 @@ export default async function UpdatesPage(props: PageProps) {
 
       <section>
         <div className="mx-auto w-full max-w-[1440px] px-5 py-12 sm:px-8 md:py-16 lg:px-12">
-          <div className="grid gap-6 border-b border-black/10 pb-8 dark:border-white/10 md:grid-cols-[minmax(180px,0.35fr)_minmax(0,1fr)]">
+          <div className="border-b border-black/10 pb-8 dark:border-white/10">
             <h2 className="text-sm font-medium text-black/55 dark:text-white/55">
               {t("updates.completed")}
             </h2>
-            <p className="text-2xl font-normal tracking-[-0.03em] sm:text-3xl">
-              {t("updates.shipped", {
-                count: completedPosts.length.toLocaleString(locale),
-              })}
-            </p>
           </div>
           <CompletedTimeline
             milestones={milestones}

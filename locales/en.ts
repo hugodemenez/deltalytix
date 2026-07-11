@@ -62,7 +62,6 @@ export default {
   "updates.inProgress": "In Progress",
   "updates.upcoming": "Upcoming Features",
   "updates.completed": "Latest updates",
-  "updates.shipped": "{count} improvements shipped",
   "updates.weeklyVideo": "📺 Latest Weekly Video",
   "notification.title": "Rithmic Sync Progress",
   "notification.noAccount": "No account being processed",

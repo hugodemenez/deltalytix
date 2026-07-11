@@ -109,8 +109,8 @@ export default function CompletedTimeline({
               aria-hidden
             >
               <div />
-              <div className="relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-sm bg-black/[0.04] p-2 transition-opacity hover:opacity-90 dark:bg-white/[0.06] sm:p-4">
-                {milestone.isMobileScreenshot ? (
+              {milestone.isMobileScreenshot ? (
+                <div className="relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-sm bg-black/[0.04] transition-opacity hover:opacity-90 dark:bg-white/[0.06]">
                   <div className="relative h-[90%] aspect-[402/874] rounded-[11%/5.1%] bg-gradient-to-br from-[#a6a6a2] via-[#383836] to-[#8f8f8a] p-[2px] shadow-[0_18px_36px_-18px_rgba(0,0,0,0.45)]">
                     <div className="relative h-full w-full overflow-hidden rounded-[10.5%/4.9%] bg-[#090909] p-[2px]">
                       <div className="relative h-full w-full overflow-hidden rounded-[10%/4.7%] bg-white">
@@ -146,18 +146,18 @@ export default function CompletedTimeline({
                       aria-hidden
                     />
                   </div>
-                ) : (
-                  <div className="relative h-full w-full overflow-hidden rounded-sm border border-black/10 dark:border-white/10">
-                    <Image
-                      src={milestone.image}
-                      alt=""
-                      fill
-                      sizes="(min-width: 1440px) 900px, (min-width: 768px) 65vw, 100vw"
-                      className="object-contain"
-                    />
-                  </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="relative aspect-[16/10] overflow-hidden rounded-sm border border-black/10 transition-opacity hover:opacity-90 dark:border-white/10">
+                  <Image
+                    src={milestone.image}
+                    alt=""
+                    fill
+                    sizes="(min-width: 1440px) 900px, (min-width: 768px) 65vw, 100vw"
+                    className="object-cover"
+                  />
+                </div>
+              )}
             </Link>
           )}
         </article>
