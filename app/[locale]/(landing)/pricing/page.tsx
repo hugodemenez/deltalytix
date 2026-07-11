@@ -13,18 +13,16 @@ export default function PricingPage() {
   }, []);
 
   return (
-    <div>
-      <main className="container mx-auto px-4 py-16">
-        <h1 className="text-4xl font-bold text-center mb-4">
+    <main className="mx-auto w-full max-w-[1440px] px-5 py-20 sm:px-8 md:py-28 lg:px-12">
+      <div className="mb-12 text-center md:mb-16">
+        <h1 className="text-5xl font-normal tracking-[-0.045em] md:text-7xl">
           {t("pricing.heading")}
         </h1>
-        <p className="text-xl text-center text-gray-600 mb-12">
+        <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-black/55 dark:text-white/55 md:text-lg">
           {t("pricing.subheading")}
         </p>
-
-        <PricingPlans />
-      </main>
-
-    </div>
+      </div>
+      <PricingPlans />
+    </main>
   );
 }

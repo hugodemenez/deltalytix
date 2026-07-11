@@ -2,6 +2,7 @@ export default {
     pricing: {
         heading: 'Pricing',
         subheading: 'Store, explore and improve your trading data with the right plan for your needs.',
+        includes: 'Includes',
         loading: 'Loading...',
         yearly: 'Yearly',
         monthly: 'Monthly',
@@ -26,8 +27,8 @@ export default {
         afterFirstMonth: 'then €{price}/month',
         equivalentTo: 'Equivalent to €{price}/month',
         yearlySavingsAmount: 'Save €{amount} per year',
-        billedYearly: '€{total} billed yearly',
-        billedQuarterly: '€{total} billed quarterly',
+        billedYearly: 'Billed {total} yearly',
+        billedQuarterly: 'Billed {total} quarterly',
         getStarted: 'Try Premium (3 days free)',
         tryBasic: 'Try Basic (7 days free)',
         basic: {

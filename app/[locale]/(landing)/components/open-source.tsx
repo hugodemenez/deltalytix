@@ -7,11 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  GitBranchIcon,
-  UsersIcon,
-  BookOpenIcon,
-} from "lucide-react";
+import { GitBranchIcon, UsersIcon, BookOpenIcon } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getI18n } from "@/locales/server";
@@ -66,7 +62,7 @@ export default async function OpenSource() {
                 </React.Fragment>
               ) : (
                 part
-              )
+              ),
             )}
         </p>
       </div>
@@ -151,7 +147,7 @@ export default async function OpenSource() {
           </div>
           <div className="lg:basis-1/2">
             <Suspense fallback={<CardSkeleton />}>
-              <CachedGithubData />
+              <CachedGithubData starLabel={t("landing.openSource.starItToo")} />
             </Suspense>
           </div>
         </div>

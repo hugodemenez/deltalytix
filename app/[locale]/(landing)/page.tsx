@@ -41,38 +41,35 @@ export default async function LandingPage({
   setStaticParamsLocale(locale);
 
   return (
-    <main className="flex flex-col sm:gap-28">
-      <section id="" className="w-full py-14 md:py-12 lg:py-16 xl:py-24">
+    <main className="flex flex-col">
+      <section className="w-full border-b border-black/10 dark:border-white/10">
         <Hero />
       </section>
       <section
         id="partners"
-        className="w-full"
+        className="w-full border-b border-black/10 py-10 dark:border-white/10 md:py-12"
       >
         <Partners />
       </section>
       <section
         id="features"
-        className="w-full"
+        className="w-full border-b border-black/10 dark:border-white/10"
       >
         <Features />
       </section>
       <section
         id="pricing"
-        className="w-full"
+        className="w-full border-b border-black/10 dark:border-white/10"
       >
         <PricingPage />
       </section>
       <section
         id="faq"
-        className="w-full"
+        className="w-full border-b border-black/10 py-16 dark:border-white/10 md:py-24"
       >
         <FAQ />
       </section>
-      <section
-        id="open-source"
-        className="w-full"
-      >
+      <section id="open-source" className="w-full py-16 md:py-24">
         <OpenSource />
       </section>
     </main>
