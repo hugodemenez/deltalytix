@@ -17,7 +17,6 @@ export default {
   },
   performanceCharts: {
     eyebrow: "Dashboard chart gallery",
-    mockData: "Mock data",
     carouselLabel: "Performance dashboard charts",
     previous: "Previous chart",
     next: "Next chart",

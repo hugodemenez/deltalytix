@@ -74,24 +74,30 @@ const hourlyPnlData = [
 ];
 
 const positionTimeData = [
-  { label: "6", value: 8 },
-  { label: "7", value: 13 },
-  { label: "8", value: 21 },
-  { label: "9", value: 34 },
-  { label: "10", value: 18 },
-  { label: "11", value: 27 },
-  { label: "12", value: 42 },
-  { label: "13", value: 31 },
-  { label: "14", value: 16 },
-  { label: "15", value: 24 },
-];
-
-const weekdayData = [
-  { label: "Mon", value: 380 },
-  { label: "Tue", value: -120 },
-  { label: "Wed", value: 540 },
-  { label: "Thu", value: 260 },
-  { label: "Fri", value: 680 },
+  { label: "00", value: 12 },
+  { label: "01", value: 8 },
+  { label: "02", value: 15 },
+  { label: "03", value: 9 },
+  { label: "04", value: 18 },
+  { label: "05", value: 26 },
+  { label: "06", value: 34 },
+  { label: "07", value: 47 },
+  { label: "08", value: 62 },
+  { label: "09", value: 76 },
+  { label: "10", value: 54 },
+  { label: "11", value: 43 },
+  { label: "12", value: 68 },
+  { label: "13", value: 58 },
+  { label: "14", value: 39 },
+  { label: "15", value: 31 },
+  { label: "16", value: 24 },
+  { label: "17", value: 36 },
+  { label: "18", value: 29 },
+  { label: "19", value: 21 },
+  { label: "20", value: 17 },
+  { label: "21", value: 14 },
+  { label: "22", value: 11 },
+  { label: "23", value: 16 },
 ];
 
 const sideData = [
@@ -156,15 +162,10 @@ const distributionData = [
 type Point = { label: string; value: number };
 
 function ChartFrame({ title, children }: { title: string; children: ReactNode }) {
-  const t = useI18n();
-
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md border bg-card">
-      <div className="flex h-12 shrink-0 items-center justify-between border-b px-3 sm:h-14 sm:px-4">
+      <div className="flex h-12 shrink-0 items-center border-b px-3 sm:h-14 sm:px-4">
         <h3 className="truncate text-sm font-medium sm:text-base">{title}</h3>
-        <span className="rounded-full bg-muted px-2 py-1 text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground sm:text-[10px]">
-          {t("performanceCharts.mockData")}
-        </span>
       </div>
       <div className="min-h-0 flex-1 p-2 sm:p-4">{children}</div>
     </div>
@@ -175,13 +176,19 @@ function AxisBarChart({
   data,
   currency = true,
   positiveNegative = true,
+  valueFormatter,
 }: {
   data: Point[];
   currency?: boolean;
   positiveNegative?: boolean;
+  valueFormatter?: (value: number) => string;
 }) {
-  const formatValue = (value: number) =>
-    currency ? `$${Math.abs(value) >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}` : `${value}`;
+  const formatValue = (value: number) => {
+    if (valueFormatter) return valueFormatter(value);
+    return currency
+      ? `$${Math.abs(value) >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}`
+      : `${value}`;
+  };
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -361,10 +368,26 @@ function DailyTargetPreview() {
   );
 }
 
+function formatDuration(minutes: number) {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+}
+
 export function PerformanceVisualizationChart() {
   const t = useI18n();
   const [api, setApi] = useState<CarouselApi>();
   const [selected, setSelected] = useState(0);
+  const weekdayData = [
+    { label: t("calendar.weekdays.sun"), value: 42 },
+    { label: t("calendar.weekdays.mon"), value: 380 },
+    { label: t("calendar.weekdays.tue"), value: -120 },
+    { label: t("calendar.weekdays.wed"), value: 540 },
+    { label: t("calendar.weekdays.thu"), value: 260 },
+    { label: t("calendar.weekdays.fri"), value: 680 },
+    { label: t("calendar.weekdays.sat"), value: -36 },
+  ];
 
   const charts = [
     { title: t("performanceCharts.equity"), content: <EquityPreview /> },
@@ -372,7 +395,14 @@ export function PerformanceVisualizationChart() {
     { title: t("performanceCharts.pnlByHour"), content: <AxisBarChart data={hourlyPnlData} /> },
     {
       title: t("performanceCharts.timeInPosition"),
-      content: <AxisBarChart data={positionTimeData} currency={false} positiveNegative={false} />,
+      content: (
+        <AxisBarChart
+          data={positionTimeData}
+          currency={false}
+          positiveNegative={false}
+          valueFormatter={formatDuration}
+        />
+      ),
     },
     { title: t("performanceCharts.weekdayPnl"), content: <AxisBarChart data={weekdayData} /> },
     { title: t("performanceCharts.pnlBySide"), content: <AxisBarChart data={sideData} /> },

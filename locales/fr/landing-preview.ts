@@ -17,7 +17,6 @@ export default {
   },
   performanceCharts: {
     eyebrow: "Galerie des graphiques",
-    mockData: "Données fictives",
     carouselLabel: "Graphiques du tableau de bord",
     previous: "Graphique précédent",
     next: "Graphique suivant",
