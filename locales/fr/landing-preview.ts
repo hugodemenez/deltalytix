@@ -20,7 +20,7 @@ export default {
     carouselLabel: "Graphiques du tableau de bord",
     previous: "Graphique précédent",
     next: "Graphique suivant",
-    equity: "Courbe d'équité",
+    equity: "Evolution des profits",
     dailyPnl: "Graphique P/L",
     pnlByHour: "P/L par heure",
     timeInPosition: "Temps en position par heure",
