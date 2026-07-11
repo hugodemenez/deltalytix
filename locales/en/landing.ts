@@ -43,6 +43,9 @@ export default {
         description:
           "Get personalized trading insights and analysis from our AI coach. Understand your trading patterns, identify strengths and weaknesses, and receive actionable recommendations.",
         stat: "Real-time Analysis",
+        inputPlaceholder: "Ask your AI coach anything…",
+        copyLabel: "Copy response",
+        copiedLabel: "Copied",
         conversation: {
           analyze:
             "Analyze my trading performance from last month and identify the key factors affecting my P&L",

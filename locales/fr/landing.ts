@@ -44,6 +44,9 @@ export default {
         description:
           "Obtenez des insights et analyses personnalisés de notre coach IA. Comprenez vos patterns de trading, identifiez vos forces et faiblesses, et recevez des recommandations actionnables.",
         stat: "Analyse en Temps Réel",
+        inputPlaceholder: "Posez une question à votre coach IA…",
+        copyLabel: "Copier la réponse",
+        copiedLabel: "Copié",
         conversation: {
           analyze:
             "Analysez ma performance de trading du mois dernier et identifiez les facteurs clés affectant mon P&L",
