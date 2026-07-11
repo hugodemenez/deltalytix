@@ -89,7 +89,7 @@ function LandingPnlBarChart({ chartData }: { chartData: ChartEntry[] }) {
   }, [absMax]);
 
   return (
-    <Card className="h-[500px] flex flex-col border-0 bg-transparent shadow-none">
+    <Card className="flex h-full flex-col border-0 bg-white shadow-none dark:bg-[#26251e]">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <CardTitle className="line-clamp-1 text-base">
           {t("embed.pnlPerContract.title")}
@@ -179,7 +179,7 @@ export function PnlPerContractPreview() {
   const chartData = useMemo(() => aggregateTrades(trades), [trades]);
 
   return (
-    <div className="h-full w-full rounded-xl border border-black/10 bg-transparent pointer-events-none dark:border-white/10">
+    <div className="pointer-events-none h-full w-full overflow-hidden">
       <LandingPnlBarChart chartData={chartData} />
     </div>
   );
