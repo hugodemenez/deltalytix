@@ -265,7 +265,7 @@ export function CalendarFeaturePreview() {
   const calendarData = useMemo(() => buildDemoCalendarData(), []);
 
   return (
-    <div className="h-full min-h-[380px] w-full overflow-hidden rounded-xl border border-black/10 bg-transparent pointer-events-none dark:border-white/10 lg:min-h-[440px]">
+    <div className="h-full w-full overflow-hidden pointer-events-none">
       <LandingCalendarPreview calendarData={calendarData} />
     </div>
   );

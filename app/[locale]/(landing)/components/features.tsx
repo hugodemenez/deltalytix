@@ -60,7 +60,7 @@ export default function Features() {
       description: t("landing.features.daily-performance.description"),
       stat: t("landing.features.daily-performance.stat"),
       image: <CalendarFeaturePreview />,
-      wrapperClass: "min-h-[420px] lg:min-h-[480px]",
+      wrapperClass: "h-[420px] lg:h-[480px]",
     },
     {
       id: "data-import",
