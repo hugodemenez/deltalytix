@@ -110,52 +110,54 @@ export default function CompletedTimeline({
             >
               <div />
               {milestone.isMobileScreenshot ? (
-                <div className="relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-sm bg-black/[0.04] transition-opacity hover:opacity-90 dark:bg-white/[0.06]">
-                  <div className="relative h-[90%] aspect-[402/874] rounded-[11%/5.1%] bg-gradient-to-br from-[#a6a6a2] via-[#383836] to-[#8f8f8a] p-[2px] shadow-[0_18px_36px_-18px_rgba(0,0,0,0.45)]">
-                    <div className="relative h-full w-full overflow-hidden rounded-[10.5%/4.9%] bg-[#090909] p-[2px]">
-                      <div className="relative h-full w-full overflow-hidden rounded-[10%/4.7%] bg-white">
-                        <div className="absolute inset-x-0 bottom-0 top-[5.4%]">
-                          <Image
-                            src={milestone.image}
-                            alt=""
-                            fill
-                            sizes="(min-width: 1440px) 240px, (min-width: 768px) 18vw, 22vw"
-                            className="object-fill"
-                          />
+                <div className="relative overflow-hidden rounded-[16px] bg-black/[0.04] p-3 transition-opacity hover:opacity-90 dark:bg-white/[0.06] sm:rounded-[20px] sm:p-4">
+                  <div className="relative flex aspect-[16/10] w-full items-center justify-center overflow-hidden rounded-[4px]">
+                    <div className="relative h-[90%] aspect-[402/874] rounded-[11%/5.1%] bg-gradient-to-br from-[#a6a6a2] via-[#383836] to-[#8f8f8a] p-[2px] shadow-[0_18px_36px_-18px_rgba(0,0,0,0.45)]">
+                      <div className="relative h-full w-full overflow-hidden rounded-[10.5%/4.9%] bg-[#090909] p-[2px]">
+                        <div className="relative h-full w-full overflow-hidden rounded-[10%/4.7%] bg-white">
+                          <div className="absolute inset-x-0 bottom-0 top-[5.4%]">
+                            <Image
+                              src={milestone.image}
+                              alt=""
+                              fill
+                              sizes="(min-width: 1440px) 240px, (min-width: 768px) 18vw, 22vw"
+                              className="object-fill"
+                            />
+                          </div>
                         </div>
+                        <span
+                          className="absolute left-1/2 top-[1.5%] z-10 h-[2.7%] w-[22%] -translate-x-1/2 rounded-full bg-black shadow-sm"
+                          aria-hidden
+                        />
+                        <span
+                          className="absolute left-[57%] top-[2.15%] z-20 size-[1.2%] rounded-full bg-[#16202c]"
+                          aria-hidden
+                        />
                       </div>
                       <span
-                        className="absolute left-1/2 top-[1.5%] z-10 h-[2.7%] w-[22%] -translate-x-1/2 rounded-full bg-black shadow-sm"
+                        className="absolute -left-[2px] top-[18%] h-[6%] w-[2px] rounded-l-sm bg-[#5c5c59]"
                         aria-hidden
                       />
                       <span
-                        className="absolute left-[57%] top-[2.15%] z-20 size-[1.2%] rounded-full bg-[#16202c]"
+                        className="absolute -left-[2px] top-[28%] h-[10%] w-[2px] rounded-l-sm bg-[#5c5c59]"
+                        aria-hidden
+                      />
+                      <span
+                        className="absolute -right-[2px] top-[25%] h-[14%] w-[2px] rounded-r-sm bg-[#5c5c59]"
                         aria-hidden
                       />
                     </div>
-                    <span
-                      className="absolute -left-[2px] top-[18%] h-[6%] w-[2px] rounded-l-sm bg-[#5c5c59]"
-                      aria-hidden
-                    />
-                    <span
-                      className="absolute -left-[2px] top-[28%] h-[10%] w-[2px] rounded-l-sm bg-[#5c5c59]"
-                      aria-hidden
-                    />
-                    <span
-                      className="absolute -right-[2px] top-[25%] h-[14%] w-[2px] rounded-r-sm bg-[#5c5c59]"
-                      aria-hidden
-                    />
                   </div>
                 </div>
               ) : (
-                <div className="relative aspect-[16/10] overflow-hidden rounded-[16px] bg-black/[0.04] p-3 transition-opacity hover:opacity-90 dark:bg-white/[0.06] sm:rounded-[20px] sm:p-4">
-                  <div className="relative h-full w-full overflow-hidden rounded-[4px] shadow-sm">
+                <div className="relative overflow-hidden rounded-[16px] bg-black/[0.04] p-3 transition-opacity hover:opacity-90 dark:bg-white/[0.06] sm:rounded-[20px] sm:p-4">
+                  <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[4px] shadow-sm">
                     <Image
                       src={milestone.image}
                       alt=""
                       fill
                       sizes="(min-width: 1440px) 870px, (min-width: 768px) 62vw, 96vw"
-                      className="scale-[1.003] object-cover"
+                      className="object-contain"
                     />
                   </div>
                 </div>
