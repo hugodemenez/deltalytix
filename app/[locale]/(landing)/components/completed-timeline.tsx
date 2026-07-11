@@ -148,8 +148,8 @@ export default function CompletedTimeline({
                   </div>
                 </div>
               ) : (
-                <div className="relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-sm bg-black/[0.04] transition-opacity hover:opacity-90 dark:bg-white/[0.06]">
-                  <div className="relative aspect-[16/10] w-[96%] overflow-hidden rounded-sm shadow-sm">
+                <div className="relative aspect-[16/10] overflow-hidden rounded-[16px] bg-black/[0.04] p-3 transition-opacity hover:opacity-90 dark:bg-white/[0.06] sm:rounded-[20px] sm:p-4">
+                  <div className="relative h-full w-full overflow-hidden rounded-[4px] shadow-sm">
                     <Image
                       src={milestone.image}
                       alt=""
