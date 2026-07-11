@@ -413,7 +413,7 @@ export default function PricingPlans({
   };
 
   const freePlan = (
-    <article className="flex min-h-[500px] flex-col rounded-sm bg-[#f2f1ed] p-5 dark:bg-[#1b1913] sm:p-6">
+    <article className="flex min-h-[500px] flex-col rounded-sm bg-white p-5 dark:bg-black sm:p-6">
       <div>
         <div className="flex items-baseline justify-between gap-4">
           <h3 className="text-2xl font-normal tracking-tight">
@@ -489,7 +489,7 @@ export default function PricingPlans({
           className={cn(
             "min-w-0 rounded-sm px-3 py-2 text-xs capitalize transition-colors duration-150 ease-out sm:min-w-24 sm:px-4",
             billingPeriod === period
-              ? "bg-[#26251e] text-white dark:bg-[#edecec] dark:text-[#14120b]"
+              ? "bg-black text-white dark:bg-white dark:text-black"
               : "text-black/55 hover:text-black dark:text-white/55 dark:hover:text-white",
           )}
         >
@@ -500,7 +500,7 @@ export default function PricingPlans({
   );
 
   const plusPlan = (
-    <article className="flex min-h-[500px] flex-col rounded-sm bg-[#f2f1ed] p-5 dark:bg-[#1b1913] sm:p-6">
+    <article className="flex min-h-[500px] flex-col rounded-sm bg-white p-5 dark:bg-black sm:p-6">
       <div className="mb-6 md:hidden">
         <p className="mb-2 text-xs font-medium text-black/55 dark:text-white/55">
           {t("pricing.billingPeriod")}
