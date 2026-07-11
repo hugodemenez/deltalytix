@@ -111,30 +111,38 @@ export default function CompletedTimeline({
               <div />
               <div className="relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-sm bg-black/[0.04] p-2 transition-opacity hover:opacity-90 dark:bg-white/[0.06] sm:p-4">
                 {milestone.isMobileScreenshot ? (
-                  <div className="relative h-[90%] aspect-[390/844] rounded-[12%/5.5%] border-[3px] border-[#1b1b1b] bg-[#1b1b1b] p-[1.5%] shadow-2xl shadow-black/30 sm:border-[5px]">
-                    <div className="relative h-full w-full overflow-hidden rounded-[10%/4.8%] bg-black">
-                      <Image
-                        src={milestone.image}
-                        alt=""
-                        fill
-                        sizes="(min-width: 1440px) 250px, (min-width: 768px) 18vw, 22vw"
-                        className="object-cover"
+                  <div className="relative h-[90%] aspect-[402/874] rounded-[11%/5.1%] bg-gradient-to-br from-[#a6a6a2] via-[#383836] to-[#8f8f8a] p-[2px] shadow-[0_18px_36px_-18px_rgba(0,0,0,0.45)]">
+                    <div className="relative h-full w-full overflow-hidden rounded-[10.5%/4.9%] bg-[#090909] p-[2px]">
+                      <div className="relative h-full w-full overflow-hidden rounded-[10%/4.7%] bg-white">
+                        <div className="absolute inset-x-0 bottom-0 top-[5.4%]">
+                          <Image
+                            src={milestone.image}
+                            alt=""
+                            fill
+                            sizes="(min-width: 1440px) 240px, (min-width: 768px) 18vw, 22vw"
+                            className="object-fill"
+                          />
+                        </div>
+                      </div>
+                      <span
+                        className="absolute left-1/2 top-[1.5%] z-10 h-[2.7%] w-[22%] -translate-x-1/2 rounded-full bg-black shadow-sm"
+                        aria-hidden
                       />
                       <span
-                        className="absolute left-1/2 top-[1.6%] z-10 h-[3.2%] w-[28%] -translate-x-1/2 rounded-full bg-black"
+                        className="absolute left-[57%] top-[2.15%] z-20 size-[1.2%] rounded-full bg-[#16202c]"
                         aria-hidden
                       />
                     </div>
                     <span
-                      className="absolute -left-[5px] top-[18%] h-[7%] w-[3px] rounded-l-sm bg-[#2a2a2a] sm:-left-[8px] sm:w-[4px]"
+                      className="absolute -left-[2px] top-[18%] h-[6%] w-[2px] rounded-l-sm bg-[#5c5c59]"
                       aria-hidden
                     />
                     <span
-                      className="absolute -left-[5px] top-[28%] h-[11%] w-[3px] rounded-l-sm bg-[#2a2a2a] sm:-left-[8px] sm:w-[4px]"
+                      className="absolute -left-[2px] top-[28%] h-[10%] w-[2px] rounded-l-sm bg-[#5c5c59]"
                       aria-hidden
                     />
                     <span
-                      className="absolute -right-[5px] top-[25%] h-[15%] w-[3px] rounded-r-sm bg-[#2a2a2a] sm:-right-[8px] sm:w-[4px]"
+                      className="absolute -right-[2px] top-[25%] h-[14%] w-[2px] rounded-r-sm bg-[#5c5c59]"
                       aria-hidden
                     />
                   </div>
