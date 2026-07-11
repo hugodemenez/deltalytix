@@ -50,7 +50,7 @@ export default async function RootLayout(
     <ThemeProvider>
       <I18nProviderClient locale={locale}>
         <ConsentBanner />
-        <div className="min-h-screen bg-[#f7f7f4] text-[#26251e] [--background:60_16%_96.3%] [--card:48_16%_93.9%] [--foreground:53_12%_13.3%] dark:bg-[#14120b] dark:text-[#edecec] dark:[--background:47_29%_6.1%] dark:[--card:45_17%_9%] dark:[--foreground:0_3%_92.7%]">
+        <div className="min-h-screen bg-[#f5f5f5] text-[#171717] [--background:0_0%_96.1%] [--card:0_0%_100%] [--foreground:0_0%_9%] dark:bg-[#111111] dark:text-[#ededed] dark:[--background:0_0%_6.7%] dark:[--card:0_0%_0%] dark:[--foreground:0_0%_93%]">
           <Toaster />
           <Navbar />
           <div className="pt-14">{children}</div>
