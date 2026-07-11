@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Area,
   AreaChart,
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 import { useI18n } from "@/locales/landing-client";
 import { Pause, Play } from "lucide-react";
 
@@ -335,12 +336,159 @@ function formatDuration(minutes: number) {
   return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 }
 
-export function PerformanceVisualizationChart() {
-  const t = useI18n();
+type ChartPreview = {
+  title: string;
+  content: ReactNode;
+};
+
+function ChartCarouselSection({
+  title,
+  charts,
+  carouselLabel,
+  playLabel,
+  pauseLabel,
+}: {
+  title: string;
+  charts: ChartPreview[];
+  carouselLabel: string;
+  playLabel: string;
+  pauseLabel: string;
+}) {
+  const carouselRef = useRef<HTMLDivElement>(null);
   const [api, setApi] = useState<CarouselApi>();
   const [selected, setSelected] = useState(0);
-  const [activeGroup, setActiveGroup] = useState(0);
-  const [isAutoPlayPaused, setIsAutoPlayPaused] = useState(false);
+  const [isUserPaused, setIsUserPaused] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+  const isAutoPlayPaused = isUserPaused || !isInView;
+
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel || typeof IntersectionObserver === "undefined") {
+      setIsInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsInView(entry.isIntersecting),
+      { threshold: 0.6 },
+    );
+    observer.observe(carousel);
+
+    return () => observer.disconnect();
+  }, []);
+
+  const onSelect = useCallback((carouselApi: NonNullable<CarouselApi>) => {
+    setSelected(carouselApi.selectedScrollSnap());
+  }, []);
+
+  useEffect(() => {
+    if (!api) return;
+    api.on("select", onSelect);
+    api.on("reInit", onSelect);
+    return () => {
+      api.off("select", onSelect);
+      api.off("reInit", onSelect);
+    };
+  }, [api, onSelect]);
+
+  const pauseAutoPlay = useCallback(() => {
+    setIsUserPaused(true);
+  }, []);
+
+  const scrollToChart = useCallback((index: number) => {
+    pauseAutoPlay();
+    api?.scrollTo(index);
+  }, [api, pauseAutoPlay]);
+
+  return (
+    <Carousel
+      ref={carouselRef}
+      setApi={setApi}
+      opts={{ loop: true, align: "start" }}
+      className="performance-carousel flex w-full min-w-0 flex-col px-2 sm:px-4"
+      aria-label={`${carouselLabel}: ${title}`}
+      data-autoplay-paused={isAutoPlayPaused}
+    >
+      <CarouselContent
+        className="-ml-2 h-[270px] sm:-ml-3 sm:h-[310px]"
+        onPointerDown={pauseAutoPlay}
+      >
+        {charts.map((chart, index) => (
+          <CarouselItem
+            key={chart.title}
+            className="h-full basis-full pl-2 sm:pl-3"
+            aria-label={`${index + 1} / ${charts.length}: ${chart.title}`}
+          >
+            <ChartFrame title={chart.title}>{chart.content}</ChartFrame>
+          </CarouselItem>
+        ))}
+      </CarouselContent>
+      <div className="mt-3 flex shrink-0 items-center justify-center gap-2">
+        <div className="flex h-11 items-center rounded-full bg-muted px-1">
+          {charts.map((chart, index) => (
+            <button
+              key={chart.title}
+              type="button"
+              onClick={() => scrollToChart(index)}
+              aria-label={`${index + 1}: ${chart.title}`}
+              aria-current={index === selected ? "true" : undefined}
+              className="group flex size-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  "relative block overflow-hidden rounded-full bg-muted-foreground/35 transition-all duration-300 ease-out",
+                  index === selected
+                    ? cn(
+                        "h-2 w-8 bg-muted-foreground/20",
+                        isUserPaused && "bg-foreground",
+                      )
+                    : "size-2 group-hover:bg-muted-foreground/60"
+                )}
+              >
+                {index === selected && (
+                  <span
+                    key={`${title}-${selected}`}
+                    className="landing-carousel-progress absolute inset-y-0 left-0 w-full origin-left rounded-full bg-foreground"
+                    onAnimationEnd={() => {
+                      if (!isAutoPlayPaused) api?.scrollNext();
+                    }}
+                  />
+                )}
+              </span>
+            </button>
+          ))}
+        </div>
+        <Button
+          type="button"
+          variant={isUserPaused ? "default" : "secondary"}
+          size="icon"
+          className={cn(
+            "size-11 shrink-0 rounded-full transition-colors duration-150 ease-out",
+            isUserPaused &&
+              "bg-foreground text-background hover:bg-foreground/90 hover:text-background"
+          )}
+          onClick={() => setIsUserPaused((paused) => !paused)}
+          aria-label={
+            isUserPaused
+              ? playLabel
+              : pauseLabel
+          }
+          aria-pressed={isUserPaused}
+        >
+          {isUserPaused ? <Play className="size-4" /> : <Pause className="size-4" />}
+        </Button>
+      </div>
+    </Carousel>
+  );
+}
+
+export function PerformanceVisualizationChart({
+  group = "patterns",
+}: {
+  group?: "patterns" | "tracking";
+}) {
+  const t = useI18n();
   const weekdayData = [
     { label: t("calendar.weekdays.sun"), value: 42 },
     { label: t("calendar.weekdays.mon"), value: 380 },
@@ -350,8 +498,7 @@ export function PerformanceVisualizationChart() {
     { label: t("calendar.weekdays.fri"), value: 680 },
     { label: t("calendar.weekdays.sat"), value: -36 },
   ];
-
-  const chartGroups = [
+  const chartGroups: Array<{ title: string; charts: ChartPreview[] }> = [
     {
       title: t("performanceCharts.understandPatterns"),
       charts: [
@@ -384,114 +531,18 @@ export function PerformanceVisualizationChart() {
       ],
     },
   ];
-  const charts = chartGroups[activeGroup].charts;
 
-  const onSelect = useCallback((carouselApi: NonNullable<CarouselApi>) => {
-    setSelected(carouselApi.selectedScrollSnap());
-  }, []);
-
-  useEffect(() => {
-    if (!api) return;
-    api.on("select", onSelect);
-    api.on("reInit", onSelect);
-    return () => {
-      api.off("select", onSelect);
-      api.off("reInit", onSelect);
-    };
-  }, [api, onSelect]);
-
-  const selectGroup = (index: number) => {
-    if (index === activeGroup) return;
-    setApi(undefined);
-    setSelected(0);
-    setActiveGroup(index);
-  };
+  const selectedGroup = chartGroups[group === "patterns" ? 0 : 1];
 
   return (
-    <Carousel
-      key={activeGroup}
-      setApi={setApi}
-      opts={{ loop: true, align: "start" }}
-      className="performance-carousel flex h-full w-full min-w-0 flex-col px-2 py-3 sm:px-4 sm:py-4"
-      aria-label={t("performanceCharts.carouselLabel")}
-      data-autoplay-paused={isAutoPlayPaused}
-    >
-      <div className="mb-3 shrink-0">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:text-xs">
-            {t("performanceCharts.eyebrow")}
-          </p>
-          <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
-            {selected + 1} / {charts.length}
-          </p>
-        </div>
-        <div className="mt-2 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
-          {chartGroups.map((group, index) => (
-            <button
-              key={group.title}
-              type="button"
-              onClick={() => selectGroup(index)}
-              className={
-                index === activeGroup
-                  ? "rounded-md bg-background px-2 py-1.5 text-[10px] font-medium text-foreground shadow-sm sm:text-xs"
-                  : "rounded-md px-2 py-1.5 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground sm:text-xs"
-              }
-            >
-              {group.title}
-            </button>
-          ))}
-        </div>
-      </div>
-      <CarouselContent className="-ml-2 h-[270px] sm:-ml-3 sm:h-[310px]">
-        {charts.map((chart, index) => (
-          <CarouselItem
-            key={chart.title}
-            className="h-full basis-full pl-2 sm:pl-3"
-            aria-label={`${index + 1} / ${charts.length}: ${chart.title}`}
-          >
-            <ChartFrame title={chart.title}>{chart.content}</ChartFrame>
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-      <div className="mt-3 flex shrink-0 items-center justify-center gap-2">
-        <div className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-2">
-          {charts.map((chart, index) => (
-            <button
-              key={chart.title}
-              type="button"
-              onClick={() => api?.scrollTo(index)}
-              aria-label={`${index + 1}: ${chart.title}`}
-              className="relative h-1 w-4 overflow-hidden rounded-full bg-muted-foreground/20"
-            >
-              {index < selected && <span className="absolute inset-0 bg-foreground" />}
-              {index === selected && (
-                <span
-                  key={`${activeGroup}-${selected}`}
-                  className="landing-carousel-progress absolute inset-0 origin-left rounded-full bg-foreground"
-                  onAnimationEnd={() => {
-                    if (!isAutoPlayPaused) api?.scrollNext();
-                  }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
-        <Button
-          type="button"
-          variant="secondary"
-          size="icon"
-          className="size-8 rounded-full"
-          onClick={() => setIsAutoPlayPaused((paused) => !paused)}
-          aria-label={
-            isAutoPlayPaused
-              ? t("performanceCharts.play")
-              : t("performanceCharts.pause")
-          }
-          aria-pressed={isAutoPlayPaused}
-        >
-          {isAutoPlayPaused ? <Play className="size-3" /> : <Pause className="size-3" />}
-        </Button>
-      </div>
-    </Carousel>
+    <div className="w-full min-w-0 py-5 sm:py-6">
+      <ChartCarouselSection
+        title={selectedGroup.title}
+        charts={selectedGroup.charts}
+        carouselLabel={t("performanceCharts.carouselLabel")}
+        playLabel={t("performanceCharts.play")}
+        pauseLabel={t("performanceCharts.pause")}
+      />
+    </div>
   );
 }

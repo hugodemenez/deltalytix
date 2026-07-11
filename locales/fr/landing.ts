@@ -33,6 +33,12 @@ export default {
           "Suivez vos résultats de trading quotidiens avec une vue calendrier intuitive. Identifiez rapidement les tendances et les modèles dans vos performances de trading.",
         stat: "Vue calendrier",
       },
+      "performance-tracking": {
+        title: "Suivez vos performances",
+        description:
+          "Suivez votre capital, vos résultats quotidiens, la répartition de vos trades et votre progression vers vos objectifs grâce à des graphiques dédiés.",
+        stat: "Suivi des performances",
+      },
       "ai-journaling": {
         title: "Journal assisté par IA",
         description:

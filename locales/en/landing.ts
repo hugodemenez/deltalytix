@@ -32,6 +32,12 @@ export default {
           "Track your daily trading results with an intuitive calendar view. Quickly identify trends and patterns in your trading performance.",
         stat: "Calendar View",
       },
+      "performance-tracking": {
+        title: "Track Your Performance",
+        description:
+          "Follow your equity, daily results, trade distribution, and progress toward your targets with focused performance charts.",
+        stat: "Performance Tracking",
+      },
       "ai-journaling": {
         title: "AI-Powered Journaling",
         description:

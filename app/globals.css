@@ -467,7 +467,6 @@
     animation: landing-carousel-progress 6s linear forwards;
   }
 
-  .performance-carousel:hover .landing-carousel-progress,
   .performance-carousel[data-autoplay-paused='true'] .landing-carousel-progress {
     animation-play-state: paused;
   }
