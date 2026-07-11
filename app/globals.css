@@ -467,6 +467,11 @@
     animation: landing-carousel-progress 6s linear forwards;
   }
 
+  .performance-carousel:hover .landing-carousel-progress,
+  .performance-carousel:focus-within .landing-carousel-progress {
+    animation-play-state: paused;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .landing-carousel-progress {
       animation: none;

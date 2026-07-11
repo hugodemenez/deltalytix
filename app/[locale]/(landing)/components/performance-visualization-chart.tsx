@@ -378,8 +378,6 @@ export function PerformanceVisualizationChart() {
   const t = useI18n();
   const [api, setApi] = useState<CarouselApi>();
   const [selected, setSelected] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isFocusWithin, setIsFocusWithin] = useState(false);
   const weekdayData = [
     { label: t("calendar.weekdays.sun"), value: 42 },
     { label: t("calendar.weekdays.mon"), value: 380 },
@@ -421,7 +419,6 @@ export function PerformanceVisualizationChart() {
     { title: t("performanceCharts.timeRange"), content: <AxisBarChart data={rangeData} /> },
     { title: t("performanceCharts.dailyTickTarget"), content: <DailyTargetPreview /> },
   ];
-  const isAutoPlayPaused = isHovered || isFocusWithin;
 
   const onSelect = useCallback((carouselApi: NonNullable<CarouselApi>) => {
     setSelected(carouselApi.selectedScrollSnap());
@@ -441,16 +438,8 @@ export function PerformanceVisualizationChart() {
     <Carousel
       setApi={setApi}
       opts={{ loop: true, align: "start" }}
-      className="flex h-full w-full min-w-0 flex-col px-2 py-3 sm:px-4 sm:py-4"
+      className="performance-carousel flex h-full w-full min-w-0 flex-col px-2 py-3 sm:px-4 sm:py-4"
       aria-label={t("performanceCharts.carouselLabel")}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onFocusCapture={() => setIsFocusWithin(true)}
-      onBlurCapture={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setIsFocusWithin(false);
-        }
-      }}
     >
       <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
         <div>
@@ -492,7 +481,6 @@ export function PerformanceVisualizationChart() {
           <span
             key={selected}
             className="landing-carousel-progress block h-full w-full origin-left rounded-full bg-foreground"
-            style={{ animationPlayState: isAutoPlayPaused ? "paused" : "running" }}
             onAnimationEnd={() => api?.scrollNext()}
           />
         </span>
