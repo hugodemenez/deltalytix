@@ -424,7 +424,7 @@ export default function TradingChatAssistant({
   return (
     <div
       className={cn(
-        "grid h-full min-h-0 w-full min-w-0 max-w-full grid-rows-[48px_minmax(0,1fr)_60px] overflow-hidden rounded-lg bg-white text-[#26251e] dark:bg-[#26251e] dark:text-[#edecec]",
+        "grid h-full min-h-0 w-full min-w-0 max-w-full grid-rows-[48px_minmax(0,1fr)_60px] overflow-hidden rounded-lg bg-transparent text-[#26251e] dark:text-[#edecec]",
         className,
       )}
     >

@@ -128,7 +128,7 @@ function LandingCalendarPreview({
   };
 
   return (
-    <Card className="flex h-full flex-col border-0 bg-white shadow-none dark:bg-[#26251e]">
+    <Card className="flex h-full flex-col border-0 bg-transparent shadow-none">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center gap-3">
           <CardTitle className="text-base sm:text-lg font-semibold truncate capitalize">
@@ -176,7 +176,7 @@ function LandingCalendarPreview({
                       ? "bg-green-50 dark:bg-green-900/20"
                       : dayData && dayData.pnl < 0
                         ? "bg-red-50 dark:bg-red-900/20"
-                        : "bg-white dark:bg-[#26251e]",
+                        : "bg-transparent",
                     isToday(date) && "ring-blue-500 bg-blue-500/5 z-10",
                     index === 0 && "rounded-tl-lg",
                     index === 35 && "rounded-bl-lg",
@@ -234,7 +234,7 @@ function LandingCalendarPreview({
                     return (
                       <div
                         className={cn(
-                          "flex h-full items-center justify-center rounded-none bg-white ring-1 ring-border dark:bg-[#26251e]",
+                          "flex h-full items-center justify-center rounded-none bg-transparent ring-1 ring-border",
                           index === 6 && "rounded-tr-lg",
                           index === 41 && "rounded-br-lg",
                         )}

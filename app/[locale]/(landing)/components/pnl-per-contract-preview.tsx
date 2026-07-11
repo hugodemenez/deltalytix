@@ -89,7 +89,7 @@ function LandingPnlBarChart({ chartData }: { chartData: ChartEntry[] }) {
   }, [absMax]);
 
   return (
-    <Card className="flex h-full flex-col border-0 bg-white shadow-none dark:bg-[#26251e]">
+    <Card className="flex h-full flex-col border-0 bg-transparent shadow-none">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <CardTitle className="line-clamp-1 text-base">
           {t("embed.pnlPerContract.title")}

@@ -107,32 +107,30 @@ export default function Features() {
             <CardContent className="min-w-0 p-0">
               <div
                 className={cn(
-                  "relative flex w-full min-w-0 max-w-full overflow-hidden rounded-sm bg-[#e8e7e3] p-3 dark:bg-[#1b1913] sm:p-4",
+                  "relative flex w-full min-w-0 max-w-full items-center justify-center overflow-hidden rounded-sm bg-white dark:bg-black",
                   feature.wrapperClass ?? "h-[300px]",
                 )}
               >
-                <div className="flex h-full w-full min-h-0 overflow-hidden rounded-md bg-white dark:bg-[#26251e]">
-                  {isImagePair(feature.image) ? (
-                    <>
-                      <Image
-                        src={feature.image.light}
-                        alt={`${feature.title} visualization`}
-                        className="h-full w-full rounded-md object-contain dark:hidden"
-                        width={800}
-                        height={400}
-                      />
-                      <Image
-                        src={feature.image.dark}
-                        alt={`${feature.title} visualization`}
-                        className="hidden h-full w-full rounded-md object-contain dark:block"
-                        width={800}
-                        height={400}
-                      />
-                    </>
-                  ) : (
-                    feature.image
-                  )}
-                </div>
+                {isImagePair(feature.image) ? (
+                  <>
+                    <Image
+                      src={feature.image.light}
+                      alt={`${feature.title} visualization`}
+                      className="h-full w-full rounded-md object-contain dark:hidden"
+                      width={800}
+                      height={400}
+                    />
+                    <Image
+                      src={feature.image.dark}
+                      alt={`${feature.title} visualization`}
+                      className="hidden h-full w-full rounded-md object-contain dark:block"
+                      width={800}
+                      height={400}
+                    />
+                  </>
+                ) : (
+                  feature.image
+                )}
               </div>
             </CardContent>
           </Card>
