@@ -1,6 +1,7 @@
 "use client"
 
-import { signInWithDiscord, signInWithEmail, verifyOtp, signInWithGoogle, signInWithPasswordAction } from "@/server/auth"
+import { signInWithEmail, verifyOtp, signInWithPasswordAction } from "@/server/auth"
+import { startOAuth } from "@/lib/auth/start-oauth"
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
@@ -296,7 +297,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
             const next = isSubscription 
                 ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}${promoParam}` 
                 : nextUrl;
-            await signInWithDiscord(next, locale)
+            startOAuth('discord', { next, locale })
         } catch (error) {
             console.error(error)
             setAuthMethod(null)
@@ -315,7 +316,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
             const next = isSubscription 
                 ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}${promoParam}` 
                 : nextUrl;
-            await signInWithGoogle(next, locale)
+            startOAuth('google', { next, locale })
         } catch (error) {
             console.error(error)
             setAuthMethod(null)

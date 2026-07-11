@@ -41,6 +41,12 @@ const allowed_origins = [_][]const u8{
     "zero://inline",
     "https://www.deltalytix.app", // pragma: allowlist secret
     "https://deltalytix.app", // pragma: allowlist secret
+    "https://discord.com",
+    "https://discord.com/*",
+    "https://fhvmtnvjiotzztimdxbi.supabase.co", // pragma: allowlist secret
+    "https://fhvmtnvjiotzztimdxbi.supabase.co/*", // pragma: allowlist secret
+    "https://accounts.google.com",
+    "https://accounts.google.com/*",
     "http://127.0.0.1:3000",
     "http://localhost:3000",
 };

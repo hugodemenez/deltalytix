@@ -102,9 +102,13 @@ zig build package -Doptimize=ReleaseFast -Dpackage-target=macos -Dpackage-archiv
 
 ## Auth notes
 
-Production loads the real sign-in flow from deltalytix.app. For local dev, use `LOCAL_DASHBOARD_AUTH_BYPASS=true` in `.env.local` (see `AGENTS.md`).
+Production loads the real sign-in flow from deltalytix.app. OAuth (Discord/Google) stays inside the desktop WebView — the app allows navigation to Discord, Supabase Auth, and Google during login.
 
-External links (Stripe, OAuth) open in the system browser.
+If Discord login does nothing, update to the latest desktop build (0.1.1+) and ensure production has the `/api/auth/oauth/*` routes deployed.
+
+For local dev, use `LOCAL_DASHBOARD_AUTH_BYPASS=true` in `.env.local` (see `AGENTS.md`).
+
+External links (Stripe billing, etc.) open in the system browser.
 
 ## Native SDK path
 

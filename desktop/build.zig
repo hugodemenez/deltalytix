@@ -117,7 +117,7 @@ pub fn build(b: *std.Build) void {
         "--optimize",
         optimize_name,
         "--output",
-        b.fmt("zig-out/package/{s}-0.1.0-{s}-{s}{s}", .{ app_exe_name, @tagName(package_target), optimize_name, packageSuffix(package_target) }),
+        b.fmt("zig-out/package/{s}-0.1.1-{s}-{s}{s}", .{ app_exe_name, @tagName(package_target), optimize_name, packageSuffix(package_target) }),
         "--binary",
     });
     package.addFileArg(exe.getEmittedBin());

@@ -3,7 +3,7 @@
     .name = "deltalytix-desktop",
     .display_name = "Deltalytix",
     .description = "Deltalytix trading journal in a native desktop shell.",
-    .version = "0.1.0",
+    .version = "0.1.1",
     .icons = .{ "assets/icon.png" },
     .platforms = .{ "macos", "linux", "windows" },
     .permissions = .{},
@@ -23,6 +23,12 @@
                 "zero://inline",
                 "https://www.deltalytix.app", // pragma: allowlist secret
                 "https://deltalytix.app", // pragma: allowlist secret
+                "https://discord.com",
+                "https://discord.com/*",
+                "https://fhvmtnvjiotzztimdxbi.supabase.co", // pragma: allowlist secret
+                "https://fhvmtnvjiotzztimdxbi.supabase.co/*", // pragma: allowlist secret
+                "https://accounts.google.com",
+                "https://accounts.google.com/*",
                 "http://127.0.0.1:3000",
                 "http://localhost:3000",
             },

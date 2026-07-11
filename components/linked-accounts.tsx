@@ -15,11 +15,10 @@ import {
   AlertCircle
 } from "lucide-react"
 import { 
-  linkDiscordAccount, 
-  linkGoogleAccount, 
   unlinkIdentity, 
   getUserIdentities 
 } from "@/server/auth"
+import { startOAuth } from "@/lib/auth/start-oauth"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -80,28 +79,14 @@ export function LinkedAccounts() {
     }
   }
 
-  const handleLinkDiscord = async () => {
-    try {
-      setLinking(true)
-      await linkDiscordAccount()
-      // Note: The redirect will happen automatically, so we don't need to handle success here
-    } catch (error) {
-      console.error('Failed to link Discord:', error)
-      toast.error(t('auth.linkingFailed'))
-      setLinking(false)
-    }
+  const handleLinkDiscord = () => {
+    setLinking(true)
+    startOAuth('discord', { mode: 'link' })
   }
 
-  const handleLinkGoogle = async () => {
-    try {
-      setLinking(true)
-      await linkGoogleAccount()
-      // Note: The redirect will happen automatically, so we don't need to handle success here
-    } catch (error) {
-      console.error('Failed to link Google:', error)
-      toast.error(t('auth.linkingFailed'))
-      setLinking(false)
-    }
+  const handleLinkGoogle = () => {
+    setLinking(true)
+    startOAuth('google', { mode: 'link' })
   }
 
   const handleUnlink = async (identity: UserIdentity) => {
