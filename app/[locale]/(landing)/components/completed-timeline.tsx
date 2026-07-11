@@ -11,6 +11,7 @@ interface TimelineItem {
   status: "completed" | "in-progress" | "upcoming";
   image?: string;
   youtubeVideoId?: string;
+  isMobileScreenshot?: boolean;
 }
 
 export default function CompletedTimeline({
@@ -108,15 +109,46 @@ export default function CompletedTimeline({
               aria-hidden
             >
               <div />
-              <div className="overflow-hidden rounded-sm bg-black/[0.04] p-2 dark:bg-white/[0.06] sm:p-4">
-                <Image
-                  src={milestone.image}
-                  alt=""
-                  width={800}
-                  height={400}
-                  sizes="(min-width: 1440px) 900px, (min-width: 768px) 65vw, 100vw"
-                  className="h-auto w-full rounded-sm border border-black/10 transition-opacity hover:opacity-90 dark:border-white/10"
-                />
+              <div className="relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-sm bg-black/[0.04] p-2 transition-opacity hover:opacity-90 dark:bg-white/[0.06] sm:p-4">
+                {milestone.isMobileScreenshot ? (
+                  <div className="relative h-[90%] aspect-[390/844] rounded-[12%/5.5%] border-[3px] border-[#1b1b1b] bg-[#1b1b1b] p-[1.5%] shadow-2xl shadow-black/30 sm:border-[5px]">
+                    <div className="relative h-full w-full overflow-hidden rounded-[10%/4.8%] bg-black">
+                      <Image
+                        src={milestone.image}
+                        alt=""
+                        fill
+                        sizes="(min-width: 1440px) 250px, (min-width: 768px) 18vw, 22vw"
+                        className="object-cover"
+                      />
+                      <span
+                        className="absolute left-1/2 top-[1.6%] z-10 h-[3.2%] w-[28%] -translate-x-1/2 rounded-full bg-black"
+                        aria-hidden
+                      />
+                    </div>
+                    <span
+                      className="absolute -left-[5px] top-[18%] h-[7%] w-[3px] rounded-l-sm bg-[#2a2a2a] sm:-left-[8px] sm:w-[4px]"
+                      aria-hidden
+                    />
+                    <span
+                      className="absolute -left-[5px] top-[28%] h-[11%] w-[3px] rounded-l-sm bg-[#2a2a2a] sm:-left-[8px] sm:w-[4px]"
+                      aria-hidden
+                    />
+                    <span
+                      className="absolute -right-[5px] top-[25%] h-[15%] w-[3px] rounded-r-sm bg-[#2a2a2a] sm:-right-[8px] sm:w-[4px]"
+                      aria-hidden
+                    />
+                  </div>
+                ) : (
+                  <div className="relative h-full w-full overflow-hidden rounded-sm border border-black/10 dark:border-white/10">
+                    <Image
+                      src={milestone.image}
+                      alt=""
+                      fill
+                      sizes="(min-width: 1440px) 900px, (min-width: 768px) 65vw, 100vw"
+                      className="object-contain"
+                    />
+                  </div>
+                )}
               </div>
             </Link>
           )}

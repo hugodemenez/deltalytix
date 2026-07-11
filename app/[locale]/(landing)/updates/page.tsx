@@ -5,6 +5,8 @@ import { getStaticParams as getLocaleStaticParams } from "@/locales/server";
 import CompletedTimeline from "../components/completed-timeline";
 import { getAllPosts } from "@/lib/posts";
 import { getLatestVideoFromPlaylist } from "@/app/[locale]/admin/actions/youtube";
+import path from "node:path";
+import sharp from "sharp";
 
 interface PageProps {
   params: Promise<{
@@ -16,6 +18,27 @@ export const revalidate = 3600;
 
 export function generateStaticParams() {
   return getLocaleStaticParams();
+}
+
+async function isMobileScreenshot(image?: string) {
+  if (!image) return false;
+
+  const publicDirectory = path.join(process.cwd(), "public");
+  const imagePath = path.resolve(
+    publicDirectory,
+    image.replace(/^\/+/, ""),
+  );
+
+  if (!imagePath.startsWith(`${publicDirectory}${path.sep}`)) {
+    return false;
+  }
+
+  try {
+    const { width, height } = await sharp(imagePath).metadata();
+    return Boolean(width && height && height > width);
+  } catch {
+    return false;
+  }
 }
 
 export default async function UpdatesPage(props: PageProps) {
@@ -36,6 +59,19 @@ export default async function UpdatesPage(props: PageProps) {
   if (locale === "fr") {
     latestVideoId = await getLatestVideoFromPlaylist();
   }
+
+  const milestones = await Promise.all(
+    completedPosts.map(async (post) => ({
+      id: post.meta.slug,
+      title: post.meta.title,
+      description: post.meta.description,
+      status: "completed" as const,
+      completedDate: post.meta.completedDate || post.meta.date,
+      image: post.meta.image,
+      youtubeVideoId: post.meta.youtubeVideoId,
+      isMobileScreenshot: await isMobileScreenshot(post.meta.image),
+    })),
+  );
 
   return (
     <main className="min-h-screen">
@@ -87,15 +123,7 @@ export default async function UpdatesPage(props: PageProps) {
             </p>
           </div>
           <CompletedTimeline
-            milestones={completedPosts.map((post) => ({
-              id: post.meta.slug,
-              title: post.meta.title,
-              description: post.meta.description,
-              status: "completed",
-              completedDate: post.meta.completedDate || post.meta.date,
-              image: post.meta.image,
-              youtubeVideoId: post.meta.youtubeVideoId,
-            }))}
+            milestones={milestones}
             locale={locale}
           />
         </div>
