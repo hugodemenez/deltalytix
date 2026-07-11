@@ -148,13 +148,13 @@ export default function CompletedTimeline({
                   </div>
                 </div>
               ) : (
-                <div className="relative aspect-[16/10] overflow-hidden rounded-sm border border-black/10 transition-opacity hover:opacity-90 dark:border-white/10">
+                <div className="relative aspect-[16/10] overflow-hidden rounded-sm transition-opacity hover:opacity-90">
                   <Image
                     src={milestone.image}
                     alt=""
                     fill
                     sizes="(min-width: 1440px) 900px, (min-width: 768px) 65vw, 100vw"
-                    className="object-cover"
+                    className="scale-[1.003] object-cover"
                   />
                 </div>
               )}
