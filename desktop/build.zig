@@ -124,6 +124,9 @@ pub fn build(b: *std.Build) void {
     package.addArgs(&.{ "--web-engine", @tagName(web_engine), "--cef-dir", cef_dir });
     if (cef_auto_install) package.addArg("--cef-auto-install");
     if (package_archive) package.addArg("--archive");
+    if (package_target == .macos) {
+        package.addArgs(&.{ "--signing", "adhoc" });
+    }
     package.step.dependOn(&exe.step);
     const package_step = b.step("package", "Create a local package artifact");
     package_step.dependOn(&package.step);

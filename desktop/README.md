@@ -57,6 +57,26 @@ Outputs land in `desktop/zig-out/package/`:
 - `deltalytix-desktop-0.1.0-macos-ReleaseFast.app`
 - `deltalytix-desktop-0.1.0-macos-ReleaseFast.dmg`
 
+CI builds are **ad-hoc signed** (`codesign --sign -`), not notarized. That is fine for internal testing but macOS Gatekeeper may still block a freshly downloaded copy.
+
+### “App is damaged and can’t be opened”
+
+This usually means **Gatekeeper + download quarantine**, not a corrupt file.
+
+After downloading the artifact from GitHub Actions:
+
+```bash
+bash scripts/desktop-unquarantine-macos.sh ~/Downloads/deltalytix-desktop-0.1.0-macos-ReleaseFast.app
+```
+
+Or manually:
+
+```bash
+xattr -cr /path/to/deltalytix-desktop-0.1.0-macos-ReleaseFast.app
+```
+
+Then **right-click → Open** the first time (do not double-click). Public distribution would need Apple Developer signing + notarization (follow-up).
+
 ### CI artifact
 
 The [`desktop-macos`](../.github/workflows/desktop-macos.yml) workflow builds the `.dmg` on `macos-latest`. On PRs that touch `desktop/`, download the artifact from the GitHub Actions run.
