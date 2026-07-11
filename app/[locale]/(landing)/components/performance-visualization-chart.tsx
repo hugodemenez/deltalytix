@@ -26,7 +26,6 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
 import { useI18n } from "@/locales/landing-client";
 
 const WIN = "hsl(var(--chart-win))";
@@ -379,6 +378,8 @@ export function PerformanceVisualizationChart() {
   const t = useI18n();
   const [api, setApi] = useState<CarouselApi>();
   const [selected, setSelected] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocusWithin, setIsFocusWithin] = useState(false);
   const weekdayData = [
     { label: t("calendar.weekdays.sun"), value: 42 },
     { label: t("calendar.weekdays.mon"), value: 380 },
@@ -420,6 +421,7 @@ export function PerformanceVisualizationChart() {
     { title: t("performanceCharts.timeRange"), content: <AxisBarChart data={rangeData} /> },
     { title: t("performanceCharts.dailyTickTarget"), content: <DailyTargetPreview /> },
   ];
+  const isAutoPlayPaused = isHovered || isFocusWithin;
 
   const onSelect = useCallback((carouselApi: NonNullable<CarouselApi>) => {
     setSelected(carouselApi.selectedScrollSnap());
@@ -441,6 +443,14 @@ export function PerformanceVisualizationChart() {
       opts={{ loop: true, align: "start" }}
       className="flex h-full w-full min-w-0 flex-col px-2 py-3 sm:px-4 sm:py-4"
       aria-label={t("performanceCharts.carouselLabel")}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onFocusCapture={() => setIsFocusWithin(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsFocusWithin(false);
+        }
+      }}
     >
       <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
         <div>
@@ -473,19 +483,20 @@ export function PerformanceVisualizationChart() {
           </CarouselItem>
         ))}
       </CarouselContent>
-      <div className="mt-3 flex shrink-0 justify-center gap-1.5" aria-hidden="true">
-        {charts.map((chart, index) => (
-          <button
-            key={chart.title}
-            type="button"
-            tabIndex={-1}
-            onClick={() => api?.scrollTo(index)}
-            className={cn(
-              "h-1.5 rounded-full transition-all",
-              selected === index ? "w-5 bg-foreground" : "w-1.5 bg-muted-foreground/30",
-            )}
+      <div
+        className="mt-3 flex h-1.5 shrink-0 items-center justify-center gap-1.5"
+        aria-hidden="true"
+      >
+        <span className="size-1.5 rounded-full bg-muted-foreground/30" />
+        <span className="h-1.5 w-8 overflow-hidden rounded-full bg-muted-foreground/20">
+          <span
+            key={selected}
+            className="landing-carousel-progress block h-full w-full origin-left rounded-full bg-foreground"
+            style={{ animationPlayState: isAutoPlayPaused ? "paused" : "running" }}
+            onAnimationEnd={() => api?.scrollNext()}
           />
-        ))}
+        </span>
+        <span className="size-1.5 rounded-full bg-muted-foreground/30" />
       </div>
     </Carousel>
   );

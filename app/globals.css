@@ -453,6 +453,26 @@
   .animate-shimmer {
     animation: shimmer 2s ease-in-out infinite;
   }
+
+  @keyframes landing-carousel-progress {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  .landing-carousel-progress {
+    animation: landing-carousel-progress 6s linear forwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .landing-carousel-progress {
+      animation: none;
+      transform: scaleX(1);
+    }
+  }
 }
 
 @utility touch-hitbox {
