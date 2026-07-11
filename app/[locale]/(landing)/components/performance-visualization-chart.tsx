@@ -212,7 +212,12 @@ function AxisBarChart({
             fontSize: "12px",
           }}
         />
-        <Bar dataKey="value" radius={[3, 3, 0, 0]} maxBarSize={34}>
+        <Bar
+          dataKey="value"
+          radius={[3, 3, 0, 0]}
+          maxBarSize={34}
+          isAnimationActive={false}
+        >
           {data.map((entry) => (
             <Cell
               key={entry.label}
@@ -271,8 +276,15 @@ function EquityPreview() {
           stroke={WIN}
           strokeWidth={2.5}
           fill="url(#landing-equity-fill)"
+          isAnimationActive={false}
         />
-        <Line type="monotone" dataKey="value" stroke={WIN} dot={false} />
+        <Line
+          type="monotone"
+          dataKey="value"
+          stroke={WIN}
+          dot={false}
+          isAnimationActive={false}
+        />
       </AreaChart>
     </ResponsiveContainer>
   );
@@ -294,6 +306,7 @@ function DonutPreview({ data }: { data: typeof commissionsData }) {
             paddingAngle={3}
             startAngle={90}
             endAngle={-270}
+            isAnimationActive={false}
           >
             {data.map((entry) => (
               <Cell key={entry.label} fill={entry.color} />
@@ -419,11 +432,11 @@ export function PerformanceVisualizationChart() {
           />
         </div>
       </div>
-      <CarouselContent className="-ml-2 min-h-0 flex-1 sm:-ml-3">
+      <CarouselContent className="-ml-2 h-[300px] sm:-ml-3 sm:h-[340px]">
         {charts.map((chart, index) => (
           <CarouselItem
             key={chart.title}
-            className="h-full basis-[94%] pl-2 sm:basis-[92%] sm:pl-3 lg:basis-full"
+            className="h-full basis-full pl-2 sm:pl-3"
             aria-label={`${index + 1} / ${charts.length}: ${chart.title}`}
           >
             <ChartFrame title={chart.title}>{chart.content}</ChartFrame>
