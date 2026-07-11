@@ -13,6 +13,7 @@ import referral from "./fr/referral";
 import admin from "./fr/admin";
 import faq from "./fr/faq";
 import support from "./fr/support";
+import landingPreview from "./fr/landing-preview";
 
 export default {
   ...shared,
@@ -24,6 +25,7 @@ export default {
   ...propfirm,
   ...chat,
   ...terms,
+  ...landingPreview,
   ...embed,
   ...teams,
   ...referral,

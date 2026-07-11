@@ -9,7 +9,7 @@ import { useI18n } from "@/locales/landing-client";
 import TradingChatAssistant from "./chat-feature";
 import { CalendarFeaturePreview } from "./calendar-preview";
 import { cn } from "@/lib/utils";
-import { PnlPerContractPreview } from "./pnl-per-contract-preview";
+import { PerformanceVisualizationChart } from "./performance-visualization-chart";
 
 type FeatureCard = {
   id: string;
@@ -50,8 +50,8 @@ export default function Features() {
       icon: <BarChart3 className="h-5 w-5 text-muted-foreground" />,
       description: t("landing.features.performance-visualization.description"),
       stat: t("landing.features.performance-visualization.stat"),
-      image: <PnlPerContractPreview />,
-      wrapperClass: "min-h-[420px]",
+      image: <PerformanceVisualizationChart group="patterns" />,
+      wrapperClass: "h-[420px] sm:h-[460px]",
     },
     {
       id: "daily-performance",
@@ -61,6 +61,15 @@ export default function Features() {
       stat: t("landing.features.daily-performance.stat"),
       image: <CalendarFeaturePreview />,
       wrapperClass: "h-[420px] lg:h-[480px]",
+    },
+    {
+      id: "performance-tracking",
+      title: t("landing.features.performance-tracking.title"),
+      icon: <BarChart3 className="h-5 w-5 text-muted-foreground" />,
+      description: t("landing.features.performance-tracking.description"),
+      stat: t("landing.features.performance-tracking.stat"),
+      image: <PerformanceVisualizationChart group="tracking" />,
+      wrapperClass: "h-[420px] sm:h-[460px]",
     },
     {
       id: "data-import",

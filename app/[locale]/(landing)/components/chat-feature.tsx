@@ -446,7 +446,7 @@ export default function TradingChatAssistant({
       <div
         ref={scrollRef}
         aria-live="polite"
-        className="min-h-0 overflow-x-hidden overflow-y-hidden overscroll-contain"
+        className="min-h-0 overflow-hidden"
       >
         <div className="flex min-h-full flex-col justify-end gap-3 p-3 sm:gap-4 sm:p-5">
           {archivedTurns.map((turn) => (
