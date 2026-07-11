@@ -486,7 +486,7 @@ export default function PricingPlans({
           ? plans.plus.price.lifetime
           : plans.plus.price.monthly;
 
-  const billedTotal =
+  const billingDetail =
     billingPeriod === "yearly"
       ? t("pricing.billedYearly", {
           total: formatCurrencyTotal(
@@ -503,7 +503,9 @@ export default function PricingPlans({
               locale,
             ),
           })
-        : null;
+        : billingPeriod === "lifetime"
+          ? t("pricing.oneTimePayment")
+          : "\u00A0";
 
   const billingPeriodSelector = (
     <div className="grid w-full grid-cols-2 gap-1 rounded-sm bg-black/5 p-1 dark:bg-white/5 sm:grid-cols-4">
@@ -561,19 +563,18 @@ export default function PricingPlans({
             )}
           </div>
         </div>
-        {billedTotal && (
-          <p className="mt-2 text-right text-xs text-black/55 dark:text-white/55">
-            {billedTotal}
-          </p>
-        )}
+        <p
+          aria-hidden={billingPeriod === "monthly"}
+          className={cn(
+            "mt-2 h-4 whitespace-nowrap text-right text-xs text-black/55 dark:text-white/55",
+            billingPeriod === "monthly" && "invisible",
+          )}
+        >
+          {billingDetail}
+        </p>
         <p className="mt-4 max-w-md text-sm leading-relaxed text-black/55 dark:text-white/55">
           {plans.plus.description}
         </p>
-        {billingPeriod === "lifetime" && (
-          <p className="mt-2 text-xs text-black/45 dark:text-white/45">
-            {t("pricing.oneTimePayment")}
-          </p>
-        )}
       </div>
 
       <div className="mt-10">
