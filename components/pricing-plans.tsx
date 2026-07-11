@@ -157,6 +157,19 @@ type Plans = {
   [key: string]: Plan;
 };
 
+function formatCurrencyTotal(
+  value: number,
+  currency: "USD" | "EUR",
+  locale: string,
+) {
+  return new Intl.NumberFormat(locale === "fr" ? "fr-FR" : "en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 interface PricingPlansProps {
   isModal?: boolean;
   onClose?: () => void;
@@ -184,6 +197,7 @@ export default function PricingPlans({
   const [pendingLookupKey, setPendingLookupKey] = useState<string>("");
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const t = useI18n();
+  const locale = useCurrentLocale();
   const { currency, symbol } = useCurrency();
 
   // Read referral code from URL params or localStorage on mount
@@ -472,6 +486,25 @@ export default function PricingPlans({
           ? plans.plus.price.lifetime
           : plans.plus.price.monthly;
 
+  const billedTotal =
+    billingPeriod === "yearly"
+      ? t("pricing.billedYearly", {
+          total: formatCurrencyTotal(
+            plans.plus.price.yearly,
+            currency,
+            locale,
+          ),
+        })
+      : billingPeriod === "quarterly"
+        ? t("pricing.billedQuarterly", {
+            total: formatCurrencyTotal(
+              plans.plus.price.quarterly,
+              currency,
+              locale,
+            ),
+          })
+        : null;
+
   const billingPeriodSelector = (
     <div className="grid w-full grid-cols-2 gap-1 rounded-sm bg-black/5 p-1 dark:bg-white/5 sm:grid-cols-4">
       {(
@@ -528,6 +561,11 @@ export default function PricingPlans({
             )}
           </div>
         </div>
+        {billedTotal && (
+          <p className="mt-2 text-right text-xs text-black/55 dark:text-white/55">
+            {billedTotal}
+          </p>
+        )}
         <p className="mt-4 max-w-md text-sm leading-relaxed text-black/55 dark:text-white/55">
           {plans.plus.description}
         </p>
