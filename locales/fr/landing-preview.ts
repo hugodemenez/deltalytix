@@ -18,6 +18,10 @@ export default {
   performanceCharts: {
     eyebrow: "Galerie des graphiques",
     carouselLabel: "Graphiques du tableau de bord",
+    understandPatterns: "Comprendre vos habitudes",
+    trackPerformance: "Suivre vos performances",
+    play: "Lire le carrousel",
+    pause: "Mettre le carrousel en pause",
     previous: "Graphique précédent",
     next: "Graphique suivant",
     equity: "Evolution des profits",

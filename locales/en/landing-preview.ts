@@ -18,6 +18,10 @@ export default {
   performanceCharts: {
     eyebrow: "Dashboard chart gallery",
     carouselLabel: "Performance dashboard charts",
+    understandPatterns: "Understand your patterns",
+    trackPerformance: "Track your performance",
+    play: "Play carousel",
+    pause: "Pause carousel",
     previous: "Previous chart",
     next: "Next chart",
     equity: "Equity Chart",

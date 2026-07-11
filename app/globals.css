@@ -468,7 +468,7 @@
   }
 
   .performance-carousel:hover .landing-carousel-progress,
-  .performance-carousel:focus-within .landing-carousel-progress {
+  .performance-carousel[data-autoplay-paused='true'] .landing-carousel-progress {
     animation-play-state: paused;
   }
 

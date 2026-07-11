@@ -21,12 +21,12 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/locales/landing-client";
+import { Pause, Play } from "lucide-react";
 
 const WIN = "hsl(var(--chart-win))";
 const LOSS = "hsl(var(--chart-loss))";
@@ -99,44 +99,6 @@ const positionTimeData = [
   { label: "23", value: 0 },
 ];
 
-const sideData = [
-  { label: "Long", value: 486 },
-  { label: "Short", value: 238 },
-];
-
-const contractData = [
-  { label: "NQ", value: 184 },
-  { label: "ES", value: 136 },
-  { label: "GC", value: 92 },
-  { label: "CL", value: 48 },
-  { label: "YM", value: -31 },
-  { label: "RTY", value: -76 },
-];
-
-const contractDailyData = [
-  { label: "02", value: 120 },
-  { label: "05", value: 185 },
-  { label: "08", value: -54 },
-  { label: "11", value: 212 },
-  { label: "14", value: 98 },
-  { label: "17", value: -82 },
-  { label: "20", value: 164 },
-  { label: "23", value: 246 },
-  { label: "26", value: 132 },
-];
-
-const tickData = [
-  { label: "-12", value: 2 },
-  { label: "-8", value: 5 },
-  { label: "-4", value: 8 },
-  { label: "0", value: 4 },
-  { label: "+4", value: 12 },
-  { label: "+8", value: 16 },
-  { label: "+12", value: 9 },
-  { label: "+16", value: 6 },
-  { label: "+20", value: 3 },
-];
-
 const rangeData = [
   { label: "<1m", value: -24 },
   { label: "1–5m", value: 82 },
@@ -145,11 +107,6 @@ const rangeData = [
   { label: "30–60m", value: 106 },
   { label: "1–2h", value: -48 },
   { label: "2h+", value: 72 },
-];
-
-const commissionsData = [
-  { label: "Net P/L", value: 88, color: WIN },
-  { label: "Fees", value: 12, color: LOSS },
 ];
 
 const distributionData = [
@@ -296,7 +253,11 @@ function EquityPreview() {
   );
 }
 
-function DonutPreview({ data }: { data: typeof commissionsData }) {
+function DonutPreview({
+  data,
+}: {
+  data: Array<{ label: string; value: number; color: string }>;
+}) {
   return (
     <div className="grid h-full grid-rows-[minmax(0,1fr)_auto]">
       <ResponsiveContainer width="100%" height="100%">
@@ -378,6 +339,8 @@ export function PerformanceVisualizationChart() {
   const t = useI18n();
   const [api, setApi] = useState<CarouselApi>();
   const [selected, setSelected] = useState(0);
+  const [activeGroup, setActiveGroup] = useState(0);
+  const [isAutoPlayPaused, setIsAutoPlayPaused] = useState(false);
   const weekdayData = [
     { label: t("calendar.weekdays.sun"), value: 42 },
     { label: t("calendar.weekdays.mon"), value: 380 },
@@ -388,37 +351,40 @@ export function PerformanceVisualizationChart() {
     { label: t("calendar.weekdays.sat"), value: -36 },
   ];
 
-  const charts = [
-    { title: t("performanceCharts.equity"), content: <EquityPreview /> },
-    { title: t("performanceCharts.dailyPnl"), content: <AxisBarChart data={dailyPnlData} /> },
-    { title: t("performanceCharts.pnlByHour"), content: <AxisBarChart data={hourlyPnlData} /> },
+  const chartGroups = [
     {
-      title: t("performanceCharts.timeInPosition"),
-      content: (
-        <AxisBarChart
-          data={positionTimeData}
-          currency={false}
-          positiveNegative={false}
-          valueFormatter={formatDuration}
-        />
-      ),
-    },
-    { title: t("performanceCharts.weekdayPnl"), content: <AxisBarChart data={weekdayData} /> },
-    { title: t("performanceCharts.pnlBySide"), content: <AxisBarChart data={sideData} /> },
-    { title: t("performanceCharts.pnlPerContract"), content: <AxisBarChart data={contractData} /> },
-    {
-      title: t("performanceCharts.dailyPnlPerContract"),
-      content: <AxisBarChart data={contractDailyData} />,
+      title: t("performanceCharts.understandPatterns"),
+      charts: [
+        { title: t("performanceCharts.weekdayPnl"), content: <AxisBarChart data={weekdayData} /> },
+        {
+          title: t("performanceCharts.timeInPosition"),
+          content: (
+            <AxisBarChart
+              data={positionTimeData}
+              currency={false}
+              positiveNegative={false}
+              valueFormatter={formatDuration}
+            />
+          ),
+        },
+        { title: t("performanceCharts.timeRange"), content: <AxisBarChart data={rangeData} /> },
+        { title: t("performanceCharts.pnlByHour"), content: <AxisBarChart data={hourlyPnlData} /> },
+      ],
     },
     {
-      title: t("performanceCharts.tickDistribution"),
-      content: <AxisBarChart data={tickData} currency={false} positiveNegative={false} />,
+      title: t("performanceCharts.trackPerformance"),
+      charts: [
+        { title: t("performanceCharts.equity"), content: <EquityPreview /> },
+        { title: t("performanceCharts.dailyPnl"), content: <AxisBarChart data={dailyPnlData} /> },
+        {
+          title: t("performanceCharts.tradeDistribution"),
+          content: <DonutPreview data={distributionData} />,
+        },
+        { title: t("performanceCharts.dailyTickTarget"), content: <DailyTargetPreview /> },
+      ],
     },
-    { title: t("performanceCharts.commissions"), content: <DonutPreview data={commissionsData} /> },
-    { title: t("performanceCharts.tradeDistribution"), content: <DonutPreview data={distributionData} /> },
-    { title: t("performanceCharts.timeRange"), content: <AxisBarChart data={rangeData} /> },
-    { title: t("performanceCharts.dailyTickTarget"), content: <DailyTargetPreview /> },
   ];
+  const charts = chartGroups[activeGroup].charts;
 
   const onSelect = useCallback((carouselApi: NonNullable<CarouselApi>) => {
     setSelected(carouselApi.selectedScrollSnap());
@@ -434,15 +400,24 @@ export function PerformanceVisualizationChart() {
     };
   }, [api, onSelect]);
 
+  const selectGroup = (index: number) => {
+    if (index === activeGroup) return;
+    setApi(undefined);
+    setSelected(0);
+    setActiveGroup(index);
+  };
+
   return (
     <Carousel
+      key={activeGroup}
       setApi={setApi}
       opts={{ loop: true, align: "start" }}
       className="performance-carousel flex h-full w-full min-w-0 flex-col px-2 py-3 sm:px-4 sm:py-4"
       aria-label={t("performanceCharts.carouselLabel")}
+      data-autoplay-paused={isAutoPlayPaused}
     >
-      <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
-        <div>
+      <div className="mb-3 shrink-0">
+        <div className="flex items-center justify-between">
           <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:text-xs">
             {t("performanceCharts.eyebrow")}
           </p>
@@ -450,18 +425,24 @@ export function PerformanceVisualizationChart() {
             {selected + 1} / {charts.length}
           </p>
         </div>
-        <div className="flex gap-2">
-          <CarouselPrevious
-            className="!static size-8 translate-y-0 sm:size-9"
-            aria-label={t("performanceCharts.previous")}
-          />
-          <CarouselNext
-            className="!static size-8 translate-y-0 sm:size-9"
-            aria-label={t("performanceCharts.next")}
-          />
+        <div className="mt-2 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+          {chartGroups.map((group, index) => (
+            <button
+              key={group.title}
+              type="button"
+              onClick={() => selectGroup(index)}
+              className={
+                index === activeGroup
+                  ? "rounded-md bg-background px-2 py-1.5 text-[10px] font-medium text-foreground shadow-sm sm:text-xs"
+                  : "rounded-md px-2 py-1.5 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground sm:text-xs"
+              }
+            >
+              {group.title}
+            </button>
+          ))}
         </div>
       </div>
-      <CarouselContent className="-ml-2 h-[300px] sm:-ml-3 sm:h-[340px]">
+      <CarouselContent className="-ml-2 h-[270px] sm:-ml-3 sm:h-[310px]">
         {charts.map((chart, index) => (
           <CarouselItem
             key={chart.title}
@@ -472,19 +453,44 @@ export function PerformanceVisualizationChart() {
           </CarouselItem>
         ))}
       </CarouselContent>
-      <div
-        className="mt-3 flex h-1.5 shrink-0 items-center justify-center gap-1.5"
-        aria-hidden="true"
-      >
-        <span className="size-1.5 rounded-full bg-muted-foreground/30" />
-        <span className="h-1.5 w-8 overflow-hidden rounded-full bg-muted-foreground/20">
-          <span
-            key={selected}
-            className="landing-carousel-progress block h-full w-full origin-left rounded-full bg-foreground"
-            onAnimationEnd={() => api?.scrollNext()}
-          />
-        </span>
-        <span className="size-1.5 rounded-full bg-muted-foreground/30" />
+      <div className="mt-3 flex shrink-0 items-center justify-center gap-2">
+        <div className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-2">
+          {charts.map((chart, index) => (
+            <button
+              key={chart.title}
+              type="button"
+              onClick={() => api?.scrollTo(index)}
+              aria-label={`${index + 1}: ${chart.title}`}
+              className="relative h-1 w-4 overflow-hidden rounded-full bg-muted-foreground/20"
+            >
+              {index < selected && <span className="absolute inset-0 bg-foreground" />}
+              {index === selected && (
+                <span
+                  key={`${activeGroup}-${selected}`}
+                  className="landing-carousel-progress absolute inset-0 origin-left rounded-full bg-foreground"
+                  onAnimationEnd={() => {
+                    if (!isAutoPlayPaused) api?.scrollNext();
+                  }}
+                />
+              )}
+            </button>
+          ))}
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          className="size-8 rounded-full"
+          onClick={() => setIsAutoPlayPaused((paused) => !paused)}
+          aria-label={
+            isAutoPlayPaused
+              ? t("performanceCharts.play")
+              : t("performanceCharts.pause")
+          }
+          aria-pressed={isAutoPlayPaused}
+        >
+          {isAutoPlayPaused ? <Play className="size-3" /> : <Pause className="size-3" />}
+        </Button>
       </div>
     </Carousel>
   );
