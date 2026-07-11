@@ -1,359 +1,306 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from "react"
-import { User, Bot, Target, AlertTriangle, CheckCircle } from "lucide-react"
-import { useI18n } from "@/locales/landing-client"
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ArrowUp,
+  BarChart3,
+  Check,
+  Copy,
+  Database,
+  Sparkles,
+} from "lucide-react";
 
-interface Message {
-  id: string
-  role: "user" | "assistant"
-  content: string
-  isStreaming?: boolean
-  showAnalysis?: boolean
-  analysis?: {
-    metric: string
-    value: string
-    trend: "positive" | "negative" | "neutral"
-    insight: string
-  }
-}
+import { useI18n } from "@/locales/landing-client";
+import { cn } from "@/lib/utils";
 
 interface TradingChatAssistantProps {
-  className?: string
-  maxMessages?: number
+  className?: string;
 }
 
-export default function TradingChatAssistant({ className = "", maxMessages = 3 }: TradingChatAssistantProps) {
-  const t = useI18n()
-  const [messages, setMessages] = useState<Message[]>([])
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isLoopRunning, setIsLoopRunning] = useState(false)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+type DemoStage = "idle" | "user" | "thinking" | "response" | "analysis";
 
-  const CONVERSATION_LOOP = [
+export default function TradingChatAssistant({
+  className,
+}: TradingChatAssistantProps) {
+  const t = useI18n();
+  const [stage, setStage] = useState<DemoStage>("idle");
+  const [turnIndex, setTurnIndex] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const conversations = [
     {
-      user: t('landing.features.chat-feature.conversation.analyze'),
-      assistant: t('landing.features.chat-feature.responses.analyze'),
-      analysis: {
-        metric: t('landing.features.chat-feature.analysis.winRate.metric'),
-        value: t('landing.features.chat-feature.analysis.winRate.value'),
-        trend: "positive" as const,
-        insight: t('landing.features.chat-feature.analysis.winRate.insight'),
-      },
-    },
-    {
-      user: t('landing.features.chat-feature.conversation.patterns'),
-      assistant: t('landing.features.chat-feature.responses.patterns'),
-      analysis: {
-        metric: t('landing.features.chat-feature.analysis.revengeTrading.metric'),
-        value: t('landing.features.chat-feature.analysis.revengeTrading.value'),
-        trend: "negative" as const,
-        insight: t('landing.features.chat-feature.analysis.revengeTrading.insight'),
-      },
+      question: t("landing.features.chat-feature.conversation.analyze"),
+      response: t("landing.features.chat-feature.responses.analyze"),
+      metric: t("landing.features.chat-feature.analysis.winRate.metric"),
+      value: t("landing.features.chat-feature.analysis.winRate.value"),
+      insight: t("landing.features.chat-feature.analysis.winRate.insight"),
+      trend: "positive" as const,
     },
     {
-      user: t('landing.features.chat-feature.conversation.riskManagement'),
-      assistant: t('landing.features.chat-feature.responses.riskManagement'),
-      analysis: {
-        metric: t('landing.features.chat-feature.analysis.riskReward.metric'),
-        value: t('landing.features.chat-feature.analysis.riskReward.value'),
-        trend: "positive" as const,
-        insight: t('landing.features.chat-feature.analysis.riskReward.insight'),
-      },
+      question: t("landing.features.chat-feature.conversation.patterns"),
+      response: t("landing.features.chat-feature.responses.patterns"),
+      metric: t("landing.features.chat-feature.analysis.revengeTrading.metric"),
+      value: t("landing.features.chat-feature.analysis.revengeTrading.value"),
+      insight: t(
+        "landing.features.chat-feature.analysis.revengeTrading.insight",
+      ),
+      trend: "negative" as const,
     },
     {
-      user: t('landing.features.chat-feature.conversation.profitableSetup'),
-      assistant: t('landing.features.chat-feature.responses.profitableSetup'),
-      analysis: {
-        metric: t('landing.features.chat-feature.analysis.bestSetup.metric'),
-        value: t('landing.features.chat-feature.analysis.bestSetup.value'),
-        trend: "positive" as const,
-        insight: t('landing.features.chat-feature.analysis.bestSetup.insight'),
-      },
+      question: t("landing.features.chat-feature.conversation.riskManagement"),
+      response: t("landing.features.chat-feature.responses.riskManagement"),
+      metric: t("landing.features.chat-feature.analysis.riskReward.metric"),
+      value: t("landing.features.chat-feature.analysis.riskReward.value"),
+      insight: t("landing.features.chat-feature.analysis.riskReward.insight"),
+      trend: "positive" as const,
     },
-    {
-      user: t('landing.features.chat-feature.conversation.marketTiming'),
-      assistant: t('landing.features.chat-feature.responses.marketTiming'),
-      analysis: {
-        metric: t('landing.features.chat-feature.analysis.executionQuality.metric'),
-        value: t('landing.features.chat-feature.analysis.executionQuality.value'),
-        trend: "negative" as const,
-        insight: t('landing.features.chat-feature.analysis.executionQuality.insight'),
-      },
-    },
-    {
-      user: t('landing.features.chat-feature.conversation.journalInsights'),
-      assistant: t('landing.features.chat-feature.responses.journalInsights'),
-      analysis: {
-        metric: t('landing.features.chat-feature.analysis.emotionalState.metric'),
-        value: t('landing.features.chat-feature.analysis.emotionalState.value'),
-        trend: "negative" as const,
-        insight: t('landing.features.chat-feature.analysis.emotionalState.insight'),
-      },
-    },
-    {
-      user: t('landing.features.chat-feature.conversation.positionSizing'),
-      assistant: t('landing.features.chat-feature.responses.positionSizing'),
-      analysis: {
-        metric: t('landing.features.chat-feature.analysis.positionSizing.metric'),
-        value: t('landing.features.chat-feature.analysis.positionSizing.value'),
-        trend: "positive" as const,
-        insight: t('landing.features.chat-feature.analysis.positionSizing.insight'),
-      },
-    },
-  ]
+  ];
 
-  const addMessage = useCallback(
-    (message: Message) => {
-      setMessages((prev) => {
-        // Keep only the most recent messages up to maxMessages
-        const newMessages = [...prev, message]
-        if (newMessages.length > maxMessages) {
-          return newMessages.slice(newMessages.length - maxMessages)
-        }
-        return newMessages
-      })
-    },
-    [maxMessages],
-  )
+  const current = conversations[turnIndex];
+  const previous = turnIndex > 0 ? conversations[turnIndex - 1] : null;
 
-  const simulateStreaming = useCallback(
-    async (text: string, analysis?: any) => {
-      const messageId = Date.now().toString()
-
-      // Add initial streaming message
-      addMessage({
-        id: messageId,
-        role: "assistant",
-        content: "",
-        isStreaming: true,
-        showAnalysis: false,
-        analysis,
-      })
-
-      await new Promise((resolve) => setTimeout(resolve, 300))
-
-      // Stream text character by character
-      const chars = text.split("")
-      for (let i = 0; i < chars.length; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 25 + Math.random() * 15))
-        setMessages((prev) => {
-          const updatedMessages = prev.map((msg) =>
-            msg.id === messageId ? { ...msg, content: chars.slice(0, i + 1).join("") } : msg,
-          )
-          return updatedMessages
-        })
-      }
-
-      // Complete streaming
-      await new Promise((resolve) => setTimeout(resolve, 200))
-      setMessages((prev) => prev.map((msg) => (msg.id === messageId ? { ...msg, isStreaming: false } : msg)))
-
-      // Show analysis with delay if it exists
-      if (analysis) {
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        setMessages((prev) => prev.map((msg) => (msg.id === messageId ? { ...msg, showAnalysis: true } : msg)))
-      }
-    },
-    [addMessage],
-  )
-
-  const fadeOutAllMessages = useCallback(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    setMessages([])
-  }, [])
-
-  const runConversationLoop = useCallback(async () => {
-    if (isLoopRunning) return
-
-    setIsLoopRunning(true)
-
-    // Reset if we've completed all conversations
-    if (currentIndex >= CONVERSATION_LOOP.length) {
-      await fadeOutAllMessages()
-      setCurrentIndex(0)
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      setIsLoopRunning(false)
-      return
-    }
-
-    const current = CONVERSATION_LOOP[currentIndex]
-
-    // Add user message
-    addMessage({
-      id: `user-${currentIndex}-${Date.now()}`,
-      role: "user",
-      content: current.user,
-    })
-
-    await new Promise((resolve) => setTimeout(resolve, 1800))
-
-    // Stream assistant response
-    await simulateStreaming(current.assistant, current.analysis)
-
-    await new Promise((resolve) => setTimeout(resolve, 3000))
-    setCurrentIndex((prev) => prev + 1)
-    setIsLoopRunning(false)
-  }, [currentIndex, isLoopRunning, addMessage, simulateStreaming, fadeOutAllMessages])
+  const sendMessage = useCallback(() => {
+    setStage((current) => (current === "idle" ? "user" : current));
+  }, []);
 
   useEffect(() => {
-    // Clear any existing timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    const next: Record<
+      Exclude<DemoStage, "analysis">,
+      { delay: number; stage: DemoStage }
+    > = {
+      idle: { delay: 2600, stage: "user" },
+      user: { delay: 650, stage: "thinking" },
+      thinking: { delay: 900, stage: "response" },
+      response: { delay: 700, stage: "analysis" },
+    };
+
+    if (stage === "analysis") {
+      timerRef.current = setTimeout(
+        () => {
+          if (turnIndex < conversations.length - 1) {
+            setTurnIndex((index) => index + 1);
+            setStage("user");
+          } else {
+            setTurnIndex(0);
+            setStage("idle");
+          }
+        },
+        turnIndex < conversations.length - 1 ? 3000 : 5200,
+      );
+    } else {
+      timerRef.current = setTimeout(
+        () => setStage(next[stage].stage),
+        next[stage].delay,
+      );
     }
 
-    // Start the loop
-    timeoutRef.current = setTimeout(() => {
-      runConversationLoop()
-    }, 1000)
-
-    // Cleanup function
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-    }
-  }, [currentIndex, isLoopRunning])
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [stage, turnIndex, conversations.length]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-    }
-  }, [])
-
-  const getTrendIcon = (trend: string) => {
-    switch (trend) {
-      case "positive":
-        return <CheckCircle className="h-3 w-3 text-black dark:text-white" />
-      case "negative":
-        return <AlertTriangle className="h-3 w-3 text-black dark:text-white" />
-      default:
-        return <Target className="h-3 w-3 text-gray-600 dark:text-gray-400" />
-    }
-  }
-
-  const getTrendLabel = (trend: string) => {
-    switch (trend) {
-      case "positive":
-        return t('landing.features.chat-feature.analysis.trends.positive')
-      case "negative":
-        return t('landing.features.chat-feature.analysis.trends.negative')
-      default:
-        return t('landing.features.chat-feature.analysis.trends.neutral')
-    }
-  }
+  const showUser = stage !== "idle";
+  const showAssistant = stage === "response" || stage === "analysis";
 
   return (
     <div
-      ref={containerRef}
-      className={`relative w-full h-full min-h-0 bg-white dark:bg-black transition-colors duration-500 ${className}`}
-      style={{
-        contain: "layout style paint",
-        isolation: "isolate",
-      }}
+      className={cn(
+        "grid h-full min-h-0 w-full min-w-0 max-w-full grid-rows-[48px_minmax(0,1fr)_60px] overflow-hidden rounded-lg border border-black/10 bg-transparent text-[#26251e] dark:border-white/10 dark:text-[#edecec]",
+        className,
+      )}
     >
-      <div className="w-full h-full border border-muted bg-white dark:bg-black shadow-lg dark:shadow-gray-900/50 transition-all duration-500 rounded-lg overflow-hidden">
-        <div className="p-4 h-full flex flex-col min-h-0">
-          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-muted transition-colors duration-300 shrink-0">
-            <Bot className="h-4 w-4 text-black dark:text-white transition-colors duration-300" />
-            <span className="text-sm font-medium text-black dark:text-white transition-colors duration-300">
-              {t('landing.features.chat-feature.title')}
-            </span>
-            <div className="ml-auto text-xs text-muted-foreground">
-              {t('landing.features.chat-feature.stat')}
+      <div className="flex h-12 min-w-0 items-center border-b border-black/10 px-3 dark:border-white/10 sm:px-4">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-[#26251e] text-white dark:bg-[#edecec] dark:text-[#14120b]">
+            <Sparkles className="size-3.5" />
+          </span>
+          <span className="truncate text-xs font-medium sm:text-sm">
+            {t("landing.features.chat-feature.title")}
+          </span>
+        </div>
+        <div className="ml-auto hidden items-center gap-1.5 text-[11px] text-black/45 dark:text-white/45 min-[360px]:flex">
+          <span className="size-1.5 rounded-full bg-emerald-500" />
+          {t("landing.features.chat-feature.stat")}
+        </div>
+      </div>
+
+      <div
+        aria-live="polite"
+        className="flex h-full min-h-0 min-w-0 flex-col justify-end gap-3 overflow-hidden p-3 sm:gap-4 sm:p-5"
+      >
+        {previous && (
+          <div className="coach-history space-y-2 opacity-55">
+            <div className="ml-auto max-w-[78%] truncate rounded-xl rounded-br-sm bg-[#26251e] px-3 py-1.5 text-[10px] text-white dark:bg-[#edecec] dark:text-[#14120b]">
+              {previous.question}
+            </div>
+            <div className="max-w-[82%] truncate rounded-xl rounded-bl-sm bg-black/[0.045] px-3 py-1.5 text-[10px] dark:bg-white/[0.06]">
+              {previous.response}
             </div>
           </div>
+        )}
 
-          <div className="flex-1 overflow-hidden relative">
-            <div className="absolute inset-0 flex flex-col justify-end space-y-3 text-xs">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-2 opacity-0 animate-slide-in ${message.role === "user" ? "justify-end" : ""}`}
-                >
-                  <div
-                    className={`flex items-start gap-2 max-w-[85%] ${message.role === "user" ? "flex-row-reverse" : ""}`}
-                  >
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
-                        message.role === "user" ? "bg-black dark:bg-white" : "bg-muted"
-                      }`}
-                    >
-                      {message.role === "user" ? (
-                        <User className="h-3 w-3 text-white dark:text-black transition-colors duration-300" />
-                      ) : (
-                        <Bot className="h-3 w-3 text-black dark:text-white transition-colors duration-300" />
-                      )}
+        {showUser && (
+          <div className="coach-enter ml-auto max-w-[92%] rounded-2xl rounded-br-sm bg-[#26251e] px-3 py-2 text-[11px] leading-relaxed text-white dark:bg-[#edecec] dark:text-[#14120b] sm:max-w-[82%] sm:px-3.5 sm:py-2.5 sm:text-xs">
+            {current.question}
+          </div>
+        )}
+
+        {(stage === "thinking" || showAssistant) && (
+          <div className="coach-enter min-w-0 max-w-full sm:max-w-[92%]">
+            <div className="mb-2 flex items-center gap-2 text-[11px] font-medium text-black/45 dark:text-white/45">
+              <Sparkles className="size-3" />
+              Deltalytix
+            </div>
+
+            {stage === "thinking" ? (
+              <div className="inline-flex items-center gap-1 rounded-2xl rounded-bl-sm bg-black/[0.045] px-3.5 py-3 dark:bg-white/[0.06]">
+                <span className="coach-dot size-1.5 rounded-full bg-current opacity-35" />
+                <span className="coach-dot size-1.5 rounded-full bg-current opacity-35 [animation-delay:120ms]" />
+                <span className="coach-dot size-1.5 rounded-full bg-current opacity-35 [animation-delay:240ms]" />
+              </div>
+            ) : (
+              <div className="min-w-0 overflow-hidden rounded-2xl rounded-bl-sm bg-black/[0.045] px-3 py-2.5 text-[11px] leading-relaxed dark:bg-white/[0.06] sm:px-3.5 sm:py-3 sm:text-xs">
+                <p className="coach-reveal">{current.response}</p>
+
+                {stage === "analysis" && (
+                  <div className="coach-enter mt-3 overflow-hidden rounded-lg border border-black/10 bg-black/[0.025] dark:border-white/10 dark:bg-white/[0.035]">
+                    <div className="flex items-center justify-between border-b border-black/10 px-3 py-2 dark:border-white/10">
+                      <div className="flex items-center gap-2 text-[11px] font-medium">
+                        <BarChart3 className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                        {current.metric}
+                      </div>
+                      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                        <Check className="mr-1 inline size-2.5" />
+                        {current.trend === "positive"
+                          ? t(
+                              "landing.features.chat-feature.analysis.trends.positive",
+                            )
+                          : t(
+                              "landing.features.chat-feature.analysis.trends.negative",
+                            )}
+                      </span>
                     </div>
-
-                    <div
-                      className={`p-2 rounded-lg transition-all duration-300 ${
-                        message.role === "user"
-                          ? "bg-black dark:bg-white text-white dark:text-black"
-                          : "bg-muted text-black dark:text-white border border-muted"
-                      }`}
-                    >
-                      <p className="leading-relaxed">
-                        {message.content}
-                        {message.isStreaming && (
-                          <span className="animate-pulse text-gray-500 dark:text-gray-400 ml-1">|</span>
-                        )}
+                    <div className="grid grid-cols-1 gap-1 px-3 py-2.5 min-[360px]:grid-cols-[auto_1fr] min-[360px]:gap-3">
+                      <span className="text-lg font-medium tracking-tight sm:text-xl">
+                        {current.value}
+                      </span>
+                      <p className="line-clamp-2 text-[10px] leading-relaxed text-black/50 dark:text-white/50 max-[359px]:line-clamp-1">
+                        {current.insight}
                       </p>
-
-                      {message.analysis && message.role === "assistant" && (
-                        <div
-                          className={`overflow-hidden transition-all duration-500 ease-out ${
-                            message.showAnalysis ? "max-h-32 opacity-100 mt-2" : "max-h-0 opacity-0 mt-0"
-                          }`}
-                        >
-                          <div className="pt-2 border-t border-muted-foreground transition-colors duration-300">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-medium text-black dark:text-white text-xs">
-                                {message.analysis.metric}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                {getTrendIcon(message.analysis.trend)}
-                                <span className="text-xs font-mono text-black dark:text-white">
-                                  {getTrendLabel(message.analysis.trend)}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-sm font-semibold text-black dark:text-white mb-1">
-                              {message.analysis.value}
-                            </div>
-                            <div className="text-xs text-gray-600 dark:text-gray-400">{message.analysis.insight}</div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                )}
+              </div>
+            )}
+
+            {showAssistant && (
+              <div className="coach-enter mt-1.5 flex items-center gap-1 text-black/35 dark:text-white/35">
+                <span aria-hidden="true" className="rounded p-1">
+                  <Copy className="size-3" />
+                </span>
+              </div>
+            )}
           </div>
+        )}
+      </div>
+
+      <div className="h-[60px] min-w-0 p-3 pt-1 sm:px-4 sm:pb-3 sm:pt-1">
+        <div className="flex items-center gap-2 rounded-xl border border-black/10 bg-black/[0.025] px-3 py-2 dark:border-white/10 dark:bg-white/[0.035]">
+          <Database className="size-3.5 shrink-0 text-black/35 dark:text-white/35" />
+          <span className="min-w-0 flex-1 truncate text-[11px] text-black/35 dark:text-white/35">
+            {current.question}
+          </span>
+          <button
+            type="button"
+            aria-label="Send suggested message"
+            disabled={stage !== "idle"}
+            onClick={sendMessage}
+            className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[#26251e] text-white transition-[transform,opacity] duration-150 ease-out active:scale-[0.94] disabled:cursor-default disabled:opacity-35 dark:bg-[#edecec] dark:text-[#14120b]"
+          >
+            <ArrowUp className="size-3.5" />
+          </button>
         </div>
       </div>
 
       <style jsx>{`
-        @keyframes slideIn {
+        .coach-enter {
+          animation: coach-enter 220ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
+          will-change: transform, opacity;
+        }
+
+        .coach-reveal {
+          animation: coach-reveal 280ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
+        }
+
+        .coach-dot {
+          animation: coach-dot 900ms ease-in-out infinite;
+        }
+
+        .coach-history {
+          animation: coach-history 200ms cubic-bezier(0.645, 0.045, 0.355, 1)
+            both;
+        }
+
+        @keyframes coach-enter {
           from {
             opacity: 0;
-            transform: translateY(12px);
+            transform: translateY(8px) scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes coach-reveal {
+          from {
+            opacity: 0;
+            transform: translateY(4px);
           }
           to {
             opacity: 1;
             transform: translateY(0);
           }
         }
-        
-        .animate-slide-in {
-          animation: slideIn 0.4s ease-out forwards;
+
+        @keyframes coach-dot {
+          0%,
+          60%,
+          100% {
+            transform: translateY(0);
+            opacity: 0.35;
+          }
+          30% {
+            transform: translateY(-3px);
+            opacity: 0.8;
+          }
+        }
+
+        @keyframes coach-history {
+          from {
+            opacity: 1;
+            transform: translateY(6px);
+          }
+          to {
+            opacity: 0.55;
+            transform: translateY(0);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .coach-enter,
+          .coach-reveal,
+          .coach-dot {
+            animation: none;
+          }
+
+          .coach-history {
+            animation: none;
+          }
         }
       `}</style>
     </div>
-  )
+  );
 }

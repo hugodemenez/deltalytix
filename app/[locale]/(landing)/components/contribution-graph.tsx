@@ -44,7 +44,7 @@ function WeekDetailOverlay({
     const centerX = anchorRect.left + anchorRect.width / 2;
     const left = Math.min(
       Math.max(centerX, margin + panelWidth / 2),
-      window.innerWidth - margin - panelWidth / 2
+      window.innerWidth - margin - panelWidth / 2,
     );
     const top = anchorRect.bottom + 8;
     setPosition({ left, top });
@@ -55,7 +55,9 @@ function WeekDetailOverlay({
       ? t("landing.openSource.contributionGraph.noCommits")
       : detail.count === 1
         ? t("landing.openSource.contributionGraph.oneCommit")
-        : t("landing.openSource.contributionGraph.nCommits", { count: detail.count });
+        : t("landing.openSource.contributionGraph.nCommits", {
+            count: detail.count,
+          });
 
   return (
     <>
@@ -88,7 +90,10 @@ function WeekDetailOverlay({
             </p>
             <ul className="space-y-1">
               {detail.days.map((day) => (
-                <li key={day.date} className="flex items-center justify-between gap-2">
+                <li
+                  key={day.date}
+                  className="flex items-center justify-between gap-2"
+                >
                   <span>{formatDayLabel(day.date, locale)}</span>
                   <span className="text-muted-foreground">
                     {day.count === 1
@@ -154,15 +159,12 @@ function MonthAxis({
   );
 }
 
-export function ContributionGraph({
-  data,
-}: {
-  data: ContributionGraphData;
-}) {
+export function ContributionGraph({ data }: { data: ContributionGraphData }) {
   const t = useI18n();
   const locale = useCurrentLocale();
   const minYear = data.availableYears[0] ?? data.defaultYear;
-  const maxYear = data.availableYears[data.availableYears.length - 1] ?? data.defaultYear;
+  const maxYear =
+    data.availableYears[data.availableYears.length - 1] ?? data.defaultYear;
   const [year, setYear] = useState(data.defaultYear);
   const [activeWeek, setActiveWeek] = useState<number | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
@@ -193,7 +195,7 @@ export function ContributionGraph({
   const canGoBack = year > minYear;
   const canGoForward = year < maxYear;
   const activeDetail =
-    activeWeek !== null ? yearData.weekDetails[activeWeek] ?? null : null;
+    activeWeek !== null ? (yearData.weekDetails[activeWeek] ?? null) : null;
 
   const openWeekDetail = (weekIndex: number, target: HTMLElement) => {
     if (weekIndex >= yearData.visibleWeekCount) return;
@@ -270,9 +272,13 @@ export function ContributionGraph({
                 })}
                 aria-pressed={isActive}
                 className={`h-3 flex-1 basis-0 rounded-[1px] sm:h-3.5 md:h-4 ${LEVEL_COLORS[level]} ${
-                  isActive ? "ring-1 ring-primary ring-offset-1 ring-offset-background" : ""
+                  isActive
+                    ? "ring-1 ring-primary ring-offset-1 ring-offset-background"
+                    : ""
                 }`}
-                onClick={(event) => openWeekDetail(weekIndex, event.currentTarget)}
+                onClick={(event) =>
+                  openWeekDetail(weekIndex, event.currentTarget)
+                }
               />
             );
           })}
@@ -288,17 +294,6 @@ export function ContributionGraph({
           t={t}
         />
       )}
-
-      <p className="mt-3 text-xs text-muted-foreground">
-        {t("landing.openSource.contributionGraph.commitsInYear", {
-          count: Intl.NumberFormat(locale).format(yearData.totalContributions),
-          year,
-        })}
-        <span className="hidden sm:inline">
-          {" "}
-          · {t("landing.openSource.contributionGraph.branches")}
-        </span>
-      </p>
     </div>
   );
 }

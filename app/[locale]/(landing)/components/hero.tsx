@@ -1,6 +1,5 @@
-'use client'
+"use client";
 import { useI18n } from "@/locales/landing-client";
-import { Button } from "@/components/ui/button";
 import Link, { useLinkStatus } from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -11,7 +10,7 @@ function GetStartedLinkContent({ children }: { children: React.ReactNode }) {
 
   return (
     <span
-      className="relative inline-flex items-center justify-center font-medium text-sm text-white"
+      className="relative inline-flex items-center justify-center text-sm font-medium"
       aria-busy={pending}
     >
       <span className={pending ? "invisible" : undefined}>{children}</span>
@@ -58,7 +57,7 @@ export default function Hero() {
           observer.disconnect();
         }
       },
-      { rootMargin: "400px 0px", threshold: 0 }
+      { rootMargin: "400px 0px", threshold: 0 },
     );
 
     observer.observe(container);
@@ -66,9 +65,6 @@ export default function Hero() {
   }, []);
 
   useEffect(() => {
-    setVideoLoaded(false);
-    setVideoError(false);
-
     if (shouldLoadVideo && videoRef.current) {
       videoRef.current.load();
     }
@@ -83,60 +79,62 @@ export default function Hero() {
   };
 
   return (
-    <div className="container px-4 md:px-6 mx-auto">
-      <div className="flex flex-col w-full gap-y-24">
-        <div className="flex flex-col  justify-center space-y-4 text-center">
-          <div className="space-y-2">
-            <Link href="/updates">
-              <Button
-                variant="link"
-                className="mx-auto sm:mb-8 box-border flex flex-row justify-center items-center px-4 py-2 h-[26px] bg-[#EAF6F5] dark:bg-[hsl(var(--chart-1)/0.1)] border border-[#BBE2DB] dark:border-[hsl(var(--chart-1)/0.3)] rounded-[26px] text-[10px] font-semibold leading-5 tracking-[0.35px] uppercase text-[rgba(36,36,36,0.8)] dark:text-[hsl(var(--chart-1)/0.8)]"
-              >
-                {t("landing.updates")}
-              </Button>
-            </Link>
-            <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
+    <div className="mx-auto w-full max-w-[1440px] px-5 pb-5 pt-16 sm:px-8 sm:pb-8 sm:pt-24 lg:px-12 lg:pt-32">
+      <div className="flex flex-col gap-14 md:gap-20">
+        <div className="max-w-[900px]">
+          <Link
+            href="/updates"
+            className="mb-7 inline-flex text-sm text-black/55 transition-colors hover:text-black dark:text-white/55 dark:hover:text-white"
+          >
+            {t("landing.updates")}
+          </Link>
+          <div>
+            <h1 className="max-w-[880px] text-[clamp(3rem,7.2vw,7.25rem)] font-normal leading-[0.92] tracking-[-0.06em]">
               {t("landing.title")}
             </h1>
-            <p className="mx-auto max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl">
+            <p className="mt-7 max-w-[660px] text-lg leading-relaxed text-black/60 dark:text-white/60 md:text-xl">
               {t("landing.description")}
             </p>
           </div>
-          <div className="flex w-full justify-center">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href={"/dashboard"}
-              className="flex justify-center items-center px-8 py-2.5 h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200"
+              className="inline-flex h-12 items-center justify-center rounded-sm bg-[#26251e] px-6 text-sm font-medium text-white transition-opacity hover:opacity-85 dark:bg-[#f2f1eb] dark:text-[#11110f]"
             >
               <GetStartedLinkContent>{t("landing.cta")}</GetStartedLinkContent>
+              <span className="ml-3">→</span>
+            </Link>
+            <Link
+              href="#features"
+              className="inline-flex h-12 items-center justify-center rounded-sm border border-black/20 px-6 text-sm font-medium transition-colors hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/5"
+            >
+              {t("landing.features.heading")} <span className="ml-3">↓</span>
             </Link>
           </div>
         </div>
         <div
           ref={videoContainerRef}
-          className="flex w-full items-center justify-center relative rounded-lg"
+          className="relative overflow-hidden rounded-sm bg-[#c6ddd6] p-2 sm:p-5 lg:p-8"
         >
-          <div className="relative w-full aspect-[2108/1080] dark:aspect-[2120/1080] rounded-[14.5867px]">
-            <span className="absolute inset-[-12px] md:inset-[-24px] bg-[rgba(50,169,151,0.15)] dark:bg-[hsl(var(--chart-1)/0.15)] rounded-[14.5867px] -z-10 animate-pulse"></span>
-            <span className="absolute inset-[-4px] md:inset-[-8px] bg-[rgba(50,169,151,0.25)] dark:bg-[hsl(var(--chart-1)/0.25)] rounded-[14.5867px] -z-20 animate-pulse"></span>
-            <span className="absolute inset-0 shadow-[0_9.1167px_13.675px_-2.735px_rgba(0,0,0,0.1),0_3.64667px_5.47px_-3.64667px_rgba(0,0,0,0.1)] md:shadow-[0_18.2333px_27.35px_-5.47px_rgba(0,0,0,0.1),0_7.29333px_10.94px_-7.29333px_rgba(0,0,0,0.1)] dark:shadow-[0_9.1167px_13.675px_-2.735px_hsl(var(--chart-1)/0.1),0_3.64667px_5.47px_-3.64667px_hsl(var(--chart-1)/0.1)] md:dark:shadow-[0_18.2333px_27.35px_-5.47px_hsl(var(--chart-1)/0.1),0_7.29333px_10.94px_-7.29333px_hsl(var(--chart-1)/0.1)] rounded-[14.5867px] -z-30"></span>
+          <div className="relative aspect-[2108/1080] w-full overflow-hidden rounded-sm border border-black/15 bg-white shadow-2xl shadow-black/15 dark:aspect-[2120/1080] dark:bg-black">
             {!videoError && (
               <>
                 <img
                   src="/videos/demo_white_poster.png"
                   alt=""
                   aria-hidden={videoLoaded}
-                  className={`absolute inset-0 h-full w-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] object-cover dark:border-gray-800 transition-opacity duration-300 dark:hidden ${videoLoaded ? "opacity-0" : "opacity-100"}`}
+                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 dark:hidden ${videoLoaded ? "opacity-0" : "opacity-100"}`}
                 />
                 <img
                   src="/videos/demo_dark_poster.png"
                   alt=""
                   aria-hidden={videoLoaded}
-                  className={`absolute inset-0 hidden h-full w-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] object-cover dark:border-gray-800 transition-opacity duration-300 dark:block ${videoLoaded ? "opacity-0" : "opacity-100"}`}
+                  className={`absolute inset-0 hidden h-full w-full object-cover transition-opacity duration-300 dark:block ${videoLoaded ? "opacity-0" : "opacity-100"}`}
                 />
               </>
             )}
             {videoError && (
-              <div className="absolute inset-0 flex items-center justify-center rounded-[14.5867px] bg-gray-100 dark:bg-black">
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-black">
                 <p className="text-red-500">Failed to load video</p>
               </div>
             )}
@@ -148,13 +146,11 @@ export default function Hero() {
               autoPlay
               playsInline
               aria-label={t("landing.demoVideo")}
-              className={`absolute inset-0 h-full w-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] object-cover transition-opacity duration-300 dark:border-gray-800 ${videoLoaded && !videoError ? "opacity-100" : "opacity-0"}`}
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${videoLoaded && !videoError ? "opacity-100" : "opacity-0"}`}
               onLoadedData={handleVideoLoad}
               onError={handleVideoError}
             >
-              {shouldLoadVideo && (
-                <source src={videoSrc} type="video/mp4" />
-              )}
+              {shouldLoadVideo && <source src={videoSrc} type="video/mp4" />}
             </video>
           </div>
         </div>

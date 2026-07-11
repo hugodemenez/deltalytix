@@ -5,13 +5,15 @@ import { ThemeProvider } from "@/context/theme-provider";
 import { I18nProviderClient } from "@/locales/landing-client";
 import { ConsentBanner } from "@/components/consent-banner";
 
-import { Metadata } from 'next';
+import { Metadata } from "next";
 import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
 
-type Locale = 'en' | 'fr';
+type Locale = "en" | "fr";
 const TITLE_TEMPLATE = "%s | Deltalytix";
 
-export async function generateMetadata(props: { params: Promise<{ locale: Locale }> }): Promise<Metadata> {
+export async function generateMetadata(props: {
+  params: Promise<{ locale: Locale }>;
+}): Promise<Metadata> {
   const params = await props.params;
   const copy = getSiteMetadataCopy(params.locale);
 
@@ -38,25 +40,20 @@ export default async function RootLayout(
   props: Readonly<{
     children: React.ReactNode;
     params: Promise<{ locale: string }>;
-  }>
+  }>,
 ) {
-  const {
-    children,
-    params
-  } = props;
-  
+  const { children, params } = props;
+
   const { locale } = await params;
 
   return (
     <ThemeProvider>
       <I18nProviderClient locale={locale}>
         <ConsentBanner />
-        <div className="px-2 sm:px-6 lg:px-32">
+        <div className="min-h-screen bg-[#f7f7f4] text-[#26251e] [--background:60_16%_96.3%] [--card:48_16%_93.9%] [--foreground:53_12%_13.3%] dark:bg-[#14120b] dark:text-[#edecec] dark:[--background:47_29%_6.1%] dark:[--card:45_17%_9%] dark:[--foreground:0_3%_92.7%]">
           <Toaster />
           <Navbar />
-          <div className="mt-8 sm:mt-20 max-w-(--breakpoint-xl) mx-auto">
-            {children}
-          </div>
+          <div className="pt-14">{children}</div>
           <Footer />
         </div>
       </I18nProviderClient>
