@@ -233,7 +233,7 @@ export default {
       productUpdates: "Mises à jour du produit",
       productUpdatesDescription:
         "Restez informé de nos dernières fonctionnalités et améliorations.",
-      changelog: "Journal des modifications",
+      changelog: "Derniers changements",
       changelogDescription:
         "Parcourez les notes de version, améliorations et nouveautés de Deltalytix.",
       youtube: "YouTube",

@@ -281,17 +281,14 @@ export default function Component() {
     // Add more languages here
   ];
 
-  const [themeOpen, setThemeOpen] = useState(false);
-  const [languageOpen, setLanguageOpen] = useState(false);
   const changeLocale = useChangeLocale();
   const handleThemeChange = (value: string) => {
     setTheme(value as "light" | "dark" | "system");
-    setThemeOpen(false);
   };
 
   const handleLanguageChange = (value: string) => {
     changeLocale(value as "en" | "fr");
-    setLanguageOpen(false);
+    closeMenu();
   };
 
   const links = [
@@ -568,43 +565,45 @@ export default function Component() {
         </div>
 
         <div className="flex items-center space-x-4">
-          <LanguageSelector />
-          <Popover modal>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                className="hidden lg:inline-flex h-9 w-9 px-0"
-              >
-                <ThemeToggleIcon className="h-5 w-5" />
-                <span className="sr-only">
-                  {t("landing.navbar.toggleTheme")}
-                </span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0" align="end">
-              <Command>
-                <CommandList>
-                  <CommandGroup>
-                    <CommandItem onSelect={() => handleThemeChange("light")}>
-                      <Sun className="mr-2 h-4 w-4" />
-                      <span>{t("landing.navbar.lightMode")}</span>
-                    </CommandItem>
-                    <CommandItem onSelect={() => handleThemeChange("dark")}>
-                      <Moon className="mr-2 h-4 w-4" />
-                      <span>{t("landing.navbar.darkMode")}</span>
-                    </CommandItem>
-                    <CommandItem onSelect={() => handleThemeChange("system")}>
-                      <Laptop className="mr-2 h-4 w-4" />
-                      <span>{t("landing.navbar.systemTheme")}</span>
-                    </CommandItem>
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          <div className="hidden items-center space-x-4 lg:flex">
+            <LanguageSelector />
+            <Popover modal>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="hidden lg:inline-flex h-9 w-9 px-0"
+                >
+                  <ThemeToggleIcon className="h-5 w-5" />
+                  <span className="sr-only">
+                    {t("landing.navbar.toggleTheme")}
+                  </span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[200px] p-0" align="end">
+                <Command>
+                  <CommandList>
+                    <CommandGroup>
+                      <CommandItem onSelect={() => handleThemeChange("light")}>
+                        <Sun className="mr-2 h-4 w-4" />
+                        <span>{t("landing.navbar.lightMode")}</span>
+                      </CommandItem>
+                      <CommandItem onSelect={() => handleThemeChange("dark")}>
+                        <Moon className="mr-2 h-4 w-4" />
+                        <span>{t("landing.navbar.darkMode")}</span>
+                      </CommandItem>
+                      <CommandItem onSelect={() => handleThemeChange("system")}>
+                        <Laptop className="mr-2 h-4 w-4" />
+                        <span>{t("landing.navbar.systemTheme")}</span>
+                      </CommandItem>
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
           <button
             type="button"
-            className="ml-auto lg:hidden p-2"
+            className="p-2 lg:hidden"
             onClick={toggleMenu}
           >
             <svg
@@ -974,6 +973,112 @@ export default function Component() {
                               </button>
                             </motion.div>
                           </motion.li>
+                        </motion.ul>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </motion.div>
+              </motion.li>
+
+              <motion.li variants={itemVariant}>
+                <motion.div
+                  className="pb-4"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.3,
+                    ease: "easeOut",
+                    delay: 0.25,
+                  }}
+                >
+                  <Accordion collapsible type="single">
+                    <AccordionItem value="language" className="border-none">
+                      <AccordionTrigger className="flex items-center justify-between w-full font-normal p-0 hover:no-underline">
+                        <span className="text-[#878787] flex items-center space-x-2">
+                          <div className="flex items-center justify-center w-5 h-5">
+                            <AnimatePresence mode="wait">
+                              <motion.div
+                                key={locale}
+                                initial={{
+                                  opacity: 0,
+                                  scale: 0.8,
+                                  rotate: -90,
+                                }}
+                                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                                exit={{ opacity: 0, scale: 0.8, rotate: 90 }}
+                                transition={{
+                                  duration: 0.4,
+                                  ease: "easeInOut",
+                                }}
+                                className="flex items-center justify-center"
+                              >
+                                <Globe className="h-5 w-5" />
+                              </motion.div>
+                            </AnimatePresence>
+                          </div>
+                          <span>{t("landing.navbar.changeLanguage")}</span>
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent className="text-xl">
+                        <motion.ul
+                          className="space-y-8 ml-4 mt-6"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {languages.map((language, languageIndex) => (
+                            <motion.li
+                              key={language.value}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{
+                                duration: 0.2,
+                                delay: 0.05 + languageIndex * 0.05,
+                              }}
+                            >
+                              <motion.div
+                                whileHover={{ x: 4 }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleLanguageChange(language.value)
+                                  }
+                                  className={`flex items-center space-x-2 w-full text-left ${
+                                    locale === language.value
+                                      ? "text-primary"
+                                      : "text-[#878787]"
+                                  }`}
+                                >
+                                  <span className="text-base">
+                                    {language.value === "en" ? "🇬🇧" : "🇫🇷"}
+                                  </span>
+                                  <span>{language.label}</span>
+                                  {locale === language.value && (
+                                    <motion.div
+                                      initial={{ opacity: 0, scale: 0 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      transition={{ duration: 0.2 }}
+                                      className="ml-auto"
+                                    >
+                                      <svg
+                                        className="h-4 w-4"
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                      >
+                                        <path
+                                          fillRule="evenodd"
+                                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                          clipRule="evenodd"
+                                        />
+                                      </svg>
+                                    </motion.div>
+                                  )}
+                                </button>
+                              </motion.div>
+                            </motion.li>
+                          ))}
                         </motion.ul>
                       </AccordionContent>
                     </AccordionItem>
