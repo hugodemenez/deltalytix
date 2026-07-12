@@ -12,11 +12,11 @@ import {
 } from "@/lib/contribution-graph";
 
 const LEVEL_COLORS = [
-  "bg-[#ebedf0] dark:bg-[#161b22]",
-  "bg-[#9be9a8] dark:bg-[#0e4429]",
-  "bg-[#40c463] dark:bg-[#006d32]",
-  "bg-[#30a14e] dark:bg-[#26a641]",
-  "bg-[#216e39] dark:bg-[#39d353]",
+  "bg-[oklch(0.94_0.01_145)] dark:bg-[oklch(0.20_0.02_145)]",
+  "bg-[oklch(0.85_0.08_145)] dark:bg-[oklch(0.35_0.06_145)]",
+  "bg-[oklch(0.72_0.12_145)] dark:bg-[oklch(0.45_0.10_145)]",
+  "bg-[oklch(0.58_0.14_145)] dark:bg-[oklch(0.55_0.12_145)]",
+  "bg-[oklch(0.45_0.16_145)] dark:bg-[oklch(0.72_0.18_145)]",
 ] as const;
 
 const UPCOMING_WEEK_COLOR = "bg-muted/70 dark:bg-muted/40";

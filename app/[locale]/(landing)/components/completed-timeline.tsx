@@ -87,8 +87,8 @@ export default function CompletedTimeline({
           {locale === "fr" && milestone.youtubeVideoId && (
             <div className="grid gap-6 pb-10 md:grid-cols-[minmax(180px,0.35fr)_minmax(0,1fr)] md:pb-14">
               <div aria-hidden />
-              <div className="overflow-hidden rounded-sm bg-[#c6ddd6] p-2 sm:p-4">
-                <div className="relative aspect-video w-full overflow-hidden rounded-sm border border-black/15 bg-black">
+              <div className="overflow-hidden rounded-md bg-[oklch(0.88_0.04_165)] p-2 sm:rounded-lg sm:p-4 lg:rounded-xl">
+                <div className="relative aspect-video w-full overflow-hidden rounded-sm bg-black outline outline-1 outline-black/10 dark:outline-white/10">
                   <iframe
                     className="absolute inset-0 h-full w-full"
                     src={`https://www.youtube.com/embed/${milestone.youtubeVideoId}`}

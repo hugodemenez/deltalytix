@@ -54,7 +54,7 @@ export default async function OpenSource() {
                     href={GITHUB_REPO_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="underline"
+                    className="underline underline-offset-[0.2em] decoration-black/30 dark:decoration-white/30"
                   >
                     code
                   </a>

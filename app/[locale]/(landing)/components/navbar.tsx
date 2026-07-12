@@ -574,7 +574,7 @@ export default function Component() {
               <PopoverTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="hidden lg:inline-flex h-9 w-9 px-0"
+                  className="hidden lg:inline-flex h-10 w-10 px-0"
                 >
                   <ThemeToggleIcon className="h-5 w-5" />
                   <span className="sr-only">
@@ -606,7 +606,7 @@ export default function Component() {
           </div>
           <button
             type="button"
-            className="p-2 lg:hidden"
+            className="min-h-10 min-w-10 flex items-center justify-center lg:hidden"
             onClick={toggleMenu}
           >
             <svg
@@ -680,7 +680,7 @@ export default function Component() {
             <motion.ul
               initial="hidden"
               animate="show"
-              className="px-3 pt-8 text-xl text-[#878787] space-y-8 mb-8"
+              className="px-3 pt-8 text-xl text-black/55 dark:text-white/55 space-y-8 mb-8"
               variants={listVariant}
             >
               {links.map(({ path, title, children }, index) => {
@@ -717,7 +717,7 @@ export default function Component() {
                         className="border-none"
                       >
                         <AccordionTrigger className="flex items-center justify-between w-full font-normal p-0 hover:no-underline">
-                          <span className="text-[#878787]">{title}</span>
+                          <span className="text-black/55 dark:text-white/55">{title}</span>
                         </AccordionTrigger>
 
                         {children && (
@@ -757,7 +757,7 @@ export default function Component() {
                                         <a
                                           href={href}
                                           onClick={closeMenu}
-                                          className="text-[#878787] flex items-center space-x-2"
+                                          className="text-black/55 dark:text-white/55 flex items-center space-x-2"
                                           {...linkProps}
                                         >
                                           <span>{child.icon}</span>
@@ -767,7 +767,7 @@ export default function Component() {
                                         <Link
                                           onClick={() => handleNavClick(href)}
                                           href={href}
-                                          className="text-[#878787] flex items-center space-x-2"
+                                          className="text-black/55 dark:text-white/55 flex items-center space-x-2"
                                         >
                                           <span>{child.icon}</span>
                                           <span>{child.title}</span>
@@ -811,9 +811,9 @@ export default function Component() {
                 <Accordion collapsible type="single">
                   <AccordionItem value="theme" className="border-none">
                     <AccordionTrigger className="flex items-center justify-between w-full font-normal p-0 hover:no-underline">
-                      <span className="text-[#878787] flex items-center space-x-2">
+                      <span className="text-black/55 dark:text-white/55 flex items-center space-x-2">
                         <div className="flex items-center justify-center w-5 h-5">
-                          <AnimatePresence mode="wait">
+                          <AnimatePresence mode="wait" initial={false}>
                             <motion.div
                               key={theme}
                               initial={{
@@ -857,7 +857,7 @@ export default function Component() {
                                 className={`flex items-center space-x-2 w-full text-left ${
                                   theme === "light"
                                     ? "text-primary"
-                                    : "text-[#878787]"
+                                    : "text-black/55 dark:text-white/55"
                                 }`}
                               >
                                 <Sun className="h-4 w-4" />
@@ -899,7 +899,7 @@ export default function Component() {
                                 className={`flex items-center space-x-2 w-full text-left ${
                                   theme === "dark"
                                     ? "text-primary"
-                                    : "text-[#878787]"
+                                    : "text-black/55 dark:text-white/55"
                                 }`}
                               >
                                 <Moon className="h-4 w-4" />
@@ -941,7 +941,7 @@ export default function Component() {
                                 className={`flex items-center space-x-2 w-full text-left ${
                                   theme === "system"
                                     ? "text-primary"
-                                    : "text-[#878787]"
+                                    : "text-black/55 dark:text-white/55"
                                 }`}
                               >
                                 <Laptop className="h-4 w-4" />
@@ -977,9 +977,9 @@ export default function Component() {
                 <Accordion collapsible type="single">
                   <AccordionItem value="language" className="border-none">
                     <AccordionTrigger className="flex items-center justify-between w-full font-normal p-0 hover:no-underline">
-                      <span className="text-[#878787] flex items-center space-x-2">
+                      <span className="text-black/55 dark:text-white/55 flex items-center space-x-2">
                         <div className="flex items-center justify-center w-5 h-5">
-                          <AnimatePresence mode="wait">
+                          <AnimatePresence mode="wait" initial={false}>
                             <motion.div
                               key={locale}
                               initial={{
@@ -1031,7 +1031,7 @@ export default function Component() {
                                   className={`flex items-center space-x-2 w-full text-left ${
                                     locale === language.value
                                       ? "text-primary"
-                                      : "text-[#878787]"
+                                      : "text-black/55 dark:text-white/55"
                                   }`}
                                 >
                                   <span className="text-base">

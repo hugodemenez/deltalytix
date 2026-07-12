@@ -433,7 +433,9 @@ export default function PricingPlans({
           <h3 className="text-2xl font-normal tracking-tight">
             {plans.basic.name}
           </h3>
-          <span className="text-2xl font-normal">{t("pricing.free.name")}</span>
+          <span className="text-2xl font-normal tabular-nums">
+            {t("pricing.free.name")}
+          </span>
         </div>
         <p className="mt-4 max-w-md text-sm leading-relaxed text-black/55 dark:text-white/55">
           {plans.basic.description}
@@ -457,11 +459,11 @@ export default function PricingPlans({
 
       <div className="mt-auto pt-10">
         {isModal ? (
-          <Button onClick={onClose} className="h-11 w-full rounded-sm">
+          <Button onClick={onClose} className="h-11 w-full rounded-sm active:scale-[0.96]">
             {t("pricing.keepBasic")}
           </Button>
         ) : (
-          <Button asChild className="h-11 w-full rounded-sm">
+          <Button asChild className="h-11 w-full rounded-sm active:scale-[0.96]">
             <Link href="/authentication">
               {t("pricing.startBasic")} <span className="ml-2">→</span>
             </Link>
@@ -548,7 +550,7 @@ export default function PricingPlans({
             {plans.plus.name}
           </h3>
           <div className="flex items-baseline">
-            <span className="text-2xl font-normal">
+            <span className="text-2xl font-normal tabular-nums">
               <NumberFlow
                 prefix={currency === "EUR" ? undefined : symbol}
                 suffix={currency === "EUR" ? symbol : undefined}
@@ -612,7 +614,7 @@ export default function PricingPlans({
                 onClick={() => handlePlanSwitch(lookupKey)}
                 disabled={isLoading || isCurrent || isBlocked}
                 variant={isCurrent || isBlocked ? "outline" : "default"}
-                className="h-11 w-full rounded-sm"
+                className="h-11 w-full rounded-sm active:scale-[0.96]"
               >
                 {isLoading
                   ? billingPeriod === "lifetime"

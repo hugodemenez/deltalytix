@@ -15,10 +15,10 @@ export default function PricingPage() {
   return (
     <main className="mx-auto w-full max-w-[1440px] px-5 py-20 sm:px-8 md:py-28 lg:px-12">
       <div className="mb-12 text-center md:mb-16">
-        <h1 className="text-5xl font-normal tracking-[-0.045em] md:text-7xl">
+        <h1 className="text-balance text-5xl font-normal tracking-[-0.045em] md:text-7xl">
           {t("pricing.heading")}
         </h1>
-        <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-black/55 dark:text-white/55 md:text-lg">
+        <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-black/55 dark:text-white/55 md:text-lg">
           {t("pricing.subheading")}
         </p>
       </div>

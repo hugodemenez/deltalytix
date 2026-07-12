@@ -91,24 +91,24 @@ export default function Hero() {
             {t("landing.updates")}
           </Link>
           <div>
-            <h1 className="max-w-[880px] text-[clamp(3rem,7.2vw,7.25rem)] font-normal leading-[0.92] tracking-[-0.06em]">
+            <h1 className="max-w-[880px] text-balance text-[clamp(3rem,7.2vw,7.25rem)] font-normal leading-[0.92] tracking-[-0.06em]">
               {t("landing.title")}
             </h1>
-            <p className="mt-7 max-w-[660px] text-lg leading-relaxed text-black/60 dark:text-white/60 md:text-xl">
+            <p className="mt-7 max-w-[660px] text-pretty text-lg leading-relaxed text-black/60 dark:text-white/60 md:text-xl">
               {t("landing.description")}
             </p>
           </div>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href={"/dashboard"}
-              className="inline-flex h-12 items-center justify-center rounded-sm bg-[#26251e] px-6 text-sm font-medium text-white transition-opacity hover:opacity-85 dark:bg-[#f2f1eb] dark:text-[#11110f]"
+              className="inline-flex h-12 items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] hover:opacity-85 active:scale-[0.96] dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]"
             >
               <GetStartedLinkContent>{t("landing.cta")}</GetStartedLinkContent>
               <span className="ml-3">→</span>
             </Link>
             <Link
               href="#features"
-              className="inline-flex h-12 items-center justify-center rounded-sm border border-black/20 px-6 text-sm font-medium transition-colors hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/5"
+              className="inline-flex h-12 items-center justify-center rounded-sm border border-black/20 px-6 text-sm font-medium transition-[colors,transform] hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:hover:bg-white/5"
             >
               {t("landing.features.heading")} <span className="ml-3">↓</span>
             </Link>
@@ -116,9 +116,9 @@ export default function Hero() {
         </div>
         <div
           ref={videoContainerRef}
-          className="relative overflow-hidden rounded-sm bg-[#c6ddd6] p-2 sm:p-5 lg:p-8"
+          className="relative overflow-hidden rounded-md bg-[oklch(0.88_0.04_165)] p-2 sm:rounded-lg sm:p-5 lg:rounded-xl lg:p-8"
         >
-          <div className="relative aspect-[2108/1080] w-full overflow-hidden rounded-sm border border-black/15 bg-white shadow-2xl shadow-black/15 dark:aspect-[2120/1080] dark:bg-black">
+          <div className="relative aspect-[2108/1080] w-full overflow-hidden rounded-sm bg-white shadow-2xl shadow-black/15 outline outline-1 outline-black/10 dark:aspect-[2120/1080] dark:bg-black dark:outline-white/10">
             {!videoError && (
               <>
                 <img

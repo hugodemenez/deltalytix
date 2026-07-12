@@ -49,7 +49,7 @@ type ArchivedTurn = {
 };
 
 const USER_BUBBLE =
-  "ml-auto max-w-[92%] rounded-2xl rounded-br-sm bg-[#26251e] px-3.5 py-2.5 text-[11px] leading-relaxed text-white dark:bg-[#edecec] dark:text-[#14120b] sm:max-w-[82%] sm:text-xs";
+  "ml-auto max-w-[92%] rounded-2xl rounded-br-sm bg-[oklch(0.22_0.01_95)] px-3.5 py-2.5 text-[11px] leading-relaxed text-white dark:bg-[oklch(0.94_0_0)] dark:text-[oklch(0.17_0.01_95)] sm:max-w-[82%] sm:text-xs";
 
 const ASSISTANT_BUBBLE =
   "rounded-2xl rounded-bl-sm bg-black/[0.045] px-3.5 py-2.5 text-[11px] leading-relaxed dark:bg-white/[0.06] sm:text-xs";
@@ -424,13 +424,13 @@ export default function TradingChatAssistant({
   return (
     <div
       className={cn(
-        "grid h-full min-h-0 w-full min-w-0 max-w-full grid-rows-[48px_minmax(0,1fr)_60px] overflow-hidden rounded-lg bg-transparent text-[#26251e] dark:text-[#edecec]",
+        "grid h-full min-h-0 w-full min-w-0 max-w-full grid-rows-[48px_minmax(0,1fr)_60px] overflow-hidden rounded-lg bg-transparent text-[oklch(0.22_0.01_95)] dark:text-[oklch(0.94_0_0)]",
         className,
       )}
     >
       <div className="flex h-12 min-w-0 items-center border-b border-black/10 px-3 dark:border-white/10 sm:px-4">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-[#26251e] text-white dark:bg-[#edecec] dark:text-[#14120b]">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-[oklch(0.22_0.01_95)] text-white dark:bg-[oklch(0.94_0_0)] dark:text-[oklch(0.17_0.01_95)]">
             <Sparkles className="size-3.5" />
           </span>
           <span className="truncate text-xs font-medium sm:text-sm">
@@ -528,7 +528,7 @@ export default function TradingChatAssistant({
                             : t("landing.features.chat-feature.copyLabel")
                         }
                         onClick={handleCopy}
-                        className="rounded p-1 transition-[color,transform,background-color] duration-150 ease hover:bg-black/[0.05] hover:text-black/60 active:scale-[0.94] dark:hover:bg-white/[0.06] dark:hover:text-white/60"
+                        className="rounded p-1 transition-[color,transform,background-color] duration-150 ease hover:bg-black/[0.05] hover:text-black/60 active:scale-[0.96] dark:hover:bg-white/[0.06] dark:hover:text-white/60"
                       >
                         {copied ? (
                           <Check className="size-3 text-emerald-600 dark:text-emerald-400" />
@@ -569,7 +569,7 @@ export default function TradingChatAssistant({
             aria-label="Send suggested message"
             disabled={!canSend}
             onClick={sendMessage}
-            className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[#26251e] text-white transition-[transform,opacity] duration-150 ease-out active:scale-[0.94] disabled:cursor-default disabled:opacity-35 dark:bg-[#edecec] dark:text-[#14120b]"
+            className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[oklch(0.22_0.01_95)] text-white transition-[transform,opacity] duration-150 ease-out active:scale-[0.96] disabled:cursor-default disabled:opacity-35 dark:bg-[oklch(0.94_0_0)] dark:text-[oklch(0.17_0.01_95)]"
           >
             <ArrowUp className="size-3.5" />
           </button>
@@ -598,10 +598,10 @@ export default function TradingChatAssistant({
         .coach-input-typing {
           background: linear-gradient(
             90deg,
-            rgba(38, 37, 30, 0.75) 0%,
-            rgba(38, 37, 30, 1) 35%,
-            rgba(38, 37, 30, 0.55) 70%,
-            rgba(38, 37, 30, 0.75) 100%
+            oklch(0.22 0.01 95 / 0.75) 0%,
+            oklch(0.22 0.01 95) 35%,
+            oklch(0.22 0.01 95 / 0.55) 70%,
+            oklch(0.22 0.01 95 / 0.75) 100%
           );
           background-size: 220% 100%;
           -webkit-background-clip: text;
@@ -613,10 +613,10 @@ export default function TradingChatAssistant({
         :global(.dark) .coach-input-typing {
           background: linear-gradient(
             90deg,
-            rgba(237, 236, 236, 0.65) 0%,
-            rgba(237, 236, 236, 1) 35%,
-            rgba(237, 236, 236, 0.55) 70%,
-            rgba(237, 236, 236, 0.65) 100%
+            oklch(0.94 0 0 / 0.65) 0%,
+            oklch(0.94 0 0) 35%,
+            oklch(0.94 0 0 / 0.55) 70%,
+            oklch(0.94 0 0 / 0.65) 100%
           );
           background-size: 220% 100%;
           -webkit-background-clip: text;

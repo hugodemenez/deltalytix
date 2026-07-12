@@ -437,7 +437,7 @@ function ChartCarouselSection({
               <span
                 aria-hidden
                 className={cn(
-                  "relative block overflow-hidden rounded-full bg-muted-foreground/35 transition-all duration-300 ease-out",
+                  "relative block overflow-hidden rounded-full bg-muted-foreground/35 transition-[height,width,background-color] duration-300 ease-out",
                   index === selected
                     ? cn(
                         "h-2 w-8 bg-muted-foreground/20",

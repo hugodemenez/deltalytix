@@ -84,10 +84,10 @@ export default function Features() {
   return (
     <div className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 md:py-28 lg:px-12">
       <div className="mb-16 grid gap-5 md:grid-cols-2 md:items-end">
-        <h2 className="text-4xl font-normal tracking-[-0.04em] md:text-6xl">
+        <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] md:text-6xl">
           {t("landing.features.heading")}
         </h2>
-        <p className="max-w-lg text-lg text-black/55 dark:text-white/55 md:justify-self-end">
+        <p className="max-w-lg text-pretty text-lg text-black/55 dark:text-white/55 md:justify-self-end">
           {t("landing.features.subheading")}
         </p>
       </div>

@@ -1,67 +1,39 @@
 "use client";
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useI18n } from "@/locales/landing-client";
+
+const FAQ_ITEMS = [1, 2, 3, 4, 5, 6] as const;
 
 export default function FAQ() {
   const t = useI18n();
 
   return (
-    <section className="py-16">
-      <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold text-center mb-8">
-          {t("faq.heading")}
-        </h2>
-        <div className="max-w-3xl mx-auto space-y-6">
-          <details className="border-b pb-4">
-            <summary className="font-semibold cursor-pointer">
-              {t("faq.question1")}
-            </summary>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
-              {t("faq.answer1")}
-            </p>
-          </details>
-          <details className="border-b pb-4">
-            <summary className="font-semibold cursor-pointer">
-              {t("faq.question2")}
-            </summary>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
-              {t("faq.answer2")}
-            </p>
-          </details>
-          <details className="border-b pb-4">
-            <summary className="font-semibold cursor-pointer">
-              {t("faq.question3")}
-            </summary>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
-              {t("faq.answer3")}
-            </p>
-          </details>
-          <details className="border-b pb-4">
-            <summary className="font-semibold cursor-pointer">
-              {t("faq.question4")}
-            </summary>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
-              {t("faq.answer4")}
-            </p>
-          </details>
-          <details className="border-b pb-4">
-            <summary className="font-semibold cursor-pointer">
-              {t("faq.question5")}
-            </summary>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
-              {t("faq.answer5")}
-            </p>
-          </details>
-          <details className="border-b pb-4">
-            <summary className="font-semibold cursor-pointer">
-              {t("faq.question6")}
-            </summary>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
-              {t("faq.answer6")}
-            </p>
-          </details>
-        </div>
-      </div>
-    </section>
+    <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
+      <h2 className="mb-12 text-center text-4xl font-normal tracking-[-0.04em] text-balance md:mb-16 md:text-6xl">
+        {t("faq.heading")}
+      </h2>
+      <Accordion
+        type="single"
+        collapsible
+        className="mx-auto max-w-3xl divide-y divide-black/10 border-y border-black/10 dark:divide-white/10 dark:border-white/10"
+      >
+        {FAQ_ITEMS.map((n) => (
+          <AccordionItem key={n} value={`item-${n}`} className="border-none">
+            <AccordionTrigger className="py-5 text-lg font-medium hover:no-underline">
+              {t(`faq.question${n}`)}
+            </AccordionTrigger>
+            <AccordionContent className="pb-5 text-pretty leading-relaxed text-black/55 dark:text-white/55">
+              {t(`faq.answer${n}`)}
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
   );
 }
