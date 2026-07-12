@@ -43,7 +43,7 @@ import {
 import { useTheme } from "@/context/theme-provider";
 import { cn } from "@/lib/utils";
 import { useChangeLocale, useI18n } from "@/locales/landing-client";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Popover,
   PopoverContent,
@@ -60,6 +60,11 @@ import {
 import { useCurrentLocale } from "@/locales/landing-client";
 import { LanguageSelector } from "@/components/ui/language-selector";
 import { GITHUB_REPO_URL } from "@/lib/github-repo";
+import {
+  getHashFromHref,
+  localizeLandingHref,
+  scrollToLandingHash,
+} from "@/lib/landing-nav-paths";
 import { YOUTUBE_CHANNEL_URL } from "@/lib/social-links";
 import { ThemeToggleIcon } from "@/components/theme-toggle-icon";
 
@@ -177,14 +182,37 @@ export default function Component() {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const t = useI18n();
+  const locale = useCurrentLocale();
   const pathname = usePathname();
+
+  const closeMenu = useCallback(() => {
+    setIsOpen(false);
+  }, []);
+
+  const localize = useCallback(
+    (path: string) => localizeLandingHref(locale, path),
+    [locale],
+  );
+
+  const handleNavClick = useCallback(
+    (href: string) => {
+      closeMenu();
+
+      const hash = getHashFromHref(href);
+      if (!hash) {
+        return;
+      }
+
+      const pathWithoutHash = href.slice(0, href.indexOf("#"));
+      if (pathWithoutHash === pathname) {
+        scrollToLandingHash(hash);
+      }
+    },
+    [closeMenu, pathname],
+  );
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
-  };
-
-  const closeMenu = () => {
-    setIsOpen(false);
   };
 
   // Add/remove data attribute when mobile menu visibility changes
@@ -208,16 +236,13 @@ export default function Component() {
     const { body, documentElement } = document;
     const previousBodyOverflow = body.style.overflow;
     const previousHtmlOverflow = documentElement.style.overflow;
-    const previousBodyTouchAction = body.style.touchAction;
 
     body.style.overflow = "hidden";
     documentElement.style.overflow = "hidden";
-    body.style.touchAction = "none";
 
     return () => {
       body.style.overflow = previousBodyOverflow;
       documentElement.style.overflow = previousHtmlOverflow;
-      body.style.touchAction = previousBodyTouchAction;
     };
   }, [isOpen]);
 
@@ -345,7 +370,7 @@ export default function Component() {
           title: t("landing.navbar.api"),
           icon: <Cpu className="h-4 w-4" />,
         },
-      ],
+      ].filter((child) => child.path.length > 0),
     },
   ];
 
@@ -398,28 +423,28 @@ export default function Component() {
                       </NavigationMenuLink>
                     </li>
                     <ListItem
-                      href="/#ai-journaling"
+                      href={localize("/#ai-journaling")}
                       title={t("landing.navbar.aiJournaling")}
                       icon={<Brain className="h-4 w-4" />}
                     >
                       {t("landing.navbar.aiJournalingDescription")}
                     </ListItem>
                     <ListItem
-                      href="/#performance-visualization"
+                      href={localize("/#performance-visualization")}
                       title={t("landing.navbar.performanceVisualization")}
                       icon={<LineChart className="h-4 w-4" />}
                     >
                       {t("landing.navbar.performanceVisualizationDescription")}
                     </ListItem>
                     <ListItem
-                      href="/#daily-performance"
+                      href={localize("/#daily-performance")}
                       title={t("landing.navbar.dailyPerformance")}
                       icon={<Calendar className="h-4 w-4" />}
                     >
                       {t("landing.navbar.dailyPerformanceDescription")}
                     </ListItem>
                     <ListItem
-                      href="/#performance-tracking"
+                      href={localize("/#performance-tracking")}
                       title={t("landing.navbar.performanceTracking")}
                       icon={<TrendingUp className="h-4 w-4" />}
                     >
@@ -427,7 +452,7 @@ export default function Component() {
                     </ListItem>
                     <div className="col-span-2">
                       <ListItem
-                        href="/#data-import"
+                        href={localize("/#data-import")}
                         title={t("landing.navbar.dataImport")}
                         icon={<Database className="h-4 w-4" />}
                       >
@@ -450,14 +475,14 @@ export default function Component() {
                 >
                   <ul className="grid gap-3 p-6 md:w-[500px] lg:w-[600px] list-none">
                     <ListItem
-                      href="#pricing"
+                      href={localize("#pricing")}
                       title={t("pricing.basic.name")}
                       icon={<Sun className="h-4 w-4" />}
                     >
                       {t("pricing.basic.description")}
                     </ListItem>
                     <ListItem
-                      href="#pricing"
+                      href={localize("#pricing")}
                       title={t("pricing.plus.name")}
                       icon={<Crown className="h-4 w-4" />}
                     >
@@ -479,7 +504,7 @@ export default function Component() {
                 >
                   <ul className="grid gap-3 p-4 md:w-[500px] lg:w-[600px] list-none">
                     <ListItem
-                      href="/updates"
+                      href={localize("/updates")}
                       title={t("landing.navbar.changelog")}
                       icon={<BarChart3 className="h-4 w-4" />}
                     >
@@ -657,10 +682,11 @@ export default function Component() {
               variants={listVariant}
             >
               {links.map(({ path, title, children }, index) => {
+                const localizedPath = path ? localize(path) : undefined;
                 const isActive =
                   path === "/updates"
                     ? pathname.includes("updates")
-                    : path === pathname;
+                    : localizedPath === pathname;
 
                 if (path) {
                   return (
@@ -670,9 +696,9 @@ export default function Component() {
                         transition={{ duration: 0.2 }}
                       >
                         <Link
-                          href={path}
+                          href={localizedPath!}
                           className={cn(isActive && "text-primary", "block")}
-                          onClick={closeMenu}
+                          onClick={() => handleNavClick(localizedPath!)}
                         >
                           {title}
                         </Link>
@@ -701,6 +727,9 @@ export default function Component() {
                               transition={{ duration: 0.2 }}
                             >
                               {children.map((child, childIndex) => {
+                                const href = child.external
+                                  ? child.path
+                                  : localize(child.path);
                                 const linkProps = child.external
                                   ? {
                                       target: "_blank" as const,
@@ -722,15 +751,26 @@ export default function Component() {
                                       whileHover={{ x: 4 }}
                                       transition={{ duration: 0.2 }}
                                     >
-                                      <Link
-                                        onClick={closeMenu}
-                                        href={child.path}
-                                        className="text-[#878787] flex items-center space-x-2"
-                                        {...linkProps}
-                                      >
-                                        <span>{child.icon}</span>
-                                        <span>{child.title}</span>
-                                      </Link>
+                                      {child.external ? (
+                                        <a
+                                          href={href}
+                                          onClick={closeMenu}
+                                          className="text-[#878787] flex items-center space-x-2"
+                                          {...linkProps}
+                                        >
+                                          <span>{child.icon}</span>
+                                          <span>{child.title}</span>
+                                        </a>
+                                      ) : (
+                                        <Link
+                                          onClick={() => handleNavClick(href)}
+                                          href={href}
+                                          className="text-[#878787] flex items-center space-x-2"
+                                        >
+                                          <span>{child.icon}</span>
+                                          <span>{child.title}</span>
+                                        </Link>
+                                      )}
                                     </motion.div>
                                   </motion.li>
                                 );
@@ -948,7 +988,7 @@ export default function Component() {
       {/* Mobile navbar backdrop — covers area behind Safari bottom tab bar */}
       {isOpen && (
         <div
-          className="mobile-nav-overlay fixed inset-0 bg-background z-40"
+          className="mobile-nav-overlay fixed inset-0 bg-background z-40 pointer-events-none"
           aria-hidden="true"
         />
       )}
