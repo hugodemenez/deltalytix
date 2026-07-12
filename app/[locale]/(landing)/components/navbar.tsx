@@ -384,7 +384,7 @@ export default function Component() {
       <header
         className={`max-w-7xl mx-auto fixed top-0 left-0 right-0 px-4 lg:px-6 h-14 flex items-center justify-between z-50  text-foreground transition-transform duration-300 ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
       >
-        <Link href="/" className="flex items-center space-x-2">
+        <Link href={localize("/")} className="flex items-center space-x-2">
           <Logo className="w-6 h-6 fill-black dark:fill-white" />
           <span className="font-bold text-xl">Deltalytix</span>
         </Link>
@@ -407,7 +407,7 @@ export default function Component() {
                       <NavigationMenuLink asChild>
                         <Link
                           className="flex h-full w-full select-none flex-col justify-end rounded-md bg-linear-to-b from-muted/50 to-muted p-6 no-underline outline-hidden focus:shadow-md"
-                          href="/"
+                          href={localize("/")}
                         >
                           <Logo className="w-6 h-6" />
                           <div className="mb-2 mt-4 text-lg font-medium">
@@ -540,15 +540,17 @@ export default function Component() {
                     >
                       {t("landing.navbar.openSourceDescription")}
                     </ListItem>
-                    <ListItem
-                      href={process.env.NEXT_PUBLIC_DISCORD_INVITATION || ""}
-                      title={t("landing.navbar.joinCommunity")}
-                      icon={<Users className="h-4 w-4" />}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {t("landing.navbar.joinCommunityDescription")}
-                    </ListItem>
+                    {process.env.NEXT_PUBLIC_DISCORD_INVITATION && (
+                      <ListItem
+                        href={process.env.NEXT_PUBLIC_DISCORD_INVITATION}
+                        title={t("landing.navbar.joinCommunity")}
+                        icon={<Users className="h-4 w-4" />}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {t("landing.navbar.joinCommunityDescription")}
+                      </ListItem>
+                    )}
                   </ul>
                 </NavigationMenuContent>
               </NavigationMenuItem>
@@ -559,7 +561,9 @@ export default function Component() {
               className="h-14 rounded-none px-4 text-sm font-medium hover:text-accent-foreground"
               asChild
             >
-              <Link href="/authentication">{t("landing.navbar.signIn")}</Link>
+              <Link href={localize("/authentication")}>
+                {t("landing.navbar.signIn")}
+              </Link>
             </Button>
           </NavigationMenu>
         </div>
@@ -793,7 +797,7 @@ export default function Component() {
                 >
                   <Link
                     className="block w-full text-xl text-primary rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    href="/authentication"
+                    href={localize("/authentication")}
                     onClick={closeMenu}
                   >
                     {t("landing.navbar.signIn")}
