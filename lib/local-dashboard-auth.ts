@@ -11,7 +11,10 @@ function isTruthy(value: string | undefined): boolean {
 
 function isBypassRequestedFromEnv(): boolean {
   if (isServer) {
-    return isTruthy(process.env.LOCAL_DASHBOARD_AUTH_BYPASS)
+    return (
+      isTruthy(process.env.LOCAL_DASHBOARD_AUTH_BYPASS) ||
+      isTruthy(process.env.NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS)
+    )
   }
 
   return isTruthy(process.env.NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS)

@@ -1,18 +1,17 @@
 'use server'
 
 import { createClient } from '@/server/auth'
-import { cookies } from 'next/headers'
-import { PrismaClient } from '@/prisma/generated/prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
 import { stripe } from '@/server/stripe'
 import Stripe from 'stripe'
 import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
+import { getLocalDashboardBillingMock } from '@/lib/local-dashboard-billing-mock'
 
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
+export type { SubscriptionWithPrice } from '@/lib/subscription-types'
 
-const prisma = new PrismaClient({ adapter })
+async function getPrisma() {
+  const { prisma } = await import('@/lib/prisma')
+  return prisma
+}
 
 // Helper function to get current period end from subscription items
 function getCurrentPeriodEnd(subscription: Stripe.Subscription): number {
@@ -26,53 +25,17 @@ function getCurrentPeriodEnd(subscription: Stripe.Subscription): number {
   return subscription.billing_cycle_anchor;
 }
 
-export type SubscriptionWithPrice = {
-  id: string
-  status: string
-  current_period_end: number
-  current_period_start: number
-  created: number
-  cancel_at_period_end: boolean
-  cancel_at: number | null
-  canceled_at: number | null
-  trial_end: number | null
-  trial_start: number | null
-  plan: {
-    id: string
-    name: string
-    amount: number
-    interval: 'month' | 'quarter' | 'year' | 'lifetime'
-  }
-  promotion?: {
-    code: string
-    amount_off: number
-    percent_off: number | null
-    duration: {
-      duration_in_months: number | null
-      duration: 'forever' | 'once' | 'repeating' | null
-    }
-  }
-  invoices?: Array<{
-    id: string
-    amount_paid: number
-    status: string
-    created: number
-    invoice_pdf: string | null
-    hosted_invoice_url: string | null
-  }>
-}
-
 export async function getSubscriptionData() {
   console.debug('getSubscriptionData')
 
   if (isLocalDashboardAuthBypassEnabled()) {
-    return null
+    return getLocalDashboardBillingMock()
   }
 
+  const prisma = await getPrisma()
   const supabase = await createClient()
 
   try {
-    // Get the current user
     const { data: { user } } = await supabase.auth.getUser()
     if (!user?.email) throw new Error('User not found')
 
@@ -415,7 +378,7 @@ export async function collectSubscriptionFeedback(
     if (!user?.email) throw new Error('User not found')
 
     // Create feedback record
-    await prisma.subscriptionFeedback.create({
+    await (await getPrisma()).subscriptionFeedback.create({
       data: {
         email: user.email,
         event,
@@ -480,7 +443,7 @@ export async function switchSubscriptionPlan(newLookupKey: string) {
         await stripe.subscriptions.cancel(currentSubscription.id)
 
         // Update local database
-        await prisma.subscription.update({
+        await (await getPrisma()).subscription.update({
           where: {
             email: user.email,
           },
@@ -541,7 +504,7 @@ export async function switchSubscriptionPlan(newLookupKey: string) {
 
     const currentPeriodEnd = getCurrentPeriodEnd(updatedSubscription);
 
-    await prisma.subscription.update({
+    await (await getPrisma()).subscription.update({
       where: {
         email: user.email,
       },

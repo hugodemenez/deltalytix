@@ -8,7 +8,10 @@ import { Check, AlertCircle, CheckCircle2, CalendarDays, Clock, CreditCard, Hist
 import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription, DialogHeader, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { updateSubscription, collectSubscriptionFeedback, type SubscriptionWithPrice } from "../../../../../server/billing"
+import { updateSubscription, collectSubscriptionFeedback } from "../../../../../server/billing"
+import type { SubscriptionWithPrice } from "@/lib/subscription-types"
+import { getLocalDashboardBillingMock } from "@/lib/local-dashboard-billing-mock"
+import { isLocalDashboardAuthBypassEnabled } from "@/lib/local-dashboard-auth"
 import { toast } from "sonner"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import PricingPlans from "@/components/pricing-plans"
@@ -52,9 +55,14 @@ export default function BillingManagement() {
   const locale = useCurrentLocale()
   
   // Use store instead of local state
-  const subscription = useStripeSubscriptionStore(state => state.stripeSubscription)
-  const isLoading = useStripeSubscriptionStore(state => state.isLoading)
+  const stripeSubscription = useStripeSubscriptionStore(state => state.stripeSubscription)
+  const subscriptionLoading = useStripeSubscriptionStore(state => state.isLoading)
   const refreshSubscription = useStripeSubscriptionStore(state => state.refreshSubscription)
+
+  const useLocalBillingMock = isLocalDashboardAuthBypassEnabled()
+  const subscription =
+    stripeSubscription ?? (useLocalBillingMock ? getLocalDashboardBillingMock() : null)
+  const billingIsLoading = useLocalBillingMock ? false : subscriptionLoading
 
   // Add helper function for safe date formatting
   function formatStripeDate(
@@ -112,7 +120,7 @@ export default function BillingManagement() {
         <CardHeader className="px-0">
           <CardTitle>{t('billing.currentPlan')}</CardTitle>
           <div className="mt-1.5 text-sm text-muted-foreground flex items-center gap-2">
-            {isLoading ? (
+            {billingIsLoading ? (
               <>
                 <Skeleton className="h-4 w-[120px]" />
                 <span className="text-muted-foreground">•</span>
@@ -172,7 +180,7 @@ export default function BillingManagement() {
           <div className="rounded-lg border bg-card p-6 space-y-6">
             {/* Current Plan Details */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-              {isLoading ? (
+              {billingIsLoading ? (
                 <>
                   <div className="space-y-2">
                     <Skeleton className="h-8 w-[140px]" />
@@ -260,7 +268,7 @@ export default function BillingManagement() {
             {/* Subscription Timeline */}
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                {isLoading ? (
+                {billingIsLoading ? (
                   <>
                     <div className="flex items-start gap-2">
                       <History className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
@@ -342,7 +350,7 @@ export default function BillingManagement() {
       </Card>
 
       {/* Subscription Management */}
-      {!isLoading && (subscription?.status === 'active' || subscription?.status === 'trialing') && subscription?.plan?.interval !== 'lifetime' && (
+      {!billingIsLoading && (subscription?.status === 'active' || subscription?.status === 'trialing') && subscription?.plan?.interval !== 'lifetime' && (
         <Card className="border-none shadow-none bg-transparent">
           <CardContent className="px-0">
             <div className="flex flex-col gap-4">
@@ -488,7 +496,7 @@ export default function BillingManagement() {
         </CardHeader>
         <CardContent className="px-0">
           <div className="rounded-lg border bg-card overflow-hidden">
-            {isLoading ? (
+            {billingIsLoading ? (
               <div className="p-4 space-y-4">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

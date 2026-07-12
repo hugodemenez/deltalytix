@@ -297,18 +297,18 @@ export async function captureScene(browser, options) {
         locale: playwrightLocale,
         ...viewport('mobile'),
       })
-      await waitForDashboard(page, locale, siteUrl)
       await page.goto(`${siteUrl}/${locale}/dashboard/billing`, {
         waitUntil: 'networkidle',
         timeout: 120_000,
       })
-      const paymentHistory = page.getByText(LABELS[locale].paymentHistory).first()
-      if ((await paymentHistory.count()) > 0) {
-        await paymentHistory.scrollIntoViewIfNeeded()
-      } else {
-        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-      }
+      await dismissCookies(page, locale)
+      await page.getByText(LABELS[locale].paymentHistory).first().waitFor({ timeout: 30_000 })
+      await page.getByRole('button', { name: LABELS[locale].viewInvoice }).first().waitFor({
+        timeout: 30_000,
+      })
+      await page.getByText(LABELS[locale].paymentHistory).first().scrollIntoViewIfNeeded()
       await page.waitForTimeout(2000)
+      await ensureCookiesDismissed(page, locale)
       await assertNoDevIssues(page, `${locale} billing mobile`)
       await screenshot(page, batch, locale, file)
       await page.close()

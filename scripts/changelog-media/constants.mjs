@@ -47,6 +47,8 @@ export const LABELS = {
     updatesNav: /^updates$/i,
     paymentHistory: /payment history/i,
     billing: /billing/i,
+    viewInvoice: /view invoice/i,
+    paidBadge: /^paid$/i,
   },
   fr: {
     acceptCookies: /tout accepter/i,
@@ -64,6 +66,8 @@ export const LABELS = {
     updatesNav: /^mises à jour$/i,
     paymentHistory: /historique des paiements/i,
     billing: /facturation/i,
+    viewInvoice: /voir la facture/i,
+    paidBadge: /^payé$/i,
   },
 }
 
