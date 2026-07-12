@@ -65,14 +65,17 @@ curl -s -o /dev/null -D - "http://localhost:3000/authentication?next=dashboard" 
 # expect: HTTP/1.1 307, location: /dashboard
 ```
 
-## Changelog media captures
+## Changelog entries
 
-When adding or updating changelog entries under `content/updates/`, capture localized screenshots/videos with Playwright.
+For beta → main promotion PRs, write user-facing changelog MDX in EN and FR, then capture media.
 
-Skill doc: [`lib/agent-skills/changelog-media.md`](./lib/agent-skills/changelog-media.md)  
-Discovery URL: `/.well-known/agent-skills/changelog-media/SKILL.md`
+**1. Write entries** — skill: [`lib/agent-skills/changelog-entries.md`](./lib/agent-skills/changelog-entries.md)  
+Discovery: `/.well-known/agent-skills/changelog-entries/SKILL.md`
 
-Quick start:
+**2. Capture media** — skill: [`lib/agent-skills/changelog-media.md`](./lib/agent-skills/changelog-media.md)  
+Discovery: `/.well-known/agent-skills/changelog-media/SKILL.md`
+
+Quick start (media step):
 
 ```bash
 cp scripts/changelog-media/recipes/template.mjs scripts/changelog-media/recipes/pr-XXX.mjs

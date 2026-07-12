@@ -3,6 +3,7 @@ import {
   absoluteUrl,
   deltalytixSkillDigest,
 } from "@/lib/agent-discovery/metadata";
+import { changelogEntriesSkillDigest } from "@/lib/agent-skills/changelog-entries";
 import { changelogMediaSkillDigest } from "@/lib/agent-skills/changelog-media";
 
 export async function GET(request: NextRequest) {
@@ -19,6 +20,17 @@ export async function GET(request: NextRequest) {
           request,
         ),
         digest: deltalytixSkillDigest,
+      },
+      {
+        name: "deltalytix-changelog-entries",
+        type: "skill-md",
+        description:
+          "Write bilingual EN/FR changelog MDX entries for release batches from promotion PRs or beta diffs.",
+        url: absoluteUrl(
+          "/.well-known/agent-skills/changelog-entries/SKILL.md",
+          request,
+        ),
+        digest: changelogEntriesSkillDigest,
       },
       {
         name: "deltalytix-changelog-media",
