@@ -47,8 +47,6 @@ export const LABELS = {
     updatesNav: /^updates$/i,
     paymentHistory: /payment history/i,
     billing: /billing/i,
-    viewInvoice: /view invoice/i,
-    paidBadge: /^paid$/i,
   },
   fr: {
     acceptCookies: /tout accepter/i,
@@ -66,12 +64,34 @@ export const LABELS = {
     updatesNav: /^mises à jour$/i,
     paymentHistory: /historique des paiements/i,
     billing: /facturation/i,
-    viewInvoice: /voir la facture/i,
-    paidBadge: /^payé$/i,
   },
 }
 
 export const PLAYWRIGHT_LOCALE = {
   en: 'en-US',
   fr: 'fr-FR',
+}
+
+/** Demo invoices injected during billing-mobile captures (local bypass has no Stripe data). */
+export const BILLING_CAPTURE_MOCK = {
+  en: {
+    paid: 'Paid',
+    viewInvoice: 'View invoice',
+    downloadPdf: 'Download PDF',
+    invoices: [
+      { amount: '€29.00', date: 'July 1, 2026' },
+      { amount: '€29.00', date: 'June 1, 2026' },
+      { amount: '€29.00', date: 'May 1, 2026' },
+    ],
+  },
+  fr: {
+    paid: 'Payé',
+    viewInvoice: 'Voir la facture',
+    downloadPdf: 'Télécharger le PDF',
+    invoices: [
+      { amount: '€29.00', date: '1 juillet 2026' },
+      { amount: '€29.00', date: '1 juin 2026' },
+      { amount: '€29.00', date: '1 mai 2026' },
+    ],
+  },
 }

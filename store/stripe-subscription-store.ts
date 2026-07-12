@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { SubscriptionWithPrice } from '@/lib/subscription-types'
+import { SubscriptionWithPrice } from '@/server/billing'
 
 interface StripeSubscriptionStore {
   // Stripe subscription data (detailed billing info)
@@ -39,8 +39,8 @@ export const useStripeSubscriptionStore = create<StripeSubscriptionStore>()((set
   refreshSubscription: async () => {
     try {
       set({ isLoading: true, error: null });
-      const { getSubscriptionDataForDashboard } = await import('@/server/local-subscription');
-      const subscriptionData = await getSubscriptionDataForDashboard();
+      const { getSubscriptionData } = await import('@/server/billing');
+      const subscriptionData = await getSubscriptionData();
       set({ 
         stripeSubscription: subscriptionData,
         error: null 

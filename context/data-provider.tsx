@@ -63,7 +63,7 @@ import { useEquityChartStore } from "@/store/widgets/equity-chart-store";
 import { useEquityChartDataStore } from "@/store/widgets/equity-chart-data-store";
 import { useStripeSubscriptionStore } from "@/store/stripe-subscription-store";
 import { useBreakevenStore } from "@/store/widgets/breakeven-store";
-import { getSubscriptionDataForDashboard } from "@/server/local-subscription";
+import { getSubscriptionData } from "@/server/billing";
 import { computeEquityChartData } from "@/lib/equity-chart";
 import { defaultLayouts } from "@/lib/default-layouts";
 import { getTimeRangeKey } from "@/lib/time-range";
@@ -593,7 +593,7 @@ export const DataProvider: React.FC<{
       // Load Stripe subscription data
       try {
         setStripeSubscriptionLoading(true);
-        const stripeSubscriptionData = await getSubscriptionDataForDashboard();
+        const stripeSubscriptionData = await getSubscriptionData();
         setStripeSubscription(stripeSubscriptionData);
         setStripeSubscriptionError(null);
       } catch (error) {
@@ -652,7 +652,7 @@ export const DataProvider: React.FC<{
   const loadStripeSubscription = useCallback(async () => {
     try {
       setStripeSubscriptionLoading(true);
-      const stripeSubscriptionData = await getSubscriptionDataForDashboard();
+      const stripeSubscriptionData = await getSubscriptionData();
       setStripeSubscription(stripeSubscriptionData);
       setStripeSubscriptionError(null);
     } catch (error) {

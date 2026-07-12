@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { execSync } from 'child_process'
-import { LABELS, viewport } from './constants.mjs'
+import { LABELS, viewport, BILLING_CAPTURE_MOCK } from './constants.mjs'
 
 const COOKIE_CONSENT_VALUE = JSON.stringify({
   analytics_storage: true,
@@ -158,6 +158,34 @@ export async function assertNoDevIssues(page, context) {
     const overlay = await page.locator('nextjs-portal').innerText().catch(() => 'unknown issue')
     throw new Error(`Next.js dev issue on ${context}: ${overlay.slice(0, 500)}`)
   }
+}
+
+export async function injectBillingPaymentHistoryMock(page, locale) {
+  const mock = BILLING_CAPTURE_MOCK[locale]
+  await page.evaluate((data) => {
+    const card = Array.from(document.querySelectorAll('.rounded-lg.border.bg-card.overflow-hidden')).find(
+      (element) =>
+        /no payment history|aucun historique/i.test(element.textContent ?? ''),
+    )
+    if (!card) return
+
+    const row = (invoice) => `
+      <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0 space-y-1">
+          <p class="text-sm font-medium">${invoice.amount}</p>
+          <p class="text-sm text-muted-foreground">${invoice.date}</p>
+        </div>
+        <div class="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
+          <span class="w-fit rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-100">${data.paid}</span>
+          <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <button type="button" class="inline-flex h-8 w-full items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium sm:w-auto">${data.viewInvoice}</button>
+            <button type="button" class="inline-flex h-8 w-full items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium sm:w-auto">${data.downloadPdf}</button>
+          </div>
+        </div>
+      </div>`
+
+    card.innerHTML = `<div class="divide-y overflow-hidden">${data.invoices.map(row).join('')}</div>`
+  }, mock)
 }
 
 export async function waitForDashboard(page, locale, siteUrl) {
