@@ -73,8 +73,19 @@ Available scenes:
 | `trade-table-scroll-video` | `.mp4` | Virtualized table scroll demo |
 | `calendar-widgets` | `.png` | Calendar widget on dashboard |
 | `calendar-table` | `.png` | Trade table tab for date alignment |
+| `landing-features-carousel` | `.png` | Landing page chart carousel section |
+| `landing-navbar-updates` | `.png` | Landing navbar Updates dropdown |
+| `billing-mobile` | `.png` | Billing payment history on phone (injects demo invoices — see below) |
 
 Asset filenames should match the changelog slug (or a descriptive suffix like `-mobile`, `-demo`).
+
+### Billing payment history captures
+
+Local dashboard auth bypass has **no Stripe subscription data**, so `/dashboard/billing` shows an empty payment history by default. **Do not change product code** to add mocks for changelog work.
+
+For `billing-mobile` captures, the scene injects demo invoice rows into the payment history card with Playwright (`injectBillingPaymentHistoryMock` in `helpers.mjs`) before taking the screenshot. Mock copy lives in `BILLING_CAPTURE_MOCK` inside `constants.mjs` (three paid Plus invoices, localized labels).
+
+If you add a new billing-related scene, follow the same pattern: inject realistic DOM in the capture script only, keep product code untouched, commit the resulting PNGs under `public/updates/<batch>/`.
 
 ### 2. Run the capture script
 
@@ -167,6 +178,22 @@ Entries wired in:
 - `trade-table-mobile-and-show-all`
 - `calendar-table-timezone-date-fix`
 
+## Example: PR #298
+
+Recipe: `scripts/changelog-media/recipes/pr-298.mjs`
+
+```bash
+bun run capture:changelog-media -- pr-298
+```
+
+Entries wired in:
+
+- `landing-page-redesign`
+- `landing-performance-chart-carousel`
+- `landing-navbar-features-and-updates`
+- `billing-payment-history-mobile-layout` (uses `billing-mobile` with injected demo invoices)
+- `calendar-grid-day-keys-timezone-fix`
+
 ## Definition of done
 
 1. Recipe exists for the batch.
@@ -175,3 +202,4 @@ Entries wired in:
 4. Each new EN/FR MDX entry has `image:` in frontmatter and ≥1 media element in the body.
 5. Media paths use the correct locale subdirectory (`en` or `fr`).
 6. Assets are committed under `public/updates/<batch>/`.
+7. Capture-only mocks (e.g. billing invoice injection) stay in `scripts/changelog-media/` — never add product-code bypasses just for screenshots.

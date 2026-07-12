@@ -3,6 +3,7 @@ import {
   clickTab,
   dismissCookies,
   ensureCookiesDismissed,
+  injectBillingPaymentHistoryMock,
   newCapturePage,
   recordVideo,
   screenshot,
@@ -10,7 +11,7 @@ import {
 } from './helpers.mjs'
 import { LABELS, viewport } from './constants.mjs'
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-features-carousel' | 'landing-navbar-updates' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'billing-mobile'} ChangelogScene */
 
 /**
  * @param {import('playwright-core').Browser} browser
@@ -47,6 +48,42 @@ export async function captureScene(browser, options) {
       await page.waitForTimeout(3000)
       await ensureCookiesDismissed(page, locale)
       await assertNoDevIssues(page, `${locale} contribution graph`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'landing-features-carousel': {
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await page.goto(`${siteUrl}/${locale}`, { waitUntil: 'networkidle', timeout: 120_000 })
+      await dismissCookies(page, locale)
+      const section = page.locator('#performance-visualization')
+      await section.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(4000)
+      await ensureCookiesDismissed(page, locale)
+      await assertNoDevIssues(page, `${locale} landing features carousel`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'landing-navbar-updates': {
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await page.goto(`${siteUrl}/${locale}`, { waitUntil: 'networkidle', timeout: 120_000 })
+      await dismissCookies(page, locale)
+      const updatesTrigger = page.getByRole('button', { name: LABELS[locale].updatesNav })
+      if ((await updatesTrigger.count()) > 0) {
+        await updatesTrigger.first().click()
+        await page.waitForTimeout(1200)
+      }
+      await ensureCookiesDismissed(page, locale)
+      await assertNoDevIssues(page, `${locale} landing navbar updates`)
       await screenshot(page, batch, locale, file)
       await page.close()
       return
@@ -251,6 +288,26 @@ export async function captureScene(browser, options) {
       await clickTab(page, LABELS[locale].widgetsTab)
       await page.waitForTimeout(2500)
       await assertNoDevIssues(page, `${locale} widgets mobile`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'billing-mobile': {
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('mobile'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      await page.goto(`${siteUrl}/${locale}/dashboard/billing`, {
+        waitUntil: 'networkidle',
+        timeout: 120_000,
+      })
+      await page.getByText(LABELS[locale].paymentHistory).first().waitFor({ timeout: 30_000 })
+      await injectBillingPaymentHistoryMock(page, locale)
+      await page.getByText(LABELS[locale].paymentHistory).first().scrollIntoViewIfNeeded()
+      await page.waitForTimeout(2000)
+      await assertNoDevIssues(page, `${locale} billing mobile`)
       await screenshot(page, batch, locale, file)
       await page.close()
       return

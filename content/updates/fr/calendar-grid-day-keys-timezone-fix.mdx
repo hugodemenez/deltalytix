@@ -1,0 +1,16 @@
+---
+title: 'Calendrier : les trades tombent sur le bon jour de la grille'
+description: 'Les cellules du calendrier utilisent désormais le fuseau horaire de votre profil pour les clés de jour, afin que les trades en fin de soirée n''apparaissent plus sur le mauvais jour.'
+date: '2026-07-06'
+status: completed
+completedDate: '2026-07-06'
+image: '/updates/pr-298/fr/calendar-grid-day-keys-timezone-fix.png'
+---
+
+# Calendrier : les trades tombent sur le bon jour de la grille
+
+![Widget calendrier avec des trades alignés sur les cellules du fuseau horaire du profil](/updates/pr-298/fr/calendar-grid-day-keys-timezone-fix.png)
+
+Les trades pris près de minuit pouvaient encore apparaître sur la mauvaise cellule du calendrier, même après l'alignement du calendrier et du tableau des trades sur le fuseau horaire de votre profil. La grille construisait les clés de jour différemment du regroupement des trades.
+
+Les cellules utilisent maintenant les mêmes clés de jour sensibles au fuseau horaire que le reste du tableau de bord, donc un trade apparaît sur le même jour de la semaine que dans le tableau. Les totaux hebdomadaires et les fenêtres du jour restent cohérents avec la cellule que vous touchez — particulièrement utile si vous tradez dans des fuseaux US, EU ou AU en dehors de l'UTC.
