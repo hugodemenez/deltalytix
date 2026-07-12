@@ -7,6 +7,7 @@ import Script from "next/script";
 import { ScrollLockFix } from "@/components/scroll-lock-fix";
 import { getSiteOrigin, siteUrl } from "@/lib/site-url";
 import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
+import { cn } from "@/lib/utils";
 
 const inter = Inter({ subsets: ["latin"] });
 const metadataBase = new URL(getSiteOrigin());
@@ -350,7 +351,9 @@ export default function RootLayout({
           `}
         </style>
       </head>
-      <body className={inter.className}>
+      <body
+        className={cn(inter.className, "antialiased [font-synthesis:none]")}
+      >
         <ScrollLockFix />
         <SpeedInsights />
         <Analytics />

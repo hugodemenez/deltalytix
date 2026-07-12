@@ -14,12 +14,12 @@ export default function Partners() {
       </h2>
       <div className="mx-auto grid max-w-3xl grid-cols-1 items-center md:grid-cols-2">
         <a
-          className="group flex min-h-20 items-center justify-center border-b border-black/10 px-6 dark:border-white/10 md:border-b-0 md:border-r"
+          className="group flex min-h-20 items-center justify-center px-6 shadow-[inset_0_-1px_0_0_oklch(0_0_0/0.06)] dark:shadow-[inset_0_-1px_0_0_oklch(1_0_0/0.08)] md:shadow-[inset_-1px_0_0_0_oklch(0_0_0/0.06)] md:dark:shadow-[inset_-1px_0_0_0_oklch(1_0_0/0.08)]"
           href="https://ninjatraderdomesticvendor.sjv.io/e1VQMz"
           target="_blank"
           rel="noopener noreferrer"
         >
-          <span className="relative h-6 w-full max-w-[144px] opacity-65 transition-opacity duration-150 ease-out group-hover:opacity-100 md:h-5 md:max-w-[120px] md:opacity-55">
+          <span className="relative h-6 w-full max-w-[144px] opacity-65 outline outline-1 outline-black/5 transition-opacity duration-150 ease-out group-hover:opacity-100 dark:outline-white/5 md:h-5 md:max-w-[120px] md:opacity-55">
             <Image
               src="/logos/ninjatrader-ob.svg"
               alt="NinjaTrader"
@@ -31,7 +31,7 @@ export default function Partners() {
           </span>
         </a>
         <div className="flex min-h-20 items-center justify-center px-6">
-          <span className="relative h-6 w-full max-w-[402px] opacity-65 md:h-5 md:max-w-[335px] md:opacity-55">
+          <span className="relative h-6 w-full max-w-[402px] opacity-65 outline outline-1 outline-black/5 dark:outline-white/5 md:h-5 md:max-w-[335px] md:opacity-55">
             <Image
               src="/logos/rithmic-logo-black.png"
               alt="Rithmic"

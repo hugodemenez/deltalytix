@@ -95,8 +95,8 @@ export default async function UpdatesPage(props: PageProps) {
             <h2 className="text-sm font-medium text-black/55 dark:text-white/55">
               {t("updates.weeklyVideo")}
             </h2>
-            <div className="overflow-hidden rounded-sm bg-[#c6ddd6] p-2 sm:p-4">
-              <div className="relative aspect-video w-full overflow-hidden rounded-sm border border-black/15 bg-black">
+            <div className="overflow-hidden rounded-md bg-[oklch(0.88_0.04_165)] p-2 sm:rounded-lg sm:p-4 lg:rounded-xl">
+              <div className="relative aspect-video w-full overflow-hidden rounded-sm bg-black outline outline-1 outline-black/10 dark:outline-white/10">
                 <iframe
                   className="absolute inset-0 h-full w-full"
                   src={`https://www.youtube.com/embed/${latestVideoId}`}
