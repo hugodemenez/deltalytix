@@ -18,7 +18,6 @@ import {
   Layers,
   BarChart3,
   Calendar,
-  BookOpen,
   Database,
   LineChart,
   Menu,
