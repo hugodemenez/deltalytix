@@ -7,6 +7,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { stripe } from '@/server/stripe'
 import Stripe from 'stripe'
 import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
+import { getLocalDashboardMockSubscriptionData } from '@/lib/local-dashboard-mock-billing'
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -66,7 +67,7 @@ export async function getSubscriptionData() {
   console.debug('getSubscriptionData')
 
   if (isLocalDashboardAuthBypassEnabled()) {
-    return null
+    return getLocalDashboardMockSubscriptionData()
   }
 
   const supabase = await createClient()
