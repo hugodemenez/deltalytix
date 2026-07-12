@@ -27,6 +27,8 @@ import {
   Sun,
   Moon,
   Crown,
+  TrendingUp,
+  Brain,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -58,6 +60,7 @@ import {
 import { useCurrentLocale } from "@/locales/landing-client";
 import { LanguageSelector } from "@/components/ui/language-selector";
 import { GITHUB_REPO_URL } from "@/lib/github-repo";
+import { YOUTUBE_CHANNEL_URL } from "@/lib/social-links";
 import { ThemeToggleIcon } from "@/components/theme-toggle-icon";
 
 const ListItem = React.forwardRef<
@@ -99,6 +102,20 @@ function GithubIcon({ className }: { className?: string }) {
       fill="currentColor"
     >
       <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+    </svg>
+  );
+}
+
+function YoutubeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      role="img"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      fill="currentColor"
+    >
+      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
     </svg>
   );
 }
@@ -257,9 +274,9 @@ export default function Component() {
       title: t("landing.navbar.features"),
       children: [
         {
-          path: "/#data-import",
-          title: t("landing.navbar.dataImport"),
-          icon: <Database className="h-4 w-4" />,
+          path: "/#ai-journaling",
+          title: t("landing.navbar.aiJournaling"),
+          icon: <Brain className="h-4 w-4" />,
         },
         {
           path: "/#performance-visualization",
@@ -272,9 +289,14 @@ export default function Component() {
           icon: <Calendar className="h-4 w-4" />,
         },
         {
-          path: "/#ai-journaling",
-          title: t("landing.navbar.aiJournaling"),
-          icon: <BookOpen className="h-4 w-4" />,
+          path: "/#performance-tracking",
+          title: t("landing.navbar.performanceTracking"),
+          icon: <TrendingUp className="h-4 w-4" />,
+        },
+        {
+          path: "/#data-import",
+          title: t("landing.navbar.dataImport"),
+          icon: <Database className="h-4 w-4" />,
         },
       ],
     },
@@ -287,8 +309,14 @@ export default function Component() {
       children: [
         {
           path: "/updates",
-          title: t("landing.navbar.productUpdates"),
+          title: t("landing.navbar.changelog"),
           icon: <BarChart3 className="h-4 w-4" />,
+        },
+        {
+          path: YOUTUBE_CHANNEL_URL,
+          title: t("landing.navbar.youtube"),
+          icon: <YoutubeIcon className="h-4 w-4" />,
+          external: true,
         },
       ],
     },
@@ -299,16 +327,13 @@ export default function Component() {
           path: GITHUB_REPO_URL,
           title: t("landing.navbar.openSource"),
           icon: <GithubIcon className="h-4 w-4" />,
-        },
-        {
-          path: "https://www.youtube.com/@hugodemenez",
-          title: "YouTube",
-          icon: <FileText className="h-4 w-4" />,
+          external: true,
         },
         {
           path: process.env.NEXT_PUBLIC_DISCORD_INVITATION || "",
           title: t("landing.navbar.joinCommunity"),
           icon: <Users className="h-4 w-4" />,
+          external: true,
         },
         {
           path: "/docs",
@@ -356,7 +381,7 @@ export default function Component() {
                   onMouseLeave={() => setHoveredItem(null)}
                 >
                   <ul className="grid gap-3 p-6 md:w-[500px] lg:w-[600px] lg:grid-cols-[.75fr_1fr] list-none">
-                    <li className="row-span-3">
+                    <li className="row-span-5">
                       <NavigationMenuLink asChild>
                         <Link
                           className="flex h-full w-full select-none flex-col justify-end rounded-md bg-linear-to-b from-muted/50 to-muted p-6 no-underline outline-hidden focus:shadow-md"
@@ -373,11 +398,11 @@ export default function Component() {
                       </NavigationMenuLink>
                     </li>
                     <ListItem
-                      href="/#data-import"
-                      title={t("landing.navbar.dataImport")}
-                      icon={<Database className="h-4 w-4" />}
+                      href="/#ai-journaling"
+                      title={t("landing.navbar.aiJournaling")}
+                      icon={<Brain className="h-4 w-4" />}
                     >
-                      {t("landing.navbar.dataImportDescription")}
+                      {t("landing.navbar.aiJournalingDescription")}
                     </ListItem>
                     <ListItem
                       href="/#performance-visualization"
@@ -393,13 +418,20 @@ export default function Component() {
                     >
                       {t("landing.navbar.dailyPerformanceDescription")}
                     </ListItem>
+                    <ListItem
+                      href="/#performance-tracking"
+                      title={t("landing.navbar.performanceTracking")}
+                      icon={<TrendingUp className="h-4 w-4" />}
+                    >
+                      {t("landing.navbar.performanceTrackingDescription")}
+                    </ListItem>
                     <div className="col-span-2">
                       <ListItem
-                        href="/#ai-journaling"
-                        title={t("landing.navbar.aiJournaling")}
-                        icon={<BookOpen className="h-4 w-4" />}
+                        href="/#data-import"
+                        title={t("landing.navbar.dataImport")}
+                        icon={<Database className="h-4 w-4" />}
                       >
-                        {t("landing.navbar.aiJournalingDescription")}
+                        {t("landing.navbar.dataImportDescription")}
                       </ListItem>
                     </div>
                   </ul>
@@ -448,17 +480,19 @@ export default function Component() {
                   <ul className="grid gap-3 p-4 md:w-[500px] lg:w-[600px] list-none">
                     <ListItem
                       href="/updates"
-                      title={t("landing.navbar.productUpdates")}
+                      title={t("landing.navbar.changelog")}
                       icon={<BarChart3 className="h-4 w-4" />}
                     >
-                      {t("landing.navbar.productUpdatesDescription")}
+                      {t("landing.navbar.changelogDescription")}
                     </ListItem>
                     <ListItem
-                      href="/community"
-                      title={t("landing.navbar.community")}
-                      icon={<Users className="h-4 w-4" />}
+                      href={YOUTUBE_CHANNEL_URL}
+                      title={t("landing.navbar.youtube")}
+                      icon={<YoutubeIcon className="h-4 w-4" />}
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
-                      {t("landing.navbar.communityDescription")}
+                      {t("landing.navbar.youtubeDescription")}
                     </ListItem>
                   </ul>
                 </NavigationMenuContent>
@@ -479,20 +513,17 @@ export default function Component() {
                       href={GITHUB_REPO_URL}
                       title={t("landing.navbar.openSource")}
                       icon={<GithubIcon className="h-4 w-4" />}
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
                       {t("landing.navbar.openSourceDescription")}
-                    </ListItem>
-                    <ListItem
-                      href="https://www.youtube.com/@hugodemenez"
-                      title="YouTube"
-                      icon={<FileText className="h-4 w-4" />}
-                    >
-                      {t("landing.navbar.youtubeDescription")}
                     </ListItem>
                     <ListItem
                       href={process.env.NEXT_PUBLIC_DISCORD_INVITATION || ""}
                       title={t("landing.navbar.joinCommunity")}
                       icon={<Users className="h-4 w-4" />}
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
                       {t("landing.navbar.joinCommunityDescription")}
                     </ListItem>
@@ -670,6 +701,13 @@ export default function Component() {
                               transition={{ duration: 0.2 }}
                             >
                               {children.map((child, childIndex) => {
+                                const linkProps = child.external
+                                  ? {
+                                      target: "_blank" as const,
+                                      rel: "noopener noreferrer",
+                                    }
+                                  : {};
+
                                 return (
                                   <motion.li
                                     key={child.path}
@@ -688,6 +726,7 @@ export default function Component() {
                                         onClick={closeMenu}
                                         href={child.path}
                                         className="text-[#878787] flex items-center space-x-2"
+                                        {...linkProps}
                                       >
                                         <span>{child.icon}</span>
                                         <span>{child.title}</span>
