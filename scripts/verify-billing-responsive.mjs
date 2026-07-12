@@ -35,7 +35,15 @@ async function waitForBillingPage(page) {
     name: /historique des paiements|payment history/i,
   })
   await paymentHistoryHeading.waitFor({ state: 'visible', timeout: 90_000 })
-  await page.waitForTimeout(1500)
+
+  // Wait for mock/local subscription invoices to render (not skeleton placeholders).
+  const viewInvoiceButton = page.getByRole('button', {
+    name: /voir la facture|view invoice/i,
+  }).first()
+  await viewInvoiceButton.waitFor({ state: 'visible', timeout: 90_000 })
+
+  await paymentHistoryHeading.scrollIntoViewIfNeeded()
+  await page.waitForTimeout(1000)
 }
 
 async function assertNoHorizontalOverflow(page, viewportName) {
