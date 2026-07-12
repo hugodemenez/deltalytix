@@ -43,6 +43,10 @@ export const LABELS = {
     chartsView: /^charts$/i,
     tableView: /^table$/i,
     accountsTableView: /^table$/i,
+    featuresNav: /^features$/i,
+    updatesNav: /^updates$/i,
+    paymentHistory: /payment history/i,
+    billing: /billing/i,
   },
   fr: {
     acceptCookies: /tout accepter/i,
@@ -56,6 +60,10 @@ export const LABELS = {
     chartsView: /^graphiques$/i,
     tableView: /^tableau$/i,
     accountsTableView: /^tableau$/i,
+    featuresNav: /^fonctionnalités$/i,
+    updatesNav: /^mises à jour$/i,
+    paymentHistory: /historique des paiements/i,
+    billing: /facturation/i,
   },
 }
 

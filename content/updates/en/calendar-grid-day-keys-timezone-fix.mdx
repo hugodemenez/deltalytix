@@ -1,0 +1,16 @@
+---
+title: 'Calendar: trades land on the correct grid day in your timezone'
+description: 'Calendar grid cells now use your profile timezone for day keys, so late-evening trades no longer appear on the wrong weekday cell.'
+date: '2026-07-06'
+status: completed
+completedDate: '2026-07-06'
+image: '/updates/pr-298/en/calendar-grid-day-keys-timezone-fix.png'
+---
+
+# Calendar: trades land on the correct grid day in your timezone
+
+![Calendar widget with trades aligned to profile timezone day cells](/updates/pr-298/en/calendar-grid-day-keys-timezone-fix.png)
+
+Trades taken near midnight could still land on the wrong calendar cell even after we aligned the calendar and trade table to your profile timezone. The grid was building day keys differently from how trades were bucketed.
+
+Grid cells now use the same timezone-aware day keys as the rest of the dashboard, so a trade appears on the same weekday you see in the table. Weekly totals and day modals stay consistent with the cell you tap—especially helpful if you trade in US, EU, or AU timezones outside UTC.
