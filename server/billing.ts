@@ -384,6 +384,10 @@ function createLifetimeSubscriptionData(localSubscription: any, invoices: any[])
 }
 
 export async function updateSubscription(action: 'pause' | 'resume' | 'cancel', subscriptionId: string) {
+  if (isLocalDashboardAuthBypassEnabled()) {
+    return { success: true }
+  }
+
   try {
     if (action === 'pause' || action === 'cancel') {
       // Cancel at period end for all subscriptions
@@ -408,6 +412,10 @@ export async function collectSubscriptionFeedback(
   cancellationReason?: string,
   feedback?: string
 ) {
+  if (isLocalDashboardAuthBypassEnabled()) {
+    return { success: true }
+  }
+
   try {
     const supabase = await createClient()
 
