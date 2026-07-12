@@ -487,28 +487,31 @@ export default function BillingManagement() {
           <CardDescription>{t('billing.paymentHistoryDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="rounded-lg border bg-card">
+          <div className="rounded-lg border bg-card overflow-hidden">
             {isLoading ? (
               <div className="p-4 space-y-4">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center justify-between">
+                  <div key={i} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="space-y-1">
                       <Skeleton className="h-4 w-[100px]" />
                       <Skeleton className="h-4 w-[140px]" />
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center">
                       <Skeleton className="h-6 w-[100px]" />
-                      <Skeleton className="h-8 w-[120px]" />
-                      <Skeleton className="h-8 w-[120px]" />
+                      <Skeleton className="h-8 w-full sm:w-[120px]" />
+                      <Skeleton className="h-8 w-full sm:w-[120px]" />
                     </div>
                   </div>
                 ))}
               </div>
             ) : subscription?.invoices && subscription.invoices.length > 0 ? (
-              <div className="divide-y">
+              <div className="divide-y overflow-hidden">
                 {subscription.invoices.map((invoice) => (
-                  <div key={invoice.id} className="flex items-center justify-between p-4">
-                    <div className="space-y-1">
+                  <div
+                    key={invoice.id}
+                    className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0 space-y-1">
                       <p className="text-sm font-medium">
                         €{(invoice.amount_paid / 100).toFixed(2)}
                       </p>
@@ -516,21 +519,24 @@ export default function BillingManagement() {
                         {formatStripeDate(invoice.created)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
                       {invoice.status === 'paid' && (
-                        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                        <Badge
+                          variant="secondary"
+                          className="w-fit bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                        >
                           {t('billing.paymentStatus.succeeded')}
                         </Badge>
                       )}
-                      <div className="flex items-center gap-2">
+                      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                         {invoice.hosted_invoice_url && (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8"
+                            className="h-8 w-full sm:w-auto"
                             onClick={() => invoice.hosted_invoice_url && window.open(invoice.hosted_invoice_url, '_blank')}
                           >
-                            <Receipt className="h-4 w-4 mr-2" />
+                            <Receipt className="h-4 w-4 mr-2 shrink-0" />
                             {t('billing.viewInvoice')}
                           </Button>
                         )}
@@ -538,10 +544,10 @@ export default function BillingManagement() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8"
+                            className="h-8 w-full sm:w-auto"
                             onClick={() => invoice.invoice_pdf && window.open(invoice.invoice_pdf, '_blank')}
                           >
-                            <FileText className="h-4 w-4 mr-2" />
+                            <FileText className="h-4 w-4 mr-2 shrink-0" />
                             {t('billing.downloadPdf')}
                           </Button>
                         )}
