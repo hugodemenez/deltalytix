@@ -784,7 +784,7 @@ export default function Component() {
               })}
 
               <motion.li
-                className="mt-auto border-t pt-8"
+                className="border-t border-black/10 pt-8 dark:border-white/10"
                 variants={itemVariant}
               >
                 <motion.div
@@ -792,7 +792,7 @@ export default function Component() {
                   transition={{ duration: 0.2 }}
                 >
                   <Link
-                    className="block w-full min-h-11 text-xl text-primary rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="block w-full text-xl text-primary rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     href="/authentication"
                     onClick={closeMenu}
                   >
@@ -801,52 +801,45 @@ export default function Component() {
                 </motion.div>
               </motion.li>
 
-              <motion.li variants={itemVariant}>
-                <motion.div
-                  className="py-4 border-t"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.3,
-                    ease: "easeOut",
-                    delay: 0.2,
-                  }}
-                >
-                  <Accordion collapsible type="single">
-                    <AccordionItem value="theme" className="border-none">
-                      <AccordionTrigger className="flex items-center justify-between w-full font-normal p-0 hover:no-underline">
-                        <span className="text-[#878787] flex items-center space-x-2">
-                          <div className="flex items-center justify-center w-5 h-5">
-                            <AnimatePresence mode="wait">
-                              <motion.div
-                                key={theme}
-                                initial={{
-                                  opacity: 0,
-                                  scale: 0.8,
-                                  rotate: -90,
-                                }}
-                                animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                                exit={{ opacity: 0, scale: 0.8, rotate: 90 }}
-                                transition={{
-                                  duration: 0.4,
-                                  ease: "easeInOut",
-                                }}
-                                className="flex items-center justify-center"
-                              >
-                                <ThemeToggleIcon className="h-5 w-5" />
-                              </motion.div>
-                            </AnimatePresence>
-                          </div>
-                          <span>{t("landing.navbar.changeTheme")}</span>
-                        </span>
-                      </AccordionTrigger>
-                      <AccordionContent className="text-xl">
-                        <motion.ul
-                          className="space-y-8 ml-4 mt-6"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.2 }}
-                        >
+              <motion.li
+                className="space-y-8 border-t border-black/10 pt-8 dark:border-white/10"
+                variants={itemVariant}
+              >
+                <Accordion collapsible type="single">
+                  <AccordionItem value="theme" className="border-none">
+                    <AccordionTrigger className="flex items-center justify-between w-full font-normal p-0 hover:no-underline">
+                      <span className="text-[#878787] flex items-center space-x-2">
+                        <div className="flex items-center justify-center w-5 h-5">
+                          <AnimatePresence mode="wait">
+                            <motion.div
+                              key={theme}
+                              initial={{
+                                opacity: 0,
+                                scale: 0.8,
+                                rotate: -90,
+                              }}
+                              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                              exit={{ opacity: 0, scale: 0.8, rotate: 90 }}
+                              transition={{
+                                duration: 0.4,
+                                ease: "easeInOut",
+                              }}
+                              className="flex items-center justify-center"
+                            >
+                              <ThemeToggleIcon className="h-5 w-5" />
+                            </motion.div>
+                          </AnimatePresence>
+                        </div>
+                        <span>{t("landing.navbar.changeTheme")}</span>
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionContent className="text-xl">
+                      <motion.ul
+                        className="space-y-8 ml-4 mt-6"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.2 }}
+                      >
                           <motion.li
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
@@ -977,55 +970,42 @@ export default function Component() {
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
-                </motion.div>
-              </motion.li>
 
-              <motion.li variants={itemVariant}>
-                <motion.div
-                  className="pb-4"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.3,
-                    ease: "easeOut",
-                    delay: 0.25,
-                  }}
-                >
-                  <Accordion collapsible type="single">
-                    <AccordionItem value="language" className="border-none">
-                      <AccordionTrigger className="flex items-center justify-between w-full font-normal p-0 hover:no-underline">
-                        <span className="text-[#878787] flex items-center space-x-2">
-                          <div className="flex items-center justify-center w-5 h-5">
-                            <AnimatePresence mode="wait">
-                              <motion.div
-                                key={locale}
-                                initial={{
-                                  opacity: 0,
-                                  scale: 0.8,
-                                  rotate: -90,
-                                }}
-                                animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                                exit={{ opacity: 0, scale: 0.8, rotate: 90 }}
-                                transition={{
-                                  duration: 0.4,
-                                  ease: "easeInOut",
-                                }}
-                                className="flex items-center justify-center"
-                              >
-                                <Globe className="h-5 w-5" />
-                              </motion.div>
-                            </AnimatePresence>
-                          </div>
-                          <span>{t("landing.navbar.changeLanguage")}</span>
-                        </span>
-                      </AccordionTrigger>
-                      <AccordionContent className="text-xl">
-                        <motion.ul
-                          className="space-y-8 ml-4 mt-6"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.2 }}
-                        >
+                <Accordion collapsible type="single">
+                  <AccordionItem value="language" className="border-none">
+                    <AccordionTrigger className="flex items-center justify-between w-full font-normal p-0 hover:no-underline">
+                      <span className="text-[#878787] flex items-center space-x-2">
+                        <div className="flex items-center justify-center w-5 h-5">
+                          <AnimatePresence mode="wait">
+                            <motion.div
+                              key={locale}
+                              initial={{
+                                opacity: 0,
+                                scale: 0.8,
+                                rotate: -90,
+                              }}
+                              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                              exit={{ opacity: 0, scale: 0.8, rotate: 90 }}
+                              transition={{
+                                duration: 0.4,
+                                ease: "easeInOut",
+                              }}
+                              className="flex items-center justify-center"
+                            >
+                              <Globe className="h-5 w-5" />
+                            </motion.div>
+                          </AnimatePresence>
+                        </div>
+                        <span>{t("landing.navbar.changeLanguage")}</span>
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionContent className="text-xl">
+                      <motion.ul
+                        className="space-y-8 ml-4 mt-6"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.2 }}
+                      >
                           {languages.map((language, languageIndex) => (
                             <motion.li
                               key={language.value}
@@ -1083,7 +1063,6 @@ export default function Component() {
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
-                </motion.div>
               </motion.li>
             </motion.ul>
           </div>
