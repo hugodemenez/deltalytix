@@ -427,7 +427,7 @@ export default function PricingPlans({
   };
 
   const freePlan = (
-    <article className="flex min-h-[500px] flex-col rounded-sm bg-white p-5 dark:bg-black sm:p-6">
+    <article className="flex min-h-[500px] min-w-0 flex-col rounded-sm bg-white p-5 dark:bg-black sm:p-6">
       <div>
         <div className="flex items-baseline justify-between gap-4">
           <h3 className="text-2xl font-normal tracking-tight">
@@ -537,7 +537,7 @@ export default function PricingPlans({
   );
 
   const plusPlan = (
-    <article className="flex min-h-[500px] flex-col rounded-sm bg-white p-5 dark:bg-black sm:p-6">
+    <article className="flex min-h-[500px] min-w-0 flex-col rounded-sm bg-white p-5 dark:bg-black sm:p-6">
       <div className="mb-6 md:hidden">
         <p className="mb-2 text-xs font-medium text-black/55 dark:text-white/55">
           {t("pricing.billingPeriod")}
@@ -549,7 +549,7 @@ export default function PricingPlans({
           <h3 className="text-2xl font-normal tracking-tight">
             {plans.plus.name}
           </h3>
-          <div className="flex items-baseline">
+          <div className="flex min-w-[11rem] shrink-0 items-baseline justify-end sm:min-w-[12rem]">
             <span className="text-2xl font-normal tabular-nums">
               <NumberFlow
                 prefix={currency === "EUR" ? undefined : symbol}
@@ -558,17 +558,20 @@ export default function PricingPlans({
                 digits={{ 1: { max: 2 } }}
               />
             </span>
-            {billingPeriod !== "lifetime" && (
-              <span className="ml-1 text-sm text-black/55 dark:text-white/55">
-                / {t("pricing.month")}
-              </span>
-            )}
+            <span
+              className={cn(
+                "ml-1 text-sm text-black/55 dark:text-white/55",
+                billingPeriod === "lifetime" && "invisible",
+              )}
+            >
+              / {t("pricing.month")}
+            </span>
           </div>
         </div>
         <p
           aria-hidden={billingPeriod === "monthly"}
           className={cn(
-            "mt-2 h-4 whitespace-nowrap text-right text-xs text-black/55 dark:text-white/55",
+            "mt-2 h-4 w-full overflow-hidden text-ellipsis whitespace-nowrap text-right text-xs text-black/55 dark:text-white/55",
             billingPeriod === "monthly" && "invisible",
           )}
         >
@@ -595,12 +598,16 @@ export default function PricingPlans({
       </div>
 
       <div className="mt-auto pt-10">
-        {billingPeriod === "lifetime" && (
-          <div className="mb-4 space-y-1 border-t border-black/10 pt-3 text-[11px] leading-relaxed text-black/45 dark:border-white/10 dark:text-white/45">
-            <p>• {t("pricing.lifetimeDisclaimer1")}</p>
-            <p>• {t("pricing.lifetimeDisclaimer2")}</p>
-          </div>
-        )}
+        <div
+          className={cn(
+            "mb-4 space-y-1 border-t border-black/10 pt-3 text-[11px] leading-relaxed text-black/45 dark:border-white/10 dark:text-white/45",
+            billingPeriod !== "lifetime" && "invisible",
+          )}
+          aria-hidden={billingPeriod !== "lifetime"}
+        >
+          <p>• {t("pricing.lifetimeDisclaimer1")}</p>
+          <p>• {t("pricing.lifetimeDisclaimer2")}</p>
+        </div>
         <div>
           {(() => {
             const lookupKey = `plus_${billingPeriod}_${currency.toLowerCase()}`;
