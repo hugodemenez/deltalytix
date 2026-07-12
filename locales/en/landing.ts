@@ -216,6 +216,7 @@ export default {
       performanceVisualization: "Performance Visualization",
       dailyPerformance: "Daily Performance",
       aiJournaling: "AI-Powered Journaling",
+      performanceTracking: "Track Your Performance",
       developers: "Developers",
       openSource: "Open Source",
       documentation: "Documentation",
@@ -231,6 +232,10 @@ export default {
       productUpdates: "Product Updates",
       productUpdatesDescription:
         "Stay up to date with our latest features and improvements.",
+      changelog: "Changelog",
+      changelogDescription:
+        "Browse release notes, improvements, and what's new in Deltalytix.",
+      youtube: "YouTube",
       dashboard: "Dashboard",
       signIn: "Sign in",
       elevateTrading:
@@ -242,6 +247,8 @@ export default {
         "Track your daily trading results with an intuitive calendar view.",
       aiJournalingDescription:
         "Improve your trading emotions with AI-assisted journaling.",
+      performanceTrackingDescription:
+        "Follow equity, daily results, and progress toward your targets.",
       openSourceDescription: "Explore our open-source projects and contribute.",
       youtubeDescription: "Watch tutorials and trading insights.",
       documentationDescription: "Comprehensive guides and API references.",

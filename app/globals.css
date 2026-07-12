@@ -422,6 +422,7 @@
     height: 100dvh;
     min-height: 100dvh;
     min-height: -webkit-fill-available;
+    touch-action: auto;
   }
 
   /* Mobile navbar overlay styles */

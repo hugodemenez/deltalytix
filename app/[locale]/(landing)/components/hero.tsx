@@ -1,5 +1,6 @@
 "use client";
-import { useI18n } from "@/locales/landing-client";
+import { useCurrentLocale, useI18n } from "@/locales/landing-client";
+import { localizeLandingHref } from "@/lib/landing-nav-paths";
 import Link, { useLinkStatus } from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -26,6 +27,7 @@ function GetStartedLinkContent({ children }: { children: React.ReactNode }) {
 
 export default function Hero() {
   const t = useI18n();
+  const locale = useCurrentLocale();
   const { theme, effectiveTheme } = useTheme();
   const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
@@ -83,7 +85,7 @@ export default function Hero() {
       <div className="flex flex-col gap-14 md:gap-20">
         <div className="max-w-[900px]">
           <Link
-            href="/updates"
+            href={localizeLandingHref(locale, "/updates")}
             className="mb-7 inline-flex text-sm text-black/55 transition-colors hover:text-black dark:text-white/55 dark:hover:text-white"
           >
             {t("landing.updates")}
