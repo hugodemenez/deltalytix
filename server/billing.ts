@@ -5,6 +5,7 @@ import { stripe } from '@/server/stripe'
 import Stripe from 'stripe'
 import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
 import { getLocalDashboardBillingMock } from '@/lib/local-dashboard-billing-mock'
+import type { SubscriptionWithPrice } from '@/lib/subscription-types'
 
 export type { SubscriptionWithPrice } from '@/lib/subscription-types'
 
