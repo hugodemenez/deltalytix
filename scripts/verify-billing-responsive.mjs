@@ -71,7 +71,10 @@ async function capturePaymentHistory(page, viewportName) {
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true })
 
-  const browser = await chromium.launch({ headless: true })
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  })
 
   for (const vp of MOBILE_VIEWPORTS) {
     const page = await browser.newPage({
