@@ -7,7 +7,6 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { stripe } from '@/server/stripe'
 import Stripe from 'stripe'
 import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
-import { getLocalDashboardMockSubscriptionData } from '@/lib/local-dashboard-mock-billing'
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -67,7 +66,7 @@ export async function getSubscriptionData() {
   console.debug('getSubscriptionData')
 
   if (isLocalDashboardAuthBypassEnabled()) {
-    return getLocalDashboardMockSubscriptionData()
+    return null
   }
 
   const supabase = await createClient()
@@ -384,10 +383,6 @@ function createLifetimeSubscriptionData(localSubscription: any, invoices: any[])
 }
 
 export async function updateSubscription(action: 'pause' | 'resume' | 'cancel', subscriptionId: string) {
-  if (isLocalDashboardAuthBypassEnabled()) {
-    return { success: true }
-  }
-
   try {
     if (action === 'pause' || action === 'cancel') {
       // Cancel at period end for all subscriptions
@@ -412,10 +407,6 @@ export async function collectSubscriptionFeedback(
   cancellationReason?: string,
   feedback?: string
 ) {
-  if (isLocalDashboardAuthBypassEnabled()) {
-    return { success: true }
-  }
-
   try {
     const supabase = await createClient()
 
