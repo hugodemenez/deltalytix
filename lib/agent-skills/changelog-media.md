@@ -4,6 +4,7 @@ Capture localized screenshots and short demo videos for Deltalytix changelog (`c
 
 ## When to use this skill
 
+- Changelog MDX entries already exist (see the **changelog entries** skill at `/.well-known/agent-skills/changelog-entries/SKILL.md`).
 - A new changelog batch was created (for example from a beta → main PR).
 - Changelog MDX entries need at least one screenshot or video in the body.
 - Assets must be served from `public/updates/<batch>/`.
