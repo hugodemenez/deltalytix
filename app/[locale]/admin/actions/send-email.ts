@@ -22,6 +22,7 @@ export type EmailTemplate =
   | "welcome"
   | "weekly-recap"
   | "new-feature"
+  | "landing-page-update"
   | "renewal-notice"
   | "team-invitation"
   | "missing-data"
@@ -44,6 +45,8 @@ async function getEmailTemplate(template: EmailTemplate): Promise<TemplateCompon
       return (await import("@/components/emails/weekly-recap")).default as TemplateComponent
     case "new-feature":
       return (await import("@/components/emails/new-feature")).default as TemplateComponent
+    case "landing-page-update":
+      return (await import("@/components/emails/landing-page-update")).default as TemplateComponent
     case "renewal-notice":
       return (await import("@/components/emails/renewal-notice")).default as TemplateComponent
     case "team-invitation":
@@ -87,6 +90,12 @@ export async function getDefaultTemplateProps(template: EmailTemplate): Promise<
         youtubeId: "ZBrIZpCh_7Q",
         introMessage: "Sample intro message",
         features: ["Feature 1", "Feature 2"],
+        unsubscribeUrl: "https://deltalytix.app/api/email/unsubscribe?email=user%40example.com",
+      }
+    case "landing-page-update":
+      return {
+        firstName: "Trader",
+        language: "en",
         unsubscribeUrl: "https://deltalytix.app/api/email/unsubscribe?email=user%40example.com",
       }
     case "renewal-notice":
@@ -149,6 +158,8 @@ export async function getRequiredTemplateProps(template: EmailTemplate): Promise
       return ["email", "firstName", "dailyPnL", "winLossStats", "resultAnalysisIntro", "tipsForNextWeek"]
     case "new-feature":
       return ["firstName", "email", "youtubeId", "introMessage", "features", "unsubscribeUrl"]
+    case "landing-page-update":
+      return ["firstName", "language", "unsubscribeUrl"]
     case "renewal-notice":
       return [
         "userFirstName",
@@ -378,6 +389,10 @@ function getDefaultSubject(template: EmailTemplate, language: string): string {
     "new-feature": {
       en: "New features on Deltalytix",
       fr: "Nouveautés sur Deltalytix",
+    },
+    "landing-page-update": {
+      en: "A fresh new look for Deltalytix",
+      fr: "Deltalytix fait peau neuve",
     },
     "renewal-notice": {
       en: "Account Renewal Notice",
