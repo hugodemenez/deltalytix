@@ -51,22 +51,22 @@ const copy = {
   fr: {
     preview: "Deltalytix fait peau neuve",
     eyebrow: "NOUVEAUTÉ",
-    title: "La nouvelle page d’accueil Deltalytix est disponible.",
+    title: "Deltalytix fait peau neuve.",
     greeting: "Bonjour",
     intro:
-      "Nous avons repensé le site Deltalytix pour présenter le produit plus clairement, faciliter son exploration et mieux refléter l’expérience que vous connaissez déjà dans le dashboard.",
-    heroTitle: "Une première impression plus claire",
+      "La page d’accueil a été entièrement repensée pour présenter Deltalytix plus clairement et mieux refléter l’expérience du tableau de bord.",
+    heroTitle: "Une page plus claire",
     heroBody:
-      "La nouvelle page associe une typographie éditoriale affirmée, une démonstration du produit et un accès simplifié aux fonctionnalités, aux tarifs et aux dernières nouveautés.",
-    chartsTitle: "De vrais aperçus du dashboard",
+      "Une mise en page plus lisible, une démo du produit et un accès direct aux fonctionnalités, aux tarifs et aux dernières mises à jour.",
+    chartsTitle: "Un aperçu du tableau de bord",
     chartsBody:
-      "Les sections fonctionnalités proposent maintenant des galeries de graphiques inspirées du dashboard : courbe d’équité, P&L quotidien, répartition des trades et objectifs de performance.",
-    navigationTitle: "Tout est plus facile à trouver",
+      "Parcourez les courbes d’équité, le P&L journalier, les distributions de trades et les objectifs de performance, sur mobile comme sur ordinateur.",
+    navigationTitle: "Trouvez plus vite ce que vous cherchez",
     navigationBody:
-      "Les nouveaux menus Fonctionnalités et Nouveautés donnent un accès direct aux différentes sections, au changelog et à la chaîne YouTube Deltalytix.",
-    cta: "Découvrir le nouveau site",
+      "Les menus Fonctionnalités et Mises à jour mènent directement aux sections de la page, au changelog et à la chaîne YouTube.",
+    cta: "Voir la nouvelle page",
     closing:
-      "Découvrez la nouvelle page et dites-moi ce que vous en pensez. Vos retours continuent de faire évoluer Deltalytix.",
+      "La nouvelle page est en ligne — dites-moi ce que vous en pensez.",
     signature: "Hugo",
     role: "Fondateur de Deltalytix",
     sentBy: "Envoyé par Deltalytix",
@@ -90,10 +90,10 @@ const styles = {
     borderRight: "1px solid #e5e6e1",
   },
   content: {
-    padding: "48px 44px",
+    padding: "40px 32px",
   },
   eyebrow: {
-    margin: "0 0 20px",
+    margin: "0 0 14px",
     color: "#667069",
     fontSize: "12px",
     lineHeight: "18px",
@@ -104,13 +104,13 @@ const styles = {
     margin: "0",
     maxWidth: "520px",
     color: "#1f211e",
-    fontSize: "46px",
-    lineHeight: "48px",
+    fontSize: "40px",
+    lineHeight: "43px",
     letterSpacing: "-0.045em",
     fontWeight: "400",
   },
   paragraph: {
-    margin: "20px 0 0",
+    margin: "16px 0 0",
     color: "#5d625c",
     fontSize: "17px",
     lineHeight: "28px",
@@ -130,7 +130,7 @@ const styles = {
     lineHeight: "24px",
   },
   screenshotFrame: {
-    marginTop: "22px",
+    marginTop: "18px",
     padding: "10px",
     backgroundColor: "#dceee5",
     borderRadius: "12px",
@@ -143,19 +143,19 @@ const styles = {
     borderRadius: "6px",
   },
   divider: {
-    margin: "40px 0",
+    margin: "28px 0",
     borderColor: "#e8e9e5",
   },
   ctaSection: {
-    padding: "32px",
+    padding: "24px",
     backgroundColor: "#eef4ef",
     borderRadius: "12px",
     textAlign: "left" as const,
   },
   button: {
     display: "inline-block",
-    marginTop: "24px",
-    padding: "14px 22px",
+    marginTop: "20px",
+    padding: "13px 18px",
     backgroundColor: "#242722",
     borderRadius: "4px",
     color: "#ffffff",
@@ -163,6 +163,7 @@ const styles = {
     lineHeight: "20px",
     fontWeight: "600",
     textDecoration: "none",
+    whiteSpace: "nowrap" as const,
   },
   footer: {
     padding: "28px 44px 36px",
@@ -196,12 +197,12 @@ export default function LandingPageUpdateEmail({
         <Container style={styles.container}>
           <Section style={styles.content}>
             <Text style={styles.eyebrow}>{t.eyebrow}</Text>
+            <Text style={{ ...styles.featureText, marginBottom: "10px", color: "#5d625c" }}>
+              {t.greeting} {firstName},
+            </Text>
             <Heading as="h1" style={styles.title}>
               {t.title}
             </Heading>
-            <Text style={styles.paragraph}>
-              {t.greeting} {firstName},
-            </Text>
             <Text style={styles.paragraph}>{t.intro}</Text>
 
             <Hr style={styles.divider} />
