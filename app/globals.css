@@ -419,6 +419,25 @@
 }
 
 @layer utilities {
+  /*
+   * Safari 26 samples fixed elements at initial render to tint its top chrome.
+   * Use the system media query here so the correct color is available before
+   * the client theme script adds the light/dark class.
+   */
+  .landing-navbar-chrome {
+    background-color: oklch(0.97 0 0);
+  }
+
+  .dark .landing-navbar-chrome {
+    background-color: oklch(0.17 0 0);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) .landing-navbar-chrome {
+      background-color: oklch(0.17 0 0);
+    }
+  }
+
   /* iOS safe-area helpers for fixed nav chrome */
   .pt-safe {
     padding-top: env(safe-area-inset-top, 0px);
