@@ -138,7 +138,6 @@
 
 @layer base {
   :root {
-    color-scheme: light;
     --background: 0 0% var(--theme-intensity, 100%);
     --foreground: 0 0% 3.9%;
     --card: 0 0% var(--theme-intensity, 100%);
@@ -185,7 +184,6 @@
   }
 
   .dark {
-    color-scheme: dark;
     --background: 0 0% calc(100% - var(--theme-intensity, 100%));
     --foreground: 0 0% 98%;
     --card: 0 0% calc(100% - var(--theme-intensity, 100%));
@@ -424,18 +422,15 @@
    * Use the system media query here so the correct color is available before
    * the client theme script adds the light/dark class.
    */
-  .landing-navbar-chrome,
   .landing-safari-theme-sampler {
     background-color: hsl(0 0% 96.1%);
   }
 
-  .dark .landing-navbar-chrome,
   .dark .landing-safari-theme-sampler {
     background-color: hsl(0 0% 6.7%);
   }
 
   @media (prefers-color-scheme: dark) {
-    :root:not(.light) .landing-navbar-chrome,
     :root:not(.light) .landing-safari-theme-sampler {
       background-color: hsl(0 0% 6.7%);
     }

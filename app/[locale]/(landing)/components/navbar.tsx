@@ -384,7 +384,7 @@ export default function Component() {
       />
 
       <span
-        className={`landing-navbar-chrome fixed top-0 left-0 right-0 z-50 pt-safe min-h-nav-safe transition-transform duration-300 ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
+        className={`fixed top-0 left-0 right-0 z-50 bg-background pt-safe min-h-nav-safe transition-transform duration-300 ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
       ></span>
       <header
         className={`fixed top-0 left-0 right-0 z-50 pt-safe text-foreground transition-transform duration-300 ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
