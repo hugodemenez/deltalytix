@@ -91,7 +91,7 @@ export default function Hero() {
             {t("landing.updates")}
           </Link>
           <div>
-            <h1 className="max-w-[880px] text-balance text-[clamp(3rem,7.2vw,7.25rem)] font-normal leading-[0.92] tracking-[-0.06em]">
+            <h1 className="max-w-[880px] text-balance text-[clamp(3rem,7.2vw,7.25rem)] font-normal leading-[1.12] tracking-[-0.06em] sm:leading-[1.06] md:leading-[1] lg:leading-[0.96]">
               {t("landing.title")}
             </h1>
             <p className="mt-7 max-w-[660px] text-pretty text-lg leading-relaxed text-black/60 dark:text-white/60 md:text-xl">
