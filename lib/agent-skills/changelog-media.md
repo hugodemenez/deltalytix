@@ -12,6 +12,8 @@ This is the last of three sequential roles:
 
 Read both `content/updates/batches/<batch>/outline.md` and the finished EN/FR MDX. Independently decide whether each entry needs **zero, one, or several** visuals.
 
+Published changelog entries and their media wiring are immutable. Only add media to the new entries in the current outline; never revise an entry that already exists on the base branch. Existing assets may be reused by a new entry when they remain accurate, but the older MDX must stay untouched.
+
 ## Assess media needs
 
 For every entry, ask:
@@ -121,6 +123,8 @@ If all entries have zero visuals, do not create an empty recipe and do not run c
 | `landing-contribution-graph` | `.png` | Open-source contribution graph |
 | `landing-features-carousel` | `.png` | Landing chart carousel |
 | `landing-navbar-updates` | `.png` | Landing Updates dropdown |
+| `landing-faq-expanded` | `.png` | Landing FAQ with one localized answer open |
+| `landing-pricing-stability` | `.mp4` | Pricing period changes with stable plan cards |
 | `import-mobile` | `.png` | Mobile import dialog |
 | `support` | `.png` | Support assistant page |
 | `trade-table-mobile` | `.png` | Compact trade table on phone |
@@ -205,6 +209,7 @@ Rules:
 6. Alt text describes the evidence shown and is localized.
 7. Capture-only mocks stay under `scripts/changelog-media/`.
 8. No unrelated product code changes are introduced for capture.
+9. No previously published MDX or asset was replaced or rewired.
 
 ## File map
 

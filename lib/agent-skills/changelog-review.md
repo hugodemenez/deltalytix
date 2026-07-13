@@ -31,6 +31,17 @@ Account for every meaningful change. Classify it as:
 
 Never turn commit titles into release notes without checking the diff and visible behavior.
 
+### Published entries are immutable
+
+Changelog work is append-only. Once an EN/FR entry exists on the base branch:
+
+- Never change its title, description, dates, body, media, or slug.
+- Mark fully documented changes as **Covered** and leave the files untouched.
+- If a later change adds a meaningful user-facing outcome, create a new follow-up entry with a new slug.
+- If the follow-up is too minor to warrant its own entry, mark it **Skip** rather than expanding the old entry.
+
+A new follow-up entry may link to or reference an earlier announcement, but must stand on its own. Publication history should not be rewritten as the product evolves.
+
 ## 2. Group changes into entries
 
 Group changes when they tell one coherent product story, even if several components changed. Split them when users would understand or discover them independently.
@@ -57,6 +68,7 @@ Do not split a coherent visual polish pass into one entry per component. Do not 
 - **Batch id:** normally `pr-<promotion-pr-number>`.
 
 Check that a slug does not already exist in `content/updates/`.
+Every included entry must use a new slug; an existing slug means the change is covered or needs a distinct follow-up slug.
 
 ## 4. Write the outline
 
@@ -112,3 +124,4 @@ Before handing the outline to the copywriter:
 4. Routes, controls, labels, availability, and limitations are concrete when known.
 5. Existing changelog coverage is acknowledged rather than duplicated.
 6. Visual moments describe what would be shown and why, without forcing media.
+7. Every proposed slug is new, and no handoff asks downstream agents to edit a published entry.

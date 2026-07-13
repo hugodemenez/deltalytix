@@ -23,6 +23,8 @@ When subagents are available, give each role to a separate agent so the copywrit
 
 If the outline groups unrelated changes, duplicates an existing entry, or contains an unsupported claim, return it to the reviewer before drafting.
 
+Changelog entries are append-only. Never edit an EN/FR entry that already exists on the base branch. If the outline requests an update to a published slug, reject the handoff: the reviewer must either define a new follow-up entry or mark the change covered/skipped.
+
 ## Editorial model
 
 Take inspiration from the strengths of excellent technology changelogs without imitating one fixed house style:
@@ -68,6 +70,8 @@ Media may appear before or after the relevant copy, or not at all. Do not insert
 - Use one credible benefit per claim; do not repeat it in different words.
 - State availability, plan restrictions, defaults, limitations, and migration risk when relevant.
 - Include a direct next step when users can try or configure the change.
+- Make next steps clickable. Use localized Markdown links such as `[Explore the redesigned homepage](/en)` and `[Découvrir la page repensée](/fr)` instead of bare route text.
+- Use internal relative links for Deltalytix pages and descriptive link text; never use “click here.”
 - Preserve useful technical detail for developer-facing changes, but explain its effect.
 - Never invent metrics, user demand, rollout status, or benefits.
 
@@ -87,6 +91,8 @@ For every outline entry, create:
 content/updates/en/<slug>.mdx
 content/updates/fr/<slug>.mdx
 ```
+
+Both files must be new. Check the base branch before writing and never overwrite an existing slug.
 
 Use shared dates and slug:
 
@@ -122,13 +128,15 @@ The media specialist decides whether an entry needs **zero, one, or several** sc
 Before handing entries to the media specialist:
 
 1. Every outline entry has matching EN and FR MDX.
-2. Titles describe a capability or outcome rather than advertising it.
-3. Copy is faithful to the outline and diff, with no unsupported claims.
-4. Length and structure fit the importance and complexity of the change.
-5. Concrete surfaces and labels replace generic phrases where useful.
-6. French reads naturally and carries the same facts, not necessarily the same syntax.
-7. Frontmatter is valid and contains no dangling media path.
-8. No paragraph, heading, or bullet exists only to satisfy a template.
+2. Every MDX pair is newly added; no published entry was modified.
+3. Titles describe a capability or outcome rather than advertising it.
+4. Copy is faithful to the outline and diff, with no unsupported claims.
+5. Length and structure fit the importance and complexity of the change.
+6. Concrete surfaces and labels replace generic phrases where useful.
+7. Actionable Deltalytix destinations use descriptive localized links, not bare paths.
+8. French reads naturally and carries the same facts, not necessarily the same syntax.
+9. Frontmatter is valid and contains no dangling media path.
+10. No paragraph, heading, or bullet exists only to satisfy a template.
 
 ## File map
 

@@ -69,6 +69,8 @@ curl -s -o /dev/null -D - "http://localhost:3000/authentication?next=dashboard" 
 
 For beta → main promotion PRs, use three sequential specialist roles. When subagents are available, assign each stage to a separate agent.
 
+Changelog publication is append-only: add new EN/FR entries and media, but never revise an entry already present on the base branch. Use descriptive localized Markdown links for product routes instead of bare paths.
+
 **1. Review changes and draft the outline** — skill: [`lib/agent-skills/changelog-review.md`](./lib/agent-skills/changelog-review.md)
 Discovery: `/.well-known/agent-skills/changelog-review/SKILL.md`
 Output: `content/updates/batches/<batch>/outline.md`
