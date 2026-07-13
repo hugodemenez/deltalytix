@@ -49,8 +49,8 @@ const copy = {
     unsubscribe: "Unsubscribe",
   },
   fr: {
-    preview: "Deltalytix fait peau neuve",
-    eyebrow: "NOUVEAUTÉ",
+    preview: "Une nouvelle page d’accueil, plus claire et plus directe.",
+    eyebrow: null,
     title: "Deltalytix fait peau neuve.",
     greeting: "Bonjour",
     intro:
@@ -60,7 +60,7 @@ const copy = {
       "Une mise en page plus lisible, une démo du produit et un accès direct aux fonctionnalités, aux tarifs et aux dernières mises à jour.",
     chartsTitle: "Un aperçu du tableau de bord",
     chartsBody:
-      "Parcourez les courbes d’équité, le P&L journalier, les distributions de trades et les objectifs de performance, sur mobile comme sur ordinateur.",
+      "Parcourez les courbes d’équité, le P&L journalier, les distributions de trades et les objectifs de performance.",
     navigationTitle: "Trouvez plus vite ce que vous cherchez",
     navigationBody:
       "Les menus Fonctionnalités et Mises à jour mènent directement aux sections de la page, au changelog et à la chaîne YouTube.",
@@ -196,7 +196,7 @@ export default function LandingPageUpdateEmail({
       <Body style={styles.body}>
         <Container style={styles.container}>
           <Section style={styles.content}>
-            <Text style={styles.eyebrow}>{t.eyebrow}</Text>
+            {t.eyebrow ? <Text style={styles.eyebrow}>{t.eyebrow}</Text> : null}
             <Text style={{ ...styles.featureText, marginBottom: "10px", color: "#5d625c" }}>
               {t.greeting} {firstName},
             </Text>
