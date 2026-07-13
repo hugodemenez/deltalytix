@@ -5,11 +5,15 @@ import { ThemeProvider } from "@/context/theme-provider";
 import { I18nProviderClient } from "@/locales/landing-client";
 import { ConsentBanner } from "@/components/consent-banner";
 
-import { Metadata } from "next";
+import { Metadata, Viewport } from "next";
 import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
 
 type Locale = "en" | "fr";
 const TITLE_TEMPLATE = "%s | Deltalytix";
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
+};
 
 export async function generateMetadata(props: {
   params: Promise<{ locale: Locale }>;
@@ -53,7 +57,7 @@ export default async function RootLayout(
         <div className="min-h-screen bg-[oklch(0.97_0_0)] text-[oklch(0.17_0_0)] [--background:0_0%_96.1%] [--card:0_0%_100%] [--foreground:0_0%_9%] dark:bg-[oklch(0.17_0_0)] dark:text-[oklch(0.93_0_0)] dark:[--background:0_0%_6.7%] dark:[--card:0_0%_0%] dark:[--foreground:0_0%_93%]">
           <Toaster />
           <Navbar />
-          <div className="pt-14">{children}</div>
+          <div className="pt-nav-content">{children}</div>
           <Footer />
         </div>
       </I18nProviderClient>
