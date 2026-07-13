@@ -54,7 +54,7 @@ export default async function RootLayout(
     <ThemeProvider>
       <I18nProviderClient locale={locale}>
         <ConsentBanner />
-        <div className="min-h-screen bg-[oklch(0.97_0_0)] text-[oklch(0.17_0_0)] [--background:0_0%_96.1%] [--card:0_0%_100%] [--foreground:0_0%_9%] dark:bg-[oklch(0.17_0_0)] dark:text-[oklch(0.93_0_0)] dark:[--background:0_0%_6.7%] dark:[--card:0_0%_0%] dark:[--foreground:0_0%_93%]">
+        <div className="min-h-dvh bg-[oklch(0.97_0_0)] text-[oklch(0.17_0_0)] [--background:0_0%_96.1%] [--card:0_0%_100%] [--foreground:0_0%_9%] dark:bg-[oklch(0.17_0_0)] dark:text-[oklch(0.93_0_0)] dark:[--background:0_0%_6.7%] dark:[--card:0_0%_0%] dark:[--foreground:0_0%_93%]">
           <Toaster />
           <Navbar />
           <div className="pt-nav-content">{children}</div>
