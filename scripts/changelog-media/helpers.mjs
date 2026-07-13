@@ -247,6 +247,9 @@ export async function recordVideo(browser, batch, locale, name, run, playwrightL
   const videoContext = viewport('desktop')
   const recordWidth = videoContext.viewport.width
   const recordHeight = videoContext.viewport.height
+  const recordingStartedAt = Date.now()
+  let markedStartMs = null
+  let markedEndMs = null
   const context = await browser.newContext({
     locale: playwrightLocale,
     ...videoContext,
@@ -280,7 +283,15 @@ export async function recordVideo(browser, batch, locale, name, run, playwrightL
     observer.observe(document.documentElement, { childList: true, subtree: true })
   }, NEXT_DEV_TOOL_SELECTORS)
   const page = await context.newPage()
-  await run(page)
+  await run(
+    page,
+    () => {
+      markedStartMs = Date.now() - recordingStartedAt
+    },
+    () => {
+      markedEndMs = Date.now() - recordingStartedAt
+    },
+  )
   const video = page.video()
   await page.close()
   await context.close()
@@ -292,8 +303,14 @@ export async function recordVideo(browser, batch, locale, name, run, playwrightL
   fs.renameSync(webmPath, webmOut)
 
   const mp4Out = path.join(outputDir(batch, locale), `${name}.mp4`)
+  const trimInput = markedStartMs === null
+    ? ''
+    : `-ss ${Math.max(0, markedStartMs - 500) / 1000} `
+  const trimDuration = markedStartMs === null || markedEndMs === null
+    ? ''
+    : `-t ${(markedEndMs - markedStartMs + 1000) / 1000} `
   execSync(
-    `ffmpeg -y -i "${webmOut}" -c:v libx264 -pix_fmt yuv420p -movflags +faststart "${mp4Out}"`,
+    `ffmpeg -y ${trimInput}-i "${webmOut}" ${trimDuration}-c:v libx264 -pix_fmt yuv420p -movflags +faststart "${mp4Out}"`,
     { stdio: 'pipe' },
   )
   fs.unlinkSync(webmOut)

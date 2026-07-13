@@ -1,160 +1,149 @@
-# Changelog Entries
+# Changelog Copywriting
 
-Write user-facing Deltalytix changelog MDX entries in English and French for a release batch (typically a beta → main promotion PR).
+Write user-facing Deltalytix changelog MDX in English and French from a reviewed release outline.
 
-## When to use this skill
+## Role
 
-- A beta → main promotion PR is open or about to merge.
-- User-facing product changes need changelog entries under `content/updates/`.
-- You are preparing a `changelog/pr-<number>` branch or adding entries directly on `beta`.
+Act as a product copywriting specialist. Use editorial judgment: a tiny fix may need one sentence, related improvements may scan best as bullets, and a significant workflow may deserve a short narrative with sections.
 
-## When to skip
+This is the second of three sequential roles:
 
-Do **not** create entries for:
+1. Change reviewer: `lib/agent-skills/changelog-review.md`
+2. **Copywriting specialist: this skill**
+3. Media specialist: `lib/agent-skills/changelog-media.md`
 
-- CI/CD, GitHub Actions, or agent workflow changes
-- Dependency bumps, refactors, or internal tooling with no user-visible effect
-- Test-only or seed-data-only changes
-- Bug fixes that only affect edge cases already covered by an existing entry
-
-When in doubt, read recent entries in `content/updates/en/` and ask whether a trader or prop-firm user would notice the change in the product UI.
+When subagents are available, give each role to a separate agent so the copywriter does not merely restate its own review.
 
 ## Prerequisites
 
-1. Identify the **batch id** — usually `pr-<promotion-pr-number>` (matches `public/updates/<batch>/` and capture recipes).
-2. Gather the change set:
-   - Promotion PR diff (`base` = `main`, `head` = `beta`), or
-   - `git log main..beta --oneline` and per-commit / per-PR diffs for user-facing commits.
-3. Read 2–3 recent entries in `content/updates/en/` for tone and length (for example `landing-page-redesign`, `billing-payment-history-mobile-layout`).
+1. Read `content/updates/batches/<batch>/outline.md`.
+2. Verify the outline covers the intended release diff.
+3. Read 2–3 recent entries for Deltalytix voice, but do not copy their structure.
+4. Read the relevant product code when a label, route, behavior, or limitation remains uncertain.
 
-## Workflow
+If the outline groups unrelated changes, duplicates an existing entry, or contains an unsupported claim, return it to the reviewer before drafting.
 
-### 1. Inventory user-facing changes
+Changelog entries are append-only. Never edit an EN/FR entry that already exists on the base branch. If the outline requests an update to a published slug, reject the handoff: the reviewer must either define a new follow-up entry or mark the change covered/skipped.
 
-Group the diff into **distinct product changes**. One entry per meaningful feature, UX fix, or integration improvement — not one giant release note.
+## Editorial model
 
-Good splits:
+Take inspiration from the strengths of excellent technology changelogs without imitating one fixed house style:
 
-| Change set | Entries |
-|------------|---------|
-| Landing redesign + navbar updates | `landing-page-redesign`, `landing-navbar-features-and-updates` |
-| Mobile billing layout fix | `billing-payment-history-mobile-layout` |
-| Calendar timezone bug + table alignment | `calendar-grid-day-keys-timezone-fix` (or separate if unrelated) |
+- **Linear:** group related changes into a coherent product story and use crisp, specific visuals.
+- **Notion:** lead with what users can now do and use warm, plain language.
+- **Stripe and Vercel:** be precise about behavior, controls, availability, limits, and next steps.
 
-### 2. Choose slugs and dates
+Deltalytix writes for traders and prop-firm users. Prefer product clarity over launch hype or engineering detail.
 
-- **Filename / slug:** `kebab-case-title.mdx` — descriptive, lowercase, hyphens only.
-- **`date`:** ISO date (`YYYY-MM-DD`) of the **first** commit in the batch window (oldest change included).
-- **`completedDate`:** ISO date of the **last** commit in the batch (newest change included).
-- Use `git log --format=%ai -1 <sha>` on boundary commits when working from a promotion PR.
+## Write for the reader's questions
 
-### 3. Write EN and FR MDX files
+The entry should make it easy to answer:
 
-Create **paired** files:
+1. Does this affect me?
+2. What changed or became possible?
+3. Where do I find it?
+4. Why is it useful?
+5. Are there limits, rollout details, changed defaults, or migration steps?
 
-```
+Not every entry needs to answer all five. Match the treatment to the change.
+
+## Choose the structure by taste and impact
+
+There is no required paragraph count or body template. Choose the shortest structure that tells the story well.
+
+Possible treatments include:
+
+- **Small fix:** H1 and 1–3 direct sentences.
+- **Focused improvement:** short lead followed by one explanatory paragraph.
+- **Related changes:** short introduction plus bullets or brief sections.
+- **Significant workflow:** narrative overview, scannable headings, examples, and availability.
+- **Breaking or migration change:** explicit sections such as **What changed**, **Impact**, **Compatibility**, and **What to do**.
+- **Retirement:** direct explanation, date, impact, and alternative.
+
+Media may appear before or after the relevant copy, or not at all. Do not insert a hero image just because previous entries have one.
+
+## Copy principles
+
+- Lead with the observable outcome, not the implementation.
+- Name exact screens, routes, controls, commands, API fields, and UI labels.
+- Connect capability to consequence: “X now does Y, so you can Z.”
+- Use one credible benefit per claim; do not repeat it in different words.
+- State availability, plan restrictions, defaults, limitations, and migration risk when relevant.
+- Include a direct next step when users can try or configure the change.
+- Make next steps clickable. Use localized Markdown links such as `[Explore the redesigned homepage](/en)` and `[Découvrir la page repensée](/fr)` instead of bare route text.
+- Use internal relative links for Deltalytix pages and descriptive link text; never use “click here.”
+- Preserve useful technical detail for developer-facing changes, but explain its effect.
+- Never invent metrics, user demand, rollout status, or benefits.
+
+Avoid:
+
+- “We are pleased/thrilled to announce…”
+- Vague titles such as “Exciting improvements” or “A better experience.”
+- Unqualified claims such as “faster,” “seamless,” or “powerful.”
+- PR summaries, ticket lists, implementation trivia, and repeated conclusions.
+- The word “programmatically.”
+
+## Create paired EN and FR files
+
+For every outline entry, create:
+
+```text
 content/updates/en/<slug>.mdx
 content/updates/fr/<slug>.mdx
 ```
 
-**Frontmatter** (both locales):
+Both files must be new. Check the base branch before writing and never overwrite an existing slug.
+
+Use shared dates and slug:
 
 ```yaml
 ---
 title: 'Short human title'
-description: 'One sentence for cards and SEO — what changed and why it matters.'
+description: 'One specific sentence for cards and SEO.'
 date: '2026-07-12'
 status: completed
 completedDate: '2026-07-12'
-image: '/updates/pr-298/en/<slug>.png'
 ---
 ```
 
 Rules:
 
-- `title` and `description` must be **localized** in the FR file (not English pasted into FR).
-- Escape apostrophes in YAML with doubled quotes: `l''historique` → use single-quoted YAML and double internal apostrophes (`d''accueil`).
-- `image` uses the batch path with the correct locale subdirectory (`en` or `fr`).
-- Leave `image` pointing at the expected asset path even before capture — the media skill fills in files later.
+- Localize title, description, body, headings, and alt text naturally in French.
+- Do not translate English word-for-word when natural French uses a different construction.
+- With single-quoted YAML, escape apostrophes by doubling them: `d''accueil`.
+- Use the outline's commit dates, not the drafting date.
+- Use **bold** for controls or section names when it improves scanning.
 
-**Body structure:**
+## Media handoff
 
-```mdx
-# Same as title (H1)
+The media specialist decides whether an entry needs **zero, one, or several** screenshots/videos after reading both the outline and final copy.
 
-![Localized alt text](/updates/<batch>/en/<slug>.png)
+- Do not create placeholder image paths to satisfy a quota.
+- Do not add `image:` frontmatter unless the referenced asset exists or the media specialist has committed to its exact path.
+- If a visual would clarify a specific sentence, leave that sentence concrete enough for the media specialist to illustrate.
+- The final structure may be adjusted when media is wired in, but the media specialist must preserve the copy's narrative.
 
-Two to four short paragraphs. Mention specific UI labels, routes, and behaviors.
-Use **bold** for button or section names that appear in the product.
-```
+## Quality review
 
-Content guidelines:
+Before handing entries to the media specialist:
 
-- **2–4 short paragraphs**; add headings or bullets only when they improve scanability.
-- **Simple, conversational language** — write for traders, not engineers.
-- **Human tone** — informal, direct; avoid corporate filler ("we are pleased to announce").
-- **Never** use the word "programmatically".
-- Lead with what was added or changed, then the benefit or use case.
-- Name concrete surfaces: `/dashboard/billing`, **Import**, mobile navbar, trade table, etc.
-- FR copy should be natural French, not literal word-for-word translation.
-
-**Media placeholders:** Include at least one `![...](...)` image or `<video>` block in the body matching the paths you expect from the media skill. Use the video pattern from `faster-landing-page` when motion matters.
-
-### 4. Capture media (next skill)
-
-After MDX files exist, follow the **changelog media** skill:
-
-- Discovery: `/.well-known/agent-skills/changelog-media/SKILL.md`
-- Repo doc: `lib/agent-skills/changelog-media.md`
-
-That skill covers Playwright recipes, `bun run capture:changelog-media -- <batch>`, and wiring `image:` + body assets.
-
-### 5. Open a changelog PR
-
-Typical git flow:
-
-```bash
-git checkout -b changelog/pr-<promotion-pr-number>
-git add content/updates/
-git commit -m "docs: add changelog entries for PR #<number>"
-git push -u origin changelog/pr-<promotion-pr-number>
-```
-
-Open a PR into `beta` (or the promotion branch) titled `📝 Changelog entries for PR #<number>` so reviewers can merge changelog work alongside the release.
+1. Every outline entry has matching EN and FR MDX.
+2. Every MDX pair is newly added; no published entry was modified.
+3. Titles describe a capability or outcome rather than advertising it.
+4. Copy is faithful to the outline and diff, with no unsupported claims.
+5. Length and structure fit the importance and complexity of the change.
+6. Concrete surfaces and labels replace generic phrases where useful.
+7. Actionable Deltalytix destinations use descriptive localized links, not bare paths.
+8. French reads naturally and carries the same facts, not necessarily the same syntax.
+9. Frontmatter is valid and contains no dangling media path.
+10. No paragraph, heading, or bullet exists only to satisfy a template.
 
 ## File map
 
 | Path | Purpose |
 |------|---------|
+| `content/updates/batches/<batch>/outline.md` | Reviewed source for copy and media |
 | `content/updates/en/<slug>.mdx` | English entry |
 | `content/updates/fr/<slug>.mdx` | French entry |
-| `public/updates/<batch>/{en,fr}/` | Screenshots and videos (media skill) |
-| `scripts/changelog-media/recipes/<batch>.mjs` | Capture recipe (media skill) |
-
-## Examples
-
-**PR #298 batch** (`pr-298`):
-
-- `landing-page-redesign`
-- `landing-performance-chart-carousel`
-- `landing-navbar-features-and-updates`
-- `billing-payment-history-mobile-layout`
-- `calendar-grid-day-keys-timezone-fix`
-
-**PR #249 batch** (`pr-249`):
-
-- `faster-landing-page` (video demo)
-- `import-from-mobile`
-- `support-assistant-codebase-search`
-- `trade-table-mobile-and-show-all`
-- `calendar-table-timezone-date-fix`
-
-## Definition of done
-
-1. Every significant **user-facing** change in the batch has its own EN + FR MDX pair.
-2. Frontmatter is valid YAML with `title`, `description`, `date`, `status: completed`, `completedDate`, and `image`.
-3. Body has an H1, ≥1 media placeholder, and 2–4 paragraphs of product-focused copy.
-4. FR entries are properly localized (not English).
-5. Slugs are kebab-case and unique within `content/updates/`.
-6. Changelog media skill has been run (or scheduled) so `public/updates/<batch>/` assets match MDX paths.
-7. Only `content/updates/` (and later `public/updates/<batch>/` from media capture) are changed — no unrelated product code edits for changelog work.
+| `lib/agent-skills/changelog-review.md` | Previous role |
+| `lib/agent-skills/changelog-media.md` | Next role |

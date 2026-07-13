@@ -7,10 +7,9 @@
 export default {
   batch: 'pr-XXX',
   assets: [
-    // Screenshots
-    { file: 'my-feature', scene: 'landing-hero' },
-    { file: 'my-dashboard-feature', scene: 'trade-table-desktop' },
-    // Videos
-    { file: 'my-feature-demo', scene: 'landing-scroll' },
+    // Add only assets justified in the batch media plan.
+    // An entry may have zero, one, or several assets.
+    { file: 'my-feature-overview', scene: 'landing-hero' },
+    { file: 'my-feature-interaction', scene: 'landing-scroll' },
   ],
 }
