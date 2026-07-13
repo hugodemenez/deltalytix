@@ -42,6 +42,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     root.classList.add(newEffectiveTheme)
     setEffectiveTheme(newEffectiveTheme)
+
+    const themeColor = newEffectiveTheme === 'dark' ? '#2b2b2b' : '#f7f7f7'
+    const themeMeta = document.querySelector('meta[name="theme-color"]')
+    if (themeMeta) {
+      themeMeta.setAttribute('content', themeColor)
+    }
   }
 
   useEffect(() => {

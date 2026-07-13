@@ -138,6 +138,7 @@
 
 @layer base {
   :root {
+    color-scheme: light;
     --background: 0 0% var(--theme-intensity, 100%);
     --foreground: 0 0% 3.9%;
     --card: 0 0% var(--theme-intensity, 100%);
@@ -184,6 +185,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     --background: 0 0% calc(100% - var(--theme-intensity, 100%));
     --foreground: 0 0% 98%;
     --card: 0 0% calc(100% - var(--theme-intensity, 100%));
@@ -417,6 +419,19 @@
 }
 
 @layer utilities {
+  /* iOS safe-area helpers for fixed nav chrome */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .min-h-nav-safe {
+    min-height: calc(3.5rem + env(safe-area-inset-top, 0px));
+  }
+
+  .pt-nav-content {
+    padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
+  }
+
   /* Full-viewport overlay that respects iOS Safari dynamic toolbars (bottom tabs, address bar) */
   .mobile-nav-overlay {
     height: 100dvh;

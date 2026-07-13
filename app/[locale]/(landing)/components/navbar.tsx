@@ -378,11 +378,12 @@ export default function Component() {
       />
 
       <span
-        className={`h-14 fixed top-0 left-0 right-0 bg-background z-50 ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
+        className={`fixed top-0 left-0 right-0 z-50 bg-background pt-safe min-h-nav-safe transition-transform duration-300 ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
       ></span>
       <header
-        className={`max-w-7xl mx-auto fixed top-0 left-0 right-0 px-4 lg:px-6 h-14 flex items-center justify-between z-50  text-foreground transition-transform duration-300 ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
+        className={`fixed top-0 left-0 right-0 z-50 pt-safe text-foreground transition-transform duration-300 ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
       >
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">
         <Link href={localize("/")} className="flex items-center space-x-2">
           <Logo className="w-6 h-6 fill-black dark:fill-white" />
           <span className="font-bold text-xl">Deltalytix</span>
@@ -621,6 +622,7 @@ export default function Component() {
               />
             </svg>
           </button>
+        </div>
         </div>
       </header>
 

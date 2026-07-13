@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
@@ -88,6 +88,16 @@ export const metadata: Metadata = {
   formatDetection: { email: false, address: false, telephone: false },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f7f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#2b2b2b" },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -122,6 +132,15 @@ export default function RootLayout({
 
                 root.classList.remove('light', 'dark');
                 root.classList.add(resolvedTheme);
+
+                var themeColor = resolvedTheme === 'dark' ? '#2b2b2b' : '#f7f7f7';
+                var themeMeta = document.querySelector('meta[name="theme-color"]');
+                if (!themeMeta) {
+                  themeMeta = document.createElement('meta');
+                  themeMeta.setAttribute('name', 'theme-color');
+                  document.head.appendChild(themeMeta);
+                }
+                themeMeta.setAttribute('content', themeColor);
 
                 var savedIntensity = localStorage.getItem('intensity');
                 var intensity = savedIntensity ? Number(savedIntensity) : 100;
