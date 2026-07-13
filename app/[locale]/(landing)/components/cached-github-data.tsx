@@ -1,11 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  StarIcon,
-  Circle,
-  Scale,
-  GitFork,
-  Activity,
-} from "lucide-react";
+import { StarIcon } from "lucide-react";
 import { ContributionGraph } from "./contribution-graph";
 import { getGithubData } from "../actions/github-data";
 import { cacheLife } from "next/cache";
@@ -30,127 +24,74 @@ function GithubStatsCard({
   githubStats,
   stars,
   lastCommit,
+  starLabel,
 }: {
   repoData: Awaited<ReturnType<typeof getGithubData>>["repoData"];
   githubStats: Awaited<ReturnType<typeof getGithubData>>["githubStats"];
   stars: number;
   lastCommit: Awaited<ReturnType<typeof getGithubData>>["lastCommit"];
+  starLabel: string;
 }) {
   return (
     <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
-      <CardHeader className="border-b border-border pb-3 md:pb-4 mb-3 md:mb-4">
+      <CardHeader className="mb-3 flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border pb-3 md:mb-4 md:pb-4">
         <CardTitle className="font-medium text-base md:text-lg lg:text-xl text-primary">
           {repoData?.name ?? GITHUB_REPO_NAME}
         </CardTitle>
+        <a
+          href={GITHUB_REPO_URL}
+          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-sm border border-border px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:text-sm"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span>
+            {starLabel} - {Intl.NumberFormat("en").format(stars)}
+          </span>
+          <StarIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
+        </a>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-wrap gap-3 md:gap-4 text-xs md:text-sm text-muted-foreground mb-4 md:mb-6">
-          <div className="flex items-center space-x-1">
-            <Circle className="w-3 h-3 md:w-4 md:h-4" />
-            <span>{repoData?.language}</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <Scale className="w-3 h-3 md:w-4 md:h-4" />
-            <span>
-              {repoData?.license?.spdx_id && repoData.license.spdx_id !== "NOASSERTION"
-                ? repoData.license.spdx_id
-                : "CC-BY-NC-4.0"}
-            </span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <StarIcon className="w-3 h-3 md:w-4 md:h-4" />
-            <span>
-              {Intl.NumberFormat("en", {
-                notation: "compact",
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 1,
-              }).format(githubStats?.repository.stargazers.totalCount || 0)}
-            </span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <GitFork className="w-3 h-3 md:w-4 md:h-4" />
-            <span>
-              {Intl.NumberFormat("en", {
-                notation: "compact",
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 1,
-              }).format(githubStats?.repository.forks.totalCount || 0)}
-            </span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <Activity className="w-3 h-3 md:w-4 md:h-4" />
-            <span>
-              {Intl.NumberFormat("en", {
-                notation: "compact",
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 1,
-              }).format(
-                githubStats?.repository.commits.history.totalCount || 0
-              )}
-            </span>
-          </div>
-        </div>
-        <div className="mt-4 md:mt-6 min-w-0">
+        <div className="min-w-0">
           <ContributionGraph data={githubStats.contributionGraph} />
           <p className="text-muted-foreground text-xs md:text-sm mt-2">
             Last commit{" "}
             {formatTimeAgo(
-              lastCommit?.commit.committer.date || new Date().toISOString()
+              lastCommit?.commit.committer.date || new Date().toISOString(),
             )}
           </p>
         </div>
-        <a
-          href={GITHUB_REPO_URL}
-          className="border border-border flex justify-center h-7 md:h-8 leading-[28px] md:leading-[30px] text-muted-foreground mt-3 md:mt-4"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <div className="bg-background pl-2 pr-3 text-xs md:text-sm flex items-center space-x-2 border-r border-border">
-            <StarIcon className="w-3 h-3 md:w-4 md:h-4" />
-            <span className="font-medium">Star</span>
-          </div>
-          <div className="px-3 md:px-4 text-xs md:text-sm items-center flex">
-            {Intl.NumberFormat("en", {
-              notation: "compact",
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 1,
-            }).format(stars)}
-          </div>
-        </a>
       </CardContent>
     </Card>
   );
 }
 
-function GithubStatsFallback() {
+function GithubStatsFallback({ starLabel }: { starLabel: string }) {
   return (
     <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
-      <CardHeader className="border-b border-border pb-3 md:pb-4 mb-3 md:mb-4">
+      <CardHeader className="mb-3 flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border pb-3 md:mb-4 md:pb-4">
         <CardTitle className="font-medium text-base md:text-lg lg:text-xl text-primary">
           {GITHUB_REPO_NAME}
         </CardTitle>
+        <a
+          href={GITHUB_REPO_URL}
+          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-sm border border-border px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span>{starLabel}</span>
+          <StarIcon className="h-3.5 w-3.5" />
+        </a>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground mb-4">
           GitHub stats are temporarily unavailable.
         </p>
-        <a
-          href={GITHUB_REPO_URL}
-          className="border border-border flex justify-center h-7 md:h-8 leading-[28px] md:leading-[30px] text-muted-foreground"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <div className="bg-background pl-2 pr-3 text-xs md:text-sm flex items-center space-x-2 border-r border-border">
-            <StarIcon className="w-3 h-3 md:w-4 md:h-4" />
-            <span className="font-medium">Star</span>
-          </div>
-        </a>
       </CardContent>
     </Card>
   );
 }
 
-export async function CachedGithubData() {
+export async function CachedGithubData({ starLabel }: { starLabel: string }) {
   "use cache";
   cacheLife("weeks");
 
@@ -163,10 +104,11 @@ export async function CachedGithubData() {
         githubStats={githubStats}
         stars={stars}
         lastCommit={lastCommit}
+        starLabel={starLabel}
       />
     );
   } catch (error) {
     console.error("[CachedGithubData] Failed to load GitHub stats:", error);
-    return <GithubStatsFallback />;
+    return <GithubStatsFallback starLabel={starLabel} />;
   }
 }

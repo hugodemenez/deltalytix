@@ -13,6 +13,7 @@ import referral from "./fr/referral";
 import admin from "./fr/admin";
 import faq from "./fr/faq";
 import support from "./fr/support";
+import landingPreview from "./fr/landing-preview";
 
 export default {
   ...shared,
@@ -24,6 +25,7 @@ export default {
   ...propfirm,
   ...chat,
   ...terms,
+  ...landingPreview,
   ...embed,
   ...teams,
   ...referral,
@@ -57,12 +59,13 @@ export default {
     and: "et",
     privacy: "Politique de confidentialité",
   },
-  "updates.title": "Feuille de route du produit Deltalytix",
+  "updates.title": "Mises à jour du produit.",
   "updates.description":
-    "Nous travaillons constamment à l'amélioration de Deltalytix pour vous offrir la meilleure plateforme d'analyse de trading. Voici un aperçu de nos progrès actuels, des fonctionnalités à venir et des mises à jour récentes.",
+    "Découvrez les dernières fonctionnalités, améliorations et corrections que nous publions pour faire de Deltalytix le meilleur espace pour vos données de trading.",
   "updates.inProgress": "En cours",
   "updates.upcoming": "Fonctionnalités à venir",
-  "updates.completed": "Fonctionnalités terminées",
+  "updates.completed": "Dernières mises à jour",
+  "updates.shipped": "{count} améliorations publiées",
   "updates.weeklyVideo": "📺 Dernière vidéo de la semaine",
   "notification.title": "Progrès de synchronisation Rithmic",
   "notification.noAccount": "Aucun compte en cours de traitement",

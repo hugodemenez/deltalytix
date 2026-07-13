@@ -2,6 +2,7 @@ export default {
     pricing: {
         heading: 'Tarification',
         subheading: 'Stockez, explorez et améliorez vos données de trading avec le plan adapté à vos besoins.',
+        includes: 'Inclus',
         loading: 'Chargement...',
         yearly: 'annuel',
         monthly: 'mensuel',
@@ -26,8 +27,8 @@ export default {
         afterFirstMonth: 'puis {price}€/mois',
         equivalentTo: 'Équivalent à ${price}/mois',
         yearlySavingsAmount: 'Économisez ${amount} par an',
-        billedYearly: '€{total} facturé annuellement',
-        billedQuarterly: '€{total} facturé trimestriellement',
+        billedYearly: 'Facturé {total} par an',
+        billedQuarterly: 'Facturé {total} par trimestre',
         getStarted: 'Essayer premium (3 jours gratuits)',
         tryBasic: 'Essayer Basic (7 jours gratuit)',
         basic: {
