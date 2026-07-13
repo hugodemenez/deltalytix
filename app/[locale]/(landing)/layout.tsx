@@ -5,11 +5,15 @@ import { ThemeProvider } from "@/context/theme-provider";
 import { I18nProviderClient } from "@/locales/landing-client";
 import { ConsentBanner } from "@/components/consent-banner";
 
-import { Metadata } from "next";
+import { Metadata, Viewport } from "next";
 import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
 
 type Locale = "en" | "fr";
 const TITLE_TEMPLATE = "%s | Deltalytix";
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
+};
 
 export async function generateMetadata(props: {
   params: Promise<{ locale: Locale }>;
