@@ -11,7 +11,7 @@ import {
 } from './helpers.mjs'
 import { LABELS, viewport } from './constants.mjs'
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-features-carousel' | 'landing-navbar-updates' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'billing-mobile'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-pricing-stability' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'billing-mobile'} ChangelogScene */
 
 /**
  * @param {import('playwright-core').Browser} browser
@@ -86,6 +86,54 @@ export async function captureScene(browser, options) {
       await assertNoDevIssues(page, `${locale} landing navbar updates`)
       await screenshot(page, batch, locale, file)
       await page.close()
+      return
+    }
+
+    case 'landing-faq-expanded': {
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await page.goto(`${siteUrl}/${locale}`, { waitUntil: 'networkidle', timeout: 120_000 })
+      await dismissCookies(page, locale)
+      const section = page.locator('#faq')
+      await section.scrollIntoViewIfNeeded()
+      const firstQuestion = section.getByRole('button').first()
+      await firstQuestion.click()
+      await page.waitForTimeout(1200)
+      await ensureCookiesDismissed(page, locale)
+      await assertNoDevIssues(page, `${locale} landing FAQ expanded`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'landing-pricing-stability': {
+      const periods = {
+        en: { monthly: /^monthly$/i, yearly: /^yearly$/i, lifetime: /^lifetime$/i },
+        fr: { monthly: /^mensuel$/i, yearly: /^annuel$/i, lifetime: /^à vie$/i },
+      }
+      await recordVideo(browser, batch, locale, file, async (page, markVideoStart, markVideoEnd) => {
+        await page.goto(`${siteUrl}/${locale}/pricing`, {
+          waitUntil: 'networkidle',
+          timeout: 120_000,
+        })
+        await dismissCookies(page, locale)
+        const monthly = page.getByRole('button', { name: periods[locale].monthly }).first()
+        const yearly = page.getByRole('button', { name: periods[locale].yearly }).first()
+        const lifetime = page.getByRole('button', { name: periods[locale].lifetime }).first()
+        await monthly.scrollIntoViewIfNeeded()
+        await page.evaluate(() => window.scrollBy(0, -140))
+        markVideoStart()
+        await page.waitForTimeout(1800)
+        await yearly.click()
+        await page.waitForTimeout(1800)
+        await lifetime.click()
+        await page.waitForTimeout(2200)
+        markVideoEnd()
+        await ensureCookiesDismissed(page, locale)
+        await assertNoDevIssues(page, `${locale} landing pricing stability`)
+      }, playwrightLocale)
       return
     }
 

@@ -3,6 +3,8 @@ export default {
   batch: 'pr-298',
   assets: [
     { file: 'landing-page-redesign', scene: 'landing-hero' },
+    { file: 'landing-page-redesign-faq', scene: 'landing-faq-expanded' },
+    { file: 'landing-page-redesign-pricing-stability', scene: 'landing-pricing-stability' },
     { file: 'landing-performance-chart-carousel', scene: 'landing-features-carousel' },
     { file: 'landing-navbar-features-and-updates', scene: 'landing-navbar-updates' },
     { file: 'billing-payment-history-mobile-layout', scene: 'billing-mobile' },
