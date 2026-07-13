@@ -378,8 +378,13 @@ export default function Component() {
       />
 
       <span
-        key={`safari-theme-${effectiveTheme}`}
+        key={`safari-theme-top-${effectiveTheme}`}
         className="landing-safari-theme-sampler"
+        aria-hidden="true"
+      />
+      <span
+        key={`safari-theme-bottom-${effectiveTheme}`}
+        className="landing-safari-theme-sampler-bottom"
         aria-hidden="true"
       />
 
