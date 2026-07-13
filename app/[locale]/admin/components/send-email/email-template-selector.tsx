@@ -15,6 +15,7 @@ const templates: { value: EmailTemplate; label: string; description: string }[] 
   { value: "welcome", label: "Welcome", description: "Welcome new users to Deltalytix" },
   { value: "weekly-recap", label: "Weekly Recap", description: "Weekly trading statistics" },
   { value: "new-feature", label: "New Feature", description: "Announce new product features" },
+  { value: "landing-page-update", label: "Landing Page Update", description: "Announce the redesigned public website" },
   { value: "renewal-notice", label: "Renewal Notice", description: "Prop firm renewal reminder" },
   { value: "team-invitation", label: "Team Invitation", description: "Invite to a team workspace" },
   { value: "missing-data", label: "Missing Data", description: "Encourage users to import trades" },
