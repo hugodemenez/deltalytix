@@ -378,7 +378,7 @@ export default function Component() {
       />
 
       <span
-        key={`safari-theme-${effectiveTheme}`}
+        key={`safari-theme-top-${effectiveTheme}`}
         className="landing-safari-theme-sampler"
         aria-hidden="true"
       />
@@ -634,6 +634,7 @@ export default function Component() {
 
       {isOpen && (
         <motion.div
+          key={`mobile-nav-menu-${effectiveTheme}`}
           className="mobile-nav-overlay fixed inset-0 z-50 flex flex-col bg-background px-2 overscroll-none"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1083,6 +1084,7 @@ export default function Component() {
       {/* Mobile navbar backdrop — covers area behind Safari bottom tab bar */}
       {isOpen && (
         <div
+          key={`mobile-nav-backdrop-${effectiveTheme}`}
           className="mobile-nav-overlay fixed inset-0 bg-background z-40 pointer-events-none"
           aria-hidden="true"
         />

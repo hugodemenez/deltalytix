@@ -437,9 +437,9 @@
   }
 
   /*
-   * Keep an untransformed fixed element at the viewport edge for Safari's
-   * browser-chrome sampler. The animated navbar backdrop is not reliably
-   * sampled while its transform changes.
+   * Keep an untransformed fixed element at the top viewport edge for Safari's
+   * browser-chrome sampler. Animated overlays are not reliably re-sampled
+   * when the theme changes.
    */
   .landing-safari-theme-sampler {
     position: fixed;
