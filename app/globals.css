@@ -424,18 +424,36 @@
    * Use the system media query here so the correct color is available before
    * the client theme script adds the light/dark class.
    */
-  .landing-navbar-chrome {
-    background-color: oklch(0.97 0 0);
+  .landing-navbar-chrome,
+  .landing-safari-theme-sampler {
+    background-color: hsl(0 0% 96.1%);
   }
 
-  .dark .landing-navbar-chrome {
-    background-color: oklch(0.17 0 0);
+  .dark .landing-navbar-chrome,
+  .dark .landing-safari-theme-sampler {
+    background-color: hsl(0 0% 6.7%);
   }
 
   @media (prefers-color-scheme: dark) {
-    :root:not(.light) .landing-navbar-chrome {
-      background-color: oklch(0.17 0 0);
+    :root:not(.light) .landing-navbar-chrome,
+    :root:not(.light) .landing-safari-theme-sampler {
+      background-color: hsl(0 0% 6.7%);
     }
+  }
+
+  /*
+   * Keep an untransformed fixed element at the viewport edge for Safari's
+   * browser-chrome sampler. The animated navbar backdrop is not reliably
+   * sampled while its transform changes.
+   */
+  .landing-safari-theme-sampler {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 60;
+    width: 100%;
+    height: 8px;
+    pointer-events: none;
   }
 
   /* iOS safe-area helpers for fixed nav chrome */
