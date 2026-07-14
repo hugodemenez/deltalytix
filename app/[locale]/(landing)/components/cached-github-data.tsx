@@ -4,6 +4,7 @@ import { ContributionGraph } from "./contribution-graph";
 import { getGithubData } from "../actions/github-data";
 import { cacheLife } from "next/cache";
 import { GITHUB_REPO_NAME, GITHUB_REPO_URL } from "@/lib/github-repo";
+import { getAllPostMetadata } from "@/lib/mdx";
 
 const formatTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
@@ -25,12 +26,18 @@ function GithubStatsCard({
   stars,
   lastCommit,
   starLabel,
+  changelogEntries,
 }: {
   repoData: Awaited<ReturnType<typeof getGithubData>>["repoData"];
   githubStats: Awaited<ReturnType<typeof getGithubData>>["githubStats"];
   stars: number;
   lastCommit: Awaited<ReturnType<typeof getGithubData>>["lastCommit"];
   starLabel: string;
+  changelogEntries: Array<{
+    slug: string;
+    title: string;
+    date: string;
+  }>;
 }) {
   return (
     <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
@@ -52,7 +59,10 @@ function GithubStatsCard({
       </CardHeader>
       <CardContent>
         <div className="min-w-0">
-          <ContributionGraph data={githubStats.contributionGraph} />
+          <ContributionGraph
+            data={githubStats.contributionGraph}
+            changelogEntries={changelogEntries}
+          />
           <p className="text-muted-foreground text-xs md:text-sm mt-2">
             Last commit{" "}
             {formatTimeAgo(
@@ -91,24 +101,45 @@ function GithubStatsFallback({ starLabel }: { starLabel: string }) {
   );
 }
 
-export async function CachedGithubData({ starLabel }: { starLabel: string }) {
+export async function CachedGithubData({
+  starLabel,
+  locale,
+}: {
+  starLabel: string;
+  locale: string;
+}) {
   "use cache";
   cacheLife("weeks");
 
-  try {
-    const { repoData, githubStats, stars, lastCommit } = await getGithubData();
+  let githubData: Awaited<ReturnType<typeof getGithubData>>;
+  let posts: Awaited<ReturnType<typeof getAllPostMetadata>>;
 
-    return (
-      <GithubStatsCard
-        repoData={repoData}
-        githubStats={githubStats}
-        stars={stars}
-        lastCommit={lastCommit}
-        starLabel={starLabel}
-      />
-    );
+  try {
+    [githubData, posts] = await Promise.all([
+      getGithubData(),
+      getAllPostMetadata(locale),
+    ]);
   } catch (error) {
     console.error("[CachedGithubData] Failed to load GitHub stats:", error);
     return <GithubStatsFallback starLabel={starLabel} />;
   }
+
+  const changelogEntries = posts
+    .filter((post) => post.meta.status === "completed")
+    .map((post) => ({
+      slug: post.slug,
+      title: String(post.meta.title),
+      date: String(post.meta.date),
+    }));
+
+  return (
+    <GithubStatsCard
+      repoData={githubData.repoData}
+      githubStats={githubData.githubStats}
+      stars={githubData.stars}
+      lastCommit={githubData.lastCommit}
+      starLabel={starLabel}
+      changelogEntries={changelogEntries}
+    />
+  );
 }
