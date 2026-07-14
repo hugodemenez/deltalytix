@@ -163,6 +163,7 @@ export async function authenticateDxFeed(
   login: string,
   password: string,
   propFirmId: string,
+  existingAccountId?: string,
 ): Promise<DxFeedActionResult> {
   try {
     if (!DXFEED_AUTH_URL || !DXFEED_PLATFORM_KEY) {
@@ -285,9 +286,12 @@ export async function authenticateDxFeed(
       tokenExpirationSource: 'provider',
     }
 
-    const storeResult = await storeDxFeedToken(JSON.stringify(credentials), login, {
-      tokenExpiresAt,
-    })
+    const synchronizationAccountId = existingAccountId?.trim() || login
+    const storeResult = await storeDxFeedToken(
+      JSON.stringify(credentials),
+      synchronizationAccountId,
+      { tokenExpiresAt },
+    )
     if (storeResult.error) {
       logger.warn('Failed to store token')
     }

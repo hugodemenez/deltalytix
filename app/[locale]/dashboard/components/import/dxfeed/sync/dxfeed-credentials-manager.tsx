@@ -39,8 +39,14 @@ import { cn } from '@/lib/utils'
 import { getDxFeedErrorToastContent } from '@/lib/dxfeed-client-messages'
 import { showToastWithCopy } from '@/lib/toast-copy'
 import { authenticateDxFeed, updateDxFeedDailySyncTimeAction } from './actions'
-import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
-import { getEnabledDxFeedPropFirms } from '@/lib/dxfeed-propfirms'
+import {
+  useDxFeedSyncContext,
+  type DxFeedSyncAccount,
+} from '@/context/dxfeed-sync-context'
+import {
+  getDxFeedPropFirmByAuthName,
+  getEnabledDxFeedPropFirms,
+} from '@/lib/dxfeed-propfirms'
 
 const DXFEED_PROP_FIRM_OPTIONS = getEnabledDxFeedPropFirms()
 const DEFAULT_PROP_FIRM_ID = DXFEED_PROP_FIRM_OPTIONS[0]?.id ?? ''
@@ -57,6 +63,7 @@ export function DxFeedCredentialsManager() {
 
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [reconnectingAccountId, setReconnectingAccountId] = useState<string | null>(null)
   const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const [syncingId, setSyncingId] = useState<string | null>(null)
@@ -82,6 +89,41 @@ export function DxFeedCredentialsManager() {
 
   const closeActionsMenu = useCallback(() => {
     setActionsMenuAccountId(null)
+  }, [])
+
+  const resetConnectionDialog = useCallback(() => {
+    setReconnectingAccountId(null)
+    setLoginEmail('')
+    setLoginPassword('')
+    setSelectedPropFirmId(DEFAULT_PROP_FIRM_ID)
+    setPropFirmOpen(false)
+    setPropFirmSearch('')
+  }, [])
+
+  const handleConnectionDialogOpenChange = useCallback(
+    (open: boolean) => {
+      setIsAddDialogOpen(open)
+      if (!open) resetConnectionDialog()
+    },
+    [resetConnectionDialog],
+  )
+
+  const openNewConnectionDialog = useCallback(() => {
+    resetConnectionDialog()
+    setIsAddDialogOpen(true)
+  }, [resetConnectionDialog])
+
+  const openReconnectDialog = useCallback((connection: DxFeedSyncAccount) => {
+    const propFirm = getDxFeedPropFirmByAuthName(connection.propFirmName)
+    setReconnectingAccountId(connection.accountId)
+    setLoginEmail(connection.accountId)
+    setLoginPassword('')
+    setSelectedPropFirmId(
+      propFirm?.enabled ? propFirm.id : DEFAULT_PROP_FIRM_ID,
+    )
+    setPropFirmOpen(false)
+    setPropFirmSearch('')
+    setIsAddDialogOpen(true)
   }, [])
 
   const handleRemoveConnection = useCallback(
@@ -110,7 +152,12 @@ export function DxFeedCredentialsManager() {
 
     try {
       setIsLoading(true)
-      const result = await authenticateDxFeed(loginEmail, loginPassword, selectedPropFirmId)
+      const result = await authenticateDxFeed(
+        loginEmail,
+        loginPassword,
+        selectedPropFirmId,
+        reconnectingAccountId ?? undefined,
+      )
 
       if (result.error) {
         const { title, description } = getDxFeedErrorToastContent(
@@ -128,9 +175,7 @@ export function DxFeedCredentialsManager() {
       showToastWithCopy('success', t('dxfeedSync.connected'), {
         copyLabel: t('common.copy'),
       })
-      setIsAddDialogOpen(false)
-      setLoginEmail('')
-      setLoginPassword('')
+      handleConnectionDialogOpenChange(false)
       await loadAccounts()
     } catch (error) {
       console.error('DxFeed connect error:', error)
@@ -141,7 +186,15 @@ export function DxFeedCredentialsManager() {
     } finally {
       setIsLoading(false)
     }
-  }, [loginEmail, loginPassword, selectedPropFirmId, t, loadAccounts])
+  }, [
+    loginEmail,
+    loginPassword,
+    selectedPropFirmId,
+    reconnectingAccountId,
+    t,
+    loadAccounts,
+    handleConnectionDialogOpenChange,
+  ])
 
   function formatDate(dateString: string) {
     return new Date(dateString).toLocaleString()
@@ -150,8 +203,10 @@ export function DxFeedCredentialsManager() {
   const handleReloadAccounts = useCallback(async () => {
     try {
       setIsReloading(true)
-      await loadAccounts()
-      toast.success(t('dxfeedSync.multiAccount.accountsReloaded'))
+      const loaded = await loadAccounts()
+      if (loaded) {
+        toast.success(t('dxfeedSync.multiAccount.accountsReloaded'))
+      }
     } catch (error) {
       toast.error(t('dxfeedSync.multiAccount.reloadError'), {
         description: t('dxfeedSync.errors.hintContactSupport'),
@@ -276,6 +331,7 @@ export function DxFeedCredentialsManager() {
             variant="ghost"
             disabled={isReloading}
             className="h-8 w-8 p-0 shrink-0"
+            aria-label={t('dxfeedSync.multiAccount.reloadAccounts')}
           >
             {isReloading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -298,7 +354,7 @@ export function DxFeedCredentialsManager() {
             <span className="truncate">{t('dxfeedSync.multiAccount.syncAll')}</span>
           </Button>
           <Button
-            onClick={() => setIsAddDialogOpen(true)}
+            onClick={openNewConnectionDialog}
             disabled={isLoading}
             size="sm"
             className="h-8 flex-1 sm:flex-none"
@@ -338,7 +394,7 @@ export function DxFeedCredentialsManager() {
                           {connection.propFirmName ?? '—'}
                         </p>
                         <span
-                          className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium leading-none ${
+                          className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium leading-none ${
                             isConnected
                               ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                               : connection.needsReconnect
@@ -359,7 +415,7 @@ export function DxFeedCredentialsManager() {
                       >
                         {connection.accountId}
                       </p>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                         <span>
                           {t('dxfeedSync.multiAccount.lastSync')}:{' '}
                           <span className="text-foreground/75">
@@ -377,7 +433,7 @@ export function DxFeedCredentialsManager() {
                                 type="button"
                                 variant="link"
                                 size="sm"
-                                className="h-auto p-0 text-[11px] font-normal"
+                                className="-mx-1 h-auto min-h-6 px-1 py-1 text-xs font-normal"
                                 onClick={() =>
                                   handleSetDailySyncTime(
                                     connection.accountId,
@@ -393,7 +449,7 @@ export function DxFeedCredentialsManager() {
                               type="button"
                               variant="link"
                               size="sm"
-                              className="h-auto p-0 text-[11px] font-normal"
+                              className="-mx-1 h-auto min-h-6 px-1 py-1 text-xs font-normal"
                               onClick={() =>
                                 handleSetDailySyncTime(
                                   connection.accountId,
@@ -412,7 +468,7 @@ export function DxFeedCredentialsManager() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setIsAddDialogOpen(true)}
+                          onClick={() => openReconnectDialog(connection)}
                           className="h-7 px-2 text-xs"
                         >
                           {t('dxfeedSync.multiAccount.reconnect')}
@@ -429,6 +485,9 @@ export function DxFeedCredentialsManager() {
                         disabled={syncingId !== null || !isConnected}
                         className="h-7 w-7 p-0 shrink-0"
                         title={t('dxfeedSync.multiAccount.syncAll')}
+                        aria-label={t('dxfeedSync.multiAccount.syncAccount', {
+                          accountId: connection.accountId,
+                        })}
                       >
                         {syncingId === connection.accountId ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -444,7 +503,14 @@ export function DxFeedCredentialsManager() {
                         }
                       >
                         <PopoverTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 shrink-0"
+                            aria-label={t('dxfeedSync.multiAccount.accountActions', {
+                              accountId: connection.accountId,
+                            })}
+                          >
                             <MoreVertical className="h-3.5 w-3.5" />
                           </Button>
                         </PopoverTrigger>
@@ -494,7 +560,7 @@ export function DxFeedCredentialsManager() {
                       {t('dxfeedSync.multiAccount.noTradingAccounts')}
                     </p>
                   )}
-                  <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
+                  <p className="mt-1.5 text-xs leading-snug text-muted-foreground">
                     {t('dxfeedSync.multiAccount.syncImportsAllAccounts')}
                   </p>
                 </AccordionContent>
@@ -505,11 +571,21 @@ export function DxFeedCredentialsManager() {
       )}
 
       {/* Add Account Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      <Dialog open={isAddDialogOpen} onOpenChange={handleConnectionDialogOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('dxfeedSync.addAccount.title')}</DialogTitle>
-            <DialogDescription>{t('dxfeedSync.addAccount.description')}</DialogDescription>
+            <DialogTitle>
+              {reconnectingAccountId
+                ? t('dxfeedSync.addAccount.reconnectTitle')
+                : t('dxfeedSync.addAccount.title')}
+            </DialogTitle>
+            <DialogDescription>
+              {reconnectingAccountId
+                ? t('dxfeedSync.addAccount.reconnectDescription', {
+                    accountId: reconnectingAccountId,
+                  })
+                : t('dxfeedSync.addAccount.description')}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             {DXFEED_PROP_FIRM_OPTIONS.length === 0 ? (
@@ -600,6 +676,7 @@ export function DxFeedCredentialsManager() {
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
                 placeholder={t('dxfeedSync.addAccount.emailPlaceholder')}
+                readOnly={reconnectingAccountId !== null}
               />
             </div>
             <div className="space-y-2">
@@ -613,7 +690,10 @@ export function DxFeedCredentialsManager() {
               />
             </div>
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => handleConnectionDialogOpenChange(false)}
+              >
                 {t('common.cancel')}
               </Button>
               <Button
@@ -630,7 +710,9 @@ export function DxFeedCredentialsManager() {
                     {t('dxfeedSync.addAccount.connecting')}
                   </>
                 ) : (
-                  t('dxfeedSync.addAccount.connect')
+                  reconnectingAccountId
+                    ? t('dxfeedSync.multiAccount.reconnect')
+                    : t('dxfeedSync.addAccount.connect')
                 )}
               </Button>
             </div>

@@ -2143,6 +2143,9 @@ export default {
       title: "Connect DxFeed Account",
       description:
         "Choose your prop firm, then sign in with the same credentials you use on that firm's platform.",
+      reconnectTitle: "Reconnect DxFeed Account",
+      reconnectDescription:
+        "Choose the prop firm and enter the password for {accountId} to refresh this connection.",
       propFirmLabel: "Prop firm",
       propFirmPlaceholder: "Select your prop firm",
       propFirmHint:
@@ -2208,6 +2211,11 @@ export default {
       savedAccounts: "Saved Accounts",
       addNew: "Add New",
       syncAll: "Sync All",
+      syncAccount: "Sync {accountId}",
+      accountActions: "Actions for {accountId}",
+      reloadAccounts: "Reload saved accounts",
+      noActiveAccountsToSync:
+        "No active DxFeed connections to sync. Reconnect an account first.",
       noSavedAccounts: "No saved accounts found",
       accountsReloaded: "Accounts reloaded successfully",
       reloadError: "Failed to reload accounts",

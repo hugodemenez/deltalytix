@@ -2272,6 +2272,9 @@ export default {
       title: "Connecter un compte DxFeed",
       description:
         "Choisissez votre propfirm, puis connectez-vous avec les mêmes identifiants que sur sa plateforme.",
+      reconnectTitle: "Reconnecter un compte DxFeed",
+      reconnectDescription:
+        "Choisissez la propfirm et saisissez le mot de passe de {accountId} pour actualiser cette connexion.",
       propFirmLabel: "Propfirm",
       propFirmPlaceholder: "Sélectionnez votre propfirm",
       propFirmHint:
@@ -2338,6 +2341,11 @@ export default {
       savedAccounts: "Comptes Enregistrés",
       addNew: "Ajouter",
       syncAll: "Synchroniser Tout",
+      syncAccount: "Synchroniser {accountId}",
+      accountActions: "Actions pour {accountId}",
+      reloadAccounts: "Recharger les comptes enregistrés",
+      noActiveAccountsToSync:
+        "Aucune connexion DxFeed active à synchroniser. Reconnectez d'abord un compte.",
       noSavedAccounts: "Aucun compte enregistré trouvé",
       accountsReloaded: "Comptes rechargés avec succès",
       reloadError: "Échec du rechargement des comptes",

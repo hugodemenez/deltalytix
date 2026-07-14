@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
 import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
 import { formatDxFeedError, getDxFeedErrorToastContent } from '@/lib/dxfeed-client-messages'
-import { runToastWithCopy, showToastWithCopy } from '@/lib/toast-copy'
+import { runToastWithCopy } from '@/lib/toast-copy'
 import type { DxFeedSyncStats } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/dxfeed-types'
 
 interface DxFeedSyncApiPayload {
@@ -16,6 +16,32 @@ interface DxFeedSyncApiPayload {
   savedCount?: number
   tradesCount?: number
   syncStats?: DxFeedSyncStats
+}
+
+interface DxFeedSynchronizationPayload {
+  id?: string
+  userId?: string
+  service?: string
+  accountId?: string
+  hasToken?: boolean
+  tokenExpired?: boolean
+  needsReconnect?: boolean
+  propFirmName?: string | null
+  accountNumbers?: unknown
+  lastSyncedAt?: string | Date | null
+  tokenExpiresAt?: string | Date | null
+  dailySyncTime?: string | Date | null
+  createdAt?: string | Date | null
+  updatedAt?: string | Date | null
+}
+
+function normalizeSynchronizationDate(
+  value: string | Date | null | undefined,
+  fallback: Date | null,
+): Date | null {
+  if (!value) return fallback
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? fallback : date
 }
 
 function buildSyncLabel(account: DxFeedSyncAccount, t: unknown): string {
@@ -114,7 +140,7 @@ interface DxFeedSyncContextType {
   performSyncForAllAccounts: () => Promise<void>
   isAutoSyncing: boolean
   accounts: DxFeedSyncAccount[]
-  loadAccounts: () => Promise<void>
+  loadAccounts: () => Promise<boolean>
   deleteAccount: (accountId: string) => Promise<void>
   syncInterval: number
   setSyncInterval: (interval: number) => void
@@ -135,26 +161,28 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
   const { refreshTradesOnly } = useData()
 
   const normalizeSynchronization = useCallback(
-    (sync: any): DxFeedSyncAccount => ({
-      id: sync.id,
-      userId: sync.userId,
-      service: sync.service,
-      accountId: sync.accountId,
+    (sync: DxFeedSynchronizationPayload): DxFeedSyncAccount => ({
+      id: sync.id ?? '',
+      userId: sync.userId ?? '',
+      service: sync.service ?? 'dxfeed',
+      accountId: sync.accountId ?? '',
       hasToken: !!sync.hasToken,
       tokenExpired: !!sync.tokenExpired,
       needsReconnect: !!sync.needsReconnect,
       propFirmName: sync.propFirmName ?? null,
-      accountNumbers: Array.isArray(sync.accountNumbers) ? sync.accountNumbers : [],
-      lastSyncedAt: sync?.lastSyncedAt ? new Date(sync.lastSyncedAt) : new Date(),
-      tokenExpiresAt: sync?.tokenExpiresAt ? new Date(sync.tokenExpiresAt) : null,
-      dailySyncTime: sync?.dailySyncTime ? new Date(sync.dailySyncTime) : null,
-      createdAt: sync?.createdAt ? new Date(sync.createdAt) : new Date(),
-      updatedAt: sync?.updatedAt ? new Date(sync.updatedAt) : new Date(),
+      accountNumbers: Array.isArray(sync.accountNumbers)
+        ? sync.accountNumbers.filter((value): value is string => typeof value === 'string')
+        : [],
+      lastSyncedAt: normalizeSynchronizationDate(sync.lastSyncedAt, new Date())!,
+      tokenExpiresAt: normalizeSynchronizationDate(sync.tokenExpiresAt, null),
+      dailySyncTime: normalizeSynchronizationDate(sync.dailySyncTime, null),
+      createdAt: normalizeSynchronizationDate(sync.createdAt, new Date())!,
+      updatedAt: normalizeSynchronizationDate(sync.updatedAt, new Date())!,
     }),
     [],
   )
 
-  const loadAccounts = useCallback(async () => {
+  const loadAccounts = useCallback(async function loadDxFeedAccounts(): Promise<boolean> {
     try {
       const response = await fetch('/api/dxfeed/synchronizations', {
         method: 'GET',
@@ -168,12 +196,19 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
       const result = await response.json()
       const data = Array.isArray(result.data) ? result.data : []
       setAccounts(data.map(normalizeSynchronization))
+      return true
     } catch (error) {
       console.warn('Failed to load DxFeed accounts:', error)
-      showToastWithCopy('error', formatDxFeedError(t, 'LOAD_SYNCHRONIZATIONS_FAILED'), {
+      toast.error(formatDxFeedError(t, 'LOAD_SYNCHRONIZATIONS_FAILED'), {
         description: t('dxfeedSync.errors.hintContactSupport'),
-        copyLabel: t('common.copy'),
+        action: {
+          label: t('common.retry'),
+          onClick: () => {
+            void loadDxFeedAccounts()
+          },
+        },
       })
+      return false
     }
   }, [normalizeSynchronization, t])
 
@@ -283,7 +318,10 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
       const validAccounts = accounts.filter(
         (acc) => acc.hasToken && !acc.tokenExpired && !acc.needsReconnect,
       )
-      if (validAccounts.length === 0) return
+      if (validAccounts.length === 0) {
+        toast.info(t('dxfeedSync.multiAccount.noActiveAccountsToSync'))
+        return
+      }
 
       for (const account of validAccounts) {
         await performSyncForAccount(account.accountId)
@@ -295,7 +333,7 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
       isAutoSyncingRef.current = false
       setIsAutoSyncing(false)
     }
-  }, [accounts, performSyncForAccount])
+  }, [accounts, performSyncForAccount, t])
 
   const checkAndPerformSyncs = useCallback(async () => {
     if (!enableAutoSync || isAutoSyncingRef.current) return
