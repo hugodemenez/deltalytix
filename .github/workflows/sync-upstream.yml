@@ -84,4 +84,4 @@ jobs:
             --title "Sync upstream ($(date -u +%Y-%m-%d))" \
             --body "$PR_BODY" \
             --base main \
-            --head "$BRANCH"
+            --head "${{ github.repository_owner }}:$BRANCH"
