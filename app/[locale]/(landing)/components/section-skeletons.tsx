@@ -51,9 +51,14 @@ export function FAQSectionSkeleton() {
 
 export function OpenSourceSectionSkeleton() {
   return (
-    <div className="px-4 mb-8 md:mb-16 lg:mb-32" aria-hidden>
-      <Skeleton className="h-10 w-72 mb-4" />
-      <Skeleton className="h-5 w-full max-w-[500px] mb-8" />
+    <div
+      className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12"
+      aria-hidden
+    >
+      <div className="mb-16 grid gap-5 md:grid-cols-2 md:items-end">
+        <Skeleton className="h-12 w-72 md:h-16" />
+        <Skeleton className="h-14 w-full max-w-lg md:justify-self-end" />
+      </div>
       <Skeleton className="h-[400px] w-full rounded-xl" />
     </div>
   );

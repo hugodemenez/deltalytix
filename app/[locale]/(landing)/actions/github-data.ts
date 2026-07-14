@@ -5,6 +5,7 @@ import { unstable_cache } from 'next/cache'
 import { GITHUB_REPO_NAME, GITHUB_REPO_OWNER } from '@/lib/github-repo'
 import {
   buildContributionGraphData,
+  type CodeFrequencyRecord,
   type CommitRecord,
   type ContributionGraphData,
 } from '@/lib/contribution-graph'
@@ -164,6 +165,44 @@ function buildCommitRecords(commits: GithubCommit[]): CommitRecord[] {
   return records
 }
 
+function buildCodeFrequencyRecords(data: unknown): CodeFrequencyRecord[] {
+  if (!Array.isArray(data)) return []
+
+  return data.flatMap((week) => {
+    if (
+      !Array.isArray(week) ||
+      week.length < 3 ||
+      typeof week[0] !== 'number' ||
+      typeof week[1] !== 'number' ||
+      typeof week[2] !== 'number'
+    ) {
+      return []
+    }
+
+    return [{
+      weekStart: new Date(week[0] * 1000).toISOString().split('T')[0],
+      additions: week[1],
+      deletions: Math.abs(week[2]),
+    }]
+  })
+}
+
+async function fetchCodeFrequency(): Promise<CodeFrequencyRecord[]> {
+  try {
+    const response = await withRetry('code frequency', () =>
+      octokit.repos.getCodeFrequencyStats({
+        owner: GITHUB_REPO_OWNER,
+        repo: GITHUB_REPO_NAME,
+      })
+    )
+
+    return buildCodeFrequencyRecords(response.data)
+  } catch (error) {
+    console.warn('Code frequency data is temporarily unavailable:', error)
+    return []
+  }
+}
+
 function getLatestCommitDate(commits: GithubCommit[]): string {
   if (commits.length === 0) return new Date().toISOString()
 
@@ -199,12 +238,15 @@ function getWeekCacheKey(date = new Date()): string {
 
 async function fetchGithubData(): Promise<GithubData> {
   try {
-    const repoResponse = await withRetry('repo data', () =>
-      octokit.repos.get({
-        owner: GITHUB_REPO_OWNER,
-        repo: GITHUB_REPO_NAME,
-      })
-    )
+    const [repoResponse, codeFrequency] = await Promise.all([
+      withRetry('repo data', () =>
+        octokit.repos.get({
+          owner: GITHUB_REPO_OWNER,
+          repo: GITHUB_REPO_NAME,
+        })
+      ),
+      fetchCodeFrequency(),
+    ])
 
     const repoData = repoResponse.data
     const today = new Date()
@@ -218,7 +260,8 @@ async function fetchGithubData(): Promise<GithubData> {
       commitRecords,
       firstYear,
       lastYear,
-      today
+      today,
+      codeFrequency,
     )
 
     return {

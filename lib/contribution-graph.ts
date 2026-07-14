@@ -3,6 +3,12 @@ export interface CommitRecord {
   authorName: string;
 }
 
+export interface CodeFrequencyRecord {
+  weekStart: string;
+  additions: number;
+  deletions: number;
+}
+
 export interface DayActivity {
   date: string;
   count: number;
@@ -20,6 +26,8 @@ export interface WeekDetail {
   count: number;
   days: DayActivity[];
   contributors: ContributorActivity[];
+  additions: number | null;
+  deletions: number | null;
 }
 
 export interface MonthLabel {
@@ -54,7 +62,10 @@ function startOfDay(date: Date): Date {
 }
 
 function toDateKey(date: Date): string {
-  return date.toISOString().split("T")[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function getYearWeekStarts(year: number): Date[] {
@@ -134,7 +145,8 @@ function buildWeekDetail(
   weekStart: Date,
   weekIndex: number,
   year: number,
-  commits: CommitRecord[]
+  commits: CommitRecord[],
+  codeFrequencyByWeek: Map<string, CodeFrequencyRecord>,
 ): WeekDetail {
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
@@ -168,6 +180,7 @@ function buildWeekDetail(
   )
     .map(([name, contributorCount]) => ({ name, count: contributorCount }))
     .sort((left, right) => right.count - left.count);
+  const codeFrequency = codeFrequencyByWeek.get(toDateKey(weekStart));
 
   return {
     weekIndex,
@@ -176,19 +189,31 @@ function buildWeekDetail(
     count,
     days,
     contributors,
+    additions: codeFrequency?.additions ?? null,
+    deletions: codeFrequency?.deletions ?? null,
   };
 }
 
 export function buildWeeklyYearGraph(
   commits: CommitRecord[],
   year: number,
-  today = new Date()
+  today = new Date(),
+  codeFrequency: CodeFrequencyRecord[] = [],
 ): WeeklyYearData {
   const weekStarts = getYearWeekStarts(year);
   const weekCount = weekStarts.length;
 
+  const codeFrequencyByWeek = new Map(
+    codeFrequency.map((record) => [record.weekStart, record]),
+  );
   const weekDetails = weekStarts.map((weekStart, weekIndex) =>
-    buildWeekDetail(weekStart, weekIndex, year, commits)
+    buildWeekDetail(
+      weekStart,
+      weekIndex,
+      year,
+      commits,
+      codeFrequencyByWeek,
+    )
   );
   const counts = weekDetails.map((detail) => detail.count);
 
@@ -217,14 +242,15 @@ export function buildContributionGraphData(
   commits: CommitRecord[],
   firstYear: number,
   lastYear: number,
-  today = new Date()
+  today = new Date(),
+  codeFrequency: CodeFrequencyRecord[] = [],
 ): ContributionGraphData {
   const availableYears: number[] = [];
   const years: Record<number, WeeklyYearData> = {};
 
   for (let year = firstYear; year <= lastYear; year++) {
     availableYears.push(year);
-    years[year] = buildWeeklyYearGraph(commits, year, today);
+    years[year] = buildWeeklyYearGraph(commits, year, today, codeFrequency);
   }
 
   return {

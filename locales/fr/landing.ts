@@ -189,6 +189,24 @@ export default {
         commitsInYear: "{count} commits en {year}",
         branches: "main & beta",
         weekAria: "Semaine {week}, {count} commits",
+        monthlyActivity: "Activité mensuelle",
+        tapMonth:
+          "Touchez un mois pour voir les changements de code et les mises à jour.",
+        hoverWeek:
+          "Survolez ou sélectionnez une semaine pour voir les changements.",
+        commitsShort: "commits",
+        monthAria:
+          "{month} {year} : {count} commits et {updates} mises à jour produit",
+        monthDetails: "Activité de {month} {year}",
+        closeMonthDetails: "Fermer les détails du mois",
+        monthSummary: "{count} commits · {updates} mises à jour produit",
+        codeChanges: "Changements de code",
+        added: "Lignes ajoutées",
+        deleted: "Lignes supprimées",
+        linesUnavailable:
+          "Le total des lignes n’est pas disponible pour cette période.",
+        productUpdates: "Mises à jour produit",
+        browseChangelog: "Voir les derniers changements",
       },
     },
     accordion: {
