@@ -41,6 +41,7 @@ function formatCurrency(value: number, locale: string) {
   return value.toLocaleString(locale === "fr" ? "fr-FR" : "en-US", {
     style: "currency",
     currency: "USD",
+    currencyDisplay: "narrowSymbol",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
@@ -128,7 +129,7 @@ function LandingCalendarPreview({
   };
 
   return (
-    <Card className="flex h-full flex-col border-0 bg-transparent shadow-none">
+    <Card className="flex h-full flex-col rounded-none border-0 shadow-none">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center gap-3">
           <CardTitle className="text-base sm:text-lg font-semibold truncate capitalize">

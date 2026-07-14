@@ -51,6 +51,12 @@ export default {
           "Obtenez des insights et analyses personnalisés de notre coach IA. Comprenez vos patterns de trading, identifiez vos forces et faiblesses, et recevez des recommandations actionnables.",
         stat: "Analyse en Temps Réel",
         inputPlaceholder: "Posez une question à votre coach IA…",
+        sendLabel: "Envoyer le message suggéré",
+        attachLabel: "Ajouter une pièce jointe",
+        widgetTitle: "Chat",
+        resetLabel: "Réinitialiser la conversation",
+        contextAnalyzed: "127 trades et 18 entrées de journal connectés",
+        analyzing: "Recherche de patterns dans votre journal…",
         copyLabel: "Copier la réponse",
         copiedLabel: "Copié",
         conversation: {
@@ -183,6 +189,24 @@ export default {
         commitsInYear: "{count} commits en {year}",
         branches: "main & beta",
         weekAria: "Semaine {week}, {count} commits",
+        monthlyActivity: "Activité mensuelle",
+        tapMonth:
+          "Touchez un mois pour voir les changements de code et les mises à jour.",
+        hoverWeek:
+          "Survolez ou sélectionnez une semaine pour voir les changements.",
+        commitsShort: "commits",
+        monthAria:
+          "{month} {year} : {count} commits et {updates} mises à jour produit",
+        monthDetails: "Activité de {month} {year}",
+        closeMonthDetails: "Fermer les détails du mois",
+        monthSummary: "{count} commits · {updates} mises à jour produit",
+        codeChanges: "Changements de code",
+        added: "Lignes ajoutées",
+        deleted: "Lignes supprimées",
+        linesUnavailable:
+          "Le total des lignes n’est pas disponible pour cette période.",
+        productUpdates: "Mises à jour produit",
+        browseChangelog: "Voir les derniers changements",
       },
     },
     accordion: {

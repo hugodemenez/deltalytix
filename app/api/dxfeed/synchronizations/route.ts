@@ -8,7 +8,7 @@ import {
 import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
 import { coerceDxFeedHistoricalHostForSync } from '@/lib/dxfeed-historical-host'
 import { getDxFeedPropFirm } from '@/lib/dxfeed-propfirms'
-import { isDxFeedTokenExpired } from '@/lib/dxfeed-token'
+import { isDxFeedAccessTokenExpired } from '@/lib/dxfeed-token'
 
 export async function GET() {
   try {
@@ -28,8 +28,6 @@ export async function GET() {
         let apiUnauthorized = false
 
         if (token) {
-          tokenExpired = isDxFeedTokenExpired(tokenExpiresAt)
-
           try {
             const parsed = JSON.parse(token) as {
               accessToken?: string
@@ -37,7 +35,17 @@ export async function GET() {
               accountNumbers?: string[]
               propFirmId?: string
               propfirmName?: string
+              tokenExpirationSource?: 'provider' | 'jwt'
             }
+
+            tokenExpired = isDxFeedAccessTokenExpired(
+              parsed.accessToken ?? '',
+              tokenExpiresAt,
+              {
+                expirationIsAuthoritative:
+                  parsed.tokenExpirationSource === 'provider',
+              },
+            )
 
             const firm = getDxFeedPropFirm(parsed.propFirmId)
             propFirmName = firm?.name ?? parsed.propfirmName ?? null
@@ -74,7 +82,7 @@ export async function GET() {
               }
             }
           } catch {
-            /* ignore parse errors */
+            tokenExpired = isDxFeedAccessTokenExpired('', tokenExpiresAt)
           }
 
           if (apiUnauthorized) {

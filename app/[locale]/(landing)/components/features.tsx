@@ -116,7 +116,7 @@ export default function Features() {
             <CardContent className="min-w-0 p-0">
               <div
                 className={cn(
-                  "relative flex w-full min-w-0 max-w-full items-center justify-center overflow-hidden rounded-sm bg-white dark:bg-black",
+                  "relative flex w-full min-w-0 max-w-full items-center justify-center overflow-hidden rounded-sm bg-[#ddddd8] dark:bg-[#20201e]",
                   feature.wrapperClass ?? "h-[300px]",
                 )}
               >

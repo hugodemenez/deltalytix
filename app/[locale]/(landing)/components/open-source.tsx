@@ -10,13 +10,12 @@ import {
 import { GitBranchIcon, UsersIcon, BookOpenIcon } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getI18n } from "@/locales/server";
+import { getCurrentLocale, getI18n } from "@/locales/server";
 import { CachedGithubData } from "./cached-github-data";
 import { GITHUB_REPO_URL } from "@/lib/github-repo";
 
-export default async function OpenSource() {
-  const t = await getI18n();
-  const CardSkeleton = () => (
+function GithubCardSkeleton() {
+  return (
     <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
       <CardHeader className="border-b border-border pb-3 md:pb-4 mb-3 md:mb-4">
         <Skeleton className="h-6 w-48" />
@@ -37,17 +36,22 @@ export default async function OpenSource() {
       </CardContent>
     </Card>
   );
+}
+
+export default async function OpenSource() {
+  const t = await getI18n();
+  const locale = await getCurrentLocale();
 
   return (
-    <div className="px-4 mb-8 md:mb-16 lg:mb-32">
-      <div className="mb-6 md:mb-12">
-        <h2 className="text-2xl md:text-3xl lg:text-4xl mb-2 md:mb-4 font-medium text-primary">
+    <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
+      <div className="mb-16 grid gap-5 md:grid-cols-2 md:items-end">
+        <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] md:text-6xl">
           {t("landing.openSource.title")}
         </h2>
-        <p className="text-sm md:text-base text-muted-foreground max-w-[500px]">
+        <p className="max-w-lg text-pretty text-lg text-black/55 dark:text-white/55 md:justify-self-end">
           {t("landing.openSource.description")
             .split("code")
-            .map((part, index, array) =>
+            .map((part, index) =>
               index === 1 ? (
                 <React.Fragment key={index}>
                   <a
@@ -146,8 +150,11 @@ export default async function OpenSource() {
             </Accordion>
           </div>
           <div className="lg:basis-1/2">
-            <Suspense fallback={<CardSkeleton />}>
-              <CachedGithubData starLabel={t("landing.openSource.starItToo")} />
+            <Suspense fallback={<GithubCardSkeleton />}>
+              <CachedGithubData
+                starLabel={t("landing.openSource.starItToo")}
+                locale={locale}
+              />
             </Suspense>
           </div>
         </div>
