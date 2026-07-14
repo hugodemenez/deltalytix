@@ -755,6 +755,9 @@ export default {
   "widgets.mobile.deleteWidgetNamed": "Supprimer {widgetName}",
   "widgets.mobile.carouselNavigation": "Navigation des widgets",
   "widgets.mobile.carouselGoTo": "Aller à {widgetName} ({index} sur {total})",
+  "widgets.mobile.minimapOpen": "Ouvrir la mini-carte des widgets ({index} sur {total})",
+  "widgets.mobile.minimapClose": "Fermer la mini-carte des widgets",
+  "widgets.mobile.minimapNavigation": "Mini-carte des widgets",
   "widgets.shared.unavailableTitle": "Widget indisponible",
   "widgets.shared.unavailableDescription":
     "Ce type de widget n'est pas pris en charge dans les tableaux de bord partagés.",

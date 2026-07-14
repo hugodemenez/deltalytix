@@ -748,6 +748,9 @@ export default {
   "widgets.mobile.deleteWidgetNamed": "Delete {widgetName}",
   "widgets.mobile.carouselNavigation": "Widget navigation",
   "widgets.mobile.carouselGoTo": "Go to {widgetName} ({index} of {total})",
+  "widgets.mobile.minimapOpen": "Open widget minimap ({index} of {total})",
+  "widgets.mobile.minimapClose": "Close widget minimap",
+  "widgets.mobile.minimapNavigation": "Widget minimap",
   "widgets.shared.unavailableTitle": "Widget unavailable",
   "widgets.shared.unavailableDescription":
     "This widget type is not supported in shared dashboard views.",
