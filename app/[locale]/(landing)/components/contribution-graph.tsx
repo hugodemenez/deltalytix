@@ -165,18 +165,18 @@ function CodeChangeSummary({
 
   return (
     <div className="grid grid-cols-2 gap-2">
-      <div className="rounded-md bg-emerald-500/8 px-2.5 py-2 dark:bg-emerald-400/10">
-        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-          <Plus className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+      <div className="rounded-md bg-emerald-500/8 px-2 py-2 dark:bg-emerald-400/10 sm:px-2.5">
+        <span className="flex items-center gap-1 whitespace-nowrap text-[10px] text-muted-foreground sm:text-[11px]">
+          <Plus className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
           {t("landing.openSource.contributionGraph.added")}
         </span>
         <strong className="mt-0.5 block text-sm font-medium text-emerald-700 dark:text-emerald-300">
           {formatter.format(additions)}
         </strong>
       </div>
-      <div className="rounded-md bg-rose-500/8 px-2.5 py-2 dark:bg-rose-400/10">
-        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-          <Minus className="h-3 w-3 text-rose-600 dark:text-rose-400" />
+      <div className="rounded-md bg-rose-500/8 px-2 py-2 dark:bg-rose-400/10 sm:px-2.5">
+        <span className="flex items-center gap-1 whitespace-nowrap text-[10px] text-muted-foreground sm:text-[11px]">
+          <Minus className="h-3 w-3 shrink-0 text-rose-600 dark:text-rose-400" />
           {t("landing.openSource.contributionGraph.deleted")}
         </span>
         <strong className="mt-0.5 block text-sm font-medium text-rose-700 dark:text-rose-300">
