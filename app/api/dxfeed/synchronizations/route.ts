@@ -7,7 +7,11 @@ import {
 } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/actions'
 import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
 import { coerceDxFeedHistoricalHostForSync } from '@/lib/dxfeed-historical-host'
-import { getDxFeedPropFirm } from '@/lib/dxfeed-propfirms'
+import {
+  isDxFeedStoredCredentialsOutdated,
+  parseDxFeedStoredCredentials,
+  resolveDxFeedPropFirmFromStoredCredentials,
+} from '@/lib/dxfeed-stored-credentials'
 import { isDxFeedAccessTokenExpired } from '@/lib/dxfeed-token'
 
 export async function GET() {
@@ -26,20 +30,15 @@ export async function GET() {
         let propFirmName: string | null = null
         let tokenExpired = false
         let apiUnauthorized = false
+        let needsReconnect = false
 
         if (token) {
-          try {
-            const parsed = JSON.parse(token) as {
-              accessToken?: string
-              historicalHost?: string
-              accountNumbers?: string[]
-              propFirmId?: string
-              propfirmName?: string
-              tokenExpirationSource?: 'provider' | 'jwt'
-            }
-
+          const parsed = parseDxFeedStoredCredentials(token)
+          if (!parsed) {
+            needsReconnect = true
+          } else {
             tokenExpired = isDxFeedAccessTokenExpired(
-              parsed.accessToken ?? '',
+              parsed.accessToken,
               tokenExpiresAt,
               {
                 expirationIsAuthoritative:
@@ -47,8 +46,9 @@ export async function GET() {
               },
             )
 
-            const firm = getDxFeedPropFirm(parsed.propFirmId)
+            const firm = resolveDxFeedPropFirmFromStoredCredentials(parsed)
             propFirmName = firm?.name ?? parsed.propfirmName ?? null
+            needsReconnect = isDxFeedStoredCredentialsOutdated(parsed)
 
             if (Array.isArray(parsed.accountNumbers)) {
               accountNumbers = parsed.accountNumbers
@@ -56,9 +56,8 @@ export async function GET() {
 
             if (
               !tokenExpired &&
+              !needsReconnect &&
               accountNumbers.length === 0 &&
-              typeof parsed.accessToken === 'string' &&
-              typeof parsed.historicalHost === 'string' &&
               firm
             ) {
               const historicalHost = coerceDxFeedHistoricalHostForSync(
@@ -81,8 +80,6 @@ export async function GET() {
                 )
               }
             }
-          } catch {
-            tokenExpired = isDxFeedAccessTokenExpired('', tokenExpiresAt)
           }
 
           if (apiUnauthorized) {
@@ -90,13 +87,14 @@ export async function GET() {
           }
         }
 
-        const connectionActive = !!token && !tokenExpired
+        const connectionActive = !!token && !tokenExpired && !needsReconnect
 
         return {
           ...rest,
           tokenExpiresAt,
           hasToken: connectionActive,
           tokenExpired: !!token && tokenExpired,
+          needsReconnect,
           propFirmName,
           accountNumbers,
         }

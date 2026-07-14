@@ -19,13 +19,18 @@ import {
 } from '@/lib/dxfeed-token'
 import { resolveDxFeedV2AuthUrl } from '@/lib/dxfeed-auth'
 import {
+  parseDxFeedStoredCredentials,
+  resolveDxFeedPropFirmFromStoredCredentials,
+  withResolvedDxFeedPropFirmId,
+  type DxFeedStoredCredentials,
+} from '@/lib/dxfeed-stored-credentials'
+import {
   buildHistoricalHostForPropFirm,
   getDxFeedPropFirm,
 } from '@/lib/dxfeed-propfirms'
 import type {
   DxFeedLoginRequest,
   DxFeedLoginResponse,
-  DxFeedStoredCredentials,
   DxFeedAccountListResponse,
   DxFeedTradesResponse,
   DxFeedReportTrade,
@@ -67,22 +72,6 @@ const logger = {
   error: (message: string, error?: unknown) => {
     console.error(`[DXFEED] ${message}`, error instanceof Error ? error.message : '')
   },
-}
-
-/**
- * Parse the JSON stored in the Synchronization.token field
- * back into { accessToken, historicalHost }.
- */
-function parseStoredCredentials(tokenField: string): DxFeedStoredCredentials | null {
-  try {
-    const parsed = JSON.parse(tokenField)
-    if (parsed.accessToken && parsed.historicalHost) {
-      return parsed as DxFeedStoredCredentials
-    }
-    return null
-  } catch {
-    return null
-  }
 }
 
 function buildHistoricalAuthHeaders(accessToken: string): HeadersInit {
@@ -483,19 +472,23 @@ export async function getDxFeedTrades(
   options?: { userId?: string },
 ): Promise<DxFeedTradesResult> {
   try {
-    const credentials = parseStoredCredentials(initialTokenJson)
+    const credentials = parseDxFeedStoredCredentials(initialTokenJson)
     if (!credentials) {
       return { error: DxFeedErrorCode.INVALID_STORED_CREDENTIALS }
     }
 
-    const propFirm = getDxFeedPropFirm(credentials.propFirmId)
+    const propFirm = resolveDxFeedPropFirmFromStoredCredentials(credentials)
     if (!propFirm) {
       return { error: DxFeedErrorCode.MISSING_PROP_FIRM_RECONNECT }
     }
 
-    const { accessToken } = credentials
+    const migratedCredentials = withResolvedDxFeedPropFirmId(credentials, propFirm)
+    const { accessToken } = migratedCredentials
     // Prefer host from connect; remap mistaken trading WSS hosts; fall back to catalog.
-    const historicalHost = coerceDxFeedHistoricalHostForSync(credentials.historicalHost, propFirm)
+    const historicalHost = coerceDxFeedHistoricalHostForSync(
+      migratedCredentials.historicalHost,
+      propFirm,
+    )
 
     let userId = options?.userId ?? null
     let syncAccountId: string | null = null
@@ -512,7 +505,6 @@ export async function getDxFeedTrades(
     }
     const resolvedUserId = userId
 
-    let storedTokenJson = initialTokenJson
     const baseUrl = historicalHost.endsWith('/') ? historicalHost.slice(0, -1) : historicalHost
 
     const syncRow = await prisma.synchronization.findFirst({
@@ -521,9 +513,21 @@ export async function getDxFeedTrades(
     })
     syncAccountId = syncRow?.accountId ?? null
 
+    let storedTokenJson = initialTokenJson
+    const migratedTokenJson = JSON.stringify(migratedCredentials)
+    if (migratedTokenJson !== initialTokenJson) {
+      const migrated = await updateStoredCredentials(
+        resolvedUserId,
+        initialTokenJson,
+        migratedTokenJson,
+      )
+      if (migrated) storedTokenJson = migratedTokenJson
+    }
+
     if (
       isDxFeedAccessTokenExpired(accessToken, syncRow?.tokenExpiresAt, {
-        expirationIsAuthoritative: credentials.tokenExpirationSource === 'provider',
+        expirationIsAuthoritative:
+          migratedCredentials.tokenExpirationSource === 'provider',
       })
     ) {
       if (syncAccountId) {
@@ -549,13 +553,17 @@ export async function getDxFeedTrades(
     )
     if (accountNumbers.length > 0) {
       const updatedCreds: DxFeedStoredCredentials = {
-        ...credentials,
+        ...migratedCredentials,
         historicalHost,
         accountNumbers,
       }
       const updatedJson = JSON.stringify(updatedCreds)
-      await updateStoredCredentials(resolvedUserId, storedTokenJson, updatedJson)
-      storedTokenJson = updatedJson
+      const updated = await updateStoredCredentials(
+        resolvedUserId,
+        storedTokenJson,
+        updatedJson,
+      )
+      if (updated) storedTokenJson = updatedJson
     }
 
     const syncStats = {
@@ -567,7 +575,7 @@ export async function getDxFeedTrades(
     }
 
     if (accounts.length === 0) {
-      const cachedAccounts = credentials.accountNumbers?.length ?? 0
+      const cachedAccounts = migratedCredentials.accountNumbers?.length ?? 0
       if (cachedAccounts > 0) {
         return {
           error: DxFeedErrorCode.SYNC_ACCOUNTS_UNAVAILABLE,
@@ -706,8 +714,12 @@ async function updateLastSyncedAt(userId: string, storedTokenJson: string) {
   })
 }
 
-async function updateStoredCredentials(userId: string, oldTokenJson: string, newTokenJson: string) {
-  await prisma.synchronization.updateMany({
+async function updateStoredCredentials(
+  userId: string,
+  oldTokenJson: string,
+  newTokenJson: string,
+): Promise<boolean> {
+  const result = await prisma.synchronization.updateMany({
     where: {
       userId,
       service: 'dxfeed',
@@ -717,6 +729,7 @@ async function updateStoredCredentials(userId: string, oldTokenJson: string, new
       token: newTokenJson,
     },
   })
+  return result.count > 0
 }
 
 export async function storeDxFeedToken(
@@ -786,7 +799,7 @@ export async function getDxFeedToken(accountId: string = 'default') {
       return { error: DxFeedErrorCode.NO_TOKEN_RECONNECT }
     }
 
-    const credentials = parseStoredCredentials(syncData.token)
+    const credentials = parseDxFeedStoredCredentials(syncData.token)
     if (
       credentials &&
       isDxFeedAccessTokenExpired(credentials.accessToken, syncData.tokenExpiresAt, {

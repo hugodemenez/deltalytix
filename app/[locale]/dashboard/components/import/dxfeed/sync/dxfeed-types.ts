@@ -26,23 +26,6 @@ export interface DxFeedLoginResponse {
   message?: string
 }
 
-/**
- * Stored as JSON in the Synchronization.token field.
- * Contains both the access token and the historical API host
- * returned by the auth endpoint.
- */
-export interface DxFeedStoredCredentials {
-  accessToken: string
-  historicalHost: string
-  accountNumbers?: string[]
-  /** User-selected prop firm id (see lib/dxfeed-propfirms.ts) */
-  propFirmId?: string
-  /** Display name captured from the user-selected prop firm. */
-  propfirmName?: string
-  /** Marks a stored expiration as provider-supplied rather than a legacy guessed TTL. */
-  tokenExpirationSource?: 'provider' | 'jwt'
-}
-
 export interface DxFeedTradingAccount {
   accountId: number
   accountReference: string | null

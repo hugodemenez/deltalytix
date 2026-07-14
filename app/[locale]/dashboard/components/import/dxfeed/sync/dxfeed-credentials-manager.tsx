@@ -321,7 +321,8 @@ export function DxFeedCredentialsManager() {
         <Accordion type="multiple" className="rounded-lg border divide-y">
           {accounts.map((connection) => {
             const tradingAccountCount = connection.accountNumbers.length
-            const isConnected = connection.hasToken && !connection.tokenExpired
+            const isConnected =
+              connection.hasToken && !connection.tokenExpired && !connection.needsReconnect
 
             return (
               <AccordionItem
@@ -340,12 +341,16 @@ export function DxFeedCredentialsManager() {
                           className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium leading-none ${
                             isConnected
                               ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                              : connection.needsReconnect
+                                ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200'
+                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                           }`}
                         >
                           {isConnected
                             ? t('dxfeedSync.multiAccount.connected')
-                            : t('dxfeedSync.multiAccount.expired')}
+                            : connection.needsReconnect
+                              ? t('dxfeedSync.multiAccount.reconnectRequired')
+                              : t('dxfeedSync.multiAccount.expired')}
                         </span>
                       </div>
                       <p

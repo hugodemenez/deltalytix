@@ -2191,6 +2191,7 @@ export default {
       tokenStatus: "Token Status",
       actions: "Actions",
       expired: "Expired",
+      reconnectRequired: "Reconnect required",
       valid: "Valid",
       connected: "Connected",
       expandTradingAccounts: "View {count} trading account(s)",
