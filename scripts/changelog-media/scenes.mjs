@@ -11,7 +11,7 @@ import {
 } from './helpers.mjs'
 import { LABELS, viewport } from './constants.mjs'
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-pricing-stability' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'billing-mobile'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-pricing-stability' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'billing-mobile'} ChangelogScene */
 
 /**
  * @param {import('playwright-core').Browser} browser
@@ -48,6 +48,46 @@ export async function captureScene(browser, options) {
       await page.waitForTimeout(3000)
       await ensureCookiesDismissed(page, locale)
       await assertNoDevIssues(page, `${locale} contribution graph`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'landing-contribution-graph-hover': {
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await page.goto(`${siteUrl}/${locale}`, { waitUntil: 'networkidle', timeout: 120_000 })
+      await dismissCookies(page, locale)
+      const section = page.locator('#open-source')
+      await section.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(2000)
+      const activeWeek = page.locator('.contribution-week-bar').filter({ hasNot: page.locator('.bg-muted\\/70') }).last()
+      await activeWeek.scrollIntoViewIfNeeded()
+      await activeWeek.hover({ force: true })
+      await page.waitForSelector('[data-radix-popper-content-wrapper]', { timeout: 10_000 })
+      await page.waitForTimeout(500)
+      await ensureCookiesDismissed(page, locale)
+      await assertNoDevIssues(page, `${locale} contribution graph hover`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'landing-ai-journaling-demo': {
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await page.goto(`${siteUrl}/${locale}`, { waitUntil: 'networkidle', timeout: 120_000 })
+      await dismissCookies(page, locale)
+      const section = page.locator('#ai-journaling')
+      await section.scrollIntoViewIfNeeded()
+      await page.waitForSelector('.coach-insight', { timeout: 20_000 })
+      await page.waitForTimeout(1000)
+      await ensureCookiesDismissed(page, locale)
+      await assertNoDevIssues(page, `${locale} AI journaling demo`)
       await screenshot(page, batch, locale, file)
       await page.close()
       return

@@ -1,0 +1,15 @@
+---
+title: 'DxFeed connections keep their real token lifetime'
+description: 'DxFeed sync no longer marks connections expired after a guessed 12-hour limit, so you reconnect only when Volumetrica actually invalidates the session.'
+date: '2026-07-14'
+status: completed
+completedDate: '2026-07-14'
+---
+
+# DxFeed connections keep their real token lifetime
+
+DxFeed connections under [Import](/en/dashboard/import) were sometimes marked **Expired** and asked for **Reconnect** even though Volumetrica still accepted the session. Deltalytix had been applying a locally guessed 12-hour expiry to opaque tokens.
+
+New connections now authenticate against Volumetrica's documented v2 API, store the provider-supplied expiration, and reuse the dedicated report token for sync. Existing connections that were saved with the old guessed timestamp stay active until DxFeed returns a real authorization failure. JWT expiry and explicit 401/403 responses still mark a connection expired when the provider actually rejects it.
+
+If you sync evaluation accounts through DxFeed, you should see fewer unnecessary daily reconnect prompts and more reliable automatic sync eligibility.

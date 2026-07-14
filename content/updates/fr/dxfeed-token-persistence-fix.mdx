@@ -1,0 +1,15 @@
+---
+title: 'Les connexions DxFeed conservent la durée de vie réelle du jeton'
+description: 'La synchronisation DxFeed ne marque plus les connexions comme expirées après une limite locale de 12 heures : vous ne reconnectez que lorsque Volumetrica invalide réellement la session.'
+date: '2026-07-14'
+status: completed
+completedDate: '2026-07-14'
+---
+
+# Les connexions DxFeed conservent la durée de vie réelle du jeton
+
+Les connexions DxFeed sous [Import](/fr/dashboard/import) étaient parfois marquées **Expirée** avec une demande de **Reconnecter** alors que Volumetrica acceptait encore la session. Deltalytix appliquait une expiration locale estimée à 12 heures sur les jetons opaques.
+
+Les nouvelles connexions s'authentifient désormais via l'API v2 documentée de Volumetrica, enregistrent l'expiration fournie par le fournisseur et réutilisent le jeton de rapport dédié pour la synchronisation. Les connexions existantes enregistrées avec l'ancien horodatage estimé restent actives jusqu'à une erreur d'autorisation réelle de DxFeed. L'expiration JWT et les réponses 401/403 explicites marquent toujours une connexion comme expirée lorsque le fournisseur la rejette.
+
+Si vous synchronisez des comptes d'évaluation via DxFeed, vous devriez voir moins de demandes de reconnexion quotidiennes inutiles et une éligibilité plus fiable à la synchronisation automatique.
