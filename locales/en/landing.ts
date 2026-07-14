@@ -50,6 +50,12 @@ export default {
           "Get personalized trading insights and analysis from our AI coach. Understand your trading patterns, identify strengths and weaknesses, and receive actionable recommendations.",
         stat: "Real-time Analysis",
         inputPlaceholder: "Ask your AI coach anything…",
+        sendLabel: "Send suggested message",
+        attachLabel: "Add attachment",
+        widgetTitle: "Chat",
+        resetLabel: "Reset conversation",
+        contextAnalyzed: "127 trades and 18 journal entries connected",
+        analyzing: "Looking for patterns in your journal…",
         copyLabel: "Copy response",
         copiedLabel: "Copied",
         conversation: {
