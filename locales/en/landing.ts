@@ -18,31 +18,26 @@ export default {
         title: "Data Import",
         description:
           "Import data from various providers. Our platform supports automatic imports with Rithmic via a sync or .CSV imports, allowing you to centralize all your trading information in one place.",
-        stat: "Sync & CSV imports",
       },
       "performance-visualization": {
         title: "Performance Visualization",
         description:
           "Visualize your trading performance with interactive charts and graphs. Analyze patterns, identify strengths, and pinpoint areas for improvement.",
-        stat: "Comprehensive Analytics",
       },
       "daily-performance": {
         title: "Daily Performance",
         description:
           "Track your daily trading results with an intuitive calendar view. Quickly identify trends and patterns in your trading performance.",
-        stat: "Calendar View",
       },
       "performance-tracking": {
         title: "Track Your Performance",
         description:
           "Follow your equity, daily results, trade distribution, and progress toward your targets with focused performance charts.",
-        stat: "Performance Tracking",
       },
       "ai-journaling": {
         title: "AI-Powered Journaling",
         description:
           "Improve your trading emotions with AI-assisted journaling. Our advanced algorithms analyze your entries to identify emotional patterns and biases.",
-        stat: "Emotional Intelligence",
       },
       "chat-feature": {
         title: "AI Trading Coach",

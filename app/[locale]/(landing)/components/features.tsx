@@ -16,7 +16,6 @@ type FeatureCard = {
   title: string;
   icon: ReactNode;
   description: string;
-  stat: string;
   image: ReactNode | { light: string; dark: string };
   wrapperClass?: string;
 };
@@ -40,7 +39,6 @@ export default function Features() {
       title: t("landing.features.ai-journaling.title"),
       icon: <Brain className="h-5 w-5 text-muted-foreground" />,
       description: t("landing.features.ai-journaling.description"),
-      stat: t("landing.features.ai-journaling.stat"),
       image: <TradingChatAssistant />,
       wrapperClass: "h-[420px] sm:h-[440px]",
     },
@@ -49,7 +47,6 @@ export default function Features() {
       title: t("landing.features.performance-visualization.title"),
       icon: <BarChart3 className="h-5 w-5 text-muted-foreground" />,
       description: t("landing.features.performance-visualization.description"),
-      stat: t("landing.features.performance-visualization.stat"),
       image: <PerformanceVisualizationChart group="patterns" />,
       wrapperClass: "h-[420px] sm:h-[460px]",
     },
@@ -58,7 +55,6 @@ export default function Features() {
       title: t("landing.features.daily-performance.title"),
       icon: <Calendar className="h-5 w-5 text-muted-foreground" />,
       description: t("landing.features.daily-performance.description"),
-      stat: t("landing.features.daily-performance.stat"),
       image: <CalendarFeaturePreview />,
       wrapperClass: "h-[420px] lg:h-[480px]",
     },
@@ -67,7 +63,6 @@ export default function Features() {
       title: t("landing.features.performance-tracking.title"),
       icon: <BarChart3 className="h-5 w-5 text-muted-foreground" />,
       description: t("landing.features.performance-tracking.description"),
-      stat: t("landing.features.performance-tracking.stat"),
       image: <PerformanceVisualizationChart group="tracking" />,
       wrapperClass: "h-[420px] sm:h-[460px]",
     },
@@ -76,7 +71,6 @@ export default function Features() {
       title: t("landing.features.data-import.title"),
       icon: <Database className="h-5 w-5 text-muted-foreground" />,
       description: t("landing.features.data-import.description"),
-      stat: t("landing.features.data-import.stat"),
       image: <ImportFeature />,
     },
   ];
@@ -108,8 +102,7 @@ export default function Features() {
               <CardTitle className="text-2xl font-normal tracking-tight md:text-3xl">
                 {feature.title}
               </CardTitle>
-              <div className="mt-5 text-sm font-medium">{feature.stat}</div>
-              <p className="mt-3 max-w-sm text-sm leading-relaxed text-black/55 dark:text-white/55">
+              <p className="mt-5 max-w-sm text-sm leading-relaxed text-black/55 dark:text-white/55">
                 {feature.description}
               </p>
             </CardHeader>
