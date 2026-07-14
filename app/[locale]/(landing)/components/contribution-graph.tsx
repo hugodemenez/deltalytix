@@ -85,7 +85,7 @@ function buildMonthActivities(
   yearData: ContributionGraphData["years"][number],
   changelogEntries: ContributionChangelogEntry[],
 ): MonthActivity[] {
-  const months = Array.from({ length: 12 }, (_, month) => ({
+  const months: MonthActivity[] = Array.from({ length: 12 }, (_, month) => ({
     month,
     commits: 0,
     additions: 0,
