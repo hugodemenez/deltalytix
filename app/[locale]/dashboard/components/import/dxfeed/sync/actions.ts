@@ -11,15 +11,14 @@ import { getUserId } from '@/server/auth'
 import {
   coerceDxFeedHistoricalHostForSync,
   normalizeDxFeedHistoricalHost,
-  resolveDxFeedHistoricalHost,
 } from '@/lib/dxfeed-historical-host'
 import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
 import {
-  isDxFeedTokenExpired,
-  resolveDxFeedTokenExpiresAt,
+  getDxFeedTokenExpiryFromProvider,
+  isDxFeedAccessTokenExpired,
 } from '@/lib/dxfeed-token'
+import { resolveDxFeedV2AuthUrl } from '@/lib/dxfeed-auth'
 import {
-  authPropfirmMatchesSelection,
   buildHistoricalHostForPropFirm,
   getDxFeedPropFirm,
 } from '@/lib/dxfeed-propfirms'
@@ -35,7 +34,7 @@ import type {
   DxFeedTradingAccount,
 } from './dxfeed-types'
 
-const DXFEED_AUTH_URL = process.env.DXFEED_AUTH_URL
+const DXFEED_AUTH_URL = resolveDxFeedV2AuthUrl(process.env.DXFEED_AUTH_URL)
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.env.DXFEED_DEBUG === 'true'
@@ -56,7 +55,7 @@ const DXFEED_RETRY_DELAY_MS = Math.max(
 )
 
 const logger = {
-  debug: (message: string, data?: any) => {
+  debug: (message: string, data?: unknown) => {
     if (IS_DEV) console.log(`[DXFEED-DEBUG] ${message}`, data ?? '')
   },
   info: (message: string) => {
@@ -168,8 +167,8 @@ function extractApiErrorMessage(payload: unknown): string | null {
 
 /**
  * Authenticate with DxFeed using username/password.
- * The auth response returns a token (body) and a host header
- * that must be used as the base URL for the Historical API.
+ * The documented v2 auth response returns a reusable report token, its exact
+ * expiration, and the Historical API host.
  */
 export async function authenticateDxFeed(
   login: string,
@@ -228,39 +227,52 @@ export async function authenticateDxFeed(
       }
     }
 
-    const data: DxFeedLoginResponse = await response.json()
+    const authResponse: DxFeedLoginResponse = await response.json()
+    const data = authResponse.data
 
-    if (data.status !== 'OK' || !data.token) {
+    if (!authResponse.success || !data?.tradingRestReportToken) {
       return {
         error: DxFeedErrorCode.AUTH_REJECTED,
-        errorParams: { reason: data.reason || 'Authentication failed' },
+        errorParams: { reason: authResponse.message || 'Authentication failed' },
       }
     }
 
-    if (!authPropfirmMatchesSelection(data.propfirmName, propFirm)) {
+    const tokenExpiresAt = getDxFeedTokenExpiryFromProvider(
+      data.tradingRestTokenExpiration,
+    )
+    if (!tokenExpiresAt) {
       return {
-        error: DxFeedErrorCode.AUTH_PROP_FIRM_MISMATCH,
-        errorParams: {
-          authPropfirm: data.propfirmName ?? '—',
-          selectedPropfirm: propFirm.name,
-        },
+        error: DxFeedErrorCode.AUTH_REJECTED,
+        errorParams: { reason: 'DxFeed did not return a valid report token expiration' },
       }
     }
 
-    const historicalHost = resolveDxFeedHistoricalHost(data, response.headers, { propFirmId: propFirm.id })
+    const historicalHost = normalizeDxFeedHistoricalHost(data.tradingRestReportHost)
 
     if (!historicalHost) {
-      logger.warn('Could not derive historical host from auth response (check prop firm mapping)')
+      logger.warn('DxFeed v2 auth response did not include the historical report host')
       return {
         error: DxFeedErrorCode.HISTORICAL_HOST_UNRESOLVED,
         errorParams: { propfirm: propFirm.name },
       }
     }
 
+    const expectedHistoricalHost = normalizeDxFeedHistoricalHost(
+      buildHistoricalHostForPropFirm(propFirm),
+    )
+    if (historicalHost !== expectedHistoricalHost) {
+      return {
+        error: DxFeedErrorCode.AUTH_PROP_FIRM_MISMATCH,
+        errorParams: {
+          authPropfirm: historicalHost,
+          selectedPropfirm: propFirm.name,
+        },
+      }
+    }
+
     logger.info(`Auth successful for ${propFirm.name}`)
 
-    const reportAccessToken = data.tradingRestReportToken || data.token
-    const tokenExpiresAt = resolveDxFeedTokenExpiresAt(reportAccessToken)
+    const reportAccessToken = data.tradingRestReportToken
 
     const accountsResult = historicalHost
       ? await getDxFeedAccounts(reportAccessToken, historicalHost)
@@ -280,7 +292,8 @@ export async function authenticateDxFeed(
       historicalHost,
       accountNumbers,
       propFirmId: propFirm.id,
-      propfirmName: data.propfirmName,
+      propfirmName: propFirm.name,
+      tokenExpirationSource: 'provider',
     }
 
     const storeResult = await storeDxFeedToken(JSON.stringify(credentials), login, {
@@ -508,7 +521,11 @@ export async function getDxFeedTrades(
     })
     syncAccountId = syncRow?.accountId ?? null
 
-    if (isDxFeedTokenExpired(syncRow?.tokenExpiresAt)) {
+    if (
+      isDxFeedAccessTokenExpired(accessToken, syncRow?.tokenExpiresAt, {
+        expirationIsAuthoritative: credentials.tokenExpirationSource === 'provider',
+      })
+    ) {
       if (syncAccountId) {
         await markDxFeedTokenExpired(resolvedUserId, syncAccountId)
       }
@@ -705,7 +722,7 @@ async function updateStoredCredentials(userId: string, oldTokenJson: string, new
 export async function storeDxFeedToken(
   tokenJson: string,
   accountId: string = 'default',
-  options?: { tokenExpiresAt?: Date },
+  options?: { tokenExpiresAt?: Date | null },
 ) {
   try {
     const supabase = await createClient()
@@ -769,7 +786,13 @@ export async function getDxFeedToken(accountId: string = 'default') {
       return { error: DxFeedErrorCode.NO_TOKEN_RECONNECT }
     }
 
-    if (isDxFeedTokenExpired(syncData.tokenExpiresAt)) {
+    const credentials = parseStoredCredentials(syncData.token)
+    if (
+      credentials &&
+      isDxFeedAccessTokenExpired(credentials.accessToken, syncData.tokenExpiresAt, {
+        expirationIsAuthoritative: credentials.tokenExpirationSource === 'provider',
+      })
+    ) {
       return { error: DxFeedErrorCode.TOKEN_EXPIRED }
     }
 
@@ -791,7 +814,11 @@ export async function removeDxFeedToken(accountId?: string) {
       return { error: 'User not authenticated' }
     }
 
-    const whereClause: any = {
+    const whereClause: {
+      userId: string
+      service: string
+      accountId?: string
+    } = {
       userId: user.id,
       service: 'dxfeed',
     }

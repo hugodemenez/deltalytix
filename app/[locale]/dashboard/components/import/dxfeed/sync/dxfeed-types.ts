@@ -7,17 +7,23 @@ export interface DxFeedLoginRequest {
   connectOnlyTrading: boolean
 }
 
-export interface DxFeedLoginResponse {
-  status: string
-  token?: string
-  reason?: string
-  details?: string[]
-  tradingWss?: string
+export interface DxFeedLoginData {
+  dataEndpoint?: string
+  dataToken?: string
+  dataExchanges?: string[]
   tradingWssEndpoint?: string
+  tradingWssToken?: string
   tradingRestReportHost?: string
   tradingRestReportToken?: string
-  propfirmName?: string
+  tradingRestTokenExpiration?: number
   tradingApiVersion?: number
+}
+
+export interface DxFeedLoginResponse {
+  success: boolean
+  data?: DxFeedLoginData
+  statusCode?: number
+  message?: string
 }
 
 /**
@@ -31,8 +37,10 @@ export interface DxFeedStoredCredentials {
   accountNumbers?: string[]
   /** User-selected prop firm id (see lib/dxfeed-propfirms.ts) */
   propFirmId?: string
-  /** From auth propfirmName — used to re-resolve host if sync config changes */
+  /** Display name captured from the user-selected prop firm. */
   propfirmName?: string
+  /** Marks a stored expiration as provider-supplied rather than a legacy guessed TTL. */
+  tokenExpirationSource?: 'provider' | 'jwt'
 }
 
 export interface DxFeedTradingAccount {
