@@ -60,10 +60,18 @@ export function MobileWidgetMinimap({
 
   const stackWidgets = useMemo(() => {
     if (widgets.length <= 1) return []
-    const layers = Math.min(3, widgets.length)
-    return Array.from({ length: layers }, (_, offset) => {
-      const index = (currentIndex + offset) % widgets.length
-      return { widget: widgets[index], index, offset }
+    const layers = Math.min(3, widgets.length - 1)
+    return Array.from({ length: layers }, (_, stackOffset) => {
+      const index = (currentIndex + 1 + stackOffset) % widgets.length
+      return { widget: widgets[index], index, stackOffset }
+    })
+  }, [widgets, currentIndex])
+
+  const upcomingWidgets = useMemo(() => {
+    if (widgets.length <= 1) return []
+    return Array.from({ length: widgets.length - 1 }, (_, step) => {
+      const index = (currentIndex + 1 + step) % widgets.length
+      return { widget: widgets[index], index }
     })
   }, [widgets, currentIndex])
 
@@ -113,19 +121,16 @@ export function MobileWidgetMinimap({
           {stackWidgets
             .slice()
             .reverse()
-            .map(({ widget, offset }) => (
+            .map(({ widget, stackOffset }) => (
               <span
-                key={`${widget.i}-${offset}`}
-                className={cn(
-                  "absolute overflow-hidden rounded-md border border-border/80 bg-card shadow-md",
-                  offset === 0 && "ring-1 ring-primary/40"
-                )}
+                key={`${widget.i}-${stackOffset}`}
+                className="absolute overflow-hidden rounded-md border border-border/80 bg-card shadow-md"
                 style={{
                   width: STACK_CARD_WIDTH,
                   height: STACK_CARD_HEIGHT,
-                  right: offset * 4,
-                  bottom: offset * 4,
-                  zIndex: 3 - offset,
+                  right: stackOffset * 4,
+                  bottom: stackOffset * 4,
+                  zIndex: 3 - stackOffset,
                 }}
               >
                 <ScaledWidgetPreview
@@ -185,16 +190,15 @@ export function MobileWidgetMinimap({
                   role="listbox"
                   aria-label={t("widgets.mobile.minimapNavigation")}
                 >
-                  {widgets.map((widget, index) => {
+                  {upcomingWidgets.map(({ widget, index }) => {
                     const widgetName = getWidgetDisplayName(t, widget.type)
-                    const isActive = index === currentIndex
 
                     return (
                       <button
                         key={widget.i}
                         type="button"
                         role="option"
-                        aria-selected={isActive}
+                        aria-selected={false}
                         aria-label={t("widgets.mobile.carouselGoTo", {
                           index: index + 1,
                           total: widgets.length,
@@ -203,9 +207,7 @@ export function MobileWidgetMinimap({
                         className={cn(
                           "flex flex-col gap-1.5 rounded-xl border p-2 text-left transition-colors",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                          isActive
-                            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                            : "border-border/70 bg-card hover:border-primary/40 hover:bg-muted/40"
+                          "border-border/70 bg-card hover:border-primary/40 hover:bg-muted/40"
                         )}
                         onClick={() => handleSelect(index)}
                       >
