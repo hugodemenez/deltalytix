@@ -3,6 +3,8 @@ import {
   absoluteUrl,
   deltalytixSkillDigest,
 } from "@/lib/agent-discovery/metadata";
+import { changelogReviewSkillDigest } from "@/lib/agent-skills/changelog-review";
+import { changelogEntriesSkillDigest } from "@/lib/agent-skills/changelog-entries";
 import { changelogMediaSkillDigest } from "@/lib/agent-skills/changelog-media";
 
 export async function GET(request: NextRequest) {
@@ -21,10 +23,32 @@ export async function GET(request: NextRequest) {
         digest: deltalytixSkillDigest,
       },
       {
+        name: "deltalytix-changelog-review",
+        type: "skill-md",
+        description:
+          "Review release diffs, group related user-facing changes, and create an editorial changelog outline.",
+        url: absoluteUrl(
+          "/.well-known/agent-skills/changelog-review/SKILL.md",
+          request,
+        ),
+        digest: changelogReviewSkillDigest,
+      },
+      {
+        name: "deltalytix-changelog-entries",
+        type: "skill-md",
+        description:
+          "Write flexible, outcome-led bilingual EN/FR changelog copy from a reviewed release outline.",
+        url: absoluteUrl(
+          "/.well-known/agent-skills/changelog-entries/SKILL.md",
+          request,
+        ),
+        digest: changelogEntriesSkillDigest,
+      },
+      {
         name: "deltalytix-changelog-media",
         type: "skill-md",
         description:
-          "Capture localized Playwright screenshots and demo videos for changelog entries and wire them into MDX.",
+          "Assess whether entries need zero, one, or several visuals, then capture and wire localized changelog media.",
         url: absoluteUrl(
           "/.well-known/agent-skills/changelog-media/SKILL.md",
           request,

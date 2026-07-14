@@ -65,22 +65,33 @@ curl -s -o /dev/null -D - "http://localhost:3000/authentication?next=dashboard" 
 # expect: HTTP/1.1 307, location: /dashboard
 ```
 
-## Changelog media captures
+## Changelog entries
 
-When adding or updating changelog entries under `content/updates/`, capture localized screenshots/videos with Playwright.
+For beta → main promotion PRs, use three sequential specialist roles. When subagents are available, assign each stage to a separate agent.
 
-Skill doc: [`lib/agent-skills/changelog-media.md`](./lib/agent-skills/changelog-media.md)  
-Discovery URL: `/.well-known/agent-skills/changelog-media/SKILL.md`
+Changelog publication is append-only: add new EN/FR entries and media, but never revise an entry already present on the base branch. Use descriptive localized Markdown links for product routes instead of bare paths.
 
-Quick start:
+**1. Review changes and draft the outline** — skill: [`lib/agent-skills/changelog-review.md`](./lib/agent-skills/changelog-review.md)
+Discovery: `/.well-known/agent-skills/changelog-review/SKILL.md`
+Output: `content/updates/batches/<batch>/outline.md`
+
+**2. Write EN/FR copy** — skill: [`lib/agent-skills/changelog-entries.md`](./lib/agent-skills/changelog-entries.md)
+Discovery: `/.well-known/agent-skills/changelog-entries/SKILL.md`
+The copywriter chooses the structure and depth that best fit each entry.
+
+**3. Assess and capture media** — skill: [`lib/agent-skills/changelog-media.md`](./lib/agent-skills/changelog-media.md)
+Discovery: `/.well-known/agent-skills/changelog-media/SKILL.md`
+The media specialist decides whether each entry needs zero, one, or several visuals, then records the rationale in `media-plan.md`.
+
+Quick start (media step):
 
 ```bash
 cp scripts/changelog-media/recipes/template.mjs scripts/changelog-media/recipes/pr-XXX.mjs
-# edit recipe assets, then:
+# add only assets justified by the media plan, then:
 bun run capture:changelog-media -- pr-XXX
 ```
 
-Assets land in `public/updates/<batch>/{en,fr}/`. Wire EN MDX to `/updates/<batch>/en/...` and FR MDX to `/updates/<batch>/fr/...`.
+Assets land in `public/updates/<batch>/{en,fr}/`. If every entry is text-only, skip the recipe and capture step.
 
 ## Docker notes
 

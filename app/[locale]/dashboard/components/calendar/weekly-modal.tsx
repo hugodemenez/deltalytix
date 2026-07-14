@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
 import { Charts } from "./charts"
 import { useI18n, useCurrentLocale } from "@/locales/client"
+import { calendarDateKeyFromZoned } from "@/lib/calendar-timezone"
 
 interface WeeklyModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export function WeeklyModal({
   const t = useI18n()
   const locale = useCurrentLocale()
   const dateLocale = locale === 'fr' ? fr : enUS
+  const weekStartsOnMonday = locale === 'fr'
   const [activeTab, setActiveTab] = useState("charts")
 
   // Aggregate weekly data
@@ -35,13 +37,15 @@ export function WeeklyModal({
     if (!selectedDate) return { trades: [], tradeNumber: 0, pnl: 0, longNumber: 0, shortNumber: 0 }
 
     const trades: any[] = []
-    const weekStart = startOfWeek(selectedDate)
-    const weekEnd = endOfWeek(selectedDate)
+    const weekStartsOn = weekStartsOnMonday ? 1 : 0
+    const weekStart = startOfWeek(selectedDate, { weekStartsOn })
+    const weekEnd = endOfWeek(selectedDate, { weekStartsOn })
+    const weekStartKey = calendarDateKeyFromZoned(weekStart)
+    const weekEndKey = calendarDateKeyFromZoned(weekEnd)
 
     // Collect all trades for the week
     for (const [dateString, dayData] of Object.entries(calendarData)) {
-      const date = new Date(dateString)
-      if (date >= weekStart && date <= weekEnd && dayData.trades) {
+      if (dateString >= weekStartKey && dateString <= weekEndKey && dayData.trades) {
         trades.push(...(dayData.trades as any[]))
       }
     }
@@ -57,13 +61,14 @@ export function WeeklyModal({
       longNumber,
       shortNumber,
     }
-  }, [selectedDate, calendarData])
+  }, [selectedDate, calendarData, weekStartsOnMonday])
 
   if (!selectedDate || !isOpen) return null;
 
   // Get start and end of week
-  const weekStart = startOfWeek(selectedDate)
-  const weekEnd = endOfWeek(selectedDate)
+  const weekStartsOn = weekStartsOnMonday ? 1 : 0
+  const weekStart = startOfWeek(selectedDate, { weekStartsOn })
+  const weekEnd = endOfWeek(selectedDate, { weekStartsOn })
   const dateRange = `${format(weekStart, 'MMMM d', { locale: dateLocale })} - ${format(weekEnd, 'MMMM d, yyyy', { locale: dateLocale })}`
 
   return (

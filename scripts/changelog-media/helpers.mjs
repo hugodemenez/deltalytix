@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { execSync } from 'child_process'
-import { LABELS, viewport } from './constants.mjs'
+import { LABELS, viewport, BILLING_CAPTURE_MOCK } from './constants.mjs'
 
 const COOKIE_CONSENT_VALUE = JSON.stringify({
   analytics_storage: true,
@@ -160,6 +160,34 @@ export async function assertNoDevIssues(page, context) {
   }
 }
 
+export async function injectBillingPaymentHistoryMock(page, locale) {
+  const mock = BILLING_CAPTURE_MOCK[locale]
+  await page.evaluate((data) => {
+    const card = Array.from(document.querySelectorAll('.rounded-lg.border.bg-card.overflow-hidden')).find(
+      (element) =>
+        /no payment history|aucun historique/i.test(element.textContent ?? ''),
+    )
+    if (!card) return
+
+    const row = (invoice) => `
+      <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0 space-y-1">
+          <p class="text-sm font-medium">${invoice.amount}</p>
+          <p class="text-sm text-muted-foreground">${invoice.date}</p>
+        </div>
+        <div class="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
+          <span class="w-fit rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-100">${data.paid}</span>
+          <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <button type="button" class="inline-flex h-8 w-full items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium sm:w-auto">${data.viewInvoice}</button>
+            <button type="button" class="inline-flex h-8 w-full items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium sm:w-auto">${data.downloadPdf}</button>
+          </div>
+        </div>
+      </div>`
+
+    card.innerHTML = `<div class="divide-y overflow-hidden">${data.invoices.map(row).join('')}</div>`
+  }, mock)
+}
+
 export async function waitForDashboard(page, locale, siteUrl) {
   await seedCookieConsent(page)
   await seedHideNextDevTools(page)
@@ -219,6 +247,9 @@ export async function recordVideo(browser, batch, locale, name, run, playwrightL
   const videoContext = viewport('desktop')
   const recordWidth = videoContext.viewport.width
   const recordHeight = videoContext.viewport.height
+  const recordingStartedAt = Date.now()
+  let markedStartMs = null
+  let markedEndMs = null
   const context = await browser.newContext({
     locale: playwrightLocale,
     ...videoContext,
@@ -252,7 +283,15 @@ export async function recordVideo(browser, batch, locale, name, run, playwrightL
     observer.observe(document.documentElement, { childList: true, subtree: true })
   }, NEXT_DEV_TOOL_SELECTORS)
   const page = await context.newPage()
-  await run(page)
+  await run(
+    page,
+    () => {
+      markedStartMs = Date.now() - recordingStartedAt
+    },
+    () => {
+      markedEndMs = Date.now() - recordingStartedAt
+    },
+  )
   const video = page.video()
   await page.close()
   await context.close()
@@ -264,8 +303,14 @@ export async function recordVideo(browser, batch, locale, name, run, playwrightL
   fs.renameSync(webmPath, webmOut)
 
   const mp4Out = path.join(outputDir(batch, locale), `${name}.mp4`)
+  const trimInput = markedStartMs === null
+    ? ''
+    : `-ss ${Math.max(0, markedStartMs - 500) / 1000} `
+  const trimDuration = markedStartMs === null || markedEndMs === null
+    ? ''
+    : `-t ${(markedEndMs - markedStartMs + 1000) / 1000} `
   execSync(
-    `ffmpeg -y -i "${webmOut}" -c:v libx264 -pix_fmt yuv420p -movflags +faststart "${mp4Out}"`,
+    `ffmpeg -y ${trimInput}-i "${webmOut}" ${trimDuration}-c:v libx264 -pix_fmt yuv420p -movflags +faststart "${mp4Out}"`,
     { stdio: 'pipe' },
   )
   fs.unlinkSync(webmOut)

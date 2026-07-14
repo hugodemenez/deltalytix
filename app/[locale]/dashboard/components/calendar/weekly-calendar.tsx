@@ -1,13 +1,16 @@
 'use client'
 
 import React from "react"
-import { format, eachWeekOfInterval, getWeek, getMonth, getYear, addDays, startOfYear, endOfYear } from "date-fns"
-import { formatInTimeZone } from "date-fns-tz"
+import { format, eachWeekOfInterval, getWeek, getMonth, getYear, addDays, getDay } from "date-fns"
 import { fr, enUS } from 'date-fns/locale'
 import { cn } from "@/lib/utils"
 import { Trade } from "@/prisma/generated/prisma/browser"
 import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
 import { useI18n, useCurrentLocale } from "@/locales/client"
+import {
+  calendarDateKeyFromZoned,
+  zonedYearInterval,
+} from "@/lib/calendar-timezone"
 import {
   Accordion,
   AccordionContent,
@@ -152,21 +155,20 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
   const locale = useCurrentLocale()
   const dateLocale = locale === 'fr' ? fr : enUS
   const timezone = useUserStore((state) => state.timezone)
+  const weekStartsOnMonday = locale === 'fr'
 
-  const yearStartDate = startOfYear(new Date(year, 0, 1));
-  const yearEndDate = endOfYear(new Date(year, 0, 1));
+  const { startZoned: yearStartDate, endZoned: yearEndDate } = zonedYearInterval(year, timezone)
 
   const weeksToDisplay = eachWeekOfInterval(
     { start: yearStartDate, end: yearEndDate },
-    { weekStartsOn: 0 }
+    { weekStartsOn: weekStartsOnMonday ? 1 : 0 }
   );
 
   function getWeekPnl(weekStart: Date) {
     let total = 0
     for (let d = 0; d < 7; d++) {
-      const day = new Date(weekStart)
-      day.setDate(day.getDate() + d)
-      const key = formatInTimeZone(day, timezone, 'yyyy-MM-dd')
+      const day = addDays(weekStart, d)
+      const key = calendarDateKeyFromZoned(day)
       if (calendarData[key]) total += calendarData[key].pnl
     }
     return total
@@ -175,9 +177,8 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
   function getWeekTrades(weekStart: Date) {
     const tradesByDay: { [key: string]: { trades: Trade[], pnl: number } } = {}
     for (let d = 0; d < 7; d++) {
-      const day = new Date(weekStart)
-      day.setDate(day.getDate() + d)
-      const key = formatInTimeZone(day, timezone, 'yyyy-MM-dd')
+      const day = addDays(weekStart, d)
+      const key = calendarDateKeyFromZoned(day)
       if (calendarData[key]) {
         tradesByDay[key] = {
           trades: calendarData[key].trades,

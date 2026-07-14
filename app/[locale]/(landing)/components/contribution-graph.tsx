@@ -12,11 +12,11 @@ import {
 } from "@/lib/contribution-graph";
 
 const LEVEL_COLORS = [
-  "bg-[#ebedf0] dark:bg-[#161b22]",
-  "bg-[#9be9a8] dark:bg-[#0e4429]",
-  "bg-[#40c463] dark:bg-[#006d32]",
-  "bg-[#30a14e] dark:bg-[#26a641]",
-  "bg-[#216e39] dark:bg-[#39d353]",
+  "bg-[oklch(0.94_0.01_145)] dark:bg-[oklch(0.20_0.02_145)]",
+  "bg-[oklch(0.85_0.08_145)] dark:bg-[oklch(0.35_0.06_145)]",
+  "bg-[oklch(0.72_0.12_145)] dark:bg-[oklch(0.45_0.10_145)]",
+  "bg-[oklch(0.58_0.14_145)] dark:bg-[oklch(0.55_0.12_145)]",
+  "bg-[oklch(0.45_0.16_145)] dark:bg-[oklch(0.72_0.18_145)]",
 ] as const;
 
 const UPCOMING_WEEK_COLOR = "bg-muted/70 dark:bg-muted/40";
@@ -44,7 +44,7 @@ function WeekDetailOverlay({
     const centerX = anchorRect.left + anchorRect.width / 2;
     const left = Math.min(
       Math.max(centerX, margin + panelWidth / 2),
-      window.innerWidth - margin - panelWidth / 2
+      window.innerWidth - margin - panelWidth / 2,
     );
     const top = anchorRect.bottom + 8;
     setPosition({ left, top });
@@ -55,7 +55,9 @@ function WeekDetailOverlay({
       ? t("landing.openSource.contributionGraph.noCommits")
       : detail.count === 1
         ? t("landing.openSource.contributionGraph.oneCommit")
-        : t("landing.openSource.contributionGraph.nCommits", { count: detail.count });
+        : t("landing.openSource.contributionGraph.nCommits", {
+            count: detail.count,
+          });
 
   return (
     <>
@@ -88,7 +90,10 @@ function WeekDetailOverlay({
             </p>
             <ul className="space-y-1">
               {detail.days.map((day) => (
-                <li key={day.date} className="flex items-center justify-between gap-2">
+                <li
+                  key={day.date}
+                  className="flex items-center justify-between gap-2"
+                >
                   <span>{formatDayLabel(day.date, locale)}</span>
                   <span className="text-muted-foreground">
                     {day.count === 1
@@ -154,15 +159,12 @@ function MonthAxis({
   );
 }
 
-export function ContributionGraph({
-  data,
-}: {
-  data: ContributionGraphData;
-}) {
+export function ContributionGraph({ data }: { data: ContributionGraphData }) {
   const t = useI18n();
   const locale = useCurrentLocale();
   const minYear = data.availableYears[0] ?? data.defaultYear;
-  const maxYear = data.availableYears[data.availableYears.length - 1] ?? data.defaultYear;
+  const maxYear =
+    data.availableYears[data.availableYears.length - 1] ?? data.defaultYear;
   const [year, setYear] = useState(data.defaultYear);
   const [activeWeek, setActiveWeek] = useState<number | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
@@ -193,7 +195,7 @@ export function ContributionGraph({
   const canGoBack = year > minYear;
   const canGoForward = year < maxYear;
   const activeDetail =
-    activeWeek !== null ? yearData.weekDetails[activeWeek] ?? null : null;
+    activeWeek !== null ? (yearData.weekDetails[activeWeek] ?? null) : null;
 
   const openWeekDetail = (weekIndex: number, target: HTMLElement) => {
     if (weekIndex >= yearData.visibleWeekCount) return;
@@ -270,9 +272,13 @@ export function ContributionGraph({
                 })}
                 aria-pressed={isActive}
                 className={`h-3 flex-1 basis-0 rounded-[1px] sm:h-3.5 md:h-4 ${LEVEL_COLORS[level]} ${
-                  isActive ? "ring-1 ring-primary ring-offset-1 ring-offset-background" : ""
+                  isActive
+                    ? "ring-1 ring-primary ring-offset-1 ring-offset-background"
+                    : ""
                 }`}
-                onClick={(event) => openWeekDetail(weekIndex, event.currentTarget)}
+                onClick={(event) =>
+                  openWeekDetail(weekIndex, event.currentTarget)
+                }
               />
             );
           })}
@@ -288,17 +294,6 @@ export function ContributionGraph({
           t={t}
         />
       )}
-
-      <p className="mt-3 text-xs text-muted-foreground">
-        {t("landing.openSource.contributionGraph.commitsInYear", {
-          count: Intl.NumberFormat(locale).format(yearData.totalContributions),
-          year,
-        })}
-        <span className="hidden sm:inline">
-          {" "}
-          · {t("landing.openSource.contributionGraph.branches")}
-        </span>
-      </p>
     </div>
   );
 }

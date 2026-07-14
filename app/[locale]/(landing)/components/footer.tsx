@@ -42,7 +42,7 @@ export default function Footer() {
   }
 
   return (
-    <footer aria-labelledby="footer-heading" className="py-12 transition-colors duration-300 max-w-7xl mx-auto">
+    <footer aria-labelledby="footer-heading" className="py-12 max-w-7xl mx-auto">
       <h2 id="footer-heading" className="sr-only">
         {t('footer.heading')}
       </h2>
@@ -51,14 +51,14 @@ export default function Footer() {
           <div className="space-y-8">
             <div className="flex items-center">
               <Logo className="h-8 w-8 mr-2 fill-black dark:fill-white" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Deltalytix</h3>
+              <h3 className="text-lg font-semibold text-foreground">Deltalytix</h3>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-black/55 dark:text-white/55">
               {t('footer.description')}
             </p>
             <div className="flex space-x-6">
               {navigation.social.map((item) => (
-                <a key={item.name} href={item.href} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <a key={item.name} href={item.href} className="inline-flex items-center justify-center p-2 text-black/45 transition-colors hover:text-black/70 dark:text-white/45 dark:hover:text-white/70">
                   <span className="sr-only">{item.name}</span>
                   <item.icon className="h-6 w-6" aria-hidden="true" />
                 </a>
@@ -68,11 +68,11 @@ export default function Footer() {
           <div className="mt-16 grid grid-cols-2 gap-8 xl:col-span-2 xl:mt-0">
             <div className="md:grid md:grid-cols-2 md:gap-8">
               <div>
-                <h4 className="text-sm font-semibold leading-6 text-gray-900 dark:text-white">{t('footer.product.title')}</h4>
+                <h4 className="text-sm font-semibold leading-6 text-foreground">{t('footer.product.title')}</h4>
                 <ul role="list" className="mt-6 space-y-4">
                   {navigation.product.map((item) => (
                     <li key={item.name}>
-                      <Link href={item.href} className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                      <Link href={item.href} className="text-sm leading-6 text-black/55 transition-colors hover:text-foreground dark:text-white/55">
                         {item.name}
                       </Link>
                     </li>
@@ -80,11 +80,11 @@ export default function Footer() {
                 </ul>
               </div>
               <div className="mt-10 md:mt-0">
-                <h4 className="text-sm font-semibold leading-6 text-gray-900 dark:text-white">{t('footer.company.title')}</h4>
+                <h4 className="text-sm font-semibold leading-6 text-foreground">{t('footer.company.title')}</h4>
                 <ul role="list" className="mt-6 space-y-4">
                   {navigation.company.map((item) => (
                     <li key={item.name}>
-                      <Link href={item.href} className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                      <Link href={item.href} className="text-sm leading-6 text-black/55 transition-colors hover:text-foreground dark:text-white/55">
                         {item.name}
                       </Link>
                     </li>
@@ -93,11 +93,11 @@ export default function Footer() {
               </div>
             </div>
             <div>
-              <h4 className="text-sm font-semibold leading-6 text-gray-900 dark:text-white">{t('footer.legal.title')}</h4>
+              <h4 className="text-sm font-semibold leading-6 text-foreground">{t('footer.legal.title')}</h4>
               <ul role="list" className="mt-6 space-y-4">
                 {navigation.legal.map((item) => (
                   <li key={item.name}>
-                    <Link href={item.href} className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                    <Link href={item.href} className="text-sm leading-6 text-black/55 transition-colors hover:text-foreground dark:text-white/55">
                       {item.name}
                     </Link>
                   </li>
@@ -106,14 +106,14 @@ export default function Footer() {
             </div>
           </div>
         </div>
-        <div className="mt-16 border-t border-gray-200 dark:border-gray-800 pt-8">
-          <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+        <div className="mt-16 border-t border-black/10 dark:border-white/10 pt-8">
+          <div className="text-center text-sm text-black/55 dark:text-white/55">
             {t('footer.copyright', { year: new Date().getFullYear() })}
           </div>
-          <div className="mt-4 text-center text-xs text-gray-500 dark:text-gray-500">
+          <div className="mt-4 text-center text-xs text-black/45 dark:text-white/45">
             {t('disclaimer.risk.content')}
           </div>
-          <div className="mt-4 text-center text-xs text-gray-500 dark:text-gray-500">
+          <div className="mt-4 text-center text-xs text-black/45 dark:text-white/45">
             {t('disclaimer.hypothetical.content')}
           </div>
         </div>
