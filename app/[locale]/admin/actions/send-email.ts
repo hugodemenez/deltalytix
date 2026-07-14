@@ -392,7 +392,7 @@ function getDefaultSubject(template: EmailTemplate, language: string): string {
     },
     "landing-page-update": {
       en: "A fresh new look for Deltalytix",
-      fr: "Deltalytix fait peau neuve",
+      fr: "Découvrez Deltalytix plus simplement",
     },
     "renewal-notice": {
       en: "Account Renewal Notice",
