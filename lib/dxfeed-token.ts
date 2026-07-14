@@ -1,9 +1,7 @@
 /**
- * DxFeed report tokens may be JWTs with an `exp` claim, or opaque strings with no metadata.
- * When expiry is unknown, we apply DXFEED_TOKEN_TTL_HOURS from connect time (conservative default).
+ * DxFeed v2 returns the report token expiry separately in Unix milliseconds.
+ * Older report tokens may instead be JWTs, or opaque tokens with no metadata.
  */
-
-const DEFAULT_TOKEN_TTL_HOURS = 12
 
 function base64UrlDecode(segment: string): string {
   const padded = segment.replace(/-/g, '+').replace(/_/g, '/')
@@ -28,21 +26,25 @@ export function getDxFeedTokenExpiryFromJwt(token: string): Date | null {
   return null
 }
 
-export function getDxFeedTokenTtlHours(): number {
-  const raw = process.env.DXFEED_TOKEN_TTL_HOURS
-  if (raw == null || raw === '') return DEFAULT_TOKEN_TTL_HOURS
-  const hours = Number(raw)
-  return Number.isFinite(hours) && hours > 0 ? hours : DEFAULT_TOKEN_TTL_HOURS
-}
-
-export function resolveDxFeedTokenExpiresAt(accessToken: string, connectedAt = new Date()): Date {
-  const fromJwt = getDxFeedTokenExpiryFromJwt(accessToken)
-  if (fromJwt && fromJwt.getTime() > connectedAt.getTime()) {
-    return fromJwt
+export function getDxFeedTokenExpiryFromProvider(
+  expirationMs: number | null | undefined,
+): Date | null {
+  if (typeof expirationMs !== 'number' || !Number.isFinite(expirationMs) || expirationMs <= 0) {
+    return null
   }
 
-  const ttlMs = getDxFeedTokenTtlHours() * 60 * 60 * 1000
-  return new Date(connectedAt.getTime() + ttlMs)
+  const expiry = new Date(expirationMs)
+  return Number.isNaN(expiry.getTime()) ? null : expiry
+}
+
+export function resolveDxFeedTokenExpiresAt(
+  accessToken: string,
+  providerExpirationMs?: number | null,
+): Date | null {
+  return (
+    getDxFeedTokenExpiryFromProvider(providerExpirationMs) ??
+    getDxFeedTokenExpiryFromJwt(accessToken)
+  )
 }
 
 export function isDxFeedTokenExpired(
@@ -54,4 +56,32 @@ export function isDxFeedTokenExpired(
     tokenExpiresAt instanceof Date ? tokenExpiresAt : new Date(tokenExpiresAt)
   if (Number.isNaN(expiry.getTime())) return false
   return expiry.getTime() <= now.getTime()
+}
+
+/**
+ * Ignore guessed legacy TTL values for opaque tokens while honoring provider
+ * expiries, JWT claims, and the epoch-zero invalidation marker written after a
+ * real 401/403 response.
+ */
+export function isDxFeedAccessTokenExpired(
+  accessToken: string,
+  tokenExpiresAt: Date | string | null | undefined,
+  options: { expirationIsAuthoritative?: boolean; now?: Date } = {},
+): boolean {
+  const { expirationIsAuthoritative = false, now = new Date() } = options
+  const storedExpiry = tokenExpiresAt
+    ? tokenExpiresAt instanceof Date
+      ? tokenExpiresAt
+      : new Date(tokenExpiresAt)
+    : null
+
+  if (storedExpiry && !Number.isNaN(storedExpiry.getTime())) {
+    if (storedExpiry.getTime() === 0) return true
+    if (expirationIsAuthoritative) {
+      return storedExpiry.getTime() <= now.getTime()
+    }
+  }
+
+  const jwtExpiry = getDxFeedTokenExpiryFromJwt(accessToken)
+  return jwtExpiry ? jwtExpiry.getTime() <= now.getTime() : false
 }
