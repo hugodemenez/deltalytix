@@ -51,6 +51,12 @@ export default {
           "Obtenez des insights et analyses personnalisés de notre coach IA. Comprenez vos patterns de trading, identifiez vos forces et faiblesses, et recevez des recommandations actionnables.",
         stat: "Analyse en Temps Réel",
         inputPlaceholder: "Posez une question à votre coach IA…",
+        sendLabel: "Envoyer le message suggéré",
+        attachLabel: "Ajouter une pièce jointe",
+        widgetTitle: "Chat",
+        resetLabel: "Réinitialiser la conversation",
+        contextAnalyzed: "127 trades et 18 entrées de journal connectés",
+        analyzing: "Recherche de patterns dans votre journal…",
         copyLabel: "Copier la réponse",
         copiedLabel: "Copié",
         conversation: {
