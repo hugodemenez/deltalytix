@@ -1,6 +1,6 @@
 export default {
     faq: {
-        heading: 'Questions fréquemment posées',
+        heading: 'Questions',
         question1: 'Deltalytix trade-t-il pour moi\u00A0?',
         answer1: 'Non, Deltalytix n\'est pas un courtier et n\'exécute aucun ordre à votre place.\n\nVous passez vos ordres chez votre courtier habituel (Tradovate, Rithmic, etc.), puis importez ou synchronisez vos données dans Deltalytix pour suivre et analyser vos performances.\n\nLa plateforme sert uniquement de journal et de tableau de bord\u00A0: elle vous aide à comprendre vos résultats, pas à trader.',
         question2: 'Quelle est la sécurité de Deltalytix\u00A0?',

@@ -37,9 +37,9 @@ export function PricingSectionSkeleton() {
 export function FAQSectionSkeleton() {
   return (
     <section className="py-16" aria-hidden>
-      <div className="container mx-auto px-4">
-        <Skeleton className="h-9 w-56 mx-auto mb-8" />
-        <div className="max-w-3xl mx-auto space-y-6">
+      <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
+        <Skeleton className="mb-16 h-12 w-48 md:h-16 md:w-56" />
+        <div className="mx-auto max-w-3xl space-y-6">
           {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} className="h-12 w-full" />
           ))}

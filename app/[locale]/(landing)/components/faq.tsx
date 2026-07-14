@@ -32,12 +32,11 @@ export default function FAQ() {
 
   return (
     <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
-      <h2 className="mb-8 text-center text-3xl font-bold">
+      <h2 className="mb-16 text-balance text-4xl font-normal tracking-[-0.04em] md:text-6xl">
         {t("faq.heading")}
       </h2>
       <Accordion
-        type="single"
-        collapsible
+        type="multiple"
         className="mx-auto max-w-3xl divide-y divide-black/10 border-y border-black/10 dark:divide-white/10 dark:border-white/10"
       >
         {FAQ_ITEMS.map((n) => (

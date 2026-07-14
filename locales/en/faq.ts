@@ -1,6 +1,6 @@
 export default {
     faq: {
-        heading: 'Frequently Asked Questions',
+        heading: 'Questions',
         question1: 'Does Deltalytix trade for me?',
         answer1: 'No. Deltalytix is a trading dashboard and journal—not a brokerage. You place and execute trades on your broker\'s platform as usual.\n\nAfter trading, you import or sync your trade data into Deltalytix to track performance, review statistics, and refine your strategy over time.',
         question2: 'How secure is Deltalytix?',
