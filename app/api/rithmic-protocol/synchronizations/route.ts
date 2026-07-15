@@ -5,8 +5,6 @@ import {
 } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions'
 import type { RithmicProtocolStoredCredentials } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/rithmic-protocol-types'
 
-export const runtime = 'nodejs'
-
 export async function GET() {
   try {
     const result = await getRithmicProtocolSynchronizations()
