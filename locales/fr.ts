@@ -462,6 +462,11 @@ export default {
   "import.type.rithmicSync.description": "Synchronisation directe du compte",
   "import.type.rithmicSync.details":
     "Synchronisation directe avec votre compte Rithmic. Authentification requise.",
+  "import.type.rithmicProtocolSync.name": "Rithmic Protocol",
+  "import.type.rithmicProtocolSync.description":
+    "Synchronisation serveur via Protocol API",
+  "import.type.rithmicProtocolSync.details":
+    "Importez l'historique d'ordres via R | Protocol API depuis les serveurs Deltalytix (TypeScript), comme Tradovate et DxFeed.",
   "import.type.csvAi.name": "CSV avec IA",
   "import.type.csvAi.description": "N'importe quel fichier CSV",
   "import.type.rithmicPerf.name": "Performance Rithmic",
@@ -2476,6 +2481,77 @@ export default {
         afterClose: "Après la Clôture du Marché (22h00 UTC)",
         midnight: "Minuit (00h00)",
       },
+    },
+  },
+  rithmicProtocolSync: {
+    title: "Synchronisation Rithmic Protocol",
+    description:
+      "Connectez-vous via R | Protocol API pour importer les fills en trades clôturés côté serveur — comme Tradovate et DxFeed.",
+    connected: "Compte Rithmic Protocol connecté avec succès",
+    error: {
+      credentialsRequired:
+        "Saisissez le nom d'utilisateur, le mot de passe et le système",
+      authFailed: "Impossible de se connecter à Rithmic Protocol API",
+    },
+    errors: {
+      USER_NOT_AUTHENTICATED:
+        "Vous devez être connecté pour lier Rithmic.",
+      AUTH_FAILED: "Échec de la connexion Rithmic : {reason}",
+      NO_ACCOUNTS: "Aucun compte de trading n'a été renvoyé pour cet identifiant.",
+      INVALID_STORED_CREDENTIALS:
+        "Les données de connexion enregistrées sont invalides. Reconnectez-vous.",
+      NO_TOKEN_RECONNECT:
+        "Cette connexion n'a pas d'identifiants. Reconnectez-vous.",
+      DUPLICATE_TRADES: "Ces trades sont déjà dans votre journal.",
+      SYNC_FAILED:
+        "La synchronisation a échoué. Réessayez dans quelques minutes.",
+      SAVE_TRADES_FAILED:
+        "Les trades ont été récupérés mais n'ont pas pu être enregistrés : {detail}",
+      ACCOUNT_ID_REQUIRED: "Identifiant de compte manquant.",
+      LOAD_SYNCHRONIZATIONS_FAILED:
+        "Impossible de charger vos connexions Rithmic Protocol.",
+      DELETE_SYNC_FAILED: "Impossible de supprimer cette connexion.",
+      UPDATE_SYNC_TIME_FAILED:
+        "Impossible de mettre à jour l'heure de synchronisation quotidienne.",
+    },
+    addAccount: {
+      title: "Connecter Rithmic Protocol",
+      description:
+        "Connectez-vous avec votre identifiant Rithmic. La conformité Protocol est requise pour Paper Trading / live.",
+      systemLabel: "Système Rithmic",
+      gatewayLabel: "URI de passerelle (wss://…)",
+      usernameLabel: "Nom d'utilisateur",
+      passwordLabel: "Mot de passe",
+      connecting: "Connexion…",
+      connect: "Connecter",
+    },
+    sync: {
+      inProgress: "Synchronisation des fills Rithmic pour {accountId}…",
+      tokenMissing: "Identifiants manquants — reconnectez-vous",
+      accountNotFound: "Compte introuvable. Actualisez la liste.",
+    },
+    multiAccount: {
+      empty:
+        "Aucune connexion Rithmic Protocol. Cliquez sur Connecter pour en ajouter une.",
+      accountsCount: "comptes de trading",
+      syncAll: "Tout synchroniser",
+      syncNow: "Synchroniser",
+      remove: "Supprimer",
+      removeTitle: "Supprimer la connexion",
+      removeDescription:
+        'Supprimer la connexion « {accountId} » ? Les trades déjà importés restent dans Deltalytix.',
+      connectionRemoved: 'Connexion « {accountId} » supprimée.',
+      removeError: 'Échec de la suppression de « {accountId} ».',
+      accountsReloaded: "Comptes rechargés avec succès",
+      reloadError: "Échec du rechargement des comptes",
+      alreadyImportedTrades: "Trades déjà importés",
+      lastSynced: "Dernière synchronisation",
+      syncCompleteForAccount:
+        "{savedCount} trades synchronisés sur {tradesCount} pour {accountId}.",
+      syncCompleteNoNewTradesForAccount:
+        "{tradesCount} trades trouvés pour {accountId}, aucun nouveau trade enregistré.",
+      syncCompleteNoOrdersForAccount:
+        "Aucun trade clôturé trouvé pour {accountId}.",
     },
   },
   "import.type.thorSync.name": "Thor",

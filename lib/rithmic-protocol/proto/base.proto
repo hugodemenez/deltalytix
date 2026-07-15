@@ -1,0 +1,7 @@
+
+package rti;
+
+message Base
+	{
+	required int32  template_id        = 154467;        // PB_OFFSET + MNM_TEMPLATE_ID
+	}

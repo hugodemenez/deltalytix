@@ -1,0 +1,10 @@
+package rti;
+
+message ResponseShowOrderHistory
+	{       
+	// PB_OFFSET = 100000, is the offset added for each MNM field id
+
+	required int32   template_id   = 154467;    // PB_OFFSET + MNM_TEMPLATE_ID
+        repeated string  user_msg      = 132760;    // PB_OFFSET + MNM_USER_MSG	
+	repeated string  rp_code       = 132766;    // PB_OFFSET + MNM_RESPONSE_CODE
+	}

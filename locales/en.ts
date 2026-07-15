@@ -419,6 +419,11 @@ export default {
   "import.type.rithmicSync.description": "Direct account syncing",
   "import.type.rithmicSync.details":
     "Direct sync with your Rithmic account. Requires authentication.",
+  "import.type.rithmicProtocolSync.name": "Rithmic Protocol",
+  "import.type.rithmicProtocolSync.description":
+    "Server-side Protocol API sync",
+  "import.type.rithmicProtocolSync.details":
+    "Sync order history through Rithmic R | Protocol API from Deltalytix servers (TypeScript), similar to Tradovate and DxFeed.",
   "import.type.csvAi.name": "CSV with AI",
   "import.type.csvAi.description": "Any CSV file",
   "import.type.rithmicPerf.name": "Rithmic Performance",
@@ -2345,6 +2350,68 @@ export default {
         afterClose: "After Market Close (22:00 UTC)",
         midnight: "Midnight (12:00 AM)",
       },
+    },
+  },
+  rithmicProtocolSync: {
+    title: "Rithmic Protocol Sync",
+    description:
+      "Connect with Rithmic R | Protocol API to import fills as closed trades from the server — same pattern as Tradovate and DxFeed.",
+    connected: "Rithmic Protocol account connected successfully",
+    error: {
+      credentialsRequired: "Enter username, password, and system to continue",
+      authFailed: "Could not connect to Rithmic Protocol API",
+    },
+    errors: {
+      USER_NOT_AUTHENTICATED: "You must be signed in to connect Rithmic.",
+      AUTH_FAILED: "Rithmic login failed: {reason}",
+      NO_ACCOUNTS: "No trading accounts were returned for this login.",
+      INVALID_STORED_CREDENTIALS: "Saved connection data is invalid. Reconnect.",
+      NO_TOKEN_RECONNECT: "This connection is missing credentials. Reconnect.",
+      DUPLICATE_TRADES: "These trades are already in your journal.",
+      SYNC_FAILED: "Trade sync failed. Try again in a few minutes.",
+      SAVE_TRADES_FAILED: "Trades were fetched but could not be saved: {detail}",
+      ACCOUNT_ID_REQUIRED: "Account identifier is missing.",
+      LOAD_SYNCHRONIZATIONS_FAILED:
+        "Could not load your saved Rithmic Protocol connections.",
+      DELETE_SYNC_FAILED: "Could not remove this connection.",
+      UPDATE_SYNC_TIME_FAILED: "Could not update the daily sync time.",
+    },
+    addAccount: {
+      title: "Connect Rithmic Protocol",
+      description:
+        "Sign in with your Rithmic username/password. Protocol conformance with Rithmic is required for Paper Trading / live systems.",
+      systemLabel: "Rithmic system",
+      gatewayLabel: "Gateway URI (wss://…)",
+      usernameLabel: "Username",
+      passwordLabel: "Password",
+      connecting: "Connecting…",
+      connect: "Connect",
+    },
+    sync: {
+      inProgress: "Syncing Rithmic fills for {accountId}…",
+      tokenMissing: "Connection missing credentials — reconnect",
+      accountNotFound: "Account not found. Refresh the list and try again.",
+    },
+    multiAccount: {
+      empty: "No Rithmic Protocol connections yet. Click Connect to add one.",
+      accountsCount: "trading accounts",
+      syncAll: "Sync All",
+      syncNow: "Sync now",
+      remove: "Remove",
+      removeTitle: "Remove connection",
+      removeDescription:
+        'Remove the connection "{accountId}"? Already imported trades stay in Deltalytix.',
+      connectionRemoved: 'Connection "{accountId}" removed.',
+      removeError: 'Failed to remove connection "{accountId}".',
+      accountsReloaded: "Accounts reloaded successfully",
+      reloadError: "Failed to reload accounts",
+      alreadyImportedTrades: "Trades already imported",
+      lastSynced: "Last synced",
+      syncCompleteForAccount:
+        "Successfully synced {savedCount} trades from {tradesCount} total for {accountId}.",
+      syncCompleteNoNewTradesForAccount:
+        "Found {tradesCount} trades for {accountId} but no new trades were saved.",
+      syncCompleteNoOrdersForAccount: "No closed trades found for {accountId}.",
     },
   },
   "import.type.thorSync.name": "Thor",
