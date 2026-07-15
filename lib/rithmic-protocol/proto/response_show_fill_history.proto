@@ -1,0 +1,51 @@
+package rti;
+
+message ResponseShowFillHistory
+	{       
+	required int32   template_id           = 154467;
+        repeated string  user_msg              = 132760;
+	repeated string  rq_handler_rp_code    = 132764;
+	repeated string  rp_code               = 132766;
+
+	optional string  basket_id             = 110300;
+	optional string  sequence_number       = 112002;
+	optional string  orig_sequence_number  = 149263;
+	optional string  cor_sequence_number   = 149264;
+
+	optional string  fcm_id                = 154013;
+	optional string  ib_id                 = 154014;
+	optional string  account_id            = 154008;
+
+	optional string  symbol                = 110100;
+	optional string  exchange              = 110101;
+	optional string  trade_exchange        = 112021;
+	optional string  trade_route           = 112016;
+	optional string  exchange_order_id     = 149238;
+	optional string  instrument_type       = 110116;
+
+	optional string transaction_type       = 112003;
+	optional string duration               = 112005;
+	optional string price_type             = 112008;
+	optional string orig_price_type        = 154770;
+	optional string manual_or_auto         = 154710;
+
+	optional string fill_time              = 110309;
+	optional string fill_date              = 110310;
+	optional string fill_id                = 110311;
+
+	optional double price                  = 110306;
+	optional double trigger_price          = 149247;
+	optional double fill_price             = 110307;
+	optional double avg_fill_price         = 110322;	
+	
+	optional uint64 fill_size              = 110308;
+	optional uint64 total_fill_size        = 154111;
+	optional uint64 total_unfilled_size    = 154112;
+
+	optional int32  ssboe                  = 150100;
+	optional int32  usecs                  = 150101;
+
+	optional int32  source_ssboe           = 150400;
+	optional int32  source_usecs           = 150401;
+	optional int32  source_nsecs           = 150404;
+	}

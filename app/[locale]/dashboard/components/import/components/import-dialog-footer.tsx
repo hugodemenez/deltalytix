@@ -95,7 +95,7 @@ export function ImportDialogFooter({
           onClick={onNext}
           className={cn(
             "w-fit min-w-[80px] sm:min-w-[100px]",
-            (currentStepIndex === 0 && (importType === 'rithmic-sync' || importType === 'tradovate-sync' || importType === 'dxfeed-sync')) && "invisible"
+            (currentStepIndex === 0 && (importType === 'rithmic-sync' || importType === 'rithmic-protocol-sync' || importType === 'tradovate-sync' || importType === 'dxfeed-sync')) && "invisible"
           )}
           disabled={isNextDisabled || isSaving}
         >

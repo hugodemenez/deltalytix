@@ -1,0 +1,20 @@
+
+package rti;
+
+message RequestAccountList
+	{                                
+	// PB_OFFSET = 100000, is the offset added for each MNM field id
+
+	enum UserType {
+	              USER_TYPE_FCM    = 1;
+		      USER_TYPE_IB     = 2;
+		      USER_TYPE_TRADER = 3;
+	              }
+
+	required int32    template_id     = 154467;    // PB_OFFSET + MNM_TEMPLATE_ID
+	repeated string   user_msg        = 132760;    // PB_OFFSET + MNM_USER_MSG	
+
+	optional string   fcm_id          = 154013;    // PB_OFFSET + MNM_FCM_ID
+	optional string   ib_id           = 154014;    // PB_OFFSET + MNM_IB_ID
+	optional UserType user_type       = 154036;    // PB_OFFSET + MNM_USER_TYPE
+	}
