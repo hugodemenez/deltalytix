@@ -11,10 +11,15 @@ import { Widget } from "../types/dashboard"
 const MINIMAP_SCALE = 0.15
 const STACK_CARD_WIDTH = 44
 const STACK_CARD_HEIGHT = 32
+const STACK_CARD_OFFSET = 4
+const MAX_STACK_CARDS = 3
+
+export type CarouselNavigationDirection = "up" | "down"
 
 interface MobileWidgetMinimapProps {
   widgets: Widget[]
   currentIndex: number
+  navigationDirection: CarouselNavigationDirection
   renderWidget: (widget: Widget) => React.ReactNode
   onSelectIndex: (index: number) => void
   slideHeight: string
@@ -51,6 +56,7 @@ function ScaledWidgetPreview({
 export function MobileWidgetMinimap({
   widgets,
   currentIndex,
+  navigationDirection,
   renderWidget,
   onSelectIndex,
   slideHeight,
@@ -60,7 +66,7 @@ export function MobileWidgetMinimap({
 
   const stackWidgets = useMemo(() => {
     if (widgets.length <= 1) return []
-    const layers = Math.min(3, widgets.length - 1)
+    const layers = Math.min(MAX_STACK_CARDS, widgets.length - 1)
     return Array.from({ length: layers }, (_, stackOffset) => {
       const index = (currentIndex + 1 + stackOffset) % widgets.length
       return { widget: widgets[index], index, stackOffset }
@@ -118,29 +124,72 @@ export function MobileWidgetMinimap({
         onClick={() => setIsExpanded(true)}
       >
         <span className="relative block" style={{ width: STACK_CARD_WIDTH + 8, height: STACK_CARD_HEIGHT + 8 }}>
-          {stackWidgets
-            .slice()
-            .reverse()
-            .map(({ widget, stackOffset }) => (
-              <span
-                key={`${widget.i}-${stackOffset}`}
-                className="absolute overflow-hidden rounded-md border border-border/80 bg-card shadow-md"
-                style={{
-                  width: STACK_CARD_WIDTH,
-                  height: STACK_CARD_HEIGHT,
-                  right: stackOffset * 4,
-                  bottom: stackOffset * 4,
-                  zIndex: 3 - stackOffset,
-                }}
-              >
-                <ScaledWidgetPreview
-                  widget={widget}
-                  renderWidget={renderWidget}
-                  slideHeight={slideHeight}
-                  className="h-full w-full"
-                />
-              </span>
-            ))}
+          <AnimatePresence initial={false} custom={navigationDirection}>
+            {stackWidgets.map(({ widget, stackOffset }) => {
+              const deepestOffset = Math.max(0, stackWidgets.length - 1)
+              const targetOffset = stackOffset * STACK_CARD_OFFSET
+              const initialOffset =
+                navigationDirection === "up"
+                  ? deepestOffset * STACK_CARD_OFFSET
+                  : targetOffset
+
+              return (
+                <motion.span
+                  key={widget.i}
+                  custom={navigationDirection}
+                  className="absolute overflow-hidden rounded-md border border-border/80 bg-card shadow-md"
+                  style={{
+                    width: STACK_CARD_WIDTH,
+                    height: STACK_CARD_HEIGHT,
+                    right: 0,
+                    bottom: 0,
+                  }}
+                  initial={{
+                    x: -initialOffset,
+                    y: -initialOffset,
+                    scale: navigationDirection === "up" ? 0.88 : 1 - stackOffset * 0.04,
+                    zIndex: navigationDirection === "up" ? 0 : MAX_STACK_CARDS - stackOffset,
+                  }}
+                  animate={{
+                    x: -targetOffset,
+                    y: -targetOffset,
+                    scale: 1 - stackOffset * 0.04,
+                    zIndex: MAX_STACK_CARDS - stackOffset,
+                  }}
+                  variants={{
+                    exit: (direction: CarouselNavigationDirection) =>
+                      direction === "down"
+                        ? {
+                            x: -deepestOffset * STACK_CARD_OFFSET,
+                            y: -deepestOffset * STACK_CARD_OFFSET,
+                            scale: 0.88,
+                            zIndex: 0,
+                          }
+                        : {
+                            x: -(deepestOffset + 1) * STACK_CARD_OFFSET,
+                            y: -(deepestOffset + 1) * STACK_CARD_OFFSET,
+                            scale: 0.84,
+                            zIndex: 0,
+                          },
+                  }}
+                  exit="exit"
+                  transition={{
+                    type: "spring",
+                    stiffness: 420,
+                    damping: 34,
+                    mass: 0.7,
+                  }}
+                >
+                  <ScaledWidgetPreview
+                    widget={widget}
+                    renderWidget={renderWidget}
+                    slideHeight={slideHeight}
+                    className="h-full w-full"
+                  />
+                </motion.span>
+              )
+            })}
+          </AnimatePresence>
         </span>
       </button>
 

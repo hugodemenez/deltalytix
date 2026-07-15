@@ -6,7 +6,7 @@ import { useCarouselGestureLock } from "@/hooks/use-carousel-gesture-lock"
 import { MOBILE_CAROUSEL_HEIGHT } from "@/lib/widget-carousel"
 import { useI18n } from "@/locales/client"
 import { getWidgetDisplayName } from "../lib/widget-display-name"
-import { MobileWidgetMinimap } from "./mobile-widget-minimap"
+import { MobileWidgetMinimap, type CarouselNavigationDirection } from "./mobile-widget-minimap"
 import { Widget } from "../types/dashboard"
 
 interface MobileWidgetCarouselProps {
@@ -34,7 +34,9 @@ export function MobileWidgetCarousel({
   const t = useI18n()
   const scrollerRef = useRef<HTMLDivElement>(null)
   const slideRefs = useRef<(HTMLDivElement | null)[]>([])
+  const currentIndexRef = useRef(0)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [navigationDirection, setNavigationDirection] = useState<CarouselNavigationDirection>("down")
 
   const sortedWidgets = useMemo(
     () => sortWidgetsForCarousel(widgets),
@@ -48,12 +50,20 @@ export function MobileWidgetCarousel({
 
   const activeWidget = sortedWidgets[currentIndex] ?? null
 
+  const updateCurrentIndex = useCallback((nextIndex: number) => {
+    const previousIndex = currentIndexRef.current
+    if (nextIndex === previousIndex) return
+    setNavigationDirection(nextIndex > previousIndex ? "down" : "up")
+    currentIndexRef.current = nextIndex
+    setCurrentIndex(nextIndex)
+  }, [])
+
   useEffect(() => {
     slideRefs.current = slideRefs.current.slice(0, sortedWidgets.length)
-    setCurrentIndex((index) =>
-      index >= sortedWidgets.length ? Math.max(0, sortedWidgets.length - 1) : index
-    )
-  }, [sortedWidgets.length, widgetIds])
+    if (currentIndex >= sortedWidgets.length) {
+      updateCurrentIndex(Math.max(0, sortedWidgets.length - 1))
+    }
+  }, [currentIndex, sortedWidgets.length, updateCurrentIndex, widgetIds])
 
   useEffect(() => {
     onActiveWidgetChange?.(activeWidget)
@@ -79,7 +89,7 @@ export function MobileWidgetCarousel({
         }
 
         if (bestIndex >= 0) {
-          setCurrentIndex(bestIndex)
+          updateCurrentIndex(bestIndex)
         }
       },
       {
@@ -93,7 +103,7 @@ export function MobileWidgetCarousel({
     })
 
     return () => observer.disconnect()
-  }, [sortedWidgets, widgetIds])
+  }, [sortedWidgets, updateCurrentIndex, widgetIds])
 
   const scrollToIndex = useCallback((index: number) => {
     const scroller = scrollerRef.current
@@ -146,6 +156,7 @@ export function MobileWidgetCarousel({
       <MobileWidgetMinimap
         widgets={sortedWidgets}
         currentIndex={currentIndex}
+        navigationDirection={navigationDirection}
         renderWidget={renderWidget}
         onSelectIndex={scrollToIndex}
         slideHeight={slideHeight}
