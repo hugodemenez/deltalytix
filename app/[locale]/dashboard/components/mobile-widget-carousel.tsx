@@ -6,6 +6,7 @@ import { useCarouselGestureLock } from "@/hooks/use-carousel-gesture-lock"
 import { MOBILE_CAROUSEL_HEIGHT } from "@/lib/widget-carousel"
 import { useI18n } from "@/locales/client"
 import { getWidgetDisplayName } from "../lib/widget-display-name"
+import { MobileWidgetMinimap } from "./mobile-widget-minimap"
 import { Widget } from "../types/dashboard"
 
 interface MobileWidgetCarouselProps {
@@ -94,12 +95,12 @@ export function MobileWidgetCarousel({
     return () => observer.disconnect()
   }, [sortedWidgets, widgetIds])
 
-  const scrollToIndex = useCallback((index: number) => {
+  const scrollToIndex = useCallback((index: number, behavior: ScrollBehavior = "smooth") => {
     const scroller = scrollerRef.current
     if (!scroller) return
     scroller.scrollTo({
       top: index * scroller.clientHeight,
-      behavior: "smooth",
+      behavior,
     })
   }, [])
 
@@ -114,81 +115,58 @@ export function MobileWidgetCarousel({
       className={cn("relative w-full overflow-hidden", className)}
       style={{ height: slideHeight }}
     >
-      <div className="flex h-full w-full">
-        <div
-          ref={scrollerRef}
-          className="h-full min-w-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          role="region"
-          aria-roledescription="carousel"
-          aria-label={t("widgets.mobile.carouselNavigation")}
-        >
-          {sortedWidgets.map((widget, index) => (
-            <div
-              key={widget.i}
-              id={`mobile-widget-slide-${widget.i}`}
-              data-slide-index={index}
-              ref={(el) => {
-                slideRefs.current[index] = el
-              }}
-              className="w-full shrink-0 snap-start snap-always"
-              style={{ height: slideHeight, scrollSnapStop: "always" }}
-              role="tabpanel"
-              aria-label={getWidgetDisplayName(t, widget.type)}
-              aria-hidden={index !== currentIndex}
-            >
-              <div className="h-full w-full min-h-0 px-2 pb-2">
-                {renderWidget(widget)}
-              </div>
-            </div>
-          ))}
-        </div>
+      <div
+        ref={scrollerRef}
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return
 
-        {sortedWidgets.length > 1 && (
+          if (event.key === "ArrowDown") {
+            event.preventDefault()
+            scrollToIndex(
+              Math.min(currentIndex + 1, sortedWidgets.length - 1),
+              "auto"
+            )
+          } else if (event.key === "ArrowUp") {
+            event.preventDefault()
+            scrollToIndex(Math.max(currentIndex - 1, 0), "auto")
+          }
+        }}
+        className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        role="region"
+        aria-roledescription="carousel"
+        aria-label={t("widgets.mobile.carouselNavigation")}
+      >
+        {sortedWidgets.map((widget, index) => (
           <div
-            className="flex h-full w-11 shrink-0 flex-col items-center gap-0 py-4 pr-1"
-            role="tablist"
-            aria-orientation="vertical"
-            aria-label={t("widgets.mobile.carouselNavigation")}
+            key={widget.i}
+            id={`mobile-widget-slide-${widget.i}`}
+            data-slide-index={index}
+            ref={(el) => {
+              slideRefs.current[index] = el
+            }}
+            className="w-full shrink-0 snap-start snap-always"
+            style={{ height: slideHeight, scrollSnapStop: "always" }}
+            role="group"
+            aria-roledescription="slide"
+            aria-label={getWidgetDisplayName(t, widget.type)}
+            aria-hidden={index !== currentIndex}
+            inert={index !== currentIndex ? true : undefined}
           >
-            {sortedWidgets.map((widget, index) => {
-              const widgetName = getWidgetDisplayName(t, widget.type)
-
-              return (
-                <button
-                  key={widget.i}
-                  type="button"
-                  role="tab"
-                  aria-selected={index === currentIndex}
-                  aria-controls={`mobile-widget-slide-${widget.i}`}
-                  aria-label={t("widgets.mobile.carouselGoTo", {
-                    index: index + 1,
-                    total: sortedWidgets.length,
-                    widgetName,
-                  })}
-                  className={cn(
-                    "flex min-h-11 min-w-11 flex-1 items-center justify-center rounded-full transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                    index === currentIndex
-                      ? "bg-primary/10"
-                      : "bg-muted/40 hover:bg-muted/60"
-                  )}
-                  onClick={() => scrollToIndex(index)}
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "block min-h-6 w-2 rounded-full transition-all",
-                      index === currentIndex
-                        ? "bg-primary"
-                        : "bg-muted-foreground/60"
-                    )}
-                  />
-                </button>
-              )
-            })}
+            <div className="h-full w-full min-h-0 px-2 pb-2">
+              {renderWidget(widget)}
+            </div>
           </div>
-        )}
+        ))}
       </div>
+
+      <MobileWidgetMinimap
+        widgets={sortedWidgets}
+        currentIndex={currentIndex}
+        renderWidget={renderWidget}
+        onSelectIndex={scrollToIndex}
+        slideHeight={slideHeight}
+      />
     </div>
   )
 }
