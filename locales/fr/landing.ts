@@ -19,31 +19,26 @@ export default {
         title: "Importation de données",
         description:
           "Notre plateforme offre une synchronisation automatique avec Rithmic et Tradovate, ainsi que des intégrations avec des copiers comme ETP et Thor. Grâce à notre système unique de mapping intelligent, vous pouvez importer n'importe quel fichier CSV, quelle que soit sa structure.",
-        stat: "Intégrations multiples et synchronisation",
       },
       "performance-visualization": {
         title: "Visualisation des performances",
         description:
           "Visualisez vos performances de trading avec des graphiques et des diagrammes interactifs. Analysez les tendances, identifiez vos points forts et repérez les domaines à améliorer.",
-        stat: "Analyses complètes",
       },
       "daily-performance": {
         title: "Performance quotidienne",
         description:
           "Suivez vos résultats de trading quotidiens avec une vue calendrier intuitive. Identifiez rapidement les tendances et les modèles dans vos performances de trading.",
-        stat: "Vue calendrier",
       },
       "performance-tracking": {
         title: "Suivez vos performances",
         description:
           "Suivez votre capital, vos résultats quotidiens, la répartition de vos trades et votre progression vers vos objectifs grâce à des graphiques dédiés.",
-        stat: "Suivi des performances",
       },
       "ai-journaling": {
         title: "Journal assisté par IA",
         description:
           "Améliorez vos émotions de trading grâce à un journal assisté par IA. Nos algorithmes avancés analysent vos entrées pour identifier les modèles émotionnels et les biais.",
-        stat: "Intelligence émotionnelle",
       },
       "chat-feature": {
         title: "Coach de Trading IA",
