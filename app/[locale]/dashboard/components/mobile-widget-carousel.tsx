@@ -95,12 +95,12 @@ export function MobileWidgetCarousel({
     return () => observer.disconnect()
   }, [sortedWidgets, widgetIds])
 
-  const scrollToIndex = useCallback((index: number) => {
+  const scrollToIndex = useCallback((index: number, behavior: ScrollBehavior = "smooth") => {
     const scroller = scrollerRef.current
     if (!scroller) return
     scroller.scrollTo({
       top: index * scroller.clientHeight,
-      behavior: "smooth",
+      behavior,
     })
   }, [])
 
@@ -117,6 +117,21 @@ export function MobileWidgetCarousel({
     >
       <div
         ref={scrollerRef}
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return
+
+          if (event.key === "ArrowDown") {
+            event.preventDefault()
+            scrollToIndex(
+              Math.min(currentIndex + 1, sortedWidgets.length - 1),
+              "auto"
+            )
+          } else if (event.key === "ArrowUp") {
+            event.preventDefault()
+            scrollToIndex(Math.max(currentIndex - 1, 0), "auto")
+          }
+        }}
         className="h-full w-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="region"
         aria-roledescription="carousel"
@@ -132,9 +147,11 @@ export function MobileWidgetCarousel({
             }}
             className="w-full shrink-0 snap-start snap-always"
             style={{ height: slideHeight, scrollSnapStop: "always" }}
-            role="tabpanel"
+            role="group"
+            aria-roledescription="slide"
             aria-label={getWidgetDisplayName(t, widget.type)}
             aria-hidden={index !== currentIndex}
+            inert={index !== currentIndex ? true : undefined}
           >
             <div className="h-full w-full min-h-0 px-2 pb-2">
               {renderWidget(widget)}
