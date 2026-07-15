@@ -27,7 +27,7 @@ import {
   ContextMenuContent,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, type ReactNode } from "react"
 import { useToolbarSettingsStore } from "@/store/toolbar-settings-store"
 import { motion } from "framer-motion"
 import { toast } from "sonner"
@@ -42,6 +42,7 @@ interface ToolbarProps {
   onRestoreDefaults: () => void
   mobileActiveWidget?: Widget | null
   onRemoveWidget?: (widgetId: string) => void
+  minimapTrigger?: ReactNode
 }
 
 export function Toolbar({
@@ -53,6 +54,7 @@ export function Toolbar({
   onRestoreDefaults,
   mobileActiveWidget = null,
   onRemoveWidget,
+  minimapTrigger,
 }: ToolbarProps) {
   const t = useI18n()
   const { isMobile } = useData()
@@ -260,6 +262,8 @@ export function Toolbar({
               compactBreakpoint={DASHBOARD_COMPACT_BREAKPOINT}
               compact={useCompactLayout}
             />
+
+            {minimapTrigger}
 
             {isCustomizing && (
               <div className="flex items-center gap-2">

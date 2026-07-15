@@ -20,7 +20,16 @@ import { useAutoScroll } from '../../../../hooks/use-auto-scroll'
 import { cn } from '@/lib/utils'
 import { Widget, WidgetType, WidgetSize, LayoutItem } from '../types/dashboard'
 import { Toolbar } from './toolbar'
-import { MobileWidgetCarousel } from './mobile-widget-carousel'
+import {
+  MobileWidgetCarousel,
+  sortWidgetsForCarousel,
+  type MobileWidgetCarouselHandle,
+} from './mobile-widget-carousel'
+import {
+  MobileWidgetMinimapOverlay,
+  MobileWidgetMinimapProvider,
+  MobileWidgetMinimapTrigger,
+} from './mobile-widget-minimap'
 import { useUserStore, DashboardLayoutWithWidgets } from '../../../../store/user-store'
 import { toast } from "sonner"
 import { defaultLayouts } from "@/lib/default-layouts"
@@ -373,6 +382,8 @@ export default function WidgetCanvas() {
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [isUserAction, setIsUserAction] = useState(false)
   const [mobileActiveWidget, setMobileActiveWidget] = useState<Widget | null>(null)
+  const [carouselCurrentIndex, setCarouselCurrentIndex] = useState(0)
+  const carouselRef = useRef<MobileWidgetCarouselHandle>(null)
   const t = useI18n()
 
   // Add this state to track if the layout change is from user interaction
@@ -701,6 +712,15 @@ export default function WidgetCanvas() {
 
   const useMobileCarousel = isMobile
 
+  const carouselWidgets = useMemo(
+    () => sortWidgetsForCarousel(currentLayout),
+    [currentLayout]
+  )
+
+  const handleCarouselIndexSelect = useCallback((index: number) => {
+    carouselRef.current?.scrollToIndex(index)
+  }, [])
+
   // Define renderWidget with all dependencies
   const renderWidget = useCallback((widget: Widget, forCarousel = false) => {
     // Ensure widget.type is a valid WidgetType
@@ -766,73 +786,89 @@ export default function WidgetCanvas() {
   }, [changeWidgetSize, isCustomizing, removeWidget, renderWidget])
 
   return (
-    <div
-      className={cn(
-        "relative w-full",
-        useMobileCarousel ? "mt-0 overflow-hidden" : "mt-6 pb-16 min-h-screen",
-      )}
-      style={useMobileCarousel ? { height: MOBILE_CAROUSEL_HEIGHT } : undefined}
+    <MobileWidgetMinimapProvider
+      widgets={carouselWidgets}
+      currentIndex={carouselCurrentIndex}
+      renderWidget={(widget) => renderWidgetCard(widget, true)}
+      onSelectIndex={handleCarouselIndexSelect}
+      slideHeight={MOBILE_CAROUSEL_HEIGHT}
     >
-      <Toolbar 
-        onAddWidget={addWidget}
-        isCustomizing={isCustomizing}
-        onEditToggle={() => {
-          setIsCustomizing(!isCustomizing)
-        }}
-        currentLayout={layouts || { desktop: [], mobile: [] }}
-        onRemoveAll={removeAllWidgets}
-        onRestoreDefaults={restoreDefaultLayout}
-        mobileActiveWidget={mobileActiveWidget}
-        onRemoveWidget={removeWidget}
-      />
-      {layouts && (
-        <div className="relative">
-          <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-50" />
-          {useMobileCarousel ? (
-            <MobileWidgetCarousel
-              widgets={currentLayout}
-              renderWidget={(widget) => renderWidgetCard(widget, true)}
-              onActiveWidgetChange={handleMobileActiveWidgetChange}
-            />
-          ) : (
-            <ResponsiveGridLayout
-              layouts={responsiveLayout}
-              breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-              cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
-              rowHeight={isMobile ? 65 : 70}
-              isDraggable={isCustomizing}
-              isResizable={false}
-              draggableHandle=".drag-handle"
-              onDragStart={() => setIsUserAction(true)}
-              onLayoutChange={handleLayoutChange}
-              margin={[16, 16]}
-              containerPadding={[0, 0]}
-              useCSSTransforms={true}
-            >
-              {currentLayout.map((widget) => {
-                const dimensions = widgetDimensions[widget.i]
+      <div
+        className={cn(
+          "relative w-full",
+          useMobileCarousel ? "mt-0 overflow-hidden" : "mt-6 pb-16 min-h-screen",
+        )}
+        style={useMobileCarousel ? { height: MOBILE_CAROUSEL_HEIGHT } : undefined}
+      >
+        <Toolbar
+          onAddWidget={addWidget}
+          isCustomizing={isCustomizing}
+          onEditToggle={() => {
+            setIsCustomizing(!isCustomizing)
+          }}
+          currentLayout={layouts || { desktop: [], mobile: [] }}
+          onRemoveAll={removeAllWidgets}
+          onRestoreDefaults={restoreDefaultLayout}
+          mobileActiveWidget={mobileActiveWidget}
+          onRemoveWidget={removeWidget}
+          minimapTrigger={
+            useMobileCarousel && carouselWidgets.length > 1 ? (
+              <MobileWidgetMinimapTrigger />
+            ) : undefined
+          }
+        />
+        {layouts && (
+          <div className="relative">
+            <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-50" />
+            {useMobileCarousel ? (
+              <MobileWidgetCarousel
+                ref={carouselRef}
+                widgets={currentLayout}
+                renderWidget={(widget) => renderWidgetCard(widget, true)}
+                onActiveWidgetChange={handleMobileActiveWidgetChange}
+                onCurrentIndexChange={setCarouselCurrentIndex}
+              />
+            ) : (
+              <ResponsiveGridLayout
+                layouts={responsiveLayout}
+                breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
+                rowHeight={isMobile ? 65 : 70}
+                isDraggable={isCustomizing}
+                isResizable={false}
+                draggableHandle=".drag-handle"
+                onDragStart={() => setIsUserAction(true)}
+                onLayoutChange={handleLayoutChange}
+                margin={[16, 16]}
+                containerPadding={[0, 0]}
+                useCSSTransforms={true}
+              >
+                {currentLayout.map((widget) => {
+                  const dimensions = widgetDimensions[widget.i]
 
-                return (
-                  <div
-                    key={widget.i}
-                    className="h-full"
-                    data-customizing={isCustomizing}
-                    data-widget-id={widget.i}
-                    data-widget-type={widget.type}
-                    data-widget-category={WIDGET_REGISTRY[widget.type as WidgetType]?.category ?? "other"}
-                    style={{
-                      width: dimensions.width,
-                      height: dimensions.height
-                    }}
-                  >
-                    {renderWidgetCard(widget)}
-                  </div>
-                )
-              })}
-            </ResponsiveGridLayout>
-          )}
-        </div>
-      )}
-    </div>
+                  return (
+                    <div
+                      key={widget.i}
+                      className="h-full"
+                      data-customizing={isCustomizing}
+                      data-widget-id={widget.i}
+                      data-widget-type={widget.type}
+                      data-widget-category={WIDGET_REGISTRY[widget.type as WidgetType]?.category ?? "other"}
+                      style={{
+                        width: dimensions.width,
+                        height: dimensions.height
+                      }}
+                    >
+                      {renderWidgetCard(widget)}
+                    </div>
+                  )
+                })}
+              </ResponsiveGridLayout>
+            )}
+          </div>
+        )}
+      </div>
+      {useMobileCarousel && carouselWidgets.length > 1 && <MobileWidgetMinimapOverlay />}
+    </MobileWidgetMinimapProvider>
   )
 }

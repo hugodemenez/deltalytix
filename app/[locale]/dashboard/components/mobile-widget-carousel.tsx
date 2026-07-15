@@ -1,12 +1,11 @@
 "use client"
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { useCarouselGestureLock } from "@/hooks/use-carousel-gesture-lock"
 import { MOBILE_CAROUSEL_HEIGHT } from "@/lib/widget-carousel"
 import { useI18n } from "@/locales/client"
 import { getWidgetDisplayName } from "../lib/widget-display-name"
-import { MobileWidgetMinimap } from "./mobile-widget-minimap"
 import { Widget } from "../types/dashboard"
 
 interface MobileWidgetCarouselProps {
@@ -14,23 +13,35 @@ interface MobileWidgetCarouselProps {
   renderWidget: (widget: Widget) => React.ReactNode
   className?: string
   onActiveWidgetChange?: (widget: Widget | null) => void
+  onCurrentIndexChange?: (index: number) => void
   slideHeight?: string
 }
 
-function sortWidgetsForCarousel(widgets: Widget[]): Widget[] {
+export function sortWidgetsForCarousel(widgets: Widget[]): Widget[] {
   return [...widgets].sort((a, b) => {
     if (a.y !== b.y) return a.y - b.y
     return a.x - b.x
   })
 }
 
-export function MobileWidgetCarousel({
-  widgets,
-  renderWidget,
-  className,
-  onActiveWidgetChange,
-  slideHeight = MOBILE_CAROUSEL_HEIGHT,
-}: MobileWidgetCarouselProps) {
+export interface MobileWidgetCarouselHandle {
+  scrollToIndex: (index: number, behavior?: ScrollBehavior) => void
+}
+
+export const MobileWidgetCarousel = React.forwardRef<
+  MobileWidgetCarouselHandle,
+  MobileWidgetCarouselProps
+>(function MobileWidgetCarousel(
+  {
+    widgets,
+    renderWidget,
+    className,
+    onActiveWidgetChange,
+    onCurrentIndexChange,
+    slideHeight = MOBILE_CAROUSEL_HEIGHT,
+  },
+  ref
+) {
   const t = useI18n()
   const scrollerRef = useRef<HTMLDivElement>(null)
   const slideRefs = useRef<(HTMLDivElement | null)[]>([])
@@ -104,6 +115,12 @@ export function MobileWidgetCarousel({
     })
   }, [])
 
+  useImperativeHandle(ref, () => ({ scrollToIndex }), [scrollToIndex])
+
+  useEffect(() => {
+    onCurrentIndexChange?.(currentIndex)
+  }, [currentIndex, onCurrentIndexChange])
+
   useCarouselGestureLock(scrollerRef)
 
   if (sortedWidgets.length === 0) {
@@ -159,14 +176,6 @@ export function MobileWidgetCarousel({
           </div>
         ))}
       </div>
-
-      <MobileWidgetMinimap
-        widgets={sortedWidgets}
-        currentIndex={currentIndex}
-        renderWidget={renderWidget}
-        onSelectIndex={scrollToIndex}
-        slideHeight={slideHeight}
-      />
     </div>
   )
-}
+})
