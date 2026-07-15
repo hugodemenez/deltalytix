@@ -5,6 +5,7 @@ import { TradovateSync } from '../tradovate/sync/tradovate-sync'
 import { DxFeedSync } from '../dxfeed/sync/dxfeed-sync'
 import { ImportType } from '../import-type-selection'
 import { RithmicSyncWrapper } from '../rithmic/sync/rithmic-sync-connection'
+import { RithmicProtocolSync } from '../rithmic-protocol/sync/rithmic-protocol-sync'
 import type { ComponentType } from 'react'
 import ImportTypeSelection from '../import-type-selection'
 import FileUpload from '../file-upload'
@@ -284,6 +285,36 @@ export const platforms: PlatformConfig[] = [
         title: 'import.steps.connectAccount',
         description: 'import.steps.connectAccountDescription',
         component: RithmicSyncWrapper,
+        isLastStep: true
+      }
+    ]
+  },
+  {
+    platformName: 'rithmic-protocol-sync',
+    type: 'rithmic-protocol-sync',
+    name: 'import.type.rithmicProtocolSync.name',
+    description: 'import.type.rithmicProtocolSync.description',
+    category: 'Direct Account Sync',
+    videoUrl: process.env.NEXT_PUBLIC_RITHMIC_SYNC_TUTORIAL_VIDEO || '',
+    details: 'import.type.rithmicProtocolSync.details',
+    logo: {
+      path: '/logos/rithmic.png',
+      alt: 'Rithmic Logo'
+    },
+    isRithmic: true,
+    customComponent: RithmicProtocolSync,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'complete',
+        title: 'import.steps.connectAccount',
+        description: 'import.steps.connectAccountDescription',
+        component: RithmicProtocolSync,
         isLastStep: true
       }
     ]

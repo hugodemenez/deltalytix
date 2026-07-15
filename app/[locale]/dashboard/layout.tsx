@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { RithmicSyncContextProvider } from "@/context/rithmic-sync-context";
 import { TradovateSyncContextProvider } from "@/context/tradovate-sync-context";
 import { DxFeedSyncContextProvider } from "@/context/dxfeed-sync-context";
+import { RithmicProtocolSyncContextProvider } from "@/context/rithmic-protocol-sync-context";
 import { I18nProviderClient } from "@/locales/client";
 import { ConsentBanner } from "@/components/consent-banner";
 
@@ -27,15 +28,17 @@ export default async function RootLayout({
       <ThemeProvider>
         <DataProvider>
           <RithmicSyncContextProvider>
-            <TradovateSyncContextProvider>
-              <DxFeedSyncContextProvider>
-                <RithmicSyncNotifications />
-                <Toaster />
-                <Navbar />
-                {children}
-                <Modals />
-              </DxFeedSyncContextProvider>
-            </TradovateSyncContextProvider>
+            <RithmicProtocolSyncContextProvider>
+              <TradovateSyncContextProvider>
+                <DxFeedSyncContextProvider>
+                  <RithmicSyncNotifications />
+                  <Toaster />
+                  <Navbar />
+                  {children}
+                  <Modals />
+                </DxFeedSyncContextProvider>
+              </TradovateSyncContextProvider>
+            </RithmicProtocolSyncContextProvider>
           </RithmicSyncContextProvider>
         </DataProvider>
       </ThemeProvider>

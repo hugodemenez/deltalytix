@@ -1,0 +1,127 @@
+
+package rti;
+
+message RithmicOrderNotification
+	{       
+	enum NotifyType {
+	                 ORDER_RCVD_FROM_CLNT      =   1;
+			 MODIFY_RCVD_FROM_CLNT     =   2;
+			 CANCEL_RCVD_FROM_CLNT     =   3;
+			 OPEN_PENDING              =   4;
+			 MODIFY_PENDING            =   5;
+			 CANCEL_PENDING            =   6;
+			 ORDER_RCVD_BY_EXCH_GTWY   =   7;
+			 MODIFY_RCVD_BY_EXCH_GTWY  =   8;
+			 CANCEL_RCVD_BY_EXCH_GTWY  =   9;
+			 ORDER_SENT_TO_EXCH        =  10;
+			 MODIFY_SENT_TO_EXCH       =  11;
+			 CANCEL_SENT_TO_EXCH       =  12;
+			 OPEN                      =  13;
+			 MODIFIED                  =  14;
+			 COMPLETE                  =  15;
+			 MODIFICATION_FAILED       =  16;
+			 CANCELLATION_FAILED       =  17;
+			 TRIGGER_PENDING           =  18;
+			 GENERIC                   =  19;
+			 LINK_ORDERS_FAILED        =  20;
+                        }	
+
+        enum TransactionType {
+	                      BUY  = 1;
+		              SELL = 2;
+			      SS   = 3;
+	                     }
+
+        enum Duration {
+	               DAY  = 1;
+		       GTC  = 2;
+		       IOC  = 3;
+		       FOK  = 4;
+                      }
+ 
+        enum PriceType {
+	                LIMIT        = 1;
+			MARKET       = 2;
+			STOP_LIMIT   = 3;
+			STOP_MARKET  = 4;
+                       }
+
+	enum BracketType {
+	                  STOP_ONLY               = 1;
+			  TARGET_ONLY             = 2;
+			  TARGET_AND_STOP         = 3;
+			  STOP_ONLY_STATIC        = 4;
+			  TARGET_ONLY_STATIC      = 5;
+			  TARGET_AND_STOP_STATIC  = 6;
+                         }
+
+        enum OrderPlacement {
+	                     MANUAL  = 1;
+			     AUTO    = 2;
+	                    }
+
+	required int32             template_id            = 154467;
+	optional string            user_tag               = 154119;
+
+	optional NotifyType        notify_type            = 153625;
+	optional bool              is_snapshot            = 110121;
+
+	optional string            status                 = 110303;
+	optional string            basket_id              = 110300;
+	optional string            original_basket_id     = 154497;
+	optional string            linked_basket_ids      = 110358;
+
+	optional string            fcm_id                 = 154013;
+	optional string            ib_id                  = 154014;
+	optional string            user_id                = 131003;
+	optional string            account_id             = 154008;
+
+	optional string            symbol                 = 110100;
+	optional string            exchange               = 110101;
+	optional string            trade_exchange         = 112021;
+	optional string            trade_route            = 112016;
+	optional string            exchange_order_id      = 149238;
+	optional string            instrument_type        = 110116;
+	optional string            completion_reason      = 149273;
+
+	optional  int32            quantity               = 112004;
+	optional  int32            quan_release_pending   = 112027;
+	optional  double           price                  = 110306;
+	optional  double           trigger_price          = 149247;
+
+	optional  TransactionType  transaction_type       = 112003;
+	optional  Duration         duration               = 112005;
+	optional  PriceType        price_type             = 112008;
+	optional  PriceType        orig_price_type        = 154770;
+	optional  OrderPlacement   manual_or_auto         = 154710;
+	optional  BracketType      bracket_type           = 157087;
+
+	optional  double           avg_fill_price         = 110322;
+
+	optional  int32            total_fill_size        = 154111;
+	optional  int32            total_unfilled_size    = 154112;
+
+        optional  int32            trail_by_ticks         = 157064;   
+        optional  int32            trail_by_price_id      = 157065;
+
+ 	optional string            sequence_number        = 112002;
+	optional string            orig_sequence_number   = 149263;
+	optional string            cor_sequence_number    = 149264;
+
+	optional string            currency               = 154382;
+	optional string            country_code           = 154172;
+
+	optional string            text                   = 120008;
+	optional string            report_text            = 120028;
+	optional string            remarks                = 154806;
+
+	optional string            window_name            = 154629;
+	optional string            originator_window_name = 154671;
+
+	optional  int32            cancel_at_ssboe        = 157085;
+	optional  int32            cancel_at_usecs        = 157086;
+        optional  int32            cancel_after_secs      = 154488;
+
+	optional int32             ssboe                  = 150100;
+	optional int32             usecs                  = 150101;
+	}

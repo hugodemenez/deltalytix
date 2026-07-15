@@ -1,0 +1,25 @@
+
+package rti;
+
+message ResponseAccountList
+	{
+	required int32    template_id                       = 154467;
+	repeated string   user_msg                          = 132760;
+	repeated string   rq_handler_rp_code                = 132764;
+	repeated string   rp_code                           = 132766;
+
+	optional string   fcm_id                            = 154013;
+	optional string   ib_id                             = 154014;	
+	optional string   account_id                        = 154008;
+	optional string   account_name                      = 154002;
+	optional string   account_currency                  = 154383;
+	optional string   loss_limit                        = 154019;
+
+        optional int32    account_creation_ssboe            = 153171;
+	optional int32    account_creation_usecs            = 153172;
+	
+	optional string   account_auto_liquidate            = 131035;
+	optional string   auto_liq_threshold_current_value  = 131040;
+	}
+
+
