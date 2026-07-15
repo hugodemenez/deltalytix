@@ -80,6 +80,9 @@ export function RithmicCredentialsManager({
   const [isLoadingSynchronizations, setIsLoadingSynchronizations] =
     useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [actionsMenuCredentialId, setActionsMenuCredentialId] = useState<
+    string | null
+  >(null);
   const [selectedCredentialId, setSelectedCredentialId] = useState<
     string | null
   >(null);
@@ -464,7 +467,15 @@ export function RithmicCredentialsManager({
                               <RefreshCw className="h-4 w-4 text-muted-foreground" />
                             )}
                           </Button>
-                          <Popover modal>
+                          <Popover
+                            modal
+                            open={actionsMenuCredentialId === credentialId}
+                            onOpenChange={(open) =>
+                              setActionsMenuCredentialId(
+                                open ? credentialId : null
+                              )
+                            }
+                          >
                             <PopoverTrigger asChild>
                               <Button
                                 variant="ghost"
@@ -480,7 +491,10 @@ export function RithmicCredentialsManager({
                                   variant="ghost"
                                   size="sm"
                                   className="justify-start"
-                                  onClick={() => handleLoadMoreData(credential)}
+                                  onClick={() => {
+                                    setActionsMenuCredentialId(null);
+                                    handleLoadMoreData(credential);
+                                  }}
                                   disabled={isAutoSyncing}
                                 >
                                   {syncingId === credentialId ? (
@@ -494,7 +508,10 @@ export function RithmicCredentialsManager({
                                   variant="ghost"
                                   size="sm"
                                   className="justify-start"
-                                  onClick={() => onSelectCredential(credential)}
+                                  onClick={() => {
+                                    setActionsMenuCredentialId(null);
+                                    onSelectCredential(credential);
+                                  }}
                                 >
                                   <Edit2 className="h-4 w-4 mr-2" />
                                   {t("rithmic.actions.edit")}
@@ -504,6 +521,7 @@ export function RithmicCredentialsManager({
                                   size="sm"
                                   className="justify-start text-destructive hover:text-destructive"
                                   onClick={() => {
+                                    setActionsMenuCredentialId(null);
                                     setSelectedCredentialId(credentialId);
                                     setIsDeleteDialogOpen(true);
                                   }}
