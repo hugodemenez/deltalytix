@@ -132,8 +132,7 @@ export function MobileWidgetCarousel({
             }}
             className="w-full shrink-0 snap-start snap-always"
             style={{ height: slideHeight, scrollSnapStop: "always" }}
-            role="tabpanel"
-            aria-label={getWidgetDisplayName(t, widget.type)}
+              aria-label={getWidgetDisplayName(t, widget.type)}
             aria-hidden={index !== currentIndex}
           >
             <div className="h-full w-full min-h-0 px-2 pb-2">

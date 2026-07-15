@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useCallback, useEffect, useMemo, useState } from "react"
-import { AnimatePresence, motion } from "framer-motion"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
@@ -56,6 +56,9 @@ export function MobileWidgetMinimap({
   slideHeight,
 }: MobileWidgetMinimapProps) {
   const t = useI18n()
+  const prefersReducedMotion = useReducedMotion()
+  const stackTriggerRef = useRef<HTMLButtonElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
   const [isExpanded, setIsExpanded] = useState(false)
 
   const stackWidgets = useMemo(() => {
@@ -75,26 +78,34 @@ export function MobileWidgetMinimap({
     })
   }, [widgets, currentIndex])
 
+  const closeExpanded = useCallback(() => {
+    setIsExpanded(false)
+    stackTriggerRef.current?.focus()
+  }, [])
+
   const handleSelect = useCallback(
     (index: number) => {
       onSelectIndex(index)
-      setIsExpanded(false)
+      closeExpanded()
     },
-    [onSelectIndex]
+    [closeExpanded, onSelectIndex]
   )
 
   useEffect(() => {
     if (!isExpanded) return
 
+    closeButtonRef.current?.focus()
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setIsExpanded(false)
+        event.preventDefault()
+        closeExpanded()
       }
     }
 
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [isExpanded])
+  }, [closeExpanded, isExpanded])
 
   if (widgets.length <= 1) {
     return null
@@ -103,6 +114,7 @@ export function MobileWidgetMinimap({
   return (
     <>
       <button
+        ref={stackTriggerRef}
         type="button"
         aria-expanded={isExpanded}
         aria-haspopup="dialog"
@@ -111,7 +123,7 @@ export function MobileWidgetMinimap({
           total: widgets.length,
         })}
         className={cn(
-          "absolute bottom-4 right-3 z-20",
+          "absolute bottom-4 right-3 z-20 flex min-h-11 min-w-11 items-end justify-end",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           isExpanded && "pointer-events-none opacity-0"
         )}
@@ -151,34 +163,39 @@ export function MobileWidgetMinimap({
             aria-modal="true"
             aria-label={t("widgets.mobile.minimapNavigation")}
             className="absolute inset-0 z-30 flex flex-col"
-            initial={{ opacity: 0 }}
+            initial={prefersReducedMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0 }}
+            transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.2 }}
           >
             <button
               type="button"
               aria-label={t("widgets.mobile.minimapClose")}
               className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-              onClick={() => setIsExpanded(false)}
+              onClick={closeExpanded}
             />
 
             <motion.div
               className="relative z-10 m-3 mb-4 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border bg-background/95 shadow-2xl"
-              initial={{ y: 24, scale: 0.96 }}
+              initial={prefersReducedMotion ? false : { y: 24, scale: 0.96 }}
               animate={{ y: 0, scale: 1 }}
-              exit={{ y: 24, scale: 0.96 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32 }}
+              exit={prefersReducedMotion ? undefined : { y: 24, scale: 0.96 }}
+              transition={
+                prefersReducedMotion
+                  ? { duration: 0 }
+                  : { type: "spring", stiffness: 380, damping: 32 }
+              }
             >
               <div className="flex items-center justify-between border-b px-4 py-3">
                 <p className="text-sm font-medium">
                   {t("widgets.mobile.minimapNavigation")}
                 </p>
                 <button
+                  ref={closeButtonRef}
                   type="button"
                   aria-label={t("widgets.mobile.minimapClose")}
-                  className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted"
-                  onClick={() => setIsExpanded(false)}
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-full hover:bg-muted"
+                  onClick={closeExpanded}
                 >
                   <X className="h-4 w-4" />
                 </button>
