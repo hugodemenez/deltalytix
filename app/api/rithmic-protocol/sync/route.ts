@@ -5,7 +5,6 @@ import {
 } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions'
 
 export const maxDuration = 300
-export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
