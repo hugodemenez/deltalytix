@@ -2,81 +2,80 @@
 
 import { getUserId } from '@/server/auth'
 import { prisma } from '@/lib/prisma'
-import { toConnectionView } from '@/lib/connection-view'
+import {
+  getConnectionsPageDataFresh,
+  invalidateConnectionsPageCache,
+} from './data'
+import type { ConnectionsPageData } from './types'
 
-export type ConnectionService = 'rithmic' | 'tradovate' | 'dxfeed' | 'thor' | 'etp'
-
-export type ConnectionsPageAccount = {
-  id: string
-  number: string
-  propfirm: string
-  connectionId: string | null
-  createdAt: Date
-  tradeCount: number
-}
-
-export type ConnectionsPageConnection = ReturnType<typeof toConnectionView> & {
-  accounts: ConnectionsPageAccount[]
-}
-
-export type ConnectionsPageData = {
-  connections: ConnectionsPageConnection[]
-  standaloneAccounts: ConnectionsPageAccount[]
-}
+export type {
+  ConnectionService,
+  ConnectionStatus,
+  ConnectionsPageAccount,
+  ConnectionsPageConnection,
+  ConnectionsPageData,
+} from './types'
 
 export async function getConnectionsPageData(): Promise<ConnectionsPageData> {
+  return getConnectionsPageDataFresh()
+}
+
+export async function deleteConnectionAction(
+  connectionId: string
+): Promise<{ success: true } | { error: string }> {
   const userId = await getUserId()
-
-  const [connections, accounts, tradeCounts] = await Promise.all([
-    prisma.connection.findMany({
-      where: { userId },
-      orderBy: [{ service: 'asc' }, { createdAt: 'asc' }],
-    }),
-    prisma.account.findMany({
-      where: { userId },
-      select: {
-        id: true,
-        number: true,
-        propfirm: true,
-        connectionId: true,
-        createdAt: true,
-      },
-      orderBy: { number: 'asc' },
-    }),
-    prisma.trade.groupBy({
-      by: ['accountNumber'],
-      where: { userId },
-      _count: { _all: true },
-    }),
-  ])
-
-  const countByNumber = new Map(
-    tradeCounts.map((row) => [row.accountNumber, row._count._all])
-  )
-
-  const mappedAccounts: ConnectionsPageAccount[] = accounts.map((account) => ({
-    ...account,
-    tradeCount: countByNumber.get(account.number) ?? 0,
-  }))
-
-  const accountsByConnection = new Map<string, ConnectionsPageAccount[]>()
-  const standaloneAccounts: ConnectionsPageAccount[] = []
-
-  for (const account of mappedAccounts) {
-    if (account.connectionId) {
-      const list = accountsByConnection.get(account.connectionId) ?? []
-      list.push(account)
-      accountsByConnection.set(account.connectionId, list)
-    } else {
-      standaloneAccounts.push(account)
-    }
+  if (!connectionId) {
+    return { error: 'MISSING_CONNECTION_ID' }
   }
 
-  return {
-    connections: connections.map((connection) => ({
-      ...toConnectionView(connection),
-      accounts: accountsByConnection.get(connection.id) ?? [],
-    })),
-    standaloneAccounts,
+  const existing = await prisma.connection.findFirst({
+    where: { id: connectionId, userId },
+    select: { id: true },
+  })
+  if (!existing) {
+    return { error: 'NOT_FOUND' }
   }
+
+  await prisma.connection.delete({
+    where: { id: connectionId },
+  })
+  await invalidateConnectionsPageCache(userId)
+
+  return { success: true }
+}
+
+/**
+ * Update daily sync time for a connection.
+ * `utcTimeString` should be an ISO timestamp whose local hours/minutes represent the preferred sync time.
+ */
+export async function updateConnectionDailySyncTimeAction(
+  connectionId: string,
+  utcTimeString: string | null
+): Promise<{ success: true } | { error: string }> {
+  const userId = await getUserId()
+  if (!connectionId) {
+    return { error: 'MISSING_CONNECTION_ID' }
+  }
+
+  const existing = await prisma.connection.findFirst({
+    where: { id: connectionId, userId },
+    select: { id: true, service: true },
+  })
+  if (!existing) {
+    return { error: 'NOT_FOUND' }
+  }
+
+  if (existing.service !== 'tradovate' && existing.service !== 'dxfeed') {
+    return { error: 'UNSUPPORTED_SERVICE' }
+  }
+
+  await prisma.connection.update({
+    where: { id: connectionId },
+    data: {
+      dailySyncTime: utcTimeString ? new Date(utcTimeString) : null,
+    },
+  })
+  await invalidateConnectionsPageCache(userId)
+
+  return { success: true }
 }

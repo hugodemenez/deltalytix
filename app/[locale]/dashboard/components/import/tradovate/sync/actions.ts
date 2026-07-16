@@ -7,6 +7,8 @@ import crypto from 'crypto'
 import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
 import { getTickDetails } from '@/server/tick-details'
 import { prisma } from '@/lib/prisma'
+import { upsertAccountsForNumbers } from '@/server/connections'
+import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connections/data'
 
 import { formatTimestamp, formatDateToTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
@@ -126,7 +128,19 @@ interface TradovateOAuthResult {
   authUrl?: string
   state?: string
   accountId?: string
+  /** True when a Connection row was upserted even though OAuth setup failed. */
+  connectionRegistered?: boolean
 }
+
+type TradovateAuthMe = {
+  errorText?: string
+  userId?: number
+  name?: string
+  fullName?: string
+  email?: string
+  organizationName?: string
+}
+
 
 interface TradovateAccountsResult {
   accounts?: TradovateAccount[]
@@ -676,6 +690,96 @@ export async function initiateTradovateOAuth(
   }
 }
 
+async function fetchTradovateAuthMe(
+  accessToken: string,
+  apiBaseUrl: string,
+  label: string
+): Promise<TradovateAuthMe | null> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/v1/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json',
+      },
+    })
+    if (!response.ok) {
+      logger.warn('Tradovate auth/me failed', {
+        label,
+        status: response.status,
+        statusText: response.statusText,
+      })
+      return null
+    }
+    const me = (await response.json()) as TradovateAuthMe
+    if (me.errorText) {
+      logger.warn('Tradovate auth/me errorText', { label, errorText: me.errorText })
+      return me // return with errorText so caller can decide to retry live
+    }
+    return me
+  } catch (error) {
+    logger.warn('Tradovate auth/me threw', error)
+    return null
+  }
+}
+
+async function getTradovateAuthMe(
+  accessToken: string,
+  environment: TradovateEnvironment = 'demo'
+): Promise<TradovateAuthMe | null> {
+  const primary = await fetchTradovateAuthMe(
+    accessToken,
+    getApiBaseUrl(environment),
+    environment
+  )
+  if (primary && !primary.errorText) {
+    return primary
+  }
+
+  // Demo OAuth tokens often require auth/me on the live host.
+  const shouldRetryLive =
+    environment === 'demo' &&
+    (!primary ||
+      !!primary.errorText?.toLowerCase().includes('live.tradovateapi.com'))
+  if (!shouldRetryLive) {
+    return null
+  }
+
+  const liveMe = await fetchTradovateAuthMe(
+    accessToken,
+    TRADOVATE_ENVIRONMENTS.live.api,
+    'live-fallback'
+  )
+  if (liveMe && !liveMe.errorText) {
+    return liveMe
+  }
+  return null
+}
+
+async function getFirstTradovateAccountName(
+  accessToken: string,
+  environment: TradovateEnvironment
+): Promise<string | null> {
+  try {
+    const apiBaseUrl = getApiBaseUrl(environment)
+    const response = await fetch(`${apiBaseUrl}/v1/account/list`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json',
+      },
+    })
+    if (!response.ok) return null
+    const accounts = (await response.json()) as TradovateAccount[]
+    if (!Array.isArray(accounts) || accounts.length === 0) return null
+    return (
+      accounts[0]?.name?.trim() ||
+      accounts[0]?.nickname?.trim() ||
+      (accounts[0]?.id != null ? `tradovate-account-${accounts[0].id}` : null)
+    )
+  } catch {
+    return null
+  }
+}
+
 export async function getPropfirmName(accessToken: string, environment: TradovateEnvironment = 'demo'): Promise<string> {
   const apiBaseUrl = getApiBaseUrl(environment)
   const response = await fetch(`${apiBaseUrl}/v1/organization/list`, {
@@ -685,16 +789,39 @@ export async function getPropfirmName(accessToken: string, environment: Tradovat
     }
   })
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch organization: ${response.status} ${response.statusText}`)
+  if (response.ok) {
+    const organizations = await response.json() as { id: number; name: string }[]
+    console.log('organizations', organizations)
+    if (Array.isArray(organizations) && organizations.length > 0) {
+      return organizations[0].name
+    }
+  } else {
+    logger.warn('organization/list failed, falling back to auth/me', {
+      status: response.status,
+      statusText: response.statusText,
+    })
   }
 
-  const organizations = await response.json() as { id: number; name: string }[]
-  console.log('organizations', organizations)
-  if (Array.isArray(organizations) && organizations.length > 0) {
-    return organizations[0].name
+  const me = await getTradovateAuthMe(accessToken, environment)
+  // Organization is optional. Skip Tradovate's generic "TDV" label — not useful as a title.
+  const orgFromMe = me?.organizationName?.trim()
+  const meaningfulOrg =
+    orgFromMe && orgFromMe.toUpperCase() !== 'TDV' ? orgFromMe : ''
+  if (meaningfulOrg) {
+    return meaningfulOrg
   }
-  throw new Error('No organization found')
+
+  // Prefer a stable per-user key over email/name in the connection title.
+  if (me?.userId != null) {
+    return `tradovate-user-${me.userId}`
+  }
+
+  const fromAccount = await getFirstTradovateAccountName(accessToken, environment)
+  if (fromAccount) {
+    return fromAccount
+  }
+
+  return 'Tradovate'
 }
 
 export async function handleTradovateCallback(code: string, state: string): Promise<TradovateOAuthResult> {
@@ -788,10 +915,10 @@ export async function handleTradovateCallback(code: string, state: string): Prom
     
     // Calculate expiration time
     const expiresAt = formatDateForAPI(new Date(Date.now() + (tokens.expires_in * 1000)))
-    
-    // Get account information from the token to determine accountId
-    // API provides an endpoint https://{env}.tradovateapi.com/v1/auth/me
+
+    // Org is optional. Resolve a stable externalId (org → auth/me → account → env fallback).
     const propfirm = await getPropfirmName(tokens.access_token, environment)
+
     // Store token in database
     const storeResult = await storeTradovateToken(
       tokens.access_token,
@@ -802,12 +929,32 @@ export async function handleTradovateCallback(code: string, state: string): Prom
     if (storeResult.error) {
       logger.warn('Failed to store token in database:', storeResult.error)
       // Continue anyway - token is still valid for this session
+    } else {
+      try {
+        const userId = await getUserId()
+        await linkTradovateAccountsToConnection({
+          userId,
+          accessToken: tokens.access_token,
+          environment,
+          connectionExternalId: propfirm,
+        })
+      } catch (linkError) {
+        logger.warn('Failed to link Tradovate accounts after OAuth:', linkError)
+      }
     }
-    
+
+    try {
+      await invalidateConnectionsPageCache()
+    } catch {
+      // non-fatal — connections page will soft-refresh
+    }
+
     return {
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
-      expiresAt
+      expiresAt,
+      accountId: propfirm,
+      connectionRegistered: true,
     }
   } catch (error) {
     console.error('Failed to handle OAuth callback:', {
@@ -1031,6 +1178,109 @@ export async function getTradovateAccounts(accessToken: string, environment: Tra
   }
 }
 
+function tradovateAccountLabel(account: TradovateAccount): string {
+  return account.name || account.nickname || account.id.toString()
+}
+
+/**
+ * One OAuth token can expose accounts on both demo and live hosts.
+ * Always list both and merge (dedupe by account label).
+ */
+async function getTradovateAccountsFromBothEnvironments(
+  accessToken: string,
+  preferredEnvironment: TradovateEnvironment
+): Promise<{
+  accounts: TradovateAccount[]
+  /** Env to store for sync when only one side has accounts; else preferred. */
+  resolvedEnvironment: TradovateEnvironment
+  demoCount: number
+  liveCount: number
+}> {
+  const [demoResult, liveResult] = await Promise.all([
+    getTradovateAccounts(accessToken, 'demo'),
+    getTradovateAccounts(accessToken, 'live'),
+  ])
+
+  const demoAccounts = demoResult.accounts ?? []
+  const liveAccounts = liveResult.accounts ?? []
+  const byLabel = new Map<string, TradovateAccount>()
+
+  for (const account of [...demoAccounts, ...liveAccounts]) {
+    const label = tradovateAccountLabel(account)
+    if (!byLabel.has(label)) {
+      byLabel.set(label, account)
+    }
+  }
+
+  const accounts = Array.from(byLabel.values())
+  let resolvedEnvironment = preferredEnvironment
+  if (demoAccounts.length > 0 && liveAccounts.length === 0) {
+    resolvedEnvironment = 'demo'
+  } else if (liveAccounts.length > 0 && demoAccounts.length === 0) {
+    resolvedEnvironment = 'live'
+  }
+
+
+  return {
+    accounts,
+    resolvedEnvironment,
+    demoCount: demoAccounts.length,
+    liveCount: liveAccounts.length,
+  }
+}
+
+/**
+ * Attach Tradovate trading accounts to the Connection so they leave the
+ * "standalone / imported without broker sync" bucket even when no trades save.
+ */
+async function linkTradovateAccountsToConnection(params: {
+  userId: string
+  accessToken: string
+  environment: TradovateEnvironment
+  connectionExternalId?: string | null
+}): Promise<void> {
+  const { userId, accessToken, environment, connectionExternalId } = params
+  const { accounts, resolvedEnvironment, demoCount, liveCount } =
+    await getTradovateAccountsFromBothEnvironments(accessToken, environment)
+  if (!accounts.length) {
+    return
+  }
+
+  const accountNumbers = accounts.map(tradovateAccountLabel)
+  const connection = connectionExternalId
+    ? await prisma.connection.findUnique({
+        where: {
+          userId_service_externalId: {
+            userId,
+            service: 'tradovate',
+            externalId: connectionExternalId,
+          },
+        },
+        select: { id: true },
+      })
+    : await prisma.connection.findFirst({
+        where: {
+          userId,
+          service: 'tradovate',
+          token: accessToken,
+        },
+        select: { id: true },
+      })
+
+  if (!connection) {
+    return
+  }
+
+  if (resolvedEnvironment !== environment) {
+    await prisma.connection.update({
+      where: { id: connection.id },
+      data: { environment: resolvedEnvironment, updatedAt: new Date() },
+    })
+  }
+
+  await upsertAccountsForNumbers(userId, accountNumbers, connection.id)
+}
+
 // Process fill pairs into trades with proper P&L calculation
 async function buildTradesFromFillPairs(
   fillPairs: TradovateFillPair[],
@@ -1078,7 +1328,7 @@ async function buildTradesFromFillPairs(
         continue
       }
 
-      const accountLabel = account.name || account.nickname || accountId.toString()
+      const accountLabel = tradovateAccountLabel(account)
 
       // Get contract information
       const contract = contracts.get(buyFill.contractId)
@@ -1310,6 +1560,15 @@ export async function getTradovateToken(accountId: string = 'default') {
 
     if (!syncData?.token) {
       return { error: 'No Tradovate token found' }
+    }
+
+    try {
+      const parsed = JSON.parse(syncData.token) as { authError?: string }
+      if (typeof parsed.authError === 'string' && parsed.authError.length > 0) {
+        return { error: parsed.authError }
+      }
+    } catch {
+      // Plain access-token string — expected happy path
     }
 
     // Check if token is expired
@@ -1578,25 +1837,43 @@ export async function getTradovateTrades(
     const fillPairs = await getFillPairs(accessToken, environment)
     logger.info(`Received ${fillPairs.length} fill pairs from Tradovate`)
     
-    // Means there are no trades to import
+    // Means there are no trades to import — still attach trading accounts to the Connection
     if (fillPairs.length === 0) {
       logger.info('No fill pairs returned from Tradovate')
       await updateLastSyncedAt(resolvedUserId, accessToken)
+      await linkTradovateAccountsToConnection({
+        userId: resolvedUserId,
+        accessToken,
+        environment,
+      })
       return { processedTrades: [], savedCount: 0, ordersCount: 0 }
     }
 
-    // Fetch all accounts to map account IDs to account details
-    logger.info('Fetching accounts for account resolution...')
-    const accountsRes = await fetch(`${apiBaseUrl}/v1/account/list`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json'
-      }
-    })
-    const accounts: TradovateAccount[] = accountsRes.ok ? await accountsRes.json() : []
+    // Fetch accounts from both hosts — one token can own demo + live accounts
+    logger.info('Fetching accounts for account resolution (demo + live)...')
+    const { accounts } = await getTradovateAccountsFromBothEnvironments(
+      accessToken,
+      environment
+    )
     const accountsById = new Map<number, TradovateAccount>()
     accounts.forEach(account => accountsById.set(account.id, account))
     logger.info(`Fetched ${accounts.length} accounts for resolution`)
+
+    const connectionForAccounts = await prisma.connection.findFirst({
+      where: {
+        userId: resolvedUserId,
+        service: 'tradovate',
+        token: accessToken,
+      },
+      select: { id: true },
+    })
+    if (connectionForAccounts && accounts.length > 0) {
+      await upsertAccountsForNumbers(
+        resolvedUserId,
+        accounts.map(tradovateAccountLabel),
+        connectionForAccounts.id,
+      )
+    }
 
     // Step 1: Collect all unique fill IDs from fill pairs
     const allFillIds = new Set<number>()
@@ -1697,7 +1974,7 @@ export async function getTradovateTrades(
       return { processedTrades: [], savedCount: 0 }
     }
 
-    const connection = await prisma.connection.findFirst({
+    const connection = connectionForAccounts ?? await prisma.connection.findFirst({
       where: {
         userId: resolvedUserId,
         service: 'tradovate',

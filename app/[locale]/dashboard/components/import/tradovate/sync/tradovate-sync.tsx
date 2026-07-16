@@ -33,6 +33,10 @@ function TradovateConnectView() {
 
       tradovateStore.setOAuthState(result.state)
       sessionStorage.setItem('tradovate_oauth_state', result.state)
+      sessionStorage.setItem(
+        'tradovate_oauth_pending',
+        JSON.stringify({ environment })
+      )
       window.location.href = result.authUrl
     } catch {
       toast.error(t('tradovateSync.error.oauthInit'))

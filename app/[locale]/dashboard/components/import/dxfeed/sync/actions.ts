@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma'
 import { formatTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
+import { upsertAccountsForNumbers } from '@/server/connections'
 import {
   coerceDxFeedHistoricalHostForSync,
   normalizeDxFeedHistoricalHost,
@@ -302,6 +303,32 @@ export async function authenticateDxFeed(
     })
     if (storeResult.error) {
       logger.warn('Failed to store token')
+    }
+
+    if (!storeResult.error && accountNumbers.length > 0) {
+      const connection = await prisma.connection.findUnique({
+        where: {
+          userId_service_externalId: {
+            userId: user.id,
+            service: 'dxfeed',
+            externalId: login,
+          },
+        },
+        select: { id: true },
+      })
+      if (connection) {
+        await upsertAccountsForNumbers(user.id, accountNumbers, connection.id)
+        if (propFirm.name) {
+          await prisma.account.updateMany({
+            where: {
+              userId: user.id,
+              number: { in: accountNumbers },
+              connectionId: connection.id,
+            },
+            data: { propfirm: propFirm.name },
+          })
+        }
+      }
     }
 
     return { success: true }
@@ -655,6 +682,32 @@ export async function getDxFeedTrades(
 
     if (allTrades.length === 0) {
       logger.info(`No closed trades to save: ${JSON.stringify(syncStats)}`)
+      if (accountNumbers.length > 0) {
+        const connectionForAccounts = syncAccountId
+          ? await prisma.connection.findFirst({
+              where: {
+                userId: resolvedUserId,
+                service: 'dxfeed',
+                externalId: syncAccountId,
+              },
+              select: { id: true },
+            })
+          : await prisma.connection.findFirst({
+              where: {
+                userId: resolvedUserId,
+                service: 'dxfeed',
+                token: storedTokenJson,
+              },
+              select: { id: true },
+            })
+        if (connectionForAccounts) {
+          await upsertAccountsForNumbers(
+            resolvedUserId,
+            accountNumbers,
+            connectionForAccounts.id,
+          )
+        }
+      }
       return { processedTrades: [], savedCount: 0, tradesCount: 0, syncStats }
     }
 
