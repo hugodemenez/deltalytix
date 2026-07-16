@@ -24,10 +24,10 @@ export function getCursorPromptUrl(prompt: string): string {
   return url.toString();
 }
 
-export function getCodexPromptUrl(prompt: string): string {
-  const url = new URL("codex://threads/new");
+/** ChatGPT web chat — `codex://` deeplinks only work with the desktop app installed. */
+export function getChatGptPromptUrl(prompt: string): string {
+  const url = new URL("https://chatgpt.com/");
   url.searchParams.set("prompt", prompt);
-  url.searchParams.set("originUrl", GITHUB_REPO_URL);
   return url.toString();
 }
 

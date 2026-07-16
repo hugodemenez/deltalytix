@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -16,11 +16,16 @@ import {
 } from "@/components/ui/popover";
 import { useI18n } from "@/locales/landing-client";
 import {
+  getChatGptPromptUrl,
   getClaudePromptUrl,
-  getCodexPromptUrl,
   getCursorPromptUrl,
   getSelfHostAgentPrompt,
 } from "@/lib/self-host-agent-prompt";
+import {
+  ChatGptAppIcon,
+  ClaudeAppIcon,
+  CursorAppIcon,
+} from "./faq-open-with-icons";
 
 export function FaqSelfHostPrompt() {
   const t = useI18n();
@@ -28,24 +33,29 @@ export function FaqSelfHostPrompt() {
   const [copied, setCopied] = useState(false);
   const [openWithOpen, setOpenWithOpen] = useState(false);
 
-  const openWithOptions = [
+  const openWithOptions: {
+    key: string;
+    href: string;
+    label: string;
+    icon: ReactNode;
+  }[] = [
     {
-      key: "cursor" as const,
+      key: "cursor",
       href: getCursorPromptUrl(prompt),
       label: t("faq.selfHost.openCursor"),
-      external: true,
+      icon: <CursorAppIcon className="size-4 shrink-0" />,
     },
     {
-      key: "codex" as const,
-      href: getCodexPromptUrl(prompt),
-      label: t("faq.selfHost.openCodex"),
-      external: false,
+      key: "chatgpt",
+      href: getChatGptPromptUrl(prompt),
+      label: t("faq.selfHost.openChatGpt"),
+      icon: <ChatGptAppIcon className="size-4 shrink-0" />,
     },
     {
-      key: "claude" as const,
+      key: "claude",
       href: getClaudePromptUrl(prompt),
       label: t("faq.selfHost.openClaude"),
-      external: true,
+      icon: <ClaudeAppIcon className="size-4 shrink-0" />,
     },
   ];
 
@@ -101,11 +111,12 @@ export function FaqSelfHostPrompt() {
                 <a
                   key={option.key}
                   href={option.href}
-                  target={option.external ? "_blank" : undefined}
-                  rel={option.external ? "noopener noreferrer" : undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   onClick={() => setOpenWithOpen(false)}
-                  className="flex items-center gap-2 rounded-sm px-2.5 py-2 text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  className="flex items-center gap-2.5 rounded-sm px-2.5 py-2 text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
+                  {option.icon}
                   <span className="flex-1">{option.label}</span>
                   <ExternalLinkIcon className="size-3.5 shrink-0 opacity-50" />
                 </a>
