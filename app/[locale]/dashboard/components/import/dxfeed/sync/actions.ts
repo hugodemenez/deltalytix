@@ -33,6 +33,7 @@ import type {
   DxFeedTradesResult,
   DxFeedTradingAccount,
 } from './dxfeed-types'
+import { capturePostHogEvent } from '@/lib/posthog-server'
 
 const DXFEED_AUTH_URL = resolveDxFeedV2AuthUrl(process.env.DXFEED_AUTH_URL)
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
@@ -731,6 +732,17 @@ export async function storeDxFeedToken(
       return { error: 'User not authenticated' }
     }
 
+    const existingSynchronization = await prisma.synchronization.findUnique({
+      where: {
+        userId_service_accountId: {
+          userId: user.id,
+          service: 'dxfeed',
+          accountId,
+        },
+      },
+      select: { id: true },
+    })
+
     await prisma.synchronization.upsert({
       where: {
         userId_service_accountId: {
@@ -754,6 +766,16 @@ export async function storeDxFeedToken(
         tokenExpiresAt: options?.tokenExpiresAt ?? null,
         lastSyncedAt: new Date(),
         includedFeeTypes: undefined, // DxFeed has no fee differentiator
+      },
+    })
+
+    await capturePostHogEvent({
+      distinctId: user.id,
+      event: 'integration_connected',
+      properties: {
+        integration: 'dxfeed',
+        environment: DXFEED_ENVIRONMENT === 0 ? 'production' : 'demo',
+        is_first_connection: !existingSynchronization,
       },
     })
 

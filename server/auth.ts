@@ -13,6 +13,7 @@ import {
 } from '@/lib/local-dashboard-auth'
 import { createLocalDashboardBypassAuthStub } from '@/lib/local-dashboard-bypass-client'
 import { ensureLocalDashboardUserInDatabase } from '@/server/local-dashboard-bootstrap'
+import { capturePostHogEvent } from '@/lib/posthog-server'
 
 export async function getWebsiteURL() {
   let url =
@@ -492,6 +493,15 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
         },
       });
       console.log('[ensureUserInDatabase] SUCCESS: New user created successfully');
+
+      await capturePostHogEvent({
+        distinctId: user.id,
+        event: 'user_signed_up',
+        properties: {
+          auth_provider: user.app_metadata?.provider || 'unknown',
+          language: locale || 'en',
+        },
+      });
       
       // Create default dashboard layout for new user
       try {

@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/prisma"
 import { getUserId } from "@/server/auth"
 import { Synchronization } from "@/prisma/generated/prisma/client"
+import { capturePostHogEvent } from "@/lib/posthog-server"
 
 export async function getRithmicSynchronizations() {
   console.log('CHECKING RITHMIC SYNCHRONIZATIONS')
@@ -15,12 +16,20 @@ export async function getRithmicSynchronizations() {
 export async function setRithmicSynchronization(synchronization: Partial<Synchronization>) {
   console.log('SETTING RITHMIC SYNCHRONIZATION')
   const userId = await getUserId()
+  const service = synchronization.service || 'rithmic'
+  const accountId = synchronization.accountId || ''
+  const existingSynchronization = await prisma.synchronization.findUnique({
+    where: {
+      userId_service_accountId: { userId, service, accountId },
+    },
+    select: { id: true },
+  })
   await prisma.synchronization.upsert({
     where: { 
       userId_service_accountId: {
         userId: userId,
-        service: synchronization.service || 'rithmic',
-        accountId: synchronization.accountId || ''
+        service,
+        accountId
       }
     },
     update: {
@@ -30,11 +39,20 @@ export async function setRithmicSynchronization(synchronization: Partial<Synchro
     },
     create: {
       ...synchronization,
-      service: synchronization.service || 'rithmic',
-      accountId: synchronization.accountId || '',
+      service,
+      accountId,
       lastSyncedAt: synchronization.lastSyncedAt || new Date(),
       userId: userId,
       includedFeeTypes: undefined, // Rithmic has no fee differentiator
+    },
+  })
+
+  await capturePostHogEvent({
+    distinctId: userId,
+    event: 'integration_connected',
+    properties: {
+      integration: service,
+      is_first_connection: !existingSynchronization,
     },
   })
 }
