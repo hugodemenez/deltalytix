@@ -2397,8 +2397,7 @@ export default {
       NO_TOKEN_RECONNECT:
         "Cette connexion n'a pas d'identifiants. Reconnectez-vous.",
       DUPLICATE_TRADES: "Ces trades sont déjà dans votre journal.",
-      SYNC_FAILED:
-        "La synchronisation a échoué. Réessayez dans quelques minutes.",
+      SYNC_FAILED: "La synchronisation a échoué : {reason}",
       SAVE_TRADES_FAILED:
         "Les trades ont été récupérés mais n'ont pas pu être enregistrés : {detail}",
       ACCOUNT_ID_REQUIRED: "Identifiant de compte manquant.",

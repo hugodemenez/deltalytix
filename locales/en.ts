@@ -2263,7 +2263,7 @@ export default {
       INVALID_STORED_CREDENTIALS: "Saved connection data is invalid. Reconnect.",
       NO_TOKEN_RECONNECT: "This connection is missing credentials. Reconnect.",
       DUPLICATE_TRADES: "These trades are already in your journal.",
-      SYNC_FAILED: "Trade sync failed. Try again in a few minutes.",
+      SYNC_FAILED: "Trade sync failed: {reason}",
       SAVE_TRADES_FAILED: "Trades were fetched but could not be saved: {detail}",
       ACCOUNT_ID_REQUIRED: "Account identifier is missing.",
       LOAD_SYNCHRONIZATIONS_FAILED:

@@ -99,6 +99,15 @@ function rpOk(rpCode: unknown): boolean {
   return String(rpCode[0]) === '0'
 }
 
+/** Rithmic uses rp_code `7` / "no data" for empty history — not a hard failure. */
+function rpIsNoData(rpCode: unknown): boolean {
+  if (!Array.isArray(rpCode) || rpCode.length === 0) return false
+  const code = String(rpCode[0]).trim()
+  if (code === '7') return true
+  const joined = rpCode.map(String).join(' ').toLowerCase()
+  return joined.includes('no data')
+}
+
 function rpMessage(rpCode: unknown): string {
   if (!Array.isArray(rpCode)) return 'Unknown Rithmic error'
   return rpCode.map(String).join(' ')
@@ -408,6 +417,9 @@ export class RithmicProtocolClient {
         }
 
         if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
+          if (rpIsNoData(decoded.rpCode)) {
+            break
+          }
           if (!rpOk(decoded.rpCode)) {
             throw new Error(`Fill history failed: ${rpMessage(decoded.rpCode)}`)
           }
@@ -448,45 +460,24 @@ export class RithmicProtocolClient {
     accountId: string
     startDateYyyymmdd?: string
   }): Promise<RithmicProtocolFill[]> {
-    await this.send('rti.RequestShowOrderHistoryDates', {
-      templateId: RithmicTemplateId.SHOW_ORDER_HISTORY_DATES_REQUEST,
-      userMsg: ['deltalytix-history-dates'],
-    })
-
-    const dates: string[] = []
-    for (;;) {
-      const msg = await this.nextMessage()
-      if (msg.templateId !== RithmicTemplateId.SHOW_ORDER_HISTORY_DATES_RESPONSE) {
-        continue
-      }
-      const decoded = decodeMessage<{
-        rpCode?: string[]
-        date?: string[]
-      }>(this.root!, 'rti.ResponseShowOrderHistoryDates', msg.raw)
-      if (Array.isArray(decoded.date)) {
-        dates.push(...decoded.date.map(String))
-      }
-      if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
-        if (!rpOk(decoded.rpCode)) {
-          throw new Error(`History dates failed: ${rpMessage(decoded.rpCode)}`)
-        }
-        break
-      }
-    }
-
+    const dates = await this.listOrderHistoryDates()
     const minDate = params.startDateYyyymmdd
-    const filtered = dates
-      .map(String)
-      .filter((d) => !minDate || d.replace(/-/g, '') >= minDate)
-      .sort()
+    const filtered = dates.filter((d) => !minDate || d >= minDate)
 
     const fills: RithmicProtocolFill[] = []
     for (const date of filtered) {
-      const dayFills = await this.getOrderHistorySummaryFills({
-        ...params,
-        date: date.replace(/-/g, ''),
-      })
-      fills.push(...dayFills)
+      try {
+        const dayFills = await this.getOrderHistorySummaryFills({
+          ...params,
+          date,
+        })
+        fills.push(...dayFills)
+      } catch (error) {
+        console.warn(
+          `[RITHMIC-PROTOCOL] Order history summary skipped for ${params.accountId} on ${date}`,
+          error instanceof Error ? error.message : error,
+        )
+      }
     }
     return fills
   }
@@ -525,6 +516,9 @@ export class RithmicProtocolClient {
           msg.raw,
         )
         if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
+          if (rpIsNoData(decoded.rpCode)) {
+            break
+          }
           if (!rpOk(decoded.rpCode)) {
             throw new Error(
               `Order history summary failed: ${rpMessage(decoded.rpCode)}`,
@@ -540,6 +534,41 @@ export class RithmicProtocolClient {
       }
     }
     return fills
+  }
+
+  /**
+   * List trade dates that have order history. Empty / "no data" → [].
+   */
+  async listOrderHistoryDates(): Promise<string[]> {
+    await this.send('rti.RequestShowOrderHistoryDates', {
+      templateId: RithmicTemplateId.SHOW_ORDER_HISTORY_DATES_REQUEST,
+      userMsg: ['deltalytix-history-dates'],
+    })
+
+    const dates: string[] = []
+    for (;;) {
+      const msg = await this.nextMessage()
+      if (msg.templateId !== RithmicTemplateId.SHOW_ORDER_HISTORY_DATES_RESPONSE) {
+        continue
+      }
+      const decoded = decodeMessage<{
+        rpCode?: string[]
+        date?: string[]
+      }>(this.root!, 'rti.ResponseShowOrderHistoryDates', msg.raw)
+      if (Array.isArray(decoded.date)) {
+        dates.push(...decoded.date.map(String))
+      }
+      if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
+        if (rpIsNoData(decoded.rpCode)) {
+          break
+        }
+        if (!rpOk(decoded.rpCode)) {
+          throw new Error(`History dates failed: ${rpMessage(decoded.rpCode)}`)
+        }
+        break
+      }
+    }
+    return dates.map((d) => d.replace(/-/g, '')).sort()
   }
 
   private decodeExchangeFill(
@@ -782,28 +811,74 @@ export async function fetchFillsForAccounts(params: {
         : undefined
 
     for (const accountId of params.accountIds) {
+      let rangeStart = startYmd
+      let rangeEnd = endYmd
+      let hasHistoryDates = false
+
+      // Bound requests to dates Rithmic actually has history for.
       try {
-        const accountFills = await getFillHistoryAllPages(client, {
+        const historyDates = await client.listOrderHistoryDates()
+        const inRange = historyDates.filter((d) => {
+          const n = Number(d)
+          return Number.isFinite(n) && n >= startYmd && n <= endYmd
+        })
+        if (inRange.length > 0) {
+          hasHistoryDates = true
+          rangeStart = Number(inRange[0])
+          rangeEnd = Number(inRange[inRange.length - 1])
+        } else {
+          console.info(
+            `[RITHMIC-PROTOCOL] No order history dates for ${accountId} in range — trying fill history once`,
+          )
+        }
+      } catch (error) {
+        console.warn(
+          `[RITHMIC-PROTOCOL] Could not list history dates for ${accountId}; using configured range`,
+          error instanceof Error ? error.message : error,
+        )
+      }
+
+      let accountFills: RithmicProtocolFill[] = []
+
+      // When we know the history window, page fill history across it.
+      // When dates are empty, still attempt a single fill-history query for the
+      // configured window (lookback) or a recent year (all-time) before falling back.
+      const fillStart = hasHistoryDates
+        ? rangeStart
+        : params.lookbackDays != null && params.lookbackDays > 0
+          ? startYmd
+          : toYmdNumber(
+              new Date(end.getTime() - 365 * 24 * 60 * 60 * 1000),
+            )
+      try {
+        accountFills = await getFillHistoryAllPages(client, {
           fcmId,
           ibId,
           accountId,
-          startDateYyyymmdd: startYmd,
-          endDateYyyymmdd: endYmd,
+          startDateYyyymmdd: fillStart,
+          endDateYyyymmdd: rangeEnd,
         })
-        fills.push(...accountFills)
       } catch (error) {
         console.warn(
           `[RITHMIC-PROTOCOL] Fill history failed for ${accountId}, falling back to order history`,
           error instanceof Error ? error.message : error,
         )
+      }
+
+      if (accountFills.length === 0) {
         const fallback = await client.getFillsViaOrderHistory({
           fcmId,
           ibId,
           accountId,
           startDateYyyymmdd: startYmdStr,
         })
-        fills.push(...fallback)
+        accountFills = fallback
       }
+
+      console.info(
+        `[RITHMIC-PROTOCOL] ${accountId}: ${accountFills.length} fills`,
+      )
+      fills.push(...accountFills)
     }
 
     return fills

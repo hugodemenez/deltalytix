@@ -162,7 +162,9 @@ export function RithmicProtocolSyncContextProvider({
             (t as (key: string, params?: Record<string, string | number>) => string)(
               `rithmicProtocolSync.errors.${code}`,
               {
-                reason: String(payload?.errorParams?.reason ?? ''),
+                reason: String(
+                  payload?.errorParams?.reason || 'Unknown error',
+                ),
               },
             ),
             { id: toastId },
