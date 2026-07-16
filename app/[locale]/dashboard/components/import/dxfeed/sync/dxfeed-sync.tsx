@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useState, type Dispatch, type SetStateAction } from 'react'
 import { Check, ChevronDown, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useI18n } from '@/locales/client'
@@ -291,11 +291,14 @@ interface DxFeedSyncProps {
   /** When false, open on the connect form instead of the saved-accounts list. */
   initialShowAccountsManager?: boolean
   onConnected?: () => void
+  /** Accepted for PlatformConfig customComponent compatibility; unused here. */
+  setIsOpen?: Dispatch<SetStateAction<boolean>> | ((open: boolean) => void)
 }
 
 export function DxFeedSync({
   initialShowAccountsManager = true,
   onConnected,
+  setIsOpen: _setIsOpen,
 }: DxFeedSyncProps = {}) {
   const t = useI18n()
 

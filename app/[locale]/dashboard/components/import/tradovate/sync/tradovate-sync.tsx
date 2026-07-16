@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useState, type Dispatch, type SetStateAction } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useI18n } from '@/locales/client'
 import { toast } from 'sonner'
@@ -115,10 +115,13 @@ function TradovateConnectView() {
 interface TradovateSyncProps {
   /** When false, open on the OAuth connect view instead of the saved-accounts list. */
   initialShowAccountsManager?: boolean
+  /** Accepted for PlatformConfig customComponent compatibility; unused here. */
+  setIsOpen?: Dispatch<SetStateAction<boolean>> | ((open: boolean) => void)
 }
 
 export function TradovateSync({
   initialShowAccountsManager = true,
+  setIsOpen: _setIsOpen,
 }: TradovateSyncProps = {}) {
   const t = useI18n()
 
