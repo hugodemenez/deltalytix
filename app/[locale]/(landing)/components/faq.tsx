@@ -8,7 +8,10 @@ import {
 } from "@/components/ui/accordion";
 import { useI18n } from "@/locales/landing-client";
 import { FAQ_ITEMS } from "./faq-items";
+import { FaqSelfHostPrompt } from "./faq-self-host-prompt";
 import { LANDING_SECTION_CONTAINER_CLASSNAME } from "./landing-section-container";
+
+const SELF_HOST_FAQ_ITEM = 5;
 
 function FaqAnswer({ text }: { text: string }) {
   const paragraphs = text.split("\n\n").filter(Boolean);
@@ -46,6 +49,7 @@ export default function FAQ() {
             </AccordionTrigger>
             <AccordionContent className="pb-5 text-start [&>div]:text-base">
               <FaqAnswer text={t(`faq.answer${n}`)} />
+              {n === SELF_HOST_FAQ_ITEM ? <FaqSelfHostPrompt /> : null}
             </AccordionContent>
           </AccordionItem>
         ))}

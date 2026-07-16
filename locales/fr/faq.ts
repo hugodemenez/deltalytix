@@ -10,8 +10,17 @@ export default {
         question4: 'Comment mettre à jour vers la dernière version\u00A0?',
         answer4: 'Deltalytix est une application web\u00A0: les mises à jour sont déployées côté serveur et s\'appliquent automatiquement dans votre navigateur.\n\nVous n\'avez rien à installer ni à mettre à jour manuellement. Rechargez simplement la page pour profiter de la dernière version.',
         question5: 'Est-il possible d\'exécuter Deltalytix localement\u00A0?',
-        answer5: 'Pour l\'instant, Deltalytix n\'est pas disponible en déploiement local. Les services de synchronisation avec Rithmic, Tradovate et Thor nécessitent une conformité réglementaire que nous ne pouvons pas garantir en auto-hébergement.\n\nNous travaillons toutefois sur une version locale avec un support complet des imports .csv et .pdf, pour les traders qui préfèrent héberger leurs données eux-mêmes.',
+        answer5: 'Oui. Deltalytix propose un mode tableau de bord local / auto-hébergé destiné aux développeurs et aux agents. Il faut un minimum de connaissances techniques — Bun, Docker et un terminal — mais le dépôt est prêt pour les agents\u00A0: AGENTS.md et SELF_HOSTING.md détaillent tout le démarrage.\n\nEn local, les imports CSV et PDF fonctionnent avec des données de démo. La synchronisation courtier en direct (Rithmic, Tradovate, Thor) reste réservée à l\'application cloud. Collez le prompt ci-dessous dans Cursor, Codex ou Claude pour qu\'un agent configure l\'environnement à votre place.',
         question6: 'Pourquoi le plan Plus ne propose-t-il pas de période d\'essai\u00A0?',
         answer6: 'Deltalytix propose déjà une version gratuite, sans limite de durée — contrairement à la plupart des journaux de trading qui imposent un essai limité dans le temps.\n\nSur le plan gratuit, vous pouvez tester l\'ensemble des fonctionnalités. Seul le stockage de l\'historique est limité à 14\u00A0jours glissants\u00A0: au-delà, les données plus anciennes ne sont plus accessibles.\n\nCela vous laisse largement le temps d\'évaluer la plateforme avant de passer au plan Plus, qui conserve l\'intégralité de votre historique.',
+        selfHost: {
+            promptLabel: 'Prompt de configuration pour agent',
+            copy: 'Copier le prompt',
+            copied: 'Prompt copié',
+            copyFailed: 'Impossible de copier le prompt',
+            openCursor: 'Ouvrir dans Cursor',
+            openCodex: 'Ouvrir dans Codex',
+            openClaude: 'Ouvrir dans Claude',
+        },
     },
 } as const;
