@@ -1,6 +1,6 @@
 export default {
     faq: {
-        heading: 'Frequently Asked Questions',
+        heading: 'Questions',
         question1: 'Does Deltalytix trade for me?',
         answer1: 'No. Deltalytix is a trading dashboard and journal—not a brokerage. You place and execute trades on your broker\'s platform as usual.\n\nAfter trading, you import or sync your trade data into Deltalytix to track performance, review statistics, and refine your strategy over time.',
         question2: 'How secure is Deltalytix?',
@@ -10,8 +10,18 @@ export default {
         question4: 'How do I get the latest version?',
         answer4: 'Deltalytix runs as a web app, so updates roll out automatically—there\'s nothing to download or install.\n\nRefresh your browser or open a new tab to use the latest version. You never need to run manual updates.',
         question5: 'Is it possible to run Deltalytix locally?',
-        answer5: 'Deltalytix isn\'t available for full local deployment today. Sync services require broker conformance and won\'t work in a self-hosted setup.\n\nWe\'re building a local version with full support for CSV and PDF uploads. Until then, use the cloud app for live broker sync.',
+        answer5: 'Yes. Deltalytix ships a local / self-hosted dashboard mode for developers and agents. It needs some coding familiarity—Bun, Docker, and a terminal—but the repo is agent-ready: AGENTS.md and SELF_HOSTING.md spell out the full bootstrap.\n\nLocal mode supports CSV and PDF imports with seeded demo data. Live broker sync (Rithmic, Tradovate, Thor) stays on the cloud app. Paste the prompt below into Cursor, ChatGPT, or Claude to have an agent set it up for you.',
         question6: 'Why doesn\'t the Plus plan include a trial?',
         answer6: 'Most trading journals offer a short free trial, then require payment. Deltalytix works differently: our Free plan has no time limit.\n\nOn Free, trade data is stored for a rolling 14-day window—older history isn\'t retained. That gives you plenty of time to explore features and decide whether Plus fits your workflow before upgrading.',
+        selfHost: {
+            promptLabel: 'Agent setup prompt',
+            copy: 'Copy prompt',
+            copied: 'Prompt copied',
+            copyFailed: 'Could not copy prompt',
+            openWith: 'Open with',
+            openCursor: 'Cursor',
+            openChatGpt: 'ChatGPT',
+            openClaude: 'Claude',
+        },
     },
 } as const;

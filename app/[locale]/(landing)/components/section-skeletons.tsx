@@ -1,4 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { FAQ_ITEM_COUNT } from "./faq-items";
+import { LANDING_SECTION_CONTAINER_CLASSNAME } from "./landing-section-container";
 
 export function FeaturesSectionSkeleton() {
   const spans = [
@@ -37,10 +39,10 @@ export function PricingSectionSkeleton() {
 export function FAQSectionSkeleton() {
   return (
     <section className="py-16" aria-hidden>
-      <div className="container mx-auto px-4">
-        <Skeleton className="h-9 w-56 mx-auto mb-8" />
-        <div className="max-w-3xl mx-auto space-y-6">
-          {Array.from({ length: 6 }).map((_, index) => (
+      <div className={LANDING_SECTION_CONTAINER_CLASSNAME}>
+        <Skeleton className="mb-10 h-12 w-48 md:h-16 md:w-56" />
+        <div className="mx-auto max-w-3xl space-y-6">
+          {Array.from({ length: FAQ_ITEM_COUNT }).map((_, index) => (
             <Skeleton key={index} className="h-12 w-full" />
           ))}
         </div>
@@ -51,10 +53,7 @@ export function FAQSectionSkeleton() {
 
 export function OpenSourceSectionSkeleton() {
   return (
-    <div
-      className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12"
-      aria-hidden
-    >
+    <div className={LANDING_SECTION_CONTAINER_CLASSNAME} aria-hidden>
       <div className="mb-16 grid gap-5 md:grid-cols-2 md:items-end">
         <Skeleton className="h-12 w-72 md:h-16" />
         <Skeleton className="h-14 w-full max-w-lg md:justify-self-end" />

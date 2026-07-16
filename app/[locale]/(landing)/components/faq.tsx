@@ -7,8 +7,11 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useI18n } from "@/locales/landing-client";
+import { FAQ_ITEMS } from "./faq-items";
+import { FaqSelfHostPrompt } from "./faq-self-host-prompt";
+import { LANDING_SECTION_CONTAINER_CLASSNAME } from "./landing-section-container";
 
-const FAQ_ITEMS = [1, 2, 3, 4, 5, 6] as const;
+const SELF_HOST_FAQ_ITEM = 5;
 
 function FaqAnswer({ text }: { text: string }) {
   const paragraphs = text.split("\n\n").filter(Boolean);
@@ -31,13 +34,12 @@ export default function FAQ() {
   const t = useI18n();
 
   return (
-    <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
-      <h2 className="mb-8 text-center text-3xl font-bold">
+    <div className={LANDING_SECTION_CONTAINER_CLASSNAME}>
+      <h2 className="mb-10 text-balance text-4xl font-normal tracking-[-0.04em] md:text-6xl">
         {t("faq.heading")}
       </h2>
       <Accordion
-        type="single"
-        collapsible
+        type="multiple"
         className="mx-auto max-w-3xl divide-y divide-black/10 border-y border-black/10 dark:divide-white/10 dark:border-white/10"
       >
         {FAQ_ITEMS.map((n) => (
@@ -47,6 +49,7 @@ export default function FAQ() {
             </AccordionTrigger>
             <AccordionContent className="pb-5 text-start [&>div]:text-base">
               <FaqAnswer text={t(`faq.answer${n}`)} />
+              {n === SELF_HOST_FAQ_ITEM ? <FaqSelfHostPrompt /> : null}
             </AccordionContent>
           </AccordionItem>
         ))}
