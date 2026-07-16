@@ -1,9 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { CheckIcon, CopyIcon, ExternalLinkIcon } from "lucide-react";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  CopyIcon,
+  ExternalLinkIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useI18n } from "@/locales/landing-client";
 import {
   getClaudePromptUrl,
@@ -16,6 +26,28 @@ export function FaqSelfHostPrompt() {
   const t = useI18n();
   const prompt = getSelfHostAgentPrompt();
   const [copied, setCopied] = useState(false);
+  const [openWithOpen, setOpenWithOpen] = useState(false);
+
+  const openWithOptions = [
+    {
+      key: "cursor" as const,
+      href: getCursorPromptUrl(prompt),
+      label: t("faq.selfHost.openCursor"),
+      external: true,
+    },
+    {
+      key: "codex" as const,
+      href: getCodexPromptUrl(prompt),
+      label: t("faq.selfHost.openCodex"),
+      external: false,
+    },
+    {
+      key: "claude" as const,
+      href: getClaudePromptUrl(prompt),
+      label: t("faq.selfHost.openClaude"),
+      external: true,
+    },
+  ];
 
   async function handleCopy() {
     try {
@@ -51,50 +83,36 @@ export function FaqSelfHostPrompt() {
           )}
           {copied ? t("faq.selfHost.copied") : t("faq.selfHost.copy")}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          asChild
-          className="border-black/15 bg-transparent shadow-none dark:border-white/15"
-        >
-          <a
-            href={getCursorPromptUrl(prompt)}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {t("faq.selfHost.openCursor")}
-            <ExternalLinkIcon className="size-3.5" />
-          </a>
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          asChild
-          className="border-black/15 bg-transparent shadow-none dark:border-white/15"
-        >
-          <a href={getCodexPromptUrl(prompt)}>
-            {t("faq.selfHost.openCodex")}
-            <ExternalLinkIcon className="size-3.5" />
-          </a>
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          asChild
-          className="border-black/15 bg-transparent shadow-none dark:border-white/15"
-        >
-          <a
-            href={getClaudePromptUrl(prompt)}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {t("faq.selfHost.openClaude")}
-            <ExternalLinkIcon className="size-3.5" />
-          </a>
-        </Button>
+        <Popover open={openWithOpen} onOpenChange={setOpenWithOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-black/15 bg-transparent shadow-none dark:border-white/15"
+            >
+              {t("faq.selfHost.openWith")}
+              <ChevronDownIcon className="size-3.5" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-48 p-1">
+            <div className="flex flex-col">
+              {openWithOptions.map((option) => (
+                <a
+                  key={option.key}
+                  href={option.href}
+                  target={option.external ? "_blank" : undefined}
+                  rel={option.external ? "noopener noreferrer" : undefined}
+                  onClick={() => setOpenWithOpen(false)}
+                  className="flex items-center gap-2 rounded-sm px-2.5 py-2 text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <span className="flex-1">{option.label}</span>
+                  <ExternalLinkIcon className="size-3.5 shrink-0 opacity-50" />
+                </a>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );

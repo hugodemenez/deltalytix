@@ -18,9 +18,10 @@ export default {
             copy: 'Copier le prompt',
             copied: 'Prompt copié',
             copyFailed: 'Impossible de copier le prompt',
-            openCursor: 'Ouvrir dans Cursor',
-            openCodex: 'Ouvrir dans Codex',
-            openClaude: 'Ouvrir dans Claude',
+            openWith: 'Ouvrir avec',
+            openCursor: 'Cursor',
+            openCodex: 'Codex',
+            openClaude: 'Claude',
         },
     },
 } as const;
