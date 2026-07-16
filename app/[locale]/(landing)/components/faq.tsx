@@ -7,8 +7,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useI18n } from "@/locales/landing-client";
-
-const FAQ_ITEMS = [1, 2, 3, 4, 5, 6] as const;
+import { FAQ_ITEMS } from "./faq-items";
+import { LANDING_SECTION_CONTAINER_CLASSNAME } from "./landing-section-container";
 
 function FaqAnswer({ text }: { text: string }) {
   const paragraphs = text.split("\n\n").filter(Boolean);
@@ -31,8 +31,8 @@ export default function FAQ() {
   const t = useI18n();
 
   return (
-    <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
-      <h2 className="mb-16 text-balance text-4xl font-normal tracking-[-0.04em] md:text-6xl">
+    <div className={LANDING_SECTION_CONTAINER_CLASSNAME}>
+      <h2 className="mb-10 text-balance text-4xl font-normal tracking-[-0.04em] md:text-6xl">
         {t("faq.heading")}
       </h2>
       <Accordion
