@@ -17,10 +17,13 @@ import type {
 } from './rithmic-protocol-types'
 
 const SERVICE = 'rithmic-protocol'
-const LOOKBACK_DAYS = Math.max(
-  1,
-  Number(process.env.RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS ?? '90'),
-)
+/** Optional cap for debugging. Unset / empty = all available history. */
+const LOOKBACK_DAYS = (() => {
+  const raw = process.env.RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS
+  if (raw == null || raw.trim() === '' || raw.trim() === '0') return null
+  const n = Number(raw)
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : null
+})()
 
 const logger = {
   info: (message: string) => console.log(`[RITHMIC-PROTOCOL] ${message}`),
@@ -285,7 +288,9 @@ export async function getRithmicProtocolTrades(
     }
 
     logger.info(
-      `Fetching fills for ${resolvedAccountIds.length} accounts (${LOOKBACK_DAYS}d lookback)`,
+      `Fetching fills for ${resolvedAccountIds.length} accounts (${
+        LOOKBACK_DAYS != null ? `${LOOKBACK_DAYS}d lookback` : 'all-time history'
+      })`,
     )
 
     const fills = await fetchFillsForAccounts({

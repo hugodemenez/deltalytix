@@ -440,12 +440,13 @@ export class RithmicProtocolClient {
 
   /**
    * Fallback: list history dates then pull summary fills via exchange notifications.
+   * When `startDateYyyymmdd` is omitted, every date Rithmic returns is fetched (all-time).
    */
   async getFillsViaOrderHistory(params: {
     fcmId?: string
     ibId?: string
     accountId: string
-    startDateYyyymmdd: string
+    startDateYyyymmdd?: string
   }): Promise<RithmicProtocolFill[]> {
     await this.send('rti.RequestShowOrderHistoryDates', {
       templateId: RithmicTemplateId.SHOW_ORDER_HISTORY_DATES_REQUEST,
@@ -473,9 +474,10 @@ export class RithmicProtocolClient {
       }
     }
 
+    const minDate = params.startDateYyyymmdd
     const filtered = dates
       .map(String)
-      .filter((d) => d.replace(/-/g, '') >= params.startDateYyyymmdd)
+      .filter((d) => !minDate || d.replace(/-/g, '') >= minDate)
       .sort()
 
     const fills: RithmicProtocolFill[] = []
@@ -649,6 +651,97 @@ export async function connectAndListAccounts(params: {
   }
 }
 
+/** Earliest trade_date index we request when syncing all-time history. */
+const ALL_TIME_START_YMD = 19900101
+const FILL_HISTORY_PAGE_MAX = 10_000
+/** Chunk size for fill history so we stay under Rithmic's 10k record cap. */
+const FILL_HISTORY_CHUNK_DAYS = 365
+
+function toYmdNumber(d: Date): number {
+  return Number(
+    `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`,
+  )
+}
+
+function ymdToUtcDate(ymd: number): Date {
+  const s = String(ymd).padStart(8, '0')
+  return new Date(
+    Date.UTC(
+      Number(s.slice(0, 4)),
+      Number(s.slice(4, 6)) - 1,
+      Number(s.slice(6, 8)),
+    ),
+  )
+}
+
+function addDaysToYmd(ymd: number, days: number): number {
+  const d = ymdToUtcDate(ymd)
+  d.setUTCDate(d.getUTCDate() + days)
+  return toYmdNumber(d)
+}
+
+function midpointYmd(startYmd: number, endYmd: number): number {
+  const start = ymdToUtcDate(startYmd).getTime()
+  const end = ymdToUtcDate(endYmd).getTime()
+  return toYmdNumber(new Date(Math.floor((start + end) / 2)))
+}
+
+/**
+ * Fetch fills for one account across [startYmd, endYmd], paging by date windows
+ * so each RequestShowFillHistory stays under the 10k record limit.
+ */
+async function getFillHistoryAllPages(
+  client: RithmicProtocolClient,
+  params: {
+    fcmId?: string
+    ibId?: string
+    accountId: string
+    startDateYyyymmdd: number
+    endDateYyyymmdd: number
+  },
+): Promise<RithmicProtocolFill[]> {
+  const fills: RithmicProtocolFill[] = []
+
+  async function fetchRange(startYmd: number, endYmd: number): Promise<void> {
+    if (startYmd > endYmd) return
+
+    const page = await client.getFillHistory({
+      fcmId: params.fcmId,
+      ibId: params.ibId,
+      accountId: params.accountId,
+      startDateYyyymmdd: startYmd,
+      endDateYyyymmdd: endYmd,
+      maxRecords: FILL_HISTORY_PAGE_MAX,
+    })
+
+    if (page.length >= FILL_HISTORY_PAGE_MAX && startYmd < endYmd) {
+      const mid = midpointYmd(startYmd, endYmd)
+      if (mid <= startYmd || mid >= endYmd) {
+        // Single-day saturation — keep what we got and move on.
+        fills.push(...page)
+        return
+      }
+      await fetchRange(startYmd, mid)
+      await fetchRange(addDaysToYmd(mid, 1), endYmd)
+      return
+    }
+
+    fills.push(...page)
+  }
+
+  let cursor = params.startDateYyyymmdd
+  while (cursor <= params.endDateYyyymmdd) {
+    const chunkEnd = Math.min(
+      addDaysToYmd(cursor, FILL_HISTORY_CHUNK_DAYS - 1),
+      params.endDateYyyymmdd,
+    )
+    await fetchRange(cursor, chunkEnd)
+    cursor = addDaysToYmd(chunkEnd, 1)
+  }
+
+  return fills
+}
+
 export async function fetchFillsForAccounts(params: {
   gatewayUri: string
   systemName: string
@@ -657,7 +750,8 @@ export async function fetchFillsForAccounts(params: {
   fcmId?: string
   ibId?: string
   accountIds: string[]
-  lookbackDays: number
+  /** When omitted/null, fetch all available history. */
+  lookbackDays?: number | null
 }): Promise<RithmicProtocolFill[]> {
   const client = new RithmicProtocolClient()
   const fills: RithmicProtocolFill[] = []
@@ -673,18 +767,23 @@ export async function fetchFillsForAccounts(params: {
     const ibId = params.ibId || info.ibId || login.ibId
 
     const end = new Date()
-    const start = new Date(end.getTime() - params.lookbackDays * 24 * 60 * 60 * 1000)
-    const toYmd = (d: Date) =>
-      Number(
-        `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`,
-      )
-    const startYmd = toYmd(start)
-    const endYmd = toYmd(end)
-    const startYmdStr = String(startYmd)
+    const endYmd = toYmdNumber(end)
+    const startYmd =
+      params.lookbackDays != null && params.lookbackDays > 0
+        ? toYmdNumber(
+            new Date(
+              end.getTime() - params.lookbackDays * 24 * 60 * 60 * 1000,
+            ),
+          )
+        : ALL_TIME_START_YMD
+    const startYmdStr =
+      params.lookbackDays != null && params.lookbackDays > 0
+        ? String(startYmd)
+        : undefined
 
     for (const accountId of params.accountIds) {
       try {
-        const accountFills = await client.getFillHistory({
+        const accountFills = await getFillHistoryAllPages(client, {
           fcmId,
           ibId,
           accountId,

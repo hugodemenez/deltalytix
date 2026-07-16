@@ -16,7 +16,8 @@ TypeScript client for Rithmic's WebSocket + protobuf **R | Protocol API**, used 
 RITHMIC_PROTOCOL_URI=wss://rituz00100.rithmic.com:443
 RITHMIC_PROTOCOL_APP_NAME=DeltalytixRithmicProtocolAPI
 RITHMIC_PROTOCOL_APP_VERSION=0.1.0
-RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS=90
+# Optional: limit history (days). Omit or 0 = all available trades (default).
+# RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS=90
 ```
 
 Protocol API has a **separate conformance** process from R | API+. Use Rithmic Test
