@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Share, Check, ChevronsUpDown, Copy, Layout, ExternalLink, Download } from "lucide-react"
+import { useIsMobile } from "@/hooks/use-mobile"
 import {
   Dialog,
   DialogContent,
@@ -52,22 +53,6 @@ interface ShareButtonProps {
     mobile: any[]
   }
   compact?: boolean
-}
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-
-    checkIsMobile()
-    window.addEventListener('resize', checkIsMobile)
-    return () => window.removeEventListener('resize', checkIsMobile)
-  }, [])
-
-  return isMobile
 }
 
 function triggerConfetti() {

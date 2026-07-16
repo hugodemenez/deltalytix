@@ -6,10 +6,11 @@ import { WIDGET_REGISTRY, getWidgetComponent } from '@/app/[locale]/dashboard/co
 import { MobileWidgetCarousel } from '@/app/[locale]/dashboard/components/mobile-widget-carousel'
 import { Widget, WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useData } from '@/context/data-provider'
 import { useI18n } from '@/locales/client'
 import { defaultLayouts } from '@/lib/default-layouts'
 import { getCarouselWidgetSize, MOBILE_CAROUSEL_VIEWPORT_HEIGHT } from '@/lib/widget-carousel'
+import { useIsMobileLayout } from '@/hooks/use-mobile'
+import { cn } from '@/lib/utils'
 
 
 // Update sizeToGrid to handle responsive sizes (copy from widget-canvas.tsx)
@@ -102,11 +103,13 @@ function SharedUnsupportedWidget() {
 }
 
 export function SharedWidgetCanvas() {
-  const { isMobile } = useData()
+  const isMobile = useIsMobileLayout()
+  const isLayoutReady = isMobile !== undefined
+  const useMobileCarousel = isMobile === true
   const ResponsiveGridLayout = useMemo(() => WidthProvider(Responsive), [])
   
   // Use default layouts instead of the passed layout prop
-  const activeLayout = isMobile ? 'mobile' : 'desktop'
+  const activeLayout = useMobileCarousel ? 'mobile' : 'desktop'
 
   const renderWidget = (widget: Widget, forCarousel = false) => {
     // Ensure widget.type is a valid WidgetType
@@ -126,7 +129,7 @@ export function SharedWidgetCanvas() {
       if (config.allowedSizes.length === 1) {
         return config.allowedSizes[0]
       }
-      if (isMobile && widget.size !== 'tiny') {
+      if (useMobileCarousel && widget.size !== 'tiny') {
         return 'small' as WidgetSize
       }
       return widget.size
@@ -144,10 +147,10 @@ export function SharedWidgetCanvas() {
       // Preserve original x,y positions from default layouts
       x: item.x,
       y: item.y,
-      w: sizeToGrid(item.size, isMobile).w,
-      h: sizeToGrid(item.size, isMobile).h
+      w: sizeToGrid(item.size, useMobileCarousel).w,
+      h: sizeToGrid(item.size, useMobileCarousel).h
     }))
-  }, [activeLayout, isMobile])
+  }, [activeLayout, useMobileCarousel])
 
   const renderWidgetCard = (widget: Widget, forCarousel = false) => (
     <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)]">
@@ -159,38 +162,46 @@ export function SharedWidgetCanvas() {
 
   return (
     <div
-      className={isMobile ? "relative mt-0 overflow-hidden" : "relative mt-6"}
-      style={isMobile ? { height: MOBILE_CAROUSEL_VIEWPORT_HEIGHT } : undefined}
+      className={cn(
+        "relative",
+        !isLayoutReady &&
+          "overflow-hidden md:mt-6 max-md:[height:calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem))]",
+        isLayoutReady && useMobileCarousel && "mt-0 overflow-hidden",
+        isLayoutReady && !useMobileCarousel && "mt-6",
+      )}
+      style={useMobileCarousel ? { height: MOBILE_CAROUSEL_VIEWPORT_HEIGHT } : undefined}
+      aria-busy={!isLayoutReady}
     >
       <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-9999" />
-      {isMobile ? (
-        <MobileWidgetCarousel
-          widgets={transformedLayout}
-          renderWidget={(widget) => renderWidgetCard(widget, true)}
-          slideHeight={MOBILE_CAROUSEL_VIEWPORT_HEIGHT}
-        />
-      ) : (
-        <ResponsiveGridLayout
-          className="layout"
-          layouts={generateResponsiveLayout(transformedLayout)}
-          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-          cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
-          rowHeight={70}
-          isDraggable={false}
-          isResizable={false}
-          margin={[16, 16]}
-          containerPadding={[0, 0]}
-          compactType="vertical"
-          preventCollision={false}
-          useCSSTransforms={true}
-        >
-          {transformedLayout.map((widget: Widget) => (
-            <div key={widget.i} className="h-full">
-              {renderWidgetCard(widget)}
-            </div>
-          ))}
-        </ResponsiveGridLayout>
-      )}
+      {isLayoutReady &&
+        (useMobileCarousel ? (
+          <MobileWidgetCarousel
+            widgets={transformedLayout}
+            renderWidget={(widget) => renderWidgetCard(widget, true)}
+            slideHeight={MOBILE_CAROUSEL_VIEWPORT_HEIGHT}
+          />
+        ) : (
+          <ResponsiveGridLayout
+            className="layout"
+            layouts={generateResponsiveLayout(transformedLayout)}
+            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+            cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
+            rowHeight={70}
+            isDraggable={false}
+            isResizable={false}
+            margin={[16, 16]}
+            containerPadding={[0, 0]}
+            compactType="vertical"
+            preventCollision={false}
+            useCSSTransforms={true}
+          >
+            {transformedLayout.map((widget: Widget) => (
+              <div key={widget.i} className="h-full">
+                {renderWidgetCard(widget)}
+              </div>
+            ))}
+          </ResponsiveGridLayout>
+        ))}
     </div>
   )
 }

@@ -33,7 +33,7 @@ interface MobileWidgetMinimapContextValue {
   renderWidget: (widget: Widget) => React.ReactNode
   slideHeight: string
   onSelectIndex: (index: number) => void
-  triggerRef: React.RefObject<HTMLButtonElement | null>
+  triggerRef: React.RefObject<HTMLDivElement | null>
   closeButtonRef: React.RefObject<HTMLButtonElement | null>
   dialogRef: React.RefObject<HTMLDivElement | null>
 }
@@ -99,7 +99,7 @@ export function MobileWidgetMinimapProvider({
   children,
 }: MobileWidgetMinimapProviderProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const triggerRef = useRef<HTMLButtonElement>(null)
+  const triggerRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const wasExpandedRef = useRef(false)
@@ -229,10 +229,16 @@ export function MobileWidgetMinimapTrigger({ className }: { className?: string }
     return null
   }
 
+  // Use a div with role="button" (not <button>) because ScaledWidgetPreview
+  // mounts live widgets that may contain their own buttons — nested <button>
+  // elements are invalid HTML and cause hydration errors.
+  const openMinimap = () => setIsExpanded(true)
+
   return (
-    <button
+    <div
       ref={triggerRef}
-      type="button"
+      role="button"
+      tabIndex={0}
       aria-expanded={isExpanded}
       aria-haspopup="dialog"
       aria-label={t("widgets.mobile.minimapOpen", {
@@ -240,12 +246,18 @@ export function MobileWidgetMinimapTrigger({ className }: { className?: string }
         total: widgets.length,
       })}
       className={cn(
-        "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95",
+        "flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform active:scale-95",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         isExpanded && "pointer-events-none opacity-0",
         className
       )}
-      onClick={() => setIsExpanded(true)}
+      onClick={openMinimap}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault()
+          openMinimap()
+        }
+      }}
     >
       <span
         className="relative block"
@@ -320,7 +332,7 @@ export function MobileWidgetMinimapTrigger({ className }: { className?: string }
           })}
         </AnimatePresence>
       </span>
-    </button>
+    </div>
   )
 }
 
@@ -417,11 +429,12 @@ export function MobileWidgetMinimapOverlay() {
                 {upcomingWidgets.map(({ widget, index }) => {
                   const widgetName = getWidgetDisplayName(t, widget.type)
 
+                  // Div + role="option" avoids nesting live-widget <button>s inside <button>
                   return (
-                    <button
+                    <div
                       key={widget.i}
-                      type="button"
                       role="option"
+                      tabIndex={0}
                       aria-selected={false}
                       aria-label={t("widgets.mobile.carouselGoTo", {
                         index: index + 1,
@@ -429,11 +442,17 @@ export function MobileWidgetMinimapOverlay() {
                         widgetName,
                       })}
                       className={cn(
-                        "flex flex-col gap-1.5 rounded-xl border p-2 text-left transition-colors",
+                        "flex cursor-pointer flex-col gap-1.5 rounded-xl border p-2 text-left transition-colors",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                         "border-border/70 bg-card hover:border-primary/40 hover:bg-muted/40"
                       )}
                       onClick={() => onSelectIndex(index)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault()
+                          onSelectIndex(index)
+                        }
+                      }}
                     >
                       <ScaledWidgetPreview
                         widget={widget}
@@ -444,7 +463,7 @@ export function MobileWidgetMinimapOverlay() {
                       <span className="truncate px-0.5 text-xs font-medium text-foreground/90">
                         {widgetName}
                       </span>
-                    </button>
+                    </div>
                   )
                 })}
               </div>
