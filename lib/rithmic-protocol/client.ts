@@ -208,6 +208,40 @@ export class RithmicProtocolClient {
     })
   }
 
+  /**
+   * Wait for the next message matching `accept`, ignoring heartbeats/noise.
+   * Enforces an overall deadline so a heartbeat stream cannot hang forever.
+   */
+  private async nextMatchingMessage(
+    accept: (templateId: number) => boolean,
+    options?: { perMessageTimeoutMs?: number; overallTimeoutMs?: number },
+  ): Promise<InboundMessage> {
+    const overallTimeoutMs = options?.overallTimeoutMs ?? 60_000
+    const perMessageTimeoutMs = options?.perMessageTimeoutMs ?? 30_000
+    const deadline = Date.now() + overallTimeoutMs
+
+    while (Date.now() < deadline) {
+      const remaining = deadline - Date.now()
+      const msg = await this.nextMessage(
+        Math.max(1_000, Math.min(perMessageTimeoutMs, remaining)),
+      )
+
+      if (
+        msg.templateId === RithmicTemplateId.HEARTBEAT_REQUEST ||
+        msg.templateId === RithmicTemplateId.HEARTBEAT_RESPONSE ||
+        msg.templateId === RithmicTemplateId.RITHMIC_ORDER_NOTIFICATION
+      ) {
+        continue
+      }
+
+      if (accept(msg.templateId)) return msg
+    }
+
+    throw new Error(
+      `Timed out waiting for matching Rithmic message after ${overallTimeoutMs}ms`,
+    )
+  }
+
   private async send(typeName: string, payload: Record<string, unknown>) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.root) {
       throw new Error('Rithmic Protocol client is not connected')
@@ -233,10 +267,10 @@ export class RithmicProtocolClient {
       infraType: ORDER_PLANT,
     })
 
-    const msg = await this.nextMessage()
-    if (msg.templateId !== RithmicTemplateId.LOGIN_RESPONSE) {
-      throw new Error(`Unexpected login response template ${msg.templateId}`)
-    }
+    const msg = await this.nextMatchingMessage(
+      (id) => id === RithmicTemplateId.LOGIN_RESPONSE,
+      { overallTimeoutMs: 45_000 },
+    )
     const decoded = decodeMessage<{
       rpCode?: string[]
       fcmId?: string
@@ -264,10 +298,10 @@ export class RithmicProtocolClient {
       templateId: RithmicTemplateId.LOGIN_INFO_REQUEST,
       userMsg: ['deltalytix-login-info'],
     })
-    const msg = await this.nextMessage()
-    if (msg.templateId !== RithmicTemplateId.LOGIN_INFO_RESPONSE) {
-      throw new Error(`Unexpected login info template ${msg.templateId}`)
-    }
+    const msg = await this.nextMatchingMessage(
+      (id) => id === RithmicTemplateId.LOGIN_INFO_RESPONSE,
+      { overallTimeoutMs: 30_000 },
+    )
     const decoded = decodeMessage<{
       rpCode?: string[]
       fcmId?: string
@@ -298,44 +332,50 @@ export class RithmicProtocolClient {
     })
 
     const accounts: RithmicProtocolAccount[] = []
-    for (;;) {
-      const msg = await this.nextMessage()
-      if (msg.templateId === RithmicTemplateId.ACCOUNT_LIST_RESPONSE) {
-        const decoded = decodeMessage<{
-          rpCode?: string[]
-          rqHandlerRpCode?: string[]
-          accountId?: string
-          accountName?: string
-          fcmId?: string
-          ibId?: string
-          accountCurrency?: string
-        }>(this.root!, 'rti.ResponseAccountList', msg.raw)
-
-        if (decoded.accountId) {
-          accounts.push({
-            accountId: decoded.accountId,
-            accountName: decoded.accountName,
-            fcmId: decoded.fcmId,
-            ibId: decoded.ibId,
-            currency: decoded.accountCurrency,
-          })
-        }
-
-        // Final response carries rp_code; intermediate rows use rq_handler_rp_code.
-        if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
-          if (!rpOk(decoded.rpCode)) {
-            throw new Error(`Account list failed: ${rpMessage(decoded.rpCode)}`)
-          }
-          break
-        }
-        continue
-      }
+    const deadline = Date.now() + 60_000
+    while (Date.now() < deadline) {
+      const msg = await this.nextMatchingMessage(
+        (id) =>
+          id === RithmicTemplateId.ACCOUNT_LIST_RESPONSE ||
+          id === RithmicTemplateId.REJECT,
+        {
+          overallTimeoutMs: Math.max(1_000, deadline - Date.now()),
+          perMessageTimeoutMs: 30_000,
+        },
+      )
 
       if (msg.templateId === RithmicTemplateId.REJECT) {
         throw new Error('Account list rejected by Rithmic')
       }
 
-      // Ignore unrelated push messages during account list.
+      const decoded = decodeMessage<{
+        rpCode?: string[]
+        rqHandlerRpCode?: string[]
+        accountId?: string
+        accountName?: string
+        fcmId?: string
+        ibId?: string
+        accountCurrency?: string
+      }>(this.root!, 'rti.ResponseAccountList', msg.raw)
+
+      if (decoded.accountId) {
+        accounts.push({
+          accountId: decoded.accountId,
+          accountName: decoded.accountName,
+          fcmId: decoded.fcmId,
+          ibId: decoded.ibId,
+          currency: decoded.accountCurrency,
+        })
+      }
+
+      // Final response carries rp_code; intermediate rows use rq_handler_rp_code.
+      if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
+        if (rpIsNoData(decoded.rpCode)) break
+        if (!rpOk(decoded.rpCode)) {
+          throw new Error(`Account list failed: ${rpMessage(decoded.rpCode)}`)
+        }
+        break
+      }
     }
 
     return accounts
@@ -366,84 +406,81 @@ export class RithmicProtocolClient {
     })
 
     const fills: RithmicProtocolFill[] = []
+    const deadline = Date.now() + 90_000
 
-    for (;;) {
-      const msg = await this.nextMessage(60_000)
+    while (Date.now() < deadline) {
+      const msg = await this.nextMatchingMessage(
+        (id) =>
+          id === RithmicTemplateId.SHOW_FILL_HISTORY_RESPONSE ||
+          id === RithmicTemplateId.EXCHANGE_ORDER_NOTIFICATION ||
+          id === RithmicTemplateId.REJECT,
+        {
+          overallTimeoutMs: Math.max(1_000, deadline - Date.now()),
+          perMessageTimeoutMs: 60_000,
+        },
+      )
 
-      if (msg.templateId === RithmicTemplateId.SHOW_FILL_HISTORY_RESPONSE) {
-        const decoded = decodeMessage<{
-          rpCode?: string[]
-          rqHandlerRpCode?: string[]
-          accountId?: string
-          fcmId?: string
-          ibId?: string
-          symbol?: string
-          exchange?: string
-          transactionType?: string
-          fillPrice?: number
-          fillSize?: number | string
-          fillId?: string
-          fillDate?: string
-          fillTime?: string
-          basketId?: string
-          sequenceNumber?: string
-          ssboe?: number
-          usecs?: number
-          avgFillPrice?: number
-        }>(this.root!, 'rti.ResponseShowFillHistory', msg.raw)
-
-        if (decoded.symbol && decoded.fillPrice != null) {
-          fills.push({
-            accountId: decoded.accountId || params.accountId,
-            fcmId: decoded.fcmId,
-            ibId: decoded.ibId,
-            symbol: decoded.symbol,
-            exchange: decoded.exchange,
-            transactionType: String(decoded.transactionType ?? ''),
-            fillPrice: Number(decoded.fillPrice),
-            fillSize: Number(decoded.fillSize ?? 0),
-            fillId: decoded.fillId,
-            fillDate: decoded.fillDate,
-            fillTime: decoded.fillTime,
-            basketId: decoded.basketId,
-            sequenceNumber: decoded.sequenceNumber,
-            ssboe: decoded.ssboe,
-            usecs: decoded.usecs,
-            avgFillPrice:
-              decoded.avgFillPrice != null
-                ? Number(decoded.avgFillPrice)
-                : undefined,
-          })
-        }
-
-        if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
-          if (rpIsNoData(decoded.rpCode)) {
-            break
-          }
-          if (!rpOk(decoded.rpCode)) {
-            throw new Error(`Fill history failed: ${rpMessage(decoded.rpCode)}`)
-          }
-          break
-        }
-        continue
+      if (msg.templateId === RithmicTemplateId.REJECT) {
+        throw new Error('Fill history rejected by Rithmic')
       }
 
-      // Summary/detail streams may also emit exchange notifications.
       if (msg.templateId === RithmicTemplateId.EXCHANGE_ORDER_NOTIFICATION) {
         const fill = this.decodeExchangeFill(msg.raw, params.accountId)
         if (fill) fills.push(fill)
         continue
       }
 
-      if (msg.templateId === RithmicTemplateId.REJECT) {
-        throw new Error('Fill history rejected by Rithmic')
+      const decoded = decodeMessage<{
+        rpCode?: string[]
+        rqHandlerRpCode?: string[]
+        accountId?: string
+        fcmId?: string
+        ibId?: string
+        symbol?: string
+        exchange?: string
+        transactionType?: string
+        fillPrice?: number
+        fillSize?: number | string
+        fillId?: string
+        fillDate?: string
+        fillTime?: string
+        basketId?: string
+        sequenceNumber?: string
+        ssboe?: number
+        usecs?: number
+        avgFillPrice?: number
+      }>(this.root!, 'rti.ResponseShowFillHistory', msg.raw)
+
+      if (decoded.symbol && decoded.fillPrice != null) {
+        fills.push({
+          accountId: decoded.accountId || params.accountId,
+          fcmId: decoded.fcmId,
+          ibId: decoded.ibId,
+          symbol: decoded.symbol,
+          exchange: decoded.exchange,
+          transactionType: String(decoded.transactionType ?? ''),
+          fillPrice: Number(decoded.fillPrice),
+          fillSize: Number(decoded.fillSize ?? 0),
+          fillId: decoded.fillId,
+          fillDate: decoded.fillDate,
+          fillTime: decoded.fillTime,
+          basketId: decoded.basketId,
+          sequenceNumber: decoded.sequenceNumber,
+          ssboe: decoded.ssboe,
+          usecs: decoded.usecs,
+          avgFillPrice:
+            decoded.avgFillPrice != null
+              ? Number(decoded.avgFillPrice)
+              : undefined,
+        })
       }
 
-      if (
-        msg.templateId === RithmicTemplateId.HEARTBEAT_RESPONSE ||
-        msg.templateId === RithmicTemplateId.RITHMIC_ORDER_NOTIFICATION
-      ) {
-        continue
+      if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
+        if (rpIsNoData(decoded.rpCode)) break
+        if (!rpOk(decoded.rpCode)) {
+          throw new Error(`Fill history failed: ${rpMessage(decoded.rpCode)}`)
+        }
+        break
       }
     }
 
@@ -498,8 +535,22 @@ export class RithmicProtocolClient {
     })
 
     const fills: RithmicProtocolFill[] = []
-    for (;;) {
-      const msg = await this.nextMessage(60_000)
+    const deadline = Date.now() + 60_000
+    while (Date.now() < deadline) {
+      const msg = await this.nextMatchingMessage(
+        (id) =>
+          id === RithmicTemplateId.EXCHANGE_ORDER_NOTIFICATION ||
+          id === RithmicTemplateId.SHOW_ORDER_HISTORY_SUMMARY_RESPONSE ||
+          id === RithmicTemplateId.REJECT,
+        {
+          overallTimeoutMs: Math.max(1_000, deadline - Date.now()),
+          perMessageTimeoutMs: 30_000,
+        },
+      )
+
+      if (msg.templateId === RithmicTemplateId.REJECT) {
+        throw new Error('Order history summary rejected')
+      }
 
       if (msg.templateId === RithmicTemplateId.EXCHANGE_ORDER_NOTIFICATION) {
         const fill = this.decodeExchangeFill(msg.raw, params.accountId)
@@ -507,30 +558,19 @@ export class RithmicProtocolClient {
         continue
       }
 
-      if (
-        msg.templateId === RithmicTemplateId.SHOW_ORDER_HISTORY_SUMMARY_RESPONSE
-      ) {
-        const decoded = decodeMessage<{ rpCode?: string[] }>(
-          this.root!,
-          'rti.ResponseShowOrderHistorySummary',
-          msg.raw,
-        )
-        if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
-          if (rpIsNoData(decoded.rpCode)) {
-            break
-          }
-          if (!rpOk(decoded.rpCode)) {
-            throw new Error(
-              `Order history summary failed: ${rpMessage(decoded.rpCode)}`,
-            )
-          }
-          break
+      const decoded = decodeMessage<{ rpCode?: string[] }>(
+        this.root!,
+        'rti.ResponseShowOrderHistorySummary',
+        msg.raw,
+      )
+      if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
+        if (rpIsNoData(decoded.rpCode)) break
+        if (!rpOk(decoded.rpCode)) {
+          throw new Error(
+            `Order history summary failed: ${rpMessage(decoded.rpCode)}`,
+          )
         }
-        continue
-      }
-
-      if (msg.templateId === RithmicTemplateId.REJECT) {
-        throw new Error('Order history summary rejected')
+        break
       }
     }
     return fills
@@ -546,11 +586,22 @@ export class RithmicProtocolClient {
     })
 
     const dates: string[] = []
-    for (;;) {
-      const msg = await this.nextMessage()
-      if (msg.templateId !== RithmicTemplateId.SHOW_ORDER_HISTORY_DATES_RESPONSE) {
-        continue
+    const deadline = Date.now() + 45_000
+    while (Date.now() < deadline) {
+      const msg = await this.nextMatchingMessage(
+        (id) =>
+          id === RithmicTemplateId.SHOW_ORDER_HISTORY_DATES_RESPONSE ||
+          id === RithmicTemplateId.REJECT,
+        {
+          overallTimeoutMs: Math.max(1_000, deadline - Date.now()),
+          perMessageTimeoutMs: 30_000,
+        },
+      )
+
+      if (msg.templateId === RithmicTemplateId.REJECT) {
+        throw new Error('History dates rejected by Rithmic')
       }
+
       const decoded = decodeMessage<{
         rpCode?: string[]
         date?: string[]
@@ -559,9 +610,7 @@ export class RithmicProtocolClient {
         dates.push(...decoded.date.map(String))
       }
       if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
-        if (rpIsNoData(decoded.rpCode)) {
-          break
-        }
+        if (rpIsNoData(decoded.rpCode)) break
         if (!rpOk(decoded.rpCode)) {
           throw new Error(`History dates failed: ${rpMessage(decoded.rpCode)}`)
         }
@@ -810,52 +859,54 @@ export async function fetchFillsForAccounts(params: {
         ? String(startYmd)
         : undefined
 
+    console.info(
+      `[RITHMIC-PROTOCOL] Logged in; fetching history for ${params.accountIds.join(', ')}`,
+    )
+
     for (const accountId of params.accountIds) {
       let rangeStart = startYmd
       let rangeEnd = endYmd
-      let hasHistoryDates = false
+      let historyDates: string[] = []
 
-      // Bound requests to dates Rithmic actually has history for.
       try {
-        const historyDates = await client.listOrderHistoryDates()
+        historyDates = await client.listOrderHistoryDates()
         const inRange = historyDates.filter((d) => {
           const n = Number(d)
           return Number.isFinite(n) && n >= startYmd && n <= endYmd
         })
-        if (inRange.length > 0) {
-          hasHistoryDates = true
-          rangeStart = Number(inRange[0])
-          rangeEnd = Number(inRange[inRange.length - 1])
-        } else {
+        console.info(
+          `[RITHMIC-PROTOCOL] ${accountId}: ${historyDates.length} history date(s), ${inRange.length} in range`,
+        )
+        if (inRange.length === 0) {
+          // Empty account — do not hang on fill/order history probes.
           console.info(
-            `[RITHMIC-PROTOCOL] No order history dates for ${accountId} in range — trying fill history once`,
+            `[RITHMIC-PROTOCOL] ${accountId}: no history dates — treating as 0 fills`,
           )
+          continue
         }
+        rangeStart = Number(inRange[0])
+        rangeEnd = Number(inRange[inRange.length - 1])
       } catch (error) {
         console.warn(
-          `[RITHMIC-PROTOCOL] Could not list history dates for ${accountId}; using configured range`,
+          `[RITHMIC-PROTOCOL] Could not list history dates for ${accountId}; probing recent fill history`,
           error instanceof Error ? error.message : error,
         )
+        // Avoid scanning back to 1990 when dates are unavailable.
+        rangeStart =
+          params.lookbackDays != null && params.lookbackDays > 0
+            ? startYmd
+            : toYmdNumber(
+                new Date(end.getTime() - 90 * 24 * 60 * 60 * 1000),
+              )
       }
 
       let accountFills: RithmicProtocolFill[] = []
-
-      // When we know the history window, page fill history across it.
-      // When dates are empty, still attempt a single fill-history query for the
-      // configured window (lookback) or a recent year (all-time) before falling back.
-      const fillStart = hasHistoryDates
-        ? rangeStart
-        : params.lookbackDays != null && params.lookbackDays > 0
-          ? startYmd
-          : toYmdNumber(
-              new Date(end.getTime() - 365 * 24 * 60 * 60 * 1000),
-            )
       try {
         accountFills = await getFillHistoryAllPages(client, {
           fcmId,
           ibId,
           accountId,
-          startDateYyyymmdd: fillStart,
+          startDateYyyymmdd: rangeStart,
           endDateYyyymmdd: rangeEnd,
         })
       } catch (error) {
@@ -865,12 +916,12 @@ export async function fetchFillsForAccounts(params: {
         )
       }
 
-      if (accountFills.length === 0) {
+      if (accountFills.length === 0 && historyDates.length > 0) {
         const fallback = await client.getFillsViaOrderHistory({
           fcmId,
           ibId,
           accountId,
-          startDateYyyymmdd: startYmdStr,
+          startDateYyyymmdd: startYmdStr ?? String(rangeStart),
         })
         accountFills = fallback
       }
