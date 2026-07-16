@@ -406,7 +406,9 @@ export class RithmicProtocolClient {
     })
 
     const fills: RithmicProtocolFill[] = []
-    const deadline = Date.now() + 90_000
+    // Keep each ShowFillHistory call short so empty / stalled ranges cannot
+    // exhaust the serverless maxDuration across many windows.
+    const deadline = Date.now() + 45_000
 
     while (Date.now() < deadline) {
       const msg = await this.nextMatchingMessage(
@@ -416,7 +418,7 @@ export class RithmicProtocolClient {
           id === RithmicTemplateId.REJECT,
         {
           overallTimeoutMs: Math.max(1_000, deadline - Date.now()),
-          perMessageTimeoutMs: 60_000,
+          perMessageTimeoutMs: 20_000,
         },
       )
 
@@ -488,21 +490,36 @@ export class RithmicProtocolClient {
   }
 
   /**
-   * Fallback: list history dates then pull summary fills via exchange notifications.
-   * When `startDateYyyymmdd` is omitted, every date Rithmic returns is fetched (all-time).
+   * Fallback: pull summary fills day-by-day via exchange notifications.
+   * Always bounded — never walk thousands of history dates in one serverless run.
    */
   async getFillsViaOrderHistory(params: {
     fcmId?: string
     ibId?: string
     accountId: string
+    /** Pre-fetched / filtered YYYYMMDD dates. Listed from Rithmic when omitted. */
+    dates?: string[]
     startDateYyyymmdd?: string
+    /** Hard cap on day requests (default 60). */
+    maxDates?: number
   }): Promise<RithmicProtocolFill[]> {
-    const dates = await this.listOrderHistoryDates()
-    const minDate = params.startDateYyyymmdd
-    const filtered = dates.filter((d) => !minDate || d >= minDate)
+    const dates =
+      params.dates ??
+      (await this.listOrderHistoryDates()).filter(
+        (d) => !params.startDateYyyymmdd || d >= params.startDateYyyymmdd,
+      )
+    const maxDates = Math.max(1, params.maxDates ?? 60)
+    const selected =
+      dates.length > maxDates ? dates.slice(dates.length - maxDates) : dates
+
+    if (dates.length > selected.length) {
+      console.warn(
+        `[RITHMIC-PROTOCOL] Order-history fallback capped to last ${selected.length} of ${dates.length} date(s) for ${params.accountId}`,
+      )
+    }
 
     const fills: RithmicProtocolFill[] = []
-    for (const date of filtered) {
+    for (const date of selected) {
       try {
         const dayFills = await this.getOrderHistorySummaryFills({
           ...params,
@@ -732,8 +749,13 @@ export async function connectAndListAccounts(params: {
 /** Earliest trade_date index we request when syncing all-time history. */
 const ALL_TIME_START_YMD = 19900101
 const FILL_HISTORY_PAGE_MAX = 10_000
-/** Chunk size for fill history so we stay under Rithmic's 10k record cap. */
-const FILL_HISTORY_CHUNK_DAYS = 365
+/**
+ * Leave headroom under Vercel's 300s maxDuration for auth, save, and teardown.
+ * Fill fetch must finish (or stop cleanly) before this budget.
+ */
+const FILL_SYNC_BUDGET_MS = 240_000
+/** Max day-by-day order-history requests if ShowFillHistory fails. */
+const ORDER_HISTORY_FALLBACK_MAX_DATES = 60
 
 function toYmdNumber(d: Date): number {
   return Number(
@@ -765,8 +787,9 @@ function midpointYmd(startYmd: number, endYmd: number): number {
 }
 
 /**
- * Fetch fills for one account across [startYmd, endYmd], paging by date windows
- * so each RequestShowFillHistory stays under the 10k record limit.
+ * Fetch fills for one account across [startYmd, endYmd].
+ * One ShowFillHistory for the full span first; bisect only when a page hits
+ * the 10k record cap (avoids dozens of year-chunk round-trips on empty accounts).
  */
 async function getFillHistoryAllPages(
   client: RithmicProtocolClient,
@@ -776,12 +799,22 @@ async function getFillHistoryAllPages(
     accountId: string
     startDateYyyymmdd: number
     endDateYyyymmdd: number
+    deadlineMs: number
   },
 ): Promise<RithmicProtocolFill[]> {
   const fills: RithmicProtocolFill[] = []
 
   async function fetchRange(startYmd: number, endYmd: number): Promise<void> {
     if (startYmd > endYmd) return
+    if (Date.now() >= params.deadlineMs) {
+      throw new Error(
+        `Fill history sync budget exceeded while fetching ${params.accountId} (${startYmd}-${endYmd})`,
+      )
+    }
+
+    console.info(
+      `[RITHMIC-PROTOCOL] ${params.accountId}: ShowFillHistory ${startYmd}-${endYmd}`,
+    )
 
     const page = await client.getFillHistory({
       fcmId: params.fcmId,
@@ -807,16 +840,7 @@ async function getFillHistoryAllPages(
     fills.push(...page)
   }
 
-  let cursor = params.startDateYyyymmdd
-  while (cursor <= params.endDateYyyymmdd) {
-    const chunkEnd = Math.min(
-      addDaysToYmd(cursor, FILL_HISTORY_CHUNK_DAYS - 1),
-      params.endDateYyyymmdd,
-    )
-    await fetchRange(cursor, chunkEnd)
-    cursor = addDaysToYmd(chunkEnd, 1)
-  }
-
+  await fetchRange(params.startDateYyyymmdd, params.endDateYyyymmdd)
   return fills
 }
 
@@ -833,6 +857,7 @@ export async function fetchFillsForAccounts(params: {
 }): Promise<RithmicProtocolFill[]> {
   const client = new RithmicProtocolClient()
   const fills: RithmicProtocolFill[] = []
+  const syncDeadline = Date.now() + FILL_SYNC_BUDGET_MS
   try {
     await client.connect(params.gatewayUri)
     const login = await client.login({
@@ -854,10 +879,6 @@ export async function fetchFillsForAccounts(params: {
             ),
           )
         : ALL_TIME_START_YMD
-    const startYmdStr =
-      params.lookbackDays != null && params.lookbackDays > 0
-        ? String(startYmd)
-        : undefined
 
     console.info(
       `[RITHMIC-PROTOCOL] Logged in; fetching history for ${params.accountIds.join(', ')}`,
@@ -866,26 +887,26 @@ export async function fetchFillsForAccounts(params: {
     for (const accountId of params.accountIds) {
       let rangeStart = startYmd
       let rangeEnd = endYmd
-      let historyDates: string[] = []
+      let historyDatesInRange: string[] = []
 
       try {
-        historyDates = await client.listOrderHistoryDates()
-        const inRange = historyDates.filter((d) => {
+        const historyDates = await client.listOrderHistoryDates()
+        historyDatesInRange = historyDates.filter((d) => {
           const n = Number(d)
           return Number.isFinite(n) && n >= startYmd && n <= endYmd
         })
         console.info(
-          `[RITHMIC-PROTOCOL] ${accountId}: ${historyDates.length} history date(s), ${inRange.length} in range`,
+          `[RITHMIC-PROTOCOL] ${accountId}: ${historyDates.length} history date(s), ${historyDatesInRange.length} in range`,
         )
-        if (inRange.length === 0) {
+        if (historyDatesInRange.length === 0) {
           // Empty account — do not hang on fill/order history probes.
           console.info(
             `[RITHMIC-PROTOCOL] ${accountId}: no history dates — treating as 0 fills`,
           )
           continue
         }
-        rangeStart = Number(inRange[0])
-        rangeEnd = Number(inRange[inRange.length - 1])
+        rangeStart = Number(historyDatesInRange[0])
+        rangeEnd = Number(historyDatesInRange[historyDatesInRange.length - 1])
       } catch (error) {
         console.warn(
           `[RITHMIC-PROTOCOL] Could not list history dates for ${accountId}; probing recent fill history`,
@@ -901,6 +922,7 @@ export async function fetchFillsForAccounts(params: {
       }
 
       let accountFills: RithmicProtocolFill[] = []
+      let fillHistorySucceeded = false
       try {
         accountFills = await getFillHistoryAllPages(client, {
           fcmId,
@@ -908,22 +930,42 @@ export async function fetchFillsForAccounts(params: {
           accountId,
           startDateYyyymmdd: rangeStart,
           endDateYyyymmdd: rangeEnd,
+          deadlineMs: syncDeadline,
         })
+        fillHistorySucceeded = true
       } catch (error) {
         console.warn(
-          `[RITHMIC-PROTOCOL] Fill history failed for ${accountId}, falling back to order history`,
+          `[RITHMIC-PROTOCOL] Fill history failed for ${accountId}`,
           error instanceof Error ? error.message : error,
         )
       }
 
-      if (accountFills.length === 0 && historyDates.length > 0) {
-        const fallback = await client.getFillsViaOrderHistory({
+      // Only fall back when ShowFillHistory failed. A successful empty result
+      // must not walk thousands of history dates day-by-day (Vercel 300s kill).
+      if (
+        accountFills.length === 0 &&
+        !fillHistorySucceeded &&
+        historyDatesInRange.length > 0 &&
+        Date.now() < syncDeadline
+      ) {
+        console.warn(
+          `[RITHMIC-PROTOCOL] ${accountId}: bounded order-history fallback (max ${ORDER_HISTORY_FALLBACK_MAX_DATES} days)`,
+        )
+        accountFills = await client.getFillsViaOrderHistory({
           fcmId,
           ibId,
           accountId,
-          startDateYyyymmdd: startYmdStr ?? String(rangeStart),
+          dates: historyDatesInRange,
+          maxDates: ORDER_HISTORY_FALLBACK_MAX_DATES,
         })
-        accountFills = fallback
+      } else if (
+        accountFills.length === 0 &&
+        fillHistorySucceeded &&
+        historyDatesInRange.length > 0
+      ) {
+        console.info(
+          `[RITHMIC-PROTOCOL] ${accountId}: ShowFillHistory returned 0 fills across ${historyDatesInRange.length} history date(s) — skipping day-by-day fallback`,
+        )
       }
 
       console.info(
