@@ -1546,6 +1546,8 @@ export default {
     synchronizationRemoved: "Synchronization removed",
     editCredentials: "Edit Credentials",
     addNewCredentials: "Add New Credentials",
+    credentialsFormDescription:
+      "Enter your Rithmic login to fetch accounts and start syncing.",
     backToList: "Back to List",
     usernameLabel: "Rithmic Username",
     passwordLabel: "Rithmic Password",
@@ -1557,6 +1559,8 @@ export default {
     saveForNextLogin: "Save credentials for next login",
     getAccounts: "Get Accounts",
     selectAccountsTitle: "Select Accounts to Import",
+    selectAccountsDescription:
+      "Choose which accounts to sync, or keep all accounts enabled.",
     selectAllAccounts: "Select All Accounts",
     syncAllAccounts: "Sync All Accounts",
     syncAllAccountsDescription:

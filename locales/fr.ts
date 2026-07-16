@@ -1152,6 +1152,8 @@ export default {
     noCredentials: "Aucun identifiant",
     editCredentials: "Modifier les Identifiants",
     addNewCredentials: "Ajouter de Nouveaux Identifiants",
+    credentialsFormDescription:
+      "Entrez vos identifiants Rithmic pour récupérer vos comptes et démarrer la synchronisation.",
     backToList: "Retour à la Liste",
     usernameLabel: "Nom d'utilisateur Rithmic",
     passwordLabel: "Mot de passe Rithmic",
@@ -1164,6 +1166,8 @@ export default {
       "Sauvegarder les identifiants pour la prochaine connexion",
     getAccounts: "Obtenir les Comptes",
     selectAccountsTitle: "Sélectionner les Comptes à Importer",
+    selectAccountsDescription:
+      "Choisissez les comptes à synchroniser, ou conservez tous les comptes.",
     selectAllAccounts: "Sélectionner Tous les Comptes",
     syncAllAccounts: "Synchroniser Tous les Comptes",
     syncAllAccountsDescription:
