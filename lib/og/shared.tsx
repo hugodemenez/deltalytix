@@ -1,5 +1,22 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import type { ReactElement } from "react";
+import {
+  OG_COLORS,
+  OG_FONT_FAMILY,
+  OG_PADDING,
+  OG_RADIUS,
+  OG_TRACKING,
+} from "@/lib/og/tokens";
+
+/** Light-theme dashboard poster used in the landing hero frame. */
+export async function loadLandingProductPosterSrc(): Promise<string> {
+  const buffer = await readFile(
+    join(process.cwd(), "public/videos/demo_white_poster.png"),
+  );
+  return `data:image/png;base64,${buffer.toString("base64")}`;
+}
 
 export const ogImageSize = { width: 1200, height: 630 };
 
@@ -9,7 +26,13 @@ export const ogImageCacheHeaders = {
   "Vercel-CDN-Cache-Control": "public, max-age=3600",
 } as const;
 
-export function LogoMark({ sizePx = 40 }: { sizePx?: number }) {
+export function LogoMark({
+  sizePx = 40,
+  color = OG_COLORS.foreground,
+}: {
+  sizePx?: number;
+  color?: string;
+}) {
   return (
     <svg
       viewBox="0 0 255 255"
@@ -20,24 +43,26 @@ export function LogoMark({ sizePx = 40 }: { sizePx?: number }) {
         fillRule="evenodd"
         clipRule="evenodd"
         d="M159 63L127.5 0V255H255L236.5 218H159V63Z"
-        fill="#FFFFFF"
+        fill={color}
       />
       <path
         fillRule="evenodd"
         clipRule="evenodd"
         d="M-3.05176e-05 255L127.5 -5.96519e-06L127.5 255L-3.05176e-05 255ZM64 217L121 104L121 217L64 217Z"
-        fill="#FFFFFF"
+        fill={color}
       />
     </svg>
   );
 }
 
 export function BrandLockup({
-  logoSize = 40,
-  fontSize = 28,
+  logoSize = 44,
+  fontSize = 32,
+  color = OG_COLORS.foreground,
 }: {
   logoSize?: number;
   fontSize?: number;
+  color?: string;
 }) {
   return (
     <div
@@ -47,13 +72,13 @@ export function BrandLockup({
         gap: 14,
       }}
     >
-      <LogoMark sizePx={logoSize} />
+      <LogoMark sizePx={logoSize} color={color} />
       <span
         style={{
           fontSize,
-          fontWeight: 700,
-          color: "#FFFFFF",
-          letterSpacing: "-0.03em",
+          fontWeight: 500,
+          color,
+          letterSpacing: OG_TRACKING.tight,
         }}
       >
         Deltalytix
@@ -64,10 +89,12 @@ export function BrandLockup({
 
 export function OgCtaButton({
   label,
-  accentColor = "#14B8A6",
+  accentColor = OG_COLORS.cta,
+  textColor = OG_COLORS.ctaText,
 }: {
   label: string;
   accentColor?: string;
+  textColor?: string;
 }) {
   return (
     <div
@@ -75,18 +102,17 @@ export function OgCtaButton({
         display: "flex",
         alignItems: "center",
         alignSelf: "flex-start",
-        padding: "18px 32px",
-        borderRadius: 999,
+        padding: "16px 28px",
+        borderRadius: OG_RADIUS.sm,
         background: accentColor,
-        boxShadow: `0 12px 40px ${accentColor}66`,
       }}
     >
       <span
         style={{
-          fontSize: 28,
-          fontWeight: 700,
-          color: "#FFFFFF",
-          letterSpacing: "-0.01em",
+          fontSize: 24,
+          fontWeight: 500,
+          color: textColor,
+          letterSpacing: OG_TRACKING.snug,
         }}
       >
         {label}
@@ -95,10 +121,74 @@ export function OgCtaButton({
   );
 }
 
+/**
+ * Soft mint product-frame echo of the landing hero demo.
+ * Keep it behind left-aligned copy; size props tune per OG variant.
+ */
+export function LandingAtmosphere({
+  width = 420,
+  height = 280,
+  right = 48,
+  bottom = 40,
+  productSrc,
+}: {
+  width?: number;
+  height?: number;
+  right?: number;
+  bottom?: number;
+  /** Optional data URL / absolute URL of the hero product poster. */
+  productSrc?: string;
+} = {}) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        right,
+        bottom,
+        width,
+        height,
+        borderRadius: OG_RADIUS.md,
+        background: OG_COLORS.wash,
+        display: "flex",
+        padding: 14,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          width: "100%",
+          height: "100%",
+          borderRadius: OG_RADIUS.sm,
+          background: OG_COLORS.surface,
+          border: `1px solid ${OG_COLORS.hairline}`,
+          overflow: "hidden",
+        }}
+      >
+        {productSrc ? (
+          <img
+            src={productSrc}
+            alt=""
+            width={width}
+            height={height}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "left top",
+            }}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 type MarketingOgImageProps = {
   headline: string;
   subheadline: string;
   cta: string;
+  productSrc?: string;
+  /** @deprecated Kept for call-site compat; landing CTA color is used instead. */
   accentColor?: string;
 };
 
@@ -106,7 +196,7 @@ export function MarketingOgImage({
   headline,
   subheadline,
   cta,
-  accentColor = "#14B8A6",
+  productSrc,
 }: MarketingOgImageProps) {
   return (
     <div
@@ -114,35 +204,20 @@ export function MarketingOgImage({
         display: "flex",
         width: "100%",
         height: "100%",
-        background: "#0a0a0a",
-        fontFamily: "system-ui, -apple-system, sans-serif",
+        background: OG_COLORS.background,
+        fontFamily: OG_FONT_FAMILY,
         position: "relative",
-        padding: "56px 72px",
+        padding: `${OG_PADDING}px`,
         flexDirection: "column",
         justifyContent: "space-between",
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          top: -100,
-          right: -100,
-          width: 480,
-          height: 480,
-          background: `radial-gradient(circle, ${accentColor}55 0%, rgba(10, 10, 10, 0) 72%)`,
-          display: "flex",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          bottom: -60,
-          left: -60,
-          width: 320,
-          height: 320,
-          background: "radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, rgba(10, 10, 10, 0) 70%)",
-          display: "flex",
-        }}
+      <LandingAtmosphere
+        width={520}
+        height={340}
+        right={40}
+        bottom={36}
+        productSrc={productSrc}
       />
 
       <BrandLockup />
@@ -151,18 +226,19 @@ export function MarketingOgImage({
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: 24,
-          maxWidth: 920,
+          gap: 28,
+          maxWidth: 620,
+          position: "relative",
         }}
       >
         <p
           style={{
             margin: 0,
             fontSize: 58,
-            fontWeight: 800,
-            color: "#FFFFFF",
-            lineHeight: 1.1,
-            letterSpacing: "-0.03em",
+            fontWeight: 400,
+            color: OG_COLORS.foreground,
+            lineHeight: 1.05,
+            letterSpacing: OG_TRACKING.display,
           }}
         >
           {headline}
@@ -170,24 +246,26 @@ export function MarketingOgImage({
         <p
           style={{
             margin: 0,
-            fontSize: 30,
-            fontWeight: 500,
-            color: "#a1a1aa",
-            lineHeight: 1.35,
-            letterSpacing: "-0.01em",
+            fontSize: 26,
+            fontWeight: 400,
+            color: OG_COLORS.muted,
+            lineHeight: 1.4,
+            letterSpacing: OG_TRACKING.snug,
+            maxWidth: 560,
           }}
         >
           {subheadline}
         </p>
-        <OgCtaButton label={cta} accentColor={accentColor} />
+        <OgCtaButton label={cta} />
       </div>
 
       <p
         style={{
           margin: 0,
-          fontSize: 22,
-          fontWeight: 500,
-          color: "#71717a",
+          fontSize: 20,
+          fontWeight: 400,
+          color: OG_COLORS.subtle,
+          position: "relative",
         }}
       >
         deltalytix.app
@@ -196,18 +274,21 @@ export function MarketingOgImage({
   ) as ReactElement;
 }
 
-export function createMarketingOgImageResponse({
+export async function createMarketingOgImageResponse({
   headline,
   subheadline,
   cta,
   accentColor,
 }: MarketingOgImageProps) {
+  const productSrc = await loadLandingProductPosterSrc();
+
   return new ImageResponse(
     <MarketingOgImage
       headline={headline}
       subheadline={subheadline}
       cta={cta}
       accentColor={accentColor}
+      productSrc={productSrc}
     />,
     {
       ...ogImageSize,

@@ -3,9 +3,20 @@ import { getPostMetadata } from "@/lib/mdx"
 import type { ReactElement } from "react"
 import { enUS, fr } from "date-fns/locale"
 import { formatDateOnly } from "@/lib/format-date-only"
-import { OgCtaButton, ogImageCacheHeaders } from "@/lib/og/shared"
+import {
+  BrandLockup,
+  LandingAtmosphere,
+  OgCtaButton,
+  loadLandingProductPosterSrc,
+  ogImageCacheHeaders,
+} from "@/lib/og/shared"
 import { getUpdatesOgCopy } from "@/lib/og/site-metadata"
-import { OG_COLORS, OG_PADDING, OG_TRACKING } from "@/lib/og/tokens"
+import {
+  OG_COLORS,
+  OG_FONT_FAMILY,
+  OG_PADDING,
+  OG_TRACKING,
+} from "@/lib/og/tokens"
 
 export const alt = "Deltalytix Update"
 export const size = {
@@ -40,6 +51,7 @@ export default async function Image({
         })
 
         const updatesCopy = getUpdatesOgCopy(locale)
+        const productSrc = await loadLandingProductPosterSrc()
 
         const element = (
             <div
@@ -48,80 +60,60 @@ export default async function Image({
                     width: "100%",
                     height: "100%",
                     background: OG_COLORS.background,
-                    fontFamily: "system-ui, -apple-system, sans-serif",
+                    fontFamily: OG_FONT_FAMILY,
                     padding: `${OG_PADDING}px`,
                     flexDirection: "column",
                     justifyContent: "space-between",
                     alignItems: "flex-start",
+                    position: "relative",
                 }}
             >
-                {/* Top section with logo */}
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                    }}
-                >
-                    <svg viewBox="0 0 255 255" xmlns="http://www.w3.org/2000/svg" style={{ width: "32px", height: "32px" }}>
-                        <path fillRule="evenodd" clipRule="evenodd" d="M159 63L127.5 0V255H255L236.5 218H159V63Z" fill={OG_COLORS.foreground} />
-                        <path fillRule="evenodd" clipRule="evenodd" d="M-3.05176e-05 255L127.5 -5.96519e-06L127.5 255L-3.05176e-05 255ZM64 217L121 104L121 217L64 217Z" fill={OG_COLORS.foreground} />
-                    </svg>
-                    <span
-                        style={{
-                            fontSize: "24px",
-                            fontWeight: "600",
-                            color: OG_COLORS.foreground,
-                            letterSpacing: OG_TRACKING.snug,
-                        }}
-                    >
-                        Deltalytix
-                    </span>
-                </div>
+                <LandingAtmosphere width={340} height={230} productSrc={productSrc} />
 
-                {/* Middle section with title */}
+                <BrandLockup logoSize={36} fontSize={26} />
+
                 <div
                     style={{
                         display: "flex",
                         flexDirection: "column",
-                        gap: "16px",
-                        maxWidth: "900px",
+                        gap: "20px",
+                        maxWidth: "760px",
+                        position: "relative",
                     }}
                 >
                     <h1
                         style={{
-                            fontSize: "56px",
-                            fontWeight: "700",
+                            fontSize: "52px",
+                            fontWeight: 400,
                             color: OG_COLORS.foreground,
                             margin: "0",
-                            lineHeight: "1.15",
-                            letterSpacing: OG_TRACKING.tight,
+                            lineHeight: "1.12",
+                            letterSpacing: OG_TRACKING.display,
                         }}
                     >
                         {meta.title}
                     </h1>
                 </div>
 
-                {/* Bottom section with date and CTA */}
                 <div
                     style={{
                         display: "flex",
-                        width: "100%",
-                        alignItems: "center",
-                        justifyContent: "space-between",
+                        flexDirection: "column",
+                        gap: 20,
+                        position: "relative",
                     }}
                 >
+                    <OgCtaButton label={updatesCopy.cta} />
                     <span
                         style={{
-                            fontSize: "18px",
-                            fontWeight: "400",
-                            color: OG_COLORS.muted,
+                            fontSize: "20px",
+                            fontWeight: 400,
+                            color: OG_COLORS.subtle,
                             letterSpacing: OG_TRACKING.wide,
                         }}
                     >
                         {formattedDate}
                     </span>
-                    <OgCtaButton label={updatesCopy.cta} accentColor={OG_COLORS.accent} />
                 </div>
             </div>
         ) as ReactElement
