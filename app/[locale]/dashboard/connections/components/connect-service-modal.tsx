@@ -63,12 +63,15 @@ export function ConnectServiceModal({
           )}
           {service === 'tradovate' && (
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <TradovateSync />
+              <TradovateSync initialShowAccountsManager={false} />
             </div>
           )}
           {service === 'dxfeed' && (
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <DxFeedSync />
+              <DxFeedSync
+                initialShowAccountsManager={false}
+                onConnected={onClose}
+              />
             </div>
           )}
           {service === 'thor' && (
