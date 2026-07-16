@@ -1,12 +1,20 @@
 "use client";
 
-import { AlertCircle, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useRef } from "react";
-import { cn } from "@/lib/utils";
+import { useEffect, useRef, useState } from "react";
 import { PlatformConfig } from "../config/platforms";
 import { useI18n } from "@/locales/client";
-import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface PlatformTutorialProps {
   selectedPlatform: PlatformConfig | undefined;
@@ -15,23 +23,19 @@ interface PlatformTutorialProps {
 
 export function PlatformTutorial({
   selectedPlatform,
-  setIsOpen,
 }: PlatformTutorialProps) {
   const t = useI18n();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [redirectOpen, setRedirectOpen] = useState(false);
 
-  // Reset and handle video when platform changes
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    // Reset video state
     video.pause();
     video.currentTime = 0;
 
-    // Handle new platform video
     if (selectedPlatform?.videoUrl) {
-      // Load and play the new video
       video.load();
       const playVideo = () => {
         video.play().catch((error) => {
@@ -39,7 +43,6 @@ export function PlatformTutorial({
         });
       };
 
-      // Play video when it's ready
       if (video.readyState >= 2) {
         playVideo();
       } else {
@@ -47,40 +50,79 @@ export function PlatformTutorial({
       }
     }
 
-    // Cleanup
     return () => {
       if (video) {
         video.pause();
-        video.removeEventListener("loadeddata", () => {});
       }
     };
   }, [selectedPlatform]);
 
   if (!selectedPlatform) return null;
 
+  const platformLabel = t(selectedPlatform.name as "import.type.csvAi.name");
+  const hasVideo = Boolean(selectedPlatform.videoUrl);
+  const hasDocs = Boolean(selectedPlatform.tutorialLink);
+
+  const openDocs = () => {
+    if (!selectedPlatform.tutorialLink) return;
+    window.open(selectedPlatform.tutorialLink, "_blank", "noopener,noreferrer");
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg sm:text-2xl font-bold">
-          {selectedPlatform.videoUrl
-            ? t("import.type.tutorial.title")
-            : t("import.type.tutorial.title").replace("Video", " ")}
-        </h2>
-        {selectedPlatform.tutorialLink && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => window.open(selectedPlatform.tutorialLink, "_blank")}
-          >
-            <ExternalLink className="h-4 w-4" />
-            {t("import.type.tutorial.viewDocs")}
-          </Button>
-        )}
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4">
+        <div className="min-w-0 space-y-2">
+          <h2 className="text-xl font-normal tracking-tight md:text-2xl">
+            {t("import.type.tutorial.open")}
+          </h2>
+          <p className="text-pretty text-sm leading-relaxed text-black/55 dark:text-white/55 md:text-base">
+            {hasVideo
+              ? t("import.type.tutorial.description", {
+                  platform: platformLabel,
+                })
+              : hasDocs
+                ? t("import.type.tutorial.redirectDescription", {
+                    platform: platformLabel,
+                  })
+                : t("import.type.tutorial.notAvailable", {
+                    platform: platformLabel,
+                  })}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedPlatform.sampleFile && (
+            <a
+              href={selectedPlatform.sampleFile}
+              download
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-sm border border-black/20 px-4 text-sm font-medium transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:hover:bg-white/5"
+            >
+              {t("import.type.tutorial.downloadSample")}
+            </a>
+          )}
+          {hasDocs && (
+            <button
+              type="button"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-sm border border-black/20 px-4 text-sm font-medium transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:hover:bg-white/5"
+              onClick={() => {
+                if (hasVideo) {
+                  openDocs();
+                  return;
+                }
+                setRedirectOpen(true);
+              }}
+            >
+              <ExternalLink className="h-4 w-4" strokeWidth={1.75} />
+              {hasVideo
+                ? t("import.type.tutorial.viewDocs")
+                : t("import.type.tutorial.redirectConfirm")}
+            </button>
+          )}
+        </div>
       </div>
-      {selectedPlatform.videoUrl ? (
-        <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 transition-transform duration-300 hover:scale-[1.02]">
-          <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+
+      {hasVideo && (
+        <div className="overflow-hidden rounded-sm bg-black/5 dark:bg-white/5">
+          <div className="aspect-video">
             <video
               ref={videoRef}
               height="600"
@@ -90,40 +132,24 @@ export function PlatformTutorial({
               muted
               controls
               playsInline
-              className="rounded-lg border border-gray-200 dark:border-gray-800 shadow-lg w-full h-full object-cover"
+              className="h-full w-full object-cover"
             >
               <source src={selectedPlatform.videoUrl} type="video/mp4" />
-              <track
-                src="/path/to/captions.vtt"
-                kind="subtitles"
-                srcLang="en"
-                label="English"
-              />
               Your browser does not support the video tag.
             </video>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {selectedPlatform.videoUrl
-              ? t("import.type.tutorial.description", {
-                  platform: selectedPlatform.type.split("-").join(" "),
-                })
-              : t("import.type.tutorial.notAvailable", {
-                  platform: selectedPlatform.type.split("-").join(" "),
-                })}
-          </p>
-        </div>
-      ) : null}
-
-      {selectedPlatform.details && (
-        <div className="text-sm text-muted-foreground flex items-start gap-2 bg-muted/50 p-4 rounded-lg transition-all duration-300 hover:bg-muted/70 animate-in slide-in-from-bottom-4">
-          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-yellow-500 animate-pulse" />
-          <p>{t(selectedPlatform.details as keyof typeof t)}</p>
         </div>
       )}
 
+      {selectedPlatform.details && (
+        <p className="border-t border-black/10 pt-4 text-sm leading-relaxed text-black/55 dark:border-white/10 dark:text-white/55">
+          {t(selectedPlatform.details as keyof typeof t)}
+        </p>
+      )}
+
       {selectedPlatform.isRithmic && (
-        <div className="mt-6 text-xs text-muted-foreground space-y-2 border-t pt-4">
-          <div className="flex items-center gap-4 mb-2">
+        <div className="space-y-2 border-t border-black/10 pt-4 text-xs leading-relaxed text-black/45 dark:border-white/10 dark:text-white/45">
+          <div className="mb-2 flex flex-wrap items-center gap-4">
             <Image
               src="/RithmicArtwork/TradingPlatformByRithmic-Black.png"
               alt="Trading Platform by Rithmic"
@@ -149,6 +175,35 @@ export function PlatformTutorial({
           <p>{t("import.type.copyright.omne")}</p>
         </div>
       )}
+
+      <AlertDialog open={redirectOpen} onOpenChange={setRedirectOpen}>
+        <AlertDialogContent className="rounded-sm border-black/10 dark:border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-normal tracking-tight">
+              {t("import.type.tutorial.redirectTitle")}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-black/55 dark:text-white/55">
+              {t("import.type.tutorial.redirectDescription", {
+                platform: platformLabel,
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-sm">
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-sm"
+              onClick={() => {
+                openDocs();
+                setRedirectOpen(false);
+              }}
+            >
+              {t("import.type.tutorial.redirectConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

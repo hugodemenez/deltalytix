@@ -38,6 +38,7 @@ function requireDatabaseUrl(): string {
 type SeedTrade = {
   id: string
   accountNumber: string
+  accountId?: string | null
   quantity: number
   instrument: string
   entryPrice: string
@@ -210,7 +211,10 @@ async function main() {
       },
     })
 
-    const trades = buildTrades(user.id, tradeDayCount)
+    const trades = buildTrades(user.id, tradeDayCount).map((trade) => ({
+      ...trade,
+      accountId: account.id,
+    }))
     await prisma.trade.createMany({ data: trades })
 
     await prisma.payout.deleteMany({ where: { accountId: account.id } })

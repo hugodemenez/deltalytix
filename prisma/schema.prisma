@@ -11,6 +11,7 @@ datasource db {
 model Trade {
   id                String   @id @unique @default(uuid())
   accountNumber     String
+  accountId         String?
   quantity          Int
   entryId           String?  @default("")
   closeId           String?  @default("")
@@ -32,8 +33,10 @@ model Trade {
   imageBase64Second String?
   groupId           String?  @default("")
   images            String[] @default([])
+  account           Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   @@index([accountNumber])
+  @@index([accountId])
   @@index([groupId])
   @@schema("public")
 }
@@ -137,7 +140,7 @@ model User {
   orders                Order[]
   posts                 Post[]
   subscriptions         Subscription?
-  synchronizations      Synchronization[]
+  connections           Connection[]
   tags                  Tag[]
   votes                 Vote[]
   businessSubscriptions BusinessSubscription[]
@@ -147,11 +150,11 @@ model User {
   @@schema("public")
 }
 
-model Synchronization {
+model Connection {
   id               String    @id @default(uuid())
   userId           String
   service          String
-  accountId        String
+  externalId       String    @map("accountId")
   lastSyncedAt     DateTime
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -161,10 +164,12 @@ model Synchronization {
   includedFeeTypes Json?
   environment      String    @default("demo")
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accounts         Account[]
 
-  @@unique([userId, service, accountId])
+  @@unique([userId, service, externalId], map: "Synchronization_userId_service_accountId_key")
   @@index([userId])
   @@index([service])
+  @@map("Synchronization")
   @@schema("public")
 }
 
@@ -325,9 +330,12 @@ model Account {
   promoType                       PromoType?
   renewalNotice                   Int?
   minPnlToCountAsDay              Float?
+  connectionId                    String?
   group                           Group?            @relation(fields: [groupId], references: [id])
   user                            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connection                      Connection?       @relation(fields: [connectionId], references: [id], onDelete: SetNull)
   payouts                         Payout[]
+  trades                          Trade[]
   buffer                          Float             @default(0)
   considerBuffer                  Boolean           @default(true)
   shouldConsiderTradesBeforeReset Boolean           @default(true)
@@ -335,6 +343,8 @@ model Account {
   @@unique([number, userId])
   @@index([number])
   @@index([groupId])
+  @@index([connectionId])
+  @@index([userId, connectionId])
   @@index([nextPaymentDate])
   @@schema("public")
 }

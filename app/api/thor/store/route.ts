@@ -126,7 +126,18 @@ export async function POST(req: NextRequest) {
       })
     )
 
-    const result = await saveTradesAction(trades as Trade[])
+    const connection = await prisma.connection.findFirst({
+      where: {
+        userId: user.id,
+        service: 'thor',
+      },
+      select: { id: true },
+    })
+
+    const result = await saveTradesAction(trades as Trade[], {
+      userId: user.id,
+      connectionId: connection?.id,
+    })
 
     // Handle duplicate trades as success, but return errors for other cases
     if (result.error && result.error !== 'DUPLICATE_TRADES') {

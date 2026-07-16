@@ -1234,24 +1234,24 @@ export async function storeTradovateToken(
       return { error: 'User not authenticated' }
     }
 
-    const existingSynchronization = await prisma.synchronization.findUnique({
+    const existingConnection = await prisma.connection.findUnique({
       where: {
-        userId_service_accountId: {
+        userId_service_externalId: {
           userId: user.id,
           service: 'tradovate',
-          accountId: accountId
+          externalId: accountId
         }
       },
       select: { id: true }
     })
 
-    // Store token in Synchronization table
-    await prisma.synchronization.upsert({
+    // Store token in Connection table
+    await prisma.connection.upsert({
       where: {
-        userId_service_accountId: {
+        userId_service_externalId: {
           userId: user.id,
           service: 'tradovate',
-          accountId: accountId
+          externalId: accountId
         }
       },
       update: {
@@ -1264,7 +1264,7 @@ export async function storeTradovateToken(
       create: {
         userId: user.id,
         service: 'tradovate',
-        accountId: accountId,
+        externalId: accountId,
         token: accessToken,
         tokenExpiresAt: new Date(expiresAt),
         environment,
@@ -1278,7 +1278,7 @@ export async function storeTradovateToken(
       properties: {
         integration: 'tradovate',
         environment,
-        is_first_connection: !existingSynchronization,
+        is_first_connection: !existingConnection,
       },
     })
 
@@ -1298,12 +1298,12 @@ export async function getTradovateToken(accountId: string = 'default') {
       return { error: 'User not authenticated' }
     }
 
-    const syncData = await prisma.synchronization.findUnique({
+    const syncData = await prisma.connection.findUnique({
       where: {
-        userId_service_accountId: {
+        userId_service_externalId: {
           userId: user.id,
           service: 'tradovate',
-          accountId: accountId
+          externalId: accountId
         }
       }
     })
@@ -1325,7 +1325,7 @@ export async function getTradovateToken(accountId: string = 'default') {
       accessToken: syncData.token,
       expiresAt: syncData.tokenExpiresAt?.toISOString() || '',
       environment: normalizeEnvironment(syncData.environment),
-      accountId: syncData.accountId,
+      accountId: syncData.externalId,
       includedFeeTypes: includedFeeTypes ?? undefined
     }
   } catch (error) {
@@ -1346,12 +1346,12 @@ export async function updateTradovateIncludedFeeTypes(
       return { success: false, error: 'User not authenticated' }
     }
 
-    await prisma.synchronization.update({
+    await prisma.connection.update({
       where: {
-        userId_service_accountId: {
+        userId_service_externalId: {
           userId: user.id,
           service: 'tradovate',
-          accountId
+          externalId: accountId
         }
       },
       data: { includedFeeTypes }
@@ -1381,10 +1381,10 @@ export async function removeTradovateToken(accountId?: string) {
 
     // If accountId is provided, only remove that specific account's token
     if (accountId) {
-      whereClause.accountId = accountId
+      whereClause.externalId = accountId
     }
 
-    await prisma.synchronization.deleteMany({
+    await prisma.connection.deleteMany({
       where: whereClause
     })
 
@@ -1405,7 +1405,7 @@ export async function getTradovateSynchronizations() {
       return { error: 'User not authenticated' }
     }
 
-    const synchronizations = await prisma.synchronization.findMany({
+    const synchronizations = await prisma.connection.findMany({
       where: {
         userId: user.id,
         service: 'tradovate'
@@ -1415,7 +1415,8 @@ export async function getTradovateSynchronizations() {
       }
     })
 
-    return { synchronizations }
+    const { toConnectionViews } = await import('@/lib/connection-view')
+    return { synchronizations: toConnectionViews(synchronizations) }
   } catch (error) {
     console.error('TRADOVATE SYNC: Failed to get Tradovate synchronizations:', error)
     return { error: 'Failed to get synchronizations' }
@@ -1528,7 +1529,7 @@ export async function testCustomTradovateToken(
 
 async function updateLastSyncedAt(userId: string, accessToken: string) {
     // Update last synced at
-    const updateResult = await prisma.synchronization.updateMany({
+    const updateResult = await prisma.connection.updateMany({
       where: {
         userId: userId,
         service: 'tradovate',
@@ -1696,9 +1697,21 @@ export async function getTradovateTrades(
       return { processedTrades: [], savedCount: 0 }
     }
 
+    const connection = await prisma.connection.findFirst({
+      where: {
+        userId: resolvedUserId,
+        service: 'tradovate',
+        token: accessToken,
+      },
+      select: { id: true },
+    })
+
     // Save trades to database
     logger.info(`Attempting to save ${processedTrades.length} fill pair trades to database`)
-    const saveResult = await saveTradesAction(processedTrades, { userId: resolvedUserId })
+    const saveResult = await saveTradesAction(processedTrades, {
+      userId: resolvedUserId,
+      connectionId: connection?.id,
+    })
     
     if (saveResult.error) {
       if (saveResult.error === "DUPLICATE_TRADES") {
@@ -1750,11 +1763,11 @@ export async function updateDailySyncTimeAction(
     }
     
     // Update the synchronization record
-    await prisma.synchronization.updateMany({
+    await prisma.connection.updateMany({
       where: {
         userId,
         service: 'tradovate',
-        accountId
+        externalId: accountId
       },
       data: {
         dailySyncTime: syncDateTime

@@ -1,0 +1,50 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 439 >>
+stream
+BT
+/F1 12 Tf
+50 750 Td
+(Interactive Brokers - Sample Activity Statement) Tj
+0 -24 Td
+(Account: U1234567) Tj
+0 -24 Td
+(Trades) Tj
+0 -20 Td
+(Symbol  Date/Time           Quantity  T. Price) Tj
+0 -18 Td
+(MES     2025-03-10 09:35:12  2         5125.25) Tj
+0 -18 Td
+(MES     2025-03-10 09:42:15  -2        5130.50) Tj
+0 -18 Td
+(MNQ     2025-03-10 10:15:05  -1        18550.00) Tj
+0 -18 Td
+(MNQ     2025-03-10 10:28:40  1         18535.25) Tj
+ET
+
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000731 00000 n 
+trailer<< /Size 6 /Root 1 0 R >>
+startxref
+801
+%%EOF

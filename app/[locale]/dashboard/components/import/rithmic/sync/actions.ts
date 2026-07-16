@@ -1,47 +1,57 @@
 'use server'
 import { prisma } from "@/lib/prisma"
 import { getUserId } from "@/server/auth"
-import { Synchronization } from "@/prisma/generated/prisma/client"
+import { Connection } from "@/prisma/generated/prisma/client"
+import { toConnectionViews } from "@/lib/connection-view"
 import { capturePostHogEvent } from "@/lib/posthog-server"
 
 export async function getRithmicSynchronizations() {
   console.log('CHECKING RITHMIC SYNCHRONIZATIONS')
   const userId = await getUserId()
-  const synchronizations = await prisma.synchronization.findMany({
+  const connections = await prisma.connection.findMany({
     where: { userId: userId, service: "rithmic" },
   })
-  return synchronizations
+  return toConnectionViews(connections)
 }
 
-export async function setRithmicSynchronization(synchronization: Partial<Synchronization>) {
+export async function setRithmicSynchronization(synchronization: Partial<Connection> & { accountId?: string }) {
   console.log('SETTING RITHMIC SYNCHRONIZATION')
   const userId = await getUserId()
   const service = synchronization.service || 'rithmic'
-  const accountId = synchronization.accountId || ''
-  const existingSynchronization = await prisma.synchronization.findUnique({
+  const externalId = synchronization.externalId || synchronization.accountId || ''
+  const existingConnection = await prisma.connection.findUnique({
     where: {
-      userId_service_accountId: { userId, service, accountId },
+      userId_service_externalId: { userId, service, externalId },
     },
     select: { id: true },
   })
-  await prisma.synchronization.upsert({
+  await prisma.connection.upsert({
     where: { 
-      userId_service_accountId: {
+      userId_service_externalId: {
         userId: userId,
         service,
-        accountId
+        externalId,
       }
     },
     update: {
-      ...synchronization,
+      service,
+      externalId,
+      lastSyncedAt: synchronization.lastSyncedAt || new Date(),
+      token: synchronization.token,
+      tokenExpiresAt: synchronization.tokenExpiresAt,
+      dailySyncTime: synchronization.dailySyncTime,
+      environment: synchronization.environment,
       userId: userId,
       includedFeeTypes: undefined, // Rithmic has no fee differentiator
     },
     create: {
-      ...synchronization,
       service,
-      accountId,
+      externalId,
       lastSyncedAt: synchronization.lastSyncedAt || new Date(),
+      token: synchronization.token,
+      tokenExpiresAt: synchronization.tokenExpiresAt,
+      dailySyncTime: synchronization.dailySyncTime,
+      environment: synchronization.environment || 'demo',
       userId: userId,
       includedFeeTypes: undefined, // Rithmic has no fee differentiator
     },
@@ -52,7 +62,7 @@ export async function setRithmicSynchronization(synchronization: Partial<Synchro
     event: 'integration_connected',
     properties: {
       integration: service,
-      is_first_connection: !existingSynchronization,
+      is_first_connection: !existingConnection,
     },
   })
 }
@@ -61,11 +71,11 @@ export async function removeRithmicSynchronization(accountId: string) {
   console.log('REMOVING RITHMIC SYNCHRONIZATION')
   const userId = await getUserId()
 
-  await prisma.synchronization.deleteMany({
+  await prisma.connection.deleteMany({
     where: {
       userId,
       service: "rithmic",
-      accountId,
+      externalId: accountId,
     },
   })
 }

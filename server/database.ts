@@ -72,7 +72,7 @@ function generateTradeUUID(trade: Partial<Trade>): string {
 
 export async function saveTradesAction(
   data: Trade[],
-  options?: { userId?: string }
+  options?: { userId?: string; connectionId?: string | null }
 ): Promise<TradeResponse> {
   console.log('[saveTrades] Saving trades:', data.length)
   const userId = options?.userId ?? await getUserId()
@@ -90,12 +90,30 @@ export async function saveTradesAction(
       select: { id: true },
     }))
 
+    const accountNumbers = data
+      .map((trade) => trade.accountNumber)
+      .filter((n): n is string => Boolean(n))
+
+    const { upsertAccountsForNumbers } = await import('@/server/connections')
+    const accountIdByNumber = await upsertAccountsForNumbers(
+      userId,
+      accountNumbers,
+      options?.connectionId
+    )
+
     // Clean the data to remove undefined values and ensure all required fields are present
     const userAssignedTrades = data.map(trade => {
+      const accountId =
+        trade.accountId ||
+        (trade.accountNumber
+          ? accountIdByNumber.get(trade.accountNumber)
+          : undefined) ||
+        null
 
       return {
         ...trade,
         userId: userId,
+        accountId,
         id: generateTradeUUID({...trade, userId: userId}), // Generate a unique ID for the trade using UUID v5 based on all trade properties
       } as Trade
     })
@@ -135,8 +153,10 @@ export async function saveTradesAction(
     // revalidateTag there — that's expected, not an error.
     try {
       updateTag(`trades-${userId}`)
+      updateTag(`user-data-${userId}`)
     } catch {
       revalidateTag(`trades-${userId}`, { expire: 0 })
+      revalidateTag(`user-data-${userId}`, { expire: 0 })
     }
 
     if (result.count > 0) {

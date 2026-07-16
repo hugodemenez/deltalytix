@@ -72,8 +72,18 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
   const { lastSelectedType, setLastSelectedType } = useImportTypePreferenceStore()
 
   useEffect(() => {
+    const syncTypes = new Set(
+      platforms
+        .filter((p) => p.category === 'Direct Account Sync')
+        .map((p) => p.type)
+    )
+    if (lastSelectedType && syncTypes.has(lastSelectedType)) {
+      setLastSelectedType('csv-ai' as ImportType)
+      setSelectedType('csv-ai' as ImportType)
+      return
+    }
     setSelectedType(lastSelectedType)
-  }, [setSelectedType, lastSelectedType])
+  }, [setSelectedType, lastSelectedType, setLastSelectedType])
 
   useEffect(() => {
     if (!selectedType) {
@@ -102,14 +112,18 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
     }
   }
 
-  const filteredPlatforms = platforms.filter(platform =>
+  const fileImportPlatforms = platforms.filter(
+    (platform) => platform.category !== 'Direct Account Sync'
+  )
+
+  const filteredPlatforms = fileImportPlatforms.filter(platform =>
     t(platform.name as keyof typeof t).toLowerCase().includes(searchQuery.toLowerCase()) ||
     t(platform.description as keyof typeof t).toLowerCase().includes(searchQuery.toLowerCase()) ||
     getTranslatedCategory(platform.category).toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const categories = Array.from(new Set(filteredPlatforms.map(platform => platform.category)))
-  const selectedPlatform = platforms.find(p => p.type === selectedType)
+  const selectedPlatform = fileImportPlatforms.find(p => p.type === selectedType)
 
   const handlePlatformSelect = (type: ImportType) => {
     setSelectedType(type)

@@ -537,6 +537,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           videoUrl: null,
           id: "",
           accountNumber: trade.accountNumber,
+          accountId: trade.accountId ?? null,
           quantity: trade.quantity,
           entryId: null,
           closeId: null,
@@ -550,6 +551,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           trades: [
             {
               ...trade,
+              accountId: trade.accountId ?? null,
               trades: [],
             },
           ],

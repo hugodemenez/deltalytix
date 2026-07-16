@@ -28,7 +28,7 @@ interface RithmicCredentials {
 }
 
 interface RithmicSyncConnectionProps {
-  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>> | ((open: boolean) => void)
 }
 
 export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps) {
@@ -728,20 +728,22 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
 }
 
 interface RithmicSyncWrapperProps {
-  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>> | ((open: boolean) => void)
 }
 
 export function RithmicSyncWrapper({ setIsOpen }: RithmicSyncWrapperProps) {
   const t = useI18n()
   
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold">{t('import.type.rithmicLogin')}</h2>
-      <RithmicSyncConnection 
-        setIsOpen={setIsOpen}
-      />
-      <div className="mt-6 text-xs text-muted-foreground space-y-2 border-t pt-4">
-        <div className="flex items-center gap-4 mb-2">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+        <h2 className="text-2xl font-bold">{t('import.type.rithmicLogin')}</h2>
+        <RithmicSyncConnection 
+          setIsOpen={setIsOpen}
+        />
+      </div>
+      <div className="shrink-0 space-y-2 border-t border-black/10 pt-4 text-xs text-muted-foreground dark:border-white/10">
+        <div className="mb-2 flex items-center gap-4">
           <Image 
             src="/logos/TradingPlatformByRithmic-Black.png"
             alt="Trading Platform by Rithmic"

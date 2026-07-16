@@ -877,7 +877,16 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         !hiddenAccountNumbers.has(accountNumber)
       )
       .forEach(accountNumber => {
-        const dbAccount = accounts.find(acc => acc.number === accountNumber)
+        const dbAccount =
+          accounts.find(acc => acc.number === accountNumber) ??
+          accounts.find(acc =>
+            trades.some(
+              (trade) =>
+                trade.accountNumber === accountNumber &&
+                trade.accountId &&
+                trade.accountId === acc.id
+            )
+          )
 
         if (dbAccount) {
           // Account is configured - use it with all its pre-computed metrics

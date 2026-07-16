@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Globe, LayoutDashboard, ChevronDown } from "lucide-react"
+import { Globe, LayoutDashboard, ChevronDown, Cable } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from '@/components/logo'
 import Link from 'next/link'
-import ImportButton from './import/import-button'
 import { useI18n } from "@/locales/client"
 import { useKeyboardShortcuts } from '../../../../hooks/use-keyboard-shortcuts'
 import { ActiveFilterTags } from './filters/active-filter-tags'
@@ -93,7 +92,17 @@ export default function Navbar() {
             className="hidden md:block flex-1 min-w-0"
           />
           <div className="flex items-center gap-2 sm:gap-4">
-            <ImportButton compact />
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="h-9 rounded-sm px-2 active:scale-[0.96]"
+            >
+              <Link href="/dashboard/connections" id="import-data">
+                <Cable className="mr-1.5 h-4 w-4" />
+                <span className="hidden sm:inline">{t('dashboard.connections')}</span>
+              </Link>
+            </Button>
             <ReferralButton />
             <UserMenu />
           </div>

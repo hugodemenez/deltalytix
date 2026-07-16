@@ -10,45 +10,87 @@ import { Step } from "../import-button"
 interface ImportDialogHeaderProps {
   step: Step
   importType: ImportType
+  inline?: boolean
 }
 
-export function ImportDialogHeader({ step, importType }: ImportDialogHeaderProps) {
+export function ImportDialogHeader({ step, importType, inline = false }: ImportDialogHeaderProps) {
   const t = useI18n()
   const platform = platforms.find(p => p.type === importType) || platforms.find(p => p.platformName === 'csv-ai')
   if (!platform) return null
 
+  const visibleSteps = inline
+    ? platform.steps.filter((s) => s.id !== 'select-import-type')
+    : platform.steps
   const currentStep = platform.steps.find(s => s.id === step)
-  const currentStepIndex = platform.steps.findIndex(s => s.id === step)
-  const totalSteps = platform.steps.length
+  const currentStepIndex = visibleSteps.findIndex(s => s.id === step)
+  const totalSteps = visibleSteps.length
+
+  if (inline) {
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <h3 className="text-xl font-normal tracking-tight md:text-2xl">
+            {t((currentStep?.title || 'import.title') as any, { count: 1 })}
+          </h3>
+          <p className="max-w-xl text-pretty text-sm leading-relaxed text-black/55 dark:text-white/55 md:text-base">
+            {t((currentStep?.description || 'import.description') as any, { count: 1 })}
+          </p>
+        </div>
+        <div className="space-y-2">
+          <div className="h-px w-full bg-black/10 dark:bg-white/10">
+            <div
+              className="h-px bg-[oklch(0.22_0.01_95)] transition-all duration-150 dark:bg-[oklch(0.94_0.01_95)]"
+              style={{
+                width: `${totalSteps > 1 ? (Math.max(currentStepIndex, 0) / (totalSteps - 1)) * 100 : 100}%`,
+              }}
+            />
+          </div>
+          <div className="flex justify-between gap-2 overflow-x-auto text-xs text-black/45 dark:text-white/45">
+            {visibleSteps.map((s, index) => (
+              <div
+                key={s.id}
+                className={cn(
+                  "shrink-0 whitespace-nowrap transition-colors duration-150",
+                  currentStepIndex >= index && "font-medium text-black dark:text-white"
+                )}
+              >
+                {t(s.title as any, { count: 1 })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <DialogHeader className="flex-none p-4 sm:p-6 border-b space-y-3 sm:space-y-4">
-      <DialogTitle className="text-base sm:text-lg pr-8">{t((currentStep?.title || 'import.title') as any, { count: 1 })}</DialogTitle>
+    <DialogHeader className="flex-none space-y-3 border-b p-4 sm:space-y-4 sm:p-6">
+      <DialogTitle className="pr-8 text-base sm:text-lg">{t((currentStep?.title || 'import.title') as any, { count: 1 })}</DialogTitle>
       <DialogDescription className="text-sm text-muted-foreground">
         {t((currentStep?.description || 'import.description') as any, { count: 1 })}
       </DialogDescription>
       <div className="space-y-2">
-        <div className="w-full bg-secondary h-2 rounded-full">
+        <div className="h-2 w-full rounded-full bg-secondary">
           <div 
-            className="bg-primary h-2 rounded-full transition-all duration-300 ease-in-out"
+            className="h-2 rounded-full bg-primary transition-all duration-300 ease-in-out"
             style={{ 
               width: `${totalSteps > 1 ? (currentStepIndex / (totalSteps - 1)) * 100 : 100}%`
             }}
           />
         </div>
-        <div className="md:hidden text-xs text-primary font-medium">
+        <div className="text-xs font-medium text-primary md:hidden">
           {t((currentStep?.title || 'import.title') as any, { count: 1 })}
-          <span className="text-muted-foreground font-normal">
+          <span className="font-normal text-muted-foreground">
             {' '}({currentStepIndex + 1}/{totalSteps})
           </span>
         </div>
-        <div className="hidden md:flex justify-between text-xs text-muted-foreground px-1 gap-2 overflow-x-auto">
-          {platform.steps.map((s, index) => (
+        <div className="hidden justify-between gap-2 overflow-x-auto px-1 text-xs text-muted-foreground md:flex">
+          {visibleSteps.map((s, index) => (
             <div 
               key={s.id}
               className={cn(
-                "transition-colors whitespace-nowrap shrink-0",
-                currentStepIndex >= index && "text-primary font-medium"
+                "shrink-0 whitespace-nowrap transition-colors",
+                currentStepIndex >= index && "font-medium text-primary"
               )}
             >
               {t(s.title as any, { count: 1 })}
@@ -58,4 +100,4 @@ export function ImportDialogHeader({ step, importType }: ImportDialogHeaderProps
       </div>
     </DialogHeader>
   )
-} 
+}

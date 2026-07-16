@@ -190,6 +190,8 @@ export interface PlatformConfig {
   customComponent?: ComponentType<{ setIsOpen: React.Dispatch<React.SetStateAction<boolean>> }>
   processorComponent?: ComponentType<PlatformProcessorProps>
   tutorialLink?: string
+  /** Public path to a downloadable sample import file */
+  sampleFile?: string
   steps: {
     id: Step
     title: TranslationKey
@@ -296,6 +298,7 @@ export const platforms: PlatformConfig[] = [
     category: 'Intelligent Import',
     videoUrl: '',
     details: '',
+    sampleFile: '/samples/import/csv-ai-sample.csv',
     logo: {
       component: () => <Sparkles className="w-4 h-4" />,
     },
@@ -350,6 +353,7 @@ export const platforms: PlatformConfig[] = [
     processFile: processStandardCsv,
     processorComponent: TradezellaProcessor,
     tutorialLink: 'https://intercom.help/tradezella-4066d388d93c/en/articles/9725069-how-to-export-data-to-a-csv-file-from-the-trade-log-page',
+    sampleFile: '/samples/import/tradezella-sample.csv',
     steps: [
       {
         id: 'select-import-type',
@@ -386,6 +390,7 @@ export const platforms: PlatformConfig[] = [
     category: 'Platform CSV Import',
     videoUrl: process.env.NEXT_PUBLIC_TRADEOVATE_TUTORIAL_VIDEO || '',
     details: '',
+    sampleFile: '/samples/import/tradovate-sample.csv',
     logo: {
       path: '/logos/tradovate.png',
       alt: 'Tradovate Logo'
@@ -429,6 +434,7 @@ export const platforms: PlatformConfig[] = [
     category: 'Platform CSV Import',
     videoUrl: process.env.NEXT_PUBLIC_QUANTOWER_TUTORIAL_VIDEO || '',
     details: 'import.type.quantower.details',
+    sampleFile: '/samples/import/quantower-sample.csv',
     logo: {
       path: '/logos/quantower.png',
       alt: 'Quantower Logo'
@@ -465,6 +471,7 @@ export const platforms: PlatformConfig[] = [
     description: 'import.type.topstep.description',
     category: 'Platform CSV Import',
     details: 'import.type.topstep.details',
+    sampleFile: '/samples/import/topstep-sample.csv',
     logo: {
       path: '/logos/topstep.png',
       alt: 'Topstep Logo'
@@ -515,6 +522,7 @@ export const platforms: PlatformConfig[] = [
     category: 'Platform CSV Import',
     videoUrl: process.env.NEXT_PUBLIC_NINJATRADER_PERFORMANCE_TUTORIAL_VIDEO || '',
     details: '',
+    sampleFile: '/samples/import/ninjatrader-performance-sample.csv',
     logo: {
       path: '/logos/ninjatrader.png',
       alt: 'NinjaTrader Logo'
@@ -557,6 +565,7 @@ export const platforms: PlatformConfig[] = [
     category: 'Platform CSV Import',
     videoUrl: process.env.NEXT_PUBLIC_RITHMIC_PERFORMANCE_TUTORIAL_VIDEO || '',
     details: 'import.type.rithmicPerf.details',
+    sampleFile: '/samples/import/rithmic-performance-sample.csv',
     logo: {
       path: '/logos/rithmic.png',
       alt: 'Rithmic Logo'
@@ -595,6 +604,7 @@ export const platforms: PlatformConfig[] = [
     category: 'Platform CSV Import',
     videoUrl: process.env.NEXT_PUBLIC_RITHMIC_ORDER_TUTORIAL_VIDEO || '',
     details: 'import.type.rithmicOrders.details',
+    sampleFile: '/samples/import/rithmic-orders-sample.csv',
     logo: {
       path: '/logos/rithmic.png',
       alt: 'Rithmic Logo'
@@ -721,6 +731,7 @@ export const platforms: PlatformConfig[] = [
     category: 'Intelligent Import',
     videoUrl: process.env.NEXT_PUBLIC_PDF_IMPORT_TUTORIAL_VIDEO || '',
     details: 'import.type.pdfImport.details',
+    sampleFile: '/samples/import/ibkr-statement-sample.pdf',
     logo: {
       path: '/logos/ibkr.png',
       alt: 'IBKR Logo'
@@ -761,6 +772,7 @@ export const platforms: PlatformConfig[] = [
     category: 'Platform CSV Import',
     videoUrl: process.env.NEXT_PUBLIC_ATAS_TUTORIAL_VIDEO || '',
     details: 'import.type.atas.details',
+    sampleFile: '/samples/import/atas-journal-sample.xlsx',
     logo: {
       component: AtasLogo,
       alt: 'ATAS Logo'
@@ -796,6 +808,7 @@ export const platforms: PlatformConfig[] = [
     category: 'Platform CSV Import',
     videoUrl: '',
     details: 'import.type.ftmo.details',
+    sampleFile: '/samples/import/ftmo-sample.csv',
     logo: {
       component: FtmoLogo,
       alt: 'FTMO Logo'

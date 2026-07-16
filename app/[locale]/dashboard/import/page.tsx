@@ -168,7 +168,7 @@ export default function ImportCallbackPage() {
 
         // Redirect back to dashboard after a short delay
         setTimeout(() => {
-          router.push("/dashboard");
+          router.push("/dashboard/connections");
         }, 1000);
       } catch (error) {
         console.error("OAuth callback error:", {
@@ -198,7 +198,7 @@ export default function ImportCallbackPage() {
   const handleRetry = () => {
     hasProcessed.current = false;
     tradovateStore.clearAll();
-    router.push("/dashboard");
+    router.push("/dashboard/connections");
   };
 
   return (
@@ -256,7 +256,7 @@ export default function ImportCallbackPage() {
                   {t("tradovateSync.callback.retry")}
                 </Button>
                 <Button
-                  onClick={() => router.push("/dashboard")}
+                  onClick={() => router.push("/dashboard/connections")}
                   variant="secondary"
                   className="w-full"
                 >
