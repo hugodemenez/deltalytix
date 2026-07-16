@@ -220,6 +220,7 @@ export function RithmicProtocolSyncContextProvider({
       for (const account of accounts) {
         if (account.hasToken) {
           await performSyncForAccount(account.accountId)
+          await new Promise((resolve) => setTimeout(resolve, 1000))
         }
       }
     } finally {

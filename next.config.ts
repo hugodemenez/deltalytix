@@ -74,6 +74,15 @@ const nextConfig: NextConfig = {
     ],
     // Runtime fs search in /api/ai/support — keep docs in the serverless bundle.
     '/api/ai/support': [...SUPPORT_SEARCH_TRACE_INCLUDES],
+    // Rithmic Protocol client loads protos + SSL params from disk at runtime.
+    '/api/rithmic-protocol/sync': [
+      './lib/rithmic-protocol/proto/**',
+      './lib/rithmic-protocol/etc/**',
+    ],
+    '/api/rithmic-protocol/synchronizations': [
+      './lib/rithmic-protocol/proto/**',
+      './lib/rithmic-protocol/etc/**',
+    ],
   },
 }
 
