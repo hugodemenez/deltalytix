@@ -22,3 +22,9 @@ RITHMIC_PROTOCOL_APP_VERSION=0.1.0
 
 Protocol API has a **separate conformance** process from R | API+. Use Rithmic Test
 until Protocol conformance is approved for Paper Trading / Rithmic 01.
+
+## Conformance testing (Kashyap)
+
+Step-by-step access + sync instructions for Rithmic Protocol review:
+
+→ **[CONFORMANCE_TEST_GUIDE.md](./CONFORMANCE_TEST_GUIDE.md)**
