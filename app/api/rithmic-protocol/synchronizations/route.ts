@@ -58,8 +58,23 @@ export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json()
     const accountId = body?.accountId as string | undefined
-    await removeRithmicProtocolToken(accountId)
-    return NextResponse.json({ success: true })
+
+    if (!accountId) {
+      return NextResponse.json(
+        { success: false, message: 'ACCOUNT_ID_REQUIRED' },
+        { status: 400 },
+      )
+    }
+
+    const result = await removeRithmicProtocolToken(accountId)
+    if (result.error) {
+      return NextResponse.json(
+        { success: false, message: result.error },
+        { status: 400 },
+      )
+    }
+
+    return NextResponse.json({ success: true, message: 'Synchronization removed' })
   } catch (error) {
     console.error('Error deleting Rithmic Protocol synchronization:', error)
     return NextResponse.json(

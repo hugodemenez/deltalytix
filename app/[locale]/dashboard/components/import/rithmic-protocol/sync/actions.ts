@@ -159,17 +159,21 @@ export async function getRithmicProtocolToken(accountId: string) {
   return { storedTokenJson: row.token, lastSyncedAt: row.lastSyncedAt }
 }
 
-export async function removeRithmicProtocolToken(accountId?: string) {
+export async function removeRithmicProtocolToken(accountId: string) {
   const userId = await getUserId()
-  if (!userId) return
+  if (!userId) {
+    return { error: 'USER_NOT_AUTHENTICATED' as const }
+  }
 
   await prisma.synchronization.deleteMany({
     where: {
       userId,
       service: SERVICE,
-      ...(accountId ? { accountId } : {}),
+      accountId,
     },
   })
+
+  return { success: true as const }
 }
 
 export async function getRithmicProtocolSynchronizations() {
