@@ -824,10 +824,11 @@ export const DataProvider: React.FC<{
           return false;
         }
 
-        // We should identify when accounts pass their buffer
-        // We can get the index of the first trade whihch is after the buffer date of its account
-        const tradeAccount = accounts.find(
-          (acc) => acc.number === trade.accountNumber
+        // Prefer Trade.accountId FK when present; fall back to soft accountNumber join
+        const tradeAccount = accounts.find((acc) =>
+          trade.accountId
+            ? acc.id === trade.accountId
+            : acc.number === trade.accountNumber
         );
 
         // Validate entry date

@@ -117,6 +117,7 @@ export type AccountMinAggregateOutputType = {
   promoType: $Enums.PromoType | null
   renewalNotice: number | null
   minPnlToCountAsDay: number | null
+  connectionId: string | null
   buffer: number | null
   considerBuffer: boolean | null
   shouldConsiderTradesBeforeReset: boolean | null
@@ -165,6 +166,7 @@ export type AccountMaxAggregateOutputType = {
   promoType: $Enums.PromoType | null
   renewalNotice: number | null
   minPnlToCountAsDay: number | null
+  connectionId: string | null
   buffer: number | null
   considerBuffer: boolean | null
   shouldConsiderTradesBeforeReset: boolean | null
@@ -213,6 +215,7 @@ export type AccountCountAggregateOutputType = {
   promoType: number
   renewalNotice: number
   minPnlToCountAsDay: number
+  connectionId: number
   buffer: number
   considerBuffer: number
   shouldConsiderTradesBeforeReset: number
@@ -311,6 +314,7 @@ export type AccountMinAggregateInputType = {
   promoType?: true
   renewalNotice?: true
   minPnlToCountAsDay?: true
+  connectionId?: true
   buffer?: true
   considerBuffer?: true
   shouldConsiderTradesBeforeReset?: true
@@ -359,6 +363,7 @@ export type AccountMaxAggregateInputType = {
   promoType?: true
   renewalNotice?: true
   minPnlToCountAsDay?: true
+  connectionId?: true
   buffer?: true
   considerBuffer?: true
   shouldConsiderTradesBeforeReset?: true
@@ -407,6 +412,7 @@ export type AccountCountAggregateInputType = {
   promoType?: true
   renewalNotice?: true
   minPnlToCountAsDay?: true
+  connectionId?: true
   buffer?: true
   considerBuffer?: true
   shouldConsiderTradesBeforeReset?: true
@@ -542,6 +548,7 @@ export type AccountGroupByOutputType = {
   promoType: $Enums.PromoType | null
   renewalNotice: number | null
   minPnlToCountAsDay: number | null
+  connectionId: string | null
   buffer: number
   considerBuffer: boolean
   shouldConsiderTradesBeforeReset: boolean
@@ -613,12 +620,15 @@ export type AccountWhereInput = {
   promoType?: Prisma.EnumPromoTypeNullableFilter<"Account"> | $Enums.PromoType | null
   renewalNotice?: Prisma.IntNullableFilter<"Account"> | number | null
   minPnlToCountAsDay?: Prisma.FloatNullableFilter<"Account"> | number | null
+  connectionId?: Prisma.StringNullableFilter<"Account"> | string | null
   buffer?: Prisma.FloatFilter<"Account"> | number
   considerBuffer?: Prisma.BoolFilter<"Account"> | boolean
   shouldConsiderTradesBeforeReset?: Prisma.BoolFilter<"Account"> | boolean
   group?: Prisma.XOR<Prisma.GroupNullableScalarRelationFilter, Prisma.GroupWhereInput> | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  connection?: Prisma.XOR<Prisma.ConnectionNullableScalarRelationFilter, Prisma.ConnectionWhereInput> | null
   payouts?: Prisma.PayoutListRelationFilter
+  trades?: Prisma.TradeListRelationFilter
 }
 
 export type AccountOrderByWithRelationInput = {
@@ -664,12 +674,15 @@ export type AccountOrderByWithRelationInput = {
   promoType?: Prisma.SortOrderInput | Prisma.SortOrder
   renewalNotice?: Prisma.SortOrderInput | Prisma.SortOrder
   minPnlToCountAsDay?: Prisma.SortOrderInput | Prisma.SortOrder
+  connectionId?: Prisma.SortOrderInput | Prisma.SortOrder
   buffer?: Prisma.SortOrder
   considerBuffer?: Prisma.SortOrder
   shouldConsiderTradesBeforeReset?: Prisma.SortOrder
   group?: Prisma.GroupOrderByWithRelationInput
   user?: Prisma.UserOrderByWithRelationInput
+  connection?: Prisma.ConnectionOrderByWithRelationInput
   payouts?: Prisma.PayoutOrderByRelationAggregateInput
+  trades?: Prisma.TradeOrderByRelationAggregateInput
 }
 
 export type AccountWhereUniqueInput = Prisma.AtLeast<{
@@ -719,12 +732,15 @@ export type AccountWhereUniqueInput = Prisma.AtLeast<{
   promoType?: Prisma.EnumPromoTypeNullableFilter<"Account"> | $Enums.PromoType | null
   renewalNotice?: Prisma.IntNullableFilter<"Account"> | number | null
   minPnlToCountAsDay?: Prisma.FloatNullableFilter<"Account"> | number | null
+  connectionId?: Prisma.StringNullableFilter<"Account"> | string | null
   buffer?: Prisma.FloatFilter<"Account"> | number
   considerBuffer?: Prisma.BoolFilter<"Account"> | boolean
   shouldConsiderTradesBeforeReset?: Prisma.BoolFilter<"Account"> | boolean
   group?: Prisma.XOR<Prisma.GroupNullableScalarRelationFilter, Prisma.GroupWhereInput> | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  connection?: Prisma.XOR<Prisma.ConnectionNullableScalarRelationFilter, Prisma.ConnectionWhereInput> | null
   payouts?: Prisma.PayoutListRelationFilter
+  trades?: Prisma.TradeListRelationFilter
 }, "id" | "id" | "number_userId">
 
 export type AccountOrderByWithAggregationInput = {
@@ -770,6 +786,7 @@ export type AccountOrderByWithAggregationInput = {
   promoType?: Prisma.SortOrderInput | Prisma.SortOrder
   renewalNotice?: Prisma.SortOrderInput | Prisma.SortOrder
   minPnlToCountAsDay?: Prisma.SortOrderInput | Prisma.SortOrder
+  connectionId?: Prisma.SortOrderInput | Prisma.SortOrder
   buffer?: Prisma.SortOrder
   considerBuffer?: Prisma.SortOrder
   shouldConsiderTradesBeforeReset?: Prisma.SortOrder
@@ -826,6 +843,7 @@ export type AccountScalarWhereWithAggregatesInput = {
   promoType?: Prisma.EnumPromoTypeNullableWithAggregatesFilter<"Account"> | $Enums.PromoType | null
   renewalNotice?: Prisma.IntNullableWithAggregatesFilter<"Account"> | number | null
   minPnlToCountAsDay?: Prisma.FloatNullableWithAggregatesFilter<"Account"> | number | null
+  connectionId?: Prisma.StringNullableWithAggregatesFilter<"Account"> | string | null
   buffer?: Prisma.FloatWithAggregatesFilter<"Account"> | number
   considerBuffer?: Prisma.BoolWithAggregatesFilter<"Account"> | boolean
   shouldConsiderTradesBeforeReset?: Prisma.BoolWithAggregatesFilter<"Account"> | boolean
@@ -877,7 +895,9 @@ export type AccountCreateInput = {
   shouldConsiderTradesBeforeReset?: boolean
   group?: Prisma.GroupCreateNestedOneWithoutAccountsInput
   user: Prisma.UserCreateNestedOneWithoutAccountsInput
+  connection?: Prisma.ConnectionCreateNestedOneWithoutAccountsInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutAccountInput
+  trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateInput = {
@@ -923,10 +943,12 @@ export type AccountUncheckedCreateInput = {
   promoType?: $Enums.PromoType | null
   renewalNotice?: number | null
   minPnlToCountAsDay?: number | null
+  connectionId?: string | null
   buffer?: number
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutAccountInput
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUpdateInput = {
@@ -975,7 +997,9 @@ export type AccountUpdateInput = {
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
   group?: Prisma.GroupUpdateOneWithoutAccountsNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutAccountsNestedInput
+  connection?: Prisma.ConnectionUpdateOneWithoutAccountsNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutAccountNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateInput = {
@@ -1021,10 +1045,12 @@ export type AccountUncheckedUpdateInput = {
   promoType?: Prisma.NullableEnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType | null
   renewalNotice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   minPnlToCountAsDay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buffer?: Prisma.FloatFieldUpdateOperationsInput | number
   considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutAccountNestedInput
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateManyInput = {
@@ -1070,6 +1096,7 @@ export type AccountCreateManyInput = {
   promoType?: $Enums.PromoType | null
   renewalNotice?: number | null
   minPnlToCountAsDay?: number | null
+  connectionId?: string | null
   buffer?: number
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
@@ -1164,9 +1191,15 @@ export type AccountUncheckedUpdateManyInput = {
   promoType?: Prisma.NullableEnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType | null
   renewalNotice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   minPnlToCountAsDay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buffer?: Prisma.FloatFieldUpdateOperationsInput | number
   considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
+}
+
+export type AccountNullableScalarRelationFilter = {
+  is?: Prisma.AccountWhereInput | null
+  isNot?: Prisma.AccountWhereInput | null
 }
 
 export type AccountListRelationFilter = {
@@ -1227,6 +1260,7 @@ export type AccountCountOrderByAggregateInput = {
   promoType?: Prisma.SortOrder
   renewalNotice?: Prisma.SortOrder
   minPnlToCountAsDay?: Prisma.SortOrder
+  connectionId?: Prisma.SortOrder
   buffer?: Prisma.SortOrder
   considerBuffer?: Prisma.SortOrder
   shouldConsiderTradesBeforeReset?: Prisma.SortOrder
@@ -1299,6 +1333,7 @@ export type AccountMaxOrderByAggregateInput = {
   promoType?: Prisma.SortOrder
   renewalNotice?: Prisma.SortOrder
   minPnlToCountAsDay?: Prisma.SortOrder
+  connectionId?: Prisma.SortOrder
   buffer?: Prisma.SortOrder
   considerBuffer?: Prisma.SortOrder
   shouldConsiderTradesBeforeReset?: Prisma.SortOrder
@@ -1347,6 +1382,7 @@ export type AccountMinOrderByAggregateInput = {
   promoType?: Prisma.SortOrder
   renewalNotice?: Prisma.SortOrder
   minPnlToCountAsDay?: Prisma.SortOrder
+  connectionId?: Prisma.SortOrder
   buffer?: Prisma.SortOrder
   considerBuffer?: Prisma.SortOrder
   shouldConsiderTradesBeforeReset?: Prisma.SortOrder
@@ -1379,6 +1415,22 @@ export type AccountSumOrderByAggregateInput = {
 export type AccountScalarRelationFilter = {
   is?: Prisma.AccountWhereInput
   isNot?: Prisma.AccountWhereInput
+}
+
+export type AccountCreateNestedOneWithoutTradesInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutTradesInput, Prisma.AccountUncheckedCreateWithoutTradesInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutTradesInput
+  connect?: Prisma.AccountWhereUniqueInput
+}
+
+export type AccountUpdateOneWithoutTradesNestedInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutTradesInput, Prisma.AccountUncheckedCreateWithoutTradesInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutTradesInput
+  upsert?: Prisma.AccountUpsertWithoutTradesInput
+  disconnect?: Prisma.AccountWhereInput | boolean
+  delete?: Prisma.AccountWhereInput | boolean
+  connect?: Prisma.AccountWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AccountUpdateToOneWithWhereWithoutTradesInput, Prisma.AccountUpdateWithoutTradesInput>, Prisma.AccountUncheckedUpdateWithoutTradesInput>
 }
 
 export type AccountCreateNestedManyWithoutUserInput = {
@@ -1420,6 +1472,48 @@ export type AccountUncheckedUpdateManyWithoutUserNestedInput = {
   connect?: Prisma.AccountWhereUniqueInput | Prisma.AccountWhereUniqueInput[]
   update?: Prisma.AccountUpdateWithWhereUniqueWithoutUserInput | Prisma.AccountUpdateWithWhereUniqueWithoutUserInput[]
   updateMany?: Prisma.AccountUpdateManyWithWhereWithoutUserInput | Prisma.AccountUpdateManyWithWhereWithoutUserInput[]
+  deleteMany?: Prisma.AccountScalarWhereInput | Prisma.AccountScalarWhereInput[]
+}
+
+export type AccountCreateNestedManyWithoutConnectionInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutConnectionInput, Prisma.AccountUncheckedCreateWithoutConnectionInput> | Prisma.AccountCreateWithoutConnectionInput[] | Prisma.AccountUncheckedCreateWithoutConnectionInput[]
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutConnectionInput | Prisma.AccountCreateOrConnectWithoutConnectionInput[]
+  createMany?: Prisma.AccountCreateManyConnectionInputEnvelope
+  connect?: Prisma.AccountWhereUniqueInput | Prisma.AccountWhereUniqueInput[]
+}
+
+export type AccountUncheckedCreateNestedManyWithoutConnectionInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutConnectionInput, Prisma.AccountUncheckedCreateWithoutConnectionInput> | Prisma.AccountCreateWithoutConnectionInput[] | Prisma.AccountUncheckedCreateWithoutConnectionInput[]
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutConnectionInput | Prisma.AccountCreateOrConnectWithoutConnectionInput[]
+  createMany?: Prisma.AccountCreateManyConnectionInputEnvelope
+  connect?: Prisma.AccountWhereUniqueInput | Prisma.AccountWhereUniqueInput[]
+}
+
+export type AccountUpdateManyWithoutConnectionNestedInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutConnectionInput, Prisma.AccountUncheckedCreateWithoutConnectionInput> | Prisma.AccountCreateWithoutConnectionInput[] | Prisma.AccountUncheckedCreateWithoutConnectionInput[]
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutConnectionInput | Prisma.AccountCreateOrConnectWithoutConnectionInput[]
+  upsert?: Prisma.AccountUpsertWithWhereUniqueWithoutConnectionInput | Prisma.AccountUpsertWithWhereUniqueWithoutConnectionInput[]
+  createMany?: Prisma.AccountCreateManyConnectionInputEnvelope
+  set?: Prisma.AccountWhereUniqueInput | Prisma.AccountWhereUniqueInput[]
+  disconnect?: Prisma.AccountWhereUniqueInput | Prisma.AccountWhereUniqueInput[]
+  delete?: Prisma.AccountWhereUniqueInput | Prisma.AccountWhereUniqueInput[]
+  connect?: Prisma.AccountWhereUniqueInput | Prisma.AccountWhereUniqueInput[]
+  update?: Prisma.AccountUpdateWithWhereUniqueWithoutConnectionInput | Prisma.AccountUpdateWithWhereUniqueWithoutConnectionInput[]
+  updateMany?: Prisma.AccountUpdateManyWithWhereWithoutConnectionInput | Prisma.AccountUpdateManyWithWhereWithoutConnectionInput[]
+  deleteMany?: Prisma.AccountScalarWhereInput | Prisma.AccountScalarWhereInput[]
+}
+
+export type AccountUncheckedUpdateManyWithoutConnectionNestedInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutConnectionInput, Prisma.AccountUncheckedCreateWithoutConnectionInput> | Prisma.AccountCreateWithoutConnectionInput[] | Prisma.AccountUncheckedCreateWithoutConnectionInput[]
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutConnectionInput | Prisma.AccountCreateOrConnectWithoutConnectionInput[]
+  upsert?: Prisma.AccountUpsertWithWhereUniqueWithoutConnectionInput | Prisma.AccountUpsertWithWhereUniqueWithoutConnectionInput[]
+  createMany?: Prisma.AccountCreateManyConnectionInputEnvelope
+  set?: Prisma.AccountWhereUniqueInput | Prisma.AccountWhereUniqueInput[]
+  disconnect?: Prisma.AccountWhereUniqueInput | Prisma.AccountWhereUniqueInput[]
+  delete?: Prisma.AccountWhereUniqueInput | Prisma.AccountWhereUniqueInput[]
+  connect?: Prisma.AccountWhereUniqueInput | Prisma.AccountWhereUniqueInput[]
+  update?: Prisma.AccountUpdateWithWhereUniqueWithoutConnectionInput | Prisma.AccountUpdateWithWhereUniqueWithoutConnectionInput[]
+  updateMany?: Prisma.AccountUpdateManyWithWhereWithoutConnectionInput | Prisma.AccountUpdateManyWithWhereWithoutConnectionInput[]
   deleteMany?: Prisma.AccountScalarWhereInput | Prisma.AccountScalarWhereInput[]
 }
 
@@ -1503,6 +1597,222 @@ export type AccountUpdateOneRequiredWithoutPayoutsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.AccountUpdateToOneWithWhereWithoutPayoutsInput, Prisma.AccountUpdateWithoutPayoutsInput>, Prisma.AccountUncheckedUpdateWithoutPayoutsInput>
 }
 
+export type AccountCreateWithoutTradesInput = {
+  id?: string
+  number: string
+  propfirm?: string
+  drawdownThreshold?: number
+  profitTarget?: number
+  isPerformance?: boolean
+  createdAt?: Date | string
+  startingBalance?: number
+  payoutCount?: number
+  trailingDrawdown?: boolean
+  trailingStopProfit?: number | null
+  resetDate?: Date | string | null
+  consistencyPercentage?: number | null
+  accountSize?: string | null
+  accountSizeName?: string | null
+  activationFees?: number | null
+  balanceRequired?: number | null
+  dailyLoss?: number | null
+  evaluation?: boolean
+  isRecursively?: string | null
+  maxFundedAccounts?: number | null
+  maxPayout?: string | null
+  minDays?: number | null
+  minPayout?: number | null
+  minTradingDaysForPayout?: number | null
+  payoutBonus?: number | null
+  payoutPolicy?: string | null
+  price?: number | null
+  priceWithPromo?: number | null
+  profitSharing?: number | null
+  rulesDailyLoss?: string | null
+  tradingNewsAllowed?: boolean
+  trailing?: string | null
+  autoRenewal?: boolean
+  nextPaymentDate?: Date | string | null
+  paymentFrequency?: $Enums.PaymentFrequency | null
+  promoPercentage?: number | null
+  promoType?: $Enums.PromoType | null
+  renewalNotice?: number | null
+  minPnlToCountAsDay?: number | null
+  buffer?: number
+  considerBuffer?: boolean
+  shouldConsiderTradesBeforeReset?: boolean
+  group?: Prisma.GroupCreateNestedOneWithoutAccountsInput
+  user: Prisma.UserCreateNestedOneWithoutAccountsInput
+  connection?: Prisma.ConnectionCreateNestedOneWithoutAccountsInput
+  payouts?: Prisma.PayoutCreateNestedManyWithoutAccountInput
+}
+
+export type AccountUncheckedCreateWithoutTradesInput = {
+  id?: string
+  number: string
+  propfirm?: string
+  drawdownThreshold?: number
+  profitTarget?: number
+  isPerformance?: boolean
+  userId: string
+  createdAt?: Date | string
+  startingBalance?: number
+  payoutCount?: number
+  trailingDrawdown?: boolean
+  trailingStopProfit?: number | null
+  resetDate?: Date | string | null
+  consistencyPercentage?: number | null
+  groupId?: string | null
+  accountSize?: string | null
+  accountSizeName?: string | null
+  activationFees?: number | null
+  balanceRequired?: number | null
+  dailyLoss?: number | null
+  evaluation?: boolean
+  isRecursively?: string | null
+  maxFundedAccounts?: number | null
+  maxPayout?: string | null
+  minDays?: number | null
+  minPayout?: number | null
+  minTradingDaysForPayout?: number | null
+  payoutBonus?: number | null
+  payoutPolicy?: string | null
+  price?: number | null
+  priceWithPromo?: number | null
+  profitSharing?: number | null
+  rulesDailyLoss?: string | null
+  tradingNewsAllowed?: boolean
+  trailing?: string | null
+  autoRenewal?: boolean
+  nextPaymentDate?: Date | string | null
+  paymentFrequency?: $Enums.PaymentFrequency | null
+  promoPercentage?: number | null
+  promoType?: $Enums.PromoType | null
+  renewalNotice?: number | null
+  minPnlToCountAsDay?: number | null
+  connectionId?: string | null
+  buffer?: number
+  considerBuffer?: boolean
+  shouldConsiderTradesBeforeReset?: boolean
+  payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutAccountInput
+}
+
+export type AccountCreateOrConnectWithoutTradesInput = {
+  where: Prisma.AccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.AccountCreateWithoutTradesInput, Prisma.AccountUncheckedCreateWithoutTradesInput>
+}
+
+export type AccountUpsertWithoutTradesInput = {
+  update: Prisma.XOR<Prisma.AccountUpdateWithoutTradesInput, Prisma.AccountUncheckedUpdateWithoutTradesInput>
+  create: Prisma.XOR<Prisma.AccountCreateWithoutTradesInput, Prisma.AccountUncheckedCreateWithoutTradesInput>
+  where?: Prisma.AccountWhereInput
+}
+
+export type AccountUpdateToOneWithWhereWithoutTradesInput = {
+  where?: Prisma.AccountWhereInput
+  data: Prisma.XOR<Prisma.AccountUpdateWithoutTradesInput, Prisma.AccountUncheckedUpdateWithoutTradesInput>
+}
+
+export type AccountUpdateWithoutTradesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  number?: Prisma.StringFieldUpdateOperationsInput | string
+  propfirm?: Prisma.StringFieldUpdateOperationsInput | string
+  drawdownThreshold?: Prisma.FloatFieldUpdateOperationsInput | number
+  profitTarget?: Prisma.FloatFieldUpdateOperationsInput | number
+  isPerformance?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startingBalance?: Prisma.FloatFieldUpdateOperationsInput | number
+  payoutCount?: Prisma.IntFieldUpdateOperationsInput | number
+  trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accountSizeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activationFees?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  balanceRequired?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  dailyLoss?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  evaluation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isRecursively?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  maxFundedAccounts?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  maxPayout?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  minDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  minPayout?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rulesDailyLoss?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tradingNewsAllowed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trailing?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoRenewal?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  nextPaymentDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paymentFrequency?: Prisma.NullableEnumPaymentFrequencyFieldUpdateOperationsInput | $Enums.PaymentFrequency | null
+  promoPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  promoType?: Prisma.NullableEnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType | null
+  renewalNotice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  minPnlToCountAsDay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  buffer?: Prisma.FloatFieldUpdateOperationsInput | number
+  considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  group?: Prisma.GroupUpdateOneWithoutAccountsNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutAccountsNestedInput
+  connection?: Prisma.ConnectionUpdateOneWithoutAccountsNestedInput
+  payouts?: Prisma.PayoutUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountUncheckedUpdateWithoutTradesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  number?: Prisma.StringFieldUpdateOperationsInput | string
+  propfirm?: Prisma.StringFieldUpdateOperationsInput | string
+  drawdownThreshold?: Prisma.FloatFieldUpdateOperationsInput | number
+  profitTarget?: Prisma.FloatFieldUpdateOperationsInput | number
+  isPerformance?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startingBalance?: Prisma.FloatFieldUpdateOperationsInput | number
+  payoutCount?: Prisma.IntFieldUpdateOperationsInput | number
+  trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accountSizeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activationFees?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  balanceRequired?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  dailyLoss?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  evaluation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isRecursively?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  maxFundedAccounts?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  maxPayout?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  minDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  minPayout?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rulesDailyLoss?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tradingNewsAllowed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trailing?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoRenewal?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  nextPaymentDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paymentFrequency?: Prisma.NullableEnumPaymentFrequencyFieldUpdateOperationsInput | $Enums.PaymentFrequency | null
+  promoPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  promoType?: Prisma.NullableEnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType | null
+  renewalNotice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  minPnlToCountAsDay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  buffer?: Prisma.FloatFieldUpdateOperationsInput | number
+  considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  payouts?: Prisma.PayoutUncheckedUpdateManyWithoutAccountNestedInput
+}
+
 export type AccountCreateWithoutUserInput = {
   id?: string
   number: string
@@ -1548,7 +1858,9 @@ export type AccountCreateWithoutUserInput = {
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
   group?: Prisma.GroupCreateNestedOneWithoutAccountsInput
+  connection?: Prisma.ConnectionCreateNestedOneWithoutAccountsInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutAccountInput
+  trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutUserInput = {
@@ -1593,10 +1905,12 @@ export type AccountUncheckedCreateWithoutUserInput = {
   promoType?: $Enums.PromoType | null
   renewalNotice?: number | null
   minPnlToCountAsDay?: number | null
+  connectionId?: string | null
   buffer?: number
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutAccountInput
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutUserInput = {
@@ -1671,9 +1985,136 @@ export type AccountScalarWhereInput = {
   promoType?: Prisma.EnumPromoTypeNullableFilter<"Account"> | $Enums.PromoType | null
   renewalNotice?: Prisma.IntNullableFilter<"Account"> | number | null
   minPnlToCountAsDay?: Prisma.FloatNullableFilter<"Account"> | number | null
+  connectionId?: Prisma.StringNullableFilter<"Account"> | string | null
   buffer?: Prisma.FloatFilter<"Account"> | number
   considerBuffer?: Prisma.BoolFilter<"Account"> | boolean
   shouldConsiderTradesBeforeReset?: Prisma.BoolFilter<"Account"> | boolean
+}
+
+export type AccountCreateWithoutConnectionInput = {
+  id?: string
+  number: string
+  propfirm?: string
+  drawdownThreshold?: number
+  profitTarget?: number
+  isPerformance?: boolean
+  createdAt?: Date | string
+  startingBalance?: number
+  payoutCount?: number
+  trailingDrawdown?: boolean
+  trailingStopProfit?: number | null
+  resetDate?: Date | string | null
+  consistencyPercentage?: number | null
+  accountSize?: string | null
+  accountSizeName?: string | null
+  activationFees?: number | null
+  balanceRequired?: number | null
+  dailyLoss?: number | null
+  evaluation?: boolean
+  isRecursively?: string | null
+  maxFundedAccounts?: number | null
+  maxPayout?: string | null
+  minDays?: number | null
+  minPayout?: number | null
+  minTradingDaysForPayout?: number | null
+  payoutBonus?: number | null
+  payoutPolicy?: string | null
+  price?: number | null
+  priceWithPromo?: number | null
+  profitSharing?: number | null
+  rulesDailyLoss?: string | null
+  tradingNewsAllowed?: boolean
+  trailing?: string | null
+  autoRenewal?: boolean
+  nextPaymentDate?: Date | string | null
+  paymentFrequency?: $Enums.PaymentFrequency | null
+  promoPercentage?: number | null
+  promoType?: $Enums.PromoType | null
+  renewalNotice?: number | null
+  minPnlToCountAsDay?: number | null
+  buffer?: number
+  considerBuffer?: boolean
+  shouldConsiderTradesBeforeReset?: boolean
+  group?: Prisma.GroupCreateNestedOneWithoutAccountsInput
+  user: Prisma.UserCreateNestedOneWithoutAccountsInput
+  payouts?: Prisma.PayoutCreateNestedManyWithoutAccountInput
+  trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
+}
+
+export type AccountUncheckedCreateWithoutConnectionInput = {
+  id?: string
+  number: string
+  propfirm?: string
+  drawdownThreshold?: number
+  profitTarget?: number
+  isPerformance?: boolean
+  userId: string
+  createdAt?: Date | string
+  startingBalance?: number
+  payoutCount?: number
+  trailingDrawdown?: boolean
+  trailingStopProfit?: number | null
+  resetDate?: Date | string | null
+  consistencyPercentage?: number | null
+  groupId?: string | null
+  accountSize?: string | null
+  accountSizeName?: string | null
+  activationFees?: number | null
+  balanceRequired?: number | null
+  dailyLoss?: number | null
+  evaluation?: boolean
+  isRecursively?: string | null
+  maxFundedAccounts?: number | null
+  maxPayout?: string | null
+  minDays?: number | null
+  minPayout?: number | null
+  minTradingDaysForPayout?: number | null
+  payoutBonus?: number | null
+  payoutPolicy?: string | null
+  price?: number | null
+  priceWithPromo?: number | null
+  profitSharing?: number | null
+  rulesDailyLoss?: string | null
+  tradingNewsAllowed?: boolean
+  trailing?: string | null
+  autoRenewal?: boolean
+  nextPaymentDate?: Date | string | null
+  paymentFrequency?: $Enums.PaymentFrequency | null
+  promoPercentage?: number | null
+  promoType?: $Enums.PromoType | null
+  renewalNotice?: number | null
+  minPnlToCountAsDay?: number | null
+  buffer?: number
+  considerBuffer?: boolean
+  shouldConsiderTradesBeforeReset?: boolean
+  payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutAccountInput
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
+}
+
+export type AccountCreateOrConnectWithoutConnectionInput = {
+  where: Prisma.AccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.AccountCreateWithoutConnectionInput, Prisma.AccountUncheckedCreateWithoutConnectionInput>
+}
+
+export type AccountCreateManyConnectionInputEnvelope = {
+  data: Prisma.AccountCreateManyConnectionInput | Prisma.AccountCreateManyConnectionInput[]
+  skipDuplicates?: boolean
+}
+
+export type AccountUpsertWithWhereUniqueWithoutConnectionInput = {
+  where: Prisma.AccountWhereUniqueInput
+  update: Prisma.XOR<Prisma.AccountUpdateWithoutConnectionInput, Prisma.AccountUncheckedUpdateWithoutConnectionInput>
+  create: Prisma.XOR<Prisma.AccountCreateWithoutConnectionInput, Prisma.AccountUncheckedCreateWithoutConnectionInput>
+}
+
+export type AccountUpdateWithWhereUniqueWithoutConnectionInput = {
+  where: Prisma.AccountWhereUniqueInput
+  data: Prisma.XOR<Prisma.AccountUpdateWithoutConnectionInput, Prisma.AccountUncheckedUpdateWithoutConnectionInput>
+}
+
+export type AccountUpdateManyWithWhereWithoutConnectionInput = {
+  where: Prisma.AccountScalarWhereInput
+  data: Prisma.XOR<Prisma.AccountUpdateManyMutationInput, Prisma.AccountUncheckedUpdateManyWithoutConnectionInput>
 }
 
 export type AccountCreateWithoutGroupInput = {
@@ -1721,7 +2162,9 @@ export type AccountCreateWithoutGroupInput = {
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
   user: Prisma.UserCreateNestedOneWithoutAccountsInput
+  connection?: Prisma.ConnectionCreateNestedOneWithoutAccountsInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutAccountInput
+  trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutGroupInput = {
@@ -1766,10 +2209,12 @@ export type AccountUncheckedCreateWithoutGroupInput = {
   promoType?: $Enums.PromoType | null
   renewalNotice?: number | null
   minPnlToCountAsDay?: number | null
+  connectionId?: string | null
   buffer?: number
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutAccountInput
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutGroupInput = {
@@ -1844,6 +2289,8 @@ export type AccountCreateWithoutPayoutsInput = {
   shouldConsiderTradesBeforeReset?: boolean
   group?: Prisma.GroupCreateNestedOneWithoutAccountsInput
   user: Prisma.UserCreateNestedOneWithoutAccountsInput
+  connection?: Prisma.ConnectionCreateNestedOneWithoutAccountsInput
+  trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutPayoutsInput = {
@@ -1889,9 +2336,11 @@ export type AccountUncheckedCreateWithoutPayoutsInput = {
   promoType?: $Enums.PromoType | null
   renewalNotice?: number | null
   minPnlToCountAsDay?: number | null
+  connectionId?: string | null
   buffer?: number
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutPayoutsInput = {
@@ -1956,6 +2405,8 @@ export type AccountUpdateWithoutPayoutsInput = {
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
   group?: Prisma.GroupUpdateOneWithoutAccountsNestedInput
   user?: Prisma.UserUpdateOneRequiredWithoutAccountsNestedInput
+  connection?: Prisma.ConnectionUpdateOneWithoutAccountsNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutPayoutsInput = {
@@ -2001,9 +2452,11 @@ export type AccountUncheckedUpdateWithoutPayoutsInput = {
   promoType?: Prisma.NullableEnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType | null
   renewalNotice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   minPnlToCountAsDay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buffer?: Prisma.FloatFieldUpdateOperationsInput | number
   considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateManyUserInput = {
@@ -2048,6 +2501,7 @@ export type AccountCreateManyUserInput = {
   promoType?: $Enums.PromoType | null
   renewalNotice?: number | null
   minPnlToCountAsDay?: number | null
+  connectionId?: string | null
   buffer?: number
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
@@ -2098,7 +2552,9 @@ export type AccountUpdateWithoutUserInput = {
   considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
   group?: Prisma.GroupUpdateOneWithoutAccountsNestedInput
+  connection?: Prisma.ConnectionUpdateOneWithoutAccountsNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutAccountNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutUserInput = {
@@ -2143,10 +2599,12 @@ export type AccountUncheckedUpdateWithoutUserInput = {
   promoType?: Prisma.NullableEnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType | null
   renewalNotice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   minPnlToCountAsDay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buffer?: Prisma.FloatFieldUpdateOperationsInput | number
   considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutAccountNestedInput
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateManyWithoutUserInput = {
@@ -2156,6 +2614,203 @@ export type AccountUncheckedUpdateManyWithoutUserInput = {
   drawdownThreshold?: Prisma.FloatFieldUpdateOperationsInput | number
   profitTarget?: Prisma.FloatFieldUpdateOperationsInput | number
   isPerformance?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startingBalance?: Prisma.FloatFieldUpdateOperationsInput | number
+  payoutCount?: Prisma.IntFieldUpdateOperationsInput | number
+  trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accountSizeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activationFees?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  balanceRequired?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  dailyLoss?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  evaluation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isRecursively?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  maxFundedAccounts?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  maxPayout?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  minDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  minPayout?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rulesDailyLoss?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tradingNewsAllowed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trailing?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoRenewal?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  nextPaymentDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paymentFrequency?: Prisma.NullableEnumPaymentFrequencyFieldUpdateOperationsInput | $Enums.PaymentFrequency | null
+  promoPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  promoType?: Prisma.NullableEnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType | null
+  renewalNotice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  minPnlToCountAsDay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  buffer?: Prisma.FloatFieldUpdateOperationsInput | number
+  considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
+}
+
+export type AccountCreateManyConnectionInput = {
+  id?: string
+  number: string
+  propfirm?: string
+  drawdownThreshold?: number
+  profitTarget?: number
+  isPerformance?: boolean
+  userId: string
+  createdAt?: Date | string
+  startingBalance?: number
+  payoutCount?: number
+  trailingDrawdown?: boolean
+  trailingStopProfit?: number | null
+  resetDate?: Date | string | null
+  consistencyPercentage?: number | null
+  groupId?: string | null
+  accountSize?: string | null
+  accountSizeName?: string | null
+  activationFees?: number | null
+  balanceRequired?: number | null
+  dailyLoss?: number | null
+  evaluation?: boolean
+  isRecursively?: string | null
+  maxFundedAccounts?: number | null
+  maxPayout?: string | null
+  minDays?: number | null
+  minPayout?: number | null
+  minTradingDaysForPayout?: number | null
+  payoutBonus?: number | null
+  payoutPolicy?: string | null
+  price?: number | null
+  priceWithPromo?: number | null
+  profitSharing?: number | null
+  rulesDailyLoss?: string | null
+  tradingNewsAllowed?: boolean
+  trailing?: string | null
+  autoRenewal?: boolean
+  nextPaymentDate?: Date | string | null
+  paymentFrequency?: $Enums.PaymentFrequency | null
+  promoPercentage?: number | null
+  promoType?: $Enums.PromoType | null
+  renewalNotice?: number | null
+  minPnlToCountAsDay?: number | null
+  buffer?: number
+  considerBuffer?: boolean
+  shouldConsiderTradesBeforeReset?: boolean
+}
+
+export type AccountUpdateWithoutConnectionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  number?: Prisma.StringFieldUpdateOperationsInput | string
+  propfirm?: Prisma.StringFieldUpdateOperationsInput | string
+  drawdownThreshold?: Prisma.FloatFieldUpdateOperationsInput | number
+  profitTarget?: Prisma.FloatFieldUpdateOperationsInput | number
+  isPerformance?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startingBalance?: Prisma.FloatFieldUpdateOperationsInput | number
+  payoutCount?: Prisma.IntFieldUpdateOperationsInput | number
+  trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accountSizeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activationFees?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  balanceRequired?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  dailyLoss?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  evaluation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isRecursively?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  maxFundedAccounts?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  maxPayout?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  minDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  minPayout?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rulesDailyLoss?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tradingNewsAllowed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trailing?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoRenewal?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  nextPaymentDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paymentFrequency?: Prisma.NullableEnumPaymentFrequencyFieldUpdateOperationsInput | $Enums.PaymentFrequency | null
+  promoPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  promoType?: Prisma.NullableEnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType | null
+  renewalNotice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  minPnlToCountAsDay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  buffer?: Prisma.FloatFieldUpdateOperationsInput | number
+  considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  group?: Prisma.GroupUpdateOneWithoutAccountsNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutAccountsNestedInput
+  payouts?: Prisma.PayoutUpdateManyWithoutAccountNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountUncheckedUpdateWithoutConnectionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  number?: Prisma.StringFieldUpdateOperationsInput | string
+  propfirm?: Prisma.StringFieldUpdateOperationsInput | string
+  drawdownThreshold?: Prisma.FloatFieldUpdateOperationsInput | number
+  profitTarget?: Prisma.FloatFieldUpdateOperationsInput | number
+  isPerformance?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startingBalance?: Prisma.FloatFieldUpdateOperationsInput | number
+  payoutCount?: Prisma.IntFieldUpdateOperationsInput | number
+  trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accountSizeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activationFees?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  balanceRequired?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  dailyLoss?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  evaluation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isRecursively?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  maxFundedAccounts?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  maxPayout?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  minDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  minPayout?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rulesDailyLoss?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tradingNewsAllowed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trailing?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoRenewal?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  nextPaymentDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paymentFrequency?: Prisma.NullableEnumPaymentFrequencyFieldUpdateOperationsInput | $Enums.PaymentFrequency | null
+  promoPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  promoType?: Prisma.NullableEnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType | null
+  renewalNotice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  minPnlToCountAsDay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  buffer?: Prisma.FloatFieldUpdateOperationsInput | number
+  considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  payouts?: Prisma.PayoutUncheckedUpdateManyWithoutAccountNestedInput
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountUncheckedUpdateManyWithoutConnectionInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  number?: Prisma.StringFieldUpdateOperationsInput | string
+  propfirm?: Prisma.StringFieldUpdateOperationsInput | string
+  drawdownThreshold?: Prisma.FloatFieldUpdateOperationsInput | number
+  profitTarget?: Prisma.FloatFieldUpdateOperationsInput | number
+  isPerformance?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startingBalance?: Prisma.FloatFieldUpdateOperationsInput | number
   payoutCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2238,6 +2893,7 @@ export type AccountCreateManyGroupInput = {
   promoType?: $Enums.PromoType | null
   renewalNotice?: number | null
   minPnlToCountAsDay?: number | null
+  connectionId?: string | null
   buffer?: number
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
@@ -2288,7 +2944,9 @@ export type AccountUpdateWithoutGroupInput = {
   considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
   user?: Prisma.UserUpdateOneRequiredWithoutAccountsNestedInput
+  connection?: Prisma.ConnectionUpdateOneWithoutAccountsNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutAccountNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutGroupInput = {
@@ -2333,10 +2991,12 @@ export type AccountUncheckedUpdateWithoutGroupInput = {
   promoType?: Prisma.NullableEnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType | null
   renewalNotice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   minPnlToCountAsDay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buffer?: Prisma.FloatFieldUpdateOperationsInput | number
   considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutAccountNestedInput
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateManyWithoutGroupInput = {
@@ -2381,6 +3041,7 @@ export type AccountUncheckedUpdateManyWithoutGroupInput = {
   promoType?: Prisma.NullableEnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType | null
   renewalNotice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   minPnlToCountAsDay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   buffer?: Prisma.FloatFieldUpdateOperationsInput | number
   considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -2393,10 +3054,12 @@ export type AccountUncheckedUpdateManyWithoutGroupInput = {
 
 export type AccountCountOutputType = {
   payouts: number
+  trades: number
 }
 
 export type AccountCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   payouts?: boolean | AccountCountOutputTypeCountPayoutsArgs
+  trades?: boolean | AccountCountOutputTypeCountTradesArgs
 }
 
 /**
@@ -2414,6 +3077,13 @@ export type AccountCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Exte
  */
 export type AccountCountOutputTypeCountPayoutsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.PayoutWhereInput
+}
+
+/**
+ * AccountCountOutputType without action
+ */
+export type AccountCountOutputTypeCountTradesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TradeWhereInput
 }
 
 
@@ -2460,12 +3130,15 @@ export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   promoType?: boolean
   renewalNotice?: boolean
   minPnlToCountAsDay?: boolean
+  connectionId?: boolean
   buffer?: boolean
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
   group?: boolean | Prisma.Account$groupArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  connection?: boolean | Prisma.Account$connectionArgs<ExtArgs>
   payouts?: boolean | Prisma.Account$payoutsArgs<ExtArgs>
+  trades?: boolean | Prisma.Account$tradesArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["account"]>
 
@@ -2512,11 +3185,13 @@ export type AccountSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   promoType?: boolean
   renewalNotice?: boolean
   minPnlToCountAsDay?: boolean
+  connectionId?: boolean
   buffer?: boolean
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
   group?: boolean | Prisma.Account$groupArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  connection?: boolean | Prisma.Account$connectionArgs<ExtArgs>
 }, ExtArgs["result"]["account"]>
 
 export type AccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -2562,11 +3237,13 @@ export type AccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   promoType?: boolean
   renewalNotice?: boolean
   minPnlToCountAsDay?: boolean
+  connectionId?: boolean
   buffer?: boolean
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
   group?: boolean | Prisma.Account$groupArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  connection?: boolean | Prisma.Account$connectionArgs<ExtArgs>
 }, ExtArgs["result"]["account"]>
 
 export type AccountSelectScalar = {
@@ -2612,25 +3289,30 @@ export type AccountSelectScalar = {
   promoType?: boolean
   renewalNotice?: boolean
   minPnlToCountAsDay?: boolean
+  connectionId?: boolean
   buffer?: boolean
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
 }
 
-export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "propfirm" | "drawdownThreshold" | "profitTarget" | "isPerformance" | "userId" | "createdAt" | "startingBalance" | "payoutCount" | "trailingDrawdown" | "trailingStopProfit" | "resetDate" | "consistencyPercentage" | "groupId" | "accountSize" | "accountSizeName" | "activationFees" | "balanceRequired" | "dailyLoss" | "evaluation" | "isRecursively" | "maxFundedAccounts" | "maxPayout" | "minDays" | "minPayout" | "minTradingDaysForPayout" | "payoutBonus" | "payoutPolicy" | "price" | "priceWithPromo" | "profitSharing" | "rulesDailyLoss" | "tradingNewsAllowed" | "trailing" | "autoRenewal" | "nextPaymentDate" | "paymentFrequency" | "promoPercentage" | "promoType" | "renewalNotice" | "minPnlToCountAsDay" | "buffer" | "considerBuffer" | "shouldConsiderTradesBeforeReset", ExtArgs["result"]["account"]>
+export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "propfirm" | "drawdownThreshold" | "profitTarget" | "isPerformance" | "userId" | "createdAt" | "startingBalance" | "payoutCount" | "trailingDrawdown" | "trailingStopProfit" | "resetDate" | "consistencyPercentage" | "groupId" | "accountSize" | "accountSizeName" | "activationFees" | "balanceRequired" | "dailyLoss" | "evaluation" | "isRecursively" | "maxFundedAccounts" | "maxPayout" | "minDays" | "minPayout" | "minTradingDaysForPayout" | "payoutBonus" | "payoutPolicy" | "price" | "priceWithPromo" | "profitSharing" | "rulesDailyLoss" | "tradingNewsAllowed" | "trailing" | "autoRenewal" | "nextPaymentDate" | "paymentFrequency" | "promoPercentage" | "promoType" | "renewalNotice" | "minPnlToCountAsDay" | "connectionId" | "buffer" | "considerBuffer" | "shouldConsiderTradesBeforeReset", ExtArgs["result"]["account"]>
 export type AccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   group?: boolean | Prisma.Account$groupArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  connection?: boolean | Prisma.Account$connectionArgs<ExtArgs>
   payouts?: boolean | Prisma.Account$payoutsArgs<ExtArgs>
+  trades?: boolean | Prisma.Account$tradesArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type AccountIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   group?: boolean | Prisma.Account$groupArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  connection?: boolean | Prisma.Account$connectionArgs<ExtArgs>
 }
 export type AccountIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   group?: boolean | Prisma.Account$groupArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  connection?: boolean | Prisma.Account$connectionArgs<ExtArgs>
 }
 
 export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2638,7 +3320,9 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
   objects: {
     group: Prisma.$GroupPayload<ExtArgs> | null
     user: Prisma.$UserPayload<ExtArgs>
+    connection: Prisma.$ConnectionPayload<ExtArgs> | null
     payouts: Prisma.$PayoutPayload<ExtArgs>[]
+    trades: Prisma.$TradePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2683,6 +3367,7 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     promoType: $Enums.PromoType | null
     renewalNotice: number | null
     minPnlToCountAsDay: number | null
+    connectionId: string | null
     buffer: number
     considerBuffer: boolean
     shouldConsiderTradesBeforeReset: boolean
@@ -3082,7 +3767,9 @@ export interface Prisma__AccountClient<T, Null = never, ExtArgs extends runtime.
   readonly [Symbol.toStringTag]: "PrismaPromise"
   group<T extends Prisma.Account$groupArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$groupArgs<ExtArgs>>): Prisma.Prisma__GroupClient<runtime.Types.Result.GetResult<Prisma.$GroupPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  connection<T extends Prisma.Account$connectionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$connectionArgs<ExtArgs>>): Prisma.Prisma__ConnectionClient<runtime.Types.Result.GetResult<Prisma.$ConnectionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   payouts<T extends Prisma.Account$payoutsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$payoutsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PayoutPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  trades<T extends Prisma.Account$tradesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$tradesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TradePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3154,6 +3841,7 @@ export interface AccountFieldRefs {
   readonly promoType: Prisma.FieldRef<"Account", 'PromoType'>
   readonly renewalNotice: Prisma.FieldRef<"Account", 'Int'>
   readonly minPnlToCountAsDay: Prisma.FieldRef<"Account", 'Float'>
+  readonly connectionId: Prisma.FieldRef<"Account", 'String'>
   readonly buffer: Prisma.FieldRef<"Account", 'Float'>
   readonly considerBuffer: Prisma.FieldRef<"Account", 'Boolean'>
   readonly shouldConsiderTradesBeforeReset: Prisma.FieldRef<"Account", 'Boolean'>
@@ -3577,6 +4265,25 @@ export type Account$groupArgs<ExtArgs extends runtime.Types.Extensions.InternalA
 }
 
 /**
+ * Account.connection
+ */
+export type Account$connectionArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Connection
+   */
+  select?: Prisma.ConnectionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Connection
+   */
+  omit?: Prisma.ConnectionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ConnectionInclude<ExtArgs> | null
+  where?: Prisma.ConnectionWhereInput
+}
+
+/**
  * Account.payouts
  */
 export type Account$payoutsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -3598,6 +4305,30 @@ export type Account$payoutsArgs<ExtArgs extends runtime.Types.Extensions.Interna
   take?: number
   skip?: number
   distinct?: Prisma.PayoutScalarFieldEnum | Prisma.PayoutScalarFieldEnum[]
+}
+
+/**
+ * Account.trades
+ */
+export type Account$tradesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Trade
+   */
+  select?: Prisma.TradeSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Trade
+   */
+  omit?: Prisma.TradeOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TradeInclude<ExtArgs> | null
+  where?: Prisma.TradeWhereInput
+  orderBy?: Prisma.TradeOrderByWithRelationInput | Prisma.TradeOrderByWithRelationInput[]
+  cursor?: Prisma.TradeWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.TradeScalarFieldEnum | Prisma.TradeScalarFieldEnum[]
 }
 
 /**

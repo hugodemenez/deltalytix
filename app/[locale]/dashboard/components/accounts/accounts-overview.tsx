@@ -877,7 +877,16 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         !hiddenAccountNumbers.has(accountNumber)
       )
       .forEach(accountNumber => {
-        const dbAccount = accounts.find(acc => acc.number === accountNumber)
+        const dbAccount =
+          accounts.find(acc => acc.number === accountNumber) ??
+          accounts.find(acc =>
+            trades.some(
+              (trade) =>
+                trade.accountNumber === accountNumber &&
+                trade.accountId &&
+                trade.accountId === acc.id
+            )
+          )
 
         if (dbAccount) {
           // Account is configured - use it with all its pre-computed metrics
@@ -1284,7 +1293,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       <div className="px-3 py-2 sm:px-4">
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex shrink-0 items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-orange-400 motion-safe:animate-pulse" />
             <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
               {t('propFirm.status.needsConfiguration')}:
             </span>
@@ -1301,7 +1310,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-5 w-5 p-0 hover:bg-orange-200 dark:hover:bg-orange-800/50"
+                  className="relative h-5 w-5 p-0 after:absolute after:inset-[-10px] hover:bg-orange-200 dark:hover:bg-orange-800/50"
                   onClick={() => {
                     const tempAccount = {
                       id: '',

@@ -1,11 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import React, { useEffect, useCallback } from 'react'
 import { Trade } from '@/prisma/generated/prisma/client'
-import { Button } from "@/components/ui/button"
-import { formatInTimeZone } from 'date-fns-tz'
-import { useUserStore } from '@/store/user-store'
 import { PlatformProcessorProps } from '../config/platforms'
-import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
+import { ProcessedTradesPreview } from '../components/processed-trades-preview'
 
 const mappings: { [key: string]: string } = {
     "ContractName": "instrument",
@@ -21,8 +17,6 @@ const mappings: { [key: string]: string } = {
 }
 
 export default function TopstepProcessor({ headers, csvData, processedTrades, setProcessedTrades }: PlatformProcessorProps) {
-    const timezone = useUserStore(state => state.timezone)
-
     const processTrades = useCallback(() => {
         const newTrades: Trade[] = [];
 
@@ -151,82 +145,5 @@ export default function TopstepProcessor({ headers, csvData, processedTrades, se
         processTrades();
     }, [processTrades]);
 
-    const totalPnL = processedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
-    const totalCommission = processedTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0);
-    const uniqueInstruments = Array.from(new Set(processedTrades.map(trade => trade.instrument)));
-
-    return (
-        <div className="flex flex-col h-full overflow-hidden">
-            <div className="flex-1 overflow-auto">
-                <div className="space-y-4 p-6">
-                    <div>
-                        <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Instrument</TableHead>
-                                    <TableHead>Side</TableHead>
-                                    <TableHead>Quantity</TableHead>
-                                    <TableHead>Entry Price</TableHead>
-                                    <TableHead>Close Price</TableHead>
-                                    <TableHead>Entry Date</TableHead>
-                                    <TableHead>Close Date</TableHead>
-                                    <TableHead>PnL</TableHead>
-                                    <TableHead>Commission</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {processedTrades.map((trade) => (
-                                    <TableRow key={trade.id}>
-                                        <TableCell>{trade.instrument}</TableCell>
-                                        <TableCell>{trade.side}</TableCell>
-                                        <TableCell>{trade.quantity}</TableCell>
-                                        <TableCell>{trade.entryPrice}</TableCell>
-                                        <TableCell>{trade.closePrice}</TableCell>
-                                        <TableCell>
-                                            {trade.entryDate ? formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ss') : '-'}
-                                        </TableCell>
-                                        <TableCell>
-                                            {trade.closeDate ? formatInTimeZone(new Date(trade.closeDate), timezone, 'yyyy-MM-dd HH:mm:ss') : '-'}
-                                        </TableCell>
-                                        <TableCell className={trade.pnl ? trade.pnl < 0 ? 'text-red-600' : 'text-green-600' : ''}>
-                                            {trade.pnl?.toFixed(2)}
-                                        </TableCell>
-                                        <TableCell>{trade.commission?.toFixed(2)}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                    <div className="flex justify-between">
-                        <div>
-                            <h3 className="text-lg font-semibold mb-2">Total PnL</h3>
-                            <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {totalPnL.toFixed(2)}
-                            </p>
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-semibold mb-2">Total Commission</h3>
-                            <p className="text-xl font-bold text-blue-600">
-                                {totalCommission.toFixed(2)}
-                            </p>
-                        </div>
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-semibold mb-2">Instruments Traded</h3>
-                        <div className="flex flex-wrap gap-2">
-                            {uniqueInstruments.map((instrument) => (
-                                <Button
-                                    key={instrument}
-                                    variant="outline"
-                                >
-                                    {instrument}
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
+    return <ProcessedTradesPreview trades={processedTrades} />
 } 

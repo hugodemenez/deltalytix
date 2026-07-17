@@ -1,0 +1,5 @@
+DEMO-001
+MESZ4
+Entry Order Number,Entry Buy/Sell,Entry Price,Entry Time,Exit Order Number,Exit Price,Exit Time,Fill Size,Trade P&L,Trade Life Span,Commission & Fees
+1001,B,5125.25,2025-03-10 09:35:12,1002,5130.50,2025-03-10 09:42:15,2,52.50,00:07:03,2.40
+1003,S,18550.00,2025-03-10 10:15:05,1004,18535.25,2025-03-10 10:28:40,1,29.50,00:13:35,1.20

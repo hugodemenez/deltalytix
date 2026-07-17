@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma'
 import { formatTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
+import { upsertAccountsForNumbers } from '@/server/connections'
 import {
   coerceDxFeedHistoricalHostForSync,
   normalizeDxFeedHistoricalHost,
@@ -304,6 +305,32 @@ export async function authenticateDxFeed(
       logger.warn('Failed to store token')
     }
 
+    if (!storeResult.error && accountNumbers.length > 0) {
+      const connection = await prisma.connection.findUnique({
+        where: {
+          userId_service_externalId: {
+            userId: user.id,
+            service: 'dxfeed',
+            externalId: login,
+          },
+        },
+        select: { id: true },
+      })
+      if (connection) {
+        await upsertAccountsForNumbers(user.id, accountNumbers, connection.id)
+        if (propFirm.name) {
+          await prisma.account.updateMany({
+            where: {
+              userId: user.id,
+              number: { in: accountNumbers },
+              connectionId: connection.id,
+            },
+            data: { propfirm: propFirm.name },
+          })
+        }
+      }
+    }
+
     return { success: true }
   } catch (error) {
     logger.error('Authentication error:', error)
@@ -361,15 +388,15 @@ export async function markDxFeedConnectionExpired(accountId: string): Promise<vo
   } = await supabase.auth.getUser()
   if (!user) return
 
-  await prisma.synchronization.updateMany({
-    where: { userId: user.id, service: 'dxfeed', accountId },
+  await prisma.connection.updateMany({
+    where: { userId: user.id, service: 'dxfeed', externalId: accountId },
     data: { tokenExpiresAt: new Date(0) },
   })
 }
 
 async function markDxFeedTokenExpired(userId: string, accountId: string): Promise<void> {
-  await prisma.synchronization.updateMany({
-    where: { userId, service: 'dxfeed', accountId },
+  await prisma.connection.updateMany({
+    where: { userId, service: 'dxfeed', externalId: accountId },
     data: { tokenExpiresAt: new Date(0) },
   })
 }
@@ -516,11 +543,11 @@ export async function getDxFeedTrades(
     let storedTokenJson = initialTokenJson
     const baseUrl = historicalHost.endsWith('/') ? historicalHost.slice(0, -1) : historicalHost
 
-    const syncRow = await prisma.synchronization.findFirst({
+    const syncRow = await prisma.connection.findFirst({
       where: { userId: resolvedUserId, service: 'dxfeed', token: initialTokenJson },
-      select: { accountId: true, tokenExpiresAt: true },
+      select: { externalId: true, tokenExpiresAt: true },
     })
-    syncAccountId = syncRow?.accountId ?? null
+    syncAccountId = syncRow?.externalId ?? null
 
     if (
       isDxFeedAccessTokenExpired(accessToken, syncRow?.tokenExpiresAt, {
@@ -655,11 +682,58 @@ export async function getDxFeedTrades(
 
     if (allTrades.length === 0) {
       logger.info(`No closed trades to save: ${JSON.stringify(syncStats)}`)
+      if (accountNumbers.length > 0) {
+        const connectionForAccounts = syncAccountId
+          ? await prisma.connection.findFirst({
+              where: {
+                userId: resolvedUserId,
+                service: 'dxfeed',
+                externalId: syncAccountId,
+              },
+              select: { id: true },
+            })
+          : await prisma.connection.findFirst({
+              where: {
+                userId: resolvedUserId,
+                service: 'dxfeed',
+                token: storedTokenJson,
+              },
+              select: { id: true },
+            })
+        if (connectionForAccounts) {
+          await upsertAccountsForNumbers(
+            resolvedUserId,
+            accountNumbers,
+            connectionForAccounts.id,
+          )
+        }
+      }
       return { processedTrades: [], savedCount: 0, tradesCount: 0, syncStats }
     }
 
     logger.info(`Saving ${allTrades.length} trades...`)
-    const saveResult = await saveTradesAction(allTrades, { userId: resolvedUserId })
+    const connection = syncAccountId
+      ? await prisma.connection.findFirst({
+          where: {
+            userId: resolvedUserId,
+            service: 'dxfeed',
+            externalId: syncAccountId,
+          },
+          select: { id: true },
+        })
+      : await prisma.connection.findFirst({
+          where: {
+            userId: resolvedUserId,
+            service: 'dxfeed',
+            token: storedTokenJson,
+          },
+          select: { id: true },
+        })
+
+    const saveResult = await saveTradesAction(allTrades, {
+      userId: resolvedUserId,
+      connectionId: connection?.id,
+    })
 
     if (saveResult.error) {
       if (saveResult.error === 'DUPLICATE_TRADES') {
@@ -695,7 +769,7 @@ export async function getDxFeedTrades(
 }
 
 async function updateLastSyncedAt(userId: string, storedTokenJson: string) {
-  await prisma.synchronization.updateMany({
+  await prisma.connection.updateMany({
     where: {
       userId,
       service: 'dxfeed',
@@ -708,7 +782,7 @@ async function updateLastSyncedAt(userId: string, storedTokenJson: string) {
 }
 
 async function updateStoredCredentials(userId: string, oldTokenJson: string, newTokenJson: string) {
-  await prisma.synchronization.updateMany({
+  await prisma.connection.updateMany({
     where: {
       userId,
       service: 'dxfeed',
@@ -732,23 +806,23 @@ export async function storeDxFeedToken(
       return { error: 'User not authenticated' }
     }
 
-    const existingSynchronization = await prisma.synchronization.findUnique({
+    const existingConnection = await prisma.connection.findUnique({
       where: {
-        userId_service_accountId: {
+        userId_service_externalId: {
           userId: user.id,
           service: 'dxfeed',
-          accountId,
+          externalId: accountId,
         },
       },
       select: { id: true },
     })
 
-    await prisma.synchronization.upsert({
+    await prisma.connection.upsert({
       where: {
-        userId_service_accountId: {
+        userId_service_externalId: {
           userId: user.id,
           service: 'dxfeed',
-          accountId,
+          externalId: accountId,
         },
       },
       update: {
@@ -761,7 +835,7 @@ export async function storeDxFeedToken(
       create: {
         userId: user.id,
         service: 'dxfeed',
-        accountId,
+        externalId: accountId,
         token: tokenJson,
         tokenExpiresAt: options?.tokenExpiresAt ?? null,
         lastSyncedAt: new Date(),
@@ -775,7 +849,7 @@ export async function storeDxFeedToken(
       properties: {
         integration: 'dxfeed',
         environment: DXFEED_ENVIRONMENT === 0 ? 'production' : 'demo',
-        is_first_connection: !existingSynchronization,
+        is_first_connection: !existingConnection,
       },
     })
 
@@ -794,12 +868,12 @@ export async function getDxFeedToken(accountId: string = 'default') {
       return { error: 'User not authenticated' }
     }
 
-    const syncData = await prisma.synchronization.findUnique({
+    const syncData = await prisma.connection.findUnique({
       where: {
-        userId_service_accountId: {
+        userId_service_externalId: {
           userId: user.id,
           service: 'dxfeed',
-          accountId,
+          externalId: accountId,
         },
       },
     })
@@ -820,7 +894,7 @@ export async function getDxFeedToken(accountId: string = 'default') {
 
     return {
       storedTokenJson: syncData.token,
-      accountId: syncData.accountId,
+      accountId: syncData.externalId,
     }
   } catch (error) {
     logger.error('Failed to get DxFeed token:', error)
@@ -839,17 +913,17 @@ export async function removeDxFeedToken(accountId?: string) {
     const whereClause: {
       userId: string
       service: string
-      accountId?: string
+      externalId?: string
     } = {
       userId: user.id,
       service: 'dxfeed',
     }
 
     if (accountId) {
-      whereClause.accountId = accountId
+      whereClause.externalId = accountId
     }
 
-    await prisma.synchronization.deleteMany({
+    await prisma.connection.deleteMany({
       where: whereClause,
     })
 
@@ -868,7 +942,7 @@ export async function getDxFeedSynchronizations() {
       return { error: 'User not authenticated' }
     }
 
-    const synchronizations = await prisma.synchronization.findMany({
+    const synchronizations = await prisma.connection.findMany({
       where: {
         userId: user.id,
         service: 'dxfeed',
@@ -878,7 +952,8 @@ export async function getDxFeedSynchronizations() {
       },
     })
 
-    return { synchronizations }
+    const { toConnectionViews } = await import('@/lib/connection-view')
+    return { synchronizations: toConnectionViews(synchronizations) }
   } catch (error) {
     logger.error('Failed to get DxFeed synchronizations:', error)
     return { error: 'Failed to get synchronizations' }
@@ -897,11 +972,11 @@ export async function updateDxFeedDailySyncTimeAction(
       syncDateTime = new Date(utcTimeString)
     }
 
-    await prisma.synchronization.updateMany({
+    await prisma.connection.updateMany({
       where: {
         userId,
         service: 'dxfeed',
-        accountId,
+        externalId: accountId,
       },
       data: {
         dailySyncTime: syncDateTime,

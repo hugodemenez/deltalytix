@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CopyIcon, RefreshCwIcon, EyeIcon } from "lucide-react"
-import { useState, useRef, useEffect } from "react"
+import { useState } from "react"
 import { generateThorToken } from "@/server/thor"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -22,44 +22,18 @@ import {
 import { useI18n } from "@/locales/client"
 import { useUserStore } from "../../../../../../store/user-store"
 
-export function ThorSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }) {
+const fieldClassName =
+  'h-11 flex-1 rounded-sm border-black/10 bg-transparent font-mono text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30'
+
+const iconButtonClassName =
+  'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border border-black/20 bg-transparent text-black/55 shadow-none transition-[opacity,transform,background-color,color] duration-150 hover:bg-black/5 hover:text-black active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:border-white/20 dark:text-white/55 dark:hover:bg-white/5 dark:hover:text-white'
+
+export function ThorSync({ setIsOpen: _setIsOpen }: { setIsOpen: (isOpen: boolean) => void }) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRevealed, setIsRevealed] = useState(false)
-  const { user, setUser } = useUserStore.getState()
+  const user = useUserStore((state) => state.user)
+  const setUser = useUserStore((state) => state.setUser)
   const t = useI18n()
-  const videoRef = useRef<HTMLVideoElement>(null)
-
-  // Handle video playback
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
-
-    // Reset video state
-    video.pause()
-    video.currentTime = 0
-
-    // Play video when component mounts
-    const playVideo = () => {
-      video.play().catch((error) => {
-        console.error('Video playback error:', error)
-      })
-    }
-
-    // Play video when it's ready
-    if (video.readyState >= 2) {
-      playVideo()
-    } else {
-      video.addEventListener('loadeddata', playVideo, { once: true })
-    }
-
-    // Cleanup
-    return () => {
-      if (video) {
-        video.pause()
-        video.removeEventListener('loadeddata', () => {})
-      }
-    }
-  }, [])
 
   const handleGenerateToken = async () => {
     try {
@@ -73,7 +47,7 @@ export function ThorSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }
       if (!user) return
       setUser({ ...user, thorToken: result.token })
       toast.success(t('thor.generated'))
-    } catch (error) {
+    } catch {
       toast.error(t('thor.error.generation'))
     } finally {
       setIsGenerating(false)
@@ -92,100 +66,85 @@ export function ThorSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }
   }
 
   return (
-    <div className="flex flex-col space-y-4 p-6">
-      <div className="flex flex-col space-y-2">
-        <h2 className="text-lg font-semibold">{t('thor.title')}</h2>
-        <p className="text-sm text-muted-foreground">
-          {t('thor.description')}
-        </p>
-      </div>
-
-      <div className="flex space-x-2">
+    <div className="flex flex-col space-y-4">
+      <div className="flex gap-2">
         {isGenerating ? (
-          <Skeleton className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" />
+          <Skeleton className="h-11 w-full rounded-sm" />
         ) : (
           <Input
             value={isRevealed ? (user?.thorToken || '') : getMaskedToken()}
             readOnly
             placeholder={t('thor.noToken')}
-            className="font-mono"
+            className={fieldClassName}
           />
         )}
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
+              type="button"
               variant="outline"
               size="icon"
               disabled={!user?.thorToken || isGenerating}
+              className={iconButtonClassName}
+              aria-label={t('thor.revealToken')}
             >
-              <EyeIcon className="h-4 w-4" />
+              <EyeIcon className="h-4 w-4" strokeWidth={1.75} />
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent>
+          <AlertDialogContent className="rounded-sm border-black/10 dark:border-white/10">
             <AlertDialogHeader>
-              <AlertDialogTitle>{t('thor.revealToken')}</AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogTitle className="font-normal tracking-tight">
+                {t('thor.revealToken')}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-black/55 dark:text-white/55">
                 {t('thor.revealWarning')}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setIsRevealed(false)}>{t('thor.cancel')}</AlertDialogCancel>
-              <AlertDialogAction onClick={() => setIsRevealed(true)}>{t('thor.reveal')}</AlertDialogAction>
+              <AlertDialogCancel
+                onClick={() => setIsRevealed(false)}
+                className="rounded-sm"
+              >
+                {t('thor.cancel')}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => setIsRevealed(true)}
+                className="rounded-sm"
+              >
+                {t('thor.reveal')}
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
         <Button
+          type="button"
           variant="outline"
           size="icon"
           onClick={handleCopyToken}
           disabled={!user?.thorToken || isGenerating}
+          className={iconButtonClassName}
+          aria-label={t('common.copy')}
         >
-          <CopyIcon className="h-4 w-4" />
+          <CopyIcon className="h-4 w-4" strokeWidth={1.75} />
         </Button>
         <Button
+          type="button"
           variant="outline"
           size="icon"
-          onClick={handleGenerateToken}
+          onClick={() => void handleGenerateToken()}
           disabled={isGenerating}
+          className={iconButtonClassName}
         >
-          <RefreshCwIcon className={cn("h-4 w-4", {
-            "animate-spin": isGenerating
-          })} />
+          <RefreshCwIcon
+            className={cn('h-4 w-4', { 'animate-spin': isGenerating })}
+            strokeWidth={1.75}
+          />
         </Button>
       </div>
 
-      <div className="text-sm text-muted-foreground">
-        <p>{t('thor.invalidation')}</p>
-      </div>
-
-      <div className="mt-8 space-y-4">
-        <h2 className="text-2xl font-bold">{t('thor.tutorial.title')}</h2>
-        <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 transition-transform duration-300 hover:scale-[1.02]">
-          <video
-            ref={videoRef}
-            height="600"
-            width="600"
-            preload="metadata"
-            loop
-            muted
-            controls
-            playsInline
-            className="rounded-lg border border-gray-200 dark:border-gray-800 shadow-lg w-full h-full object-cover"
-          >
-            <source src="/videos/thor-tutorial.mp4" type="video/mp4" />
-            <track
-              src="/path/to/captions.vtt"
-              kind="subtitles"
-              srcLang="en"
-              label="English"
-            />
-            Your browser does not support the video tag.
-          </video>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {t('thor.tutorial.description')}
-        </p>
-      </div>
+      <p className="text-sm leading-relaxed text-black/45 dark:text-white/45">
+        {t('thor.invalidation')}
+      </p>
     </div>
   )
-} 
+}

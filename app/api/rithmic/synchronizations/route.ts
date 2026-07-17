@@ -4,7 +4,7 @@ import {
   setRithmicSynchronization,
   removeRithmicSynchronization,
 } from "@/app/[locale]/dashboard/components/import/rithmic/sync/actions";
-import { Synchronization } from "@/prisma/generated/prisma/client";
+import { Connection } from "@/prisma/generated/prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const synchronization: Partial<Synchronization> = body;
+    const synchronization: Partial<Connection> & { accountId?: string } = body;
 
     await setRithmicSynchronization(synchronization);
     return NextResponse.json({

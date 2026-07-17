@@ -132,10 +132,22 @@ export async function renameAccountAction(oldAccountNumber: string, newAccountNu
         }
       })
 
-      // Update trades accountNumber
+      // Update trades accountNumber (keep accountId linked to this account)
       await tx.trade.updateMany({
         where: {
           accountNumber: oldAccountNumber,
+          userId: userId
+        },
+        data: {
+          accountNumber: newAccountNumber,
+          accountId: existingAccount.id
+        }
+      })
+
+      // Also backfill any trades already linked by accountId
+      await tx.trade.updateMany({
+        where: {
+          accountId: existingAccount.id,
           userId: userId
         },
         data: {
@@ -201,11 +213,19 @@ export async function setupAccountAction(account: Account): Promise<Account> {
     aboveBuffer,
     considerBuffer,
     trades,
+    connectionId,
+    connection,
     ...baseAccountData
-  } = account
+  } = account as Account & { connection?: unknown }
 
   // Only include considerBuffer when explicitly provided to avoid overriding unintentionally
   const considerBufferUpdate = considerBuffer === undefined ? {} : { considerBuffer }
+  const connectionUpdate =
+    connectionId === undefined
+      ? {}
+      : connectionId
+        ? { connection: { connect: { id: connectionId } } }
+        : { connection: { disconnect: true } }
 
   // Build group relation payloads separately for update vs create
   // - Update: allow disconnect when groupId is explicitly null
@@ -213,6 +233,7 @@ export async function setupAccountAction(account: Account): Promise<Account> {
   const accountDataForUpdate = {
     ...baseAccountData,
     ...considerBufferUpdate,
+    ...connectionUpdate,
     ...(groupId !== undefined &&
       (groupId
         ? {
@@ -232,6 +253,15 @@ export async function setupAccountAction(account: Account): Promise<Account> {
   const accountDataForCreate = {
     ...baseAccountData,
     ...considerBufferUpdate,
+    ...(connectionId
+      ? {
+        connection: {
+          connect: {
+            id: connectionId,
+          },
+        },
+      }
+      : {}),
     ...(groupId
       ? {
         group: {

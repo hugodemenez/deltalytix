@@ -14,10 +14,26 @@ import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 import { saveRithmicData, getRithmicData, clearRithmicData, generateCredentialId, getAllRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
 import { RithmicCredentialsManager } from './rithmic-credentials-manager'
 import { useI18n } from '@/locales/client'
-import Image from 'next/image'
+import { ThemeAwareLogo } from '@/components/monochrome-logo'
 import { useUserStore } from '@/store/user-store'
 import { setRithmicSynchronization } from './actions'
 import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
+import { cn } from '@/lib/utils'
+
+const fieldClassName =
+  'h-11 rounded-sm border-black/10 bg-transparent text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30'
+
+const configSelectClassName =
+  'h-8 w-auto min-w-0 max-w-full gap-1 rounded-sm border-black/10 bg-transparent px-2 text-xs shadow-none focus:ring-0 focus:ring-offset-0 dark:border-white/10 [&>span]:truncate'
+
+const selectContentClassName =
+  'rounded-sm border-black/10 bg-white shadow-none dark:border-white/10 dark:bg-black'
+
+const primaryButtonClassName =
+  'h-11 w-full rounded-sm bg-[oklch(0.22_0.01_95)] text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]'
+
+const secondaryButtonClassName =
+  'h-9 rounded-sm border border-black/20 bg-transparent px-3 text-sm font-medium shadow-none transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:hover:bg-white/5'
 
 interface RithmicCredentials {
   username: string
@@ -28,10 +44,15 @@ interface RithmicCredentials {
 }
 
 interface RithmicSyncConnectionProps {
-  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>> | ((open: boolean) => void)
+  /** When false, open on the credentials form instead of the saved-credentials list. */
+  initialShowCredentialsManager?: boolean
 }
 
-export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps) {
+export function RithmicSyncConnection({
+  setIsOpen,
+  initialShowCredentialsManager = true,
+}: RithmicSyncConnectionProps) {
   const user = useUserStore(state => state.user)
   const { 
     connect, 
@@ -85,7 +106,9 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
     userId: user?.id || ''
   })
   const [shouldSaveCredentials, setShouldSaveCredentials] = useState(true)
-  const [showCredentialsManager, setShowCredentialsManager] = useState(true)
+  const [showCredentialsManager, setShowCredentialsManager] = useState(
+    initialShowCredentialsManager
+  )
   const [currentCredentialId, setCurrentCredentialId] = useState<string | null>(null)
   const [allAccounts, setAllAccounts] = useState(true)
   const [accountSearch, setAccountSearch] = useState('')
@@ -353,7 +376,7 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
     setToken(null)
     setWsUrl(null)
     setShouldAutoConnect(false)
-    setShowCredentialsManager(true)
+    setShowCredentialsManager(initialShowCredentialsManager)
     setCredentials({
       username: '',
       password: '',
@@ -361,7 +384,14 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
       location: 'Chicago Area',
       userId: user?.id || ''
     })
-  }, [resetProcessingState, user?.id, setToken, setWsUrl, setStep])
+  }, [
+    resetProcessingState,
+    user?.id,
+    setToken,
+    setWsUrl,
+    setStep,
+    initialShowCredentialsManager,
+  ])
 
   // Close modal when processing is complete
   useEffect(() => {
@@ -441,11 +471,9 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
   return (
     <div className="space-y-6">
       {step === 'processing' && (
-        <div className="flex items-center gap-2 p-3 mb-2 rounded-md bg-muted/60 border border-primary/20">
-          <Loader2 className="animate-spin h-5 w-5 text-primary" />
-          <span className="text-sm font-medium text-primary">
-            {t('rithmic.processingBanner')}
-          </span>
+        <div className="flex items-center gap-2 border-y border-black/10 py-3 text-sm text-black/55 dark:border-white/10 dark:text-white/55">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>{t('rithmic.processingBanner')}</span>
         </div>
       )}
       {(showCredentialsManager && (step === 'credentials' || step === 'processing')) ? (
@@ -472,22 +500,90 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
       ) : (
         <>
           {step === 'credentials' && (
-            <form onSubmit={(e) => handleConnect(e, false)} className="space-y-4" autoComplete="on">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold">
-                  {currentCredentialId ? t('rithmic.editCredentials') : t('rithmic.addNewCredentials')}
-                </h2>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowCredentialsManager(true)}
-                >
-                  {t('rithmic.backToList')}
-                </Button>
+            <form onSubmit={(e) => handleConnect(e, false)} className="space-y-5" autoComplete="on">
+              {(initialShowCredentialsManager || currentCredentialId) && (
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="text-xl font-normal tracking-tight md:text-2xl">
+                    {currentCredentialId
+                      ? t('rithmic.editCredentials')
+                      : t('rithmic.addNewCredentials')}
+                  </h2>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCredentialsManager(true)}
+                    className={cn(secondaryButtonClassName, 'shrink-0')}
+                  >
+                    {t('rithmic.backToList')}
+                  </Button>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-black/10 pb-3 dark:border-white/10">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Label
+                    htmlFor="server-type"
+                    className="shrink-0 text-xs text-black/45 dark:text-white/45"
+                  >
+                    {t('rithmic.serverTypeLabel')}
+                  </Label>
+                  <Select
+                    name="server-type"
+                    value={credentials.server_type}
+                    onValueChange={(value) => {
+                      setCredentials((prev) => ({
+                        ...prev,
+                        server_type: value,
+                        location: '',
+                      }))
+                    }}
+                  >
+                    <SelectTrigger id="server-type" className={configSelectClassName}>
+                      <SelectValue placeholder={t('rithmic.selectServerType')} />
+                    </SelectTrigger>
+                    <SelectContent className={selectContentClassName}>
+                      {Object.keys(serverConfigs).map((serverType) => (
+                        <SelectItem key={serverType} value={serverType} className="rounded-sm text-xs">
+                          {serverType}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Label
+                    htmlFor="location"
+                    className="shrink-0 text-xs text-black/45 dark:text-white/45"
+                  >
+                    {t('rithmic.locationLabel')}
+                  </Label>
+                  <Select
+                    name="location"
+                    value={credentials.location}
+                    onValueChange={(value) =>
+                      setCredentials((prev) => ({ ...prev, location: value }))
+                    }
+                    disabled={!credentials.server_type}
+                  >
+                    <SelectTrigger id="location" className={configSelectClassName}>
+                      <SelectValue placeholder={t('rithmic.selectLocation')} />
+                    </SelectTrigger>
+                    <SelectContent className={selectContentClassName}>
+                      {credentials.server_type &&
+                        serverConfigs[credentials.server_type]?.map((location) => (
+                          <SelectItem key={location} value={location} className="rounded-sm text-xs">
+                            {location}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="rithmic-username">{t('rithmic.usernameLabel')}</Label>
+                <Label htmlFor="rithmic-username" className="text-sm text-black/55 dark:text-white/55">
+                  {t('rithmic.usernameLabel')}
+                </Label>
                 <Input 
                   id="rithmic-username" 
                   name="username"
@@ -495,12 +591,15 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
                   value={credentials.username}
                   onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
                   spellCheck="false"
-                  required 
+                  required
+                  className={fieldClassName}
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="rithmic-password">{t('rithmic.passwordLabel')}</Label>
+                <Label htmlFor="rithmic-password" className="text-sm text-black/55 dark:text-white/55">
+                  {t('rithmic.passwordLabel')}
+                </Label>
                 <Input 
                   id="rithmic-password" 
                   name="password"
@@ -508,58 +607,12 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
                   autoComplete="current-password"
                   value={credentials.password}
                   onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
-                  required 
+                  required
+                  className={fieldClassName}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="server-type">{t('rithmic.serverTypeLabel')}</Label>
-                <Select
-                  name="server-type"
-                  value={credentials.server_type}
-                  onValueChange={(value) => {
-                    setCredentials(prev => ({ 
-                      ...prev, 
-                      server_type: value,
-                      location: '' // Reset location when server type changes
-                    }))
-                  }}
-                >
-                  <SelectTrigger id="server-type">
-                    <SelectValue placeholder={t('rithmic.selectServerType')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.keys(serverConfigs).map((serverType) => (
-                      <SelectItem key={serverType} value={serverType}>
-                        {serverType}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="location">{t('rithmic.locationLabel')}</Label>
-                <Select
-                  name="location"
-                  value={credentials.location}
-                  onValueChange={(value) => setCredentials(prev => ({ ...prev, location: value }))}
-                  disabled={!credentials.server_type}
-                >
-                  <SelectTrigger id="location">
-                    <SelectValue placeholder={t('rithmic.selectLocation')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {credentials.server_type && serverConfigs[credentials.server_type]?.map((location) => (
-                      <SelectItem key={location} value={location}>
-                        {location}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center space-x-2 py-2">
+              <div className="flex items-center gap-2 border-y border-black/10 py-3 dark:border-white/10">
                 <Checkbox
                   id="save-credentials"
                   checked={shouldSaveCredentials}
@@ -567,124 +620,135 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
                 />
                 <Label 
                   htmlFor="save-credentials"
-                  className="text-sm text-muted-foreground cursor-pointer"
+                  className="cursor-pointer text-sm text-black/55 dark:text-white/55"
                 >
                   {currentCredentialId ? t('rithmic.updateSavedCredentials') : t('rithmic.saveForNextLogin')}
                 </Label>
               </div>
 
-              <div className="flex justify-between">
-                <Button 
-                  type="submit" 
-                  disabled={isLoading || !credentials.server_type || !credentials.location} 
-                  className="w-full"
-                >
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {t('rithmic.getAccounts')}
-                </Button>
-              </div>
+              <Button 
+                type="submit" 
+                disabled={isLoading || !credentials.server_type || !credentials.location} 
+                className={primaryButtonClassName}
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {t('rithmic.getAccounts')}
+              </Button>
             </form>
           )}
 
           {step === 'select-accounts' && (
-            <div className="space-y-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="sync-all"
-                      checked={allAccounts}
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-xl font-normal tracking-tight md:text-2xl">
+                  {t('rithmic.selectAccountsTitle')}
+                </h2>
+                <p className="mt-1 text-sm leading-relaxed text-black/55 dark:text-white/55">
+                  {t('rithmic.selectAccountsDescription')}
+                </p>
+              </div>
+
+              <div className="flex items-start gap-3 border-y border-black/10 py-4 dark:border-white/10">
+                <Switch
+                  id="sync-all"
+                  checked={allAccounts}
+                  onCheckedChange={(checked) => {
+                    setAllAccounts(checked)
+                    if (checked) {
+                      setSelectedAccounts([])
+                    }
+                  }}
+                />
+                <div className="flex flex-col gap-0.5">
+                  <Label 
+                    htmlFor="sync-all"
+                    className="cursor-pointer text-sm font-medium"
+                  >
+                    {t('rithmic.syncAllAccounts')}
+                  </Label>
+                  <span className="text-sm text-black/45 dark:text-white/45">
+                    {t('rithmic.syncAllAccountsDescription')}
+                  </span>
+                </div>
+              </div>
+
+              {!allAccounts && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder={t('rithmic.searchAccounts')}
+                      value={accountSearch}
+                      onChange={(e) => setAccountSearch(e.target.value)}
+                      className={cn(fieldClassName, 'flex-1')}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setAccountSearch('')}
+                      className={secondaryButtonClassName}
+                    >
+                      {t('common.clear')}
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-2 border-b border-black/10 pb-3 dark:border-white/10">
+                    <Checkbox
+                      id="select-all"
+                      checked={
+                        filteredAccounts.length > 0 &&
+                        selectedAccounts.length === filteredAccounts.length
+                      }
                       onCheckedChange={(checked) => {
-                        setAllAccounts(checked)
                         if (checked) {
+                          setSelectedAccounts(filteredAccounts.map(acc => acc.account_id))
+                        } else {
                           setSelectedAccounts([])
                         }
                       }}
                     />
-                    <div className="flex flex-col">
-                      <Label 
-                        htmlFor="sync-all"
-                        className="text-sm font-medium cursor-pointer"
+                    <Label 
+                      htmlFor="select-all"
+                      className="cursor-pointer text-sm font-medium"
+                    >
+                      {t('rithmic.selectAllAccounts')}
+                    </Label>
+                  </div>
+
+                  <div className="max-h-[300px] divide-y divide-black/10 overflow-y-auto border-y border-black/10 dark:divide-white/10 dark:border-white/10">
+                    {filteredAccounts.map((account) => (
+                      <div
+                        key={account.account_id}
+                        className="flex items-center gap-3 py-3 transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5"
                       >
-                        {t('rithmic.syncAllAccounts')}
-                      </Label>
-                      <span className="text-xs text-muted-foreground">
-                        {t('rithmic.syncAllAccountsDescription')}
-                      </span>
-                    </div>
+                        <Checkbox
+                          id={account.account_id}
+                          checked={selectedAccounts.includes(account.account_id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedAccounts([...selectedAccounts, account.account_id])
+                            } else {
+                              setSelectedAccounts(selectedAccounts.filter(id => id !== account.account_id))
+                            }
+                          }}
+                        />
+                        <Label 
+                          htmlFor={account.account_id}
+                          className="flex-1 cursor-pointer"
+                        >
+                          <span className="text-sm font-medium">{account.account_id}</span>
+                          <span className="ml-2 text-sm text-black/45 dark:text-white/45">
+                            {t('rithmic.fcmId')}: {account.fcm_id}
+                          </span>
+                        </Label>
+                      </div>
+                    ))}
                   </div>
                 </div>
+              )}
 
-                {!allAccounts && (
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <Input
-                        placeholder={t('rithmic.searchAccounts')}
-                        value={accountSearch}
-                        onChange={(e) => setAccountSearch(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setAccountSearch('')}
-                      >
-                        {t('common.clear')}
-                      </Button>
-                    </div>
-
-                    <div className="flex items-center space-x-2 p-2 rounded bg-accent/50">
-                      <Checkbox
-                        id="select-all"
-                        checked={selectedAccounts.length === filteredAccounts.length}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedAccounts(filteredAccounts.map(acc => acc.account_id))
-                          } else {
-                            setSelectedAccounts([])
-                          }
-                        }}
-                      />
-                      <Label 
-                        htmlFor="select-all"
-                        className="text-sm font-medium cursor-pointer"
-                      >
-                        {t('rithmic.selectAllAccounts')}
-                      </Label>
-                    </div>
-
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                      {filteredAccounts.map((account) => (
-                        <div key={account.account_id} className="flex items-center space-x-2 p-2 rounded hover:bg-accent">
-                          <Checkbox
-                            id={account.account_id}
-                            checked={selectedAccounts.includes(account.account_id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedAccounts([...selectedAccounts, account.account_id])
-                              } else {
-                                setSelectedAccounts(selectedAccounts.filter(id => id !== account.account_id))
-                              }
-                            }}
-                          />
-                          <Label 
-                            htmlFor={account.account_id}
-                            className="flex-1 cursor-pointer"
-                          >
-                            {account.account_id} 
-                            <span className="text-sm text-muted-foreground ml-2">
-                              ({t('rithmic.fcmId')}: {account.fcm_id})
-                            </span>
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex space-x-2">
+              <div className="flex gap-2 pt-1">
                 <Button
+                  type="button"
                   variant="outline"
                   onClick={() => {
                     setStep('credentials')
@@ -694,13 +758,15 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
                     setAccountSearch('')
                   }}
                   disabled={isLoading}
+                  className={secondaryButtonClassName}
                 >
                   {t('common.back')}
                 </Button>
                 <Button
+                  type="button"
                   onClick={handleStartProcessing}
                   disabled={isLoading || (!allAccounts && selectedAccounts.length === 0)}
-                  className="flex-1"
+                  className={cn(primaryButtonClassName, 'flex-1')}
                 >
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {allAccounts 
@@ -713,14 +779,6 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
               </div>
             </div>
           )}
-{/* 
-          {step === 'processing' && (
-            <div className="space-y-4">
-              <RithmicSyncFeedback 
-                totalAccounts={allAccounts ? availableAccounts.length : selectedAccounts.length}
-              />
-            </div>
-          )} */}
         </>
       )}
     </div>
@@ -728,39 +786,46 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
 }
 
 interface RithmicSyncWrapperProps {
-  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>> | ((open: boolean) => void)
+  /** When false, open on the credentials form instead of the saved-credentials list. */
+  initialShowCredentialsManager?: boolean
 }
 
-export function RithmicSyncWrapper({ setIsOpen }: RithmicSyncWrapperProps) {
+export function RithmicSyncWrapper({
+  setIsOpen,
+  initialShowCredentialsManager = true,
+}: RithmicSyncWrapperProps) {
   const t = useI18n()
-  
+  const showChromeTitle = initialShowCredentialsManager
+
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold">{t('import.type.rithmicLogin')}</h2>
-      <RithmicSyncConnection 
-        setIsOpen={setIsOpen}
-      />
-      <div className="mt-6 text-xs text-muted-foreground space-y-2 border-t pt-4">
-        <div className="flex items-center gap-4 mb-2">
-          <Image 
-            src="/logos/TradingPlatformByRithmic-Black.png"
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto">
+        {showChromeTitle && (
+          <h2 className="text-xl font-normal tracking-tight md:text-2xl">
+            {t('import.type.rithmicLogin')}
+          </h2>
+        )}
+        <RithmicSyncConnection 
+          setIsOpen={setIsOpen}
+          initialShowCredentialsManager={initialShowCredentialsManager}
+        />
+      </div>
+      <div className="shrink-0 space-y-2 border-t border-black/10 pt-4 text-xs leading-relaxed text-black/45 dark:border-white/10 dark:text-white/45">
+        <div className="mb-2 flex items-center gap-4">
+          <ThemeAwareLogo
+            path="/logos/monochrome/trading-platform-by-rithmic-black.png"
+            darkPath="/logos/monochrome/trading-platform-by-rithmic-white.png"
             alt="Trading Platform by Rithmic"
-            width={120}
-            height={40}
-            className="dark:hidden"
+            size={120}
+            className="h-10 w-auto"
           />
-          <Image 
-            src="/logos/TradingPlatformByRithmic-Green.png"
-            alt="Trading Platform by Rithmic"
-            width={120}
-            height={40}
-            className="hidden dark:block"
-          />
-          <Image 
-            src="/logos/Powered_by_Omne.png"
+          <ThemeAwareLogo
+            path="/logos/monochrome/powered-by-omne-black.png"
+            darkPath="/logos/monochrome/powered-by-omne-white.png"
             alt="Powered by OMNE"
-            width={120}
-            height={40}
+            size={120}
+            className="h-10 w-auto"
           />
         </div>
         <p>{t('import.type.copyright.rithmic')}</p>
@@ -771,5 +836,3 @@ export function RithmicSyncWrapper({ setIsOpen }: RithmicSyncWrapperProps) {
     </div>
   )
 }
-
-

@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from 'sonner'
@@ -10,6 +9,7 @@ import { useI18n } from '@/locales/client'
 import { useTradesStore } from '@/store/trades-store'
 import { generateTradeHash } from '@/lib/utils'
 import { PlatformProcessorProps } from '../config/platforms'
+import { ProcessedTradesPreview } from '../components/processed-trades-preview'
 
 const formatPnl = (pnl: string | undefined): { pnl: number, error?: string } => {
     if (typeof pnl !== 'string' || pnl.trim() === '') {
@@ -245,25 +245,21 @@ export default function TradovateProcessor({ headers, csvData, processedTrades, 
         });
     };
 
-    const totalPnL = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0), [processedTrades]);
-    const totalCommission = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0), [processedTrades]);
-    const uniqueInstruments = useMemo(() => Array.from(new Set(processedTrades.map(trade => trade.instrument))), [processedTrades]);
-
     return (
         <div className="flex flex-col h-full overflow-hidden">
             <div className="flex-1 overflow-auto">
-                <div className="space-y-4 p-6">
+                <div className="space-y-8 p-0 sm:p-0">
                     {showCommissionPrompt && (
-                        <div className="flex-none bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-r" role="alert">
-                            <p className="font-bold">{t('import.commission.title')}</p>
-                            <p>{t('import.commission.description')}</p>
-                            <p className="mt-2 text-sm">{t('import.commission.help')}</p>
-                            <p className="text-sm italic">{t('import.commission.example')}</p>
-                            <div className="mt-4 space-y-2">
+                        <div className="space-y-3 border border-black/10 p-4 dark:border-white/10" role="alert">
+                            <p className="text-sm font-medium">{t('import.commission.title')}</p>
+                            <p className="text-sm leading-relaxed text-black/55 dark:text-white/55">{t('import.commission.description')}</p>
+                            <p className="text-sm text-black/55 dark:text-white/55">{t('import.commission.help')}</p>
+                            <p className="text-sm text-black/45 italic dark:text-white/45">{t('import.commission.example')}</p>
+                            <div className="space-y-2 pt-2">
                                 {Object.keys(missingCommissions).map(instrument => (
-                                    <div key={instrument} className="flex items-center space-x-2">
-                                        <label htmlFor={`commission-${instrument}`} className="min-w-[200px]">
-                                            {instrument} - {t('import.commission.perContract')}
+                                    <div key={instrument} className="flex items-center gap-3">
+                                        <label htmlFor={`commission-${instrument}`} className="min-w-[200px] text-sm">
+                                            {instrument} — {t('import.commission.perContract')}
                                         </label>
                                         <Input
                                             id={`commission-${instrument}`}
@@ -271,86 +267,23 @@ export default function TradovateProcessor({ headers, csvData, processedTrades, 
                                             step="0.01"
                                             value={missingCommissions[instrument]}
                                             onChange={(e) => handleCommissionChange(instrument, e.target.value)}
-                                            className="w-24"
+                                            className="h-10 w-24 rounded-sm"
                                         />
                                     </div>
                                 ))}
                             </div>
-                            <Button onClick={applyCommissions} className="mt-4">
+                            <Button onClick={applyCommissions} className="mt-2 rounded-sm">
                                 {t('import.commission.apply')}
                             </Button>
                         </div>
                     )}
                     {processedTrades.length === 0 && (
-                        <div className="flex-none bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-r" role="alert">
-                            <p className="font-bold">{t('import.error.duplicateTrades')}</p>
-                            <p>{t('import.error.duplicateTradesDescription')}</p>
+                        <div className="space-y-1 border border-black/10 p-4 dark:border-white/10" role="alert">
+                            <p className="text-sm font-medium">{t('import.error.duplicateTrades')}</p>
+                            <p className="text-sm text-black/55 dark:text-white/55">{t('import.error.duplicateTradesDescription')}</p>
                         </div>
                     )}
-                    <div className="px-2">
-                        <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Instrument</TableHead>
-                                    <TableHead>Side</TableHead>
-                                    <TableHead>Quantity</TableHead>
-                                    <TableHead>Entry Price</TableHead>
-                                    <TableHead>Close Price</TableHead>
-                                    <TableHead>Entry Date</TableHead>
-                                    <TableHead>Close Date</TableHead>
-                                    <TableHead>PnL</TableHead>
-                                    <TableHead>Time in Position</TableHead>
-                                    <TableHead>Commission</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {processedTrades.map((trade) => (
-                                    <TableRow key={trade.id}>
-                                        <TableCell>{trade.instrument}</TableCell>
-                                        <TableCell>{trade.side}</TableCell>
-                                        <TableCell>{trade.quantity}</TableCell>
-                                        <TableCell>{trade.entryPrice}</TableCell>
-                                        <TableCell>{trade.closePrice || '-'}</TableCell>
-                                        <TableCell>{trade.entryDate ? new Date(trade.entryDate).toLocaleString() : '-'}</TableCell>
-                                        <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
-                                        <TableCell className={trade.pnl && trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
-                                            {trade.pnl?.toFixed(2)}
-                                        </TableCell>
-                                        <TableCell>{`${Math.floor((trade.timeInPosition || 0) / 60)}m ${Math.floor((trade.timeInPosition || 0) % 60)}s`}</TableCell>
-                                        <TableCell>{trade.commission?.toFixed(2)}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                    <div className="flex justify-between px-2 py-4">
-                        <div>
-                            <h3 className="text-lg font-semibold mb-2">Total PnL</h3>
-                            <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {totalPnL.toFixed(2)}
-                            </p>
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-semibold mb-2">Total Commission</h3>
-                            <p className="text-xl font-bold text-blue-600">
-                                {totalCommission.toFixed(2)}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="px-2">
-                        <h3 className="text-lg font-semibold mb-2">Instruments Traded</h3>
-                        <div className="flex flex-wrap gap-2">
-                            {uniqueInstruments.map((instrument) => (
-                                <Button
-                                    key={instrument}
-                                    variant="outline"
-                                >
-                                    {instrument}
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
+                    <ProcessedTradesPreview trades={processedTrades} />
                 </div>
             </div>
         </div>

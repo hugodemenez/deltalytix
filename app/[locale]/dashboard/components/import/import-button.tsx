@@ -49,8 +49,35 @@ export type Step =
   | "complete"
   | "process-file";
 
-export default function ImportButton({ compact = false }: { compact?: boolean }) {
-  const [isOpen, setIsOpen] = useState<boolean>(false);
+export default function ImportButton({
+  compact = false,
+  open: controlledOpen,
+  onOpenChange,
+  initialType,
+  hideTrigger = false,
+  inline = false,
+}: {
+  compact?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  /** Platform `type` (or `csv-ai` for AI CSV which uses empty type) */
+  initialType?: string
+  hideTrigger?: boolean
+  /** Render the import steps on the page instead of in a dialog */
+  inline?: boolean
+}) {
+  const [internalOpen, setInternalOpen] = useState<boolean>(false);
+  const isControlled = controlledOpen !== undefined;
+  const isOpen = inline ? true : isControlled ? controlledOpen : internalOpen;
+  const setIsOpen = useCallback(
+    (next: boolean | ((prev: boolean) => boolean)) => {
+      const value = typeof next === "function" ? next(isOpen) : next;
+      if (!isControlled && !inline) setInternalOpen(value);
+      onOpenChange?.(value);
+    },
+    [isControlled, inline, isOpen, onOpenChange]
+  );
+
   const [step, setStep] = useState<Step>("select-import-type");
   const [importType, setImportType] = useState<ImportType>("");
   const [files, setFiles] = useState<File[]>([]);
@@ -73,6 +100,45 @@ export default function ImportButton({ compact = false }: { compact?: boolean })
   const setTradesStore = useTradesStore((state) => state.setTrades);
   const { refreshTradesOnly } = useData();
   const t = useI18n();
+
+  const resolvePlatform = useCallback((type: string) => {
+    if (type === "csv-ai" || type === "") {
+      return platforms.find((p) => p.platformName === "csv-ai");
+    }
+    return (
+      platforms.find((p) => p.type === type) ||
+      platforms.find((p) => p.platformName === type)
+    );
+  }, []);
+
+  const applyInitialType = useCallback(
+    (type: string | undefined) => {
+      if (!type) {
+        setImportType("");
+        setStep("select-import-type");
+        return;
+      }
+      const platform = resolvePlatform(type);
+      const resolvedType = (platform?.type ?? "") as ImportType;
+      setImportType(resolvedType);
+      const firstFlowStep = platform?.steps.find(
+        (s) => s.id !== "select-import-type"
+      );
+      setStep((firstFlowStep?.id as Step) || "upload-file");
+    },
+    [resolvePlatform]
+  );
+
+  useEffect(() => {
+    if (inline) {
+      applyInitialType(initialType);
+      return;
+    }
+    if (!isOpen) return;
+    if (initialType !== undefined) {
+      applyInitialType(initialType);
+    }
+  }, [inline, isOpen, initialType, applyInitialType]);
 
   const handleSave = useCallback(async () => {
     console.log("[ImportButton] First:", processedTrades);
@@ -157,8 +223,10 @@ export default function ImportButton({ compact = false }: { compact?: boolean })
         }),
       });
       setIsOpen(false);
-      // Reset the import process
       resetImportState();
+      if (inline) {
+        applyInitialType(initialType);
+      }
     } catch (error) {
       console.error("Error saving trades:", error);
       toast.error(t("import.error.failed"), {
@@ -167,7 +235,7 @@ export default function ImportButton({ compact = false }: { compact?: boolean })
     } finally {
       setIsSaving(false);
     }
-  }, [processedTrades, accountNumbers, selectedAccountNumbers, importType, user, supabaseUser, t, refreshTradesOnly]);
+  }, [processedTrades, accountNumbers, selectedAccountNumbers, importType, user, supabaseUser, t, refreshTradesOnly, setIsOpen, setTradesStore, trades, inline, initialType, applyInitialType]);
 
   const resetImportState = () => {
     setImportType("");
@@ -225,6 +293,7 @@ export default function ImportButton({ compact = false }: { compact?: boolean })
 
     const prevStep = platform.steps[currentStepIndex - 1];
     if (!prevStep) return;
+    if (inline && prevStep.id === "select-import-type") return;
 
     setStep(prevStep.id);
   };
@@ -420,43 +489,85 @@ export default function ImportButton({ compact = false }: { compact?: boolean })
     return false;
   };
 
+  const platformForNav =
+    platforms.find((p) => p.type === importType) ||
+    platforms.find((p) => p.platformName === "csv-ai");
+  const currentStepIndex =
+    platformForNav?.steps.findIndex((s) => s.id === step) ?? -1;
+  const previousStep =
+    currentStepIndex > 0 ? platformForNav?.steps[currentStepIndex - 1] : null;
+  const canGoBack = Boolean(
+    previousStep && !(inline && previousStep.id === "select-import-type")
+  );
+
+  const flowContent = (
+    <>
+      <ImportDialogHeader step={step} importType={importType} inline={inline} />
+
+      <div
+        className={cn(
+          "min-h-0 flex-1 overflow-hidden p-3 sm:p-6",
+          inline && "overflow-y-auto p-0 sm:p-0"
+        )}
+      >
+        {renderStep()}
+      </div>
+
+      <ImportDialogFooter
+        step={step}
+        importType={importType}
+        onBack={handleBackStep}
+        onNext={handleNextStep}
+        isSaving={isSaving}
+        isNextDisabled={isNextDisabled()}
+        canGoBack={canGoBack}
+        inline={inline}
+      />
+    </>
+  );
+
+  if (inline) {
+    return (
+      <div className="flex flex-col gap-6 border-t border-black/10 pt-8 dark:border-white/10">
+        {flowContent}
+      </div>
+    );
+  }
+
   return (
     <div>
-      <Button
-        onClick={() => setIsOpen(true)}
-        variant="default"
-        className={cn(
-          "justify-center font-normal shrink-0",
-          compact
-            ? "h-9 w-9 p-0 rounded-md md:justify-start md:text-left md:w-auto md:h-10 md:px-4 md:py-2"
-            : "justify-start text-left w-full h-10 px-4 py-2"
-        )}
-        id="import-data"
-        aria-label={t("import.button")}
-        onMouseEnter={() => uploadIconRef.current?.startAnimation()}
-        onMouseLeave={() => uploadIconRef.current?.stopAnimation()}
-      >
-        <UploadIcon ref={uploadIconRef} className={cn("h-4 w-4", compact ? "md:mr-2" : "mr-2")} />
-        <span className={compact ? "hidden md:inline" : "inline"}>{t("import.button")}</span>
-      </Button>
+      {!hideTrigger && (
+        <Button
+          onClick={() => setIsOpen(true)}
+          variant="default"
+          className={cn(
+            "justify-center font-normal shrink-0",
+            compact
+              ? "h-9 w-9 p-0 rounded-md md:justify-start md:text-left md:w-auto md:h-10 md:px-4 md:py-2"
+              : "justify-start text-left w-full h-10 px-4 py-2"
+          )}
+          id="import-data"
+          aria-label={t("import.button")}
+          onMouseEnter={() => uploadIconRef.current?.startAnimation()}
+          onMouseLeave={() => uploadIconRef.current?.stopAnimation()}
+        >
+          <UploadIcon ref={uploadIconRef} className={cn("h-4 w-4", compact ? "md:mr-2" : "mr-2")} />
+          <span className={compact ? "hidden md:inline" : "inline"}>{t("import.button")}</span>
+        </Button>
+      )}
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen} >
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          setIsOpen(open);
+          if (!open) resetImportState();
+        }}
+      >
         <DialogContent
           className="flex flex-col w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-[90vw] lg:max-w-[80vw] h-[calc(100dvh-1rem)] sm:h-[85vh] lg:h-[80vh] p-0 gap-0"
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
-          <ImportDialogHeader step={step} importType={importType} />
-
-          <div className="flex-1 overflow-hidden p-3 sm:p-6 min-h-0">{renderStep()}</div>
-
-          <ImportDialogFooter
-            step={step}
-            importType={importType}
-            onBack={handleBackStep}
-            onNext={handleNextStep}
-            isSaving={isSaving}
-            isNextDisabled={isNextDisabled()}
-          />
+          {flowContent}
         </DialogContent>
       </Dialog>
     </div>
