@@ -123,6 +123,13 @@ export default {
   "dashboard.billing": "Subscription",
   "dashboard.data": "Data",
   "dashboard.connections": "Connections",
+  "betaInvite.connectionFlow.ariaLabel": "Try the new connection flow on beta",
+  "betaInvite.connectionFlow.title": "Try the new connection flow",
+  "betaInvite.connectionFlow.description":
+    "A clearer way to manage broker connections is available on beta. Want to give it a try?",
+  "betaInvite.connectionFlow.tryBeta": "Try on beta",
+  "betaInvite.connectionFlow.notNow": "Not now",
+  "betaInvite.connectionFlow.dismiss": "Dismiss",
   "connections.title": "Connections",
   "connections.description":
     "Manage broker connections and the trading accounts they host. Import files for standalone accounts.",
