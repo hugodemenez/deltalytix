@@ -107,11 +107,14 @@ export function captureConnectionCreated(
   service: string,
   extra?: Record<string, string | boolean | number | null | undefined>
 ) {
-  if (!canCapture()) return;
-  posthog.capture("connection_created", {
-    service,
-    source: "connections_page",
-    ...extra,
-  });
+  // Always attempt the feedback survey after a successful connect.
+  // Analytics capture is optional (beta is a separate origin/consent jar).
+  if (canCapture()) {
+    posthog.capture("connection_created", {
+      service,
+      source: "connections_page",
+      ...extra,
+    });
+  }
   showConnectionFeedbackSurvey();
 }
