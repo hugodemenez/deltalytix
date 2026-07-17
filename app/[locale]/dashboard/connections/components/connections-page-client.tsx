@@ -676,7 +676,7 @@ function PendingTradovateConnectionRow({ title }: { title?: string }) {
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-3">
           <span className="inline-flex shrink-0 items-center" aria-hidden>
-            <span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />
+            <span className="h-2 w-2 motion-safe:animate-pulse rounded-full bg-amber-500" />
           </span>
           <div className="min-w-0 truncate text-xl font-normal tracking-tight md:text-2xl">
             {title || t('connections.oauth.tradovate.connecting')}
