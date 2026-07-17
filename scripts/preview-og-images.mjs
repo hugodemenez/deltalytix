@@ -11,7 +11,6 @@ import {
   LandingAtmosphere,
   MarketingOgImage,
   OgCtaButton,
-  loadLandingProductPosterSrc,
 } from "../lib/og/shared.tsx";
 import { ReferralOgImage } from "../lib/og/referral-opengraph.tsx";
 import {
@@ -39,7 +38,6 @@ async function renderPng(element, filename) {
   console.log(`wrote ${path} (${buffer.length} bytes)`);
 }
 
-const productSrc = await loadLandingProductPosterSrc();
 const en = getSiteMetadataCopy("en");
 const fr = getSiteMetadataCopy("fr");
 const updatesEn = getUpdatesOgCopy("en");
@@ -49,7 +47,6 @@ await renderPng(
     headline: en.ogHeadline,
     subheadline: en.ogSubheadline,
     cta: en.ogCta,
-    productSrc,
   }),
   "marketing-en.png",
 );
@@ -59,7 +56,6 @@ await renderPng(
     headline: fr.ogHeadline,
     subheadline: fr.ogSubheadline,
     cta: fr.ogCta,
-    productSrc,
   }),
   "marketing-fr.png",
 );
@@ -70,7 +66,6 @@ await renderPng(
     joinLabel: "Join with referral code",
     tagline: "Get started on Deltalytix with a friend.",
     cta: "Claim invite →",
-    productSrc,
   }),
   "referral-en.png",
 );
@@ -91,11 +86,7 @@ const updatesElement = createElement(
       position: "relative",
     },
   },
-  createElement(LandingAtmosphere, {
-    width: 340,
-    height: 230,
-    productSrc,
-  }),
+  createElement(LandingAtmosphere, { width: 340, height: 230 }),
   createElement(BrandLockup, { logoSize: 36, fontSize: 26 }),
   createElement(
     "div",

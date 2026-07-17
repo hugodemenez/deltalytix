@@ -7,7 +7,6 @@ import {
   BrandLockup,
   LandingAtmosphere,
   OgCtaButton,
-  loadLandingProductPosterSrc,
   ogImageCacheHeaders,
 } from "@/lib/og/shared"
 import { getUpdatesOgCopy } from "@/lib/og/site-metadata"
@@ -51,7 +50,6 @@ export default async function Image({
         })
 
         const updatesCopy = getUpdatesOgCopy(locale)
-        const productSrc = await loadLandingProductPosterSrc()
 
         const element = (
             <div
@@ -68,7 +66,7 @@ export default async function Image({
                     position: "relative",
                 }}
             >
-                <LandingAtmosphere width={340} height={230} productSrc={productSrc} />
+                <LandingAtmosphere width={340} height={230} />
 
                 <BrandLockup logoSize={36} fontSize={26} />
 

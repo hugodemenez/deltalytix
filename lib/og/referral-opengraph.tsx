@@ -4,7 +4,6 @@ import {
   BrandLockup,
   LandingAtmosphere,
   OgCtaButton,
-  loadLandingProductPosterSrc,
   ogImageCacheHeaders,
   ogImageSize,
 } from "@/lib/og/shared";
@@ -23,7 +22,6 @@ type ReferralOgImageProps = {
   joinLabel: string;
   tagline: string;
   cta: string;
-  productSrc?: string;
 };
 
 export function ReferralOgImage({
@@ -31,7 +29,6 @@ export function ReferralOgImage({
   joinLabel,
   tagline,
   cta,
-  productSrc,
 }: ReferralOgImageProps) {
   return (
     <div
@@ -47,7 +44,7 @@ export function ReferralOgImage({
         justifyContent: "space-between",
       }}
     >
-      <LandingAtmosphere width={380} height={250} productSrc={productSrc} />
+      <LandingAtmosphere width={380} height={250} />
 
       <BrandLockup />
 
@@ -128,7 +125,7 @@ export function ReferralOgImage({
   ) as ReactElement;
 }
 
-export async function createReferralOgImageResponse({
+export function createReferralOgImageResponse({
   ref,
   joinLabel,
   tagline,
@@ -139,15 +136,12 @@ export async function createReferralOgImageResponse({
   tagline: string;
   cta: string;
 }) {
-  const productSrc = await loadLandingProductPosterSrc();
-
   return new ImageResponse(
     <ReferralOgImage
       ref={ref}
       joinLabel={joinLabel}
       tagline={tagline}
       cta={cta}
-      productSrc={productSrc}
     />,
     {
       ...referralOgSize,

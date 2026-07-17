@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import type { ReactElement } from "react";
 import {
@@ -9,14 +7,6 @@ import {
   OG_RADIUS,
   OG_TRACKING,
 } from "@/lib/og/tokens";
-
-/** Light-theme dashboard poster used in the landing hero frame. */
-export async function loadLandingProductPosterSrc(): Promise<string> {
-  const buffer = await readFile(
-    join(process.cwd(), "public/videos/demo_white_poster.png"),
-  );
-  return `data:image/png;base64,${buffer.toString("base64")}`;
-}
 
 export const ogImageSize = { width: 1200, height: 630 };
 
@@ -121,24 +111,111 @@ export function OgCtaButton({
   );
 }
 
+/** Stylized daily P&L bars — no labels, no axes, no numbers. */
+const OG_BAR_HEIGHTS = [
+  0.42, 0.68, -0.28, 0.55, 0.22, -0.48, 0.78, 0.35, -0.18, 0.62, 0.48, -0.32,
+  0.85, 0.3, -0.55, 0.58, 0.72, 0.18, -0.25, 0.92,
+] as const;
+
+function barColor(value: number): string {
+  if (value > 0.05) return OG_COLORS.chartWin;
+  if (value < -0.05) return OG_COLORS.chartLoss;
+  return OG_COLORS.chartNeutral;
+}
+
+export function OgBarChart({
+  width = 420,
+  height = 280,
+}: {
+  width?: number;
+  height?: number;
+} = {}) {
+  const gap = 8;
+  const barWidth = Math.floor(
+    (width - gap * (OG_BAR_HEIGHTS.length - 1)) / OG_BAR_HEIGHTS.length,
+  );
+  const midY = height / 2;
+  const maxBar = midY - 8;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        width,
+        height,
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: midY,
+          height: 1,
+          background: OG_COLORS.hairline,
+          display: "flex",
+        }}
+      />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          height: "100%",
+          gap,
+        }}
+      >
+        {OG_BAR_HEIGHTS.map((value, index) => {
+          const barH = Math.max(6, Math.abs(value) * maxBar);
+          const isPositive = value >= 0;
+          return (
+            <div
+              key={index}
+              style={{
+                display: "flex",
+                width: barWidth,
+                height: "100%",
+                alignItems: isPositive ? "flex-end" : "flex-start",
+                paddingTop: isPositive ? 0 : midY,
+                paddingBottom: isPositive ? midY : 0,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  height: barH,
+                  borderRadius: OG_RADIUS.sm,
+                  background: barColor(value),
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /**
- * Soft mint product-frame echo of the landing hero demo.
- * Keep it behind left-aligned copy; size props tune per OG variant.
+ * Right-side visual: mint-washed frame wrapping a text-free bar chart.
  */
 export function LandingAtmosphere({
   width = 420,
   height = 280,
   right = 48,
   bottom = 40,
-  productSrc,
 }: {
   width?: number;
   height?: number;
   right?: number;
   bottom?: number;
-  /** Optional data URL / absolute URL of the hero product poster. */
-  productSrc?: string;
 } = {}) {
+  const chartWidth = width - 48;
+  const chartHeight = height - 48;
+
   return (
     <div
       style={{
@@ -150,7 +227,7 @@ export function LandingAtmosphere({
         borderRadius: OG_RADIUS.md,
         background: OG_COLORS.wash,
         display: "flex",
-        padding: 14,
+        padding: 12,
       }}
     >
       <div
@@ -161,23 +238,11 @@ export function LandingAtmosphere({
           borderRadius: OG_RADIUS.sm,
           background: OG_COLORS.surface,
           border: `1px solid ${OG_COLORS.hairline}`,
-          overflow: "hidden",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        {productSrc ? (
-          <img
-            src={productSrc}
-            alt=""
-            width={width}
-            height={height}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "left top",
-            }}
-          />
-        ) : null}
+        <OgBarChart width={chartWidth} height={chartHeight} />
       </div>
     </div>
   );
@@ -187,7 +252,6 @@ type MarketingOgImageProps = {
   headline: string;
   subheadline: string;
   cta: string;
-  productSrc?: string;
   /** @deprecated Kept for call-site compat; landing CTA color is used instead. */
   accentColor?: string;
 };
@@ -196,7 +260,6 @@ export function MarketingOgImage({
   headline,
   subheadline,
   cta,
-  productSrc,
 }: MarketingOgImageProps) {
   return (
     <div
@@ -212,13 +275,7 @@ export function MarketingOgImage({
         justifyContent: "space-between",
       }}
     >
-      <LandingAtmosphere
-        width={520}
-        height={340}
-        right={40}
-        bottom={36}
-        productSrc={productSrc}
-      />
+      <LandingAtmosphere width={520} height={340} right={40} bottom={36} />
 
       <BrandLockup />
 
@@ -274,21 +331,18 @@ export function MarketingOgImage({
   ) as ReactElement;
 }
 
-export async function createMarketingOgImageResponse({
+export function createMarketingOgImageResponse({
   headline,
   subheadline,
   cta,
   accentColor,
 }: MarketingOgImageProps) {
-  const productSrc = await loadLandingProductPosterSrc();
-
   return new ImageResponse(
     <MarketingOgImage
       headline={headline}
       subheadline={subheadline}
       cta={cta}
       accentColor={accentColor}
-      productSrc={productSrc}
     />,
     {
       ...ogImageSize,

@@ -1,27 +1,33 @@
 // Design tokens for generated OG images. Satori inline styles cannot use CSS
 // variables or Tailwind, so we centralize literals here for consistency.
 //
-// Hex values are sRGB approximations of the landing-page oklch tokens from
-// `.cursor/skills/deltalytix-styling-guidelines/SKILL.md` and the hero.
+// Hex values are sRGB approximations of the landing-page *dark* oklch tokens
+// from `.cursor/skills/deltalytix-styling-guidelines/SKILL.md`.
+// OG images cannot be theme-responsive — crawlers fetch one cached URL.
 
 export const OG_COLORS = {
-  /** Landing shell: oklch(0.97 0 0) */
-  background: "#f5f5f5",
-  /** Landing text: oklch(0.17 0 0) */
-  foreground: "#0f0f0f",
-  /** Secondary body ≈ text-black/55 on the light shell */
-  muted: "rgba(15, 15, 15, 0.55)",
-  /** Meta / footer ≈ text-black/45 */
-  subtle: "rgba(15, 15, 15, 0.45)",
-  /** Primary CTA fill: oklch(0.22 0.01 95) */
-  cta: "#1c1b15",
-  ctaText: "#ffffff",
-  /** Hero demo-frame wash: oklch(0.88 0.04 165) */
+  /** Dark landing shell: oklch(0.17 0 0) */
+  background: "#0f0f0f",
+  /** Dark landing text: oklch(0.93 0 0) */
+  foreground: "#e8e8e8",
+  /** Secondary body ≈ text-white/55 */
+  muted: "rgba(232, 232, 232, 0.55)",
+  /** Meta / footer ≈ text-white/45 */
+  subtle: "rgba(232, 232, 232, 0.45)",
+  /** Dark primary CTA: oklch(0.94 0.01 95) */
+  cta: "#edebe4",
+  ctaText: "#0f0f0f",
+  /** Soft mint wash (same hue as hero demo frame) */
   wash: "#c0e0d1",
-  /** Hairline borders: border-black/10 */
-  hairline: "rgba(0, 0, 0, 0.1)",
-  /** Soft panel surface for product-frame accents */
-  surface: "#ffffff",
+  /** Hairline borders: border-white/10 */
+  hairline: "rgba(255, 255, 255, 0.1)",
+  /** Panel surface on dark shell */
+  surface: "#161616",
+  /** Chart win / loss — hsl(173 60% 55%) / hsl(12 75% 65%) from globals dark */
+  chartWin: "#3dccb0",
+  chartLoss: "#f08a6c",
+  /** Neutral bar for quiet days */
+  chartNeutral: "rgba(232, 232, 232, 0.18)",
 } as const;
 
 export const OG_TRACKING = {
