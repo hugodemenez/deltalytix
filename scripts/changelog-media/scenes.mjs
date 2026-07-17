@@ -11,7 +11,7 @@ import {
 } from './helpers.mjs'
 import { LABELS, viewport } from './constants.mjs'
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-pricing-stability' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'billing-mobile'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile'} ChangelogScene */
 
 /**
  * @param {import('playwright-core').Browser} browser
@@ -143,6 +143,41 @@ export async function captureScene(browser, options) {
       await page.waitForTimeout(1200)
       await ensureCookiesDismissed(page, locale)
       await assertNoDevIssues(page, `${locale} landing FAQ expanded`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'landing-faq-self-host': {
+      // Desktop FAQ #faq: self-host question open with Open-with popover (Cursor/ChatGPT/Claude).
+      const selfHostQuestion = {
+        en: /is it possible to run deltalytix locally/i,
+        fr: /est-il possible d'exécuter deltalytix localement/i,
+      }
+      const openWith = {
+        en: /^open with$/i,
+        fr: /^ouvrir avec$/i,
+      }
+      const promptLabel = {
+        en: /agent setup prompt/i,
+        fr: /prompt de configuration pour agent/i,
+      }
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await page.goto(`${siteUrl}/${locale}`, { waitUntil: 'networkidle', timeout: 120_000 })
+      await dismissCookies(page, locale)
+      const section = page.locator('#faq')
+      await section.scrollIntoViewIfNeeded()
+      await section.getByRole('button', { name: selfHostQuestion[locale] }).click()
+      await section.getByText(promptLabel[locale]).waitFor({ timeout: 15_000 })
+      await page.waitForTimeout(800)
+      await section.getByRole('button', { name: openWith[locale] }).click()
+      await page.getByRole('link', { name: /chatgpt/i }).waitFor({ timeout: 10_000 })
+      await page.waitForTimeout(600)
+      await ensureCookiesDismissed(page, locale)
+      await assertNoDevIssues(page, `${locale} landing FAQ self-host`)
       await screenshot(page, batch, locale, file)
       await page.close()
       return
@@ -376,6 +411,36 @@ export async function captureScene(browser, options) {
       await clickTab(page, LABELS[locale].widgetsTab)
       await page.waitForTimeout(2500)
       await assertNoDevIssues(page, `${locale} widgets mobile`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'widgets-mobile-minimap': {
+      // Mobile Widgets tab: expanded toolbar minimap overlay with miniature widget thumbnails.
+      const minimapOpen = {
+        en: /open widget minimap/i,
+        fr: /ouvrir la mini-carte des widgets/i,
+      }
+      const minimapDialog = {
+        en: /widget minimap/i,
+        fr: /mini-carte des widgets/i,
+      }
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('mobile'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      await clickTab(page, LABELS[locale].widgetsTab)
+      await page.waitForTimeout(2500)
+      const trigger = page.getByRole('button', { name: minimapOpen[locale] })
+      await trigger.waitFor({ timeout: 30_000 })
+      await trigger.click()
+      await page.getByRole('dialog', { name: minimapDialog[locale] }).waitFor({
+        timeout: 15_000,
+      })
+      await page.waitForTimeout(1200)
+      await assertNoDevIssues(page, `${locale} widgets mobile minimap`)
       await screenshot(page, batch, locale, file)
       await page.close()
       return
