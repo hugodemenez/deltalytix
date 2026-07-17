@@ -17,7 +17,10 @@ export function PostHogIdentity({
   const syncIdentity = useCallback(() => {
     if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return;
 
-    // Keep email available for feature-flag targeting even when analytics is opted out.
+    // Prefer the in-app locale over browser language for survey translations.
+    posthog.config.override_display_language = language;
+
+    // Keep email/language available for feature-flag targeting even when analytics is opted out.
     posthog.setPersonPropertiesForFlags({ email, language });
 
     if (posthog.has_opted_out_capturing()) return;
