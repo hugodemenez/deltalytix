@@ -17,7 +17,7 @@ import {
   OG_TRACKING,
 } from "@/lib/og/tokens"
 
-export const alt = "Deltalytix Update"
+export const alt = "Deltalytix product update — Read the Changelog"
 export const size = {
     width: 1200,
     height: 630,

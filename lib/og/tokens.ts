@@ -10,22 +10,24 @@ export const OG_COLORS = {
   background: "#0f0f0f",
   /** Dark landing text: oklch(0.93 0 0) */
   foreground: "#e8e8e8",
-  /** Secondary body ≈ text-white/55 */
+  /** Secondary body ≈ text-white/55 — ~5.3:1 on shell */
   muted: "rgba(232, 232, 232, 0.55)",
-  /** Meta / footer ≈ text-white/45 */
-  subtle: "rgba(232, 232, 232, 0.45)",
+  /** Meta / footer — same as muted so footer meets WCAG AA for text-in-image */
+  subtle: "rgba(232, 232, 232, 0.55)",
   /** Dark primary CTA: oklch(0.94 0.01 95) */
   cta: "#edebe4",
   ctaText: "#0f0f0f",
-  /** Soft mint wash (same hue as hero demo frame) */
-  wash: "#c0e0d1",
   /** Hairline borders: border-white/10 */
   hairline: "rgba(255, 255, 255, 0.1)",
   /** Panel surface on dark shell */
   surface: "#161616",
-  /** Chart win / loss — hsl(173 60% 55%) / hsl(12 75% 65%) from globals dark */
+  /**
+   * Decorative P&L backdrop only — not for reading values.
+   * Win/loss use position (above/below baseline) + hue/lightness.
+   * hsl(173 60% 55%) / hsl(12 70% 48%) from globals dark chart tokens.
+   */
   chartWin: "#3dccb0",
-  chartLoss: "#f08a6c",
+  chartLoss: "#c45c3a",
   /** Neutral bar for quiet days */
   chartNeutral: "rgba(232, 232, 232, 0.18)",
 } as const;

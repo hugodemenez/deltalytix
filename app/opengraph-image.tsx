@@ -1,7 +1,7 @@
 import { createMarketingOgImageResponse } from "@/lib/og/shared";
 import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
 
-export const alt = "Deltalytix trading analytics dashboard — Get Started";
+export const alt = "Deltalytix — Master your trading journey. Trading analytics for futures traders. Get Started.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

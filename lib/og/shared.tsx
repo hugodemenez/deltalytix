@@ -211,7 +211,7 @@ export function OgBarChart({
 }
 
 /**
- * Soft bar-chart backdrop — sits behind copy, not inside a framed panel.
+ * Soft bar-chart backdrop — decorative only (position encodes win/loss).
  * Opacity is applied via bar fill alpha (Satori does not honor parent opacity).
  */
 export function LandingAtmosphere({

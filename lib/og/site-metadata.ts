@@ -21,7 +21,8 @@ const SITE_METADATA: Record<OgLocale, SiteMetadataCopy> = {
     ogSubheadline:
       "Store, explore, and understand your track-record across brokers.",
     ogCta: "Get Started →",
-    ogAlt: "Deltalytix trading analytics dashboard — Get Started",
+    ogAlt:
+      "Deltalytix — Master your trading journey. Trading analytics for futures traders. Get Started.",
   },
   fr: {
     title: "Deltalytix — Tableau de bord de trading pour traders futures",
@@ -31,7 +32,8 @@ const SITE_METADATA: Record<OgLocale, SiteMetadataCopy> = {
     ogSubheadline:
       "Stockez, explorez et comprenez votre historique de trading futures.",
     ogCta: "Commencer maintenant →",
-    ogAlt: "Tableau de bord Deltalytix — Commencer maintenant",
+    ogAlt:
+      "Deltalytix — Votre journal de trading. Analyses pour traders futures. Commencer maintenant.",
   },
 };
 
