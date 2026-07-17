@@ -17,22 +17,83 @@ import { PlatformProcessorProps } from "../config/platforms";
 import { TradeTableReview } from "../../tables/trade-table-review";
 import { createTradeWithDefaults } from "@/lib/trade-factory";
 
+const hasGroupedThousands = (value: string, separator: "," | ".") => {
+  const parts = value.split(separator);
+  return (
+    parts.length > 1 &&
+    parts[0].length >= 1 &&
+    parts[0].length <= 3 &&
+    parts.slice(1).every((part) => /^\d{3}$/.test(part))
+  );
+};
+
+const getDecimalSeparator = (value: string): "," | "." | undefined => {
+  const lastComma = value.lastIndexOf(",");
+  const lastDot = value.lastIndexOf(".");
+
+  if (lastComma >= 0 && lastDot >= 0) {
+    return lastComma > lastDot ? "," : ".";
+  }
+
+  if (lastComma >= 0) {
+    return hasGroupedThousands(value, ",") ? undefined : ",";
+  }
+
+  if (lastDot >= 0) {
+    return hasGroupedThousands(value, ".") ? undefined : ".";
+  }
+
+  return undefined;
+};
+
+const parseAtasNumber = (value: unknown): number | undefined => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  let normalized = String(value ?? "").trim();
+  if (!normalized) return undefined;
+
+  const isParenthesizedNegative = /^\(.*\)$/.test(normalized);
+  const hasTrailingMinus = normalized.endsWith("-");
+
+  normalized = normalized
+    .replace(/\u00a0/g, " ")
+    .replace(/[\s']/g, "")
+    .replace(/[^\d.,+-]/g, "");
+
+  if (!/\d/.test(normalized)) return undefined;
+
+  const isNegative =
+    isParenthesizedNegative || hasTrailingMinus || normalized.startsWith("-");
+  normalized = normalized.replace(/[+-]/g, "");
+
+  const decimalSeparator = getDecimalSeparator(normalized);
+  if (decimalSeparator) {
+    const thousandsSeparator = decimalSeparator === "," ? "." : ",";
+    normalized = normalized
+      .replace(new RegExp(`\\${thousandsSeparator}`, "g"), "")
+      .replace(decimalSeparator, ".");
+  } else {
+    normalized = normalized.replace(/[,.]/g, "");
+  }
+
+  const numericValue = Number(normalized);
+  if (!Number.isFinite(numericValue)) return undefined;
+
+  return isNegative ? -Math.abs(numericValue) : numericValue;
+};
+
 const formatPnl = (
   pnl: string | undefined
 ): { pnl: number; error?: string } => {
-  if (!pnl || String(pnl).trim() === "") {
+  if (pnl === undefined || String(pnl).trim() === "") {
     console.warn("Invalid PNL value:", pnl);
     return { pnl: 0, error: "Invalid PNL value" };
   }
 
-  let formattedPnl = String(pnl).trim();
-
-  // Remove any currency symbols and commas
-  formattedPnl = formattedPnl.replace(/[$,€£]/g, "");
-
-  const numericValue = parseFloat(formattedPnl);
-
-  if (isNaN(numericValue)) {
+  const numericValue = parseAtasNumber(pnl);
+  if (numericValue === undefined) {
     console.warn("Unable to parse PNL value:", pnl);
     return { pnl: 0, error: "Unable to parse PNL value" };
   }
@@ -309,6 +370,7 @@ export default function AtasProcessor({
     csvData.forEach((row) => {
       const item: Partial<Trade> = {};
       let quantity = 0;
+      let shouldSkipTrade = false;
 
       headers.forEach((header, index) => {
         if (atasMappings[header]) {
@@ -317,12 +379,13 @@ export default function AtasProcessor({
 
           switch (key) {
             case "quantity":
-              quantity = Math.abs(parseFloat(String(cellValue)) || 0);
+              quantity = Math.abs(parseAtasNumber(cellValue) || 0);
               item[key] = quantity;
               break;
             case "pnl":
               const { pnl, error } = formatPnl(cellValue);
               if (error) {
+                shouldSkipTrade = true;
                 return;
               }
               item[key] = pnl;
@@ -334,9 +397,8 @@ export default function AtasProcessor({
             case "entryPrice":
             case "closePrice":
               if (cellValue) {
-                // Convert to string and remove commas
-                const priceString = String(cellValue).replace(/,/g, "");
-                item[key] = priceString;
+                const price = parseAtasNumber(cellValue);
+                item[key] = price === undefined ? "0" : String(price);
               } else {
                 item[key] = "0";
               }
@@ -360,6 +422,10 @@ export default function AtasProcessor({
         }
       });
 
+      if (shouldSkipTrade) {
+        return;
+      }
+
       if (!item.entryDate || !item.closeDate) {
         console.warn("Missing required dates");
         return;
@@ -376,7 +442,7 @@ export default function AtasProcessor({
       const closeQuantityIndex = headers.findIndex((h) => h === "Close volume");
       const closeQuantity =
         closeQuantityIndex >= 0
-          ? Math.abs(parseFloat(String(row[closeQuantityIndex])) || 0)
+          ? Math.abs(parseAtasNumber(row[closeQuantityIndex]) || 0)
           : 0;
 
       if (quantity !== closeQuantity) {
@@ -387,12 +453,12 @@ export default function AtasProcessor({
       }
 
       // Determine trade side based on quantity sign in the original data
-      const originalOpenVolume = parseFloat(
-        String(row[headers.findIndex((h) => h === "Open volume")] || "0")
-      );
-      const originalCloseVolume = parseFloat(
-        String(row[headers.findIndex((h) => h === "Close volume")] || "0")
-      );
+      const originalOpenVolume =
+        parseAtasNumber(row[headers.findIndex((h) => h === "Open volume")]) ||
+        0;
+      const originalCloseVolume =
+        parseAtasNumber(row[headers.findIndex((h) => h === "Close volume")]) ||
+        0;
 
       if (originalOpenVolume > 0 && originalCloseVolume < 0) {
         item.side = "long";

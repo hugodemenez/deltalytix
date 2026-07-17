@@ -118,6 +118,12 @@ interface TimeRange {
   range: string | null;
 }
 
+type RefreshTradesOnlyOptions = {
+  force?: boolean;
+  withLoading?: boolean;
+  refreshEquity?: boolean;
+};
+
 // Add new interface for tick filter
 interface TickFilter {
   value: string | null;
@@ -199,7 +205,7 @@ export interface Account extends Omit<PrismaAccount, "payouts" | "group"> {
 // Combined Context Type
 interface DataContextType {
   refreshTrades: () => Promise<void>;
-  refreshTradesOnly: (options?: { force?: boolean }) => Promise<void>;
+  refreshTradesOnly: (options?: RefreshTradesOnlyOptions) => Promise<void>;
   refreshUserDataOnly: (options?: { force?: boolean; includeStripe?: boolean }) => Promise<void>;
   refreshAllData: (options?: { force?: boolean }) => Promise<void>;
   isLoading: boolean;
@@ -667,9 +673,15 @@ export const DataProvider: React.FC<{
   }, []);
 
   const refreshTradesOnly = useCallback(
-    async (options?: { force?: boolean; withLoading?: boolean }) => {
+    async (options?: RefreshTradesOnlyOptions) => {
       if (!supabaseUser?.id) return;
-      const { force = false, withLoading = true } = options || {};
+      const {
+        force = false,
+        withLoading = true,
+        refreshEquity = true,
+      } = options || {};
+      const shouldRefreshEquity =
+        refreshEquity && !isSharedView && hasEquityChartWidget;
 
       if (withLoading) setIsLoading(true);
 
@@ -682,6 +694,9 @@ export const DataProvider: React.FC<{
           const cachedTrades = await getTradesCache(userId);
           if (cachedTrades && Array.isArray(cachedTrades) && cachedTrades.length > 0) {
             setTrades(cachedTrades);
+            if (shouldRefreshEquity) {
+              await fetchEquityChartData();
+            }
             if (withLoading) setIsLoading(false);
             return;
           }
@@ -697,13 +712,24 @@ export const DataProvider: React.FC<{
             console.error("[refreshTradesOnly] Failed to cache trades in IndexedDB", err),
           );
         }
+
+        if (shouldRefreshEquity) {
+          await fetchEquityChartData();
+        }
       } catch (error) {
         console.error("Error refreshing trades:", error);
       } finally {
         if (withLoading) setIsLoading(false);
       }
     },
-    [supabaseUser?.id, setTrades]
+    [
+      supabaseUser?.id,
+      setTrades,
+      isSharedView,
+      hasEquityChartWidget,
+      fetchEquityChartData,
+      setIsLoading,
+    ]
   );
 
   const refreshUserDataOnly = useCallback(
@@ -772,7 +798,11 @@ export const DataProvider: React.FC<{
 
       setIsLoading(true);
       try {
-        await refreshTradesOnly({ force, withLoading: false });
+        await refreshTradesOnly({
+          force,
+          withLoading: false,
+          refreshEquity: false,
+        });
         await refreshUserDataOnly({
           force,
           includeStripe: true,
@@ -1497,8 +1527,17 @@ export const DataProvider: React.FC<{
       );
       setTrades(updatedTrades);
       await updateTradesAction(tradeIds, update);
+      if (hasEquityChartWidget) {
+        await fetchEquityChartData();
+      }
     },
-    [supabaseUser?.id, trades, setTrades]
+    [
+      supabaseUser?.id,
+      trades,
+      setTrades,
+      hasEquityChartWidget,
+      fetchEquityChartData,
+    ]
   );
 
   const groupTrades = useCallback(
@@ -1546,6 +1585,9 @@ export const DataProvider: React.FC<{
       try {
         // Delete from database
         await deleteTradesByIdsAction(tradeIds);
+        if (hasEquityChartWidget) {
+          await fetchEquityChartData();
+        }
       } catch (error) {
         // On error, refresh to restore the correct state
         console.error("Error deleting trades:", error);
@@ -1553,7 +1595,14 @@ export const DataProvider: React.FC<{
         throw error;
       }
     },
-    [supabaseUser?.id, trades, setTrades, refreshAllData]
+    [
+      supabaseUser?.id,
+      trades,
+      setTrades,
+      refreshAllData,
+      hasEquityChartWidget,
+      fetchEquityChartData,
+    ]
   );
 
   const saveDashboardLayout = useCallback(
