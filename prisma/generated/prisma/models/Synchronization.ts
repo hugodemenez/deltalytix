@@ -203,7 +203,7 @@ export type SynchronizationGroupByOutputType = {
   _max: SynchronizationMaxAggregateOutputType | null
 }
 
-type GetSynchronizationGroupByPayload<T extends SynchronizationGroupByArgs> = Prisma.PrismaPromise<
+export type GetSynchronizationGroupByPayload<T extends SynchronizationGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<SynchronizationGroupByOutputType, T['by']> &
       {
@@ -1368,6 +1368,11 @@ export type SynchronizationFindManyArgs<ExtArgs extends runtime.Types.Extensions
    * Skip the first `n` Synchronizations.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of Synchronizations.
+   */
   distinct?: Prisma.SynchronizationScalarFieldEnum | Prisma.SynchronizationScalarFieldEnum[]
 }
 
