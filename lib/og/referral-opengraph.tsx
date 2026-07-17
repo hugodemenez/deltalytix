@@ -8,6 +8,8 @@ import {
   ogImageSize,
 } from "@/lib/og/shared";
 import {
+  OG_CARD_PADDING_X,
+  OG_CARD_PADDING_Y,
   OG_COLORS,
   OG_FONT_FAMILY,
   OG_PADDING,
@@ -74,7 +76,7 @@ export function ReferralOgImage({
             display: "flex",
             alignItems: "center",
             alignSelf: "flex-start",
-            padding: "20px 32px",
+            padding: `${OG_CARD_PADDING_Y}px ${OG_CARD_PADDING_X}px`,
             borderRadius: OG_RADIUS.sm,
             border: `1px solid ${OG_COLORS.hairline}`,
             background: OG_COLORS.surface,

@@ -33,7 +33,7 @@ export const OG_COLORS = {
 } as const;
 
 export const OG_TRACKING = {
-  display: "-0.04em",
+  display: "-0.03em",
   tight: "-0.03em",
   snug: "-0.01em",
   wide: "0.01em",
@@ -41,6 +41,14 @@ export const OG_TRACKING = {
 
 /** Canvas edge padding in px */
 export const OG_PADDING = 72;
+
+/** CTA button padding (vertical / horizontal) */
+export const OG_CTA_PADDING_Y = 16;
+export const OG_CTA_PADDING_X = 28;
+
+/** Inner card / ref-code box padding (vertical / horizontal) */
+export const OG_CARD_PADDING_Y = 20;
+export const OG_CARD_PADDING_X = 32;
 
 /** Matches landing `rounded-sm` (~4px) */
 export const OG_RADIUS = {

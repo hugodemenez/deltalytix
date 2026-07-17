@@ -2,6 +2,8 @@ import { ImageResponse } from "next/og";
 import type { ReactElement } from "react";
 import {
   OG_COLORS,
+  OG_CTA_PADDING_X,
+  OG_CTA_PADDING_Y,
   OG_FONT_FAMILY,
   OG_PADDING,
   OG_RADIUS,
@@ -92,7 +94,7 @@ export function OgCtaButton({
         display: "flex",
         alignItems: "center",
         alignSelf: "flex-start",
-        padding: "16px 28px",
+        padding: `${OG_CTA_PADDING_Y}px ${OG_CTA_PADDING_X}px`,
         borderRadius: OG_RADIUS.sm,
         background: accentColor,
       }}
@@ -249,8 +251,6 @@ type MarketingOgImageProps = {
   headline: string;
   subheadline: string;
   cta: string;
-  /** @deprecated Kept for call-site compat; landing CTA color is used instead. */
-  accentColor?: string;
 };
 
 export function MarketingOgImage({
@@ -332,14 +332,12 @@ export function createMarketingOgImageResponse({
   headline,
   subheadline,
   cta,
-  accentColor,
 }: MarketingOgImageProps) {
   return new ImageResponse(
     <MarketingOgImage
       headline={headline}
       subheadline={subheadline}
       cta={cta}
-      accentColor={accentColor}
     />,
     {
       ...ogImageSize,

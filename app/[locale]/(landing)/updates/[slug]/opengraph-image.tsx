@@ -87,6 +87,10 @@ export default async function Image({
                             margin: "0",
                             lineHeight: "1.12",
                             letterSpacing: OG_TRACKING.display,
+                            display: "-webkit-box",
+                            WebkitBoxOrient: "vertical",
+                            WebkitLineClamp: 2,
+                            overflow: "hidden",
                         }}
                     >
                         {meta.title}
