@@ -11,10 +11,15 @@ export const BETA_CONNECTION_FLOW_INVITE_FLAG = "beta-connection-flow-invite";
 const DISMISS_STORAGE_KEY = "deltalytix:beta-connection-flow-invite:dismissed";
 const BETA_CONNECTION_URL = "https://beta.deltalytix.app/dashboard/connections";
 
-function isProductionHost() {
+function isInviteHost() {
   if (typeof window === "undefined") return false;
   const host = window.location.hostname;
-  return host === "deltalytix.app" || host === "www.deltalytix.app";
+  return (
+    host === "deltalytix.app" ||
+    host === "www.deltalytix.app" ||
+    host === "localhost" ||
+    host === "127.0.0.1"
+  );
 }
 
 function wasDismissed() {
@@ -66,7 +71,7 @@ export function BetaConnectionFlowInvite() {
 
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return;
-    if (!isProductionHost() || wasDismissed()) return;
+    if (!isInviteHost() || wasDismissed()) return;
 
     const syncVisibility = () => {
       if (wasDismissed()) {
