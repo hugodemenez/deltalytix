@@ -54,6 +54,7 @@ import { handleTradovateCallback } from '@/app/[locale]/dashboard/components/imp
 import { useTradovateSyncStore } from '@/store/tradovate-sync-store'
 import { useTradovateSyncContext } from '@/context/tradovate-sync-context'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
+import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -64,12 +65,11 @@ import {
 const SERVICE_SECTIONS: {
   service: ConnectionService
   labelKey: string
-  addLabelKey: string
 }[] = [
-  { service: 'rithmic', labelKey: 'connections.sections.rithmic', addLabelKey: 'connections.add.rithmic' },
-  { service: 'tradovate', labelKey: 'connections.sections.tradovate', addLabelKey: 'connections.add.tradovate' },
-  { service: 'dxfeed', labelKey: 'connections.sections.dxfeed', addLabelKey: 'connections.add.dxfeed' },
-  { service: 'thor', labelKey: 'connections.sections.thor', addLabelKey: 'connections.add.thor' },
+  { service: 'rithmic', labelKey: 'connections.sections.rithmic' },
+  { service: 'tradovate', labelKey: 'connections.sections.tradovate' },
+  { service: 'dxfeed', labelKey: 'connections.sections.dxfeed' },
+  { service: 'thor', labelKey: 'connections.sections.thor' },
 ]
 
 const iconButtonClassName =
@@ -698,21 +698,21 @@ function PendingTradovateConnectionRow({ title }: { title?: string }) {
 function TypeSection({
   service,
   label,
-  addLabel,
   connections,
-  onAdd,
   onChanged,
   oauthPending,
 }: {
   service: ConnectionService
   label: string
-  addLabel: string
   connections: ConnectionsPageConnection[]
-  onAdd: () => void
   onChanged: () => void
   oauthPending?: TradovateOAuthPending | null
 }) {
   const t = useI18n()
+  const [syncingAll, setSyncingAll] = useState(false)
+  const { performSyncForAccount: syncTradovate } = useTradovateSyncContext()
+  const { performSyncForAccount: syncDxFeed } = useDxFeedSyncContext()
+  const { performSyncForCredential: syncRithmic } = useRithmicSyncContext()
   const replacingId =
     oauthPending?.externalId || oauthPending?.resolvedExternalId || null
   const hasInPlacePending =
@@ -722,6 +722,59 @@ function TypeSection({
     )
   // New connection: reserve a slot at the end (matches createdAt sort) to avoid CLS.
   const showTrailingPending = !!oauthPending && !hasInPlacePending
+
+  const canSyncAll =
+    service === 'tradovate' ||
+    service === 'dxfeed' ||
+    service === 'rithmic'
+
+  const handleSyncAll = useCallback(async () => {
+    if (!canSyncAll || connections.length === 0) {
+      toast.message(t('connections.sync.manualOnly'))
+      return
+    }
+
+    setSyncingAll(true)
+    let failed = 0
+    try {
+      for (const connection of connections) {
+        try {
+          let result: { success?: boolean } | void
+          if (service === 'tradovate') {
+            result = await syncTradovate(connection.accountId)
+          } else if (service === 'dxfeed') {
+            result = await syncDxFeed(connection.accountId)
+          } else {
+            result = await syncRithmic(connection.accountId)
+          }
+          if (result && result.success === false) {
+            failed += 1
+          }
+        } catch (error) {
+          console.error(error)
+          failed += 1
+        }
+      }
+
+      if (failed > 0) {
+        toast.error(t('connections.sync.failed'))
+      } else {
+        toast.success(t('connections.sync.allDone'))
+      }
+      onChanged()
+    } finally {
+      setSyncingAll(false)
+    }
+  }, [
+    canSyncAll,
+    connections,
+    onChanged,
+    service,
+    syncDxFeed,
+    syncRithmic,
+    syncTradovate,
+    t,
+  ])
 
   return (
     <section className="space-y-2">
@@ -737,15 +790,22 @@ function TypeSection({
           </span>
           {label}
         </h2>
-        <button
-          type="button"
-          onClick={onAdd}
-          aria-label={addLabel}
-          className={cn(secondaryButtonClassName, 'gap-1.5 px-3')}
-        >
-          <Plus className="h-4 w-4" strokeWidth={1.75} />
-          {t('common.add')}
-        </button>
+        {canSyncAll ? (
+          <button
+            type="button"
+            onClick={() => void handleSyncAll()}
+            disabled={syncingAll || connections.length === 0}
+            aria-label={`${t('rithmic.actions.syncAll')}: ${label}`}
+            className={cn(secondaryButtonClassName, 'gap-1.5 px-3')}
+          >
+            {syncingAll ? (
+              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />
+            ) : (
+              <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
+            )}
+            {t('rithmic.actions.syncAll')}
+          </button>
+        ) : null}
       </div>
       <div className="divide-y divide-black/10 border-y border-black/10 dark:divide-white/10 dark:border-white/10">
         {connections.map((connection) => {
@@ -1049,55 +1109,48 @@ export function ConnectionsPageClient({
             {t('connections.description')}
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setAddMenuOpen((open) => !open)}
-                aria-expanded={addMenuOpen}
-                aria-haspopup="menu"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]"
+            <Popover open={addMenuOpen} onOpenChange={setAddMenuOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-haspopup="menu"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]"
+                >
+                  <Plus className="h-4 w-4" strokeWidth={1.75} />
+                  {t('connections.addConnection')}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                sideOffset={8}
+                className="w-auto min-w-[12rem] rounded-sm border-black/10 bg-white p-1 shadow-none dark:border-white/10 dark:bg-black"
               >
-                <Plus className="h-4 w-4" strokeWidth={1.75} />
-                {t('connections.addConnection')}
-              </button>
-              {addMenuOpen && (
-                <>
-                  <button
-                    type="button"
-                    aria-label={t('connections.modal.close')}
-                    className="fixed inset-0 z-40 cursor-default"
-                    onClick={() => setAddMenuOpen(false)}
-                  />
-                  <div
-                    role="menu"
-                    className="absolute left-0 top-full z-50 mt-2 min-w-[12rem] rounded-sm bg-white py-1 outline outline-1 outline-black/10 dark:bg-black dark:outline-white/10"
-                  >
-                    {SERVICE_SECTIONS.map((section) => (
-                      <button
-                        key={section.service}
-                        type="button"
-                        role="menuitem"
-                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5"
-                        onClick={() => {
-                          setAddMenuOpen(false)
-                          setConnectService(section.service)
-                        }}
-                      >
-                        <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
-                          <ServiceMonochromeLogo
-                            service={section.service}
-                            alt=""
-                            size={20}
-                            className="h-5 w-5"
-                          />
-                        </span>
-                        {t(section.labelKey as 'connections.sections.rithmic')}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+                <div role="menu" className="flex flex-col">
+                  {SERVICE_SECTIONS.map((section) => (
+                    <button
+                      key={section.service}
+                      type="button"
+                      role="menuitem"
+                      className="flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-left text-sm transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5"
+                      onClick={() => {
+                        setAddMenuOpen(false)
+                        setConnectService(section.service)
+                      }}
+                    >
+                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
+                        <ServiceMonochromeLogo
+                          service={section.service}
+                          alt=""
+                          size={20}
+                          className="h-5 w-5"
+                        />
+                      </span>
+                      {t(section.labelKey as 'connections.sections.rithmic')}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
             {selectedImportPlatform ? (
               <div className="inline-flex h-11 items-center gap-1 rounded-sm border border-black/20 pl-1 pr-1 dark:border-white/20">
                 <Popover open={importMenuOpen} onOpenChange={setImportMenuOpen}>
@@ -1273,9 +1326,7 @@ export function ConnectionsPageClient({
                 key={section.service}
                 service={section.service}
                 label={t(section.labelKey as 'connections.sections.rithmic')}
-                addLabel={t(section.addLabelKey as 'connections.add.rithmic')}
                 connections={byService.get(section.service) ?? []}
-                onAdd={() => setConnectService(section.service)}
                 onChanged={() => void load()}
                 oauthPending={
                   section.service === 'tradovate' ? oauthPending : null

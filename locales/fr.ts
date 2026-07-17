@@ -157,6 +157,7 @@ export default {
   "connections.env.live": "Live",
   "connections.env.demo": "Démo",
   "connections.sync.now": "Synchroniser",
+  "connections.sync.allDone": "Toutes les connexions sont synchronisées",
   "connections.sync.failed": "Échec de la synchronisation",
   "connections.sync.manualOnly": "Synchronisez cette connexion depuis ses paramètres.",
   "connections.status.connected": "Connecté",

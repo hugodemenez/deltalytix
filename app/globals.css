@@ -714,8 +714,10 @@
 @keyframes t-stagger-in {
   to {
     opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
+    /* Use none so fill-mode:forwards does not leave a permanent
+       transform/filter containing block (traps fixed overlays / z-index). */
+    transform: none;
+    filter: none;
   }
 }
 
