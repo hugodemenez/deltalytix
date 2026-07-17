@@ -813,25 +813,35 @@ export function RithmicSyncWrapper({
       </div>
       <div className="shrink-0 space-y-2 border-t border-black/10 pt-4 text-xs leading-relaxed text-black/45 dark:border-white/10 dark:text-white/45">
         <div className="mb-2 flex items-center gap-4">
-          <Image 
-            src="/logos/TradingPlatformByRithmic-Black.png"
+          <Image
+            src="/logos/monochrome/trading-platform-by-rithmic-black.png"
             alt="Trading Platform by Rithmic"
             width={120}
             height={40}
             className="dark:hidden"
           />
-          <Image 
-            src="/logos/TradingPlatformByRithmic-Green.png"
-            alt="Trading Platform by Rithmic"
+          <Image
+            src="/logos/monochrome/trading-platform-by-rithmic-white.png"
+            alt=""
+            aria-hidden="true"
             width={120}
             height={40}
             className="hidden dark:block"
           />
-          <Image 
-            src="/logos/Powered_by_Omne.png"
+          <Image
+            src="/logos/monochrome/powered-by-omne-black.png"
             alt="Powered by OMNE"
             width={120}
             height={40}
+            className="dark:hidden"
+          />
+          <Image
+            src="/logos/monochrome/powered-by-omne-white.png"
+            alt=""
+            aria-hidden="true"
+            width={120}
+            height={40}
+            className="hidden dark:block"
           />
         </div>
         <p>{t('import.type.copyright.rithmic')}</p>
@@ -842,5 +852,3 @@ export function RithmicSyncWrapper({
     </div>
   )
 }
-
-
