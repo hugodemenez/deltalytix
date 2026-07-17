@@ -30,6 +30,7 @@ WARP.md
 *.pem
 wip
 /private/
+/tmp/
 
 # debug
 npm-debug.log*
@@ -68,3 +69,4 @@ datafeeds/
 
 # Lock files
 !bun.lock
+og-preview-artifacts/
