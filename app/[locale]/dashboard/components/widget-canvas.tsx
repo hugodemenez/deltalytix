@@ -35,7 +35,22 @@ import { useUserStore, DashboardLayoutWithWidgets } from '../../../../store/user
 import { toast } from "sonner"
 import { defaultLayouts } from "@/lib/default-layouts"
 import { getCarouselWidgetSize, MOBILE_CAROUSEL_HEIGHT } from "@/lib/widget-carousel"
+import { useIsMobileLayout } from "@/hooks/use-mobile"
 import { Prisma, DashboardLayout } from "@/prisma/generated/prisma/browser"
+import { Skeleton } from "@/components/ui/skeleton"
+
+function CanvasSkeleton() {
+  return (
+    <div className="flex h-full min-h-[16rem] w-full flex-col gap-4 p-4" aria-hidden>
+      <Skeleton className="h-24 w-full rounded-lg" />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Skeleton className="h-40 w-full rounded-lg" />
+        <Skeleton className="h-40 w-full rounded-lg max-md:hidden" />
+      </div>
+      <Skeleton className="h-32 w-full rounded-lg max-md:hidden" />
+    </div>
+  )
+}
 
 // Helper function to convert internal layout to Prisma type
 const toPrismaLayout = (layout: DashboardLayoutWithWidgets): DashboardLayout => {
@@ -379,7 +394,10 @@ type WidgetDimensions = { w: number; h: number; width: string; height: string }
 export default function WidgetCanvas() {
   const { dashboardLayout: layouts, setDashboardLayout: setLayouts } = useUserStore(state => state)
   const user = useUserStore(state => state.user)
-  const { isMobile, saveDashboardLayout } = useData()
+  const { saveDashboardLayout } = useData()
+  // undefined until layout-effect measurement — prevents desktop→mobile flash
+  const isMobile = useIsMobileLayout()
+  const isLayoutReady = isMobile !== undefined
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [isUserAction, setIsUserAction] = useState(false)
   const [mobileActiveWidget, setMobileActiveWidget] = useState<Widget | null>(null)
@@ -390,7 +408,10 @@ export default function WidgetCanvas() {
   const t = useI18n()
 
   // Add this state to track if the layout change is from user interaction
-  const activeLayout = useMemo(() => isMobile ? 'mobile' : 'desktop', [isMobile])
+  const activeLayout = useMemo(
+    () => (isMobile === true ? "mobile" : "desktop"),
+    [isMobile]
+  )
   
   // Move all memoized values up, out of conditional rendering paths
   const ResponsiveGridLayout = useMemo(() => WidthProvider(Responsive), [])
@@ -401,7 +422,7 @@ export default function WidgetCanvas() {
     
     const widgets = layouts[activeLayout]
     return widgets.reduce((acc: Record<string, WidgetDimensions>, widget) => {
-      acc[widget.i] = getWidgetDimensions(widget, isMobile)
+      acc[widget.i] = getWidgetDimensions(widget, isMobile === true)
       return acc
     }, {} as Record<string, WidgetDimensions>)
   }, [layouts, activeLayout, isMobile])
@@ -453,9 +474,9 @@ export default function WidgetCanvas() {
           // Create updated widget with proper type assertions
           const updatedWidget = {
             ...existingWidget,
-            x: isMobile ? 0 : item.x,
+            x: isMobile === true ? 0 : item.x,
             y: item.y,
-            w: isMobile ? 12 : item.w,
+            w: isMobile === true ? 12 : item.w,
             h: item.h,
           };
 
@@ -480,10 +501,13 @@ export default function WidgetCanvas() {
       }
     } catch (error) {
       console.error('Error updating layout:', error);
+      toast.error(t('widgets.layoutSaveFailed'), {
+        description: t('widgets.layoutSaveFailedDescription'),
+      });
       // Revert to previous layout on error
       setLayouts(layouts);
     }
-  }, [user?.id, isCustomizing, setLayouts, layouts, activeLayout, isMobile, isUserAction, saveDashboardLayout, setIsUserAction]);
+  }, [user?.id, isCustomizing, setLayouts, layouts, activeLayout, isMobile, isUserAction, saveDashboardLayout, setIsUserAction, t]);
 
   // Define addWidget with all dependencies
   const addWidget = useCallback(async (type: WidgetType, size: WidgetSize = 'medium') => {
@@ -713,7 +737,7 @@ export default function WidgetCanvas() {
     setMobileActiveWidget(widget)
   }, [])
 
-  const useMobileCarousel = isMobile
+  const useMobileCarousel = isMobile === true
 
   const carouselWidgets = useMemo(
     () => sortWidgetsForCarousel(currentLayout),
@@ -745,7 +769,7 @@ export default function WidgetCanvas() {
       if (config.allowedSizes.length === 1) {
         return config.allowedSizes[0]
       }
-      if (isMobile && widget.size !== 'tiny') {
+      if (isMobile === true && widget.size !== 'tiny') {
         return 'small' as WidgetSize
       }
       return widget.size as WidgetSize
@@ -755,13 +779,13 @@ export default function WidgetCanvas() {
   }, [isMobile, removeWidget]);
 
   useEffect(() => {
-    if (isCustomizing && !isMobile) {
+    if (isCustomizing && isMobile === false) {
       document.addEventListener('click', handleOutsideClick)
       return () => document.removeEventListener('click', handleOutsideClick)
     }
   }, [isCustomizing, isMobile, handleOutsideClick]);
 
-  useAutoScroll(!isMobile && isCustomizing)
+  useAutoScroll(isMobile === false && isCustomizing)
 
   const renderWidgetCard = useCallback((widget: Widget, forCarousel = false) => {
     const widgetConfig = WIDGET_REGISTRY[widget.type as WidgetType]
@@ -800,9 +824,15 @@ export default function WidgetCanvas() {
       <div
         className={cn(
           "relative w-full",
-          useMobileCarousel ? "mt-0 overflow-hidden" : "mt-6 pb-16 min-h-screen",
+          // Before viewport is known: mobile-sized shell that expands on md+
+          // so we never paint the desktop grid on a phone for a frame.
+          !isLayoutReady &&
+            "overflow-hidden md:mt-6 md:min-h-screen md:overflow-visible md:pb-16 max-md:[height:calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem)-var(--mobile-toolbar-top,5.5rem))]",
+          isLayoutReady && useMobileCarousel && "mt-0 overflow-hidden",
+          isLayoutReady && !useMobileCarousel && "mt-6 pb-16 min-h-screen",
         )}
         style={useMobileCarousel ? { height: MOBILE_CAROUSEL_HEIGHT } : undefined}
+        aria-busy={!isLayoutReady}
       >
         <Toolbar
           onAddWidget={addWidget}
@@ -821,7 +851,8 @@ export default function WidgetCanvas() {
             ) : undefined
           }
         />
-        {layouts && (
+        {!isLayoutReady && <CanvasSkeleton />}
+        {isLayoutReady && layouts && (
           <div className="relative">
             <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-50" />
             {useMobileCarousel ? (

@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Share, Check, ChevronsUpDown, Copy, Layout, ExternalLink, Download } from "lucide-react"
+import { useIsMobile } from "@/hooks/use-mobile"
 import {
   Dialog,
   DialogContent,
@@ -52,22 +53,6 @@ interface ShareButtonProps {
     mobile: any[]
   }
   compact?: boolean
-}
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-
-    checkIsMobile()
-    window.addEventListener('resize', checkIsMobile)
-    return () => window.removeEventListener('resize', checkIsMobile)
-  }, [])
-
-  return isMobile
 }
 
 function triggerConfetti() {
@@ -136,6 +121,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const [shareTitle, setShareTitle] = useState("")
     const [shareAllAccounts, setShareAllAccounts] = useState(true)
     const [isExporting, setIsExporting] = useState(false)
+    const [isSharing, setIsSharing] = useState(false)
     const useCompactButton = compact || isMobile
 
     // Get the earliest and latest trade dates
@@ -208,6 +194,9 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     }, [t])
 
     const handleShare = async () => {
+      if (isSharing) {
+        return
+      }
       try {
         if (!user) {
           toast.error(t('share.error'), {
@@ -241,6 +230,8 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           })
           return
         }
+
+        setIsSharing(true)
 
         const slug = await createShared({
           userId: user.id,
@@ -375,6 +366,8 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         toast.error(t('share.error'), {
           description: error instanceof Error ? error.message : t('share.error.description'),
         })
+      } finally {
+        setIsSharing(false)
       }
     }
 
@@ -494,6 +487,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
             ref={ref}
             variant={variant}
             size={size}
+            aria-label={useCompactButton ? t("share.button") : undefined}
             className={cn(
               "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
               useCompactButton ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
@@ -728,7 +722,9 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                       <Layout className="h-4 w-4 mr-2" />
                       {t("share.manageLayouts")}
                     </Button>
-                    <Button onClick={handleShare}>{t("share.shareButton")}</Button>
+                    <Button onClick={handleShare} disabled={isSharing}>
+                      {isSharing ? t("share.shareInProgress") : t("share.shareButton")}
+                    </Button>
                   </div>
                 ) : (
                   <Button onClick={() => {
