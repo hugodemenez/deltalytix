@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentLocale, getI18n } from "@/locales/server";
 import { CachedGithubData } from "./cached-github-data";
 import { GITHUB_REPO_URL } from "@/lib/github-repo";
+import { LANDING_SECTION_CONTAINER_CLASSNAME } from "./landing-section-container";
 
 function GithubCardSkeleton() {
   return (
@@ -43,7 +44,7 @@ export default async function OpenSource() {
   const locale = await getCurrentLocale();
 
   return (
-    <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
+    <div className={LANDING_SECTION_CONTAINER_CLASSNAME}>
       <div className="mb-16 grid gap-5 md:grid-cols-2 md:items-end">
         <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] md:text-6xl">
           {t("landing.openSource.title")}

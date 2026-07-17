@@ -660,6 +660,9 @@ export default {
   "widgets.widgetAdded": "Widget Added",
   "widgets.widgetAddedDescription":
     "The widget has been added to your dashboard",
+  "widgets.layoutSaveFailed": "Failed to save layout",
+  "widgets.layoutSaveFailedDescription":
+    "Your previous layout has been restored. Please try again.",
   "widgets.size.tiny": "Tiny (3x1)",
   "widgets.size.small": "Small (3x4)",
   "widgets.size.medium": "Medium (6x4)",
@@ -748,6 +751,9 @@ export default {
   "widgets.mobile.deleteWidgetNamed": "Delete {widgetName}",
   "widgets.mobile.carouselNavigation": "Widget navigation",
   "widgets.mobile.carouselGoTo": "Go to {widgetName} ({index} of {total})",
+  "widgets.mobile.minimapOpen": "Open widget minimap ({index} of {total})",
+  "widgets.mobile.minimapClose": "Close widget minimap",
+  "widgets.mobile.minimapNavigation": "Widget minimap",
   "widgets.shared.unavailableTitle": "Widget unavailable",
   "widgets.shared.unavailableDescription":
     "This widget type is not supported in shared dashboard views.",
@@ -1235,6 +1241,7 @@ export default {
   "share.accounts": "accounts",
   "share.expiration": "Expiration",
   "share.shareButton": "Share",
+  "share.shareInProgress": "Sharing...",
   "share.cancel": "Cancel",
   "share.titleLabel": "Title",
   "share.titlePlaceholder": "Enter a title for your shared dashboard",

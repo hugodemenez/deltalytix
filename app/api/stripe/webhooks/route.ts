@@ -6,6 +6,7 @@ import { stripe } from "@/server/stripe";
 import { PrismaClient } from "@/prisma/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { sendSubscriptionErrorEmail } from "@/app/[locale]/(landing)/actions/send-support-email";
+import { capturePostHogEvent } from "@/lib/posthog-server";
 
 // Helper function to get current period end from subscription items
 function getCurrentPeriodEnd(subscription: Stripe.Subscription): number {
@@ -135,6 +136,22 @@ export async function POST(req: Request) {
             });
 
             console.log('subscription created/updated', subscription)
+
+            if (data.metadata?.analytics_consent === 'granted' && user?.id) {
+              await capturePostHogEvent({
+                consentGranted: true,
+                distinctId: data.metadata.posthog_distinct_id || user.id,
+                event: 'subscription_purchased',
+                properties: {
+                  $insert_id: event.id,
+                  plan: subscriptionPlan,
+                  billing_interval: interval,
+                  currency: data.currency,
+                  revenue: data.amount_total ? data.amount_total / 100 : 0,
+                  stripe_checkout_session_id: data.id,
+                },
+              })
+            }
             
             // Apply referral code if present in metadata
             if (data.metadata?.referral_code && user?.id) {
@@ -209,6 +226,22 @@ export async function POST(req: Request) {
                 });
 
                 console.log('lifetime subscription created/updated')
+
+                if (data.metadata?.analytics_consent === 'granted' && user?.id) {
+                  await capturePostHogEvent({
+                    consentGranted: true,
+                    distinctId: data.metadata.posthog_distinct_id || user.id,
+                    event: 'subscription_purchased',
+                    properties: {
+                      $insert_id: event.id,
+                      plan: subscriptionPlan,
+                      billing_interval: 'lifetime',
+                      currency: data.currency,
+                      revenue: data.amount_total ? data.amount_total / 100 : 0,
+                      stripe_checkout_session_id: data.id,
+                    },
+                  })
+                }
                 
                 // Apply referral code if present in metadata (for lifetime plans too)
                 if (data.metadata?.referral_code && user?.id) {

@@ -11,6 +11,7 @@ import { prisma } from '@/lib/prisma'
 import { formatTimestamp, formatDateToTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
+import { capturePostHogEvent } from '@/lib/posthog-server'
 
 // Helper function to format dates in the required format: 2025-06-05T08:38:40+00:00
 function formatDateForAPI(date: Date): string {
@@ -1233,6 +1234,17 @@ export async function storeTradovateToken(
       return { error: 'User not authenticated' }
     }
 
+    const existingSynchronization = await prisma.synchronization.findUnique({
+      where: {
+        userId_service_accountId: {
+          userId: user.id,
+          service: 'tradovate',
+          accountId: accountId
+        }
+      },
+      select: { id: true }
+    })
+
     // Store token in Synchronization table
     await prisma.synchronization.upsert({
       where: {
@@ -1258,6 +1270,16 @@ export async function storeTradovateToken(
         environment,
         lastSyncedAt: new Date()
       }
+    })
+
+    await capturePostHogEvent({
+      distinctId: user.id,
+      event: 'integration_connected',
+      properties: {
+        integration: 'tradovate',
+        environment,
+        is_first_connection: !existingSynchronization,
+      },
     })
 
     return { success: true }
@@ -1747,4 +1769,3 @@ export async function updateDailySyncTimeAction(
 }
 
 
- 

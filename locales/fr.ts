@@ -666,6 +666,9 @@ export default {
   "widgets.widgetAdded": "Widget ajouté",
   "widgets.widgetAddedDescription":
     "Le widget a été ajouté à votre tableau de bord",
+  "widgets.layoutSaveFailed": "Échec de l'enregistrement de la disposition",
+  "widgets.layoutSaveFailedDescription":
+    "Votre disposition précédente a été restaurée. Veuillez réessayer.",
   "widgets.size.tiny": "Minuscule (3x1)",
   "widgets.size.small": "Petit (3x4)",
   "widgets.size.medium": "Moyen (6x4)",
@@ -755,6 +758,9 @@ export default {
   "widgets.mobile.deleteWidgetNamed": "Supprimer {widgetName}",
   "widgets.mobile.carouselNavigation": "Navigation des widgets",
   "widgets.mobile.carouselGoTo": "Aller à {widgetName} ({index} sur {total})",
+  "widgets.mobile.minimapOpen": "Ouvrir la mini-carte des widgets ({index} sur {total})",
+  "widgets.mobile.minimapClose": "Fermer la mini-carte des widgets",
+  "widgets.mobile.minimapNavigation": "Mini-carte des widgets",
   "widgets.shared.unavailableTitle": "Widget indisponible",
   "widgets.shared.unavailableDescription":
     "Ce type de widget n'est pas pris en charge dans les tableaux de bord partagés.",
@@ -1182,6 +1188,7 @@ export default {
   "share.accounts": "comptes",
   "share.expiration": "Expiration",
   "share.shareButton": "Partager",
+  "share.shareInProgress": "Partage...",
   "share.cancel": "Annuler",
   "share.titleLabel": "Titre",
   "share.titlePlaceholder":
