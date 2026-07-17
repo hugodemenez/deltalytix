@@ -205,6 +205,7 @@ export function MobileWidgetMinimapProvider({
 
 export function MobileWidgetMinimapTrigger({ className }: { className?: string }) {
   const t = useI18n()
+  const shouldReduceMotion = useReducedMotion()
   const {
     widgets,
     currentIndex,
@@ -246,7 +247,7 @@ export function MobileWidgetMinimapTrigger({ className }: { className?: string }
         total: widgets.length,
       })}
       className={cn(
-        "flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform active:scale-95",
+        "flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform active:scale-95",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         isExpanded && "pointer-events-none opacity-0",
         className
@@ -314,12 +315,11 @@ export function MobileWidgetMinimapTrigger({ className }: { className?: string }
                         },
                 }}
                 exit="exit"
-                transition={{
-                  type: "spring",
-                  stiffness: 420,
-                  damping: 34,
-                  mass: 0.7,
-                }}
+                transition={
+                  shouldReduceMotion
+                    ? { duration: 0 }
+                    : { type: "spring", stiffness: 420, damping: 34, mass: 0.7 }
+                }
               >
                 <ScaledWidgetPreview
                   widget={widget}

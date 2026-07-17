@@ -6,11 +6,25 @@ import { WIDGET_REGISTRY, getWidgetComponent } from '@/app/[locale]/dashboard/co
 import { MobileWidgetCarousel } from '@/app/[locale]/dashboard/components/mobile-widget-carousel'
 import { Widget, WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useI18n } from '@/locales/client'
 import { defaultLayouts } from '@/lib/default-layouts'
 import { getCarouselWidgetSize, MOBILE_CAROUSEL_VIEWPORT_HEIGHT } from '@/lib/widget-carousel'
 import { useIsMobileLayout } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
+
+function CanvasSkeleton() {
+  return (
+    <div className="flex h-full min-h-[16rem] w-full flex-col gap-4 p-4 md:mt-0" aria-hidden>
+      <Skeleton className="h-24 w-full rounded-lg" />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Skeleton className="h-40 w-full rounded-lg" />
+        <Skeleton className="h-40 w-full rounded-lg max-md:hidden" />
+      </div>
+      <Skeleton className="h-32 w-full rounded-lg max-md:hidden" />
+    </div>
+  )
+}
 
 
 // Update sizeToGrid to handle responsive sizes (copy from widget-canvas.tsx)
@@ -173,6 +187,7 @@ export function SharedWidgetCanvas() {
       aria-busy={!isLayoutReady}
     >
       <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-9999" />
+      {!isLayoutReady && <CanvasSkeleton />}
       {isLayoutReady &&
         (useMobileCarousel ? (
           <MobileWidgetCarousel
