@@ -56,6 +56,10 @@ import { useTradovateSyncContext } from '@/context/tradovate-sync-context'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  ServiceMonochromeLogo,
+  ThemeAwareLogo,
+} from '@/components/monochrome-logo'
 
 const SERVICE_SECTIONS: {
   service: ConnectionService
@@ -692,6 +696,7 @@ function PendingTradovateConnectionRow({ title }: { title?: string }) {
 }
 
 function TypeSection({
+  service,
   label,
   addLabel,
   connections,
@@ -699,6 +704,7 @@ function TypeSection({
   onChanged,
   oauthPending,
 }: {
+  service: ConnectionService
   label: string
   addLabel: string
   connections: ConnectionsPageConnection[]
@@ -706,6 +712,7 @@ function TypeSection({
   onChanged: () => void
   oauthPending?: TradovateOAuthPending | null
 }) {
+  const t = useI18n()
   const replacingId =
     oauthPending?.externalId || oauthPending?.resolvedExternalId || null
   const hasInPlacePending =
@@ -719,14 +726,25 @@ function TypeSection({
   return (
     <section className="space-y-2">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-xl font-normal tracking-tight md:text-2xl">{label}</h2>
+        <h2 className="flex items-center gap-3 text-xl font-normal tracking-tight md:text-2xl">
+          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center md:h-8 md:w-8">
+            <ServiceMonochromeLogo
+              service={service}
+              alt=""
+              size={32}
+              className="h-7 w-7 md:h-8 md:w-8"
+            />
+          </span>
+          {label}
+        </h2>
         <button
           type="button"
           onClick={onAdd}
           aria-label={addLabel}
-          className={iconButtonClassName}
+          className={cn(secondaryButtonClassName, 'gap-1.5 px-3')}
         >
           <Plus className="h-4 w-4" strokeWidth={1.75} />
+          {t('common.add')}
         </button>
       </div>
       <div className="divide-y divide-black/10 border-y border-black/10 dark:divide-white/10 dark:border-white/10">
@@ -1059,12 +1077,20 @@ export function ConnectionsPageClient({
                         key={section.service}
                         type="button"
                         role="menuitem"
-                        className="flex w-full px-4 py-2.5 text-left text-sm transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5"
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5"
                         onClick={() => {
                           setAddMenuOpen(false)
                           setConnectService(section.service)
                         }}
                       >
+                        <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
+                          <ServiceMonochromeLogo
+                            service={section.service}
+                            alt=""
+                            size={20}
+                            className="h-5 w-5"
+                          />
+                        </span>
                         {t(section.labelKey as 'connections.sections.rithmic')}
                       </button>
                     ))}
@@ -1078,8 +1104,23 @@ export function ConnectionsPageClient({
                   <PopoverTrigger asChild>
                     <button
                       type="button"
-                      className="inline-flex h-9 items-center rounded-sm px-3 text-sm font-medium transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5"
+                      className="inline-flex h-9 items-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5"
                     >
+                      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
+                        {selectedImportPlatform.logo.path ? (
+                          <ThemeAwareLogo
+                            path={selectedImportPlatform.logo.path}
+                            darkPath={selectedImportPlatform.logo.darkPath}
+                            alt=""
+                            size={16}
+                            className="h-4 w-4"
+                          />
+                        ) : selectedImportPlatform.logo.component ? (
+                          <span className="flex h-4 w-4 items-center justify-center [&>svg]:h-4 [&>svg]:w-4">
+                            <selectedImportPlatform.logo.component />
+                          </span>
+                        ) : null}
+                      </span>
                       {t(selectedImportPlatform.name as 'import.type.csvAi.name')}
                     </button>
                   </PopoverTrigger>
@@ -1098,7 +1139,7 @@ export function ConnectionsPageClient({
                             type="button"
                             role="menuitem"
                             className={cn(
-                              'flex w-full rounded-sm px-3 py-2.5 text-left text-sm font-medium transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5',
+                              'flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-left text-sm font-medium transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5',
                               selected && 'bg-black/5 dark:bg-white/5'
                             )}
                             onClick={() => {
@@ -1106,6 +1147,21 @@ export function ConnectionsPageClient({
                               setSelectedImportPlatform(platform)
                             }}
                           >
+                            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
+                              {platform.logo.path ? (
+                                <ThemeAwareLogo
+                                  path={platform.logo.path}
+                                  darkPath={platform.logo.darkPath}
+                                  alt=""
+                                  size={20}
+                                  className="h-5 w-5"
+                                />
+                              ) : platform.logo.component ? (
+                                <span className="flex h-5 w-5 items-center justify-center [&>svg]:h-5 [&>svg]:w-5">
+                                  <platform.logo.component />
+                                </span>
+                              ) : null}
+                            </span>
                             {t(platform.name as 'import.type.csvAi.name')}
                           </button>
                         )
@@ -1147,12 +1203,27 @@ export function ConnectionsPageClient({
                           key={key}
                           type="button"
                           role="menuitem"
-                          className="flex w-full rounded-sm px-3 py-2.5 text-left text-sm font-medium transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5"
+                          className="flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-left text-sm font-medium transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5"
                           onClick={() => {
                             setImportMenuOpen(false)
                             setSelectedImportPlatform(platform)
                           }}
                         >
+                          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
+                            {platform.logo.path ? (
+                              <ThemeAwareLogo
+                                path={platform.logo.path}
+                                darkPath={platform.logo.darkPath}
+                                alt=""
+                                size={20}
+                                className="h-5 w-5"
+                              />
+                            ) : platform.logo.component ? (
+                              <span className="flex h-5 w-5 items-center justify-center [&>svg]:h-5 [&>svg]:w-5">
+                                <platform.logo.component />
+                              </span>
+                            ) : null}
+                          </span>
                           {t(platform.name as 'import.type.csvAi.name')}
                         </button>
                       )
@@ -1200,6 +1271,7 @@ export function ConnectionsPageClient({
             {activeSections.map((section) => (
               <TypeSection
                 key={section.service}
+                service={section.service}
                 label={t(section.labelKey as 'connections.sections.rithmic')}
                 addLabel={t(section.addLabelKey as 'connections.add.rithmic')}
                 connections={byService.get(section.service) ?? []}
@@ -1219,22 +1291,22 @@ export function ConnectionsPageClient({
 
             {(data?.standaloneAccounts.length ?? 0) > 0 && (
             <section className="space-y-2">
-              <h2 className="text-xl font-normal tracking-tight md:text-2xl">
-                {t('connections.sections.standalone')}
-              </h2>
+              <div>
+                <h2 className="text-xl font-normal tracking-tight md:text-2xl">
+                  {t('connections.sections.standalone')}
+                </h2>
+                <p className="mt-1 text-sm text-black/55 dark:text-white/55">
+                  {t('connections.standaloneHint')}
+                </p>
+              </div>
               <ul className="divide-y divide-black/10 border-y border-black/10 dark:divide-white/10 dark:border-white/10">
                 {data!.standaloneAccounts.map((account) => (
                   <li
                     key={account.id}
                     className="flex items-center justify-between gap-4 py-6 md:py-8"
                   >
-                    <div>
-                      <div className="text-xl font-normal tracking-tight md:text-2xl">
-                        {account.number}
-                      </div>
-                      <p className="mt-1 text-sm text-black/55 dark:text-white/55">
-                        {t('connections.standaloneHint')}
-                      </p>
+                    <div className="text-xl font-normal tracking-tight md:text-2xl">
+                      {account.number}
                     </div>
                     <span className="text-sm text-black/45 dark:text-white/45">
                       {account.tradeCount === 1

@@ -1,7 +1,6 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { PlatformConfig } from "../config/platforms";
 import { useI18n } from "@/locales/client";
@@ -15,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ThemeAwareLogo } from "@/components/monochrome-logo";
 
 interface PlatformTutorialProps {
   selectedPlatform: PlatformConfig | undefined;
@@ -150,25 +150,19 @@ export function PlatformTutorial({
       {selectedPlatform.isRithmic && (
         <div className="space-y-2 border-t border-black/10 pt-4 text-xs leading-relaxed text-black/45 dark:border-white/10 dark:text-white/45">
           <div className="mb-2 flex flex-wrap items-center gap-4">
-            <Image
-              src="/RithmicArtwork/TradingPlatformByRithmic-Black.png"
+            <ThemeAwareLogo
+              path="/logos/monochrome/trading-platform-by-rithmic-black.png"
+              darkPath="/logos/monochrome/trading-platform-by-rithmic-white.png"
               alt="Trading Platform by Rithmic"
-              width={120}
-              height={40}
-              className="dark:hidden"
+              size={120}
+              className="h-10 w-auto"
             />
-            <Image
-              src="/RithmicArtwork/TradingPlatformByRithmic-Green.png"
-              alt="Trading Platform by Rithmic"
-              width={120}
-              height={40}
-              className="hidden dark:block"
-            />
-            <Image
-              src="/RithmicArtwork/Powered_by_Omne.png"
+            <ThemeAwareLogo
+              path="/logos/monochrome/powered-by-omne-black.png"
+              darkPath="/logos/monochrome/powered-by-omne-white.png"
               alt="Powered by OMNE"
-              width={120}
-              height={40}
+              size={120}
+              className="h-10 w-auto"
             />
           </div>
           <p>{t("import.type.copyright.platform")}</p>

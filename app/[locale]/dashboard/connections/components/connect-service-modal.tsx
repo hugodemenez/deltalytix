@@ -12,6 +12,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { ServiceMonochromeLogo } from '@/components/monochrome-logo'
 
 export function ConnectServiceModal({
   service,
@@ -48,7 +49,17 @@ export function ConnectServiceModal({
         className="flex w-full flex-col gap-0 overflow-hidden rounded-none border-l border-black/10 bg-white p-0 dark:border-white/10 dark:bg-black sm:max-w-xl md:max-w-2xl"
       >
         <SheetHeader className="shrink-0 space-y-0 border-b border-black/10 px-4 py-3 text-left dark:border-white/10">
-          <SheetTitle className="pr-8 text-lg font-normal tracking-tight">
+          <SheetTitle className="flex items-center gap-3 pr-8 text-lg font-normal tracking-tight">
+            {service ? (
+              <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center">
+                <ServiceMonochromeLogo
+                  service={service}
+                  alt=""
+                  size={24}
+                  className="h-6 w-6"
+                />
+              </span>
+            ) : null}
             {title}
           </SheetTitle>
         </SheetHeader>
