@@ -51,7 +51,7 @@ export function ImportDialogHeader({ step, importType, inline = false }: ImportD
                 key={s.id}
                 className={cn(
                   "shrink-0 whitespace-nowrap transition-colors duration-150",
-                  currentStepIndex >= index && "font-medium text-black dark:text-white"
+                  currentStepIndex >= index && "text-black dark:text-white"
                 )}
               >
                 {t(s.title as any, { count: 1 })}
@@ -90,7 +90,7 @@ export function ImportDialogHeader({ step, importType, inline = false }: ImportD
               key={s.id}
               className={cn(
                 "shrink-0 whitespace-nowrap transition-colors",
-                currentStepIndex >= index && "font-medium text-primary"
+                currentStepIndex >= index && "text-primary"
               )}
             >
               {t(s.title as any, { count: 1 })}

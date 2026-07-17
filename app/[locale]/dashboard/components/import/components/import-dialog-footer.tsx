@@ -53,7 +53,8 @@ export function ImportDialogFooter({
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex h-11 items-center justify-center rounded-sm border border-black/20 px-6 text-sm font-medium transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:hover:bg-white/5"
+            disabled={isSaving}
+            className="inline-flex h-11 items-center justify-center rounded-sm border border-black/20 px-6 text-sm font-medium transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:border-white/20 dark:hover:bg-white/5"
           >
             {t('import.button.back')}
           </button>
@@ -84,6 +85,7 @@ export function ImportDialogFooter({
           <Button 
             variant="outline" 
             onClick={onBack}
+            disabled={isSaving}
             className="w-fit min-w-[80px] sm:min-w-[100px]"
           >
             {t('import.button.back')}
@@ -95,7 +97,7 @@ export function ImportDialogFooter({
             "w-fit min-w-[80px] sm:min-w-[100px]",
             (currentStepIndex === 0 && (importType === 'rithmic-sync' || importType === 'tradovate-sync' || importType === 'dxfeed-sync')) && "invisible"
           )}
-          disabled={isNextDisabled}
+          disabled={isNextDisabled || isSaving}
         >
           {getNextButtonText()}
         </Button>

@@ -55,7 +55,7 @@ export function PlatformItem({
               <>
                 <Image
                   src={platform.logo.path}
-                  alt={platform.logo.alt || ''}
+                  alt={platform.logo.alt || t(platform.name as keyof typeof t)}
                   width={32}
                   height={32}
                   className="h-8 w-8 object-contain dark:hidden"
@@ -85,7 +85,7 @@ export function PlatformItem({
                 <Badge variant="secondary" className="transition-transform duration-200 hover:scale-105">
                   {t('import.type.badge.maintenance')}
                 </Badge>
-                <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-500 animate-pulse" />
+                <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-500 motion-safe:animate-pulse" />
               </>
             )}
             {platform.isComingSoon && !platform.isDisabled && (
