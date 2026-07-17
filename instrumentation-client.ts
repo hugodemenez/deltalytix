@@ -20,7 +20,7 @@ if (projectToken) {
     defaults: "2026-05-30",
     person_profiles: "identified_only",
     opt_out_capturing_by_default: !hasAnalyticsConsent(),
-    opt_out_capturing_persistence_type: "local_storage",
+    opt_out_capturing_persistence_type: "localStorage",
     autocapture: false,
     capture_pageview: true,
     capture_pageleave: true,
