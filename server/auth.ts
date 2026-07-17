@@ -3,7 +3,6 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { headers } from "next/headers"
 import { User } from '@supabase/supabase-js'
 import {
   buildLocalDashboardBypassUser,
@@ -588,25 +587,15 @@ export async function verifyOtp(email: string, token: string, type: 'email' | 's
   }
 }
 
-// Optimized function that uses middleware data when available
 export async function getUserId(): Promise<string> {
   if (isLocalDashboardAuthBypassEnabled()) {
     await ensureLocalDashboardUserInDatabase()
     return getLocalDashboardUserId()
   }
 
-  // First try to get user ID from middleware headers
-  const headersList = await headers()
-  const userIdFromMiddleware = headersList.get("x-user-id")
-
-  if (userIdFromMiddleware) {
-    console.log("[Auth] Using user ID from middleware")
-    return userIdFromMiddleware
-  }
-
-  // Fallback to Supabase call (for API routes or edge cases)
+  // Always validate identity via Supabase session — never trust request headers
+  // such as x-user-id, which clients can spoof.
   try {
-    console.log("[Auth] Fallback to Supabase call")
     const supabase = await createClient()
     const {
       data: { user },
@@ -628,10 +617,17 @@ export async function getUserEmail(): Promise<string> {
     return getLocalDashboardUserEmail()
   }
 
-  const headersList = await headers()
-  const userEmail = headersList.get("x-user-email")
-  console.log("[Auth] getUserEmail FROM HEADERS", userEmail)
-  return userEmail || ""
+  const supabase = await createClient()
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
+  if (error || !user) {
+    return ""
+  }
+
+  return user.email || ""
 }
 
 // Lightweight updater for user language without full ensure logic

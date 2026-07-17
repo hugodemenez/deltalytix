@@ -103,6 +103,10 @@ export async function getShared(slug: string): Promise<{params: SharedParams, tr
       return null
     }
 
+    if (!shared.isPublic || (shared.expiresAt && shared.expiresAt < new Date())) {
+      return null
+    }
+
     // Parse the date range
     const dateRange = shared.dateRange as unknown as DateRange
     if (!dateRange?.from) {

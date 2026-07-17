@@ -12,6 +12,7 @@ import {
   getLocalDashboardUserId,
   isLocalDashboardAuthBypassEnabled,
 } from "@/lib/local-dashboard-auth"
+import { safeRedirectPath } from "@/lib/safe-redirect-path"
 
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
@@ -454,8 +455,7 @@ export default async function proxy(req: NextRequest) {
     // Authenticated - redirect from auth to dashboard
     if (pathname.includes("/authentication")) {
       const nextParam = req.nextUrl.searchParams.get("next")
-      const redirectUrl = nextParam ? `/${nextParam}` : "/dashboard"
-      return NextResponse.redirect(new URL(redirectUrl, req.url))
+      return NextResponse.redirect(new URL(safeRedirectPath(nextParam), req.url))
     }
   }
 
