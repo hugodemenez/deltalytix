@@ -128,6 +128,7 @@ export function DxFeedCredentialsManager() {
       showToastWithCopy('success', t('dxfeedSync.connected'), {
         copyLabel: t('common.copy'),
       })
+      captureConnectionCreated('dxfeed', { source_ui: 'credentials_manager' })
       setIsAddDialogOpen(false)
       setLoginEmail('')
       setLoginPassword('')
