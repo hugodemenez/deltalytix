@@ -69,3 +69,4 @@ datafeeds/
 
 # Lock files
 !bun.lock
+og-preview-artifacts/

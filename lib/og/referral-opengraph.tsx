@@ -44,7 +44,7 @@ export function ReferralOgImage({
         justifyContent: "space-between",
       }}
     >
-      <LandingAtmosphere width={380} height={250} />
+      <LandingAtmosphere />
 
       <BrandLockup />
 

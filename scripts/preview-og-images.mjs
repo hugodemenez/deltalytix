@@ -86,7 +86,7 @@ const updatesElement = createElement(
       position: "relative",
     },
   },
-  createElement(LandingAtmosphere, { width: 340, height: 230 }),
+  createElement(LandingAtmosphere),
   createElement(BrandLockup, { logoSize: 36, fontSize: 26 }),
   createElement(
     "div",

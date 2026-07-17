@@ -114,23 +114,34 @@ export function OgCtaButton({
 /** Stylized daily P&L bars — no labels, no axes, no numbers. */
 const OG_BAR_HEIGHTS = [
   0.42, 0.68, -0.28, 0.55, 0.22, -0.48, 0.78, 0.35, -0.18, 0.62, 0.48, -0.32,
-  0.85, 0.3, -0.55, 0.58, 0.72, 0.18, -0.25, 0.92,
+  0.85, 0.3, -0.55, 0.58, 0.72, 0.18, -0.25, 0.92, 0.4, -0.38, 0.66, 0.52,
 ] as const;
 
-function barColor(value: number): string {
-  if (value > 0.05) return OG_COLORS.chartWin;
-  if (value < -0.05) return OG_COLORS.chartLoss;
-  return OG_COLORS.chartNeutral;
+function withAlpha(hex: string, alpha: number): string {
+  const normalized = hex.replace("#", "");
+  const r = Number.parseInt(normalized.slice(0, 2), 16);
+  const g = Number.parseInt(normalized.slice(2, 4), 16);
+  const b = Number.parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function barColor(value: number, alpha: number): string {
+  if (value > 0.05) return withAlpha(OG_COLORS.chartWin, alpha);
+  if (value < -0.05) return withAlpha(OG_COLORS.chartLoss, alpha);
+  return `rgba(232, 232, 232, ${0.12 * alpha})`;
 }
 
 export function OgBarChart({
   width = 420,
   height = 280,
+  alpha = 0.45,
 }: {
   width?: number;
   height?: number;
+  /** Satori ignores parent opacity — bake alpha into bar fills instead. */
+  alpha?: number;
 } = {}) {
-  const gap = 8;
+  const gap = 10;
   const barWidth = Math.floor(
     (width - gap * (OG_BAR_HEIGHTS.length - 1)) / OG_BAR_HEIGHTS.length,
   );
@@ -155,7 +166,7 @@ export function OgBarChart({
           right: 0,
           top: midY,
           height: 1,
-          background: OG_COLORS.hairline,
+          background: `rgba(255, 255, 255, ${0.08 * alpha})`,
           display: "flex",
         }}
       />
@@ -188,7 +199,7 @@ export function OgBarChart({
                   width: "100%",
                   height: barH,
                   borderRadius: OG_RADIUS.sm,
-                  background: barColor(value),
+                  background: barColor(value, alpha),
                 }}
               />
             </div>
@@ -200,22 +211,22 @@ export function OgBarChart({
 }
 
 /**
- * Right-side visual: mint-washed frame wrapping a text-free bar chart.
+ * Soft bar-chart backdrop — sits behind copy, not inside a framed panel.
+ * Opacity is applied via bar fill alpha (Satori does not honor parent opacity).
  */
 export function LandingAtmosphere({
-  width = 420,
-  height = 280,
-  right = 48,
-  bottom = 40,
+  width = 620,
+  height = 460,
+  right = -48,
+  bottom = -36,
+  alpha = 0.32,
 }: {
   width?: number;
   height?: number;
   right?: number;
   bottom?: number;
+  alpha?: number;
 } = {}) {
-  const chartWidth = width - 48;
-  const chartHeight = height - 48;
-
   return (
     <div
       style={{
@@ -224,26 +235,12 @@ export function LandingAtmosphere({
         bottom,
         width,
         height,
-        borderRadius: OG_RADIUS.md,
-        background: OG_COLORS.wash,
         display: "flex",
-        padding: 12,
+        alignItems: "center",
+        justifyContent: "center",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          width: "100%",
-          height: "100%",
-          borderRadius: OG_RADIUS.sm,
-          background: OG_COLORS.surface,
-          border: `1px solid ${OG_COLORS.hairline}`,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <OgBarChart width={chartWidth} height={chartHeight} />
-      </div>
+      <OgBarChart width={width} height={height} alpha={alpha} />
     </div>
   );
 }
@@ -275,7 +272,7 @@ export function MarketingOgImage({
         justifyContent: "space-between",
       }}
     >
-      <LandingAtmosphere width={520} height={340} right={40} bottom={36} />
+      <LandingAtmosphere />
 
       <BrandLockup />
 
@@ -284,7 +281,7 @@ export function MarketingOgImage({
           display: "flex",
           flexDirection: "column",
           gap: 28,
-          maxWidth: 620,
+          maxWidth: 540,
           position: "relative",
         }}
       >
@@ -308,7 +305,7 @@ export function MarketingOgImage({
             color: OG_COLORS.muted,
             lineHeight: 1.4,
             letterSpacing: OG_TRACKING.snug,
-            maxWidth: 560,
+            maxWidth: 500,
           }}
         >
           {subheadline}

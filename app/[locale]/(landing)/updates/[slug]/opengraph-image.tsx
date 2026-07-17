@@ -66,7 +66,7 @@ export default async function Image({
                     position: "relative",
                 }}
             >
-                <LandingAtmosphere width={340} height={230} />
+                <LandingAtmosphere />
 
                 <BrandLockup logoSize={36} fontSize={26} />
 
