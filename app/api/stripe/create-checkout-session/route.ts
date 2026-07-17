@@ -5,6 +5,7 @@ import { createClient, getWebsiteURL } from "@/server/auth";
 import { stripe } from "@/server/stripe";
 import { getSubscriptionDetails } from "@/server/subscription";
 import { getReferralBySlug } from "@/server/referral";
+import { capturePostHogEvent, hasAnalyticsConsent } from "@/lib/posthog-server";
 
 async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: string, referral?: string | null, promo_code?: string | null) {
     const subscriptionDetails = await getSubscriptionDetails();
@@ -94,12 +95,17 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
     }
 
     // Create session with appropriate mode based on price type
+    const analyticsConsent = await hasAnalyticsConsent();
     const sessionConfig: any = {
         customer: customerId,
         metadata: {
             plan: lookup_key,
             ...(referral && { referral_code: referral }),
             ...(promo_code && { promo_code: promo_code }),
+            ...(analyticsConsent && {
+                analytics_consent: 'granted',
+                posthog_distinct_id: user.id,
+            }),
         },
         line_items: [
             {
@@ -129,6 +135,18 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
     }
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
+
+    await capturePostHogEvent({
+        distinctId: user.id,
+        event: 'checkout_started',
+        properties: {
+            lookup_key,
+            is_lifetime: isLifetimePlan,
+            has_referral: Boolean(referral),
+            has_promo_code: Boolean(promo_code),
+            stripe_checkout_session_id: session.id,
+        },
+    });
 
     return NextResponse.redirect(session.url as string, 303);
 }

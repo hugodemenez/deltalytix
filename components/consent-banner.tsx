@@ -22,6 +22,33 @@ import { Label } from "@/components/ui/label"
 import { motion, AnimatePresence } from "framer-motion"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { useI18n } from "@/locales/client"
+import posthog from "posthog-js"
+
+const ANALYTICS_CONSENT_COOKIE = "deltalytix_analytics_consent"
+const CONSENT_EVENT = "deltalytix:analytics-consent"
+
+function syncPostHogConsent(analyticsEnabled: boolean) {
+  const secure = window.location.protocol === "https:" ? "; Secure" : ""
+  document.cookie = `${ANALYTICS_CONSENT_COOKIE}=${analyticsEnabled ? "granted" : "denied"}; Max-Age=31536000; Path=/; SameSite=Lax${secure}`
+
+  if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return
+
+  if (analyticsEnabled) {
+    const wasOptedOut = posthog.has_opted_out_capturing()
+    if (!posthog.has_opted_in_capturing()) {
+      posthog.opt_in_capturing()
+    }
+    window.dispatchEvent(new Event(CONSENT_EVENT))
+
+    if (wasOptedOut) {
+      posthog.capture("$pageview", { $current_url: window.location.href })
+    }
+  } else {
+    if (!posthog.has_opted_out_capturing()) {
+      posthog.opt_out_capturing()
+    }
+  }
+}
 
 interface ConsentSettings {
   analytics_storage: boolean;
@@ -55,6 +82,15 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
     const hasConsent = localStorage.getItem("cookieConsent")
     if (!hasConsent) {
       setIsVisible(true)
+    } else {
+      try {
+        const savedSettings = JSON.parse(hasConsent) as ConsentSettings
+        setSettings(savedSettings)
+        syncPostHogConsent(savedSettings.analytics_storage)
+      } catch {
+        localStorage.removeItem("cookieConsent")
+        setIsVisible(true)
+      }
     }
 
     // Add keyboard shortcut for dev mode (Cmd/Ctrl + Shift + K)
@@ -104,6 +140,7 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
 
   const saveConsent = (consentSettings: ConsentSettings) => {
     localStorage.setItem("cookieConsent", JSON.stringify(consentSettings))
+    syncPostHogConsent(consentSettings.analytics_storage)
     window.gtag?.("consent", "update", {
       analytics_storage: consentSettings.analytics_storage ? "granted" : "denied",
       ad_storage: consentSettings.ad_storage ? "granted" : "denied",
