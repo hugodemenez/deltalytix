@@ -18,6 +18,7 @@ import { ThemeAwareLogo } from '@/components/monochrome-logo'
 import { useUserStore } from '@/store/user-store'
 import { setRithmicSynchronization } from './actions'
 import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
+import { captureConnectionCreated } from '@/lib/connection-analytics'
 import { cn } from '@/lib/utils'
 
 const fieldClassName =
@@ -443,6 +444,7 @@ export function RithmicSyncConnection({
         token: token,
         tokenExpiresAt: null
       })
+      captureConnectionCreated('rithmic')
     } catch (error) {
       console.error('Failed to save synchronization data:', error)
       toast.error(t('rithmic.error.syncDataSaveFailed'), {

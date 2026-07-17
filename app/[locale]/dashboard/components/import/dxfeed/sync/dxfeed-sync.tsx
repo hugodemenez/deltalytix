@@ -26,6 +26,7 @@ import { getEnabledDxFeedPropFirms } from '@/lib/dxfeed-propfirms'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
 import { authenticateDxFeed } from './actions'
 import { DxFeedCredentialsManager } from './dxfeed-credentials-manager'
+import { captureConnectionCreated } from '@/lib/connection-analytics'
 
 const DXFEED_PROP_FIRM_OPTIONS = getEnabledDxFeedPropFirms()
 const DEFAULT_PROP_FIRM_ID = DXFEED_PROP_FIRM_OPTIONS[0]?.id ?? ''
@@ -96,6 +97,7 @@ function DxFeedConnectView({ onConnected }: { onConnected?: () => void }) {
       showToastWithCopy('success', t('dxfeedSync.connected'), {
         copyLabel: t('common.copy'),
       })
+      captureConnectionCreated('dxfeed')
       setLoginEmail('')
       setLoginPassword('')
       await loadAccounts()

@@ -124,6 +124,13 @@ export default {
   "dashboard.billing": "Abonnement",
   "dashboard.data": "Données",
   "dashboard.connections": "Connexions",
+  "betaInvite.connectionFlow.ariaLabel": "Essayer le nouveau flux de connexions sur beta",
+  "betaInvite.connectionFlow.title": "Essayer le nouveau flux de connexions",
+  "betaInvite.connectionFlow.description":
+    "Une façon plus claire de gérer les connexions broker est disponible sur beta. Vous voulez l’essayer ?",
+  "betaInvite.connectionFlow.tryBeta": "Essayer sur beta",
+  "betaInvite.connectionFlow.notNow": "Pas maintenant",
+  "betaInvite.connectionFlow.dismiss": "Fermer",
   "connections.title": "Connexions",
   "connections.description":
     "Gérez vos connexions broker et les comptes qu’elles hébergent. Importez des fichiers pour les comptes autonomes.",

@@ -38,6 +38,10 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { platforms, type PlatformConfig } from '@/app/[locale]/dashboard/components/import/config/platforms'
+import {
+  captureConnectionAddClicked,
+  captureConnectionCreated,
+} from '@/lib/connection-analytics'
 import { PlatformTutorial } from '@/app/[locale]/dashboard/components/import/components/platform-tutorial'
 import {
   deleteConnectionAction,
@@ -1019,6 +1023,7 @@ export function ConnectionsPageClient({
         }
 
         toast.success(t('connections.oauth.tradovate.success'))
+        captureConnectionCreated('tradovate')
         const next = await getConnectionsPageData()
         // Single paint: drop skeleton and show the real row in the same slot.
         setData(next)
@@ -1061,6 +1066,7 @@ export function ConnectionsPageClient({
 
     if (result === 'success') {
       toast.success(t('connections.oauth.tradovate.success'))
+      captureConnectionCreated('tradovate', { legacy_oauth_bridge: true })
     } else if (result === 'error') {
       toast.error(
         registered
@@ -1134,6 +1140,7 @@ export function ConnectionsPageClient({
                       className="flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-left text-sm transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5"
                       onClick={() => {
                         setAddMenuOpen(false)
+                        captureConnectionAddClicked(section.service)
                         setConnectService(section.service)
                       }}
                     >

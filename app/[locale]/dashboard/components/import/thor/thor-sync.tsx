@@ -20,6 +20,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useI18n } from "@/locales/client"
+import { captureConnectionCreated } from "@/lib/connection-analytics"
 import { useUserStore } from "../../../../../../store/user-store"
 
 const fieldClassName =
@@ -47,6 +48,7 @@ export function ThorSync({ setIsOpen: _setIsOpen }: { setIsOpen: (isOpen: boolea
       if (!user) return
       setUser({ ...user, thorToken: result.token })
       toast.success(t('thor.generated'))
+      captureConnectionCreated('thor')
     } catch {
       toast.error(t('thor.error.generation'))
     } finally {
