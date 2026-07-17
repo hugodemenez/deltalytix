@@ -10,6 +10,7 @@ import { TradovateSyncContextProvider } from "@/context/tradovate-sync-context";
 import { DxFeedSyncContextProvider } from "@/context/dxfeed-sync-context";
 import { I18nProviderClient } from "@/locales/client";
 import { ConsentBanner } from "@/components/consent-banner";
+import { BetaConnectionFlowInvite } from "@/components/beta-connection-flow-invite";
 import { PostHogIdentity } from "@/components/posthog-identity";
 import { createClient } from "@/server/auth";
 
@@ -41,6 +42,7 @@ export default async function RootLayout({
                 <Navbar />
                 {children}
                 <Modals />
+                <BetaConnectionFlowInvite />
               </DxFeedSyncContextProvider>
             </TradovateSyncContextProvider>
           </RithmicSyncContextProvider>

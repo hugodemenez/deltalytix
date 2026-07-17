@@ -123,6 +123,13 @@ export default {
   "dashboard.profile": "Profil",
   "dashboard.billing": "Abonnement",
   "dashboard.data": "Données",
+  "betaInvite.connectionFlow.ariaLabel": "Essayer le nouveau flux de connexions sur beta",
+  "betaInvite.connectionFlow.title": "Essayer le nouveau flux de connexions",
+  "betaInvite.connectionFlow.description":
+    "Une façon plus claire de gérer les connexions broker est disponible sur beta. Vous voulez l’essayer ?",
+  "betaInvite.connectionFlow.tryBeta": "Essayer sur beta",
+  "betaInvite.connectionFlow.notNow": "Pas maintenant",
+  "betaInvite.connectionFlow.dismiss": "Fermer",
   "dashboard.refreshData": "Actualiser les données",
   "dashboard.inviteUsers": "Inviter des utilisateurs",
   "dashboard.email": "Email",
