@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { CommandItem } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 import { AlertTriangle, ChevronRight } from "lucide-react"
-import Image from "next/image"
+import { ThemeAwareLogo } from "@/components/monochrome-logo"
 import { PlatformConfig } from "../config/platforms"
 import { useI18n } from "@/locales/client"
 
@@ -52,25 +52,13 @@ export function PlatformItem({
         <div className="flex items-center py-1">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/50 bg-background/50 shrink-0">
             {platform.logo.path && (
-              <>
-                <Image
-                  src={platform.logo.path}
-                  alt={platform.logo.alt || t(platform.name as keyof typeof t)}
-                  width={32}
-                  height={32}
-                  className="h-8 w-8 object-contain dark:hidden"
-                />
-                {platform.logo.darkPath && (
-                  <Image
-                    src={platform.logo.darkPath}
-                    alt=""
-                    aria-hidden="true"
-                    width={32}
-                    height={32}
-                    className="hidden h-8 w-8 object-contain dark:block"
-                  />
-                )}
-              </>
+              <ThemeAwareLogo
+                path={platform.logo.path}
+                darkPath={platform.logo.darkPath}
+                alt={platform.logo.alt || t(platform.name as keyof typeof t)}
+                size={32}
+                className="h-8 w-8"
+              />
             )}
             {platform.logo.component && (
               <platform.logo.component />

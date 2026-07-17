@@ -14,7 +14,7 @@ import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 import { saveRithmicData, getRithmicData, clearRithmicData, generateCredentialId, getAllRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
 import { RithmicCredentialsManager } from './rithmic-credentials-manager'
 import { useI18n } from '@/locales/client'
-import Image from 'next/image'
+import { ThemeAwareLogo } from '@/components/monochrome-logo'
 import { useUserStore } from '@/store/user-store'
 import { setRithmicSynchronization } from './actions'
 import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
@@ -813,35 +813,19 @@ export function RithmicSyncWrapper({
       </div>
       <div className="shrink-0 space-y-2 border-t border-black/10 pt-4 text-xs leading-relaxed text-black/45 dark:border-white/10 dark:text-white/45">
         <div className="mb-2 flex items-center gap-4">
-          <Image
-            src="/logos/monochrome/trading-platform-by-rithmic-black.png"
+          <ThemeAwareLogo
+            path="/logos/monochrome/trading-platform-by-rithmic-black.png"
+            darkPath="/logos/monochrome/trading-platform-by-rithmic-white.png"
             alt="Trading Platform by Rithmic"
-            width={120}
-            height={40}
-            className="dark:hidden"
+            size={120}
+            className="h-10 w-auto"
           />
-          <Image
-            src="/logos/monochrome/trading-platform-by-rithmic-white.png"
-            alt=""
-            aria-hidden="true"
-            width={120}
-            height={40}
-            className="hidden dark:block"
-          />
-          <Image
-            src="/logos/monochrome/powered-by-omne-black.png"
+          <ThemeAwareLogo
+            path="/logos/monochrome/powered-by-omne-black.png"
+            darkPath="/logos/monochrome/powered-by-omne-white.png"
             alt="Powered by OMNE"
-            width={120}
-            height={40}
-            className="dark:hidden"
-          />
-          <Image
-            src="/logos/monochrome/powered-by-omne-white.png"
-            alt=""
-            aria-hidden="true"
-            width={120}
-            height={40}
-            className="hidden dark:block"
+            size={120}
+            className="h-10 w-auto"
           />
         </div>
         <p>{t('import.type.copyright.rithmic')}</p>

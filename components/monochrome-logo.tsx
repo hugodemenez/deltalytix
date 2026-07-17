@@ -18,45 +18,41 @@ export function monochromePaths(slug: string) {
   }
 }
 
+/**
+ * Uses next/image (optimizer + cache). For monochrome pairs we only fetch the
+ * black asset and invert it in dark mode, so each logo is one cached request.
+ */
 export function ThemeAwareLogo({
   path,
   darkPath,
   alt = '',
   size = 24,
   className,
+  priority = false,
 }: {
   path?: string
   darkPath?: string
   alt?: string
   size?: number
   className?: string
+  priority?: boolean
 }) {
   if (!path) return null
 
   return (
-    <>
-      <Image
-        src={path}
-        alt={alt}
-        width={size}
-        height={size}
-        className={cn(
-          'object-contain',
-          darkPath ? 'dark:hidden' : undefined,
-          className
-        )}
-      />
-      {darkPath ? (
-        <Image
-          src={darkPath}
-          alt=""
-          aria-hidden
-          width={size}
-          height={size}
-          className={cn('hidden object-contain dark:block', className)}
-        />
-      ) : null}
-    </>
+    <Image
+      src={path}
+      alt={alt}
+      width={size}
+      height={size}
+      sizes={`${size}px`}
+      priority={priority}
+      className={cn(
+        'object-contain',
+        darkPath ? 'dark:invert' : undefined,
+        className
+      )}
+    />
   )
 }
 
@@ -65,11 +61,13 @@ export function ServiceMonochromeLogo({
   alt,
   size = 24,
   className,
+  priority = false,
 }: {
   service: string
   alt?: string
   size?: number
   className?: string
+  priority?: boolean
 }) {
   const slug = SERVICE_SLUGS[service as MonochromeService]
   if (!slug) return null
@@ -81,6 +79,7 @@ export function ServiceMonochromeLogo({
       alt={alt}
       size={size}
       className={className}
+      priority={priority}
     />
   )
 }
