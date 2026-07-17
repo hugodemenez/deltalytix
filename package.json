@@ -129,6 +129,7 @@
     "pdf2json": "^3.2.2",
     "pg": "^8.17.2",
     "playwright-core": "^1.56.1",
+    "posthog-js": "^1.403.0",
     "prisma": "7.8.0",
     "radix-ui": "^1.6.0",
     "react": "19.2.1",

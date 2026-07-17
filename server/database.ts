@@ -10,6 +10,7 @@ import { unstable_cache } from 'next/cache'
 import { defaultLayouts } from '@/lib/default-layouts'
 import { formatTimestamp } from '@/lib/date-utils'
 import { v5 as uuidv5 } from 'uuid'
+import { capturePostHogEvent } from '@/lib/posthog-server'
 
 type TradeError =
   | 'DUPLICATE_TRADES'
@@ -84,6 +85,11 @@ export async function saveTradesAction(
   }
 
   try {
+    const hadExistingTrades = Boolean(await prisma.trade.findFirst({
+      where: { userId },
+      select: { id: true },
+    }))
+
     // Clean the data to remove undefined values and ensure all required fields are present
     const userAssignedTrades = data.map(trade => {
 
@@ -131,6 +137,34 @@ export async function saveTradesAction(
       updateTag(`trades-${userId}`)
     } catch {
       revalidateTag(`trades-${userId}`, { expire: 0 })
+    }
+
+    if (result.count > 0) {
+      const sources = Array.from(new Set(
+        userAssignedTrades.flatMap((trade) => trade.tags ?? [])
+      ))
+
+      await capturePostHogEvent({
+        distinctId: userId,
+        event: 'trades_imported',
+        properties: {
+          imported_trade_count: result.count,
+          attempted_trade_count: data.length,
+          import_sources: sources.join(','),
+          is_first_import: !hadExistingTrades,
+        },
+      })
+
+      if (!hadExistingTrades) {
+        await capturePostHogEvent({
+          distinctId: userId,
+          event: 'first_trade_imported',
+          properties: {
+            imported_trade_count: result.count,
+            import_sources: sources.join(','),
+          },
+        })
+      }
     }
 
     return {
