@@ -6,7 +6,7 @@ export const CONNECTIONS_PAGE_DWELL_THRESHOLD_EVENT =
 
 const DWELL_STORAGE_KEY = "deltalytix:connections-page-dwell-ms";
 const DWELL_EVENT_FIRED_KEY = "deltalytix:connections-page-dwell-event-fired";
-const DWELL_THRESHOLD_MS = 180_000;
+const DWELL_THRESHOLD_MS = 60_000;
 const CONSENT_EVENT = "deltalytix:analytics-consent";
 
 function canCapture() {
