@@ -1,4 +1,5 @@
 import React from "react";
+import { cacheLife } from "next/cache";
 import { setStaticParamsLocale } from "next-international/server";
 import { getI18n } from "@/locales/server";
 import { getStaticParams as getLocaleStaticParams } from "@/locales/server";
@@ -13,8 +14,6 @@ interface PageProps {
     locale: string;
   }>;
 }
-
-export const revalidate = 3600;
 
 export function generateStaticParams() {
   return getLocaleStaticParams();
@@ -42,6 +41,9 @@ async function isMobileScreenshot(image?: string) {
 }
 
 export default async function UpdatesPage(props: PageProps) {
+  "use cache";
+  cacheLife("hours");
+
   const { locale } = await props.params;
 
   setStaticParamsLocale(locale);

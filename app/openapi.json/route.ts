@@ -1,9 +1,10 @@
+import { connection } from "next/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { absoluteUrl } from "@/lib/agent-discovery/metadata";
 
-export const dynamic = "force-dynamic";
+export async function GET(request: NextRequest) {
+  await connection();
 
-export function GET(request: NextRequest) {
   return NextResponse.json(
     {
       openapi: "3.1.0",

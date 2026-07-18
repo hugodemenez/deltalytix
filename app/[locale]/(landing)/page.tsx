@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import nextDynamic from "next/dynamic";
 import Partners from "./components/partners";
 import { setStaticParamsLocale } from "next-international/server";
@@ -26,8 +27,6 @@ const OpenSource = nextDynamic(() => import("./components/open-source"), {
   loading: () => <OpenSourceSectionSkeleton />,
 });
 
-export const dynamic = "force-static";
-
 export function generateStaticParams() {
   return getStaticParams();
 }
@@ -37,6 +36,9 @@ export default async function LandingPage({
 }: {
   params: Promise<{ locale: string }>;
 }) {
+  "use cache";
+  cacheLife("max");
+
   const { locale } = await params;
   setStaticParamsLocale(locale);
 

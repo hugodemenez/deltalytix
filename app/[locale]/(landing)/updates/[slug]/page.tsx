@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import { getAllPostMetadata, getPost, getPostMetadata } from "@/lib/mdx";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
@@ -31,9 +32,6 @@ interface PageProps {
 // are resolved from the build-time site origin (siteUrl/getSiteOrigin, which
 // reads NEXT_PUBLIC_BASE_URL / VERCEL_URL), avoiding any request-time
 // dependency that would force dynamic rendering.
-export const dynamic = "force-static";
-export const dynamicParams = false;
-
 // Generate static paths for all posts in all locales
 export async function generateStaticParams() {
   const locales = getLocaleStaticParams().map((entry) => entry.locale);
@@ -55,6 +53,9 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  "use cache";
+  cacheLife("max");
+
   try {
     const resolvedParams = await Promise.resolve(params);
     if (!resolvedParams || !resolvedParams.slug || !resolvedParams.locale) {
@@ -136,6 +137,9 @@ export async function generateMetadata({
 }
 
 export default async function Page({ params }: PageProps) {
+  "use cache";
+  cacheLife("max");
+
   let resolvedParams: { slug: string; locale: string };
 
   try {

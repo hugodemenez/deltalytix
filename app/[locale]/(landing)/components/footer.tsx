@@ -108,7 +108,7 @@ export default function Footer() {
         </div>
         <div className="mt-16 border-t border-black/10 dark:border-white/10 pt-8">
           <div className="text-center text-sm text-black/55 dark:text-white/55">
-            {t('footer.copyright', { year: new Date().getFullYear() })}
+            {t('footer.copyright', { year: 2026 })}
           </div>
           <div className="mt-4 text-center text-xs text-black/45 dark:text-white/45">
             {t('disclaimer.risk.content')}

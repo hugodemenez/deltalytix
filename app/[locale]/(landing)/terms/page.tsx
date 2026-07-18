@@ -87,7 +87,7 @@ export default function TermsOfService() {
         <p>{t('terms.sections.changesTerms.content')}</p>
       </section>
 
-      <p className="mt-8 text-sm">{t('terms.lastUpdated')}{new Date().toISOString().split('T')[0]}</p>
+      <p className="mt-8 text-sm">{t('terms.lastUpdated')}2025-01-01</p>
     </div>
   );
 }

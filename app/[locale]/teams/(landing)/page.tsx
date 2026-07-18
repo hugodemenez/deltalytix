@@ -5,7 +5,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useI18n } from '@/locales/client'
+import { useCurrentLocale, useI18n } from '@/locales/client'
+import { I18nProviderClient as LandingI18nProviderClient } from '@/locales/landing-client'
 import { getCalApi } from "@calcom/embed-react"
 import { 
   Users, 
@@ -35,6 +36,7 @@ import Image from 'next/image'
 
 export default function TeamPage() {
   const t = useI18n()
+  const locale = useCurrentLocale()
 
   useEffect(() => {
     // Cal.com initialization
@@ -278,7 +280,10 @@ export default function TeamPage() {
         {/* Footer */}
         <footer className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
           <div className="container px-4 md:px-6 mx-auto">
-            <Footer />
+            {/* Landing Footer uses landing-client i18n keys. */}
+            <LandingI18nProviderClient locale={locale}>
+              <Footer />
+            </LandingI18nProviderClient>
           </div>
         </footer>
       </main>

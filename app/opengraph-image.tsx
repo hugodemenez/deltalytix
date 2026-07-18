@@ -5,8 +5,6 @@ export const alt = "Deltalytix — Master your trading journey. Trading analytic
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export const revalidate = 3600;
-
 export default async function Image() {
   const copy = getSiteMetadataCopy("en");
 

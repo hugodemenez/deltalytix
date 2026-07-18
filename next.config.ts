@@ -28,11 +28,9 @@ const nextConfig: NextConfig = {
   // -> /en/updates). next.config redirects run before middleware, so they force a
   // single locale and prevent the i18n middleware from routing by the user's
   // selected language. Locale routing is handled entirely by the i18n middleware.
-  //
-  // Cache Components / Instant Navigations (`cacheComponents` + `partialPrefetching`)
-  // are not enabled app-wide yet: they require migrating legacy route segment
-  // configs (`dynamic` / `revalidate` / `runtime`) and wrapping uncached dynamic
-  // access in Suspense across many routes. Connections already streams via Suspense.
+  // Instant Navigations: Cache Components + Partial Prefetching (Next.js 16.3+).
+  cacheComponents: true,
+  partialPrefetching: true,
   images: {
     remotePatterns: [
       {
@@ -47,8 +45,13 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     cpus: buildWorkers,
-    useCache: true,
     mdxRs: true,
+    // Quiet Route Handler prerender bail-outs that are caught by try/catch.
+    hideLogsAfterAbort: true,
+    // Validate Instant Navigations only on routes that export `instant`.
+    instantInsights: {
+      validationLevel: 'manual-warning',
+    },
     optimizePackageImports: [
       'lucide-react',
       'date-fns',

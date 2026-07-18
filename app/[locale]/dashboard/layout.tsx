@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { ThemeProvider } from "@/context/theme-provider";
 import { DataProvider } from "@/context/data-provider";
 import Modals from "@/components/modals";
@@ -14,8 +15,12 @@ import { ConsentBanner } from "@/components/consent-banner";
 import { BetaConnectionFlowInvite } from "@/components/beta-connection-flow-invite";
 import { PostHogIdentity } from "@/components/posthog-identity";
 import { createClient } from "@/server/auth";
+import { getCachedLocale } from "@/lib/locale-params";
 
 async function DashboardPostHogIdentity({ locale }: { locale: string }) {
+  // Request-time only — avoid running auth/bypass checks during prerender.
+  await connection();
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -35,7 +40,7 @@ export default async function RootLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  const { locale } = await params;
+  const locale = await getCachedLocale(params);
 
   return (
     <I18nProviderClient locale={locale}>

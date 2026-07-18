@@ -1,5 +1,6 @@
 // CRON JOB RUNNING EVERY WEEK
 
+import { connection } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { startOfWeek, endOfWeek, subWeeks, parseISO, format } from "date-fns";
@@ -291,6 +292,8 @@ async function processInstrumentTrades(instrumentData: InstrumentData): Promise<
 }
 
 export async function GET() {
+  await connection();
+
   try {
     console.log('Starting MAE/MFE computation cron job');
     

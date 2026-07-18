@@ -2,6 +2,7 @@ import { ThemeProvider } from "@/context/theme-provider";
 import { DataProvider } from "@/context/data-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { I18nProviderClient } from "@/locales/client";
+import { getCachedLocale } from "@/lib/locale-params";
 
 export default async function RootLayout({
   children,
@@ -10,7 +11,7 @@ export default async function RootLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  const { locale } = await params;
+  const locale = await getCachedLocale(params);
 
   return (
     <I18nProviderClient locale={locale}>

@@ -1,20 +1,28 @@
 import type { Metadata } from 'next'
-import { headers } from 'next/headers'
+import { cacheLife } from 'next/cache'
+import { connection } from 'next/server'
 import { Suspense } from 'react'
 import { getConnectionsMetadataCopy } from '@/lib/og/site-metadata'
-import { getRequestOrigin, siteUrl } from '@/lib/site-url'
+import { getCachedLocale } from '@/lib/locale-params'
+import { getSiteOrigin, siteUrl } from '@/lib/site-url'
 import { ConnectionsPageClient } from './components/connections-page-client'
 import { ConnectionsPageSkeleton } from './components/connections-page-skeleton'
 import { getConnectionsPageDataCached } from './data'
 
 type Locale = 'en' | 'fr'
 
+/** Opt this route into Instant Navigations validation (Cache Components). */
+export const instant = true
+
 export async function generateMetadata(props: {
   params: Promise<{ locale: Locale }>
 }): Promise<Metadata> {
-  const { locale } = await props.params
+  'use cache'
+  cacheLife('max')
+
+  const locale = (await getCachedLocale(props.params)) as Locale
   const copy = getConnectionsMetadataCopy(locale)
-  const origin = getRequestOrigin(await headers())
+  const origin = getSiteOrigin()
   const imageUrl = siteUrl(`/${locale}/dashboard/connections/opengraph-image`, origin)
 
   return {
@@ -45,6 +53,8 @@ export async function generateMetadata(props: {
 }
 
 async function ConnectionsPageContent() {
+  // Request-time auth/DB — keep out of the prerender shell.
+  await connection()
   const initialData = await getConnectionsPageDataCached()
   return <ConnectionsPageClient initialData={initialData} />
 }

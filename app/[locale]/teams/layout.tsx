@@ -1,8 +1,9 @@
-
 import { ThemeProvider } from "@/context/theme-provider";
 import { Metadata } from 'next';
+import { cacheLife } from 'next/cache';
 import { I18nProviderClient } from "@/locales/client";
 import { truncateForSocialDescription } from "@/lib/og/site-metadata";
+import { getCachedLocale } from "@/lib/locale-params";
 
 type Locale = 'en' | 'fr';
 
@@ -19,13 +20,16 @@ const TEAM_DESCRIPTIONS: Record<Locale, string> = {
 };
 
 export async function generateMetadata(props: { params: Promise<{ locale: Locale }> }): Promise<Metadata> {
-  const params = await props.params;
+  "use cache";
+  cacheLife("max");
+
+  const locale = (await getCachedLocale(props.params)) as Locale;
   const description = truncateForSocialDescription(
-    TEAM_DESCRIPTIONS[params.locale] || TEAM_DESCRIPTIONS.en,
+    TEAM_DESCRIPTIONS[locale] || TEAM_DESCRIPTIONS.en,
   );
 
   return {
-    title: TEAM_TITLES[params.locale] || TEAM_TITLES.en,
+    title: TEAM_TITLES[locale] || TEAM_TITLES.en,
     description,
   };
 }
@@ -37,7 +41,7 @@ export default async function TeamLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  const { locale } = await params;
+  const locale = await getCachedLocale(params);
 
   return (
     <I18nProviderClient locale={locale}>
