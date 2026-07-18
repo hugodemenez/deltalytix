@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +10,10 @@ import {
 import { GitBranchIcon, UsersIcon, BookOpenIcon } from "lucide-react";
 import Link from "next/link";
 import { getCurrentLocale, getI18n } from "@/locales/server";
-import { CachedGithubData } from "./cached-github-data";
+import {
+  CachedGithubData,
+  GithubCardSkeleton,
+} from "./cached-github-data";
 import { GITHUB_REPO_URL } from "@/lib/github-repo";
 import { LANDING_SECTION_CONTAINER_CLASSNAME } from "./landing-section-container";
 
@@ -126,10 +129,12 @@ export default async function OpenSource() {
             </Accordion>
           </div>
           <div className="lg:basis-1/2">
-            <CachedGithubData
-              starLabel={t("landing.openSource.starItToo")}
-              locale={locale}
-            />
+            <Suspense fallback={<GithubCardSkeleton />}>
+              <CachedGithubData
+                starLabel={t("landing.openSource.starItToo")}
+                locale={locale}
+              />
+            </Suspense>
           </div>
         </div>
       </Card>

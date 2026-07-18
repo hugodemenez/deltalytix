@@ -1,46 +1,16 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StarIcon } from "lucide-react";
 import { ContributionGraph } from "./contribution-graph";
+import {
+  GITHUB_DATA_CACHE_TAG,
+  loadGithubData,
+  type GithubData,
+} from "../actions/github-data";
+import { cacheLife, cacheTag } from "next/cache";
+import { connection } from "next/server";
 import { GITHUB_REPO_NAME, GITHUB_REPO_URL } from "@/lib/github-repo";
-import type { ContributionGraphData } from "@/lib/contribution-graph";
-
-type GithubStatsPayload = {
-  repoData: {
-    name: string;
-    description: string;
-    language: string;
-    license: { spdx_id: string } | null;
-    stargazers_count: number;
-    forks_count: number;
-    updated_at: string;
-    created_at: string;
-  };
-  githubStats: {
-    repository: {
-      stargazers: { totalCount: number };
-      forks: { totalCount: number };
-      commits: { history: { totalCount: number } };
-    };
-    contributionGraph: ContributionGraphData;
-  };
-  stars: number;
-  lastCommit: {
-    commit: {
-      committer: {
-        date: string;
-      };
-    };
-  };
-  changelogEntries: Array<{
-    slug: string;
-    title: string;
-    date: string;
-  }>;
-};
+import { getAllPostMetadata } from "@/lib/mdx";
 
 const formatTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
@@ -56,7 +26,7 @@ const formatTimeAgo = (dateString: string) => {
   return `${seconds} second${seconds !== 1 ? "s" : ""} ago`;
 };
 
-function GithubCardSkeleton() {
+export function GithubCardSkeleton() {
   return (
     <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
       <CardHeader className="border-b border-border pb-3 md:pb-4 mb-3 md:mb-4">
@@ -87,7 +57,14 @@ function GithubStatsCard({
   lastCommit,
   starLabel,
   changelogEntries,
-}: GithubStatsPayload & { starLabel: string }) {
+}: GithubData & {
+  starLabel: string;
+  changelogEntries: Array<{
+    slug: string;
+    title: string;
+    date: string;
+  }>;
+}) {
   return (
     <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
       <CardHeader className="mb-3 flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border pb-3 md:mb-4 md:pb-4">
@@ -151,52 +128,70 @@ function GithubStatsFallback({ starLabel }: { starLabel: string }) {
 }
 
 /**
- * Load GitHub stats after paint via `/api/github-stats`.
+ * Per-locale cached GitHub card UI (Cache Components).
  *
- * Under Cache Components, a server `await connection()` + Suspense hole kept
- * the HTML stream open (~2.5s) even when the inner `"use cache"` was warm.
- * Client fetch keeps the document fully static while the card streams in.
+ * Same shape as `CachedConnectionsPage`:
+ * - Cold `'use cache'` → parent Suspense skeleton
+ * - Warm `'use cache'` → card included without a request-time dynamic hole
+ *
+ * `starLabel` / `locale` are passed in from outside so request-bound i18n
+ * stays out of the cache scope.
  */
-export function CachedGithubData({
+async function CachedGithubCard({
   starLabel,
   locale,
 }: {
   starLabel: string;
   locale: string;
 }) {
-  const [data, setData] = useState<GithubStatsPayload | null>(null);
-  const [failed, setFailed] = useState(false);
+  "use cache";
+  cacheTag(GITHUB_DATA_CACHE_TAG);
+  cacheLife("weeks");
 
-  useEffect(() => {
-    let cancelled = false;
-    const controller = new AbortController();
+  try {
+    const [githubData, posts] = await Promise.all([
+      loadGithubData(),
+      getAllPostMetadata(locale),
+    ]);
 
-    fetch(`/api/github-stats?locale=${encodeURIComponent(locale)}`, {
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`GitHub stats HTTP ${response.status}`);
-        }
-        return (await response.json()) as GithubStatsPayload;
-      })
-      .then((payload) => {
-        if (!cancelled) setData(payload);
-      })
-      .catch((error: unknown) => {
-        if (cancelled || controller.signal.aborted) return;
-        console.error("[CachedGithubData] Failed to load GitHub stats:", error);
-        setFailed(true);
-      });
+    const changelogEntries = posts
+      .filter((post) => post.meta.status === "completed")
+      .map((post) => ({
+        slug: post.slug,
+        title: String(post.meta.title),
+        date: String(post.meta.date),
+      }));
 
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [locale]);
+    return (
+      <GithubStatsCard
+        {...githubData}
+        starLabel={starLabel}
+        changelogEntries={changelogEntries}
+      />
+    );
+  } catch (error) {
+    console.error("[CachedGithubData] Failed to load GitHub stats:", error);
+    return <GithubStatsFallback starLabel={starLabel} />;
+  }
+}
 
-  if (failed) return <GithubStatsFallback starLabel={starLabel} />;
-  if (!data) return <GithubCardSkeleton />;
+/**
+ * Landing GitHub card entry (mirrors Connections `ConnectionsPageContent`).
+ *
+ * `connection()` runs only during `next build` so static generation does not
+ * paginate GitHub inside the 60s budget. At runtime we never call it — warm
+ * `'use cache'` is served without holding the HTML stream open.
+ */
+export async function CachedGithubData({
+  starLabel,
+  locale,
+}: {
+  starLabel: string;
+  locale: string;
+}) {
+  if (process.env.NEXT_PHASE === "phase-production-build") {
+    await connection();
+  }
 
-  return <GithubStatsCard {...data} starLabel={starLabel} />;
+  return <CachedGithubCard starLabel={starLabel} locale={locale} />;
 }
