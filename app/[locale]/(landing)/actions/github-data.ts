@@ -1,4 +1,5 @@
 import { Octokit } from '@octokit/rest'
+import { cacheLife, cacheTag } from 'next/cache'
 import { GITHUB_REPO_NAME, GITHUB_REPO_OWNER } from '@/lib/github-repo'
 import {
   buildContributionGraphData,
@@ -6,6 +7,7 @@ import {
   type CommitRecord,
   type ContributionGraphData,
 } from '@/lib/contribution-graph'
+import { getAllPostMetadata } from '@/lib/mdx'
 
 const REQUEST_TIMEOUT_MS = 8000
 const MAX_RETRIES = 2
@@ -62,6 +64,14 @@ export interface GithubData {
       }
     }
   }
+}
+
+export type GithubStatsPayload = GithubData & {
+  changelogEntries: Array<{
+    slug: string
+    title: string
+    date: string
+  }>
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -234,70 +244,93 @@ function getLatestCommitDate(commits: GithubCommit[]): string {
   )
 }
 
-/**
- * Uncached GitHub network load (same role as `loadConnectionsPageDataForUser`).
- * Caching lives on the caller via `'use cache'` + `cacheLife` / `cacheTag`.
- */
+/** Uncached GitHub network load. */
 export async function loadGithubData(): Promise<GithubData> {
-  try {
-    const [repoResponse, codeFrequency] = await Promise.all([
-      withRetry('repo data', () =>
-        octokit.repos.get({
-          owner: GITHUB_REPO_OWNER,
-          repo: GITHUB_REPO_NAME,
-        }),
-      ),
-      fetchCodeFrequency(),
-    ])
+  const [repoResponse, codeFrequency] = await Promise.all([
+    withRetry('repo data', () =>
+      octokit.repos.get({
+        owner: GITHUB_REPO_OWNER,
+        repo: GITHUB_REPO_NAME,
+      }),
+    ),
+    fetchCodeFrequency(),
+  ])
 
-    const repoData = repoResponse.data
-    const today = new Date()
-    const createdAt = new Date(repoData.created_at)
-    const firstYear = createdAt.getFullYear()
-    const lastYear = today.getFullYear()
+  const repoData = repoResponse.data
+  const today = new Date()
+  const createdAt = new Date(repoData.created_at)
+  const firstYear = createdAt.getFullYear()
+  const lastYear = today.getFullYear()
 
-    const allCommits = await fetchTrackedBranchCommits(createdAt)
-    const commitRecords = buildCommitRecords(allCommits)
-    const contributionGraph = buildContributionGraphData(
-      commitRecords,
-      firstYear,
-      lastYear,
-      today,
-      codeFrequency,
-    )
+  const allCommits = await fetchTrackedBranchCommits(createdAt)
+  const commitRecords = buildCommitRecords(allCommits)
+  const contributionGraph = buildContributionGraphData(
+    commitRecords,
+    firstYear,
+    lastYear,
+    today,
+    codeFrequency,
+  )
 
-    return {
-      repoData: {
-        name: repoData.name,
-        description: repoData.description || '',
-        language: repoData.language || 'TypeScript',
-        license: repoData.license?.spdx_id
-          ? { spdx_id: repoData.license.spdx_id }
-          : null,
-        stargazers_count: repoData.stargazers_count,
-        forks_count: repoData.forks_count,
-        updated_at: repoData.updated_at,
-        created_at: repoData.created_at,
+  return {
+    repoData: {
+      name: repoData.name,
+      description: repoData.description || '',
+      language: repoData.language || 'TypeScript',
+      license: repoData.license?.spdx_id
+        ? { spdx_id: repoData.license.spdx_id }
+        : null,
+      stargazers_count: repoData.stargazers_count,
+      forks_count: repoData.forks_count,
+      updated_at: repoData.updated_at,
+      created_at: repoData.created_at,
+    },
+    githubStats: {
+      repository: {
+        stargazers: { totalCount: repoData.stargazers_count },
+        forks: { totalCount: repoData.forks_count },
+        commits: { history: { totalCount: allCommits.length } },
       },
-      githubStats: {
-        repository: {
-          stargazers: { totalCount: repoData.stargazers_count },
-          forks: { totalCount: repoData.forks_count },
-          commits: { history: { totalCount: allCommits.length } },
-        },
-        contributionGraph,
-      },
-      stars: repoData.stargazers_count,
-      lastCommit: {
-        commit: {
-          committer: {
-            date: getLatestCommitDate(allCommits),
-          },
+      contributionGraph,
+    },
+    stars: repoData.stargazers_count,
+    lastCommit: {
+      commit: {
+        committer: {
+          date: getLatestCommitDate(allCommits),
         },
       },
-    }
-  } catch (error) {
-    console.error('Error fetching GitHub data:', error)
-    throw error
+    },
+  }
+}
+
+/**
+ * Cached landing GitHub card payload (Cache Components).
+ * Served from `/api/github-stats` so homepage HTML never waits on GitHub.
+ * `locale` is part of the cache key — pass it from outside the cache scope.
+ */
+export async function getCachedGithubStatsPayload(
+  locale: string,
+): Promise<GithubStatsPayload> {
+  'use cache'
+  cacheTag(GITHUB_DATA_CACHE_TAG)
+  cacheLife('days') // revalidate daily for near-daily commits
+
+  const [githubData, posts] = await Promise.all([
+    loadGithubData(),
+    getAllPostMetadata(locale),
+  ])
+
+  const changelogEntries = posts
+    .filter((post) => post.meta.status === 'completed')
+    .map((post) => ({
+      slug: post.slug,
+      title: String(post.meta.title),
+      date: String(post.meta.date),
+    }))
+
+  return {
+    ...githubData,
+    changelogEntries,
   }
 }
