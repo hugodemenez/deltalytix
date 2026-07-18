@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { ThemeProvider } from "@/context/theme-provider";
 import { DataProvider } from "@/context/data-provider";
 import Modals from "@/components/modals";
@@ -14,6 +15,19 @@ import { BetaConnectionFlowInvite } from "@/components/beta-connection-flow-invi
 import { PostHogIdentity } from "@/components/posthog-identity";
 import { createClient } from "@/server/auth";
 
+async function DashboardPostHogIdentity({ locale }: { locale: string }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user?.id || !user.email) return null;
+
+  return (
+    <PostHogIdentity userId={user.id} email={user.email} language={locale} />
+  );
+}
+
 export default async function RootLayout({
   children,
   params,
@@ -22,32 +36,30 @@ export default async function RootLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
 
   return (
     <I18nProviderClient locale={locale}>
       <ConsentBanner />
-      {user?.id && user.email && (
-        <PostHogIdentity userId={user.id} email={user.email} language={locale} />
-      )}
+      <Suspense fallback={null}>
+        <DashboardPostHogIdentity locale={locale} />
+      </Suspense>
       <TooltipProvider>
-      <ThemeProvider>
-        <DataProvider>
-          <RithmicSyncContextProvider>
-            <TradovateSyncContextProvider>
-              <DxFeedSyncContextProvider>
-                <RithmicSyncNotifications />
-                <Toaster />
-                <Navbar />
-                {children}
-                <Modals />
-                <BetaConnectionFlowInvite />
-              </DxFeedSyncContextProvider>
-            </TradovateSyncContextProvider>
-          </RithmicSyncContextProvider>
-        </DataProvider>
-      </ThemeProvider>
+        <ThemeProvider>
+          <DataProvider>
+            <RithmicSyncContextProvider>
+              <TradovateSyncContextProvider>
+                <DxFeedSyncContextProvider>
+                  <RithmicSyncNotifications />
+                  <Toaster />
+                  <Navbar />
+                  {children}
+                  <Modals />
+                  <BetaConnectionFlowInvite />
+                </DxFeedSyncContextProvider>
+              </TradovateSyncContextProvider>
+            </RithmicSyncContextProvider>
+          </DataProvider>
+        </ThemeProvider>
       </TooltipProvider>
     </I18nProviderClient>
   );

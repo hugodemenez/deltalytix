@@ -873,9 +873,6 @@ export function ConnectionsPageClient({
     []
   )
 
-  // Full-page skeleton only when we have nothing useful to show yet.
-  const showPageSkeleton = loading && !data && !oauthPending
-
   const load = useCallback(async (opts?: { quiet?: boolean }) => {
     try {
       const next = await getConnectionsPageData()
@@ -1317,69 +1314,58 @@ export function ConnectionsPageClient({
           </section>
         )}
 
-        {showPageSkeleton ? (
-          <div className="space-y-10" aria-hidden>
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="space-y-3">
-                <div className="h-7 w-40 animate-pulse rounded-sm bg-black/10 dark:bg-white/10" />
-                <div className="h-24 animate-pulse rounded-sm bg-black/5 dark:bg-white/5" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-14 md:space-y-16">
-            {activeSections.map((section) => (
-              <TypeSection
-                key={section.service}
-                service={section.service}
-                label={t(section.labelKey as 'connections.sections.rithmic')}
-                connections={byService.get(section.service) ?? []}
-                onChanged={() => void load()}
-                oauthPending={
-                  section.service === 'tradovate' ? oauthPending : null
-                }
-              />
-            ))}
+        <div className="space-y-14 md:space-y-16">
+          {activeSections.map((section) => (
+            <TypeSection
+              key={section.service}
+              service={section.service}
+              label={t(section.labelKey as 'connections.sections.rithmic')}
+              connections={byService.get(section.service) ?? []}
+              onChanged={() => void load()}
+              oauthPending={
+                section.service === 'tradovate' ? oauthPending : null
+              }
+            />
+          ))}
 
-            {!loading && activeSections.length === 0 && !oauthPending && (
-              <p className="border-y border-black/10 py-10 text-sm text-black/45 dark:border-white/10 dark:text-white/45">
-                {t('connections.noConnectionsYet')}
+          {!loading && activeSections.length === 0 && !oauthPending && (
+            <p className="border-y border-black/10 py-10 text-sm text-black/45 dark:border-white/10 dark:text-white/45">
+              {t('connections.noConnectionsYet')}
+            </p>
+          )}
+
+          {(data?.standaloneAccounts.length ?? 0) > 0 && (
+          <section className="space-y-2">
+            <div>
+              <h2 className="text-xl font-normal tracking-tight md:text-2xl">
+                {t('connections.sections.standalone')}
+              </h2>
+              <p className="mt-1 text-sm text-black/55 dark:text-white/55">
+                {t('connections.standaloneHint')}
               </p>
-            )}
-
-            {(data?.standaloneAccounts.length ?? 0) > 0 && (
-            <section className="space-y-2">
-              <div>
-                <h2 className="text-xl font-normal tracking-tight md:text-2xl">
-                  {t('connections.sections.standalone')}
-                </h2>
-                <p className="mt-1 text-sm text-black/55 dark:text-white/55">
-                  {t('connections.standaloneHint')}
-                </p>
-              </div>
-              <ul className="divide-y divide-black/10 border-y border-black/10 dark:divide-white/10 dark:border-white/10">
-                {data!.standaloneAccounts.map((account) => (
-                  <li
-                    key={account.id}
-                    className="flex items-center justify-between gap-4 py-6 md:py-8"
-                  >
-                    <div className="text-xl font-normal tracking-tight md:text-2xl">
-                      {account.number}
-                    </div>
-                    <span className="text-sm text-black/45 dark:text-white/45">
-                      {account.tradeCount === 1
-                      ? t('connections.tradeCount.one', { count: 1 })
-                      : t('connections.tradeCount.other', {
-                          count: account.tradeCount,
-                        })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-            )}
-          </div>
-        )}
+            </div>
+            <ul className="divide-y divide-black/10 border-y border-black/10 dark:divide-white/10 dark:border-white/10">
+              {data!.standaloneAccounts.map((account) => (
+                <li
+                  key={account.id}
+                  className="flex items-center justify-between gap-4 py-6 md:py-8"
+                >
+                  <div className="text-xl font-normal tracking-tight md:text-2xl">
+                    {account.number}
+                  </div>
+                  <span className="text-sm text-black/45 dark:text-white/45">
+                    {account.tradeCount === 1
+                    ? t('connections.tradeCount.one', { count: 1 })
+                    : t('connections.tradeCount.other', {
+                        count: account.tradeCount,
+                      })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+          )}
+        </div>
       </div>
 
       <ConnectServiceModal

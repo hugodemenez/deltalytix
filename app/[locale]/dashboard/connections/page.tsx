@@ -4,9 +4,13 @@ import { Suspense } from 'react'
 import { getConnectionsMetadataCopy } from '@/lib/og/site-metadata'
 import { getRequestOrigin, siteUrl } from '@/lib/site-url'
 import { ConnectionsPageClient } from './components/connections-page-client'
+import { ConnectionsPageSkeleton } from './components/connections-page-skeleton'
 import { getConnectionsPageDataCached } from './data'
 
 type Locale = 'en' | 'fr'
+
+/** Opt this route into Instant Navigations validation (Cache Components). */
+export const instant = true
 
 export async function generateMetadata(props: {
   params: Promise<{ locale: Locale }>
@@ -43,12 +47,19 @@ export async function generateMetadata(props: {
   }
 }
 
-export default async function ConnectionsPage() {
+async function ConnectionsPageContent() {
   const initialData = await getConnectionsPageDataCached()
+  return <ConnectionsPageClient initialData={initialData} />
+}
 
+/**
+ * Return the shell immediately; stream connection data behind Suspense so
+ * client navigations (e.g. navbar → Connections) feel instant.
+ */
+export default function ConnectionsPage() {
   return (
-    <Suspense fallback={null}>
-      <ConnectionsPageClient initialData={initialData} />
+    <Suspense fallback={<ConnectionsPageSkeleton />}>
+      <ConnectionsPageContent />
     </Suspense>
   )
 }
