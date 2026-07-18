@@ -41,7 +41,6 @@ import { platforms, type PlatformConfig } from '@/app/[locale]/dashboard/compone
 import {
   captureConnectionAddClicked,
   captureConnectionCreated,
-  startConnectionsPageDwellTracking,
 } from '@/lib/connection-analytics'
 import { PlatformTutorial } from '@/app/[locale]/dashboard/components/import/components/platform-tutorial'
 import {
@@ -873,9 +872,6 @@ export function ConnectionsPageClient({
     () => platforms.filter((p) => p.category !== 'Direct Account Sync'),
     []
   )
-
-  // Cumulative visible dwell survives OAuth leave/return via sessionStorage.
-  useEffect(() => startConnectionsPageDwellTracking(), [])
 
   // Full-page skeleton only when we have nothing useful to show yet.
   const showPageSkeleton = loading && !data && !oauthPending
