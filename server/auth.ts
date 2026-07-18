@@ -14,34 +14,14 @@ import {
 import { createLocalDashboardBypassAuthStub } from '@/lib/local-dashboard-bypass-client'
 import { ensureLocalDashboardUserInDatabase } from '@/server/local-dashboard-bootstrap'
 import { capturePostHogEvent } from '@/lib/posthog-server'
+import { getRequestOrigin } from '@/lib/site-url'
 
 export async function getWebsiteURL() {
-  const requestHeaders = await headers()
-  const host = (
-    requestHeaders.get('x-forwarded-host') ??
-    requestHeaders.get('host')
-  )?.split(',')[0]?.trim()
-
-  if (host) {
-    const forwardedProtocol = requestHeaders
-      .get('x-forwarded-proto')
-      ?.split(',')[0]
-      ?.trim()
-    const protocol =
-      forwardedProtocol ??
-      (host.startsWith('localhost') || host.startsWith('127.0.0.1')
-        ? 'http'
-        : 'https')
-
-    return `${protocol}://${host}/`
-  }
-
-  let url =
-    process?.env?.NEXT_PUBLIC_SITE_URL ??
-    process?.env?.NEXT_PUBLIC_VERCEL_URL ??
-    'http://localhost:3000/'
-  url = url.startsWith('http') ? url : `https://${url}`
-  return url.endsWith('/') ? url : `${url}/`
+  // Reuse the shared trusted-host allowlist (*.deltalytix.app, *.vercel.app,
+  // configured env origins, localhost in non-prod) so preview OAuth callbacks
+  // stay on the deployment the user opened without accepting arbitrary Host headers.
+  const origin = getRequestOrigin(await headers())
+  return origin.endsWith('/') ? origin : `${origin}/`
 }
 
 /**
