@@ -22,7 +22,11 @@ const buildWorkers =
     : defaultBuildWorkers;
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Standalone is for Docker/self-host (`Dockerfile.bun` copies `.next/standalone`).
+  // On Vercel + Turbopack (Next 16.3+), the adapter skips `next-server.js.nft.json`,
+  // so `output: "standalone"` crashes finalize with ENOENT. Vercel ignores standalone
+  // output anyway.
+  ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
   // Hide the Next.js dev indicator during changelog media capture (see lib/agent-skills/changelog-media.md).
   ...(process.env.CHANGELOG_MEDIA_CAPTURE === '1' ? { devIndicators: false as const } : {}),
   // playwright-core reads browsers.json at import time; keep it external + traced for cron scraping.
