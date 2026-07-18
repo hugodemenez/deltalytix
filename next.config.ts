@@ -7,7 +7,11 @@ const detectedBuildWorkers =
   typeof os.availableParallelism === 'function'
     ? os.availableParallelism()
     : os.cpus().length;
-const defaultBuildWorkers = Math.max(4, detectedBuildWorkers * 2);
+// On Vercel (4-core build machines), oversubscribing workers (* 2) causes
+// static-generation thrashing and 60s per-page timeouts. Match core count.
+const defaultBuildWorkers = process.env.VERCEL
+  ? Math.max(1, detectedBuildWorkers)
+  : Math.max(4, detectedBuildWorkers * 2);
 const configuredBuildWorkers = Number.parseInt(
   process.env.NEXT_BUILD_WORKERS ?? '',
   10
