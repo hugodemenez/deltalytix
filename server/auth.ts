@@ -16,15 +16,32 @@ import { ensureLocalDashboardUserInDatabase } from '@/server/local-dashboard-boo
 import { capturePostHogEvent } from '@/lib/posthog-server'
 
 export async function getWebsiteURL() {
+  const requestHeaders = await headers()
+  const host = (
+    requestHeaders.get('x-forwarded-host') ??
+    requestHeaders.get('host')
+  )?.split(',')[0]?.trim()
+
+  if (host) {
+    const forwardedProtocol = requestHeaders
+      .get('x-forwarded-proto')
+      ?.split(',')[0]
+      ?.trim()
+    const protocol =
+      forwardedProtocol ??
+      (host.startsWith('localhost') || host.startsWith('127.0.0.1')
+        ? 'http'
+        : 'https')
+
+    return `${protocol}://${host}/`
+  }
+
   let url =
-    process?.env?.NEXT_PUBLIC_SITE_URL ?? // Set this to your site URL in production env.
-    process?.env?.NEXT_PUBLIC_VERCEL_URL ?? // Automatically set by Vercel.
+    process?.env?.NEXT_PUBLIC_SITE_URL ??
+    process?.env?.NEXT_PUBLIC_VERCEL_URL ??
     'http://localhost:3000/'
-  // Make sure to include `https://` when not localhost.
   url = url.startsWith('http') ? url : `https://${url}`
-  // Make sure to include a trailing `/`.
-  url = url.endsWith('/') ? url : `${url}/`
-  return url
+  return url.endsWith('/') ? url : `${url}/`
 }
 
 /**
