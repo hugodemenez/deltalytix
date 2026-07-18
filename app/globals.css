@@ -453,21 +453,18 @@
 
 @layer utilities {
   /*
-   * Safari 26 samples fixed elements at initial render to tint its top chrome.
-   * Use the system media query here so the correct color is available before
-   * the client theme script adds the light/dark class.
+   * Safari samples a fixed top-edge element to tint its browser chrome.
+   * Prefer the active --background token so dashboard, landing, and other
+   * shells stay in sync. Fall back via prefers-color-scheme before the
+   * client theme script adds the light/dark class.
    */
-  .landing-safari-theme-sampler {
-    background-color: hsl(0 0% 96.1%);
-  }
-
-  .dark .landing-safari-theme-sampler {
-    background-color: hsl(0 0% 6.7%);
+  .safari-theme-sampler {
+    background-color: hsl(var(--background));
   }
 
   @media (prefers-color-scheme: dark) {
-    :root:not(.light) .landing-safari-theme-sampler {
-      background-color: hsl(0 0% 6.7%);
+    :root:not(.light) .safari-theme-sampler {
+      background-color: hsl(0 0% calc(100% - var(--theme-intensity, 100%)));
     }
   }
 
@@ -476,7 +473,7 @@
    * browser-chrome sampler. Animated overlays are not reliably re-sampled
    * when the theme changes.
    */
-  .landing-safari-theme-sampler {
+  .safari-theme-sampler {
     position: fixed;
     top: 0;
     left: 0;
