@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useI18n } from '@/locales/client'
+import { WidgetToolbarHostProvider } from './widget-toolbar-host'
 
 /**
  * Instant shell chrome for Dashboard home: real tab labels + layout math.
@@ -137,7 +138,9 @@ export function DashboardHomeChrome({ children }: { children: ReactNode }) {
           </TabsList>
         </div>
 
-        {children}
+        <WidgetToolbarHostProvider active={tab === 'widgets'}>
+          {children}
+        </WidgetToolbarHostProvider>
       </Tabs>
     </main>
   )
