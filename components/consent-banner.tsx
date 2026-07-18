@@ -27,9 +27,35 @@ import posthog from "posthog-js"
 const ANALYTICS_CONSENT_COOKIE = "deltalytix_analytics_consent"
 const CONSENT_EVENT = "deltalytix:analytics-consent"
 
+function isDeltalytixHost() {
+  const host = window.location.hostname
+  return host === "deltalytix.app" || host.endsWith(".deltalytix.app")
+}
+
+function getSharedAnalyticsConsent() {
+  const cookie = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith(`${ANALYTICS_CONSENT_COOKIE}=`))
+
+  if (!cookie) return null
+
+  const value = cookie.split("=")[1]
+  if (value === "granted") return true
+  if (value === "denied") return false
+  return null
+}
+
 function syncPostHogConsent(analyticsEnabled: boolean) {
   const secure = window.location.protocol === "https:" ? "; Secure" : ""
-  document.cookie = `${ANALYTICS_CONSENT_COOKIE}=${analyticsEnabled ? "granted" : "denied"}; Max-Age=31536000; Path=/; SameSite=Lax${secure}`
+  const value = analyticsEnabled ? "granted" : "denied"
+  const attributes = `Max-Age=31536000; Path=/; SameSite=Lax${secure}`
+
+  // Keep the current-origin cookie in sync, then share the same choice with
+  // production and beta. This avoids asking twice or silently opting beta out.
+  document.cookie = `${ANALYTICS_CONSENT_COOKIE}=${value}; ${attributes}`
+  if (isDeltalytixHost()) {
+    document.cookie = `${ANALYTICS_CONSENT_COOKIE}=${value}; ${attributes}; Domain=.deltalytix.app`
+  }
 
   if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return
 
@@ -79,24 +105,59 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
   const isDesktop = useMediaQuery("(min-width: 768px)")
 
   useEffect(() => {
+    const sharedAnalyticsConsent = getSharedAnalyticsConsent()
     const hasConsent = localStorage.getItem("cookieConsent")
-    if (!hasConsent) {
-      setIsVisible(true)
-    } else {
+
+    // Parent-domain cookie is the cross-origin source of truth. Prefer it over
+    // a stale origin-local choice so beta/prod cannot overwrite each other.
+    if (sharedAnalyticsConsent !== null) {
+      let settingsToApply: ConsentSettings = {
+        analytics_storage: sharedAnalyticsConsent,
+        ad_storage: false,
+        ad_user_data: false,
+        ad_personalization: false,
+        functionality_storage: true,
+        personalization_storage: false,
+        security_storage: true,
+      }
+
+      if (hasConsent) {
+        try {
+          settingsToApply = {
+            ...(JSON.parse(hasConsent) as ConsentSettings),
+            analytics_storage: sharedAnalyticsConsent,
+          }
+        } catch {
+          localStorage.removeItem("cookieConsent")
+        }
+      }
+
+      localStorage.setItem("cookieConsent", JSON.stringify(settingsToApply))
+      setSettings(settingsToApply)
+      syncPostHogConsent(sharedAnalyticsConsent)
+    } else if (hasConsent) {
       try {
         const savedSettings = JSON.parse(hasConsent) as ConsentSettings
         setSettings(savedSettings)
+        // Migrates existing origin-local consent onto the shared Domain cookie.
         syncPostHogConsent(savedSettings.analytics_storage)
       } catch {
         localStorage.removeItem("cookieConsent")
         setIsVisible(true)
       }
+    } else {
+      setIsVisible(true)
     }
 
     // Add keyboard shortcut for dev mode (Cmd/Ctrl + Shift + K)
     const handleKeyPress = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'K') {
         localStorage.removeItem("cookieConsent")
+        const secure = window.location.protocol === "https:" ? "; Secure" : ""
+        document.cookie = `${ANALYTICS_CONSENT_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax${secure}`
+        if (isDeltalytixHost()) {
+          document.cookie = `${ANALYTICS_CONSENT_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax${secure}; Domain=.deltalytix.app`
+        }
         setIsVisible(true)
       }
     }

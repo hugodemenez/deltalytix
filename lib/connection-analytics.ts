@@ -1,13 +1,13 @@
-import posthog, { DisplaySurveyType } from "posthog-js";
+import posthog from "posthog-js";
 
-/** PostHog survey: Beta connection flow feedback */
-export const CONNECTION_FEEDBACK_SURVEY_ID =
-  "019f7215-397f-0000-90b4-c32b914ff31e";
+/** Fired once per tab session after cumulative visible time on Connections reaches the threshold. */
+export const CONNECTIONS_PAGE_DWELL_THRESHOLD_EVENT =
+  "connections_page_dwell_threshold";
 
-const BETA_CONNECTION_FLOW_INVITE_FLAG = "beta-connection-flow-invite";
-const SURVEY_SHOWN_STORAGE_KEY = `deltalytix:survey:${CONNECTION_FEEDBACK_SURVEY_ID}:programmatic-shown`;
-
-let surveyDisplayInFlight = false;
+const DWELL_STORAGE_KEY = "deltalytix:connections-page-dwell-ms";
+const DWELL_EVENT_FIRED_KEY = "deltalytix:connections-page-dwell-event-fired";
+const DWELL_THRESHOLD_MS = 180_000;
+const CONSENT_EVENT = "deltalytix:analytics-consent";
 
 function canCapture() {
   if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return false;
@@ -15,84 +15,162 @@ function canCapture() {
   return !posthog.has_opted_out_capturing();
 }
 
-function wasProgrammaticSurveyShown() {
+function readDwellMs(): number {
   try {
-    return localStorage.getItem(SURVEY_SHOWN_STORAGE_KEY) === "1";
+    const raw = sessionStorage.getItem(DWELL_STORAGE_KEY);
+    const value = raw ? Number(raw) : 0;
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeDwellMs(ms: number) {
+  try {
+    sessionStorage.setItem(DWELL_STORAGE_KEY, String(Math.floor(ms)));
+  } catch {
+    // sessionStorage may be unavailable
+  }
+}
+
+function wasDwellEventFired(): boolean {
+  try {
+    return sessionStorage.getItem(DWELL_EVENT_FIRED_KEY) === "1";
   } catch {
     return false;
   }
 }
 
-function markProgrammaticSurveyShown() {
+function markDwellEventFired() {
   try {
-    localStorage.setItem(SURVEY_SHOWN_STORAGE_KEY, "1");
+    sessionStorage.setItem(DWELL_EVENT_FIRED_KEY, "1");
   } catch {
-    // Ignore storage failures; PostHog "once" schedule is still a backstop.
+    // sessionStorage may be unavailable
   }
 }
 
-function displayConnectionFeedbackSurvey() {
-  if (surveyDisplayInFlight || wasProgrammaticSurveyShown()) return;
-  if (posthog.isFeatureEnabled(BETA_CONNECTION_FLOW_INVITE_FLAG) !== true) return;
+function captureDwellThreshold(totalMs: number) {
+  if (wasDwellEventFired()) return;
+  if (!canCapture()) return;
 
-  surveyDisplayInFlight = true;
-  try {
-    posthog.displaySurvey(CONNECTION_FEEDBACK_SURVEY_ID, {
-      displayType: DisplaySurveyType.Popover,
-      // Event-trigger conditions are unreliable on OAuth remounts; we already
-      // gated on the invite flag and a successful connection_created capture.
-      ignoreConditions: true,
-      ignoreDelay: true,
-    });
-    markProgrammaticSurveyShown();
-  } catch (error) {
-    surveyDisplayInFlight = false;
-    console.warn("[connection-analytics] displaySurvey failed", error);
-  }
+  markDwellEventFired();
+  posthog.capture(CONNECTIONS_PAGE_DWELL_THRESHOLD_EVENT, {
+    source: "connections_page",
+    dwell_ms: Math.floor(totalMs),
+    threshold_ms: DWELL_THRESHOLD_MS,
+  });
 }
 
 /**
- * Event-triggered PostHog surveys often miss OAuth return flows: the page
- * remounts, `connection_created` fires within a few seconds, and the surveys
- * extension may not have registered its event listeners yet.
- *
- * Display the feedback survey programmatically after a successful connect,
- * gated by the same invite flag.
+ * Accumulates visible time on the Connections page in sessionStorage so OAuth
+ * leave/return does not reset progress. Fires
+ * {@link CONNECTIONS_PAGE_DWELL_THRESHOLD_EVENT} once the tab has spent
+ * {@link DWELL_THRESHOLD_MS} visible milliseconds on the page.
  */
-export function showConnectionFeedbackSurvey() {
-  if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return;
-  if (typeof window === "undefined") return;
-  if (wasProgrammaticSurveyShown()) return;
+export function startConnectionsPageDwellTracking(): () => void {
+  if (typeof window === "undefined") return () => {};
 
-  const tryShow = () => {
-    if (surveyDisplayInFlight || wasProgrammaticSurveyShown()) return;
-    if (posthog.isFeatureEnabled(BETA_CONNECTION_FLOW_INVITE_FLAG) !== true) return;
+  // Already done this tab session — nothing to track.
+  if (wasDwellEventFired()) return () => {};
 
-    posthog.getSurveys((surveys) => {
-      if (surveyDisplayInFlight || wasProgrammaticSurveyShown()) return;
-      if (!surveys?.some((survey) => survey.id === CONNECTION_FEEDBACK_SURVEY_ID)) {
-        // Force reload once if the survey list is still empty/stale.
-        posthog.getSurveys((reloaded) => {
-          if (reloaded?.some((survey) => survey.id === CONNECTION_FEEDBACK_SURVEY_ID)) {
-            displayConnectionFeedbackSurvey();
-          }
-        }, true);
-        return;
-      }
-      displayConnectionFeedbackSurvey();
-    }, true);
+  let segmentStart: number | null =
+    document.visibilityState === "visible" ? Date.now() : null;
+  let stopped = false;
+  let pendingFireTimer: number | null = null;
+  let intervalId: number | null = null;
+
+  const stopTracking = () => {
+    if (stopped) return;
+    stopped = true;
+    segmentStart = null;
+    if (pendingFireTimer != null) {
+      window.clearTimeout(pendingFireTimer);
+      pendingFireTimer = null;
+    }
+    if (intervalId != null) {
+      window.clearInterval(intervalId);
+      intervalId = null;
+    }
+    document.removeEventListener("visibilitychange", onVisibility);
+    window.removeEventListener("pagehide", onPageHide);
+    window.removeEventListener(CONSENT_EVENT, onConsent);
   };
 
-  // Flags + surveys both load async after OAuth remount.
-  const unsubscribe = posthog.onFeatureFlags(() => {
-    tryShow();
-  });
-  tryShow();
-  window.setTimeout(tryShow, 1500);
-  window.setTimeout(() => {
-    tryShow();
-    unsubscribe?.();
-  }, 4000);
+  const accumulate = (endSegment = false) => {
+    if (segmentStart == null) return readDwellMs();
+    const now = Date.now();
+    const elapsed = now - segmentStart;
+    segmentStart = endSegment || stopped ? null : now;
+    // Cap at the threshold — no need to keep growing sessionStorage after that.
+    const total = Math.min(
+      DWELL_THRESHOLD_MS,
+      readDwellMs() + Math.max(0, elapsed)
+    );
+    writeDwellMs(total);
+    return total;
+  };
+
+  const maybeFire = (opts?: { defer?: boolean }) => {
+    if (stopped || wasDwellEventFired()) {
+      stopTracking();
+      return;
+    }
+
+    const total = accumulate();
+    if (total < DWELL_THRESHOLD_MS) return;
+
+    const finish = () => {
+      captureDwellThreshold(readDwellMs());
+      // Stop once fired, or keep waiting for consent if capture was blocked.
+      if (wasDwellEventFired()) {
+        stopTracking();
+      }
+    };
+
+    if (opts?.defer) {
+      // After OAuth remount, give PostHog surveys time to attach event listeners.
+      if (pendingFireTimer != null) return;
+      pendingFireTimer = window.setTimeout(() => {
+        pendingFireTimer = null;
+        finish();
+      }, 1500);
+      return;
+    }
+
+    finish();
+  };
+
+  const onVisibility = () => {
+    if (stopped) return;
+    if (document.visibilityState === "visible") {
+      segmentStart = Date.now();
+      maybeFire({ defer: readDwellMs() >= DWELL_THRESHOLD_MS });
+    } else {
+      accumulate(true);
+    }
+  };
+
+  const onConsent = () => {
+    maybeFire({ defer: true });
+  };
+
+  const onPageHide = () => {
+    accumulate(true);
+  };
+
+  intervalId = window.setInterval(() => {
+    if (document.visibilityState !== "visible" || stopped) return;
+    maybeFire();
+  }, 1000);
+
+  document.addEventListener("visibilitychange", onVisibility);
+  window.addEventListener("pagehide", onPageHide);
+  window.addEventListener(CONSENT_EVENT, onConsent);
+
+  // Resume from prior segments in this tab (e.g. after OAuth return).
+  maybeFire({ defer: readDwellMs() >= DWELL_THRESHOLD_MS });
+
+  return stopTracking;
 }
 
 export function captureConnectionAddClicked(service: string) {
@@ -107,14 +185,10 @@ export function captureConnectionCreated(
   service: string,
   extra?: Record<string, string | boolean | number | null | undefined>
 ) {
-  // Always attempt the feedback survey after a successful connect.
-  // Analytics capture is optional (beta is a separate origin/consent jar).
-  if (canCapture()) {
-    posthog.capture("connection_created", {
-      service,
-      source: "connections_page",
-      ...extra,
-    });
-  }
-  showConnectionFeedbackSurvey();
+  if (!canCapture()) return;
+  posthog.capture("connection_created", {
+    service,
+    source: "connections_page",
+    ...extra,
+  });
 }

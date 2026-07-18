@@ -2,8 +2,29 @@ import posthog from "posthog-js";
 
 const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
 const apiHost = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com";
+const ANALYTICS_CONSENT_COOKIE = "deltalytix_analytics_consent";
+
+function getSharedAnalyticsConsent() {
+  try {
+    const cookie = document.cookie
+      .split("; ")
+      .find((entry) => entry.startsWith(`${ANALYTICS_CONSENT_COOKIE}=`));
+
+    if (!cookie) return null;
+
+    const value = cookie.split("=")[1];
+    if (value === "granted") return true;
+    if (value === "denied") return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 function hasAnalyticsConsent() {
+  const sharedConsent = getSharedAnalyticsConsent();
+  if (sharedConsent !== null) return sharedConsent;
+
   try {
     const storedConsent = localStorage.getItem("cookieConsent");
     if (!storedConsent) return false;
