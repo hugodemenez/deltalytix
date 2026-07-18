@@ -146,7 +146,9 @@ async function CachedGithubCard({
 }) {
   "use cache";
   cacheTag(GITHUB_DATA_CACHE_TAG);
-  cacheLife("weeks");
+  // Daily revalidate: commit graph / stars should pick up near-daily pushes.
+  // Profile: stale 5m · revalidate 1 day · expire 1 week.
+  cacheLife("days");
 
   try {
     const [githubData, posts] = await Promise.all([
