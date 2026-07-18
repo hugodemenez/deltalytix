@@ -1,18 +1,23 @@
 import type { Metadata } from 'next'
 import { cacheLife } from 'next/cache'
-import { connection } from 'next/server'
 import { Suspense } from 'react'
 import { getConnectionsMetadataCopy } from '@/lib/og/site-metadata'
 import { resolveLocale } from '@/lib/locale-params'
 import { getSiteOrigin, siteUrl } from '@/lib/site-url'
-import { ConnectionsPageClient } from './components/connections-page-client'
+import { getUserId } from '@/server/auth'
+import { CachedConnectionsPage } from './components/cached-connections-page'
 import { ConnectionsPageSkeleton } from './components/connections-page-skeleton'
-import { getConnectionsPageDataCached } from './data'
 
 type Locale = 'en' | 'fr'
 
 /** Opt this route into Instant Navigations validation (Cache Components). */
 export const instant = true
+
+/**
+ * Prefetch with the user session so warm `'use cache'` Connections UI can be
+ * part of the instant navigation (not only the Suspense skeleton).
+ */
+export const prefetch = 'allow-runtime'
 
 async function getCachedConnectionsMetadata(locale: Locale): Promise<Metadata> {
   'use cache'
@@ -58,18 +63,15 @@ export async function generateMetadata(props: {
   return getCachedConnectionsMetadata(locale)
 }
 
+/**
+ * Resolve auth outside `'use cache'`, then render the tagged cached page UI.
+ * Cold cache → Suspense skeleton. Warm cache → cached UI included instantly.
+ */
 async function ConnectionsPageContent() {
-  // Request-time auth/DB — keep out of the prerender shell.
-  await connection()
-  const initialData = await getConnectionsPageDataCached()
-  return <ConnectionsPageClient initialData={initialData} />
+  const userId = await getUserId()
+  return <CachedConnectionsPage userId={userId} />
 }
 
-/**
- * Return the page chrome immediately (title, description, action labels);
- * stream auth/DB-backed connection rows behind Suspense. The skeleton keeps
- * real header copy so Instant Navigations do not flash empty placeholder bars.
- */
 export default function ConnectionsPage() {
   return (
     <Suspense fallback={<ConnectionsPageSkeleton />}>

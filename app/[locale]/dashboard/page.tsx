@@ -1,12 +1,25 @@
+import { Suspense } from 'react'
 import { connection } from 'next/server'
+import { DashboardHomeSkeleton } from './components/dashboard-home-skeleton'
 import DashboardHomeClient from './dashboard-home-client'
 
+/** Opt this route into Instant Navigations validation (Cache Components). */
+export const instant = true
+
 /**
- * Authenticated client UI — skip static SSR during `next build`.
- * Without this, Cache Components tries to prerender the large client tree and
- * can exceed Vercel's 60s per-page static-generation budget under load.
+ * Heavy client UI — keep out of the prerender shell so `next build` does not
+ * SSR the full widget tree (Vercel 60s static-generation budget).
+ * Suspense still gives Instant Navigations a real tab chrome shell.
  */
-export default async function DashboardPage() {
+async function DashboardPageContent() {
   await connection()
   return <DashboardHomeClient />
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardHomeSkeleton />}>
+      <DashboardPageContent />
+    </Suspense>
+  )
 }

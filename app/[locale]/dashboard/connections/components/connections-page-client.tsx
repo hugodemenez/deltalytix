@@ -849,7 +849,8 @@ export function ConnectionsPageClient({
   const t = useI18n()
   const searchParams = useSearchParams()
   const tradovateStore = useTradovateSyncStore()
-  // Seeded from RSC (`use cache`) — no full-page skeleton on reload.
+  // Seeded from cached RSC (`CachedConnectionsPage`) — warm cache skips the
+  // Suspense skeleton; this client state is already hydrated on first paint.
   const [data, setData] = useState<ConnectionsPageData | null>(initialData)
   const [loading, setLoading] = useState(false)
   const [connectService, setConnectService] = useState<ConnectionService | null>(null)

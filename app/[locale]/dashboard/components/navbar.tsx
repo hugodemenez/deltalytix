@@ -61,7 +61,8 @@ export default function Navbar() {
                     <h4 className="font-medium leading-none mb-3">{t('landing.navbar.logo.title')}</h4>
                     <div className="grid gap-2">
                       <Link 
-                        href="/dashboard" 
+                        href="/dashboard"
+                        prefetch={true}
                         className="flex items-center gap-2 text-sm hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
                         onClick={() => setIsLogoPopoverOpen(false)}
                       >
@@ -98,7 +99,11 @@ export default function Navbar() {
               asChild
               className="h-9 rounded-sm px-2 active:scale-[0.96]"
             >
-              <Link href="/dashboard/connections" id="import-data">
+              <Link
+                href="/dashboard/connections"
+                id="import-data"
+                prefetch={true}
+              >
                 <Cable className="mr-1.5 h-4 w-4" />
                 <span className="hidden sm:inline">{t('dashboard.connections')}</span>
               </Link>

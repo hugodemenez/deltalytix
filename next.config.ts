@@ -37,6 +37,8 @@ const nextConfig: NextConfig = {
   // single locale and prevent the i18n middleware from routing by the user's
   // selected language. Locale routing is handled entirely by the i18n middleware.
   // Instant Navigations: Cache Components + Partial Prefetching (Next.js 16.3+).
+  // Opt routes in with `export const instant = true` (and optionally
+  // `export const prefetch = 'allow-runtime'` for session-aware prefetch).
   cacheComponents: true,
   partialPrefetching: true,
   images: {
