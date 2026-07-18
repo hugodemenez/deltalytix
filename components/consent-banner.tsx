@@ -105,40 +105,59 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
   const isDesktop = useMediaQuery("(min-width: 768px)")
 
   useEffect(() => {
+    const sharedAnalyticsConsent = getSharedAnalyticsConsent()
     const hasConsent = localStorage.getItem("cookieConsent")
-    if (!hasConsent) {
-      const sharedAnalyticsConsent = getSharedAnalyticsConsent()
-      if (sharedAnalyticsConsent === null) {
-        setIsVisible(true)
-      } else {
-        const sharedSettings: ConsentSettings = {
-          analytics_storage: sharedAnalyticsConsent,
-          ad_storage: false,
-          ad_user_data: false,
-          ad_personalization: false,
-          functionality_storage: true,
-          personalization_storage: false,
-          security_storage: true,
-        }
-        localStorage.setItem("cookieConsent", JSON.stringify(sharedSettings))
-        setSettings(sharedSettings)
-        syncPostHogConsent(sharedAnalyticsConsent)
+
+    // Parent-domain cookie is the cross-origin source of truth. Prefer it over
+    // a stale origin-local choice so beta/prod cannot overwrite each other.
+    if (sharedAnalyticsConsent !== null) {
+      let settingsToApply: ConsentSettings = {
+        analytics_storage: sharedAnalyticsConsent,
+        ad_storage: false,
+        ad_user_data: false,
+        ad_personalization: false,
+        functionality_storage: true,
+        personalization_storage: false,
+        security_storage: true,
       }
-    } else {
+
+      if (hasConsent) {
+        try {
+          settingsToApply = {
+            ...(JSON.parse(hasConsent) as ConsentSettings),
+            analytics_storage: sharedAnalyticsConsent,
+          }
+        } catch {
+          localStorage.removeItem("cookieConsent")
+        }
+      }
+
+      localStorage.setItem("cookieConsent", JSON.stringify(settingsToApply))
+      setSettings(settingsToApply)
+      syncPostHogConsent(sharedAnalyticsConsent)
+    } else if (hasConsent) {
       try {
         const savedSettings = JSON.parse(hasConsent) as ConsentSettings
         setSettings(savedSettings)
+        // Migrates existing origin-local consent onto the shared Domain cookie.
         syncPostHogConsent(savedSettings.analytics_storage)
       } catch {
         localStorage.removeItem("cookieConsent")
         setIsVisible(true)
       }
+    } else {
+      setIsVisible(true)
     }
 
     // Add keyboard shortcut for dev mode (Cmd/Ctrl + Shift + K)
     const handleKeyPress = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'K') {
         localStorage.removeItem("cookieConsent")
+        const secure = window.location.protocol === "https:" ? "; Secure" : ""
+        document.cookie = `${ANALYTICS_CONSENT_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax${secure}`
+        if (isDeltalytixHost()) {
+          document.cookie = `${ANALYTICS_CONSENT_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax${secure}; Domain=.deltalytix.app`
+        }
         setIsVisible(true)
       }
     }
