@@ -70,40 +70,78 @@ function captureDwellThreshold(totalMs: number) {
 export function startConnectionsPageDwellTracking(): () => void {
   if (typeof window === "undefined") return () => {};
 
+  // Already done this tab session — nothing to track.
+  if (wasDwellEventFired()) return () => {};
+
   let segmentStart: number | null =
     document.visibilityState === "visible" ? Date.now() : null;
   let stopped = false;
   let pendingFireTimer: number | null = null;
+  let intervalId: number | null = null;
+
+  const stopTracking = () => {
+    if (stopped) return;
+    stopped = true;
+    segmentStart = null;
+    if (pendingFireTimer != null) {
+      window.clearTimeout(pendingFireTimer);
+      pendingFireTimer = null;
+    }
+    if (intervalId != null) {
+      window.clearInterval(intervalId);
+      intervalId = null;
+    }
+    document.removeEventListener("visibilitychange", onVisibility);
+    window.removeEventListener("pagehide", onPageHide);
+    window.removeEventListener(CONSENT_EVENT, onConsent);
+  };
 
   const accumulate = (endSegment = false) => {
     if (segmentStart == null) return readDwellMs();
     const now = Date.now();
     const elapsed = now - segmentStart;
     segmentStart = endSegment || stopped ? null : now;
-    const total = readDwellMs() + Math.max(0, elapsed);
+    // Cap at the threshold — no need to keep growing sessionStorage after that.
+    const total = Math.min(
+      DWELL_THRESHOLD_MS,
+      readDwellMs() + Math.max(0, elapsed)
+    );
     writeDwellMs(total);
     return total;
   };
 
   const maybeFire = (opts?: { defer?: boolean }) => {
+    if (stopped || wasDwellEventFired()) {
+      stopTracking();
+      return;
+    }
+
     const total = accumulate();
     if (total < DWELL_THRESHOLD_MS) return;
-    if (wasDwellEventFired()) return;
+
+    const finish = () => {
+      captureDwellThreshold(readDwellMs());
+      // Stop once fired, or keep waiting for consent if capture was blocked.
+      if (wasDwellEventFired()) {
+        stopTracking();
+      }
+    };
 
     if (opts?.defer) {
       // After OAuth remount, give PostHog surveys time to attach event listeners.
       if (pendingFireTimer != null) return;
       pendingFireTimer = window.setTimeout(() => {
         pendingFireTimer = null;
-        captureDwellThreshold(readDwellMs());
+        finish();
       }, 1500);
       return;
     }
 
-    captureDwellThreshold(total);
+    finish();
   };
 
   const onVisibility = () => {
+    if (stopped) return;
     if (document.visibilityState === "visible") {
       segmentStart = Date.now();
       maybeFire({ defer: readDwellMs() >= DWELL_THRESHOLD_MS });
@@ -120,7 +158,7 @@ export function startConnectionsPageDwellTracking(): () => void {
     accumulate(true);
   };
 
-  const intervalId = window.setInterval(() => {
+  intervalId = window.setInterval(() => {
     if (document.visibilityState !== "visible" || stopped) return;
     maybeFire();
   }, 1000);
@@ -132,18 +170,7 @@ export function startConnectionsPageDwellTracking(): () => void {
   // Resume from prior segments in this tab (e.g. after OAuth return).
   maybeFire({ defer: readDwellMs() >= DWELL_THRESHOLD_MS });
 
-  return () => {
-    stopped = true;
-    accumulate(true);
-    if (pendingFireTimer != null) {
-      window.clearTimeout(pendingFireTimer);
-      pendingFireTimer = null;
-    }
-    window.clearInterval(intervalId);
-    document.removeEventListener("visibilitychange", onVisibility);
-    window.removeEventListener("pagehide", onPageHide);
-    window.removeEventListener(CONSENT_EVENT, onConsent);
-  };
+  return stopTracking;
 }
 
 export function captureConnectionAddClicked(service: string) {
