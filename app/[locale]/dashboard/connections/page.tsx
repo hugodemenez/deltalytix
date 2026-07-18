@@ -66,8 +66,9 @@ async function ConnectionsPageContent() {
 }
 
 /**
- * Return the shell immediately; stream connection data behind Suspense so
- * client navigations (e.g. navbar → Connections) feel instant.
+ * Return the page chrome immediately (title, description, action labels);
+ * stream auth/DB-backed connection rows behind Suspense. The skeleton keeps
+ * real header copy so Instant Navigations do not flash empty placeholder bars.
  */
 export default function ConnectionsPage() {
   return (
