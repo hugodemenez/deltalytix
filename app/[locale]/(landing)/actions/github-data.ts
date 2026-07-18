@@ -246,6 +246,13 @@ function getWeekCacheKey(date = new Date()): string {
 }
 
 async function fetchGithubData(): Promise<GithubData> {
+  // Never paginate GitHub during `next build` — it blew the 60s static budget
+  // and previously forced `connection()` on the landing card (which blocked
+  // HTML streaming at runtime). Runtime / API fills the weekly cache instead.
+  if (IS_PRODUCTION_BUILD) {
+    return getGithubDataFallback()
+  }
+
   try {
     const [repoResponse, codeFrequency] = await Promise.all([
       withRetry('repo data', () =>

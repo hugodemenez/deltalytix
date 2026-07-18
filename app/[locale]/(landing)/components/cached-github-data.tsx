@@ -1,11 +1,46 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StarIcon } from "lucide-react";
 import { ContributionGraph } from "./contribution-graph";
-import { getGithubData } from "../actions/github-data";
-import { cacheLife } from "next/cache";
-import { connection } from "next/server";
 import { GITHUB_REPO_NAME, GITHUB_REPO_URL } from "@/lib/github-repo";
-import { getAllPostMetadata } from "@/lib/mdx";
+import type { ContributionGraphData } from "@/lib/contribution-graph";
+
+type GithubStatsPayload = {
+  repoData: {
+    name: string;
+    description: string;
+    language: string;
+    license: { spdx_id: string } | null;
+    stargazers_count: number;
+    forks_count: number;
+    updated_at: string;
+    created_at: string;
+  };
+  githubStats: {
+    repository: {
+      stargazers: { totalCount: number };
+      forks: { totalCount: number };
+      commits: { history: { totalCount: number } };
+    };
+    contributionGraph: ContributionGraphData;
+  };
+  stars: number;
+  lastCommit: {
+    commit: {
+      committer: {
+        date: string;
+      };
+    };
+  };
+  changelogEntries: Array<{
+    slug: string;
+    title: string;
+    date: string;
+  }>;
+};
 
 const formatTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
@@ -21,6 +56,30 @@ const formatTimeAgo = (dateString: string) => {
   return `${seconds} second${seconds !== 1 ? "s" : ""} ago`;
 };
 
+function GithubCardSkeleton() {
+  return (
+    <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
+      <CardHeader className="border-b border-border pb-3 md:pb-4 mb-3 md:mb-4">
+        <Skeleton className="h-6 w-48" />
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-2 mb-3 md:mb-4">
+          <Skeleton className="h-6 w-20" />
+          <Skeleton className="h-6 w-20" />
+        </div>
+        <div className="flex flex-wrap gap-3 md:gap-4 mb-4 md:mb-6">
+          {[...Array(5)].map((_, index) => (
+            <Skeleton key={index} className="h-4 w-16" />
+          ))}
+        </div>
+        <Skeleton className="h-[120px] w-full mb-4" />
+        <Skeleton className="h-4 w-48 mb-4" />
+        <Skeleton className="h-8 w-full" />
+      </CardContent>
+    </Card>
+  );
+}
+
 function GithubStatsCard({
   repoData,
   githubStats,
@@ -28,18 +87,7 @@ function GithubStatsCard({
   lastCommit,
   starLabel,
   changelogEntries,
-}: {
-  repoData: Awaited<ReturnType<typeof getGithubData>>["repoData"];
-  githubStats: Awaited<ReturnType<typeof getGithubData>>["githubStats"];
-  stars: number;
-  lastCommit: Awaited<ReturnType<typeof getGithubData>>["lastCommit"];
-  starLabel: string;
-  changelogEntries: Array<{
-    slug: string;
-    title: string;
-    date: string;
-  }>;
-}) {
+}: GithubStatsPayload & { starLabel: string }) {
   return (
     <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
       <CardHeader className="mb-3 flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border pb-3 md:mb-4 md:pb-4">
@@ -102,58 +150,53 @@ function GithubStatsFallback({ starLabel }: { starLabel: string }) {
   );
 }
 
-async function CachedGithubDataInner({
+/**
+ * Load GitHub stats after paint via `/api/github-stats`.
+ *
+ * Under Cache Components, a server `await connection()` + Suspense hole kept
+ * the HTML stream open (~2.5s) even when the inner `"use cache"` was warm.
+ * Client fetch keeps the document fully static while the card streams in.
+ */
+export function CachedGithubData({
   starLabel,
   locale,
 }: {
   starLabel: string;
   locale: string;
 }) {
-  "use cache";
-  cacheLife("weeks");
+  const [data, setData] = useState<GithubStatsPayload | null>(null);
+  const [failed, setFailed] = useState(false);
 
-  let githubData: Awaited<ReturnType<typeof getGithubData>>;
-  let posts: Awaited<ReturnType<typeof getAllPostMetadata>>;
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
 
-  try {
-    [githubData, posts] = await Promise.all([
-      getGithubData(),
-      getAllPostMetadata(locale),
-    ]);
-  } catch (error) {
-    console.error("[CachedGithubData] Failed to load GitHub stats:", error);
-    return <GithubStatsFallback starLabel={starLabel} />;
-  }
+    fetch(`/api/github-stats?locale=${encodeURIComponent(locale)}`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`GitHub stats HTTP ${response.status}`);
+        }
+        return (await response.json()) as GithubStatsPayload;
+      })
+      .then((payload) => {
+        if (!cancelled) setData(payload);
+      })
+      .catch((error: unknown) => {
+        if (cancelled || controller.signal.aborted) return;
+        console.error("[CachedGithubData] Failed to load GitHub stats:", error);
+        setFailed(true);
+      });
 
-  const changelogEntries = posts
-    .filter((post) => post.meta.status === "completed")
-    .map((post) => ({
-      slug: post.slug,
-      title: String(post.meta.title),
-      date: String(post.meta.date),
-    }));
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [locale]);
 
-  return (
-    <GithubStatsCard
-      repoData={githubData.repoData}
-      githubStats={githubData.githubStats}
-      stars={githubData.stars}
-      lastCommit={githubData.lastCommit}
-      starLabel={starLabel}
-      changelogEntries={changelogEntries}
-    />
-  );
-}
+  if (failed) return <GithubStatsFallback starLabel={starLabel} />;
+  if (!data) return <GithubCardSkeleton />;
 
-export async function CachedGithubData({
-  starLabel,
-  locale,
-}: {
-  starLabel: string;
-  locale: string;
-}) {
-  // Keep GitHub out of `next build` static generation — network retries were
-  // exhausting the 60s per-page budget and cascading into unrelated routes.
-  await connection();
-  return <CachedGithubDataInner starLabel={starLabel} locale={locale} />;
+  return <GithubStatsCard {...data} starLabel={starLabel} />;
 }
