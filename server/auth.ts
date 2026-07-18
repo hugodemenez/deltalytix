@@ -14,17 +14,14 @@ import {
 import { createLocalDashboardBypassAuthStub } from '@/lib/local-dashboard-bypass-client'
 import { ensureLocalDashboardUserInDatabase } from '@/server/local-dashboard-bootstrap'
 import { capturePostHogEvent } from '@/lib/posthog-server'
+import { getRequestOrigin } from '@/lib/site-url'
 
 export async function getWebsiteURL() {
-  let url =
-    process?.env?.NEXT_PUBLIC_SITE_URL ?? // Set this to your site URL in production env.
-    process?.env?.NEXT_PUBLIC_VERCEL_URL ?? // Automatically set by Vercel.
-    'http://localhost:3000/'
-  // Make sure to include `https://` when not localhost.
-  url = url.startsWith('http') ? url : `https://${url}`
-  // Make sure to include a trailing `/`.
-  url = url.endsWith('/') ? url : `${url}/`
-  return url
+  // Reuse the shared trusted-host allowlist (*.deltalytix.app, *.vercel.app,
+  // configured env origins, localhost in non-prod) so preview OAuth callbacks
+  // stay on the deployment the user opened without accepting arbitrary Host headers.
+  const origin = getRequestOrigin(await headers())
+  return origin.endsWith('/') ? origin : `${origin}/`
 }
 
 /**
