@@ -1,5 +1,6 @@
 'use server'
 import { createClient, ensureUserInDatabase } from '@/server/auth'
+import { getRequestOrigin } from '@/lib/site-url'
 import { NextResponse } from 'next/server'
 // The client you created from the Server-Side Auth instructions
 
@@ -11,11 +12,13 @@ export async function GET(request: Request) {
   const next = searchParams.get('next')
   const action = searchParams.get('action')
   const locale = searchParams.get('locale') || undefined
+  const requestOrigin = getRequestOrigin(request.headers)
 
   // Add debugging for Edge
   console.log('Auth callback debug:', {
     userAgent: request.headers.get('user-agent'),
     origin,
+    requestOrigin,
     hasCode: !!code,
     next,
     action
@@ -34,23 +37,15 @@ export async function GET(request: Request) {
       if (!error) {
         // Handle password recovery redirect
         if (type === 'recovery') {
-          const forwardedHost = request.headers.get('x-forwarded-host')
-          const isLocalEnv = process.env.NODE_ENV === 'development'
-          const baseUrl = isLocalEnv
-            ? `${origin}/dashboard/settings`
-            : `https://${forwardedHost || origin}/dashboard/settings`
-          const redirectUrl = `${baseUrl}?passwordReset=true`
+          const redirectUrl = new URL('/dashboard/settings', requestOrigin)
+          redirectUrl.searchParams.set('passwordReset', 'true')
           return NextResponse.redirect(redirectUrl)
         }
 
         // Handle identity linking redirect
         if (action === 'link') {
-          const forwardedHost = request.headers.get('x-forwarded-host')
-          const isLocalEnv = process.env.NODE_ENV === 'development'
-          const baseUrl = isLocalEnv
-            ? `${origin}/dashboard/settings`
-            : `https://${forwardedHost || origin}/dashboard/settings`
-          const redirectUrl = `${baseUrl}?linked=true`
+          const redirectUrl = new URL('/dashboard/settings', requestOrigin)
+          redirectUrl.searchParams.set('linked', 'true')
           return NextResponse.redirect(redirectUrl)
         }
 
@@ -65,25 +60,10 @@ export async function GET(request: Request) {
           // Non-fatal: continue redirect
         }
 
-        const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
-        const isLocalEnv = process.env.NODE_ENV === 'development'
-        if (isLocalEnv) {
-          // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
-          if (decodedNext) {
-            return NextResponse.redirect(new URL(decodedNext, origin))
-          }
-          return NextResponse.redirect(`${origin}${next ?? '/dashboard'}`)
-        } else if (forwardedHost) {
-          if (decodedNext) {
-            return NextResponse.redirect(new URL(decodedNext, `https://${forwardedHost}`))
-          }
-          return NextResponse.redirect(`https://${forwardedHost}${next ?? '/dashboard'}`)
-        } else {
-          if (decodedNext) {
-            return NextResponse.redirect(new URL(decodedNext, origin))
-          }
-          return NextResponse.redirect(`${origin}${next ?? '/dashboard'}`)
+        if (decodedNext) {
+          return NextResponse.redirect(new URL(decodedNext, requestOrigin))
         }
+        return NextResponse.redirect(new URL(next ?? '/dashboard', requestOrigin))
       } else {
         console.log('Auth callback error:', error)
       }
@@ -97,12 +77,14 @@ export async function GET(request: Request) {
       ) {
         console.error('[Auth Callback] Supabase API returned non-JSON response:', error)
         // Redirect to auth page with error message
-        return NextResponse.redirect(`${origin}/authentication?error=service_unavailable`)
+        const errorUrl = new URL('/authentication', requestOrigin)
+        errorUrl.searchParams.set('error', 'service_unavailable')
+        return NextResponse.redirect(errorUrl)
       }
       console.error('Auth callback unexpected error:', error)
     }
   }
 
   // return the user to the authentication page
-  return NextResponse.redirect(`${origin}/authentication`)
+  return NextResponse.redirect(new URL('/authentication', requestOrigin))
 }
