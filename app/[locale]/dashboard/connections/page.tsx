@@ -6,7 +6,8 @@ import { resolveLocale } from '@/lib/locale-params'
 import { getSiteOrigin, siteUrl } from '@/lib/site-url'
 import { getUserId } from '@/server/auth'
 import { CachedConnectionsPage } from './components/cached-connections-page'
-import { ConnectionsPageSkeleton } from './components/connections-page-skeleton'
+import { ConnectionsPageChrome } from './components/connections-page-chrome'
+import { ConnectionsListSkeleton } from './components/connections-page-skeleton'
 
 type Locale = 'en' | 'fr'
 
@@ -14,8 +15,8 @@ type Locale = 'en' | 'fr'
 export const instant = true
 
 /**
- * Prefetch with the user session so warm `'use cache'` Connections UI can be
- * part of the instant navigation (not only the Suspense skeleton).
+ * Prefetch with the user session so warm `'use cache'` list UI can be part of
+ * the instant navigation (not only the list Suspense skeleton).
  */
 export const prefetch = 'allow-runtime'
 
@@ -64,18 +65,26 @@ export async function generateMetadata(props: {
 }
 
 /**
- * Resolve auth outside `'use cache'`, then render the tagged cached page UI.
- * Cold cache → Suspense skeleton. Warm cache → cached UI included instantly.
+ * Resolve auth outside `'use cache'`, then render the tagged cached list UI.
+ * Cold cache → list skeleton under the instant chrome.
+ * Warm cache → list included instantly (no skeleton).
  */
 async function ConnectionsPageContent() {
   const userId = await getUserId()
   return <CachedConnectionsPage userId={userId} />
 }
 
+/**
+ * Per-component Instant Navigations:
+ * - Chrome (title, description, actions) is outside Suspense → paints + animates once
+ * - List streams behind its own Suspense (or resolves from `'use cache'`)
+ */
 export default function ConnectionsPage() {
   return (
-    <Suspense fallback={<ConnectionsPageSkeleton />}>
-      <ConnectionsPageContent />
-    </Suspense>
+    <ConnectionsPageChrome>
+      <Suspense fallback={<ConnectionsListSkeleton />}>
+        <ConnectionsPageContent />
+      </Suspense>
+    </ConnectionsPageChrome>
   )
 }

@@ -7,11 +7,11 @@ function connectionsCacheTag(userId: string) {
 }
 
 /**
- * Per-user cached RSC UI for Connections.
+ * Per-user cached Connections list UI (chrome lives outside Suspense).
  *
- * Instant Navigations distinction:
- * - Suspense alone (Stream) → skeleton every navigation until data resolves
- * - `'use cache'` (Cache) → warm entries reuse this UI across requests/refreshes
+ * Instant Navigations:
+ * - Cold cache → list Suspense skeleton under the instant chrome
+ * - Warm `'use cache'` → list UI reused across requests (no skeleton)
  *
  * `userId` is passed in from outside so cookies/headers stay out of the cache scope.
  */
