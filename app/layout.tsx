@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
@@ -86,6 +86,12 @@ export const metadata: Metadata = {
   creator: "Hugo DEMENEZ",
   publisher: "Hugo DEMENEZ",
   formatDetection: { email: false, address: false, telephone: false },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

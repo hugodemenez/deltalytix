@@ -378,12 +378,6 @@ export default function Component() {
       />
 
       <span
-        key={`safari-theme-top-${effectiveTheme}`}
-        className="landing-safari-theme-sampler"
-        aria-hidden="true"
-      />
-
-      <span
         className={`fixed top-0 left-0 right-0 z-50 bg-background pt-safe min-h-nav-safe transition-transform duration-300 ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
       ></span>
       <header
