@@ -15,19 +15,19 @@ function getPostPath(slug: string, locale: string) {
   return path.join(postsDirectory, locale, `${slug}.mdx`)
 }
 
-/** Stable fallback — never use `new Date()` during prerender. */
-const MISSING_POST_DATE = '1970-01-01'
-
 function normalizePostMeta(meta: Record<string, any>, slug: string) {
-  const date = meta.date || MISSING_POST_DATE
+  if (!meta.date) {
+    throw new Error(`Update post "${slug}" is missing required frontmatter field "date"`)
+  }
+
   return {
     ...meta,
     title: meta.title || slug,
     description: meta.description || '',
-    date,
+    date: meta.date,
     status: meta.status || 'upcoming',
     image: meta.image || null,
-    updatedAt: meta.updatedAt || date,
+    updatedAt: meta.updatedAt || meta.date,
   }
 }
 
