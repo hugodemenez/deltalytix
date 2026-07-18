@@ -1,13 +1,19 @@
-import posthog from "posthog-js";
+import posthog, { DisplaySurveyType } from "posthog-js";
 
-/** Fired once per tab session after cumulative visible time on Connections reaches the threshold. */
+/** PostHog survey: Beta connection flow feedback */
+export const CONNECTION_FEEDBACK_SURVEY_ID =
+  "019f7215-397f-0000-90b4-c32b914ff31e";
+
+/** Optional analytics breadcrumb when consent allows capture. */
 export const CONNECTIONS_PAGE_DWELL_THRESHOLD_EVENT =
   "connections_page_dwell_threshold";
 
 const DWELL_STORAGE_KEY = "deltalytix:connections-page-dwell-ms";
-const DWELL_EVENT_FIRED_KEY = "deltalytix:connections-page-dwell-event-fired";
-const DWELL_THRESHOLD_MS = 180_000;
+const SURVEY_SHOWN_STORAGE_KEY = `deltalytix:survey:${CONNECTION_FEEDBACK_SURVEY_ID}:programmatic-shown`;
+const DWELL_THRESHOLD_MS = 60_000;
 const CONSENT_EVENT = "deltalytix:analytics-consent";
+
+let surveyDisplayInFlight = false;
 
 function canCapture() {
   if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return false;
@@ -33,27 +39,24 @@ function writeDwellMs(ms: number) {
   }
 }
 
-function wasDwellEventFired(): boolean {
+function wasSurveyShown(): boolean {
   try {
-    return sessionStorage.getItem(DWELL_EVENT_FIRED_KEY) === "1";
+    return sessionStorage.getItem(SURVEY_SHOWN_STORAGE_KEY) === "1";
   } catch {
     return false;
   }
 }
 
-function markDwellEventFired() {
+function markSurveyShown() {
   try {
-    sessionStorage.setItem(DWELL_EVENT_FIRED_KEY, "1");
+    sessionStorage.setItem(SURVEY_SHOWN_STORAGE_KEY, "1");
   } catch {
     // sessionStorage may be unavailable
   }
 }
 
 function captureDwellThreshold(totalMs: number) {
-  if (wasDwellEventFired()) return;
   if (!canCapture()) return;
-
-  markDwellEventFired();
   posthog.capture(CONNECTIONS_PAGE_DWELL_THRESHOLD_EVENT, {
     source: "connections_page",
     dwell_ms: Math.floor(totalMs),
@@ -62,30 +65,78 @@ function captureDwellThreshold(totalMs: number) {
 }
 
 /**
- * Accumulates visible time on the Connections page in sessionStorage so OAuth
- * leave/return does not reset progress. Fires
- * {@link CONNECTIONS_PAGE_DWELL_THRESHOLD_EVENT} once the tab has spent
- * {@link DWELL_THRESHOLD_MS} visible milliseconds on the page.
+ * Show the feedback survey directly — do not wait for PostHog event-trigger
+ * conditions or analytics consent. Capture remains optional.
+ */
+function showConnectionFeedbackSurvey(totalMs: number) {
+  if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return;
+  if (typeof window === "undefined") return;
+  if (surveyDisplayInFlight || wasSurveyShown()) return;
+
+  surveyDisplayInFlight = true;
+
+  const display = () => {
+    if (wasSurveyShown()) return;
+    try {
+      posthog.displaySurvey(CONNECTION_FEEDBACK_SURVEY_ID, {
+        displayType: DisplaySurveyType.Popover,
+        ignoreConditions: true,
+        ignoreDelay: true,
+      });
+      markSurveyShown();
+      captureDwellThreshold(totalMs);
+    } catch (error) {
+      surveyDisplayInFlight = false;
+      console.warn("[connection-analytics] displaySurvey failed", error);
+    }
+  };
+
+  try {
+    posthog.getSurveys((surveys) => {
+      if (wasSurveyShown()) return;
+      if (surveys?.some((survey) => survey.id === CONNECTION_FEEDBACK_SURVEY_ID)) {
+        display();
+        return;
+      }
+      // Force reload once if surveys extension is still warming up (common on iOS).
+      posthog.getSurveys((reloaded) => {
+        if (reloaded?.some((survey) => survey.id === CONNECTION_FEEDBACK_SURVEY_ID)) {
+          display();
+          return;
+        }
+        surveyDisplayInFlight = false;
+      }, true);
+    }, true);
+  } catch (error) {
+    surveyDisplayInFlight = false;
+    console.warn("[connection-analytics] getSurveys failed", error);
+  }
+}
+
+/**
+ * Accumulates time on the Connections page in sessionStorage so OAuth
+ * leave/return does not reset progress. After {@link DWELL_THRESHOLD_MS},
+ * shows the feedback survey programmatically (no event/consent gate).
  */
 export function startConnectionsPageDwellTracking(): () => void {
   if (typeof window === "undefined") return () => {};
+  if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return () => {};
+  if (wasSurveyShown()) return () => {};
 
-  // Already done this tab session — nothing to track.
-  if (wasDwellEventFired()) return () => {};
-
-  let segmentStart: number | null =
-    document.visibilityState === "visible" ? Date.now() : null;
+  // Count while mounted. iOS Safari can report odd initial visibilityState;
+  // pause only when the page is actually backgrounded/unloaded.
+  let segmentStart: number | null = Date.now();
   let stopped = false;
-  let pendingFireTimer: number | null = null;
+  let pendingShowTimer: number | null = null;
   let intervalId: number | null = null;
 
   const stopTracking = () => {
     if (stopped) return;
     stopped = true;
     segmentStart = null;
-    if (pendingFireTimer != null) {
-      window.clearTimeout(pendingFireTimer);
-      pendingFireTimer = null;
+    if (pendingShowTimer != null) {
+      window.clearTimeout(pendingShowTimer);
+      pendingShowTimer = null;
     }
     if (intervalId != null) {
       window.clearInterval(intervalId);
@@ -101,7 +152,6 @@ export function startConnectionsPageDwellTracking(): () => void {
     const now = Date.now();
     const elapsed = now - segmentStart;
     segmentStart = endSegment || stopped ? null : now;
-    // Cap at the threshold — no need to keep growing sessionStorage after that.
     const total = Math.min(
       DWELL_THRESHOLD_MS,
       readDwellMs() + Math.max(0, elapsed)
@@ -110,8 +160,8 @@ export function startConnectionsPageDwellTracking(): () => void {
     return total;
   };
 
-  const maybeFire = (opts?: { defer?: boolean }) => {
-    if (stopped || wasDwellEventFired()) {
+  const maybeShow = (opts?: { defer?: boolean }) => {
+    if (stopped || wasSurveyShown()) {
       stopTracking();
       return;
     }
@@ -120,18 +170,17 @@ export function startConnectionsPageDwellTracking(): () => void {
     if (total < DWELL_THRESHOLD_MS) return;
 
     const finish = () => {
-      captureDwellThreshold(readDwellMs());
-      // Stop once fired, or keep waiting for consent if capture was blocked.
-      if (wasDwellEventFired()) {
+      showConnectionFeedbackSurvey(readDwellMs());
+      if (wasSurveyShown()) {
         stopTracking();
       }
     };
 
     if (opts?.defer) {
-      // After OAuth remount, give PostHog surveys time to attach event listeners.
-      if (pendingFireTimer != null) return;
-      pendingFireTimer = window.setTimeout(() => {
-        pendingFireTimer = null;
+      if (pendingShowTimer != null) return;
+      // Give PostHog surveys time to load after remount / consent.
+      pendingShowTimer = window.setTimeout(() => {
+        pendingShowTimer = null;
         finish();
       }, 1500);
       return;
@@ -144,14 +193,14 @@ export function startConnectionsPageDwellTracking(): () => void {
     if (stopped) return;
     if (document.visibilityState === "visible") {
       segmentStart = Date.now();
-      maybeFire({ defer: readDwellMs() >= DWELL_THRESHOLD_MS });
+      maybeShow({ defer: readDwellMs() >= DWELL_THRESHOLD_MS });
     } else {
       accumulate(true);
     }
   };
 
   const onConsent = () => {
-    maybeFire({ defer: true });
+    maybeShow({ defer: true });
   };
 
   const onPageHide = () => {
@@ -159,16 +208,16 @@ export function startConnectionsPageDwellTracking(): () => void {
   };
 
   intervalId = window.setInterval(() => {
-    if (document.visibilityState !== "visible" || stopped) return;
-    maybeFire();
+    if (stopped) return;
+    if (document.visibilityState === "hidden") return;
+    maybeShow();
   }, 1000);
 
   document.addEventListener("visibilitychange", onVisibility);
   window.addEventListener("pagehide", onPageHide);
   window.addEventListener(CONSENT_EVENT, onConsent);
 
-  // Resume from prior segments in this tab (e.g. after OAuth return).
-  maybeFire({ defer: readDwellMs() >= DWELL_THRESHOLD_MS });
+  maybeShow({ defer: readDwellMs() >= DWELL_THRESHOLD_MS });
 
   return stopTracking;
 }
