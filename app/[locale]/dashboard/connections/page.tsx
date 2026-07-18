@@ -14,13 +14,10 @@ type Locale = 'en' | 'fr'
 /** Opt this route into Instant Navigations validation (Cache Components). */
 export const instant = true
 
-export async function generateMetadata(props: {
-  params: Promise<{ locale: Locale }>
-}): Promise<Metadata> {
+async function getCachedConnectionsMetadata(locale: Locale): Promise<Metadata> {
   'use cache'
   cacheLife('max')
 
-  const locale = (await resolveLocale(props.params)) as Locale
   const copy = getConnectionsMetadataCopy(locale)
   const origin = getSiteOrigin()
   const imageUrl = siteUrl(`/${locale}/dashboard/connections/opengraph-image`, origin)
@@ -50,6 +47,15 @@ export async function generateMetadata(props: {
       images: [imageUrl],
     },
   }
+}
+
+export async function generateMetadata(props: {
+  params: Promise<{ locale: Locale }>
+}): Promise<Metadata> {
+  // Await params outside `"use cache"` — request-bound promises inside a cache
+  // scope hang prerender ("Filling a cache during prerender timed out").
+  const locale = (await resolveLocale(props.params)) as Locale
+  return getCachedConnectionsMetadata(locale)
 }
 
 async function ConnectionsPageContent() {
