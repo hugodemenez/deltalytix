@@ -65,7 +65,7 @@ export default function PrivacyPolicy() {
         <p>If you have any questions about this Privacy Policy, please contact us at: <a href="mailto:privacy@deltalytix.com" className="text-primary hover:underline">privacy@deltalytix.com</a></p>
       </section>
 
-      <p className="mt-8 text-sm">Last updated: {new Date().toISOString().split('T')[0]}</p>
+      <p className="mt-8 text-sm">Last updated: 2025-01-01</p>
     </div>
   );
 }

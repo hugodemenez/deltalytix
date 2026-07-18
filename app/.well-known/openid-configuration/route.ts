@@ -1,12 +1,13 @@
+import { connection } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import {
   getOAuthEndpoint,
   getOAuthIssuer,
 } from "@/lib/agent-discovery/metadata";
 
-export const dynamic = "force-dynamic";
+export async function GET(request: NextRequest) {
+  await connection();
 
-export function GET(request: NextRequest) {
   const issuer = getOAuthIssuer(request);
 
   return NextResponse.json({

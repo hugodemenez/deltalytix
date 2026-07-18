@@ -18,6 +18,9 @@ const MAX_PAGES_PER_BRANCH = 20
 const TRACKED_BRANCHES = ['main', 'beta'] as const
 const WEEKLY_REVALIDATE_SECONDS = 60 * 60 * 24 * 7
 
+/** Skip slow GitHub retries while Next is generating static pages. */
+const IS_PRODUCTION_BUILD = process.env.NEXT_PHASE === 'phase-production-build'
+
 const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
   request: {
@@ -83,6 +86,12 @@ const isRetryableError = (error: unknown) => {
 }
 
 const withRetry = async <T>(label: string, fn: () => Promise<T>) => {
+  // Production builds share a 60s per-page budget across many workers. Retries
+  // against a flaky GitHub API starve static generation of unrelated routes.
+  if (IS_PRODUCTION_BUILD) {
+    return fn()
+  }
+
   let attempt = 0
   while (true) {
     try {
@@ -294,43 +303,7 @@ async function fetchGithubData(): Promise<GithubData> {
     }
   } catch (error) {
     console.error('Error fetching GitHub data:', error)
-
-    const today = new Date()
-    const fallbackYear = today.getFullYear()
-
-    return {
-      repoData: {
-        name: GITHUB_REPO_NAME,
-        description: 'A trading analytics platform',
-        language: 'TypeScript',
-        license: { spdx_id: 'MIT' },
-        stargazers_count: 0,
-        forks_count: 0,
-        updated_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-      },
-      githubStats: {
-        repository: {
-          stargazers: { totalCount: 0 },
-          forks: { totalCount: 0 },
-          commits: { history: { totalCount: 0 } },
-        },
-        contributionGraph: buildContributionGraphData(
-          [],
-          fallbackYear,
-          fallbackYear,
-          today
-        ),
-      },
-      stars: 0,
-      lastCommit: {
-        commit: {
-          committer: {
-            date: new Date().toISOString(),
-          },
-        },
-      },
-    }
+    return getGithubDataFallback()
   }
 }
 
@@ -351,6 +324,45 @@ function getWeeklyGithubDataCache(weekKey: string) {
 
   weeklyGithubDataCache.set(weekKey, cached)
   return cached
+}
+
+function getGithubDataFallback(): GithubData {
+  const today = new Date()
+  const fallbackYear = today.getFullYear()
+
+  return {
+    repoData: {
+      name: GITHUB_REPO_NAME,
+      description: 'A trading analytics platform',
+      language: 'TypeScript',
+      license: { spdx_id: 'MIT' },
+      stargazers_count: 0,
+      forks_count: 0,
+      updated_at: today.toISOString(),
+      created_at: today.toISOString(),
+    },
+    githubStats: {
+      repository: {
+        stargazers: { totalCount: 0 },
+        forks: { totalCount: 0 },
+        commits: { history: { totalCount: 0 } },
+      },
+      contributionGraph: buildContributionGraphData(
+        [],
+        fallbackYear,
+        fallbackYear,
+        today
+      ),
+    },
+    stars: 0,
+    lastCommit: {
+      commit: {
+        committer: {
+          date: today.toISOString(),
+        },
+      },
+    },
+  }
 }
 
 export async function getGithubData(): Promise<GithubData> {

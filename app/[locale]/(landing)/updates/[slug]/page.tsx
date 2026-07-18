@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import { getAllPostMetadata, getPost, getPostMetadata } from "@/lib/mdx";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
@@ -31,9 +32,6 @@ interface PageProps {
 // are resolved from the build-time site origin (siteUrl/getSiteOrigin, which
 // reads NEXT_PUBLIC_BASE_URL / VERCEL_URL), avoiding any request-time
 // dependency that would force dynamic rendering.
-export const dynamic = "force-static";
-export const dynamicParams = false;
-
 // Generate static paths for all posts in all locales
 export async function generateStaticParams() {
   const locales = getLocaleStaticParams().map((entry) => entry.locale);
@@ -52,6 +50,69 @@ export async function generateStaticParams() {
   return paths;
 }
 
+async function getCachedUpdateMetadata(
+  slug: string,
+  locale: string,
+): Promise<Metadata> {
+  "use cache";
+  cacheLife("max");
+
+  setStaticParamsLocale(locale);
+
+  try {
+    const post = await getPostMetadata(slug, locale);
+    if (!post)
+      return {
+        title: "Not Found",
+        description: "The page you are looking for does not exist.",
+      };
+    const { meta } = post;
+
+    const url = siteUrl(`/${locale}/updates/${slug}`);
+    const dateLocale = locale === "fr" ? fr : enUS;
+    const shareDateFormat = locale === "fr" ? "d MMMM yyyy" : "MMMM d, yyyy";
+    const formattedShareDate = formatDateOnly(meta.date, shareDateFormat, {
+      locale: dateLocale,
+    });
+    const shareTitleLabel = locale === "fr" ? "Changements" : "Changelog";
+    const shareTitle = `${shareTitleLabel} · ${formattedShareDate} | Deltalytix`;
+    const description = truncateForSocialDescription(meta.description);
+
+    return {
+      title: meta.title,
+      description,
+      alternates: {
+        canonical: url,
+        languages: {
+          en: siteUrl(`/en/updates/${slug}`),
+          fr: siteUrl(`/fr/updates/${slug}`),
+        },
+      },
+      openGraph: {
+        title: shareTitle,
+        description,
+        type: "article",
+        publishedTime: meta.date,
+        modifiedTime: meta.updatedAt || meta.date,
+        url,
+        siteName: "Deltalytix",
+        locale: locale,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: shareTitle,
+        description,
+      },
+    };
+  } catch (postError) {
+    console.error("Error fetching post:", postError);
+    return {
+      title: "Not Found",
+      description: "The page you are looking for does not exist.",
+    };
+  }
+}
+
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -64,68 +125,7 @@ export async function generateMetadata({
       };
     }
 
-    const { slug, locale } = resolvedParams;
-    setStaticParamsLocale(locale);
-
-    try {
-      const post = await getPostMetadata(slug, locale);
-      if (!post)
-        return {
-          title: "Not Found",
-          description: "The page you are looking for does not exist.",
-        };
-      const { meta } = post;
-
-      const url = siteUrl(`/${locale}/updates/${slug}`);
-      const dateLocale = locale === "fr" ? fr : enUS;
-      const shareDateFormat = locale === "fr" ? "d MMMM yyyy" : "MMMM d, yyyy";
-      const formattedShareDate = formatDateOnly(meta.date, shareDateFormat, {
-        locale: dateLocale,
-      });
-      const shareTitleLabel = locale === "fr" ? "Changements" : "Changelog";
-      const shareTitle = `${shareTitleLabel} · ${formattedShareDate} | Deltalytix`;
-      const description = truncateForSocialDescription(meta.description);
-
-      return {
-        title: meta.title,
-        description,
-        alternates: {
-          canonical: url,
-          languages: {
-            en: siteUrl(`/en/updates/${slug}`),
-            fr: siteUrl(`/fr/updates/${slug}`),
-          },
-        },
-        openGraph: {
-          title: shareTitle,
-          description,
-          type: "article",
-          publishedTime: meta.date,
-          modifiedTime: meta.updatedAt || meta.date,
-          url,
-          siteName: "Deltalytix",
-          locale: locale,
-          // The og:image is injected automatically from the colocated
-          // opengraph-image.tsx route and resolved against metadataBase. We do
-          // not hardcode the URL: that route lives inside the (landing) route
-          // group, so Next.js publishes it at a hashed path
-          // (e.g. /opengraph-image-1uk6iz?<version>), and a hand-written
-          // `/opengraph-image` URL resolves to the not-found route instead.
-        },
-        twitter: {
-          card: "summary_large_image",
-          title: shareTitle,
-          description,
-          // twitter:image is also derived from opengraph-image.tsx.
-        },
-      };
-    } catch (postError) {
-      console.error("Error fetching post:", postError);
-      return {
-        title: "Not Found",
-        description: "The page you are looking for does not exist.",
-      };
-    }
+    return getCachedUpdateMetadata(resolvedParams.slug, resolvedParams.locale);
   } catch (paramError) {
     console.error("Error resolving params:", paramError);
     return {
@@ -135,20 +135,18 @@ export async function generateMetadata({
   }
 }
 
-export default async function Page({ params }: PageProps) {
-  let resolvedParams: { slug: string; locale: string };
+async function CachedUpdatePage({
+  slug,
+  locale,
+}: {
+  slug: string;
+  locale: string;
+}) {
+  // Cache Components stand-in for the old force-static segment config: MDX is
+  // pure content, so cache the rendered page. Params stay outside this scope.
+  "use cache";
+  cacheLife("max");
 
-  try {
-    resolvedParams = await Promise.resolve(params);
-    if (!resolvedParams || !resolvedParams.slug || !resolvedParams.locale) {
-      notFound();
-    }
-  } catch (paramError) {
-    console.error("Error resolving params:", paramError);
-    notFound();
-  }
-
-  const { slug, locale } = resolvedParams;
   setStaticParamsLocale(locale);
 
   let post: Awaited<ReturnType<typeof getPost>>;
@@ -182,7 +180,6 @@ export default async function Page({ params }: PageProps) {
   });
   const url = siteUrl(`/${locale}/updates/${slug}`);
 
-  // Prepare JSON-LD structured data
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -268,5 +265,26 @@ export default async function Page({ params }: PageProps) {
         <MdxSidebar />
       </article>
     </>
+  );
+}
+
+export default async function Page({ params }: PageProps) {
+  let resolvedParams: { slug: string; locale: string };
+
+  try {
+    resolvedParams = await Promise.resolve(params);
+    if (!resolvedParams || !resolvedParams.slug || !resolvedParams.locale) {
+      notFound();
+    }
+  } catch (paramError) {
+    console.error("Error resolving params:", paramError);
+    notFound();
+  }
+
+  return (
+    <CachedUpdatePage
+      slug={resolvedParams.slug}
+      locale={resolvedParams.locale}
+    />
   );
 }

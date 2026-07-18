@@ -4,18 +4,20 @@ import Footer from "./components/footer";
 import { ThemeProvider } from "@/context/theme-provider";
 import { I18nProviderClient } from "@/locales/landing-client";
 import { ConsentBanner } from "@/components/consent-banner";
+import { cacheLife } from "next/cache";
 
 import { Metadata } from "next";
 import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
+import { resolveLocale } from "@/lib/locale-params";
 
 type Locale = "en" | "fr";
 const TITLE_TEMPLATE = "%s | Deltalytix";
 
-export async function generateMetadata(props: {
-  params: Promise<{ locale: Locale }>;
-}): Promise<Metadata> {
-  const params = await props.params;
-  const copy = getSiteMetadataCopy(params.locale);
+async function getCachedLandingMetadata(locale: Locale): Promise<Metadata> {
+  "use cache";
+  cacheLife("max");
+
+  const copy = getSiteMetadataCopy(locale);
 
   return {
     title: {
@@ -26,7 +28,7 @@ export async function generateMetadata(props: {
     openGraph: {
       title: copy.title,
       description: copy.description,
-      locale: params.locale === "fr" ? "fr_FR" : "en_US",
+      locale: locale === "fr" ? "fr_FR" : "en_US",
     },
     twitter: {
       card: "summary_large_image",
@@ -36,6 +38,13 @@ export async function generateMetadata(props: {
   };
 }
 
+export async function generateMetadata(props: {
+  params: Promise<{ locale: Locale }>;
+}): Promise<Metadata> {
+  const locale = (await resolveLocale(props.params)) as Locale;
+  return getCachedLandingMetadata(locale);
+}
+
 export default async function RootLayout(
   props: Readonly<{
     children: React.ReactNode;
@@ -43,8 +52,7 @@ export default async function RootLayout(
   }>,
 ) {
   const { children, params } = props;
-
-  const { locale } = await params;
+  const locale = await resolveLocale(params);
 
   return (
     <I18nProviderClient locale={locale}>

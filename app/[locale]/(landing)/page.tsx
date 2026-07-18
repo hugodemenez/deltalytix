@@ -26,8 +26,6 @@ const OpenSource = nextDynamic(() => import("./components/open-source"), {
   loading: () => <OpenSourceSectionSkeleton />,
 });
 
-export const dynamic = "force-static";
-
 export function generateStaticParams() {
   return getStaticParams();
 }

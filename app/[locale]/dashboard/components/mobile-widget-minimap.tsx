@@ -22,6 +22,49 @@ const STACK_CARD_HEIGHT = 26
 const STACK_CARD_OFFSET = 3
 const MAX_STACK_CARDS = 3
 
+/**
+ * Loading placeholder for the toolbar minimap trigger — same stacked sheet
+ * geometry as the live card deck so Instant Nav does not jump.
+ */
+export function MobileWidgetMinimapTriggerSkeleton({
+  className,
+}: {
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
+        className
+      )}
+      aria-hidden
+    >
+      <span
+        className="relative block"
+        style={{ width: STACK_CARD_WIDTH + 6, height: STACK_CARD_HEIGHT + 6 }}
+      >
+        {Array.from({ length: MAX_STACK_CARDS }, (_, stackOffset) => {
+          const offset = stackOffset * STACK_CARD_OFFSET
+          return (
+            <span
+              key={stackOffset}
+              className="absolute overflow-hidden rounded border border-border/80 bg-muted animate-pulse"
+              style={{
+                width: STACK_CARD_WIDTH,
+                height: STACK_CARD_HEIGHT,
+                right: 0,
+                bottom: 0,
+                transform: `translate(${-offset}px, ${-offset}px) scale(${1 - stackOffset * 0.04})`,
+                zIndex: MAX_STACK_CARDS - stackOffset,
+              }}
+            />
+          )
+        })}
+      </span>
+    </div>
+  )
+}
+
 export type CarouselNavigationDirection = "up" | "down"
 
 interface MobileWidgetMinimapContextValue {

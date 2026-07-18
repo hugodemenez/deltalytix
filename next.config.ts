@@ -7,7 +7,11 @@ const detectedBuildWorkers =
   typeof os.availableParallelism === 'function'
     ? os.availableParallelism()
     : os.cpus().length;
-const defaultBuildWorkers = Math.max(4, detectedBuildWorkers * 2);
+// On Vercel (4-core build machines), oversubscribing workers (* 2) causes
+// static-generation thrashing and 60s per-page timeouts. Match core count.
+const defaultBuildWorkers = process.env.VERCEL
+  ? Math.max(1, detectedBuildWorkers)
+  : Math.max(4, detectedBuildWorkers * 2);
 const configuredBuildWorkers = Number.parseInt(
   process.env.NEXT_BUILD_WORKERS ?? '',
   10
@@ -18,7 +22,11 @@ const buildWorkers =
     : defaultBuildWorkers;
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Standalone is for Docker/self-host (`Dockerfile.bun` copies `.next/standalone`).
+  // On Vercel + Turbopack (Next 16.3+), the adapter skips `next-server.js.nft.json`,
+  // so `output: "standalone"` crashes finalize with ENOENT. Vercel ignores standalone
+  // output anyway.
+  ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
   // Hide the Next.js dev indicator during changelog media capture (see lib/agent-skills/changelog-media.md).
   ...(process.env.CHANGELOG_MEDIA_CAPTURE === '1' ? { devIndicators: false as const } : {}),
   // playwright-core reads browsers.json at import time; keep it external + traced for cron scraping.
@@ -28,7 +36,11 @@ const nextConfig: NextConfig = {
   // -> /en/updates). next.config redirects run before middleware, so they force a
   // single locale and prevent the i18n middleware from routing by the user's
   // selected language. Locale routing is handled entirely by the i18n middleware.
-  // cacheComponents: true, // Enable Cache Components (Next.js 16+)
+  // Instant Navigations: Cache Components + Partial Prefetching (Next.js 16.3+).
+  // Opt routes in with `export const instant = true` (and optionally
+  // `export const prefetch = 'allow-runtime'` for session-aware prefetch).
+  cacheComponents: true,
+  partialPrefetching: true,
   images: {
     remotePatterns: [
       {
@@ -43,8 +55,13 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     cpus: buildWorkers,
-    useCache: true,
     mdxRs: true,
+    // Quiet Route Handler prerender bail-outs that are caught by try/catch.
+    hideLogsAfterAbort: true,
+    // Validate Instant Navigations only on routes that export `instant`.
+    instantInsights: {
+      validationLevel: 'manual-warning',
+    },
     optimizePackageImports: [
       'lucide-react',
       'date-fns',
