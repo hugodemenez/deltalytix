@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getConnectionsMetadataCopy,
   getSiteMetadataCopy,
   SOCIAL_DESCRIPTION_MAX_LENGTH,
   truncateForSocialDescription,
@@ -18,6 +19,24 @@ describe("site metadata copy", () => {
   it("returns French copy with SEO-friendly description length", () => {
     const copy = getSiteMetadataCopy("fr");
 
+    expect(copy.description.length).toBeLessThanOrEqual(SOCIAL_DESCRIPTION_MAX_LENGTH);
+    expect(copy.ogCta).toContain("→");
+  });
+});
+
+describe("connections metadata copy", () => {
+  it("returns English connections OG copy with social-safe lengths", () => {
+    const copy = getConnectionsMetadataCopy("en");
+
+    expect(copy.ogHeadline).toBe("Connect your brokers.");
+    expect(copy.description.length).toBeLessThanOrEqual(SOCIAL_DESCRIPTION_MAX_LENGTH);
+    expect(copy.ogCta).toContain("→");
+  });
+
+  it("returns French connections OG copy with social-safe lengths", () => {
+    const copy = getConnectionsMetadataCopy("fr");
+
+    expect(copy.ogHeadline).toBe("Connectez vos brokers.");
     expect(copy.description.length).toBeLessThanOrEqual(SOCIAL_DESCRIPTION_MAX_LENGTH);
     expect(copy.ogCta).toContain("→");
   });

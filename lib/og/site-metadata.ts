@@ -59,6 +59,31 @@ const SHARED_OG_COPY: Record<OgLocale, { cta: string; alt: string }> = {
   },
 };
 
+const CONNECTIONS_METADATA: Record<OgLocale, SiteMetadataCopy> = {
+  en: {
+    title: "Connections — Sync Brokers on Deltalytix",
+    description:
+      "Manage broker connections and sync trading accounts across Rithmic, Tradovate, and more.",
+    ogHeadline: "Connect your brokers.",
+    ogSubheadline:
+      "Manage connections and sync trading accounts in one place.",
+    ogCta: "Open Connections →",
+    ogAlt:
+      "Deltalytix — Connect your brokers. Manage connections and sync trading accounts. Open Connections.",
+  },
+  fr: {
+    title: "Connexions — Synchronisez vos brokers sur Deltalytix",
+    description:
+      "Gérez vos connexions broker et synchronisez vos comptes Rithmic, Tradovate et plus encore.",
+    ogHeadline: "Connectez vos brokers.",
+    ogSubheadline:
+      "Gérez vos connexions et synchronisez vos comptes au même endroit.",
+    ogCta: "Ouvrir les connexions →",
+    ogAlt:
+      "Deltalytix — Connectez vos brokers. Gérez vos connexions et synchronisez vos comptes. Ouvrir les connexions.",
+  },
+};
+
 export function resolveOgLocale(locale: string | undefined): OgLocale {
   return locale === "fr" ? "fr" : "en";
 }
@@ -73,6 +98,12 @@ export function getUpdatesOgCopy(locale: string | undefined) {
 
 export function getSharedOgCopy(locale: string | undefined) {
   return SHARED_OG_COPY[resolveOgLocale(locale)];
+}
+
+export function getConnectionsMetadataCopy(
+  locale: string | undefined,
+): SiteMetadataCopy {
+  return CONNECTIONS_METADATA[resolveOgLocale(locale)];
 }
 
 export function truncateForSocialDescription(

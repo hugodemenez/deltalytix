@@ -14,6 +14,7 @@ import {
 } from "../lib/og/shared.tsx";
 import { ReferralOgImage } from "../lib/og/referral-opengraph.tsx";
 import {
+  getConnectionsMetadataCopy,
   getSiteMetadataCopy,
   getUpdatesOgCopy,
 } from "../lib/og/site-metadata.ts";
@@ -40,6 +41,8 @@ async function renderPng(element, filename) {
 
 const en = getSiteMetadataCopy("en");
 const fr = getSiteMetadataCopy("fr");
+const connectionsEn = getConnectionsMetadataCopy("en");
+const connectionsFr = getConnectionsMetadataCopy("fr");
 const updatesEn = getUpdatesOgCopy("en");
 
 await renderPng(
@@ -58,6 +61,24 @@ await renderPng(
     cta: fr.ogCta,
   }),
   "marketing-fr.png",
+);
+
+await renderPng(
+  createElement(MarketingOgImage, {
+    headline: connectionsEn.ogHeadline,
+    subheadline: connectionsEn.ogSubheadline,
+    cta: connectionsEn.ogCta,
+  }),
+  "connections-en.png",
+);
+
+await renderPng(
+  createElement(MarketingOgImage, {
+    headline: connectionsFr.ogHeadline,
+    subheadline: connectionsFr.ogSubheadline,
+    cta: connectionsFr.ogCta,
+  }),
+  "connections-fr.png",
 );
 
 await renderPng(
