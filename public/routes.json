@@ -5,6 +5,7 @@
   "/[locale]/authentication",
   "/[locale]/dashboard",
   "/[locale]/dashboard/billing",
+  "/[locale]/dashboard/connections",
   "/[locale]/dashboard/data",
   "/[locale]/dashboard/import",
   "/[locale]/dashboard/settings",

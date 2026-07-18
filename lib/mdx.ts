@@ -15,15 +15,19 @@ function getPostPath(slug: string, locale: string) {
   return path.join(postsDirectory, locale, `${slug}.mdx`)
 }
 
+/** Stable fallback — never use `new Date()` during prerender. */
+const MISSING_POST_DATE = '1970-01-01'
+
 function normalizePostMeta(meta: Record<string, any>, slug: string) {
+  const date = meta.date || MISSING_POST_DATE
   return {
     ...meta,
     title: meta.title || slug,
     description: meta.description || '',
-    date: meta.date || new Date().toISOString(),
+    date,
     status: meta.status || 'upcoming',
     image: meta.image || null,
-    updatedAt: meta.updatedAt || meta.date || new Date().toISOString(),
+    updatedAt: meta.updatedAt || date,
   }
 }
 
