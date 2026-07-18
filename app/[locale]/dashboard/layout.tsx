@@ -15,7 +15,7 @@ import { ConsentBanner } from "@/components/consent-banner";
 import { BetaConnectionFlowInvite } from "@/components/beta-connection-flow-invite";
 import { PostHogIdentity } from "@/components/posthog-identity";
 import { createClient } from "@/server/auth";
-import { getCachedLocale } from "@/lib/locale-params";
+import { resolveLocale } from "@/lib/locale-params";
 
 async function DashboardPostHogIdentity({ locale }: { locale: string }) {
   // Request-time only — avoid running auth/bypass checks during prerender.
@@ -40,7 +40,7 @@ export default async function RootLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  const locale = await getCachedLocale(params);
+  const locale = await resolveLocale(params);
 
   return (
     <I18nProviderClient locale={locale}>

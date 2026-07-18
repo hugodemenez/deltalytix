@@ -40,11 +40,9 @@ async function isMobileScreenshot(image?: string) {
   }
 }
 
-export default async function UpdatesPage(props: PageProps) {
+async function CachedUpdatesPage({ locale }: { locale: string }) {
   "use cache";
   cacheLife("hours");
-
-  const { locale } = await props.params;
 
   setStaticParamsLocale(locale);
 
@@ -127,4 +125,11 @@ export default async function UpdatesPage(props: PageProps) {
       </section>
     </main>
   );
+}
+
+export default async function UpdatesPage(props: PageProps) {
+  // Await params outside `"use cache"` — request-bound promises inside a cache
+  // scope hang prerender ("Filling a cache during prerender timed out").
+  const { locale } = await props.params;
+  return <CachedUpdatesPage locale={locale} />;
 }

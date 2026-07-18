@@ -31,15 +31,10 @@ export function generateStaticParams() {
   return getStaticParams();
 }
 
-export default async function LandingPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
+async function CachedLandingPage({ locale }: { locale: string }) {
   "use cache";
   cacheLife("max");
 
-  const { locale } = await params;
   setStaticParamsLocale(locale);
 
   return (
@@ -76,4 +71,15 @@ export default async function LandingPage({
       </section>
     </main>
   );
+}
+
+export default async function LandingPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  // Await params outside `"use cache"` — request-bound promises inside a cache
+  // scope hang prerender ("Filling a cache during prerender timed out").
+  const { locale } = await params;
+  return <CachedLandingPage locale={locale} />;
 }

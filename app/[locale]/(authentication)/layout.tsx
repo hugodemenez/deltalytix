@@ -1,6 +1,6 @@
 import AuthenticationLayoutClient from "./authentication-layout-client";
 import { I18nProviderClient } from "@/locales/client";
-import { getCachedLocale } from "@/lib/locale-params";
+import { resolveLocale } from "@/lib/locale-params";
 
 export default async function AuthenticationLayout({
   children,
@@ -9,7 +9,7 @@ export default async function AuthenticationLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  const locale = await getCachedLocale(params);
+  const locale = await resolveLocale(params);
 
   return (
     <I18nProviderClient locale={locale}>

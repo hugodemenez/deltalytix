@@ -3,7 +3,7 @@ import { cacheLife } from 'next/cache'
 import { connection } from 'next/server'
 import { Suspense } from 'react'
 import { getConnectionsMetadataCopy } from '@/lib/og/site-metadata'
-import { getCachedLocale } from '@/lib/locale-params'
+import { resolveLocale } from '@/lib/locale-params'
 import { getSiteOrigin, siteUrl } from '@/lib/site-url'
 import { ConnectionsPageClient } from './components/connections-page-client'
 import { ConnectionsPageSkeleton } from './components/connections-page-skeleton'
@@ -20,7 +20,7 @@ export async function generateMetadata(props: {
   'use cache'
   cacheLife('max')
 
-  const locale = (await getCachedLocale(props.params)) as Locale
+  const locale = (await resolveLocale(props.params)) as Locale
   const copy = getConnectionsMetadataCopy(locale)
   const origin = getSiteOrigin()
   const imageUrl = siteUrl(`/${locale}/dashboard/connections/opengraph-image`, origin)

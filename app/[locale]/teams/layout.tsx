@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import { cacheLife } from 'next/cache';
 import { I18nProviderClient } from "@/locales/client";
 import { truncateForSocialDescription } from "@/lib/og/site-metadata";
-import { getCachedLocale } from "@/lib/locale-params";
+import { resolveLocale } from "@/lib/locale-params";
 
 type Locale = 'en' | 'fr';
 
@@ -19,11 +19,10 @@ const TEAM_DESCRIPTIONS: Record<Locale, string> = {
     "Analyses de trading pour gestionnaires de fonds, prop firms et équipes. Suivez les traders et pilotez vos décisions.",
 };
 
-export async function generateMetadata(props: { params: Promise<{ locale: Locale }> }): Promise<Metadata> {
+async function getCachedTeamsMetadata(locale: Locale): Promise<Metadata> {
   "use cache";
   cacheLife("max");
 
-  const locale = (await getCachedLocale(props.params)) as Locale;
   const description = truncateForSocialDescription(
     TEAM_DESCRIPTIONS[locale] || TEAM_DESCRIPTIONS.en,
   );
@@ -34,6 +33,11 @@ export async function generateMetadata(props: { params: Promise<{ locale: Locale
   };
 }
 
+export async function generateMetadata(props: { params: Promise<{ locale: Locale }> }): Promise<Metadata> {
+  const locale = (await resolveLocale(props.params)) as Locale;
+  return getCachedTeamsMetadata(locale);
+}
+
 export default async function TeamLayout({
   children,
   params,
@@ -41,7 +45,7 @@ export default async function TeamLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  const locale = await getCachedLocale(params);
+  const locale = await resolveLocale(params);
 
   return (
     <I18nProviderClient locale={locale}>
