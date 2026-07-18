@@ -9,9 +9,6 @@ import { getConnectionsPageDataCached } from './data'
 
 type Locale = 'en' | 'fr'
 
-/** Opt this route into Instant Navigations validation (Cache Components). */
-export const instant = true
-
 export async function generateMetadata(props: {
   params: Promise<{ locale: Locale }>
 }): Promise<Metadata> {

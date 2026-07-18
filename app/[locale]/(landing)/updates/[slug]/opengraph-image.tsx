@@ -25,7 +25,6 @@ export const size = {
 export const contentType = "image/png"
 
 // Route segment configuration - these are specialized Route Handlers
-export const runtime = 'nodejs'
 export const revalidate = 3600 // 1 hour
 
 export default async function Image({ 
