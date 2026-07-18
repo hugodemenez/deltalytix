@@ -1,5 +1,4 @@
 import React from "react";
-import { cacheLife } from "next/cache";
 import { setStaticParamsLocale } from "next-international/server";
 import { getI18n } from "@/locales/server";
 import { getStaticParams as getLocaleStaticParams } from "@/locales/server";
@@ -40,9 +39,8 @@ async function isMobileScreenshot(image?: string) {
   }
 }
 
-async function CachedUpdatesPage({ locale }: { locale: string }) {
-  "use cache";
-  cacheLife("hours");
+export default async function UpdatesPage(props: PageProps) {
+  const { locale } = await props.params;
 
   setStaticParamsLocale(locale);
 
@@ -125,11 +123,4 @@ async function CachedUpdatesPage({ locale }: { locale: string }) {
       </section>
     </main>
   );
-}
-
-export default async function UpdatesPage(props: PageProps) {
-  // Await params outside `"use cache"` — request-bound promises inside a cache
-  // scope hang prerender ("Filling a cache during prerender timed out").
-  const { locale } = await props.params;
-  return <CachedUpdatesPage locale={locale} />;
 }

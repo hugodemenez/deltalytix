@@ -3,6 +3,7 @@ import { StarIcon } from "lucide-react";
 import { ContributionGraph } from "./contribution-graph";
 import { getGithubData } from "../actions/github-data";
 import { cacheLife } from "next/cache";
+import { connection } from "next/server";
 import { GITHUB_REPO_NAME, GITHUB_REPO_URL } from "@/lib/github-repo";
 import { getAllPostMetadata } from "@/lib/mdx";
 
@@ -101,7 +102,7 @@ function GithubStatsFallback({ starLabel }: { starLabel: string }) {
   );
 }
 
-export async function CachedGithubData({
+async function CachedGithubDataInner({
   starLabel,
   locale,
 }: {
@@ -142,4 +143,17 @@ export async function CachedGithubData({
       changelogEntries={changelogEntries}
     />
   );
+}
+
+export async function CachedGithubData({
+  starLabel,
+  locale,
+}: {
+  starLabel: string;
+  locale: string;
+}) {
+  // Keep GitHub out of `next build` static generation — network retries were
+  // exhausting the 60s per-page budget and cascading into unrelated routes.
+  await connection();
+  return <CachedGithubDataInner starLabel={starLabel} locale={locale} />;
 }
