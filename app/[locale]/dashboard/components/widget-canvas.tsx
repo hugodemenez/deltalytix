@@ -37,20 +37,7 @@ import { defaultLayouts } from "@/lib/default-layouts"
 import { getCarouselWidgetSize, MOBILE_CAROUSEL_HEIGHT } from "@/lib/widget-carousel"
 import { useIsMobileLayout } from "@/hooks/use-mobile"
 import { Prisma, DashboardLayout } from "@/prisma/generated/prisma/browser"
-import { Skeleton } from "@/components/ui/skeleton"
-
-function CanvasSkeleton() {
-  return (
-    <div className="flex h-full min-h-[16rem] w-full flex-col gap-4 p-4" aria-hidden>
-      <Skeleton className="h-24 w-full rounded-lg" />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Skeleton className="h-40 w-full rounded-lg" />
-        <Skeleton className="h-40 w-full rounded-lg max-md:hidden" />
-      </div>
-      <Skeleton className="h-32 w-full rounded-lg max-md:hidden" />
-    </div>
-  )
-}
+import { WidgetCanvasSkeleton } from './dashboard-home-skeleton'
 
 // Helper function to convert internal layout to Prisma type
 const toPrismaLayout = (layout: DashboardLayoutWithWidgets): DashboardLayout => {
@@ -851,7 +838,7 @@ export default function WidgetCanvas() {
             ) : undefined
           }
         />
-        {!isLayoutReady && <CanvasSkeleton />}
+        {!isLayoutReady && <WidgetCanvasSkeleton />}
         {isLayoutReady && layouts && (
           <div className="relative">
             <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-50" />

@@ -3,9 +3,9 @@
 import { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { TabsContent } from '@/components/ui/tabs'
-import { TradeTableReview } from './components/tables/trade-table-review'
-import { AccountsOverview } from './components/accounts/accounts-overview'
-import WidgetCanvas from './components/widget-canvas'
+import { TradeTableReview } from '../components/tables/trade-table-review'
+import { AccountsOverview } from '../components/accounts/accounts-overview'
+import WidgetCanvas from '../components/widget-canvas'
 import { clearReferralCode } from '@/lib/referral-storage'
 
 /**

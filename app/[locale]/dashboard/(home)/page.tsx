@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { connection } from 'next/server'
-import { DashboardHomeChrome } from './components/dashboard-home-chrome'
-import { DashboardHomeContentSkeleton } from './components/dashboard-home-skeleton'
+import { DashboardHomeChrome } from '../components/dashboard-home-chrome'
+import { DashboardHomeContentSkeleton } from '../components/dashboard-home-skeleton'
 import DashboardHomeClient from './dashboard-home-client'
 
 /** Opt this route into Instant Navigations validation (Cache Components). */
@@ -30,6 +30,7 @@ async function DashboardPageContent() {
  * Per-component Instant Navigations (same model as Connections):
  * - Chrome (real tab labels) is outside Suspense → paints once
  * - Tab bodies stream behind their own Suspense skeleton
+ * - `loading.tsx` in this segment shows the same chrome+skeleton on navigate
  */
 export default function DashboardPage() {
   return (
