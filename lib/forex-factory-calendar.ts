@@ -183,10 +183,12 @@ export function parseForexFactoryMarkdown(
 
     // Full row may repeat the day in cell 0.
     let offset = 0
-    if (cells[0] && parseDayHeader(cells[0], year)) {
-      currentDay = parseDayHeader(cells[0], year)
+    const dayFromRow = cells[0] ? parseDayHeader(cells[0], year) : null
+    if (dayFromRow) {
+      currentDay = dayFromRow
       offset = 1
     }
+    const day = currentDay
 
     // Skip revised-date oddities like "Apr 18th"
     if (cells[offset] && /\d{1,2}(st|nd|rd|th)/i.test(cells[offset]) && !/am|pm|all day/i.test(cells[offset])) {
@@ -222,12 +224,12 @@ export function parseForexFactoryMarkdown(
     let date: Date | null = null
 
     if (isAllDay || !timeCell) {
-      date = new Date(currentDay)
+      date = new Date(day)
     } else {
       const clock = parseFfClock(timeCell)
       if (!clock) continue
       lastTime = timeCell
-      const local = `${currentDay.getUTCFullYear()}-${String(currentDay.getUTCMonth() + 1).padStart(2, '0')}-${String(currentDay.getUTCDate()).padStart(2, '0')} ${String(clock.hours).padStart(2, '0')}:${String(clock.minutes).padStart(2, '0')}:00`
+      const local = `${day.getUTCFullYear()}-${String(day.getUTCMonth() + 1).padStart(2, '0')}-${String(day.getUTCDate()).padStart(2, '0')} ${String(clock.hours).padStart(2, '0')}:${String(clock.minutes).padStart(2, '0')}:00`
       date = fromZonedTime(local, FF_TIMEZONE)
     }
 
