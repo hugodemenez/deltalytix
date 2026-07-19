@@ -34,7 +34,6 @@ import {
   deleteAccountAction,
   setupAccountAction,
   savePayoutAction,
-  calculateAccountMetricsAction,
   deleteTradesByIdsAction,
 } from "@/server/accounts";
 import { computeMetricsForAccounts } from "@/lib/account-metrics";
@@ -68,6 +67,34 @@ import { computeEquityChartData } from "@/lib/equity-chart";
 import { defaultLayouts } from "@/lib/default-layouts";
 import { getTimeRangeKey } from "@/lib/time-range";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+/** Dev-only / opt-in timing for dashboard critical-path work. No production overhead. */
+const DASHBOARD_PERF_LOG =
+  process.env.NODE_ENV === "development" ||
+  process.env.NEXT_PUBLIC_DASHBOARD_PERF_LOG === "1";
+
+function logDashboardPerf(
+  label: string,
+  startMs: number,
+  detail?: Record<string, number | string | boolean>
+) {
+  if (!DASHBOARD_PERF_LOG) return;
+  const elapsed = performance.now() - startMs;
+  if (detail) {
+    console.info(`[dashboard-perf] ${label}: ${elapsed.toFixed(1)}ms`, detail);
+  } else {
+    console.info(`[dashboard-perf] ${label}: ${elapsed.toFixed(1)}ms`);
+  }
+}
+
+async function timedPromise<T>(
+  name: string,
+  promise: Promise<T>
+): Promise<{ name: string; ms: number; value: T }> {
+  const start = performance.now();
+  const value = await promise;
+  return { name, ms: performance.now() - start, value };
+}
 
 // Types from trades-data.tsx
 type StatisticsProps = {
@@ -444,9 +471,30 @@ export const DataProvider: React.FC<{
     equityChartParams,
   ]);
 
-  // Load data from the server
+  const loadStripeSubscription = useCallback(async () => {
+    try {
+      setStripeSubscriptionLoading(true);
+      const stripeSubscriptionData = await getSubscriptionData();
+      setStripeSubscription(stripeSubscriptionData);
+      setStripeSubscriptionError(null);
+    } catch (error) {
+      console.error("Error loading Stripe subscription:", error);
+      setStripeSubscriptionError(
+        error instanceof Error ? error.message : "Failed to load subscription"
+      );
+      setStripeSubscription(null);
+    } finally {
+      setStripeSubscriptionLoading(false);
+    }
+  }, [
+    setStripeSubscription,
+    setStripeSubscriptionError,
+    setStripeSubscriptionLoading,
+  ]);
+
+  // Load authenticated dashboard data: auth first, then parallel critical fetches.
   const loadData = useCallback(async () => {
-    // Prevent multiple simultaneous loads
+    const loadStarted = performance.now();
     try {
       setIsLoading(true);
 
@@ -462,35 +510,36 @@ export const DataProvider: React.FC<{
             ),
           }));
 
-          // Batch state updates
-          const updates = async () => {
-            setTrades(processedSharedTrades);
-            setSharedParams(sharedData.params);
+          setTrades(processedSharedTrades);
+          setSharedParams(sharedData.params);
+          setDashboardLayout(defaultLayouts);
 
-            setDashboardLayout(defaultLayouts);
+          if (sharedData.params.tickDetails) {
+            setTickDetails(sharedData.params.tickDetails);
+          }
 
-            if (sharedData.params.tickDetails) {
-              setTickDetails(sharedData.params.tickDetails);
-            }
-
-            const accountsWithMetrics = await calculateAccountMetricsAction(
-              sharedData.groups?.flatMap((group) => group.accounts) || []
-            );
-            setGroups(sharedData.groups || []);
-            setAccounts(accountsWithMetrics);
-          };
-
-          await updates();
+          // Shared views: compute metrics from already-loaded trades (no extra DB round-trip).
+          const sharedAccounts =
+            sharedData.groups?.flatMap((group) => group.accounts) || [];
+          const accountsWithMetrics = computeMetricsForAccounts(
+            sharedAccounts,
+            processedSharedTrades
+          );
+          setGroups(sharedData.groups || []);
+          setAccounts(accountsWithMetrics);
         }
         setIsLoading(false);
+        logDashboardPerf("shared loadData", loadStarted);
         return;
       }
 
-      // Step 1: Get Supabase user
+      // Only authentication must complete before parallel critical-path work.
+      const authStarted = performance.now();
       const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      logDashboardPerf("auth.getUser", authStarted);
 
       if (!user || !user.id) {
         await signOut();
@@ -500,49 +549,74 @@ export const DataProvider: React.FC<{
 
       setSupabaseUser(user);
 
-      // CRITICAL: Get dashboard layout first
-      // But check if the layout is already in the state
-      // TODO: Cache layout client side (lightweight)
-      if (!dashboardLayout) {
-        const dashboardLayoutResponse = await getDashboardLayout(user.id);
+      const existingLayout = useUserStore.getState().dashboardLayout;
+
+      const layoutPromise = existingLayout
+        ? Promise.resolve(null)
+        : getDashboardLayout(user.id);
+
+      const tradesPromise = (async (): Promise<PrismaTrade[]> => {
+        // Dev: prefer local IndexedDB to avoid hitting remote DB on reloads.
+        // IndexedDB is a cache only — never the authoritative source.
+        if (process.env.NODE_ENV === "development" && user.id) {
+          const cachedTrades = await getTradesCache(user.id);
+          if (
+            cachedTrades &&
+            Array.isArray(cachedTrades) &&
+            cachedTrades.length > 0
+          ) {
+            return cachedTrades;
+          }
+          const remoteTrades = await getTradesAction(user.id, false);
+          const safeTrades = Array.isArray(remoteTrades) ? remoteTrades : [];
+          setTradesCache(user.id, safeTrades).catch((err) =>
+            console.error(
+              "[DataProvider] Failed to cache trades in IndexedDB (loadData)",
+              err
+            )
+          );
+          return safeTrades;
+        }
+        const remoteTrades = await getTradesAction();
+        return Array.isArray(remoteTrades) ? remoteTrades : [];
+      })();
+
+      const userDataPromise = getUserData();
+
+      const parallelStarted = performance.now();
+      const [layoutResult, tradesResult, userDataResult] = await Promise.all([
+        timedPromise("layout", layoutPromise),
+        timedPromise("trades", tradesPromise),
+        timedPromise("userData", userDataPromise),
+      ]);
+
+      const parallelWallMs = performance.now() - parallelStarted;
+      const sequentialEstimateMs =
+        layoutResult.ms + tradesResult.ms + userDataResult.ms;
+      logDashboardPerf("critical path Promise.all", parallelStarted, {
+        layoutMs: Number(layoutResult.ms.toFixed(1)),
+        tradesMs: Number(tradesResult.ms.toFixed(1)),
+        userDataMs: Number(userDataResult.ms.toFixed(1)),
+        wallMs: Number(parallelWallMs.toFixed(1)),
+        sequentialEstimateMs: Number(sequentialEstimateMs.toFixed(1)),
+        savedMs: Number((sequentialEstimateMs - parallelWallMs).toFixed(1)),
+      });
+
+      const dashboardLayoutResponse = layoutResult.value;
+      const loadedTrades = tradesResult.value;
+      const data = userDataResult.value;
+
+      if (!existingLayout) {
         if (dashboardLayoutResponse) {
           setDashboardLayout(
-            // Convert from JSONB to DashboardLayoutWithWidgets type
             dashboardLayoutResponse as unknown as DashboardLayoutWithWidgets
           );
         } else {
-          // If no layout exists in database, use default layout
           setDashboardLayout(defaultLayouts);
         }
       }
 
-      // Step 2: Fetch trades (with caching server side)
-      // I think we could make basic computations server side to offload inital stats computations
-      // Dev: prefer local IndexedDB to avoid hitting remote DB on reloads
-      if (
-        process.env.NODE_ENV === "development" &&
-        user.id &&
-        !params?.isSharedView // avoid caching shared/public views
-      ) {
-        const cachedTrades = await getTradesCache(user.id);
-        if (cachedTrades && Array.isArray(cachedTrades) && cachedTrades.length > 0) {
-          setTrades(cachedTrades);
-        } else {
-          const trades = await getTradesAction(false);
-          const safeTrades = Array.isArray(trades) ? trades : [];
-          setTrades(safeTrades);
-          setTradesCache(user.id, safeTrades).catch((err) =>
-            console.error("[DataProvider] Failed to cache trades in IndexedDB (loadData)", err),
-          );
-        }
-      } else {
-        const trades = await getTradesAction();
-        setTrades(Array.isArray(trades) ? trades : []);
-      }
-
-      // Step 3: Fetch user data
-      // TODO: Check what we could cache client side
-      const data = await getUserData();
+      setTrades(loadedTrades);
 
       if (!data) {
         await signOut();
@@ -550,12 +624,18 @@ export const DataProvider: React.FC<{
         return;
       }
 
-      // Calculate metrics for each account
-      const accountsWithMetrics = await calculateAccountMetricsAction(
-        data.accounts || []
+      // Metrics from trades already in hand — avoids a second trades DB fetch via server action.
+      const metricsStarted = performance.now();
+      const accountsWithMetrics = computeMetricsForAccounts(
+        data.accounts || [],
+        loadedTrades
       );
-      setAccounts(accountsWithMetrics);
+      logDashboardPerf("computeMetricsForAccounts", metricsStarted, {
+        accountCount: data.accounts?.length ?? 0,
+        tradeCount: loadedTrades.length,
+      });
 
+      setAccounts(accountsWithMetrics);
       setUser(data.userData);
       setSubscription(data.subscription as PrismaSubscription | null);
       setTags(data.tags);
@@ -565,9 +645,9 @@ export const DataProvider: React.FC<{
       setTickDetails(data.tickDetails);
       setIsFirstConnection(data.userData?.isFirstConnection || false);
 
+      logDashboardPerf("authenticated loadData (critical path done)", loadStarted);
     } catch (error) {
       console.error("Error loading data:", error);
-      // Optionally handle specific error cases here
       if (error instanceof Error) {
         console.error("Error details:", error.message);
       }
@@ -578,33 +658,31 @@ export const DataProvider: React.FC<{
     isSharedView,
     params?.slug,
     timezone,
-    supabaseUser,
-    isLoading,
     setIsLoading,
+    setTrades,
+    setSharedParams,
+    setDashboardLayout,
+    setTickDetails,
+    setGroups,
+    setAccounts,
+    setSupabaseUser,
+    setUser,
+    setSubscription,
+    setTags,
+    setMoods,
+    setEvents,
+    setIsFirstConnection,
   ]);
 
-  // Load data on mount and when isSharedView changes
+  // Load data on mount and when isSharedView changes.
+  // Stripe starts concurrently and must not block the dashboard loading state.
   useEffect(() => {
     let mounted = true;
 
     const loadDataIfMounted = async () => {
       if (!mounted) return;
+      void loadStripeSubscription();
       await loadData();
-      // Load Stripe subscription data
-      try {
-        setStripeSubscriptionLoading(true);
-        const stripeSubscriptionData = await getSubscriptionData();
-        setStripeSubscription(stripeSubscriptionData);
-        setStripeSubscriptionError(null);
-      } catch (error) {
-        console.error("Error loading Stripe subscription:", error);
-        setStripeSubscriptionError(
-          error instanceof Error ? error.message : "Failed to load subscription"
-        );
-        setStripeSubscription(null);
-      } finally {
-        setStripeSubscriptionLoading(false);
-      }
     };
 
     loadDataIfMounted();
@@ -648,23 +726,6 @@ export const DataProvider: React.FC<{
     };
     updateLanguage();
   }, [locale, supabaseUser?.id]);
-
-  const loadStripeSubscription = useCallback(async () => {
-    try {
-      setStripeSubscriptionLoading(true);
-      const stripeSubscriptionData = await getSubscriptionData();
-      setStripeSubscription(stripeSubscriptionData);
-      setStripeSubscriptionError(null);
-    } catch (error) {
-      console.error("Error loading Stripe subscription:", error);
-      setStripeSubscriptionError(
-        error instanceof Error ? error.message : "Failed to load subscription"
-      );
-      setStripeSubscription(null);
-    } finally {
-      setStripeSubscriptionLoading(false);
-    }
-  }, []);
 
   const refreshTradesOnly = useCallback(
     async (options?: { force?: boolean; withLoading?: boolean }) => {
@@ -727,8 +788,11 @@ export const DataProvider: React.FC<{
           return;
         }
 
-        const accountsWithMetrics = await calculateAccountMetricsAction(
-          data.accounts || []
+        // Reuse trades already in the store — same metrics, no extra server round-trip.
+        const currentTrades = useTradesStore.getState().trades;
+        const accountsWithMetrics = computeMetricsForAccounts(
+          data.accounts || [],
+          currentTrades
         );
         setAccounts(accountsWithMetrics);
 
@@ -742,7 +806,8 @@ export const DataProvider: React.FC<{
         setIsFirstConnection(data.userData?.isFirstConnection || false);
 
         if (includeStripe) {
-          await loadStripeSubscription();
+          // Noncritical: do not extend the loading gate for Stripe.
+          void loadStripeSubscription();
         }
       } catch (error) {
         console.error("Error refreshing user data:", error);
@@ -772,12 +837,22 @@ export const DataProvider: React.FC<{
 
       setIsLoading(true);
       try {
-        await refreshTradesOnly({ force, withLoading: false });
-        await refreshUserDataOnly({
-          force,
-          includeStripe: true,
-          withLoading: false,
-        });
+        const refreshStarted = performance.now();
+        // Trades + user bundle are independent once the user is known.
+        await Promise.all([
+          refreshTradesOnly({ force, withLoading: false }),
+          refreshUserDataOnly({
+            force,
+            includeStripe: false,
+            withLoading: false,
+          }),
+        ]);
+        // refreshUserDataOnly may finish before trades land; recompute from final stores.
+        const latestAccounts = useUserStore.getState().accounts;
+        const latestTrades = useTradesStore.getState().trades;
+        setAccounts(computeMetricsForAccounts(latestAccounts, latestTrades));
+        void loadStripeSubscription();
+        logDashboardPerf("refreshAllData", refreshStarted);
         console.log("[refreshAllData] Successfully refreshed trades and user data");
       } catch (error) {
         console.error("Error refreshing all data:", error);
@@ -785,7 +860,13 @@ export const DataProvider: React.FC<{
         setIsLoading(false);
       }
     },
-    [refreshTradesOnly, refreshUserDataOnly, supabaseUser?.id]
+    [
+      refreshTradesOnly,
+      refreshUserDataOnly,
+      loadStripeSubscription,
+      setAccounts,
+      supabaseUser?.id,
+    ]
   );
 
   // Dev-only: persist trades store into IndexedDB so reloads avoid DB hits
