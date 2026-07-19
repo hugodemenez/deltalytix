@@ -1,0 +1,74 @@
+{{ $fr := eq .Data.language "fr" }}
+<!DOCTYPE html>
+<html lang="{{ if $fr }}fr{{ else }}en{{ end }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>{{ if $fr }}Connexion à Deltalytix{{ else }}Sign in to Deltalytix{{ end }}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f7f7f4;font-family:Arial,Helvetica,sans-serif;color:#1f211e;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">{{ if $fr }}Votre lien de connexion sécurisé et votre code de vérification Deltalytix.{{ else }}Your secure Deltalytix sign-in link and verification code.{{ end }}</div>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" bgcolor="#f7f7f4" style="width:100%;background-color:#f7f7f4;">
+    <tr>
+      <td align="center" style="padding-top:24px;padding-right:12px;padding-bottom:24px;padding-left:12px;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" bgcolor="#ffffff" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #e5e6e1;">
+          <tr>
+            <td style="padding-top:40px;padding-right:32px;padding-bottom:40px;padding-left:32px;">
+              <p style="margin-top:0;margin-right:0;margin-bottom:32px;margin-left:0;color:#1f211e;font-family:Arial,Helvetica,sans-serif;font-size:17px;line-height:24px;font-weight:600;letter-spacing:-0.02em;">Deltalytix</p>
+              <p style="margin-top:0;margin-right:0;margin-bottom:10px;margin-left:0;color:#5d625c;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;word-break:break-word;">{{ if $fr }}Connexion en tant que{{ else }}Signing in as{{ end }} {{ .Email }}</p>
+              <h1 style="margin:0;color:#1f211e;font-family:Arial,Helvetica,sans-serif;font-size:40px;line-height:43px;letter-spacing:-0.045em;font-weight:400;">{{ if $fr }}Heureux de vous revoir.{{ else }}Welcome back.{{ end }}</h1>
+              <p style="margin-top:16px;margin-right:0;margin-bottom:0;margin-left:0;color:#5d625c;font-family:Arial,Helvetica,sans-serif;font-size:17px;line-height:28px;">{{ if $fr }}Utilisez le lien sécurisé ci-dessous pour vous connecter à votre compte Deltalytix.{{ else }}Use the secure link below to sign in to your Deltalytix account.{{ end }}</p>
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td style="padding-top:30px;padding-bottom:30px;"><div style="height:1px;background-color:#e8e9e5;font-size:1px;line-height:1px;">&nbsp;</div></td></tr></table>
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" bgcolor="#eef4ef" style="width:100%;background-color:#eef4ef;border-radius:12px;">
+                <tr>
+                  <td bgcolor="#eef4ef" style="padding-top:24px;padding-right:24px;padding-bottom:24px;padding-left:24px;background-color:#eef4ef;border-radius:12px;">
+                    <p style="margin-top:0;margin-right:0;margin-bottom:8px;margin-left:0;color:#697069;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;font-weight:700;letter-spacing:0.08em;">{{ if $fr }}CONNEXION SÉCURISÉE{{ else }}SECURE SIGN-IN{{ end }}</p>
+                    <h2 style="margin-top:0;margin-right:0;margin-bottom:10px;margin-left:0;color:#1f211e;font-family:Arial,Helvetica,sans-serif;font-size:29px;line-height:34px;letter-spacing:-0.035em;font-weight:500;">{{ if $fr }}Continuer vers Deltalytix{{ else }}Continue to Deltalytix{{ end }}</h2>
+                    <p style="margin:0;color:#626760;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;">{{ if $fr }}Ce lien vous est réservé et ne peut être utilisé qu’une seule fois.{{ else }}This link is unique to you and can only be used once.{{ end }}</p>
+                    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-top:20px;">
+                      <tr>
+                        <td bgcolor="#242722" style="background-color:#242722;border-radius:4px;">
+                          <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding-top:13px;padding-right:18px;padding-bottom:13px;padding-left:18px;white-space:nowrap;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;font-weight:600;text-decoration:none;">{{ if $fr }}Se connecter en toute sécurité →{{ else }}Sign in securely →{{ end }}</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td style="padding-top:30px;padding-bottom:30px;"><div style="height:1px;background-color:#e8e9e5;font-size:1px;line-height:1px;">&nbsp;</div></td></tr></table>
+
+              <h2 style="margin-top:0;margin-right:0;margin-bottom:8px;margin-left:0;color:#1f211e;font-family:Arial,Helvetica,sans-serif;font-size:24px;line-height:30px;letter-spacing:-0.025em;font-weight:500;">{{ if $fr }}Ou utilisez votre code de vérification{{ else }}Or use your verification code{{ end }}</h2>
+              <p style="margin:0;color:#626760;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;">{{ if $fr }}Saisissez ce code à usage unique dans l’application Deltalytix.{{ else }}Enter this one-time code in the Deltalytix app.{{ end }}</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" bgcolor="#f3f4f1" style="width:100%;margin-top:18px;background-color:#f3f4f1;border-radius:12px;">
+                <tr>
+                  <td bgcolor="#f3f4f1" style="padding-top:22px;padding-right:22px;padding-bottom:22px;padding-left:22px;background-color:#f3f4f1;border-radius:12px;">
+                    <p style="margin-top:0;margin-right:0;margin-bottom:6px;margin-left:0;color:#777c74;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;font-weight:700;letter-spacing:0.08em;">{{ if $fr }}CODE DE VÉRIFICATION{{ else }}VERIFICATION CODE{{ end }}</p>
+                    <p style="margin:0;color:#30342f;font-family:'Courier New',Courier,monospace;font-size:30px;line-height:38px;font-weight:700;letter-spacing:0.16em;">{{ .Token }}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td style="padding-top:30px;padding-bottom:30px;"><div style="height:1px;background-color:#e8e9e5;font-size:1px;line-height:1px;">&nbsp;</div></td></tr></table>
+
+              <h2 style="margin-top:0;margin-right:0;margin-bottom:8px;margin-left:0;color:#1f211e;font-family:Arial,Helvetica,sans-serif;font-size:24px;line-height:30px;letter-spacing:-0.025em;font-weight:500;">{{ if $fr }}Vous n’êtes pas à l’origine de cette demande ?{{ else }}Didn’t request this?{{ end }}</h2>
+              <p style="margin:0;color:#626760;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;">{{ if $fr }}Vous pouvez ignorer cet e-mail. Le lien et le code expirent rapidement et ne peuvent être utilisés qu’une seule fois.{{ else }}You can safely ignore this email. The link and code expire shortly and can only be used once.{{ end }}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding-top:24px;padding-right:32px;padding-bottom:28px;padding-left:32px;border-top:1px solid #e8e9e5;">
+              <p style="margin-top:0;margin-right:0;margin-bottom:8px;margin-left:0;color:#858981;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">{{ if $fr }}Deltalytix · Analyses de trading pour les traders modernes{{ else }}Deltalytix · Trading analytics for modern traders{{ end }}</p>
+              <p style="margin:0;color:#858981;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">{{ if $fr }}Besoin d’aide ?{{ else }}Need help?{{ end }} <a href="https://discord.gg/a5YVF5Ec2n" style="color:#73776f;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;text-decoration:underline;">{{ if $fr }}Rejoignez la communauté Discord{{ else }}Join the Discord community{{ end }}</a></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
