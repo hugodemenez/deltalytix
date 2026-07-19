@@ -1,0 +1,600 @@
+/**
+ * Investing.com economic calendar fetch + parse.
+ *
+ * Direct requests to sslecal2.investing.com are blocked by Cloudflare from
+ * datacenter IPs. Jina Reader runs a real browser fetch and returns the widget
+ * as markdown, which we parse into events.
+ *
+ * Optional: set JINA_API_KEY for higher rate limits.
+ * Optional: INVESTING_SCRAPE_MODE=browser to try agent-browser first (needs CF bypass).
+ */
+
+import { isValid } from 'date-fns'
+
+export type CronLang = 'fr' | 'en'
+
+export interface MappedFinancialEvent {
+  title: string
+  date: Date
+  importance: 'HIGH' | 'MEDIUM' | 'LOW'
+  type: string
+  sourceUrl: string
+  country: string
+  lang: CronLang
+  timezone: string
+}
+
+const LANG_TO_INVESTING: Record<CronLang, string> = {
+  fr: '5',
+  en: '1',
+}
+
+const INVESTING_CALENDAR_PAGE: Record<CronLang, string> = {
+  en: 'https://www.investing.com/economic-calendar/',
+  fr: 'https://fr.investing.com/economic-calendar/',
+}
+
+const ENGLISH_MONTHS: Record<string, string> = {
+  january: '01',
+  february: '02',
+  march: '03',
+  april: '04',
+  may: '05',
+  june: '06',
+  july: '07',
+  august: '08',
+  september: '09',
+  october: '10',
+  november: '11',
+  december: '12',
+}
+
+const FRENCH_MONTHS: Record<string, string> = {
+  janvier: '01',
+  février: '02',
+  fevrier: '02',
+  mars: '03',
+  avril: '04',
+  mai: '05',
+  juin: '06',
+  juillet: '07',
+  août: '08',
+  aout: '08',
+  septembre: '09',
+  octobre: '10',
+  novembre: '11',
+  décembre: '12',
+  decembre: '12',
+}
+
+const JINA_READER = 'https://r.jina.ai/'
+
+function investingWidgetUrl(lang: CronLang): string {
+  // timeZone=55 is UTC on Investing's widget.
+  return `https://sslecal2.investing.com/?timeZone=55&lang=${LANG_TO_INVESTING[lang]}`
+}
+
+function forexprosWidgetUrl(lang: CronLang): string {
+  // Same Fusion Media / Investing widget host (fallback if investing.com is rate-limited on Jina).
+  return `https://sslecal2.forexprostools.com/?timeZone=55&lang=${LANG_TO_INVESTING[lang]}`
+}
+
+function jinaHeaders(): HeadersInit {
+  const headers: Record<string, string> = {
+    Accept: 'text/markdown',
+    'User-Agent': 'Mozilla/5.0 (compatible; CalendarSyncBot/1.0)',
+  }
+  if (process.env.JINA_API_KEY) {
+    headers.Authorization = `Bearer ${process.env.JINA_API_KEY}`
+  }
+  return headers
+}
+
+function looksLikeCloudflareOrError(text: string): boolean {
+  return (
+    /just a moment/i.test(text) ||
+    /returned error 403/i.test(text) ||
+    /AuthenticationRequiredError/i.test(text) ||
+    /AbuseAlleviationError/i.test(text)
+  )
+}
+
+function hasCalendarContent(text: string): boolean {
+  if (looksLikeCloudflareOrError(text) && !text.includes('| Time |')) {
+    return false
+  }
+  return (
+    text.includes('| Time |') ||
+    text.includes('| Heure |') ||
+    /(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),/i.test(
+      text,
+    ) ||
+    /(?:Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche)\s+\d+/i.test(text)
+  )
+}
+
+async function fetchViaJina(url: string): Promise<string> {
+  const response = await fetch(`${JINA_READER}${url}`, {
+    headers: jinaHeaders(),
+    cache: 'no-store',
+  })
+  const text = await response.text()
+  if (!response.ok) {
+    throw new Error(
+      `Jina Reader failed for ${url}: ${response.status} ${response.statusText}`,
+    )
+  }
+  if (!hasCalendarContent(text)) {
+    throw new Error(
+      `Jina Reader returned no calendar content for ${url} (len=${text.length})`,
+    )
+  }
+  return text
+}
+
+export async function fetchInvestingMarkdown(lang: CronLang): Promise<{
+  markdown: string
+  sourceUrl: string
+}> {
+  // Prefer forexprostools host first: same Investing/Fusion Media widget, but
+  // Jina is less likely to have the domain abuse-blocked than investing.com.
+  const candidates = [forexprosWidgetUrl(lang), investingWidgetUrl(lang)]
+  const errors: string[] = []
+
+  for (const url of candidates) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) {
+          const delayMs = 2000 * attempt
+          console.log(`Retrying Jina fetch in ${delayMs}ms for ${url}`)
+          await new Promise((resolve) => setTimeout(resolve, delayMs))
+        }
+        console.log(`Fetching Investing calendar via Jina: ${url}`)
+        const markdown = await fetchViaJina(url)
+        return { markdown, sourceUrl: url }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        console.warn(
+          `Investing fetch failed for ${url} (attempt ${attempt + 1}): ${message}`,
+        )
+        errors.push(message)
+      }
+    }
+  }
+
+  throw new Error(
+    `Failed to fetch Investing.com calendar for lang=${lang}: ${errors.join(' | ')}`,
+  )
+}
+
+function parseEnglishDay(dateStr: string): Date | null {
+  const normalized = dateStr.replace(/,/g, '').trim()
+  const parts = normalized.split(/\s+/)
+  const [, month, day, year] = parts
+  const monthNum = ENGLISH_MONTHS[month?.toLowerCase() ?? '']
+  if (!day || !monthNum || !year) return null
+  const parsed = new Date(
+    Date.UTC(parseInt(year, 10), parseInt(monthNum, 10) - 1, parseInt(day, 10)),
+  )
+  return isValid(parsed) ? parsed : null
+}
+
+function parseFrenchDay(dateStr: string): Date | null {
+  // e.g. "Lundi 13 juillet 2026" or "dimanche 19 juillet 2026"
+  const parts = dateStr.trim().split(/\s+/)
+  if (parts.length < 4) return null
+  const [, day, month, year] = parts
+  const monthNum = FRENCH_MONTHS[month?.toLowerCase() ?? '']
+  if (!day || !monthNum || !year) return null
+  const parsed = new Date(
+    Date.UTC(parseInt(year, 10), parseInt(monthNum, 10) - 1, parseInt(day, 10)),
+  )
+  return isValid(parsed) ? parsed : null
+}
+
+function splitMarkdownRow(line: string): string[] {
+  const trimmed = line.trim()
+  if (!trimmed.startsWith('|')) return []
+  return trimmed
+    .split('|')
+    .slice(1, -1)
+    .map((cell) => cell.trim())
+}
+
+function combineUtcDateAndTime(day: Date, time: string): Date | null {
+  const match = time.match(/^(\d{1,2}):(\d{2})$/)
+  if (!match) return null
+  const hours = parseInt(match[1], 10)
+  const minutes = parseInt(match[2], 10)
+  const combined = new Date(
+    Date.UTC(
+      day.getUTCFullYear(),
+      day.getUTCMonth(),
+      day.getUTCDate(),
+      hours,
+      minutes,
+    ),
+  )
+  return isValid(combined) ? combined : null
+}
+
+function stripGluedCalendarStats(eventName: string): string {
+  let name = eventName.trim()
+
+  // If actual/forecast/previous values are glued after the last ")", drop them.
+  const lastParen = name.lastIndexOf(')')
+  if (lastParen >= 0 && /^\s*-?\d/.test(name.slice(lastParen + 1))) {
+    name = name.slice(0, lastParen + 1)
+  }
+
+  // Titles without a trailing paren still sometimes append rates:
+  // "Adjudication ... Allemagne 2,566%2,478%"
+  name = name.replace(
+    /(?<=[A-Za-zÀ-ÿ.»"'])\s*-?\d[\d\s.,%A-Za-z-]*$/u,
+    '',
+  )
+
+  return name.trim()
+}
+
+function inferImportance(eventName: string, impactCell: string): 'HIGH' | 'MEDIUM' | 'LOW' {
+  const impact = impactCell.trim()
+  // Markdown usually drops bull icons; keep heuristics for holidays / explicit markers.
+  if (
+    /holiday|vacances|jour férié|férié/i.test(eventName) ||
+    /^holiday$/i.test(impact)
+  ) {
+    return 'LOW'
+  }
+  const bullish = (impact.match(/bull|★|⭐/gi) || []).length
+  if (bullish >= 3 || /high/i.test(impact)) return 'HIGH'
+  if (bullish === 2 || /medium/i.test(impact)) return 'MEDIUM'
+  if (bullish === 1 || /low/i.test(impact)) return 'LOW'
+  return 'MEDIUM'
+}
+
+/**
+ * Parse Investing widget markdown from Jina Reader (EN table or FR plaintext).
+ */
+export function parseInvestingMarkdown(
+  markdown: string,
+  lang: CronLang,
+): MappedFinancialEvent[] {
+  const sourcePage = INVESTING_CALENDAR_PAGE[lang]
+  const events: MappedFinancialEvent[] = []
+  let currentDay: Date | null = null
+
+  const lines = markdown.split(/\r?\n/)
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim()
+    if (!line || line === '|' || /^\|?\s*---/.test(line)) continue
+
+    // Day headers may be a one-cell markdown row or a bare French date line.
+    const enDayMatch = line.match(
+      /^\|\s*((?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+[^|]+?)\s*\|?\s*$/i,
+    )
+    if (enDayMatch) {
+      currentDay = parseEnglishDay(enDayMatch[1])
+      continue
+    }
+
+    const frDayMatch = line.match(
+      /^(?:\|\s*)?((?:Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche)\s+\d{1,2}\s+\S+\s+\d{4})\s*\|?\s*$/i,
+    )
+    if (frDayMatch) {
+      currentDay = parseFrenchDay(frDayMatch[1])
+      continue
+    }
+
+    if (!currentDay) continue
+
+    const cells = splitMarkdownRow(line)
+    if (cells.length >= 4) {
+      // Table row: Time | Cur. | Imp. | Event | ...
+      const [time, currency, impact, rawEventName] = cells
+      if (!time || !rawEventName) continue
+      if (/^time$/i.test(time) || /^heure$/i.test(time)) continue
+
+      const eventName = stripGluedCalendarStats(rawEventName)
+      if (!eventName) continue
+
+      const isAllDay = /^(all day|toute la journée)$/i.test(time)
+      const date = isAllDay
+        ? new Date(currentDay)
+        : combineUtcDateAndTime(currentDay, time)
+      if (!date) continue
+
+      const currencyCode = currency?.trim() || ''
+      const title = currencyCode ? `${currencyCode} - ${eventName}` : eventName
+
+      events.push({
+        title,
+        date,
+        importance: inferImportance(eventName, impact || ''),
+        type: 'ECONOMIC',
+        sourceUrl: sourcePage,
+        country: currencyCode || 'Holiday',
+        lang,
+        timezone: 'UTC',
+      })
+      continue
+    }
+
+    // French widget often renders as plaintext:
+    // "06:00 NOK Production manufacturière (Mensuel) (Mai)0,7%0,4%-0,6%"
+    const plainMatch = line.match(
+      /^(\d{1,2}:\d{2}|Toute la journée|All Day)\s+([A-Z]{3})?\s*(.+)$/i,
+    )
+    if (plainMatch) {
+      const time = plainMatch[1]
+      const currencyCode = (plainMatch[2] || '').trim()
+      const eventName = stripGluedCalendarStats(plainMatch[3])
+      if (!eventName) continue
+
+      const isAllDay = /^(all day|toute la journée)$/i.test(time)
+      const date = isAllDay
+        ? new Date(currentDay)
+        : combineUtcDateAndTime(currentDay, time)
+      if (!date) continue
+
+      events.push({
+        title: currencyCode ? `${currencyCode} - ${eventName}` : eventName,
+        date,
+        importance: inferImportance(eventName, ''),
+        type: 'ECONOMIC',
+        sourceUrl: sourcePage,
+        country: currencyCode || 'Holiday',
+        lang,
+        timezone: 'UTC',
+      })
+    }
+  }
+
+  return events
+}
+
+/**
+ * Investing markdown drops bull-icon importance. Optionally overlay High/Medium/Low
+ * from Forex Factory's public JSON when currency + UTC minute match.
+ */
+async function enrichImportanceFromForexFactory(
+  events: MappedFinancialEvent[],
+): Promise<number> {
+  try {
+    const response = await fetch(
+      'https://nfs.faireconomy.media/ff_calendar_thisweek.json',
+      {
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'Mozilla/5.0 (compatible; CalendarSyncBot/1.0)',
+        },
+        cache: 'no-store',
+      },
+    )
+    if (!response.ok) return 0
+
+    const payload = (await response.json()) as Array<{
+      title?: string
+      country?: string
+      date?: string
+      impact?: string
+    }>
+    if (!Array.isArray(payload)) return 0
+
+    const impactByKey = new Map<string, 'HIGH' | 'MEDIUM' | 'LOW'>()
+    for (const raw of payload) {
+      const country = raw.country?.trim()
+      const date = raw.date ? new Date(raw.date) : null
+      if (!country || !date || !isValid(date)) continue
+      const impact = (raw.impact || '').trim().toLowerCase()
+      const importance =
+        impact === 'high' ? 'HIGH' : impact === 'medium' ? 'MEDIUM' : 'LOW'
+      impactByKey.set(`${country}|${date.toISOString().slice(0, 16)}`, importance)
+    }
+
+    let enriched = 0
+    for (const event of events) {
+      const key = `${event.country}|${event.date.toISOString().slice(0, 16)}`
+      const importance = impactByKey.get(key)
+      if (importance) {
+        event.importance = importance
+        enriched++
+      }
+    }
+    return enriched
+  } catch (error) {
+    console.warn('Forex Factory importance enrichment skipped:', error)
+    return 0
+  }
+}
+
+function eventMatchKey(event: Pick<MappedFinancialEvent, 'country' | 'date'>): string {
+  return `${event.country}|${event.date.toISOString().slice(0, 16)}`
+}
+
+function eventNameFromTitle(title: string): string {
+  const separator = title.indexOf(' - ')
+  return separator >= 0 ? title.slice(separator + 3) : title
+}
+
+/**
+ * Best-effort EN → FR for Investing calendar titles when the FR widget
+ * does not cover the same UTC minute (EU Mon–Sun vs EN Sun–Sat weeks).
+ */
+export function translateEconomicEventNameToFrench(name: string): string {
+  const replacements: Array<[RegExp, string]> = [
+    [/Rightmove House Price Index/gi, 'Indice des prix immobiliers Rightmove'],
+    [/House Price Index/gi, 'Indice des prix immobiliers'],
+    [/Core CPI/gi, 'IPC de base'],
+    [/Common CPI/gi, 'IPC commun'],
+    [/Median CPI/gi, 'IPC médian'],
+    [/Trimmed CPI/gi, 'IPC tronqué'],
+    [/\bCPI\b/gi, 'IPC'],
+    [/\bPPI\b/gi, 'IPP'],
+    [/\bGDP\b/gi, 'PIB'],
+    [/Trade Balance/gi, 'Balance commerciale'],
+    [/Interest Rate Decision/gi, "Décision de taux d'intérêt"],
+    [/Unemployment Claims/gi, 'Inscriptions au chômage'],
+    [/Unemployment Rate/gi, 'Taux de chômage'],
+    [/Employment Change/gi, "Variation de l'emploi"],
+    [/Nonfarm Payrolls|Non-Farm Payrolls|\bNFP\b/gi, 'Paies hors secteur agricole'],
+    [/Building Permits/gi, 'Permis de construire'],
+    [/Consumer Confidence/gi, 'Confiance des consommateurs'],
+    [/Retail Sales/gi, 'Ventes au détail'],
+    [/Industrial Production/gi, 'Production industrielle'],
+    [/Manufacturing Production/gi, 'Production manufacturière'],
+    [/Construction Output/gi, 'Production dans la construction'],
+    [/Leading Index/gi, 'Indice avancé'],
+    [/Existing Home Sales/gi, 'Ventes de logements anciens'],
+    [/New Home Sales/gi, 'Ventes de logements neufs'],
+    [/Crude Oil Inventories/gi, 'Stocks de pétrole brut'],
+    [/Natural Gas Storage/gi, 'Stocks de gaz naturel'],
+    [/FOMC Statement/gi, 'Déclaration du FOMC'],
+    [/FOMC Press Conference/gi, 'Conférence de presse du FOMC'],
+    [/Federal Budget Balance/gi, 'Balance du budget fédéral'],
+    [/Loan Prime Rate/gi, 'Taux préférentiel des prêts'],
+    [/Infrastructure Output/gi, "Production d'infrastructures"],
+    [/Focus Market Readout/gi, 'Analyse de marché'],
+    [/\bExports\b/gi, 'Exportations'],
+    [/\bImports\b/gi, 'Importations'],
+    [/\bSpeech\b/gi, 'Discours'],
+    [/\bHoliday\b/gi, 'Jour férié'],
+    [/\bAuction\b/gi, 'Adjudication'],
+    [/\(MoM\)/gi, '(Mensuel)'],
+    [/\(YoY\)/gi, '(Annuel)'],
+    [/\(QoQ\)/gi, '(Trimestriel)'],
+    // Month names only as English tokens — do not match inside French words
+    // like "marché" (JS \b treats "é" as a boundary and would turn it into "Marsé").
+    [/(?<![A-Za-zÀ-ÿ])January(?![A-Za-zÀ-ÿ])/gi, 'Janvier'],
+    [/(?<![A-Za-zÀ-ÿ])February(?![A-Za-zÀ-ÿ])/gi, 'Février'],
+    [/(?<![A-Za-zÀ-ÿ])March(?![A-Za-zÀ-ÿ])/gi, 'Mars'],
+    [/(?<![A-Za-zÀ-ÿ])April(?![A-Za-zÀ-ÿ])/gi, 'Avril'],
+    [/(?<![A-Za-zÀ-ÿ])May(?![A-Za-zÀ-ÿ])/gi, 'Mai'],
+    [/(?<![A-Za-zÀ-ÿ])June(?![A-Za-zÀ-ÿ])/gi, 'Juin'],
+    [/(?<![A-Za-zÀ-ÿ])July(?![A-Za-zÀ-ÿ])/gi, 'Juillet'],
+    [/(?<![A-Za-zÀ-ÿ])August(?![A-Za-zÀ-ÿ])/gi, 'Août'],
+    [/(?<![A-Za-zÀ-ÿ])September(?![A-Za-zÀ-ÿ])/gi, 'Septembre'],
+    [/(?<![A-Za-zÀ-ÿ])October(?![A-Za-zÀ-ÿ])/gi, 'Octobre'],
+    [/(?<![A-Za-zÀ-ÿ])November(?![A-Za-zÀ-ÿ])/gi, 'Novembre'],
+    [/(?<![A-Za-zÀ-ÿ])December(?![A-Za-zÀ-ÿ])/gi, 'Décembre'],
+    [/\((Jan)\)/gi, '(Janv.)'],
+    [/\((Feb)\)/gi, '(Févr.)'],
+    [/\((Mar)\)/gi, '(Mars)'],
+    [/\((Apr)\)/gi, '(Avr.)'],
+    [/\((Jun)\)/gi, '(Juin)'],
+    [/\((Jul)\)/gi, '(Juill.)'],
+    [/\((Aug)\)/gi, '(Août)'],
+    [/\((Sep)\)/gi, '(Sept.)'],
+    [/\((Oct)\)/gi, '(Oct.)'],
+    [/\((Nov)\)/gi, '(Nov.)'],
+    [/\((Dec)\)/gi, '(Déc.)'],
+  ]
+
+  let translated = name
+  for (const [pattern, replacement] of replacements) {
+    translated = translated.replace(pattern, replacement)
+  }
+  return translated
+}
+
+function buildFrenchEventsFromEnglishSchedule(
+  enEvents: MappedFinancialEvent[],
+  frEvents: MappedFinancialEvent[],
+): { events: MappedFinancialEvent[]; matched: number; translated: number } {
+  const frTitleByKey = new Map<string, string>()
+  for (const event of frEvents) {
+    frTitleByKey.set(eventMatchKey(event), event.title)
+  }
+
+  let matched = 0
+  let translated = 0
+
+  const events = enEvents.map((enEvent) => {
+    const matchedTitle = frTitleByKey.get(eventMatchKey(enEvent))
+    if (matchedTitle) {
+      matched++
+      return {
+        ...enEvent,
+        lang: 'fr' as const,
+        title: matchedTitle,
+        sourceUrl: INVESTING_CALENDAR_PAGE.fr,
+      }
+    }
+
+    translated++
+    const frenchName = translateEconomicEventNameToFrench(
+      eventNameFromTitle(enEvent.title),
+    )
+    const title =
+      enEvent.country && enEvent.country !== 'Holiday'
+        ? `${enEvent.country} - ${frenchName}`
+        : frenchName
+
+    return {
+      ...enEvent,
+      lang: 'fr' as const,
+      title,
+      sourceUrl: INVESTING_CALENDAR_PAGE.fr,
+    }
+  })
+
+  return { events, matched, translated }
+}
+
+export async function fetchInvestingEvents(langs: CronLang[]): Promise<{
+  events: MappedFinancialEvent[]
+  diagnostics: Record<string, unknown>
+}> {
+  const diagnostics: Record<string, unknown> = { source: 'investing', via: 'jina' }
+  const allEvents: MappedFinancialEvent[] = []
+  const uniqueLangs = [...new Set(langs)]
+
+  // EN schedule is the coverage authority (Sun–Sat). FR widget is Mon–Sun and
+  // often misses the forward half of the EN week, so we align FR rows to EN
+  // timestamps and overlay French titles (widget match, else glossary).
+  const needsEn = uniqueLangs.includes('en') || uniqueLangs.includes('fr')
+  const needsFr = uniqueLangs.includes('fr')
+
+  let enEvents: MappedFinancialEvent[] = []
+  let frWidgetEvents: MappedFinancialEvent[] = []
+
+  if (needsEn) {
+    const { markdown, sourceUrl } = await fetchInvestingMarkdown('en')
+    enEvents = parseInvestingMarkdown(markdown, 'en')
+    diagnostics.enWidgetUrl = sourceUrl
+    diagnostics.enMarkdownLength = markdown.length
+    diagnostics.enParsedCount = enEvents.length
+  }
+
+  if (needsFr) {
+    if (needsEn) {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+    }
+    const { markdown, sourceUrl } = await fetchInvestingMarkdown('fr')
+    frWidgetEvents = parseInvestingMarkdown(markdown, 'fr')
+    diagnostics.frWidgetUrl = sourceUrl
+    diagnostics.frMarkdownLength = markdown.length
+    diagnostics.frParsedCount = frWidgetEvents.length
+  }
+
+  if (uniqueLangs.includes('en')) {
+    allEvents.push(...enEvents)
+  }
+
+  if (uniqueLangs.includes('fr')) {
+    if (enEvents.length > 0) {
+      const built = buildFrenchEventsFromEnglishSchedule(enEvents, frWidgetEvents)
+      allEvents.push(...built.events)
+      diagnostics.frMatchedFromWidget = built.matched
+      diagnostics.frTranslatedFromEn = built.translated
+    } else {
+      allEvents.push(...frWidgetEvents)
+    }
+  }
+
+  const enriched = await enrichImportanceFromForexFactory(allEvents)
+  diagnostics.importanceEnrichedFromFf = enriched
+
+  return { events: allEvents, diagnostics }
+}
