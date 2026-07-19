@@ -96,7 +96,10 @@ function mapImpactToImportance(impact: string): 'HIGH' | 'MEDIUM' | 'LOW' {
   }
 }
 
-async function fetchInvestingCalendarEvents(lang: 'fr' | 'en' = 'fr') {
+async function fetchInvestingCalendarEvents(
+  lang: 'fr' | 'en' = 'fr',
+  options: { debug?: boolean } = {},
+) {
   try {
     // Map language to Investing.com language code
     const langMap = {
@@ -112,6 +115,22 @@ async function fetchInvestingCalendarEvents(lang: 'fr' | 'en' = 'fr') {
       timeout: 60000,
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
     });
+
+    const diagnostics = {
+      htmlLength: html.length,
+      hasEventRowId: html.includes('eventRowId_'),
+      hasTheDay: html.includes('theDay'),
+      hasEventTimestamp: html.includes('event_timestamp'),
+      trCount: (html.match(/<tr[\s>]/gi) || []).length,
+      tableCount: (html.match(/<table[\s>]/gi) || []).length,
+      titleMatch: html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] ?? null,
+      // First non-whitespace chunk helps identify bot walls / empty shells.
+      htmlPreview: html.replace(/\s+/g, ' ').trim().slice(0, 1200),
+    }
+    console.log('HTML diagnostics:', {
+      ...diagnostics,
+      htmlPreview: diagnostics.htmlPreview.slice(0, 300),
+    })
     
     // Parse the HTML table
     const events: InvestingEvent[] = []
@@ -330,7 +349,7 @@ async function fetchInvestingCalendarEvents(lang: 'fr' | 'en' = 'fr') {
       console.log('Warning: No events were created. This might indicate a parsing issue.')
     }
 
-    return events.map(event => ({
+    const mapped = events.map(event => ({
       title: `${event.currency} - ${event.event}`,
       date: new Date(event.timestamp!), // We know timestamp exists because we filtered for it
       importance: mapImpactToImportance(event.impact),
@@ -340,6 +359,20 @@ async function fetchInvestingCalendarEvents(lang: 'fr' | 'en' = 'fr') {
       lang: event.lang,
       timezone: event.timezone
     }))
+
+    return {
+      events: mapped,
+      diagnostics: options.debug
+        ? {
+            ...diagnostics,
+            rowCount,
+            dateRowCount,
+            eventRowCount,
+            eventInfoRowCount,
+            parsedCount: mapped.length,
+          }
+        : undefined,
+    }
   } catch (error) {
     console.error('Error fetching calendar events:', error)
     throw error
@@ -354,12 +387,14 @@ export async function GET(request: Request) {
     const shouldStoreInDb = searchParams.get('db') === 'true'
 
     // Fetch events directly from Investing.com
-    const events = await fetchInvestingCalendarEvents(lang)
+    const debug = searchParams.get('debug') === '1'
+    const { events, diagnostics } = await fetchInvestingCalendarEvents(lang, { debug })
 
     if (events.length === 0) {
       return NextResponse.json({
         success: false,
         error: 'No events found',
+        ...(debug ? { diagnostics } : {}),
       }, { status: 404 })
     }
 
