@@ -3,6 +3,7 @@
 import { createClient, getUserId } from '@/server/auth'
 import { saveTradesAction } from '@/server/database'
 import { prisma } from '@/lib/prisma'
+import { toConnectionViews } from '@/lib/connection-view'
 import { getTickDetails } from '@/server/tick-details'
 import {
   connectAndListAccounts,
@@ -113,12 +114,12 @@ export async function storeRithmicProtocolToken(
   const userId = await getUserId()
   if (!userId) throw new Error('Not authenticated')
 
-  await prisma.synchronization.upsert({
+  await prisma.connection.upsert({
     where: {
-      userId_service_accountId: {
+      userId_service_externalId: {
         userId,
         service: SERVICE,
-        accountId,
+        externalId: accountId,
       },
     },
     update: {
@@ -129,7 +130,7 @@ export async function storeRithmicProtocolToken(
     create: {
       userId,
       service: SERVICE,
-      accountId,
+      externalId: accountId,
       token: tokenJson,
       lastSyncedAt: new Date(),
     },
@@ -142,12 +143,12 @@ export async function getRithmicProtocolToken(accountId: string) {
     return { error: 'USER_NOT_AUTHENTICATED' as const }
   }
 
-  const row = await prisma.synchronization.findUnique({
+  const row = await prisma.connection.findUnique({
     where: {
-      userId_service_accountId: {
+      userId_service_externalId: {
         userId,
         service: SERVICE,
-        accountId,
+        externalId: accountId,
       },
     },
   })
@@ -165,11 +166,11 @@ export async function removeRithmicProtocolToken(accountId: string) {
     return { error: 'USER_NOT_AUTHENTICATED' as const }
   }
 
-  await prisma.synchronization.deleteMany({
+  await prisma.connection.deleteMany({
     where: {
       userId,
       service: SERVICE,
-      accountId,
+      externalId: accountId,
     },
   })
 
@@ -183,12 +184,12 @@ export async function getRithmicProtocolSynchronizations() {
       return { error: 'USER_NOT_AUTHENTICATED' as const }
     }
 
-    const synchronizations = await prisma.synchronization.findMany({
+    const synchronizations = await prisma.connection.findMany({
       where: { userId, service: SERVICE },
       orderBy: { updatedAt: 'desc' },
     })
 
-    return { synchronizations }
+    return { synchronizations: toConnectionViews(synchronizations) }
   } catch (error) {
     logger.error('getRithmicProtocolSynchronizations failed', error)
     return { error: 'LOAD_SYNCHRONIZATIONS_FAILED' as const }
@@ -205,12 +206,12 @@ export async function updateRithmicProtocolDailySyncTimeAction(
       return { success: false as const, error: 'USER_NOT_AUTHENTICATED' }
     }
 
-    await prisma.synchronization.update({
+    await prisma.connection.update({
       where: {
-        userId_service_accountId: {
+        userId_service_externalId: {
           userId,
           service: SERVICE,
-          accountId,
+          externalId: accountId,
         },
       },
       data: {
@@ -337,11 +338,11 @@ export async function getRithmicProtocolTrades(
       savedCount = saveResult.numberOfTradesAdded
     }
 
-    await prisma.synchronization.updateMany({
+    await prisma.connection.updateMany({
       where: {
         userId,
         service: SERVICE,
-        accountId: credentials.username,
+        externalId: credentials.username,
       },
       data: { lastSyncedAt: new Date() },
     })
