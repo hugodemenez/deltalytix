@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   CalendarIcon,
-  Info,
   Plus,
   Clock,
   CheckCircle,
@@ -28,6 +27,7 @@ import {
   Table,
   RefreshCw,
 } from "lucide-react"
+import { InfoBubble } from "@/components/ui/info-bubble"
 import { Calendar } from "@/components/ui/calendar"
 import { format, Locale } from "date-fns"
 import { cn, calculateTradingDays } from "@/lib/utils"
@@ -51,12 +51,6 @@ import { AccountsToolbar } from './accounts-toolbar'
 import { AccountsSortMenu } from './accounts-sort-menu'
 import { AlertDialogAction, AlertDialogCancel, AlertDialogFooter, AlertDialogDescription, AlertDialogTitle, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { AlertDialog } from '@/components/ui/alert-dialog'
-import {
-  Tooltip as UITooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { Account } from '@/context/data-provider'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
@@ -1567,19 +1561,12 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
             >
               {t('propFirm.title')}
             </CardTitle>
-            <TooltipProvider>
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <Info className={cn(
-                    "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                    size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
-                  )} />
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>{t('propFirm.description')}</p>
-                </TooltipContent>
-              </UITooltip>
-            </TooltipProvider>
+            <InfoBubble
+              side="top"
+              iconClassName={size === 'small' ? 'size-3.5' : 'size-4'}
+            >
+              <p>{t('propFirm.description')}</p>
+            </InfoBubble>
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
             <Button

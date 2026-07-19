@@ -12,12 +12,7 @@ import {
   Cell,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Info } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { InfoBubble } from "@/components/ui/info-bubble"
 import { getTickDetails } from "@/server/tick-details";
 import { TickDetails } from "@/prisma/generated/prisma/browser";
 import {
@@ -193,14 +188,9 @@ export default function TickDistributionChartEmbed({
             <CardTitle className="line-clamp-1 text-base">
               {t("embed.tickDistribution.title")}
             </CardTitle>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
-              </PopoverTrigger>
-              <PopoverContent side="top">
-                <p>{t("embed.tickDistribution.description")}</p>
-              </PopoverContent>
-            </Popover>
+            <InfoBubble side="top" iconClassName="size-4">
+              <p>{t("embed.tickDistribution.description")}</p>
+            </InfoBubble>
           </div>
           {availableInstruments.length > 0 && (
             <Select

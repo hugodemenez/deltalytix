@@ -2,16 +2,11 @@
 
 import { useData } from "@/context/data-provider"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { BarChart, TrendingUp, TrendingDown, Minus, HelpCircle } from "lucide-react"
+import { BarChart, TrendingUp, TrendingDown, Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '../../types/dashboard'
 import { useI18n } from '@/locales/client'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { InfoBubble } from "@/components/ui/info-bubble"
 
 interface TradePerformanceCardProps {
   size?: WidgetSize
@@ -43,20 +38,15 @@ export default function TradePerformanceCard({ size = 'medium' }: TradePerforman
             <TrendingDown className="h-3 w-3 text-red-500" />
             <span className="font-medium text-sm tabular-nums">{lossRate}%</span>
           </div>
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent 
-                side="bottom" 
-                sideOffset={5} 
-                className="max-w-[300px]"
-              >
-                {t('widgets.tradePerformance.tooltip')}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <InfoBubble
+            icon="help"
+            side="bottom"
+            sideOffset={5}
+            iconClassName="size-3"
+            contentClassName="max-w-[300px]"
+          >
+            {t('widgets.tradePerformance.tooltip')}
+          </InfoBubble>
         </div>
       </Card>
     )

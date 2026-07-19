@@ -29,6 +29,7 @@ import {
   MoreHorizontal,
   Settings,
 } from "lucide-react";
+import { InfoBubble } from "@/components/ui/info-bubble";
 import { Switch } from "@/components/ui/switch";
 import { Trade } from "@/prisma/generated/prisma/browser";
 import {
@@ -1285,16 +1286,12 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
               <CardTitle className="line-clamp-1 text-sm sm:text-base">
                 {t("trade-table.title")}
               </CardTitle>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p>{t("trade-table.description")}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <InfoBubble
+                side="top"
+                iconClassName="size-3.5 sm:size-4"
+              >
+                <p>{t("trade-table.description")}</p>
+              </InfoBubble>
             </div>
             {isMobile && !config?.disableColumnConfig && (
               <ColumnConfigDialog tableId="trade-table" trigger={columnConfigTrigger} />

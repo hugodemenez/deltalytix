@@ -1121,6 +1121,7 @@ export default {
     retry: "Réessayer",
     copy: "Copier",
     loading: "Chargement",
+    moreInformation: "Plus d'informations",
   },
   rithmic: {
     savedCredentials: "Identifiants Sauvegardés",
@@ -2512,6 +2513,7 @@ export default {
   "common.back": "Retour",
   "common.save": "Enregistrer",
   "common.saving": "Enregistrement...",
+  "common.moreInformation": "Plus d'informations",
   "calendar.impactFilter.title": "Filtre d'impact",
   "calendar.impactFilter.low": "Faible",
   "calendar.impactFilter.medium": "Moyen",

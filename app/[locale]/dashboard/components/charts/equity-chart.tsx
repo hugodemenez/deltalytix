@@ -31,16 +31,9 @@ import {
   ChartTooltip,
 } from "@/components/ui/chart";
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Info } from "lucide-react";
+import { InfoBubble } from "@/components/ui/info-bubble";
 
 import { useData } from "@/context/data-provider";
 import { useI18n } from "@/locales/client";
@@ -494,18 +487,15 @@ const AccountsLegend = React.memo(
             <span className="text-xs text-muted-foreground">
               ({accountsWithEquity.length} {t("equity.legend.accounts")})
             </span>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-3 w-3 text-muted-foreground hover:text-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="z-9999 max-w-xs">
-                  <p className="text-xs">
-                    {t("equity.legend.maxAccountsInfo")}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <InfoBubble
+              side="top"
+              iconClassName="size-3"
+              contentClassName="z-9999 max-w-xs"
+            >
+              <p className="text-xs">
+                {t("equity.legend.maxAccountsInfo")}
+              </p>
+            </InfoBubble>
           </div>
           <AccountSelectionPopover
             accountNumbers={accountNumbers}
@@ -912,21 +902,12 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
             >
               {t("equity.title")}
             </CardTitle>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info
-                    className={cn(
-                      "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                      size === "small" ? "h-3.5 w-3.5" : "h-4 w-4"
-                    )}
-                  />
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>{t("equity.description")}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <InfoBubble
+              side="top"
+              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
+            >
+              <p>{t("equity.description")}</p>
+            </InfoBubble>
           </div>
           {!isSharedView && !isTeamView && (
             <div className="flex items-center space-x-2">

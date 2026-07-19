@@ -10,9 +10,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { WidgetSize } from '../../types/dashboard'
-import { Scale, HelpCircle } from "lucide-react"
+import { Scale } from "lucide-react"
 import { useI18n } from '@/locales/client'
 import { useMemo } from "react"
+import { InfoBubble } from "@/components/ui/info-bubble"
 
 interface RiskRewardRatioCardProps {
   size?: WidgetSize
@@ -56,20 +57,15 @@ export default function RiskRewardRatioCard({ size = 'tiny' }: RiskRewardRatioCa
         <div className="flex items-center gap-1.5">
           <Scale className="h-3 w-3 text-primary" />
           <span className="font-medium text-sm tabular-nums">RR {riskRewardRatio}</span>
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent 
-                side="bottom" 
-                sideOffset={5} 
-                className="max-w-[300px]"
-              >
-                {t('widgets.riskRewardRatio.tooltip')}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <InfoBubble
+            icon="help"
+            side="bottom"
+            sideOffset={5}
+            iconClassName="size-3"
+            contentClassName="max-w-[300px]"
+          >
+            {t('widgets.riskRewardRatio.tooltip')}
+          </InfoBubble>
         </div>
         <TooltipProvider delayDuration={100}>
           <Tooltip>
