@@ -1,3 +1,5 @@
+'use server'
+
 import { Octokit } from '@octokit/rest'
 import { cacheLife, cacheTag } from 'next/cache'
 import { GITHUB_REPO_NAME, GITHUB_REPO_OWNER } from '@/lib/github-repo'
@@ -15,11 +17,12 @@ const RETRY_BASE_DELAY_MS = 400
 const MAX_PAGES_PER_BRANCH = 20
 /** Integration flow: preview branches roll into beta, then main. */
 const TRACKED_BRANCHES = ['main', 'beta'] as const
+const ALLOWED_LOCALES = new Set(['en', 'fr'])
 
 /** Skip slow GitHub retries while Next is generating static pages. */
 const IS_PRODUCTION_BUILD = process.env.NEXT_PHASE === 'phase-production-build'
 
-export const GITHUB_DATA_CACHE_TAG = 'github-data'
+const GITHUB_DATA_CACHE_TAG = 'github-data'
 
 const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
@@ -119,6 +122,10 @@ const withRetry = async <T>(label: string, fn: () => Promise<T>) => {
   }
 }
 
+/**
+ * Fetch commits from tracked branches. Any page failure aborts the whole load
+ * so we never cache a truncated contribution graph as a successful payload.
+ */
 async function fetchTrackedBranchCommits(since: Date): Promise<GithubCommit[]> {
   const seenShas = new Set<string>()
   const allCommits: GithubCommit[] = []
@@ -128,37 +135,32 @@ async function fetchTrackedBranchCommits(since: Date): Promise<GithubCommit[]> {
     let hasMoreCommits = true
 
     while (hasMoreCommits && page <= MAX_PAGES_PER_BRANCH) {
-      try {
-        const commitsResponse = await withRetry(
-          `commits ${branch} page ${page}`,
-          () =>
-            octokit.repos.listCommits({
-              owner: GITHUB_REPO_OWNER,
-              repo: GITHUB_REPO_NAME,
-              sha: branch,
-              per_page: 100,
-              page,
-              since: since.toISOString(),
-            }),
-        )
+      const commitsResponse = await withRetry(
+        `commits ${branch} page ${page}`,
+        () =>
+          octokit.repos.listCommits({
+            owner: GITHUB_REPO_OWNER,
+            repo: GITHUB_REPO_NAME,
+            sha: branch,
+            per_page: 100,
+            page,
+            since: since.toISOString(),
+          }),
+      )
 
-        if (commitsResponse.data.length === 0) {
-          hasMoreCommits = false
-        } else {
-          for (const commit of commitsResponse.data) {
-            if (commit.sha && !seenShas.has(commit.sha)) {
-              seenShas.add(commit.sha)
-              allCommits.push(commit as GithubCommit)
-            }
-          }
-          page++
-          if (commitsResponse.data.length < 100) {
-            hasMoreCommits = false
+      if (commitsResponse.data.length === 0) {
+        hasMoreCommits = false
+      } else {
+        for (const commit of commitsResponse.data) {
+          if (commit.sha && !seenShas.has(commit.sha)) {
+            seenShas.add(commit.sha)
+            allCommits.push(commit as GithubCommit)
           }
         }
-      } catch (error) {
-        console.log(`Error fetching commits from ${branch} page ${page}:`, error)
-        hasMoreCommits = false
+        page++
+        if (commitsResponse.data.length < 100) {
+          hasMoreCommits = false
+        }
       }
     }
   }
@@ -219,6 +221,7 @@ async function fetchCodeFrequency(): Promise<CodeFrequencyRecord[]> {
 
     return buildCodeFrequencyRecords(response.data)
   } catch (error) {
+    // Soft dependency: graph still works without additions/deletions.
     console.warn('Code frequency data is temporarily unavailable:', error)
     return []
   }
@@ -244,8 +247,8 @@ function getLatestCommitDate(commits: GithubCommit[]): string {
   )
 }
 
-/** Uncached GitHub network load. */
-export async function loadGithubData(): Promise<GithubData> {
+/** Uncached GitHub network load. Throws on repo/commit failures. */
+async function loadGithubData(): Promise<GithubData> {
   const [repoResponse, codeFrequency] = await Promise.all([
     withRetry('repo data', () =>
       octokit.repos.get({
@@ -306,10 +309,10 @@ export async function loadGithubData(): Promise<GithubData> {
 
 /**
  * Cached landing GitHub card payload (Cache Components).
- * Served from `/api/github-stats` so homepage HTML never waits on GitHub.
- * `locale` is part of the cache key — pass it from outside the cache scope.
+ * Only called from `fetchGithubStatsPayload` after client paint — never from
+ * the homepage RSC/Suspense path (that kept the HTML stream open).
  */
-export async function getCachedGithubStatsPayload(
+async function getCachedGithubStatsPayload(
   locale: string,
 ): Promise<GithubStatsPayload> {
   'use cache'
@@ -333,4 +336,21 @@ export async function getCachedGithubStatsPayload(
     ...githubData,
     changelogEntries,
   }
+}
+
+/**
+ * Client-callable entry for the landing GitHub card.
+ *
+ * Must only be invoked from a client `useEffect` after paint. Calling this
+ * during RSC render / Suspense would re-introduce the homepage document-complete
+ * stall (pending stream hole until commit pagination finishes).
+ */
+export async function fetchGithubStatsPayload(
+  locale: string,
+): Promise<GithubStatsPayload> {
+  if (!ALLOWED_LOCALES.has(locale)) {
+    throw new Error(`Unsupported locale: ${locale}`)
+  }
+
+  return getCachedGithubStatsPayload(locale)
 }

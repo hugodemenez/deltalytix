@@ -6,42 +6,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StarIcon } from "lucide-react";
 import { ContributionGraph } from "./contribution-graph";
 import { GITHUB_REPO_NAME, GITHUB_REPO_URL } from "@/lib/github-repo";
-import type { ContributionGraphData } from "@/lib/contribution-graph";
-
-/** Mirrors `GithubStatsPayload` without importing the server data module. */
-type GithubStatsPayload = {
-  repoData: {
-    name: string;
-    description: string;
-    language: string;
-    license: { spdx_id: string } | null;
-    stargazers_count: number;
-    forks_count: number;
-    updated_at: string;
-    created_at: string;
-  };
-  githubStats: {
-    repository: {
-      stargazers: { totalCount: number };
-      forks: { totalCount: number };
-      commits: { history: { totalCount: number } };
-    };
-    contributionGraph: ContributionGraphData;
-  };
-  stars: number;
-  lastCommit: {
-    commit: {
-      committer: {
-        date: string;
-      };
-    };
-  };
-  changelogEntries: Array<{
-    slug: string;
-    title: string;
-    date: string;
-  }>;
-};
+import {
+  fetchGithubStatsPayload,
+  type GithubStatsPayload,
+} from "../actions/github-data";
 
 const formatTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
@@ -153,8 +121,11 @@ function GithubStatsFallback({ starLabel }: { starLabel: string }) {
 
 /**
  * Landing GitHub card: SSR/client initial paint is a static skeleton only.
- * Stats load after paint from `/api/github-stats` so homepage HTML never waits
- * on GitHub commit pagination (no server Suspense streaming hole).
+ *
+ * Stats load in `useEffect` (after paint) via a server action so homepage HTML
+ * never waits on GitHub commit pagination. Do not await this data in RSC or
+ * wrap it in server Suspense — that reopens a streaming hole and stalls
+ * document-complete.
  */
 export function CachedGithubData({
   starLabel,
@@ -168,29 +139,19 @@ export function CachedGithubData({
 
   useEffect(() => {
     let cancelled = false;
-    const controller = new AbortController();
 
-    fetch(`/api/github-stats?locale=${encodeURIComponent(locale)}`, {
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`GitHub stats HTTP ${response.status}`);
-        }
-        return (await response.json()) as GithubStatsPayload;
-      })
+    fetchGithubStatsPayload(locale)
       .then((payload) => {
         if (!cancelled) setData(payload);
       })
       .catch((error: unknown) => {
-        if (cancelled || controller.signal.aborted) return;
+        if (cancelled) return;
         console.error("[CachedGithubData] Failed to load GitHub stats:", error);
         setFailed(true);
       });
 
     return () => {
       cancelled = true;
-      controller.abort();
     };
   }, [locale]);
 
