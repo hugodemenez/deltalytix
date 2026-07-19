@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Globe, LayoutDashboard, ChevronDown, Cable } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from '@/components/logo'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useI18n } from "@/locales/client"
 import { useKeyboardShortcuts } from '../../../../hooks/use-keyboard-shortcuts'
 import { ActiveFilterTags } from './filters/active-filter-tags'
@@ -20,6 +21,7 @@ import UserMenu from './user-menu'
 import ReferralButton from './referral-button'
 
 export default function Navbar() {
+  const router = useRouter()
   const  user = useUserStore(state => state.supabaseUser)
   const t = useI18n()
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false)
@@ -30,6 +32,13 @@ export default function Navbar() {
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts()
+
+  // Dashboard lives inside a closed logo popover, so its Link is not in the DOM
+  // on /connections and Partial Prefetching never warms the route. Connections
+  // is always visible → prefetched → feels instant. Prefetch dashboard explicitly.
+  useEffect(() => {
+    router.prefetch('/dashboard')
+  }, [router])
 
   return (
     <>
