@@ -512,6 +512,12 @@ export async function saveDashboardLayoutAction(layouts: DashboardLayout): Promi
       },
     })
 
+    // Expire Instant Navigations `'use cache'` seed for /dashboard
+    try {
+      updateTag(`dashboard-home-${userId}`)
+    } catch {
+      // updateTag is only valid in some server contexts
+    }
   } catch (error) {
     console.error('[saveDashboardLayout] Database error:', error)
   }
@@ -538,6 +544,12 @@ export async function createDefaultDashboardLayout(userId: string): Promise<void
         mobile: JSON.stringify(mobileLayout)
       }
     })
+
+    try {
+      updateTag(`dashboard-home-${userId}`)
+    } catch {
+      // updateTag is only valid in some server contexts
+    }
 
     console.log('[createDefaultDashboardLayout] SUCCESS: Default layout ensured for user:', userId)
   } catch (error) {

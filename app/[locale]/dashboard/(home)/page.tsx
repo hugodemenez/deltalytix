@@ -1,33 +1,40 @@
+import { Suspense } from 'react'
+import { getUserId } from '@/server/auth'
 import { DashboardHomeChrome } from '../components/dashboard-home-chrome'
-import { DashboardHomeContent } from './dashboard-home-content'
+import { DashboardHomeContentSkeleton } from '../components/dashboard-home-skeleton'
+import { CachedDashboardHome } from './components/cached-dashboard-home'
 
 /** Opt this route into Instant Navigations validation (Cache Components). */
 export const instant = true
 
 /**
- * Prefetch with the user session so Instant Navigations can include the
- * chrome. Tab bodies paint client-side from DataProvider (see
- * `dashboard-home-content.tsx`) — unlike Connections, there is no per-user
- * `"use cache"` payload to reuse for widget content yet.
+ * Prefetch with the user session so warm `'use cache'` layout UI can be part
+ * of the instant navigation (not only the content Suspense skeleton).
  */
 export const prefetch = 'allow-runtime'
 
 /**
- * Per-component Instant Navigations (same chrome model as Connections):
- * - Chrome (real tab labels) is outside the content boundary → paints once
- * - Tab bodies are client-first: skeleton only during prerender/SSR, then
- *   immediate mount from the warm Zustand store on soft navigation
- * - `loading.tsx` uses the same chrome + content boundary
- *
- * Do not wrap tab bodies in `await connection()` + Suspense here. That pattern
- * protects the static-generation budget for other heavy pages, but on this
- * route it forced every soft navigation to wait on a dynamic RSC stream even
- * when DataProvider was already warm (e.g. navigating back from /connections).
+ * Resolve auth outside `'use cache'`, then render the tagged cached home UI.
+ * Cold cache → content skeleton under the instant chrome.
+ * Warm cache → layout-seeded client UI included instantly (no skeleton).
+ */
+async function DashboardPageContent() {
+  const userId = await getUserId()
+  return <CachedDashboardHome userId={userId} />
+}
+
+/**
+ * Per-component Instant Navigations (same model as Connections):
+ * - Chrome (real tab labels) is outside Suspense → paints once
+ * - Tab bodies stream behind Suspense, or resolve from `'use cache'`
+ * - `loading.tsx` shows the same chrome + skeleton on navigate
  */
 export default function DashboardPage() {
   return (
     <DashboardHomeChrome>
-      <DashboardHomeContent />
+      <Suspense fallback={<DashboardHomeContentSkeleton />}>
+        <DashboardPageContent />
+      </Suspense>
     </DashboardHomeChrome>
   )
 }
