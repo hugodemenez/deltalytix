@@ -220,10 +220,20 @@ function combineUtcDateAndTime(day: Date, time: string): Date | null {
 
 function stripGluedCalendarStats(eventName: string): string {
   let name = eventName.trim()
-  // Stats are often glued after a closing paren: "(Juin)40,41B 45,20B" or "(Juin)250M"
-  name = name.replace(/\)(-?\d[\d\s.,]*[A-Za-z%]*)+$/u, ')')
-  // Or space-separated trailing actual/forecast/previous values
-  name = name.replace(/(?:\s+-?\d[\d\s.,]*[A-Za-z%]*)+$/u, '')
+
+  // If actual/forecast/previous values are glued after the last ")", drop them.
+  const lastParen = name.lastIndexOf(')')
+  if (lastParen >= 0 && /^\s*-?\d/.test(name.slice(lastParen + 1))) {
+    name = name.slice(0, lastParen + 1)
+  }
+
+  // Titles without a trailing paren still sometimes append rates:
+  // "Adjudication ... Allemagne 2,566%2,478%"
+  name = name.replace(
+    /(?<=[A-Za-zÀ-ÿ.»"'])\s*-?\d[\d\s.,%A-Za-z-]*$/u,
+    '',
+  )
+
   return name.trim()
 }
 
