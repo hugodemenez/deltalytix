@@ -2,16 +2,11 @@
 
 import { useData } from '@/context/data-provider'
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { ArrowLeftRight, ArrowUpFromLine, ArrowDownFromLine, HelpCircle } from "lucide-react"
+import { ArrowLeftRight, ArrowUpFromLine, ArrowDownFromLine } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '../../types/dashboard'
 import { useI18n } from '@/locales/client'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { InfoBubble } from "@/components/ui/info-bubble"
 
 interface LongShortPerformanceCardProps {
   size?: WidgetSize
@@ -47,20 +42,15 @@ export default function LongShortPerformanceCard({ size = 'medium' }: LongShortP
             <ArrowDownFromLine className="h-3 w-3 text-red-500" />
             <span className="font-medium text-sm tabular-nums">{shortRate}%</span>
           </div>
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent 
-                side="bottom" 
-                sideOffset={5} 
-                className="max-w-[300px]"
-              >
-                {t('widgets.longShortPerformance.tooltip')}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <InfoBubble
+            icon="help"
+            side="bottom"
+            sideOffset={5}
+            iconClassName="size-3"
+            contentClassName="max-w-[300px]"
+          >
+            {t('widgets.longShortPerformance.tooltip')}
+          </InfoBubble>
         </div>
       </Card>
     )

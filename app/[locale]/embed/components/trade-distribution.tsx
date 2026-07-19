@@ -13,12 +13,7 @@ import {
 import type { Props } from "recharts/types/component/Label";
 import type { PolarViewBox } from "recharts/types/util/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Info } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { InfoBubble } from "@/components/ui/info-bubble"
 import { useI18n } from "@/locales/client";
 import {
   BreakevenRange,
@@ -136,14 +131,9 @@ export default function TradeDistributionChartEmbed({
             <CardTitle className="line-clamp-1 text-base">
               {t("embed.tradeDistribution.title")}
             </CardTitle>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
-              </PopoverTrigger>
-              <PopoverContent side="top">
-                <p>{t("embed.tradeDistribution.description")}</p>
-              </PopoverContent>
-            </Popover>
+            <InfoBubble side="top" iconClassName="size-4">
+              <p>{t("embed.tradeDistribution.description")}</p>
+            </InfoBubble>
           </div>
         </div>
       </CardHeader>

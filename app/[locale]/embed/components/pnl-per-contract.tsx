@@ -3,8 +3,7 @@
 import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Info } from 'lucide-react'
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { InfoBubble } from "@/components/ui/info-bubble"
 import { useI18n } from '@/locales/client'
 
 type TradeLike = {
@@ -109,14 +108,9 @@ export default function PnLPerContractChartEmbed({ trades }: { trades: TradeLike
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
             <CardTitle className="line-clamp-1 text-base">{t('embed.pnlPerContract.title')}</CardTitle>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
-              </PopoverTrigger>
-              <PopoverContent side="top">
-                <p>{t('embed.pnlPerContract.description')}</p>
-              </PopoverContent>
-            </Popover>
+            <InfoBubble side="top" iconClassName="size-4">
+              <p>{t("embed.pnlPerContract.description")}</p>
+            </InfoBubble>
           </div>
         </div>
       </CardHeader>

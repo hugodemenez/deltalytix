@@ -1,15 +1,10 @@
 import { useData } from "@/context/data-provider"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { PiggyBank, HelpCircle } from "lucide-react"
+import { PiggyBank } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '../../types/dashboard'
 import { useI18n } from '@/locales/client'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { InfoBubble } from "@/components/ui/info-bubble"
 
 interface CumulativePnlCardProps {
   size?: WidgetSize
@@ -31,20 +26,15 @@ export default function CumulativePnlCard({ size = 'medium' }: CumulativePnlCard
           )}>
             ${Math.abs(totalPnl).toFixed(2)}
           </span>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <HelpCircle className="h-3 w-3 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent 
-                side="bottom" 
-                sideOffset={5} 
-                className="max-w-[300px]"
-              >
-                {t('widgets.cumulativePnl.tooltip')}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <InfoBubble
+            icon="help"
+            side="bottom"
+            sideOffset={5}
+            iconClassName="size-3"
+            contentClassName="max-w-[300px]"
+          >
+            {t('widgets.cumulativePnl.tooltip')}
+          </InfoBubble>
         </div>
       </Card>
     )

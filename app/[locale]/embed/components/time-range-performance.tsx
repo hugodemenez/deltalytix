@@ -12,14 +12,9 @@ import {
   Cell,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { InfoBubble } from "@/components/ui/info-bubble"
 import { cn } from "@/lib/utils";
-import { Info } from "lucide-react";
 import { ChartConfig } from "@/components/ui/chart";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { themeVarsToStyle, type EmbedThemeVars } from "../theme";
 import { useI18n } from "@/locales/client";
 import { getTimeRangeKey } from "@/lib/time-range";
@@ -179,14 +174,9 @@ export default function TimeRangePerformanceChart({
             <CardTitle className="line-clamp-1 text-base">
               {t("embed.timeRangePerformance.title")}
             </CardTitle>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
-              </PopoverTrigger>
-              <PopoverContent side="top">
-                <p>{t("embed.timeRangePerformance.description")}</p>
-              </PopoverContent>
-            </Popover>
+            <InfoBubble side="top" iconClassName="size-4">
+              <p>{t("embed.timeRangePerformance.description")}</p>
+            </InfoBubble>
           </div>
         </div>
       </CardHeader>
