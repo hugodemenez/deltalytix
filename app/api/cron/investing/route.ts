@@ -1,404 +1,166 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { isValid } from 'date-fns'
-import { scrapeWithSandbox } from '@/lib/browser-sandbox'
 
-// Chrome install + dump-dom inside Vercel Sandbox can exceed the default 60s.
-export const maxDuration = 300
+/**
+ * Weekly financial-events sync.
+ *
+ * Historically scraped Investing.com via a headless browser. That path is now
+ * blocked by Cloudflare ("Just a moment...") from Vercel Sandbox IPs.
+ * Forex Factory publishes a public weekly JSON feed that works with a plain
+ * fetch, so the cron uses that instead.
+ *
+ * Note: this route is intentionally not CRON_SECRET-gated today (unlike other
+ * cron handlers). Vercel only *schedules* crons on production, but the HTTP
+ * endpoint can still be invoked manually on preview/production.
+ */
+export const maxDuration = 60
 
-interface InvestingEvent {
-  time: string
-  currency: string
-  impact: string
-  event: string
-  timestamp: string | null
+type CronLang = 'fr' | 'en'
+
+interface ForexFactoryEvent {
+  title: string
   country: string
-  eventId: string | null
+  date: string
+  impact: string
+  forecast?: string
+  previous?: string
+}
+
+interface MappedFinancialEvent {
+  title: string
+  date: Date
+  importance: 'HIGH' | 'MEDIUM' | 'LOW'
+  type: string
   sourceUrl: string
-  lang: 'fr' | 'en'
+  country: string
+  lang: CronLang
   timezone: string
-  title?: string
-  date?: Date
-  importance?: 'HIGH' | 'MEDIUM' | 'LOW'
-  type?: string
 }
 
-const FRENCH_MONTHS: Record<string, string> = {
-  janvier: '01',
-  février: '02',
-  mars: '03',
-  avril: '04',
-  mai: '05',
-  juin: '06',
-  juillet: '07',
-  août: '08',
-  septembre: '09',
-  octobre: '10',
-  novembre: '11',
-  décembre: '12',
-}
-
-const ENGLISH_MONTHS: Record<string, string> = {
-  january: '01',
-  february: '02',
-  march: '03',
-  april: '04',
-  may: '05',
-  june: '06',
-  july: '07',
-  august: '08',
-  september: '09',
-  october: '10',
-  november: '11',
-  december: '12',
-}
-
-function parseCalendarDay(dateStr: string, lang: 'fr' | 'en'): Date | null {
-  const parts = dateStr.trim().split(/\s+/)
-
-  try {
-    if (lang === 'fr') {
-      // e.g. "Mercredi 7 mai 2025"
-      const [, day, month, year] = parts
-      const monthNum = FRENCH_MONTHS[month?.toLowerCase() ?? '']
-      if (!day || !monthNum || !year) return null
-      const parsed = new Date(Date.UTC(parseInt(year, 10), parseInt(monthNum, 10) - 1, parseInt(day, 10)))
-      return isValid(parsed) ? parsed : null
-    }
-
-    // e.g. "Wednesday, May 7, 2025" or "Wednesday May 7 2025"
-    const normalized = dateStr.replace(/,/g, '')
-    const enParts = normalized.trim().split(/\s+/)
-    const [, month, day, year] = enParts
-    const monthNum = ENGLISH_MONTHS[month?.toLowerCase() ?? '']
-    if (!day || !monthNum || !year) return null
-    const parsed = new Date(Date.UTC(parseInt(year, 10), parseInt(monthNum, 10) - 1, parseInt(day, 10)))
-    return isValid(parsed) ? parsed : null
-  } catch (error) {
-    console.error('Error parsing current date:', error)
-    return null
-  }
-}
+const FF_CALENDAR_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json'
+const FF_CALENDAR_PAGE = 'https://www.forexfactory.com/calendar'
 
 function mapImpactToImportance(impact: string): 'HIGH' | 'MEDIUM' | 'LOW' {
-  // Prefer the historical Investing.com class; fall back to data-img_key attrs.
-  const filledBulls = (
-    impact.match(/grayFullBullishIcon|data-img_key="fullBullish"/g) || []
-  ).length
-  switch (filledBulls) {
-    case 3:
+  switch (impact.trim().toLowerCase()) {
+    case 'high':
       return 'HIGH'
-    case 2:
+    case 'medium':
       return 'MEDIUM'
-    case 1:
     default:
+      // Low / Holiday / unknown
       return 'LOW'
   }
 }
 
-async function fetchInvestingCalendarEvents(
-  lang: 'fr' | 'en' = 'fr',
-  options: { debug?: boolean } = {},
-) {
-  try {
-    // Map language to Investing.com language code
-    const langMap = {
-      fr: '5',  // French
-      en: '1'   // English
-    }
+async function fetchForexFactoryEvents(lang: CronLang): Promise<{
+  events: MappedFinancialEvent[]
+  diagnostics?: Record<string, unknown>
+}> {
+  console.log(`Fetching Forex Factory calendar from ${FF_CALENDAR_URL} (lang=${lang})...`)
 
-    const targetUrl = `https://sslecal2.investing.com/?timeZone=55&lang=${langMap[lang]}`;
-    console.log(`Fetching calendar events from ${targetUrl} using Vercel Sandbox...`);
-    
-    // Use the sandbox browser approach
-    const html = await scrapeWithSandbox(targetUrl, {
-      timeout: 60000,
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-    });
+  const response = await fetch(FF_CALENDAR_URL, {
+    headers: {
+      Accept: 'application/json',
+      'User-Agent':
+        'Mozilla/5.0 (compatible; DeltalytixBot/1.0; +https://deltalytix.com)',
+    },
+    // Avoid Next.js fetch cache so the weekly cron always sees fresh data.
+    cache: 'no-store',
+  })
 
-    const diagnostics = {
-      htmlLength: html.length,
-      hasEventRowId: html.includes('eventRowId_'),
-      hasTheDay: html.includes('theDay'),
-      hasEventTimestamp: html.includes('event_timestamp'),
-      trCount: (html.match(/<tr[\s>]/gi) || []).length,
-      tableCount: (html.match(/<table[\s>]/gi) || []).length,
-      titleMatch: html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] ?? null,
-      // First non-whitespace chunk helps identify bot walls / empty shells.
-      htmlPreview: html.replace(/\s+/g, ' ').trim().slice(0, 1200),
-    }
-    console.log('HTML diagnostics:', {
-      ...diagnostics,
-      htmlPreview: diagnostics.htmlPreview.slice(0, 300),
-    })
-    
-    // Parse the HTML table
-    const events: InvestingEvent[] = []
-    const tableRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/g
-    
-    let tableMatch
-    let currentEvent: Partial<InvestingEvent> | null = null
-    let currentDate: Date | null = null
-    let rowCount = 0
-    let dateRowCount = 0
-    let eventRowCount = 0
-    let eventInfoRowCount = 0
-    
-    while ((tableMatch = tableRegex.exec(html)) !== null) {
-      rowCount++
-      const fullRow = tableMatch[0] // Get the full tr element including attributes
-      const row = tableMatch[1] // Get the content inside tr
-      
-      // Check if this is a date row
-      if (row.includes('theDay')) {
-        dateRowCount++
-        const dateMatch = row.match(/<td[^>]*class="theDay"[^>]*>([^<]+)<\/td>/)
-        if (dateMatch) {
-          const dateStr = dateMatch[1].trim()
-          currentDate = parseCalendarDay(dateStr, lang)
-          if (!currentDate) {
-            console.log('Invalid current date created:', { dateStr, lang })
-          }
-        }
-        continue
-      }
-      
-      // Check if this is an event info row
-      if (row.includes('eventInfo')) {
-        eventInfoRowCount++
-        // If we have a current event, try to get its source URL
-        if (currentEvent) {
-          // Look for the source URL in the event info row
-          const sourceUrlMatch = row.match(/<a[^>]*href="([^"]+)"[^>]*>/)
-          if (sourceUrlMatch) {
-            currentEvent.sourceUrl = sourceUrlMatch[1]
-          }
-          events.push(currentEvent as InvestingEvent)
-          currentEvent = null
-        }
-        continue
-      }
-      
-      // Skip non-event rows
-      if (!fullRow.includes('eventRowId_')) {
-        continue
-      }
-      
-      // If we have a current event but found a new event row,
-      // it means the previous event didn't have an info row
-      if (currentEvent) {
-        events.push(currentEvent as InvestingEvent)
-        currentEvent = null
-      }
-      
-      eventRowCount++
-      
-      // Extract event ID and timestamp from tr attributes
-      const eventIdMatch = fullRow.match(/event_attr_id="(\d+)"/)
-      const timestampMatch = fullRow.match(/event_timestamp="([^"]+)"/)
-      const eventTimestamp = timestampMatch ? timestampMatch[1] : null
-      const eventId = eventIdMatch ? eventIdMatch[1] : null
-      
-      // Extract time
-      const timeMatch = row.match(/<td[^>]*class="[^"]*time[^"]*"[^>]*>([^<]+)<\/td>/)
-      if (!timeMatch) continue
-      
-      const time = timeMatch[1].trim()
-      
-      // Handle "All day" events
-      if (time === 'Toute la journée' || time === 'All Day') {
-        if (!currentDate) continue
-        
-        // Extract country and event name for all-day events
-        const countryMatch = row.match(/<span[^>]*title="([^"]+)"[^>]*class="[^"]*ceFlags[^"]*"[^>]*>/)
-        const eventMatch = row.match(/<td[^>]*class="[^"]*event[^"]*"[^>]*>([^<]+)<\/td>/)
-        
-        if (countryMatch && eventMatch) {
-          currentEvent = {
-            time: time,
-            currency: '',
-            impact: '',
-            event: eventMatch[1].trim(),
-            timestamp: currentDate.toISOString(),
-            country: countryMatch[1],
-            eventId: eventId,
-            sourceUrl: '',
-            lang: lang,
-            timezone: 'UTC'
-          }
-        }
-        continue
-      }
-      
-      // Handle regular events
-      if (!eventTimestamp) {
-        console.log('Skipping regular event - missing timestamp:', { eventTimestamp })
-        continue
-      }
-      
-      // Extract country and currency
-      const flagMatch = row.match(/<span[^>]*title="([^"]+)"[^>]*class="[^"]*ceFlags[^"]*"[^>]*>.*?<\/span>\s*([A-Z]{3})/)
-      if (!flagMatch) {
-        console.log('Skipping regular event - no flag/currency match:', row)
-        continue
-      }
-      
-      const country = flagMatch[1]
-      const currency = flagMatch[2]
-      
-      // Extract impact/sentiment
-      const impactMatch = row.match(/<td[^>]*class="[^"]*sentiment[^"]*"[^>]*>([\s\S]*?)<\/td>/)
-      if (!impactMatch) {
-        console.log('Skipping regular event - no impact match:', row)
-        continue
-      }
-      
-      const impact = impactMatch[1]
-      
-      // Extract event name
-      const eventMatch = row.match(/<td[^>]*class="[^"]*event[^"]*"[^>]*>([\s\S]*?)<\/td>/)
-      if (!eventMatch) {
-        console.log('Skipping regular event - no event name match:', row)
-        continue
-      }
-      
-      // Clean the event name by removing HTML elements and extra whitespace
-      const eventName = eventMatch[1]
-        .replace(/<[^>]*>/g, '') // Remove all HTML tags
-        .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
-        .replace(/&amp;/g, '&')  // Replace &amp; with &
-        .replace(/&lt;/g, '<')   // Replace &lt; with <
-        .replace(/&gt;/g, '>')   // Replace &gt; with >
-        .replace(/&quot;/g, '"') // Replace &quot; with "
-        .replace(/&#39;/g, "'")  // Replace &#39; with '
-        .replace(/\s+/g, ' ')    // Replace multiple spaces with single space
-        .trim()                  // Remove leading/trailing whitespace
-
-      if (!eventName) {
-        console.log('Skipping regular event - empty event name after cleaning:', eventMatch[1])
-        continue
-      }
-
-      console.log('Creating regular event:', {
-        time,
-        currency,
-        event: eventName,
-        timestamp: eventTimestamp,
-        country
-      })
-      
-      // Parse the timestamp into UTC
-      try {
-        const [datePart, timePart] = eventTimestamp.split(' ')
-        if (!datePart || !timePart) {
-          console.log('Invalid timestamp format:', eventTimestamp)
-          continue
-        }
-
-        const [year, month, day] = datePart.split('-').map(Number)
-        const [hours, minutes] = timePart.split(':').map(Number)
-
-        if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hours) || isNaN(minutes)) {
-          console.log('Invalid date/time components:', { year, month, day, hours, minutes })
-          continue
-        }
-
-        // Create UTC date
-        const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes))
-        
-        // Validate the date
-        if (!isValid(utcDate)) {
-          console.log('Invalid UTC date created:', utcDate)
-          continue
-        }
-
-        currentEvent = {
-          time: time,
-          currency: currency,
-          impact: impact,
-          event: eventName,
-          timestamp: utcDate.toISOString(),
-          country: country,
-          eventId: eventId || '',
-          sourceUrl: '',
-          lang: lang,
-          timezone: 'UTC'
-        }
-      } catch (error) {
-        console.error('Error parsing timestamp:', error)
-        continue
-      }
-    }
-
-    // Don't forget to add the last event if there is one
-    if (currentEvent) {
-      console.log('Adding final event:', currentEvent)
-      events.push(currentEvent as InvestingEvent)
-    }
-
-    console.log('Parsing Summary:')
-    console.log('- Total rows processed:', rowCount)
-    console.log('- Date rows found:', dateRowCount)
-    console.log('- Event rows found:', eventRowCount)
-    console.log('- Event info rows found:', eventInfoRowCount)
-    console.log('- Events created:', events.length)
-    console.log('- All day events:', events.filter(e => e.time === 'Toute la journée').length)
-    console.log('- Regular events:', events.filter(e => e.time !== 'Toute la journée').length)
-
-    if (events.length === 0) {
-      console.log('Warning: No events were created. This might indicate a parsing issue.')
-    }
-
-    const mapped = events.map(event => ({
-      title: `${event.currency} - ${event.event}`,
-      date: new Date(event.timestamp!), // We know timestamp exists because we filtered for it
-      importance: mapImpactToImportance(event.impact),
-      type: 'ECONOMIC',
-      sourceUrl: event.sourceUrl || '',
-      country: event.country,
-      lang: event.lang,
-      timezone: event.timezone
-    }))
-
-    return {
-      events: mapped,
-      diagnostics: options.debug
-        ? {
-            ...diagnostics,
-            rowCount,
-            dateRowCount,
-            eventRowCount,
-            eventInfoRowCount,
-            parsedCount: mapped.length,
-          }
-        : undefined,
-    }
-  } catch (error) {
-    console.error('Error fetching calendar events:', error)
-    throw error
+  if (!response.ok) {
+    throw new Error(
+      `Forex Factory feed failed: ${response.status} ${response.statusText}`,
+    )
   }
+
+  const payload = (await response.json()) as unknown
+  if (!Array.isArray(payload)) {
+    throw new Error('Forex Factory feed returned a non-array payload')
+  }
+
+  const rawEvents = payload as ForexFactoryEvent[]
+  const events: MappedFinancialEvent[] = []
+  let skippedInvalidDate = 0
+  let skippedMissingTitle = 0
+
+  for (const raw of rawEvents) {
+    const titleText = raw.title?.trim()
+    const currency = raw.country?.trim()
+    if (!titleText || !currency) {
+      skippedMissingTitle++
+      continue
+    }
+
+    const date = new Date(raw.date)
+    if (!isValid(date)) {
+      skippedInvalidDate++
+      continue
+    }
+
+    events.push({
+      // Keep the historical "USD - Event" title shape used by the Investing scraper.
+      title: `${currency} - ${titleText}`,
+      date,
+      importance: mapImpactToImportance(raw.impact || 'Low'),
+      type: 'ECONOMIC',
+      sourceUrl: FF_CALENDAR_PAGE,
+      country: currency,
+      // FF titles are English-only; we still tag rows with the requested lang so
+      // both weekly cron invocations (en/fr) populate their locale filters.
+      lang,
+      timezone: 'UTC',
+    })
+  }
+
+  const diagnostics = {
+    feedUrl: FF_CALENDAR_URL,
+    rawCount: rawEvents.length,
+    mappedCount: events.length,
+    skippedInvalidDate,
+    skippedMissingTitle,
+    sample: events.slice(0, 3).map((e) => ({
+      title: e.title,
+      date: e.date.toISOString(),
+      importance: e.importance,
+      country: e.country,
+      lang: e.lang,
+    })),
+  }
+
+  console.log('Forex Factory fetch summary:', diagnostics)
+
+  return { events, diagnostics }
 }
 
 export async function GET(request: Request) {
   try {
-    // Get the URL and search params
     const { searchParams } = new URL(request.url)
-    const lang = (searchParams.get('lang') || 'fr') as 'fr' | 'en'
+    const lang = (searchParams.get('lang') || 'fr') as CronLang
     const shouldStoreInDb = searchParams.get('db') === 'true'
-
-    // Fetch events directly from Investing.com
     const debug = searchParams.get('debug') === '1'
-    const { events, diagnostics } = await fetchInvestingCalendarEvents(lang, { debug })
 
-    if (events.length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'No events found',
-        ...(debug ? { diagnostics } : {}),
-      }, { status: 404 })
+    if (lang !== 'fr' && lang !== 'en') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid lang. Use en or fr.' },
+        { status: 400 },
+      )
     }
 
-    // If db=true, store events in database
+    const { events, diagnostics } = await fetchForexFactoryEvents(lang)
+
+    if (events.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'No events found',
+          ...(debug ? { diagnostics } : {}),
+        },
+        { status: 404 },
+      )
+    }
+
     if (shouldStoreInDb) {
       console.log('Storing events in database...')
       const storedEvents = await Promise.all(
@@ -410,12 +172,14 @@ export async function GET(request: Request) {
                   title: event.title,
                   date: event.date,
                   lang: event.lang,
-                  timezone: event.timezone
-                }
+                  timezone: event.timezone,
+                },
               },
               update: {
                 importance: event.importance,
-                updatedAt: new Date()
+                sourceUrl: event.sourceUrl,
+                country: event.country,
+                updatedAt: new Date(),
               },
               create: {
                 title: event.title,
@@ -425,39 +189,42 @@ export async function GET(request: Request) {
                 sourceUrl: event.sourceUrl,
                 country: event.country,
                 lang: event.lang,
-                timezone: event.timezone
-              }
+                timezone: event.timezone,
+              },
             })
           } catch (error) {
             console.error(`Error processing event ${event.title}:`, error)
             return null
           }
-        })
+        }),
       )
 
       return NextResponse.json({
         success: true,
-        events: events,
+        source: 'forexfactory',
+        events,
         count: events.length,
-        storedCount: storedEvents.filter(Boolean).length
+        storedCount: storedEvents.filter(Boolean).length,
+        ...(debug ? { diagnostics } : {}),
       })
     }
 
-    // If db=false or not specified, just return the events
     return NextResponse.json({
       success: true,
-      events: events,
-      count: events.length
+      source: 'forexfactory',
+      events,
+      count: events.length,
+      ...(debug ? { diagnostics } : {}),
     })
   } catch (error) {
     console.error('Error in GET route:', error)
     return NextResponse.json(
-      { 
+      {
         success: false,
-        error: 'Failed to fetch events from Investing.com', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
+        error: 'Failed to fetch financial events',
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

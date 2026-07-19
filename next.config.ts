@@ -74,9 +74,6 @@ const nextConfig: NextConfig = {
     '/app/api/**': [
       './prisma/generated/prisma/**',
     ],
-    '/api/cron/investing': [
-      './node_modules/playwright-core/**',
-    ],
     // Runtime fs search in /api/ai/support — keep docs in the serverless bundle.
     '/api/ai/support': [...SUPPORT_SEARCH_TRACE_INCLUDES],
   },
