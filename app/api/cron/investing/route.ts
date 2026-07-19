@@ -3,6 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { isValid } from 'date-fns'
 import { scrapeWithSandbox } from '@/lib/browser-sandbox'
 
+// Chrome install + dump-dom inside Vercel Sandbox can exceed the default 60s.
+export const maxDuration = 300
+
 interface InvestingEvent {
   time: string
   currency: string
@@ -20,9 +23,68 @@ interface InvestingEvent {
   type?: string
 }
 
+const FRENCH_MONTHS: Record<string, string> = {
+  janvier: '01',
+  février: '02',
+  mars: '03',
+  avril: '04',
+  mai: '05',
+  juin: '06',
+  juillet: '07',
+  août: '08',
+  septembre: '09',
+  octobre: '10',
+  novembre: '11',
+  décembre: '12',
+}
+
+const ENGLISH_MONTHS: Record<string, string> = {
+  january: '01',
+  february: '02',
+  march: '03',
+  april: '04',
+  may: '05',
+  june: '06',
+  july: '07',
+  august: '08',
+  september: '09',
+  october: '10',
+  november: '11',
+  december: '12',
+}
+
+function parseCalendarDay(dateStr: string, lang: 'fr' | 'en'): Date | null {
+  const parts = dateStr.trim().split(/\s+/)
+
+  try {
+    if (lang === 'fr') {
+      // e.g. "Mercredi 7 mai 2025"
+      const [, day, month, year] = parts
+      const monthNum = FRENCH_MONTHS[month?.toLowerCase() ?? '']
+      if (!day || !monthNum || !year) return null
+      const parsed = new Date(Date.UTC(parseInt(year, 10), parseInt(monthNum, 10) - 1, parseInt(day, 10)))
+      return isValid(parsed) ? parsed : null
+    }
+
+    // e.g. "Wednesday, May 7, 2025" or "Wednesday May 7 2025"
+    const normalized = dateStr.replace(/,/g, '')
+    const enParts = normalized.trim().split(/\s+/)
+    const [, month, day, year] = enParts
+    const monthNum = ENGLISH_MONTHS[month?.toLowerCase() ?? '']
+    if (!day || !monthNum || !year) return null
+    const parsed = new Date(Date.UTC(parseInt(year, 10), parseInt(monthNum, 10) - 1, parseInt(day, 10)))
+    return isValid(parsed) ? parsed : null
+  } catch (error) {
+    console.error('Error parsing current date:', error)
+    return null
+  }
+}
+
 function mapImpactToImportance(impact: string): 'HIGH' | 'MEDIUM' | 'LOW' {
-  // Count the number of filled bull icons
-  const filledBulls = (impact.match(/grayFullBullishIcon/g) || []).length
+  // Count filled bull icons (class name has varied over time).
+  const filledBulls = (
+    impact.match(/grayFullBullishIcon|bullishIcon|sentimentBullish/g) || []
+  ).length
   switch (filledBulls) {
     case 3:
       return 'HIGH'
@@ -74,29 +136,9 @@ async function fetchInvestingCalendarEvents(lang: 'fr' | 'en' = 'fr') {
         const dateMatch = row.match(/<td[^>]*class="theDay"[^>]*>([^<]+)<\/td>/)
         if (dateMatch) {
           const dateStr = dateMatch[1].trim()
-          // Parse French date format (e.g., "Mercredi 7 mai 2025")
-          const [day, date, month, year] = dateStr.split(' ')
-          const monthMap: { [key: string]: string } = {
-            'janvier': '01', 'février': '02', 'mars': '03', 'avril': '04',
-            'mai': '05', 'juin': '06', 'juillet': '07', 'août': '08',
-            'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12'
-          }
-          try {
-            // Create date in UTC
-            currentDate = new Date(Date.UTC(
-              parseInt(year),
-              parseInt(monthMap[month.toLowerCase()]) - 1,
-              parseInt(date)
-            ))
-            
-            // Validate the date
-            if (!isValid(currentDate)) {
-              console.log('Invalid current date created:', { dateStr, currentDate })
-              currentDate = null
-            }
-          } catch (error) {
-            console.error('Error parsing current date:', error)
-            currentDate = null
+          currentDate = parseCalendarDay(dateStr, lang)
+          if (!currentDate) {
+            console.log('Invalid current date created:', { dateStr, lang })
           }
         }
         continue
