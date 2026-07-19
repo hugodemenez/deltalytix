@@ -2,6 +2,7 @@ import { cacheLife, cacheTag, updateTag } from 'next/cache'
 import { getUserId } from '@/server/auth'
 import { prisma } from '@/lib/prisma'
 import { toConnectionView } from '@/lib/connection-view'
+import { decryptConnectionToken } from '@/lib/connection-token-crypto'
 import { getDxFeedPropFirm } from '@/lib/dxfeed-propfirms'
 import type { Connection } from '@/prisma/generated/prisma/client'
 import type {
@@ -14,10 +15,20 @@ function connectionsCacheTag(userId: string) {
   return `connections-${userId}`
 }
 
-function parseConnectionAuthError(token: string | null): string | null {
+function plaintextConnectionToken(token: string | null): string | null {
   if (!token) return null
   try {
-    const parsed = JSON.parse(token) as { authError?: string }
+    return decryptConnectionToken(token)
+  } catch {
+    return null
+  }
+}
+
+function parseConnectionAuthError(token: string | null): string | null {
+  const plaintext = plaintextConnectionToken(token)
+  if (!plaintext) return null
+  try {
+    const parsed = JSON.parse(plaintext) as { authError?: string }
     return typeof parsed.authError === 'string' && parsed.authError.length > 0
       ? parsed.authError
       : null
@@ -48,9 +59,10 @@ function deriveConnectionStatus(
 }
 
 function getDxFeedPropFirmName(token: string | null): string | null {
-  if (!token) return null
+  const plaintext = plaintextConnectionToken(token)
+  if (!plaintext) return null
   try {
-    const parsed = JSON.parse(token) as {
+    const parsed = JSON.parse(plaintext) as {
       propFirmId?: string
       propfirmName?: string
     }

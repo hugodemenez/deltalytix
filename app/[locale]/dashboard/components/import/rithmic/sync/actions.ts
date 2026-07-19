@@ -2,7 +2,8 @@
 import { prisma } from "@/lib/prisma"
 import { getUserId } from "@/server/auth"
 import { Connection } from "@/prisma/generated/prisma/client"
-import { toConnectionViews } from "@/lib/connection-view"
+import { toDecryptedConnectionViews } from "@/lib/connection-view"
+import { encryptConnectionToken } from "@/lib/connection-token-crypto"
 import { capturePostHogEvent } from "@/lib/posthog-server"
 
 export async function getRithmicSynchronizations() {
@@ -11,7 +12,7 @@ export async function getRithmicSynchronizations() {
   const connections = await prisma.connection.findMany({
     where: { userId: userId, service: "rithmic" },
   })
-  return toConnectionViews(connections)
+  return toDecryptedConnectionViews(connections)
 }
 
 export async function setRithmicSynchronization(synchronization: Partial<Connection> & { accountId?: string }) {
@@ -19,6 +20,10 @@ export async function setRithmicSynchronization(synchronization: Partial<Connect
   const userId = await getUserId()
   const service = synchronization.service || 'rithmic'
   const externalId = synchronization.externalId || synchronization.accountId || ''
+  const encryptedToken =
+    synchronization.token !== undefined
+      ? encryptConnectionToken(synchronization.token)
+      : undefined
   const existingConnection = await prisma.connection.findUnique({
     where: {
       userId_service_externalId: { userId, service, externalId },
@@ -37,7 +42,7 @@ export async function setRithmicSynchronization(synchronization: Partial<Connect
       service,
       externalId,
       lastSyncedAt: synchronization.lastSyncedAt || new Date(),
-      token: synchronization.token,
+      ...(encryptedToken !== undefined ? { token: encryptedToken } : {}),
       tokenExpiresAt: synchronization.tokenExpiresAt,
       dailySyncTime: synchronization.dailySyncTime,
       environment: synchronization.environment,
@@ -48,7 +53,7 @@ export async function setRithmicSynchronization(synchronization: Partial<Connect
       service,
       externalId,
       lastSyncedAt: synchronization.lastSyncedAt || new Date(),
-      token: synchronization.token,
+      token: encryptedToken ?? null,
       tokenExpiresAt: synchronization.tokenExpiresAt,
       dailySyncTime: synchronization.dailySyncTime,
       environment: synchronization.environment || 'demo',

@@ -14,6 +14,10 @@ import { formatTimestamp, formatDateToTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
 import { capturePostHogEvent } from '@/lib/posthog-server'
+import {
+  decryptConnectionToken,
+  encryptConnectionToken,
+} from '@/lib/connection-token-crypto'
 
 // Helper function to format dates in the required format: 2025-06-05T08:38:40+00:00
 function formatDateForAPI(date: Date): string {
@@ -1258,14 +1262,7 @@ async function linkTradovateAccountsToConnection(params: {
         },
         select: { id: true },
       })
-    : await prisma.connection.findFirst({
-        where: {
-          userId,
-          service: 'tradovate',
-          token: accessToken,
-        },
-        select: { id: true },
-      })
+    : null
 
   if (!connection) {
     return
@@ -1505,7 +1502,7 @@ export async function storeTradovateToken(
         }
       },
       update: {
-        token: accessToken,
+        token: encryptConnectionToken(accessToken),
         tokenExpiresAt: new Date(expiresAt),
         environment,
         lastSyncedAt: new Date(),
@@ -1515,7 +1512,7 @@ export async function storeTradovateToken(
         userId: user.id,
         service: 'tradovate',
         externalId: accountId,
-        token: accessToken,
+        token: encryptConnectionToken(accessToken),
         tokenExpiresAt: new Date(expiresAt),
         environment,
         lastSyncedAt: new Date()
@@ -1562,8 +1559,13 @@ export async function getTradovateToken(accountId: string = 'default') {
       return { error: 'No Tradovate token found' }
     }
 
+    const plaintextToken = decryptConnectionToken(syncData.token)
+    if (!plaintextToken) {
+      return { error: 'No Tradovate token found' }
+    }
+
     try {
-      const parsed = JSON.parse(syncData.token) as { authError?: string }
+      const parsed = JSON.parse(plaintextToken) as { authError?: string }
       if (typeof parsed.authError === 'string' && parsed.authError.length > 0) {
         return { error: parsed.authError }
       }
@@ -1581,7 +1583,7 @@ export async function getTradovateToken(accountId: string = 'default') {
 
     const includedFeeTypes = syncData.includedFeeTypes as Record<string, boolean> | null | undefined
     return {
-      accessToken: syncData.token,
+      accessToken: plaintextToken,
       expiresAt: syncData.tokenExpiresAt?.toISOString() || '',
       environment: normalizeEnvironment(syncData.environment),
       accountId: syncData.externalId,
@@ -1674,8 +1676,8 @@ export async function getTradovateSynchronizations() {
       }
     })
 
-    const { toConnectionViews } = await import('@/lib/connection-view')
-    return { synchronizations: toConnectionViews(synchronizations) }
+    const { toDecryptedConnectionViews } = await import('@/lib/connection-view')
+    return { synchronizations: toDecryptedConnectionViews(synchronizations) }
   } catch (error) {
     console.error('TRADOVATE SYNC: Failed to get Tradovate synchronizations:', error)
     return { error: 'Failed to get synchronizations' }
@@ -1786,13 +1788,13 @@ export async function testCustomTradovateToken(
   }
 }
 
-async function updateLastSyncedAt(userId: string, accessToken: string) {
+async function updateLastSyncedAt(userId: string, connectionExternalId: string) {
     // Update last synced at
     const updateResult = await prisma.connection.updateMany({
       where: {
         userId: userId,
         service: 'tradovate',
-        token: accessToken,
+        externalId: connectionExternalId,
       },
       data: {
         lastSyncedAt: new Date()
@@ -1805,7 +1807,13 @@ async function updateLastSyncedAt(userId: string, accessToken: string) {
   
 export async function getTradovateTrades(
   accessToken: string,
-  options?: { userId?: string; includeAllFees?: boolean; includedFeeTypes?: TradovateIncludedFeeTypes; environment?: TradovateEnvironment }
+  options?: {
+    userId?: string
+    includeAllFees?: boolean
+    includedFeeTypes?: TradovateIncludedFeeTypes
+    environment?: TradovateEnvironment
+    connectionExternalId?: string
+  }
 ): Promise<TradovateTradesResult> {
   try {
     // If we are on the server
@@ -1829,6 +1837,7 @@ export async function getTradovateTrades(
       return { error: 'User not authenticated' }
     }
     const resolvedUserId = userId
+    const connectionExternalId = options?.connectionExternalId ?? null
 
     const apiBaseUrl = getApiBaseUrl(environment)
 
@@ -1840,11 +1849,14 @@ export async function getTradovateTrades(
     // Means there are no trades to import — still attach trading accounts to the Connection
     if (fillPairs.length === 0) {
       logger.info('No fill pairs returned from Tradovate')
-      await updateLastSyncedAt(resolvedUserId, accessToken)
+      if (connectionExternalId) {
+        await updateLastSyncedAt(resolvedUserId, connectionExternalId)
+      }
       await linkTradovateAccountsToConnection({
         userId: resolvedUserId,
         accessToken,
         environment,
+        connectionExternalId,
       })
       return { processedTrades: [], savedCount: 0, ordersCount: 0 }
     }
@@ -1859,14 +1871,18 @@ export async function getTradovateTrades(
     accounts.forEach(account => accountsById.set(account.id, account))
     logger.info(`Fetched ${accounts.length} accounts for resolution`)
 
-    const connectionForAccounts = await prisma.connection.findFirst({
-      where: {
-        userId: resolvedUserId,
-        service: 'tradovate',
-        token: accessToken,
-      },
-      select: { id: true },
-    })
+    const connectionForAccounts = connectionExternalId
+      ? await prisma.connection.findUnique({
+          where: {
+            userId_service_externalId: {
+              userId: resolvedUserId,
+              service: 'tradovate',
+              externalId: connectionExternalId,
+            },
+          },
+          select: { id: true },
+        })
+      : null
     if (connectionForAccounts && accounts.length > 0) {
       await upsertAccountsForNumbers(
         resolvedUserId,
@@ -1967,21 +1983,16 @@ export async function getTradovateTrades(
       tickDetails,
     )
     
-    await updateLastSyncedAt(resolvedUserId, accessToken)
+    if (connectionExternalId) {
+      await updateLastSyncedAt(resolvedUserId, connectionExternalId)
+    }
 
     if (processedTrades.length === 0) {
       logger.info('No trades could be created from fill pairs')
       return { processedTrades: [], savedCount: 0 }
     }
 
-    const connection = connectionForAccounts ?? await prisma.connection.findFirst({
-      where: {
-        userId: resolvedUserId,
-        service: 'tradovate',
-        token: accessToken,
-      },
-      select: { id: true },
-    })
+    const connection = connectionForAccounts
 
     // Save trades to database
     logger.info(`Attempting to save ${processedTrades.length} fill pair trades to database`)

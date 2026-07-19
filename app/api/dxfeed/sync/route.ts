@@ -28,7 +28,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const syncResult = await getDxFeedTrades(tokenResult.storedTokenJson)
+    const syncResult = await getDxFeedTrades(tokenResult.storedTokenJson, {
+      accountId,
+    })
     if (syncResult.error) {
       return NextResponse.json(
         {
