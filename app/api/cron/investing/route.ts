@@ -153,23 +153,61 @@ async function fetchForexFactoryEvents(lang: CronLang): Promise<{
   return { events, diagnostics }
 }
 
+async function upsertEvents(events: MappedFinancialEvent[]) {
+  const storedEvents = await Promise.all(
+    events.map(async (event) => {
+      try {
+        return prisma.financialEvent.upsert({
+          where: {
+            title_date_lang_timezone: {
+              title: event.title,
+              date: event.date,
+              lang: event.lang,
+              timezone: event.timezone,
+            },
+          },
+          update: {
+            importance: event.importance,
+            sourceUrl: event.sourceUrl,
+            country: event.country,
+            updatedAt: new Date(),
+          },
+          create: {
+            title: event.title,
+            date: event.date,
+            importance: event.importance,
+            type: event.type,
+            sourceUrl: event.sourceUrl,
+            country: event.country,
+            lang: event.lang,
+            timezone: event.timezone,
+          },
+        })
+      } catch (error) {
+        console.error(`Error processing event ${event.title}:`, error)
+        return null
+      }
+    }),
+  )
+
+  return storedEvents.filter(Boolean).length
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const lang = (searchParams.get('lang') || 'fr') as CronLang
+    const langParam = searchParams.get('lang')
     const shouldStoreInDb = searchParams.get('db') === 'true'
     const debug = searchParams.get('debug') === '1'
 
-    if (lang !== 'fr' && lang !== 'en') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid lang. Use en or fr.' },
-        { status: 400 },
-      )
-    }
+    // Default to both locales so a single cron invocation (and a single FF
+    // fetch) can populate en + fr without tripping Forex Factory rate limits.
+    const langs: CronLang[] =
+      langParam === 'en' || langParam === 'fr' ? [langParam] : ['en', 'fr']
 
-    const { events, diagnostics } = await fetchForexFactoryEvents(lang)
-
-    if (events.length === 0) {
+    // Fetch once, then project into each requested lang.
+    const { events: baseEvents, diagnostics } = await fetchForexFactoryEvents(langs[0])
+    if (baseEvents.length === 0) {
       return NextResponse.json(
         {
           success: false,
@@ -180,59 +218,40 @@ export async function GET(request: Request) {
       )
     }
 
+    const eventsByLang = Object.fromEntries(
+      langs.map((lang) => [
+        lang,
+        baseEvents.map((event) => ({ ...event, lang })),
+      ]),
+    ) as Record<CronLang, MappedFinancialEvent[]>
+
+    const allEvents = langs.flatMap((lang) => eventsByLang[lang])
+
     if (shouldStoreInDb) {
-      console.log('Storing events in database...')
-      const storedEvents = await Promise.all(
-        events.map(async (event) => {
-          try {
-            return prisma.financialEvent.upsert({
-              where: {
-                title_date_lang_timezone: {
-                  title: event.title,
-                  date: event.date,
-                  lang: event.lang,
-                  timezone: event.timezone,
-                },
-              },
-              update: {
-                importance: event.importance,
-                sourceUrl: event.sourceUrl,
-                country: event.country,
-                updatedAt: new Date(),
-              },
-              create: {
-                title: event.title,
-                date: event.date,
-                importance: event.importance,
-                type: event.type,
-                sourceUrl: event.sourceUrl,
-                country: event.country,
-                lang: event.lang,
-                timezone: event.timezone,
-              },
-            })
-          } catch (error) {
-            console.error(`Error processing event ${event.title}:`, error)
-            return null
-          }
-        }),
-      )
+      console.log(`Storing events in database for langs=${langs.join(',')}...`)
+      const storedCount = await upsertEvents(allEvents)
 
       return NextResponse.json({
         success: true,
         source: 'forexfactory',
-        events,
-        count: events.length,
-        storedCount: storedEvents.filter(Boolean).length,
-        ...(debug ? { diagnostics } : {}),
+        langs,
+        count: allEvents.length,
+        storedCount,
+        ...(debug
+          ? {
+              diagnostics,
+              events: allEvents.slice(0, 5),
+            }
+          : {}),
       })
     }
 
     return NextResponse.json({
       success: true,
       source: 'forexfactory',
-      events,
-      count: events.length,
+      langs,
+      events: allEvents,
+      count: allEvents.length,
       ...(debug ? { diagnostics } : {}),
     })
   } catch (error) {
