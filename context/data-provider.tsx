@@ -567,7 +567,7 @@ export const DataProvider: React.FC<{
           ) {
             return cachedTrades;
           }
-          const remoteTrades = await getTradesAction(user.id, false);
+          const remoteTrades = await getTradesAction(false);
           const safeTrades = Array.isArray(remoteTrades) ? remoteTrades : [];
           setTradesCache(user.id, safeTrades).catch((err) =>
             console.error(

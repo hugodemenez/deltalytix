@@ -282,14 +282,15 @@ export async function getTradesAction(forceRefresh: boolean = false): Promise<Tr
     query.where.entryDate = { gte: twoWeeksAgo.toISOString() }
   }
   const count = await prisma.trade.count(query)
-  // Split pages by chunks of 1000
+  // Split pages by chunks of 1000 — fetch pages in parallel (was sequential wall-clock sum)
   const chunkSize = 1000
   const totalPages = Math.ceil(count / chunkSize)
-  const trades: Trade[] = []
-  for (let page = 1; page <= totalPages; page++) {
-    const pageTrades = await getCachedTrades(userId, isSubscribed, page, chunkSize)
-    trades.push(...pageTrades)
-  }
+  const pageResults = await Promise.all(
+    Array.from({ length: totalPages }, (_, i) =>
+      getCachedTrades(userId, isSubscribed, i + 1, chunkSize)
+    )
+  )
+  const trades: Trade[] = pageResults.flat()
   console.log(`[getTrades] Found ${count} trades fetched ${trades.length}`)
 
   // Tell the server that the trades have changed
