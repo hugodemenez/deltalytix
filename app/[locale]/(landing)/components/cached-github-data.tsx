@@ -1,11 +1,15 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StarIcon } from "lucide-react";
 import { ContributionGraph } from "./contribution-graph";
-import { getGithubData } from "../actions/github-data";
-import { cacheLife } from "next/cache";
-import { connection } from "next/server";
 import { GITHUB_REPO_NAME, GITHUB_REPO_URL } from "@/lib/github-repo";
-import { getAllPostMetadata } from "@/lib/mdx";
+import {
+  fetchGithubStatsPayload,
+  type GithubStatsPayload,
+} from "../actions/github-data";
 
 const formatTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
@@ -21,6 +25,30 @@ const formatTimeAgo = (dateString: string) => {
   return `${seconds} second${seconds !== 1 ? "s" : ""} ago`;
 };
 
+function GithubCardSkeleton() {
+  return (
+    <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
+      <CardHeader className="border-b border-border pb-3 md:pb-4 mb-3 md:mb-4">
+        <Skeleton className="h-6 w-48" />
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-2 mb-3 md:mb-4">
+          <Skeleton className="h-6 w-20" />
+          <Skeleton className="h-6 w-20" />
+        </div>
+        <div className="flex flex-wrap gap-3 md:gap-4 mb-4 md:mb-6">
+          {[...Array(5)].map((_, index) => (
+            <Skeleton key={index} className="h-4 w-16" />
+          ))}
+        </div>
+        <Skeleton className="h-[120px] w-full mb-4" />
+        <Skeleton className="h-4 w-48 mb-4" />
+        <Skeleton className="h-8 w-full" />
+      </CardContent>
+    </Card>
+  );
+}
+
 function GithubStatsCard({
   repoData,
   githubStats,
@@ -28,18 +56,7 @@ function GithubStatsCard({
   lastCommit,
   starLabel,
   changelogEntries,
-}: {
-  repoData: Awaited<ReturnType<typeof getGithubData>>["repoData"];
-  githubStats: Awaited<ReturnType<typeof getGithubData>>["githubStats"];
-  stars: number;
-  lastCommit: Awaited<ReturnType<typeof getGithubData>>["lastCommit"];
-  starLabel: string;
-  changelogEntries: Array<{
-    slug: string;
-    title: string;
-    date: string;
-  }>;
-}) {
+}: GithubStatsPayload & { starLabel: string }) {
   return (
     <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
       <CardHeader className="mb-3 flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border pb-3 md:mb-4 md:pb-4">
@@ -102,58 +119,44 @@ function GithubStatsFallback({ starLabel }: { starLabel: string }) {
   );
 }
 
-async function CachedGithubDataInner({
+/**
+ * Landing GitHub card: SSR/client initial paint is a static skeleton only.
+ *
+ * Stats load in `useEffect` (after paint) via a server action so homepage HTML
+ * never waits on GitHub commit pagination. Do not await this data in RSC or
+ * wrap it in server Suspense — that reopens a streaming hole and stalls
+ * document-complete.
+ */
+export function CachedGithubData({
   starLabel,
   locale,
 }: {
   starLabel: string;
   locale: string;
 }) {
-  "use cache";
-  cacheLife("weeks");
+  const [data, setData] = useState<GithubStatsPayload | null>(null);
+  const [failed, setFailed] = useState(false);
 
-  let githubData: Awaited<ReturnType<typeof getGithubData>>;
-  let posts: Awaited<ReturnType<typeof getAllPostMetadata>>;
+  useEffect(() => {
+    let cancelled = false;
 
-  try {
-    [githubData, posts] = await Promise.all([
-      getGithubData(),
-      getAllPostMetadata(locale),
-    ]);
-  } catch (error) {
-    console.error("[CachedGithubData] Failed to load GitHub stats:", error);
-    return <GithubStatsFallback starLabel={starLabel} />;
-  }
+    fetchGithubStatsPayload(locale)
+      .then((payload) => {
+        if (!cancelled) setData(payload);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        console.error("[CachedGithubData] Failed to load GitHub stats:", error);
+        setFailed(true);
+      });
 
-  const changelogEntries = posts
-    .filter((post) => post.meta.status === "completed")
-    .map((post) => ({
-      slug: post.slug,
-      title: String(post.meta.title),
-      date: String(post.meta.date),
-    }));
+    return () => {
+      cancelled = true;
+    };
+  }, [locale]);
 
-  return (
-    <GithubStatsCard
-      repoData={githubData.repoData}
-      githubStats={githubData.githubStats}
-      stars={githubData.stars}
-      lastCommit={githubData.lastCommit}
-      starLabel={starLabel}
-      changelogEntries={changelogEntries}
-    />
-  );
-}
+  if (failed) return <GithubStatsFallback starLabel={starLabel} />;
+  if (!data) return <GithubCardSkeleton />;
 
-export async function CachedGithubData({
-  starLabel,
-  locale,
-}: {
-  starLabel: string;
-  locale: string;
-}) {
-  // Keep GitHub out of `next build` static generation — network retries were
-  // exhausting the 60s per-page budget and cascading into unrelated routes.
-  await connection();
-  return <CachedGithubDataInner starLabel={starLabel} locale={locale} />;
+  return <GithubStatsCard {...data} starLabel={starLabel} />;
 }
