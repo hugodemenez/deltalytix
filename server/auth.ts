@@ -15,6 +15,7 @@ import { createLocalDashboardBypassAuthStub } from '@/lib/local-dashboard-bypass
 import { ensureLocalDashboardUserInDatabase } from '@/server/local-dashboard-bootstrap'
 import { capturePostHogEvent } from '@/lib/posthog-server'
 import { getRequestOrigin } from '@/lib/site-url'
+import { resolveAuthEmailLocale } from '@/lib/auth-email-locale'
 
 export async function getWebsiteURL() {
   // Reuse the shared trusted-host allowlist (*.deltalytix.app, *.vercel.app,
@@ -166,12 +167,14 @@ export async function signInWithEmail(email: string, next: string | null = null,
   try {
     const supabase = await createClient()
     const websiteURL = await getWebsiteURL()
+    const language = resolveAuthEmailLocale(locale)
     const callbackParams = new URLSearchParams()
     if (next) callbackParams.set('next', next)
     if (locale) callbackParams.set('locale', locale)
     const { error } = await supabase.auth.signInWithOtp({
       email: email,
       options: {
+        data: { language },
         emailRedirectTo: `${websiteURL}api/auth/callback/${callbackParams.toString() ? `?${callbackParams.toString()}` : ''}`,
       },
     })
@@ -204,6 +207,7 @@ export async function signInWithPasswordAction(
         
         // Try to sign up - if user exists, this will fail and we'll know it's a wrong password
         const websiteURL = await getWebsiteURL()
+        const language = resolveAuthEmailLocale(locale)
         const callbackParams = new URLSearchParams()
         if (next) callbackParams.set('next', next)
         if (locale) callbackParams.set('locale', locale)
@@ -212,6 +216,7 @@ export async function signInWithPasswordAction(
           email,
           password,
           options: {
+            data: { language },
             emailRedirectTo: `${websiteURL}api/auth/callback/${callbackParams.toString() ? `?${callbackParams.toString()}` : ''}`,
           },
         })
@@ -333,6 +338,7 @@ export async function signUpWithPasswordAction(
   try {
     const supabase = await createClient()
     const websiteURL = await getWebsiteURL()
+    const language = resolveAuthEmailLocale(locale)
     const callbackParams = new URLSearchParams()
     if (next) callbackParams.set('next', next)
     if (locale) callbackParams.set('locale', locale)
@@ -340,6 +346,7 @@ export async function signUpWithPasswordAction(
       email,
       password,
       options: {
+        data: { language },
         emailRedirectTo: `${websiteURL}api/auth/callback/${callbackParams.toString() ? `?${callbackParams.toString()}` : ''}`,
       },
     })
@@ -634,8 +641,7 @@ export async function getUserEmail(): Promise<string> {
 // Lightweight updater for user language without full ensure logic
 export async function updateUserLanguage(locale: string): Promise<{ updated: boolean }> {
   console.log("[Auth] updateUserLanguage", locale)
-  const allowedLocales = new Set(['en', 'fr'])
-  if (!allowedLocales.has(locale)) {
+  if (locale !== 'en' && locale !== 'fr') {
     return { updated: false }
   }
 
@@ -650,14 +656,29 @@ export async function updateUserLanguage(locale: string): Promise<{ updated: boo
     return { updated: false }
   }
 
-  if (existing.language === locale) {
+  const shouldUpdateDatabase = existing.language !== locale
+  const shouldUpdateAuthMetadata = user.user_metadata?.language !== locale
+
+  if (!shouldUpdateDatabase && !shouldUpdateAuthMetadata) {
     return { updated: false }
   }
 
-  await prisma.user.update({
-    where: { auth_user_id: user.id },
-    data: { language: locale },
-  })
+  if (shouldUpdateDatabase) {
+    await prisma.user.update({
+      where: { auth_user_id: user.id },
+      data: { language: locale },
+    })
+  }
+
+  if (shouldUpdateAuthMetadata) {
+    const { error } = await supabase.auth.updateUser({
+      data: { language: locale },
+    })
+    if (error) {
+      throw error
+    }
+  }
+
   return { updated: true }
 }
 
