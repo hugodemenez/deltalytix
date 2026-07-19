@@ -5,6 +5,7 @@
     "": {
       "name": "delatlytix",
       "dependencies": {
+        "@agent-browser/sandbox": "0.32.2",
         "@ai-sdk/openai": "^3.0.10",
         "@ai-sdk/react": "^3.0.33",
         "@calcom/embed-react": "^1.5.3",
@@ -181,6 +182,8 @@
     },
   },
   "packages": {
+    "@agent-browser/sandbox": ["@agent-browser/sandbox@0.32.2", "", { "peerDependencies": { "@vercel/sandbox": ">=1.0.0" }, "optionalPeers": ["@vercel/sandbox"] }, "sha512-VUn2IvFNDUeglj6mh0r8GvVd7YCjsb5WCsI/cRHuSEG2Wz0TYYK3TlXNdfvBqaTzLSgpPnuXXI1sDUi8tNhxJA=="],
+
     "@ai-sdk/gateway": ["@ai-sdk/gateway@3.0.128", "", { "dependencies": { "@ai-sdk/provider": "3.0.10", "@ai-sdk/provider-utils": "4.0.28", "@vercel/oidc": "3.2.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-t9Dyqk5thSmIzsNvVTQtZZiO3xqKGkk1hX3+GNpYmro+GuEdW+E6mKFHihb9Y1vCEt3rEyd4pbGUcin4D57FfQ=="],
 
     "@ai-sdk/openai": ["@ai-sdk/openai@3.0.70", "", { "dependencies": { "@ai-sdk/provider": "3.0.10", "@ai-sdk/provider-utils": "4.0.28" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-0sAaS5IrgHvLF1OUHCB1fV+d4HCvfUvhnf5Hpq2yrzFRPLKdLv6TDohWOt/vmf1A6tXO1DuQKKsSuNqG3Rydgw=="],

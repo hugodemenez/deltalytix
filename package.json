@@ -19,6 +19,7 @@
     "seed:self-host": "bun scripts/seed-self-host.ts"
   },
   "dependencies": {
+    "@agent-browser/sandbox": "0.32.2",
     "@ai-sdk/openai": "^3.0.10",
     "@ai-sdk/react": "^3.0.33",
     "@calcom/embed-react": "^1.5.3",

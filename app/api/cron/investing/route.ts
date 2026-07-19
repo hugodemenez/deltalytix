@@ -1,30 +1,34 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { isValid } from 'date-fns'
+import { scrapeUrlsWithAgentBrowser } from '@/lib/browser-sandbox'
 
 /**
- * Weekly financial-events sync.
+ * Weekly financial-events sync from Investing.com.
  *
- * Historically scraped Investing.com via a headless browser. That path is now
- * blocked by Cloudflare ("Just a moment...") from Vercel Sandbox IPs.
- * Forex Factory publishes a public weekly JSON feed that works with a plain
- * fetch, so the cron uses that instead.
+ * Scrapes sslecal2.investing.com via Vercel agent-browser (Sandbox + Chrome),
+ * which can wait through Cloudflare challenges that plain HTTP / --dump-dom
+ * cannot.
  *
- * Note: this route is intentionally not CRON_SECRET-gated today (unlike other
- * cron handlers). Vercel only *schedules* crons on production, but the HTTP
- * endpoint can still be invoked manually on preview/production.
+ * Not CRON_SECRET-gated today (unlike other cron handlers). Vercel only
+ * schedules crons on production; the HTTP endpoint can still be invoked on
+ * preview for verification.
  */
-export const maxDuration = 60
+export const maxDuration = 300
 
 type CronLang = 'fr' | 'en'
 
-interface ForexFactoryEvent {
-  title: string
-  country: string
-  date: string
+interface InvestingEvent {
+  time: string
+  currency: string
   impact: string
-  forecast?: string
-  previous?: string
+  event: string
+  timestamp: string | null
+  country: string
+  eventId: string | null
+  sourceUrl: string
+  lang: CronLang
+  timezone: string
 }
 
 interface MappedFinancialEvent {
@@ -38,123 +42,289 @@ interface MappedFinancialEvent {
   timezone: string
 }
 
-const FF_CALENDAR_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json'
-const FF_CALENDAR_PAGE = 'https://www.forexfactory.com/calendar'
+const LANG_TO_INVESTING: Record<CronLang, string> = {
+  fr: '5',
+  en: '1',
+}
+
+const FRENCH_MONTHS: Record<string, string> = {
+  janvier: '01',
+  février: '02',
+  mars: '03',
+  avril: '04',
+  mai: '05',
+  juin: '06',
+  juillet: '07',
+  août: '08',
+  septembre: '09',
+  octobre: '10',
+  novembre: '11',
+  décembre: '12',
+}
+
+const ENGLISH_MONTHS: Record<string, string> = {
+  january: '01',
+  february: '02',
+  march: '03',
+  april: '04',
+  may: '05',
+  june: '06',
+  july: '07',
+  august: '08',
+  september: '09',
+  october: '10',
+  november: '11',
+  december: '12',
+}
+
+function investingCalendarUrl(lang: CronLang): string {
+  return `https://sslecal2.investing.com/?timeZone=55&lang=${LANG_TO_INVESTING[lang]}`
+}
+
+function parseCalendarDay(dateStr: string, lang: CronLang): Date | null {
+  try {
+    if (lang === 'fr') {
+      // e.g. "Mercredi 7 mai 2025"
+      const parts = dateStr.trim().split(/\s+/)
+      const [, day, month, year] = parts
+      const monthNum = FRENCH_MONTHS[month?.toLowerCase() ?? '']
+      if (!day || !monthNum || !year) return null
+      const parsed = new Date(
+        Date.UTC(parseInt(year, 10), parseInt(monthNum, 10) - 1, parseInt(day, 10)),
+      )
+      return isValid(parsed) ? parsed : null
+    }
+
+    // e.g. "Wednesday, May 7, 2025" or "Wednesday May 7 2025"
+    const normalized = dateStr.replace(/,/g, '')
+    const enParts = normalized.trim().split(/\s+/)
+    const [, month, day, year] = enParts
+    const monthNum = ENGLISH_MONTHS[month?.toLowerCase() ?? '']
+    if (!day || !monthNum || !year) return null
+    const parsed = new Date(
+      Date.UTC(parseInt(year, 10), parseInt(monthNum, 10) - 1, parseInt(day, 10)),
+    )
+    return isValid(parsed) ? parsed : null
+  } catch (error) {
+    console.error('Error parsing current date:', error)
+    return null
+  }
+}
 
 function mapImpactToImportance(impact: string): 'HIGH' | 'MEDIUM' | 'LOW' {
-  switch (impact.trim().toLowerCase()) {
-    case 'high':
+  const filledBulls = (
+    impact.match(/grayFullBullishIcon|data-img_key="fullBullish"/g) || []
+  ).length
+  switch (filledBulls) {
+    case 3:
       return 'HIGH'
-    case 'medium':
+    case 2:
       return 'MEDIUM'
     default:
-      // Low / Holiday / unknown
       return 'LOW'
   }
 }
 
-async function fetchForexFactoryJson(): Promise<ForexFactoryEvent[]> {
-  // FF rate-limits to ~2 requests / 5 minutes across export formats.
-  let lastError: Error | null = null
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const response = await fetch(FF_CALENDAR_URL, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent':
-          'Mozilla/5.0 (compatible; DeltalytixBot/1.0; +https://deltalytix.com)',
-      },
-      // Avoid Next.js fetch cache so the weekly cron always sees fresh data.
-      cache: 'no-store',
-    })
-
-    if (response.ok) {
-      const payload = (await response.json()) as unknown
-      if (!Array.isArray(payload)) {
-        throw new Error('Forex Factory feed returned a non-array payload')
-      }
-      return payload as ForexFactoryEvent[]
-    }
-
-    lastError = new Error(
-      `Forex Factory feed failed: ${response.status} ${response.statusText}`,
-    )
-    if (response.status !== 429 && response.status < 500) {
-      throw lastError
-    }
-
-    const delayMs = Math.min(30_000, 2_000 * 2 ** attempt)
-    console.warn(
-      `Forex Factory feed attempt ${attempt + 1} failed (${response.status}); retrying in ${delayMs}ms`,
-    )
-    await new Promise((resolve) => setTimeout(resolve, delayMs))
+function htmlDiagnostics(html: string) {
+  return {
+    htmlLength: html.length,
+    hasEventRowId: html.includes('eventRowId_'),
+    hasTheDay: html.includes('theDay'),
+    hasEventTimestamp: html.includes('event_timestamp'),
+    titleMatch: html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] ?? null,
+    looksLikeCloudflare: /just a moment/i.test(html),
+    htmlPreview: html.replace(/\s+/g, ' ').trim().slice(0, 400),
   }
-
-  throw lastError ?? new Error('Forex Factory feed failed after retries')
 }
 
-async function fetchForexFactoryEvents(lang: CronLang): Promise<{
-  events: MappedFinancialEvent[]
-  diagnostics?: Record<string, unknown>
-}> {
-  console.log(`Fetching Forex Factory calendar from ${FF_CALENDAR_URL} (lang=${lang})...`)
+function parseInvestingHtml(html: string, lang: CronLang): MappedFinancialEvent[] {
+  const events: InvestingEvent[] = []
+  const tableRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/g
 
-  const rawEvents = await fetchForexFactoryJson()
+  let tableMatch
+  let currentEvent: Partial<InvestingEvent> | null = null
+  let currentDate: Date | null = null
+  let rowCount = 0
+  let dateRowCount = 0
+  let eventRowCount = 0
+  let eventInfoRowCount = 0
 
-  const events: MappedFinancialEvent[] = []
-  let skippedInvalidDate = 0
-  let skippedMissingTitle = 0
+  while ((tableMatch = tableRegex.exec(html)) !== null) {
+    rowCount++
+    const fullRow = tableMatch[0]
+    const row = tableMatch[1]
 
-  for (const raw of rawEvents) {
-    const titleText = raw.title?.trim()
-    const currency = raw.country?.trim()
-    if (!titleText || !currency) {
-      skippedMissingTitle++
+    if (row.includes('theDay')) {
+      dateRowCount++
+      const dateMatch = row.match(/<td[^>]*class="theDay"[^>]*>([^<]+)<\/td>/)
+      if (dateMatch) {
+        const dateStr = dateMatch[1].trim()
+        currentDate = parseCalendarDay(dateStr, lang)
+        if (!currentDate) {
+          console.log('Invalid current date created:', { dateStr, lang })
+        }
+      }
       continue
     }
 
-    const date = new Date(raw.date)
-    if (!isValid(date)) {
-      skippedInvalidDate++
+    if (row.includes('eventInfo')) {
+      eventInfoRowCount++
+      if (currentEvent) {
+        const sourceUrlMatch = row.match(/<a[^>]*href="([^"]+)"[^>]*>/)
+        if (sourceUrlMatch) {
+          currentEvent.sourceUrl = sourceUrlMatch[1]
+        }
+        events.push(currentEvent as InvestingEvent)
+        currentEvent = null
+      }
       continue
     }
 
-    events.push({
-      // Keep the historical "USD - Event" title shape used by the Investing scraper.
-      title: `${currency} - ${titleText}`,
-      date,
-      importance: mapImpactToImportance(raw.impact || 'Low'),
-      type: 'ECONOMIC',
-      sourceUrl: FF_CALENDAR_PAGE,
-      country: currency,
-      // FF titles are English-only; we still tag rows with the requested lang so
-      // both weekly cron invocations (en/fr) populate their locale filters.
-      lang,
-      timezone: 'UTC',
-    })
+    if (!fullRow.includes('eventRowId_')) {
+      continue
+    }
+
+    if (currentEvent) {
+      events.push(currentEvent as InvestingEvent)
+      currentEvent = null
+    }
+
+    eventRowCount++
+
+    const eventIdMatch = fullRow.match(/event_attr_id="(\d+)"/)
+    const timestampMatch = fullRow.match(/event_timestamp="([^"]+)"/)
+    const eventTimestamp = timestampMatch ? timestampMatch[1] : null
+    const eventId = eventIdMatch ? eventIdMatch[1] : null
+
+    const timeMatch = row.match(/<td[^>]*class="[^"]*time[^"]*"[^>]*>([^<]+)<\/td>/)
+    if (!timeMatch) continue
+
+    const time = timeMatch[1].trim()
+
+    if (time === 'Toute la journée' || time === 'All Day') {
+      if (!currentDate) continue
+
+      const countryMatch = row.match(
+        /<span[^>]*title="([^"]+)"[^>]*class="[^"]*ceFlags[^"]*"[^>]*>/,
+      )
+      const eventMatch = row.match(/<td[^>]*class="[^"]*event[^"]*"[^>]*>([^<]+)<\/td>/)
+
+      if (countryMatch && eventMatch) {
+        currentEvent = {
+          time,
+          currency: '',
+          impact: '',
+          event: eventMatch[1].trim(),
+          timestamp: currentDate.toISOString(),
+          country: countryMatch[1],
+          eventId,
+          sourceUrl: '',
+          lang,
+          timezone: 'UTC',
+        }
+      }
+      continue
+    }
+
+    if (!eventTimestamp) continue
+
+    const flagMatch = row.match(
+      /<span[^>]*title="([^"]+)"[^>]*class="[^"]*ceFlags[^"]*"[^>]*>.*?<\/span>\s*([A-Z]{3})/,
+    )
+    if (!flagMatch) continue
+
+    const country = flagMatch[1]
+    const currency = flagMatch[2]
+
+    const impactMatch = row.match(
+      /<td[^>]*class="[^"]*sentiment[^"]*"[^>]*>([\s\S]*?)<\/td>/,
+    )
+    if (!impactMatch) continue
+
+    const impact = impactMatch[1]
+
+    const eventMatch = row.match(
+      /<td[^>]*class="[^"]*event[^"]*"[^>]*>([\s\S]*?)<\/td>/,
+    )
+    if (!eventMatch) continue
+
+    const eventName = eventMatch[1]
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    if (!eventName) continue
+
+    try {
+      const [datePart, timePart] = eventTimestamp.split(' ')
+      if (!datePart || !timePart) continue
+
+      const [year, month, day] = datePart.split('-').map(Number)
+      const [hours, minutes] = timePart.split(':').map(Number)
+
+      if (
+        isNaN(year) ||
+        isNaN(month) ||
+        isNaN(day) ||
+        isNaN(hours) ||
+        isNaN(minutes)
+      ) {
+        continue
+      }
+
+      const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes))
+      if (!isValid(utcDate)) continue
+
+      currentEvent = {
+        time,
+        currency,
+        impact,
+        event: eventName,
+        timestamp: utcDate.toISOString(),
+        country,
+        eventId: eventId || '',
+        sourceUrl: '',
+        lang,
+        timezone: 'UTC',
+      }
+    } catch (error) {
+      console.error('Error parsing timestamp:', error)
+    }
   }
 
-  const diagnostics = {
-    feedUrl: FF_CALENDAR_URL,
-    rawCount: rawEvents.length,
-    mappedCount: events.length,
-    skippedInvalidDate,
-    skippedMissingTitle,
-    sample: events.slice(0, 3).map((e) => ({
-      title: e.title,
-      date: e.date.toISOString(),
-      importance: e.importance,
-      country: e.country,
-      lang: e.lang,
-    })),
+  if (currentEvent) {
+    events.push(currentEvent as InvestingEvent)
   }
 
-  console.log('Forex Factory fetch summary:', diagnostics)
+  console.log('Parsing Summary:', {
+    lang,
+    rowCount,
+    dateRowCount,
+    eventRowCount,
+    eventInfoRowCount,
+    eventsCreated: events.length,
+  })
 
-  return { events, diagnostics }
+  return events.map((event) => ({
+    title: event.currency ? `${event.currency} - ${event.event}` : event.event,
+    date: new Date(event.timestamp!),
+    importance: mapImpactToImportance(event.impact),
+    type: 'ECONOMIC',
+    sourceUrl: event.sourceUrl || '',
+    country: event.country,
+    lang: event.lang,
+    timezone: event.timezone,
+  }))
 }
 
 async function upsertEvents(events: MappedFinancialEvent[]) {
-  const storedEvents = await Promise.all(
+  const stored = await Promise.all(
     events.map(async (event) => {
       try {
         return prisma.financialEvent.upsert({
@@ -190,7 +360,7 @@ async function upsertEvents(events: MappedFinancialEvent[]) {
     }),
   )
 
-  return storedEvents.filter(Boolean).length
+  return stored.filter(Boolean).length
 }
 
 export async function GET(request: Request) {
@@ -200,46 +370,54 @@ export async function GET(request: Request) {
     const shouldStoreInDb = searchParams.get('db') === 'true'
     const debug = searchParams.get('debug') === '1'
 
-    // Default to both locales so a single cron invocation (and a single FF
-    // fetch) can populate en + fr without tripping Forex Factory rate limits.
     const langs: CronLang[] =
       langParam === 'en' || langParam === 'fr' ? [langParam] : ['en', 'fr']
 
-    // Fetch once, then project into each requested lang.
-    const { events: baseEvents, diagnostics } = await fetchForexFactoryEvents(langs[0])
-    if (baseEvents.length === 0) {
+    const urls = langs.map(investingCalendarUrl)
+    console.log(
+      `Fetching Investing.com calendars via agent-browser for langs=${langs.join(',')}`,
+    )
+
+    const htmlPages = await scrapeUrlsWithAgentBrowser(urls, {
+      timeoutMs: 5 * 60 * 1000,
+    })
+
+    const diagnosticsByLang: Record<string, unknown> = {}
+    const allEvents: MappedFinancialEvent[] = []
+
+    for (let i = 0; i < langs.length; i++) {
+      const lang = langs[i]
+      const html = htmlPages[i] ?? ''
+      diagnosticsByLang[lang] = htmlDiagnostics(html)
+      allEvents.push(...parseInvestingHtml(html, lang))
+    }
+
+    if (allEvents.length === 0) {
       return NextResponse.json(
         {
           success: false,
           error: 'No events found',
-          ...(debug ? { diagnostics } : {}),
+          source: 'investing',
+          langs,
+          ...(debug ? { diagnostics: diagnosticsByLang } : {}),
         },
         { status: 404 },
       )
     }
 
-    const eventsByLang = Object.fromEntries(
-      langs.map((lang) => [
-        lang,
-        baseEvents.map((event) => ({ ...event, lang })),
-      ]),
-    ) as Record<CronLang, MappedFinancialEvent[]>
-
-    const allEvents = langs.flatMap((lang) => eventsByLang[lang])
-
     if (shouldStoreInDb) {
-      console.log(`Storing events in database for langs=${langs.join(',')}...`)
+      console.log(`Storing ${allEvents.length} Investing.com events...`)
       const storedCount = await upsertEvents(allEvents)
 
       return NextResponse.json({
         success: true,
-        source: 'forexfactory',
+        source: 'investing',
         langs,
         count: allEvents.length,
         storedCount,
         ...(debug
           ? {
-              diagnostics,
+              diagnostics: diagnosticsByLang,
               events: allEvents.slice(0, 5),
             }
           : {}),
@@ -248,18 +426,18 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      source: 'forexfactory',
+      source: 'investing',
       langs,
       events: allEvents,
       count: allEvents.length,
-      ...(debug ? { diagnostics } : {}),
+      ...(debug ? { diagnostics: diagnosticsByLang } : {}),
     })
   } catch (error) {
     console.error('Error in GET route:', error)
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch financial events',
+        error: 'Failed to fetch events from Investing.com',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 },
