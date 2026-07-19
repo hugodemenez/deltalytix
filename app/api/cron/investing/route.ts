@@ -81,9 +81,9 @@ function parseCalendarDay(dateStr: string, lang: 'fr' | 'en'): Date | null {
 }
 
 function mapImpactToImportance(impact: string): 'HIGH' | 'MEDIUM' | 'LOW' {
-  // Count filled bull icons (class name has varied over time).
+  // Prefer the historical Investing.com class; fall back to data-img_key attrs.
   const filledBulls = (
-    impact.match(/grayFullBullishIcon|bullishIcon|sentimentBullish/g) || []
+    impact.match(/grayFullBullishIcon|data-img_key="fullBullish"/g) || []
   ).length
   switch (filledBulls) {
     case 3:
