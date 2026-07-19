@@ -53,34 +53,53 @@ function mapImpactToImportance(impact: string): 'HIGH' | 'MEDIUM' | 'LOW' {
   }
 }
 
+async function fetchForexFactoryJson(): Promise<ForexFactoryEvent[]> {
+  // FF rate-limits to ~2 requests / 5 minutes across export formats.
+  let lastError: Error | null = null
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const response = await fetch(FF_CALENDAR_URL, {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent':
+          'Mozilla/5.0 (compatible; DeltalytixBot/1.0; +https://deltalytix.com)',
+      },
+      // Avoid Next.js fetch cache so the weekly cron always sees fresh data.
+      cache: 'no-store',
+    })
+
+    if (response.ok) {
+      const payload = (await response.json()) as unknown
+      if (!Array.isArray(payload)) {
+        throw new Error('Forex Factory feed returned a non-array payload')
+      }
+      return payload as ForexFactoryEvent[]
+    }
+
+    lastError = new Error(
+      `Forex Factory feed failed: ${response.status} ${response.statusText}`,
+    )
+    if (response.status !== 429 && response.status < 500) {
+      throw lastError
+    }
+
+    const delayMs = Math.min(30_000, 2_000 * 2 ** attempt)
+    console.warn(
+      `Forex Factory feed attempt ${attempt + 1} failed (${response.status}); retrying in ${delayMs}ms`,
+    )
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
+  }
+
+  throw lastError ?? new Error('Forex Factory feed failed after retries')
+}
+
 async function fetchForexFactoryEvents(lang: CronLang): Promise<{
   events: MappedFinancialEvent[]
   diagnostics?: Record<string, unknown>
 }> {
   console.log(`Fetching Forex Factory calendar from ${FF_CALENDAR_URL} (lang=${lang})...`)
 
-  const response = await fetch(FF_CALENDAR_URL, {
-    headers: {
-      Accept: 'application/json',
-      'User-Agent':
-        'Mozilla/5.0 (compatible; DeltalytixBot/1.0; +https://deltalytix.com)',
-    },
-    // Avoid Next.js fetch cache so the weekly cron always sees fresh data.
-    cache: 'no-store',
-  })
+  const rawEvents = await fetchForexFactoryJson()
 
-  if (!response.ok) {
-    throw new Error(
-      `Forex Factory feed failed: ${response.status} ${response.statusText}`,
-    )
-  }
-
-  const payload = (await response.json()) as unknown
-  if (!Array.isArray(payload)) {
-    throw new Error('Forex Factory feed returned a non-array payload')
-  }
-
-  const rawEvents = payload as ForexFactoryEvent[]
   const events: MappedFinancialEvent[] = []
   let skippedInvalidDate = 0
   let skippedMissingTitle = 0
