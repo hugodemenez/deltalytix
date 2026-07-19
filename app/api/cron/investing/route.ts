@@ -27,15 +27,15 @@ async function replaceEventsInWindow(events: MappedFinancialEvent[]) {
     byLang.set(event.lang, list)
   }
 
+  // Clear the union date window for every synced locale so leftover English
+  // `fr` clones outside the FR widget week are removed.
+  const allTimes = events.map((event) => event.date.getTime())
+  const minDate = new Date(Math.min(...allTimes))
+  const maxDate = new Date(Math.max(...allTimes))
+
   let storedCount = 0
 
-  for (const [lang, langEvents] of byLang) {
-    const times = langEvents.map((event) => event.date.getTime())
-    const minDate = new Date(Math.min(...times))
-    const maxDate = new Date(Math.max(...times))
-
-    // Title is part of the unique key, so replacing English-titled `fr` rows
-    // requires deleting the previous window before inserting French titles.
+  for (const lang of byLang.keys()) {
     const deleted = await prisma.financialEvent.deleteMany({
       where: {
         lang,
@@ -49,7 +49,56 @@ async function replaceEventsInWindow(events: MappedFinancialEvent[]) {
     console.log(
       `Cleared ${deleted.count} existing ${lang} events between ${minDate.toISOString()} and ${maxDate.toISOString()}`,
     )
+  }
 
+  // Extra sweep: any remaining English-shaped French rows (from older syncs),
+  // including ones outside this week's window.
+  if (byLang.has('fr')) {
+    const englishFrCleanup = await prisma.financialEvent.deleteMany({
+      where: {
+        lang: 'fr',
+        OR: [
+          { title: { contains: 'Exports (' } },
+          { title: { contains: 'Imports (' } },
+          { title: { contains: 'Trade Balance' } },
+          { title: { contains: 'House Price Index' } },
+          { title: { contains: '(MoM)' } },
+          { title: { contains: '(YoY)' } },
+          { title: { contains: '(QoQ)' } },
+          { title: { contains: ' Speech' } },
+          { title: { contains: 'Holiday' } },
+          { title: { contains: 'Employment Change' } },
+          { title: { contains: 'Interest Rate Decision' } },
+          { title: { contains: ' (Jan)' } },
+          { title: { contains: ' (Feb)' } },
+          { title: { contains: ' (Mar)' } },
+          { title: { contains: ' (Apr)' } },
+          { title: { contains: ' (May)' } },
+          { title: { contains: ' (Jun)' } },
+          { title: { contains: ' (Jul)' } },
+          { title: { contains: ' (Aug)' } },
+          { title: { contains: ' (Sep)' } },
+          { title: { contains: ' (Oct)' } },
+          { title: { contains: ' (Nov)' } },
+          { title: { contains: ' (Dec)' } },
+          { title: { contains: 'CPI (' } },
+          { title: { contains: 'PPI (' } },
+          { title: { contains: 'GDP (' } },
+          { title: { contains: 'FOMC' } },
+          { title: { contains: 'Payrolls' } },
+          { title: { contains: 'Retail Sales' } },
+          { title: { contains: 'Building Permits' } },
+          { title: { contains: 'Crude Oil' } },
+          { title: { contains: 'Leading Index' } },
+        ],
+      },
+    })
+    console.log(
+      `Cleared ${englishFrCleanup.count} leftover English-titled fr events`,
+    )
+  }
+
+  for (const [, langEvents] of byLang) {
     const stored = await Promise.all(
       langEvents.map(async (event) => {
         try {

@@ -409,27 +409,186 @@ async function enrichImportanceFromForexFactory(
   }
 }
 
+function eventMatchKey(event: Pick<MappedFinancialEvent, 'country' | 'date'>): string {
+  return `${event.country}|${event.date.toISOString().slice(0, 16)}`
+}
+
+function eventNameFromTitle(title: string): string {
+  const separator = title.indexOf(' - ')
+  return separator >= 0 ? title.slice(separator + 3) : title
+}
+
+/**
+ * Best-effort EN → FR for Investing calendar titles when the FR widget
+ * does not cover the same UTC minute (EU Mon–Sun vs EN Sun–Sat weeks).
+ */
+export function translateEconomicEventNameToFrench(name: string): string {
+  const replacements: Array<[RegExp, string]> = [
+    [/Rightmove House Price Index/gi, 'Indice des prix immobiliers Rightmove'],
+    [/House Price Index/gi, 'Indice des prix immobiliers'],
+    [/Core CPI/gi, 'IPC de base'],
+    [/Common CPI/gi, 'IPC commun'],
+    [/Median CPI/gi, 'IPC médian'],
+    [/Trimmed CPI/gi, 'IPC tronqué'],
+    [/\bCPI\b/gi, 'IPC'],
+    [/\bPPI\b/gi, 'IPP'],
+    [/\bGDP\b/gi, 'PIB'],
+    [/Trade Balance/gi, 'Balance commerciale'],
+    [/Interest Rate Decision/gi, "Décision de taux d'intérêt"],
+    [/Unemployment Claims/gi, 'Inscriptions au chômage'],
+    [/Unemployment Rate/gi, 'Taux de chômage'],
+    [/Employment Change/gi, "Variation de l'emploi"],
+    [/Nonfarm Payrolls|Non-Farm Payrolls|\bNFP\b/gi, 'Paies hors secteur agricole'],
+    [/Building Permits/gi, 'Permis de construire'],
+    [/Consumer Confidence/gi, 'Confiance des consommateurs'],
+    [/Retail Sales/gi, 'Ventes au détail'],
+    [/Industrial Production/gi, 'Production industrielle'],
+    [/Manufacturing Production/gi, 'Production manufacturière'],
+    [/Construction Output/gi, 'Production dans la construction'],
+    [/Leading Index/gi, 'Indice avancé'],
+    [/Existing Home Sales/gi, 'Ventes de logements anciens'],
+    [/New Home Sales/gi, 'Ventes de logements neufs'],
+    [/Crude Oil Inventories/gi, 'Stocks de pétrole brut'],
+    [/Natural Gas Storage/gi, 'Stocks de gaz naturel'],
+    [/FOMC Statement/gi, 'Déclaration du FOMC'],
+    [/FOMC Press Conference/gi, 'Conférence de presse du FOMC'],
+    [/Federal Budget Balance/gi, 'Balance du budget fédéral'],
+    [/Loan Prime Rate/gi, 'Taux préférentiel des prêts'],
+    [/Infrastructure Output/gi, "Production d'infrastructures"],
+    [/Focus Market Readout/gi, 'Analyse de marché'],
+    [/\bExports\b/gi, 'Exportations'],
+    [/\bImports\b/gi, 'Importations'],
+    [/\bSpeech\b/gi, 'Discours'],
+    [/\bHoliday\b/gi, 'Jour férié'],
+    [/\bAuction\b/gi, 'Adjudication'],
+    [/\(MoM\)/gi, '(Mensuel)'],
+    [/\(YoY\)/gi, '(Annuel)'],
+    [/\(QoQ\)/gi, '(Trimestriel)'],
+    // Month names only in full or inside parentheses — avoid eating "Market", "Marché", etc.
+    [/\bJanuary\b/gi, 'Janvier'],
+    [/\bFebruary\b/gi, 'Février'],
+    [/\bMarch\b/gi, 'Mars'],
+    [/\bApril\b/gi, 'Avril'],
+    [/\bMay\b/gi, 'Mai'],
+    [/\bJune\b/gi, 'Juin'],
+    [/\bJuly\b/gi, 'Juillet'],
+    [/\bAugust\b/gi, 'Août'],
+    [/\bSeptember\b/gi, 'Septembre'],
+    [/\bOctober\b/gi, 'Octobre'],
+    [/\bNovember\b/gi, 'Novembre'],
+    [/\bDecember\b/gi, 'Décembre'],
+    [/\((Jan)\)/gi, '(Janv.)'],
+    [/\((Feb)\)/gi, '(Févr.)'],
+    [/\((Mar)\)/gi, '(Mars)'],
+    [/\((Apr)\)/gi, '(Avr.)'],
+    [/\((Jun)\)/gi, '(Juin)'],
+    [/\((Jul)\)/gi, '(Juill.)'],
+    [/\((Aug)\)/gi, '(Août)'],
+    [/\((Sep)\)/gi, '(Sept.)'],
+    [/\((Oct)\)/gi, '(Oct.)'],
+    [/\((Nov)\)/gi, '(Nov.)'],
+    [/\((Dec)\)/gi, '(Déc.)'],
+  ]
+
+  let translated = name
+  for (const [pattern, replacement] of replacements) {
+    translated = translated.replace(pattern, replacement)
+  }
+  return translated
+}
+
+function buildFrenchEventsFromEnglishSchedule(
+  enEvents: MappedFinancialEvent[],
+  frEvents: MappedFinancialEvent[],
+): { events: MappedFinancialEvent[]; matched: number; translated: number } {
+  const frTitleByKey = new Map<string, string>()
+  for (const event of frEvents) {
+    frTitleByKey.set(eventMatchKey(event), event.title)
+  }
+
+  let matched = 0
+  let translated = 0
+
+  const events = enEvents.map((enEvent) => {
+    const matchedTitle = frTitleByKey.get(eventMatchKey(enEvent))
+    if (matchedTitle) {
+      matched++
+      return {
+        ...enEvent,
+        lang: 'fr' as const,
+        title: matchedTitle,
+        sourceUrl: INVESTING_CALENDAR_PAGE.fr,
+      }
+    }
+
+    translated++
+    const frenchName = translateEconomicEventNameToFrench(
+      eventNameFromTitle(enEvent.title),
+    )
+    const title =
+      enEvent.country && enEvent.country !== 'Holiday'
+        ? `${enEvent.country} - ${frenchName}`
+        : frenchName
+
+    return {
+      ...enEvent,
+      lang: 'fr' as const,
+      title,
+      sourceUrl: INVESTING_CALENDAR_PAGE.fr,
+    }
+  })
+
+  return { events, matched, translated }
+}
+
 export async function fetchInvestingEvents(langs: CronLang[]): Promise<{
   events: MappedFinancialEvent[]
   diagnostics: Record<string, unknown>
 }> {
   const diagnostics: Record<string, unknown> = { source: 'investing', via: 'jina' }
   const allEvents: MappedFinancialEvent[] = []
+  const uniqueLangs = [...new Set(langs)]
 
-  // Fetch each locale from Investing's widget so FR titles stay French.
-  // Note: Investing's FR week is Mon–Sun (EU); EN is often Sun–Sat. On the
-  // Monday cron both cover the trading week ahead.
-  for (const lang of langs) {
-    const { markdown, sourceUrl } = await fetchInvestingMarkdown(lang)
-    const parsed = parseInvestingMarkdown(markdown, lang)
-    diagnostics[`${lang}WidgetUrl`] = sourceUrl
-    diagnostics[`${lang}MarkdownLength`] = markdown.length
-    diagnostics[`${lang}ParsedCount`] = parsed.length
-    allEvents.push(...parsed)
+  // EN schedule is the coverage authority (Sun–Sat). FR widget is Mon–Sun and
+  // often misses the forward half of the EN week, so we align FR rows to EN
+  // timestamps and overlay French titles (widget match, else glossary).
+  const needsEn = uniqueLangs.includes('en') || uniqueLangs.includes('fr')
+  const needsFr = uniqueLangs.includes('fr')
 
-    // Brief pause between Jina requests to reduce anonymous rate-limits.
-    if (langs.length > 1 && lang !== langs[langs.length - 1]) {
+  let enEvents: MappedFinancialEvent[] = []
+  let frWidgetEvents: MappedFinancialEvent[] = []
+
+  if (needsEn) {
+    const { markdown, sourceUrl } = await fetchInvestingMarkdown('en')
+    enEvents = parseInvestingMarkdown(markdown, 'en')
+    diagnostics.enWidgetUrl = sourceUrl
+    diagnostics.enMarkdownLength = markdown.length
+    diagnostics.enParsedCount = enEvents.length
+  }
+
+  if (needsFr) {
+    if (needsEn) {
       await new Promise((resolve) => setTimeout(resolve, 1500))
+    }
+    const { markdown, sourceUrl } = await fetchInvestingMarkdown('fr')
+    frWidgetEvents = parseInvestingMarkdown(markdown, 'fr')
+    diagnostics.frWidgetUrl = sourceUrl
+    diagnostics.frMarkdownLength = markdown.length
+    diagnostics.frParsedCount = frWidgetEvents.length
+  }
+
+  if (uniqueLangs.includes('en')) {
+    allEvents.push(...enEvents)
+  }
+
+  if (uniqueLangs.includes('fr')) {
+    if (enEvents.length > 0) {
+      const built = buildFrenchEventsFromEnglishSchedule(enEvents, frWidgetEvents)
+      allEvents.push(...built.events)
+      diagnostics.frMatchedFromWidget = built.matched
+      diagnostics.frTranslatedFromEn = built.translated
+    } else {
+      allEvents.push(...frWidgetEvents)
     }
   }
 
