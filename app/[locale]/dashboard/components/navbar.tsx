@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Globe, LayoutDashboard, ChevronDown, Cable } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from '@/components/logo'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useI18n } from "@/locales/client"
 import { useKeyboardShortcuts } from '../../../../hooks/use-keyboard-shortcuts'
 import { ActiveFilterTags } from './filters/active-filter-tags'
@@ -20,6 +21,7 @@ import UserMenu from './user-menu'
 import ReferralButton from './referral-button'
 
 export default function Navbar() {
+  const router = useRouter()
   const  user = useUserStore(state => state.supabaseUser)
   const t = useI18n()
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false)
@@ -31,9 +33,28 @@ export default function Navbar() {
   // Initialize keyboard shortcuts
   useKeyboardShortcuts()
 
+  // The Dashboard link lives inside a closed logo popover, so it is not in the
+  // DOM on /connections and Partial Prefetching never warms `/dashboard`.
+  // Connections is always visible → prefetched → feels instant. Warm the
+  // dashboard route explicitly so Connections → Dashboard matches that.
+  useEffect(() => {
+    router.prefetch('/dashboard')
+    router.prefetch('/dashboard/connections')
+  }, [router])
+
   return (
     <>
       <nav className="sticky top-0 left-0 right-0 z-40 flex w-full flex-col border-b bg-background pt-safe text-primary shadow-xs">
+        {/* Always-mounted prefetch target: Link viewport prefetch + runtime cache */}
+        <Link
+          href="/dashboard"
+          prefetch={true}
+          tabIndex={-1}
+          aria-hidden="true"
+          className="pointer-events-none absolute h-px w-px overflow-hidden opacity-0"
+        >
+          {t('landing.navbar.logo.dashboard')}
+        </Link>
         <div className="flex items-center justify-between px-3 sm:px-6 lg:px-10 h-16 gap-3 sm:gap-4 py-2">
           <div className="flex items-center gap-x-4">
             <div className="flex flex-col items-center">
