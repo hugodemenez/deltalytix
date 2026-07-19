@@ -218,10 +218,24 @@ function combineUtcDateAndTime(day: Date, time: string): Date | null {
   return isValid(combined) ? combined : null
 }
 
+function stripGluedCalendarStats(eventName: string): string {
+  let name = eventName.trim()
+  // Stats are often glued after a closing paren: "(Juin)40,41B 45,20B" or "(Juin)250M"
+  name = name.replace(/\)(-?\d[\d\s.,]*[A-Za-z%]*)+$/u, ')')
+  // Or space-separated trailing actual/forecast/previous values
+  name = name.replace(/(?:\s+-?\d[\d\s.,]*[A-Za-z%]*)+$/u, '')
+  return name.trim()
+}
+
 function inferImportance(eventName: string, impactCell: string): 'HIGH' | 'MEDIUM' | 'LOW' {
   const impact = impactCell.trim()
   // Markdown usually drops bull icons; keep heuristics for holidays / explicit markers.
-  if (/holiday/i.test(eventName) || /^holiday$/i.test(impact)) return 'LOW'
+  if (
+    /holiday|vacances|jour férié|férié/i.test(eventName) ||
+    /^holiday$/i.test(impact)
+  ) {
+    return 'LOW'
+  }
   const bullish = (impact.match(/bull|★|⭐/gi) || []).length
   if (bullish >= 3 || /high/i.test(impact)) return 'HIGH'
   if (bullish === 2 || /medium/i.test(impact)) return 'MEDIUM'
@@ -230,7 +244,7 @@ function inferImportance(eventName: string, impactCell: string): 'HIGH' | 'MEDIU
 }
 
 /**
- * Parse Investing widget markdown from Jina Reader (EN table layout).
+ * Parse Investing widget markdown from Jina Reader (EN table or FR plaintext).
  */
 export function parseInvestingMarkdown(
   markdown: string,
@@ -268,9 +282,12 @@ export function parseInvestingMarkdown(
     const cells = splitMarkdownRow(line)
     if (cells.length >= 4) {
       // Table row: Time | Cur. | Imp. | Event | ...
-      const [time, currency, impact, eventName] = cells
-      if (!time || !eventName) continue
+      const [time, currency, impact, rawEventName] = cells
+      if (!time || !rawEventName) continue
       if (/^time$/i.test(time) || /^heure$/i.test(time)) continue
+
+      const eventName = stripGluedCalendarStats(rawEventName)
+      if (!eventName) continue
 
       const isAllDay = /^(all day|toute la journée)$/i.test(time)
       const date = isAllDay
@@ -279,9 +296,7 @@ export function parseInvestingMarkdown(
       if (!date) continue
 
       const currencyCode = currency?.trim() || ''
-      const title = currencyCode
-        ? `${currencyCode} - ${eventName.trim()}`
-        : eventName.trim()
+      const title = currencyCode ? `${currencyCode} - ${eventName}` : eventName
 
       events.push({
         title,
@@ -296,7 +311,7 @@ export function parseInvestingMarkdown(
       continue
     }
 
-    // French widget sometimes renders as plaintext:
+    // French widget often renders as plaintext:
     // "06:00 NOK Production manufacturière (Mensuel) (Mai)0,7%0,4%-0,6%"
     const plainMatch = line.match(
       /^(\d{1,2}:\d{2}|Toute la journée|All Day)\s+([A-Z]{3})?\s*(.+)$/i,
@@ -304,9 +319,7 @@ export function parseInvestingMarkdown(
     if (plainMatch) {
       const time = plainMatch[1]
       const currencyCode = (plainMatch[2] || '').trim()
-      let eventName = plainMatch[3].trim()
-      // Strip trailing actual/forecast/previous number blobs glued to the name.
-      eventName = eventName.replace(/(-?\d[\d\s.,]*[A-Za-z%]*)+$/g, '').trim()
+      const eventName = stripGluedCalendarStats(plainMatch[3])
       if (!eventName) continue
 
       const isAllDay = /^(all day|toute la journée)$/i.test(time)
@@ -393,30 +406,21 @@ export async function fetchInvestingEvents(langs: CronLang[]): Promise<{
   const diagnostics: Record<string, unknown> = { source: 'investing', via: 'jina' }
   const allEvents: MappedFinancialEvent[] = []
 
-  // One EN widget fetch (reliable markdown table). Jina's FR widget render is
-  // often stale/plaintext, so FR locale rows reuse the EN schedule — same
-  // bilingual tagging approach as the previous Forex Factory sync.
-  const { markdown, sourceUrl } = await fetchInvestingMarkdown('en')
-  diagnostics.widgetUrl = sourceUrl
-  diagnostics.markdownLength = markdown.length
-
-  const enEvents = parseInvestingMarkdown(markdown, 'en')
-  diagnostics.enParsedCount = enEvents.length
-
+  // Fetch each locale from Investing's widget so FR titles stay French.
+  // Note: Investing's FR week is Mon–Sun (EU); EN is often Sun–Sat. On the
+  // Monday cron both cover the trading week ahead.
   for (const lang of langs) {
-    if (lang === 'en') {
-      allEvents.push(...enEvents)
-      continue
-    }
+    const { markdown, sourceUrl } = await fetchInvestingMarkdown(lang)
+    const parsed = parseInvestingMarkdown(markdown, lang)
+    diagnostics[`${lang}WidgetUrl`] = sourceUrl
+    diagnostics[`${lang}MarkdownLength`] = markdown.length
+    diagnostics[`${lang}ParsedCount`] = parsed.length
+    allEvents.push(...parsed)
 
-    allEvents.push(
-      ...enEvents.map((event) => ({
-        ...event,
-        lang: 'fr' as const,
-        sourceUrl: INVESTING_CALENDAR_PAGE.fr,
-      })),
-    )
-    diagnostics.frFallback = 'cloned-from-en'
+    // Brief pause between Jina requests to reduce anonymous rate-limits.
+    if (langs.length > 1 && lang !== langs[langs.length - 1]) {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+    }
   }
 
   const enriched = await enrichImportanceFromForexFactory(allEvents)

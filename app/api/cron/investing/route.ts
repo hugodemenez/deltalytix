@@ -19,44 +19,77 @@ import {
  */
 export const maxDuration = 60
 
-async function upsertEvents(events: MappedFinancialEvent[]) {
-  const stored = await Promise.all(
-    events.map(async (event) => {
-      try {
-        return prisma.financialEvent.upsert({
-          where: {
-            title_date_lang_timezone: {
+async function replaceEventsInWindow(events: MappedFinancialEvent[]) {
+  const byLang = new Map<CronLang, MappedFinancialEvent[]>()
+  for (const event of events) {
+    const list = byLang.get(event.lang) ?? []
+    list.push(event)
+    byLang.set(event.lang, list)
+  }
+
+  let storedCount = 0
+
+  for (const [lang, langEvents] of byLang) {
+    const times = langEvents.map((event) => event.date.getTime())
+    const minDate = new Date(Math.min(...times))
+    const maxDate = new Date(Math.max(...times))
+
+    // Title is part of the unique key, so replacing English-titled `fr` rows
+    // requires deleting the previous window before inserting French titles.
+    const deleted = await prisma.financialEvent.deleteMany({
+      where: {
+        lang,
+        timezone: 'UTC',
+        date: {
+          gte: minDate,
+          lte: maxDate,
+        },
+      },
+    })
+    console.log(
+      `Cleared ${deleted.count} existing ${lang} events between ${minDate.toISOString()} and ${maxDate.toISOString()}`,
+    )
+
+    const stored = await Promise.all(
+      langEvents.map(async (event) => {
+        try {
+          return prisma.financialEvent.upsert({
+            where: {
+              title_date_lang_timezone: {
+                title: event.title,
+                date: event.date,
+                lang: event.lang,
+                timezone: event.timezone,
+              },
+            },
+            update: {
+              importance: event.importance,
+              sourceUrl: event.sourceUrl,
+              country: event.country,
+              updatedAt: new Date(),
+            },
+            create: {
               title: event.title,
               date: event.date,
+              importance: event.importance,
+              type: event.type,
+              sourceUrl: event.sourceUrl,
+              country: event.country,
               lang: event.lang,
               timezone: event.timezone,
             },
-          },
-          update: {
-            importance: event.importance,
-            sourceUrl: event.sourceUrl,
-            country: event.country,
-            updatedAt: new Date(),
-          },
-          create: {
-            title: event.title,
-            date: event.date,
-            importance: event.importance,
-            type: event.type,
-            sourceUrl: event.sourceUrl,
-            country: event.country,
-            lang: event.lang,
-            timezone: event.timezone,
-          },
-        })
-      } catch (error) {
-        console.error(`Error processing event ${event.title}:`, error)
-        return null
-      }
-    }),
-  )
+          })
+        } catch (error) {
+          console.error(`Error processing event ${event.title}:`, error)
+          return null
+        }
+      }),
+    )
 
-  return stored.filter(Boolean).length
+    storedCount += stored.filter(Boolean).length
+  }
+
+  return storedCount
 }
 
 export async function GET(request: Request) {
@@ -90,7 +123,7 @@ export async function GET(request: Request) {
 
     if (shouldStoreInDb) {
       console.log(`Storing ${events.length} Investing.com events...`)
-      const storedCount = await upsertEvents(events)
+      const storedCount = await replaceEventsInWindow(events)
 
       return NextResponse.json({
         success: true,
