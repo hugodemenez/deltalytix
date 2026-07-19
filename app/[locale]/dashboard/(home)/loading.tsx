@@ -1,15 +1,15 @@
 import { DashboardHomeChrome } from '../components/dashboard-home-chrome'
-import { DashboardHomeContentSkeleton } from '../components/dashboard-home-skeleton'
+import { DashboardHomeContent } from './dashboard-home-content'
 
 /**
- * Instant Navigations shell for /dashboard — same pattern as
- * connections/loading.tsx (chrome outside, content skeleton inside).
- * Scoped to the `(home)` segment so nested routes keep their own loading UI.
+ * Soft-navigation shell for /dashboard — same chrome + client-first content
+ * boundary as `page.tsx`. After hydrate, warm DataProvider state paints
+ * widgets immediately (no skeleton wait for a dynamic RSC round-trip).
  */
 export default function DashboardLoading() {
   return (
     <DashboardHomeChrome>
-      <DashboardHomeContentSkeleton />
+      <DashboardHomeContent />
     </DashboardHomeChrome>
   )
 }

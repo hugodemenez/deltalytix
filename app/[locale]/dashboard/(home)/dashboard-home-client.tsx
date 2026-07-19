@@ -9,8 +9,8 @@ import WidgetCanvas from '../components/widget-canvas'
 import { clearReferralCode } from '@/lib/referral-storage'
 
 /**
- * Dashboard tab bodies — streamed behind Suspense under DashboardHomeChrome.
- * Tab chrome (labels + fixed TabsList) lives outside so it paints instantly.
+ * Dashboard tab bodies — mounted client-side under DashboardHomeChrome
+ * (via DashboardHomeContent). Tab chrome lives outside so it paints instantly.
  */
 export default function DashboardHomeClient() {
   const searchParams = useSearchParams()
