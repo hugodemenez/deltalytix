@@ -19,7 +19,6 @@
     "seed:self-host": "bun scripts/seed-self-host.ts"
   },
   "dependencies": {
-    "@agent-browser/sandbox": "0.32.2",
     "@ai-sdk/openai": "^3.0.10",
     "@ai-sdk/react": "^3.0.33",
     "@calcom/embed-react": "^1.5.3",
@@ -93,7 +92,6 @@
     "@types/pg": "^8.16.0",
     "@vercel/analytics": "^1.5.0",
     "@vercel/functions": "^2.2.13",
-    "@vercel/sandbox": "^1.0.2",
     "@vercel/speed-insights": "^1.2.0",
     "ai": "^6.0.31",
     "canvas": "^3.2.0",
@@ -129,7 +127,6 @@
     "pdf-lib": "^1.17.1",
     "pdf2json": "^3.2.2",
     "pg": "^8.17.2",
-    "playwright-core": "^1.56.1",
     "posthog-js": "^1.403.0",
     "prisma": "7.8.0",
     "radix-ui": "^1.6.0",
