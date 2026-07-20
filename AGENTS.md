@@ -44,6 +44,7 @@ LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local
 NEXT_PUBLIC_LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 OPENAI_API_KEY=dummy
+ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 ```
 
 If the shell already exports `DATABASE_URL`, run `unset DATABASE_URL DIRECT_URL` before sourcing `.env.local`.

@@ -34,6 +34,11 @@ import type {
   DxFeedTradingAccount,
 } from './dxfeed-types'
 import { capturePostHogEvent } from '@/lib/posthog-server'
+import {
+  decryptConnectionToken,
+  encryptConnectionToken,
+  withDecryptedConnectionToken,
+} from '@/lib/connection-token-crypto'
 
 const DXFEED_AUTH_URL = resolveDxFeedV2AuthUrl(process.env.DXFEED_AUTH_URL)
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
@@ -481,7 +486,7 @@ function buildTradesFromDxFeedReport(
 
 export async function getDxFeedTrades(
   initialTokenJson: string,
-  options?: { userId?: string },
+  options?: { userId?: string; accountId?: string },
 ): Promise<DxFeedTradesResult> {
   try {
     const credentials = parseStoredCredentials(initialTokenJson)
@@ -499,7 +504,7 @@ export async function getDxFeedTrades(
     const historicalHost = coerceDxFeedHistoricalHostForSync(credentials.historicalHost, propFirm)
 
     let userId = options?.userId ?? null
-    let syncAccountId: string | null = null
+    let syncAccountId: string | null = options?.accountId ?? null
     if (!userId) {
       const supabase = await createClient()
       const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -513,14 +518,25 @@ export async function getDxFeedTrades(
     }
     const resolvedUserId = userId
 
-    let storedTokenJson = initialTokenJson
     const baseUrl = historicalHost.endsWith('/') ? historicalHost.slice(0, -1) : historicalHost
 
-    const syncRow = await prisma.synchronization.findFirst({
-      where: { userId: resolvedUserId, service: 'dxfeed', token: initialTokenJson },
-      select: { accountId: true, tokenExpiresAt: true },
-    })
-    syncAccountId = syncRow?.accountId ?? null
+    const syncRow = syncAccountId
+      ? await prisma.synchronization.findUnique({
+          where: {
+            userId_service_accountId: {
+              userId: resolvedUserId,
+              service: 'dxfeed',
+              accountId: syncAccountId,
+            },
+          },
+          select: { accountId: true, tokenExpiresAt: true },
+        })
+      : await prisma.synchronization.findFirst({
+          where: { userId: resolvedUserId, service: 'dxfeed' },
+          select: { accountId: true, tokenExpiresAt: true },
+          orderBy: { updatedAt: 'desc' },
+        })
+    syncAccountId = syncRow?.accountId ?? syncAccountId
 
     if (
       isDxFeedAccessTokenExpired(accessToken, syncRow?.tokenExpiresAt, {
@@ -555,8 +571,9 @@ export async function getDxFeedTrades(
         accountNumbers,
       }
       const updatedJson = JSON.stringify(updatedCreds)
-      await updateStoredCredentials(resolvedUserId, storedTokenJson, updatedJson)
-      storedTokenJson = updatedJson
+      if (syncAccountId) {
+        await updateStoredCredentials(resolvedUserId, syncAccountId, updatedJson)
+      }
     }
 
     const syncStats = {
@@ -576,7 +593,9 @@ export async function getDxFeedTrades(
           syncStats,
         }
       }
-      await updateLastSyncedAt(resolvedUserId, storedTokenJson)
+      if (syncAccountId) {
+        await updateLastSyncedAt(resolvedUserId, syncAccountId)
+      }
       return { processedTrades: [], savedCount: 0, tradesCount: 0, syncStats }
     }
 
@@ -643,7 +662,9 @@ export async function getDxFeedTrades(
 
     syncStats.closedTrades = allTrades.length
 
-    await updateLastSyncedAt(resolvedUserId, storedTokenJson)
+    if (syncAccountId) {
+      await updateLastSyncedAt(resolvedUserId, syncAccountId)
+    }
 
     if (syncStats.fetchFailures > 0 && syncStats.fetchFailures >= accounts.length) {
       return {
@@ -694,12 +715,12 @@ export async function getDxFeedTrades(
   }
 }
 
-async function updateLastSyncedAt(userId: string, storedTokenJson: string) {
+async function updateLastSyncedAt(userId: string, accountId: string) {
   await prisma.synchronization.updateMany({
     where: {
       userId,
       service: 'dxfeed',
-      token: storedTokenJson,
+      accountId,
     },
     data: {
       lastSyncedAt: new Date(),
@@ -707,15 +728,19 @@ async function updateLastSyncedAt(userId: string, storedTokenJson: string) {
   })
 }
 
-async function updateStoredCredentials(userId: string, oldTokenJson: string, newTokenJson: string) {
+async function updateStoredCredentials(
+  userId: string,
+  accountId: string,
+  newTokenJson: string,
+) {
   await prisma.synchronization.updateMany({
     where: {
       userId,
       service: 'dxfeed',
-      token: oldTokenJson,
+      accountId,
     },
     data: {
-      token: newTokenJson,
+      token: encryptConnectionToken(newTokenJson),
     },
   })
 }
@@ -752,7 +777,7 @@ export async function storeDxFeedToken(
         },
       },
       update: {
-        token: tokenJson,
+        token: encryptConnectionToken(tokenJson),
         tokenExpiresAt: options?.tokenExpiresAt ?? null,
         lastSyncedAt: new Date(),
         updatedAt: new Date(),
@@ -762,7 +787,7 @@ export async function storeDxFeedToken(
         userId: user.id,
         service: 'dxfeed',
         accountId,
-        token: tokenJson,
+        token: encryptConnectionToken(tokenJson),
         tokenExpiresAt: options?.tokenExpiresAt ?? null,
         lastSyncedAt: new Date(),
         includedFeeTypes: undefined, // DxFeed has no fee differentiator
@@ -808,7 +833,12 @@ export async function getDxFeedToken(accountId: string = 'default') {
       return { error: DxFeedErrorCode.NO_TOKEN_RECONNECT }
     }
 
-    const credentials = parseStoredCredentials(syncData.token)
+    const plaintextToken = decryptConnectionToken(syncData.token)
+    if (!plaintextToken) {
+      return { error: DxFeedErrorCode.NO_TOKEN_RECONNECT }
+    }
+
+    const credentials = parseStoredCredentials(plaintextToken)
     if (
       credentials &&
       isDxFeedAccessTokenExpired(credentials.accessToken, syncData.tokenExpiresAt, {
@@ -819,7 +849,7 @@ export async function getDxFeedToken(accountId: string = 'default') {
     }
 
     return {
-      storedTokenJson: syncData.token,
+      storedTokenJson: plaintextToken,
       accountId: syncData.accountId,
     }
   } catch (error) {
@@ -878,7 +908,9 @@ export async function getDxFeedSynchronizations() {
       },
     })
 
-    return { synchronizations }
+    return {
+      synchronizations: synchronizations.map(withDecryptedConnectionToken),
+    }
   } catch (error) {
     logger.error('Failed to get DxFeed synchronizations:', error)
     return { error: 'Failed to get synchronizations' }
