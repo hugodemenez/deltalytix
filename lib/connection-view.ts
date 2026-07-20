@@ -1,4 +1,5 @@
 import type { Connection } from '@/prisma/generated/prisma/client'
+import { withDecryptedConnectionToken } from '@/lib/connection-token-crypto'
 
 /**
  * Client-facing connection shape.
@@ -25,6 +26,15 @@ export function toConnectionViews(
   connections: Connection[]
 ): ConnectionView[] {
   return connections.map(toConnectionView)
+}
+
+/** Map DB rows to views with Connection.token decrypted for server use. */
+export function toDecryptedConnectionViews(
+  connections: Connection[]
+): ConnectionView[] {
+  return connections.map((connection) =>
+    toConnectionView(withDecryptedConnectionToken(connection)),
+  )
 }
 
 /** Resolve externalId from request body that may send accountId or externalId */

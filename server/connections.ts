@@ -1,5 +1,6 @@
 'use server'
 
+import { encryptConnectionToken } from '@/lib/connection-token-crypto'
 import { prisma } from '@/lib/prisma'
 
 /**
@@ -68,6 +69,9 @@ export async function ensureConnection(params: {
     includedFeeTypes,
   } = params
 
+  const encryptedToken =
+    token !== undefined ? encryptConnectionToken(token) : undefined
+
   return prisma.connection.upsert({
     where: {
       userId_service_externalId: {
@@ -78,7 +82,7 @@ export async function ensureConnection(params: {
     },
     update: {
       lastSyncedAt,
-      ...(token !== undefined ? { token } : {}),
+      ...(encryptedToken !== undefined ? { token: encryptedToken } : {}),
       ...(tokenExpiresAt !== undefined ? { tokenExpiresAt } : {}),
       ...(dailySyncTime !== undefined ? { dailySyncTime } : {}),
       ...(includedFeeTypes !== undefined
@@ -91,7 +95,7 @@ export async function ensureConnection(params: {
       service,
       externalId,
       lastSyncedAt,
-      token: token ?? null,
+      token: encryptedToken ?? null,
       tokenExpiresAt: tokenExpiresAt ?? null,
       dailySyncTime: dailySyncTime ?? null,
       includedFeeTypes: includedFeeTypes as object | undefined,
