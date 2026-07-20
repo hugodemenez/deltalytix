@@ -42,6 +42,8 @@ LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local
 NEXT_PUBLIC_LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 OPENAI_API_KEY=dummy
+# Local AES key for Synchronization.token encryption (dev only — rotate for real deployments)
+ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 EOF
 
 unset DATABASE_URL DIRECT_URL

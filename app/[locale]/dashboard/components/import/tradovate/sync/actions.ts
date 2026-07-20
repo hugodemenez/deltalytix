@@ -12,6 +12,11 @@ import { formatTimestamp, formatDateToTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
 import { capturePostHogEvent } from '@/lib/posthog-server'
+import {
+  decryptConnectionToken,
+  encryptConnectionToken,
+  withDecryptedConnectionToken,
+} from '@/lib/connection-token-crypto'
 
 // Helper function to format dates in the required format: 2025-06-05T08:38:40+00:00
 function formatDateForAPI(date: Date): string {
@@ -1255,7 +1260,7 @@ export async function storeTradovateToken(
         }
       },
       update: {
-        token: accessToken,
+        token: encryptConnectionToken(accessToken),
         tokenExpiresAt: new Date(expiresAt),
         environment,
         lastSyncedAt: new Date(),
@@ -1265,7 +1270,7 @@ export async function storeTradovateToken(
         userId: user.id,
         service: 'tradovate',
         accountId: accountId,
-        token: accessToken,
+        token: encryptConnectionToken(accessToken),
         tokenExpiresAt: new Date(expiresAt),
         environment,
         lastSyncedAt: new Date()
@@ -1312,6 +1317,11 @@ export async function getTradovateToken(accountId: string = 'default') {
       return { error: 'No Tradovate token found' }
     }
 
+    const plaintextToken = decryptConnectionToken(syncData.token)
+    if (!plaintextToken) {
+      return { error: 'No Tradovate token found' }
+    }
+
     // Check if token is expired
     const now = new Date()
     const expiresAt = syncData.tokenExpiresAt
@@ -1322,7 +1332,7 @@ export async function getTradovateToken(accountId: string = 'default') {
 
     const includedFeeTypes = syncData.includedFeeTypes as Record<string, boolean> | null | undefined
     return {
-      accessToken: syncData.token,
+      accessToken: plaintextToken,
       expiresAt: syncData.tokenExpiresAt?.toISOString() || '',
       environment: normalizeEnvironment(syncData.environment),
       accountId: syncData.accountId,
@@ -1415,7 +1425,9 @@ export async function getTradovateSynchronizations() {
       }
     })
 
-    return { synchronizations }
+    return {
+      synchronizations: synchronizations.map(withDecryptedConnectionToken),
+    }
   } catch (error) {
     console.error('TRADOVATE SYNC: Failed to get Tradovate synchronizations:', error)
     return { error: 'Failed to get synchronizations' }
@@ -1526,13 +1538,13 @@ export async function testCustomTradovateToken(
   }
 }
 
-async function updateLastSyncedAt(userId: string, accessToken: string) {
+async function updateLastSyncedAt(userId: string, accountId: string) {
     // Update last synced at
     const updateResult = await prisma.synchronization.updateMany({
       where: {
         userId: userId,
         service: 'tradovate',
-        token: accessToken,
+        accountId,
       },
       data: {
         lastSyncedAt: new Date()
@@ -1545,7 +1557,13 @@ async function updateLastSyncedAt(userId: string, accessToken: string) {
   
 export async function getTradovateTrades(
   accessToken: string,
-  options?: { userId?: string; includeAllFees?: boolean; includedFeeTypes?: TradovateIncludedFeeTypes; environment?: TradovateEnvironment }
+  options?: {
+    userId?: string
+    includeAllFees?: boolean
+    includedFeeTypes?: TradovateIncludedFeeTypes
+    environment?: TradovateEnvironment
+    accountId?: string
+  }
 ): Promise<TradovateTradesResult> {
   try {
     // If we are on the server
@@ -1569,6 +1587,7 @@ export async function getTradovateTrades(
       return { error: 'User not authenticated' }
     }
     const resolvedUserId = userId
+    const accountId = options?.accountId ?? null
 
     const apiBaseUrl = getApiBaseUrl(environment)
 
@@ -1580,7 +1599,9 @@ export async function getTradovateTrades(
     // Means there are no trades to import
     if (fillPairs.length === 0) {
       logger.info('No fill pairs returned from Tradovate')
-      await updateLastSyncedAt(resolvedUserId, accessToken)
+      if (accountId) {
+        await updateLastSyncedAt(resolvedUserId, accountId)
+      }
       return { processedTrades: [], savedCount: 0, ordersCount: 0 }
     }
 
@@ -1689,7 +1710,9 @@ export async function getTradovateTrades(
       tickDetails,
     )
     
-    await updateLastSyncedAt(resolvedUserId, accessToken)
+    if (accountId) {
+      await updateLastSyncedAt(resolvedUserId, accountId)
+    }
 
     if (processedTrades.length === 0) {
       logger.info('No trades could be created from fill pairs')

@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     const syncResult = await getTradovateTrades(tokenResult.accessToken, {
       includedFeeTypes: tokenResult.includedFeeTypes,
       environment: tokenResult.environment,
+      accountId,
     });
     if (syncResult.error) {
       return NextResponse.json(

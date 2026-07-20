@@ -1,5 +1,9 @@
 // app/api/cron/renew-tradovate-token/route.ts
 import { prisma } from '@/lib/prisma';
+import {
+  decryptConnectionToken,
+  encryptConnectionToken,
+} from '@/lib/connection-token-crypto';
 import { NextRequest } from 'next/server';
 
 /**
@@ -109,11 +113,17 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
       ? 'https://demo.tradovateapi.com' 
       : 'https://live.tradovateapi.com';
     
+    const plaintextToken = decryptConnectionToken(synchronization.token)
+    if (!plaintextToken) {
+      console.error(`[CRON] Missing token for account ${synchronization.accountId}`);
+      return false;
+    }
+    
     console.log(`[CRON] Attempting token renewal for account ${synchronization.accountId}`);
     
     const renewal = await fetch(`${apiBaseUrl}/auth/renewAccessToken`, {
       headers: {
-        'Authorization': `Bearer ${synchronization.token}`
+        'Authorization': `Bearer ${plaintextToken}`
       }
     });
     
@@ -144,7 +154,7 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
         synchronizations: {
           update: {
             where: { id: synchronization.id },
-            data: { token: renewalData.accessToken, tokenExpiresAt: new Date(renewalData.expirationTime) }
+            data: { token: encryptConnectionToken(renewalData.accessToken), tokenExpiresAt: new Date(renewalData.expirationTime) }
           }
         }
       }
@@ -183,10 +193,16 @@ async function performDailySync(synchronization: any): Promise<boolean> {
     
     // Use account-level fee config from DB (includedFeeTypes on sync record)
     const includedFeeTypes = synchronization.includedFeeTypes as Record<string, boolean> | null | undefined
-    const result = await getTradovateTrades(synchronization.token, {
+    const plaintextToken = decryptConnectionToken(synchronization.token)
+    if (!plaintextToken) {
+      console.error(`[CRON] Missing token for daily sync of account ${synchronization.accountId}`);
+      return false;
+    }
+    const result = await getTradovateTrades(plaintextToken, {
       userId: synchronization.userId,
       includedFeeTypes: includedFeeTypes ?? undefined,
       environment: synchronization.environment === 'live' ? 'live' : 'demo',
+      accountId: synchronization.accountId,
     });
     
     if (result.error) {
