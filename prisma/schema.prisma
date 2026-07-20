@@ -9,7 +9,7 @@ datasource db {
 }
 
 model Trade {
-  id                String   @id @unique @default(uuid())
+  id                String   @id @default(uuid())
   accountNumber     String
   accountId         String?
   quantity          Int
@@ -38,6 +38,8 @@ model Trade {
   @@index([accountNumber])
   @@index([accountId])
   @@index([groupId])
+  @@index([userId, entryDate(sort: Desc)])
+  @@index([entryDate])
   @@schema("public")
 }
 
