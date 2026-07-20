@@ -432,7 +432,7 @@ export type TradeWhereUniqueInput = Prisma.AtLeast<{
   groupId?: Prisma.StringNullableFilter<"Trade"> | string | null
   images?: Prisma.StringNullableListFilter<"Trade">
   account?: Prisma.XOR<Prisma.AccountNullableScalarRelationFilter, Prisma.AccountWhereInput> | null
-}, "id" | "id">
+}, "id">
 
 export type TradeOrderByWithAggregationInput = {
   id?: Prisma.SortOrder

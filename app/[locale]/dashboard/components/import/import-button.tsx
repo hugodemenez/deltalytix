@@ -14,7 +14,6 @@ import ImportTypeSelection, { ImportType } from "./import-type-selection";
 import FileUpload from "./file-upload";
 import HeaderSelection from "./header-selection";
 import AccountSelection from "./account-selection";
-import { useData } from "@/context/data-provider";
 import ColumnMapping from "./column-mapping";
 import { useI18n } from "@/locales/client";
 import { ImportDialogHeader } from "./components/import-dialog-header";
@@ -28,7 +27,6 @@ import { usePdfProcessingStore } from "@/store/pdf-processing-store";
 import PdfUpload from "./ibkr-pdf/pdf-upload";
 import PdfProcessing from "./ibkr-pdf/pdf-processing";
 import AtasFileUpload from "./atas/atas-file-upload";
-import { generateTradeHash } from "@/lib/utils";
 import { isLocalDashboardAuthBypassEnabled } from "@/lib/local-dashboard-auth";
 import { createTradeWithDefaults } from "@/lib/trade-factory";
 
@@ -98,7 +96,6 @@ export default function ImportButton({
   const supabaseUser = useUserStore((state) => state.supabaseUser);
   const trades = useTradesStore((state) => state.trades);
   const setTradesStore = useTradesStore((state) => state.setTrades);
-  const { refreshTradesOnly } = useData();
   const t = useI18n();
 
   const resolvePlatform = useCallback((type: string) => {
@@ -189,16 +186,6 @@ export default function ImportButton({
       console.log("[ImportButton] Saving trades:", newTrades);
       const result = await saveTradesAction(newTrades);
 
-      // Optimistically merge new trades into local store to avoid full refetch
-      const newIds = new Set(newTrades.map((t) => t.id));
-      const mergedTrades = [
-        ...newTrades,
-        ...trades.filter((t) => !newIds.has(t.id)),
-      ];
-      setTradesStore(mergedTrades);
-
-      // Keep server cache fresh (server action will update tags); avoid full refresh
-      await refreshTradesOnly({ force: false });
       if (result.error) {
         if (result.error === "DUPLICATE_TRADES") {
           toast.error(t("import.error.duplicateTrades"), {
@@ -213,10 +200,17 @@ export default function ImportButton({
             description: t("import.error.failedDescription"),
           });
         }
-        // Don't proceed further if there's an error
         return;
       }
-      // Show success message
+
+      // Merge server-assigned trades (correct IDs/accountIds) — no full history refetch
+      const savedTrades = result.trades ?? newTrades;
+      const newIds = new Set(savedTrades.map((t) => t.id));
+      setTradesStore([
+        ...savedTrades,
+        ...trades.filter((t) => !newIds.has(t.id)),
+      ]);
+
       toast.success(t("import.success"), {
         description: t("import.successDescription", {
           numberOfTradesAdded: result.numberOfTradesAdded,
@@ -235,7 +229,7 @@ export default function ImportButton({
     } finally {
       setIsSaving(false);
     }
-  }, [processedTrades, accountNumbers, selectedAccountNumbers, importType, user, supabaseUser, t, refreshTradesOnly, setIsOpen, setTradesStore, trades, inline, initialType, applyInitialType]);
+  }, [processedTrades, accountNumbers, selectedAccountNumbers, importType, user, supabaseUser, t, setIsOpen, setTradesStore, trades, inline, initialType, applyInitialType]);
 
   const resetImportState = () => {
     setImportType("");

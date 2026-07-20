@@ -22,6 +22,8 @@ interface TradeResponse {
   error: TradeError | false
   numberOfTradesAdded: number
   details?: unknown
+  /** Trades prepared with server-assigned IDs/accountIds for client merge */
+  trades?: Trade[]
 }
 
 export async function revalidateCache(tags: string[]) {
@@ -189,7 +191,8 @@ export async function saveTradesAction(
 
     return {
       error: result.count === 0 ? 'NO_TRADES_ADDED' : false,
-      numberOfTradesAdded: result.count
+      numberOfTradesAdded: result.count,
+      trades: result.count > 0 ? userAssignedTrades : undefined,
     }
   } catch (error) {
     console.error('[saveTrades] Database error:', error)
@@ -232,24 +235,21 @@ function getCachedTrades(userId: string, isSubscribed: boolean, page: number, ch
 }
 
 
-export async function getTradesAction(userId: string | null = null, forceRefresh: boolean = false): Promise<Trade[]> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user && !userId) {
-    throw new Error('User not found')
-  }
+export async function getTradesAction(forceRefresh: boolean = false): Promise<Trade[]> {
+  // Always derive userId from auth — never accept a client-provided userId
+  const userId = await getUserId()
 
   const subscriptionDetails = await getSubscriptionDetails()
   const isSubscribed = subscriptionDetails?.isActive || false
 
   // If forceRefresh is true, bypass cache and fetch directly
   if (forceRefresh) {
-    console.log(`[getTrades] Force refresh - bypassing cache for user ${userId || user?.id}`)
-    updateTag(`trades-${userId || user?.id}`)
+    console.log(`[getTrades] Force refresh - bypassing cache for user ${userId}`)
+    updateTag(`trades-${userId}`)
 
     const query: any = {
       where: {
-        userId: userId || user?.id,
+        userId,
       },
       orderBy: { entryDate: 'desc' }
     }
@@ -273,7 +273,7 @@ export async function getTradesAction(userId: string | null = null, forceRefresh
   // Per page
   const query: any = {
     where: {
-      userId: userId || user?.id,
+      userId,
     }
   }
   if (!isSubscribed) {
@@ -287,7 +287,7 @@ export async function getTradesAction(userId: string | null = null, forceRefresh
   const totalPages = Math.ceil(count / chunkSize)
   const trades: Trade[] = []
   for (let page = 1; page <= totalPages; page++) {
-    const pageTrades = await getCachedTrades(userId || user?.id || '', isSubscribed, page, chunkSize)
+    const pageTrades = await getCachedTrades(userId, isSubscribed, page, chunkSize)
     trades.push(...pageTrades)
   }
   console.log(`[getTrades] Found ${count} trades fetched ${trades.length}`)

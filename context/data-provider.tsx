@@ -528,7 +528,7 @@ export const DataProvider: React.FC<{
         if (cachedTrades && Array.isArray(cachedTrades) && cachedTrades.length > 0) {
           setTrades(cachedTrades);
         } else {
-          const trades = await getTradesAction(user.id, false);
+          const trades = await getTradesAction(false);
           const safeTrades = Array.isArray(trades) ? trades : [];
           setTrades(safeTrades);
           setTradesCache(user.id, safeTrades).catch((err) =>
@@ -687,7 +687,7 @@ export const DataProvider: React.FC<{
           }
         }
 
-        const trades = await getTradesAction(userId, force);
+        const trades = await getTradesAction(force);
         const safeTrades = Array.isArray(trades) ? trades : [];
         setTrades(safeTrades);
 
