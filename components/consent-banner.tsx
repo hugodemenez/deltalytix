@@ -89,6 +89,8 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
   const isDesktop = useMediaQuery("(min-width: 768px)")
 
   useEffect(() => {
+    // Restore consent from cookie/localStorage after mount (client-only).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional client hydration from storage
     const sharedAnalyticsConsent = getSharedAnalyticsConsent()
     const hasConsent = localStorage.getItem("cookieConsent")
 

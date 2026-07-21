@@ -436,8 +436,6 @@ export default function Component() {
 
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-[calc(150px+env(safe-area-inset-bottom,0px))]">
             <ul
-              initial="hidden"
-              animate="show"
               className="px-3 pt-8 text-xl text-black/55 dark:text-white/55 space-y-8 mb-8"
             >
               {links.map(({ path, title, children }, index) => {
@@ -480,7 +478,7 @@ export default function Component() {
                             <ul
                               className="space-y-8 ml-4 mt-6"
                             >
-                              {children.map((child, childIndex) => {
+                              {children.map((child) => {
                                 const href = child.external
                                   ? child.path
                                   : localize(child.path);
@@ -492,11 +490,8 @@ export default function Component() {
                                   : {};
 
                                 return (
-                                  <li
-                                    key={child.path}
-                                  >
-                                    <div
-                                    >
+                                  <li key={child.path}>
+                                    <div>
                                       {child.external ? (
                                         <a
                                           href={href}
@@ -693,12 +688,9 @@ export default function Component() {
                       <ul
                         className="space-y-8 ml-4 mt-6"
                       >
-                          {languages.map((language, languageIndex) => (
-                            <li
-                              key={language.value}
-                            >
-                              <div
-                              >
+                          {languages.map((language) => (
+                            <li key={language.value}>
+                              <div>
                                 <button
                                   type="button"
                                   onClick={() =>
