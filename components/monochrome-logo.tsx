@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 
 const SERVICE_SLUGS = {
   rithmic: 'rithmic',
+  'rithmic-protocol': 'rithmic',
   tradovate: 'tradovate',
   dxfeed: 'dxfeed',
   thor: 'thor',

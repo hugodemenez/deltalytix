@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Loader2, Trash2, Plus, RefreshCw, MoreVertical } from 'lucide-react'
 import {
@@ -32,9 +32,13 @@ import {
 } from '@/components/ui/select'
 import { useI18n } from '@/locales/client'
 import { toast } from 'sonner'
-import { authenticateRithmicProtocol } from './actions'
+import {
+  authenticateRithmicProtocol,
+  listRithmicProtocolSystems,
+} from './actions'
 import { useRithmicProtocolSyncContext } from '@/context/rithmic-protocol-sync-context'
-import { RITHMIC_PROTOCOL_SYSTEMS } from '@/lib/rithmic-protocol/systems'
+import { RITHMIC_PROTOCOL_FALLBACK_SYSTEMS } from '@/lib/rithmic-protocol/systems'
+import { captureConnectionCreated } from '@/lib/connection-analytics'
 
 export function RithmicProtocolCredentialsManager() {
   const {
@@ -53,22 +57,42 @@ export function RithmicProtocolCredentialsManager() {
   const [isReloading, setIsReloading] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [systems, setSystems] = useState<string[]>([
+    ...RITHMIC_PROTOCOL_FALLBACK_SYSTEMS,
+  ])
   const [systemName, setSystemName] = useState<string>(
-    RITHMIC_PROTOCOL_SYSTEMS[0]?.systemName ?? 'Rithmic Test',
+    RITHMIC_PROTOCOL_FALLBACK_SYSTEMS[0],
   )
-  const [gatewayUri, setGatewayUri] = useState<string>(
-    RITHMIC_PROTOCOL_SYSTEMS[0]?.gatewayUri ?? '',
-  )
+  const [loadingSystems, setLoadingSystems] = useState(false)
   const [actionsMenuAccountId, setActionsMenuAccountId] = useState<string | null>(
     null,
   )
   const t = useI18n()
 
-  const handleSystemChange = useCallback((value: string) => {
-    setSystemName(value)
-    const known = RITHMIC_PROTOCOL_SYSTEMS.find((s) => s.systemName === value)
-    if (known) setGatewayUri(known.gatewayUri)
-  }, [])
+  useEffect(() => {
+    if (!isAddDialogOpen) return
+    let cancelled = false
+    void (async () => {
+      try {
+        setLoadingSystems(true)
+        const result = await listRithmicProtocolSystems()
+        if (cancelled) return
+        if (result.systems.length > 0) {
+          setSystems(result.systems)
+          setSystemName((current) =>
+            result.systems.includes(current) ? current : result.systems[0],
+          )
+        }
+      } catch (error) {
+        console.warn('Failed to load Rithmic Protocol systems', error)
+      } finally {
+        if (!cancelled) setLoadingSystems(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isAddDialogOpen])
 
   const handleRemoveConnection = useCallback(
     async (accountId: string) => {
@@ -100,7 +124,6 @@ export function RithmicProtocolCredentialsManager() {
         username,
         password,
         systemName,
-        gatewayUri,
       )
 
       if ('error' in result && result.error) {
@@ -117,6 +140,7 @@ export function RithmicProtocolCredentialsManager() {
       }
 
       toast.success(t('rithmicProtocolSync.connected'))
+      captureConnectionCreated('rithmic-protocol')
       setIsAddDialogOpen(false)
       setUsername('')
       setPassword('')
@@ -127,7 +151,7 @@ export function RithmicProtocolCredentialsManager() {
     } finally {
       setIsLoading(false)
     }
-  }, [username, password, systemName, gatewayUri, t, loadAccounts])
+  }, [username, password, systemName, t, loadAccounts])
 
   const handleReloadAccounts = useCallback(async () => {
     try {
@@ -260,26 +284,22 @@ export function RithmicProtocolCredentialsManager() {
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
               <Label>{t('rithmicProtocolSync.addAccount.systemLabel')}</Label>
-              <Select value={systemName} onValueChange={handleSystemChange}>
+              <Select
+                value={systemName}
+                onValueChange={setSystemName}
+                disabled={loadingSystems || systems.length === 0}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {RITHMIC_PROTOCOL_SYSTEMS.map((system) => (
-                    <SelectItem key={system.systemName} value={system.systemName}>
-                      {system.systemName}
+                  {systems.map((system) => (
+                    <SelectItem key={system} value={system}>
+                      {system}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>{t('rithmicProtocolSync.addAccount.gatewayLabel')}</Label>
-              <Input
-                value={gatewayUri}
-                onChange={(e) => setGatewayUri(e.target.value)}
-                placeholder="wss://rituz00100.rithmic.com:443"
-              />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label>{t('rithmicProtocolSync.addAccount.usernameLabel')}</Label>
@@ -298,7 +318,10 @@ export function RithmicProtocolCredentialsManager() {
                 autoComplete="current-password"
               />
             </div>
-            <Button onClick={() => void handleAddAccount()} disabled={isLoading}>
+            <Button
+              onClick={() => void handleAddAccount()}
+              disabled={isLoading || loadingSystems || !systemName}
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />

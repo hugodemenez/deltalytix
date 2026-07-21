@@ -40,7 +40,10 @@ function parseConnectionAuthError(token: string | null): string | null {
 function deriveConnectionStatus(
   connection: Connection
 ): ConnectionsPageConnection['status'] {
-  if (connection.service === 'rithmic') {
+  if (
+    connection.service === 'rithmic' ||
+    connection.service === 'rithmic-protocol'
+  ) {
     return 'connected'
   }
 

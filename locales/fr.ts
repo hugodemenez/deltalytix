@@ -142,11 +142,13 @@ export default {
   "connections.addConnection": "Ajouter une connexion",
   "connections.noConnectionsYet": "Aucune connexion broker. Ajoutez-en une pour synchroniser des comptes.",
   "connections.sections.rithmic": "Rithmic",
+  "connections.sections.rithmicProtocol": "Rithmic Protocol",
   "connections.sections.tradovate": "Tradovate",
   "connections.sections.dxfeed": "DxFeed",
   "connections.sections.thor": "Thor",
   "connections.sections.standalone": "Comptes autonomes",
   "connections.add.rithmic": "Ajouter une connexion Rithmic",
+  "connections.add.rithmicProtocol": "Ajouter une connexion Rithmic Protocol",
   "connections.add.tradovate": "Ajouter une connexion Tradovate",
   "connections.add.dxfeed": "Ajouter une connexion DxFeed",
   "connections.add.thor": "Ajouter une connexion Thor",
@@ -514,7 +516,7 @@ export default {
   "import.type.copyright.platform":
     "Trading Platform by Rithmic™ est une marque déposée de Rithmic, LLC. Tous droits réservés.",
   "import.type.copyright.omne":
-    "Le logiciel OMNE™ est protégé par le droit d'auteur © 2024 par Omnesys, LLC et Omnesys Technologies, Inc. Tous droits réservés.",
+    "Powered by OMNE est une marque d'Omnesys, LLC et Omnesys Technologies, Inc. Tous droits réservés.",
   "mood.question": "Comment vous sentez-vous aujourd'hui ?",
   "mood.bad": "Mauvaise journée",
   "mood.okay": "Journée correcte",
@@ -2517,9 +2519,8 @@ export default {
     addAccount: {
       title: "Connecter Rithmic Protocol",
       description:
-        "Connectez-vous avec votre identifiant Rithmic. La conformité Protocol est requise pour Paper Trading / live.",
+        "Connectez-vous avec votre identifiant Rithmic. Utilisez Rithmic Test pendant la conformité Protocol — la passerelle est définie automatiquement.",
       systemLabel: "Système Rithmic",
-      gatewayLabel: "URI de passerelle (wss://…)",
       usernameLabel: "Nom d'utilisateur",
       passwordLabel: "Mot de passe",
       connecting: "Connexion…",

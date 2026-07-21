@@ -141,11 +141,13 @@ export default {
   "connections.addConnection": "Add connection",
   "connections.noConnectionsYet": "No broker connections yet. Add one to start syncing accounts.",
   "connections.sections.rithmic": "Rithmic",
+  "connections.sections.rithmicProtocol": "Rithmic Protocol",
   "connections.sections.tradovate": "Tradovate",
   "connections.sections.dxfeed": "DxFeed",
   "connections.sections.thor": "Thor",
   "connections.sections.standalone": "Standalone accounts",
   "connections.add.rithmic": "Add Rithmic connection",
+  "connections.add.rithmicProtocol": "Add Rithmic Protocol connection",
   "connections.add.tradovate": "Add Tradovate connection",
   "connections.add.dxfeed": "Add DxFeed connection",
   "connections.add.thor": "Add Thor connection",
@@ -471,7 +473,7 @@ export default {
   "import.type.copyright.platform":
     "Trading Platform by Rithmic™ is a trademark of Rithmic, LLC. All rights reserved.",
   "import.type.copyright.omne":
-    "The OMNE™ software is Copyright © 2024 by Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.",
+    "Powered by OMNE is a trademark of Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.",
   "import.type.topstep.name": "Topstep",
   "import.type.topstep.description": "Topstep CSV file",
   "import.type.topstep.details":
@@ -2379,9 +2381,8 @@ export default {
     addAccount: {
       title: "Connect Rithmic Protocol",
       description:
-        "Sign in with your Rithmic username/password. Protocol conformance with Rithmic is required for Paper Trading / live systems.",
+        "Sign in with your Rithmic username/password. Use Rithmic Test while Protocol conformance is in progress — the gateway is set automatically.",
       systemLabel: "Rithmic system",
-      gatewayLabel: "Gateway URI (wss://…)",
       usernameLabel: "Username",
       passwordLabel: "Password",
       connecting: "Connecting…",

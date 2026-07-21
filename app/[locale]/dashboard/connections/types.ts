@@ -1,6 +1,12 @@
 import type { ConnectionView } from '@/lib/connection-view'
 
-export type ConnectionService = 'rithmic' | 'tradovate' | 'dxfeed' | 'thor' | 'etp'
+export type ConnectionService =
+  | 'rithmic'
+  | 'rithmic-protocol'
+  | 'tradovate'
+  | 'dxfeed'
+  | 'thor'
+  | 'etp'
 
 export type ConnectionStatus = 'connected' | 'warning' | 'error'
 

@@ -64,6 +64,7 @@ import { useEquityChartDataStore } from "@/store/widgets/equity-chart-data-store
 import { useStripeSubscriptionStore } from "@/store/stripe-subscription-store";
 import { useBreakevenStore } from "@/store/widgets/breakeven-store";
 import { getSubscriptionData } from "@/server/billing";
+import { isLocalDashboardAuthBypassEnabled } from "@/lib/local-dashboard-auth";
 import { computeEquityChartData } from "@/lib/equity-chart";
 import { defaultLayouts } from "@/lib/default-layouts";
 import { getTimeRangeKey } from "@/lib/time-range";
@@ -590,6 +591,13 @@ export const DataProvider: React.FC<{
     const loadDataIfMounted = async () => {
       if (!mounted) return;
       await loadData();
+      // Local auth bypass: skip Stripe server round-trip entirely.
+      if (isLocalDashboardAuthBypassEnabled()) {
+        setStripeSubscription(null);
+        setStripeSubscriptionError(null);
+        setStripeSubscriptionLoading(false);
+        return;
+      }
       // Load Stripe subscription data
       try {
         setStripeSubscriptionLoading(true);
@@ -650,6 +658,12 @@ export const DataProvider: React.FC<{
   }, [locale, supabaseUser?.id]);
 
   const loadStripeSubscription = useCallback(async () => {
+    if (isLocalDashboardAuthBypassEnabled()) {
+      setStripeSubscription(null);
+      setStripeSubscriptionError(null);
+      setStripeSubscriptionLoading(false);
+      return;
+    }
     try {
       setStripeSubscriptionLoading(true);
       const stripeSubscriptionData = await getSubscriptionData();
