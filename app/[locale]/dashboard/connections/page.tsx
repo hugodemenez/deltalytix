@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { cacheLife } from 'next/cache'
 import { Suspense } from 'react'
-import { connection } from 'next/server'
 import { getConnectionsMetadataCopy } from '@/lib/og/site-metadata'
 import { resolveLocale } from '@/lib/locale-params'
 import { getSiteOrigin, siteUrl } from '@/lib/site-url'
@@ -69,12 +68,8 @@ export async function generateMetadata(props: {
  * Resolve auth outside `'use cache'`, then render the tagged cached list UI.
  * Cold cache → list skeleton under the instant chrome.
  * Warm cache → list included instantly (no skeleton).
- *
- * `connection()` marks the route intentionally dynamic so locale-aware
- * `generateMetadata()` does not block Instant Navigations prefetch.
  */
 async function ConnectionsPageContent() {
-  await connection()
   const userId = await getUserId()
   return <CachedConnectionsPage userId={userId} />
 }
