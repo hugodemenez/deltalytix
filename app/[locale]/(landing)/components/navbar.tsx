@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import {
   Accordion,
   AccordionContent,
@@ -15,49 +14,32 @@ import {
   FileText,
   Cpu,
   Users,
-  Layers,
   BarChart3,
   Calendar,
   Database,
   LineChart,
-  Menu,
   Globe,
   Laptop,
   Sun,
   Moon,
-  Crown,
   TrendingUp,
   Brain,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu";
 import { useTheme } from "@/context/theme-provider";
 import { cn } from "@/lib/utils";
-import { useChangeLocale, useI18n } from "@/locales/landing-client";
+import {
+  useChangeLocale,
+  useCurrentLocale,
+  useI18n,
+} from "@/locales/landing-client";
 import { usePathname } from "next/navigation";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { useCurrentLocale } from "@/locales/landing-client";
-import { LanguageSelector } from "@/components/ui/language-selector";
+import { LandingLanguageSelector } from "./landing-language-selector";
+import { LazyDesktopNav } from "./lazy-desktop-nav";
 import { GITHUB_REPO_URL } from "@/lib/github-repo";
 import {
   getHashFromHref,
@@ -66,35 +48,6 @@ import {
 } from "@/lib/landing-nav-paths";
 import { YOUTUBE_CHANNEL_URL } from "@/lib/social-links";
 import { ThemeToggleIcon } from "@/components/theme-toggle-icon";
-
-const ListItem = React.forwardRef<
-  React.ComponentRef<"a">,
-  React.ComponentPropsWithoutRef<"a"> & {
-    title: string;
-    icon?: React.ReactNode;
-  }
->(({ className, title, children, icon, ...props }, ref) => {
-  return (
-    <li>
-      <NavigationMenuLink asChild>
-        <a
-          ref={ref}
-          className={`block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-hidden transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground ${className}`}
-          {...props}
-        >
-          <div className="text-sm font-medium leading-none flex items-center">
-            {icon}
-            <span className="ml-2">{title}</span>
-          </div>
-          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground mt-1">
-            {children}
-          </p>
-        </a>
-      </NavigationMenuLink>
-    </li>
-  );
-});
-ListItem.displayName = "ListItem";
 
 function GithubIcon({ className }: { className?: string }) {
   return (
@@ -123,56 +76,6 @@ function YoutubeIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-
-const MobileNavItem = ({
-  href,
-  children,
-  onClick,
-  className,
-}: {
-  href: string;
-  children: React.ReactNode;
-  onClick?: () => void;
-  className?: string;
-}) => (
-  <li>
-    <Link
-      href={href}
-      className={cn(
-        "block py-2 hover:text-primary transition-colors",
-        className,
-      )}
-      onClick={onClick}
-    >
-      {children}
-    </Link>
-  </li>
-);
-
-// Animation variants for mobile menu
-const listVariant = {
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.1,
-    },
-  },
-  hidden: {
-    opacity: 0,
-  },
-};
-
-const itemVariant = {
-  hidden: {
-    opacity: 0,
-    y: 20,
-  },
-  show: {
-    opacity: 1,
-    y: 0,
-  },
-};
 
 export default function Component() {
   const { theme, effectiveTheme, setTheme } = useTheme();
@@ -389,188 +292,52 @@ export default function Component() {
           <span className="font-bold text-xl">Deltalytix</span>
         </Link>
         <div className="hidden lg:block">
-          <NavigationMenu>
-            <NavigationMenuList className="list-none">
-              <NavigationMenuItem
-                onMouseEnter={() => setHoveredItem("features")}
-                onMouseLeave={() => setHoveredItem(null)}
-              >
-                <NavigationMenuTrigger className="bg-transparent">
-                  {t("landing.navbar.features")}
-                </NavigationMenuTrigger>
-                <NavigationMenuContent
-                  onMouseEnter={() => setHoveredItem("features")}
-                  onMouseLeave={() => setHoveredItem(null)}
-                >
-                  <ul className="grid gap-3 p-6 md:w-[500px] lg:w-[600px] lg:grid-cols-[.75fr_1fr] list-none">
-                    <li className="row-span-5">
-                      <NavigationMenuLink asChild>
-                        <Link
-                          className="flex h-full w-full select-none flex-col justify-end rounded-md bg-linear-to-b from-muted/50 to-muted p-6 no-underline outline-hidden focus:shadow-md"
-                          href={localize("/")}
-                        >
-                          <Logo className="w-6 h-6" />
-                          <div className="mb-2 mt-4 text-lg font-medium">
-                            Deltalytix
-                          </div>
-                          <p className="text-sm leading-tight text-muted-foreground">
-                            {t("landing.navbar.elevateTrading")}
-                          </p>
-                        </Link>
-                      </NavigationMenuLink>
-                    </li>
-                    <ListItem
-                      href={localize("/#ai-journaling")}
-                      title={t("landing.navbar.aiJournaling")}
-                      icon={<Brain className="h-4 w-4" />}
-                    >
-                      {t("landing.navbar.aiJournalingDescription")}
-                    </ListItem>
-                    <ListItem
-                      href={localize("/#performance-visualization")}
-                      title={t("landing.navbar.performanceVisualization")}
-                      icon={<LineChart className="h-4 w-4" />}
-                    >
-                      {t("landing.navbar.performanceVisualizationDescription")}
-                    </ListItem>
-                    <ListItem
-                      href={localize("/#daily-performance")}
-                      title={t("landing.navbar.dailyPerformance")}
-                      icon={<Calendar className="h-4 w-4" />}
-                    >
-                      {t("landing.navbar.dailyPerformanceDescription")}
-                    </ListItem>
-                    <ListItem
-                      href={localize("/#performance-tracking")}
-                      title={t("landing.navbar.performanceTracking")}
-                      icon={<TrendingUp className="h-4 w-4" />}
-                    >
-                      {t("landing.navbar.performanceTrackingDescription")}
-                    </ListItem>
-                    <div className="col-span-2">
-                      <ListItem
-                        href={localize("/#data-import")}
-                        title={t("landing.navbar.dataImport")}
-                        icon={<Database className="h-4 w-4" />}
-                      >
-                        {t("landing.navbar.dataImportDescription")}
-                      </ListItem>
-                    </div>
-                  </ul>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-              <NavigationMenuItem
-                onMouseEnter={() => setHoveredItem("pricing")}
-                onMouseLeave={() => setHoveredItem(null)}
-              >
-                <NavigationMenuTrigger className="bg-transparent">
-                  {t("landing.navbar.pricing")}
-                </NavigationMenuTrigger>
-                <NavigationMenuContent
-                  onMouseEnter={() => setHoveredItem("pricing")}
-                  onMouseLeave={() => setHoveredItem(null)}
-                >
-                  <ul className="grid gap-3 p-6 md:w-[500px] lg:w-[600px] list-none">
-                    <ListItem
-                      href={localize("#pricing")}
-                      title={t("pricing.basic.name")}
-                      icon={<Sun className="h-4 w-4" />}
-                    >
-                      {t("pricing.basic.description")}
-                    </ListItem>
-                    <ListItem
-                      href={localize("#pricing")}
-                      title={t("pricing.plus.name")}
-                      icon={<Crown className="h-4 w-4" />}
-                    >
-                      {t("pricing.plus.description")}
-                    </ListItem>
-                  </ul>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-              <NavigationMenuItem
-                onMouseEnter={() => setHoveredItem("updates")}
-                onMouseLeave={() => setHoveredItem(null)}
-              >
-                <NavigationMenuTrigger className="bg-transparent">
-                  {t("landing.navbar.updates")}
-                </NavigationMenuTrigger>
-                <NavigationMenuContent
-                  onMouseEnter={() => setHoveredItem("updates")}
-                  onMouseLeave={() => setHoveredItem(null)}
-                >
-                  <ul className="grid gap-3 p-4 md:w-[500px] lg:w-[600px] list-none">
-                    <ListItem
-                      href={localize("/updates")}
-                      title={t("landing.navbar.changelog")}
-                      icon={<BarChart3 className="h-4 w-4" />}
-                    >
-                      {t("landing.navbar.changelogDescription")}
-                    </ListItem>
-                    <ListItem
-                      href={YOUTUBE_CHANNEL_URL}
-                      title={t("landing.navbar.youtube")}
-                      icon={<YoutubeIcon className="h-4 w-4" />}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {t("landing.navbar.youtubeDescription")}
-                    </ListItem>
-                  </ul>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-              <NavigationMenuItem
-                onMouseEnter={() => setHoveredItem("developers")}
-                onMouseLeave={() => setHoveredItem(null)}
-              >
-                <NavigationMenuTrigger className="bg-transparent">
-                  {t("landing.navbar.developers")}
-                </NavigationMenuTrigger>
-                <NavigationMenuContent
-                  onMouseEnter={() => setHoveredItem("developers")}
-                  onMouseLeave={() => setHoveredItem(null)}
-                >
-                  <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] list-none">
-                    <ListItem
-                      href={GITHUB_REPO_URL}
-                      title={t("landing.navbar.openSource")}
-                      icon={<GithubIcon className="h-4 w-4" />}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {t("landing.navbar.openSourceDescription")}
-                    </ListItem>
-                    {process.env.NEXT_PUBLIC_DISCORD_INVITATION && (
-                      <ListItem
-                        href={process.env.NEXT_PUBLIC_DISCORD_INVITATION}
-                        title={t("landing.navbar.joinCommunity")}
-                        icon={<Users className="h-4 w-4" />}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {t("landing.navbar.joinCommunityDescription")}
-                      </ListItem>
-                    )}
-                  </ul>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-            </NavigationMenuList>
-            <Separator orientation="vertical" className="h-6 mx-4" />
-            <Button
-              variant="ghost"
-              className="h-14 rounded-none px-4 text-sm font-medium hover:text-accent-foreground"
-              asChild
-            >
-              <Link href={localize("/authentication")}>
-                {t("landing.navbar.signIn")}
-              </Link>
-            </Button>
-          </NavigationMenu>
+          <LazyDesktopNav
+            localize={localize}
+            onHoverChange={setHoveredItem}
+            featuresLabel={t("landing.navbar.features")}
+            elevateTrading={t("landing.navbar.elevateTrading")}
+            aiJournaling={t("landing.navbar.aiJournaling")}
+            aiJournalingDescription={t("landing.navbar.aiJournalingDescription")}
+            performanceVisualization={t("landing.navbar.performanceVisualization")}
+            performanceVisualizationDescription={t(
+              "landing.navbar.performanceVisualizationDescription",
+            )}
+            dailyPerformance={t("landing.navbar.dailyPerformance")}
+            dailyPerformanceDescription={t(
+              "landing.navbar.dailyPerformanceDescription",
+            )}
+            performanceTracking={t("landing.navbar.performanceTracking")}
+            performanceTrackingDescription={t(
+              "landing.navbar.performanceTrackingDescription",
+            )}
+            dataImport={t("landing.navbar.dataImport")}
+            dataImportDescription={t("landing.navbar.dataImportDescription")}
+            pricingLabel={t("landing.navbar.pricing")}
+            basicName={t("pricing.basic.name")}
+            basicDescription={t("pricing.basic.description")}
+            plusName={t("pricing.plus.name")}
+            plusDescription={t("pricing.plus.description")}
+            updatesLabel={t("landing.navbar.updates")}
+            changelog={t("landing.navbar.changelog")}
+            changelogDescription={t("landing.navbar.changelogDescription")}
+            youtube={t("landing.navbar.youtube")}
+            youtubeDescription={t("landing.navbar.youtubeDescription")}
+            developersLabel={t("landing.navbar.developers")}
+            openSource={t("landing.navbar.openSource")}
+            openSourceDescription={t("landing.navbar.openSourceDescription")}
+            joinCommunity={t("landing.navbar.joinCommunity")}
+            joinCommunityDescription={t(
+              "landing.navbar.joinCommunityDescription",
+            )}
+            signIn={t("landing.navbar.signIn")}
+            discordInvitation={process.env.NEXT_PUBLIC_DISCORD_INVITATION}
+          />
         </div>
 
         <div className="flex items-center space-x-4">
           <div className="hidden items-center space-x-4 lg:flex">
-            <LanguageSelector />
+            <LandingLanguageSelector />
             <Popover modal>
               <PopoverTrigger asChild>
                 <Button
@@ -583,25 +350,33 @@ export default function Component() {
                   </span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[200px] p-0" align="end">
-                <Command>
-                  <CommandList>
-                    <CommandGroup>
-                      <CommandItem onSelect={() => handleThemeChange("light")}>
-                        <Sun className="mr-2 h-4 w-4" />
-                        <span>{t("landing.navbar.lightMode")}</span>
-                      </CommandItem>
-                      <CommandItem onSelect={() => handleThemeChange("dark")}>
-                        <Moon className="mr-2 h-4 w-4" />
-                        <span>{t("landing.navbar.darkMode")}</span>
-                      </CommandItem>
-                      <CommandItem onSelect={() => handleThemeChange("system")}>
-                        <Laptop className="mr-2 h-4 w-4" />
-                        <span>{t("landing.navbar.systemTheme")}</span>
-                      </CommandItem>
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
+              <PopoverContent className="w-[200px] p-1" align="end">
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleThemeChange("light")}
+                    className="flex w-full items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                  >
+                    <Sun className="mr-2 h-4 w-4" />
+                    <span>{t("landing.navbar.lightMode")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleThemeChange("dark")}
+                    className="flex w-full items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                  >
+                    <Moon className="mr-2 h-4 w-4" />
+                    <span>{t("landing.navbar.darkMode")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleThemeChange("system")}
+                    className="flex w-full items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                  >
+                    <Laptop className="mr-2 h-4 w-4" />
+                    <span>{t("landing.navbar.systemTheme")}</span>
+                  </button>
+                </div>
               </PopoverContent>
             </Popover>
           </div>
@@ -627,45 +402,25 @@ export default function Component() {
       </header>
 
       {isOpen && (
-        <motion.div
+        <div
           key={`mobile-nav-menu-${effectiveTheme}`}
           className="mobile-nav-overlay fixed inset-0 z-50 flex flex-col bg-background px-2 overscroll-none"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          transition={{
-            duration: 0.3,
-            ease: "easeOut",
-          }}
         >
-          <motion.div
+          <div
             className="mt-4 flex justify-between p-3 px-4 relative ml-px"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: 0.3,
-              ease: "easeOut",
-              delay: 0.1,
-            }}
           >
-            <motion.button
+            <button
               type="button"
               onClick={closeMenu}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ duration: 0.1 }}
             >
               <span className="sr-only">Deltalytix Logo</span>
               <Logo className="w-6 h-6 fill-black dark:fill-white" />
-            </motion.button>
+            </button>
 
-            <motion.button
+            <button
               type="button"
               className="ml-auto lg:hidden p-2 absolute right-[10px] top-2"
               onClick={closeMenu}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ duration: 0.1 }}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -676,15 +431,14 @@ export default function Component() {
                 <path fill="none" d="M0 0h24v24H0V0z" />
                 <path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
               </svg>
-            </motion.button>
-          </motion.div>
+            </button>
+          </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-[calc(150px+env(safe-area-inset-bottom,0px))]">
-            <motion.ul
+            <ul
               initial="hidden"
               animate="show"
               className="px-3 pt-8 text-xl text-black/55 dark:text-white/55 space-y-8 mb-8"
-              variants={listVariant}
             >
               {links.map(({ path, title, children }, index) => {
                 const localizedPath = path ? localize(path) : undefined;
@@ -695,10 +449,8 @@ export default function Component() {
 
                 if (path) {
                   return (
-                    <motion.li variants={itemVariant} key={path}>
-                      <motion.div
-                        whileHover={{ x: 4 }}
-                        transition={{ duration: 0.2 }}
+                    <li key={path}>
+                      <div
                       >
                         <Link
                           href={localizedPath!}
@@ -707,13 +459,13 @@ export default function Component() {
                         >
                           {title}
                         </Link>
-                      </motion.div>
-                    </motion.li>
+                      </div>
+                    </li>
                   );
                 }
 
                 return (
-                  <motion.li key={title} variants={itemVariant}>
+                  <li key={title}>
                     <Accordion collapsible type="single">
                       <AccordionItem
                         value={`item-${index}`}
@@ -725,11 +477,8 @@ export default function Component() {
 
                         {children && (
                           <AccordionContent className="text-xl">
-                            <motion.ul
+                            <ul
                               className="space-y-8 ml-4 mt-6"
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ duration: 0.2 }}
                             >
                               {children.map((child, childIndex) => {
                                 const href = child.external
@@ -743,18 +492,10 @@ export default function Component() {
                                   : {};
 
                                 return (
-                                  <motion.li
+                                  <li
                                     key={child.path}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{
-                                      duration: 0.2,
-                                      delay: childIndex * 0.05,
-                                    }}
                                   >
-                                    <motion.div
-                                      whileHover={{ x: 4 }}
-                                      transition={{ duration: 0.2 }}
+                                    <div
                                     >
                                       {child.external ? (
                                         <a
@@ -776,26 +517,23 @@ export default function Component() {
                                           <span>{child.title}</span>
                                         </Link>
                                       )}
-                                    </motion.div>
-                                  </motion.li>
+                                    </div>
+                                  </li>
                                 );
                               })}
-                            </motion.ul>
+                            </ul>
                           </AccordionContent>
                         )}
                       </AccordionItem>
                     </Accordion>
-                  </motion.li>
+                  </li>
                 );
               })}
 
-              <motion.li
+              <li
                 className="border-t border-black/10 pt-8 dark:border-white/10"
-                variants={itemVariant}
               >
-                <motion.div
-                  whileHover={{ x: 4 }}
-                  transition={{ duration: 0.2 }}
+                <div
                 >
                   <Link
                     className="block w-full text-xl text-primary rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -804,56 +542,34 @@ export default function Component() {
                   >
                     {t("landing.navbar.signIn")}
                   </Link>
-                </motion.div>
-              </motion.li>
+                </div>
+              </li>
 
-              <motion.li
+              <li
                 className="space-y-8 border-t border-black/10 pt-8 dark:border-white/10"
-                variants={itemVariant}
               >
                 <Accordion collapsible type="single">
                   <AccordionItem value="theme" className="border-none">
                     <AccordionTrigger className="flex items-center justify-between w-full font-normal p-0 hover:no-underline">
                       <span className="text-black/55 dark:text-white/55 flex items-center space-x-2">
                         <div className="flex items-center justify-center w-5 h-5">
-                          <AnimatePresence mode="wait" initial={false}>
-                            <motion.div
+                          <div
                               key={theme}
-                              initial={{
-                                opacity: 0,
-                                scale: 0.8,
-                                rotate: -90,
-                              }}
-                              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                              exit={{ opacity: 0, scale: 0.8, rotate: 90 }}
-                              transition={{
-                                duration: 0.4,
-                                ease: "easeInOut",
-                              }}
                               className="flex items-center justify-center"
                             >
                               <ThemeToggleIcon className="h-5 w-5" />
-                            </motion.div>
-                          </AnimatePresence>
+                            </div>
                         </div>
                         <span>{t("landing.navbar.changeTheme")}</span>
                       </span>
                     </AccordionTrigger>
                     <AccordionContent className="text-xl">
-                      <motion.ul
+                      <ul
                         className="space-y-8 ml-4 mt-6"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.2 }}
                       >
-                          <motion.li
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.2, delay: 0.05 }}
+                          <li
                           >
-                            <motion.div
-                              whileHover={{ x: 4 }}
-                              transition={{ duration: 0.2 }}
+                            <div
                             >
                               <button
                                 onClick={() => handleThemeChange("light")}
@@ -866,10 +582,7 @@ export default function Component() {
                                 <Sun className="h-4 w-4" />
                                 <span>{t("landing.navbar.lightMode")}</span>
                                 {theme === "light" && (
-                                  <motion.div
-                                    initial={{ opacity: 0, scale: 0 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ duration: 0.2 }}
+                                  <div
                                     className="ml-auto"
                                   >
                                     <svg
@@ -883,19 +596,14 @@ export default function Component() {
                                         clipRule="evenodd"
                                       />
                                     </svg>
-                                  </motion.div>
+                                  </div>
                                 )}
                               </button>
-                            </motion.div>
-                          </motion.li>
-                          <motion.li
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.2, delay: 0.1 }}
+                            </div>
+                          </li>
+                          <li
                           >
-                            <motion.div
-                              whileHover={{ x: 4 }}
-                              transition={{ duration: 0.2 }}
+                            <div
                             >
                               <button
                                 onClick={() => handleThemeChange("dark")}
@@ -908,10 +616,7 @@ export default function Component() {
                                 <Moon className="h-4 w-4" />
                                 <span>{t("landing.navbar.darkMode")}</span>
                                 {theme === "dark" && (
-                                  <motion.div
-                                    initial={{ opacity: 0, scale: 0 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ duration: 0.2 }}
+                                  <div
                                     className="ml-auto"
                                   >
                                     <svg
@@ -925,19 +630,14 @@ export default function Component() {
                                         clipRule="evenodd"
                                       />
                                     </svg>
-                                  </motion.div>
+                                  </div>
                                 )}
                               </button>
-                            </motion.div>
-                          </motion.li>
-                          <motion.li
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.2, delay: 0.15 }}
+                            </div>
+                          </li>
+                          <li
                           >
-                            <motion.div
-                              whileHover={{ x: 4 }}
-                              transition={{ duration: 0.2 }}
+                            <div
                             >
                               <button
                                 onClick={() => handleThemeChange("system")}
@@ -950,10 +650,7 @@ export default function Component() {
                                 <Laptop className="h-4 w-4" />
                                 <span>{t("landing.navbar.systemTheme")}</span>
                                 {theme === "system" && (
-                                  <motion.div
-                                    initial={{ opacity: 0, scale: 0 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ duration: 0.2 }}
+                                  <div
                                     className="ml-auto"
                                   >
                                     <svg
@@ -967,12 +664,12 @@ export default function Component() {
                                         clipRule="evenodd"
                                       />
                                     </svg>
-                                  </motion.div>
+                                  </div>
                                 )}
                               </button>
-                            </motion.div>
-                          </motion.li>
-                        </motion.ul>
+                            </div>
+                          </li>
+                        </ul>
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
@@ -982,49 +679,25 @@ export default function Component() {
                     <AccordionTrigger className="flex items-center justify-between w-full font-normal p-0 hover:no-underline">
                       <span className="text-black/55 dark:text-white/55 flex items-center space-x-2">
                         <div className="flex items-center justify-center w-5 h-5">
-                          <AnimatePresence mode="wait" initial={false}>
-                            <motion.div
+                          <div
                               key={locale}
-                              initial={{
-                                opacity: 0,
-                                scale: 0.8,
-                                rotate: -90,
-                              }}
-                              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                              exit={{ opacity: 0, scale: 0.8, rotate: 90 }}
-                              transition={{
-                                duration: 0.4,
-                                ease: "easeInOut",
-                              }}
                               className="flex items-center justify-center"
                             >
                               <Globe className="h-5 w-5" />
-                            </motion.div>
-                          </AnimatePresence>
+                            </div>
                         </div>
                         <span>{t("landing.navbar.changeLanguage")}</span>
                       </span>
                     </AccordionTrigger>
                     <AccordionContent className="text-xl">
-                      <motion.ul
+                      <ul
                         className="space-y-8 ml-4 mt-6"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.2 }}
                       >
                           {languages.map((language, languageIndex) => (
-                            <motion.li
+                            <li
                               key={language.value}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{
-                                duration: 0.2,
-                                delay: 0.05 + languageIndex * 0.05,
-                              }}
                             >
-                              <motion.div
-                                whileHover={{ x: 4 }}
-                                transition={{ duration: 0.2 }}
+                              <div
                               >
                                 <button
                                   type="button"
@@ -1042,10 +715,7 @@ export default function Component() {
                                   </span>
                                   <span>{language.label}</span>
                                   {locale === language.value && (
-                                    <motion.div
-                                      initial={{ opacity: 0, scale: 0 }}
-                                      animate={{ opacity: 1, scale: 1 }}
-                                      transition={{ duration: 0.2 }}
+                                    <div
                                       className="ml-auto"
                                     >
                                       <svg
@@ -1059,20 +729,20 @@ export default function Component() {
                                           clipRule="evenodd"
                                         />
                                       </svg>
-                                    </motion.div>
+                                    </div>
                                   )}
                                 </button>
-                              </motion.div>
-                            </motion.li>
+                              </div>
+                            </li>
                           ))}
-                        </motion.ul>
+                        </ul>
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
-              </motion.li>
-            </motion.ul>
+              </li>
+            </ul>
           </div>
-        </motion.div>
+        </div>
       )}
 
       {/* Mobile navbar backdrop — covers area behind Safari bottom tab bar */}
