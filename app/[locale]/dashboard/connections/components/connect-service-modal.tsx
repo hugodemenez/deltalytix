@@ -1,6 +1,7 @@
 'use client'
 
 import { RithmicSyncWrapper } from '@/app/[locale]/dashboard/components/import/rithmic/sync/rithmic-sync-connection'
+import { RithmicProtocolSync } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/rithmic-protocol-sync'
 import { TradovateSync } from '@/app/[locale]/dashboard/components/import/tradovate/sync/tradovate-sync'
 import { DxFeedSync } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/dxfeed-sync'
 import { ThorSync } from '@/app/[locale]/dashboard/components/import/thor/thor-sync'
@@ -27,15 +28,17 @@ export function ConnectServiceModal({
   const title =
     service === 'rithmic'
       ? t('connections.add.rithmic')
-      : service === 'tradovate'
-        ? t('connections.add.tradovate')
-        : service === 'dxfeed'
-          ? t('connections.add.dxfeed')
-          : service === 'thor'
-            ? t('connections.add.thor')
-            : service === 'etp'
-              ? t('connections.add.etp')
-              : t('connections.addConnection')
+      : service === 'rithmic-protocol'
+        ? t('connections.add.rithmicProtocol')
+        : service === 'tradovate'
+          ? t('connections.add.tradovate')
+          : service === 'dxfeed'
+            ? t('connections.add.dxfeed')
+            : service === 'thor'
+              ? t('connections.add.thor')
+              : service === 'etp'
+                ? t('connections.add.etp')
+                : t('connections.addConnection')
 
   return (
     <Sheet
@@ -70,6 +73,12 @@ export function ConnectServiceModal({
               setIsOpen={(next: boolean) => {
                 if (!next) onClose()
               }}
+            />
+          )}
+          {service === 'rithmic-protocol' && (
+            <RithmicProtocolSync
+              initialShowAccountsManager={false}
+              onConnected={onClose}
             />
           )}
           {service === 'tradovate' && (

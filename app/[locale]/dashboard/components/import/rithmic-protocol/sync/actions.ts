@@ -4,13 +4,19 @@ import { createClient, getUserId } from '@/server/auth'
 import { saveTradesAction } from '@/server/database'
 import { prisma } from '@/lib/prisma'
 import { toConnectionViews } from '@/lib/connection-view'
+import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connections/data'
+import { upsertAccountsForNumbers } from '@/server/connections'
 import { getTickDetails } from '@/server/tick-details'
 import {
   connectAndListAccounts,
+  fetchAvailableSystems,
   fetchFillsForAccounts,
 } from '@/lib/rithmic-protocol/client'
 import { buildTradesFromRithmicFills } from '@/lib/rithmic-protocol/fills-to-trades'
-import { resolveGatewayUri } from '@/lib/rithmic-protocol/systems'
+import {
+  RITHMIC_PROTOCOL_FALLBACK_SYSTEMS,
+  resolveGatewayUri,
+} from '@/lib/rithmic-protocol/systems'
 import type {
   RithmicProtocolActionResult,
   RithmicProtocolStoredCredentials,
@@ -38,17 +44,43 @@ function parseStoredCredentials(
 ): RithmicProtocolStoredCredentials | null {
   try {
     const parsed = JSON.parse(tokenField) as RithmicProtocolStoredCredentials
-    if (
-      parsed.username &&
-      parsed.password &&
-      parsed.systemName &&
-      parsed.gatewayUri
-    ) {
-      return parsed
+    if (!parsed.username || !parsed.password || !parsed.systemName) {
+      return null
     }
-    return null
+    return {
+      ...parsed,
+      // Gateway is always server-configured (never user-edited).
+      gatewayUri: resolveGatewayUri(parsed.systemName),
+    }
   } catch {
     return null
+  }
+}
+
+/**
+ * Pre-login: ask the Protocol server for system names (Rithmic Test, …).
+ * Falls back to a static list if the probe fails.
+ */
+export async function listRithmicProtocolSystems(): Promise<{
+  systems: string[]
+  gatewayUri: string
+}> {
+  const gatewayUri = resolveGatewayUri()
+  try {
+    const systems = await fetchAvailableSystems(gatewayUri)
+    if (systems.length > 0) {
+      return { systems, gatewayUri }
+    }
+  } catch (error) {
+    logger.warn(
+      `listRithmicProtocolSystems falling back: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    )
+  }
+  return {
+    systems: [...RITHMIC_PROTOCOL_FALLBACK_SYSTEMS],
+    gatewayUri,
   }
 }
 
@@ -56,7 +88,6 @@ export async function authenticateRithmicProtocol(
   username: string,
   password: string,
   systemName: string,
-  gatewayUri?: string,
 ): Promise<RithmicProtocolActionResult> {
   try {
     const userId = await getUserId()
@@ -64,7 +95,8 @@ export async function authenticateRithmicProtocol(
       return { error: 'USER_NOT_AUTHENTICATED' }
     }
 
-    const resolvedUri = resolveGatewayUri(systemName, gatewayUri)
+    // Gateway is server-configured (Test URI / env), never user-edited.
+    const resolvedUri = resolveGatewayUri(systemName)
     logger.info(`Authenticating ${username} on ${systemName} via ${resolvedUri}`)
 
     const result = await connectAndListAccounts({
@@ -73,6 +105,7 @@ export async function authenticateRithmicProtocol(
       username,
       password,
     })
+
 
     if (result.accounts.length === 0) {
       return { error: 'NO_ACCOUNTS' }
@@ -87,9 +120,21 @@ export async function authenticateRithmicProtocol(
       accountIds,
       fcmId: result.fcmId,
       ibId: result.ibId,
+      uniqueUserId: result.uniqueUserId,
     }
 
-    await storeRithmicProtocolToken(JSON.stringify(stored), username)
+    const loginAt = new Date()
+    logger.info(
+      `Login ok unique_user_id=${result.uniqueUserId ?? '(none)'} at ${loginAt.toISOString()} (UTC) accounts=${accountIds.length}`,
+    )
+
+    const connection = await storeRithmicProtocolToken(
+      JSON.stringify(stored),
+      username,
+    )
+
+    await upsertAccountsForNumbers(userId, accountIds, connection.id)
+
 
     return {
       success: true,
@@ -114,7 +159,7 @@ export async function storeRithmicProtocolToken(
   const userId = await getUserId()
   if (!userId) throw new Error('Not authenticated')
 
-  await prisma.connection.upsert({
+  const connection = await prisma.connection.upsert({
     where: {
       userId_service_externalId: {
         userId,
@@ -135,6 +180,10 @@ export async function storeRithmicProtocolToken(
       lastSyncedAt: new Date(),
     },
   })
+
+
+  await invalidateConnectionsPageCache(userId)
+  return connection
 }
 
 export async function getRithmicProtocolToken(accountId: string) {

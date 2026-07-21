@@ -6,6 +6,8 @@ export interface RithmicProtocolStoredCredentials {
   accountIds?: string[]
   fcmId?: string
   ibId?: string
+  /** From ResponseLogin.unique_user_id — useful for Rithmic support/conformance. */
+  uniqueUserId?: string
 }
 
 export interface RithmicProtocolSyncStats {

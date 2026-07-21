@@ -29,6 +29,10 @@ const SERVICE_SECTIONS: {
   labelKey: string
 }[] = [
   { service: 'rithmic', labelKey: 'connections.sections.rithmic' },
+  {
+    service: 'rithmic-protocol',
+    labelKey: 'connections.sections.rithmicProtocol',
+  },
   { service: 'tradovate', labelKey: 'connections.sections.tradovate' },
   { service: 'dxfeed', labelKey: 'connections.sections.dxfeed' },
   { service: 'thor', labelKey: 'connections.sections.thor' },

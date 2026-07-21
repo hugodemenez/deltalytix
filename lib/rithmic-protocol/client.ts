@@ -280,18 +280,21 @@ export class RithmicProtocolClient {
     ibId?: string
     userType?: number
   }): Promise<RithmicProtocolAccount[]> {
+    const requestUserType = params.userType ?? 3
     await this.send('rti.RequestAccountList', {
       templateId: RithmicTemplateId.ACCOUNT_LIST_REQUEST,
       userMsg: ['deltalytix-accounts'],
       fcmId: params.fcmId,
       ibId: params.ibId,
-      userType: params.userType ?? 3,
+      userType: requestUserType,
     })
 
     const accounts: RithmicProtocolAccount[] = []
+    let responseCount = 0
     for (;;) {
       const msg = await this.nextMessage()
       if (msg.templateId === RithmicTemplateId.ACCOUNT_LIST_RESPONSE) {
+        responseCount += 1
         const decoded = decodeMessage<{
           rpCode?: string[]
           rqHandlerRpCode?: string[]
@@ -301,6 +304,7 @@ export class RithmicProtocolClient {
           ibId?: string
           accountCurrency?: string
         }>(this.root!, 'rti.ResponseAccountList', msg.raw)
+
 
         if (decoded.accountId) {
           accounts.push({
@@ -328,6 +332,7 @@ export class RithmicProtocolClient {
 
       // Ignore unrelated push messages during account list.
     }
+
 
     return accounts
   }
@@ -596,6 +601,31 @@ export class RithmicProtocolClient {
     }
   }
 
+  /**
+   * Pre-login probe: RequestRithmicSystemInfo → list of system_name values.
+   * Rithmic expects this on a short-lived connection before RequestLogin.
+   */
+  async requestSystemInfo(): Promise<string[]> {
+    await this.send('rti.RequestRithmicSystemInfo', {
+      templateId: RithmicTemplateId.RITHMIC_SYSTEM_INFO_REQUEST,
+      userMsg: ['deltalytix-system-info'],
+    })
+    const msg = await this.nextMessage()
+    if (msg.templateId !== RithmicTemplateId.RITHMIC_SYSTEM_INFO_RESPONSE) {
+      throw new Error(`Unexpected system info template ${msg.templateId}`)
+    }
+    const decoded = decodeMessage<{
+      rpCode?: string[]
+      systemName?: string[]
+    }>(this.root!, 'rti.ResponseRithmicSystemInfo', msg.raw)
+    if (!rpOk(decoded.rpCode)) {
+      throw new Error(`System info failed: ${rpMessage(decoded.rpCode)}`)
+    }
+    return Array.isArray(decoded.systemName)
+      ? decoded.systemName.map(String).filter(Boolean)
+      : []
+  }
+
   async logout(): Promise<void> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.root) return
     try {
@@ -608,8 +638,8 @@ export class RithmicProtocolClient {
     }
   }
 
-  async close(): Promise<void> {
-    await this.logout()
+  /** Close the socket without sending Logout (used for pre-login probes). */
+  async disconnect(): Promise<void> {
     if (this.ws) {
       try {
         this.ws.close()
@@ -619,6 +649,27 @@ export class RithmicProtocolClient {
       this.ws = null
     }
     this.closed = true
+  }
+
+  async close(): Promise<void> {
+    await this.logout()
+    await this.disconnect()
+  }
+}
+
+/**
+ * Open a short-lived websocket, ask for available system names, then close.
+ * Matches Rithmic's recommended pre-login sequence.
+ */
+export async function fetchAvailableSystems(
+  gatewayUri: string,
+): Promise<string[]> {
+  const client = new RithmicProtocolClient()
+  try {
+    await client.connect(gatewayUri)
+    return await client.requestSystemInfo()
+  } finally {
+    await client.disconnect()
   }
 }
 
