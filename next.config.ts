@@ -46,6 +46,29 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Public marketing assets are content-addressed by filename; rename on change.
+  async headers() {
+    return [
+      {
+        source: '/videos/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/logos/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ];
+  },
   pageExtensions: ['mdx', 'ts', 'tsx'],
   typescript: {
     // Keep full checking in `bun run typecheck`; do not duplicate it inside `next build`.

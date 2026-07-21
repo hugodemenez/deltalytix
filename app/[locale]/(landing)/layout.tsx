@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/context/theme-provider";
 import { I18nProviderClient } from "@/locales/landing-client";
 import { ConsentBanner } from "@/components/consent-banner";
 import { cacheLife } from "next/cache";
+import { setStaticParamsLocale } from "next-international/server";
 
 import { Metadata } from "next";
 import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
@@ -53,6 +54,7 @@ export default async function RootLayout(
 ) {
   const { children, params } = props;
   const locale = await resolveLocale(params);
+  setStaticParamsLocale(locale);
 
   return (
     <I18nProviderClient locale={locale}>

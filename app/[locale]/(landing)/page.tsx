@@ -2,6 +2,7 @@ import nextDynamic from "next/dynamic";
 import Partners from "./components/partners";
 import { setStaticParamsLocale } from "next-international/server";
 import Hero from "./components/hero";
+import HeroPosterPreloads from "./components/hero-poster-preloads";
 import { getStaticParams } from "@/locales/server";
 import {
   FAQSectionSkeleton,
@@ -40,6 +41,7 @@ export default async function LandingPage({
 
   return (
     <main className="flex flex-col">
+      <HeroPosterPreloads />
       <section className="w-full shadow-[0_1px_0_0_oklch(0_0_0/0.06)] dark:shadow-[0_1px_0_0_oklch(1_0_0/0.08)]">
         <Hero />
       </section>
