@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { SubscriptionWithPrice } from '@/server/billing'
-import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
 
 interface StripeSubscriptionStore {
   // Stripe subscription data (detailed billing info)
@@ -16,12 +15,10 @@ interface StripeSubscriptionStore {
   refreshSubscription: () => Promise<void>
 }
 
-const bypassStripe = isLocalDashboardAuthBypassEnabled()
-
 export const useStripeSubscriptionStore = create<StripeSubscriptionStore>()((set, get) => ({
-  // Initial state — skip loading spinner under local auth bypass
+  // Initial state
   stripeSubscription: null,
-  isLoading: !bypassStripe,
+  isLoading: true,
   error: null,
   
   // Actions
@@ -40,10 +37,6 @@ export const useStripeSubscriptionStore = create<StripeSubscriptionStore>()((set
   }),
   
   refreshSubscription: async () => {
-    if (isLocalDashboardAuthBypassEnabled()) {
-      set({ stripeSubscription: null, error: null, isLoading: false })
-      return
-    }
     try {
       set({ isLoading: true, error: null });
       const { getSubscriptionData } = await import('@/server/billing');
