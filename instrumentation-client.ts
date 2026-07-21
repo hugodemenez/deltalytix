@@ -1,5 +1,3 @@
-import posthog from "posthog-js";
-
 const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
 const apiHost = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com";
 const ANALYTICS_CONSENT_COOKIE = "deltalytix_analytics_consent";
@@ -35,8 +33,41 @@ function hasAnalyticsConsent() {
   }
 }
 
-if (projectToken) {
-  posthog.init(projectToken, {
+/** App shells need PostHog sooner (flags / identity). Marketing can wait. */
+function isAppShellPath(pathname: string) {
+  return (
+    pathname.includes("/dashboard") ||
+    pathname.includes("/authentication") ||
+    pathname.includes("/admin") ||
+    pathname.includes("/billing")
+  );
+}
+
+function scheduleDeferred(task: () => void, idleTimeoutMs: number) {
+  const run = () => {
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(() => task(), { timeout: idleTimeoutMs });
+      return;
+    }
+    window.setTimeout(task, Math.min(idleTimeoutMs, 2500));
+  };
+
+  if (document.readyState === "complete") {
+    run();
+    return;
+  }
+
+  window.addEventListener("load", run, { once: true });
+}
+
+async function initPostHog(options?: { marketing?: boolean }) {
+  const { default: posthog } = await import("posthog-js");
+
+  if (posthog.__loaded) return posthog;
+
+  const marketing = options?.marketing ?? false;
+
+  posthog.init(projectToken!, {
     api_host: apiHost,
     defaults: "2026-05-30",
     person_profiles: "identified_only",
@@ -46,7 +77,26 @@ if (projectToken) {
     capture_pageview: true,
     capture_pageleave: true,
     disable_session_recording: true,
+    // Marketing: skip external surveys script + flag bootstrap on the critical path.
+    disable_external_dependency_loading: marketing,
+    advanced_disable_feature_flags: marketing,
   });
+
+  return posthog;
 }
 
-export { posthog };
+if (projectToken && typeof window !== "undefined") {
+  const appShell = isAppShellPath(window.location.pathname);
+
+  if (appShell) {
+    // Still avoid competing with hydration: load after the window load event.
+    scheduleDeferred(() => {
+      void initPostHog({ marketing: false });
+    }, 1500);
+  } else {
+    // Marketing: wait for idle so LCP/TBT are not blocked by ~200KB+ of analytics JS.
+    scheduleDeferred(() => {
+      void initPostHog({ marketing: true });
+    }, 5000);
+  }
+}

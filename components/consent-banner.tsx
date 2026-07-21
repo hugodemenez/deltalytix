@@ -36,9 +36,16 @@ async function syncPostHogConsent(analyticsEnabled: boolean) {
     document.cookie = `${ANALYTICS_CONSENT_COOKIE}=${value}; ${attributes}; Domain=.deltalytix.app`
   }
 
+  // PostHog may still be deferred on marketing routes; persistence is enough until init.
   if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return
 
   const { default: posthog } = await import("posthog-js")
+
+  // Prefer not to force-load analytics during consent clicks on cold marketing loads.
+  if (!posthog.__loaded) {
+    window.dispatchEvent(new Event(CONSENT_EVENT))
+    return
+  }
 
   if (analyticsEnabled) {
     const wasOptedOut = posthog.has_opted_out_capturing()
