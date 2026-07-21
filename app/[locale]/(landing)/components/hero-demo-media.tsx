@@ -87,11 +87,14 @@ export default function HeroDemoMedia({ demoVideoLabel }: HeroDemoMediaProps) {
         (navigator as Navigator & { connection?: { saveData?: boolean } })
           .connection?.saveData,
       );
+    // Mobile lab/field profiles are bandwidth-constrained; keep the optimized
+    // poster as the permanent visual there instead of fetching a multi‑MB MP4.
+    const preferPosterOnly = window.matchMedia("(max-width: 768px)").matches;
 
     // Keep the optimized poster as LCP; only upgrade to video after idle and
     // when the demo is near the viewport. Skip autoplay video when the user
-    // prefers reduced motion or has data-saver enabled.
-    if (reduceMotion || saveData) return;
+    // prefers reduced motion, has data-saver enabled, or is on a narrow viewport.
+    if (reduceMotion || saveData || preferPosterOnly) return;
 
     let idleId: number | undefined;
     let timeoutId: number | undefined;
