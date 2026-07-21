@@ -14,22 +14,18 @@ import WhenVisible from "./components/when-visible";
 
 const Features = nextDynamic(() => import("./components/features"), {
   loading: () => <FeaturesSectionSkeleton />,
-  ssr: false,
 });
 
 const PricingPage = nextDynamic(() => import("./pricing/page"), {
   loading: () => <PricingSectionSkeleton />,
-  ssr: false,
 });
 
 const FAQ = nextDynamic(() => import("./components/faq"), {
   loading: () => <FAQSectionSkeleton />,
-  ssr: false,
 });
 
 const OpenSource = nextDynamic(() => import("./components/open-source"), {
   loading: () => <OpenSourceSectionSkeleton />,
-  ssr: false,
 });
 
 export function generateStaticParams() {
