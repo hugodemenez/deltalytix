@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import protobuf from 'protobufjs'
 import WebSocket from 'ws'
 import {
@@ -18,7 +19,8 @@ import {
   normalizeGatewayUri,
 } from './systems'
 
-const PROTO_DIR = path.join(process.cwd(), 'lib/rithmic-protocol/proto')
+/** Proto dir next to this module — traced into Vercel/serverless via next.config. */
+const PROTO_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'proto')
 
 const PROTO_FILES = [
   'base.proto',

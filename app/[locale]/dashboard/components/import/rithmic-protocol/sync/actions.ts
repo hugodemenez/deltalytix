@@ -3,7 +3,11 @@
 import { createClient, getUserId } from '@/server/auth'
 import { saveTradesAction } from '@/server/database'
 import { prisma } from '@/lib/prisma'
-import { toConnectionViews } from '@/lib/connection-view'
+import {
+  decryptConnectionToken,
+  encryptConnectionToken,
+} from '@/lib/connection-token-crypto'
+import { toDecryptedConnectionViews } from '@/lib/connection-view'
 import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connections/data'
 import { upsertAccountsForNumbers } from '@/server/connections'
 import { getTickDetails } from '@/server/tick-details'
@@ -159,6 +163,8 @@ export async function storeRithmicProtocolToken(
   const userId = await getUserId()
   if (!userId) throw new Error('Not authenticated')
 
+  const encryptedToken = encryptConnectionToken(tokenJson)
+
   const connection = await prisma.connection.upsert({
     where: {
       userId_service_externalId: {
@@ -168,7 +174,7 @@ export async function storeRithmicProtocolToken(
       },
     },
     update: {
-      token: tokenJson,
+      token: encryptedToken,
       lastSyncedAt: new Date(),
       includedFeeTypes: undefined,
     },
@@ -176,11 +182,10 @@ export async function storeRithmicProtocolToken(
       userId,
       service: SERVICE,
       externalId: accountId,
-      token: tokenJson,
+      token: encryptedToken,
       lastSyncedAt: new Date(),
     },
   })
-
 
   await invalidateConnectionsPageCache(userId)
   return connection
@@ -206,7 +211,12 @@ export async function getRithmicProtocolToken(accountId: string) {
     return { error: 'NO_TOKEN_RECONNECT' as const }
   }
 
-  return { storedTokenJson: row.token, lastSyncedAt: row.lastSyncedAt }
+  const storedTokenJson = decryptConnectionToken(row.token)
+  if (!storedTokenJson) {
+    return { error: 'NO_TOKEN_RECONNECT' as const }
+  }
+
+  return { storedTokenJson, lastSyncedAt: row.lastSyncedAt }
 }
 
 export async function removeRithmicProtocolToken(accountId: string) {
@@ -238,7 +248,7 @@ export async function getRithmicProtocolSynchronizations() {
       orderBy: { updatedAt: 'desc' },
     })
 
-    return { synchronizations: toConnectionViews(synchronizations) }
+    return { synchronizations: toDecryptedConnectionViews(synchronizations) }
   } catch (error) {
     logger.error('getRithmicProtocolSynchronizations failed', error)
     return { error: 'LOAD_SYNCHRONIZATIONS_FAILED' as const }
