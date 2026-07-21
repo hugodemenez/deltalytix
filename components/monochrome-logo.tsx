@@ -28,6 +28,8 @@ export function ThemeAwareLogo({
   darkPath,
   alt = '',
   size = 24,
+  width,
+  height,
   className,
   priority = false,
 }: {
@@ -35,18 +37,25 @@ export function ThemeAwareLogo({
   darkPath?: string
   alt?: string
   size?: number
+  /** Intrinsic width when the asset is not square (prefer over `size`). */
+  width?: number
+  /** Intrinsic height when the asset is not square (prefer over `size`). */
+  height?: number
   className?: string
   priority?: boolean
 }) {
   if (!path) return null
 
+  const w = width ?? size
+  const h = height ?? size
+
   return (
     <Image
       src={path}
       alt={alt}
-      width={size}
-      height={size}
-      sizes={`${size}px`}
+      width={w}
+      height={h}
+      sizes={`${Math.max(w, h)}px`}
       priority={priority}
       className={cn(
         'object-contain',

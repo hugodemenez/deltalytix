@@ -10,6 +10,10 @@ TypeScript client for Rithmic's WebSocket + protobuf **R | Protocol API**, used 
 - `client.ts` — system-info probe, ORDER_PLANT login, account list, fill / order-history fetch
 - `fills-to-trades.ts` — FIFO round-trip matching into Deltalytix `Trade` rows
 
+Proto files are loaded from disk at runtime. On Vercel they must be listed in
+`next.config.ts` → `outputFileTracingIncludes` (including Connections server
+actions, not only `/api/rithmic-protocol/*`).
+
 ## Connection sequence (Rithmic)
 
 1. Open `wss://…` (SSL only), send `RequestRithmicSystemInfo`, record `system_name` values, close.

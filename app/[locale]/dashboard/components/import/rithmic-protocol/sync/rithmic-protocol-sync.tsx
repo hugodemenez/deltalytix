@@ -276,15 +276,17 @@ export function RithmicProtocolSync({
             path="/logos/monochrome/trading-platform-by-rithmic-black.png"
             darkPath="/logos/monochrome/trading-platform-by-rithmic-white.png"
             alt="Trading Platform by Rithmic"
-            size={120}
-            className="h-10 w-auto"
+            width={164}
+            height={35}
+            className="h-7 w-auto"
           />
           <ThemeAwareLogo
             path="/logos/monochrome/powered-by-omne-black.png"
             darkPath="/logos/monochrome/powered-by-omne-white.png"
             alt="Powered by OMNE"
-            size={120}
-            className="h-10 w-auto"
+            width={141}
+            height={15}
+            className="h-3.5 w-auto"
           />
         </div>
         <p>{t('import.type.copyright.rithmic')}</p>
