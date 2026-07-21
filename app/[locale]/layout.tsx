@@ -6,6 +6,13 @@ export function generateStaticParams() {
   return getStaticParams();
 }
 
+/**
+ * Locale must be read from `params` to seed `I18nProviderClient`, so this
+ * segment cannot share a URL-agnostic App Shell. Nested routes (e.g. dashboard
+ * pages with `export const instant = true`) remain independently validated.
+ */
+export const instant = false;
+
 export default async function LocaleLayout({
   children,
   params,
