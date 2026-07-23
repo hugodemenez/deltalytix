@@ -169,6 +169,7 @@ export function PlatformTutorial({
           </div>
           <p>{t("import.type.copyright.platform")}</p>
           <p>{t("import.type.copyright.omne")}</p>
+          <p>{t("import.type.copyright.omneSoftware")}</p>
         </div>
       )}
 

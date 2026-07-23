@@ -836,6 +836,7 @@ export function RithmicSyncWrapper({
         <p>{t('import.type.copyright.protocol')}</p>
         <p>{t('import.type.copyright.platform')}</p>
         <p>{t('import.type.copyright.omne')}</p>
+        <p>{t('import.type.copyright.omneSoftware')}</p>
       </div>
     </div>
   )
