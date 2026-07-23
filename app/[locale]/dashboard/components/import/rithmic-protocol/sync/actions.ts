@@ -348,6 +348,27 @@ export async function getRithmicProtocolTrades(
       return { processedTrades: [], savedCount: 0, tradesCount: 0, syncStats }
     }
 
+    // Attach trading accounts to the Connection on every sync so accounts that
+    // only appear during fill processing (or that were created before linking)
+    // leave the standalone bucket.
+    const connection = await prisma.connection.findUnique({
+      where: {
+        userId_service_externalId: {
+          userId,
+          service: SERVICE,
+          externalId: credentials.username,
+        },
+      },
+      select: { id: true },
+    })
+    if (connection && resolvedAccountIds.length > 0) {
+      await upsertAccountsForNumbers(
+        userId,
+        resolvedAccountIds,
+        connection.id,
+      )
+    }
+
     logger.info(
       `Fetching fills for ${resolvedAccountIds.length} accounts (${LOOKBACK_DAYS}d lookback, ≤30d windows)`,
     )
@@ -385,9 +406,28 @@ export async function getRithmicProtocolTrades(
     syncStats.closedTrades = trades.length
     syncStats.openTradesSkipped = openSkipped
 
+    // Also link any account numbers that appear only on fills/trades.
+    const tradeAccountNumbers = [
+      ...new Set(
+        trades
+          .map((trade) => trade.accountNumber)
+          .filter((n): n is string => Boolean(n)),
+      ),
+    ]
+    if (connection && tradeAccountNumbers.length > 0) {
+      await upsertAccountsForNumbers(
+        userId,
+        tradeAccountNumbers,
+        connection.id,
+      )
+    }
+
     let savedCount = 0
     if (trades.length > 0) {
-      const saveResult = await saveTradesAction(trades, { userId })
+      const saveResult = await saveTradesAction(trades, {
+        userId,
+        connectionId: connection?.id,
+      })
       if (saveResult.error === 'DUPLICATE_TRADES') {
         return { error: 'DUPLICATE_TRADES', syncStats, tradesCount: trades.length }
       }
@@ -409,6 +449,8 @@ export async function getRithmicProtocolTrades(
       },
       data: { lastSyncedAt: new Date() },
     })
+
+    await invalidateConnectionsPageCache(userId)
 
     return {
       processedTrades: trades,

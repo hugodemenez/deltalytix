@@ -436,13 +436,19 @@ export function RithmicSyncConnection({
 
     // Save credentials and accounts locally
     saveCredentialsAndAccounts()
-    // Store synchronization data in db
+
+    // Use all available accounts if allAccounts is true
+    const accountsToSync = allAccounts ? availableAccounts.map(acc => acc.account_id) : selectedAccounts
+
+    // Store synchronization data in db and attach trading accounts to the
+    // Connection so they appear under Rithmic instead of Standalone.
     try {
       await setRithmicSynchronization({
         service: 'rithmic',
         accountId: credentials.username || '',
         token: token,
-        tokenExpiresAt: null
+        tokenExpiresAt: null,
+        accountNumbers: accountsToSync,
       })
       captureConnectionCreated('rithmic')
     } catch (error) {
@@ -452,8 +458,6 @@ export function RithmicSyncConnection({
       })
     }
 
-    // Use all available accounts if allAccounts is true
-    const accountsToSync = allAccounts ? availableAccounts.map(acc => acc.account_id) : selectedAccounts
     const startDate = calculateStartDate(accountsToSync)
     console.log('Connecting to WebSocket:', wsUrl)
     connect(wsUrl, token, accountsToSync, startDate)
