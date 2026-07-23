@@ -9,7 +9,7 @@ import { MOBILE_CAROUSEL_HEIGHT } from '@/lib/widget-carousel'
 export function DashboardHomeContentSkeleton() {
   return (
     <div
-      className="min-w-0 overflow-hidden px-0 max-md:h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem))] sm:px-4"
+      className="min-w-0 overflow-hidden px-0 max-md:h-[calc(100dvh-var(--navbar-height,4rem)-var(--tabs-height,3rem))] sm:px-4"
       aria-busy="true"
       aria-live="polite"
     >
@@ -40,7 +40,7 @@ export function WidgetCanvasSkeleton() {
 
       {/* Desktop: one full-page placeholder (no fake widget tiles) */}
       <div className="relative hidden w-full md:mt-6 md:block md:min-h-screen md:pb-16">
-        <Skeleton className="min-h-[min(70vh,40rem)] w-full rounded-lg md:min-h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem)-6rem)]" />
+        <Skeleton className="min-h-[min(70vh,40rem)] w-full rounded-lg md:min-h-[calc(100dvh-var(--navbar-height,4rem)-var(--tabs-height,3rem)-6rem)]" />
       </div>
     </div>
   )

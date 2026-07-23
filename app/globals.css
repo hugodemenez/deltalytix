@@ -197,6 +197,10 @@
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
     --radius: 0.5rem;
+    /* Dashboard sticky nav is h-16 (4rem) + optional iOS safe-area inset.
+       Fixed tab chrome uses this before JS measures the real nav height. */
+    --navbar-height: calc(4rem + env(safe-area-inset-top, 0px));
+    --tabs-height: 3rem;
     --sidebar-background: 0 0% var(--theme-intensity, 98%);
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;

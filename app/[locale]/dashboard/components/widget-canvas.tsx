@@ -844,7 +844,7 @@ export default function WidgetCanvas() {
         // Before viewport is known: mobile-sized shell that expands on md+
         // so we never paint the desktop grid on a phone for a frame.
         !isLayoutReady &&
-          "overflow-hidden md:mt-6 md:min-h-screen md:overflow-visible md:pb-16 max-md:[height:calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem)-var(--mobile-toolbar-top,5.5rem))]",
+          "overflow-hidden md:mt-6 md:min-h-screen md:overflow-visible md:pb-16 max-md:[height:calc(100dvh-var(--navbar-height,4rem)-var(--tabs-height,3rem)-var(--mobile-toolbar-top,5.5rem))]",
         isLayoutReady && useMobileCarousel && "mt-0 overflow-hidden",
         isLayoutReady && !useMobileCarousel && "mt-6 pb-16 min-h-screen",
       )}
