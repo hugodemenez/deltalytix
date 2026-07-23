@@ -5,6 +5,8 @@ import { Connection } from "@/prisma/generated/prisma/client"
 import { toDecryptedConnectionViews } from "@/lib/connection-view"
 import { encryptConnectionToken } from "@/lib/connection-token-crypto"
 import { capturePostHogEvent } from "@/lib/posthog-server"
+import { upsertAccountsForNumbers } from "@/server/connections"
+import { invalidateConnectionsPageCache } from "@/app/[locale]/dashboard/connections/data"
 
 export async function getRithmicSynchronizations() {
   console.log('CHECKING RITHMIC SYNCHRONIZATIONS')
@@ -15,7 +17,17 @@ export async function getRithmicSynchronizations() {
   return toDecryptedConnectionViews(connections)
 }
 
-export async function setRithmicSynchronization(synchronization: Partial<Connection> & { accountId?: string }) {
+/**
+ * Upsert the Rithmic Connection and optionally attach trading accounts so they
+ * leave the Connections page "standalone / imported without broker sync" bucket.
+ */
+export async function setRithmicSynchronization(
+  synchronization: Partial<Connection> & {
+    accountId?: string
+    /** Trading account numbers to attach to this Connection */
+    accountNumbers?: string[]
+  }
+) {
   console.log('SETTING RITHMIC SYNCHRONIZATION')
   const userId = await getUserId()
   const service = synchronization.service || 'rithmic'
@@ -30,7 +42,7 @@ export async function setRithmicSynchronization(synchronization: Partial<Connect
     },
     select: { id: true },
   })
-  await prisma.connection.upsert({
+  const connection = await prisma.connection.upsert({
     where: { 
       userId_service_externalId: {
         userId: userId,
@@ -62,6 +74,13 @@ export async function setRithmicSynchronization(synchronization: Partial<Connect
     },
   })
 
+  const accountNumbers = synchronization.accountNumbers ?? []
+  if (accountNumbers.length > 0) {
+    await upsertAccountsForNumbers(userId, accountNumbers, connection.id)
+  }
+
+  await invalidateConnectionsPageCache(userId)
+
   await capturePostHogEvent({
     distinctId: userId,
     event: 'integration_connected',
@@ -70,6 +89,8 @@ export async function setRithmicSynchronization(synchronization: Partial<Connect
       is_first_connection: !existingConnection,
     },
   })
+
+  return connection
 }
 
 export async function removeRithmicSynchronization(accountId: string) {
@@ -83,4 +104,6 @@ export async function removeRithmicSynchronization(accountId: string) {
       externalId: accountId,
     },
   })
+
+  await invalidateConnectionsPageCache(userId)
 }
