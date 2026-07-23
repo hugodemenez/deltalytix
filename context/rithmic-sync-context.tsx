@@ -652,7 +652,7 @@ export function RithmicSyncContextProvider({
           message: `Starting automatic background sync for ${savedData.name || savedData.credentials.username}`,
         });
 
-        // Update last sync time in the database
+        // Update last sync time in the database and (re)link trading accounts
         // Call API route instead of server action
         const syncResponse = await fetch("/api/rithmic/synchronizations", {
           method: "POST",
@@ -660,6 +660,7 @@ export function RithmicSyncContextProvider({
           body: JSON.stringify({
             accountId: savedData.id,
             lastSyncedAt: new Date(),
+            accountNumbers: accountsToSync,
           }),
         });
 
