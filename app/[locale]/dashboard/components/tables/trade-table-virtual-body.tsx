@@ -8,10 +8,12 @@ import { cn } from "@/lib/utils";
 const ROW_HEIGHT_ESTIMATE = 44;
 const ROW_HEIGHT_ESTIMATE_COMPACT = 36;
 const VIRTUAL_OVERSCAN = 10;
+/** Cap non-virtual fallback so a zero-height container can't mount thousands of DOM rows. */
+const NON_VIRTUAL_FALLBACK_LIMIT = 100;
 
 interface TradeTableVirtualBodyProps<TData> {
   table: Table<TData>;
-  scrollElementRef: React.RefObject<HTMLDivElement | null>;
+  scrollElement: HTMLDivElement | null;
   columnCount: number;
   compact?: boolean;
 }
@@ -61,7 +63,7 @@ function TradeTableBodyRow<TData>({
 
 export function TradeTableVirtualBody<TData>({
   table,
-  scrollElementRef,
+  scrollElement,
   columnCount,
   compact = false,
 }: TradeTableVirtualBodyProps<TData>) {
@@ -69,10 +71,12 @@ export function TradeTableVirtualBody<TData>({
 
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
-    getScrollElement: () => scrollElementRef.current,
+    getScrollElement: () => scrollElement,
     estimateSize: () =>
       compact ? ROW_HEIGHT_ESTIMATE_COMPACT : ROW_HEIGHT_ESTIMATE,
     overscan: VIRTUAL_OVERSCAN,
+    // Prefer a usable first paint before the flex layout settles a real height.
+    initialRect: { width: 0, height: 400 },
   });
 
   const virtualRows = rowVirtualizer.getVirtualItems();
@@ -81,6 +85,15 @@ export function TradeTableVirtualBody<TData>({
     virtualRows.length > 0
       ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end
       : 0;
+
+  // Remeasure when the scroll parent mounts or rows appear but the range is empty
+  // (common when the flex container reports height 0 on the first layout pass).
+  React.useLayoutEffect(() => {
+    if (!scrollElement || rows.length === 0) return;
+    if (virtualRows.length === 0) {
+      rowVirtualizer.measure();
+    }
+  }, [scrollElement, rows.length, virtualRows.length, rowVirtualizer]);
 
   if (rows.length === 0) {
     return (
@@ -93,6 +106,24 @@ export function TradeTableVirtualBody<TData>({
             No results.
           </td>
         </tr>
+      </tbody>
+    );
+  }
+
+  // If the virtualizer still has no range (e.g. height still 0), render a capped
+  // non-virtual slice so the table is never blank on init.
+  if (virtualRows.length === 0) {
+    const fallbackRows = rows.slice(0, NON_VIRTUAL_FALLBACK_LIMIT);
+    return (
+      <tbody className="bg-background [&_tr:last-child]:border-0">
+        {fallbackRows.map((row, rowIndex) => (
+          <TradeTableBodyRow
+            key={row.id}
+            row={row}
+            rowIndex={rowIndex}
+            compact={compact}
+          />
+        ))}
       </tbody>
     );
   }

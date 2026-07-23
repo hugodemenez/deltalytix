@@ -10,6 +10,18 @@ export interface TableColumnConfig {
   order: number
 }
 
+export const DEFAULT_TRADE_TABLE_PAGE_SIZE = 50
+
+/** Coerce persisted/UI page sizes; 0 breaks TanStack pagination (empty page). */
+export function sanitizeTablePageSize(
+  pageSize: unknown,
+  fallback: number = DEFAULT_TRADE_TABLE_PAGE_SIZE,
+): number {
+  const n = typeof pageSize === 'number' ? pageSize : Number(pageSize)
+  if (!Number.isFinite(n) || n <= 0) return fallback
+  return Math.floor(n)
+}
+
 export interface TableConfig {
   id: string
   columns: TableColumnConfig[]
@@ -69,9 +81,26 @@ const defaultTradeTableConfig: TableConfig = {
   columnVisibility: {},
   sorting: [{ id: 'entryDate', desc: true }],
   columnFilters: [],
-  pageSize: 10,
+  pageSize: DEFAULT_TRADE_TABLE_PAGE_SIZE,
   groupingGranularity: 0,
   groupingMode: 'time',
+}
+
+function sanitizeTablesPageSizes(
+  tables: Record<string, TableConfig>,
+): Record<string, TableConfig> {
+  let changed = false
+  const next: Record<string, TableConfig> = {}
+  for (const [tableId, config] of Object.entries(tables)) {
+    const pageSize = sanitizeTablePageSize(config.pageSize)
+    if (pageSize !== config.pageSize) {
+      changed = true
+      next[tableId] = { ...config, pageSize }
+    } else {
+      next[tableId] = config
+    }
+  }
+  return changed ? next : tables
 }
 
 export const useTableConfigStore = create<TableConfigState>()(
@@ -246,7 +275,7 @@ export const useTableConfigStore = create<TableConfigState>()(
           ...state.tables,
           [tableId]: {
             ...state.tables[tableId],
-            pageSize,
+            pageSize: sanitizeTablePageSize(pageSize),
           },
         },
       })),
@@ -290,6 +319,26 @@ export const useTableConfigStore = create<TableConfigState>()(
     {
       name: 'table-config-store',
       storage: createJSONStorage(() => localStorage),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<TableConfigState> | undefined
+        const tables = sanitizeTablesPageSizes({
+          ...currentState.tables,
+          ...(persisted?.tables ?? {}),
+        })
+        return {
+          ...currentState,
+          ...persisted,
+          tables,
+        }
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state) return
+        state.migrateOldColumns()
+        const tables = sanitizeTablesPageSizes(state.tables)
+        if (tables !== state.tables) {
+          useTableConfigStore.setState({ tables })
+        }
+      },
     }
   )
 ) 
