@@ -101,6 +101,12 @@ function rpOk(rpCode: unknown): boolean {
   return String(rpCode[0]) === '0'
 }
 
+/** Rithmic rp_code `7 no data` — empty history window, not a hard failure. */
+function rpIsNoData(rpCode: unknown): boolean {
+  if (!Array.isArray(rpCode) || rpCode.length === 0) return false
+  return String(rpCode[0]) === '7'
+}
+
 function rpMessage(rpCode: unknown): string {
   if (!Array.isArray(rpCode)) return 'Unknown Rithmic error'
   return rpCode.map(String).join(' ')
@@ -415,10 +421,10 @@ export class RithmicProtocolClient {
         }
 
         if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
-          if (!rpOk(decoded.rpCode)) {
-            throw new Error(`Fill history failed: ${rpMessage(decoded.rpCode)}`)
+          if (rpOk(decoded.rpCode) || rpIsNoData(decoded.rpCode)) {
+            break
           }
-          break
+          throw new Error(`Fill history failed: ${rpMessage(decoded.rpCode)}`)
         }
         continue
       }
@@ -432,6 +438,69 @@ export class RithmicProtocolClient {
 
       if (msg.templateId === RithmicTemplateId.REJECT) {
         throw new Error('Fill history rejected by Rithmic')
+      }
+
+      if (
+        msg.templateId === RithmicTemplateId.HEARTBEAT_RESPONSE ||
+        msg.templateId === RithmicTemplateId.RITHMIC_ORDER_NOTIFICATION
+      ) {
+        continue
+      }
+    }
+
+    return fills
+  }
+
+  /**
+   * Replay recent executions (template 3506). On Rithmic Test, same-day fills often
+   * appear here before ShowFillHistory / order-history dates publish the trade date.
+   */
+  async replayExecutions(params: {
+    fcmId?: string
+    ibId?: string
+    accountId: string
+    startSsboe: number
+    finishSsboe: number
+  }): Promise<RithmicProtocolFill[]> {
+    await this.send('rti.RequestReplayExecutions', {
+      templateId: RithmicTemplateId.REPLAY_EXECUTIONS_REQUEST,
+      userMsg: ['deltalytix-replay-executions'],
+      fcmId: params.fcmId,
+      ibId: params.ibId,
+      accountId: params.accountId,
+      startIndex: params.startSsboe,
+      finishIndex: params.finishSsboe,
+    })
+
+    const fills: RithmicProtocolFill[] = []
+    for (;;) {
+      const msg = await this.nextMessage(60_000)
+
+      if (msg.templateId === RithmicTemplateId.EXCHANGE_ORDER_NOTIFICATION) {
+        const fill = this.decodeExchangeFill(msg.raw, params.accountId)
+        if (fill) fills.push(fill)
+        continue
+      }
+
+      if (msg.templateId === RithmicTemplateId.REPLAY_EXECUTIONS_RESPONSE) {
+        const decoded = decodeMessage<{ rpCode?: string[] }>(
+          this.root!,
+          'rti.ResponseReplayExecutions',
+          msg.raw,
+        )
+        if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
+          if (rpOk(decoded.rpCode) || rpIsNoData(decoded.rpCode)) {
+            break
+          }
+          throw new Error(
+            `Replay executions failed: ${rpMessage(decoded.rpCode)}`,
+          )
+        }
+        continue
+      }
+
+      if (msg.templateId === RithmicTemplateId.REJECT) {
+        throw new Error('Replay executions rejected by Rithmic')
       }
 
       if (
@@ -472,10 +541,13 @@ export class RithmicProtocolClient {
       if (Array.isArray(decoded.date)) {
         dates.push(...decoded.date.map(String))
       }
-      if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
-        if (!rpOk(decoded.rpCode)) {
-          throw new Error(`History dates failed: ${rpMessage(decoded.rpCode)}`)
-        }
+        if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
+          if (rpIsNoData(decoded.rpCode)) {
+            break
+          }
+          if (!rpOk(decoded.rpCode)) {
+            throw new Error(`History dates failed: ${rpMessage(decoded.rpCode)}`)
+          }
         break
       }
     }
@@ -530,6 +602,9 @@ export class RithmicProtocolClient {
           msg.raw,
         )
         if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
+          if (rpIsNoData(decoded.rpCode)) {
+            break
+          }
           if (!rpOk(decoded.rpCode)) {
             throw new Error(
               `Order history summary failed: ${rpMessage(decoded.rpCode)}`,
@@ -552,7 +627,8 @@ export class RithmicProtocolClient {
     fallbackAccountId: string,
   ): RithmicProtocolFill | null {
     const decoded = decodeMessage<{
-      notifyType?: number
+      notifyType?: number | string
+      reportType?: string
       isSnapshot?: boolean
       accountId?: string
       fcmId?: string
@@ -574,7 +650,16 @@ export class RithmicProtocolClient {
       quantity?: number
     }>(this.root!, 'rti.ExchangeOrderNotification', raw)
 
-    if (decoded.notifyType != null && decoded.notifyType !== EXCHANGE_NOTIFY_FILL) {
+    if (decoded.notifyType != null) {
+      const notify = decoded.notifyType
+      const isFill =
+        notify === EXCHANGE_NOTIFY_FILL ||
+        String(notify).toUpperCase() === 'FILL'
+      if (!isFill) return null
+    } else if (
+      decoded.reportType != null &&
+      String(decoded.reportType).toLowerCase() !== 'fill'
+    ) {
       return null
     }
 
@@ -711,7 +796,9 @@ export async function fetchFillsForAccounts(params: {
   ibId?: string
   accountIds: string[]
   lookbackDays: number
-}): Promise<RithmicProtocolFill[]> {
+}): Promise<{ fills: RithmicProtocolFill[]; uniqueUserId?: string }> {
+  /** Rithmic guidance: ≤30 days of fill history per ShowFillHistory request. */
+  const MAX_FILL_WINDOW_DAYS = 30
   const client = new RithmicProtocolClient()
   const fills: RithmicProtocolFill[] = []
   try {
@@ -724,44 +811,134 @@ export async function fetchFillsForAccounts(params: {
     const info = await client.loginInfo()
     const fcmId = params.fcmId || info.fcmId || login.fcmId
     const ibId = params.ibId || info.ibId || login.ibId
+    const uniqueUserId = login.uniqueUserId
+
+    console.log(
+      `[RITHMIC-PROTOCOL] Sync session unique_user_id=${uniqueUserId ?? '(none)'} at ${new Date().toISOString()} (UTC)`,
+    )
 
     const end = new Date()
-    const start = new Date(end.getTime() - params.lookbackDays * 24 * 60 * 60 * 1000)
-    const toYmd = (d: Date) =>
-      Number(
-        `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`,
-      )
-    const startYmd = toYmd(start)
-    const endYmd = toYmd(end)
-    const startYmdStr = String(startYmd)
+    const lookbackDays = Math.max(1, params.lookbackDays)
+    const windows = buildUtcFillHistoryWindows(end, lookbackDays, MAX_FILL_WINDOW_DAYS)
+    const earliestStart = windows[0]?.start ?? end
+    const startYmdStr = toYyyymmddString(earliestStart)
 
+    // Accounts and ≤30-day windows are requested serially (await each response fully).
     for (const accountId of params.accountIds) {
+      let usedFallback = false
+      for (const window of windows) {
+        try {
+          const accountFills = await client.getFillHistory({
+            fcmId,
+            ibId,
+            accountId,
+            startDateYyyymmdd: toYyyymmddNumber(window.start),
+            endDateYyyymmdd: toYyyymmddNumber(window.end),
+          })
+          fills.push(...accountFills)
+        } catch (error) {
+          console.warn(
+            `[RITHMIC-PROTOCOL] Fill history failed for ${accountId} (${toYyyymmddString(window.start)}–${toYyyymmddString(window.end)}), falling back to order history`,
+            error instanceof Error ? error.message : error,
+          )
+          if (!usedFallback) {
+            usedFallback = true
+            const fallback = await client.getFillsViaOrderHistory({
+              fcmId,
+              ibId,
+              accountId,
+              startDateYyyymmdd: startYmdStr,
+            })
+            fills.push(...fallback)
+          }
+          break
+        }
+      }
+
+      // Same-day fills on Test often land in ReplayExecutions before ShowFillHistory
+      // publishes the trade date (history dates currently lag behind UTC "today").
+      const finishSsboe = Math.floor(Date.now() / 1000) + 60
+      const startSsboe = finishSsboe - Math.min(lookbackDays, 2) * 24 * 60 * 60
       try {
-        const accountFills = await client.getFillHistory({
+        const replayed = await client.replayExecutions({
           fcmId,
           ibId,
           accountId,
-          startDateYyyymmdd: startYmd,
-          endDateYyyymmdd: endYmd,
+          startSsboe,
+          finishSsboe,
         })
-        fills.push(...accountFills)
+        if (replayed.length > 0) {
+          console.log(
+            `[RITHMIC-PROTOCOL] ReplayExecutions returned ${replayed.length} fill(s) for ${accountId}`,
+          )
+          fills.push(...replayed)
+        }
       } catch (error) {
         console.warn(
-          `[RITHMIC-PROTOCOL] Fill history failed for ${accountId}, falling back to order history`,
+          `[RITHMIC-PROTOCOL] ReplayExecutions failed for ${accountId}`,
           error instanceof Error ? error.message : error,
         )
-        const fallback = await client.getFillsViaOrderHistory({
-          fcmId,
-          ibId,
-          accountId,
-          startDateYyyymmdd: startYmdStr,
-        })
-        fills.push(...fallback)
       }
     }
 
-    return fills
+    return { fills: dedupeFills(fills), uniqueUserId }
   } finally {
     await client.close()
   }
+}
+
+function toYyyymmddNumber(d: Date): number {
+  return Number(toYyyymmddString(d))
+}
+
+function toYyyymmddString(d: Date): string {
+  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`
+}
+
+function dedupeFills(fills: RithmicProtocolFill[]): RithmicProtocolFill[] {
+  const seen = new Set<string>()
+  const out: RithmicProtocolFill[] = []
+  for (const fill of fills) {
+    const key = [
+      fill.accountId,
+      fill.basketId ?? '',
+      fill.fillId ?? '',
+      fill.symbol,
+      fill.transactionType,
+      fill.fillPrice,
+      fill.fillSize,
+      fill.ssboe ?? '',
+      fill.fillDate ?? '',
+      fill.fillTime ?? '',
+    ].join('|')
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(fill)
+  }
+  return out
+}
+
+/** Oldest → newest windows of at most `maxWindowDays` (UTC calendar days). */
+function buildUtcFillHistoryWindows(
+  end: Date,
+  lookbackDays: number,
+  maxWindowDays: number,
+): Array<{ start: Date; end: Date }> {
+  const windows: Array<{ start: Date; end: Date }> = []
+  let windowEnd = new Date(
+    Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()),
+  )
+  let remaining = lookbackDays
+
+  while (remaining > 0) {
+    const span = Math.min(maxWindowDays, remaining)
+    const windowStart = new Date(windowEnd)
+    windowStart.setUTCDate(windowStart.getUTCDate() - (span - 1))
+    windows.push({ start: new Date(windowStart), end: new Date(windowEnd) })
+    windowEnd = new Date(windowStart)
+    windowEnd.setUTCDate(windowEnd.getUTCDate() - 1)
+    remaining -= span
+  }
+
+  return windows.reverse()
 }

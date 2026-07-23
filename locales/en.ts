@@ -474,6 +474,8 @@ export default {
     "Trading Platform by Rithmic™ is a trademark of Rithmic, LLC. All rights reserved.",
   "import.type.copyright.omne":
     "Powered by OMNE is a trademark of Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.",
+  "import.type.copyright.omneSoftware":
+    "The OMNE™ software is Copyright © 2026 by Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.",
   "import.type.topstep.name": "Topstep",
   "import.type.topstep.description": "Topstep CSV file",
   "import.type.topstep.details":

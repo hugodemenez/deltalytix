@@ -30,7 +30,7 @@ import type {
 const SERVICE = 'rithmic-protocol'
 const LOOKBACK_DAYS = Math.max(
   1,
-  Number(process.env.RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS ?? '90'),
+  Number(process.env.RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS ?? '30'),
 )
 
 const logger = {
@@ -349,10 +349,10 @@ export async function getRithmicProtocolTrades(
     }
 
     logger.info(
-      `Fetching fills for ${resolvedAccountIds.length} accounts (${LOOKBACK_DAYS}d lookback)`,
+      `Fetching fills for ${resolvedAccountIds.length} accounts (${LOOKBACK_DAYS}d lookback, ≤30d windows)`,
     )
 
-    const fills = await fetchFillsForAccounts({
+    const { fills, uniqueUserId } = await fetchFillsForAccounts({
       gatewayUri: credentials.gatewayUri,
       systemName: credentials.systemName,
       username: credentials.username,
@@ -362,6 +362,10 @@ export async function getRithmicProtocolTrades(
       accountIds: resolvedAccountIds,
       lookbackDays: LOOKBACK_DAYS,
     })
+
+    logger.info(
+      `Sync fill fetch done unique_user_id=${uniqueUserId ?? credentials.uniqueUserId ?? '(none)'} fills=${fills.length}`,
+    )
 
     syncStats.rawFills = fills.length
 

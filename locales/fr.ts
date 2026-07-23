@@ -517,6 +517,8 @@ export default {
     "Trading Platform by Rithmic™ est une marque déposée de Rithmic, LLC. Tous droits réservés.",
   "import.type.copyright.omne":
     "Powered by OMNE est une marque d'Omnesys, LLC et Omnesys Technologies, Inc. Tous droits réservés.",
+  "import.type.copyright.omneSoftware":
+    "Le logiciel OMNE™ est protégé par le droit d'auteur © 2026 par Omnesys, LLC et Omnesys Technologies, Inc. Tous droits réservés.",
   "mood.question": "Comment vous sentez-vous aujourd'hui ?",
   "mood.bad": "Mauvaise journée",
   "mood.okay": "Journée correcte",
