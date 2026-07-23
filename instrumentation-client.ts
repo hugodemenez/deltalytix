@@ -37,6 +37,7 @@ function hasAnalyticsConsent() {
 function isAppShellPath(pathname: string) {
   return (
     pathname.includes("/dashboard") ||
+    pathname.includes("/connections") ||
     pathname.includes("/authentication") ||
     pathname.includes("/admin") ||
     pathname.includes("/billing")

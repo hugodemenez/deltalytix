@@ -163,7 +163,7 @@ export default function HeroDemoMedia({ demoVideoLabel }: HeroDemoMediaProps) {
             />
             <PosterPicture
               poster={DARK_POSTER}
-              loading="lazy"
+              loading="eager"
               className={`absolute inset-0 hidden transition-opacity duration-300 dark:block ${posterHidden}`}
             />
           </>
