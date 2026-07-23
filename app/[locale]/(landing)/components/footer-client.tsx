@@ -1,8 +1,11 @@
-import { getI18n } from "@/locales/server";
+"use client";
+
+import { useI18n } from "@/locales/landing-client";
 import { FooterContent } from "./footer-content";
 
-export default async function Footer() {
-  const t = await getI18n();
+/** Client footer for pages that already live under a client boundary (e.g. /teams). */
+export default function FooterClient() {
+  const t = useI18n();
 
   return (
     <FooterContent
