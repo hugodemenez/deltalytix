@@ -171,7 +171,8 @@ function ConnectionRow({
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [dailySyncTime, setDailySyncTime] = useState('')
   const [savingSchedule, setSavingSchedule] = useState(false)
-  const [nowMs, setNowMs] = useState(() => Date.now())
+  // Countdown must not SSR with Date.now() — minute boundaries cause hydration mismatches.
+  const [nowMs, setNowMs] = useState<number | null>(null)
   const { performSyncForAccount: syncTradovate } = useTradovateSyncContext()
   const { performSyncForAccount: syncDxFeed } = useDxFeedSyncContext()
 
@@ -183,6 +184,7 @@ function ConnectionRow({
 
   useEffect(() => {
     if (!canSchedule || !nextSyncAt) return
+    setNowMs(Date.now())
     const id = window.setInterval(() => setNowMs(Date.now()), 60_000)
     return () => window.clearInterval(id)
   }, [canSchedule, nextSyncAt])
@@ -355,7 +357,7 @@ function ConnectionRow({
                         openScheduleDialog()
                       }}
                     >
-                      {nextSyncAt
+                      {nextSyncAt && nowMs != null
                         ? t('connections.nextSyncIn', {
                             time: formatCountdown(nextSyncAt, nowMs),
                           })

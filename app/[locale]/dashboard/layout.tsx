@@ -10,17 +10,26 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { RithmicSyncContextProvider } from "@/context/rithmic-sync-context";
 import { TradovateSyncContextProvider } from "@/context/tradovate-sync-context";
 import { DxFeedSyncContextProvider } from "@/context/dxfeed-sync-context";
-import { I18nProviderClient } from "@/locales/client";
 import { ConsentBanner } from "@/components/consent-banner";
 import { BetaConnectionFlowInvite } from "@/components/beta-connection-flow-invite";
 import { PostHogIdentity } from "@/components/posthog-identity";
 import { createClient } from "@/server/auth";
 import { resolveLocale } from "@/lib/locale-params";
 
-async function DashboardPostHogIdentity({ locale }: { locale: string }) {
+/**
+ * Locale + auth for PostHog only — keep URL data inside Suspense so the
+ * dashboard App Shell stays reusable for Instant Navigations.
+ * Parent `[locale]/layout` already provides `I18nProviderClient`.
+ */
+async function DashboardPostHogIdentity({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
   // Request-time only — avoid running auth/bypass checks during prerender.
   await connection();
 
+  const locale = await resolveLocale(params);
   const supabase = await createClient();
   const {
     data: { user },
@@ -33,20 +42,21 @@ async function DashboardPostHogIdentity({ locale }: { locale: string }) {
   );
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  const locale = await resolveLocale(params);
-
+  // Do not await `params` here — Instant Navigations needs a shared App Shell.
+  // Locale i18n comes from `app/[locale]/layout.tsx`; only PostHog needs locale
+  // and that read stays behind Suspense.
   return (
-    <I18nProviderClient locale={locale}>
+    <>
       <ConsentBanner />
       <Suspense fallback={null}>
-        <DashboardPostHogIdentity locale={locale} />
+        <DashboardPostHogIdentity params={params} />
       </Suspense>
       <TooltipProvider>
         <ThemeProvider>
@@ -66,6 +76,6 @@ export default async function RootLayout({
           </DataProvider>
         </ThemeProvider>
       </TooltipProvider>
-    </I18nProviderClient>
+    </>
   );
 }
