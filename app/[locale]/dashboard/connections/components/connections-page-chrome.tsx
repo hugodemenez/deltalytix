@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, type ReactNode } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Loader2, Plus, RefreshCw, X } from 'lucide-react'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import {
@@ -53,8 +53,14 @@ export function ConnectionsPageChrome({ children }: { children: ReactNode }) {
 
 function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
   const t = useI18n()
-  const { refresh, connectService, connectPrefill, openConnect, closeConnect } =
-    useConnectionsRefresh()
+  const {
+    refresh,
+    syncAll,
+    connectService,
+    connectPrefill,
+    openConnect,
+    closeConnect,
+  } = useConnectionsRefresh()
   const [selectedImportPlatform, setSelectedImportPlatform] =
     useState<PlatformConfig | null>(null)
   const [importMenuOpen, setImportMenuOpen] = useState(false)
@@ -253,6 +259,21 @@ function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
                   </div>
                 </PopoverContent>
               </Popover>
+            )}
+            {syncAll && (
+              <button
+                type="button"
+                onClick={syncAll.run}
+                disabled={syncAll.syncing}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-sm border border-black/20 px-6 text-sm font-medium transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:border-white/20 dark:hover:bg-white/5"
+              >
+                {syncAll.syncing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />
+                ) : (
+                  <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
+                )}
+                {t('connections.sync.syncAll')}
+              </button>
             )}
           </div>
         </header>

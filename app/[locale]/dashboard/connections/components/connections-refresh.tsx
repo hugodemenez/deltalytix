@@ -13,9 +13,21 @@ import type { ConnectPrefill } from './connect-prefill'
 
 type RefreshFn = () => void
 
+/**
+ * Global "Sync all" action published by the streamed list so the instant page
+ * chrome can render it next to the other header actions. Null when no hosted
+ * connection can be synced on demand.
+ */
+export type SyncAllAction = {
+  syncing: boolean
+  run: () => void
+} | null
+
 type ConnectionsRefreshContextValue = {
   refresh: () => void
   register: (fn: RefreshFn) => () => void
+  syncAll: SyncAllAction
+  setSyncAll: (action: SyncAllAction) => void
   /** Open the connect/reconnect sheet for a service (from chrome or a row). */
   connectService: ConnectionService | null
   /** Prefill for reconnect; null when adding a new connection. */
@@ -43,6 +55,7 @@ export function ConnectionsRefreshProvider({
   const [connectPrefill, setConnectPrefill] = useState<ConnectPrefill | null>(
     null
   )
+  const [syncAll, setSyncAll] = useState<SyncAllAction>(null)
 
   const register = useCallback((fn: RefreshFn) => {
     fnRef.current = fn
@@ -73,6 +86,8 @@ export function ConnectionsRefreshProvider({
       value={{
         refresh,
         register,
+        syncAll,
+        setSyncAll,
         connectService,
         connectPrefill,
         openConnect,

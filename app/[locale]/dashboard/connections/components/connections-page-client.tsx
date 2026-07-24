@@ -73,6 +73,14 @@ const SERVICE_SECTIONS: {
   { service: 'thor', labelKey: 'connections.sections.thor' },
 ]
 
+// Providers whose hosted connections can be synced on demand from this page.
+const SYNCABLE_SERVICES = new Set<string>([
+  'rithmic',
+  'rithmic-protocol',
+  'tradovate',
+  'dxfeed',
+])
+
 const iconButtonClassName =
   'inline-flex h-8 w-8 items-center justify-center rounded-sm text-black/45 transition-[opacity,transform,background-color,color] duration-150 hover:bg-black/5 hover:text-black active:scale-[0.96] dark:text-white/45 dark:hover:bg-white/5 dark:hover:text-white'
 
@@ -895,13 +903,6 @@ function TypeSection({
   onChanged: () => void
   oauthPending?: TradovateOAuthPending | null
 }) {
-  const t = useI18n()
-  const [syncingAll, setSyncingAll] = useState(false)
-  const { performSyncForAccount: syncTradovate } = useTradovateSyncContext()
-  const { performSyncForAccount: syncDxFeed } = useDxFeedSyncContext()
-  const { performSyncForCredential: syncRithmic } = useRithmicSyncContext()
-  const { performSyncForAccount: syncRithmicProtocol } =
-    useRithmicProtocolSyncContext()
   const replacingId =
     oauthPending?.externalId || oauthPending?.resolvedExternalId || null
   const hasInPlacePending =
@@ -912,80 +913,9 @@ function TypeSection({
   // New connection: reserve a slot at the end (matches createdAt sort) to avoid CLS.
   const showTrailingPending = !!oauthPending && !hasInPlacePending
 
-  const canSyncAll =
-    service === 'tradovate' ||
-    service === 'dxfeed' ||
-    service === 'rithmic' ||
-    service === 'rithmic-protocol'
-
-  const handleSyncAll = useCallback(async () => {
-    if (!canSyncAll || connections.length === 0) {
-      toast.message(t('connections.sync.manualOnly'))
-      return
-    }
-
-    setSyncingAll(true)
-    let failed = 0
-    try {
-      if (service === 'rithmic-protocol') {
-        // Protocol tracks per-connection syncing in context; run in parallel so
-        // each row can show its own spinner without a toast storm.
-        const results = await Promise.all(
-          connections.map(async (connection) => {
-            try {
-              return await syncRithmicProtocol(connection.accountId)
-            } catch (error) {
-              console.error(error)
-              return { success: false as const }
-            }
-          }),
-        )
-        failed = results.filter((result) => result && result.success === false).length
-      } else {
-        for (const connection of connections) {
-          try {
-            let result: { success?: boolean } | void
-            if (service === 'tradovate') {
-              result = await syncTradovate(connection.accountId)
-            } else if (service === 'dxfeed') {
-              result = await syncDxFeed(connection.accountId)
-            } else {
-              result = await syncRithmic(connection.accountId)
-            }
-            if (result && result.success === false) {
-              failed += 1
-            }
-          } catch (error) {
-            console.error(error)
-            failed += 1
-          }
-        }
-      }
-
-      if (failed > 0) {
-        toast.error(t('connections.sync.failed'))
-      } else {
-        toast.success(t('connections.sync.allDone'))
-      }
-      onChanged()
-    } finally {
-      setSyncingAll(false)
-    }
-  }, [
-    canSyncAll,
-    connections,
-    onChanged,
-    service,
-    syncDxFeed,
-    syncRithmic,
-    syncRithmicProtocol,
-    syncTradovate,
-    t,
-  ])
-
   return (
     <section className="space-y-2">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center gap-4">
         <h2 className="flex items-center gap-3 text-xl font-normal tracking-tight md:text-2xl">
           <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center md:h-8 md:w-8">
             <ServiceMonochromeLogo
@@ -997,22 +927,6 @@ function TypeSection({
           </span>
           {label}
         </h2>
-        {canSyncAll ? (
-          <button
-            type="button"
-            onClick={() => void handleSyncAll()}
-            disabled={syncingAll || connections.length === 0}
-            aria-label={`${t('rithmic.actions.syncAll')}: ${label}`}
-            className={cn(secondaryButtonClassName, 'gap-1.5 px-3')}
-          >
-            {syncingAll ? (
-              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />
-            ) : (
-              <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
-            )}
-            {t('rithmic.actions.syncAll')}
-          </button>
-        ) : null}
       </div>
       <div className="divide-y divide-black/10 border-y border-black/10 dark:divide-white/10 dark:border-white/10">
         {connections.map((connection) => {
@@ -1057,7 +971,7 @@ export function ConnectionsPageClient({
   const locale = useCurrentLocale()
   const searchParams = useSearchParams()
   const tradovateStore = useTradovateSyncStore()
-  const { register } = useConnectionsRefresh()
+  const { register, setSyncAll } = useConnectionsRefresh()
   // Seeded from cached RSC (`CachedConnectionsPage`) — warm cache skips the
   // list Suspense skeleton; this client state is already hydrated on first paint.
   const [data, setData] = useState<ConnectionsPageData | null>(initialData)
@@ -1069,8 +983,18 @@ export function ConnectionsPageClient({
   const oauthCallbackHandled = useRef(false)
   const oauthResultHandled = useRef(false)
   const cacheRestored = useRef(false)
-  const { loadAccounts: loadTradovate } = useTradovateSyncContext()
-  const { loadAccounts: loadDxFeed } = useDxFeedSyncContext()
+  const [syncingAll, setSyncingAll] = useState(false)
+  const {
+    loadAccounts: loadTradovate,
+    performSyncForAccount: syncTradovate,
+  } = useTradovateSyncContext()
+  const {
+    loadAccounts: loadDxFeed,
+    performSyncForAccount: syncDxFeed,
+  } = useDxFeedSyncContext()
+  const { performSyncForCredential: syncRithmic } = useRithmicSyncContext()
+  const { performSyncForAccount: syncRithmicProtocol } =
+    useRithmicProtocolSyncContext()
   const storeHydrated = useTradovateSyncStore.persist?.hasHydrated?.() ?? true
   const [tradovateStoreReady, setTradovateStoreReady] = useState(storeHydrated)
 
@@ -1303,6 +1227,72 @@ export function ConnectionsPageClient({
       }),
     [byService, oauthPending]
   )
+
+  // Every hosted connection that can be synced on demand, across all providers.
+  const syncableConnections = useMemo(
+    () =>
+      (data?.connections ?? []).filter((connection) =>
+        SYNCABLE_SERVICES.has(connection.service)
+      ),
+    [data]
+  )
+
+  const handleSyncAll = useCallback(async () => {
+    if (syncableConnections.length === 0) return
+
+    setSyncingAll(true)
+    let failed = 0
+    try {
+      for (const connection of syncableConnections) {
+        try {
+          let result: { success?: boolean } | void
+          if (connection.service === 'tradovate') {
+            result = await syncTradovate(connection.accountId)
+          } else if (connection.service === 'dxfeed') {
+            result = await syncDxFeed(connection.accountId)
+          } else if (connection.service === 'rithmic-protocol') {
+            result = await syncRithmicProtocol(connection.accountId)
+          } else {
+            result = await syncRithmic(connection.accountId)
+          }
+          if (result && result.success === false) {
+            failed += 1
+          }
+        } catch (error) {
+          console.error(error)
+          failed += 1
+        }
+      }
+
+      if (failed > 0) {
+        toast.error(t('connections.sync.failed'))
+      } else {
+        toast.success(t('connections.sync.allDone'))
+      }
+      await load()
+    } finally {
+      setSyncingAll(false)
+    }
+  }, [
+    load,
+    syncDxFeed,
+    syncRithmic,
+    syncRithmicProtocol,
+    syncTradovate,
+    syncableConnections,
+    t,
+  ])
+
+  // Publish the action so the page chrome can render "Sync all" alongside the
+  // other header actions (this list streams in behind its own Suspense boundary).
+  useEffect(() => {
+    if (syncableConnections.length === 0) {
+      setSyncAll(null)
+      return
+    }
+    setSyncAll({ syncing: syncingAll, run: () => void handleSyncAll() })
+    return () => setSyncAll(null)
+  }, [handleSyncAll, setSyncAll, syncableConnections.length, syncingAll])
 
   return (
     <div className="space-y-14 md:space-y-16">
