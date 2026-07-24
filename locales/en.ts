@@ -163,6 +163,7 @@ export default {
   "connections.env.live": "Live",
   "connections.env.demo": "Demo",
   "connections.sync.now": "Sync now",
+  "connections.sync.syncAll": "Sync all",
   "connections.sync.allDone": "All connections synced",
   "connections.sync.failed": "Sync failed",
   "connections.sync.manualOnly": "Sync this connection from its settings.",
