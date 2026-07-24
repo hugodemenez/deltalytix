@@ -160,6 +160,7 @@ export default {
   "connections.accountCount.other": "{count} accounts",
   "connections.tradeCount.one": "{count} trade",
   "connections.tradeCount.other": "{count} trades",
+  "connections.lastTrade": "Last trade {date}",
   "connections.env.live": "Live",
   "connections.env.demo": "Demo",
   "connections.sync.now": "Sync now",

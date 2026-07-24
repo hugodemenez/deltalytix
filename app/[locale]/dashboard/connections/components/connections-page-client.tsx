@@ -78,6 +78,13 @@ function formatRelative(date: Date | string | null | undefined, fallback: string
   return d.toLocaleString()
 }
 
+function formatTradeDate(date: string | null | undefined) {
+  if (!date) return null
+  const d = new Date(date)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleDateString()
+}
+
 function supportsDailySync(service: string) {
   return service === 'tradovate' || service === 'dxfeed'
 }
@@ -1136,6 +1143,12 @@ export function ConnectionsPageClient({
                     : t('connections.tradeCount.other', {
                         count: account.tradeCount,
                       })}
+                  {(() => {
+                    const lastTrade = formatTradeDate(account.lastTradeDate)
+                    return lastTrade
+                      ? ` · ${t('connections.lastTrade', { date: lastTrade })}`
+                      : ''
+                  })()}
                 </span>
               </li>
             ))}
