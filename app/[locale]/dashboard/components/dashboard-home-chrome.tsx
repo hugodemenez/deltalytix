@@ -21,43 +21,49 @@ export function DashboardHomeChrome({ children }: { children: ReactNode }) {
   const [tab, setTab] = useState('widgets')
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout
+    let timeoutId: NodeJS.Timeout | undefined
+
+    const applyHeights = () => {
+      const navbar = document.querySelector(
+        'nav[class*="sticky"]'
+      ) as HTMLElement | null
+      // Match navbar.tsx: h-16 (4rem). Avoid the old 96/5rem fallback that
+      // left a visible strip between sticky nav and fixed tabs.
+      const navbarHeight = navbar?.offsetHeight || 64
+
+      const tabsList = tabsListRef.current
+      const tabsListHeight = tabsList?.offsetHeight || 48
+      const tabsWrapperBottom = navbarHeight + tabsListHeight
+
+      const main = mainRef.current
+      const mainTop = main?.getBoundingClientRect().top || 0
+      const calculatedPaddingTop = tabsWrapperBottom - mainTop
+
+      document.documentElement.style.setProperty(
+        '--navbar-height',
+        `${navbarHeight}px`
+      )
+      document.documentElement.style.setProperty(
+        '--tabs-height',
+        `${tabsListHeight}px`
+      )
+      document.documentElement.style.setProperty(
+        '--calculated-padding-top',
+        `${calculatedPaddingTop}px`
+      )
+    }
 
     const calculateHeight = () => {
       if (timeoutId) {
         clearTimeout(timeoutId)
       }
 
-      timeoutId = setTimeout(() => {
-        const navbar = document.querySelector(
-          'nav[class*="sticky"]'
-        ) as HTMLElement
-        const navbarHeight = navbar?.offsetHeight || 96
-
-        const tabsList = tabsListRef.current
-        const tabsListHeight = tabsList?.offsetHeight || 0
-        const tabsWrapperBottom = navbarHeight + tabsListHeight
-
-        const main = mainRef.current
-        const mainTop = main?.getBoundingClientRect().top || 0
-        const calculatedPaddingTop = tabsWrapperBottom - mainTop
-
-        document.documentElement.style.setProperty(
-          '--navbar-height',
-          `${navbarHeight}px`
-        )
-        document.documentElement.style.setProperty(
-          '--tabs-height',
-          `${tabsListHeight}px`
-        )
-        document.documentElement.style.setProperty(
-          '--calculated-padding-top',
-          `${calculatedPaddingTop}px`
-        )
-      }, 100)
+      // Debounce resize/mutation noise only — first paint must be immediate
+      // so Instant Nav does not flash the old 5rem gap.
+      timeoutId = setTimeout(applyHeights, 100)
     }
 
-    calculateHeight()
+    applyHeights()
     window.addEventListener('resize', calculateHeight)
 
     const resizeObserver = new ResizeObserver(calculateHeight)
@@ -125,7 +131,7 @@ export function DashboardHomeChrome({ children }: { children: ReactNode }) {
       >
         <div
           ref={tabsListRef}
-          className="fixed inset-x-0 top-(--navbar-height,5rem) z-30 w-full overflow-x-auto border-b bg-background shadow-xs"
+          className="fixed inset-x-0 top-(--navbar-height,4rem) z-30 w-full overflow-x-auto border-b bg-background shadow-xs"
         >
           <TabsList className="h-12 w-full min-w-max max-w-none rounded-none bg-muted/70 sm:min-w-0">
             <TabsTrigger value="widgets">

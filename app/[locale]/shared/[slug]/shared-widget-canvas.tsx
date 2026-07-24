@@ -179,7 +179,7 @@ export function SharedWidgetCanvas() {
       className={cn(
         "relative",
         !isLayoutReady &&
-          "overflow-hidden md:mt-6 max-md:[height:calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem))]",
+          "overflow-hidden md:mt-6 max-md:[height:calc(100dvh-var(--navbar-height,4rem)-var(--tabs-height,3rem))]",
         isLayoutReady && useMobileCarousel && "mt-0 overflow-hidden",
         isLayoutReady && !useMobileCarousel && "mt-6",
       )}

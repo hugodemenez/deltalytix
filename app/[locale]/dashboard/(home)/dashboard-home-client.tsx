@@ -26,21 +26,21 @@ export default function DashboardHomeClient() {
     <>
       <TabsContent
         value="table"
-        className="h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem)-16px)] min-w-0 p-2 sm:p-4"
+        className="h-[calc(100dvh-var(--navbar-height,4rem)-var(--tabs-height,3rem)-16px)] min-w-0 p-2 sm:p-4"
       >
         <TradeTableReview />
       </TabsContent>
 
       <TabsContent
         value="accounts"
-        className="h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem)-16px)] min-w-0 mt-0"
+        className="h-[calc(100dvh-var(--navbar-height,4rem)-var(--tabs-height,3rem)-16px)] min-w-0 mt-0"
       >
         <AccountsOverview size="large" />
       </TabsContent>
 
       <TabsContent
         value="widgets"
-        className="min-w-0 overflow-hidden px-0 max-md:h-[calc(100dvh-var(--navbar-height,5rem)-var(--tabs-height,3rem))] sm:px-4"
+        className="min-w-0 overflow-hidden px-0 max-md:h-[calc(100dvh-var(--navbar-height,4rem)-var(--tabs-height,3rem))] sm:px-4"
       >
         <WidgetCanvas />
       </TabsContent>
