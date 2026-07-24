@@ -1,6 +1,7 @@
 export default {
   feedback: {
     title: 'Send feedback',
+    tooltip: 'Send feedback or report a bug',
     heading: 'Share your feedback',
     description: 'Help us improve Deltalytix. Tell us what is on your mind.',
     type: {
