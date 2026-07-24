@@ -592,15 +592,6 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
     return Array.from(groups.values());
   }, [trades, groupingGranularity, groupingMode, config?.groupTrades]);
 
-  // Keep pageIndex in range when filters/data shrink (autoResetPageIndex is off)
-  React.useEffect(() => {
-    const safePageSize = Math.max(pageSize, 1);
-    const pageCount = Math.max(1, Math.ceil(groupedTrades.length / safePageSize));
-    if (pageIndex > pageCount - 1) {
-      setPageIndex(Math.max(0, pageCount - 1));
-    }
-  }, [groupedTrades.length, pageSize, pageIndex]);
-
   // Initialize expanded state when expandByDefault is enabled
   React.useEffect(() => {
     if (config?.expandByDefault && groupedTrades.length > 0 && !hasInitializedExpanded) {
@@ -1254,6 +1245,17 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
       minSize: 100,
     },
   });
+
+  // Keep pageIndex in range when filters/data shrink (autoResetPageIndex is off).
+  // Uses the table's filtered page count so column filters are respected — clamping
+  // against the unfiltered groupedTrades length would leave pageIndex past the last
+  // visible page after filters narrow the row set, showing an empty body.
+  React.useEffect(() => {
+    const maxPageIndex = Math.max(0, table.getPageCount() - 1);
+    if (pageIndex > maxPageIndex) {
+      setPageIndex(maxPageIndex);
+    }
+  }, [table, groupedTrades.length, pageSize, pageIndex, columnFilters]);
 
   const currentPageTotals = calculateTotalsForRows(
     table.getPaginationRowModel().rows.map((row) => row.original),
