@@ -114,6 +114,7 @@ export function TradeTableVirtualBody<TData>({
   // non-virtual slice so the table is never blank on init.
   if (virtualRows.length === 0) {
     const fallbackRows = rows.slice(0, NON_VIRTUAL_FALLBACK_LIMIT);
+    const hiddenRowCount = rows.length - fallbackRows.length;
     return (
       <tbody className="bg-background [&_tr:last-child]:border-0">
         {fallbackRows.map((row, rowIndex) => (
@@ -124,6 +125,17 @@ export function TradeTableVirtualBody<TData>({
             compact={compact}
           />
         ))}
+        {hiddenRowCount > 0 && (
+          <tr>
+            <td
+              colSpan={columnCount}
+              className="p-4 align-middle text-center text-sm text-muted-foreground"
+            >
+              Loading {hiddenRowCount} more{" "}
+              {hiddenRowCount === 1 ? "row" : "rows"}…
+            </td>
+          </tr>
+        )}
       </tbody>
     );
   }
