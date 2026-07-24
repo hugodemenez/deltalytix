@@ -13,6 +13,7 @@ import referral from "./fr/referral";
 import admin from "./fr/admin";
 import faq from "./fr/faq";
 import support from "./fr/support";
+import feedback from "./fr/feedback";
 import landingPreview from "./fr/landing-preview";
 
 export default {
@@ -32,6 +33,7 @@ export default {
   ...admin,
   ...faq,
   ...support,
+  ...feedback,
   "footer.heading": "Pied de page",
   "footer.description": "Analyses avancées pour les traders modernes.",
   "footer.product.title": "Produit",

@@ -13,6 +13,7 @@ import referral from "./en/referral";
 import admin from "./en/admin";
 import faq from "./en/faq";
 import support from "./en/support";
+import feedback from "./en/feedback";
 import landingPreview from "./en/landing-preview";
 export default {
   ...shared,
@@ -31,6 +32,7 @@ export default {
   ...admin,
   ...faq,
   ...support,
+  ...feedback,
   "footer.heading": "Footer",
   "footer.description": "Advanced analytics for modern traders.",
   "footer.product.title": "Product",
