@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Globe, LayoutDashboard, ChevronDown, Cable } from "lucide-react"
+import { Globe, LayoutDashboard, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from '@/components/logo'
 import Link from 'next/link'
@@ -20,6 +20,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { UsersIcon, type UsersIconHandle } from '@/components/animated-icons/users'
+import { CableIcon, type CableIconHandle } from '@/components/animated-icons/cable'
 import { useModalStateStore } from '@/store/modal-state-store'
 import { useUserStore } from '@/store/user-store'
 import UserMenu from './user-menu'
@@ -34,6 +35,7 @@ export default function Navbar() {
   const [showAccountNumbers, setShowAccountNumbers] = useState(true)
   const [isLogoPopoverOpen, setIsLogoPopoverOpen] = useState(false)
   const usersIconRef = useRef<UsersIconHandle>(null)
+  const cableIconRef = useRef<CableIconHandle>(null)
   const { accountGroupBoardOpen } = useModalStateStore()
 
   // Initialize keyboard shortcuts
@@ -121,8 +123,10 @@ export default function Navbar() {
                     id="import-data"
                     prefetch={true}
                     aria-label={t('dashboard.connections')}
+                    onMouseEnter={() => cableIconRef.current?.startAnimation()}
+                    onMouseLeave={() => cableIconRef.current?.stopAnimation()}
                   >
-                    <Cable className="h-4 w-4" />
+                    <CableIcon ref={cableIconRef} className="h-4 w-4" />
                   </Link>
                 </Button>
               </TooltipTrigger>

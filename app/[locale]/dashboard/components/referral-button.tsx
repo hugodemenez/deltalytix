@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Gift, Copy, Check, Users, Trophy, Sparkles, ExternalLink } from 'lucide-react'
+import { GiftIcon, type GiftIconHandle } from '@/components/animated-icons/gift'
 import { Button } from '@/components/ui/button'
 import {
   Popover,
@@ -53,6 +54,7 @@ export default function ReferralButton() {
   const [referralData, setReferralData] = useState<ReferralData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const iconRef = useRef<GiftIconHandle>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -125,8 +127,10 @@ export default function ReferralButton() {
               size="sm"
               className="h-9 px-2 rounded-md hover:bg-accent hover:text-accent-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors relative"
               aria-label={t('referral.title')}
+              onMouseEnter={() => iconRef.current?.startAnimation()}
+              onMouseLeave={() => iconRef.current?.stopAnimation()}
             >
-              <Gift className="h-4 w-4" />
+              <GiftIcon ref={iconRef} className="h-4 w-4" />
               {referralData && referralData.referral.count > 0 && (
                 <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
                   {referralData.referral.count}
