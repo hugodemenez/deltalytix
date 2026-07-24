@@ -403,6 +403,7 @@ export const ModelName = {
   Payout: 'Payout',
   DashboardLayout: 'DashboardLayout',
   SubscriptionFeedback: 'SubscriptionFeedback',
+  UserFeedback: 'UserFeedback',
   Mood: 'Mood',
   Shared: 'Shared',
   Referral: 'Referral',
@@ -430,7 +431,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "trade" | "tickDetails" | "subscription" | "businessSubscription" | "teamSubscription" | "notification" | "user" | "connection" | "team" | "teamInvitation" | "teamManager" | "business" | "businessManager" | "businessInvitation" | "group" | "account" | "payout" | "dashboardLayout" | "subscriptionFeedback" | "mood" | "shared" | "referral" | "financialEvent" | "tag" | "newsletter" | "post" | "comment" | "vote" | "order" | "tradeAnalytics" | "historicalData"
+    modelProps: "trade" | "tickDetails" | "subscription" | "businessSubscription" | "teamSubscription" | "notification" | "user" | "connection" | "team" | "teamInvitation" | "teamManager" | "business" | "businessManager" | "businessInvitation" | "group" | "account" | "payout" | "dashboardLayout" | "subscriptionFeedback" | "userFeedback" | "mood" | "shared" | "referral" | "financialEvent" | "tag" | "newsletter" | "post" | "comment" | "vote" | "order" | "tradeAnalytics" | "historicalData"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1840,6 +1841,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    UserFeedback: {
+      payload: Prisma.$UserFeedbackPayload<ExtArgs>
+      fields: Prisma.UserFeedbackFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UserFeedbackFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFeedbackPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UserFeedbackFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFeedbackPayload>
+        }
+        findFirst: {
+          args: Prisma.UserFeedbackFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFeedbackPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UserFeedbackFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFeedbackPayload>
+        }
+        findMany: {
+          args: Prisma.UserFeedbackFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFeedbackPayload>[]
+        }
+        create: {
+          args: Prisma.UserFeedbackCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFeedbackPayload>
+        }
+        createMany: {
+          args: Prisma.UserFeedbackCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.UserFeedbackCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFeedbackPayload>[]
+        }
+        delete: {
+          args: Prisma.UserFeedbackDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFeedbackPayload>
+        }
+        update: {
+          args: Prisma.UserFeedbackUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFeedbackPayload>
+        }
+        deleteMany: {
+          args: Prisma.UserFeedbackDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UserFeedbackUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.UserFeedbackUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFeedbackPayload>[]
+        }
+        upsert: {
+          args: Prisma.UserFeedbackUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserFeedbackPayload>
+        }
+        aggregate: {
+          args: Prisma.UserFeedbackAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUserFeedback>
+        }
+        groupBy: {
+          args: Prisma.UserFeedbackGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserFeedbackGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UserFeedbackCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserFeedbackCountAggregateOutputType> | number
+        }
+      }
+    }
     Mood: {
       payload: Prisma.$MoodPayload<ExtArgs>
       fields: Prisma.MoodFieldRefs
@@ -3075,6 +3150,18 @@ export const SubscriptionFeedbackScalarFieldEnum = {
 export type SubscriptionFeedbackScalarFieldEnum = (typeof SubscriptionFeedbackScalarFieldEnum)[keyof typeof SubscriptionFeedbackScalarFieldEnum]
 
 
+export const UserFeedbackScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  email: 'email',
+  type: 'type',
+  message: 'message',
+  createdAt: 'createdAt'
+} as const
+
+export type UserFeedbackScalarFieldEnum = (typeof UserFeedbackScalarFieldEnum)[keyof typeof UserFeedbackScalarFieldEnum]
+
+
 export const MoodScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -3584,6 +3671,7 @@ export type GlobalOmitConfig = {
   payout?: Prisma.PayoutOmit
   dashboardLayout?: Prisma.DashboardLayoutOmit
   subscriptionFeedback?: Prisma.SubscriptionFeedbackOmit
+  userFeedback?: Prisma.UserFeedbackOmit
   mood?: Prisma.MoodOmit
   shared?: Prisma.SharedOmit
   referral?: Prisma.ReferralOmit

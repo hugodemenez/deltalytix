@@ -391,6 +391,18 @@ model SubscriptionFeedback {
   @@schema("public")
 }
 
+model UserFeedback {
+  id        String   @id @default(uuid())
+  userId    String
+  email     String?
+  type      String
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@schema("public")
+}
+
 model Mood {
   id                   String   @id @default(uuid())
   userId               String

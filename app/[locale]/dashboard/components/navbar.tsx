@@ -19,6 +19,7 @@ import { useModalStateStore } from '@/store/modal-state-store'
 import { useUserStore } from '@/store/user-store'
 import UserMenu from './user-menu'
 import ReferralButton from './referral-button'
+import FeedbackButton from './feedback-button'
 
 export default function Navbar() {
   const router = useRouter()
@@ -117,6 +118,7 @@ export default function Navbar() {
                 <span className="hidden sm:inline">{t('dashboard.connections')}</span>
               </Link>
             </Button>
+            <FeedbackButton />
             <ReferralButton />
             <UserMenu />
           </div>
