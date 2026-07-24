@@ -1,6 +1,7 @@
 export default {
   feedback: {
     title: 'Envoyer un retour',
+    tooltip: 'Envoyer un retour ou signaler un bug',
     heading: 'Partagez votre retour',
     description: 'Aidez-nous à améliorer Deltalytix. Dites-nous ce que vous en pensez.',
     type: {

@@ -14,6 +14,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { UsersIcon, type UsersIconHandle } from '@/components/animated-icons/users'
 import { useModalStateStore } from '@/store/modal-state-store'
 import { useUserStore } from '@/store/user-store'
@@ -103,21 +108,26 @@ export default function Navbar() {
             className="hidden md:block flex-1 min-w-0"
           />
           <div className="flex items-center gap-2 sm:gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              asChild
-              className="h-9 rounded-sm px-2 active:scale-[0.96]"
-            >
-              <Link
-                href="/dashboard/connections"
-                id="import-data"
-                prefetch={true}
-              >
-                <Cable className="mr-1.5 h-4 w-4" />
-                <span className="hidden sm:inline">{t('dashboard.connections')}</span>
-              </Link>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className="h-9 rounded-sm px-2 active:scale-[0.96]"
+                >
+                  <Link
+                    href="/dashboard/connections"
+                    id="import-data"
+                    prefetch={true}
+                    aria-label={t('dashboard.connections')}
+                  >
+                    <Cable className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('dashboard.connections')}</TooltipContent>
+            </Tooltip>
             <FeedbackButton />
             <ReferralButton />
             <UserMenu />
