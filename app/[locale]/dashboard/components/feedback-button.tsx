@@ -1,7 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { MessageSquarePlus } from 'lucide-react'
+import { useRef, useState } from 'react'
+import {
+  MessageSquarePlusIcon,
+  type MessageSquarePlusIconHandle,
+} from '@/components/animated-icons/message-square-plus'
 import { Button } from '@/components/ui/button'
 import {
   Popover,
@@ -30,6 +33,7 @@ export default function FeedbackButton() {
     other: t('feedback.type.other'),
   }
 
+  const iconRef = useRef<MessageSquarePlusIconHandle>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [type, setType] = useState<FeedbackType>('bug')
   const [message, setMessage] = useState('')
@@ -64,8 +68,10 @@ export default function FeedbackButton() {
               size="sm"
               className="h-9 px-2 rounded-md hover:bg-accent hover:text-accent-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors relative"
               aria-label={t('feedback.title')}
+              onMouseEnter={() => iconRef.current?.startAnimation()}
+              onMouseLeave={() => iconRef.current?.stopAnimation()}
             >
-              <MessageSquarePlus className="h-4 w-4" />
+              <MessageSquarePlusIcon ref={iconRef} className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
