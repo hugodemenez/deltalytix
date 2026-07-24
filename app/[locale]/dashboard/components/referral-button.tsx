@@ -117,7 +117,7 @@ export default function ReferralButton() {
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <Tooltip>
+      <Tooltip delayDuration={200}>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
             <Button

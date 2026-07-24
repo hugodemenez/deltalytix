@@ -108,7 +108,7 @@ export default function Navbar() {
             className="hidden md:block flex-1 min-w-0"
           />
           <div className="flex items-center gap-2 sm:gap-4">
-            <Tooltip>
+            <Tooltip delayDuration={200}>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
