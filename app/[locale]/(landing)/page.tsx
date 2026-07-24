@@ -2,6 +2,7 @@ import nextDynamic from "next/dynamic";
 import Partners from "./components/partners";
 import { setStaticParamsLocale } from "next-international/server";
 import Hero from "./components/hero";
+import HeroPosterPreloads from "./components/hero-poster-preloads";
 import { getStaticParams } from "@/locales/server";
 import {
   FAQSectionSkeleton,
@@ -9,6 +10,7 @@ import {
   OpenSourceSectionSkeleton,
   PricingSectionSkeleton,
 } from "./components/section-skeletons";
+import WhenVisible from "./components/when-visible";
 
 const Features = nextDynamic(() => import("./components/features"), {
   loading: () => <FeaturesSectionSkeleton />,
@@ -40,6 +42,7 @@ export default async function LandingPage({
 
   return (
     <main className="flex flex-col">
+      <HeroPosterPreloads />
       <section className="w-full shadow-[0_1px_0_0_oklch(0_0_0/0.06)] dark:shadow-[0_1px_0_0_oklch(1_0_0/0.08)]">
         <Hero />
       </section>
@@ -53,22 +56,30 @@ export default async function LandingPage({
         id="features"
         className="w-full shadow-[0_1px_0_0_oklch(0_0_0/0.06)] dark:shadow-[0_1px_0_0_oklch(1_0_0/0.08)]"
       >
-        <Features />
+        <WhenVisible fallback={<FeaturesSectionSkeleton />}>
+          <Features />
+        </WhenVisible>
       </section>
       <section
         id="pricing"
         className="w-full shadow-[0_1px_0_0_oklch(0_0_0/0.06)] dark:shadow-[0_1px_0_0_oklch(1_0_0/0.08)]"
       >
-        <PricingPage />
+        <WhenVisible fallback={<PricingSectionSkeleton />}>
+          <PricingPage />
+        </WhenVisible>
       </section>
       <section
         id="faq"
         className="w-full py-16 shadow-[0_1px_0_0_oklch(0_0_0/0.06)] dark:shadow-[0_1px_0_0_oklch(1_0_0/0.08)] md:py-24"
       >
-        <FAQ />
+        <WhenVisible fallback={<FAQSectionSkeleton />}>
+          <FAQ />
+        </WhenVisible>
       </section>
       <section id="open-source" className="w-full py-16 md:py-24">
-        <OpenSource />
+        <WhenVisible fallback={<OpenSourceSectionSkeleton />}>
+          <OpenSource />
+        </WhenVisible>
       </section>
     </main>
   );

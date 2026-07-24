@@ -31,7 +31,7 @@ import {
   ChevronRight
 } from 'lucide-react'
 import { useTheme } from '@/context/theme-provider'
-import Footer from '../../(landing)/components/footer'
+import Footer from '../../(landing)/components/footer-client'
 import Image from 'next/image'
 
 export default function TeamPage() {
