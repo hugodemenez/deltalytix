@@ -47,6 +47,7 @@ import { useTradovateSyncStore } from '@/store/tradovate-sync-store'
 import { useTradovateSyncContext } from '@/context/tradovate-sync-context'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
 import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
+import { useRithmicProtocolSyncContext } from '@/context/rithmic-protocol-sync-context'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ServiceMonochromeLogo } from '@/components/monochrome-logo'
@@ -57,6 +58,10 @@ const SERVICE_SECTIONS: {
   labelKey: string
 }[] = [
   { service: 'rithmic', labelKey: 'connections.sections.rithmic' },
+  {
+    service: 'rithmic-protocol',
+    labelKey: 'connections.sections.rithmicProtocol',
+  },
   { service: 'tradovate', labelKey: 'connections.sections.tradovate' },
   { service: 'dxfeed', labelKey: 'connections.sections.dxfeed' },
   { service: 'thor', labelKey: 'connections.sections.thor' },
@@ -175,6 +180,8 @@ function ConnectionRow({
   const [nowMs, setNowMs] = useState<number | null>(null)
   const { performSyncForAccount: syncTradovate } = useTradovateSyncContext()
   const { performSyncForAccount: syncDxFeed } = useDxFeedSyncContext()
+  const { performSyncForAccount: syncRithmicProtocol } =
+    useRithmicProtocolSyncContext()
 
   const canSchedule = supportsDailySync(connection.service)
   const nextSyncAt = useMemo(
@@ -262,6 +269,8 @@ function ConnectionRow({
         result = await syncTradovate(connection.accountId)
       } else if (connection.service === 'dxfeed') {
         result = await syncDxFeed(connection.accountId)
+      } else if (connection.service === 'rithmic-protocol') {
+        result = await syncRithmicProtocol(connection.accountId)
       } else {
         toast.message(t('connections.sync.manualOnly'))
         return
@@ -280,7 +289,7 @@ function ConnectionRow({
     } finally {
       setSyncing(false)
     }
-  }, [connection, onChanged, syncDxFeed, syncTradovate, t])
+  }, [connection, onChanged, syncDxFeed, syncRithmicProtocol, syncTradovate, t])
 
   const handleDelete = useCallback(async () => {
     setDeleting(true)
@@ -381,7 +390,8 @@ function ConnectionRow({
           onKeyDown={(e) => e.stopPropagation()}
         >
           {(connection.service === 'tradovate' ||
-            connection.service === 'dxfeed') && (
+            connection.service === 'dxfeed' ||
+            connection.service === 'rithmic-protocol') && (
             <button
               type="button"
               className={iconButtonClassName}
@@ -705,6 +715,8 @@ function TypeSection({
   const { performSyncForAccount: syncTradovate } = useTradovateSyncContext()
   const { performSyncForAccount: syncDxFeed } = useDxFeedSyncContext()
   const { performSyncForCredential: syncRithmic } = useRithmicSyncContext()
+  const { performSyncForAccount: syncRithmicProtocol } =
+    useRithmicProtocolSyncContext()
   const replacingId =
     oauthPending?.externalId || oauthPending?.resolvedExternalId || null
   const hasInPlacePending =
@@ -718,7 +730,8 @@ function TypeSection({
   const canSyncAll =
     service === 'tradovate' ||
     service === 'dxfeed' ||
-    service === 'rithmic'
+    service === 'rithmic' ||
+    service === 'rithmic-protocol'
 
   const handleSyncAll = useCallback(async () => {
     if (!canSyncAll || connections.length === 0) {
@@ -736,6 +749,8 @@ function TypeSection({
             result = await syncTradovate(connection.accountId)
           } else if (service === 'dxfeed') {
             result = await syncDxFeed(connection.accountId)
+          } else if (service === 'rithmic-protocol') {
+            result = await syncRithmicProtocol(connection.accountId)
           } else {
             result = await syncRithmic(connection.accountId)
           }
@@ -764,6 +779,7 @@ function TypeSection({
     service,
     syncDxFeed,
     syncRithmic,
+    syncRithmicProtocol,
     syncTradovate,
     t,
   ])

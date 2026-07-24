@@ -1,0 +1,28 @@
+
+package rti;
+
+message RequestLogin
+	{                                
+        enum SysInfraType {
+	                   TICKER_PLANT      = 1;
+			   ORDER_PLANT       = 2;
+			   HISTORY_PLANT     = 3;
+			   PNL_PLANT         = 4;
+			   REPOSITORY_PLANT  = 5;
+	                  } 
+     
+	required int32        template_id         = 154467;
+	optional string       template_version    = 153634;
+	repeated string       user_msg            = 132760;
+
+	optional string       user                = 131003;
+	optional string       password            = 130004;
+	optional string       app_name            = 130002;
+	optional string       app_version         = 131803;
+	optional string       system_name         = 153628;
+	optional SysInfraType infra_type          = 153621;
+	repeated string       mac_addr            = 144108;
+	optional string       os_version          = 144021;
+	optional string       os_platform         = 144020;
+	optional bool         aggregated_quotes   = 153644;  // applicable only for TICKER_PLANT infra_type
+	}

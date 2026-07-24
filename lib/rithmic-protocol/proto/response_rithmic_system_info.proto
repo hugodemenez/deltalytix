@@ -1,0 +1,12 @@
+
+package rti;
+
+message ResponseRithmicSystemInfo
+	{
+	required int32  template_id            = 154467;
+	repeated string user_msg               = 132760;
+	repeated string rp_code                = 132766;
+
+	repeated string system_name            = 153628;
+	repeated bool   has_aggregated_quotes  = 153649;
+	}
