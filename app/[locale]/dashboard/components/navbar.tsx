@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Globe, LayoutDashboard, ChevronDown, Cable } from "lucide-react"
+import { Globe, LayoutDashboard, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from '@/components/logo'
 import Link from 'next/link'
@@ -14,11 +14,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { UsersIcon, type UsersIconHandle } from '@/components/animated-icons/users'
+import { CableIcon, type CableIconHandle } from '@/components/animated-icons/cable'
 import { useModalStateStore } from '@/store/modal-state-store'
 import { useUserStore } from '@/store/user-store'
 import UserMenu from './user-menu'
 import ReferralButton from './referral-button'
+import FeedbackButton from './feedback-button'
 
 export default function Navbar() {
   const router = useRouter()
@@ -28,6 +35,7 @@ export default function Navbar() {
   const [showAccountNumbers, setShowAccountNumbers] = useState(true)
   const [isLogoPopoverOpen, setIsLogoPopoverOpen] = useState(false)
   const usersIconRef = useRef<UsersIconHandle>(null)
+  const cableIconRef = useRef<CableIconHandle>(null)
   const { accountGroupBoardOpen } = useModalStateStore()
 
   // Initialize keyboard shortcuts
@@ -102,21 +110,29 @@ export default function Navbar() {
             className="hidden md:block flex-1 min-w-0"
           />
           <div className="flex items-center gap-2 sm:gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              asChild
-              className="h-9 rounded-sm px-2 active:scale-[0.96]"
-            >
-              <Link
-                href="/dashboard/connections"
-                id="import-data"
-                prefetch={true}
-              >
-                <Cable className="mr-1.5 h-4 w-4" />
-                <span className="hidden sm:inline">{t('dashboard.connections')}</span>
-              </Link>
-            </Button>
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className="h-9 rounded-sm px-2 active:scale-[0.96]"
+                >
+                  <Link
+                    href="/dashboard/connections"
+                    id="import-data"
+                    prefetch={true}
+                    aria-label={t('dashboard.connections')}
+                    onMouseEnter={() => cableIconRef.current?.startAnimation()}
+                    onMouseLeave={() => cableIconRef.current?.stopAnimation()}
+                  >
+                    <CableIcon ref={cableIconRef} className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('dashboard.connections')}</TooltipContent>
+            </Tooltip>
+            <FeedbackButton />
             <ReferralButton />
             <UserMenu />
           </div>
