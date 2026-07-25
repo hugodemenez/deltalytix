@@ -14,7 +14,6 @@ export default {
     submit: 'Envoyer',
     submitting: 'Envoi...',
     success: 'Merci pour votre retour !',
-    rateLimited: "Vous pouvez envoyer jusqu'à 3 retours par heure.",
     error: "Échec de l'envoi du retour. Veuillez réessayer.",
   },
 }
