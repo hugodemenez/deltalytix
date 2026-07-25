@@ -11,22 +11,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn, parsePositionTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Trade } from "@/prisma/generated/prisma/browser";
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar";
 import { Charts } from "./charts";
 import { useI18n, useCurrentLocale } from "@/locales/client";
 import { DailyStats } from "./daily-stats";
 import { DailyComment } from "./daily-comment";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { useUserStore } from "../../../../../store/user-store";
 import { TradeTableReview } from "../tables/trade-table-review";
 import StatisticsWidget from "../statistics/statistics-widget";
@@ -39,19 +38,90 @@ interface CalendarModalProps {
   isLoading: boolean;
 }
 
-interface GroupedTrades {
-  [accountNumber: string]: Trade[];
+interface DailyTabsProps {
+  selectedDate: Date;
+  dayData: CalendarEntry | undefined;
+  isLoading: boolean;
+  layout: "dialog" | "drawer";
 }
 
-function groupTradesByAccount(trades: Trade[]): GroupedTrades {
-  return trades.reduce((acc: GroupedTrades, trade) => {
-    const account = trade.accountNumber || "Unknown Account";
-    if (!acc[account]) {
-      acc[account] = [];
-    }
-    acc[account].push(trade);
-    return acc;
-  }, {});
+const formatSignedCurrency = (value: number) => {
+  const formatted = Math.abs(value).toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+  return value < 0 ? `-${formatted}` : `+${formatted}`;
+};
+
+function DailyTabs({ selectedDate, dayData, isLoading, layout }: DailyTabsProps) {
+  const t = useI18n();
+  const isDrawer = layout === "drawer";
+  // On mobile the drawer should be glanceable first: land on the read-only
+  // analysis tab instead of opening straight into the journal editor.
+  const [activeTab, setActiveTab] = useState(isDrawer ? "analysis" : "comment");
+
+  return (
+    <Tabs
+      value={activeTab}
+      onValueChange={setActiveTab}
+      className="grow flex flex-col overflow-hidden min-h-0"
+    >
+      <TabsList
+        className={cn(
+          "shrink-0",
+          isDrawer ? "mx-4 grid w-auto grid-cols-3" : "px-6",
+        )}
+      >
+        <TabsTrigger value="comment">{t("calendar.modal.comment")}</TabsTrigger>
+        <TabsTrigger value="table">{t("calendar.modal.table")}</TabsTrigger>
+        <TabsTrigger value="analysis">
+          {t("calendar.modal.analysis")}
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent
+        value="comment"
+        className={cn(
+          "grow overflow-hidden h-full flex flex-col min-h-0",
+          isDrawer ? "px-4 pt-2 pb-4" : "p-6 pt-2",
+        )}
+        data-vaul-no-drag
+      >
+        <DailyComment dayData={dayData} selectedDate={selectedDate} />
+      </TabsContent>
+      <TabsContent
+        value="table"
+        className="grow overflow-hidden flex flex-col min-h-0"
+        data-vaul-no-drag
+      >
+        {dayData && dayData.trades?.length > 0 ? (
+          <div className="h-full w-full overflow-hidden">
+            <TradeTableReview tradesParam={dayData.trades as Trade[]} />
+          </div>
+        ) : (
+          <p className={cn(isDrawer ? "px-4 pt-2" : "p-6 pt-2")}>
+            {t("calendar.modal.noTrades")}
+          </p>
+        )}
+      </TabsContent>
+      <TabsContent
+        value="analysis"
+        className={cn(
+          "grow overflow-y-auto overscroll-contain space-y-4 min-h-0",
+          isDrawer ? "px-4 pt-2 pb-6" : "p-6 pt-2",
+        )}
+        data-vaul-no-drag
+      >
+        {dayData && dayData.trades?.length > 0 && (
+          <StatisticsWidget dayData={dayData} size="medium" />
+        )}
+        <DailyStats dayData={dayData} isWeekly={false} />
+        {/* <DailyMood dayData={dayData} isWeekly={false} selectedDate={selectedDate} /> */}
+        <Charts dayData={dayData} isLoading={isLoading} />
+      </TabsContent>
+    </Tabs>
+  );
 }
 
 export function CalendarModal({
@@ -65,7 +135,7 @@ export function CalendarModal({
   const locale = useCurrentLocale();
   const timezone = useUserStore((state) => state.timezone);
   const dateLocale = locale === "fr" ? fr : enUS;
-  const [activeTab, setActiveTab] = useState("comment");
+  const isDesktop = useMediaQuery("(min-width: 640px)");
   const [formattedDate, setFormattedDate] = useState<string>("");
 
   React.useEffect(() => {
@@ -80,59 +150,62 @@ export function CalendarModal({
 
   if (!selectedDate) return null;
 
+  if (!isDesktop) {
+    const tradeCount = dayData?.tradeNumber ?? 0;
+
+    return (
+      <Drawer open={isOpen} onOpenChange={onOpenChange}>
+        <DrawerContent className="h-[85dvh] max-h-[85dvh] p-0 flex flex-col">
+          <DrawerHeader className="shrink-0 px-4 pt-3 pb-2 text-left">
+            <div className="flex items-baseline justify-between gap-3">
+              <DrawerTitle className="text-base capitalize truncate">
+                {formattedDate}
+              </DrawerTitle>
+              {dayData && (
+                <span
+                  className={cn(
+                    "text-sm font-semibold shrink-0",
+                    dayData.pnl >= 0
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-red-600 dark:text-red-400",
+                  )}
+                >
+                  {formatSignedCurrency(dayData.pnl)}
+                </span>
+              )}
+            </div>
+            <DrawerDescription className="text-xs">
+              {tradeCount > 0
+                ? `${tradeCount} ${tradeCount > 1 ? t("calendar.trades") : t("calendar.trade")}`
+                : t("calendar.modal.noTrades")}
+            </DrawerDescription>
+          </DrawerHeader>
+          <DailyTabs
+            selectedDate={selectedDate}
+            dayData={dayData}
+            isLoading={isLoading}
+            layout="drawer"
+          />
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-full h-dvh sm:h-[80vh] p-0 flex flex-col">
+      <DialogContent className="max-w-4xl w-full h-[80vh] p-0 flex flex-col">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>{formattedDate}</DialogTitle>
           <DialogDescription>
             {t("calendar.modal.tradeDetails")}
           </DialogDescription>
         </DialogHeader>
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="grow flex flex-col overflow-hidden"
-        >
-          <TabsList className="px-6">
-            <TabsTrigger value="comment">
-              {t("calendar.modal.comment")}
-            </TabsTrigger>
-            <TabsTrigger value="table">{t("calendar.modal.table")}</TabsTrigger>
-            <TabsTrigger value="analysis">
-              {t("calendar.modal.analysis")}
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent
-            value="comment"
-            className="grow overflow-hidden p-6 pt-2 h-full flex flex-col"
-          >
-            <DailyComment dayData={dayData} selectedDate={selectedDate} />
-          </TabsContent>
-          <TabsContent
-            value="table"
-            className="grow overflow-hidden flex flex-col min-h-0"
-          >
-            {dayData && dayData.trades?.length > 0 ? (
-              <div className="h-full w-full overflow-hidden">
-                <TradeTableReview tradesParam={dayData.trades as Trade[]} />
-              </div>
-            ) : (
-              <p className="p-6 pt-2">{t("calendar.modal.noTrades")}</p>
-            )}
-          </TabsContent>
-          <TabsContent
-            value="analysis"
-            className="grow overflow-auto p-6 pt-2 space-y-4"
-          >
-            {dayData && dayData.trades?.length > 0 && (
-              <StatisticsWidget dayData={dayData} size="medium" />
-            )}
-            <DailyStats dayData={dayData} isWeekly={false} />
-            {/* <DailyMood dayData={dayData} isWeekly={false} selectedDate={selectedDate} /> */}
-            <Charts dayData={dayData} isLoading={isLoading} />
-          </TabsContent>
-        </Tabs>
+        <DailyTabs
+          selectedDate={selectedDate}
+          dayData={dayData}
+          isLoading={isLoading}
+          layout="dialog"
+        />
       </DialogContent>
     </Dialog>
   );
