@@ -49,10 +49,6 @@ export default function FeedbackButton() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, message: trimmed, locale }),
       })
-      if (response.status === 429) {
-        toast.error(t('feedback.rateLimited'))
-        return
-      }
       if (!response.ok) {
         throw new Error(`Feedback request failed: ${response.status}`)
       }
