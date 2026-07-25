@@ -1,6 +1,8 @@
 import "server-only";
 
+import { render } from "@react-email/render";
 import { createElement } from "react";
+import type { ReactElement } from "react";
 import { Resend } from "resend";
 
 import FeedbackAcknowledgementEmail from "@/components/emails/feedback-acknowledgement";
@@ -28,6 +30,22 @@ const ACKNOWLEDGEMENT_SUBJECT: Record<FeedbackEmailLocale, string> = {
   fr: "Nous avons bien reçu votre retour",
 };
 
+/**
+ * Renders to html/text instead of handing Resend the `react` option. Resend
+ * reaches for `@react-email/render` through an optional dynamic require, which
+ * Next's bundler does not trace into the serverless function — it throws
+ * "Failed to render React component" at runtime on Vercel while working fine
+ * locally. A static import gets bundled, and we get the plain-text alternative
+ * for free.
+ */
+async function renderEmail(element: ReactElement) {
+  const [html, text] = await Promise.all([
+    render(element),
+    render(element, { plainText: true }),
+  ]);
+  return { html, text };
+}
+
 function firstNameFrom(email: string | null) {
   const localPart = email?.split("@")[0]?.split(/[._-]/)[0];
   if (!localPart) return "trader";
@@ -50,13 +68,8 @@ export async function sendFeedbackNotificationEmail(
 
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const { error } = await resend.emails.send({
-      from: config.from,
-      to: [config.to],
-      // Replying in the inbox answers the user directly.
-      ...(input.userEmail ? { replyTo: input.userEmail } : {}),
-      subject: `${SUBJECT_PREFIX[input.type]} from ${input.userEmail ?? input.userId}`,
-      react: createElement(FeedbackNotificationEmail, {
+    const { html, text } = await renderEmail(
+      createElement(FeedbackNotificationEmail, {
         feedbackType: input.type,
         message: input.message,
         userEmail: input.userEmail,
@@ -64,6 +77,15 @@ export async function sendFeedbackNotificationEmail(
         locale: input.locale,
         submittedAt: new Date().toISOString(),
       }),
+    );
+    const { error } = await resend.emails.send({
+      from: config.from,
+      to: [config.to],
+      // Replying in the inbox answers the user directly.
+      ...(input.userEmail ? { replyTo: input.userEmail } : {}),
+      subject: `${SUBJECT_PREFIX[input.type]} from ${input.userEmail ?? input.userId}`,
+      html,
+      text,
     });
 
     if (error) {
@@ -96,17 +118,21 @@ export async function sendFeedbackAcknowledgementEmail(
 
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const { error } = await resend.emails.send({
-      from: config.from,
-      to: [input.userEmail],
-      replyTo: config.to,
-      subject: ACKNOWLEDGEMENT_SUBJECT[input.locale],
-      react: createElement(FeedbackAcknowledgementEmail, {
+    const { html, text } = await renderEmail(
+      createElement(FeedbackAcknowledgementEmail, {
         firstName: firstNameFrom(input.userEmail),
         language: input.locale,
         feedbackType: input.type,
         message: input.message,
       }),
+    );
+    const { error } = await resend.emails.send({
+      from: config.from,
+      to: [input.userEmail],
+      replyTo: config.to,
+      subject: ACKNOWLEDGEMENT_SUBJECT[input.locale],
+      html,
+      text,
     });
 
     if (error) {
