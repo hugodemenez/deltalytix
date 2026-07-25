@@ -193,8 +193,14 @@ function ConnectionRow({
   const [nowMs, setNowMs] = useState<number | null>(null)
   const { performSyncForAccount: syncTradovate } = useTradovateSyncContext()
   const { performSyncForAccount: syncDxFeed } = useDxFeedSyncContext()
-  const { performSyncForAccount: syncRithmicProtocol } =
-    useRithmicProtocolSyncContext()
+  const {
+    performSyncForAccount: syncRithmicProtocol,
+    isAccountSyncing: isRithmicProtocolSyncing,
+  } = useRithmicProtocolSyncContext()
+  const protocolSyncing =
+    connection.service === 'rithmic-protocol' &&
+    isRithmicProtocolSyncing(connection.accountId)
+  const rowSyncing = protocolSyncing || syncing
 
   const canSchedule = supportsDailySync(connection.service)
   const nextSyncAt = useMemo(
@@ -275,7 +281,8 @@ function ConnectionRow({
   )
 
   const handleSync = useCallback(async () => {
-    setSyncing(true)
+    const usesLocalSyncState = connection.service !== 'rithmic-protocol'
+    if (usesLocalSyncState) setSyncing(true)
     try {
       let result: { success?: boolean } | void
       if (connection.service === 'tradovate') {
@@ -283,6 +290,7 @@ function ConnectionRow({
       } else if (connection.service === 'dxfeed') {
         result = await syncDxFeed(connection.accountId)
       } else if (connection.service === 'rithmic-protocol') {
+        // Loading/error feedback comes from Protocol sync context (row spinner).
         result = await syncRithmicProtocol(connection.accountId)
       } else {
         toast.message(t('connections.sync.manualOnly'))
@@ -290,7 +298,9 @@ function ConnectionRow({
       }
       if (result && result.success === false) {
         setSyncFailed(true)
-        toast.error(t('connections.sync.failed'))
+        if (usesLocalSyncState) {
+          toast.error(t('connections.sync.failed'))
+        }
         return
       }
       setSyncFailed(false)
@@ -298,9 +308,11 @@ function ConnectionRow({
     } catch (error) {
       console.error(error)
       setSyncFailed(true)
-      toast.error(t('connections.sync.failed'))
+      if (usesLocalSyncState) {
+        toast.error(t('connections.sync.failed'))
+      }
     } finally {
-      setSyncing(false)
+      if (usesLocalSyncState) setSyncing(false)
     }
   }, [connection, onChanged, syncDxFeed, syncRithmicProtocol, syncTradovate, t])
 
@@ -409,10 +421,10 @@ function ConnectionRow({
               type="button"
               className={iconButtonClassName}
               aria-label={t('connections.sync.now')}
-              disabled={syncing}
+              disabled={rowSyncing}
               onClick={() => void handleSync()}
             >
-              {syncing ? (
+              {rowSyncing ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
@@ -786,24 +798,38 @@ function TypeSection({
     setSyncingAll(true)
     let failed = 0
     try {
-      for (const connection of connections) {
-        try {
-          let result: { success?: boolean } | void
-          if (service === 'tradovate') {
-            result = await syncTradovate(connection.accountId)
-          } else if (service === 'dxfeed') {
-            result = await syncDxFeed(connection.accountId)
-          } else if (service === 'rithmic-protocol') {
-            result = await syncRithmicProtocol(connection.accountId)
-          } else {
-            result = await syncRithmic(connection.accountId)
-          }
-          if (result && result.success === false) {
+      if (service === 'rithmic-protocol') {
+        // Protocol tracks per-connection syncing in context; run in parallel so
+        // each row can show its own spinner without a toast storm.
+        const results = await Promise.all(
+          connections.map(async (connection) => {
+            try {
+              return await syncRithmicProtocol(connection.accountId)
+            } catch (error) {
+              console.error(error)
+              return { success: false as const }
+            }
+          }),
+        )
+        failed = results.filter((result) => result && result.success === false).length
+      } else {
+        for (const connection of connections) {
+          try {
+            let result: { success?: boolean } | void
+            if (service === 'tradovate') {
+              result = await syncTradovate(connection.accountId)
+            } else if (service === 'dxfeed') {
+              result = await syncDxFeed(connection.accountId)
+            } else {
+              result = await syncRithmic(connection.accountId)
+            }
+            if (result && result.success === false) {
+              failed += 1
+            }
+          } catch (error) {
+            console.error(error)
             failed += 1
           }
-        } catch (error) {
-          console.error(error)
-          failed += 1
         }
       }
 

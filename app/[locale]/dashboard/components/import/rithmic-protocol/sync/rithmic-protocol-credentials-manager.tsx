@@ -41,6 +41,8 @@ export function RithmicProtocolCredentialsManager() {
   const {
     performSyncForAccount,
     performSyncForAllAccounts,
+    isAutoSyncing,
+    isAccountSyncing,
     accounts,
     deleteAccount,
     loadAccounts,
@@ -49,7 +51,6 @@ export function RithmicProtocolCredentialsManager() {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
-  const [syncingId, setSyncingId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isReloading, setIsReloading] = useState(false)
   const [username, setUsername] = useState('')
@@ -95,6 +96,7 @@ export function RithmicProtocolCredentialsManager() {
       return
     }
 
+    const connectedUsername = username
     try {
       setIsLoading(true)
       const result = await authenticateRithmicProtocol(
@@ -125,6 +127,8 @@ export function RithmicProtocolCredentialsManager() {
       setPassword('')
       setHistoryStartDate('')
       await loadAccounts()
+      // One sync pulls every trading account stored on this connection.
+      void performSyncForAccount(connectedUsername)
     } catch (error) {
       console.error('Rithmic Protocol connect error:', error)
       toast.error(t('rithmicProtocolSync.error.authFailed'))
@@ -139,6 +143,7 @@ export function RithmicProtocolCredentialsManager() {
     gatewayId,
     t,
     loadAccounts,
+    performSyncForAccount,
   ])
 
   const handleReloadAccounts = useCallback(async () => {
@@ -165,9 +170,13 @@ export function RithmicProtocolCredentialsManager() {
           variant="outline"
           size="sm"
           onClick={() => void performSyncForAllAccounts()}
-          disabled={accounts.length === 0}
+          disabled={accounts.length === 0 || isAutoSyncing}
         >
-          <RefreshCw className="h-4 w-4 mr-1" />
+          {isAutoSyncing ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-1" />
+          )}
           {t('rithmicProtocolSync.multiAccount.syncAll')}
         </Button>
         <Button
@@ -190,31 +199,41 @@ export function RithmicProtocolCredentialsManager() {
         </p>
       ) : (
         <Accordion type="multiple" className="w-full">
-          {accounts.map((account) => (
+          {accounts.map((account) => {
+            const syncing = isAccountSyncing(account.accountId)
+            return (
             <AccordionItem key={account.accountId} value={account.accountId}>
               <AccordionTrigger className="text-sm">
-                <div className="flex flex-col items-start gap-0.5 text-left">
-                  <span className="font-medium">{account.accountId}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {account.systemName || 'Rithmic'}
-                    {account.gatewayLabel ? ` · ${account.gatewayLabel}` : ''} ·{' '}
-                    {account.accountNumbers.length}{' '}
-                    {t('rithmicProtocolSync.multiAccount.accountsCount')}
-                  </span>
+                <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                  <div className="flex min-w-0 flex-col items-start gap-0.5">
+                    <span className="font-medium">{account.accountId}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {account.systemName || 'Rithmic'}
+                      {account.gatewayLabel ? ` · ${account.gatewayLabel}` : ''} ·{' '}
+                      {account.accountNumbers.length}{' '}
+                      {t('rithmicProtocolSync.multiAccount.accountsCount')}
+                    </span>
+                  </div>
+                  {syncing ? (
+                    <Loader2
+                      className="ml-auto h-4 w-4 shrink-0 animate-spin text-muted-foreground"
+                      aria-label={t('rithmicProtocolSync.sync.inProgress', {
+                        accountId: account.accountId,
+                      })}
+                    />
+                  ) : null}
                 </div>
               </AccordionTrigger>
               <AccordionContent>
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   <Button
                     size="sm"
-                    disabled={syncingId === account.accountId}
-                    onClick={async () => {
-                      setSyncingId(account.accountId)
-                      await performSyncForAccount(account.accountId)
-                      setSyncingId(null)
+                    disabled={syncing}
+                    onClick={() => {
+                      void performSyncForAccount(account.accountId)
                     }}
                   >
-                    {syncingId === account.accountId ? (
+                    {syncing ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-1" />
                     ) : null}
                     {t('rithmicProtocolSync.multiAccount.syncNow')}
@@ -258,7 +277,8 @@ export function RithmicProtocolCredentialsManager() {
                 </div>
               </AccordionContent>
             </AccordionItem>
-          ))}
+            )
+          })}
         </Accordion>
       )}
 

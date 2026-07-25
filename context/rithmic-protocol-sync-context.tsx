@@ -44,8 +44,11 @@ interface RithmicProtocolSyncContextType {
   ) => Promise<{ success: boolean; message: string } | undefined>
   performSyncForAllAccounts: () => Promise<void>
   isAutoSyncing: boolean
+  /** Connection externalIds (usernames) currently mid-sync. */
+  syncingAccountIds: ReadonlySet<string>
+  isAccountSyncing: (accountId: string) => boolean
   accounts: RithmicProtocolSyncAccount[]
-  loadAccounts: () => Promise<void>
+  loadAccounts: () => Promise<RithmicProtocolSyncAccount[]>
   deleteAccount: (accountId: string) => Promise<void>
   syncInterval: number
   setSyncInterval: (interval: number) => void
@@ -65,8 +68,28 @@ export function RithmicProtocolSyncContextProvider({
   const [isAutoSyncing, setIsAutoSyncing] = useState(false)
   const isAutoSyncingRef = useRef(false)
   const [accounts, setAccounts] = useState<RithmicProtocolSyncAccount[]>([])
+  const accountsRef = useRef<RithmicProtocolSyncAccount[]>([])
+  const [syncingAccountIds, setSyncingAccountIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  )
+  const syncingAccountIdsRef = useRef(new Set<string>())
   const [syncInterval, setSyncInterval] = useState(15)
   const [enableAutoSync, setEnableAutoSync] = useState(false)
+
+  const beginAccountSync = useCallback((accountId: string) => {
+    syncingAccountIdsRef.current.add(accountId)
+    setSyncingAccountIds(new Set(syncingAccountIdsRef.current))
+  }, [])
+
+  const endAccountSync = useCallback((accountId: string) => {
+    syncingAccountIdsRef.current.delete(accountId)
+    setSyncingAccountIds(new Set(syncingAccountIdsRef.current))
+  }, [])
+
+  const isAccountSyncing = useCallback(
+    (accountId: string) => syncingAccountIds.has(accountId),
+    [syncingAccountIds],
+  )
 
   const t = useI18n()
   const { refreshTradesOnly } = useData()
@@ -105,15 +128,24 @@ export function RithmicProtocolSyncContextProvider({
       if (!response.ok) throw new Error('Failed to fetch synchronizations')
       const result = await response.json()
       const data = Array.isArray(result.data) ? result.data : []
-      setAccounts(data.map(normalizeSynchronization))
+      const next = data.map(normalizeSynchronization)
+      // Keep the ref in sync immediately so a post-connect sync can resolve the
+      // new connection before React re-renders with setAccounts.
+      accountsRef.current = next
+      setAccounts(next)
+      return next
     } catch (error) {
       console.warn('Failed to load Rithmic Protocol accounts:', error)
       toast.error(t('rithmicProtocolSync.errors.LOAD_SYNCHRONIZATIONS_FAILED'))
+      return accountsRef.current
     }
   }, [normalizeSynchronization, t])
 
   const deleteAccount = useCallback(async (accountId: string) => {
-    setAccounts((prev) => prev.filter((acc) => acc.accountId !== accountId))
+    accountsRef.current = accountsRef.current.filter(
+      (acc) => acc.accountId !== accountId,
+    )
+    setAccounts(accountsRef.current)
     await fetch('/api/rithmic-protocol/synchronizations', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -123,7 +155,7 @@ export function RithmicProtocolSyncContextProvider({
 
   const performSyncForAccount = useCallback(
     async (accountId: string) => {
-      const account = accounts.find((acc) => acc.accountId === accountId)
+      const account = accountsRef.current.find((acc) => acc.accountId === accountId)
       if (!account) {
         return {
           success: false,
@@ -136,11 +168,11 @@ export function RithmicProtocolSyncContextProvider({
           message: t('rithmicProtocolSync.sync.tokenMissing'),
         }
       }
+      if (syncingAccountIdsRef.current.has(accountId)) {
+        return { success: true, message: 'SYNC_IN_PROGRESS' }
+      }
 
-      const toastId = toast.loading(
-        t('rithmicProtocolSync.sync.inProgress', { accountId }),
-      )
-
+      beginAccountSync(accountId)
       try {
         const response = await fetch('/api/rithmic-protocol/sync', {
           method: 'POST',
@@ -152,9 +184,6 @@ export function RithmicProtocolSyncContextProvider({
         if (payload?.message === 'DUPLICATE_TRADES') {
           await loadAccounts()
           await refreshTradesOnly({ force: false })
-          toast.success(t('rithmicProtocolSync.multiAccount.alreadyImportedTrades'), {
-            id: toastId,
-          })
           return { success: true, message: 'DUPLICATE_TRADES' }
         }
 
@@ -168,69 +197,44 @@ export function RithmicProtocolSyncContextProvider({
                 reason: String(payload?.errorParams?.reason ?? ''),
               },
             ),
-            { id: toastId },
           )
           return { success: false, message: code }
         }
 
         await loadAccounts()
         await refreshTradesOnly({ force: false })
-
-        const savedCount = payload.savedCount ?? 0
-        const tradesCount = payload.tradesCount ?? 0
-        if (savedCount > 0) {
-          toast.success(
-            t('rithmicProtocolSync.multiAccount.syncCompleteForAccount', {
-              savedCount,
-              tradesCount,
-              accountId,
-            }),
-            { id: toastId },
-          )
-        } else if (tradesCount > 0) {
-          toast.success(
-            t(
-              'rithmicProtocolSync.multiAccount.syncCompleteNoNewTradesForAccount',
-              { tradesCount, accountId },
-            ),
-            { id: toastId },
-          )
-        } else {
-          toast.success(
-            t(
-              'rithmicProtocolSync.multiAccount.syncCompleteNoOrdersForAccount',
-              { accountId },
-            ),
-            { id: toastId },
-          )
-        }
-
         return { success: true, message: 'OK' }
       } catch (error) {
         console.error('Rithmic Protocol sync error:', error)
-        toast.error(t('rithmicProtocolSync.errors.SYNC_FAILED'), { id: toastId })
+        toast.error(t('rithmicProtocolSync.errors.SYNC_FAILED'))
         return { success: false, message: 'SYNC_FAILED' }
+      } finally {
+        endAccountSync(accountId)
       }
     },
-    [accounts, loadAccounts, refreshTradesOnly, t],
+    [beginAccountSync, endAccountSync, loadAccounts, refreshTradesOnly, t],
   )
 
+  /**
+   * One Protocol connection login stores many trading accounts; each sync already
+   * fetches fills for every accountId on that connection. Sync All therefore runs
+   * once per connection (username), not once per trading account — and connections
+   * sync in parallel with per-row loading state (no promise toasts).
+   */
   const performSyncForAllAccounts = useCallback(async () => {
     if (isAutoSyncingRef.current) return
     isAutoSyncingRef.current = true
     setIsAutoSyncing(true)
     try {
-      for (const account of accounts) {
-        if (account.hasToken) {
-          await performSyncForAccount(account.accountId)
-          await new Promise((resolve) => setTimeout(resolve, 1000))
-        }
-      }
+      const targets = accountsRef.current.filter((account) => account.hasToken)
+      await Promise.all(
+        targets.map((account) => performSyncForAccount(account.accountId)),
+      )
     } finally {
       isAutoSyncingRef.current = false
       setIsAutoSyncing(false)
     }
-  }, [accounts, performSyncForAccount])
+  }, [performSyncForAccount])
 
   useEffect(() => {
     void loadAccounts()
@@ -261,6 +265,8 @@ export function RithmicProtocolSyncContextProvider({
         performSyncForAccount,
         performSyncForAllAccounts,
         isAutoSyncing,
+        syncingAccountIds,
+        isAccountSyncing,
         accounts,
         loadAccounts,
         deleteAccount,

@@ -43,7 +43,7 @@ function RithmicProtocolConnectView({
   onConnected?: () => void
 }) {
   const t = useI18n()
-  const { loadAccounts } = useRithmicProtocolSyncContext()
+  const { loadAccounts, performSyncForAccount } = useRithmicProtocolSyncContext()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [historyStartDate, setHistoryStartDate] = useState('')
@@ -67,6 +67,7 @@ function RithmicProtocolConnectView({
       return
     }
 
+    const connectedUsername = username
     try {
       setIsLoading(true)
       const result = await authenticateRithmicProtocol(
@@ -97,6 +98,8 @@ function RithmicProtocolConnectView({
       setHistoryStartDate('')
       await loadAccounts()
       onConnected?.()
+      // One sync pulls every trading account stored on this connection.
+      void performSyncForAccount(connectedUsername)
     } catch (error) {
       console.error('Rithmic Protocol connect error:', error)
       toast.error(t('rithmicProtocolSync.error.authFailed'))
@@ -111,6 +114,7 @@ function RithmicProtocolConnectView({
     gatewayId,
     t,
     loadAccounts,
+    performSyncForAccount,
     onConnected,
   ])
 
