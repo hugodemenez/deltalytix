@@ -1,6 +1,26 @@
 # Shared agent skills
 
-This is Deltalytix's canonical cross-agent skill directory. Keep each skill in `agents/skills/<name>/` with a `SKILL.md` entry point, and point every coding agent here instead of maintaining `.cursor`, `.claude`, or `.codex` copies.
+This is Deltalytix's canonical cross-agent skill directory. Keep each skill in `agents/skills/<name>/` with a `SKILL.md` entry point. This directory holds the only copy of every skill; agent-specific directories contain symlinks, never duplicated content.
+
+## How each agent discovers these skills
+
+Codex reads [`AGENTS.md`](../../AGENTS.md), which points here directly. Claude Code and Cursor only auto-discover skills under their own directories, so each skill is symlinked into both:
+
+```
+.claude/skills/<name>  ->  ../../agents/skills/<name>
+.cursor/skills/<name>  ->  ../../agents/skills/<name>
+```
+
+Both tools follow a symlinked skill entry and read `SKILL.md` from the target, so the skill loads by name and description without a second copy on disk.
+
+**When adding a skill**, create it in `agents/skills/<name>/` with `name` and `description` frontmatter, then link it into both trees:
+
+```bash
+ln -s "../../agents/skills/<name>" ".claude/skills/<name>"
+ln -s "../../agents/skills/<name>" ".cursor/skills/<name>"
+```
+
+Windows contributors need `git config core.symlinks true` (and Developer Mode) for the links to check out as links rather than plain text files.
 
 ## Deltalytix workflows
 

@@ -2,6 +2,7 @@ import type { NextConfig } from 'next';
 import createMDX from '@next/mdx';
 import os from 'os';
 import { SUPPORT_SEARCH_TRACE_INCLUDES } from './lib/ai/search-codebase';
+import { AGENT_SKILLS_TRACE_INCLUDES } from './lib/agent-skills/load-skill';
 
 const detectedBuildWorkers =
   typeof os.availableParallelism === 'function'
@@ -80,6 +81,9 @@ const nextConfig: NextConfig = {
     ],
     // Runtime fs search in /api/ai/support — keep docs in the serverless bundle.
     '/api/ai/support': [...SUPPORT_SEARCH_TRACE_INCLUDES],
+    // /.well-known/agent-skills/index.json is dynamic and reads the shared
+    // skill markdown at request time to compute its digests.
+    '/.well-known/agent-skills/**': [...AGENT_SKILLS_TRACE_INCLUDES],
     // Protocol login is a server action from Connections (not only /api/rithmic-protocol/*).
     // Include assets for all server traces so preview/production lambdas can load protos.
     '/*': [...RITHMIC_PROTOCOL_TRACE_INCLUDES],

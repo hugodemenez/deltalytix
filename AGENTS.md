@@ -68,7 +68,7 @@ curl -s -o /dev/null -D - "http://localhost:3000/authentication?next=dashboard" 
 
 ## Shared agent skills
 
-The canonical, cross-agent skill library lives in [`agents/skills/`](./agents/skills/). Do not create duplicate `.cursor`, `.claude`, or `.codex` skill trees.
+The canonical, cross-agent skill library lives in [`agents/skills/`](./agents/skills/). It holds the only copy of each skill; `.claude/skills/` and `.cursor/skills/` contain symlinks into it so Claude Code and Cursor auto-discover the same files. Never copy a skill into an agent-specific tree.
 
 When a task names a skill or matches a skill's frontmatter description:
 
