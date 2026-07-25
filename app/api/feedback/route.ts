@@ -7,7 +7,6 @@ import {
   toFeedbackLocale,
 } from '@/lib/feedback'
 import { createClient } from '@/server/auth'
-import { consumeFeedbackRateLimit } from '@/server/feedback-rate-limit'
 import {
   sendFeedbackAcknowledgementEmail,
   sendFeedbackNotificationEmail,
@@ -68,21 +67,6 @@ export async function POST(request: Request) {
   }
   if (!isFeedbackType(type)) {
     return NextResponse.json({ error: 'Invalid feedback type' }, { status: 400 })
-  }
-
-  const rateLimit = await consumeFeedbackRateLimit(user.id)
-  if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { error: 'Feedback rate limit exceeded' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': String(rateLimit.retryAfterSeconds),
-          'X-RateLimit-Limit': String(rateLimit.limit),
-          'X-RateLimit-Remaining': String(rateLimit.remaining),
-        },
-      },
-    )
   }
 
   const locale = toFeedbackLocale(rawLocale)
