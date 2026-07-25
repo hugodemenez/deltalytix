@@ -16,7 +16,9 @@ import {
 // 16.3-preview + Turbopack, importing @react-email/render from a server action
 // makes the bundler emit an unresolvable hashed external, which breaks *every*
 // action sharing that route chunk. Route handlers bundle it correctly.
-export const dynamic = 'force-dynamic'
+//
+// No `dynamic` route-segment export here: it is rejected under
+// `cacheComponents`, and a POST handler is dynamic regardless.
 
 export async function POST(request: Request) {
   const supabase = await createClient()
