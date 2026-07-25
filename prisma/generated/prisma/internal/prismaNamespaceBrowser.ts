@@ -81,8 +81,7 @@ export const ModelName = {
   Vote: 'Vote',
   Order: 'Order',
   TradeAnalytics: 'TradeAnalytics',
-  HistoricalData: 'HistoricalData',
-  FeedbackRateLimit: 'FeedbackRateLimit'
+  HistoricalData: 'HistoricalData'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -587,15 +586,6 @@ export const HistoricalDataScalarFieldEnum = {
 } as const
 
 export type HistoricalDataScalarFieldEnum = (typeof HistoricalDataScalarFieldEnum)[keyof typeof HistoricalDataScalarFieldEnum]
-
-
-export const FeedbackRateLimitScalarFieldEnum = {
-  userId: 'userId',
-  windowStart: 'windowStart',
-  count: 'count'
-} as const
-
-export type FeedbackRateLimitScalarFieldEnum = (typeof FeedbackRateLimitScalarFieldEnum)[keyof typeof FeedbackRateLimitScalarFieldEnum]
 
 
 export const SortOrder = {
