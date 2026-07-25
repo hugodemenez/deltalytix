@@ -11,6 +11,8 @@ export type ConnectionsPageAccount = {
   connectionId: string | null
   createdAt: Date
   tradeCount: number
+  /** ISO date of the account's most recent trade, or null when it has none. */
+  lastTradeDate: string | null
 }
 
 export type ConnectionsPageConnection = Omit<ConnectionView, 'token'> & {

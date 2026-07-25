@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { RefreshCw, Loader2, Trash2 } from 'lucide-react'
-import { useI18n } from '@/locales/client'
+import { useCurrentLocale, useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import {
   AlertDialog,
@@ -76,6 +76,19 @@ function formatRelative(date: Date | string | null | undefined, fallback: string
   const d = typeof date === 'string' ? new Date(date) : date
   if (Number.isNaN(d.getTime())) return fallback
   return d.toLocaleString()
+}
+
+// Fixed-width, locale-ordered date (zero-padded day/month, 4-digit year) so
+// every "Last trade" label has the same length and rows stay visually aligned.
+function formatTradeDate(date: string | null | undefined, locale: string) {
+  if (!date) return null
+  const d = new Date(date)
+  if (Number.isNaN(d.getTime())) return null
+  return new Intl.DateTimeFormat(locale, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(d)
 }
 
 function supportsDailySync(service: string) {
@@ -163,6 +176,7 @@ function ConnectionRow({
   onChanged: () => void
 }) {
   const t = useI18n()
+  const locale = useCurrentLocale()
   const [open, setOpen] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -435,12 +449,18 @@ function ConnectionRow({
                   className="flex items-center justify-between gap-4 py-3 text-sm"
                 >
                   <span className="font-medium tracking-tight">{account.number}</span>
-                  <span className="text-black/45 dark:text-white/45">
+                  <span className="text-black/45 dark:text-white/45 tabular-nums">
                     {account.tradeCount === 1
                       ? t('connections.tradeCount.one', { count: 1 })
                       : t('connections.tradeCount.other', {
                           count: account.tradeCount,
                         })}
+                    {(() => {
+                      const lastTrade = formatTradeDate(account.lastTradeDate, locale)
+                      return lastTrade
+                        ? ` · ${t('connections.lastTrade', { date: lastTrade })}`
+                        : ''
+                    })()}
                   </span>
                 </li>
               ))}
@@ -839,6 +859,7 @@ export function ConnectionsPageClient({
   initialData: ConnectionsPageData
 }) {
   const t = useI18n()
+  const locale = useCurrentLocale()
   const searchParams = useSearchParams()
   const tradovateStore = useTradovateSyncStore()
   const { register } = useConnectionsRefresh()
@@ -1130,12 +1151,18 @@ export function ConnectionsPageClient({
                 <div className="text-xl font-normal tracking-tight md:text-2xl">
                   {account.number}
                 </div>
-                <span className="text-sm text-black/45 dark:text-white/45">
+                <span className="text-sm text-black/45 dark:text-white/45 tabular-nums">
                   {account.tradeCount === 1
                     ? t('connections.tradeCount.one', { count: 1 })
                     : t('connections.tradeCount.other', {
                         count: account.tradeCount,
                       })}
+                  {(() => {
+                    const lastTrade = formatTradeDate(account.lastTradeDate, locale)
+                    return lastTrade
+                      ? ` · ${t('connections.lastTrade', { date: lastTrade })}`
+                      : ''
+                  })()}
                 </span>
               </li>
             ))}

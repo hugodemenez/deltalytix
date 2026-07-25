@@ -130,16 +130,22 @@ export async function loadConnectionsPageDataForUser(
       by: ['accountNumber'],
       where: { userId },
       _count: { _all: true },
+      _max: { entryDate: true },
     }),
   ])
 
   const countByNumber = new Map(
     tradeCounts.map((row) => [row.accountNumber, row._count._all])
   )
+  // entryDate is an ISO string, so lexicographic max is the latest trade date.
+  const lastTradeByNumber = new Map(
+    tradeCounts.map((row) => [row.accountNumber, row._max.entryDate ?? null])
+  )
 
   const mappedAccounts: ConnectionsPageAccount[] = accounts.map((account) => ({
     ...account,
     tradeCount: countByNumber.get(account.number) ?? 0,
+    lastTradeDate: lastTradeByNumber.get(account.number) ?? null,
   }))
 
   const accountsByConnection = new Map<string, ConnectionsPageAccount[]>()
