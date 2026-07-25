@@ -17,7 +17,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Textarea } from '@/components/ui/textarea'
-import { useI18n } from '@/locales/client'
+import { useCurrentLocale, useI18n } from '@/locales/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { submitFeedback, type FeedbackType } from '@/server/feedback'
@@ -26,6 +26,7 @@ const FEEDBACK_TYPES: FeedbackType[] = ['bug', 'feature', 'other']
 
 export default function FeedbackButton() {
   const t = useI18n()
+  const locale = useCurrentLocale()
 
   const typeLabels: Record<FeedbackType, string> = {
     bug: t('feedback.type.bug'),
@@ -45,7 +46,7 @@ export default function FeedbackButton() {
 
     try {
       setIsPending(true)
-      await submitFeedback({ type, message: trimmed })
+      await submitFeedback({ type, message: trimmed, locale })
       toast.success(t('feedback.success'))
       setMessage('')
       setType('bug')
@@ -58,8 +59,9 @@ export default function FeedbackButton() {
     }
   }
 
-  // Feedback is delivered to PostHog only, so a deployment without it
-  // configured (self-hosted) has nowhere to send it.
+  // Feedback also goes to the support inbox, but Resend config is server-only
+  // and unreadable here, so PostHog stays the proxy for "this deployment can
+  // receive feedback". A self-hosted deploy with only Resend hides the button.
   if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return null
 
   return (
