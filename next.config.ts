@@ -29,13 +29,6 @@ const nextConfig: NextConfig = {
   ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
   // Hide the Next.js dev indicator during changelog media capture (see lib/agent-skills/changelog-media.md).
   ...(process.env.CHANGELOG_MEDIA_CAPTURE === '1' ? { devIndicators: false as const } : {}),
-  // @react-email/render pulls in prettier. Under Turbopack (Next 16.3+) that
-  // gets externalised but not traced into the serverless function, so any
-  // server action importing it dies at runtime with
-  // "Cannot find package 'prettier-<hash>'" — taking down every action in the
-  // same route chunk. Route handlers are unaffected, which is why the API-route
-  // senders work. Keeping it external makes Next trace it properly.
-  serverExternalPackages: ['@react-email/render'],
   allowedDevOrigins: ["13.36.171.174", "192.168.0.178"],
   // NOTE: Do not add hardcoded /en redirects for localized routes (e.g. /updates
   // -> /en/updates). next.config redirects run before middleware, so they force a

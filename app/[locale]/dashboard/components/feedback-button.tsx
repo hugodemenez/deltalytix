@@ -20,9 +20,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useCurrentLocale, useI18n } from '@/locales/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { submitFeedback, type FeedbackType } from '@/server/feedback'
-
-const FEEDBACK_TYPES: FeedbackType[] = ['bug', 'feature', 'other']
+import { FEEDBACK_TYPES, type FeedbackType } from '@/lib/feedback'
 
 export default function FeedbackButton() {
   const t = useI18n()
@@ -46,7 +44,14 @@ export default function FeedbackButton() {
 
     try {
       setIsPending(true)
-      await submitFeedback({ type, message: trimmed, locale })
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, message: trimmed, locale }),
+      })
+      if (!response.ok) {
+        throw new Error(`Feedback request failed: ${response.status}`)
+      }
       toast.success(t('feedback.success'))
       setMessage('')
       setType('bug')
