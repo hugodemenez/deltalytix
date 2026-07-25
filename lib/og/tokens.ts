@@ -2,7 +2,7 @@
 // variables or Tailwind, so we centralize literals here for consistency.
 //
 // Hex values are sRGB approximations of the landing-page *dark* oklch tokens
-// from `.cursor/skills/deltalytix-styling-guidelines/SKILL.md`.
+// defined by `app/[locale]/(landing)/layout.tsx`.
 // OG images cannot be theme-responsive — crawlers fetch one cached URL.
 
 export const OG_COLORS = {

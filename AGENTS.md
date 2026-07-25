@@ -66,21 +66,33 @@ curl -s -o /dev/null -D - "http://localhost:3000/authentication?next=dashboard" 
 # expect: HTTP/1.1 307, location: /dashboard
 ```
 
+## Shared agent skills
+
+The canonical, cross-agent skill library lives in [`agents/skills/`](./agents/skills/). Do not create duplicate `.cursor`, `.claude`, or `.codex` skill trees.
+
+When a task names a skill or matches a skill's frontmatter description:
+
+1. Read that skill's complete `SKILL.md` before acting.
+2. Resolve linked resources relative to the skill directory.
+3. Use `better-interface` for a holistic interface review; it coordinates the focused `better-accessibility`, `better-colors`, `better-layout`, `better-typography`, `better-ui`, and `better-writing` skills.
+
+See [`agents/skills/README.md`](./agents/skills/README.md) for the catalog and upstream provenance.
+
 ## Changelog entries
 
 For beta → main promotion PRs, use three sequential specialist roles. When subagents are available, assign each stage to a separate agent.
 
 Changelog publication is append-only: add new EN/FR entries and media, but never revise an entry already present on the base branch. Use descriptive localized Markdown links for product routes instead of bare paths.
 
-**1. Review changes and draft the outline** — skill: [`lib/agent-skills/changelog-review.md`](./lib/agent-skills/changelog-review.md)
+**1. Review changes and draft the outline** — skill: [`agents/skills/changelog-review/SKILL.md`](./agents/skills/changelog-review/SKILL.md)
 Discovery: `/.well-known/agent-skills/changelog-review/SKILL.md`
 Output: `content/updates/batches/<batch>/outline.md`
 
-**2. Write EN/FR copy** — skill: [`lib/agent-skills/changelog-entries.md`](./lib/agent-skills/changelog-entries.md)
+**2. Write EN/FR copy** — skill: [`agents/skills/changelog-entries/SKILL.md`](./agents/skills/changelog-entries/SKILL.md)
 Discovery: `/.well-known/agent-skills/changelog-entries/SKILL.md`
 The copywriter chooses the structure and depth that best fit each entry.
 
-**3. Assess and capture media** — skill: [`lib/agent-skills/changelog-media.md`](./lib/agent-skills/changelog-media.md)
+**3. Assess and capture media** — skill: [`agents/skills/changelog-media/SKILL.md`](./agents/skills/changelog-media/SKILL.md)
 Discovery: `/.well-known/agent-skills/changelog-media/SKILL.md`
 The media specialist decides whether each entry needs zero, one, or several visuals, then records the rationale in `media-plan.md`.
 

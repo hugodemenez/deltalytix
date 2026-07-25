@@ -1,3 +1,8 @@
+---
+name: changelog-entries
+description: Write new bilingual English and French Deltalytix changelog entries from a reviewed release outline. Use for outcome-led release copy, localized MDX, changelog metadata, and copy-to-media handoff.
+---
+
 # Changelog Copywriting
 
 Write user-facing Deltalytix changelog MDX in English and French from a reviewed release outline.
@@ -8,9 +13,9 @@ Act as a product copywriting specialist. Use editorial judgment: a tiny fix may 
 
 This is the second of three sequential roles:
 
-1. Change reviewer: `lib/agent-skills/changelog-review.md`
+1. Change reviewer: `agents/skills/changelog-review/SKILL.md`
 2. **Copywriting specialist: this skill**
-3. Media specialist: `lib/agent-skills/changelog-media.md`
+3. Media specialist: `agents/skills/changelog-media/SKILL.md`
 
 When subagents are available, give each role to a separate agent so the copywriter does not merely restate its own review.
 
@@ -145,5 +150,5 @@ Before handing entries to the media specialist:
 | `content/updates/batches/<batch>/outline.md` | Reviewed source for copy and media |
 | `content/updates/en/<slug>.mdx` | English entry |
 | `content/updates/fr/<slug>.mdx` | French entry |
-| `lib/agent-skills/changelog-review.md` | Previous role |
-| `lib/agent-skills/changelog-media.md` | Next role |
+| `agents/skills/changelog-review/SKILL.md` | Previous role |
+| `agents/skills/changelog-media/SKILL.md` | Next role |

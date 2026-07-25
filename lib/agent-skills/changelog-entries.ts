@@ -5,7 +5,10 @@ import { createHash } from "crypto";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const skillPath = path.join(__dirname, "changelog-entries.md");
+const skillPath = path.join(
+  __dirname,
+  "../../agents/skills/changelog-entries/SKILL.md",
+);
 export const changelogEntriesSkillMarkdown = fs.readFileSync(skillPath, "utf8");
 
 export const changelogEntriesSkillDigest = `sha256:${createHash("sha256")

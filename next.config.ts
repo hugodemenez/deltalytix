@@ -33,7 +33,7 @@ const nextConfig: NextConfig = {
   // so `output: "standalone"` crashes finalize with ENOENT. Vercel ignores standalone
   // output anyway.
   ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
-  // Hide the Next.js dev indicator during changelog media capture (see lib/agent-skills/changelog-media.md).
+  // Hide the Next.js dev indicator during changelog media capture (see agents/skills/changelog-media/SKILL.md).
   ...(process.env.CHANGELOG_MEDIA_CAPTURE === '1' ? { devIndicators: false as const } : {}),
   allowedDevOrigins: ["13.36.171.174", "192.168.0.178"],
   // NOTE: Do not add hardcoded /en redirects for localized routes (e.g. /updates
