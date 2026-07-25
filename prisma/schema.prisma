@@ -601,6 +601,19 @@ model HistoricalData {
   @@schema("public")
 }
 
+/// Fixed-window counter for authenticated feedback submissions. The user ID is
+/// the Supabase auth ID, so this intentionally has no relation to the public
+/// User model (whose primary key is a separate application ID).
+model FeedbackRateLimit {
+  userId      String
+  windowStart DateTime
+  count       Int      @default(1)
+
+  @@id([userId, windowStart])
+  @@index([windowStart])
+  @@schema("public")
+}
+
 enum PostType {
   FEATURE_REQUEST
   BUG_REPORT

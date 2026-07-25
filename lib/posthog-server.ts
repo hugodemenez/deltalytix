@@ -14,6 +14,11 @@ export async function hasAnalyticsConsent(): Promise<boolean> {
   }
 }
 
+/**
+ * Returns true when PostHog accepted the event. Callers that treat delivery as
+ * best-effort can ignore it; callers with no other durable store (feedback)
+ * use it to surface a retry to the user.
+ */
 export async function capturePostHogEvent({
   consentGranted = false,
   distinctId,
@@ -24,9 +29,9 @@ export async function capturePostHogEvent({
   distinctId: string;
   event: string;
   properties?: PostHogProperties;
-}) {
+}): Promise<boolean> {
   const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
-  if (!projectToken || (!consentGranted && !(await hasAnalyticsConsent()))) return;
+  if (!projectToken || (!consentGranted && !(await hasAnalyticsConsent()))) return false;
 
   const apiHost = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com";
 
@@ -49,8 +54,12 @@ export async function capturePostHogEvent({
 
     if (!response.ok) {
       console.warn(`[PostHog] Failed to capture ${event}: ${response.status}`);
+      return false;
     }
+
+    return true;
   } catch (error) {
     console.warn(`[PostHog] Failed to capture ${event}`, error);
+    return false;
   }
 }

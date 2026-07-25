@@ -414,7 +414,8 @@ export const ModelName = {
   Vote: 'Vote',
   Order: 'Order',
   TradeAnalytics: 'TradeAnalytics',
-  HistoricalData: 'HistoricalData'
+  HistoricalData: 'HistoricalData',
+  FeedbackRateLimit: 'FeedbackRateLimit'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -430,7 +431,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "trade" | "tickDetails" | "subscription" | "businessSubscription" | "teamSubscription" | "notification" | "user" | "connection" | "team" | "teamInvitation" | "teamManager" | "business" | "businessManager" | "businessInvitation" | "group" | "account" | "payout" | "dashboardLayout" | "subscriptionFeedback" | "mood" | "shared" | "referral" | "financialEvent" | "tag" | "newsletter" | "post" | "comment" | "vote" | "order" | "tradeAnalytics" | "historicalData"
+    modelProps: "trade" | "tickDetails" | "subscription" | "businessSubscription" | "teamSubscription" | "notification" | "user" | "connection" | "team" | "teamInvitation" | "teamManager" | "business" | "businessManager" | "businessInvitation" | "group" | "account" | "payout" | "dashboardLayout" | "subscriptionFeedback" | "mood" | "shared" | "referral" | "financialEvent" | "tag" | "newsletter" | "post" | "comment" | "vote" | "order" | "tradeAnalytics" | "historicalData" | "feedbackRateLimit"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2728,6 +2729,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    FeedbackRateLimit: {
+      payload: Prisma.$FeedbackRateLimitPayload<ExtArgs>
+      fields: Prisma.FeedbackRateLimitFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.FeedbackRateLimitFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FeedbackRateLimitPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.FeedbackRateLimitFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FeedbackRateLimitPayload>
+        }
+        findFirst: {
+          args: Prisma.FeedbackRateLimitFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FeedbackRateLimitPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.FeedbackRateLimitFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FeedbackRateLimitPayload>
+        }
+        findMany: {
+          args: Prisma.FeedbackRateLimitFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FeedbackRateLimitPayload>[]
+        }
+        create: {
+          args: Prisma.FeedbackRateLimitCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FeedbackRateLimitPayload>
+        }
+        createMany: {
+          args: Prisma.FeedbackRateLimitCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.FeedbackRateLimitCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FeedbackRateLimitPayload>[]
+        }
+        delete: {
+          args: Prisma.FeedbackRateLimitDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FeedbackRateLimitPayload>
+        }
+        update: {
+          args: Prisma.FeedbackRateLimitUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FeedbackRateLimitPayload>
+        }
+        deleteMany: {
+          args: Prisma.FeedbackRateLimitDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.FeedbackRateLimitUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.FeedbackRateLimitUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FeedbackRateLimitPayload>[]
+        }
+        upsert: {
+          args: Prisma.FeedbackRateLimitUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FeedbackRateLimitPayload>
+        }
+        aggregate: {
+          args: Prisma.FeedbackRateLimitAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateFeedbackRateLimit>
+        }
+        groupBy: {
+          args: Prisma.FeedbackRateLimitGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.FeedbackRateLimitGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.FeedbackRateLimitCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.FeedbackRateLimitCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -3255,6 +3330,15 @@ export const HistoricalDataScalarFieldEnum = {
 export type HistoricalDataScalarFieldEnum = (typeof HistoricalDataScalarFieldEnum)[keyof typeof HistoricalDataScalarFieldEnum]
 
 
+export const FeedbackRateLimitScalarFieldEnum = {
+  userId: 'userId',
+  windowStart: 'windowStart',
+  count: 'count'
+} as const
+
+export type FeedbackRateLimitScalarFieldEnum = (typeof FeedbackRateLimitScalarFieldEnum)[keyof typeof FeedbackRateLimitScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -3596,6 +3680,7 @@ export type GlobalOmitConfig = {
   order?: Prisma.OrderOmit
   tradeAnalytics?: Prisma.TradeAnalyticsOmit
   historicalData?: Prisma.HistoricalDataOmit
+  feedbackRateLimit?: Prisma.FeedbackRateLimitOmit
 }
 
 /* Types for Logging */

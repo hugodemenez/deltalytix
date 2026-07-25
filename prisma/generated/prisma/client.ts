@@ -196,3 +196,10 @@ export type TradeAnalytics = Prisma.TradeAnalyticsModel
  * 
  */
 export type HistoricalData = Prisma.HistoricalDataModel
+/**
+ * Model FeedbackRateLimit
+ * Fixed-window counter for authenticated feedback submissions. The user ID is
+ * the Supabase auth ID, so this intentionally has no relation to the public
+ * User model (whose primary key is a separate application ID).
+ */
+export type FeedbackRateLimit = Prisma.FeedbackRateLimitModel
