@@ -46,14 +46,14 @@ function WeeklyTabs({
   const [activeTab, setActiveTab] = useState("charts")
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="grow flex flex-col overflow-hidden min-h-0">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden min-h-0">
       <TabsList className={cn("shrink-0", isDrawer ? "mx-4 grid w-auto grid-cols-1" : "px-6")}>
         <TabsTrigger value="charts">{t('calendar.modal.charts')}</TabsTrigger>
       </TabsList>
       <TabsContent
         value="charts"
         className={cn(
-          "grow overflow-y-auto overscroll-contain min-h-0",
+          "flex-1 overflow-y-auto overscroll-contain min-h-0",
           isDrawer ? "px-4 pt-2 pb-6" : "p-6 pt-2"
         )}
         data-vaul-no-drag

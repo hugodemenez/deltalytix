@@ -66,7 +66,7 @@ function DailyTabs({ selectedDate, dayData, isLoading, layout }: DailyTabsProps)
     <Tabs
       value={activeTab}
       onValueChange={setActiveTab}
-      className="grow flex flex-col overflow-hidden min-h-0"
+      className="flex-1 flex flex-col overflow-hidden min-h-0"
     >
       <TabsList
         className={cn(
@@ -83,7 +83,7 @@ function DailyTabs({ selectedDate, dayData, isLoading, layout }: DailyTabsProps)
       <TabsContent
         value="comment"
         className={cn(
-          "grow overflow-hidden h-full flex flex-col min-h-0",
+          "flex-1 overflow-hidden flex flex-col min-h-0",
           isDrawer ? "px-4 pt-2 pb-4" : "p-6 pt-2",
         )}
         data-vaul-no-drag
@@ -92,7 +92,7 @@ function DailyTabs({ selectedDate, dayData, isLoading, layout }: DailyTabsProps)
       </TabsContent>
       <TabsContent
         value="table"
-        className="grow overflow-hidden flex flex-col min-h-0"
+        className="flex-1 overflow-hidden flex flex-col min-h-0"
         data-vaul-no-drag
       >
         {dayData && dayData.trades?.length > 0 ? (
@@ -108,7 +108,7 @@ function DailyTabs({ selectedDate, dayData, isLoading, layout }: DailyTabsProps)
       <TabsContent
         value="analysis"
         className={cn(
-          "grow overflow-y-auto overscroll-contain space-y-4 min-h-0",
+          "flex-1 overflow-y-auto overscroll-contain space-y-4 min-h-0",
           isDrawer ? "px-4 pt-2 pb-6" : "p-6 pt-2",
         )}
         data-vaul-no-drag
