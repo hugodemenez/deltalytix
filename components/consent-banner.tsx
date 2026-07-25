@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Drawer,
@@ -103,6 +103,7 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
   })
 
   const isDesktop = useMediaQuery("(min-width: 768px)")
+  const bannerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const sharedAnalyticsConsent = getSharedAnalyticsConsent()
@@ -166,6 +167,23 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [])
 
+  // Radix (and vaul on top of it) decides an interaction happened "outside" an
+  // open dialog from a document-level pointerdown listener, and closes on it.
+  // A React onPointerDown cannot stop that: React delegates handlers to the
+  // root container, so its stopPropagation runs on the same node as Radix's
+  // listener and therefore too late. Stopping the event on the banner element
+  // itself keeps it from ever reaching document, so choosing a consent option
+  // no longer tears down whatever modal the user had open.
+  useEffect(() => {
+    const node = bannerRef.current
+    if (!node) return
+
+    const stop = (event: Event) => event.stopPropagation()
+    const events = ["pointerdown", "mousedown", "touchstart"] as const
+    events.forEach((type) => node.addEventListener(type, stop))
+    return () => events.forEach((type) => node.removeEventListener(type, stop))
+  }, [isVisible])
+
   // Add/remove data attribute when banner visibility changes
   useEffect(() => {
     if (isVisible) {
@@ -218,8 +236,17 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
 
   return (
     <AnimatePresence>
-      <motion.div 
-        className="fixed bottom-0 left-0 right-0 z-9999 p-4 -m-4"
+      <motion.div
+        // The banner outlives any modal on the page, so it has to survive what
+        // Radix does to the rest of the document while a dialog/drawer is open:
+        // - body gets `pointer-events: none`, which the banner inherits, hence
+        //   the explicit `pointer-events-auto`;
+        // - `hideOthers()` marks every other body child `aria-hidden`, and it
+        //   only spares `[aria-live]` nodes, hence the live region.
+        // Without these, an open drawer leaves the banner visible but dead.
+        ref={bannerRef}
+        className="fixed bottom-0 left-0 right-0 z-9999 p-4 -m-4 pointer-events-auto"
+        aria-live="polite"
         initial={{ y: 100 }}
         animate={{ y: 0 }}
         exit={{ y: 100 }}
