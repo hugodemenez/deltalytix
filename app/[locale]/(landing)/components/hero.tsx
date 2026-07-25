@@ -1,84 +1,12 @@
-"use client";
-import { useCurrentLocale, useI18n } from "@/locales/landing-client";
+import { getCurrentLocale, getI18n } from "@/locales/server";
 import { localizeLandingHref } from "@/lib/landing-nav-paths";
-import Link, { useLinkStatus } from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
-import { useTheme } from "@/context/theme-provider";
+import Link from "next/link";
+import HeroCtaLink from "./hero-cta-link";
+import HeroDemoMedia from "./hero-demo-media";
 
-function GetStartedLinkContent({ children }: { children: React.ReactNode }) {
-  const { pending } = useLinkStatus();
-
-  return (
-    <span
-      className="relative inline-flex items-center justify-center text-sm font-medium"
-      aria-busy={pending}
-    >
-      <span className={pending ? "invisible" : undefined}>{children}</span>
-      {pending && (
-        <>
-          <Loader2 className="absolute h-4 w-4 animate-spin" aria-hidden />
-          <span className="sr-only">Loading…</span>
-        </>
-      )}
-    </span>
-  );
-}
-
-export default function Hero() {
-  const t = useI18n();
-  const locale = useCurrentLocale();
-  const { theme, effectiveTheme } = useTheme();
-  const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
-  const [videoLoaded, setVideoLoaded] = useState(false);
-  const [videoError, setVideoError] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const videoContainerRef = useRef<HTMLDivElement>(null);
-
-  // Read from the DOM class (set by the blocking init-theme script) so the
-  // correct media is chosen before React state hydrates.
-  const resolvedTheme =
-    typeof document !== "undefined" &&
-    document.documentElement.classList.contains("dark")
-      ? "dark"
-      : effectiveTheme;
-
-  const videoSrc =
-    resolvedTheme === "dark"
-      ? "/videos/demo_dark.mp4"
-      : "/videos/demo_white.mp4";
-
-  useEffect(() => {
-    const container = videoContainerRef.current;
-    if (!container) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setShouldLoadVideo(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "400px 0px", threshold: 0 },
-    );
-
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (shouldLoadVideo && videoRef.current) {
-      videoRef.current.load();
-    }
-  }, [theme, effectiveTheme, shouldLoadVideo]);
-
-  const handleVideoLoad = () => {
-    setVideoLoaded(true);
-  };
-
-  const handleVideoError = () => {
-    setVideoError(true);
-  };
+export default async function Hero() {
+  const t = await getI18n();
+  const locale = await getCurrentLocale();
 
   return (
     <div className="mx-auto w-full max-w-[1440px] px-5 pb-5 pt-16 sm:px-8 sm:pb-8 sm:pt-24 lg:px-12 lg:pt-32">
@@ -99,13 +27,7 @@ export default function Hero() {
             </p>
           </div>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href={"/dashboard"}
-              className="inline-flex h-12 items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] hover:opacity-85 active:scale-[0.96] dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]"
-            >
-              <GetStartedLinkContent>{t("landing.cta")}</GetStartedLinkContent>
-              <span className="ml-3">→</span>
-            </Link>
+            <HeroCtaLink>{t("landing.cta")}</HeroCtaLink>
             <Link
               href="#features"
               className="inline-flex h-12 items-center justify-center rounded-sm border border-black/20 px-6 text-sm font-medium transition-[colors,transform] hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:hover:bg-white/5"
@@ -114,48 +36,7 @@ export default function Hero() {
             </Link>
           </div>
         </div>
-        <div
-          ref={videoContainerRef}
-          className="relative overflow-hidden rounded-md bg-[oklch(0.88_0.04_165)] p-2 sm:rounded-lg sm:p-5 lg:rounded-xl lg:p-8"
-        >
-          <div className="relative aspect-[2108/1080] w-full overflow-hidden rounded-sm bg-white shadow-2xl shadow-black/15 outline outline-1 outline-black/10 dark:aspect-[2120/1080] dark:bg-black dark:outline-white/10">
-            {!videoError && (
-              <>
-                <img
-                  src="/videos/demo_white_poster.png"
-                  alt=""
-                  aria-hidden={videoLoaded}
-                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 dark:hidden ${videoLoaded ? "opacity-0" : "opacity-100"}`}
-                />
-                <img
-                  src="/videos/demo_dark_poster.png"
-                  alt=""
-                  aria-hidden={videoLoaded}
-                  className={`absolute inset-0 hidden h-full w-full object-cover transition-opacity duration-300 dark:block ${videoLoaded ? "opacity-0" : "opacity-100"}`}
-                />
-              </>
-            )}
-            {videoError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-black">
-                <p className="text-red-500">Failed to load video</p>
-              </div>
-            )}
-            <video
-              ref={videoRef}
-              preload="none"
-              loop
-              muted
-              autoPlay
-              playsInline
-              aria-label={t("landing.demoVideo")}
-              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${videoLoaded && !videoError ? "opacity-100" : "opacity-0"}`}
-              onLoadedData={handleVideoLoad}
-              onError={handleVideoError}
-            >
-              {shouldLoadVideo && <source src={videoSrc} type="video/mp4" />}
-            </video>
-          </div>
-        </div>
+        <HeroDemoMedia demoVideoLabel={t("landing.demoVideo")} />
       </div>
     </div>
   );

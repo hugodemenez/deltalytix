@@ -1,11 +1,8 @@
-"use client";
-
 import Image from "next/image";
+import { getI18n } from "@/locales/server";
 
-import { useI18n } from "@/locales/landing-client";
-
-export default function Partners() {
-  const t = useI18n();
+export default async function Partners() {
+  const t = await getI18n();
 
   return (
     <div className="mx-auto w-full max-w-[1440px] px-5 sm:px-8 lg:px-12">
@@ -26,7 +23,6 @@ export default function Partners() {
               fill
               sizes="(max-width: 767px) 144px, 120px"
               className="object-contain dark:brightness-0 dark:invert"
-              priority
             />
           </span>
         </a>
@@ -38,7 +34,6 @@ export default function Partners() {
               fill
               sizes="(max-width: 767px) 90vw, 335px"
               className="object-contain dark:hidden"
-              priority
             />
             <Image
               src="/logos/rithmic-logo-white.png"
@@ -46,7 +41,6 @@ export default function Partners() {
               fill
               sizes="(max-width: 767px) 90vw, 335px"
               className="hidden object-contain dark:block"
-              priority
             />
           </span>
         </div>
