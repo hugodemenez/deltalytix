@@ -70,7 +70,6 @@ export const ModelName = {
   Payout: 'Payout',
   DashboardLayout: 'DashboardLayout',
   SubscriptionFeedback: 'SubscriptionFeedback',
-  UserFeedback: 'UserFeedback',
   Mood: 'Mood',
   Shared: 'Shared',
   Referral: 'Referral',
@@ -407,18 +406,6 @@ export const SubscriptionFeedbackScalarFieldEnum = {
 } as const
 
 export type SubscriptionFeedbackScalarFieldEnum = (typeof SubscriptionFeedbackScalarFieldEnum)[keyof typeof SubscriptionFeedbackScalarFieldEnum]
-
-
-export const UserFeedbackScalarFieldEnum = {
-  id: 'id',
-  userId: 'userId',
-  email: 'email',
-  type: 'type',
-  message: 'message',
-  createdAt: 'createdAt'
-} as const
-
-export type UserFeedbackScalarFieldEnum = (typeof UserFeedbackScalarFieldEnum)[keyof typeof UserFeedbackScalarFieldEnum]
 
 
 export const MoodScalarFieldEnum = {

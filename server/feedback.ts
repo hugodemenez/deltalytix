@@ -1,6 +1,6 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
+import { capturePostHogEvent } from '@/lib/posthog-server'
 import { createClient } from './auth'
 
 const FEEDBACK_TYPES = ['bug', 'feature', 'other'] as const
@@ -34,14 +34,25 @@ export async function submitFeedback(input: {
     throw new Error('Invalid feedback type')
   }
 
-  await prisma.userFeedback.create({
-    data: {
-      userId: user.id,
+  // consentGranted: the user typed this and pressed send, so it is a submission
+  // fulfilling their own request rather than passive analytics. Same reasoning
+  // as the Stripe webhook events.
+  const delivered = await capturePostHogEvent({
+    consentGranted: true,
+    distinctId: user.id,
+    event: 'feedback_submitted',
+    properties: {
+      feedback_type: input.type,
+      feedback_message: message,
       email: user.email ?? null,
-      type: input.type,
-      message,
     },
   })
+
+  // PostHog is the only store for feedback, so a dropped event means the
+  // message is gone. Surface it instead of showing a success toast.
+  if (!delivered) {
+    throw new Error('Failed to deliver feedback')
+  }
 
   return { success: true }
 }

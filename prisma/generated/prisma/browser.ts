@@ -113,11 +113,6 @@ export type DashboardLayout = Prisma.DashboardLayoutModel
  */
 export type SubscriptionFeedback = Prisma.SubscriptionFeedbackModel
 /**
- * Model UserFeedback
- * 
- */
-export type UserFeedback = Prisma.UserFeedbackModel
-/**
  * Model Mood
  * 
  */

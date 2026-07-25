@@ -58,6 +58,10 @@ export default function FeedbackButton() {
     }
   }
 
+  // Feedback is delivered to PostHog only, so a deployment without it
+  // configured (self-hosted) has nowhere to send it.
+  if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return null
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <Tooltip delayDuration={200}>
