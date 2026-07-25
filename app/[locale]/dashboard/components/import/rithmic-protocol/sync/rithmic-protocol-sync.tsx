@@ -2,7 +2,6 @@
 
 import {
   useCallback,
-  useEffect,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -20,14 +19,11 @@ import {
 } from '@/components/ui/select'
 import { ThemeAwareLogo } from '@/components/monochrome-logo'
 import { captureConnectionCreated } from '@/lib/connection-analytics'
-import { RITHMIC_PROTOCOL_FALLBACK_SYSTEMS } from '@/lib/rithmic-protocol/systems'
 import { useRithmicProtocolSyncContext } from '@/context/rithmic-protocol-sync-context'
 import { toast } from 'sonner'
-import {
-  authenticateRithmicProtocol,
-  listRithmicProtocolSystems,
-} from './actions'
+import { authenticateRithmicProtocol } from './actions'
 import { RithmicProtocolCredentialsManager } from './rithmic-protocol-credentials-manager'
+import { useRithmicProtocolConnectOptions } from './use-rithmic-protocol-connect-options'
 
 const fieldClassName =
   'h-11 rounded-sm border-black/10 bg-transparent text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30'
@@ -50,41 +46,23 @@ function RithmicProtocolConnectView({
   const { loadAccounts } = useRithmicProtocolSyncContext()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [systems, setSystems] = useState<string[]>([
-    ...RITHMIC_PROTOCOL_FALLBACK_SYSTEMS,
-  ])
-  const [systemName, setSystemName] = useState<string>(
-    RITHMIC_PROTOCOL_FALLBACK_SYSTEMS[0],
-  )
-  const [loadingSystems, setLoadingSystems] = useState(true)
+  const [historyStartDate, setHistoryStartDate] = useState('')
+  const {
+    gateways,
+    gatewayId,
+    setGatewayId,
+    systems,
+    systemName,
+    setSystemName,
+    loadingGateways,
+    loadingSystems,
+  } = useRithmicProtocolConnectOptions()
   const [isLoading, setIsLoading] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      try {
-        setLoadingSystems(true)
-        const result = await listRithmicProtocolSystems()
-        if (cancelled) return
-        if (result.systems.length > 0) {
-          setSystems(result.systems)
-          setSystemName((current) =>
-            result.systems.includes(current) ? current : result.systems[0],
-          )
-        }
-      } catch (error) {
-        console.warn('Failed to load Rithmic Protocol systems', error)
-      } finally {
-        if (!cancelled) setLoadingSystems(false)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const todayUtc = new Date().toISOString().slice(0, 10)
 
   const handleConnect = useCallback(async () => {
-    if (!username || !password || !systemName) {
+    if (!username || !password || !systemName || !historyStartDate) {
       toast.error(t('rithmicProtocolSync.error.credentialsRequired'))
       return
     }
@@ -95,6 +73,8 @@ function RithmicProtocolConnectView({
         username,
         password,
         systemName,
+        historyStartDate,
+        gatewayId,
       )
 
       if ('error' in result && result.error) {
@@ -114,6 +94,7 @@ function RithmicProtocolConnectView({
       captureConnectionCreated('rithmic-protocol')
       setUsername('')
       setPassword('')
+      setHistoryStartDate('')
       await loadAccounts()
       onConnected?.()
     } catch (error) {
@@ -122,7 +103,16 @@ function RithmicProtocolConnectView({
     } finally {
       setIsLoading(false)
     }
-  }, [username, password, systemName, t, loadAccounts, onConnected])
+  }, [
+    username,
+    password,
+    systemName,
+    historyStartDate,
+    gatewayId,
+    t,
+    loadAccounts,
+    onConnected,
+  ])
 
   return (
     <form
@@ -134,6 +124,37 @@ function RithmicProtocolConnectView({
       autoComplete="on"
     >
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-black/10 pb-3 dark:border-white/10">
+        <div className="flex min-w-0 items-center gap-2">
+          <Label
+            htmlFor="rithmic-protocol-gateway"
+            className="shrink-0 text-xs text-black/45 dark:text-white/45"
+          >
+            {t('rithmicProtocolSync.addAccount.gatewayLabel')}
+          </Label>
+          <Select
+            value={gatewayId}
+            onValueChange={setGatewayId}
+            disabled={loadingGateways || gateways.length === 0}
+          >
+            <SelectTrigger
+              id="rithmic-protocol-gateway"
+              className={configSelectClassName}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className={selectContentClassName}>
+              {gateways.map((gateway) => (
+                <SelectItem
+                  key={gateway.id}
+                  value={gateway.id}
+                  className="rounded-sm text-xs"
+                >
+                  {gateway.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex min-w-0 items-center gap-2">
           <Label
             htmlFor="rithmic-protocol-system"
@@ -212,14 +233,39 @@ function RithmicProtocolConnectView({
         />
       </div>
 
+      <div className="space-y-2">
+        <Label
+          htmlFor="rithmic-protocol-history-start"
+          className="text-sm text-black/55 dark:text-white/55"
+        >
+          {t('rithmicProtocolSync.addAccount.historyStartLabel')}
+        </Label>
+        <Input
+          id="rithmic-protocol-history-start"
+          name="historyStartDate"
+          type="date"
+          value={historyStartDate}
+          onChange={(e) => setHistoryStartDate(e.target.value)}
+          min="2013-01-01"
+          max={todayUtc}
+          required
+          className={fieldClassName}
+        />
+        <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
+          {t('rithmicProtocolSync.addAccount.historyStartHelp')}
+        </p>
+      </div>
+
       <button
         type="submit"
         disabled={
           isLoading ||
+          loadingGateways ||
           loadingSystems ||
           !username ||
           !password ||
-          !systemName
+          !systemName ||
+          !historyStartDate
         }
         className={primaryButtonClassName}
       >

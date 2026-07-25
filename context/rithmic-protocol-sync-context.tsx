@@ -20,6 +20,8 @@ export interface RithmicProtocolSyncAccount {
   accountId: string
   hasToken: boolean
   systemName?: string | null
+  /** Human label of the Rithmic connect point, e.g. "Core (Chicago)". */
+  gatewayLabel?: string | null
   username?: string | null
   accountNumbers: string[]
   lastSyncedAt: Date
@@ -77,6 +79,7 @@ export function RithmicProtocolSyncContextProvider({
       accountId: String(sync.accountId),
       hasToken: !!sync.hasToken,
       systemName: (sync.systemName as string | null) ?? null,
+      gatewayLabel: (sync.gatewayLabel as string | null) ?? null,
       username: (sync.username as string | null) ?? null,
       accountNumbers: Array.isArray(sync.accountNumbers)
         ? (sync.accountNumbers as string[])

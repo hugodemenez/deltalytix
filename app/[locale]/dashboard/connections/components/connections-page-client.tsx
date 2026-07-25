@@ -35,7 +35,6 @@ import { Label } from '@/components/ui/label'
 import { captureConnectionCreated } from '@/lib/connection-analytics'
 import {
   deleteConnectionAction,
-  getConnectionsPageData,
   updateConnectionDailySyncTimeAction,
   type ConnectionStatus,
   type ConnectionsPageConnection,
@@ -618,30 +617,55 @@ function reviveDate(value: unknown): Date | null {
   return null
 }
 
+function reviveConnectionsPageData(parsed: ConnectionsPageData): ConnectionsPageData {
+  return {
+    connections: (parsed.connections ?? []).map((connection) => ({
+      ...connection,
+      createdAt: reviveDate(connection.createdAt) ?? new Date(0),
+      updatedAt: reviveDate(connection.updatedAt) ?? new Date(0),
+      lastSyncedAt: reviveDate(connection.lastSyncedAt) ?? new Date(0),
+      tokenExpiresAt: reviveDate(connection.tokenExpiresAt),
+      dailySyncTime: reviveDate(connection.dailySyncTime),
+      accounts: (connection.accounts ?? []).map((account) => ({
+        ...account,
+        createdAt: reviveDate(account.createdAt) ?? new Date(0),
+      })),
+    })),
+    standaloneAccounts: (parsed.standaloneAccounts ?? []).map((account) => ({
+      ...account,
+      createdAt: reviveDate(account.createdAt) ?? new Date(0),
+    })),
+  }
+}
+
+/**
+ * Client refresh via JSON API (not a server action).
+ * Avoids Next.js "An unexpected response was received from the server" when
+ * action POSTs receive HTML during Instant Navigations / HMR / redirects.
+ */
+async function fetchConnectionsPageData(): Promise<ConnectionsPageData> {
+  const response = await fetch('/api/connections/page-data', {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+  })
+  if (!response.ok) {
+    throw new Error(`CONNECTIONS_LOAD_FAILED:${response.status}`)
+  }
+  const json = (await response.json()) as ConnectionsPageData | { error?: string }
+  if (!json || typeof json !== 'object' || !('connections' in json)) {
+    throw new Error('CONNECTIONS_LOAD_FAILED:invalid_payload')
+  }
+  return reviveConnectionsPageData(json)
+}
+
 function readConnectionsPageCache(): ConnectionsPageData | null {
   if (typeof window === 'undefined') return null
   try {
     const raw = sessionStorage.getItem(CONNECTIONS_PAGE_CACHE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as ConnectionsPageData
-    return {
-      connections: (parsed.connections ?? []).map((connection) => ({
-        ...connection,
-        createdAt: reviveDate(connection.createdAt) ?? new Date(0),
-        updatedAt: reviveDate(connection.updatedAt) ?? new Date(0),
-        lastSyncedAt: reviveDate(connection.lastSyncedAt) ?? new Date(0),
-        tokenExpiresAt: reviveDate(connection.tokenExpiresAt),
-        dailySyncTime: reviveDate(connection.dailySyncTime),
-        accounts: (connection.accounts ?? []).map((account) => ({
-          ...account,
-          createdAt: reviveDate(account.createdAt) ?? new Date(0),
-        })),
-      })),
-      standaloneAccounts: (parsed.standaloneAccounts ?? []).map((account) => ({
-        ...account,
-        createdAt: reviveDate(account.createdAt) ?? new Date(0),
-      })),
-    }
+    return reviveConnectionsPageData(parsed)
   } catch {
     return null
   }
@@ -895,29 +919,27 @@ export function ConnectionsPageClient({
   const storeHydrated = useTradovateSyncStore.persist?.hasHydrated?.() ?? true
   const [tradovateStoreReady, setTradovateStoreReady] = useState(storeHydrated)
 
+  const dataRef = useRef(data)
+  dataRef.current = data
+
   const load = useCallback(async (opts?: { quiet?: boolean }) => {
     try {
-      const next = await getConnectionsPageData()
+      const next = await fetchConnectionsPageData()
       setData(next)
       writeConnectionsPageCache(next)
       await Promise.allSettled([loadTradovate(), loadDxFeed()])
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
       console.error(error)
-      // Next can abort in-flight server actions during oauth router.replace.
-      if (/unexpected response/i.test(message)) {
-        try {
-          const next = await getConnectionsPageData()
-          setData(next)
-          writeConnectionsPageCache(next)
-          await Promise.allSettled([loadTradovate(), loadDxFeed()])
-          return
-        } catch (retryError) {
-          console.error(retryError)
-        }
-      }
+      // Soft refresh / post-mutation refresh: keep RSC-seeded rows. Only surface
+      // loadFailed when the page has nothing useful to show.
       if (!opts?.quiet) {
-        toast.error(t('connections.loadFailed'))
+        const current = dataRef.current
+        const hasRows =
+          (current?.connections.length ?? 0) > 0 ||
+          (current?.standaloneAccounts.length ?? 0) > 0
+        if (!hasRows) {
+          toast.error(t('connections.loadFailed'))
+        }
       }
     } finally {
       setLoading(false)
@@ -1049,7 +1071,7 @@ export function ConnectionsPageClient({
 
         toast.success(t('connections.oauth.tradovate.success'))
         captureConnectionCreated('tradovate')
-        const next = await getConnectionsPageData()
+        const next = await fetchConnectionsPageData()
         // Single paint: drop skeleton and show the real row in the same slot.
         setData(next)
         writeConnectionsPageCache(next)
@@ -1135,7 +1157,7 @@ export function ConnectionsPageClient({
           service={section.service}
           label={t(section.labelKey as 'connections.sections.rithmic')}
           connections={byService.get(section.service) ?? []}
-          onChanged={() => void load()}
+          onChanged={() => void load({ quiet: true })}
           oauthPending={
             section.service === 'tradovate' ? oauthPending : null
           }

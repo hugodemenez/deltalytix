@@ -795,7 +795,13 @@ export async function fetchFillsForAccounts(params: {
   fcmId?: string
   ibId?: string
   accountIds: string[]
-  lookbackDays: number
+  /**
+   * Preferred: UTC YYYY-MM-DD when the account started trading.
+   * Sync walks from this date through today in serial ≤30-day windows.
+   */
+  historyStartDate?: string
+  /** Fallback when `historyStartDate` is missing (legacy connections). */
+  lookbackDays?: number
 }): Promise<{ fills: RithmicProtocolFill[]; uniqueUserId?: string }> {
   /** Rithmic guidance: ≤30 days of fill history per ShowFillHistory request. */
   const MAX_FILL_WINDOW_DAYS = 30
@@ -817,11 +823,18 @@ export async function fetchFillsForAccounts(params: {
       `[RITHMIC-PROTOCOL] Sync session unique_user_id=${uniqueUserId ?? '(none)'} at ${new Date().toISOString()} (UTC)`,
     )
 
-    const end = new Date()
-    const lookbackDays = Math.max(1, params.lookbackDays)
-    const windows = buildUtcFillHistoryWindows(end, lookbackDays, MAX_FILL_WINDOW_DAYS)
-    const earliestStart = windows[0]?.start ?? end
-    const startYmdStr = toYyyymmddString(earliestStart)
+    const end = utcCalendarDay(new Date())
+    const start = resolveHistoryStartUtc(params.historyStartDate, params.lookbackDays, end)
+    const windows = buildUtcFillHistoryWindowsFromRange(start, end, MAX_FILL_WINDOW_DAYS)
+    const startYmdStr = toYyyymmddString(start)
+    const lookbackDays = Math.max(
+      1,
+      Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1,
+    )
+
+    console.log(
+      `[RITHMIC-PROTOCOL] Fill history range ${startYmdStr}–${toYyyymmddString(end)} (${windows.length} × ≤${MAX_FILL_WINDOW_DAYS}d windows)`,
+    )
 
     // Accounts and ≤30-day windows are requested serially (await each response fully).
     for (const accountId of params.accountIds) {
@@ -918,27 +931,64 @@ function dedupeFills(fills: RithmicProtocolFill[]): RithmicProtocolFill[] {
   return out
 }
 
-/** Oldest → newest windows of at most `maxWindowDays` (UTC calendar days). */
-function buildUtcFillHistoryWindows(
+function utcCalendarDay(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+}
+
+function parseUtcYyyyMmDd(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim())
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const date = new Date(Date.UTC(year, month - 1, day))
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null
+  }
+  return date
+}
+
+function resolveHistoryStartUtc(
+  historyStartDate: string | undefined,
+  lookbackDays: number | undefined,
   end: Date,
-  lookbackDays: number,
+): Date {
+  if (historyStartDate) {
+    const parsed = parseUtcYyyyMmDd(historyStartDate)
+    if (parsed && parsed.getTime() <= end.getTime()) {
+      return parsed
+    }
+  }
+  const days = Math.max(1, lookbackDays ?? 30)
+  const start = new Date(end)
+  start.setUTCDate(start.getUTCDate() - (days - 1))
+  return start
+}
+
+/** Oldest → newest windows of at most `maxWindowDays` (UTC calendar days), inclusive. */
+function buildUtcFillHistoryWindowsFromRange(
+  start: Date,
+  end: Date,
   maxWindowDays: number,
 ): Array<{ start: Date; end: Date }> {
   const windows: Array<{ start: Date; end: Date }> = []
-  let windowEnd = new Date(
-    Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()),
-  )
-  let remaining = lookbackDays
+  let cursor = utcCalendarDay(start)
+  const last = utcCalendarDay(end)
 
-  while (remaining > 0) {
-    const span = Math.min(maxWindowDays, remaining)
-    const windowStart = new Date(windowEnd)
-    windowStart.setUTCDate(windowStart.getUTCDate() - (span - 1))
-    windows.push({ start: new Date(windowStart), end: new Date(windowEnd) })
-    windowEnd = new Date(windowStart)
-    windowEnd.setUTCDate(windowEnd.getUTCDate() - 1)
-    remaining -= span
+  while (cursor.getTime() <= last.getTime()) {
+    const windowEnd = new Date(cursor)
+    windowEnd.setUTCDate(windowEnd.getUTCDate() + (maxWindowDays - 1))
+    if (windowEnd.getTime() > last.getTime()) {
+      windowEnd.setTime(last.getTime())
+    }
+    windows.push({ start: new Date(cursor), end: new Date(windowEnd) })
+    cursor = new Date(windowEnd)
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
   }
 
-  return windows.reverse()
+  return windows
 }

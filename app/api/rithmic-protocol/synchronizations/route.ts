@@ -4,6 +4,7 @@ import {
   removeRithmicProtocolToken,
 } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions'
 import type { RithmicProtocolStoredCredentials } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/rithmic-protocol-types'
+import { resolveGateway } from '@/lib/rithmic-protocol/systems'
 
 export async function GET() {
   try {
@@ -20,12 +21,16 @@ export async function GET() {
         let accountNumbers: string[] = []
         let systemName: string | null = null
         let username: string | null = null
+        let gatewayLabel: string | null = null
 
         if (token) {
           try {
             const parsed = JSON.parse(token) as RithmicProtocolStoredCredentials
             systemName = parsed.systemName ?? null
             username = parsed.username ?? null
+            gatewayLabel = resolveGateway(
+              parsed.gatewayId ?? parsed.gatewayUri,
+            ).label
             if (Array.isArray(parsed.accountIds)) {
               accountNumbers = parsed.accountIds
             }
@@ -38,6 +43,7 @@ export async function GET() {
           ...rest,
           hasToken: !!token,
           systemName,
+          gatewayLabel,
           username,
           accountNumbers,
         }

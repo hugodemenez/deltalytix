@@ -2495,7 +2495,7 @@ export default {
     connected: "Compte Rithmic Protocol connecté avec succès",
     error: {
       credentialsRequired:
-        "Saisissez le nom d'utilisateur, le mot de passe et le système",
+        "Saisissez le nom d'utilisateur, le mot de passe, le système et la date de début du compte",
       authFailed: "Impossible de se connecter à Rithmic Protocol API",
     },
     errors: {
@@ -2503,6 +2503,8 @@ export default {
         "Vous devez être connecté pour lier Rithmic.",
       AUTH_FAILED: "Échec de la connexion Rithmic : {reason}",
       NO_ACCOUNTS: "Aucun compte de trading n'a été renvoyé pour cet identifiant.",
+      HISTORY_START_REQUIRED:
+        "Choisissez une date de début de compte valide (au plus tard aujourd'hui).",
       INVALID_STORED_CREDENTIALS:
         "Les données de connexion enregistrées sont invalides. Reconnectez-vous.",
       NO_TOKEN_RECONNECT:
@@ -2522,10 +2524,16 @@ export default {
     addAccount: {
       title: "Connecter Rithmic Protocol",
       description:
-        "Connectez-vous avec votre identifiant Rithmic. Utilisez Rithmic Test pendant la conformité Protocol — la passerelle est définie automatiquement.",
+        "Connectez-vous avec votre identifiant Rithmic, puis choisissez le système de votre compte (par exemple Rithmic 01 ou Rithmic Paper Trading).",
+      gatewayLabel: "Point de connexion",
+      gatewayHelp:
+        "Choisissez le point de connexion Rithmic le plus proche. Core (Chicago) fonctionne partout ; un point régional réduit seulement la latence.",
       systemLabel: "Système Rithmic",
       usernameLabel: "Nom d'utilisateur",
       passwordLabel: "Mot de passe",
+      historyStartLabel: "Date de début du compte",
+      historyStartHelp:
+        "Indiquez le jour où vous avez commencé à trader sur ce compte. Nous importons les fills depuis cette date jusqu'à aujourd'hui par lots de 30 jours (recommandation Rithmic).",
       connecting: "Connexion…",
       connect: "Connecter",
     },

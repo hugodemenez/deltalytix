@@ -18,8 +18,12 @@ import {
 } from '@/lib/rithmic-protocol/client'
 import { buildTradesFromRithmicFills } from '@/lib/rithmic-protocol/fills-to-trades'
 import {
-  RITHMIC_PROTOCOL_FALLBACK_SYSTEMS,
-  resolveGatewayUri,
+  gatewayUri as gatewayUriFor,
+  getDefaultRithmicProtocolGateway,
+  getFallbackSystems,
+  listSelectableRithmicProtocolGateways,
+  resolveGateway,
+  type RithmicProtocolEnvironment,
 } from '@/lib/rithmic-protocol/systems'
 import type {
   RithmicProtocolActionResult,
@@ -28,10 +32,38 @@ import type {
 } from './rithmic-protocol-types'
 
 const SERVICE = 'rithmic-protocol'
-const LOOKBACK_DAYS = Math.max(
+/** Fallback lookback when a legacy connection has no `historyStartDate`. */
+const DEFAULT_LOOKBACK_DAYS = Math.max(
   1,
   Number(process.env.RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS ?? '30'),
 )
+
+const HISTORY_START_MIN = '2013-01-01'
+
+function parseHistoryStartDate(value: string): string | null {
+  const trimmed = value.trim()
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed)
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const date = new Date(Date.UTC(year, month - 1, day))
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null
+  }
+  const today = new Date()
+  const todayUtc = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+  )
+  if (date.getTime() > todayUtc.getTime()) return null
+  const min = new Date(`${HISTORY_START_MIN}T00:00:00.000Z`)
+  if (date.getTime() < min.getTime()) return null
+  return trimmed
+}
 
 const logger = {
   info: (message: string) => console.log(`[RITHMIC-PROTOCOL] ${message}`),
@@ -51,39 +83,63 @@ function parseStoredCredentials(
     if (!parsed.username || !parsed.password || !parsed.systemName) {
       return null
     }
+    // Connect point comes from the stored id (legacy rows only stored the URI);
+    // anything unknown falls back to the deployment default.
+    const gateway = resolveGateway(parsed.gatewayId ?? parsed.gatewayUri)
     return {
       ...parsed,
-      // Gateway is always server-configured (never user-edited).
-      gatewayUri: resolveGatewayUri(parsed.systemName),
+      gatewayId: gateway.id,
+      gatewayUri: gatewayUriFor(gateway),
     }
   } catch {
     return null
   }
 }
 
+/** Connect points a user may pick from (production regions + UAT on dev). */
+export async function listRithmicProtocolGateways(): Promise<{
+  gateways: Array<{
+    id: string
+    label: string
+    environment: RithmicProtocolEnvironment
+  }>
+  defaultGatewayId: string
+}> {
+  return {
+    gateways: listSelectableRithmicProtocolGateways().map(
+      ({ id, label, environment }) => ({ id, label, environment }),
+    ),
+    defaultGatewayId: getDefaultRithmicProtocolGateway().id,
+  }
+}
+
 /**
- * Pre-login: ask the Protocol server for system names (Rithmic Test, …).
+ * Pre-login: ask the chosen connect point for its system names
+ * (Rithmic 01, Rithmic Paper Trading, Rithmic Test, …).
  * Falls back to a static list if the probe fails.
  */
-export async function listRithmicProtocolSystems(): Promise<{
+export async function listRithmicProtocolSystems(gatewayId?: string): Promise<{
   systems: string[]
+  gatewayId: string
   gatewayUri: string
 }> {
-  const gatewayUri = resolveGatewayUri()
+  const gateway = resolveGateway(gatewayId)
+  const gatewayUri = gatewayUriFor(gateway)
   try {
     const systems = await fetchAvailableSystems(gatewayUri)
     if (systems.length > 0) {
-      return { systems, gatewayUri }
+      return { systems, gatewayId: gateway.id, gatewayUri }
     }
   } catch (error) {
     logger.warn(
-      `listRithmicProtocolSystems falling back: ${
+      `listRithmicProtocolSystems falling back for ${gateway.id}: ${
         error instanceof Error ? error.message : String(error)
       }`,
     )
   }
   return {
-    systems: [...RITHMIC_PROTOCOL_FALLBACK_SYSTEMS],
+    systems: getFallbackSystems(gateway.id),
+    gatewayId: gateway.id,
     gatewayUri,
   }
 }
@@ -92,6 +148,8 @@ export async function authenticateRithmicProtocol(
   username: string,
   password: string,
   systemName: string,
+  historyStartDate: string,
+  gatewayId?: string,
 ): Promise<RithmicProtocolActionResult> {
   try {
     const userId = await getUserId()
@@ -99,9 +157,16 @@ export async function authenticateRithmicProtocol(
       return { error: 'USER_NOT_AUTHENTICATED' }
     }
 
-    // Gateway is server-configured (Test URI / env), never user-edited.
-    const resolvedUri = resolveGatewayUri(systemName)
-    logger.info(`Authenticating ${username} on ${systemName} via ${resolvedUri}`)
+    const normalizedHistoryStart = parseHistoryStartDate(historyStartDate)
+    if (!normalizedHistoryStart) {
+      return { error: 'HISTORY_START_REQUIRED' }
+    }
+
+    const gateway = resolveGateway(gatewayId)
+    const resolvedUri = gatewayUriFor(gateway)
+    logger.info(
+      `Authenticating ${username} on ${systemName} via ${gateway.id} (${resolvedUri})`,
+    )
 
     const result = await connectAndListAccounts({
       gatewayUri: resolvedUri,
@@ -109,7 +174,6 @@ export async function authenticateRithmicProtocol(
       username,
       password,
     })
-
 
     if (result.accounts.length === 0) {
       return { error: 'NO_ACCOUNTS' }
@@ -120,16 +184,18 @@ export async function authenticateRithmicProtocol(
       username,
       password,
       systemName,
+      gatewayId: gateway.id,
       gatewayUri: resolvedUri,
       accountIds,
       fcmId: result.fcmId,
       ibId: result.ibId,
       uniqueUserId: result.uniqueUserId,
+      historyStartDate: normalizedHistoryStart,
     }
 
     const loginAt = new Date()
     logger.info(
-      `Login ok unique_user_id=${result.uniqueUserId ?? '(none)'} at ${loginAt.toISOString()} (UTC) accounts=${accountIds.length}`,
+      `Login ok unique_user_id=${result.uniqueUserId ?? '(none)'} at ${loginAt.toISOString()} (UTC) accounts=${accountIds.length} historyStart=${normalizedHistoryStart}`,
     )
 
     const connection = await storeRithmicProtocolToken(
@@ -349,7 +415,7 @@ export async function getRithmicProtocolTrades(
     }
 
     logger.info(
-      `Fetching fills for ${resolvedAccountIds.length} accounts (${LOOKBACK_DAYS}d lookback, ≤30d windows)`,
+      `Fetching fills for ${resolvedAccountIds.length} accounts (from ${credentials.historyStartDate ?? `${DEFAULT_LOOKBACK_DAYS}d lookback`}, ≤30d windows)`,
     )
 
     const { fills, uniqueUserId } = await fetchFillsForAccounts({
@@ -360,7 +426,8 @@ export async function getRithmicProtocolTrades(
       fcmId: credentials.fcmId,
       ibId: credentials.ibId,
       accountIds: resolvedAccountIds,
-      lookbackDays: LOOKBACK_DAYS,
+      historyStartDate: credentials.historyStartDate,
+      lookbackDays: DEFAULT_LOOKBACK_DAYS,
     })
 
     logger.info(

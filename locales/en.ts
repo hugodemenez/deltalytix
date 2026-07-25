@@ -2363,13 +2363,16 @@ export default {
       "Connect with Rithmic R | Protocol API to import fills as closed trades from the server — same pattern as Tradovate and DxFeed.",
     connected: "Rithmic Protocol account connected successfully",
     error: {
-      credentialsRequired: "Enter username, password, and system to continue",
+      credentialsRequired:
+        "Enter username, password, system, and account start date to continue",
       authFailed: "Could not connect to Rithmic Protocol API",
     },
     errors: {
       USER_NOT_AUTHENTICATED: "You must be signed in to connect Rithmic.",
       AUTH_FAILED: "Rithmic login failed: {reason}",
       NO_ACCOUNTS: "No trading accounts were returned for this login.",
+      HISTORY_START_REQUIRED:
+        "Choose a valid account start date (on or before today).",
       INVALID_STORED_CREDENTIALS: "Saved connection data is invalid. Reconnect.",
       NO_TOKEN_RECONNECT: "This connection is missing credentials. Reconnect.",
       DUPLICATE_TRADES: "These trades are already in your journal.",
@@ -2384,10 +2387,16 @@ export default {
     addAccount: {
       title: "Connect Rithmic Protocol",
       description:
-        "Sign in with your Rithmic username/password. Use Rithmic Test while Protocol conformance is in progress — the gateway is set automatically.",
+        "Sign in with your Rithmic username/password, then pick the system your account lives on (for example Rithmic 01 or Rithmic Paper Trading).",
+      gatewayLabel: "Connect point",
+      gatewayHelp:
+        "Choose the Rithmic connect point closest to you. Core (Chicago) works everywhere; a regional one only lowers latency.",
       systemLabel: "Rithmic system",
       usernameLabel: "Username",
       passwordLabel: "Password",
+      historyStartLabel: "Account start date",
+      historyStartHelp:
+        "Pick the day you started trading this account. We import fills from then until today in serial 30-day batches (Rithmic guidance).",
       connecting: "Connecting…",
       connect: "Connect",
     },

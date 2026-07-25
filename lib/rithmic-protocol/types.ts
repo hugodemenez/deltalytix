@@ -30,6 +30,8 @@ export interface RithmicProtocolCredentials {
   username: string
   password: string
   systemName: string
+  /** Connect-point id from `RITHMIC_PROTOCOL_GATEWAYS` (e.g. `core`, `nyc`, `test`). */
+  gatewayId?: string
   /** Full wss:// host:port URI */
   gatewayUri: string
   /** Trading account ids selected for sync; empty = all */
