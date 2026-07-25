@@ -125,7 +125,7 @@ export default function FeedbackButton() {
             placeholder={t('feedback.placeholder')}
             maxLength={2000}
             rows={4}
-            className="resize-none"
+            className="resize-none text-base md:text-sm"
           />
 
           <Button
