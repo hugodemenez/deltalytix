@@ -14,7 +14,6 @@ export default {
     submit: 'Send',
     submitting: 'Sending...',
     success: 'Thanks for your feedback!',
-    rateLimited: 'You can send up to 3 feedback messages per hour.',
     error: 'Failed to send feedback. Please try again.',
   },
 }
