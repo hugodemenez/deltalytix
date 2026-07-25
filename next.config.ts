@@ -21,6 +21,12 @@ const buildWorkers =
     ? configuredBuildWorkers
     : defaultBuildWorkers;
 
+/** Proto + SSL assets loaded via fs at runtime (server actions + API routes). */
+const RITHMIC_PROTOCOL_TRACE_INCLUDES = [
+  './lib/rithmic-protocol/proto/**/*',
+  './lib/rithmic-protocol/etc/**/*',
+] as const;
+
 const nextConfig: NextConfig = {
   // Standalone is for Docker/self-host (`Dockerfile.bun` copies `.next/standalone`).
   // On Vercel + Turbopack (Next 16.3+), the adapter skips `next-server.js.nft.json`,
@@ -74,6 +80,10 @@ const nextConfig: NextConfig = {
     ],
     // Runtime fs search in /api/ai/support — keep docs in the serverless bundle.
     '/api/ai/support': [...SUPPORT_SEARCH_TRACE_INCLUDES],
+    // Protocol login is a server action from Connections (not only /api/rithmic-protocol/*).
+    // Include assets for all server traces so preview/production lambdas can load protos.
+    '/*': [...RITHMIC_PROTOCOL_TRACE_INCLUDES],
+    '/api/rithmic-protocol/**': [...RITHMIC_PROTOCOL_TRACE_INCLUDES],
   },
 }
 

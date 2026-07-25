@@ -1,25 +1,17 @@
-import { cacheLife, cacheTag } from 'next/cache'
-import { loadConnectionsPageDataForUser } from '../data'
+import { getCachedConnectionsPageData } from '../data'
 import { ConnectionsPageClient } from './connections-page-client'
 
-function connectionsCacheTag(userId: string) {
-  return `connections-${userId}`
-}
-
 /**
- * Per-user cached Connections list UI (chrome lives outside Suspense).
+ * Connections list entry: resolve tagged cached *data*, then render the client
+ * list outside the `'use cache'` boundary.
  *
- * Instant Navigations:
- * - Cold cache → list Suspense skeleton under the instant chrome
- * - Warm `'use cache'` → list UI reused across requests (no skeleton)
+ * Caching only the data (not the Client Component) keeps Instant Navigations
+ * warm-cache benefits while ensuring server-action IDs on the client stay bound
+ * to the current deployment / HMR generation.
  *
  * `userId` is passed in from outside so cookies/headers stay out of the cache scope.
  */
 export async function CachedConnectionsPage({ userId }: { userId: string }) {
-  'use cache'
-  cacheTag(connectionsCacheTag(userId))
-  cacheLife('minutes')
-
-  const initialData = await loadConnectionsPageDataForUser(userId)
+  const initialData = await getCachedConnectionsPageData(userId)
   return <ConnectionsPageClient initialData={initialData} />
 }

@@ -1,0 +1,18 @@
+
+package rti;
+
+message RequestShowFillHistory
+	{                                
+	required int32     template_id      = 154467;
+	repeated string    user_msg         = 132760;
+
+	optional string    fcm_id           = 154013;
+	optional string    ib_id            = 154014;
+	optional string    account_id       = 154008;
+	
+	optional string    index_format     = 120001;	// ssboe or trade_date
+	optional int32     start_index      = 153002;	// seconds since begin of epoch or CCYYMMDD
+	optional int32     finish_index     = 153003;	// seconds since begin of epoch or CCYYMMDD
+
+	optional int32     max_record_count = 154020;	// optional, but if specified the count MUST be <= 10000
+	}

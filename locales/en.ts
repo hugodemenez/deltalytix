@@ -141,11 +141,13 @@ export default {
   "connections.addConnection": "Add connection",
   "connections.noConnectionsYet": "No broker connections yet. Add one to start syncing accounts.",
   "connections.sections.rithmic": "Rithmic",
+  "connections.sections.rithmicProtocol": "Rithmic Protocol",
   "connections.sections.tradovate": "Tradovate",
   "connections.sections.dxfeed": "DxFeed",
   "connections.sections.thor": "Thor",
   "connections.sections.standalone": "Standalone accounts",
   "connections.add.rithmic": "Add Rithmic connection",
+  "connections.add.rithmicProtocol": "Add Rithmic Protocol connection",
   "connections.add.tradovate": "Add Tradovate connection",
   "connections.add.dxfeed": "Add DxFeed connection",
   "connections.add.thor": "Add Thor connection",
@@ -420,6 +422,11 @@ export default {
   "import.type.rithmicSync.description": "Direct account syncing",
   "import.type.rithmicSync.details":
     "Direct sync with your Rithmic account. Requires authentication.",
+  "import.type.rithmicProtocolSync.name": "Rithmic Protocol",
+  "import.type.rithmicProtocolSync.description":
+    "Server-side Protocol API sync",
+  "import.type.rithmicProtocolSync.details":
+    "Sync order history through Rithmic R | Protocol API from Deltalytix servers (TypeScript), similar to Tradovate and DxFeed.",
   "import.type.csvAi.name": "CSV with AI",
   "import.type.csvAi.description": "Any CSV file",
   "import.type.rithmicPerf.name": "Rithmic Performance",
@@ -467,7 +474,9 @@ export default {
   "import.type.copyright.platform":
     "Trading Platform by Rithmic™ is a trademark of Rithmic, LLC. All rights reserved.",
   "import.type.copyright.omne":
-    "The OMNE™ software is Copyright © 2024 by Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.",
+    "Powered by OMNE is a trademark of Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.",
+  "import.type.copyright.omneSoftware":
+    "The OMNE™ software is Copyright © 2026 by Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.",
   "import.type.topstep.name": "Topstep",
   "import.type.topstep.description": "Topstep CSV file",
   "import.type.topstep.details":
@@ -2346,6 +2355,76 @@ export default {
         afterClose: "After Market Close (22:00 UTC)",
         midnight: "Midnight (12:00 AM)",
       },
+    },
+  },
+  rithmicProtocolSync: {
+    title: "Rithmic Protocol Sync",
+    description:
+      "Connect with Rithmic R | Protocol API to import fills as closed trades from the server — same pattern as Tradovate and DxFeed.",
+    connected: "Rithmic Protocol account connected successfully",
+    error: {
+      credentialsRequired:
+        "Enter username, password, system, and account start date to continue",
+      authFailed: "Could not connect to Rithmic Protocol API",
+    },
+    errors: {
+      USER_NOT_AUTHENTICATED: "You must be signed in to connect Rithmic.",
+      AUTH_FAILED: "Rithmic login failed: {reason}",
+      NO_ACCOUNTS: "No trading accounts were returned for this login.",
+      HISTORY_START_REQUIRED:
+        "Choose a valid account start date (on or before today).",
+      INVALID_STORED_CREDENTIALS: "Saved connection data is invalid. Reconnect.",
+      NO_TOKEN_RECONNECT: "This connection is missing credentials. Reconnect.",
+      DUPLICATE_TRADES: "These trades are already in your journal.",
+      SYNC_FAILED: "Trade sync failed. Try again in a few minutes.",
+      SAVE_TRADES_FAILED: "Trades were fetched but could not be saved: {detail}",
+      ACCOUNT_ID_REQUIRED: "Account identifier is missing.",
+      LOAD_SYNCHRONIZATIONS_FAILED:
+        "Could not load your saved Rithmic Protocol connections.",
+      DELETE_SYNC_FAILED: "Could not remove this connection.",
+      UPDATE_SYNC_TIME_FAILED: "Could not update the daily sync time.",
+    },
+    addAccount: {
+      title: "Connect Rithmic Protocol",
+      description:
+        "Sign in with your Rithmic username/password, then pick the system your account lives on (for example Rithmic 01 or Rithmic Paper Trading).",
+      gatewayLabel: "Connect point",
+      gatewayHelp:
+        "Choose the Rithmic connect point closest to you. Core (Chicago) works everywhere; a regional one only lowers latency.",
+      systemLabel: "Rithmic system",
+      usernameLabel: "Username",
+      passwordLabel: "Password",
+      historyStartLabel: "Account start date",
+      historyStartHelp:
+        "Pick the day you started trading this account. We import fills from then until today in serial 30-day batches (Rithmic guidance).",
+      connecting: "Connecting…",
+      connect: "Connect",
+    },
+    sync: {
+      inProgress: "Syncing Rithmic fills for {accountId}…",
+      tokenMissing: "Connection missing credentials — reconnect",
+      accountNotFound: "Account not found. Refresh the list and try again.",
+    },
+    multiAccount: {
+      empty: "No Rithmic Protocol connections yet. Click Connect to add one.",
+      accountsCount: "trading accounts",
+      syncAll: "Sync All",
+      syncNow: "Sync now",
+      remove: "Remove",
+      removeTitle: "Remove connection",
+      removeDescription:
+        'Remove the connection "{accountId}"? Already imported trades stay in Deltalytix.',
+      connectionRemoved: 'Connection "{accountId}" removed.',
+      removeError: 'Failed to remove connection "{accountId}".',
+      accountsReloaded: "Accounts reloaded successfully",
+      reloadError: "Failed to reload accounts",
+      alreadyImportedTrades: "Trades already imported",
+      lastSynced: "Last synced",
+      syncCompleteForAccount:
+        "Successfully synced {savedCount} trades from {tradesCount} total for {accountId}.",
+      syncCompleteNoNewTradesForAccount:
+        "Found {tradesCount} trades for {accountId} but no new trades were saved.",
+      syncCompleteNoOrdersForAccount: "No closed trades found for {accountId}.",
     },
   },
   "import.type.thorSync.name": "Thor",

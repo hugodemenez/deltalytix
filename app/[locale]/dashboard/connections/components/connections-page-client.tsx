@@ -35,7 +35,6 @@ import { Label } from '@/components/ui/label'
 import { captureConnectionCreated } from '@/lib/connection-analytics'
 import {
   deleteConnectionAction,
-  getConnectionsPageData,
   updateConnectionDailySyncTimeAction,
   type ConnectionStatus,
   type ConnectionsPageConnection,
@@ -47,6 +46,7 @@ import { useTradovateSyncStore } from '@/store/tradovate-sync-store'
 import { useTradovateSyncContext } from '@/context/tradovate-sync-context'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
 import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
+import { useRithmicProtocolSyncContext } from '@/context/rithmic-protocol-sync-context'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ServiceMonochromeLogo } from '@/components/monochrome-logo'
@@ -57,6 +57,10 @@ const SERVICE_SECTIONS: {
   labelKey: string
 }[] = [
   { service: 'rithmic', labelKey: 'connections.sections.rithmic' },
+  {
+    service: 'rithmic-protocol',
+    labelKey: 'connections.sections.rithmicProtocol',
+  },
   { service: 'tradovate', labelKey: 'connections.sections.tradovate' },
   { service: 'dxfeed', labelKey: 'connections.sections.dxfeed' },
   { service: 'thor', labelKey: 'connections.sections.thor' },
@@ -189,6 +193,14 @@ function ConnectionRow({
   const [nowMs, setNowMs] = useState<number | null>(null)
   const { performSyncForAccount: syncTradovate } = useTradovateSyncContext()
   const { performSyncForAccount: syncDxFeed } = useDxFeedSyncContext()
+  const {
+    performSyncForAccount: syncRithmicProtocol,
+    isAccountSyncing: isRithmicProtocolSyncing,
+  } = useRithmicProtocolSyncContext()
+  const protocolSyncing =
+    connection.service === 'rithmic-protocol' &&
+    isRithmicProtocolSyncing(connection.accountId)
+  const rowSyncing = protocolSyncing || syncing
 
   const canSchedule = supportsDailySync(connection.service)
   const nextSyncAt = useMemo(
@@ -269,20 +281,26 @@ function ConnectionRow({
   )
 
   const handleSync = useCallback(async () => {
-    setSyncing(true)
+    const usesLocalSyncState = connection.service !== 'rithmic-protocol'
+    if (usesLocalSyncState) setSyncing(true)
     try {
       let result: { success?: boolean } | void
       if (connection.service === 'tradovate') {
         result = await syncTradovate(connection.accountId)
       } else if (connection.service === 'dxfeed') {
         result = await syncDxFeed(connection.accountId)
+      } else if (connection.service === 'rithmic-protocol') {
+        // Loading/error feedback comes from Protocol sync context (row spinner).
+        result = await syncRithmicProtocol(connection.accountId)
       } else {
         toast.message(t('connections.sync.manualOnly'))
         return
       }
       if (result && result.success === false) {
         setSyncFailed(true)
-        toast.error(t('connections.sync.failed'))
+        if (usesLocalSyncState) {
+          toast.error(t('connections.sync.failed'))
+        }
         return
       }
       setSyncFailed(false)
@@ -290,11 +308,13 @@ function ConnectionRow({
     } catch (error) {
       console.error(error)
       setSyncFailed(true)
-      toast.error(t('connections.sync.failed'))
+      if (usesLocalSyncState) {
+        toast.error(t('connections.sync.failed'))
+      }
     } finally {
-      setSyncing(false)
+      if (usesLocalSyncState) setSyncing(false)
     }
-  }, [connection, onChanged, syncDxFeed, syncTradovate, t])
+  }, [connection, onChanged, syncDxFeed, syncRithmicProtocol, syncTradovate, t])
 
   const handleDelete = useCallback(async () => {
     setDeleting(true)
@@ -395,15 +415,16 @@ function ConnectionRow({
           onKeyDown={(e) => e.stopPropagation()}
         >
           {(connection.service === 'tradovate' ||
-            connection.service === 'dxfeed') && (
+            connection.service === 'dxfeed' ||
+            connection.service === 'rithmic-protocol') && (
             <button
               type="button"
               className={iconButtonClassName}
               aria-label={t('connections.sync.now')}
-              disabled={syncing}
+              disabled={rowSyncing}
               onClick={() => void handleSync()}
             >
-              {syncing ? (
+              {rowSyncing ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
@@ -608,30 +629,55 @@ function reviveDate(value: unknown): Date | null {
   return null
 }
 
+function reviveConnectionsPageData(parsed: ConnectionsPageData): ConnectionsPageData {
+  return {
+    connections: (parsed.connections ?? []).map((connection) => ({
+      ...connection,
+      createdAt: reviveDate(connection.createdAt) ?? new Date(0),
+      updatedAt: reviveDate(connection.updatedAt) ?? new Date(0),
+      lastSyncedAt: reviveDate(connection.lastSyncedAt) ?? new Date(0),
+      tokenExpiresAt: reviveDate(connection.tokenExpiresAt),
+      dailySyncTime: reviveDate(connection.dailySyncTime),
+      accounts: (connection.accounts ?? []).map((account) => ({
+        ...account,
+        createdAt: reviveDate(account.createdAt) ?? new Date(0),
+      })),
+    })),
+    standaloneAccounts: (parsed.standaloneAccounts ?? []).map((account) => ({
+      ...account,
+      createdAt: reviveDate(account.createdAt) ?? new Date(0),
+    })),
+  }
+}
+
+/**
+ * Client refresh via JSON API (not a server action).
+ * Avoids Next.js "An unexpected response was received from the server" when
+ * action POSTs receive HTML during Instant Navigations / HMR / redirects.
+ */
+async function fetchConnectionsPageData(): Promise<ConnectionsPageData> {
+  const response = await fetch('/api/connections/page-data', {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+  })
+  if (!response.ok) {
+    throw new Error(`CONNECTIONS_LOAD_FAILED:${response.status}`)
+  }
+  const json = (await response.json()) as ConnectionsPageData | { error?: string }
+  if (!json || typeof json !== 'object' || !('connections' in json)) {
+    throw new Error('CONNECTIONS_LOAD_FAILED:invalid_payload')
+  }
+  return reviveConnectionsPageData(json)
+}
+
 function readConnectionsPageCache(): ConnectionsPageData | null {
   if (typeof window === 'undefined') return null
   try {
     const raw = sessionStorage.getItem(CONNECTIONS_PAGE_CACHE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as ConnectionsPageData
-    return {
-      connections: (parsed.connections ?? []).map((connection) => ({
-        ...connection,
-        createdAt: reviveDate(connection.createdAt) ?? new Date(0),
-        updatedAt: reviveDate(connection.updatedAt) ?? new Date(0),
-        lastSyncedAt: reviveDate(connection.lastSyncedAt) ?? new Date(0),
-        tokenExpiresAt: reviveDate(connection.tokenExpiresAt),
-        dailySyncTime: reviveDate(connection.dailySyncTime),
-        accounts: (connection.accounts ?? []).map((account) => ({
-          ...account,
-          createdAt: reviveDate(account.createdAt) ?? new Date(0),
-        })),
-      })),
-      standaloneAccounts: (parsed.standaloneAccounts ?? []).map((account) => ({
-        ...account,
-        createdAt: reviveDate(account.createdAt) ?? new Date(0),
-      })),
-    }
+    return reviveConnectionsPageData(parsed)
   } catch {
     return null
   }
@@ -725,6 +771,8 @@ function TypeSection({
   const { performSyncForAccount: syncTradovate } = useTradovateSyncContext()
   const { performSyncForAccount: syncDxFeed } = useDxFeedSyncContext()
   const { performSyncForCredential: syncRithmic } = useRithmicSyncContext()
+  const { performSyncForAccount: syncRithmicProtocol } =
+    useRithmicProtocolSyncContext()
   const replacingId =
     oauthPending?.externalId || oauthPending?.resolvedExternalId || null
   const hasInPlacePending =
@@ -738,7 +786,8 @@ function TypeSection({
   const canSyncAll =
     service === 'tradovate' ||
     service === 'dxfeed' ||
-    service === 'rithmic'
+    service === 'rithmic' ||
+    service === 'rithmic-protocol'
 
   const handleSyncAll = useCallback(async () => {
     if (!canSyncAll || connections.length === 0) {
@@ -749,22 +798,38 @@ function TypeSection({
     setSyncingAll(true)
     let failed = 0
     try {
-      for (const connection of connections) {
-        try {
-          let result: { success?: boolean } | void
-          if (service === 'tradovate') {
-            result = await syncTradovate(connection.accountId)
-          } else if (service === 'dxfeed') {
-            result = await syncDxFeed(connection.accountId)
-          } else {
-            result = await syncRithmic(connection.accountId)
-          }
-          if (result && result.success === false) {
+      if (service === 'rithmic-protocol') {
+        // Protocol tracks per-connection syncing in context; run in parallel so
+        // each row can show its own spinner without a toast storm.
+        const results = await Promise.all(
+          connections.map(async (connection) => {
+            try {
+              return await syncRithmicProtocol(connection.accountId)
+            } catch (error) {
+              console.error(error)
+              return { success: false as const }
+            }
+          }),
+        )
+        failed = results.filter((result) => result && result.success === false).length
+      } else {
+        for (const connection of connections) {
+          try {
+            let result: { success?: boolean } | void
+            if (service === 'tradovate') {
+              result = await syncTradovate(connection.accountId)
+            } else if (service === 'dxfeed') {
+              result = await syncDxFeed(connection.accountId)
+            } else {
+              result = await syncRithmic(connection.accountId)
+            }
+            if (result && result.success === false) {
+              failed += 1
+            }
+          } catch (error) {
+            console.error(error)
             failed += 1
           }
-        } catch (error) {
-          console.error(error)
-          failed += 1
         }
       }
 
@@ -784,6 +849,7 @@ function TypeSection({
     service,
     syncDxFeed,
     syncRithmic,
+    syncRithmicProtocol,
     syncTradovate,
     t,
   ])
@@ -879,29 +945,27 @@ export function ConnectionsPageClient({
   const storeHydrated = useTradovateSyncStore.persist?.hasHydrated?.() ?? true
   const [tradovateStoreReady, setTradovateStoreReady] = useState(storeHydrated)
 
+  const dataRef = useRef(data)
+  dataRef.current = data
+
   const load = useCallback(async (opts?: { quiet?: boolean }) => {
     try {
-      const next = await getConnectionsPageData()
+      const next = await fetchConnectionsPageData()
       setData(next)
       writeConnectionsPageCache(next)
       await Promise.allSettled([loadTradovate(), loadDxFeed()])
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
       console.error(error)
-      // Next can abort in-flight server actions during oauth router.replace.
-      if (/unexpected response/i.test(message)) {
-        try {
-          const next = await getConnectionsPageData()
-          setData(next)
-          writeConnectionsPageCache(next)
-          await Promise.allSettled([loadTradovate(), loadDxFeed()])
-          return
-        } catch (retryError) {
-          console.error(retryError)
-        }
-      }
+      // Soft refresh / post-mutation refresh: keep RSC-seeded rows. Only surface
+      // loadFailed when the page has nothing useful to show.
       if (!opts?.quiet) {
-        toast.error(t('connections.loadFailed'))
+        const current = dataRef.current
+        const hasRows =
+          (current?.connections.length ?? 0) > 0 ||
+          (current?.standaloneAccounts.length ?? 0) > 0
+        if (!hasRows) {
+          toast.error(t('connections.loadFailed'))
+        }
       }
     } finally {
       setLoading(false)
@@ -1033,7 +1097,7 @@ export function ConnectionsPageClient({
 
         toast.success(t('connections.oauth.tradovate.success'))
         captureConnectionCreated('tradovate')
-        const next = await getConnectionsPageData()
+        const next = await fetchConnectionsPageData()
         // Single paint: drop skeleton and show the real row in the same slot.
         setData(next)
         writeConnectionsPageCache(next)
@@ -1119,7 +1183,7 @@ export function ConnectionsPageClient({
           service={section.service}
           label={t(section.labelKey as 'connections.sections.rithmic')}
           connections={byService.get(section.service) ?? []}
-          onChanged={() => void load()}
+          onChanged={() => void load({ quiet: true })}
           oauthPending={
             section.service === 'tradovate' ? oauthPending : null
           }

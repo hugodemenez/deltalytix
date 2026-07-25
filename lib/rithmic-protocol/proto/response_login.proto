@@ -1,0 +1,18 @@
+
+package rti;
+
+message ResponseLogin
+	{       
+	required int32  template_id         = 154467;
+	optional string template_version    = 153634;
+	repeated string user_msg            = 132760;
+	repeated string rp_code             = 132766;
+
+	optional string fcm_id              = 154013;
+	optional string ib_id               = 154014;
+	optional string country_code        = 154712;
+	optional string state_code          = 154713;
+
+	optional string unique_user_id      = 153428;
+	optional double heartbeat_interval  = 153633;
+	}

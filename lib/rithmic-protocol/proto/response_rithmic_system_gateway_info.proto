@@ -1,0 +1,13 @@
+
+package rti;
+
+message ResponseRithmicSystemGatewayInfo
+	{
+	required int32  template_id   = 154467;
+	repeated string user_msg      = 132760;
+	repeated string rp_code       = 132766;
+
+	optional string system_name   = 153628;
+	repeated string gateway_name  = 153640;
+	repeated string gateway_uri   = 153641;
+	}
