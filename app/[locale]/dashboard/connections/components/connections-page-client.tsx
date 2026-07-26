@@ -41,7 +41,11 @@ import {
   type ConnectionsPageData,
   type ConnectionService,
 } from '../actions'
-import { handleTradovateCallback } from '@/app/[locale]/dashboard/components/import/tradovate/sync/actions'
+import {
+  handleTradovateCallback,
+  initiateTradovateOAuth,
+  type TradovateEnvironment,
+} from '@/app/[locale]/dashboard/components/import/tradovate/sync/actions'
 import { useTradovateSyncStore } from '@/store/tradovate-sync-store'
 import { useTradovateSyncContext } from '@/context/tradovate-sync-context'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
@@ -51,6 +55,9 @@ import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ServiceMonochromeLogo } from '@/components/monochrome-logo'
 import { useConnectionsRefresh } from './connections-refresh'
+
+const reconnectButtonClassName =
+  'inline-flex h-8 items-center justify-center rounded-sm border border-black/20 bg-transparent px-3 text-sm font-medium transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:border-white/20 dark:hover:bg-white/5'
 
 const SERVICE_SECTIONS: {
   service: ConnectionService
@@ -268,11 +275,14 @@ function ConnectionRow({
   const [deleting, setDeleting] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [syncFailed, setSyncFailed] = useState(false)
+  const [reconnecting, setReconnecting] = useState(false)
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [dailySyncTime, setDailySyncTime] = useState('')
   const [savingSchedule, setSavingSchedule] = useState(false)
   // Countdown must not SSR with Date.now() — minute boundaries cause hydration mismatches.
   const [nowMs, setNowMs] = useState<number | null>(null)
+  const { openConnect } = useConnectionsRefresh()
+  const tradovateStore = useTradovateSyncStore()
   const { performSyncForAccount: syncTradovate } = useTradovateSyncContext()
   const { performSyncForAccount: syncDxFeed } = useDxFeedSyncContext()
   const {
@@ -283,6 +293,11 @@ function ConnectionRow({
     connection.service === 'rithmic-protocol' &&
     isRithmicProtocolSyncing(connection.accountId)
   const rowSyncing = protocolSyncing || syncing
+  // Orange = expired token; red = missing/invalid auth (or last sync failed).
+  const needsReconnect =
+    syncFailed ||
+    connection.status === 'warning' ||
+    connection.status === 'error'
 
   const canSchedule = supportsDailySync(connection.service)
   const nextSyncAt = useMemo(
@@ -398,6 +413,44 @@ function ConnectionRow({
     }
   }, [connection, onChanged, syncDxFeed, syncRithmicProtocol, syncTradovate, t])
 
+  const handleReconnect = useCallback(async () => {
+    // Tradovate can re-auth in place via OAuth without opening the add sheet.
+    if (connection.service === 'tradovate') {
+      setReconnecting(true)
+      try {
+        const environment: TradovateEnvironment =
+          connection.environment === 'live' ? 'live' : 'demo'
+        tradovateStore.setEnvironment(environment)
+        const result = await initiateTradovateOAuth(
+          connection.accountId,
+          environment
+        )
+        if (result.error || !result.authUrl || !result.state) {
+          toast.error(t('connections.reconnectFailed'))
+          return
+        }
+        tradovateStore.setOAuthState(result.state)
+        sessionStorage.setItem('tradovate_oauth_state', result.state)
+        sessionStorage.setItem(
+          'tradovate_oauth_pending',
+          JSON.stringify({
+            environment,
+            externalId: connection.accountId,
+          })
+        )
+        window.location.href = result.authUrl
+      } catch (error) {
+        console.error(error)
+        toast.error(t('connections.reconnectFailed'))
+      } finally {
+        setReconnecting(false)
+      }
+      return
+    }
+
+    openConnect(connection.service as ConnectionService)
+  }, [connection, openConnect, t, tradovateStore])
+
   const handleDelete = useCallback(async () => {
     setDeleting(true)
     try {
@@ -448,6 +501,19 @@ function ConnectionRow({
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
           >
+            {needsReconnect && (
+              <button
+                type="button"
+                className={reconnectButtonClassName}
+                disabled={reconnecting}
+                onClick={() => void handleReconnect()}
+              >
+                {reconnecting ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : null}
+                {t('connections.reconnect')}
+              </button>
+            )}
             {(connection.service === 'tradovate' ||
               connection.service === 'dxfeed' ||
               connection.service === 'rithmic-protocol') && (
@@ -455,7 +521,7 @@ function ConnectionRow({
                 type="button"
                 className={iconButtonClassName}
                 aria-label={t('connections.sync.now')}
-                disabled={rowSyncing}
+                disabled={rowSyncing || needsReconnect}
                 onClick={() => void handleSync()}
               >
                 {rowSyncing ? (

@@ -175,6 +175,8 @@ export default {
   "connections.status.warning": "Needs reconnect",
   "connections.status.error": "Disconnected",
   "connections.status.syncFailed": "Last sync failed",
+  "connections.reconnect": "Reconnect",
+  "connections.reconnectFailed": "Could not start reconnect",
   "connections.delete": "Delete connection",
   "connections.deleteConfirmTitle": "Delete this connection?",
   "connections.deleteConfirmDescription":
