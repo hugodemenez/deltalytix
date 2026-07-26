@@ -105,9 +105,8 @@ function formatTradeDate(date: string | null | undefined, locale: string) {
 /**
  * Account rows:
  * - Mobile: account number, then one meta row — last trade (left) · trades (right).
- * - sm+: shared subgrid — account | last trade (left) | trade count (right).
- * Last trade uses a fixed-width date so it anchors the left; trade counts stay
- * right-aligned with tabular-nums for quick comparison.
+ * - sm+: shared subgrid — account | trade count | last trade (same row).
+ * Trade counts stay right-aligned with tabular-nums for quick comparison.
  */
 function AccountTradeList({
   accounts,
@@ -168,13 +167,23 @@ function AccountTradeList({
               {account.number}
             </span>
             <div className="flex min-w-0 items-baseline justify-between gap-3 sm:contents">
-              <span className={cn(metaClassName, 'sm:justify-self-start')}>
+              <span
+                className={cn(
+                  metaClassName,
+                  'order-2 text-right sm:order-1 sm:justify-self-end'
+                )}
+              >
+                {tradeCountLabel}
+              </span>
+              <span
+                className={cn(
+                  metaClassName,
+                  'order-1 sm:order-2 sm:justify-self-end'
+                )}
+              >
                 {lastTrade
                   ? t('connections.lastTrade', { date: lastTrade })
                   : null}
-              </span>
-              <span className={cn(metaClassName, 'text-right sm:justify-self-end')}>
-                {tradeCountLabel}
               </span>
             </div>
           </li>
