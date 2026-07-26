@@ -1,3 +1,5 @@
+import fs from 'fs'
+
 import {
   assertNoDevIssues,
   clickTab,
@@ -5,20 +7,21 @@ import {
   ensureCookiesDismissed,
   injectBillingPaymentHistoryMock,
   newCapturePage,
+  outputDir,
   recordVideo,
   screenshot,
   waitForDashboard,
 } from './helpers.mjs'
 import { LABELS, viewport } from './constants.mjs'
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image'} ChangelogScene */
 
 /**
  * @param {import('playwright-core').Browser} browser
- * @param {{ batch: string, locale: string, file: string, scene: ChangelogScene, siteUrl: string, playwrightLocale: string }} options
+ * @param {{ batch: string, locale: string, file: string, scene: ChangelogScene, route?: string, siteUrl: string, playwrightLocale: string }} options
  */
 export async function captureScene(browser, options) {
-  const { batch, locale, file, scene, siteUrl, playwrightLocale } = options
+  const { batch, locale, file, scene, route, siteUrl, playwrightLocale } = options
 
   switch (scene) {
     case 'landing-hero': {
@@ -462,6 +465,131 @@ export async function captureScene(browser, options) {
       await page.waitForTimeout(2000)
       await assertNoDevIssues(page, `${locale} billing mobile`)
       await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'connections-hub': {
+      // Desktop Connections overview with the provider menu open and seeded
+      // standalone account visible below it.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      // Warm the dashboard user/trade stores first so the Connections capture
+      // does not contain transient avatar or trade-loading indicators.
+      await waitForDashboard(page, locale, siteUrl)
+      await page.goto(`${siteUrl}/${locale}/dashboard/connections`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 120_000,
+      })
+      await dismissCookies(page, locale)
+      await page.getByText('LOCAL-SIM-001').waitFor({ timeout: 90_000 })
+      const addConnection = page.getByRole('button', {
+        name: LABELS[locale].addConnection,
+      })
+      await addConnection.click()
+      await page.getByRole('menu').first().waitFor({ timeout: 15_000 })
+      await page.locator('[data-sonner-toast]').first().waitFor({
+        state: 'hidden',
+        timeout: 15_000,
+      }).catch(() => {})
+      await page.waitForTimeout(1200)
+      await assertNoDevIssues(page, `${locale} connections hub`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'widget-info-popover-mobile': {
+      // Touch-sized Widgets view with a real seeded widget explanation open.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('mobile'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      await clickTab(page, LABELS[locale].widgetsTab)
+      const infoTrigger = page
+        .getByRole('button', { name: LABELS[locale].moreInformation })
+        .first()
+      await infoTrigger.waitFor({ timeout: 30_000 })
+      await infoTrigger.click()
+      await page.getByRole('note', { name: LABELS[locale].moreInformation }).waitFor({
+        timeout: 15_000,
+      })
+      await page.waitForTimeout(1200)
+      await assertNoDevIssues(page, `${locale} widget info popover mobile`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'feedback-popover': {
+      // Desktop dashboard navbar with the localized feedback form open. The
+      // capture only opens the form and never submits a message.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      const feedbackTrigger = page.getByRole('button', {
+        name: LABELS[locale].feedback,
+      })
+      await feedbackTrigger.waitFor({ timeout: 30_000 })
+      await feedbackTrigger.click()
+      await page.getByText(LABELS[locale].feedbackHeading).waitFor({
+        timeout: 15_000,
+      })
+      await page.waitForTimeout(1200)
+      await assertNoDevIssues(page, `${locale} feedback popover`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'update-og-image': {
+      // Resolve localized metadata, then save the exact generated OG response
+      // rather than rasterizing it again through a browser viewport.
+      if (!route) {
+        throw new Error(`Missing update route for ${locale}/${file}`)
+      }
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await page.goto(`${siteUrl}/${locale}/updates/${route}`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 120_000,
+      })
+      await dismissCookies(page, locale)
+      await assertNoDevIssues(page, `${locale} update Open Graph page`)
+
+      const imageHref = await page
+        .locator('meta[property="og:image"]')
+        .getAttribute('content')
+      if (!imageHref) {
+        throw new Error(`Missing og:image metadata for ${locale} update`)
+      }
+
+      const imageUrl = new URL(imageHref, page.url()).toString()
+      const response = await page.request.get(imageUrl, { timeout: 120_000 })
+      const contentType = response.headers()['content-type'] ?? ''
+      if (!response.ok() || !contentType.startsWith('image/png')) {
+        throw new Error(
+          `Invalid OG response for ${locale}: ${response.status()} ${contentType}`,
+        )
+      }
+
+      const body = await response.body()
+      const width = body.readUInt32BE(16)
+      const height = body.readUInt32BE(20)
+      if (width !== 1200 || height !== 630) {
+        throw new Error(`Unexpected OG dimensions for ${locale}: ${width}x${height}`)
+      }
+
+      const out = `${outputDir(batch, locale)}/${file}.png`
+      fs.writeFileSync(out, body)
+      console.log('Saved', out)
       await page.close()
       return
     }

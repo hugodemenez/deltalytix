@@ -47,6 +47,10 @@ export const LABELS = {
     updatesNav: /^updates$/i,
     paymentHistory: /payment history/i,
     billing: /billing/i,
+    moreInformation: /^more information$/i,
+    feedback: /^send feedback$/i,
+    feedbackHeading: /^share your feedback$/i,
+    addConnection: /^add connection$/i,
   },
   fr: {
     acceptCookies: /tout accepter/i,
@@ -64,6 +68,10 @@ export const LABELS = {
     updatesNav: /^mises à jour$/i,
     paymentHistory: /historique des paiements/i,
     billing: /facturation/i,
+    moreInformation: /^plus d'informations$/i,
+    feedback: /^envoyer un retour$/i,
+    feedbackHeading: /^partagez votre retour$/i,
+    addConnection: /^ajouter une connexion$/i,
   },
 }
 
