@@ -11,23 +11,23 @@
 
 ## connections-hub-and-streamlined-imports
 
-- Decision: 0 visuals
-- Rationale: The finished copy clearly separates connection management from the shorter add/import flow and enumerates the available metadata and actions. An honest overview requires several populated providers and hosted accounts, while the local capture state cannot safely prove provider health, synchronization, or last-trade metadata without realistic connection data; an empty or synthetic overview would underrepresent the feature.
-- Primary/card asset: none
+- Decision: 1 visual
+- Rationale: The localized Connections overview communicates the consolidated destination, provider choices, file-import entry point, and standalone-account treatment faster than copy alone. The seeded standalone account is real local demo data, while the open provider menu avoids inventing hosted connection health or synchronization states.
+- Primary/card asset: `connections-hub.png` — desktop Connections overview with the provider menu open and the seeded standalone account visible.
 - Additional assets: none
 - Omitted candidates:
-  - Expanded Connections overview — requires populated provider connections and account metadata that are not available as safe capture data.
+  - Expanded provider connections — requires populated provider connections and account metadata that are not available as safe capture data.
   - Provider sheet or inline import — would show only one branch of the consolidated workflow and repeat the step-by-step copy.
   - Narrow account rows — responsive alignment alone is secondary polish rather than distinct evidence for this broad entry.
 
 ## mobile-widget-info-popovers
 
-- Decision: 0 visuals
-- Rationale: The important improvement is interaction and accessibility behavior across tap, keyboard focus, dismissal, positioning, and reduced motion. One static phone screenshot could show placement but not prove those behaviors, while a video of opening and closing a short explanation would mostly restate the concise copy.
-- Primary/card asset: none
+- Decision: 1 visual
+- Rationale: A localized phone screenshot directly demonstrates that widget help is reachable by touch, remains legible, and stays within the narrow viewport. The copy continues to cover keyboard, dismissal, and reduced-motion behavior that a static image cannot prove.
+- Primary/card asset: `mobile-widget-info-popover.png` — phone-sized Widgets view with a seeded performance metric explanation open.
 - Additional assets: none
 - Omitted candidates:
-  - Phone-sized widget with an open popover — demonstrates only one transient position and not the accessible interaction that makes the change meaningful.
+  - Additional widget popovers — the shared interaction and positioning are already represented by one clear example.
 
 ## calendar-events-and-mobile-details
 
@@ -70,10 +70,9 @@
 
 ## send-feedback-from-the-dashboard
 
-- Decision: 0 visuals
-- Rationale: The compact entry fully describes the navbar action, required message, optional reply email, confirmation, and acknowledgement. A form screenshot would merely duplicate those controls, while a success capture would require stubbing submission and still could not demonstrate email acknowledgement.
-- Primary/card asset: none
+- Decision: 1 visual
+- Rationale: The localized dashboard capture shows the navbar entry point, feedback categories, required message field, and send action together without submitting data. It makes the workflow location and compact scope immediately clear, while delivery and acknowledgement remain documented in text.
+- Primary/card asset: `dashboard-feedback-popover.png` — populated dashboard with the feedback form opened from the navbar.
 - Additional assets: none
 - Omitted candidates:
-  - Open feedback form — the controls are simple and already described, so the image would be decorative.
-  - Localized success state — safely stubbing delivery would prove only the transient UI confirmation, not the acknowledgement-email claim.
+  - Localized success state — safely stubbing delivery would prove only the transient toast, not durable delivery or the acknowledgement email.

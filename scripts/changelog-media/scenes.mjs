@@ -11,7 +11,7 @@ import {
 } from './helpers.mjs'
 import { LABELS, viewport } from './constants.mjs'
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'widget-info-popover-mobile' | 'feedback-popover'} ChangelogScene */
 
 /**
  * @param {import('playwright-core').Browser} browser
@@ -461,6 +461,84 @@ export async function captureScene(browser, options) {
       await page.getByText(LABELS[locale].paymentHistory).first().scrollIntoViewIfNeeded()
       await page.waitForTimeout(2000)
       await assertNoDevIssues(page, `${locale} billing mobile`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'connections-hub': {
+      // Desktop Connections overview with the provider menu open and seeded
+      // standalone account visible below it.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      // Warm the dashboard user/trade stores first so the Connections capture
+      // does not contain transient avatar or trade-loading indicators.
+      await waitForDashboard(page, locale, siteUrl)
+      await page.goto(`${siteUrl}/${locale}/dashboard/connections`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 120_000,
+      })
+      await dismissCookies(page, locale)
+      await page.getByText('LOCAL-SIM-001').waitFor({ timeout: 90_000 })
+      const addConnection = page.getByRole('button', {
+        name: LABELS[locale].addConnection,
+      })
+      await addConnection.click()
+      await page.getByRole('menu').first().waitFor({ timeout: 15_000 })
+      await page.locator('[data-sonner-toast]').first().waitFor({
+        state: 'hidden',
+        timeout: 15_000,
+      }).catch(() => {})
+      await page.waitForTimeout(1200)
+      await assertNoDevIssues(page, `${locale} connections hub`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'widget-info-popover-mobile': {
+      // Touch-sized Widgets view with a real seeded widget explanation open.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('mobile'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      await clickTab(page, LABELS[locale].widgetsTab)
+      const infoTrigger = page
+        .getByRole('button', { name: LABELS[locale].moreInformation })
+        .first()
+      await infoTrigger.waitFor({ timeout: 30_000 })
+      await infoTrigger.click()
+      await page.getByRole('note', { name: LABELS[locale].moreInformation }).waitFor({
+        timeout: 15_000,
+      })
+      await page.waitForTimeout(1200)
+      await assertNoDevIssues(page, `${locale} widget info popover mobile`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'feedback-popover': {
+      // Desktop dashboard navbar with the localized feedback form open. The
+      // capture only opens the form and never submits a message.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      const feedbackTrigger = page.getByRole('button', {
+        name: LABELS[locale].feedback,
+      })
+      await feedbackTrigger.waitFor({ timeout: 30_000 })
+      await feedbackTrigger.click()
+      await page.getByText(LABELS[locale].feedbackHeading).waitFor({
+        timeout: 15_000,
+      })
+      await page.waitForTimeout(1200)
+      await assertNoDevIssues(page, `${locale} feedback popover`)
       await screenshot(page, batch, locale, file)
       await page.close()
       return

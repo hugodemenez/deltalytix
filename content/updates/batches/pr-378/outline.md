@@ -189,12 +189,12 @@
 
 ## Entry: send-feedback-from-the-dashboard
 
-- User outcome: Users can send feedback or report a bug without leaving the dashboard, optionally attach a reply email, and receive an on-screen success state plus an acknowledgement email when an address is supplied.
+- User outcome: Users can send feedback or report a bug without leaving the dashboard and receive an on-screen success state plus an acknowledgement at their signed-in account email.
 - Audience: Any authenticated dashboard user who wants to suggest an improvement or report a problem.
-- Surfaces: Dashboard navbar **Send feedback or report a bug** button; **Share your feedback** dialog; message and optional email fields.
+- Surfaces: Dashboard navbar **Send feedback or report a bug** button; **Share your feedback** popover; feedback type and message fields.
 - Dates: 2026-07-25 → 2026-07-25
 - Grouping rationale: Navbar entry point, form, API, notification, acknowledgement, and localized copy make one complete feedback workflow.
-- Important details: The message is required and length-limited; email is optional but must be valid if provided. English and French UI/email copy are included. This is distinct from the temporary PostHog Connections survey.
+- Important details: The message is required and length-limited. Identity and acknowledgement delivery use the signed-in account email rather than a user-entered address. English and French UI/email copy are included. This is distinct from the temporary PostHog Connections survey.
 - Try it: Select the message-square-plus action in the dashboard navbar, enter feedback, optionally add a reply email, and submit.
 
 ### Story options
@@ -204,7 +204,7 @@
 
 ### Visual moments
 
-- The feedback dialog open from the dashboard navbar, with the message and optional email controls visible.
+- The feedback popover open from the dashboard navbar, with the feedback type and message controls visible.
 - The localized success state after submission, if email delivery is safely stubbed.
 
 ### Visual caveats
