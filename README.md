@@ -28,37 +28,15 @@ Use it hosted at [deltalytix.app](https://deltalytix.app), or run the whole thin
 
 ## What it does
 
-### Get your trades in
+**Get your trades in.** Direct sync for Rithmic, Tradovate, Thor, and DXfeed. File and statement import for Interactive Brokers PDFs, ATAS, FTMO, TradeZella, Quantower, Topstep, and NinjaTrader. Manual entry with commissions inferred from your history. For anything not on that list, AI field mapping reads an arbitrary CSV and works out the columns.
 
-Direct sync for Rithmic, Tradovate, Thor, and DXfeed. File and statement import for Interactive Brokers PDFs, ATAS, FTMO, TradeZella, Quantower, Topstep, and NinjaTrader. Manual entry with commissions inferred from your history. For anything not on that list, AI field mapping reads an arbitrary CSV and works out the columns.
+**See what happened.** A drag-and-drop dashboard of PnL, win rate, trade distribution, average time in position, and per-account breakdowns — filterable by instrument, weekday, and date range. Calendar view with daily statistics, and a trade table you can sort, group, and bulk-edit.
 
-<div align="center">
-  <img src="public/updates/pr-249/en/import-from-mobile.png" alt="Import dialog listing direct account sync options for Rithmic, Thor, Tradovate and DxFeed, plus AI-mapped CSV import" width="320" />
-</div>
+**Write it down.** A rich journal editor with tables, resizable images, and session tags, plus an AI coach that reads your entries alongside your fills and names the patterns costing you money.
 
-### See what happened
+**Trade together.** Team accounts with combined performance across every trader, and a prop-firm catalogue with aggregated payout and pass-rate statistics.
 
-A drag-and-drop dashboard of PnL, win rate, trade distribution, average time in position, and per-account breakdowns — filterable by instrument, weekday, and date range. Calendar view with daily statistics, and a trade table you can sort, group, and bulk-edit.
-
-<div align="center">
-  <img src="public/updates/pr-288/en/responsive-calendar-analytics-charts.png" alt="Dashboard widgets showing daily PnL charts, trading statistics, average PnL by hour, and a monthly calendar" width="700" />
-  <br /><br />
-  <img src="public/updates/pr-249/en/trade-table-mobile-and-show-all.png" alt="Trade review table listing entry and exit prices, direction, position time and instrument per trade" width="700" />
-</div>
-
-### Write it down
-
-A rich journal editor with tables, resizable images, and session tags, plus an AI coach that reads your entries alongside your fills and names the patterns costing you money.
-
-<div align="center">
-  <img src="public/updates/pr-316/en/landing-ai-coach-demo.png" alt="AI coach chat identifying a revenge-trading pattern with a 73% loss rate after consecutive losses" width="700" />
-</div>
-
-### Trade together
-
-Team accounts with combined performance across every trader, and a prop-firm catalogue with aggregated payout and pass-rate statistics.
-
-Available in English and French. More screenshots accompany each release in the [release notes](https://deltalytix.app/updates).
+Available in English and French.
 
 ## Run it yourself
 
