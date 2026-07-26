@@ -95,6 +95,86 @@ function formatTradeDate(date: string | null | undefined, locale: string) {
   }).format(d)
 }
 
+/**
+ * Account rows use a shared parent grid + subgrid so account number, trade
+ * count, and last-trade date stay column-aligned across the list — including
+ * on narrow mobile where the account id wraps onto its own line.
+ */
+function AccountTradeList({
+  accounts,
+  locale,
+  density = 'compact',
+}: {
+  accounts: Array<{
+    id: string
+    number: string
+    tradeCount: number
+    lastTradeDate: string | null
+  }>
+  locale: string
+  density?: 'compact' | 'standalone'
+}) {
+  const t = useI18n()
+  const compact = density === 'compact'
+
+  return (
+    <ul
+      className={cn(
+        'grid grid-cols-[auto_auto] justify-items-start gap-x-3',
+        'sm:grid-cols-[minmax(0,1fr)_auto_auto]',
+        !compact &&
+          'border-y border-black/10 dark:border-white/10'
+      )}
+    >
+      {accounts.map((account) => {
+        const lastTrade = formatTradeDate(account.lastTradeDate, locale)
+        return (
+          <li
+            key={account.id}
+            className={cn(
+              'col-span-full grid grid-cols-subgrid items-baseline gap-y-1 border-t border-black/10 first:border-t-0 dark:border-white/10',
+              compact ? 'py-3 text-sm' : 'py-6 md:py-8'
+            )}
+          >
+            <span
+              className={cn(
+                'col-span-2 min-w-0 break-all tracking-tight sm:col-span-1 sm:truncate sm:break-normal',
+                compact
+                  ? 'font-medium'
+                  : 'text-xl font-normal md:text-2xl'
+              )}
+            >
+              {account.number}
+            </span>
+            <span
+              className={cn(
+                'whitespace-nowrap text-black/45 dark:text-white/45 tabular-nums',
+                !compact && 'text-sm'
+              )}
+            >
+              {account.tradeCount === 1
+                ? t('connections.tradeCount.one', { count: 1 })
+                : t('connections.tradeCount.other', {
+                    count: account.tradeCount,
+                  })}
+            </span>
+            <span
+              className={cn(
+                'whitespace-nowrap text-black/45 dark:text-white/45 tabular-nums',
+                !compact && 'text-sm'
+              )}
+            >
+              {lastTrade
+                ? t('connections.lastTrade', { date: lastTrade })
+                : null}
+            </span>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 function supportsDailySync(service: string) {
   return service === 'tradovate' || service === 'dxfeed'
 }
@@ -463,29 +543,11 @@ function ConnectionRow({
               {t('connections.noHostedAccounts')}
             </p>
           ) : (
-            <ul className="divide-y divide-black/10 dark:divide-white/10">
-              {connection.accounts.map((account) => (
-                <li
-                  key={account.id}
-                  className="flex items-center justify-between gap-4 py-3 text-sm"
-                >
-                  <span className="font-medium tracking-tight">{account.number}</span>
-                  <span className="text-black/45 dark:text-white/45 tabular-nums">
-                    {account.tradeCount === 1
-                      ? t('connections.tradeCount.one', { count: 1 })
-                      : t('connections.tradeCount.other', {
-                          count: account.tradeCount,
-                        })}
-                    {(() => {
-                      const lastTrade = formatTradeDate(account.lastTradeDate, locale)
-                      return lastTrade
-                        ? ` · ${t('connections.lastTrade', { date: lastTrade })}`
-                        : ''
-                    })()}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <AccountTradeList
+              accounts={connection.accounts}
+              locale={locale}
+              density="compact"
+            />
           )}
         </div>
       </div>
@@ -1206,31 +1268,11 @@ export function ConnectionsPageClient({
               {t('connections.standaloneHint')}
             </p>
           </div>
-          <ul className="divide-y divide-black/10 border-y border-black/10 dark:divide-white/10 dark:border-white/10">
-            {data!.standaloneAccounts.map((account) => (
-              <li
-                key={account.id}
-                className="flex items-center justify-between gap-4 py-6 md:py-8"
-              >
-                <div className="text-xl font-normal tracking-tight md:text-2xl">
-                  {account.number}
-                </div>
-                <span className="text-sm text-black/45 dark:text-white/45 tabular-nums">
-                  {account.tradeCount === 1
-                    ? t('connections.tradeCount.one', { count: 1 })
-                    : t('connections.tradeCount.other', {
-                        count: account.tradeCount,
-                      })}
-                  {(() => {
-                    const lastTrade = formatTradeDate(account.lastTradeDate, locale)
-                    return lastTrade
-                      ? ` · ${t('connections.lastTrade', { date: lastTrade })}`
-                      : ''
-                  })()}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <AccountTradeList
+            accounts={data!.standaloneAccounts}
+            locale={locale}
+            density="standalone"
+          />
         </section>
       )}
     </div>
