@@ -1,0 +1,17 @@
+---
+title: "Faster navigation with fewer empty states"
+description: "Pages begin rendering sooner, dashboard transitions keep an immediate shell, and the trade table reliably opens on a populated page."
+date: "2026-07-18"
+status: completed
+completedDate: "2026-07-24"
+---
+
+# Faster navigation with fewer empty states
+
+Moving through Deltalytix now involves less waiting and fewer blank states. Landing and dashboard pages begin rendering sooner, while transitions between dashboard destinations preserve an immediate page shell as your account data loads.
+
+The improvements cover dashboard home, Connections, Import, Data, Billing, Settings, and locale-aware navigation. Cached page structure never substitutes another or stale account's data: dynamic trading information still resolves for the authenticated user.
+
+Large imports no longer force an avoidable reload of the full trade history. The trade review table also clamps invalid page positions and safely returns to an available page, preventing the initial view from appearing empty when trades exist.
+
+[Open the dashboard](/en/dashboard), move between its sections, and return to the trade table to experience the smoother flow.
