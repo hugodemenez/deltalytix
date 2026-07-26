@@ -2,12 +2,13 @@
 
 ## dark-localized-link-previews
 
-- Decision: 0 visuals
-- Rationale: The entry already names the affected link types, the dark treatment, localization, contrast, and social-client caching caveat. A standalone generated card would show only one locale and one route without demonstrating the cross-surface consistency or the actual unfurl context, so it would be decorative rather than useful evidence.
-- Primary/card asset: none
+- Decision: 1 visual
+- Rationale: The localized update card is the feature's actual rendered output, so it provides direct evidence of the dark treatment, readable contrast, translated title, and chart-led visual language. EN and FR captures are generated independently from each page's `og:image` metadata.
+- Primary/card asset: `dark-localized-link-preview.png` — exact 1200×630 Open Graph response for the localized changelog entry.
 - Additional assets: none
 - Omitted candidates:
-  - Generated site or Connections preview card — one card cannot substantiate the entry's broader cross-route and locale behavior, and a social-client frame would introduce client-specific presentation that Deltalytix does not control.
+  - Social-client unfurl frame — client chrome and caching are outside Deltalytix's control and would distract from the card itself.
+  - Additional site or Connections cards — the update card already demonstrates the shared visual system without multiplying near-identical assets.
 
 ## connections-hub-and-streamlined-imports
 
