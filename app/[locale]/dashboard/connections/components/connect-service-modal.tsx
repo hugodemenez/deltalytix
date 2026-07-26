@@ -14,18 +14,22 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { ServiceMonochromeLogo } from '@/components/monochrome-logo'
+import type { ConnectPrefill } from './connect-prefill'
 
 export function ConnectServiceModal({
   service,
+  prefill,
   onClose,
 }: {
   service: ConnectionService | null
+  prefill?: ConnectPrefill | null
   onClose: () => void
 }) {
   const t = useI18n()
   const open = service !== null
+  const isReconnect = !!prefill?.accountId
 
-  const title =
+  const addTitle =
     service === 'rithmic'
       ? t('connections.add.rithmic')
       : service === 'rithmic-protocol'
@@ -39,6 +43,8 @@ export function ConnectServiceModal({
               : service === 'etp'
                 ? t('connections.add.etp')
                 : t('connections.addConnection')
+
+  const title = isReconnect ? t('connections.reconnect') : addTitle
 
   return (
     <Sheet
@@ -70,6 +76,7 @@ export function ConnectServiceModal({
           {service === 'rithmic' && (
             <RithmicSyncWrapper
               initialShowCredentialsManager={false}
+              initialUsername={prefill?.accountId}
               setIsOpen={(next: boolean) => {
                 if (!next) onClose()
               }}
@@ -78,6 +85,7 @@ export function ConnectServiceModal({
           {service === 'rithmic-protocol' && (
             <RithmicProtocolSync
               initialShowAccountsManager={false}
+              initialUsername={prefill?.accountId}
               onConnected={onClose}
             />
           )}
@@ -90,6 +98,8 @@ export function ConnectServiceModal({
             <div className="min-h-0 flex-1 overflow-y-auto">
               <DxFeedSync
                 initialShowAccountsManager={false}
+                initialEmail={prefill?.accountId}
+                initialPropFirmName={prefill?.displayName}
                 onConnected={onClose}
               />
             </div>

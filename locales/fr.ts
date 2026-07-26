@@ -173,7 +173,6 @@ export default {
   "connections.sync.failed": "Échec de la synchronisation",
   "connections.sync.manualOnly": "Synchronisez cette connexion depuis ses paramètres.",
   "connections.status.connected": "Connecté",
-  "connections.status.warning": "Reconnecter",
   "connections.status.error": "Déconnecté",
   "connections.status.syncFailed": "Échec de la dernière sync",
   "connections.reconnect": "Reconnecter",

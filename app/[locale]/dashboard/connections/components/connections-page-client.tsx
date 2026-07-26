@@ -234,14 +234,12 @@ function ConnectionStatusLight({
   syncFailed: boolean
 }) {
   const t = useI18n()
-  const effective: ConnectionStatus = syncFailed ? 'error' : status
+  const isError = syncFailed || status !== 'connected'
   const label = syncFailed
     ? t('connections.status.syncFailed')
-    : effective === 'connected'
-      ? t('connections.status.connected')
-      : effective === 'warning'
-        ? t('connections.status.warning')
-        : t('connections.status.error')
+    : isError
+      ? t('connections.status.error')
+      : t('connections.status.connected')
 
   return (
     <span
@@ -252,9 +250,7 @@ function ConnectionStatusLight({
       <span
         className={cn(
           'h-2 w-2 rounded-full',
-          effective === 'connected' && 'bg-emerald-500',
-          effective === 'warning' && 'bg-amber-500',
-          effective === 'error' && 'bg-red-500'
+          isError ? 'bg-red-500' : 'bg-emerald-500'
         )}
       />
     </span>
@@ -293,11 +289,8 @@ function ConnectionRow({
     connection.service === 'rithmic-protocol' &&
     isRithmicProtocolSyncing(connection.accountId)
   const rowSyncing = protocolSyncing || syncing
-  // Orange = expired token; red = missing/invalid auth (or last sync failed).
-  const needsReconnect =
-    syncFailed ||
-    connection.status === 'warning' ||
-    connection.status === 'error'
+  // Red = expired/missing auth, or the last sync attempt failed.
+  const needsReconnect = syncFailed || connection.status !== 'connected'
 
   const canSchedule = supportsDailySync(connection.service)
   const nextSyncAt = useMemo(
@@ -448,7 +441,12 @@ function ConnectionRow({
       return
     }
 
-    openConnect(connection.service as ConnectionService)
+    openConnect(connection.service as ConnectionService, {
+      service: connection.service as ConnectionService,
+      accountId: connection.accountId,
+      displayName: connection.displayName,
+      environment: connection.environment,
+    })
   }, [connection, openConnect, t, tradovateStore])
 
   const handleDelete = useCallback(async () => {
@@ -514,23 +512,24 @@ function ConnectionRow({
                 {t('connections.reconnect')}
               </button>
             )}
-            {(connection.service === 'tradovate' ||
-              connection.service === 'dxfeed' ||
-              connection.service === 'rithmic-protocol') && (
-              <button
-                type="button"
-                className={iconButtonClassName}
-                aria-label={t('connections.sync.now')}
-                disabled={rowSyncing || needsReconnect}
-                onClick={() => void handleSync()}
-              >
-                {rowSyncing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
-                )}
-              </button>
-            )}
+            {!needsReconnect &&
+              (connection.service === 'tradovate' ||
+                connection.service === 'dxfeed' ||
+                connection.service === 'rithmic-protocol') && (
+                <button
+                  type="button"
+                  className={iconButtonClassName}
+                  aria-label={t('connections.sync.now')}
+                  disabled={rowSyncing}
+                  onClick={() => void handleSync()}
+                >
+                  {rowSyncing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
+                  )}
+                </button>
+              )}
             <button
               type="button"
               className={iconButtonClassName}
@@ -561,51 +560,42 @@ function ConnectionRow({
         </div>
         <p className="mt-1 pl-5 text-sm text-black/55 dark:text-white/55">
           {connection.loginLabel ? (
-            <span className="truncate">{connection.loginLabel}</span>
-          ) : null}
-          {connection.authError ? (
             <>
-              {connection.loginLabel ? ' · ' : null}
-              <span className="text-red-600 dark:text-red-400">
-                {connection.authError}
-              </span>
-            </>
-          ) : (
-            <>
-              {connection.loginLabel ? ' · ' : null}
-              {t('connections.lastSynced', {
-                time: formatRelative(
-                  connection.lastSyncedAt,
-                  t('connections.neverSynced')
-                ),
-              })}
-              {canSchedule && (
-                <>
-                  {' · '}
-                  <button
-                    type="button"
-                    className="underline decoration-black/20 underline-offset-2 transition-colors duration-150 hover:text-black dark:decoration-white/20 dark:hover:text-white"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      openScheduleDialog()
-                    }}
-                  >
-                    {nextSyncAt && nowMs != null
-                      ? t('connections.nextSyncIn', {
-                          time: formatCountdown(nextSyncAt, nowMs),
-                        })
-                      : t('connections.nextSyncSchedule')}
-                  </button>
-                </>
-              )}
+              <span className="truncate">{connection.loginLabel}</span>
               {' · '}
-              {connection.accounts.length === 1
-                ? t('connections.accountCount.one', { count: 1 })
-                : t('connections.accountCount.other', {
-                    count: connection.accounts.length,
-                  })}
+            </>
+          ) : null}
+          {t('connections.lastSynced', {
+            time: formatRelative(
+              connection.lastSyncedAt,
+              t('connections.neverSynced')
+            ),
+          })}
+          {canSchedule && (
+            <>
+              {' · '}
+              <button
+                type="button"
+                className="underline decoration-black/20 underline-offset-2 transition-colors duration-150 hover:text-black dark:decoration-white/20 dark:hover:text-white"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openScheduleDialog()
+                }}
+              >
+                {nextSyncAt && nowMs != null
+                  ? t('connections.nextSyncIn', {
+                      time: formatCountdown(nextSyncAt, nowMs),
+                    })
+                  : t('connections.nextSyncSchedule')}
+              </button>
             </>
           )}
+          {' · '}
+          {connection.accounts.length === 1
+            ? t('connections.accountCount.one', { count: 1 })
+            : t('connections.accountCount.other', {
+                count: connection.accounts.length,
+              })}
         </p>
       </div>
       <div className="t-acc-panel">

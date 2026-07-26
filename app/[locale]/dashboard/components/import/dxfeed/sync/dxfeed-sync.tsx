@@ -22,7 +22,11 @@ import {
 } from '@/components/ui/command'
 import { getDxFeedErrorToastContent } from '@/lib/dxfeed-client-messages'
 import { showToastWithCopy } from '@/lib/toast-copy'
-import { getEnabledDxFeedPropFirms } from '@/lib/dxfeed-propfirms'
+import {
+  getDxFeedPropFirm,
+  getDxFeedPropFirmByAuthName,
+  getEnabledDxFeedPropFirms,
+} from '@/lib/dxfeed-propfirms'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
 import { authenticateDxFeed } from './actions'
 import { DxFeedCredentialsManager } from './dxfeed-credentials-manager'
@@ -41,12 +45,31 @@ const configSelectClassName =
 const primaryButtonClassName =
   'inline-flex h-11 w-full items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]'
 
-function DxFeedConnectView({ onConnected }: { onConnected?: () => void }) {
+function resolvePrefillPropFirmId(propFirmName?: string) {
+  if (!propFirmName) return DEFAULT_PROP_FIRM_ID
+  return (
+    getDxFeedPropFirm(propFirmName)?.id ??
+    getDxFeedPropFirmByAuthName(propFirmName)?.id ??
+    DEFAULT_PROP_FIRM_ID
+  )
+}
+
+function DxFeedConnectView({
+  onConnected,
+  initialEmail,
+  initialPropFirmName,
+}: {
+  onConnected?: () => void
+  initialEmail?: string
+  initialPropFirmName?: string
+}) {
   const t = useI18n()
   const { loadAccounts } = useDxFeedSyncContext()
-  const [loginEmail, setLoginEmail] = useState('')
+  const [loginEmail, setLoginEmail] = useState(initialEmail ?? '')
   const [loginPassword, setLoginPassword] = useState('')
-  const [selectedPropFirmId, setSelectedPropFirmId] = useState(DEFAULT_PROP_FIRM_ID)
+  const [selectedPropFirmId, setSelectedPropFirmId] = useState(() =>
+    resolvePrefillPropFirmId(initialPropFirmName)
+  )
   const [isLoading, setIsLoading] = useState(false)
   const [propFirmOpen, setPropFirmOpen] = useState(false)
   const [propFirmSearch, setPropFirmSearch] = useState('')
@@ -292,6 +315,10 @@ function DxFeedConnectView({ onConnected }: { onConnected?: () => void }) {
 interface DxFeedSyncProps {
   /** When false, open on the connect form instead of the saved-accounts list. */
   initialShowAccountsManager?: boolean
+  /** Prefill login email when reconnecting. */
+  initialEmail?: string
+  /** Prefill prop firm (name or id) when reconnecting. */
+  initialPropFirmName?: string
   onConnected?: () => void
   /** Accepted for PlatformConfig customComponent compatibility; unused here. */
   setIsOpen?: Dispatch<SetStateAction<boolean>> | ((open: boolean) => void)
@@ -299,13 +326,21 @@ interface DxFeedSyncProps {
 
 export function DxFeedSync({
   initialShowAccountsManager = true,
+  initialEmail,
+  initialPropFirmName,
   onConnected,
   setIsOpen: _setIsOpen,
 }: DxFeedSyncProps = {}) {
   const t = useI18n()
 
   if (!initialShowAccountsManager) {
-    return <DxFeedConnectView onConnected={onConnected} />
+    return (
+      <DxFeedConnectView
+        onConnected={onConnected}
+        initialEmail={initialEmail}
+        initialPropFirmName={initialPropFirmName}
+      />
+    )
   }
 
   return (

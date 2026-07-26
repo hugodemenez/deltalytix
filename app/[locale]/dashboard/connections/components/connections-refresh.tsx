@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { ConnectionService } from '../actions'
+import type { ConnectPrefill } from './connect-prefill'
 
 type RefreshFn = () => void
 
@@ -17,7 +18,9 @@ type ConnectionsRefreshContextValue = {
   register: (fn: RefreshFn) => () => void
   /** Open the connect/reconnect sheet for a service (from chrome or a row). */
   connectService: ConnectionService | null
-  openConnect: (service: ConnectionService) => void
+  /** Prefill for reconnect; null when adding a new connection. */
+  connectPrefill: ConnectPrefill | null
+  openConnect: (service: ConnectionService, prefill?: ConnectPrefill) => void
   closeConnect: () => void
 }
 
@@ -37,6 +40,9 @@ export function ConnectionsRefreshProvider({
   const fnRef = useRef<RefreshFn | null>(null)
   const [connectService, setConnectService] =
     useState<ConnectionService | null>(null)
+  const [connectPrefill, setConnectPrefill] = useState<ConnectPrefill | null>(
+    null
+  )
 
   const register = useCallback((fn: RefreshFn) => {
     fnRef.current = fn
@@ -49,12 +55,17 @@ export function ConnectionsRefreshProvider({
     fnRef.current?.()
   }, [])
 
-  const openConnect = useCallback((service: ConnectionService) => {
-    setConnectService(service)
-  }, [])
+  const openConnect = useCallback(
+    (service: ConnectionService, prefill?: ConnectPrefill) => {
+      setConnectService(service)
+      setConnectPrefill(prefill ?? null)
+    },
+    []
+  )
 
   const closeConnect = useCallback(() => {
     setConnectService(null)
+    setConnectPrefill(null)
   }, [])
 
   return (
@@ -63,6 +74,7 @@ export function ConnectionsRefreshProvider({
         refresh,
         register,
         connectService,
+        connectPrefill,
         openConnect,
         closeConnect,
       }}

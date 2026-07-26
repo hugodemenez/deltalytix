@@ -53,7 +53,7 @@ export function ConnectionsPageChrome({ children }: { children: ReactNode }) {
 
 function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
   const t = useI18n()
-  const { refresh, connectService, openConnect, closeConnect } =
+  const { refresh, connectService, connectPrefill, openConnect, closeConnect } =
     useConnectionsRefresh()
   const [selectedImportPlatform, setSelectedImportPlatform] =
     useState<PlatformConfig | null>(null)
@@ -285,6 +285,7 @@ function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
 
       <ConnectServiceModal
         service={connectService}
+        prefill={connectPrefill}
         onClose={() => {
           closeConnect()
           refresh()
