@@ -96,9 +96,11 @@ function formatTradeDate(date: string | null | undefined, locale: string) {
 }
 
 /**
- * Account rows use a shared parent grid + subgrid so account number, trade
- * count, and last-trade date stay column-aligned across the list — including
- * on narrow mobile where the account id wraps onto its own line.
+ * Account rows:
+ * - Mobile: 3-row stack (account → trade count → last trade), meta right-aligned
+ *   so trade counts can be compared at a glance.
+ * - sm+: shared parent grid + subgrid keeps account / trades / last-trade
+ *   columns aligned across the list; trade counts stay right-aligned.
  */
 function AccountTradeList({
   accounts,
@@ -120,8 +122,8 @@ function AccountTradeList({
   return (
     <ul
       className={cn(
-        'grid grid-cols-[auto_auto] justify-items-start gap-x-3',
-        'sm:grid-cols-[minmax(0,1fr)_auto_auto]',
+        'grid grid-cols-1',
+        'sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:gap-x-4',
         !compact &&
           'border-y border-black/10 dark:border-white/10'
       )}
@@ -132,13 +134,14 @@ function AccountTradeList({
           <li
             key={account.id}
             className={cn(
-              'col-span-full grid grid-cols-subgrid items-baseline gap-y-1 border-t border-black/10 first:border-t-0 dark:border-white/10',
+              'grid grid-cols-1 gap-y-1 border-t border-black/10 first:border-t-0 dark:border-white/10',
+              'sm:col-span-full sm:grid-cols-subgrid sm:items-baseline',
               compact ? 'py-3 text-sm' : 'py-6 md:py-8'
             )}
           >
             <span
               className={cn(
-                'col-span-2 min-w-0 break-all tracking-tight sm:col-span-1 sm:truncate sm:break-normal',
+                'min-w-0 break-all tracking-tight sm:truncate sm:break-normal',
                 compact
                   ? 'font-medium'
                   : 'text-xl font-normal md:text-2xl'
@@ -148,7 +151,7 @@ function AccountTradeList({
             </span>
             <span
               className={cn(
-                'whitespace-nowrap text-black/45 dark:text-white/45 tabular-nums',
+                'whitespace-nowrap text-right text-black/45 dark:text-white/45 tabular-nums',
                 !compact && 'text-sm'
               )}
             >
@@ -160,7 +163,7 @@ function AccountTradeList({
             </span>
             <span
               className={cn(
-                'whitespace-nowrap text-black/45 dark:text-white/45 tabular-nums',
+                'whitespace-nowrap text-right text-black/45 dark:text-white/45 tabular-nums',
                 !compact && 'text-sm'
               )}
             >
@@ -421,7 +424,7 @@ function ConnectionRow({
         role="button"
         tabIndex={0}
         aria-expanded={open}
-        className="t-acc-head flex w-full cursor-pointer items-center justify-between gap-4 py-6 text-left md:py-8"
+        className="t-acc-head w-full cursor-pointer py-6 text-left md:py-8"
         onClick={() => setOpen((v) => !v)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -430,7 +433,8 @@ function ConnectionRow({
           }
         }}
       >
-        <div className="min-w-0 flex-1">
+        {/* Title row: status + account number + actions share one alignment line */}
+        <div className="flex min-w-0 items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <ConnectionStatusLight
               status={connection.status}
@@ -440,101 +444,104 @@ function ConnectionRow({
               {connection.displayName}
             </div>
           </div>
-          <p className="mt-1 pl-5 text-sm text-black/55 dark:text-white/55">
-            {connection.loginLabel ? (
-              <span className="truncate">{connection.loginLabel}</span>
-            ) : null}
-            {connection.authError ? (
-              <>
-                {connection.loginLabel ? ' · ' : null}
-                <span className="text-red-600 dark:text-red-400">
-                  {connection.authError}
-                </span>
-              </>
-            ) : (
-              <>
-                {connection.loginLabel ? ' · ' : null}
-                {t('connections.lastSynced', {
-                  time: formatRelative(
-                    connection.lastSyncedAt,
-                    t('connections.neverSynced')
-                  ),
-                })}
-                {canSchedule && (
-                  <>
-                    {' · '}
-                    <button
-                      type="button"
-                      className="underline decoration-black/20 underline-offset-2 transition-colors duration-150 hover:text-black dark:decoration-white/20 dark:hover:text-white"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        openScheduleDialog()
-                      }}
-                    >
-                      {nextSyncAt && nowMs != null
-                        ? t('connections.nextSyncIn', {
-                            time: formatCountdown(nextSyncAt, nowMs),
-                          })
-                        : t('connections.nextSyncSchedule')}
-                    </button>
-                  </>
+          <div
+            className="flex shrink-0 items-center gap-1"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            {(connection.service === 'tradovate' ||
+              connection.service === 'dxfeed' ||
+              connection.service === 'rithmic-protocol') && (
+              <button
+                type="button"
+                className={iconButtonClassName}
+                aria-label={t('connections.sync.now')}
+                disabled={rowSyncing}
+                onClick={() => void handleSync()}
+              >
+                {rowSyncing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
                 )}
-                {' · '}
-                {connection.accounts.length === 1
-                  ? t('connections.accountCount.one', { count: 1 })
-                  : t('connections.accountCount.other', {
-                      count: connection.accounts.length,
-                    })}
-              </>
+              </button>
             )}
-          </p>
-        </div>
-        <div
-          className="flex shrink-0 items-center gap-1"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          {(connection.service === 'tradovate' ||
-            connection.service === 'dxfeed' ||
-            connection.service === 'rithmic-protocol') && (
             <button
               type="button"
               className={iconButtonClassName}
-              aria-label={t('connections.sync.now')}
-              disabled={rowSyncing}
-              onClick={() => void handleSync()}
+              aria-label={t('connections.delete')}
+              disabled={deleting}
+              onClick={() => setDeleteOpen(true)}
             >
-              {rowSyncing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
-              )}
+              <Trash2 className="h-4 w-4" strokeWidth={1.75} />
             </button>
-          )}
-          <button
-            type="button"
-            className={iconButtonClassName}
-            aria-label={t('connections.delete')}
-            disabled={deleting}
-            onClick={() => setDeleteOpen(true)}
-          >
-            <Trash2 className="h-4 w-4" strokeWidth={1.75} />
-          </button>
-          <span
-            className={cn(iconButtonClassName, 't-acc-chevron pointer-events-none')}
-            aria-hidden
-          >
-            <svg
-              viewBox="0 0 16 16"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
+            <span
+              className={cn(
+                iconButtonClassName,
+                't-acc-chevron pointer-events-none'
+              )}
+              aria-hidden
             >
-              <path d="M4 6.5L8 10.5L12 6.5" />
-            </svg>
-          </span>
+              <svg
+                viewBox="0 0 16 16"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <path d="M4 6.5L8 10.5L12 6.5" />
+              </svg>
+            </span>
+          </div>
         </div>
+        <p className="mt-1 pl-5 text-sm text-black/55 dark:text-white/55">
+          {connection.loginLabel ? (
+            <span className="truncate">{connection.loginLabel}</span>
+          ) : null}
+          {connection.authError ? (
+            <>
+              {connection.loginLabel ? ' · ' : null}
+              <span className="text-red-600 dark:text-red-400">
+                {connection.authError}
+              </span>
+            </>
+          ) : (
+            <>
+              {connection.loginLabel ? ' · ' : null}
+              {t('connections.lastSynced', {
+                time: formatRelative(
+                  connection.lastSyncedAt,
+                  t('connections.neverSynced')
+                ),
+              })}
+              {canSchedule && (
+                <>
+                  {' · '}
+                  <button
+                    type="button"
+                    className="underline decoration-black/20 underline-offset-2 transition-colors duration-150 hover:text-black dark:decoration-white/20 dark:hover:text-white"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openScheduleDialog()
+                    }}
+                  >
+                    {nextSyncAt && nowMs != null
+                      ? t('connections.nextSyncIn', {
+                          time: formatCountdown(nextSyncAt, nowMs),
+                        })
+                      : t('connections.nextSyncSchedule')}
+                  </button>
+                </>
+              )}
+              {' · '}
+              {connection.accounts.length === 1
+                ? t('connections.accountCount.one', { count: 1 })
+                : t('connections.accountCount.other', {
+                    count: connection.accounts.length,
+                  })}
+            </>
+          )}
+        </p>
       </div>
       <div className="t-acc-panel">
         <div className="t-acc-panel-inner pb-6 md:pb-8">
