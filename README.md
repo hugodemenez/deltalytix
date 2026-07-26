@@ -6,7 +6,9 @@
   <h3>Open-source trading journal and analytics for futures and prop-firm traders</h3>
 
   [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
-  [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
+  [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
+  [![React](https://img.shields.io/badge/React-19-blue)](https://react.dev/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
   [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/a5YVF5Ec2n)
 
   <a href="https://trustmrr.com/startup/deltalytix" target="_blank"><img src="https://trustmrr.com/api/embed/deltalytix?format=svg" alt="TrustMRR verified revenue badge" width="220" height="90" /></a>
@@ -26,15 +28,37 @@ Use it hosted at [deltalytix.app](https://deltalytix.app), or run the whole thin
 
 ## What it does
 
-**Get your trades in.** Direct sync for Rithmic, Tradovate, Thor, and DXfeed. File and statement import for Interactive Brokers PDFs, ATAS, FTMO, TradeZella, Quantower, Topstep, and NinjaTrader. Manual entry with commissions inferred from your history. For anything not on that list, AI field mapping reads an arbitrary CSV and works out the columns.
+### Get your trades in
 
-**See what happened.** Drag-and-drop dashboard of PnL, decile statistics, and per-account breakdowns, filterable by instrument, weekday, and date range. Calendar view with daily statistics and trade-by-trade review.
+Direct sync for Rithmic, Tradovate, Thor, and DXfeed. File and statement import for Interactive Brokers PDFs, ATAS, FTMO, TradeZella, Quantower, Topstep, and NinjaTrader. Manual entry with commissions inferred from your history. For anything not on that list, AI field mapping reads an arbitrary CSV and works out the columns.
 
-**Write it down.** A rich journal editor with tables, resizable images, and session tags, plus AI-assisted entries that focus on the mistakes and the things that went right.
+<div align="center">
+  <img src="public/updates/pr-249/en/import-from-mobile.png" alt="Import dialog listing direct account sync options for Rithmic, Thor, Tradovate and DxFeed, plus AI-mapped CSV import" width="320" />
+</div>
 
-**Trade together.** Team accounts with combined performance across every trader, and a prop-firm catalogue with aggregated payout and pass-rate statistics.
+### See what happened
 
-Available in English and French.
+A drag-and-drop dashboard of PnL, win rate, trade distribution, average time in position, and per-account breakdowns — filterable by instrument, weekday, and date range. Calendar view with daily statistics, and a trade table you can sort, group, and bulk-edit.
+
+<div align="center">
+  <img src="public/updates/pr-288/en/responsive-calendar-analytics-charts.png" alt="Dashboard widgets showing daily PnL charts, trading statistics, average PnL by hour, and a monthly calendar" width="700" />
+  <br /><br />
+  <img src="public/updates/pr-249/en/trade-table-mobile-and-show-all.png" alt="Trade review table listing entry and exit prices, direction, position time and instrument per trade" width="700" />
+</div>
+
+### Write it down
+
+A rich journal editor with tables, resizable images, and session tags, plus an AI coach that reads your entries alongside your fills and names the patterns costing you money.
+
+<div align="center">
+  <img src="public/updates/pr-316/en/landing-ai-coach-demo.png" alt="AI coach chat identifying a revenge-trading pattern with a 73% loss rate after consecutive losses" width="700" />
+</div>
+
+### Trade together
+
+Team accounts with combined performance across every trader, and a prop-firm catalogue with aggregated payout and pass-rate statistics.
+
+Available in English and French. More screenshots accompany each release in the [release notes](https://deltalytix.app/updates).
 
 ## Run it yourself
 
@@ -61,7 +85,9 @@ Then open <http://localhost:3000/dashboard>. The quickstart starts Postgres, wri
 
 ## Built with
 
-Next.js 15 (App Router) and React 19 on TypeScript, Tailwind, and Radix UI. Postgres through Prisma, with Supabase for auth and storage. Zustand for client state, Server Actions for mutations. Stripe for billing, OpenAI for the AI features, Bun as the package manager.
+Next.js 16 (App Router, currently tracking the `16.3.0-preview` channel) and React 19.2 on TypeScript 5.9, Tailwind CSS 4, and Radix UI. Postgres through Prisma 7, with Supabase for auth and storage. Zustand for client state, Server Actions for mutations. Stripe for billing, OpenAI for the AI features, Bun as the package manager.
+
+Because Next.js 16 is a preview release, its APIs and conventions differ from Next.js 15 in ways that may not match what you (or an AI assistant) expect — check `node_modules/next/dist/docs/` before reaching for a familiar pattern.
 
 ## Roadmap
 
