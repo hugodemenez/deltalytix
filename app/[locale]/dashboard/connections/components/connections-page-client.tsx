@@ -97,10 +97,10 @@ function formatTradeDate(date: string | null | undefined, locale: string) {
 
 /**
  * Account rows:
- * - Mobile: 3-row stack (account → trade count → last trade), meta right-aligned
- *   so trade counts can be compared at a glance.
- * - sm+: shared parent grid + subgrid keeps account / trades / last-trade
- *   columns aligned across the list; trade counts stay right-aligned.
+ * - Mobile: account number, then one meta row — last trade (left) · trades (right).
+ * - sm+: shared subgrid — account | last trade (left) | trade count (right).
+ * Last trade uses a fixed-width date so it anchors the left; trade counts stay
+ * right-aligned with tabular-nums for quick comparison.
  */
 function AccountTradeList({
   accounts,
@@ -118,6 +118,10 @@ function AccountTradeList({
 }) {
   const t = useI18n()
   const compact = density === 'compact'
+  const metaClassName = cn(
+    'whitespace-nowrap text-black/45 dark:text-white/45 tabular-nums',
+    !compact && 'text-sm'
+  )
 
   return (
     <ul
@@ -130,6 +134,13 @@ function AccountTradeList({
     >
       {accounts.map((account) => {
         const lastTrade = formatTradeDate(account.lastTradeDate, locale)
+        const tradeCountLabel =
+          account.tradeCount === 1
+            ? t('connections.tradeCount.one', { count: 1 })
+            : t('connections.tradeCount.other', {
+                count: account.tradeCount,
+              })
+
         return (
           <li
             key={account.id}
@@ -149,28 +160,16 @@ function AccountTradeList({
             >
               {account.number}
             </span>
-            <span
-              className={cn(
-                'whitespace-nowrap text-right text-black/45 dark:text-white/45 tabular-nums',
-                !compact && 'text-sm'
-              )}
-            >
-              {account.tradeCount === 1
-                ? t('connections.tradeCount.one', { count: 1 })
-                : t('connections.tradeCount.other', {
-                    count: account.tradeCount,
-                  })}
-            </span>
-            <span
-              className={cn(
-                'whitespace-nowrap text-right text-black/45 dark:text-white/45 tabular-nums',
-                !compact && 'text-sm'
-              )}
-            >
-              {lastTrade
-                ? t('connections.lastTrade', { date: lastTrade })
-                : null}
-            </span>
+            <div className="flex min-w-0 items-baseline justify-between gap-3 sm:contents">
+              <span className={cn(metaClassName, 'sm:justify-self-start')}>
+                {lastTrade
+                  ? t('connections.lastTrade', { date: lastTrade })
+                  : null}
+              </span>
+              <span className={cn(metaClassName, 'text-right sm:justify-self-end')}>
+                {tradeCountLabel}
+              </span>
+            </div>
           </li>
         )
       })}
@@ -795,12 +794,8 @@ function readOAuthPendingFromSession(
 function PendingTradovateConnectionRow({ title }: { title?: string }) {
   const t = useI18n()
   return (
-    <div
-      className="flex w-full items-center justify-between gap-4 py-6 md:py-8"
-      aria-busy="true"
-      aria-live="polite"
-    >
-      <div className="min-w-0 flex-1">
+    <div className="w-full py-6 md:py-8" aria-busy="true" aria-live="polite">
+      <div className="flex min-w-0 items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <span className="inline-flex shrink-0 items-center" aria-hidden>
             <span className="h-2 w-2 motion-safe:animate-pulse rounded-full bg-amber-500" />
@@ -809,15 +804,15 @@ function PendingTradovateConnectionRow({ title }: { title?: string }) {
             {title || t('connections.oauth.tradovate.connecting')}
           </div>
         </div>
-        <p className="mt-1 pl-5 text-sm text-black/55 dark:text-white/55">
-          {t('connections.oauth.tradovate.connectingHint')}
-        </p>
-        <div className="mt-3 space-y-2 pl-5">
-          <Skeleton className="h-3 w-48 rounded-sm bg-black/10 dark:bg-white/10" />
-          <Skeleton className="h-3 w-32 rounded-sm bg-black/10 dark:bg-white/10" />
-        </div>
+        <Loader2 className="h-5 w-5 shrink-0 animate-spin text-black/35 dark:text-white/35" />
       </div>
-      <Loader2 className="h-5 w-5 shrink-0 animate-spin text-black/35 dark:text-white/35" />
+      <p className="mt-1 pl-5 text-sm text-black/55 dark:text-white/55">
+        {t('connections.oauth.tradovate.connectingHint')}
+      </p>
+      <div className="mt-3 space-y-2 pl-5">
+        <Skeleton className="h-3 w-48 rounded-sm bg-black/10 dark:bg-white/10" />
+        <Skeleton className="h-3 w-32 rounded-sm bg-black/10 dark:bg-white/10" />
+      </div>
     </div>
   )
 }
