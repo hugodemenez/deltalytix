@@ -137,7 +137,7 @@ export default {
   "connections.description":
     "Gérez vos connexions broker et les comptes qu’elles hébergent. Importez des fichiers pour les comptes autonomes.",
   "connections.importFile": "Importer un fichier",
-  "connections.selectImportType": "Choisir le type d'import",
+  "connections.selectImportType": "Ajouter avec un fichier",
   "connections.importSelected": "Importer {platform}",
   "connections.changeImportType": "Changer de type",
   "connections.clearImportType": "Effacer le type d'import",

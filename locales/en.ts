@@ -136,7 +136,7 @@ export default {
   "connections.description":
     "Manage broker connections and the trading accounts they host. Import files for standalone accounts.",
   "connections.importFile": "Import file",
-  "connections.selectImportType": "Select import type",
+  "connections.selectImportType": "Upload a file",
   "connections.importSelected": "Import {platform}",
   "connections.changeImportType": "Change type",
   "connections.clearImportType": "Clear import type",
