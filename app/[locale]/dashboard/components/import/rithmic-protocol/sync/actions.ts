@@ -222,13 +222,15 @@ export async function authenticateRithmicProtocol(
   }
 }
 
-export async function storeRithmicProtocolToken(
+/**
+ * Writes credentials for an already-resolved user. Kept module-private so the
+ * exported action can never be handed a caller-supplied userId.
+ */
+async function persistRithmicProtocolCredentials(
+  userId: string,
   tokenJson: string,
   accountId: string,
 ) {
-  const userId = await getUserId()
-  if (!userId) throw new Error('Not authenticated')
-
   const encryptedToken = encryptConnectionToken(tokenJson)
 
   const connection = await prisma.connection.upsert({
@@ -255,6 +257,16 @@ export async function storeRithmicProtocolToken(
 
   await invalidateConnectionsPageCache(userId)
   return connection
+}
+
+export async function storeRithmicProtocolToken(
+  tokenJson: string,
+  accountId: string,
+) {
+  const userId = await getUserId()
+  if (!userId) throw new Error('Not authenticated')
+
+  return persistRithmicProtocolCredentials(userId, tokenJson, accountId)
 }
 
 export async function getRithmicProtocolToken(accountId: string) {
@@ -403,7 +415,8 @@ export async function getRithmicProtocolTrades(
       credentials.accountIds = resolvedAccountIds
       credentials.fcmId = listed.fcmId ?? credentials.fcmId
       credentials.ibId = listed.ibId ?? credentials.ibId
-      await storeRithmicProtocolToken(
+      await persistRithmicProtocolCredentials(
+        userId,
         JSON.stringify(credentials),
         credentials.username,
       )
@@ -452,6 +465,18 @@ export async function getRithmicProtocolTrades(
     syncStats.closedTrades = trades.length
     syncStats.openTradesSkipped = openSkipped
 
+    // Stamped before saving: the fills were fetched, so the connection has synced
+    // even when every trade turns out to be a duplicate. Leaving it unstamped made
+    // the daily-sync cron re-run this connection on every tick.
+    await prisma.connection.updateMany({
+      where: {
+        userId,
+        service: SERVICE,
+        externalId: credentials.username,
+      },
+      data: { lastSyncedAt: new Date() },
+    })
+
     let savedCount = 0
     if (trades.length > 0) {
       const saveResult = await saveTradesAction(trades, { userId })
@@ -467,15 +492,6 @@ export async function getRithmicProtocolTrades(
       }
       savedCount = saveResult.numberOfTradesAdded
     }
-
-    await prisma.connection.updateMany({
-      where: {
-        userId,
-        service: SERVICE,
-        externalId: credentials.username,
-      },
-      data: { lastSyncedAt: new Date() },
-    })
 
     return {
       processedTrades: trades,

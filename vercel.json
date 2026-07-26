@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/renew-tradovate-token",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/daily-sync",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

@@ -6,6 +6,7 @@ import {
   getConnectionsPageDataFresh,
   invalidateConnectionsPageCache,
 } from './data'
+import { supportsDailySync } from './daily-sync-services'
 import type { ConnectionsPageData } from './types'
 
 export type {
@@ -65,7 +66,7 @@ export async function updateConnectionDailySyncTimeAction(
     return { error: 'NOT_FOUND' }
   }
 
-  if (existing.service !== 'tradovate' && existing.service !== 'dxfeed') {
+  if (!supportsDailySync(existing.service)) {
     return { error: 'UNSUPPORTED_SERVICE' }
   }
 
