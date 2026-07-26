@@ -48,11 +48,14 @@ interface RithmicSyncConnectionProps {
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>> | ((open: boolean) => void)
   /** When false, open on the credentials form instead of the saved-credentials list. */
   initialShowCredentialsManager?: boolean
+  /** Prefill username when reconnecting. */
+  initialUsername?: string
 }
 
 export function RithmicSyncConnection({
   setIsOpen,
   initialShowCredentialsManager = true,
+  initialUsername,
 }: RithmicSyncConnectionProps) {
   const user = useUserStore(state => state.user)
   const { 
@@ -100,7 +103,7 @@ export function RithmicSyncConnection({
   }, [])
   
   const [credentials, setCredentials] = useState<RithmicCredentials>({
-    username: '',
+    username: initialUsername ?? '',
     password: '',
     server_type: 'Rithmic Paper Trading',
     location: 'Chicago Area',
@@ -379,7 +382,7 @@ export function RithmicSyncConnection({
     setShouldAutoConnect(false)
     setShowCredentialsManager(initialShowCredentialsManager)
     setCredentials({
-      username: '',
+      username: initialUsername ?? '',
       password: '',
       server_type: 'Rithmic Paper Trading',
       location: 'Chicago Area',
@@ -392,6 +395,7 @@ export function RithmicSyncConnection({
     setWsUrl,
     setStep,
     initialShowCredentialsManager,
+    initialUsername,
   ])
 
   // Close modal when processing is complete
@@ -791,11 +795,14 @@ interface RithmicSyncWrapperProps {
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>> | ((open: boolean) => void)
   /** When false, open on the credentials form instead of the saved-credentials list. */
   initialShowCredentialsManager?: boolean
+  /** Prefill username when reconnecting. */
+  initialUsername?: string
 }
 
 export function RithmicSyncWrapper({
   setIsOpen,
   initialShowCredentialsManager = true,
+  initialUsername,
 }: RithmicSyncWrapperProps) {
   const t = useI18n()
   const showChromeTitle = initialShowCredentialsManager
@@ -811,6 +818,7 @@ export function RithmicSyncWrapper({
         <RithmicSyncConnection 
           setIsOpen={setIsOpen}
           initialShowCredentialsManager={initialShowCredentialsManager}
+          initialUsername={initialUsername}
         />
       </div>
       <div className="shrink-0 space-y-2 border-t border-black/10 pt-4 text-xs leading-relaxed text-black/45 dark:border-white/10 dark:text-white/45">

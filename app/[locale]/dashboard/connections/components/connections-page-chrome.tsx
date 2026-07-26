@@ -53,10 +53,8 @@ export function ConnectionsPageChrome({ children }: { children: ReactNode }) {
 
 function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
   const t = useI18n()
-  const { refresh } = useConnectionsRefresh()
-  const [connectService, setConnectService] = useState<ConnectionService | null>(
-    null
-  )
+  const { refresh, connectService, connectPrefill, openConnect, closeConnect } =
+    useConnectionsRefresh()
   const [selectedImportPlatform, setSelectedImportPlatform] =
     useState<PlatformConfig | null>(null)
   const [importMenuOpen, setImportMenuOpen] = useState(false)
@@ -104,7 +102,7 @@ function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
                       onClick={() => {
                         setAddMenuOpen(false)
                         captureConnectionAddClicked(section.service)
-                        setConnectService(section.service)
+                        openConnect(section.service)
                       }}
                     >
                       <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
@@ -287,8 +285,9 @@ function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
 
       <ConnectServiceModal
         service={connectService}
+        prefill={connectPrefill}
         onClose={() => {
-          setConnectService(null)
+          closeConnect()
           refresh()
         }}
       />

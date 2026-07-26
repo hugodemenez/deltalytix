@@ -47,15 +47,15 @@ function deriveConnectionStatus(
     return 'connected'
   }
 
-  if (!connection.token || parseConnectionAuthError(connection.token)) {
-    return 'error'
-  }
-
+  // Missing token, stored auth error, or expired token all mean reconnect.
+  // A single red state is clearer than orange (expired) vs red (error).
   if (
-    connection.tokenExpiresAt &&
-    connection.tokenExpiresAt.getTime() <= Date.now()
+    !connection.token ||
+    parseConnectionAuthError(connection.token) ||
+    (connection.tokenExpiresAt &&
+      connection.tokenExpiresAt.getTime() <= Date.now())
   ) {
-    return 'warning'
+    return 'error'
   }
 
   return 'connected'

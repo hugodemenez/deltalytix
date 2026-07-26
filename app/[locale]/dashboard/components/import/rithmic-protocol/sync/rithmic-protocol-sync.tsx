@@ -39,12 +39,14 @@ const primaryButtonClassName =
 
 function RithmicProtocolConnectView({
   onConnected,
+  initialUsername,
 }: {
   onConnected?: () => void
+  initialUsername?: string
 }) {
   const t = useI18n()
   const { loadAccounts, performSyncForAccount } = useRithmicProtocolSyncContext()
-  const [username, setUsername] = useState('')
+  const [username, setUsername] = useState(initialUsername ?? '')
   const [password, setPassword] = useState('')
   const [historyStartDate, setHistoryStartDate] = useState('')
   const {
@@ -289,6 +291,8 @@ function RithmicProtocolConnectView({
 interface RithmicProtocolSyncProps {
   /** When false, open on the connect form instead of the saved-accounts list. */
   initialShowAccountsManager?: boolean
+  /** Prefill username when reconnecting. */
+  initialUsername?: string
   onConnected?: () => void
   /** Accepted for PlatformConfig customComponent compatibility; unused here. */
   setIsOpen?: Dispatch<SetStateAction<boolean>> | ((open: boolean) => void)
@@ -296,6 +300,7 @@ interface RithmicProtocolSyncProps {
 
 export function RithmicProtocolSync({
   initialShowAccountsManager = true,
+  initialUsername,
   onConnected,
   setIsOpen: _setIsOpen,
 }: RithmicProtocolSyncProps = {}) {
@@ -305,7 +310,10 @@ export function RithmicProtocolSync({
     <div className="flex h-full min-h-0 flex-col">
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto">
         {!initialShowAccountsManager ? (
-          <RithmicProtocolConnectView onConnected={onConnected} />
+          <RithmicProtocolConnectView
+            onConnected={onConnected}
+            initialUsername={initialUsername}
+          />
         ) : (
           <>
             <div className="flex min-w-0 flex-col gap-1.5">

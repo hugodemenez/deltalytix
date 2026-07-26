@@ -8,7 +8,7 @@ export type ConnectionService =
   | 'thor'
   | 'etp'
 
-export type ConnectionStatus = 'connected' | 'warning' | 'error'
+export type ConnectionStatus = 'connected' | 'error'
 
 export type ConnectionsPageAccount = {
   id: string

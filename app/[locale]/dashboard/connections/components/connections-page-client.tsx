@@ -41,7 +41,11 @@ import {
   type ConnectionsPageData,
   type ConnectionService,
 } from '../actions'
-import { handleTradovateCallback } from '@/app/[locale]/dashboard/components/import/tradovate/sync/actions'
+import {
+  handleTradovateCallback,
+  initiateTradovateOAuth,
+  type TradovateEnvironment,
+} from '@/app/[locale]/dashboard/components/import/tradovate/sync/actions'
 import { useTradovateSyncStore } from '@/store/tradovate-sync-store'
 import { useTradovateSyncContext } from '@/context/tradovate-sync-context'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
@@ -51,6 +55,9 @@ import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ServiceMonochromeLogo } from '@/components/monochrome-logo'
 import { useConnectionsRefresh } from './connections-refresh'
+
+const reconnectButtonClassName =
+  'inline-flex h-8 items-center justify-center rounded-sm border border-black/20 bg-transparent px-3 text-sm font-medium transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:border-white/20 dark:hover:bg-white/5'
 
 const SERVICE_SECTIONS: {
   service: ConnectionService
@@ -93,6 +100,97 @@ function formatTradeDate(date: string | null | undefined, locale: string) {
     month: '2-digit',
     year: 'numeric',
   }).format(d)
+}
+
+/**
+ * Account rows:
+ * - Mobile: account number, then one meta row — last trade (left) · trades (right).
+ * - sm+: shared subgrid — account | trade count | last trade (same row).
+ * Trade counts stay right-aligned with tabular-nums for quick comparison.
+ */
+function AccountTradeList({
+  accounts,
+  locale,
+  density = 'compact',
+}: {
+  accounts: Array<{
+    id: string
+    number: string
+    tradeCount: number
+    lastTradeDate: string | null
+  }>
+  locale: string
+  density?: 'compact' | 'standalone'
+}) {
+  const t = useI18n()
+  const compact = density === 'compact'
+  const metaClassName = cn(
+    'whitespace-nowrap text-black/45 dark:text-white/45 tabular-nums',
+    !compact && 'text-sm'
+  )
+
+  return (
+    <ul
+      className={cn(
+        'grid grid-cols-1',
+        'sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:gap-x-4',
+        !compact &&
+          'border-y border-black/10 dark:border-white/10'
+      )}
+    >
+      {accounts.map((account) => {
+        const lastTrade = formatTradeDate(account.lastTradeDate, locale)
+        const tradeCountLabel =
+          account.tradeCount === 1
+            ? t('connections.tradeCount.one', { count: 1 })
+            : t('connections.tradeCount.other', {
+                count: account.tradeCount,
+              })
+
+        return (
+          <li
+            key={account.id}
+            className={cn(
+              'grid grid-cols-1 gap-y-1 border-t border-black/10 first:border-t-0 dark:border-white/10',
+              'sm:col-span-full sm:grid-cols-subgrid sm:items-baseline',
+              compact ? 'py-3 text-sm' : 'py-6 md:py-8'
+            )}
+          >
+            <span
+              className={cn(
+                'min-w-0 break-all tracking-tight sm:truncate sm:break-normal',
+                compact
+                  ? 'font-medium'
+                  : 'text-xl font-normal md:text-2xl'
+              )}
+            >
+              {account.number}
+            </span>
+            <div className="flex min-w-0 items-baseline justify-between gap-3 sm:contents">
+              <span
+                className={cn(
+                  metaClassName,
+                  'order-2 text-right sm:order-1 sm:justify-self-end'
+                )}
+              >
+                {tradeCountLabel}
+              </span>
+              <span
+                className={cn(
+                  metaClassName,
+                  'order-1 sm:order-2 sm:justify-self-end'
+                )}
+              >
+                {lastTrade
+                  ? t('connections.lastTrade', { date: lastTrade })
+                  : null}
+              </span>
+            </div>
+          </li>
+        )
+      })}
+    </ul>
+  )
 }
 
 function supportsDailySync(service: string) {
@@ -145,14 +243,12 @@ function ConnectionStatusLight({
   syncFailed: boolean
 }) {
   const t = useI18n()
-  const effective: ConnectionStatus = syncFailed ? 'error' : status
+  const isError = syncFailed || status !== 'connected'
   const label = syncFailed
     ? t('connections.status.syncFailed')
-    : effective === 'connected'
-      ? t('connections.status.connected')
-      : effective === 'warning'
-        ? t('connections.status.warning')
-        : t('connections.status.error')
+    : isError
+      ? t('connections.status.error')
+      : t('connections.status.connected')
 
   return (
     <span
@@ -163,9 +259,7 @@ function ConnectionStatusLight({
       <span
         className={cn(
           'h-2 w-2 rounded-full',
-          effective === 'connected' && 'bg-emerald-500',
-          effective === 'warning' && 'bg-amber-500',
-          effective === 'error' && 'bg-red-500'
+          isError ? 'bg-red-500' : 'bg-emerald-500'
         )}
       />
     </span>
@@ -186,11 +280,14 @@ function ConnectionRow({
   const [deleting, setDeleting] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [syncFailed, setSyncFailed] = useState(false)
+  const [reconnecting, setReconnecting] = useState(false)
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [dailySyncTime, setDailySyncTime] = useState('')
   const [savingSchedule, setSavingSchedule] = useState(false)
   // Countdown must not SSR with Date.now() — minute boundaries cause hydration mismatches.
   const [nowMs, setNowMs] = useState<number | null>(null)
+  const { openConnect } = useConnectionsRefresh()
+  const tradovateStore = useTradovateSyncStore()
   const { performSyncForAccount: syncTradovate } = useTradovateSyncContext()
   const { performSyncForAccount: syncDxFeed } = useDxFeedSyncContext()
   const {
@@ -201,6 +298,8 @@ function ConnectionRow({
     connection.service === 'rithmic-protocol' &&
     isRithmicProtocolSyncing(connection.accountId)
   const rowSyncing = protocolSyncing || syncing
+  // Red = expired/missing auth, or the last sync attempt failed.
+  const needsReconnect = syncFailed || connection.status !== 'connected'
 
   const canSchedule = supportsDailySync(connection.service)
   const nextSyncAt = useMemo(
@@ -316,6 +415,49 @@ function ConnectionRow({
     }
   }, [connection, onChanged, syncDxFeed, syncRithmicProtocol, syncTradovate, t])
 
+  const handleReconnect = useCallback(async () => {
+    // Tradovate can re-auth in place via OAuth without opening the add sheet.
+    if (connection.service === 'tradovate') {
+      setReconnecting(true)
+      try {
+        const environment: TradovateEnvironment =
+          connection.environment === 'live' ? 'live' : 'demo'
+        tradovateStore.setEnvironment(environment)
+        const result = await initiateTradovateOAuth(
+          connection.accountId,
+          environment
+        )
+        if (result.error || !result.authUrl || !result.state) {
+          toast.error(t('connections.reconnectFailed'))
+          return
+        }
+        tradovateStore.setOAuthState(result.state)
+        sessionStorage.setItem('tradovate_oauth_state', result.state)
+        sessionStorage.setItem(
+          'tradovate_oauth_pending',
+          JSON.stringify({
+            environment,
+            externalId: connection.accountId,
+          })
+        )
+        window.location.href = result.authUrl
+      } catch (error) {
+        console.error(error)
+        toast.error(t('connections.reconnectFailed'))
+      } finally {
+        setReconnecting(false)
+      }
+      return
+    }
+
+    openConnect(connection.service as ConnectionService, {
+      service: connection.service as ConnectionService,
+      accountId: connection.accountId,
+      displayName: connection.displayName,
+      environment: connection.environment,
+    })
+  }, [connection, openConnect, t, tradovateStore])
+
   const handleDelete = useCallback(async () => {
     setDeleting(true)
     try {
@@ -341,7 +483,7 @@ function ConnectionRow({
         role="button"
         tabIndex={0}
         aria-expanded={open}
-        className="t-acc-head flex w-full cursor-pointer items-center justify-between gap-4 py-6 text-left md:py-8"
+        className="t-acc-head w-full cursor-pointer py-6 text-left md:py-8"
         onClick={() => setOpen((v) => !v)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -350,7 +492,8 @@ function ConnectionRow({
           }
         }}
       >
-        <div className="min-w-0 flex-1">
+        {/* Title row: status + account number + actions share one alignment line */}
+        <div className="flex min-w-0 items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <ConnectionStatusLight
               status={connection.status}
@@ -360,101 +503,109 @@ function ConnectionRow({
               {connection.displayName}
             </div>
           </div>
-          <p className="mt-1 pl-5 text-sm text-black/55 dark:text-white/55">
-            {connection.loginLabel ? (
-              <span className="truncate">{connection.loginLabel}</span>
-            ) : null}
-            {connection.authError ? (
-              <>
-                {connection.loginLabel ? ' · ' : null}
-                <span className="text-red-600 dark:text-red-400">
-                  {connection.authError}
-                </span>
-              </>
-            ) : (
-              <>
-                {connection.loginLabel ? ' · ' : null}
-                {t('connections.lastSynced', {
-                  time: formatRelative(
-                    connection.lastSyncedAt,
-                    t('connections.neverSynced')
-                  ),
-                })}
-                {canSchedule && (
-                  <>
-                    {' · '}
-                    <button
-                      type="button"
-                      className="underline decoration-black/20 underline-offset-2 transition-colors duration-150 hover:text-black dark:decoration-white/20 dark:hover:text-white"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        openScheduleDialog()
-                      }}
-                    >
-                      {nextSyncAt && nowMs != null
-                        ? t('connections.nextSyncIn', {
-                            time: formatCountdown(nextSyncAt, nowMs),
-                          })
-                        : t('connections.nextSyncSchedule')}
-                    </button>
-                  </>
-                )}
-                {' · '}
-                {connection.accounts.length === 1
-                  ? t('connections.accountCount.one', { count: 1 })
-                  : t('connections.accountCount.other', {
-                      count: connection.accounts.length,
-                    })}
-              </>
+          <div
+            className="flex shrink-0 items-center gap-1"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            {needsReconnect && (
+              <button
+                type="button"
+                className={reconnectButtonClassName}
+                disabled={reconnecting}
+                onClick={() => void handleReconnect()}
+              >
+                {reconnecting ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : null}
+                {t('connections.reconnect')}
+              </button>
             )}
-          </p>
-        </div>
-        <div
-          className="flex shrink-0 items-center gap-1"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          {(connection.service === 'tradovate' ||
-            connection.service === 'dxfeed' ||
-            connection.service === 'rithmic-protocol') && (
+            {!needsReconnect &&
+              (connection.service === 'tradovate' ||
+                connection.service === 'dxfeed' ||
+                connection.service === 'rithmic-protocol') && (
+                <button
+                  type="button"
+                  className={iconButtonClassName}
+                  aria-label={t('connections.sync.now')}
+                  disabled={rowSyncing}
+                  onClick={() => void handleSync()}
+                >
+                  {rowSyncing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
+                  )}
+                </button>
+              )}
             <button
               type="button"
               className={iconButtonClassName}
-              aria-label={t('connections.sync.now')}
-              disabled={rowSyncing}
-              onClick={() => void handleSync()}
+              aria-label={t('connections.delete')}
+              disabled={deleting}
+              onClick={() => setDeleteOpen(true)}
             >
-              {rowSyncing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
-              )}
+              <Trash2 className="h-4 w-4" strokeWidth={1.75} />
             </button>
-          )}
-          <button
-            type="button"
-            className={iconButtonClassName}
-            aria-label={t('connections.delete')}
-            disabled={deleting}
-            onClick={() => setDeleteOpen(true)}
-          >
-            <Trash2 className="h-4 w-4" strokeWidth={1.75} />
-          </button>
-          <span
-            className={cn(iconButtonClassName, 't-acc-chevron pointer-events-none')}
-            aria-hidden
-          >
-            <svg
-              viewBox="0 0 16 16"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
+            <span
+              className={cn(
+                iconButtonClassName,
+                't-acc-chevron pointer-events-none'
+              )}
+              aria-hidden
             >
-              <path d="M4 6.5L8 10.5L12 6.5" />
-            </svg>
-          </span>
+              <svg
+                viewBox="0 0 16 16"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <path d="M4 6.5L8 10.5L12 6.5" />
+              </svg>
+            </span>
+          </div>
         </div>
+        <p className="mt-1 pl-5 text-sm text-black/55 dark:text-white/55">
+          {connection.loginLabel ? (
+            <>
+              <span className="truncate">{connection.loginLabel}</span>
+              {' · '}
+            </>
+          ) : null}
+          {t('connections.lastSynced', {
+            time: formatRelative(
+              connection.lastSyncedAt,
+              t('connections.neverSynced')
+            ),
+          })}
+          {canSchedule && (
+            <>
+              {' · '}
+              <button
+                type="button"
+                className="underline decoration-black/20 underline-offset-2 transition-colors duration-150 hover:text-black dark:decoration-white/20 dark:hover:text-white"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openScheduleDialog()
+                }}
+              >
+                {nextSyncAt && nowMs != null
+                  ? t('connections.nextSyncIn', {
+                      time: formatCountdown(nextSyncAt, nowMs),
+                    })
+                  : t('connections.nextSyncSchedule')}
+              </button>
+            </>
+          )}
+          {' · '}
+          {connection.accounts.length === 1
+            ? t('connections.accountCount.one', { count: 1 })
+            : t('connections.accountCount.other', {
+                count: connection.accounts.length,
+              })}
+        </p>
       </div>
       <div className="t-acc-panel">
         <div className="t-acc-panel-inner pb-6 md:pb-8">
@@ -463,29 +614,11 @@ function ConnectionRow({
               {t('connections.noHostedAccounts')}
             </p>
           ) : (
-            <ul className="divide-y divide-black/10 dark:divide-white/10">
-              {connection.accounts.map((account) => (
-                <li
-                  key={account.id}
-                  className="flex items-center justify-between gap-4 py-3 text-sm"
-                >
-                  <span className="font-medium tracking-tight">{account.number}</span>
-                  <span className="text-black/45 dark:text-white/45 tabular-nums">
-                    {account.tradeCount === 1
-                      ? t('connections.tradeCount.one', { count: 1 })
-                      : t('connections.tradeCount.other', {
-                          count: account.tradeCount,
-                        })}
-                    {(() => {
-                      const lastTrade = formatTradeDate(account.lastTradeDate, locale)
-                      return lastTrade
-                        ? ` · ${t('connections.lastTrade', { date: lastTrade })}`
-                        : ''
-                    })()}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <AccountTradeList
+              accounts={connection.accounts}
+              locale={locale}
+              density="compact"
+            />
           )}
         </div>
       </div>
@@ -726,12 +859,8 @@ function readOAuthPendingFromSession(
 function PendingTradovateConnectionRow({ title }: { title?: string }) {
   const t = useI18n()
   return (
-    <div
-      className="flex w-full items-center justify-between gap-4 py-6 md:py-8"
-      aria-busy="true"
-      aria-live="polite"
-    >
-      <div className="min-w-0 flex-1">
+    <div className="w-full py-6 md:py-8" aria-busy="true" aria-live="polite">
+      <div className="flex min-w-0 items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <span className="inline-flex shrink-0 items-center" aria-hidden>
             <span className="h-2 w-2 motion-safe:animate-pulse rounded-full bg-amber-500" />
@@ -740,15 +869,15 @@ function PendingTradovateConnectionRow({ title }: { title?: string }) {
             {title || t('connections.oauth.tradovate.connecting')}
           </div>
         </div>
-        <p className="mt-1 pl-5 text-sm text-black/55 dark:text-white/55">
-          {t('connections.oauth.tradovate.connectingHint')}
-        </p>
-        <div className="mt-3 space-y-2 pl-5">
-          <Skeleton className="h-3 w-48 rounded-sm bg-black/10 dark:bg-white/10" />
-          <Skeleton className="h-3 w-32 rounded-sm bg-black/10 dark:bg-white/10" />
-        </div>
+        <Loader2 className="h-5 w-5 shrink-0 animate-spin text-black/35 dark:text-white/35" />
       </div>
-      <Loader2 className="h-5 w-5 shrink-0 animate-spin text-black/35 dark:text-white/35" />
+      <p className="mt-1 pl-5 text-sm text-black/55 dark:text-white/55">
+        {t('connections.oauth.tradovate.connectingHint')}
+      </p>
+      <div className="mt-3 space-y-2 pl-5">
+        <Skeleton className="h-3 w-48 rounded-sm bg-black/10 dark:bg-white/10" />
+        <Skeleton className="h-3 w-32 rounded-sm bg-black/10 dark:bg-white/10" />
+      </div>
     </div>
   )
 }
@@ -1206,31 +1335,11 @@ export function ConnectionsPageClient({
               {t('connections.standaloneHint')}
             </p>
           </div>
-          <ul className="divide-y divide-black/10 border-y border-black/10 dark:divide-white/10 dark:border-white/10">
-            {data!.standaloneAccounts.map((account) => (
-              <li
-                key={account.id}
-                className="flex items-center justify-between gap-4 py-6 md:py-8"
-              >
-                <div className="text-xl font-normal tracking-tight md:text-2xl">
-                  {account.number}
-                </div>
-                <span className="text-sm text-black/45 dark:text-white/45 tabular-nums">
-                  {account.tradeCount === 1
-                    ? t('connections.tradeCount.one', { count: 1 })
-                    : t('connections.tradeCount.other', {
-                        count: account.tradeCount,
-                      })}
-                  {(() => {
-                    const lastTrade = formatTradeDate(account.lastTradeDate, locale)
-                    return lastTrade
-                      ? ` · ${t('connections.lastTrade', { date: lastTrade })}`
-                      : ''
-                  })()}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <AccountTradeList
+            accounts={data!.standaloneAccounts}
+            locale={locale}
+            density="standalone"
+          />
         </section>
       )}
     </div>
