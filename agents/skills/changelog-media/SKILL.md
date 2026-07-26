@@ -1,3 +1,8 @@
+---
+name: changelog-media
+description: Assess, plan, capture, and wire localized media for new Deltalytix changelog entries. Use for deciding whether release notes need screenshots or video, creating capture recipes, and validating EN/FR assets.
+---
+
 # Changelog Media Specialist
 
 Assess, capture, and wire localized media for Deltalytix changelog entries. Media is optional evidence, not a quota.
@@ -6,8 +11,8 @@ Assess, capture, and wire localized media for Deltalytix changelog entries. Medi
 
 This is the last of three sequential roles:
 
-1. Change reviewer: `lib/agent-skills/changelog-review.md`
-2. Copywriting specialist: `lib/agent-skills/changelog-entries.md`
+1. Change reviewer: `agents/skills/changelog-review/SKILL.md`
+2. Copywriting specialist: `agents/skills/changelog-entries/SKILL.md`
 3. **Media specialist: this skill**
 
 Read both `content/updates/batches/<batch>/outline.md` and the finished EN/FR MDX. Independently decide whether each entry needs **zero, one, or several** visuals.

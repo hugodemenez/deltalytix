@@ -6,6 +6,9 @@
 !.cursor/environment.json
 !.cursor/rules/
 !.cursor/rules/**
+# Symlinks into agents/skills/ so Cursor auto-discovers the shared skills.
+!.cursor/skills/
+!.cursor/skills/**
 WARP.md
 .github/instructions/
 

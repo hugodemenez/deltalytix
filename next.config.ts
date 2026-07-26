@@ -2,6 +2,7 @@ import type { NextConfig } from 'next';
 import createMDX from '@next/mdx';
 import os from 'os';
 import { SUPPORT_SEARCH_TRACE_INCLUDES } from './lib/ai/search-codebase';
+import { AGENT_SKILLS_TRACE_INCLUDES } from './lib/agent-skills/load-skill';
 
 const detectedBuildWorkers =
   typeof os.availableParallelism === 'function'
@@ -33,7 +34,7 @@ const nextConfig: NextConfig = {
   // so `output: "standalone"` crashes finalize with ENOENT. Vercel ignores standalone
   // output anyway.
   ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
-  // Hide the Next.js dev indicator during changelog media capture (see lib/agent-skills/changelog-media.md).
+  // Hide the Next.js dev indicator during changelog media capture (see agents/skills/changelog-media/SKILL.md).
   ...(process.env.CHANGELOG_MEDIA_CAPTURE === '1' ? { devIndicators: false as const } : {}),
   allowedDevOrigins: ["13.36.171.174", "192.168.0.178"],
   // NOTE: Do not add hardcoded /en redirects for localized routes (e.g. /updates
@@ -80,6 +81,9 @@ const nextConfig: NextConfig = {
     ],
     // Runtime fs search in /api/ai/support — keep docs in the serverless bundle.
     '/api/ai/support': [...SUPPORT_SEARCH_TRACE_INCLUDES],
+    // /.well-known/agent-skills/index.json is dynamic and reads the shared
+    // skill markdown at request time to compute its digests.
+    '/.well-known/agent-skills/**': [...AGENT_SKILLS_TRACE_INCLUDES],
     // Protocol login is a server action from Connections (not only /api/rithmic-protocol/*).
     // Include assets for all server traces so preview/production lambdas can load protos.
     '/*': [...RITHMIC_PROTOCOL_TRACE_INCLUDES],

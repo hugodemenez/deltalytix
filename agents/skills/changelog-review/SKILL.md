@@ -1,3 +1,8 @@
+---
+name: changelog-review
+description: Review Deltalytix beta-to-main release changes and produce a supported editorial changelog outline. Use for release diff inventory, user-facing change grouping, coverage decisions, and changelog metadata planning.
+---
+
 # Changelog Change Review
 
 Review a Deltalytix release batch and produce the editorial outline that a copywriter and media specialist will use.
