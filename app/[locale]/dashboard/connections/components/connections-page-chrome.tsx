@@ -42,6 +42,7 @@ const SERVICE_SECTIONS: {
   },
   { service: 'tradovate', labelKey: 'connections.sections.tradovate' },
   { service: 'dxfeed', labelKey: 'connections.sections.dxfeed' },
+  { service: 'ibkr', labelKey: 'connections.sections.ibkr' },
   { service: 'thor', labelKey: 'connections.sections.thor' },
 ]
 

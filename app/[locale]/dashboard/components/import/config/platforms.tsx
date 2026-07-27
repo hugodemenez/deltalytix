@@ -3,6 +3,7 @@ import { Trade } from '@/prisma/generated/prisma/browser'
 import { ThorSync } from '../thor/thor-sync'
 import { TradovateSync } from '../tradovate/sync/tradovate-sync'
 import { DxFeedSync } from '../dxfeed/sync/dxfeed-sync'
+import { IbkrSync } from '../ibkr/sync/ibkr-sync'
 import { RithmicSyncWrapper } from '../rithmic/sync/rithmic-sync-connection'
 import { RithmicProtocolSync } from '../rithmic-protocol/sync/rithmic-protocol-sync'
 import type { ComponentType } from 'react'
@@ -128,6 +129,7 @@ type StepComponent =
   | typeof ThorSync
   | typeof TradovateSync
   | typeof DxFeedSync
+  | typeof IbkrSync
   | typeof PdfUpload
   | typeof PdfProcessing
   | typeof AtasFileUpload
@@ -740,6 +742,35 @@ export const platforms: PlatformConfig[] = [
         title: 'import.steps.connectAccount',
         description: 'import.steps.connectAccountDescription',
         component: DxFeedSync,
+        isLastStep: true
+      }
+    ]
+  },
+  {
+    platformName: 'ibkr-sync',
+    type: 'ibkr-sync',
+    name: 'import.type.ibkrSync.name',
+    description: 'import.type.ibkrSync.description',
+    category: 'Direct Account Sync',
+    videoUrl: process.env.NEXT_PUBLIC_IBKR_SYNC_TUTORIAL_VIDEO || '',
+    details: 'import.type.ibkrSync.details',
+    logo: {
+      path: '/logos/ibkr.png',
+      alt: 'Interactive Brokers Logo'
+    },
+    customComponent: IbkrSync,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'complete',
+        title: 'import.steps.connectAccount',
+        description: 'import.steps.connectAccountDescription',
+        component: IbkrSync,
         isLastStep: true
       }
     ]

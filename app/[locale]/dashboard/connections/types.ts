@@ -5,6 +5,7 @@ export type ConnectionService =
   | 'rithmic-protocol'
   | 'tradovate'
   | 'dxfeed'
+  | 'ibkr'
   | 'thor'
   | 'etp'
 
