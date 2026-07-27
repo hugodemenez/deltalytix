@@ -9,7 +9,7 @@ import {
   useState,
 } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { RefreshCw, Loader2, Trash2 } from 'lucide-react'
+import { ChevronDown, Loader2, Trash2 } from 'lucide-react'
 import { useCurrentLocale, useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import {
@@ -57,8 +57,13 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ServiceMonochromeLogo } from '@/components/monochrome-logo'
 import { useConnectionsRefresh } from './connections-refresh'
 
-const reconnectButtonClassName =
-  'inline-flex h-8 items-center justify-center rounded-sm border border-black/20 bg-transparent px-3 text-sm font-medium transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:border-white/20 dark:hover:bg-white/5'
+// One shape for every status, so a row does not reflow when a connection breaks.
+const statusActionClassName =
+  'inline-flex h-8 items-center justify-center gap-2 rounded-sm border border-black/20 bg-transparent px-3 text-sm font-medium transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:border-white/20 dark:hover:bg-white/5'
+
+// Same footprint, no affordance — nothing to do but report the state.
+const statusBadgeClassName =
+  'inline-flex h-8 items-center gap-2 px-1 text-sm text-black/55 dark:text-white/55'
 
 const SERVICE_SECTIONS: {
   service: ConnectionService
@@ -73,6 +78,9 @@ const SERVICE_SECTIONS: {
   { service: 'dxfeed', labelKey: 'connections.sections.dxfeed' },
   { service: 'thor', labelKey: 'connections.sections.thor' },
 ]
+
+// Accounts shown inline under a connection before the "show more" toggle.
+const VISIBLE_ACCOUNTS = 1
 
 // Providers whose hosted connections can be synced on demand from this page.
 const SYNCABLE_SERVICES = new Set<string>([
@@ -116,11 +124,15 @@ function formatTradeDate(date: string | null | undefined, locale: string) {
  * - Mobile: account number, then one meta row — last trade (left) · trades (right).
  * - sm+: shared subgrid — account | trade count | last trade (same row).
  * Trade counts stay right-aligned with tabular-nums for quick comparison.
+ *
+ * `continuation` keeps the leading separator: the revealed accounts render as a
+ * second list (its own animated panel) but must read as one continuous table.
  */
 function AccountTradeList({
   accounts,
   locale,
   density = 'compact',
+  continuation = false,
 }: {
   accounts: Array<{
     id: string
@@ -130,6 +142,7 @@ function AccountTradeList({
   }>
   locale: string
   density?: 'compact' | 'standalone'
+  continuation?: boolean
 }) {
   const t = useI18n()
   const compact = density === 'compact'
@@ -160,7 +173,8 @@ function AccountTradeList({
           <li
             key={account.id}
             className={cn(
-              'grid grid-cols-1 gap-y-1 border-t border-black/10 first:border-t-0 dark:border-white/10',
+              'grid grid-cols-1 gap-y-1 border-t border-black/10 dark:border-white/10',
+              !continuation && 'first:border-t-0',
               'sm:col-span-full sm:grid-cols-subgrid sm:items-baseline',
               compact ? 'py-3 text-sm' : 'py-6 md:py-8'
             )}
@@ -240,34 +254,92 @@ function toLocalTimeInputValue(
   return `${hours}:${minutes}`
 }
 
-function ConnectionStatusLight({
+/**
+ * Status and its remedy in a single control: the dot reports the state, the
+ * label offers the one action that state allows — sync while healthy, reconnect
+ * once broken. A connection with nothing to trigger degrades to a plain badge.
+ */
+function ConnectionStatusAction({
   status,
   syncFailed,
+  canSync,
+  syncing,
+  reconnecting,
+  onSync,
+  onReconnect,
 }: {
   status: ConnectionStatus
   syncFailed: boolean
+  canSync: boolean
+  syncing: boolean
+  reconnecting: boolean
+  onSync: () => void
+  onReconnect: () => void
 }) {
   const t = useI18n()
   const isError = syncFailed || status !== 'connected'
-  const label = syncFailed
+  const statusLabel = syncFailed
     ? t('connections.status.syncFailed')
     : isError
       ? t('connections.status.error')
       : t('connections.status.connected')
 
-  return (
+  const dot = (
     <span
-      className="inline-flex shrink-0 items-center"
-      title={label}
-      aria-label={label}
-    >
-      <span
-        className={cn(
-          'h-2 w-2 rounded-full',
-          isError ? 'bg-red-500' : 'bg-emerald-500'
+      className={cn(
+        'h-2 w-2 shrink-0 rounded-full',
+        isError ? 'bg-red-500' : 'bg-emerald-500'
+      )}
+      aria-hidden
+    />
+  )
+
+  if (isError) {
+    return (
+      <button
+        type="button"
+        className={statusActionClassName}
+        title={statusLabel}
+        disabled={reconnecting}
+        onClick={onReconnect}
+      >
+        {reconnecting ? (
+          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+        ) : (
+          dot
         )}
-      />
-    </span>
+        {/* The dot is the only visual carrier of status — name it for AT. */}
+        <span className="sr-only">{statusLabel}, </span>
+        {t('connections.reconnect')}
+      </button>
+    )
+  }
+
+  if (!canSync) {
+    return (
+      <span className={statusBadgeClassName} title={statusLabel}>
+        {dot}
+        {statusLabel}
+      </span>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      className={statusActionClassName}
+      title={statusLabel}
+      disabled={syncing}
+      onClick={onSync}
+    >
+      {syncing ? (
+        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+      ) : (
+        dot
+      )}
+      <span className="sr-only">{statusLabel}, </span>
+      {t('connections.sync.now')}
+    </button>
   )
 }
 
@@ -280,7 +352,7 @@ function ConnectionRow({
 }) {
   const t = useI18n()
   const locale = useCurrentLocale()
-  const [open, setOpen] = useState(false)
+  const [showAllAccounts, setShowAllAccounts] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -305,6 +377,11 @@ function ConnectionRow({
   const rowSyncing = protocolSyncing || syncing
   // Red = expired/missing auth, or the last sync attempt failed.
   const needsReconnect = syncFailed || connection.status !== 'connected'
+  // Rithmic and Thor sync from their own flows, not from this row.
+  const canSyncRow =
+    connection.service === 'tradovate' ||
+    connection.service === 'dxfeed' ||
+    connection.service === 'rithmic-protocol'
 
   const canSchedule = supportsDailySync(connection.service)
   const nextSyncAt = useMemo(
@@ -482,68 +559,37 @@ function ConnectionRow({
     }
   }, [connection.id, onChanged, t])
 
+  // Split rather than slice: the overflow accounts stay mounted inside the
+  // collapsed panel so revealing them can animate instead of popping in.
+  const leadAccounts = connection.accounts.slice(0, VISIBLE_ACCOUNTS)
+  const overflowAccounts = connection.accounts.slice(VISIBLE_ACCOUNTS)
+
   return (
-    <div className="t-acc" data-open={open ? 'true' : 'false'}>
-      <div
-        role="button"
-        tabIndex={0}
-        aria-expanded={open}
-        className="t-acc-head w-full cursor-pointer py-6 text-left md:py-8"
-        onClick={() => setOpen((v) => !v)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            setOpen((v) => !v)
-          }
-        }}
-      >
-        {/* Title row: status + account number + actions share one alignment line */}
-        <div className="flex min-w-0 items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <ConnectionStatusLight
+    <div
+      className="t-acc py-6 md:py-8"
+      data-open={showAllAccounts ? 'true' : 'false'}
+    >
+      <div>
+        {/* Title row: name, then the status action and delete on one line.
+            Wrapping is a safety net for long broker names only — the status
+            control keeps a fixed footprint, so rows normally stay single-line. */}
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          {/* `flex-auto` bases the wrap decision on the name's own width: it
+              shares the line while it fits, takes a full line when it does not,
+              and only truncates when even a full line is too narrow. */}
+          <div className="min-w-0 flex-auto truncate text-xl font-normal tracking-tight md:text-2xl">
+            {connection.displayName}
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <ConnectionStatusAction
               status={connection.status}
               syncFailed={syncFailed}
+              canSync={canSyncRow}
+              syncing={rowSyncing}
+              reconnecting={reconnecting}
+              onSync={() => void handleSync()}
+              onReconnect={() => void handleReconnect()}
             />
-            <div className="min-w-0 truncate text-xl font-normal tracking-tight md:text-2xl">
-              {connection.displayName}
-            </div>
-          </div>
-          <div
-            className="flex shrink-0 items-center gap-1"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-          >
-            {needsReconnect && (
-              <button
-                type="button"
-                className={reconnectButtonClassName}
-                disabled={reconnecting}
-                onClick={() => void handleReconnect()}
-              >
-                {reconnecting ? (
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                ) : null}
-                {t('connections.reconnect')}
-              </button>
-            )}
-            {!needsReconnect &&
-              (connection.service === 'tradovate' ||
-                connection.service === 'dxfeed' ||
-                connection.service === 'rithmic-protocol') && (
-                <button
-                  type="button"
-                  className={iconButtonClassName}
-                  aria-label={t('connections.sync.now')}
-                  disabled={rowSyncing}
-                  onClick={() => void handleSync()}
-                >
-                  {rowSyncing ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
-                  )}
-                </button>
-              )}
             <button
               type="button"
               className={iconButtonClassName}
@@ -553,26 +599,9 @@ function ConnectionRow({
             >
               <Trash2 className="h-4 w-4" strokeWidth={1.75} />
             </button>
-            <span
-              className={cn(
-                iconButtonClassName,
-                't-acc-chevron pointer-events-none'
-              )}
-              aria-hidden
-            >
-              <svg
-                viewBox="0 0 16 16"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
-                <path d="M4 6.5L8 10.5L12 6.5" />
-              </svg>
-            </span>
           </div>
         </div>
-        <p className="mt-1 pl-5 text-sm text-black/55 dark:text-white/55">
+        <p className="mt-1 text-sm text-black/55 dark:text-white/55">
           {connection.loginLabel ? (
             <>
               <span className="truncate">{connection.loginLabel}</span>
@@ -585,16 +614,15 @@ function ConnectionRow({
               t('connections.neverSynced')
             ),
           })}
-          {canSchedule && (
+          {/* A countdown to the next daily sync is noise while the connection is
+              broken — nothing will sync until it is reconnected. */}
+          {canSchedule && !needsReconnect && (
             <>
               {' · '}
               <button
                 type="button"
                 className="underline decoration-black/20 underline-offset-2 transition-colors duration-150 hover:text-black dark:decoration-white/20 dark:hover:text-white"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  openScheduleDialog()
-                }}
+                onClick={openScheduleDialog}
               >
                 {nextSyncAt && nowMs != null
                   ? t('connections.nextSyncIn', {
@@ -612,21 +640,56 @@ function ConnectionRow({
               })}
         </p>
       </div>
-      <div className="t-acc-panel">
-        <div className="t-acc-panel-inner pb-6 md:pb-8">
-          {connection.accounts.length === 0 ? (
-            <p className="text-sm text-black/45 dark:text-white/45">
-              {t('connections.noHostedAccounts')}
-            </p>
-          ) : (
-            <AccountTradeList
-              accounts={connection.accounts}
-              locale={locale}
-              density="compact"
-            />
+      {/* No empty state: the meta line above already reads "0 accounts". */}
+      {connection.accounts.length > 0 && (
+        <div className="mt-2">
+          <AccountTradeList
+            accounts={leadAccounts}
+            locale={locale}
+            density="compact"
+          />
+          {overflowAccounts.length > 0 && (
+            <>
+              {/* Toggle sits above the panel it controls: the revealed rows push
+                  the page down, not the button, so it stays under the pointer
+                  through repeated clicks. */}
+              <button
+                type="button"
+                aria-expanded={showAllAccounts}
+                className="mt-1 flex w-full items-center gap-1 py-2 text-left text-sm text-black/55 transition-colors duration-150 hover:text-black dark:text-white/55 dark:hover:text-white"
+                onClick={() => setShowAllAccounts((v) => !v)}
+              >
+                {showAllAccounts
+                  ? t('connections.showFewerAccounts')
+                  : overflowAccounts.length === 1
+                    ? t('connections.showMoreAccounts.one', { count: 1 })
+                    : t('connections.showMoreAccounts.other', {
+                        count: overflowAccounts.length,
+                      })}
+                <ChevronDown
+                  className="t-acc-chevron h-4 w-4"
+                  strokeWidth={1.75}
+                  aria-hidden
+                />
+              </button>
+              <div className="t-acc-panel">
+                <div className="t-acc-panel-inner">
+                  {/* Spacing goes inside the clipped box — padding on the box
+                      itself survives the collapse and leaves a dead gap. */}
+                  <div className="pt-3">
+                    <AccountTradeList
+                      accounts={overflowAccounts}
+                      locale={locale}
+                      density="compact"
+                      continuation
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
-      </div>
+      )}
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent className="rounded-sm border-black/10 dark:border-white/10">
@@ -865,21 +928,23 @@ function PendingTradovateConnectionRow({ title }: { title?: string }) {
   const t = useI18n()
   return (
     <div className="w-full py-6 md:py-8" aria-busy="true" aria-live="polite">
-      <div className="flex min-w-0 items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="inline-flex shrink-0 items-center" aria-hidden>
-            <span className="h-2 w-2 motion-safe:animate-pulse rounded-full bg-amber-500" />
-          </span>
-          <div className="min-w-0 truncate text-xl font-normal tracking-tight md:text-2xl">
-            {title || t('connections.oauth.tradovate.connecting')}
-          </div>
+      {/* Mirrors ConnectionRow: name on the left, status control on the right. */}
+      <div className="flex min-w-0 items-center gap-4">
+        <div className="min-w-0 flex-1 truncate text-xl font-normal tracking-tight md:text-2xl">
+          {title || t('connections.oauth.tradovate.connecting')}
         </div>
-        <Loader2 className="h-5 w-5 shrink-0 animate-spin text-black/35 dark:text-white/35" />
+        <span className={cn(statusBadgeClassName, 'shrink-0')}>
+          <span
+            className="h-2 w-2 shrink-0 motion-safe:animate-pulse rounded-full bg-amber-500"
+            aria-hidden
+          />
+          {t('connections.oauth.tradovate.connecting')}
+        </span>
       </div>
-      <p className="mt-1 pl-5 text-sm text-black/55 dark:text-white/55">
+      <p className="mt-1 text-sm text-black/55 dark:text-white/55">
         {t('connections.oauth.tradovate.connectingHint')}
       </p>
-      <div className="mt-3 space-y-2 pl-5">
+      <div className="mt-3 space-y-2">
         <Skeleton className="h-3 w-48 rounded-sm bg-black/10 dark:bg-white/10" />
         <Skeleton className="h-3 w-32 rounded-sm bg-black/10 dark:bg-white/10" />
       </div>

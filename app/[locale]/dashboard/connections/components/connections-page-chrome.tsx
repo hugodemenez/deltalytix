@@ -279,7 +279,7 @@ function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
         </header>
 
         {selectedImportPlatform && (
-          <section className="mb-12 max-w-3xl space-y-10 border-y border-black/10 py-10 dark:border-white/10 md:mb-16 md:space-y-12 md:py-12">
+          <section className="mb-12 space-y-10 border-y border-black/10 py-10 dark:border-white/10 md:mb-16 md:space-y-12 md:py-12">
             <PlatformTutorial
               selectedPlatform={selectedImportPlatform}
               setIsOpen={() => {}}
