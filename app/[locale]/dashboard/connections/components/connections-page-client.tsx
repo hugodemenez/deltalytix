@@ -41,6 +41,7 @@ import {
   type ConnectionsPageData,
   type ConnectionService,
 } from '../actions'
+import { supportsDailySync } from '../daily-sync-services'
 import {
   handleTradovateCallback,
   initiateTradovateOAuth,
@@ -191,10 +192,6 @@ function AccountTradeList({
       })}
     </ul>
   )
-}
-
-function supportsDailySync(service: string) {
-  return service === 'tradovate' || service === 'dxfeed'
 }
 
 function getNextDailySyncAt(
