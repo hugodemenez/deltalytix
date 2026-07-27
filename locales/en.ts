@@ -129,7 +129,7 @@ export default {
   "connections.description":
     "Manage broker connections and the trading accounts they host. Import files for standalone accounts.",
   "connections.importFile": "Import file",
-  "connections.selectImportType": "Select import type",
+  "connections.selectImportType": "Upload a file",
   "connections.importSelected": "Import {platform}",
   "connections.changeImportType": "Change type",
   "connections.clearImportType": "Clear import type",
@@ -161,6 +161,7 @@ export default {
   "connections.env.live": "Live",
   "connections.env.demo": "Demo",
   "connections.sync.now": "Sync now",
+  "connections.sync.syncAll": "Sync all",
   "connections.sync.allDone": "All connections synced",
   "connections.sync.failed": "Sync failed",
   "connections.sync.manualOnly": "Sync this connection from its settings.",

@@ -130,7 +130,7 @@ export default {
   "connections.description":
     "Gérez vos connexions broker et les comptes qu’elles hébergent. Importez des fichiers pour les comptes autonomes.",
   "connections.importFile": "Importer un fichier",
-  "connections.selectImportType": "Choisir le type d'import",
+  "connections.selectImportType": "Ajouter avec un fichier",
   "connections.importSelected": "Importer {platform}",
   "connections.changeImportType": "Changer de type",
   "connections.clearImportType": "Effacer le type d'import",
@@ -162,6 +162,7 @@ export default {
   "connections.env.live": "Live",
   "connections.env.demo": "Démo",
   "connections.sync.now": "Synchroniser",
+  "connections.sync.syncAll": "Tout synchroniser",
   "connections.sync.allDone": "Toutes les connexions sont synchronisées",
   "connections.sync.failed": "Échec de la synchronisation",
   "connections.sync.manualOnly": "Synchronisez cette connexion depuis ses paramètres.",
