@@ -204,7 +204,7 @@ export async function authenticateRithmicProtocol(
     )
 
     await upsertAccountsForNumbers(userId, accountIds, connection.id)
-
+    await invalidateConnectionsPageCache(userId)
 
     return {
       success: true,
@@ -446,6 +446,8 @@ export async function getRithmicProtocolTrades(
         resolvedAccountIds,
         connection.id,
       )
+      // Persist the account links even when the remote fill fetch below fails.
+      await invalidateConnectionsPageCache(userId)
     }
 
     logger.info(
@@ -514,6 +516,10 @@ export async function getRithmicProtocolTrades(
       )
     }
 
+    // Account links and lastSyncedAt are already committed at this point.
+    // Invalidate before saving trades because duplicate/error results return early.
+    await invalidateConnectionsPageCache(userId)
+
     let savedCount = 0
     if (trades.length > 0) {
       const saveResult = await saveTradesAction(trades, {
@@ -532,8 +538,6 @@ export async function getRithmicProtocolTrades(
       }
       savedCount = saveResult.numberOfTradesAdded
     }
-
-    await invalidateConnectionsPageCache(userId)
 
     return {
       processedTrades: trades,
