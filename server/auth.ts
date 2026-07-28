@@ -577,16 +577,18 @@ export async function verifyOtp(email: string, token: string, type: 'email' | 's
       type
     })
 
+    let isNewUser = false
     if (data.user && data.session) {
       const locale = email.includes('.fr') ? 'fr' : 'en';
-      await ensureUserInDatabase(data.user, locale)
+      const databaseUser = await ensureUserInDatabase(data.user, locale)
+      isNewUser = Date.now() - databaseUser.createdAt.getTime() < 60_000
     }
 
     if (error) {
       throw new Error(error.message)
     }
 
-    return data
+    return { ...data, isNewUser }
   } catch (error: any) {
     handleAuthError(error)
   }

@@ -26,6 +26,7 @@ export async function GET(request: Request) {
 
   // Redirect to the decoded 'next' URL if it exists, otherwise to the homepage
   let decodedNext: string | null = null;
+  let isNewUser = false;
   if (next) {
     decodedNext = decodeURIComponent(next)
   }
@@ -53,17 +54,19 @@ export async function GET(request: Request) {
         try {
           const { data: { user } } = await supabase.auth.getUser()
           if (user) {
-            await ensureUserInDatabase(user, locale)
+            const databaseUser = await ensureUserInDatabase(user, locale)
+            isNewUser = Date.now() - databaseUser.createdAt.getTime() < 60_000
           }
         } catch (e) {
           console.error('Auth callback ensureUserInDatabase error:', e)
           // Non-fatal: continue redirect
         }
 
-        if (decodedNext) {
-          return NextResponse.redirect(new URL(decodedNext, requestOrigin))
+        const redirectUrl = new URL(decodedNext ?? next ?? '/dashboard', requestOrigin)
+        if (isNewUser && redirectUrl.pathname.includes('/dashboard')) {
+          redirectUrl.searchParams.set('signup', 'success')
         }
-        return NextResponse.redirect(new URL(next ?? '/dashboard', requestOrigin))
+        return NextResponse.redirect(redirectUrl)
       } else {
         console.log('Auth callback error:', error)
       }

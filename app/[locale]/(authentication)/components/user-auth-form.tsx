@@ -269,12 +269,15 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setIsLoading(true)
         try {
             const email = form.getValues('email')
-            await verifyOtp(email, values.otp)
+            const result = await verifyOtp(email, values.otp)
             toast.success("Successfully verified. Redirecting...", {
                 description: "Successfully verified. Redirecting...",
             })
             router.refresh()
-            router.push(nextUrl || '/dashboard')
+            const fallbackUrl = result?.isNewUser
+              ? '/dashboard?signup=success'
+              : '/dashboard'
+            router.push(nextUrl || fallbackUrl)
         } catch (error) {
             console.error(error)
             toast.error("Error", {

@@ -8,6 +8,7 @@ import { ScrollLockFix } from "@/components/scroll-lock-fix";
 import { getSiteOrigin, siteUrl } from "@/lib/site-url";
 import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
 import { cn } from "@/lib/utils";
+import { GoogleTag } from "@/components/google-tag";
 
 const inter = Inter({ subsets: ["latin"] });
 const metadataBase = new URL(getSiteOrigin());
@@ -348,6 +349,7 @@ export default function RootLayout({
         className={cn(inter.className, "antialiased [font-synthesis:none]")}
       >
         <ScrollLockFix />
+        <GoogleTag />
         <SpeedInsights />
         <Analytics />
         {children}

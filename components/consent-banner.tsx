@@ -26,6 +26,7 @@ import posthog from "posthog-js"
 
 const ANALYTICS_CONSENT_COOKIE = "deltalytix_analytics_consent"
 const CONSENT_EVENT = "deltalytix:analytics-consent"
+const CONSENT_UPDATED_EVENT = "deltalytix:consent-updated"
 
 function isDeltalytixHost() {
   const host = window.location.hostname
@@ -220,6 +221,9 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
   const saveConsent = (consentSettings: ConsentSettings) => {
     localStorage.setItem("cookieConsent", JSON.stringify(consentSettings))
     syncPostHogConsent(consentSettings.analytics_storage)
+    window.dispatchEvent(new CustomEvent(CONSENT_UPDATED_EVENT, {
+      detail: consentSettings,
+    }))
     window.gtag?.("consent", "update", {
       analytics_storage: consentSettings.analytics_storage ? "granted" : "denied",
       ad_storage: consentSettings.ad_storage ? "granted" : "denied",
