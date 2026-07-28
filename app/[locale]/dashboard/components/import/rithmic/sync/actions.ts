@@ -8,6 +8,22 @@ import { capturePostHogEvent } from "@/lib/posthog-server"
 import { upsertAccountsForNumbers } from "@/server/connections"
 import { invalidateConnectionsPageCache } from "@/app/[locale]/dashboard/connections/data"
 
+/** Upper bound on accounts linked in one call, so a malformed body can't fan out. */
+const MAX_LINKED_ACCOUNTS = 500
+
+/**
+ * `accountNumbers` reaches this action straight from a request body
+ * (`/api/rithmic/synchronizations`), so it is untrusted: keep only non-empty
+ * strings and cap the count before it hits the database.
+ */
+function sanitizeAccountNumbers(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const numbers = value
+    .filter((n): n is string => typeof n === 'string' && n.trim().length > 0)
+    .map((n) => n.trim())
+  return [...new Set(numbers)].slice(0, MAX_LINKED_ACCOUNTS)
+}
+
 export async function getRithmicSynchronizations() {
   console.log('CHECKING RITHMIC SYNCHRONIZATIONS')
   const userId = await getUserId()
@@ -72,9 +88,12 @@ export async function setRithmicSynchronization(
       userId: userId,
       includedFeeTypes: undefined, // Rithmic has no fee differentiator
     },
+    // This action is called from the client; never send the row back wholesale
+    // or the encrypted token crosses the boundary with it.
+    select: { id: true },
   })
 
-  const accountNumbers = synchronization.accountNumbers ?? []
+  const accountNumbers = sanitizeAccountNumbers(synchronization.accountNumbers)
   if (accountNumbers.length > 0) {
     await upsertAccountsForNumbers(userId, accountNumbers, connection.id)
   }

@@ -29,7 +29,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const syncResult = await getRithmicProtocolTrades(tokenResult.storedTokenJson)
+    const syncResult = await getRithmicProtocolTrades(
+      tokenResult.storedTokenJson,
+      { connectionId: tokenResult.connectionId },
+    )
     if (syncResult.error) {
       return NextResponse.json(
         {
