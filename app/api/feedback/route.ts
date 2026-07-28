@@ -83,22 +83,20 @@ export async function POST(request: Request) {
     page,
   }
 
-  // Two independent delivery channels. PostHog is the analytics/correlation
-  // layer; the support inbox is the durable one, since PostHog event retention
-  // is plan-limited.
+  // PostHog records only non-sensitive submission metadata. The support inbox
+  // is the sole durable channel for the message and the user's email address.
   //
   // consentGranted: the user typed this and pressed send, so it is a submission
   // fulfilling their own request rather than passive analytics. Same reasoning
   // as the Stripe webhook events.
-  const [capturedByPostHog, emailedToSupport] = await Promise.all([
+  const [, emailedToSupport] = await Promise.all([
     capturePostHogEvent({
       consentGranted: true,
       distinctId: user.id,
       event: 'feedback_submitted',
       properties: {
         feedback_type: type,
-        feedback_message: message,
-        email: user.email ?? null,
+        message_length: message.length,
         locale,
         page,
       },
@@ -106,9 +104,9 @@ export async function POST(request: Request) {
     sendFeedbackNotificationEmail(emailInput),
   ])
 
-  // Only a total failure loses the message. Surface that instead of reporting
-  // success; either channel landing means the team has the feedback.
-  if (!capturedByPostHog && !emailedToSupport) {
+  // Analytics no longer contains the message, so a support-email failure must
+  // be surfaced instead of reporting a successful submission.
+  if (!emailedToSupport) {
     return NextResponse.json(
       { error: 'Failed to deliver feedback' },
       { status: 502 },
