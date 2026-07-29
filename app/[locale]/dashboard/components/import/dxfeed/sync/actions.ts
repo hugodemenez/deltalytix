@@ -855,15 +855,17 @@ export async function storeDxFeedToken(
       },
     })
 
-    await capturePostHogEvent({
-      distinctId: user.id,
-      event: 'integration_connected',
-      properties: {
-        integration: 'dxfeed',
-        environment: DXFEED_ENVIRONMENT === 0 ? 'production' : 'demo',
-        is_first_connection: !existingConnection,
-      },
-    })
+    if (!existingConnection) {
+      await capturePostHogEvent({
+        distinctId: user.id,
+        event: 'integration_connected',
+        properties: {
+          integration: 'dxfeed',
+          environment: DXFEED_ENVIRONMENT === 0 ? 'production' : 'demo',
+          is_first_connection: true,
+        },
+      })
+    }
 
     return { success: true }
   } catch (error) {
