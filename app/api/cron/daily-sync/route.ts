@@ -23,6 +23,7 @@ const WALL_CLOCK_BUDGET_MS = 240_000
 const DUPLICATE_TRADES = 'DUPLICATE_TRADES'
 
 async function syncConnection(connection: {
+  id: string
   service: string
   userId: string
   externalId: string
@@ -44,6 +45,7 @@ async function syncConnection(connection: {
       : (
           await getRithmicProtocolTrades(storedTokenJson, {
             userId: connection.userId,
+            connectionId: connection.id,
           })
         ).error
 

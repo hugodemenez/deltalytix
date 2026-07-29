@@ -642,6 +642,30 @@ export function RithmicSyncContextProvider({
             .replace(/-/g, "");
         }
 
+        // Update last sync time in the database and (re)link trading accounts
+        // before opening the socket: trades saved by the sync server in between
+        // would otherwise create accounts that are briefly standalone.
+        // Call API route instead of server action
+        const syncResponse = await fetch("/api/rithmic/synchronizations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            // Match the externalId the connect flow writes. Legacy credential
+            // sets can carry a generated `cred_…` id, which would target a
+            // different Connection row and drag the accounts onto it.
+            accountId: savedData.credentials.username || savedData.id,
+            lastSyncedAt: new Date(),
+            accountNumbers: accountsToSync,
+          }),
+        });
+
+        // Reported below rather than here: a failed link must not stop the
+        // trade sync itself, which is what this call is really for.
+        const syncLinkError = syncResponse.ok
+          ? null
+          : ((await syncResponse.json().catch(() => null))?.message ??
+            "Failed to update synchronization");
+
         // Connect and start syncing
         connect(wsUrl, data.token, accountsToSync, startDate);
         updateLastSyncTime(credentialId);
@@ -652,22 +676,8 @@ export function RithmicSyncContextProvider({
           message: `Starting automatic background sync for ${savedData.name || savedData.credentials.username}`,
         });
 
-        // Update last sync time in the database
-        // Call API route instead of server action
-        const syncResponse = await fetch("/api/rithmic/synchronizations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            accountId: savedData.id,
-            lastSyncedAt: new Date(),
-          }),
-        });
-
-        if (!syncResponse.ok) {
-          const errorData = await syncResponse.json();
-          throw new Error(
-            errorData.message || "Failed to update synchronization"
-          );
+        if (syncLinkError) {
+          throw new Error(syncLinkError);
         }
 
         return {

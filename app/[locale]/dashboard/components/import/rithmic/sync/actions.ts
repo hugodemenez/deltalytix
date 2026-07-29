@@ -5,6 +5,24 @@ import { Connection } from "@/prisma/generated/prisma/client"
 import { toDecryptedConnectionViews } from "@/lib/connection-view"
 import { encryptConnectionToken } from "@/lib/connection-token-crypto"
 import { capturePostHogEvent } from "@/lib/posthog-server"
+import { upsertAccountsForNumbers } from "@/server/connections"
+import { invalidateConnectionsPageCache } from "@/app/[locale]/dashboard/connections/data"
+
+/** Upper bound on accounts linked in one call, so a malformed body can't fan out. */
+const MAX_LINKED_ACCOUNTS = 500
+
+/**
+ * `accountNumbers` reaches this action straight from a request body
+ * (`/api/rithmic/synchronizations`), so it is untrusted: keep only non-empty
+ * strings and cap the count before it hits the database.
+ */
+function sanitizeAccountNumbers(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const numbers = value
+    .filter((n): n is string => typeof n === 'string' && n.trim().length > 0)
+    .map((n) => n.trim())
+  return [...new Set(numbers)].slice(0, MAX_LINKED_ACCOUNTS)
+}
 
 export async function getRithmicSynchronizations() {
   console.log('CHECKING RITHMIC SYNCHRONIZATIONS')
@@ -15,7 +33,17 @@ export async function getRithmicSynchronizations() {
   return toDecryptedConnectionViews(connections)
 }
 
-export async function setRithmicSynchronization(synchronization: Partial<Connection> & { accountId?: string }) {
+/**
+ * Upsert the Rithmic Connection and optionally attach trading accounts so they
+ * leave the Connections page "standalone / imported without broker sync" bucket.
+ */
+export async function setRithmicSynchronization(
+  synchronization: Partial<Connection> & {
+    accountId?: string
+    /** Trading account numbers to attach to this Connection */
+    accountNumbers?: string[]
+  }
+) {
   console.log('SETTING RITHMIC SYNCHRONIZATION')
   const userId = await getUserId()
   const service = synchronization.service || 'rithmic'
@@ -30,7 +58,7 @@ export async function setRithmicSynchronization(synchronization: Partial<Connect
     },
     select: { id: true },
   })
-  await prisma.connection.upsert({
+  const connection = await prisma.connection.upsert({
     where: { 
       userId_service_externalId: {
         userId: userId,
@@ -60,7 +88,17 @@ export async function setRithmicSynchronization(synchronization: Partial<Connect
       userId: userId,
       includedFeeTypes: undefined, // Rithmic has no fee differentiator
     },
+    // This action is called from the client; never send the row back wholesale
+    // or the encrypted token crosses the boundary with it.
+    select: { id: true },
   })
+
+  const accountNumbers = sanitizeAccountNumbers(synchronization.accountNumbers)
+  if (accountNumbers.length > 0) {
+    await upsertAccountsForNumbers(userId, accountNumbers, connection.id)
+  }
+
+  await invalidateConnectionsPageCache(userId)
 
   await capturePostHogEvent({
     distinctId: userId,
@@ -70,6 +108,8 @@ export async function setRithmicSynchronization(synchronization: Partial<Connect
       is_first_connection: !existingConnection,
     },
   })
+
+  return connection
 }
 
 export async function removeRithmicSynchronization(accountId: string) {
@@ -83,4 +123,6 @@ export async function removeRithmicSynchronization(accountId: string) {
       externalId: accountId,
     },
   })
+
+  await invalidateConnectionsPageCache(userId)
 }

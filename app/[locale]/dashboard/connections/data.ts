@@ -1,4 +1,4 @@
-import { cacheLife, cacheTag, updateTag } from 'next/cache'
+import { cacheLife, cacheTag, revalidateTag, updateTag } from 'next/cache'
 import { getUserId } from '@/server/auth'
 import { prisma } from '@/lib/prisma'
 import { toConnectionView } from '@/lib/connection-view'
@@ -208,9 +208,14 @@ export async function getConnectionsPageDataFresh(): Promise<ConnectionsPageData
 
 export async function invalidateConnectionsPageCache(userId?: string) {
   const id = userId ?? (await getUserId())
+  // Prefer updateTag: in a Server Action context it expires AND immediately
+  // refreshes the cache, so the caller reads its own writes without a separate
+  // refetch. updateTag throws when called from a Route Handler (e.g.
+  // /api/rithmic/synchronizations, /api/rithmic-protocol/sync), so fall back to
+  // revalidateTag there — that's expected, not an error.
   try {
     updateTag(connectionsCacheTag(id))
   } catch {
-    // updateTag is only valid in some server contexts; ignore elsewhere
+    revalidateTag(connectionsCacheTag(id), { expire: 0 })
   }
 }

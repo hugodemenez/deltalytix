@@ -204,7 +204,7 @@ export async function authenticateRithmicProtocol(
     )
 
     await upsertAccountsForNumbers(userId, accountIds, connection.id)
-
+    await invalidateConnectionsPageCache(userId)
 
     return {
       success: true,
@@ -294,7 +294,7 @@ export async function getRithmicProtocolToken(accountId: string) {
     return { error: 'NO_TOKEN_RECONNECT' as const }
   }
 
-  return { storedTokenJson, lastSyncedAt: row.lastSyncedAt }
+  return { storedTokenJson, lastSyncedAt: row.lastSyncedAt, connectionId: row.id }
 }
 
 export async function removeRithmicProtocolToken(accountId: string) {
@@ -365,7 +365,7 @@ export async function updateRithmicProtocolDailySyncTimeAction(
 
 export async function getRithmicProtocolTrades(
   initialTokenJson: string,
-  options?: { userId?: string },
+  options?: { userId?: string; connectionId?: string },
 ): Promise<RithmicProtocolTradesResult> {
   const syncStats = {
     tradingAccounts: 0,
@@ -427,6 +427,35 @@ export async function getRithmicProtocolTrades(
       return { processedTrades: [], savedCount: 0, tradesCount: 0, syncStats }
     }
 
+    // Attach trading accounts to the Connection on every sync so accounts that
+    // only appear during fill processing (or that were created before linking)
+    // leave the standalone bucket. Callers that already hold the row (the
+    // daily-sync cron) pass its id so a username/externalId mismatch can't
+    // silently skip the linking.
+    let connectionId = options?.connectionId
+    if (!connectionId) {
+      const connection = await prisma.connection.findUnique({
+        where: {
+          userId_service_externalId: {
+            userId,
+            service: SERVICE,
+            externalId: credentials.username,
+          },
+        },
+        select: { id: true },
+      })
+      connectionId = connection?.id
+    }
+    if (connectionId) {
+      await upsertAccountsForNumbers(userId, resolvedAccountIds, connectionId)
+      // Invalidate now so the links show up even if the fill fetch below fails.
+      await invalidateConnectionsPageCache(userId)
+    } else {
+      logger.warn(
+        `No ${SERVICE} connection found for externalId=${credentials.username}; trading accounts will stay standalone`,
+      )
+    }
+
     logger.info(
       `Fetching fills for ${resolvedAccountIds.length} accounts (from ${credentials.historyStartDate ?? `${DEFAULT_LOOKBACK_DAYS}d lookback`}, ≤30d windows)`,
     )
@@ -477,9 +506,19 @@ export async function getRithmicProtocolTrades(
       data: { lastSyncedAt: new Date() },
     })
 
+    // saveTradesAction links every account number it sees on the trades to this
+    // Connection, so accounts that only appear on fills are covered too.
+    const saveResult =
+      trades.length > 0
+        ? await saveTradesAction(trades, { userId, connectionId })
+        : null
+
+    // Invalidate after the save so the trade-derived account links are picked
+    // up, including on the duplicate/error results that return early below.
+    await invalidateConnectionsPageCache(userId)
+
     let savedCount = 0
-    if (trades.length > 0) {
-      const saveResult = await saveTradesAction(trades, { userId })
+    if (saveResult) {
       if (saveResult.error === 'DUPLICATE_TRADES') {
         return { error: 'DUPLICATE_TRADES', syncStats, tradesCount: trades.length }
       }
