@@ -528,7 +528,7 @@ export const DataProvider: React.FC<{
         if (cachedTrades && Array.isArray(cachedTrades) && cachedTrades.length > 0) {
           setTrades(cachedTrades);
         } else {
-          const trades = await getTradesAction(user.id, false);
+          const trades = await getTradesAction(false);
           const safeTrades = Array.isArray(trades) ? trades : [];
           setTrades(safeTrades);
           setTradesCache(user.id, safeTrades).catch((err) =>
@@ -687,7 +687,7 @@ export const DataProvider: React.FC<{
           }
         }
 
-        const trades = await getTradesAction(userId, force);
+        const trades = await getTradesAction(force);
         const safeTrades = Array.isArray(trades) ? trades : [];
         setTrades(safeTrades);
 
@@ -824,10 +824,11 @@ export const DataProvider: React.FC<{
           return false;
         }
 
-        // We should identify when accounts pass their buffer
-        // We can get the index of the first trade whihch is after the buffer date of its account
-        const tradeAccount = accounts.find(
-          (acc) => acc.number === trade.accountNumber
+        // Prefer Trade.accountId FK when present; fall back to soft accountNumber join
+        const tradeAccount = accounts.find((acc) =>
+          trade.accountId
+            ? acc.id === trade.accountId
+            : acc.number === trade.accountNumber
         );
 
         // Validate entry date

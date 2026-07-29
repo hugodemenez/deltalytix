@@ -4,9 +4,6 @@ import { prisma } from '@/lib/prisma'
 import auth from '@/locales/en/auth'
 import { createClient } from '@/server/auth'
 import { revalidatePath } from 'next/cache'
-import { Resend } from 'resend'
-import { render } from '@react-email/render'
-import TeamInvitationEmail from '@/components/emails/team-invitation'
 
 export async function createTeam(name: string) {
   try {
@@ -591,134 +588,9 @@ export async function addTraderToTeam(teamId: string, traderEmail: string) {
   }
 }
 
-export async function sendTeamInvitation(teamId: string, traderEmail: string) {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user?.id) {
-      throw new Error('Unauthorized')
-    }
-
-    // Check if user is the owner or admin of this team
-    const team = await prisma.team.findUnique({
-      where: { id: teamId },
-    })
-
-    if (!team) {
-      throw new Error('Team not found')
-    }
-
-    // Check if current user is owner or admin manager
-    const isOwner = team.userId === user.id
-    const isAdminManager = await prisma.teamManager.findUnique({
-      where: {
-        teamId_managerId: {
-          teamId,
-          managerId: user.id,
-        }
-      }
-    })
-
-    if (!isOwner && (!isAdminManager || isAdminManager.access !== 'admin')) {
-      throw new Error('Unauthorized: Only team owners and admin managers can send invitations')
-    }
-
-    // Check if there's already a pending invitation
-    const existingInvitation = await prisma.teamInvitation.findUnique({
-      where: {
-        teamId_email: {
-          teamId,
-          email: traderEmail,
-        }
-      }
-    })
-
-    if (existingInvitation && existingInvitation.status === 'PENDING') {
-      throw new Error('An invitation has already been sent to this email')
-    }
-
-    // Check if user is already a trader in this team
-    const existingUser = await prisma.user.findUnique({
-      where: { email: traderEmail },
-    })
-
-    if (existingUser && team.traderIds.includes(existingUser.id)) {
-      throw new Error('User is already a member of this team')
-    }
-
-    // Create or update invitation
-    const invitation = await prisma.teamInvitation.upsert({
-      where: {
-        teamId_email: {
-          teamId,
-          email: traderEmail,
-        }
-      },
-      update: {
-        status: 'PENDING',
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        invitedBy: user.id,
-      },
-      create: {
-        teamId,
-        email: traderEmail,
-        invitedBy: user.id,
-        status: 'PENDING',
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      },
-    })
-
-    // Get inviter information
-    const inviter = await prisma.user.findUnique({
-      where: { id: user.id },
-    })
-
-    // Generate join URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-      (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://deltalytix.app')
-    const joinUrl = `${baseUrl}/teams/join?invitation=${invitation.id}`
-
-    // Render email
-    const emailHtml = await render(
-      TeamInvitationEmail({
-        email: traderEmail,
-        teamName: team.name,
-        inviterName: inviter?.email?.split('@')[0] || 'trader',
-        inviterEmail: inviter?.email || 'trader@example.com',
-        joinUrl,
-        language: existingUser?.language || 'en'
-      })
-    )
-
-    // Send email
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY is not configured')
-    }
-
-    const resend = new Resend(process.env.RESEND_API_KEY)
-    const { error: emailError } = await resend.emails.send({
-      from: 'Deltalytix Team <team@eu.updates.deltalytix.app>',
-      to: traderEmail,
-      subject: existingUser?.language === 'fr' 
-        ? `Invitation à rejoindre ${team.name} sur Deltalytix`
-        : `Invitation to join ${team.name} on Deltalytix`,
-      html: emailHtml,
-      replyTo: 'hugo.demenez@deltalytix.app',
-    })
-
-    if (emailError) {
-      console.error('Error sending invitation email:', emailError)
-      throw new Error('Failed to send invitation email')
-    }
-
-    revalidatePath('/dashboard/settings')
-    revalidatePath('/teams/dashboard')
-    return { success: true, invitationId: invitation.id }
-  } catch (error) {
-    console.error('Error sending team invitation:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to send invitation' }
-  }
-}
+// sendTeamInvitation moved to POST /api/team/invite. It rendered a React Email
+// here, and importing @react-email/render into a 'use server' module breaks every
+// action in this file on Turbopack builds. See app/api/team/invite/route.ts.
 
 export async function getTeamInvitations(teamId: string) {
   try {

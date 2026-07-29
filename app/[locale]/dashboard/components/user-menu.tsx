@@ -35,6 +35,7 @@ import {
   Moon,
   Sun,
   Laptop,
+  Cable,
   Settings,
   Building2,
 } from 'lucide-react'
@@ -121,6 +122,15 @@ export default function UserMenu() {
                 <CreditCard className="mr-2 h-4 w-4" />
                 <span>{t('dashboard.billing')}</span>
                 <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
+              </div>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/connections">
+              <div className="flex items-center w-full">
+                <Cable className="mr-2 h-4 w-4" />
+                <span>{t('dashboard.connections')}</span>
+                <DropdownMenuShortcut>⌘I</DropdownMenuShortcut>
               </div>
             </Link>
           </DropdownMenuItem>

@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Globe, LayoutDashboard, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from '@/components/logo'
 import Link from 'next/link'
-import ImportButton from './import/import-button'
+import { useRouter } from 'next/navigation'
 import { useI18n } from "@/locales/client"
 import { useKeyboardShortcuts } from '../../../../hooks/use-keyboard-shortcuts'
 import { ActiveFilterTags } from './filters/active-filter-tags'
@@ -14,28 +14,44 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { UsersIcon, type UsersIconHandle } from '@/components/animated-icons/users'
+import { CableIcon, type CableIconHandle } from '@/components/animated-icons/cable'
 import { useModalStateStore } from '@/store/modal-state-store'
 import { useUserStore } from '@/store/user-store'
 import UserMenu from './user-menu'
 import ReferralButton from './referral-button'
+import FeedbackButton from './feedback-button'
 
 export default function Navbar() {
+  const router = useRouter()
   const  user = useUserStore(state => state.supabaseUser)
   const t = useI18n()
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false)
   const [showAccountNumbers, setShowAccountNumbers] = useState(true)
   const [isLogoPopoverOpen, setIsLogoPopoverOpen] = useState(false)
   const usersIconRef = useRef<UsersIconHandle>(null)
+  const cableIconRef = useRef<CableIconHandle>(null)
   const { accountGroupBoardOpen } = useModalStateStore()
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts()
 
+  // Dashboard lives inside a closed logo popover, so its Link is not in the DOM
+  // on /connections and Partial Prefetching never warms the route. Connections
+  // is always visible → prefetched → feels instant. Prefetch dashboard explicitly.
+  useEffect(() => {
+    router.prefetch('/dashboard')
+  }, [router])
+
   return (
     <>
-      <nav className="sticky py-2 top-0 left-0 right-0 z-40 flex w-full flex-col border-b bg-background/80 text-primary shadow-xs backdrop-blur-md">
-        <div className="flex items-center justify-between px-3 sm:px-6 lg:px-10 h-16 gap-3 sm:gap-4">
+      <nav className="sticky top-0 left-0 right-0 z-40 flex w-full flex-col border-b bg-background pt-safe text-primary shadow-xs">
+        <div className="flex items-center justify-between px-3 sm:px-6 lg:px-10 h-16 gap-3 sm:gap-4 py-2">
           <div className="flex items-center gap-x-4">
             <div className="flex flex-col items-center">
               <Popover open={isLogoPopoverOpen} onOpenChange={setIsLogoPopoverOpen} modal={false}>
@@ -62,7 +78,8 @@ export default function Navbar() {
                     <h4 className="font-medium leading-none mb-3">{t('landing.navbar.logo.title')}</h4>
                     <div className="grid gap-2">
                       <Link 
-                        href="/dashboard" 
+                        href="/dashboard"
+                        prefetch={true}
                         className="flex items-center gap-2 text-sm hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
                         onClick={() => setIsLogoPopoverOpen(false)}
                       >
@@ -93,7 +110,29 @@ export default function Navbar() {
             className="hidden md:block flex-1 min-w-0"
           />
           <div className="flex items-center gap-2 sm:gap-4">
-            <ImportButton compact />
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className="h-9 rounded-sm px-2 active:scale-[0.96]"
+                >
+                  <Link
+                    href="/dashboard/connections"
+                    id="import-data"
+                    prefetch={true}
+                    aria-label={t('dashboard.connections')}
+                    onMouseEnter={() => cableIconRef.current?.startAnimation()}
+                    onMouseLeave={() => cableIconRef.current?.stopAnimation()}
+                  >
+                    <CableIcon ref={cableIconRef} className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('dashboard.connections')}</TooltipContent>
+            </Tooltip>
+            <FeedbackButton />
             <ReferralButton />
             <UserMenu />
           </div>

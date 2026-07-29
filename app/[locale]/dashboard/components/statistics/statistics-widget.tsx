@@ -3,8 +3,8 @@
 import * as React from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useData } from "@/context/data-provider"
-import { Clock, PiggyBank, Award, BarChart, Info } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Clock, PiggyBank, Award, BarChart } from "lucide-react"
+import { InfoBubble } from "@/components/ui/info-bubble"
 import { cn, calculateStatistics } from "@/lib/utils"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { useBreakevenStore } from "@/store/widgets/breakeven-store"
@@ -197,16 +197,9 @@ export default function StatisticsWidget({ size = 'medium', dayData }: Statistic
             >
               {t('statistics.title')}
             </CardTitle>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('statistics.tooltip')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <InfoBubble iconClassName="size-3.5">
+              <p>{t('statistics.tooltip')}</p>
+            </InfoBubble>
           </div>
           <BarChart className="h-3.5 w-3.5 text-muted-foreground" />
         </div>
@@ -274,16 +267,9 @@ export default function StatisticsWidget({ size = 'medium', dayData }: Statistic
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-1">
                   <span className="text-muted-foreground text-xs">{t('statistics.performance.avgWin')}</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="h-3 w-3 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{t('statistics.performance.avgWinTooltip')}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <InfoBubble iconClassName="size-3">
+                    <p>{t('statistics.performance.avgWinTooltip')}</p>
+                  </InfoBubble>
                 </div>
                 <span className="text-sm font-medium text-green-500 font-mono tabular-nums">{formatCurrency(avgWinPerDay)}</span>
               </div>
@@ -291,16 +277,9 @@ export default function StatisticsWidget({ size = 'medium', dayData }: Statistic
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground text-xs">{t('statistics.performance.avgLoss')}</span>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="h-3 w-3 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{t('statistics.performance.avgLossTooltip')}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <InfoBubble iconClassName="size-3">
+                      <p>{t('statistics.performance.avgLossTooltip')}</p>
+                    </InfoBubble>
                   </div>
                   <span className="text-sm font-medium text-red-500 font-mono tabular-nums">-{formatCurrency(avgLossPerDay)}</span>
                 </div>

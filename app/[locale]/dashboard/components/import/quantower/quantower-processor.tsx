@@ -1,11 +1,10 @@
 'use client'
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
+import React, { useState, useEffect, useCallback } from 'react'
 import { toast } from "sonner"
 import { Trade } from '@/prisma/generated/prisma/browser'
 import { Input } from "@/components/ui/input"
+import { ProcessedTradesPreview } from '../components/processed-trades-preview'
 
 interface ContractSpec {
   tickSize: number;
@@ -553,11 +552,6 @@ export default function QuantowerOrderProcessor({ csvData, headers, processedTra
     processOrders()
   }, [processOrders])
 
-  const uniqueSymbols = useMemo(() => Array.from(new Set(processedTrades.map(trade => trade.instrument).filter(Boolean))), [processedTrades])
-
-  const totalPnL = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0), [processedTrades])
-  const totalCommission = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0), [processedTrades])
-
   const handleContractSpecChange = (symbol: string, field: keyof ContractSpec, value: string) => {
     setContractSpecs(prev => ({
       ...prev,
@@ -617,72 +611,7 @@ export default function QuantowerOrderProcessor({ csvData, headers, processedTra
             </div>
           )}
           
-          <div className="px-2">
-            <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Instrument</TableHead>
-                  <TableHead>Side</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Entry Price</TableHead>
-                  <TableHead>Close Price</TableHead>
-                  <TableHead>Entry Date</TableHead>
-                  <TableHead>Close Date</TableHead>
-                  <TableHead>PnL</TableHead>
-                  <TableHead>Time in Position</TableHead>
-                  <TableHead>Commission</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {processedTrades.map((trade, index) => (
-                  <TableRow key={trade.entryId || index}>
-                    <TableCell>{trade.instrument}</TableCell>
-                    <TableCell>{trade.side}</TableCell>
-                    <TableCell>{trade.quantity}</TableCell>
-                    <TableCell>{trade.entryPrice}</TableCell>
-                    <TableCell>{trade.closePrice || '-'}</TableCell>
-                    <TableCell>{trade.entryDate ? new Date(trade.entryDate).toLocaleString() : '-'}</TableCell>
-                    <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
-                    <TableCell className={(trade.pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
-                      {(trade.pnl || 0).toFixed(2)}
-                    </TableCell>
-                    <TableCell>{trade.timeInPosition ? `${Math.floor(trade.timeInPosition / 60)}m ${Math.floor(trade.timeInPosition % 60)}s` : '-'}</TableCell>
-                    <TableCell>{(trade.commission || 0).toFixed(2)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          
-          <div className="flex justify-between px-2 py-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Total PnL</h3>
-              <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {totalPnL.toFixed(2)}
-              </p>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Total Commission</h3>
-              <p className="text-xl font-bold text-blue-600">
-                {totalCommission.toFixed(2)}
-              </p>
-            </div>
-          </div>
-          
-          <div className="px-2">
-            <h3 className="text-lg font-semibold mb-2">Instruments Traded</h3>
-            <div className="flex flex-wrap gap-2">
-              {uniqueSymbols.map((symbol) => (
-                <Button
-                  key={symbol}
-                  variant="outline"
-                >
-                  {symbol}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <ProcessedTradesPreview trades={processedTrades} />
         </div>
       </div>
     </div>

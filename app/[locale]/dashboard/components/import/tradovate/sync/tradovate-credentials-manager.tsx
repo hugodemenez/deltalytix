@@ -109,6 +109,14 @@ export function TradovateCredentialsManager() {
 
         // Also store in sessionStorage as backup
         sessionStorage.setItem("tradovate_oauth_state", result.state);
+        sessionStorage.setItem(
+          "tradovate_oauth_pending",
+          JSON.stringify({
+            environment,
+            // Reconnecting a known connection — skeleton replaces that row in place.
+            externalId: accountId !== "default" ? accountId : undefined,
+          }),
+        );
 
         // Redirect to Tradovate OAuth
         window.location.href = result.authUrl;

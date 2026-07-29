@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from 'react'
 import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 
 
-import { Badge } from "@/components/ui/badge"
 import { Clock } from 'lucide-react'
 import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
 
@@ -65,13 +64,13 @@ export function SyncCountdown({ lastSyncTime, isAutoSyncing, credentialId }: Syn
 
 
   if (isAutoSyncing) {
-    return <span className="text-primary">Syncing...</span>
+    return <span className="inline-flex items-center gap-1 text-sm text-black/55 dark:text-white/55">Syncing...</span>
   }
 
   return (
-    <Badge variant={isAutoSyncing ? "default" : "secondary"} className="ml-2">
-      <Clock className="h-3 w-3 mr-1" />
+    <span className="inline-flex items-center gap-1 text-sm text-black/55 dark:text-white/55">
+      <Clock className="h-3.5 w-3.5" strokeWidth={1.75} />
       {timeLeft}
-    </Badge>
+    </span>
   )
 } 

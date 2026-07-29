@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge"
 // Link removed; unauthenticated users can't reach settings
 import { useAuthPreferenceStore } from "@/store/auth-preference-store"
 import { openMailbox } from "@/lib/open-mailbox"
+import { signupRedirectPath } from "@/lib/signup-redirect"
 
 const formSchema = z.object({
     email: z.string().email(),
@@ -231,10 +232,12 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setIsLoading(true)
         setAuthMethod('email')
         try {
-            await signInWithPasswordAction(values.email, values.password || '')
+            const result = await signInWithPasswordAction(values.email, values.password || '')
             toast.success(t('success'), { description: t('auth.signIn') })
             router.refresh()
-            router.push(nextUrl || '/dashboard')
+            // This action doubles as registration when the account does not
+            // exist yet, so it can legitimately return a brand-new user.
+            router.push(signupRedirectPath(nextUrl, result?.isNewUser ?? false))
             setLastAuthPreference('password')
         } catch (error) {
             console.error(error)
@@ -269,12 +272,12 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setIsLoading(true)
         try {
             const email = form.getValues('email')
-            await verifyOtp(email, values.otp)
+            const result = await verifyOtp(email, values.otp)
             toast.success("Successfully verified. Redirecting...", {
                 description: "Successfully verified. Redirecting...",
             })
             router.refresh()
-            router.push(nextUrl || '/dashboard')
+            router.push(signupRedirectPath(nextUrl, result?.isNewUser ?? false))
         } catch (error) {
             console.error(error)
             toast.error("Error", {

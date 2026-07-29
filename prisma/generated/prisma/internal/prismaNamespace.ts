@@ -391,7 +391,7 @@ export const ModelName = {
   TeamSubscription: 'TeamSubscription',
   Notification: 'Notification',
   User: 'User',
-  Synchronization: 'Synchronization',
+  Connection: 'Connection',
   Team: 'Team',
   TeamInvitation: 'TeamInvitation',
   TeamManager: 'TeamManager',
@@ -430,7 +430,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "trade" | "tickDetails" | "subscription" | "businessSubscription" | "teamSubscription" | "notification" | "user" | "synchronization" | "team" | "teamInvitation" | "teamManager" | "business" | "businessManager" | "businessInvitation" | "group" | "account" | "payout" | "dashboardLayout" | "subscriptionFeedback" | "mood" | "shared" | "referral" | "financialEvent" | "tag" | "newsletter" | "post" | "comment" | "vote" | "order" | "tradeAnalytics" | "historicalData"
+    modelProps: "trade" | "tickDetails" | "subscription" | "businessSubscription" | "teamSubscription" | "notification" | "user" | "connection" | "team" | "teamInvitation" | "teamManager" | "business" | "businessManager" | "businessInvitation" | "group" | "account" | "payout" | "dashboardLayout" | "subscriptionFeedback" | "mood" | "shared" | "referral" | "financialEvent" | "tag" | "newsletter" | "post" | "comment" | "vote" | "order" | "tradeAnalytics" | "historicalData"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -952,77 +952,77 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
-    Synchronization: {
-      payload: Prisma.$SynchronizationPayload<ExtArgs>
-      fields: Prisma.SynchronizationFieldRefs
+    Connection: {
+      payload: Prisma.$ConnectionPayload<ExtArgs>
+      fields: Prisma.ConnectionFieldRefs
       operations: {
         findUnique: {
-          args: Prisma.SynchronizationFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$SynchronizationPayload> | null
+          args: Prisma.ConnectionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConnectionPayload> | null
         }
         findUniqueOrThrow: {
-          args: Prisma.SynchronizationFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$SynchronizationPayload>
+          args: Prisma.ConnectionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConnectionPayload>
         }
         findFirst: {
-          args: Prisma.SynchronizationFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$SynchronizationPayload> | null
+          args: Prisma.ConnectionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConnectionPayload> | null
         }
         findFirstOrThrow: {
-          args: Prisma.SynchronizationFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$SynchronizationPayload>
+          args: Prisma.ConnectionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConnectionPayload>
         }
         findMany: {
-          args: Prisma.SynchronizationFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$SynchronizationPayload>[]
+          args: Prisma.ConnectionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConnectionPayload>[]
         }
         create: {
-          args: Prisma.SynchronizationCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$SynchronizationPayload>
+          args: Prisma.ConnectionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConnectionPayload>
         }
         createMany: {
-          args: Prisma.SynchronizationCreateManyArgs<ExtArgs>
+          args: Prisma.ConnectionCreateManyArgs<ExtArgs>
           result: BatchPayload
         }
         createManyAndReturn: {
-          args: Prisma.SynchronizationCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$SynchronizationPayload>[]
+          args: Prisma.ConnectionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConnectionPayload>[]
         }
         delete: {
-          args: Prisma.SynchronizationDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$SynchronizationPayload>
+          args: Prisma.ConnectionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConnectionPayload>
         }
         update: {
-          args: Prisma.SynchronizationUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$SynchronizationPayload>
+          args: Prisma.ConnectionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConnectionPayload>
         }
         deleteMany: {
-          args: Prisma.SynchronizationDeleteManyArgs<ExtArgs>
+          args: Prisma.ConnectionDeleteManyArgs<ExtArgs>
           result: BatchPayload
         }
         updateMany: {
-          args: Prisma.SynchronizationUpdateManyArgs<ExtArgs>
+          args: Prisma.ConnectionUpdateManyArgs<ExtArgs>
           result: BatchPayload
         }
         updateManyAndReturn: {
-          args: Prisma.SynchronizationUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$SynchronizationPayload>[]
+          args: Prisma.ConnectionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConnectionPayload>[]
         }
         upsert: {
-          args: Prisma.SynchronizationUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$SynchronizationPayload>
+          args: Prisma.ConnectionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConnectionPayload>
         }
         aggregate: {
-          args: Prisma.SynchronizationAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateSynchronization>
+          args: Prisma.ConnectionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateConnection>
         }
         groupBy: {
-          args: Prisma.SynchronizationGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.SynchronizationGroupByOutputType>[]
+          args: Prisma.ConnectionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ConnectionGroupByOutputType>[]
         }
         count: {
-          args: Prisma.SynchronizationCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.SynchronizationCountAggregateOutputType> | number
+          args: Prisma.ConnectionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ConnectionCountAggregateOutputType> | number
         }
       }
     }
@@ -2770,6 +2770,7 @@ export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof
 export const TradeScalarFieldEnum = {
   id: 'id',
   accountNumber: 'accountNumber',
+  accountId: 'accountId',
   quantity: 'quantity',
   entryId: 'entryId',
   closeId: 'closeId',
@@ -2879,11 +2880,11 @@ export const UserScalarFieldEnum = {
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
-export const SynchronizationScalarFieldEnum = {
+export const ConnectionScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
   service: 'service',
-  accountId: 'accountId',
+  externalId: 'externalId',
   lastSyncedAt: 'lastSyncedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
@@ -2894,7 +2895,7 @@ export const SynchronizationScalarFieldEnum = {
   environment: 'environment'
 } as const
 
-export type SynchronizationScalarFieldEnum = (typeof SynchronizationScalarFieldEnum)[keyof typeof SynchronizationScalarFieldEnum]
+export type ConnectionScalarFieldEnum = (typeof ConnectionScalarFieldEnum)[keyof typeof ConnectionScalarFieldEnum]
 
 
 export const TeamScalarFieldEnum = {
@@ -3027,6 +3028,7 @@ export const AccountScalarFieldEnum = {
   promoType: 'promoType',
   renewalNotice: 'renewalNotice',
   minPnlToCountAsDay: 'minPnlToCountAsDay',
+  connectionId: 'connectionId',
   buffer: 'buffer',
   considerBuffer: 'considerBuffer',
   shouldConsiderTradesBeforeReset: 'shouldConsiderTradesBeforeReset'
@@ -3570,7 +3572,7 @@ export type GlobalOmitConfig = {
   teamSubscription?: Prisma.TeamSubscriptionOmit
   notification?: Prisma.NotificationOmit
   user?: Prisma.UserOmit
-  synchronization?: Prisma.SynchronizationOmit
+  connection?: Prisma.ConnectionOmit
   team?: Prisma.TeamOmit
   teamInvitation?: Prisma.TeamInvitationOmit
   teamManager?: Prisma.TeamManagerOmit

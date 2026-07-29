@@ -2,12 +2,17 @@ import type { NextConfig } from 'next';
 import createMDX from '@next/mdx';
 import os from 'os';
 import { SUPPORT_SEARCH_TRACE_INCLUDES } from './lib/ai/search-codebase';
+import { AGENT_SKILLS_TRACE_INCLUDES } from './lib/agent-skills/load-skill';
 
 const detectedBuildWorkers =
   typeof os.availableParallelism === 'function'
     ? os.availableParallelism()
     : os.cpus().length;
-const defaultBuildWorkers = Math.max(4, detectedBuildWorkers * 2);
+// On Vercel (4-core build machines), oversubscribing workers (* 2) causes
+// static-generation thrashing and 60s per-page timeouts. Match core count.
+const defaultBuildWorkers = process.env.VERCEL
+  ? Math.max(1, detectedBuildWorkers)
+  : Math.max(4, detectedBuildWorkers * 2);
 const configuredBuildWorkers = Number.parseInt(
   process.env.NEXT_BUILD_WORKERS ?? '',
   10
@@ -17,18 +22,30 @@ const buildWorkers =
     ? configuredBuildWorkers
     : defaultBuildWorkers;
 
+/** Proto + SSL assets loaded via fs at runtime (server actions + API routes). */
+const RITHMIC_PROTOCOL_TRACE_INCLUDES = [
+  './lib/rithmic-protocol/proto/**/*',
+  './lib/rithmic-protocol/etc/**/*',
+] as const;
+
 const nextConfig: NextConfig = {
-  output: "standalone",
-  // Hide the Next.js dev indicator during changelog media capture (see lib/agent-skills/changelog-media.md).
+  // Standalone is for Docker/self-host (`Dockerfile.bun` copies `.next/standalone`).
+  // On Vercel + Turbopack (Next 16.3+), the adapter skips `next-server.js.nft.json`,
+  // so `output: "standalone"` crashes finalize with ENOENT. Vercel ignores standalone
+  // output anyway.
+  ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
+  // Hide the Next.js dev indicator during changelog media capture (see agents/skills/changelog-media/SKILL.md).
   ...(process.env.CHANGELOG_MEDIA_CAPTURE === '1' ? { devIndicators: false as const } : {}),
-  // playwright-core reads browsers.json at import time; keep it external + traced for cron scraping.
-  serverExternalPackages: ['playwright-core', '@vercel/sandbox'],
   allowedDevOrigins: ["13.36.171.174", "192.168.0.178"],
   // NOTE: Do not add hardcoded /en redirects for localized routes (e.g. /updates
   // -> /en/updates). next.config redirects run before middleware, so they force a
   // single locale and prevent the i18n middleware from routing by the user's
   // selected language. Locale routing is handled entirely by the i18n middleware.
-  // cacheComponents: true, // Enable Cache Components (Next.js 16+)
+  // Instant Navigations: Cache Components + Partial Prefetching (Next.js 16.3+).
+  // Opt routes in with `export const instant = true` (and optionally
+  // `export const prefetch = 'allow-runtime'` for session-aware prefetch).
+  cacheComponents: true,
+  partialPrefetching: true,
   images: {
     remotePatterns: [
       {
@@ -43,8 +60,13 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     cpus: buildWorkers,
-    useCache: true,
     mdxRs: true,
+    // Quiet Route Handler prerender bail-outs that are caught by try/catch.
+    hideLogsAfterAbort: true,
+    // Validate Instant Navigations only on routes that export `instant`.
+    instantInsights: {
+      validationLevel: 'manual-warning',
+    },
     optimizePackageImports: [
       'lucide-react',
       'date-fns',
@@ -57,11 +79,15 @@ const nextConfig: NextConfig = {
     '/app/api/**': [
       './prisma/generated/prisma/**',
     ],
-    '/api/cron/investing': [
-      './node_modules/playwright-core/**',
-    ],
     // Runtime fs search in /api/ai/support — keep docs in the serverless bundle.
     '/api/ai/support': [...SUPPORT_SEARCH_TRACE_INCLUDES],
+    // /.well-known/agent-skills/index.json is dynamic and reads the shared
+    // skill markdown at request time to compute its digests.
+    '/.well-known/agent-skills/**': [...AGENT_SKILLS_TRACE_INCLUDES],
+    // Protocol login is a server action from Connections (not only /api/rithmic-protocol/*).
+    // Include assets for all server traces so preview/production lambdas can load protos.
+    '/*': [...RITHMIC_PROTOCOL_TRACE_INCLUDES],
+    '/api/rithmic-protocol/**': [...RITHMIC_PROTOCOL_TRACE_INCLUDES],
   },
 }
 

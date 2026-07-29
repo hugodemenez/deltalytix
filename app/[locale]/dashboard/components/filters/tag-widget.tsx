@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus, X, Edit2, Trash2, Search, Info } from 'lucide-react'
+import { Plus, X, Edit2, Trash2, Search } from 'lucide-react'
+import { InfoBubble } from '@/components/ui/info-bubble'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
@@ -303,21 +304,15 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
               >
                 {t('widgets.tags.title')}
               </CardTitle>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className={cn(
-                      "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                      size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
-                    )} />
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[300px]">
-                    <div className="space-y-1">
-                      <p className="font-medium wrap-break-word">{t('widgets.tags.description')}</p>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <InfoBubble
+                side="top"
+                iconClassName={size === 'small' ? 'size-3.5' : 'size-4'}
+                contentClassName="max-w-[300px]"
+              >
+                <div className="space-y-1">
+                  <p className="font-medium wrap-break-word">{t('widgets.tags.description')}</p>
+                </div>
+              </InfoBubble>
             </div>
             <div className="flex items-center gap-2">
               {tagFilter.tags.length > 0 && (

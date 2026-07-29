@@ -216,7 +216,10 @@ export function Toolbar({
             willChange: 'transform, opacity' // Optimize for animations
           }}
           variants={toolbarVariants}
-          initial="hidden"
+          // Skip mount animation (scale/y) so Instant Nav chrome stays size-stable —
+          // same idea as Connections `t-stagger` chrome that paints once. Auto-hide
+          // still animates when `animate` flips after mount.
+          initial={false}
           animate={isVisible ? "visible" : "hidden"}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}

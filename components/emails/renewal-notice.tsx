@@ -101,9 +101,9 @@ export default function RenewalNoticeEmail({
 
   return (
     <Html>
-      <Head />
-      <Preview>{t.preview}</Preview>
       <Tailwind>
+        <Head />
+        <Preview>{t.preview}</Preview>
         <Body className="bg-gray-50 font-sans">
           <Section className="bg-white max-w-[600px] mx-auto rounded-lg shadow-xs">
             <Section className="px-6 py-8">

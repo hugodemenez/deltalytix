@@ -111,6 +111,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={value}>
+      {/*
+        Safari samples a fixed top-edge element for browser-chrome tinting.
+        Remount on theme change so the status-bar region stays in sync and
+        does not leave a light strip after toggling light/dark.
+      */}
+      <span
+        key={`safari-theme-top-${effectiveTheme}`}
+        className="safari-theme-sampler"
+        aria-hidden="true"
+      />
       {children}
     </ThemeContext.Provider>
   )

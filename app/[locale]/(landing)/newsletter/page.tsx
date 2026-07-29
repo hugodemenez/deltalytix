@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { Suspense } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2 } from "lucide-react"
 import { getScopedI18n } from "@/locales/server"
@@ -8,16 +9,16 @@ export const metadata: Metadata = {
   description: "Manage your newsletter preferences and subscription settings",
 }
 
-export default async function NewsletterPage(
-  props: {
-    searchParams: Promise<{ [key: string]: string | undefined }>
-  }
-) {
-  const searchParams = await props.searchParams;
-  const t = await getScopedI18n('newsletter')
+async function NewsletterPageContent({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | undefined }>
+}) {
+  const resolvedSearchParams = await searchParams
+  const t = await getScopedI18n("newsletter")
 
-  const isUnsubscribed = searchParams?.status === "unsubscribed"
-  const email = searchParams?.email
+  const isUnsubscribed = resolvedSearchParams?.status === "unsubscribed"
+  const email = resolvedSearchParams?.email
 
   return (
     <main className="min-h-[calc(100vh-4rem)] flex items-start">
@@ -56,5 +57,15 @@ export default async function NewsletterPage(
         </div>
       </div>
     </main>
+  )
+}
+
+export default function NewsletterPage(props: {
+  searchParams: Promise<{ [key: string]: string | undefined }>
+}) {
+  return (
+    <Suspense fallback={null}>
+      <NewsletterPageContent searchParams={props.searchParams} />
+    </Suspense>
   )
 }

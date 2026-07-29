@@ -7,8 +7,9 @@ import { Journaling } from "./journaling"
 import { Timeline } from "./timeline"
 import { MindsetSummary } from "./mindset-summary"
 import { useI18n } from "@/locales/client"
-import { Info, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Download } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { InfoBubble } from "@/components/ui/info-bubble"
 import {
   Tooltip as UITooltip,
   TooltipContent,
@@ -382,19 +383,12 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
             >
               {t('mindset.title')}
             </CardTitle>
-            <TooltipProvider>
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <Info className={cn(
-                    "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                    size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
-                  )} />
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>{t('mindset.description')}</p>
-                </TooltipContent>
-              </UITooltip>
-            </TooltipProvider>
+            <InfoBubble
+              side="top"
+              iconClassName={size === 'small' ? 'size-3.5' : 'size-4'}
+            >
+              <p>{t('mindset.description')}</p>
+            </InfoBubble>
           </div>
           <div className="flex items-center gap-2">
             <TooltipProvider>

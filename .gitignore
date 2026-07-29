@@ -6,6 +6,9 @@
 !.cursor/environment.json
 !.cursor/rules/
 !.cursor/rules/**
+# Symlinks into agents/skills/ so Cursor auto-discovers the shared skills.
+!.cursor/skills/
+!.cursor/skills/**
 WARP.md
 .github/instructions/
 
@@ -30,6 +33,7 @@ WARP.md
 *.pem
 wip
 /private/
+/tmp/
 
 # debug
 npm-debug.log*
@@ -68,3 +72,4 @@ datafeeds/
 
 # Lock files
 !bun.lock
+og-preview-artifacts/

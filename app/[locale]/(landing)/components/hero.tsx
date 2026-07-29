@@ -5,6 +5,7 @@ import Link, { useLinkStatus } from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useTheme } from "@/context/theme-provider";
+import { captureMarketingCtaClicked } from "@/lib/marketing-analytics";
 
 function GetStartedLinkContent({ children }: { children: React.ReactNode }) {
   const { pending } = useLinkStatus();
@@ -101,6 +102,14 @@ export default function Hero() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href={"/dashboard"}
+              onClick={() =>
+                captureMarketingCtaClicked({
+                  ctaId: "hero_get_started",
+                  destination: "/dashboard",
+                  locale,
+                  placement: "hero",
+                })
+              }
               className="inline-flex h-12 items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] hover:opacity-85 active:scale-[0.96] dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]"
             >
               <GetStartedLinkContent>{t("landing.cta")}</GetStartedLinkContent>

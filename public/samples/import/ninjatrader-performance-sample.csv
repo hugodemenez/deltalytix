@@ -1,0 +1,3 @@
+Account,Instrument,Market pos.,Qty,Entry name,Entry price,Entry time,Exit name,Exit price,Exit time,Profit,Commission
+Sim101,MES 03-25,Long,2,EN1,5125.25,03/10/2025 9:35:12 AM,EX1,5130.50,03/10/2025 9:42:15 AM,52.50,2.40
+Sim101,MNQ 03-25,Short,1,EN2,18550.00,03/10/2025 10:15:05 AM,EX2,18535.25,03/10/2025 10:28:40 AM,29.50,1.20

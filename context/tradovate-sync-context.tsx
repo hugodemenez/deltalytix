@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { useData } from '@/context/data-provider'
 import { toast } from 'sonner'
 import { useI18n } from "@/locales/client"
-import { Synchronization } from '@/prisma/generated/prisma/browser'
+import { ConnectionView } from '@/lib/connection-view'
 import { DEFAULT_INCLUDED_FEE_TYPES } from '@/app/[locale]/dashboard/components/import/tradovate/sync/fee-types'
 
 interface TradovateSyncContextType {
@@ -16,7 +16,7 @@ interface TradovateSyncContextType {
   isAutoSyncing: boolean
   
   // Account management
-  accounts: Synchronization[]
+  accounts: ConnectionView[]
   loadAccounts: () => Promise<void>
   deleteAccount: (accountId: string) => Promise<void>
   
@@ -35,7 +35,7 @@ const TradovateSyncContext = createContext<TradovateSyncContextType | undefined>
 
 export function TradovateSyncContextProvider({ children }: { children: ReactNode }) {
   const [isAutoSyncing, setIsAutoSyncing] = useState(false)
-  const [accounts, setAccounts] = useState<Synchronization[]>([])
+  const [accounts, setAccounts] = useState<ConnectionView[]>([])
   const [syncInterval, setSyncInterval] = useState(15) // 15 minutes default
   const [enableAutoSync, setEnableAutoSync] = useState(false)
 
@@ -53,8 +53,10 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
 
   // Normalize dates and fee config returned from API
   const normalizeSynchronization = useCallback(
-    (sync: any): Synchronization => ({
+    (sync: any): ConnectionView => ({
       ...sync,
+      externalId: sync?.externalId || sync?.accountId,
+      accountId: sync?.accountId || sync?.externalId,
       lastSyncedAt: sync?.lastSyncedAt ? new Date(sync.lastSyncedAt) : null,
       tokenExpiresAt: sync?.tokenExpiresAt ? new Date(sync.tokenExpiresAt) : null,
       dailySyncTime: sync?.dailySyncTime ? new Date(sync.dailySyncTime) : null,

@@ -57,7 +57,6 @@ import {
   getUserTeamAccess,
   deleteTeam,
   renameTeam,
-  sendTeamInvitation,
   getTeamInvitations,
   removeTraderFromTeam,
   cancelTeamInvitation,
@@ -498,8 +497,22 @@ export function TeamManagement({
 
     setIsSubmitting(true)
     try {
-      const result = await sendTeamInvitation(selectedTeam.id, newTraderEmail.trim())
-      if (result.success) {
+      // Route Handler, not a server action: rendering the invitation email needs
+      // @react-email/render, which cannot be imported into a 'use server' module
+      // on Turbopack builds without breaking every other action in that file.
+      const response = await fetch('/api/team/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: selectedTeam.id,
+          email: newTraderEmail.trim(),
+        }),
+      })
+      const result = (await response.json().catch(() => ({}))) as {
+        success?: boolean
+        error?: string
+      }
+      if (response.ok && result.success) {
         toast.success(t('teams.invitations.sent'))
         setNewTraderEmail('')
         // Only reload pending invitations, no need to reload all team data

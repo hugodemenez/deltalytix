@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { useUserStore } from '@/store/user-store'
-import ImportButton from '../app/[locale]/dashboard/components/import/import-button'
+import Link from 'next/link'
 import { useI18n } from "@/locales/client"
 import { signOut } from '@/server/auth'
 import PricingPlans from '@/components/pricing-plans'
@@ -151,7 +151,13 @@ export default function Modals() {
               {t('modals.noTrades.description')}
             </DialogDescription>
           </DialogHeader>
-          <ImportButton />
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <Button asChild className="rounded-sm active:scale-[0.96]">
+              <Link href="/dashboard/connections" onClick={() => setIsTradesDialogOpen(false)}>
+                {t('dashboard.connections')}
+              </Link>
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

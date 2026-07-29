@@ -1,0 +1,5 @@
+Account,Date/Time,Symbol,Description,Symbol type,Expiration date,Strike price,Side,Order type,Quantity,Price,Gross P/L,Fee,Net P/L,Trade value,Trade ID,Order ID,Position ID,Connection name,Comment,Exchange
+Demo,2025-03-10 9:35:12 AM +00:00,MES,Micro E-mini S&P,Futures,,,Buy,Market,2,5125.25,0,1.20,-1.20,10250.50,T1,O1,P1,Sim,,CME
+Demo,2025-03-10 9:42:15 AM +00:00,MES,Micro E-mini S&P,Futures,,,Sell,Market,2,5130.50,52.50,1.20,51.30,10261.00,T2,O2,P1,Sim,,CME
+Demo,2025-03-10 10:15:05 AM +00:00,MNQ,Micro E-mini Nasdaq,Futures,,,Sell,Market,1,18550.00,0,0.60,-0.60,18550.00,T3,O3,P2,Sim,,CME
+Demo,2025-03-10 10:28:40 AM +00:00,MNQ,Micro E-mini Nasdaq,Futures,,,Buy,Market,1,18535.25,29.50,0.60,28.90,18535.25,T4,O4,P2,Sim,,CME

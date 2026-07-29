@@ -27,7 +27,24 @@ export async function generateThorToken() {
       }
     })
 
+    const dbUser = await prisma.user.findUnique({
+      where: { auth_user_id: user.id },
+      select: { id: true },
+    })
+    if (dbUser) {
+      const { ensureConnection } = await import('@/server/connections')
+      await ensureConnection({
+        userId: dbUser.id,
+        service: 'thor',
+        externalId: 'default',
+        token,
+        lastSyncedAt: new Date(),
+        environment: 'live',
+      })
+    }
+
     revalidatePath('/dashboard')
+    revalidatePath('/dashboard/connections')
     return { token }
   } catch (error) {
     console.error('Failed to generate Thor token:', error)

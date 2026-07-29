@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { CommandItem } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 import { AlertTriangle, ChevronRight } from "lucide-react"
-import Image from "next/image"
+import { ThemeAwareLogo } from "@/components/monochrome-logo"
 import { PlatformConfig } from "../config/platforms"
 import { useI18n } from "@/locales/client"
 
@@ -52,12 +52,12 @@ export function PlatformItem({
         <div className="flex items-center py-1">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/50 bg-background/50 shrink-0">
             {platform.logo.path && (
-              <Image
-                src={platform.logo.path}
-                alt={platform.logo.alt || ''}
-                width={32}
-                height={32}
-                className="object-contain"
+              <ThemeAwareLogo
+                path={platform.logo.path}
+                darkPath={platform.logo.darkPath}
+                alt={platform.logo.alt || t(platform.name as keyof typeof t)}
+                size={32}
+                className="h-8 w-8"
               />
             )}
             {platform.logo.component && (
@@ -73,7 +73,7 @@ export function PlatformItem({
                 <Badge variant="secondary" className="transition-transform duration-200 hover:scale-105">
                   {t('import.type.badge.maintenance')}
                 </Badge>
-                <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-500 animate-pulse" />
+                <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-500 motion-safe:animate-pulse" />
               </>
             )}
             {platform.isComingSoon && !platform.isDisabled && (
@@ -101,4 +101,4 @@ export function PlatformItem({
       </CommandItem>
     </div>
   )
-} 
+}

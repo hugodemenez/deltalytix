@@ -16,13 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig } from "@/components/ui/chart";
 import { useData } from "@/context/data-provider";
 import { cn } from "@/lib/utils";
-import { Info } from "lucide-react";
-import {
-  Tooltip as UITooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { InfoBubble } from "@/components/ui/info-bubble";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
 import {
@@ -173,21 +167,12 @@ export default function PnLPerContractChart({
             >
               {t("pnlPerContract.title")}
             </CardTitle>
-            <TooltipProvider>
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <Info
-                    className={cn(
-                      "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                      size === "small" ? "h-3.5 w-3.5" : "h-4 w-4",
-                    )}
-                  />
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>{t("pnlPerContract.description")}</p>
-                </TooltipContent>
-              </UITooltip>
-            </TooltipProvider>
+            <InfoBubble
+              side="top"
+              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
+            >
+              <p>{t("pnlPerContract.description")}</p>
+            </InfoBubble>
           </div>
         </div>
       </CardHeader>

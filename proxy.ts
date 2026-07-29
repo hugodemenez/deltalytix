@@ -437,7 +437,13 @@ export default async function proxy(req: NextRequest) {
   if (!user || error) {
     if (isProtectedDashboardPath(pathname)) {
       const encodedSearchParams = `${pathname.substring(1)}${req.nextUrl.search}`
-      const authUrl = new URL("/authentication", req.url)
+      const pathLocale = pathname.split("/").find((segment) =>
+        LOCALES.includes(segment),
+      )
+      const authPath = pathLocale
+        ? `/${pathLocale}/authentication`
+        : "/authentication"
+      const authUrl = new URL(authPath, req.url)
 
       if (encodedSearchParams) {
         authUrl.searchParams.append("next", encodedSearchParams)

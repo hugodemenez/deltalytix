@@ -1,0 +1,3 @@
+accountNumber,instrument,side,quantity,entryPrice,closePrice,entryDate,closeDate,pnl,commission,timeInPosition
+DEMO-001,MES,Long,2,5125.25,5130.50,2025-03-10 09:35:00,2025-03-10 09:42:15,52.50,2.40,435
+DEMO-001,MNQ,Short,1,18550.00,18535.25,2025-03-10 10:15:00,2025-03-10 10:28:40,29.50,1.20,820

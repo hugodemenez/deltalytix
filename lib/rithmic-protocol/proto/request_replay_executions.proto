@@ -1,0 +1,15 @@
+
+package rti;
+
+message RequestReplayExecutions
+	{
+	required int32    template_id    = 154467;
+	repeated string   user_msg       = 132760;
+
+	optional string   fcm_id         = 154013;
+	optional string   ib_id          = 154014;
+	optional string   account_id     = 154008;
+
+	optional int32    start_index    = 153002;
+	optional int32    finish_index   = 153003;
+	}

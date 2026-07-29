@@ -1,0 +1,3 @@
+symbol,qty,pnl,duration,buyFillId,buyPrice,boughtTimestamp,sellFillId,sellPrice,soldTimestamp
+MESH5,2,52.50,7min 3sec,B-1001,5125.25,03/10/2025 09:35:12,S-1002,5130.50,03/10/2025 09:42:15
+MNQH5,1,29.50,13min 35sec,B-1003,18535.25,03/10/2025 10:15:05,S-1004,18550.00,03/10/2025 10:28:40

@@ -13,6 +13,7 @@ import referral from "./en/referral";
 import admin from "./en/admin";
 import faq from "./en/faq";
 import support from "./en/support";
+import feedback from "./en/feedback";
 import landingPreview from "./en/landing-preview";
 export default {
   ...shared,
@@ -31,6 +32,7 @@ export default {
   ...admin,
   ...faq,
   ...support,
+  ...feedback,
   "footer.heading": "Footer",
   "footer.description": "Advanced analytics for modern traders.",
   "footer.product.title": "Product",
@@ -122,13 +124,83 @@ export default {
   "dashboard.profile": "Profile",
   "dashboard.billing": "Subscription",
   "dashboard.data": "Data",
-  "betaInvite.connectionFlow.ariaLabel": "Try the new connection flow on beta",
-  "betaInvite.connectionFlow.title": "Try the new connection flow",
-  "betaInvite.connectionFlow.description":
-    "A clearer way to manage broker connections is available on beta. Want to give it a try?",
-  "betaInvite.connectionFlow.tryBeta": "Try on beta",
-  "betaInvite.connectionFlow.notNow": "Not now",
-  "betaInvite.connectionFlow.dismiss": "Dismiss",
+  "dashboard.connections": "Connections",
+  "connections.title": "Connections",
+  "connections.description":
+    "Manage broker connections and the trading accounts they host. Import files for standalone accounts.",
+  "connections.importFile": "Import file",
+  "connections.selectImportType": "Upload a file",
+  "connections.importSelected": "Import {platform}",
+  "connections.changeImportType": "Change type",
+  "connections.clearImportType": "Clear import type",
+  "connections.addConnection": "Add connection",
+  "connections.noConnectionsYet": "No broker connections yet. Add one to start syncing accounts.",
+  "connections.sections.rithmic": "Rithmic",
+  "connections.sections.rithmicProtocol": "Rithmic Protocol",
+  "connections.sections.tradovate": "Tradovate",
+  "connections.sections.dxfeed": "DxFeed",
+  "connections.sections.thor": "Thor",
+  "connections.sections.standalone": "Standalone accounts",
+  "connections.add.rithmic": "Add Rithmic connection",
+  "connections.add.rithmicProtocol": "Add Rithmic Protocol connection",
+  "connections.add.tradovate": "Add Tradovate connection",
+  "connections.add.dxfeed": "Add DxFeed connection",
+  "connections.add.thor": "Add Thor connection",
+  "connections.add.etp": "Add ETP connection",
+  "connections.emptySection": "No connections yet. Use + to add one.",
+  "connections.standaloneEmpty": "No standalone accounts. Import a file or enter trades manually.",
+  "connections.standaloneHint": "Imported without a broker sync",
+  "connections.lastSynced": "Last synced {time}",
+  "connections.neverSynced": "Never synced",
+  "connections.accountCount.one": "{count} account",
+  "connections.accountCount.other": "{count} accounts",
+  "connections.showMoreAccounts.one": "Show {count} more account",
+  "connections.showMoreAccounts.other": "Show {count} more accounts",
+  "connections.showFewerAccounts": "Show fewer",
+  "connections.tradeCount.one": "{count} trade",
+  "connections.tradeCount.other": "{count} trades",
+  "connections.lastTrade": "Last trade {date}",
+  "connections.env.live": "Live",
+  "connections.env.demo": "Demo",
+  "connections.sync.now": "Sync now",
+  "connections.sync.syncAll": "Sync all",
+  "connections.sync.allDone": "All connections synced",
+  "connections.sync.failed": "Sync failed",
+  "connections.sync.manualOnly": "Sync this connection from its settings.",
+  "connections.status.connected": "Connected",
+  "connections.status.error": "Disconnected",
+  "connections.status.syncFailed": "Last sync failed",
+  "connections.reconnect": "Reconnect",
+  "connections.reconnectFailed": "Could not start reconnect",
+  "connections.delete": "Delete connection",
+  "connections.deleteConfirmTitle": "Delete this connection?",
+  "connections.deleteConfirmDescription":
+    "This removes the broker link. Hosted accounts become standalone; trades are kept.",
+  "connections.deleted": "Connection deleted",
+  "connections.deleteFailed": "Failed to delete connection",
+  "connections.nextSyncIn": "Next sync in {time}",
+  "connections.nextSyncSchedule": "Schedule daily sync",
+  "connections.dailySync.title": "Daily sync time",
+  "connections.dailySync.description":
+    "Choose when this connection should sync automatically each day.",
+  "connections.dailySync.label": "Sync time (local)",
+  "connections.dailySync.timezoneNote": "Uses your local timezone ({timezone})",
+  "connections.dailySync.clear": "Clear schedule",
+  "connections.dailySync.updated": "Daily sync time updated",
+  "connections.dailySync.updateFailed": "Failed to update daily sync time",
+  "connections.dailySync.presets.morning": "Morning (8:00)",
+  "connections.dailySync.presets.midday": "Midday (12:00)",
+  "connections.dailySync.presets.afterClose": "After close",
+  "connections.dailySync.presets.midnight": "Midnight",
+  "connections.loadFailed": "Failed to load connections",
+  "connections.oauth.tradovate.success": "Tradovate connected",
+  "connections.oauth.tradovate.errorRegistered":
+    "Tradovate connection saved with an error: {reason}",
+  "connections.oauth.tradovate.unknownError": "Tradovate authentication failed",
+  "connections.oauth.tradovate.connecting": "Connecting Tradovate…",
+  "connections.oauth.tradovate.connectingHint":
+    "Finishing authentication and loading accounts",
+  "connections.modal.close": "Close",
   "dashboard.refreshData": "Refresh Data",
   "dashboard.inviteUsers": "Invite users",
   "dashboard.email": "Email",
@@ -296,6 +368,20 @@ export default {
   "import.atas.processedTrades": "Processed {count} trades from ATAS file",
   "import.preview.note":
     'Review the trades below. Click "Save" to import them to your account.',
+  "import.processed.title": "Processed trades",
+  "import.processed.totalPnl": "Total PnL",
+  "import.processed.totalCommission": "Total commission",
+  "import.processed.instruments": "Instruments traded",
+  "import.processed.columns.instrument": "Instrument",
+  "import.processed.columns.side": "Side",
+  "import.processed.columns.quantity": "Quantity",
+  "import.processed.columns.entryPrice": "Entry price",
+  "import.processed.columns.closePrice": "Close price",
+  "import.processed.columns.entryDate": "Entry date",
+  "import.processed.columns.closeDate": "Close date",
+  "import.processed.columns.pnl": "PnL",
+  "import.processed.columns.timeInPosition": "Time in position",
+  "import.processed.columns.commission": "Commission",
   "import.processing": {
     startProcessing: "Start Processing",
     starting: "Starting...",
@@ -335,24 +421,29 @@ export default {
   "import.type.rithmicSync.description": "Direct account syncing",
   "import.type.rithmicSync.details":
     "Direct sync with your Rithmic account. Requires authentication.",
+  "import.type.rithmicProtocolSync.name": "Rithmic Protocol",
+  "import.type.rithmicProtocolSync.description":
+    "Server-side Protocol API sync",
+  "import.type.rithmicProtocolSync.details":
+    "Sync order history through Rithmic R | Protocol API from Deltalytix servers (TypeScript), similar to Tradovate and DxFeed.",
   "import.type.csvAi.name": "CSV with AI",
-  "import.type.csvAi.description": "CSV file with AI mapping",
+  "import.type.csvAi.description": "Any CSV file",
   "import.type.rithmicPerf.name": "Rithmic Performance",
-  "import.type.rithmicPerf.description": "Import from Rithmic",
+  "import.type.rithmicPerf.description": "Rithmic Performance CSV",
   "import.type.rithmicPerf.details":
     "Remember to expand every row to see the full details during export.",
   "import.type.rithmicOrders.name": "Rithmic Orders",
-  "import.type.rithmicOrders.description": "Import from Rithmic",
+  "import.type.rithmicOrders.description": "Rithmic Orders CSV",
   "import.type.rithmicOrders.details":
     "Following fields are mandatory: Account, Buy/Sell, Avg Price, Symbol, Update time, Qty, Commission rate",
   "import.type.ninjaTrader.name": "NinjaTrader Performance",
-  "import.type.ninjaTrader.description": "Import from NinjaTrader",
+  "import.type.ninjaTrader.description": "NinjaTrader Performance CSV",
   "import.type.tradezella.name": "TradeZella",
-  "import.type.tradezella.description": "Import from TradeZella",
+  "import.type.tradezella.description": "TradeZella Excel file",
   "import.type.tradovate.name": "Tradovate",
-  "import.type.tradovate.description": "Import from Tradovate",
+  "import.type.tradovate.description": "Tradovate CSV file",
   "import.type.quantower.name": "Quantower",
-  "import.type.quantower.description": "Import from Quantower",
+  "import.type.quantower.description": "Quantower CSV file",
   "import.type.quantower.details":
     "Select columns to import: Account, Date/Time, Symbol, Description, Symbol type, Expiration date, Strike price, Side, Order type, Quantity, Price, Gross P/L, Fee, Net P/L, Trade value, Trade ID, Order ID, Position ID, Connection name, Comment, Exchange",
   "import.type.tutorial.title": "Tutorial Video",
@@ -361,6 +452,12 @@ export default {
   "import.type.tutorial.notAvailable":
     "Tutorial video for {platform} is not available.",
   "import.type.tutorial.viewDocs": "View Documentation",
+  "import.type.tutorial.open": "Tutorial",
+  "import.type.tutorial.redirectTitle": "Open external tutorial?",
+  "import.type.tutorial.redirectDescription":
+    "No in-app video is available for {platform}. Continue to the official documentation in a new tab?",
+  "import.type.tutorial.redirectConfirm": "Open tutorial",
+  "import.type.tutorial.downloadSample": "Download sample file",
   "import.type.badge.soon": "SOON",
   "import.type.badge.plus": "PLUS",
   "import.type.badge.maintenance": "MAINTENANCE",
@@ -376,10 +473,11 @@ export default {
   "import.type.copyright.platform":
     "Trading Platform by Rithmic™ is a trademark of Rithmic, LLC. All rights reserved.",
   "import.type.copyright.omne":
-    "The OMNE™ software is Copyright © 2024 by Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.",
+    "Powered by OMNE is a trademark of Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.",
+  "import.type.copyright.omneSoftware":
+    "The OMNE™ software is Copyright © 2026 by Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.",
   "import.type.topstep.name": "Topstep",
-  "import.type.topstep.description":
-    "Import trades from Topstep funded trader account exports",
+  "import.type.topstep.description": "Topstep CSV file",
   "import.type.topstep.details":
     "Make sure to export your trades in CSV format from your Topstep funded trader account dashboard.",
   notFound: {
@@ -581,6 +679,7 @@ export default {
     retry: "Retry",
     copy: "Copy",
     loading: "Loading",
+    moreInformation: "More information",
   },
   "import.error.accountExists": "Account already exists",
   "import.upload.dragAndDrop": "Drag and drop your files here",
@@ -1498,6 +1597,8 @@ export default {
     synchronizationRemoved: "Synchronization removed",
     editCredentials: "Edit Credentials",
     addNewCredentials: "Add New Credentials",
+    credentialsFormDescription:
+      "Enter your Rithmic login to fetch accounts and start syncing.",
     backToList: "Back to List",
     usernameLabel: "Rithmic Username",
     passwordLabel: "Rithmic Password",
@@ -1509,6 +1610,8 @@ export default {
     saveForNextLogin: "Save credentials for next login",
     getAccounts: "Get Accounts",
     selectAccountsTitle: "Select Accounts to Import",
+    selectAccountsDescription:
+      "Choose which accounts to sync, or keep all accounts enabled.",
     selectAllAccounts: "Select All Accounts",
     syncAllAccounts: "Sync All Accounts",
     syncAllAccountsDescription:
@@ -2253,6 +2356,76 @@ export default {
       },
     },
   },
+  rithmicProtocolSync: {
+    title: "Rithmic Protocol Sync",
+    description:
+      "Connect with Rithmic R | Protocol API to import fills as closed trades from the server — same pattern as Tradovate and DxFeed.",
+    connected: "Rithmic Protocol account connected successfully",
+    error: {
+      credentialsRequired:
+        "Enter username, password, system, and account start date to continue",
+      authFailed: "Could not connect to Rithmic Protocol API",
+    },
+    errors: {
+      USER_NOT_AUTHENTICATED: "You must be signed in to connect Rithmic.",
+      AUTH_FAILED: "Rithmic login failed: {reason}",
+      NO_ACCOUNTS: "No trading accounts were returned for this login.",
+      HISTORY_START_REQUIRED:
+        "Choose a valid account start date (on or before today).",
+      INVALID_STORED_CREDENTIALS: "Saved connection data is invalid. Reconnect.",
+      NO_TOKEN_RECONNECT: "This connection is missing credentials. Reconnect.",
+      DUPLICATE_TRADES: "These trades are already in your journal.",
+      SYNC_FAILED: "Trade sync failed. Try again in a few minutes.",
+      SAVE_TRADES_FAILED: "Trades were fetched but could not be saved: {detail}",
+      ACCOUNT_ID_REQUIRED: "Account identifier is missing.",
+      LOAD_SYNCHRONIZATIONS_FAILED:
+        "Could not load your saved Rithmic Protocol connections.",
+      DELETE_SYNC_FAILED: "Could not remove this connection.",
+      UPDATE_SYNC_TIME_FAILED: "Could not update the daily sync time.",
+    },
+    addAccount: {
+      title: "Connect Rithmic Protocol",
+      description:
+        "Sign in with your Rithmic username/password, then pick the system your account lives on (for example Rithmic 01 or Rithmic Paper Trading).",
+      gatewayLabel: "Connect point",
+      gatewayHelp:
+        "Choose the Rithmic connect point closest to you. Core (Chicago) works everywhere; a regional one only lowers latency.",
+      systemLabel: "Rithmic system",
+      usernameLabel: "Username",
+      passwordLabel: "Password",
+      historyStartLabel: "Account start date",
+      historyStartHelp:
+        "Pick the day you started trading this account. We import fills from then until today in serial 30-day batches (Rithmic guidance).",
+      connecting: "Connecting…",
+      connect: "Connect",
+    },
+    sync: {
+      inProgress: "Syncing Rithmic fills for {accountId}…",
+      tokenMissing: "Connection missing credentials — reconnect",
+      accountNotFound: "Account not found. Refresh the list and try again.",
+    },
+    multiAccount: {
+      empty: "No Rithmic Protocol connections yet. Click Connect to add one.",
+      accountsCount: "trading accounts",
+      syncAll: "Sync All",
+      syncNow: "Sync now",
+      remove: "Remove",
+      removeTitle: "Remove connection",
+      removeDescription:
+        'Remove the connection "{accountId}"? Already imported trades stay in Deltalytix.',
+      connectionRemoved: 'Connection "{accountId}" removed.',
+      removeError: 'Failed to remove connection "{accountId}".',
+      accountsReloaded: "Accounts reloaded successfully",
+      reloadError: "Failed to reload accounts",
+      alreadyImportedTrades: "Trades already imported",
+      lastSynced: "Last synced",
+      syncCompleteForAccount:
+        "Successfully synced {savedCount} trades from {tradesCount} total for {accountId}.",
+      syncCompleteNoNewTradesForAccount:
+        "Found {tradesCount} trades for {accountId} but no new trades were saved.",
+      syncCompleteNoOrdersForAccount: "No closed trades found for {accountId}.",
+    },
+  },
   "import.type.thorSync.name": "Thor",
   "import.type.thorSync.description":
     "Direct account synchronization with Thor",
@@ -2269,15 +2442,15 @@ export default {
   "import.type.dxfeedSync.details":
     "Import closed trades from your prop firm (DxFeed / Volumetrica). Select your firm, then sign in with your platform credentials.",
   "import.type.atas.name": "ATAS",
-  "import.type.atas.description": "Import from ATAS Excel files",
+  "import.type.atas.description": "ATAS Excel file",
   "import.type.atas.details":
     'Import trades from ATAS Excel files. Make sure your file has a "Journal" sheet with the required columns.',
   "import.type.ftmo.name": "FTMO",
-  "import.type.ftmo.description": "Import from FTMO trading journal exports",
+  "import.type.ftmo.description": "FTMO journal CSV",
   "import.type.ftmo.details":
     "Import trades from FTMO trading journal CSV exports. The system automatically detects the column positions regardless of language.",
   "import.type.manualEntry.name": "Manual Entry",
-  "import.type.manualEntry.description": "Manually add trades by filling in a form",
+  "import.type.manualEntry.description": "Add trades in a form",
   "import.type.manualEntry.details":
     "Add trades manually by filling in trade details in a form. Perfect for adding individual trades or correcting data.",
   "common.add": "Add",
@@ -2288,6 +2461,7 @@ export default {
   "common.back": "Back",
   "common.save": "Save",
   "common.saving": "Saving...",
+  "common.moreInformation": "More information",
   "calendar.impactFilter.title": "Impact Filter",
   "calendar.impactFilter.low": "Low",
   "calendar.impactFilter.medium": "Medium",
@@ -2325,7 +2499,7 @@ export default {
   },
   "import.type.pdfImport": {
     name: "PDF Import",
-    description: "Import trades from PDF statements using OCR technology",
+    description: "IBKR PDF statement",
     details:
       "Upload your PDF statements and let our OCR technology extract your trades automatically",
   },

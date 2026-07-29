@@ -3,8 +3,7 @@
 import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Info } from 'lucide-react'
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { InfoBubble } from "@/components/ui/info-bubble"
 
 export default function ContractQuantityChartEmbed({ trades }: { trades: { quantity: number, entryDate?: string | Date }[] }) {
   const chartData = React.useMemo(() => {
@@ -52,14 +51,9 @@ export default function ContractQuantityChartEmbed({ trades }: { trades: { quant
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
             <CardTitle className="line-clamp-1 text-base">Contracts by Hour</CardTitle>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
-              </PopoverTrigger>
-              <PopoverContent side="top">
-                <p>Total number of contracts traded by entry hour (UTC).</p>
-              </PopoverContent>
-            </Popover>
+            <InfoBubble side="top" iconClassName="size-4">
+              <p>Total number of contracts traded by entry hour (UTC).</p>
+            </InfoBubble>
           </div>
         </div>
       </CardHeader>

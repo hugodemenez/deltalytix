@@ -1,71 +1,128 @@
 'use server'
 import { prisma } from "@/lib/prisma"
 import { getUserId } from "@/server/auth"
-import { Synchronization } from "@/prisma/generated/prisma/client"
+import { Connection } from "@/prisma/generated/prisma/client"
+import { toDecryptedConnectionViews } from "@/lib/connection-view"
+import { encryptConnectionToken } from "@/lib/connection-token-crypto"
 import { capturePostHogEvent } from "@/lib/posthog-server"
+import { upsertAccountsForNumbers } from "@/server/connections"
+import { invalidateConnectionsPageCache } from "@/app/[locale]/dashboard/connections/data"
+
+/** Upper bound on accounts linked in one call, so a malformed body can't fan out. */
+const MAX_LINKED_ACCOUNTS = 500
+
+/**
+ * `accountNumbers` reaches this action straight from a request body
+ * (`/api/rithmic/synchronizations`), so it is untrusted: keep only non-empty
+ * strings and cap the count before it hits the database.
+ */
+function sanitizeAccountNumbers(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const numbers = value
+    .filter((n): n is string => typeof n === 'string' && n.trim().length > 0)
+    .map((n) => n.trim())
+  return [...new Set(numbers)].slice(0, MAX_LINKED_ACCOUNTS)
+}
 
 export async function getRithmicSynchronizations() {
   console.log('CHECKING RITHMIC SYNCHRONIZATIONS')
   const userId = await getUserId()
-  const synchronizations = await prisma.synchronization.findMany({
+  const connections = await prisma.connection.findMany({
     where: { userId: userId, service: "rithmic" },
   })
-  return synchronizations
+  return toDecryptedConnectionViews(connections)
 }
 
-export async function setRithmicSynchronization(synchronization: Partial<Synchronization>) {
+/**
+ * Upsert the Rithmic Connection and optionally attach trading accounts so they
+ * leave the Connections page "standalone / imported without broker sync" bucket.
+ */
+export async function setRithmicSynchronization(
+  synchronization: Partial<Connection> & {
+    accountId?: string
+    /** Trading account numbers to attach to this Connection */
+    accountNumbers?: string[]
+  }
+) {
   console.log('SETTING RITHMIC SYNCHRONIZATION')
   const userId = await getUserId()
   const service = synchronization.service || 'rithmic'
-  const accountId = synchronization.accountId || ''
-  const existingSynchronization = await prisma.synchronization.findUnique({
+  const externalId = synchronization.externalId || synchronization.accountId || ''
+  const encryptedToken =
+    synchronization.token !== undefined
+      ? encryptConnectionToken(synchronization.token)
+      : undefined
+  const existingConnection = await prisma.connection.findUnique({
     where: {
-      userId_service_accountId: { userId, service, accountId },
+      userId_service_externalId: { userId, service, externalId },
     },
     select: { id: true },
   })
-  await prisma.synchronization.upsert({
+  const connection = await prisma.connection.upsert({
     where: { 
-      userId_service_accountId: {
+      userId_service_externalId: {
         userId: userId,
         service,
-        accountId
+        externalId,
       }
     },
     update: {
-      ...synchronization,
+      service,
+      externalId,
+      lastSyncedAt: synchronization.lastSyncedAt || new Date(),
+      ...(encryptedToken !== undefined ? { token: encryptedToken } : {}),
+      tokenExpiresAt: synchronization.tokenExpiresAt,
+      dailySyncTime: synchronization.dailySyncTime,
+      environment: synchronization.environment,
       userId: userId,
       includedFeeTypes: undefined, // Rithmic has no fee differentiator
     },
     create: {
-      ...synchronization,
       service,
-      accountId,
+      externalId,
       lastSyncedAt: synchronization.lastSyncedAt || new Date(),
+      token: encryptedToken ?? null,
+      tokenExpiresAt: synchronization.tokenExpiresAt,
+      dailySyncTime: synchronization.dailySyncTime,
+      environment: synchronization.environment || 'demo',
       userId: userId,
       includedFeeTypes: undefined, // Rithmic has no fee differentiator
     },
+    // This action is called from the client; never send the row back wholesale
+    // or the encrypted token crosses the boundary with it.
+    select: { id: true },
   })
+
+  const accountNumbers = sanitizeAccountNumbers(synchronization.accountNumbers)
+  if (accountNumbers.length > 0) {
+    await upsertAccountsForNumbers(userId, accountNumbers, connection.id)
+  }
+
+  await invalidateConnectionsPageCache(userId)
 
   await capturePostHogEvent({
     distinctId: userId,
     event: 'integration_connected',
     properties: {
       integration: service,
-      is_first_connection: !existingSynchronization,
+      is_first_connection: !existingConnection,
     },
   })
+
+  return connection
 }
 
 export async function removeRithmicSynchronization(accountId: string) {
   console.log('REMOVING RITHMIC SYNCHRONIZATION')
   const userId = await getUserId()
 
-  await prisma.synchronization.deleteMany({
+  await prisma.connection.deleteMany({
     where: {
       userId,
       service: "rithmic",
-      accountId,
+      externalId: accountId,
     },
   })
+
+  await invalidateConnectionsPageCache(userId)
 }

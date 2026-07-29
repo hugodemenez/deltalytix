@@ -58,7 +58,7 @@ export const ModelName = {
   TeamSubscription: 'TeamSubscription',
   Notification: 'Notification',
   User: 'User',
-  Synchronization: 'Synchronization',
+  Connection: 'Connection',
   Team: 'Team',
   TeamInvitation: 'TeamInvitation',
   TeamManager: 'TeamManager',
@@ -103,6 +103,7 @@ export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof
 export const TradeScalarFieldEnum = {
   id: 'id',
   accountNumber: 'accountNumber',
+  accountId: 'accountId',
   quantity: 'quantity',
   entryId: 'entryId',
   closeId: 'closeId',
@@ -212,11 +213,11 @@ export const UserScalarFieldEnum = {
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
-export const SynchronizationScalarFieldEnum = {
+export const ConnectionScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
   service: 'service',
-  accountId: 'accountId',
+  externalId: 'externalId',
   lastSyncedAt: 'lastSyncedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
@@ -227,7 +228,7 @@ export const SynchronizationScalarFieldEnum = {
   environment: 'environment'
 } as const
 
-export type SynchronizationScalarFieldEnum = (typeof SynchronizationScalarFieldEnum)[keyof typeof SynchronizationScalarFieldEnum]
+export type ConnectionScalarFieldEnum = (typeof ConnectionScalarFieldEnum)[keyof typeof ConnectionScalarFieldEnum]
 
 
 export const TeamScalarFieldEnum = {
@@ -360,6 +361,7 @@ export const AccountScalarFieldEnum = {
   promoType: 'promoType',
   renewalNotice: 'renewalNotice',
   minPnlToCountAsDay: 'minPnlToCountAsDay',
+  connectionId: 'connectionId',
   buffer: 'buffer',
   considerBuffer: 'considerBuffer',
   shouldConsiderTradesBeforeReset: 'shouldConsiderTradesBeforeReset'

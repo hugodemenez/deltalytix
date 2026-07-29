@@ -2,66 +2,25 @@ import { ImageResponse } from "next/og";
 import type { ReactElement } from "react";
 import {
   BrandLockup,
+  LandingAtmosphere,
   OgCtaButton,
   ogImageCacheHeaders,
   ogImageSize,
 } from "@/lib/og/shared";
+import {
+  OG_CARD_PADDING_X,
+  OG_CARD_PADDING_Y,
+  OG_COLORS,
+  OG_FONT_FAMILY,
+  OG_PADDING,
+  OG_RADIUS,
+  OG_TRACKING,
+} from "@/lib/og/tokens";
 
 export const referralOgSize = ogImageSize;
 
-function hslToHex(h: number, s: number, l: number): string {
-  s /= 100;
-  l /= 100;
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = l - c / 2;
-  let r = 0;
-  let g = 0;
-  let b = 0;
-
-  if (h < 60) {
-    r = c;
-    g = x;
-  } else if (h < 120) {
-    r = x;
-    g = c;
-  } else if (h < 180) {
-    g = c;
-    b = x;
-  } else if (h < 240) {
-    g = x;
-    b = c;
-  } else if (h < 300) {
-    r = x;
-    b = c;
-  } else {
-    r = c;
-    b = x;
-  }
-
-  r = Math.round((r + m) * 255);
-  g = Math.round((g + m) * 255);
-  b = Math.round((b + m) * 255);
-
-  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
-}
-
-export function generateReferralAccentColor(ref: string): string {
-  let hash = 0;
-  for (let i = 0; i < ref.length; i++) {
-    hash = ref.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  const hue = Math.abs(hash % 360);
-  const saturation = 60 + (Math.abs(hash >> 8) % 30);
-  const lightness = 50 + (Math.abs(hash >> 16) % 20);
-
-  return hslToHex(hue, saturation, lightness);
-}
-
 type ReferralOgImageProps = {
   ref: string;
-  accentColor: string;
   joinLabel: string;
   tagline: string;
   cta: string;
@@ -69,7 +28,6 @@ type ReferralOgImageProps = {
 
 export function ReferralOgImage({
   ref,
-  accentColor,
   joinLabel,
   tagline,
   cta,
@@ -80,36 +38,15 @@ export function ReferralOgImage({
         display: "flex",
         width: "100%",
         height: "100%",
-        background: "#0a0a0a",
-        fontFamily: "system-ui, -apple-system, sans-serif",
+        background: OG_COLORS.background,
+        fontFamily: OG_FONT_FAMILY,
         position: "relative",
-        padding: "56px 72px",
+        padding: `${OG_PADDING}px`,
         flexDirection: "column",
         justifyContent: "space-between",
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          top: -100,
-          right: -100,
-          width: 480,
-          height: 480,
-          background: `radial-gradient(circle, ${accentColor}55 0%, rgba(10, 10, 10, 0) 72%)`,
-          display: "flex",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          bottom: -60,
-          left: -60,
-          width: 320,
-          height: 320,
-          background: "radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, rgba(10, 10, 10, 0) 70%)",
-          display: "flex",
-        }}
-      />
+      <LandingAtmosphere />
 
       <BrandLockup />
 
@@ -117,17 +54,18 @@ export function ReferralOgImage({
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: 28,
-          maxWidth: 900,
+          gap: 24,
+          maxWidth: 820,
+          position: "relative",
         }}
       >
         <p
           style={{
             margin: 0,
-            fontSize: 28,
-            fontWeight: 500,
-            color: "#a1a1aa",
-            letterSpacing: "-0.01em",
+            fontSize: 24,
+            fontWeight: 400,
+            color: OG_COLORS.muted,
+            letterSpacing: OG_TRACKING.snug,
           }}
         >
           {joinLabel}
@@ -138,19 +76,18 @@ export function ReferralOgImage({
             display: "flex",
             alignItems: "center",
             alignSelf: "flex-start",
-            padding: "28px 40px",
-            borderRadius: 20,
-            border: `3px solid ${accentColor}`,
-            background: "rgba(255, 255, 255, 0.04)",
-            boxShadow: `0 0 60px ${accentColor}33`,
+            padding: `${OG_CARD_PADDING_Y}px ${OG_CARD_PADDING_X}px`,
+            borderRadius: OG_RADIUS.sm,
+            border: `1px solid ${OG_COLORS.hairline}`,
+            background: OG_COLORS.surface,
           }}
         >
           <span
             style={{
-              fontSize: 80,
-              fontWeight: 800,
-              color: "#FFFFFF",
-              letterSpacing: "0.12em",
+              fontSize: 64,
+              fontWeight: 500,
+              color: OG_COLORS.foreground,
+              letterSpacing: "0.08em",
               textTransform: "uppercase",
             }}
           >
@@ -161,25 +98,27 @@ export function ReferralOgImage({
         <p
           style={{
             margin: 0,
-            fontSize: 34,
-            fontWeight: 600,
-            color: "#f4f4f5",
+            fontSize: 32,
+            fontWeight: 400,
+            color: OG_COLORS.foreground,
             lineHeight: 1.3,
-            letterSpacing: "-0.02em",
+            letterSpacing: OG_TRACKING.tight,
+            maxWidth: 700,
           }}
         >
           {tagline}
         </p>
 
-        <OgCtaButton label={cta} accentColor={accentColor} />
+        <OgCtaButton label={cta} />
       </div>
 
       <p
         style={{
           margin: 0,
-          fontSize: 22,
-          fontWeight: 500,
-          color: "#71717a",
+          fontSize: 20,
+          fontWeight: 400,
+          color: OG_COLORS.subtle,
+          position: "relative",
         }}
       >
         deltalytix.app
@@ -199,12 +138,9 @@ export function createReferralOgImageResponse({
   tagline: string;
   cta: string;
 }) {
-  const accentColor = generateReferralAccentColor(ref);
-
   return new ImageResponse(
     <ReferralOgImage
       ref={ref}
-      accentColor={accentColor}
       joinLabel={joinLabel}
       tagline={tagline}
       cta={cta}

@@ -1,0 +1,3 @@
+Account Name,Open Date,Open Time,Close Date,Close Time,Instrument,Side,Quantity,Entry Price,Exit Price,Gross P&L,Commission,Duration,Adjusted Cost,Adjusted Proceeds
+Demo Account,2025-03-10,09:35:12,2025-03-10,09:42:18,MES,Long,2,5125.25,5130.50,52.50,2.40,426,10250.50,10261.00
+Demo Account,2025-03-10,10:15:05,2025-03-10,10:28:40,MNQ,Short,1,18550.00,18535.25,29.50,1.20,815,18550.00,18535.25

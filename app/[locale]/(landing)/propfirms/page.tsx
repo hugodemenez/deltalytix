@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { Suspense } from 'react'
 import { getI18n } from '@/locales/server'
 import { propFirms } from '@/app/[locale]/dashboard/components/accounts/config'
 import { getPropfirmCatalogueData } from './actions/get-propfirm-catalogue'
@@ -109,7 +110,7 @@ interface PropFirmsPageProps {
   searchParams: Promise<{ sort?: string; timeframe?: string }>
 }
 
-export default async function PropFirmsPage({ searchParams }: PropFirmsPageProps) {
+async function PropFirmsPageContent({ searchParams }: PropFirmsPageProps) {
   const t = await getI18n()
   const resolvedSearchParams = await searchParams
   const timeframe = (resolvedSearchParams.timeframe || '2025') as Timeframe
@@ -242,5 +243,13 @@ export default async function PropFirmsPage({ searchParams }: PropFirmsPageProps
         </div>
       </div>
     </div>
+  )
+}
+
+export default function PropFirmsPage({ searchParams }: PropFirmsPageProps) {
+  return (
+    <Suspense fallback={null}>
+      <PropFirmsPageContent searchParams={searchParams} />
+    </Suspense>
   )
 }

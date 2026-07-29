@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Drawer,
@@ -22,14 +22,42 @@ import { Label } from "@/components/ui/label"
 import { motion, AnimatePresence } from "framer-motion"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { useI18n } from "@/locales/client"
+import type { ConsentSettings } from "@/lib/consent-settings"
 import posthog from "posthog-js"
 
 const ANALYTICS_CONSENT_COOKIE = "deltalytix_analytics_consent"
 const CONSENT_EVENT = "deltalytix:analytics-consent"
+const CONSENT_UPDATED_EVENT = "deltalytix:consent-updated"
+
+function isDeltalytixHost() {
+  const host = window.location.hostname
+  return host === "deltalytix.app" || host.endsWith(".deltalytix.app")
+}
+
+function getSharedAnalyticsConsent() {
+  const cookie = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith(`${ANALYTICS_CONSENT_COOKIE}=`))
+
+  if (!cookie) return null
+
+  const value = cookie.split("=")[1]
+  if (value === "granted") return true
+  if (value === "denied") return false
+  return null
+}
 
 function syncPostHogConsent(analyticsEnabled: boolean) {
   const secure = window.location.protocol === "https:" ? "; Secure" : ""
-  document.cookie = `${ANALYTICS_CONSENT_COOKIE}=${analyticsEnabled ? "granted" : "denied"}; Max-Age=31536000; Path=/; SameSite=Lax${secure}`
+  const value = analyticsEnabled ? "granted" : "denied"
+  const attributes = `Max-Age=31536000; Path=/; SameSite=Lax${secure}`
+
+  // Keep the current-origin cookie in sync, then share the same choice with
+  // production and beta. This avoids asking twice or silently opting beta out.
+  document.cookie = `${ANALYTICS_CONSENT_COOKIE}=${value}; ${attributes}`
+  if (isDeltalytixHost()) {
+    document.cookie = `${ANALYTICS_CONSENT_COOKIE}=${value}; ${attributes}; Domain=.deltalytix.app`
+  }
 
   if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return
 
@@ -50,17 +78,6 @@ function syncPostHogConsent(analyticsEnabled: boolean) {
   }
 }
 
-interface ConsentSettings {
-  analytics_storage: boolean;
-  ad_storage: boolean;
-  ad_user_data: boolean;
-  ad_personalization: boolean;
-  functionality_storage: boolean;
-  personalization_storage: boolean;
-  security_storage: boolean;
-}
-
-
 type ConsentTranslator = ReturnType<typeof useI18n>
 
 function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
@@ -77,26 +94,62 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
   })
 
   const isDesktop = useMediaQuery("(min-width: 768px)")
+  const bannerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    const sharedAnalyticsConsent = getSharedAnalyticsConsent()
     const hasConsent = localStorage.getItem("cookieConsent")
-    if (!hasConsent) {
-      setIsVisible(true)
-    } else {
+
+    // Parent-domain cookie is the cross-origin source of truth. Prefer it over
+    // a stale origin-local choice so beta/prod cannot overwrite each other.
+    if (sharedAnalyticsConsent !== null) {
+      let settingsToApply: ConsentSettings = {
+        analytics_storage: sharedAnalyticsConsent,
+        ad_storage: false,
+        ad_user_data: false,
+        ad_personalization: false,
+        functionality_storage: true,
+        personalization_storage: false,
+        security_storage: true,
+      }
+
+      if (hasConsent) {
+        try {
+          settingsToApply = {
+            ...(JSON.parse(hasConsent) as ConsentSettings),
+            analytics_storage: sharedAnalyticsConsent,
+          }
+        } catch {
+          localStorage.removeItem("cookieConsent")
+        }
+      }
+
+      localStorage.setItem("cookieConsent", JSON.stringify(settingsToApply))
+      setSettings(settingsToApply)
+      syncPostHogConsent(sharedAnalyticsConsent)
+    } else if (hasConsent) {
       try {
         const savedSettings = JSON.parse(hasConsent) as ConsentSettings
         setSettings(savedSettings)
+        // Migrates existing origin-local consent onto the shared Domain cookie.
         syncPostHogConsent(savedSettings.analytics_storage)
       } catch {
         localStorage.removeItem("cookieConsent")
         setIsVisible(true)
       }
+    } else {
+      setIsVisible(true)
     }
 
     // Add keyboard shortcut for dev mode (Cmd/Ctrl + Shift + K)
     const handleKeyPress = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'K') {
         localStorage.removeItem("cookieConsent")
+        const secure = window.location.protocol === "https:" ? "; Secure" : ""
+        document.cookie = `${ANALYTICS_CONSENT_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax${secure}`
+        if (isDeltalytixHost()) {
+          document.cookie = `${ANALYTICS_CONSENT_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax${secure}; Domain=.deltalytix.app`
+        }
         setIsVisible(true)
       }
     }
@@ -104,6 +157,23 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [])
+
+  // Radix (and vaul on top of it) decides an interaction happened "outside" an
+  // open dialog from a document-level pointerdown listener, and closes on it.
+  // A React onPointerDown cannot stop that: React delegates handlers to the
+  // root container, so its stopPropagation runs on the same node as Radix's
+  // listener and therefore too late. Stopping the event on the banner element
+  // itself keeps it from ever reaching document, so choosing a consent option
+  // no longer tears down whatever modal the user had open.
+  useEffect(() => {
+    const node = bannerRef.current
+    if (!node) return
+
+    const stop = (event: Event) => event.stopPropagation()
+    const events = ["pointerdown", "mousedown", "touchstart"] as const
+    events.forEach((type) => node.addEventListener(type, stop))
+    return () => events.forEach((type) => node.removeEventListener(type, stop))
+  }, [isVisible])
 
   // Add/remove data attribute when banner visibility changes
   useEffect(() => {
@@ -141,15 +211,11 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
   const saveConsent = (consentSettings: ConsentSettings) => {
     localStorage.setItem("cookieConsent", JSON.stringify(consentSettings))
     syncPostHogConsent(consentSettings.analytics_storage)
-    window.gtag?.("consent", "update", {
-      analytics_storage: consentSettings.analytics_storage ? "granted" : "denied",
-      ad_storage: consentSettings.ad_storage ? "granted" : "denied",
-      ad_user_data: consentSettings.ad_user_data ? "granted" : "denied",
-      ad_personalization: consentSettings.ad_personalization ? "granted" : "denied",
-      functionality_storage: consentSettings.functionality_storage ? "granted" : "denied",
-      personalization_storage: consentSettings.personalization_storage ? "granted" : "denied",
-      security_storage: consentSettings.security_storage ? "granted" : "denied",
-    })
+    // <GoogleTag /> owns everything Google-side: it loads the tag on first
+    // consent and relays later changes, so the banner only has to announce.
+    window.dispatchEvent(new CustomEvent(CONSENT_UPDATED_EVENT, {
+      detail: consentSettings,
+    }))
     setIsVisible(false)
   }
 
@@ -157,8 +223,17 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
 
   return (
     <AnimatePresence>
-      <motion.div 
-        className="fixed bottom-0 left-0 right-0 z-9999 p-4 -m-4"
+      <motion.div
+        // The banner outlives any modal on the page, so it has to survive what
+        // Radix does to the rest of the document while a dialog/drawer is open:
+        // - body gets `pointer-events: none`, which the banner inherits, hence
+        //   the explicit `pointer-events-auto`;
+        // - `hideOthers()` marks every other body child `aria-hidden`, and it
+        //   only spares `[aria-live]` nodes, hence the live region.
+        // Without these, an open drawer leaves the banner visible but dead.
+        ref={bannerRef}
+        className="fixed bottom-0 left-0 right-0 z-9999 p-4 -m-4 pointer-events-auto"
+        aria-live="polite"
         initial={{ y: 100 }}
         animate={{ y: 0 }}
         exit={{ y: 100 }}

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
@@ -8,6 +8,7 @@ import { ScrollLockFix } from "@/components/scroll-lock-fix";
 import { getSiteOrigin, siteUrl } from "@/lib/site-url";
 import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
 import { cn } from "@/lib/utils";
+import { GoogleTag } from "@/components/google-tag";
 
 const inter = Inter({ subsets: ["latin"] });
 const metadataBase = new URL(getSiteOrigin());
@@ -86,6 +87,12 @@ export const metadata: Metadata = {
   creator: "Hugo DEMENEZ",
   publisher: "Hugo DEMENEZ",
   formatDetection: { email: false, address: false, telephone: false },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -342,6 +349,7 @@ export default function RootLayout({
         className={cn(inter.className, "antialiased [font-synthesis:none]")}
       >
         <ScrollLockFix />
+        <GoogleTag />
         <SpeedInsights />
         <Analytics />
         {children}

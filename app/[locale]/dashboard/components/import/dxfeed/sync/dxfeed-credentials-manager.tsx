@@ -38,6 +38,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { getDxFeedErrorToastContent } from '@/lib/dxfeed-client-messages'
 import { showToastWithCopy } from '@/lib/toast-copy'
+import { captureConnectionCreated } from '@/lib/connection-analytics'
 import { authenticateDxFeed, updateDxFeedDailySyncTimeAction } from './actions'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
 import { getEnabledDxFeedPropFirms } from '@/lib/dxfeed-propfirms'
@@ -128,6 +129,7 @@ export function DxFeedCredentialsManager() {
       showToastWithCopy('success', t('dxfeedSync.connected'), {
         copyLabel: t('common.copy'),
       })
+      captureConnectionCreated('dxfeed', { source_ui: 'credentials_manager' })
       setIsAddDialogOpen(false)
       setLoginEmail('')
       setLoginPassword('')

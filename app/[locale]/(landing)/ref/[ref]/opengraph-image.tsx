@@ -5,12 +5,9 @@ import {
 } from "@/lib/og/referral-opengraph";
 import { isValidReferralSlug } from "@/lib/referral-url";
 
-export const alt = "Deltalytix Referral";
+export const alt = "Deltalytix referral — Sign up with an invite code";
 export const size = referralOgSize;
 export const contentType = "image/png";
-
-export const runtime = "nodejs";
-export const revalidate = 3600;
 
 export default async function Image({
   params,

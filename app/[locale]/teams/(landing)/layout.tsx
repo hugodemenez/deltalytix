@@ -1,8 +1,9 @@
-
 import { AuthProfileButton } from "../components/auth-profile-button";
 import TeamNavbar from "../components/team-navbar";
 import { Metadata } from 'next';
+import { cacheLife } from 'next/cache';
 import { truncateForSocialDescription } from "@/lib/og/site-metadata";
+import { resolveLocale } from "@/lib/locale-params";
 
 type Locale = 'en' | 'fr';
 
@@ -18,16 +19,23 @@ const TEAM_DESCRIPTIONS: Record<Locale, string> = {
     "Analyses de trading entreprise pour gestionnaires de fonds et prop firms. Suivez les traders et pilotez vos décisions.",
 };
 
-export async function generateMetadata(props: { params: Promise<{ locale: Locale }> }): Promise<Metadata> {
-  const params = await props.params;
+async function getCachedTeamLandingMetadata(locale: Locale): Promise<Metadata> {
+  "use cache";
+  cacheLife("max");
+
   const description = truncateForSocialDescription(
-    TEAM_DESCRIPTIONS[params.locale] || TEAM_DESCRIPTIONS.en,
+    TEAM_DESCRIPTIONS[locale] || TEAM_DESCRIPTIONS.en,
   );
 
   return {
-    title: TEAM_TITLES[params.locale] || TEAM_TITLES.en,
+    title: TEAM_TITLES[locale] || TEAM_TITLES.en,
     description,
   };
+}
+
+export async function generateMetadata(props: { params: Promise<{ locale: Locale }> }): Promise<Metadata> {
+  const locale = (await resolveLocale(props.params)) as Locale;
+  return getCachedTeamLandingMetadata(locale);
 }
 
 export default async function TeamLayout({

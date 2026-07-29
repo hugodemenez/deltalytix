@@ -1,5 +1,5 @@
-import React, { Suspense } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import React from "react";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -9,35 +9,10 @@ import {
 } from "@/components/ui/accordion";
 import { GitBranchIcon, UsersIcon, BookOpenIcon } from "lucide-react";
 import Link from "next/link";
-import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentLocale, getI18n } from "@/locales/server";
 import { CachedGithubData } from "./cached-github-data";
 import { GITHUB_REPO_URL } from "@/lib/github-repo";
 import { LANDING_SECTION_CONTAINER_CLASSNAME } from "./landing-section-container";
-
-function GithubCardSkeleton() {
-  return (
-    <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
-      <CardHeader className="border-b border-border pb-3 md:pb-4 mb-3 md:mb-4">
-        <Skeleton className="h-6 w-48" />
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2 mb-3 md:mb-4">
-          <Skeleton className="h-6 w-20" />
-          <Skeleton className="h-6 w-20" />
-        </div>
-        <div className="flex flex-wrap gap-3 md:gap-4 mb-4 md:mb-6">
-          {[...Array(5)].map((_, index) => (
-            <Skeleton key={index} className="h-4 w-16" />
-          ))}
-        </div>
-        <Skeleton className="h-[120px] w-full mb-4" />
-        <Skeleton className="h-4 w-48 mb-4" />
-        <Skeleton className="h-8 w-full" />
-      </CardContent>
-    </Card>
-  );
-}
 
 export default async function OpenSource() {
   const t = await getI18n();
@@ -151,12 +126,10 @@ export default async function OpenSource() {
             </Accordion>
           </div>
           <div className="lg:basis-1/2">
-            <Suspense fallback={<GithubCardSkeleton />}>
-              <CachedGithubData
-                starLabel={t("landing.openSource.starItToo")}
-                locale={locale}
-              />
-            </Suspense>
+            <CachedGithubData
+              starLabel={t("landing.openSource.starItToo")}
+              locale={locale}
+            />
           </div>
         </div>
       </Card>

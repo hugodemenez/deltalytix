@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   CalendarIcon,
-  Info,
   Plus,
   Clock,
   CheckCircle,
@@ -28,6 +27,7 @@ import {
   Table,
   RefreshCw,
 } from "lucide-react"
+import { InfoBubble } from "@/components/ui/info-bubble"
 import { Calendar } from "@/components/ui/calendar"
 import { format, Locale } from "date-fns"
 import { cn, calculateTradingDays } from "@/lib/utils"
@@ -51,12 +51,6 @@ import { AccountsToolbar } from './accounts-toolbar'
 import { AccountsSortMenu } from './accounts-sort-menu'
 import { AlertDialogAction, AlertDialogCancel, AlertDialogFooter, AlertDialogDescription, AlertDialogTitle, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { AlertDialog } from '@/components/ui/alert-dialog'
-import {
-  Tooltip as UITooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { Account } from '@/context/data-provider'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
@@ -877,7 +871,16 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         !hiddenAccountNumbers.has(accountNumber)
       )
       .forEach(accountNumber => {
-        const dbAccount = accounts.find(acc => acc.number === accountNumber)
+        const dbAccount =
+          accounts.find(acc => acc.number === accountNumber) ??
+          accounts.find(acc =>
+            trades.some(
+              (trade) =>
+                trade.accountNumber === accountNumber &&
+                trade.accountId &&
+                trade.accountId === acc.id
+            )
+          )
 
         if (dbAccount) {
           // Account is configured - use it with all its pre-computed metrics
@@ -1284,7 +1287,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       <div className="px-3 py-2 sm:px-4">
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex shrink-0 items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-orange-400 motion-safe:animate-pulse" />
             <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
               {t('propFirm.status.needsConfiguration')}:
             </span>
@@ -1301,7 +1304,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-5 w-5 p-0 hover:bg-orange-200 dark:hover:bg-orange-800/50"
+                  className="relative h-5 w-5 p-0 after:absolute after:inset-[-10px] hover:bg-orange-200 dark:hover:bg-orange-800/50"
                   onClick={() => {
                     const tempAccount = {
                       id: '',
@@ -1558,19 +1561,12 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
             >
               {t('propFirm.title')}
             </CardTitle>
-            <TooltipProvider>
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <Info className={cn(
-                    "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                    size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
-                  )} />
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>{t('propFirm.description')}</p>
-                </TooltipContent>
-              </UITooltip>
-            </TooltipProvider>
+            <InfoBubble
+              side="top"
+              iconClassName={size === 'small' ? 'size-3.5' : 'size-4'}
+            >
+              <p>{t('propFirm.description')}</p>
+            </InfoBubble>
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
             <Button

@@ -16,13 +16,7 @@ import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { useData } from "@/context/data-provider";
 import { cn } from "@/lib/utils";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
-import { Info } from "lucide-react";
-import {
-  Tooltip as UITooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { InfoBubble } from "@/components/ui/info-bubble";
 import { useI18n, useCurrentLocale } from "@/locales/client";
 import { formatInTimeZone } from "date-fns-tz";
 import { fr, enUS } from "date-fns/locale";
@@ -174,21 +168,12 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
             >
               {t("pnl.title")}
             </CardTitle>
-            <TooltipProvider>
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <Info
-                    className={cn(
-                      "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                      size === "small" ? "h-3.5 w-3.5" : "h-4 w-4",
-                    )}
-                  />
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>{t("pnl.description")}</p>
-                </TooltipContent>
-              </UITooltip>
-            </TooltipProvider>
+            <InfoBubble
+              side="top"
+              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
+            >
+              <p>{t("pnl.description")}</p>
+            </InfoBubble>
           </div>
         </div>
       </CardHeader>

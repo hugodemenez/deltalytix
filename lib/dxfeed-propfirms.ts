@@ -62,6 +62,15 @@ export const DXFEED_PROP_FIRMS: DxFeedPropFirmDefinition[] = [
     tradingSubdomain: 'trading-volumetrica',
     enabled: true,
   },
+  {
+    id: 'taurusarena',
+    name: 'Taurus Arena',
+    website: 'https://taurusarena.com',
+    domain: 'taurusarena.com',
+    historicalSubdomain: 'dxfeed',
+    tradingSubdomain: 'trading-dxfeed',
+    enabled: true,
+  },
   // More Volumetrica-based firms can be added once their domain pattern is confirmed.
 ]
 

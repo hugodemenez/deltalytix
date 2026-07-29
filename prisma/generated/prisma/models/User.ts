@@ -218,7 +218,7 @@ export type UserWhereInput = {
   orders?: Prisma.OrderListRelationFilter
   posts?: Prisma.PostListRelationFilter
   subscriptions?: Prisma.XOR<Prisma.SubscriptionNullableScalarRelationFilter, Prisma.SubscriptionWhereInput> | null
-  synchronizations?: Prisma.SynchronizationListRelationFilter
+  connections?: Prisma.ConnectionListRelationFilter
   tags?: Prisma.TagListRelationFilter
   votes?: Prisma.VoteListRelationFilter
   businessSubscriptions?: Prisma.BusinessSubscriptionListRelationFilter
@@ -246,7 +246,7 @@ export type UserOrderByWithRelationInput = {
   orders?: Prisma.OrderOrderByRelationAggregateInput
   posts?: Prisma.PostOrderByRelationAggregateInput
   subscriptions?: Prisma.SubscriptionOrderByWithRelationInput
-  synchronizations?: Prisma.SynchronizationOrderByRelationAggregateInput
+  connections?: Prisma.ConnectionOrderByRelationAggregateInput
   tags?: Prisma.TagOrderByRelationAggregateInput
   votes?: Prisma.VoteOrderByRelationAggregateInput
   businessSubscriptions?: Prisma.BusinessSubscriptionOrderByRelationAggregateInput
@@ -277,7 +277,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   orders?: Prisma.OrderListRelationFilter
   posts?: Prisma.PostListRelationFilter
   subscriptions?: Prisma.XOR<Prisma.SubscriptionNullableScalarRelationFilter, Prisma.SubscriptionWhereInput> | null
-  synchronizations?: Prisma.SynchronizationListRelationFilter
+  connections?: Prisma.ConnectionListRelationFilter
   tags?: Prisma.TagListRelationFilter
   votes?: Prisma.VoteListRelationFilter
   businessSubscriptions?: Prisma.BusinessSubscriptionListRelationFilter
@@ -333,7 +333,7 @@ export type UserCreateInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
@@ -361,7 +361,7 @@ export type UserUncheckedCreateInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -389,7 +389,7 @@ export type UserUpdateInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
@@ -417,7 +417,7 @@ export type UserUncheckedUpdateInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -555,18 +555,18 @@ export type BoolFieldUpdateOperationsInput = {
   set?: boolean
 }
 
-export type UserCreateNestedOneWithoutSynchronizationsInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutSynchronizationsInput, Prisma.UserUncheckedCreateWithoutSynchronizationsInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSynchronizationsInput
+export type UserCreateNestedOneWithoutConnectionsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutConnectionsInput, Prisma.UserUncheckedCreateWithoutConnectionsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutConnectionsInput
   connect?: Prisma.UserWhereUniqueInput
 }
 
-export type UserUpdateOneRequiredWithoutSynchronizationsNestedInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutSynchronizationsInput, Prisma.UserUncheckedCreateWithoutSynchronizationsInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSynchronizationsInput
-  upsert?: Prisma.UserUpsertWithoutSynchronizationsInput
+export type UserUpdateOneRequiredWithoutConnectionsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutConnectionsInput, Prisma.UserUncheckedCreateWithoutConnectionsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutConnectionsInput
+  upsert?: Prisma.UserUpsertWithoutConnectionsInput
   connect?: Prisma.UserWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSynchronizationsInput, Prisma.UserUpdateWithoutSynchronizationsInput>, Prisma.UserUncheckedUpdateWithoutSynchronizationsInput>
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutConnectionsInput, Prisma.UserUpdateWithoutConnectionsInput>, Prisma.UserUncheckedUpdateWithoutConnectionsInput>
 }
 
 export type UserCreateNestedOneWithoutTeamsInput = {
@@ -757,7 +757,7 @@ export type UserCreateWithoutSubscriptionsInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
@@ -784,7 +784,7 @@ export type UserUncheckedCreateWithoutSubscriptionsInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -827,7 +827,7 @@ export type UserUpdateWithoutSubscriptionsInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
@@ -854,7 +854,7 @@ export type UserUncheckedUpdateWithoutSubscriptionsInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -882,7 +882,7 @@ export type UserCreateWithoutBusinessSubscriptionsInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
@@ -909,7 +909,7 @@ export type UserUncheckedCreateWithoutBusinessSubscriptionsInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
@@ -952,7 +952,7 @@ export type UserUpdateWithoutBusinessSubscriptionsInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
@@ -979,7 +979,7 @@ export type UserUncheckedUpdateWithoutBusinessSubscriptionsInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
@@ -1005,7 +1005,7 @@ export type UserCreateWithoutTeamSubscriptionsInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
@@ -1032,7 +1032,7 @@ export type UserUncheckedCreateWithoutTeamSubscriptionsInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1075,7 +1075,7 @@ export type UserUpdateWithoutTeamSubscriptionsInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
@@ -1102,7 +1102,7 @@ export type UserUncheckedUpdateWithoutTeamSubscriptionsInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -1129,7 +1129,7 @@ export type UserCreateWithoutNotificationsInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
@@ -1156,7 +1156,7 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1199,7 +1199,7 @@ export type UserUpdateWithoutNotificationsInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
@@ -1226,14 +1226,14 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
 }
 
-export type UserCreateWithoutSynchronizationsInput = {
+export type UserCreateWithoutConnectionsInput = {
   id?: string
   email: string
   auth_user_id: string
@@ -1260,7 +1260,7 @@ export type UserCreateWithoutSynchronizationsInput = {
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
 }
 
-export type UserUncheckedCreateWithoutSynchronizationsInput = {
+export type UserUncheckedCreateWithoutConnectionsInput = {
   id?: string
   email: string
   auth_user_id: string
@@ -1287,23 +1287,23 @@ export type UserUncheckedCreateWithoutSynchronizationsInput = {
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
 }
 
-export type UserCreateOrConnectWithoutSynchronizationsInput = {
+export type UserCreateOrConnectWithoutConnectionsInput = {
   where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutSynchronizationsInput, Prisma.UserUncheckedCreateWithoutSynchronizationsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutConnectionsInput, Prisma.UserUncheckedCreateWithoutConnectionsInput>
 }
 
-export type UserUpsertWithoutSynchronizationsInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutSynchronizationsInput, Prisma.UserUncheckedUpdateWithoutSynchronizationsInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutSynchronizationsInput, Prisma.UserUncheckedCreateWithoutSynchronizationsInput>
+export type UserUpsertWithoutConnectionsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutConnectionsInput, Prisma.UserUncheckedUpdateWithoutConnectionsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutConnectionsInput, Prisma.UserUncheckedCreateWithoutConnectionsInput>
   where?: Prisma.UserWhereInput
 }
 
-export type UserUpdateToOneWithWhereWithoutSynchronizationsInput = {
+export type UserUpdateToOneWithWhereWithoutConnectionsInput = {
   where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutSynchronizationsInput, Prisma.UserUncheckedUpdateWithoutSynchronizationsInput>
+  data: Prisma.XOR<Prisma.UserUpdateWithoutConnectionsInput, Prisma.UserUncheckedUpdateWithoutConnectionsInput>
 }
 
-export type UserUpdateWithoutSynchronizationsInput = {
+export type UserUpdateWithoutConnectionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   auth_user_id?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1330,7 +1330,7 @@ export type UserUpdateWithoutSynchronizationsInput = {
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
 }
 
-export type UserUncheckedUpdateWithoutSynchronizationsInput = {
+export type UserUncheckedUpdateWithoutConnectionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   auth_user_id?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1377,7 +1377,7 @@ export type UserCreateWithoutTeamsInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
@@ -1404,7 +1404,7 @@ export type UserUncheckedCreateWithoutTeamsInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1447,7 +1447,7 @@ export type UserUpdateWithoutTeamsInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
@@ -1474,7 +1474,7 @@ export type UserUncheckedUpdateWithoutTeamsInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -1501,7 +1501,7 @@ export type UserCreateWithoutBusinessesInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
@@ -1528,7 +1528,7 @@ export type UserUncheckedCreateWithoutBusinessesInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1571,7 +1571,7 @@ export type UserUpdateWithoutBusinessesInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
@@ -1598,7 +1598,7 @@ export type UserUncheckedUpdateWithoutBusinessesInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -1625,7 +1625,7 @@ export type UserCreateWithoutGroupsInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
@@ -1652,7 +1652,7 @@ export type UserUncheckedCreateWithoutGroupsInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1695,7 +1695,7 @@ export type UserUpdateWithoutGroupsInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
@@ -1722,7 +1722,7 @@ export type UserUncheckedUpdateWithoutGroupsInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -1749,7 +1749,7 @@ export type UserCreateWithoutAccountsInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
@@ -1776,7 +1776,7 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1819,7 +1819,7 @@ export type UserUpdateWithoutAccountsInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
@@ -1846,7 +1846,7 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -1873,7 +1873,7 @@ export type UserCreateWithoutDashboardLayoutInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
@@ -1900,7 +1900,7 @@ export type UserUncheckedCreateWithoutDashboardLayoutInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1943,7 +1943,7 @@ export type UserUpdateWithoutDashboardLayoutInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
@@ -1970,7 +1970,7 @@ export type UserUncheckedUpdateWithoutDashboardLayoutInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -1997,7 +1997,7 @@ export type UserCreateWithoutMoodsInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
@@ -2024,7 +2024,7 @@ export type UserUncheckedCreateWithoutMoodsInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -2067,7 +2067,7 @@ export type UserUpdateWithoutMoodsInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
@@ -2094,7 +2094,7 @@ export type UserUncheckedUpdateWithoutMoodsInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -2122,7 +2122,7 @@ export type UserCreateWithoutReferralInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
@@ -2149,7 +2149,7 @@ export type UserUncheckedCreateWithoutReferralInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -2192,7 +2192,7 @@ export type UserUpdateWithoutReferralInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
@@ -2219,7 +2219,7 @@ export type UserUncheckedUpdateWithoutReferralInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -2246,7 +2246,7 @@ export type UserCreateWithoutTagsInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
@@ -2273,7 +2273,7 @@ export type UserUncheckedCreateWithoutTagsInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
@@ -2316,7 +2316,7 @@ export type UserUpdateWithoutTagsInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
@@ -2343,7 +2343,7 @@ export type UserUncheckedUpdateWithoutTagsInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
@@ -2369,7 +2369,7 @@ export type UserCreateWithoutPostsInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
@@ -2396,7 +2396,7 @@ export type UserUncheckedCreateWithoutPostsInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -2439,7 +2439,7 @@ export type UserUpdateWithoutPostsInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
@@ -2466,7 +2466,7 @@ export type UserUncheckedUpdateWithoutPostsInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -2493,7 +2493,7 @@ export type UserCreateWithoutCommentsInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
@@ -2520,7 +2520,7 @@ export type UserUncheckedCreateWithoutCommentsInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -2563,7 +2563,7 @@ export type UserUpdateWithoutCommentsInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
@@ -2590,7 +2590,7 @@ export type UserUncheckedUpdateWithoutCommentsInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -2618,7 +2618,7 @@ export type UserCreateWithoutVotesInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
@@ -2645,7 +2645,7 @@ export type UserUncheckedCreateWithoutVotesInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
@@ -2688,7 +2688,7 @@ export type UserUpdateWithoutVotesInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
@@ -2715,7 +2715,7 @@ export type UserUncheckedUpdateWithoutVotesInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
@@ -2741,7 +2741,7 @@ export type UserCreateWithoutOrdersInput = {
   notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
@@ -2768,7 +2768,7 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
-  synchronizations?: Prisma.SynchronizationUncheckedCreateNestedManyWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -2811,7 +2811,7 @@ export type UserUpdateWithoutOrdersInput = {
   notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
@@ -2838,7 +2838,7 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
-  synchronizations?: Prisma.SynchronizationUncheckedUpdateManyWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -2861,7 +2861,7 @@ export type UserCountOutputType = {
   notifications: number
   orders: number
   posts: number
-  synchronizations: number
+  connections: number
   tags: number
   votes: number
   businessSubscriptions: number
@@ -2878,7 +2878,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   notifications?: boolean | UserCountOutputTypeCountNotificationsArgs
   orders?: boolean | UserCountOutputTypeCountOrdersArgs
   posts?: boolean | UserCountOutputTypeCountPostsArgs
-  synchronizations?: boolean | UserCountOutputTypeCountSynchronizationsArgs
+  connections?: boolean | UserCountOutputTypeCountConnectionsArgs
   tags?: boolean | UserCountOutputTypeCountTagsArgs
   votes?: boolean | UserCountOutputTypeCountVotesArgs
   businessSubscriptions?: boolean | UserCountOutputTypeCountBusinessSubscriptionsArgs
@@ -2967,8 +2967,8 @@ export type UserCountOutputTypeCountPostsArgs<ExtArgs extends runtime.Types.Exte
 /**
  * UserCountOutputType without action
  */
-export type UserCountOutputTypeCountSynchronizationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.SynchronizationWhereInput
+export type UserCountOutputTypeCountConnectionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ConnectionWhereInput
 }
 
 /**
@@ -3014,7 +3014,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   posts?: boolean | Prisma.User$postsArgs<ExtArgs>
   subscriptions?: boolean | Prisma.User$subscriptionsArgs<ExtArgs>
-  synchronizations?: boolean | Prisma.User$synchronizationsArgs<ExtArgs>
+  connections?: boolean | Prisma.User$connectionsArgs<ExtArgs>
   tags?: boolean | Prisma.User$tagsArgs<ExtArgs>
   votes?: boolean | Prisma.User$votesArgs<ExtArgs>
   businessSubscriptions?: boolean | Prisma.User$businessSubscriptionsArgs<ExtArgs>
@@ -3069,7 +3069,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   posts?: boolean | Prisma.User$postsArgs<ExtArgs>
   subscriptions?: boolean | Prisma.User$subscriptionsArgs<ExtArgs>
-  synchronizations?: boolean | Prisma.User$synchronizationsArgs<ExtArgs>
+  connections?: boolean | Prisma.User$connectionsArgs<ExtArgs>
   tags?: boolean | Prisma.User$tagsArgs<ExtArgs>
   votes?: boolean | Prisma.User$votesArgs<ExtArgs>
   businessSubscriptions?: boolean | Prisma.User$businessSubscriptionsArgs<ExtArgs>
@@ -3094,7 +3094,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     orders: Prisma.$OrderPayload<ExtArgs>[]
     posts: Prisma.$PostPayload<ExtArgs>[]
     subscriptions: Prisma.$SubscriptionPayload<ExtArgs> | null
-    synchronizations: Prisma.$SynchronizationPayload<ExtArgs>[]
+    connections: Prisma.$ConnectionPayload<ExtArgs>[]
     tags: Prisma.$TagPayload<ExtArgs>[]
     votes: Prisma.$VotePayload<ExtArgs>[]
     businessSubscriptions: Prisma.$BusinessSubscriptionPayload<ExtArgs>[]
@@ -3515,7 +3515,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   orders<T extends Prisma.User$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   posts<T extends Prisma.User$postsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$postsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PostPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   subscriptions<T extends Prisma.User$subscriptionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$subscriptionsArgs<ExtArgs>>): Prisma.Prisma__SubscriptionClient<runtime.Types.Result.GetResult<Prisma.$SubscriptionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-  synchronizations<T extends Prisma.User$synchronizationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$synchronizationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SynchronizationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  connections<T extends Prisma.User$connectionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$connectionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConnectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   tags<T extends Prisma.User$tagsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$tagsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   votes<T extends Prisma.User$votesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$votesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   businessSubscriptions<T extends Prisma.User$businessSubscriptionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$businessSubscriptionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BusinessSubscriptionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -4228,27 +4228,27 @@ export type User$subscriptionsArgs<ExtArgs extends runtime.Types.Extensions.Inte
 }
 
 /**
- * User.synchronizations
+ * User.connections
  */
-export type User$synchronizationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type User$connectionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the Synchronization
+   * Select specific fields to fetch from the Connection
    */
-  select?: Prisma.SynchronizationSelect<ExtArgs> | null
+  select?: Prisma.ConnectionSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the Synchronization
+   * Omit specific fields from the Connection
    */
-  omit?: Prisma.SynchronizationOmit<ExtArgs> | null
+  omit?: Prisma.ConnectionOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.SynchronizationInclude<ExtArgs> | null
-  where?: Prisma.SynchronizationWhereInput
-  orderBy?: Prisma.SynchronizationOrderByWithRelationInput | Prisma.SynchronizationOrderByWithRelationInput[]
-  cursor?: Prisma.SynchronizationWhereUniqueInput
+  include?: Prisma.ConnectionInclude<ExtArgs> | null
+  where?: Prisma.ConnectionWhereInput
+  orderBy?: Prisma.ConnectionOrderByWithRelationInput | Prisma.ConnectionOrderByWithRelationInput[]
+  cursor?: Prisma.ConnectionWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.SynchronizationScalarFieldEnum | Prisma.SynchronizationScalarFieldEnum[]
+  distinct?: Prisma.ConnectionScalarFieldEnum | Prisma.ConnectionScalarFieldEnum[]
 }
 
 /**

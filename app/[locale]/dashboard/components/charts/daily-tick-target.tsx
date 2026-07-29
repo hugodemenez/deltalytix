@@ -2,16 +2,16 @@
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Target, HelpCircle, Plus, Minus, ArrowUp, ArrowDown } from "lucide-react"
+import { Target, Plus, Minus, ArrowUp, ArrowDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
-import { Info } from 'lucide-react'
 import {
   Tooltip as UITooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { InfoBubble } from "@/components/ui/info-bubble"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Switch } from "@/components/ui/switch"
@@ -185,19 +185,12 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
             >
               {t('widgets.dailyTickTarget.title')}
             </CardTitle>
-            <TooltipProvider>
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <Info className={cn(
-                    "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                    size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
-                  )} />
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>{t('widgets.dailyTickTarget.tooltip')}</p>
-                </TooltipContent>
-              </UITooltip>
-            </TooltipProvider>
+            <InfoBubble
+              side="top"
+              iconClassName={cn(size === 'small' ? "size-3.5" : "size-4")}
+            >
+              <p>{t('widgets.dailyTickTarget.tooltip')}</p>
+            </InfoBubble>
             
             {/* Points/Ticks Toggle */}
             <div className="flex items-center gap-2 ml-2">

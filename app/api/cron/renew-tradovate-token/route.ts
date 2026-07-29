@@ -1,5 +1,9 @@
 // app/api/cron/renew-tradovate-token/route.ts
 import { prisma } from '@/lib/prisma';
+import {
+  decryptConnectionToken,
+  encryptConnectionToken,
+} from '@/lib/connection-token-crypto';
 import { NextRequest } from 'next/server';
 
 /**
@@ -34,7 +38,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Get all users with Tradovate tokens from your database
-    const synchronizations = await prisma.synchronization.findMany({
+    const synchronizations = await prisma.connection.findMany({
       where: {
         service: 'tradovate',
         token: { not: null }
@@ -45,7 +49,7 @@ export async function GET(request: NextRequest) {
     const missingExpiry = synchronizations.filter((s) => !s.tokenExpiresAt);
     if (missingExpiry.length > 0) {
       console.warn(`[CRON] Clearing ${missingExpiry.length} Tradovate tokens missing tokenExpiresAt`);
-      await prisma.synchronization.updateMany({
+      await prisma.connection.updateMany({
         where: {
           id: { in: missingExpiry.map((s) => s.id) }
         },
@@ -109,28 +113,27 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
       ? 'https://demo.tradovateapi.com' 
       : 'https://live.tradovateapi.com';
     
-    console.log(`[CRON] Attempting token renewal for account ${synchronization.accountId}`);
+        const plaintextToken = decryptConnectionToken(synchronization.token)
+    if (!plaintextToken) {
+      console.error(`[CRON] Missing token for account ${synchronization.externalId}`);
+      return false;
+    }
+    
+    console.log(`[CRON] Attempting token renewal for account ${synchronization.externalId}`);
     
     const renewal = await fetch(`${apiBaseUrl}/auth/renewAccessToken`, {
       headers: {
-        'Authorization': `Bearer ${synchronization.token}`
+        'Authorization': `Bearer ${plaintextToken}`
       }
     });
     
     if (!renewal.ok) {
       const errorText = await renewal.text();
-      console.error(`[CRON] Failed to renew token for account ${synchronization.accountId}: ${errorText}`);
+      console.error(`[CRON] Failed to renew token for account ${synchronization.externalId}: ${errorText}`);
       // Remove invalid/expired token
-      await prisma.user.update({
-        where: { id: synchronization.userId },
-        data: {
-          synchronizations: {
-            update: {
-              where: { id: synchronization.id },
-              data: { token: null, tokenExpiresAt: null }
-            }
-          }
-        }
+      await prisma.connection.update({
+        where: { id: synchronization.id },
+        data: { token: null, tokenExpiresAt: null }
       });
       return false;
     }
@@ -138,32 +141,21 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
     const renewalData = await renewal.json();
     
     // Update database
-    await prisma.user.update({
-      where: { id: synchronization.userId },
+    await prisma.connection.update({
+      where: { id: synchronization.id },
       data: {
-        synchronizations: {
-          update: {
-            where: { id: synchronization.id },
-            data: { token: renewalData.accessToken, tokenExpiresAt: new Date(renewalData.expirationTime) }
-          }
-        }
+        token: encryptConnectionToken(renewalData.accessToken),
+        tokenExpiresAt: new Date(renewalData.expirationTime),
       }
     });
 
     return true;
   } catch (error) {
-    console.error(`[CRON] Error renewing token for account ${synchronization.accountId}:`, error);
+    console.error(`[CRON] Error renewing token for account ${synchronization.externalId}:`, error);
     // On unexpected error, also expire the token to force re-auth
-    await prisma.user.update({
-      where: { id: synchronization.userId },
-      data: {
-        synchronizations: {
-          update: {
-            where: { id: synchronization.id },
-            data: { token: null, tokenExpiresAt: null }
-          }
-        }
-      }
+    await prisma.connection.update({
+      where: { id: synchronization.id },
+      data: { token: null, tokenExpiresAt: null }
     });
     return false;
   }
@@ -176,28 +168,34 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
  */
 async function performDailySync(synchronization: any): Promise<boolean> {
   try {
-    console.log(`[CRON] Performing daily sync for account ${synchronization.accountId}`);
+    console.log(`[CRON] Performing daily sync for account ${synchronization.externalId}`);
     
     // Dynamically import the getTradovateTrades action to avoid circular dependencies
     const { getTradovateTrades } = await import('@/app/[locale]/dashboard/components/import/tradovate/sync/actions');
     
     // Use account-level fee config from DB (includedFeeTypes on sync record)
     const includedFeeTypes = synchronization.includedFeeTypes as Record<string, boolean> | null | undefined
-    const result = await getTradovateTrades(synchronization.token, {
+    const plaintextToken = decryptConnectionToken(synchronization.token)
+    if (!plaintextToken) {
+      console.error(`[CRON] Missing token for daily sync of account ${synchronization.externalId}`);
+      return false;
+    }
+    const result = await getTradovateTrades(plaintextToken, {
       userId: synchronization.userId,
       includedFeeTypes: includedFeeTypes ?? undefined,
       environment: synchronization.environment === 'live' ? 'live' : 'demo',
+      connectionExternalId: synchronization.externalId,
     });
     
     if (result.error) {
-      console.error(`[CRON] Failed to sync trades for account ${synchronization.accountId}:`, result.error);
+      console.error(`[CRON] Failed to sync trades for account ${synchronization.externalId}:`, result.error);
       return false;
     }
     
-    console.log(`[CRON] Successfully synced ${result.savedCount || 0} trades for account ${synchronization.accountId}`);
+    console.log(`[CRON] Successfully synced ${result.savedCount || 0} trades for account ${synchronization.externalId}`);
     return true;
   } catch (error) {
-    console.error(`[CRON] Error during daily sync for account ${synchronization.accountId}:`, error);
+    console.error(`[CRON] Error during daily sync for account ${synchronization.externalId}:`, error);
     return false;
   }
 }

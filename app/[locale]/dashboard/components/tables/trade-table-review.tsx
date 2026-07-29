@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo } from "react";
 import { useData } from "@/context/data-provider";
 import {
   ColumnDef,
@@ -29,6 +29,7 @@ import {
   MoreHorizontal,
   Settings,
 } from "lucide-react";
+import { InfoBubble } from "@/components/ui/info-bubble";
 import { Switch } from "@/components/ui/switch";
 import { Trade } from "@/prisma/generated/prisma/browser";
 import {
@@ -104,6 +105,10 @@ import { EditableInstrumentCell } from "./editable-instrument-cell";
 import { BulkEditPanel } from "./bulk-edit-panel";
 import { TradeTableVirtualBody } from "./trade-table-virtual-body";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  DEFAULT_TRADE_TABLE_PAGE_SIZE,
+  sanitizeTablePageSize,
+} from "@/store/widgets/table-config-store";
 
 // Custom Tags Header Component
 function TagsColumnHeader() {
@@ -327,7 +332,9 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
     tableConfig?.columnVisibility || {},
   );
   const [expanded, setExpanded] = useState<ExpandedState>({});
-  const [pageSize, setPageSize] = useState(tableConfig?.pageSize || 50);
+  const [pageSize, setPageSize] = useState(() =>
+    sanitizeTablePageSize(tableConfig?.pageSize),
+  );
   const [groupingGranularity, setGroupingGranularity] = useState<number>(
     tableConfig?.groupingGranularity || 0,
   );
@@ -352,7 +359,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
       } else {
         setColumnVisibility(tableConfig.columnVisibility);
       }
-      setPageSize(tableConfig.pageSize);
+      setPageSize(sanitizeTablePageSize(tableConfig.pageSize));
       setGroupingGranularity(tableConfig.groupingGranularity);
       setGroupingMode(tableConfig.groupingMode || "time");
     }
@@ -400,9 +407,10 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   };
 
   const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize);
+    const safePageSize = sanitizeTablePageSize(newPageSize);
+    setPageSize(safePageSize);
     setPageIndex(0); // Reset to first page when page size changes
-    updatePageSize("trade-table", newPageSize);
+    updatePageSize("trade-table", safePageSize);
   };
 
   const handleGroupingGranularityChange = (newGranularity: number) => {
@@ -537,6 +545,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           videoUrl: null,
           id: "",
           accountNumber: trade.accountNumber,
+          accountId: trade.accountId ?? null,
           quantity: trade.quantity,
           entryId: null,
           closeId: null,
@@ -550,6 +559,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           trades: [
             {
               ...trade,
+              accountId: trade.accountId ?? null,
               trades: [],
             },
           ],
@@ -1236,6 +1246,17 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
     },
   });
 
+  // Keep pageIndex in range when filters/data shrink (autoResetPageIndex is off).
+  // Uses the table's filtered page count so column filters are respected — clamping
+  // against the unfiltered groupedTrades length would leave pageIndex past the last
+  // visible page after filters narrow the row set, showing an empty body.
+  React.useEffect(() => {
+    const maxPageIndex = Math.max(0, table.getPageCount() - 1);
+    if (pageIndex > maxPageIndex) {
+      setPageIndex(maxPageIndex);
+    }
+  }, [table, groupedTrades.length, pageSize, pageIndex, columnFilters]);
+
   const currentPageTotals = calculateTotalsForRows(
     table.getPaginationRowModel().rows.map((row) => row.original),
   );
@@ -1258,7 +1279,8 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   // Note: This only controls the Card header, not the table column headers
   const showHeader = config?.showHeader !== false;
   const isMobile = useIsMobile();
-  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const [tableScrollElement, setTableScrollElement] =
+    useState<HTMLDivElement | null>(null);
 
   const columnConfigTrigger = isMobile ? (
     <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
@@ -1283,16 +1305,12 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
               <CardTitle className="line-clamp-1 text-sm sm:text-base">
                 {t("trade-table.title")}
               </CardTitle>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p>{t("trade-table.description")}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <InfoBubble
+                side="top"
+                iconClassName="size-3.5 sm:size-4"
+              >
+                <p>{t("trade-table.description")}</p>
+              </InfoBubble>
             </div>
             {isMobile && !config?.disableColumnConfig && (
               <ColumnConfigDialog tableId="trade-table" trigger={columnConfigTrigger} />
@@ -1437,7 +1455,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
         </div>
       </CardHeader>
       )}
-      <CardContent ref={tableContainerRef} className="flex-1 min-h-0 overflow-auto p-0">
+      <CardContent ref={setTableScrollElement} className="flex-1 min-h-0 overflow-auto p-0">
         <div className="relative w-full min-w-max">
           <table
             className="w-full border-separate border-spacing-0 caption-bottom text-sm"
@@ -1469,7 +1487,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
 
             <TradeTableVirtualBody
               table={table}
-              scrollElementRef={tableContainerRef}
+              scrollElement={tableScrollElement}
               columnCount={visibleColumns.length}
               compact={isMobile}
             />
@@ -1637,7 +1655,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    handlePageSizeChange(50);
+                    handlePageSizeChange(DEFAULT_TRADE_TABLE_PAGE_SIZE);
                     table.resetPageSize();
                     table.setPageIndex(0);
                   }}
@@ -1646,7 +1664,11 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    const maxPageSize = groupedTrades.length;
+                    // Never persist 0 — Show All while empty would blank the table on reload
+                    const maxPageSize = Math.max(
+                      groupedTrades.length,
+                      DEFAULT_TRADE_TABLE_PAGE_SIZE,
+                    );
                     handlePageSizeChange(maxPageSize);
                     table.setPageSize(maxPageSize);
                     table.setPageIndex(0);
@@ -1675,7 +1697,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                 size="sm"
                 className="hidden min-w-0 sm:inline-flex"
                 onClick={() => {
-                  handlePageSizeChange(50);
+                  handlePageSizeChange(DEFAULT_TRADE_TABLE_PAGE_SIZE);
                   table.resetPageSize();
                   table.setPageIndex(0);
                 }}
@@ -1687,7 +1709,11 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                 size="sm"
                 className="hidden min-w-0 sm:inline-flex"
                 onClick={() => {
-                  const maxPageSize = groupedTrades.length;
+                  // Never persist 0 — Show All while empty would blank the table on reload
+                  const maxPageSize = Math.max(
+                    groupedTrades.length,
+                    DEFAULT_TRADE_TABLE_PAGE_SIZE,
+                  );
                   handlePageSizeChange(maxPageSize);
                   table.setPageSize(maxPageSize);
                   table.setPageIndex(0);

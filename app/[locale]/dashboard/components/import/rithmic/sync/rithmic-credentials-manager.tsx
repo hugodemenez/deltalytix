@@ -25,21 +25,12 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { SyncCountdown } from "./sync-countdown";
 import { useI18n } from "@/locales/client";
 import { toast } from "sonner";
@@ -53,6 +44,16 @@ import {
 } from "@/components/ui/select";
 import { useUserStore } from "@/store/user-store";
 import { useRithmicSyncContext } from "@/context/rithmic-sync-context";
+import { cn } from "@/lib/utils";
+
+const fieldClassName =
+  "h-9 rounded-sm border-black/10 bg-transparent text-sm shadow-none focus:ring-0 focus:ring-offset-0 dark:border-white/10";
+const primaryButtonClassName =
+  "h-9 rounded-sm bg-[oklch(0.22_0.01_95)] px-4 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]";
+const secondaryButtonClassName =
+  "h-9 rounded-sm border border-black/20 bg-transparent px-3 text-sm font-medium shadow-none transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:hover:bg-white/5";
+const iconButtonClassName =
+  "inline-flex h-8 w-8 items-center justify-center rounded-sm text-black/45 transition-[opacity,transform,background-color,color] duration-150 hover:bg-black/5 hover:text-black active:scale-[0.96] dark:text-white/45 dark:hover:bg-white/5 dark:hover:text-white";
 
 interface Synchronization {
   accountId: string;
@@ -318,272 +319,243 @@ export function RithmicCredentialsManager({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-lg font-semibold">
-            {t("rithmic.savedCredentials")}
-          </h2>
-          <Button onClick={onAddNew} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            {t("rithmic.addNew")}
-          </Button>
-        </div>
+    <div className="space-y-5">
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="text-xl font-normal tracking-tight md:text-2xl">
+          {t("rithmic.savedCredentials")}
+        </h2>
+        <Button type="button" onClick={onAddNew} className={primaryButtonClassName}>
+          <Plus className="mr-2 h-4 w-4" strokeWidth={1.75} />
+          {t("rithmic.addNew")}
+        </Button>
+      </div>
 
-        <div className="flex items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                {t("rithmic.syncInterval")}
-              </span>
-              <Select
-                value={syncInterval.toString()}
-                onValueChange={(value) =>
-                  setSyncInterval(parseInt(value) as SyncInterval)
-                }
-              >
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5 min</SelectItem>
-                  <SelectItem value="15">15 min</SelectItem>
-                  <SelectItem value="30">30 min</SelectItem>
-                  <SelectItem value="60">60 min</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <Button
-            onClick={() => {
-              const allCredentials = Object.values(credentials);
-              allCredentials.forEach((cred) => handleSync(cred));
-            }}
-            size="sm"
-            variant="outline"
-            disabled={true}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-y border-black/10 py-3 dark:border-white/10">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-black/45 dark:text-white/45">
+            {t("rithmic.syncInterval")}
+          </span>
+          <Select
+            value={syncInterval.toString()}
+            onValueChange={(value) =>
+              setSyncInterval(parseInt(value) as SyncInterval)
+            }
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            {t("rithmic.actions.syncAll")}
-          </Button>
+            <SelectTrigger className={cn(fieldClassName, "w-[100px]")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="rounded-sm border-black/10 bg-white shadow-none dark:border-white/10 dark:bg-black">
+              <SelectItem value="5">5 min</SelectItem>
+              <SelectItem value="15">15 min</SelectItem>
+              <SelectItem value="30">30 min</SelectItem>
+              <SelectItem value="60">60 min</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+
+        <Button
+          type="button"
+          onClick={() => {
+            const allCredentials = Object.values(credentials);
+            allCredentials.forEach((cred) => handleSync(cred));
+          }}
+          variant="outline"
+          disabled={true}
+          className={secondaryButtonClassName}
+        >
+          <RefreshCw className="mr-2 h-4 w-4" strokeWidth={1.75} />
+          {t("rithmic.actions.syncAll")}
+        </Button>
       </div>
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("rithmic.username")}</TableHead>
-              <TableHead>{t("rithmic.lastSync")}</TableHead>
-              <TableHead>{t("rithmic.nextSync")}</TableHead>
-              <TableHead>{t("rithmic.actions.title")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoadingSynchronizations ? (
-              <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="text-center text-muted-foreground py-6"
-                >
-                  <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : allEntries.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="text-center text-muted-foreground py-6"
-                >
-                  {t("rithmic.noSavedCredentials")}
-                </TableCell>
-              </TableRow>
-            ) : (
-              allEntries.map((entry) => {
-                const { sync, credential, hasLocalCredentials } = entry;
-                const credentialId = credential?.id || "";
-                const rowId = sync?.accountId || credentialId || "";
-                const lastSyncTime =
-                  credential?.lastSyncTime ||
-                  sync?.lastSyncedAt ||
-                  new Date().toISOString();
+      {isLoadingSynchronizations ? (
+        <p className="flex items-center gap-2 border-y border-black/10 py-8 text-sm text-black/45 dark:border-white/10 dark:text-white/45">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading...
+        </p>
+      ) : allEntries.length === 0 ? (
+        <p className="border-y border-black/10 py-8 text-sm text-black/45 dark:border-white/10 dark:text-white/45">
+          {t("rithmic.noSavedCredentials")}
+        </p>
+      ) : (
+        <ul className="divide-y divide-black/10 border-y border-black/10 dark:divide-white/10 dark:border-white/10">
+          {allEntries.map((entry) => {
+            const { sync, credential, hasLocalCredentials } = entry;
+            const credentialId = credential?.id || "";
+            const rowId = sync?.accountId || credentialId || "";
+            const lastSyncTime =
+              credential?.lastSyncTime ||
+              sync?.lastSyncedAt ||
+              new Date().toISOString();
+            const username =
+              credential?.credentials.username || sync?.accountId || "N/A";
 
-                return (
-                  <TableRow key={rowId}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {credential ? (
-                          credential.credentials.username
+            return (
+              <li key={rowId} className="flex items-start justify-between gap-4 py-5">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 truncate text-base font-normal tracking-tight md:text-lg">
+                    <span className="truncate">{username}</span>
+                    {!hasLocalCredentials && (
+                      <AlertTriangle
+                        className="h-4 w-4 shrink-0 text-black/45 dark:text-white/45"
+                        aria-label={t("rithmic.missingCredentialsWarning")}
+                      />
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm text-black/55 dark:text-white/55">
+                    {t("rithmic.lastSync")}:{" "}
+                    {lastSyncTime
+                      ? formatDate(lastSyncTime)
+                      : t("rithmic.neverSynced")}
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-black/45 dark:text-white/45">
+                    <span>{t("rithmic.nextSync")}</span>
+                    {credential ? (
+                      <SyncCountdown
+                        lastSyncTime={lastSyncTime}
+                        isAutoSyncing={
+                          isAutoSyncing && syncingId === credentialId
+                        }
+                        credentialId={credentialId}
+                      />
+                    ) : (
+                      <span>{t("rithmic.noCredentials")}</span>
+                    )}
+                  </div>
+                  {!hasLocalCredentials && (
+                    <p className="mt-2 text-sm leading-relaxed text-black/55 dark:text-white/55">
+                      {t("rithmic.missingCredentialsWarning")}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1">
+                  {credential ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleSync(credential)}
+                        disabled={isAutoSyncing}
+                        className={iconButtonClassName}
+                        aria-label={t("rithmic.actions.sync")}
+                      >
+                        {syncingId === credentialId ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <span className="text-muted-foreground">
-                            {sync?.accountId || "N/A"}
-                          </span>
+                          <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
                         )}
-                        {!hasLocalCredentials && (
-                          <AlertTriangle
-                            className="h-4 w-4 text-yellow-500"
-                            aria-label={t("rithmic.missingCredentialsWarning")}
-                          />
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {lastSyncTime
-                        ? formatDate(lastSyncTime)
-                        : t("rithmic.neverSynced")}
-                    </TableCell>
-                    <TableCell>
-                      {credential ? (
-                        <SyncCountdown
-                          lastSyncTime={lastSyncTime}
-                          isAutoSyncing={
-                            isAutoSyncing && syncingId === credentialId
-                          }
-                          credentialId={credentialId}
-                        />
-                      ) : (
-                        <span className="text-muted-foreground text-sm">
-                          {t("rithmic.noCredentials")}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {credential ? (
-                        <div className="flex justify-center items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSync(credential)}
-                            disabled={isAutoSyncing}
+                      </button>
+                      <Popover modal>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className={iconButtonClassName}
+                            aria-label={t("rithmic.actions.title")}
                           >
-                            {syncingId === credentialId ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </Button>
-                          <Popover modal>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-48 p-2" align="end">
-                              <div className="flex flex-col space-y-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="justify-start"
-                                  onClick={() => handleLoadMoreData(credential)}
-                                  disabled={isAutoSyncing}
-                                >
-                                  {syncingId === credentialId ? (
-                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                  ) : (
-                                    <History className="h-4 w-4 mr-2" />
-                                  )}
-                                  {t("rithmic.actions.loadMore")}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="justify-start"
-                                  onClick={() => onSelectCredential(credential)}
-                                >
-                                  <Edit2 className="h-4 w-4 mr-2" />
-                                  {t("rithmic.actions.edit")}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="justify-start text-destructive hover:text-destructive"
-                                  onClick={() => {
-                                    setSelectedCredentialId(credentialId);
-                                    setIsDeleteDialogOpen(true);
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  {t("rithmic.actions.delete")}
-                                </Button>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="flex items-start gap-2 text-xs text-yellow-600 dark:text-yellow-400 max-w-md">
-                            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                            <span className="text-left">
-                              {t("rithmic.missingCredentialsWarning")}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="justify-start"
-                              onClick={() =>
-                                handleLoginMissing(sync?.accountId)
-                              }
-                              disabled={
-                                !sync?.accountId ||
-                                deletingSyncId === sync.accountId
-                              }
+                            <MoreVertical className="h-4 w-4" strokeWidth={1.75} />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-48 rounded-sm border-black/10 bg-white p-1 shadow-none dark:border-white/10 dark:bg-black"
+                          align="end"
+                        >
+                          <div className="flex flex-col">
+                            <button
+                              type="button"
+                              className="flex w-full items-center rounded-sm px-3 py-2.5 text-left text-sm transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5"
+                              onClick={() => handleLoadMoreData(credential)}
+                              disabled={isAutoSyncing}
                             >
-                              <LogIn className="h-4 w-4 mr-2" />
-                              {t("rithmic.actions.login")}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="justify-start text-destructive hover:text-destructive"
-                              onClick={() =>
-                                handleDeleteSynchronization(sync?.accountId)
-                              }
-                              disabled={deletingSyncId === sync?.accountId}
-                            >
-                              {deletingSyncId === sync?.accountId ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              {syncingId === credentialId ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                               ) : (
-                                <Trash2 className="h-4 w-4 mr-2" />
+                                <History className="mr-2 h-4 w-4" strokeWidth={1.75} />
                               )}
-                              {t("rithmic.actions.deleteSync")}
-                            </Button>
+                              {t("rithmic.actions.loadMore")}
+                            </button>
+                            <button
+                              type="button"
+                              className="flex w-full items-center rounded-sm px-3 py-2.5 text-left text-sm transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5"
+                              onClick={() => onSelectCredential(credential)}
+                            >
+                              <Edit2 className="mr-2 h-4 w-4" strokeWidth={1.75} />
+                              {t("rithmic.actions.edit")}
+                            </button>
+                            <button
+                              type="button"
+                              className="flex w-full items-center rounded-sm px-3 py-2.5 text-left text-sm text-red-600 transition-colors duration-150 hover:bg-black/5 dark:text-red-400 dark:hover:bg-white/5"
+                              onClick={() => {
+                                setSelectedCredentialId(credentialId);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" strokeWidth={1.75} />
+                              {t("rithmic.actions.delete")}
+                            </button>
                           </div>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                        </PopoverContent>
+                      </Popover>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className={cn(secondaryButtonClassName, "px-2")}
+                        onClick={() => handleLoginMissing(sync?.accountId)}
+                        disabled={
+                          !sync?.accountId || deletingSyncId === sync.accountId
+                        }
+                      >
+                        <LogIn className="mr-2 h-4 w-4" strokeWidth={1.75} />
+                        {t("rithmic.actions.login")}
+                      </button>
+                      <button
+                        type="button"
+                        className={iconButtonClassName}
+                        onClick={() =>
+                          handleDeleteSynchronization(sync?.accountId)
+                        }
+                        disabled={deletingSyncId === sync?.accountId}
+                        aria-label={t("rithmic.actions.deleteSync")}
+                      >
+                        {deletingSyncId === sync?.accountId ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" strokeWidth={1.75} />
+                        )}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-sm border-black/10 dark:border-white/10">
           <DialogHeader>
-            <DialogTitle>{t("rithmic.deleteCredentials")}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="font-normal tracking-tight">
+              {t("rithmic.deleteCredentials")}
+            </DialogTitle>
+            <DialogDescription className="text-black/55 dark:text-white/55">
               {t("rithmic.deleteCredentialsConfirm")}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end space-x-2 mt-4">
+          <div className="mt-4 flex justify-end gap-2">
             <Button
+              type="button"
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
+              className={secondaryButtonClassName}
             >
               {t("common.cancel")}
             </Button>
             <Button
+              type="button"
               variant="destructive"
+              className="h-9 rounded-sm"
               onClick={() =>
                 selectedCredentialId && handleDelete(selectedCredentialId)
               }

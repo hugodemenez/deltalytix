@@ -53,10 +53,10 @@ export type Notification = Prisma.NotificationModel
  */
 export type User = Prisma.UserModel
 /**
- * Model Synchronization
+ * Model Connection
  * 
  */
-export type Synchronization = Prisma.SynchronizationModel
+export type Connection = Prisma.ConnectionModel
 /**
  * Model Team
  * 

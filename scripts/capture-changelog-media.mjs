@@ -80,6 +80,7 @@ async function main() {
           locale,
           file: asset.file,
           scene: asset.scene,
+          route: asset.route,
           siteUrl,
           playwrightLocale: PLAYWRIGHT_LOCALE[locale],
         })

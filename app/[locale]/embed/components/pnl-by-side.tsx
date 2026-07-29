@@ -13,12 +13,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Info } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { InfoBubble } from "@/components/ui/info-bubble"
 import { useI18n } from "@/locales/client";
 
 type TradeLike = {
@@ -157,14 +152,9 @@ export default function PnLBySideChartEmbed({
             <CardTitle className="line-clamp-1 text-base">
               {t("embed.pnlBySide.title")}
             </CardTitle>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
-              </PopoverTrigger>
-              <PopoverContent side="top">
-                <p>{t("embed.pnlBySide.description")}</p>
-              </PopoverContent>
-            </Popover>
+            <InfoBubble side="top" iconClassName="size-4">
+              <p>{t("embed.pnlBySide.description")}</p>
+            </InfoBubble>
           </div>
           <button
             className="text-xs text-muted-foreground hover:text-foreground"

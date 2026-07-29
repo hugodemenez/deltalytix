@@ -1,0 +1,44 @@
+
+package rti;
+
+message ResponseLoginInfo
+	{       
+	enum UserType {
+		      USER_TYPE_ADMIN  = 0;
+	              USER_TYPE_FCM    = 1;
+		      USER_TYPE_IB     = 2;
+		      USER_TYPE_TRADER = 3;
+	              }
+
+	required int32    template_id           = 154467;
+	repeated string   user_msg              = 132760;
+	repeated string   rp_code               = 132766;
+
+	optional string   fcm_id                = 154013;
+	optional string   ib_id                 = 154014;
+	optional string   user                  = 131003;
+	
+	optional string   first_name            = 154216;
+	optional string   last_name             = 154217;
+	optional string   email_address         = 150110;
+	optional UserType user_type             = 154036;
+
+	optional string   order_copy_status     = 158206;	        // enabled or disabled
+
+	optional string   country_code          = 154712;
+	optional string   state_code            = 154713;
+
+	optional string   address_street_1      = 144511;
+	optional string   address_street_2      = 144512;
+	optional string   address_city          = 144513;
+	optional string   address_state         = 144514;
+	optional string   address_country       = 144515;
+	optional string   address_zip           = 144519;
+
+	optional string   phone_residence       = 144516;
+	optional string   phone_work            = 144517;
+	optional string   phone_mobile          = 144518;
+
+	optional int32    tp_max_session_count  = 140000;               // ticker_plant (market data) max session count
+	optional int32    op_max_session_count  = 140012;               // order_plant max session count
+	}

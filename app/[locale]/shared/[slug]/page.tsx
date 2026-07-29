@@ -1,10 +1,13 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import { getShared } from "@/server/shared"
 import { SharedPageClient } from "./shared-page-client"
 import { getRequestOrigin, siteUrl } from "@/lib/site-url"
 import { headers } from "next/headers"
 import { truncateForSocialDescription } from "@/lib/og/site-metadata"
+import { CacheComponentsDynamicMarker } from "@/components/cache-components-dynamic-marker"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface SharedPageProps {
   params: Promise<{
@@ -62,17 +65,34 @@ export async function generateMetadata({ params }: SharedPageProps): Promise<Met
   }
 }
 
-// Main page component - Server Component
-export default async function SharedPage({ params }: SharedPageProps) {
-  // Await the params Promise
+async function SharedPageContent({ params }: SharedPageProps) {
   const resolvedParams = await params
-  // Fetch shared data on the server
   const sharedData = await getShared(resolvedParams.slug)
-  
+
   if (!sharedData) {
     notFound()
   }
 
-  // Pass the resolved params and fetched data to the client component
   return <SharedPageClient params={resolvedParams} initialData={sharedData} />
+}
+
+function SharedPageFallback() {
+  return (
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-10" aria-busy="true">
+      <Skeleton className="h-10 w-64" />
+      <Skeleton className="h-5 w-full max-w-xl" />
+      <Skeleton className="h-72 w-full" />
+    </div>
+  )
+}
+
+export default function SharedPage({ params }: SharedPageProps) {
+  return (
+    <>
+      <CacheComponentsDynamicMarker />
+      <Suspense fallback={<SharedPageFallback />}>
+        <SharedPageContent params={params} />
+      </Suspense>
+    </>
+  )
 }

@@ -1,4 +1,5 @@
 import React from "react";
+import { cacheLife } from "next/cache";
 import { setStaticParamsLocale } from "next-international/server";
 import { getI18n } from "@/locales/server";
 import { getStaticParams as getLocaleStaticParams } from "@/locales/server";
@@ -13,8 +14,6 @@ interface PageProps {
     locale: string;
   }>;
 }
-
-export const revalidate = 3600;
 
 export function generateStaticParams() {
   return getLocaleStaticParams();
@@ -41,8 +40,9 @@ async function isMobileScreenshot(image?: string) {
   }
 }
 
-export default async function UpdatesPage(props: PageProps) {
-  const { locale } = await props.params;
+async function CachedUpdatesPage({ locale }: { locale: string }) {
+  "use cache";
+  cacheLife("hours");
 
   setStaticParamsLocale(locale);
 
@@ -54,9 +54,13 @@ export default async function UpdatesPage(props: PageProps) {
     (post) => post.meta.status === "completed",
   );
 
-  // Get the latest video for French locale
+  // Skip YouTube during production builds — network latency can exhaust the
+  // 60s static-generation budget when many routes prerender in parallel.
   let latestVideoId: string | null = null;
-  if (locale === "fr") {
+  if (
+    locale === "fr" &&
+    process.env.NEXT_PHASE !== "phase-production-build"
+  ) {
     latestVideoId = await getLatestVideoFromPlaylist();
   }
 
@@ -125,4 +129,9 @@ export default async function UpdatesPage(props: PageProps) {
       </section>
     </main>
   );
+}
+
+export default async function UpdatesPage(props: PageProps) {
+  const { locale } = await props.params;
+  return <CachedUpdatesPage locale={locale} />;
 }

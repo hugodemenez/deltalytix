@@ -1,13 +1,12 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { TickDetails, Trade } from '@/prisma/generated/prisma/browser'
 import { getTickDetails } from '@/server/tick-details'
 import { PlatformProcessorProps } from '../config/platforms'
+import { ProcessedTradesPreview } from '../components/processed-trades-preview'
 
 interface ContractSpec {
   tickSize: number;
@@ -347,9 +346,6 @@ export default function RithmicOrderProcessor({ csvData, headers, processedTrade
     setTickDetails(updatedTickDetails)
   }
 
-  const totalPnL = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0), [processedTrades])
-  const totalCommission = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0), [processedTrades])
-
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-1 overflow-auto">
@@ -395,70 +391,7 @@ export default function RithmicOrderProcessor({ csvData, headers, processedTrade
               ))}
             </div>
           </div>
-          <div className="px-2">
-            <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Account</TableHead>
-                  <TableHead>Instrument</TableHead>
-                  <TableHead>Side</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Entry Price</TableHead>
-                  <TableHead>Close Price</TableHead>
-                  <TableHead>Entry Date</TableHead>
-                  <TableHead>Close Date</TableHead>
-                  <TableHead>PnL</TableHead>
-                  <TableHead>Time in Position</TableHead>
-                  <TableHead>Commission</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {processedTrades.map((trade) => (
-                  <TableRow key={trade.id}>
-                    <TableCell>{trade.accountNumber}</TableCell>
-                    <TableCell>{trade.instrument}</TableCell>
-                    <TableCell>{trade.side}</TableCell>
-                    <TableCell>{trade.quantity}</TableCell>
-                    <TableCell>{trade.entryPrice}</TableCell>
-                    <TableCell>{trade.closePrice || '-'}</TableCell>
-                    <TableCell>{trade.entryDate ? new Date(trade.entryDate).toLocaleString() : '-'}</TableCell>
-                    <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
-                    <TableCell>{trade.pnl ? trade.pnl.toFixed(2) : '-'}</TableCell>
-                    <TableCell>{trade.timeInPosition ? `${Math.floor(trade.timeInPosition / 60)}m ${Math.floor(trade.timeInPosition % 60)}s` : '-'}</TableCell>
-                    <TableCell>{trade.commission ? trade.commission.toFixed(2) : '-'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          <div className="flex justify-between px-2 py-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Total PnL</h3>
-              <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {totalPnL.toFixed(2)}
-              </p>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Total Commission</h3>
-              <p className="text-xl font-bold text-blue-600">
-                {totalCommission.toFixed(2)}
-              </p>
-            </div>
-          </div>
-          <div className="px-2">
-            <h3 className="text-lg font-semibold mb-2">Instruments Traded</h3>
-            <div className="flex flex-wrap gap-2">
-              {uniqueSymbols.map((symbol) => (
-                <Button
-                  key={symbol}
-                  variant="outline"
-                >
-                  {symbol}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <ProcessedTradesPreview trades={processedTrades} />
         </div>
       </div>
     </div>

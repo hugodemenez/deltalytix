@@ -1,3 +1,4 @@
+import { connection } from "next/server"
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
@@ -10,6 +11,8 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter })
 
 export async function GET(request: Request) {
+  await connection()
+
   try {
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')
