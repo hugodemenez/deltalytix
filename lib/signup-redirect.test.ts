@@ -49,6 +49,8 @@ describe("resolveInternalDestination", () => {
     "https://evil.example/steal",
     "//evil.example/steal",
     "http://deltalytix.app.evil.example/steal",
+    "javascript:alert(1)",
+    "data:text/html,<script>alert(1)</script>",
   ])("refuses the off-origin destination %s", (target) => {
     expect(resolveInternalDestination(target, ORIGIN).href).toBe(
       `${ORIGIN}/dashboard`,
@@ -83,9 +85,21 @@ describe("signupRedirectPath", () => {
     );
   });
 
-  it("never marks an off-origin destination", () => {
-    expect(signupRedirectPath("https://evil.example/steal", true)).toBe(
-      "https://evil.example/steal",
-    );
+  it("keeps a relative next such as the checkout endpoint", () => {
+    expect(
+      signupRedirectPath("api/stripe/create-checkout-session?lookup_key=x", true),
+    ).toBe("/api/stripe/create-checkout-session?lookup_key=x&signup=success");
+  });
+
+  // The result goes to router.push, so an unrecognised target must never
+  // survive: `javascript:` parses as a URL and would otherwise be navigated to.
+  it.each([
+    "https://evil.example/steal",
+    "//evil.example/steal",
+    "javascript:alert(1)",
+    "JaVaScRiPt:alert(1)",
+    "data:text/html,<script>alert(1)</script>",
+  ])("refuses to navigate to %s", (target) => {
+    expect(signupRedirectPath(target, true)).toBe("/dashboard?signup=success");
   });
 });

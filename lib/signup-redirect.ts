@@ -8,8 +8,11 @@
  * The marker is applied to any *internal* destination rather than to
  * `/dashboard` alone: `next` legitimately points at checkout and team surfaces,
  * locale-prefixed paths (`/fr/dashboard`) are equally valid landings, and a
- * signup is a signup wherever the user ends up. External destinations are never
- * tagged, so the marker cannot leak off-origin.
+ * signup is a signup wherever the user ends up.
+ *
+ * `next` is attacker-controlled — it arrives on the query string — so both the
+ * server redirect and the client navigation resolve it against the app's own
+ * origin and fall back to the dashboard when it points anywhere else.
  */
 
 export const SIGNUP_SUCCESS_PARAM = "signup";
@@ -52,25 +55,20 @@ export function resolveInternalDestination(
 }
 
 /**
- * Client-side counterpart: takes a relative path and returns it with the signup
- * marker applied, preserving any query string and hash already on it. External
- * or unparseable targets are returned untouched.
+ * Client-side counterpart: takes a `next` value and returns the path to
+ * navigate to, with the signup marker applied and any query string or hash
+ * preserved.
+ *
+ * Applies the same containment rule as the server. This matters more on the
+ * client than it looks: the result is handed to `router.push`, and a scheme
+ * like `javascript:` parses as a valid URL, so passing an unrecognised target
+ * through would hand attacker-controlled input to the router.
  */
 export function signupRedirectPath(
   target: string | null | undefined,
   isNewUser: boolean,
 ): string {
-  const destination = target || DEFAULT_DESTINATION;
-
-  let url: URL;
-  try {
-    url = new URL(destination, RELATIVE_BASE);
-  } catch {
-    return destination;
-  }
-
-  if (url.origin !== RELATIVE_BASE) return destination;
-
+  const url = resolveInternalDestination(target, RELATIVE_BASE);
   applySignupSuccess(url, isNewUser);
   return `${url.pathname}${url.search}${url.hash}`;
 }
