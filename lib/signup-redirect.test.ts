@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   applySignupSuccess,
+  hasSignupSuccess,
   resolveInternalDestination,
   signupRedirectPath,
 } from "./signup-redirect";
@@ -26,6 +27,29 @@ describe("applySignupSuccess", () => {
     );
     expect(url.searchParams.get("tab")).toBe("trades");
     expect(url.searchParams.get("signup")).toBe("success");
+  });
+});
+
+describe("hasSignupSuccess", () => {
+  it("recognises the marker so checkout can forward it", () => {
+    const { searchParams } = new URL(
+      "/api/stripe/create-checkout-session?lookup_key=pro&signup=success",
+      ORIGIN,
+    );
+    expect(hasSignupSuccess(searchParams)).toBe(true);
+  });
+
+  it.each(["", "?lookup_key=pro", "?signup=", "?signup=true"])(
+    "rejects %s",
+    (query) => {
+      const { searchParams } = new URL(`/checkout${query}`, ORIGIN);
+      expect(hasSignupSuccess(searchParams)).toBe(false);
+    },
+  );
+
+  it("round-trips what applySignupSuccess writes", () => {
+    const url = applySignupSuccess(new URL("/checkout", ORIGIN), true);
+    expect(hasSignupSuccess(url.searchParams)).toBe(true);
   });
 });
 

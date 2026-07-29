@@ -33,6 +33,17 @@ export function applySignupSuccess(url: URL, isNewUser: boolean): URL {
 }
 
 /**
+ * Whether a request carries the signup marker.
+ *
+ * Used to hand the marker across a hop that renders no page of ours — the
+ * checkout endpoint redirects straight to Stripe, so it has to forward the
+ * marker to the URLs Stripe sends the user back to.
+ */
+export function hasSignupSuccess(params: URLSearchParams): boolean {
+  return params.get(SIGNUP_SUCCESS_PARAM) === SIGNUP_SUCCESS_VALUE;
+}
+
+/**
  * Resolves an untrusted `next` value to a URL on this origin.
  *
  * Anything that resolves off-origin — an absolute URL, a protocol-relative
