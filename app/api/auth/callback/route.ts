@@ -54,8 +54,8 @@ export async function GET(request: Request) {
         try {
           const { data: { user } } = await supabase.auth.getUser()
           if (user) {
-            const databaseUser = await ensureUserInDatabase(user, locale)
-            isNewUser = Date.now() - databaseUser.createdAt.getTime() < 60_000
+            const ensureResult = await ensureUserInDatabase(user, locale)
+            isNewUser = ensureResult.isNewUser
           }
         } catch (e) {
           console.error('Auth callback ensureUserInDatabase error:', e)

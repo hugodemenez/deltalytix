@@ -409,7 +409,8 @@ export async function setPasswordAction(newPassword: string) {
  *   persisted to the `language` field for the user record.
  *
  * Returns:
- * - The up-to-date Prisma `user` record.
+ * - `user`: the up-to-date Prisma `user` record.
+ * - `isNewUser`: true only when this call created the record.
  *
  * Side effects:
  * - May sign the user out on integrity or identification errors.
@@ -458,14 +459,14 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
             },
           });
           console.log('[ensureUserInDatabase] SUCCESS: User updated successfully');
-          return updatedUser;
+          return { user: updatedUser, isNewUser: false };
         } catch (updateError) {
           console.error('[ensureUserInDatabase] ERROR: Failed to update user record:', updateError);
           throw new Error('Failed to update user');
         }
       }
       console.log('[ensureUserInDatabase] SUCCESS: Existing user found, no update needed');
-      return existingUserByAuthId;
+      return { user: existingUserByAuthId, isNewUser: false };
     }
 
     // If user doesn't exist by auth_user_id, check if email exists
@@ -517,7 +518,7 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
         // Don't throw here - user creation succeeded, layout can be created later
       }
       
-      return newUser;
+      return { user: newUser, isNewUser: true };
     } catch (createError) {
       if (createError instanceof Error &&
         createError.message.includes('Unique constraint failed')) {
@@ -580,8 +581,8 @@ export async function verifyOtp(email: string, token: string, type: 'email' | 's
     let isNewUser = false
     if (data.user && data.session) {
       const locale = email.includes('.fr') ? 'fr' : 'en';
-      const databaseUser = await ensureUserInDatabase(data.user, locale)
-      isNewUser = Date.now() - databaseUser.createdAt.getTime() < 60_000
+      const ensureResult = await ensureUserInDatabase(data.user, locale)
+      isNewUser = ensureResult.isNewUser
     }
 
     if (error) {
