@@ -272,13 +272,15 @@ export async function signInWithPasswordAction(
         // Check if user is already signed in (session exists)
         if (signUpData.user && signUpData.session) {
           // User is automatically signed in (email confirmation disabled)
+          let isNewUser = false
           try {
-            await ensureUserInDatabase(signUpData.user, locale)
+            const ensureResult = await ensureUserInDatabase(signUpData.user, locale)
+            isNewUser = ensureResult.isNewUser
           } catch (e) {
             // Non-fatal; still proceed
             console.error('[signInWithPasswordAction] ensureUserInDatabase failed:', e)
           }
-          return { success: true, next }
+          return { success: true, next, isNewUser }
         }
         
         // If email confirmation is enabled, user needs to confirm email first
@@ -293,17 +295,19 @@ export async function signInWithPasswordAction(
         }
         
         // Continue with normal flow after successful sign-in
+        let isNewUser = false
         try {
           const { data: { user } } = await supabase.auth.getUser()
           if (user) {
-            await ensureUserInDatabase(user, locale)
+            const ensureResult = await ensureUserInDatabase(user, locale)
+            isNewUser = ensureResult.isNewUser
           }
         } catch (e) {
           // Non-fatal; still proceed
           console.error('[signInWithPasswordAction] ensureUserInDatabase failed:', e)
         }
-        
-        return { success: true, next }
+
+        return { success: true, next, isNewUser }
       }
       
       // For other errors, throw as-is
@@ -311,10 +315,12 @@ export async function signInWithPasswordAction(
     }
 
     // Sign-in succeeded normally
+    let isNewUser = false
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        await ensureUserInDatabase(user, locale)
+        const ensureResult = await ensureUserInDatabase(user, locale)
+        isNewUser = ensureResult.isNewUser
       }
     } catch (e) {
       // Non-fatal; still proceed
@@ -322,7 +328,7 @@ export async function signInWithPasswordAction(
     }
 
     // Optionally handle redirect on the client; return success and let client route
-    return { success: true, next }
+    return { success: true, next, isNewUser }
   } catch (error: any) {
     handleAuthError(error)
   }
@@ -355,16 +361,18 @@ export async function signUpWithPasswordAction(
     }
     
     // If email confirmation is disabled, user is automatically signed in
+    let isNewUser = false
     if (data.user && data.session) {
       try {
-        await ensureUserInDatabase(data.user, locale)
+        const ensureResult = await ensureUserInDatabase(data.user, locale)
+        isNewUser = ensureResult.isNewUser
       } catch (e) {
         // Non-fatal; still proceed
         console.error('[signUpWithPasswordAction] ensureUserInDatabase failed:', e)
       }
     }
-    
-    return { success: true, next }
+
+    return { success: true, next, isNewUser }
   } catch (error: any) {
     handleAuthError(error)
   }
@@ -409,7 +417,8 @@ export async function setPasswordAction(newPassword: string) {
  *   persisted to the `language` field for the user record.
  *
  * Returns:
- * - The up-to-date Prisma `user` record.
+ * - `user`: the up-to-date Prisma `user` record.
+ * - `isNewUser`: true only when this call created the record.
  *
  * Side effects:
  * - May sign the user out on integrity or identification errors.
@@ -458,14 +467,14 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
             },
           });
           console.log('[ensureUserInDatabase] SUCCESS: User updated successfully');
-          return updatedUser;
+          return { user: updatedUser, isNewUser: false };
         } catch (updateError) {
           console.error('[ensureUserInDatabase] ERROR: Failed to update user record:', updateError);
           throw new Error('Failed to update user');
         }
       }
       console.log('[ensureUserInDatabase] SUCCESS: Existing user found, no update needed');
-      return existingUserByAuthId;
+      return { user: existingUserByAuthId, isNewUser: false };
     }
 
     // If user doesn't exist by auth_user_id, check if email exists
@@ -517,7 +526,7 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
         // Don't throw here - user creation succeeded, layout can be created later
       }
       
-      return newUser;
+      return { user: newUser, isNewUser: true };
     } catch (createError) {
       if (createError instanceof Error &&
         createError.message.includes('Unique constraint failed')) {
@@ -577,16 +586,18 @@ export async function verifyOtp(email: string, token: string, type: 'email' | 's
       type
     })
 
+    let isNewUser = false
     if (data.user && data.session) {
       const locale = email.includes('.fr') ? 'fr' : 'en';
-      await ensureUserInDatabase(data.user, locale)
+      const ensureResult = await ensureUserInDatabase(data.user, locale)
+      isNewUser = ensureResult.isNewUser
     }
 
     if (error) {
       throw new Error(error.message)
     }
 
-    return data
+    return { ...data, isNewUser }
   } catch (error: any) {
     handleAuthError(error)
   }

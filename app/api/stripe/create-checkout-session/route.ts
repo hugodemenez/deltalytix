@@ -6,8 +6,27 @@ import { stripe } from "@/server/stripe";
 import { getSubscriptionDetails } from "@/server/subscription";
 import { getReferralBySlug } from "@/server/referral";
 import { capturePostHogEvent, hasAnalyticsConsent } from "@/lib/posthog-server";
+import { applySignupSuccess, hasSignupSuccess } from "@/lib/signup-redirect";
 
-async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: string, referral?: string | null, promo_code?: string | null) {
+// This endpoint renders no page of ours — it redirects straight to Stripe — so
+// a signup marker arriving here would never reach the Google tag. Forward it to
+// every URL that brings the user back instead. The account already exists at
+// this point, so the signal is owed regardless of how checkout ends.
+function buildReturnUrl(
+    websiteURL: string,
+    path: string,
+    params: Record<string, string>,
+    signupSuccess: boolean,
+) {
+    const url = new URL(path, websiteURL);
+    for (const [key, value] of Object.entries(params)) {
+        url.searchParams.set(key, value);
+    }
+    applySignupSuccess(url, signupSuccess);
+    return url.toString();
+}
+
+async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: string, referral?: string | null, promo_code?: string | null, signupSuccess = false) {
     const subscriptionDetails = await getSubscriptionDetails();
     
     // If referral code is provided, validate it (but don't block checkout if invalid)
@@ -30,7 +49,7 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
 
     if (subscriptionDetails?.isActive) {
         return NextResponse.redirect(
-            `${websiteURL}dashboard?error=already_subscribed`,
+            buildReturnUrl(websiteURL, 'dashboard', { error: 'already_subscribed' }, signupSuccess),
             303
         );
     }
@@ -113,8 +132,15 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
                 quantity: 1,
             },
         ],
-        success_url: `${websiteURL}dashboard?success=true&referral_applied=${referral ? 'true' : 'false'}`,
-        cancel_url: `${websiteURL}pricing?canceled=true`,
+        success_url: buildReturnUrl(
+            websiteURL,
+            'dashboard',
+            { success: 'true', referral_applied: referral ? 'true' : 'false' },
+            signupSuccess,
+        ),
+        // Abandoning checkout does not undo the registration, so the marker
+        // rides the cancel path too.
+        cancel_url: buildReturnUrl(websiteURL, 'pricing', { canceled: 'true' }, signupSuccess),
         allow_promotion_codes: true,
     };
 
@@ -175,7 +201,7 @@ export async function POST(req: Request) {
         );
     }
 
-    return handleCheckoutSession(lookup_key, user, websiteURL, referral, promo_code);
+    return handleCheckoutSession(lookup_key, user, websiteURL, referral, promo_code, false);
 }
 
 export async function GET(req: Request) {
@@ -201,5 +227,12 @@ export async function GET(req: Request) {
         );
     }
 
-    return handleCheckoutSession(lookup_key, user, websiteURL, referral, promo_code);
+    return handleCheckoutSession(
+        lookup_key,
+        user,
+        websiteURL,
+        referral,
+        promo_code,
+        hasSignupSuccess(searchParams),
+    );
 }
