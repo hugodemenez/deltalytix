@@ -1,6 +1,7 @@
 'use server'
 import { createClient, ensureUserInDatabase } from '@/server/auth'
 import { getRequestOrigin } from '@/lib/site-url'
+import { applySignupSuccess, resolveInternalDestination } from '@/lib/signup-redirect'
 import { NextResponse } from 'next/server'
 // The client you created from the Server-Side Auth instructions
 
@@ -62,10 +63,8 @@ export async function GET(request: Request) {
           // Non-fatal: continue redirect
         }
 
-        const redirectUrl = new URL(decodedNext ?? next ?? '/dashboard', requestOrigin)
-        if (isNewUser && redirectUrl.pathname.includes('/dashboard')) {
-          redirectUrl.searchParams.set('signup', 'success')
-        }
+        const redirectUrl = resolveInternalDestination(decodedNext, requestOrigin)
+        applySignupSuccess(redirectUrl, isNewUser)
         return NextResponse.redirect(redirectUrl)
       } else {
         console.log('Auth callback error:', error)

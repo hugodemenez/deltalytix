@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label"
 import { motion, AnimatePresence } from "framer-motion"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { useI18n } from "@/locales/client"
+import type { ConsentSettings } from "@/lib/consent-settings"
 import posthog from "posthog-js"
 
 const ANALYTICS_CONSENT_COOKIE = "deltalytix_analytics_consent"
@@ -76,17 +77,6 @@ function syncPostHogConsent(analyticsEnabled: boolean) {
     }
   }
 }
-
-interface ConsentSettings {
-  analytics_storage: boolean;
-  ad_storage: boolean;
-  ad_user_data: boolean;
-  ad_personalization: boolean;
-  functionality_storage: boolean;
-  personalization_storage: boolean;
-  security_storage: boolean;
-}
-
 
 type ConsentTranslator = ReturnType<typeof useI18n>
 
@@ -221,18 +211,11 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
   const saveConsent = (consentSettings: ConsentSettings) => {
     localStorage.setItem("cookieConsent", JSON.stringify(consentSettings))
     syncPostHogConsent(consentSettings.analytics_storage)
+    // <GoogleTag /> owns everything Google-side: it loads the tag on first
+    // consent and relays later changes, so the banner only has to announce.
     window.dispatchEvent(new CustomEvent(CONSENT_UPDATED_EVENT, {
       detail: consentSettings,
     }))
-    window.gtag?.("consent", "update", {
-      analytics_storage: consentSettings.analytics_storage ? "granted" : "denied",
-      ad_storage: consentSettings.ad_storage ? "granted" : "denied",
-      ad_user_data: consentSettings.ad_user_data ? "granted" : "denied",
-      ad_personalization: consentSettings.ad_personalization ? "granted" : "denied",
-      functionality_storage: consentSettings.functionality_storage ? "granted" : "denied",
-      personalization_storage: consentSettings.personalization_storage ? "granted" : "denied",
-      security_storage: consentSettings.security_storage ? "granted" : "denied",
-    })
     setIsVisible(false)
   }
 
