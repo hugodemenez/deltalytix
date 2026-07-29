@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { Resend } from 'resend'
-import WelcomeEmail from '@/components/emails/welcome'
+import WelcomeEmail, { renderWelcomeEmailText, WELCOME_VIDEO_IDS } from '@/components/emails/welcome'
 import { getLatestVideoFromPlaylist } from "@/app/[locale]/admin/actions/youtube"
 
 const adapter = new PrismaPg({
@@ -55,17 +55,18 @@ export async function POST(req: Request) {
       where: { email: record.email }
     })
     const userLanguage = user?.language || 'en'
-    let youtubeId = 'ZBrIZpCh_7Q'
-    if (userLanguage === 'fr') {
-      youtubeId = await getLatestVideoFromPlaylist() || '_-VtBaOGctY'
-    }
+    const locale = userLanguage === 'fr' ? 'fr' : 'en'
+    const youtubeId = locale === 'fr'
+      ? await getLatestVideoFromPlaylist() || WELCOME_VIDEO_IDS.fr
+      : WELCOME_VIDEO_IDS.en
 
     // Use react prop instead of rendering to HTML
     const { data, error } = await resend.emails.send({
       from: 'Deltalytix <welcome@eu.updates.deltalytix.app>',
       to: record.email,
       subject: userLanguage === 'fr' ? 'Bienvenue sur Deltalytix' : 'Welcome to Deltalytix',
-      react: WelcomeEmail({ firstName, email: record.email, language: userLanguage, youtubeId: youtubeId || 'ZBrIZpCh_7Q' }),
+      react: WelcomeEmail({ firstName, email: record.email, language: userLanguage, youtubeId }),
+      text: renderWelcomeEmailText({ firstName, email: record.email, language: userLanguage, youtubeId }),
       replyTo: 'hugo.demenez@deltalytix.app',
       headers: {
         'List-Unsubscribe': `<${unsubscribeUrl}>`,
@@ -95,4 +96,3 @@ export async function POST(req: Request) {
     )
   }
 }
-

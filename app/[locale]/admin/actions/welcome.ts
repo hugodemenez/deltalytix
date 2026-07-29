@@ -1,7 +1,7 @@
 "use server"
 
 import { render } from "@react-email/render"
-import WelcomeEmail from "@/components/emails/welcome"
+import WelcomeEmail, { renderWelcomeEmailText, WELCOME_VIDEO_IDS } from "@/components/emails/welcome"
 import { getLatestVideoFromPlaylist } from "./youtube"
 
 export async function renderWelcomeEmailPreview(params: {
@@ -10,8 +10,10 @@ export async function renderWelcomeEmailPreview(params: {
   language: string
 }) {
   try {
-    // Get the latest YouTube video ID
-    const youtubeId = await getLatestVideoFromPlaylist() || 'ugvyK1c3yPc' // Default video ID if null
+    const locale = params.language === "fr" ? "fr" : "en"
+    const youtubeId = locale === "fr"
+      ? await getLatestVideoFromPlaylist() || WELCOME_VIDEO_IDS.fr
+      : WELCOME_VIDEO_IDS.en
     
     const html = await render(
       WelcomeEmail({
@@ -24,6 +26,12 @@ export async function renderWelcomeEmailPreview(params: {
 
     return {
       success: true,
+      text: renderWelcomeEmailText({
+        firstName: params.firstName,
+        email: params.email,
+        language: params.language,
+        youtubeId
+      }),
       html: `<!DOCTYPE html>
         <html>
           <head>

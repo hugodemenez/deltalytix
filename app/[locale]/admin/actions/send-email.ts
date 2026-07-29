@@ -5,6 +5,7 @@ import { Resend } from "resend"
 import { prisma } from "@/lib/prisma"
 import { createClient, type User } from "@supabase/supabase-js"
 import { render } from "@react-email/render"
+import { renderWelcomeEmailText } from "@/components/emails/welcome"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -350,6 +351,17 @@ export async function sendEmailsToUsers(
             subject: emailSubject,
             reply_to: "hugo.demenez@deltalytix.app",
             react: React.createElement(EmailComponent, mergedProps),
+            ...(template === "welcome"
+              ? {
+                  text: renderWelcomeEmailText({
+                    firstName: user.firstName,
+                    email: user.email,
+                    language: user.language,
+                    youtubeId:
+                      typeof customProps.youtubeId === "string" ? customProps.youtubeId : undefined,
+                  }),
+                }
+              : {}),
             headers: {
               "List-Unsubscribe": `<${unsubscribeUrl}>`,
               "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -419,5 +431,4 @@ function getDefaultSubject(template: EmailTemplate, language: string): string {
   const locale = language === "fr" ? "fr" : "en"
   return subjects[template][locale]
 }
-
 
