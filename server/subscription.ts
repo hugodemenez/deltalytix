@@ -9,6 +9,8 @@ interface SubscriptionInfo {
     status: string;
     endDate: Date | null;
     trialEndsAt: Date | null;
+    /** Last address Stripe was told about; null when no local row exists. */
+    billingEmail: string | null;
 }
 
 export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null> {
@@ -25,7 +27,8 @@ export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null>
             plan: 'Plus',
             status: 'ACTIVE',
             endDate: null,
-            trialEndsAt: null
+            trialEndsAt: null,
+            billingEmail: null
         }
     }
 
@@ -45,7 +48,8 @@ export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null>
                 status: true,
                 plan: true,
                 endDate: true,
-                trialEndsAt: true
+                trialEndsAt: true,
+                email: true
             }
         })
 
@@ -66,7 +70,8 @@ export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null>
             plan: subscription.plan,
             status: subscription.status,
             endDate: subscription.endDate,
-            trialEndsAt: subscription.trialEndsAt
+            trialEndsAt: subscription.trialEndsAt,
+            billingEmail: subscription.email
         }
 
     } catch (error) {

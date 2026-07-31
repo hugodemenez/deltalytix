@@ -3,6 +3,7 @@ import "server-only";
 import type Stripe from "stripe";
 
 import {
+  disambiguateStripeCustomersByBilling,
   selectStripeCustomersForUser,
   STRIPE_USER_ID_METADATA_KEY,
 } from "@/lib/stripe-customer-identity";
@@ -15,6 +16,16 @@ type ResolveStripeCustomerOptions = {
   createIfMissing?: boolean;
   synchronizeEmail?: boolean;
 };
+
+type StripeCustomerMatch =
+  | { status: "found"; customers: Stripe.Customer[] }
+  | { status: "not_found" }
+  | { status: "ambiguous"; customerIds: string[] };
+
+export type StripeCustomerEmailSyncResult =
+  | { status: "synchronized"; customer: Stripe.Customer }
+  | { status: "not_found" }
+  | { status: "ambiguous"; customerIds: string[] };
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -55,6 +66,68 @@ async function listCustomerCandidates(userId: string, emails: string[]) {
   return [...customersById.values()];
 }
 
+async function countSubscriptions(customerId: string) {
+  const subscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    status: "all",
+    limit: 1,
+  });
+
+  return subscriptions.data.length;
+}
+
+async function findCustomersForUser({
+  userId,
+  email,
+  previousEmail,
+}: {
+  userId: string;
+  email: string;
+  previousEmail?: string;
+}): Promise<StripeCustomerMatch> {
+  const normalizedEmail = normalizeEmail(email);
+  const candidateEmails = [normalizedEmail];
+  if (previousEmail && normalizeEmail(previousEmail) !== normalizedEmail) {
+    candidateEmails.push(previousEmail);
+  }
+
+  const candidates = await listCustomerCandidates(userId, candidateEmails);
+  const selection = selectStripeCustomersForUser(candidates, userId);
+
+  if (selection.outcome === "owned" || selection.outcome === "unclaimed") {
+    return { status: "found", customers: selection.customers };
+  }
+
+  if (selection.outcome === "not_found") {
+    return { status: "not_found" };
+  }
+
+  // Several unclaimed legacy customers share this email. Ask Stripe which of
+  // them actually carries billing history before giving up on all of them.
+  const activity = await Promise.all(
+    selection.customers.map(async (customer) => ({
+      customer,
+      subscriptionCount: await countSubscriptions(customer.id),
+    })),
+  );
+  const disambiguation = disambiguateStripeCustomersByBilling(activity);
+
+  if (disambiguation.outcome === "resolved") {
+    return { status: "found", customers: [disambiguation.customer] };
+  }
+
+  if (disambiguation.outcome === "unclaimable") {
+    // Every candidate is an empty shell, so there is no entitlement to strand
+    // and the caller is free to start from a fresh, owned customer.
+    return { status: "not_found" };
+  }
+
+  return {
+    status: "ambiguous",
+    customerIds: disambiguation.customers.map((customer) => customer.id),
+  };
+}
+
 export async function resolveStripeCustomerForUser({
   userId,
   email,
@@ -63,15 +136,19 @@ export async function resolveStripeCustomerForUser({
   synchronizeEmail = false,
 }: ResolveStripeCustomerOptions): Promise<Stripe.Customer | null> {
   const normalizedEmail = normalizeEmail(email);
-  const candidateEmails = [normalizedEmail];
-  if (previousEmail && normalizeEmail(previousEmail) !== normalizedEmail) {
-    candidateEmails.push(previousEmail);
+  const match = await findCustomersForUser({ userId, email, previousEmail });
+
+  if (match.status === "ambiguous") {
+    // Creating a replacement here would read as "no subscription" while the
+    // active one keeps billing against a customer we can no longer reach.
+    console.error(
+      "[stripe-customer] Several legacy Stripe customers hold billing history for this user",
+      { userId, customerIds: match.customerIds },
+    );
+    return null;
   }
 
-  const candidates = await listCustomerCandidates(userId, candidateEmails);
-  const validatedCustomers = selectStripeCustomersForUser(candidates, userId);
-
-  if (validatedCustomers.length === 0) {
+  if (match.status === "not_found") {
     if (!createIfMissing) return null;
 
     return stripe.customers.create({
@@ -82,7 +159,7 @@ export async function resolveStripeCustomerForUser({
     });
   }
 
-  const [customer] = validatedCustomers;
+  const [customer] = match.customers;
   const shouldClaimCustomer =
     customer.metadata[STRIPE_USER_ID_METADATA_KEY] !== userId;
   const shouldUpdateEmail =
@@ -109,18 +186,24 @@ export async function synchronizeStripeCustomerEmailForUser({
   userId: string;
   previousEmail: string;
   email: string;
-}) {
+}): Promise<StripeCustomerEmailSyncResult> {
   const normalizedEmail = normalizeEmail(email);
-  const candidates = await listCustomerCandidates(userId, [
-    normalizedEmail,
+  const match = await findCustomersForUser({
+    userId,
+    email: normalizedEmail,
     previousEmail,
-  ]);
-  const validatedCustomers = selectStripeCustomersForUser(candidates, userId);
+  });
 
-  if (validatedCustomers.length === 0) return null;
+  if (match.status === "ambiguous") {
+    return { status: "ambiguous", customerIds: match.customerIds };
+  }
+
+  if (match.status === "not_found") {
+    return { status: "not_found" };
+  }
 
   const updatedCustomers = await Promise.all(
-    validatedCustomers.map((customer) =>
+    match.customers.map((customer) =>
       stripe.customers.update(customer.id, {
         email: normalizedEmail,
         metadata: {
@@ -130,5 +213,5 @@ export async function synchronizeStripeCustomerEmailForUser({
     ),
   );
 
-  return updatedCustomers[0];
+  return { status: "synchronized", customer: updatedCustomers[0] };
 }

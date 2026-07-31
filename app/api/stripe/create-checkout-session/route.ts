@@ -58,6 +58,9 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
     const customer = await resolveStripeCustomerForUser({
         userId: user.id,
         email: user.email,
+        // Reaches the existing customer even when Stripe has not caught up with a
+        // recent email change, so checkout does not mint a duplicate.
+        previousEmail: subscriptionDetails?.billingEmail ?? undefined,
         createIfMissing: true,
         synchronizeEmail: true,
     });

@@ -94,6 +94,7 @@ export async function getSubscriptionData() {
       const customer = await resolveStripeCustomerForUser({
         userId: user.id,
         email: user.email,
+        previousEmail: localSubscription.email,
         synchronizeEmail: true,
       })
 
@@ -195,9 +196,12 @@ export async function getSubscriptionData() {
     }
 
     // SECOND: Check for active Stripe subscription (recurring plans)
+    // The stored billing email is the last address Stripe was told about, so it
+    // still finds the customer while a rename is propagating through Search.
     const customer = await resolveStripeCustomerForUser({
       userId: user.id,
       email: user.email,
+      previousEmail: localSubscription?.email,
       createIfMissing: true,
       synchronizeEmail: true,
     })
@@ -446,9 +450,15 @@ export async function switchSubscriptionPlan(newLookupKey: string) {
     })
     if (!appUser) throw new Error('User not found')
 
+    const localSubscription = await prisma.subscription.findUnique({
+      where: { userId: appUser.id },
+      select: { email: true },
+    })
+
     const customer = await resolveStripeCustomerForUser({
       userId: user.id,
       email: user.email,
+      previousEmail: localSubscription?.email,
       synchronizeEmail: true,
     })
     if (!customer) {

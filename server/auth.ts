@@ -485,17 +485,35 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
             }
           }
 
-          if (shouldUpdateEmail && subscription) {
+          // Stripe is renamed before the local write so that a failure here leaves
+          // the previous billing email on record to retry with. The reverse order
+          // would strand Stripe on an address nothing points at any more; that is
+          // only recoverable because user-id metadata, not the email, is the key.
+          if (shouldUpdateEmail) {
             try {
               const { synchronizeStripeCustomerEmailForUser } = await import('@/server/stripe-customer');
-              const stripeCustomer = await synchronizeStripeCustomerEmailForUser({
+              // Accounts without a Subscription row still have a Stripe customer
+              // (getSubscriptionData creates one on read), so fall back to the
+              // local user email rather than skipping the rename entirely.
+              const syncResult = await synchronizeStripeCustomerEmailForUser({
                 userId: user.id,
-                previousEmail: subscription.email,
+                previousEmail: subscription?.email ?? existingUserByAuthId.email,
                 email: normalizedAuthEmail,
               });
 
-              if (!stripeCustomer) {
-                console.warn('[ensureUserInDatabase] No unambiguous Stripe customer found for email synchronization', {
+              if (syncResult.status === 'ambiguous') {
+                // The previous email is the only remaining pointer to the legacy
+                // customer holding the subscription. Keep it so a later request
+                // can retry once the duplicates are merged in Stripe.
+                console.error('[ensureUserInDatabase] Ambiguous Stripe customers, keeping previous billing email', {
+                  userId: user.id,
+                  customerIds: syncResult.customerIds,
+                });
+                return { user: existingUserByAuthId, isNewUser: false };
+              }
+
+              if (syncResult.status === 'not_found') {
+                console.warn('[ensureUserInDatabase] No Stripe customer found for email synchronization', {
                   userId: user.id,
                 });
               }
@@ -534,6 +552,12 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
           console.log('[ensureUserInDatabase] SUCCESS: User updated successfully');
           return { user: updatedUser, isNewUser: false };
         } catch (updateError) {
+          // The outer handler routes on the 'Account conflict' message. Rewrapping
+          // it would fall through to the catch-all branch and sign the user out
+          // with "Critical database error" instead of showing the conflict.
+          if (updateError instanceof Error && updateError.message.includes('Account conflict')) {
+            throw updateError;
+          }
           console.error('[ensureUserInDatabase] ERROR: Failed to update user record:', updateError);
           throw new Error('Failed to update user');
         }
