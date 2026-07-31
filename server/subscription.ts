@@ -1,7 +1,6 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { headers } from 'next/headers';
 import { createClient } from './auth';
 
 interface SubscriptionInfo {
@@ -12,32 +11,13 @@ interface SubscriptionInfo {
     trialEndsAt: Date | null;
 }
 
-// Validate email to prevent SQL injection and invalid queries
-function isValidEmail(email: string): boolean {
-    if (!email || typeof email !== 'string') return false
-    // Basic email validation regex
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-}
-
 export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null> {
-    // Get user email using headers from our middleware
-    const headersList = await headers()
-    let email = headersList.get("x-user-email")
-    if (!email) {
-        // USE supabase to get user email
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-            return null
-        }
-        email = user.email || null
-    }
-    // Input validation
-    if (!email || !isValidEmail(email)) {
-        console.error('[getSubscriptionDetails] Invalid email format:', email)
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.id) {
         return null
     }
-    const normalizedEmail = email.toLowerCase().trim()
+    const normalizedEmail = user.email?.toLowerCase().trim() || ''
 
     if (normalizedEmail.endsWith('@rithmic.com')) {
         return {
@@ -49,11 +29,17 @@ export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null>
         }
     }
 
-    console.log("[getSubscriptionDetails] Fetching details for", normalizedEmail)
+    console.log("[getSubscriptionDetails] Fetching details for authenticated user", user.id)
 
     try {
+        const appUser = await prisma.user.findUnique({
+            where: { auth_user_id: user.id },
+            select: { id: true },
+        })
+        if (!appUser) return null
+
         const subscription = await prisma.subscription.findUnique({
-            where: { email: normalizedEmail },
+            where: { userId: appUser.id },
             // Only select the fields we need
             select: {
                 status: true,
@@ -85,7 +71,7 @@ export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null>
 
     } catch (error) {
         console.error('[getSubscriptionDetails] Database error:', {
-            email: normalizedEmail,
+            userId: user.id,
             error: error instanceof Error ? error.message : 'Unknown error'
         })
         return null

@@ -7,6 +7,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { stripe } from '@/server/stripe'
 import Stripe from 'stripe'
 import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
+import { resolveStripeCustomerForUser } from '@/server/stripe-customer'
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -76,36 +77,43 @@ export async function getSubscriptionData() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user?.email) throw new Error('User not found')
 
+    const appUser = await prisma.user.findUnique({
+      where: { auth_user_id: user.id },
+      select: { id: true },
+    })
+    if (!appUser) throw new Error('User not found')
+
     // FIRST: Check local database for active lifetime subscription (highest priority)
     const localSubscription = await prisma.subscription.findUnique({
-      where: { email: user.email },
+      where: { userId: appUser.id },
     })
 
     if (localSubscription && localSubscription.status === 'ACTIVE' && localSubscription.interval === 'lifetime') {
 
       // Get customer and invoices for lifetime subscription
-      const customers = await stripe.customers.list({
+      const customer = await resolveStripeCustomerForUser({
+        userId: user.id,
         email: user.email,
-        limit: 1,
+        synchronizeEmail: true,
       })
 
       let invoices: { data: any[] } = { data: [] }
-      if (customers.data[0]) {
+      if (customer) {
         // First, get all invoices (for any subscription-based payments)
         const allInvoices = await stripe.invoices.list({
-          customer: customers.data[0].id,
+          customer: customer.id,
           limit: 10,
         })
 
         // Get payment intents (for one-time payments like lifetime purchases)
         const paymentIntents = await stripe.paymentIntents.list({
-          customer: customers.data[0].id,
+          customer: customer.id,
           limit: 10,
         })
 
         // Get charges (alternative method for one-time payments)
         const charges = await stripe.charges.list({
-          customer: customers.data[0].id,
+          customer: customer.id,
           limit: 10,
         })
 
@@ -187,21 +195,14 @@ export async function getSubscriptionData() {
     }
 
     // SECOND: Check for active Stripe subscription (recurring plans)
-    const customers = await stripe.customers.list({
+    const customer = await resolveStripeCustomerForUser({
+      userId: user.id,
       email: user.email,
-      limit: 1,
+      createIfMissing: true,
+      synchronizeEmail: true,
     })
-
-    const customer = customers.data[0]
     if (!customer) {
-      // Create a new customer if they don't exist
-      const newCustomer = await stripe.customers.create({
-        email: user.email,
-        metadata: {
-          user_id: user.id,
-        },
-      })
-      return null // New customer won't have a subscription yet
+      return null
     }
 
     // Get ONLY ACTIVE subscriptions (not canceled/expired ones)
@@ -439,13 +440,17 @@ export async function switchSubscriptionPlan(newLookupKey: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user?.email) throw new Error('User not found')
 
-    // Get customer by email
-    const customers = await stripe.customers.list({
-      email: user.email,
-      limit: 1,
+    const appUser = await prisma.user.findUnique({
+      where: { auth_user_id: user.id },
+      select: { id: true },
     })
+    if (!appUser) throw new Error('User not found')
 
-    const customer = customers.data[0]
+    const customer = await resolveStripeCustomerForUser({
+      userId: user.id,
+      email: user.email,
+      synchronizeEmail: true,
+    })
     if (!customer) {
       throw new Error('Customer not found')
     }
@@ -482,7 +487,7 @@ export async function switchSubscriptionPlan(newLookupKey: string) {
         // Update local database
         await prisma.subscription.update({
           where: {
-            email: user.email,
+            userId: appUser.id,
           },
           data: {
             plan: 'FREE',
@@ -543,7 +548,7 @@ export async function switchSubscriptionPlan(newLookupKey: string) {
 
     await prisma.subscription.update({
       where: {
-        email: user.email,
+        userId: appUser.id,
       },
       data: {
         plan: subscriptionPlan,

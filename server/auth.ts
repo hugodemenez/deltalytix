@@ -451,21 +451,86 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
 
     // If user exists by auth_user_id, update fields if needed
     if (existingUserByAuthId) {
-      const shouldUpdateEmail = existingUserByAuthId.email !== user.email;
+      const normalizedAuthEmail = user.email?.trim().toLowerCase();
+      const shouldUpdateEmail = !!normalizedAuthEmail && existingUserByAuthId.email !== normalizedAuthEmail;
       const shouldUpdateLanguage = !!locale && locale !== existingUserByAuthId.language;
 
       if (shouldUpdateEmail || shouldUpdateLanguage) {
         console.log('[ensureUserInDatabase] Updating existing user record');
         try {
-          const updatedUser = await prisma.user.update({
-            where: {
-              auth_user_id: user.id // Always use auth_user_id as the unique identifier
-            },
-            data: {
-              email: shouldUpdateEmail ? (user.email || existingUserByAuthId.email) : existingUserByAuthId.email,
-              language: shouldUpdateLanguage ? (locale as string) : existingUserByAuthId.language
-            },
+          const subscription = shouldUpdateEmail
+            ? await prisma.subscription.findUnique({
+                where: { userId: existingUserByAuthId.id },
+                select: { email: true, userId: true },
+              })
+            : null;
+
+          if (shouldUpdateEmail) {
+            const [userWithNewEmail, subscriptionWithNewEmail] = await Promise.all([
+              prisma.user.findUnique({
+                where: { email: normalizedAuthEmail },
+                select: { id: true },
+              }),
+              prisma.subscription.findUnique({
+                where: { email: normalizedAuthEmail },
+                select: { userId: true },
+              }),
+            ]);
+
+            if (
+              (userWithNewEmail && userWithNewEmail.id !== existingUserByAuthId.id) ||
+              (subscriptionWithNewEmail && subscriptionWithNewEmail.userId !== existingUserByAuthId.id)
+            ) {
+              throw new Error('Account conflict: Email already associated with another user');
+            }
+          }
+
+          if (shouldUpdateEmail && subscription) {
+            try {
+              const { synchronizeStripeCustomerEmailForUser } = await import('@/server/stripe-customer');
+              const stripeCustomer = await synchronizeStripeCustomerEmailForUser({
+                userId: user.id,
+                previousEmail: subscription.email,
+                email: normalizedAuthEmail,
+              });
+
+              if (!stripeCustomer) {
+                console.warn('[ensureUserInDatabase] No unambiguous Stripe customer found for email synchronization', {
+                  userId: user.id,
+                });
+              }
+            } catch (stripeError) {
+              // Keep the previous local email so a later authenticated request can
+              // safely retry the Stripe lookup with the last known billing email.
+              console.error('[ensureUserInDatabase] Failed to synchronize Stripe customer email', {
+                userId: user.id,
+                error: stripeError instanceof Error ? stripeError.message : 'Unknown error',
+              });
+              return { user: existingUserByAuthId, isNewUser: false };
+            }
+          }
+
+          const updatedUser = await prisma.$transaction(async (transaction) => {
+            if (shouldUpdateEmail && subscription) {
+              // The subscription is selected and updated through the immutable user ID,
+              // never through the mutable previous email address.
+              await transaction.subscription.update({
+                where: { userId: existingUserByAuthId.id },
+                data: { email: normalizedAuthEmail },
+              });
+            }
+
+            return transaction.user.update({
+              where: {
+                auth_user_id: user.id // Always use auth_user_id as the unique identifier
+              },
+              data: {
+                email: shouldUpdateEmail ? normalizedAuthEmail : existingUserByAuthId.email,
+                language: shouldUpdateLanguage ? (locale as string) : existingUserByAuthId.language
+              },
+            });
           });
+
           console.log('[ensureUserInDatabase] SUCCESS: User updated successfully');
           return { user: updatedUser, isNewUser: false };
         } catch (updateError) {
