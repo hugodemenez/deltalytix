@@ -12,6 +12,12 @@ const stripeMock = vi.hoisted(() => ({
   subscriptions: {
     list: vi.fn(),
   },
+  charges: {
+    list: vi.fn(),
+  },
+  invoices: {
+    list: vi.fn(),
+  },
 }));
 
 vi.mock("@/server/stripe", () => ({ stripe: stripeMock }));
@@ -63,11 +69,28 @@ function givenSubscriptionCounts(counts: Record<string, number>) {
   );
 }
 
+/**
+ * Lifetime plans check out in `mode: 'payment'`, so their only trace is a
+ * succeeded charge — no subscription is ever created.
+ */
+function givenSucceededCharges(counts: Record<string, number>) {
+  stripeMock.charges.list.mockImplementation(({ customer }: { customer: string }) =>
+    Promise.resolve({
+      data: Array.from({ length: counts[customer] ?? 0 }, () => ({
+        status: "succeeded",
+        paid: true,
+      })),
+    }),
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   stripeMock.customers.search.mockResolvedValue({ data: [] });
   stripeMock.customers.list.mockResolvedValue({ data: [] });
   stripeMock.subscriptions.list.mockResolvedValue({ data: [] });
+  stripeMock.charges.list.mockResolvedValue({ data: [] });
+  stripeMock.invoices.list.mockResolvedValue({ data: [] });
   stripeMock.customers.create.mockImplementation(
     (params: Record<string, unknown>) =>
       Promise.resolve({ id: "cus_new", ...params }),
@@ -141,6 +164,66 @@ describe("resolveStripeCustomerForUser", () => {
 
     expect(customer?.id).toBe("cus_paying");
     expect(stripeMock.customers.create).not.toHaveBeenCalled();
+  });
+
+  it("recovers the lifetime customer, which has a charge but no subscription", async () => {
+    givenStripeCustomers([
+      fakeCustomer("cus_empty", "user@example.com"),
+      fakeCustomer("cus_lifetime", "user@example.com"),
+    ]);
+    givenSubscriptionCounts({});
+    givenSucceededCharges({ cus_lifetime: 1 });
+
+    const customer = await resolveStripeCustomerForUser({
+      userId: "user-1",
+      email: "user@example.com",
+      createIfMissing: true,
+    });
+
+    expect(customer?.id).toBe("cus_lifetime");
+    expect(stripeMock.customers.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses to pick between a canceled subscription and a lifetime purchase", async () => {
+    givenStripeCustomers([
+      fakeCustomer("cus_canceled", "user@example.com"),
+      fakeCustomer("cus_lifetime", "user@example.com"),
+    ]);
+    givenSubscriptionCounts({ cus_canceled: 1 });
+    givenSucceededCharges({ cus_lifetime: 1 });
+
+    const customer = await resolveStripeCustomerForUser({
+      userId: "user-1",
+      email: "user@example.com",
+      createIfMissing: true,
+    });
+
+    expect(customer).toBeNull();
+    expect(stripeMock.customers.create).not.toHaveBeenCalled();
+  });
+
+  it("ignores failed charges when deciding a candidate is an empty shell", async () => {
+    givenStripeCustomers([
+      fakeCustomer("cus_failed", "user@example.com"),
+      fakeCustomer("cus_paying", "user@example.com"),
+    ]);
+    givenSubscriptionCounts({ cus_paying: 1 });
+    stripeMock.charges.list.mockImplementation(({ customer }: { customer: string }) =>
+      Promise.resolve({
+        data:
+          customer === "cus_failed"
+            ? [{ status: "failed", paid: false }]
+            : [],
+      }),
+    );
+
+    const customer = await resolveStripeCustomerForUser({
+      userId: "user-1",
+      email: "user@example.com",
+      createIfMissing: true,
+    });
+
+    expect(customer?.id).toBe("cus_paying");
   });
 
   it("creates a customer when every ambiguous candidate is an empty shell", async () => {

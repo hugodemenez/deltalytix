@@ -54,7 +54,15 @@ export function selectStripeCustomersForUser<T extends StripeCustomerIdentity>(
 
 export type StripeCustomerBillingActivity<T> = {
   customer: T;
+  /** Subscriptions in any status, including canceled ones. */
   subscriptionCount: number;
+  /**
+   * Successful one-time payments — succeeded charges and paid invoices.
+   * Lifetime plans check out in `mode: 'payment'` and never create a
+   * subscription, so counting subscriptions alone reads a paying lifetime
+   * customer as an empty shell.
+   */
+  paymentCount: number;
 };
 
 export type StripeCustomerDisambiguation<T> =
@@ -69,15 +77,22 @@ export type StripeCustomerDisambiguation<T> =
  * Break a tie between unclaimed legacy customers using their billing history.
  *
  * Every customer created before user-id metadata existed is unclaimed, so an
- * email shared by duplicates is common in production data. The subscription
- * almost always lives on exactly one of them; picking that one recovers the
- * entitlement instead of silently minting an empty replacement customer.
+ * email shared by duplicates is common in production data. The entitlement
+ * almost always lives on exactly one of them; picking that one recovers it
+ * instead of silently minting an empty replacement customer.
+ *
+ * Recurring and one-time activity count equally. Ranking them would claim the
+ * wrong customer when one duplicate holds a canceled subscription and the other
+ * holds the lifetime purchase, so that case stays ambiguous on purpose.
  */
 export function disambiguateStripeCustomersByBilling<
   T extends StripeCustomerIdentity,
 >(activity: StripeCustomerBillingActivity<T>[]): StripeCustomerDisambiguation<T> {
   const billingCustomers = activity
-    .filter((candidate) => candidate.subscriptionCount > 0)
+    .filter(
+      (candidate) =>
+        candidate.subscriptionCount > 0 || candidate.paymentCount > 0,
+    )
     .map((candidate) => candidate.customer);
 
   if (billingCustomers.length === 1) {

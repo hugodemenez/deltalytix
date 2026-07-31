@@ -66,14 +66,35 @@ async function listCustomerCandidates(userId: string, emails: string[]) {
   return [...customersById.values()];
 }
 
-async function countSubscriptions(customerId: string) {
-  const subscriptions = await stripe.subscriptions.list({
-    customer: customerId,
-    status: "all",
-    limit: 1,
-  });
+/**
+ * Measure how much billing history a customer carries.
+ *
+ * Both halves matter: recurring plans leave subscriptions, and lifetime plans
+ * check out in `mode: 'payment'` and leave only a charge. Reading one signal
+ * would treat the other kind of paying customer as disposable. Charges and
+ * invoices are listed rather than counted precisely — all the caller needs to
+ * know is whether anything is there at all.
+ */
+async function readBillingActivity(customerId: string) {
+  const [subscriptions, charges, invoices] = await Promise.all([
+    stripe.subscriptions.list({ customer: customerId, status: "all", limit: 1 }),
+    stripe.charges.list({ customer: customerId, limit: 100 }),
+    stripe.invoices.list({ customer: customerId, limit: 100 }),
+  ]);
 
-  return subscriptions.data.length;
+  const paidCharges = charges.data.filter(
+    (charge) => charge.status === "succeeded" && charge.paid,
+  );
+  // A paid invoice normally has a charge, but it can be settled out of band or
+  // from credit balance, which leaves no charge behind.
+  const paidInvoices = invoices.data.filter(
+    (invoice) => invoice.status === "paid" || invoice.amount_paid > 0,
+  );
+
+  return {
+    subscriptionCount: subscriptions.data.length,
+    paymentCount: paidCharges.length + paidInvoices.length,
+  };
 }
 
 async function findCustomersForUser({
@@ -107,7 +128,7 @@ async function findCustomersForUser({
   const activity = await Promise.all(
     selection.customers.map(async (customer) => ({
       customer,
-      subscriptionCount: await countSubscriptions(customer.id),
+      ...(await readBillingActivity(customer.id)),
     })),
   );
   const disambiguation = disambiguateStripeCustomersByBilling(activity);
