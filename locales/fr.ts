@@ -2588,6 +2588,20 @@ export default {
   "import.type.ftmo.description": "CSV journal FTMO",
   "import.type.ftmo.details":
     "Importez les trades depuis les exports CSV de journal de trading FTMO. Le système détecte automatiquement les positions des colonnes indépendamment de la langue.",
+  "import.type.ig.name": "IG",
+  "import.type.ig.description": "CSV d'historique des transactions IG",
+  "import.type.ig.details":
+    "Importez les trades clôturés depuis un export CSV de l'historique des transactions IG. Le fichier d'historique d'activité n'est pas nécessaire.",
+  "import.ig.error.title": "Impossible de lire cet export IG",
+  "import.ig.error.activityHistory":
+    "Ce fichier correspond à l'historique d'activité IG. Téléchargez et importez plutôt l'historique des transactions.",
+  "import.ig.error.invalidFile":
+    "Importez un CSV d'historique des transactions IG contenant le marché, la référence, les prix, la taille, le PnL et les dates UTC.",
+  "import.ig.skippedRows":
+    "{count} ligne(s) hors trade ou non prise(s) en charge ont été ignorées. Les quantités fractionnaires IG ne sont pas encore prises en charge.",
+  "import.ig.noTrades": "Aucun trade IG clôturé trouvé",
+  "import.ig.noTradesDescription":
+    "Vérifiez que la période contient des trades clôturés et que vous avez exporté l'historique des transactions plutôt que l'historique d'activité.",
   "import.type.manualEntry.name": "Saisie Manuelle",
   "import.type.manualEntry.description": "Ajouter des trades via un formulaire",
   "import.type.manualEntry.details":
