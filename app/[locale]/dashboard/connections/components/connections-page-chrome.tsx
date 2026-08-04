@@ -9,6 +9,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import { platforms, type PlatformConfig } from '@/app/[locale]/dashboard/components/import/config/platforms'
 import { captureConnectionAddClicked } from '@/lib/connection-analytics'
 import { PlatformTutorial } from '@/app/[locale]/dashboard/components/import/components/platform-tutorial'
@@ -71,6 +78,56 @@ function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
     []
   )
 
+  const importPlatformCommand = (
+    <Command className="rounded-sm bg-white dark:bg-black">
+      <CommandInput placeholder={t('import.type.search')} />
+      <CommandList className="max-h-80">
+        <CommandEmpty>{t('import.type.noResults')}</CommandEmpty>
+        {fileImportPlatforms.map((platform) => {
+          const key = platform.type || platform.platformName
+          const name = t(platform.name as 'import.type.csvAi.name')
+          const description = t(
+            platform.description as 'import.type.csvAi.description'
+          )
+          const selected =
+            selectedImportPlatform?.platformName === platform.platformName
+
+          return (
+            <CommandItem
+              key={key}
+              value={`${name} ${description} ${platform.platformName}`}
+              className={cn(
+                'gap-3 rounded-sm px-3 py-2.5 text-sm font-medium',
+                selected && 'bg-black/5 dark:bg-white/5'
+              )}
+              onSelect={() => {
+                setImportMenuOpen(false)
+                setSelectedImportPlatform(platform)
+              }}
+            >
+              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
+                {platform.logo.path ? (
+                  <ThemeAwareLogo
+                    path={platform.logo.path}
+                    darkPath={platform.logo.darkPath}
+                    alt=""
+                    size={20}
+                    className="h-5 w-5"
+                  />
+                ) : platform.logo.component ? (
+                  <span className="flex h-5 w-5 items-center justify-center [&>svg]:h-5 [&>svg]:w-5">
+                    <platform.logo.component />
+                  </span>
+                ) : null}
+              </span>
+              <span>{name}</span>
+            </CommandItem>
+          )
+        })}
+      </CommandList>
+    </Command>
+  )
+
   return (
     <div className="min-h-[calc(100vh-var(--navbar-height,4rem))] bg-[oklch(0.97_0_0)] text-[oklch(0.17_0_0)] dark:bg-[oklch(0.17_0_0)] dark:text-[oklch(0.93_0_0)]">
       <div className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 md:py-14 lg:px-12">
@@ -131,6 +188,8 @@ function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
                   <PopoverTrigger asChild>
                     <button
                       type="button"
+                      aria-haspopup="listbox"
+                      aria-expanded={importMenuOpen}
                       className="inline-flex h-9 items-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5"
                     >
                       <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
@@ -153,48 +212,9 @@ function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
                   </PopoverTrigger>
                   <PopoverContent
                     align="start"
-                    className="w-64 rounded-sm border-black/10 bg-white p-1 shadow-none dark:border-white/10 dark:bg-black"
+                    className="w-72 rounded-sm border-black/10 bg-white p-0 shadow-none dark:border-white/10 dark:bg-black [&_[cmdk-input-wrapper]]:border-b [&_[cmdk-input-wrapper]]:border-black/10 dark:[&_[cmdk-input-wrapper]]:border-white/10"
                   >
-                    <div role="menu" className="flex max-h-80 flex-col overflow-y-auto">
-                      {fileImportPlatforms.map((platform) => {
-                        const key = platform.type || platform.platformName
-                        const selected =
-                          selectedImportPlatform.platformName ===
-                          platform.platformName
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            role="menuitem"
-                            className={cn(
-                              'flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-left text-sm font-medium transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5',
-                              selected && 'bg-black/5 dark:bg-white/5'
-                            )}
-                            onClick={() => {
-                              setImportMenuOpen(false)
-                              setSelectedImportPlatform(platform)
-                            }}
-                          >
-                            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
-                              {platform.logo.path ? (
-                                <ThemeAwareLogo
-                                  path={platform.logo.path}
-                                  darkPath={platform.logo.darkPath}
-                                  alt=""
-                                  size={20}
-                                  className="h-5 w-5"
-                                />
-                              ) : platform.logo.component ? (
-                                <span className="flex h-5 w-5 items-center justify-center [&>svg]:h-5 [&>svg]:w-5">
-                                  <platform.logo.component />
-                                </span>
-                              ) : null}
-                            </span>
-                            {t(platform.name as 'import.type.csvAi.name')}
-                          </button>
-                        )
-                      })}
-                    </div>
+                    {importPlatformCommand}
                   </PopoverContent>
                 </Popover>
                 <button
@@ -214,6 +234,8 @@ function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
                 <PopoverTrigger asChild>
                   <button
                     type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={importMenuOpen}
                     className="inline-flex h-11 items-center justify-center rounded-sm border border-black/20 px-6 text-sm font-medium transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:hover:bg-white/5"
                   >
                     {t('connections.selectImportType')}
@@ -221,42 +243,9 @@ function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
                 </PopoverTrigger>
                 <PopoverContent
                   align="start"
-                  className="w-64 rounded-sm border-black/10 bg-white p-1 shadow-none dark:border-white/10 dark:bg-black"
+                  className="w-72 rounded-sm border-black/10 bg-white p-0 shadow-none dark:border-white/10 dark:bg-black [&_[cmdk-input-wrapper]]:border-b [&_[cmdk-input-wrapper]]:border-black/10 dark:[&_[cmdk-input-wrapper]]:border-white/10"
                 >
-                  <div role="menu" className="flex max-h-80 flex-col overflow-y-auto">
-                    {fileImportPlatforms.map((platform) => {
-                      const key = platform.type || platform.platformName
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          role="menuitem"
-                          className="flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-left text-sm font-medium transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/5"
-                          onClick={() => {
-                            setImportMenuOpen(false)
-                            setSelectedImportPlatform(platform)
-                          }}
-                        >
-                          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
-                            {platform.logo.path ? (
-                              <ThemeAwareLogo
-                                path={platform.logo.path}
-                                darkPath={platform.logo.darkPath}
-                                alt=""
-                                size={20}
-                                className="h-5 w-5"
-                              />
-                            ) : platform.logo.component ? (
-                              <span className="flex h-5 w-5 items-center justify-center [&>svg]:h-5 [&>svg]:w-5">
-                                <platform.logo.component />
-                              </span>
-                            ) : null}
-                          </span>
-                          {t(platform.name as 'import.type.csvAi.name')}
-                        </button>
-                      )
-                    })}
-                  </div>
+                  {importPlatformCommand}
                 </PopoverContent>
               </Popover>
             )}
