@@ -184,10 +184,7 @@ export function IgSyncContextProvider({ children }: { children: ReactNode }) {
                 params?: Record<string, string | number>,
               ) => string
             )(`igSync.errors.${code}`, {
-              reason: String(payload?.errorParams?.reason ?? ""),
-              failures: Number(payload?.errorParams?.failures ?? 0),
-              total: Number(payload?.errorParams?.total ?? 0),
-              detail: String(payload?.errorParams?.detail ?? ""),
+              ...(payload?.errorParams ?? {}),
             }),
           );
           return { success: false, message: code };

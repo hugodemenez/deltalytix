@@ -18,7 +18,7 @@ import { useIgSyncContext } from "@/context/ig-sync-context";
 import { toast } from "sonner";
 import { authenticateIg } from "./actions";
 import { IgCredentialsManager } from "./ig-credentials-manager";
-import { IgApiKeyHelp } from "./ig-api-key-help";
+import { IgConnectIntro, IgFaq } from "./ig-faq";
 import type { IgApiEnvironment } from "@/lib/ig-api/types";
 
 const fieldClassName =
@@ -75,7 +75,7 @@ function IgConnectView({
         ) => string;
         toast.error(
           translate(`igSync.errors.${result.error}`, {
-            reason: String(result.errorParams?.reason ?? ""),
+            ...(result.errorParams ?? {}),
           }),
         );
         return;
@@ -146,11 +146,7 @@ function IgConnectView({
         </div>
       </div>
 
-      <p className="text-sm leading-relaxed text-black/55 dark:text-white/55">
-        {t("igSync.addAccount.description")}
-      </p>
-
-      <IgApiKeyHelp />
+      <IgConnectIntro />
 
       <div className="space-y-2">
         <Label
@@ -208,6 +204,9 @@ function IgConnectView({
           required
           className={fieldClassName}
         />
+        <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
+          {t("igSync.addAccount.apiKeyHelp")}
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -249,6 +248,8 @@ function IgConnectView({
           t("igSync.addAccount.connect")
         )}
       </button>
+
+      <IgFaq />
     </form>
   );
 }

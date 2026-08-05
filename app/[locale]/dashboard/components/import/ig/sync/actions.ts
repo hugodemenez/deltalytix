@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import {
   decryptConnectionToken,
   encryptConnectionToken,
+  hasConnectionTokenEncryptionKey,
 } from "@/lib/connection-token-crypto";
 import { toDecryptedConnectionViews } from "@/lib/connection-view";
 import { invalidateConnectionsPageCache } from "@/app/[locale]/dashboard/connections/data";
@@ -15,7 +16,6 @@ import { generateDeterministicTradeId } from "@/lib/trade-id-utils";
 import {
   createIgSession,
   fetchIgTransactions,
-  IgApiError,
   listIgAccounts,
   switchIgAccount,
   type IgApiEnvironment,
@@ -39,6 +39,49 @@ const logger = {
       error instanceof Error ? error.message : (error ?? ""),
     ),
 };
+
+/**
+ * IG reports failures as dotted error codes (`error.security.invalid-details`).
+ * Map the ones a trader can act on to their own message; anything unmapped
+ * still surfaces the raw code so support has something to go on.
+ */
+function mapIgAuthError(
+  error: unknown,
+  environment: IgApiEnvironment,
+): { error: string; errorParams?: Record<string, string | number> } {
+  const reason =
+    error instanceof Error ? error.message : "Unknown error";
+  const code = reason.toLowerCase();
+  const environmentLabel = environment === "demo" ? "Demo" : "Live";
+
+  if (code.includes("invalid-details")) {
+    return { error: "IG_INVALID_CREDENTIALS" };
+  }
+  if (code.includes("api-key-disabled") || code.includes("api-key-revoked")) {
+    return { error: "IG_API_KEY_DISABLED" };
+  }
+  if (code.includes("api-key")) {
+    return {
+      error: "IG_API_KEY_REJECTED",
+      errorParams: { environment: environmentLabel },
+    };
+  }
+  if (
+    code.includes("too-many-failed-attempts") ||
+    code.includes("account-locked") ||
+    code.includes("client-suspended")
+  ) {
+    return { error: "IG_ACCOUNT_LOCKED" };
+  }
+  if (code.includes("encryption.required")) {
+    return { error: "IG_PASSWORD_ENCRYPTION_REQUIRED" };
+  }
+  if (code.includes("allowance") || code.includes("too-many-requests")) {
+    return { error: "IG_RATE_LIMITED" };
+  }
+
+  return { error: "AUTH_FAILED", errorParams: { reason } };
+}
 
 function parseHistoryStartDate(value: string): string | null {
   const trimmed = value.trim();
@@ -147,6 +190,13 @@ export async function authenticateIg(
       return { error: "CREDENTIALS_REQUIRED" };
     }
 
+    // Fail before touching IG: without a key we could not store the credentials
+    // anyway, and the raw crypto error is meaningless to a trader.
+    if (!hasConnectionTokenEncryptionKey()) {
+      logger.error("ENCRYPTION_KEY is not configured — refusing to connect IG");
+      return { error: "ENCRYPTION_KEY_MISSING" };
+    }
+
     logger.info(
       `Authenticating ${trimmedIdentifier} on ${environment}`,
     );
@@ -206,16 +256,7 @@ export async function authenticateIg(
     };
   } catch (error) {
     logger.error("authenticateIg failed", error);
-    const reason =
-      error instanceof IgApiError
-        ? error.message
-        : error instanceof Error
-          ? error.message
-          : "Unknown error";
-    return {
-      error: "AUTH_FAILED",
-      errorParams: { reason },
-    };
+    return mapIgAuthError(error, environment);
   }
 }
 
@@ -305,12 +346,15 @@ export async function getIgTrades(
     skippedRows: 0,
     fetchFailures: 0,
   };
+  // Hoisted so the catch below can tell the user which environment IG rejected.
+  let environment: IgApiEnvironment = "live";
 
   try {
     const credentials = parseStoredCredentials(initialTokenJson);
     if (!credentials) {
       return { error: "INVALID_STORED_CREDENTIALS", syncStats };
     }
+    environment = credentials.environment;
 
     let userId = options?.userId ?? null;
     if (!userId) {
@@ -530,6 +574,12 @@ export async function getIgTrades(
     };
   } catch (error) {
     logger.error("getIgTrades failed", error);
+    // Stored credentials go stale (password changed, key revoked). Say which,
+    // rather than "try again in a few minutes" on something retrying cannot fix.
+    const mapped = mapIgAuthError(error, environment);
+    if (mapped.error !== "AUTH_FAILED") {
+      return { error: mapped.error, errorParams: mapped.errorParams, syncStats };
+    }
     return {
       error: "SYNC_FAILED",
       errorParams: {
