@@ -217,6 +217,48 @@ export async function clickTab(page, pattern) {
   await page.waitForTimeout(1500)
 }
 
+/**
+ * The dashboard navbar renders a transient "Loading..." subscription badge next
+ * to the avatar. It resolves on its own, but slowly enough to land in a capture.
+ */
+export async function waitForNavbarBadgeSettled(page) {
+  await page
+    .waitForFunction(
+      () =>
+        !Array.from(document.querySelectorAll('*')).some(
+          (element) =>
+            element.children.length === 0 &&
+            /^(loading\.\.\.|chargement\.\.\.)$/i.test((element.textContent ?? '').trim()),
+        ),
+      { timeout: 60_000 },
+    )
+    .catch(() => {
+      throw new Error('Navbar subscription badge never left its loading state')
+    })
+  await page.waitForTimeout(400)
+}
+
+/**
+ * Viewport-space bounding box around one or more locators, padded, for tightly
+ * framed screenshots. Returns undefined when nothing is measurable.
+ */
+export async function clipAround(page, locators, padding = 24) {
+  const boxes = []
+  for (const locator of locators) {
+    const box = await locator.boundingBox().catch(() => null)
+    if (box) boxes.push(box)
+  }
+  if (boxes.length === 0) return undefined
+
+  const viewport = page.viewportSize()
+  const left = Math.max(0, Math.min(...boxes.map((b) => b.x)) - padding)
+  const top = Math.max(0, Math.min(...boxes.map((b) => b.y)) - padding)
+  const right = Math.min(viewport.width, Math.max(...boxes.map((b) => b.x + b.width)) + padding)
+  const bottom = Math.min(viewport.height, Math.max(...boxes.map((b) => b.y + b.height)) + padding)
+
+  return { x: left, y: top, width: right - left, height: bottom - top }
+}
+
 export async function prepareForScreenshot(page) {
   await hideNextDevTools(page)
   await assertNoVisibleDevTools(page)
@@ -228,7 +270,7 @@ export async function prepareForScreenshot(page) {
   await page.waitForTimeout(300)
 }
 
-export async function screenshot(page, batch, locale, name) {
+export async function screenshot(page, batch, locale, name, options = {}) {
   await ensureCookiesDismissed(page, locale)
   await prepareForScreenshot(page)
   const out = path.join(outputDir(batch, locale), `${name}.png`)
@@ -236,6 +278,7 @@ export async function screenshot(page, batch, locale, name) {
     path: out,
     type: 'png',
     fullPage: false,
+    ...(options.clip ? { clip: options.clip } : {}),
     scale: 'device',
     animations: 'disabled',
   })

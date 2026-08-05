@@ -1,0 +1,6 @@
+TextDate,Summary,MarketName,Period,ProfitAndLoss,Transaction type,Reference,Open level,Close level,Size,Currency,PL Amount,Cash transaction,DateUtc,OpenDateUtc,CurrencyIsoCode
+04/08/26,Closed position,Spot Gold ($1) converted at 0.861122464,-,EUR 10.06,ORDER,XU9KG7AM,4061.4,4073.08,+1,EUR,10.06,false,2026-08-04T11:47:24,2026-08-04T11:30:06,EUR
+03/08/26,Closed position,Germany 40 Cash (1 EUR),-,(EUR 25.50),ORDER,XU8FB2LT,18500,18525.5,-2,EUR,(25.50),false,2026-08-03T15:12:40,2026-08-03T14:05:11,EUR
+03/08/26,Closed position,EUR/USD Forward converted at 1.0912,-,EUR 42.80,ORDER,XU7DC4KP,1.09215,1.09429,+3,EUR,42.80,false,2026-08-03T09:58:02,2026-08-03T08:41:37,EUR
+02/08/26,Cash transfer,-,-,EUR 500.00,DEPOSIT,XU6AA1QN,-,-,-,EUR,500.00,true,2026-08-02T07:15:00,2026-08-02T07:15:00,EUR
+31/07/26,Closed position,Wall Street Cash (1 EUR),-,EUR 4.10,ORDER,XU5ZZ9RM,40120,40155,+0.5,EUR,4.10,false,2026-07-31T16:22:19,2026-07-31T15:47:03,EUR
