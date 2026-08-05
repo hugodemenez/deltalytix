@@ -9,14 +9,19 @@ const SERVICE_SLUGS = {
   ibkr: 'ibkr',
   thor: 'thor',
   etp: 'thor',
+  ig: 'ig',
 } as const
+
+const SERVICE_EXTENSIONS: Partial<Record<keyof typeof SERVICE_SLUGS, 'png' | 'svg'>> = {
+  ig: 'svg',
+}
 
 export type MonochromeService = keyof typeof SERVICE_SLUGS
 
-export function monochromePaths(slug: string) {
+export function monochromePaths(slug: string, extension: 'png' | 'svg' = 'png') {
   return {
-    path: `/logos/monochrome/${slug}-black.png`,
-    darkPath: `/logos/monochrome/${slug}-white.png`,
+    path: `/logos/monochrome/${slug}-black.${extension}`,
+    darkPath: `/logos/monochrome/${slug}-white.${extension}`,
   }
 }
 
@@ -82,7 +87,9 @@ export function ServiceMonochromeLogo({
 }) {
   const slug = SERVICE_SLUGS[service as MonochromeService]
   if (!slug) return null
-  const { path, darkPath } = monochromePaths(slug)
+  const extension =
+    SERVICE_EXTENSIONS[service as MonochromeService] ?? 'png'
+  const { path, darkPath } = monochromePaths(slug, extension)
   return (
     <ThemeAwareLogo
       path={path}

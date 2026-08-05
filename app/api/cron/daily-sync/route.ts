@@ -7,6 +7,7 @@ import { getDxFeedTrades } from '@/app/[locale]/dashboard/components/import/dxfe
 import { getRithmicProtocolTrades } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions'
 import { syncIbkrAccount } from '@/app/[locale]/dashboard/components/import/ibkr/sync/actions'
 import { getTradovateTrades } from '@/app/[locale]/dashboard/components/import/tradovate/sync/actions'
+import { getIgTrades } from '@/app/[locale]/dashboard/components/import/ig/sync/actions'
 import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connections/data'
 
 export const maxDuration = 300
@@ -18,7 +19,7 @@ export const maxDuration = 300
  * of /api/cron/renew-tradovate-token, which no longer syncs itself so that
  * every service honours the same schedule maths.
  */
-const SYNCABLE_SERVICES = ['dxfeed', 'rithmic-protocol', 'ibkr', 'tradovate'] as const
+const SYNCABLE_SERVICES = ['dxfeed', 'rithmic-protocol', 'ibkr', 'tradovate', 'ig'] as const
 
 /**
  * IBKR statements cover a rolling window rather than only the latest day, so a
@@ -94,6 +95,13 @@ async function syncConnection(connection: {
       userId: connection.userId,
     })
     error = result.error && !IBKR_EMPTY_RESULTS.has(result.error) ? result.error : undefined
+  } else if (connection.service === 'ig') {
+    error = (
+      await getIgTrades(storedTokenJson, {
+        userId: connection.userId,
+        connectionId: connection.id,
+      })
+    ).error
   } else {
     error = (
       await getRithmicProtocolTrades(storedTokenJson, {

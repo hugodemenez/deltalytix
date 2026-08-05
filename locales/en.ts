@@ -140,6 +140,7 @@ export default {
   "connections.sections.tradovate": "Tradovate",
   "connections.sections.dxfeed": "DxFeed",
   "connections.sections.ibkr": "Interactive Brokers",
+  "connections.sections.ig": "IG",
   "connections.sections.thor": "Thor",
   "connections.sections.standalone": "Standalone accounts",
   "connections.add.rithmic": "Add Rithmic connection",
@@ -147,6 +148,7 @@ export default {
   "connections.add.tradovate": "Add Tradovate connection",
   "connections.add.dxfeed": "Add DxFeed connection",
   "connections.add.ibkr": "Add Interactive Brokers connection",
+  "connections.add.ig": "Add IG connection",
   "connections.add.thor": "Add Thor connection",
   "connections.add.etp": "Add ETP connection",
   "connections.emptySection": "No connections yet. Use + to add one.",
@@ -2627,6 +2629,74 @@ export default {
       syncCompleteNoOrdersForAccount: "No closed trades found for {accountId}.",
     },
   },
+  igSync: {
+    title: "IG Sync",
+    description:
+      "Connect your IG account with a Labs API key to import closed deals from Transaction History automatically.",
+    connected: "IG account connected successfully",
+    error: {
+      credentialsRequired:
+        "Enter username, password, API key, and account start date to continue",
+      authFailed: "Could not connect to IG",
+    },
+    errors: {
+      USER_NOT_AUTHENTICATED: "You must be signed in to connect IG.",
+      CREDENTIALS_REQUIRED:
+        "Enter username, password, and API key to continue.",
+      AUTH_FAILED: "IG login failed: {reason}",
+      NO_ACCOUNTS: "No trading accounts were returned for this login.",
+      HISTORY_START_REQUIRED:
+        "Choose a valid account start date (on or before today).",
+      INVALID_STORED_CREDENTIALS: "Saved connection data is invalid. Reconnect.",
+      NO_TOKEN_RECONNECT: "This connection is missing credentials. Reconnect.",
+      DUPLICATE_TRADES: "These trades are already in your journal.",
+      SYNC_FAILED: "Trade sync failed. Try again in a few minutes.",
+      SYNC_FETCH_FAILED:
+        "Could not load transactions from IG ({failures} of {total} accounts failed). Reconnect and try again.",
+      SAVE_TRADES_FAILED: "Trades were fetched but could not be saved: {detail}",
+      ACCOUNT_ID_REQUIRED: "Account identifier is missing.",
+      LOAD_SYNCHRONIZATIONS_FAILED:
+        "Could not load your saved IG connections.",
+      DELETE_SYNC_FAILED: "Could not remove this connection.",
+    },
+    addAccount: {
+      title: "Connect IG",
+      description:
+        "Sign in with your IG username and password, then paste the API key you create on",
+      environmentLabel: "Environment",
+      environmentLive: "Live",
+      environmentDemo: "Demo",
+      usernameLabel: "Username",
+      passwordLabel: "Password",
+      apiKeyLabel: "API key",
+      apiKeyHelp:
+        "Create a personal API key at labs.ig.com (My Account → API keys). Use a demo key with the Demo environment.",
+      historyStartLabel: "Account start date",
+      historyStartHelp:
+        "Pick the day you started trading this account. We import closed deals from then until today.",
+      connecting: "Connecting…",
+      connect: "Connect",
+    },
+    sync: {
+      tokenMissing: "Connection missing credentials — reconnect",
+      accountNotFound: "Account not found. Refresh the list and try again.",
+    },
+    multiAccount: {
+      empty: "No IG connections yet. Click Connect to add one.",
+      accountsCount: "trading accounts",
+      syncAll: "Sync All",
+      syncNow: "Sync now",
+      remove: "Remove",
+      removeTitle: "Remove connection",
+      removeDescription:
+        'Remove the connection "{accountId}"? Already imported trades stay in Deltalytix.',
+      connectionRemoved: 'Connection "{accountId}" removed.',
+      removeError: 'Failed to remove connection "{accountId}".',
+      accountsReloaded: "Accounts reloaded successfully",
+      reloadError: "Failed to reload accounts",
+      lastSynced: "Last synced",
+    },
+  },
   "import.type.thorSync.name": "Thor",
   "import.type.thorSync.description":
     "Direct account synchronization with Thor",
@@ -2647,6 +2717,11 @@ export default {
     "Direct account synchronization with Interactive Brokers",
   "import.type.ibkrSync.details":
     "Import your IBKR trade history automatically using a Flex Query. You create the query once in Client Portal, paste the token and query ID here, and we keep it in sync.",
+  "import.type.igSync.name": "IG Sync",
+  "import.type.igSync.description":
+    "Direct account synchronization with IG",
+  "import.type.igSync.details":
+    "Connect with your IG username, password, and Labs API key to import closed deals from Transaction History automatically. CSV import remains available as a fallback.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "ATAS Excel file",
   "import.type.atas.details":

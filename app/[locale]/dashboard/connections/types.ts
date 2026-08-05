@@ -8,6 +8,7 @@ export type ConnectionService =
   | 'ibkr'
   | 'thor'
   | 'etp'
+  | 'ig'
 
 export type ConnectionStatus = 'connected' | 'error'
 
