@@ -310,6 +310,7 @@ export const platforms: PlatformConfig[] = [
     category: 'Direct Account Sync',
     videoUrl: '',
     details: 'import.type.igSync.details',
+    tutorialLink: 'https://labs.ig.com/gettingstarted',
     logo: {
       path: '/logos/monochrome/ig-black.svg',
       darkPath: '/logos/monochrome/ig-white.svg',

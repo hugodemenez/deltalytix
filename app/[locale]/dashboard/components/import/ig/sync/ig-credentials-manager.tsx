@@ -35,6 +35,7 @@ import { authenticateIg } from "./actions";
 import { useIgSyncContext } from "@/context/ig-sync-context";
 import { captureConnectionCreated } from "@/lib/connection-analytics";
 import type { IgApiEnvironment } from "@/lib/ig-api/types";
+import { IgApiKeyHelp } from "./ig-api-key-help";
 
 const fieldClassName =
   "h-11 rounded-sm border-black/10 bg-transparent text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30";
@@ -288,7 +289,7 @@ export function IgCredentialsManager() {
       )}
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="rounded-sm sm:max-w-md">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-sm sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t("igSync.addAccount.title")}</DialogTitle>
             <DialogDescription>
@@ -296,6 +297,7 @@ export function IgCredentialsManager() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <IgApiKeyHelp />
             <div className="space-y-2">
               <Label htmlFor="ig-mgr-environment">
                 {t("igSync.addAccount.environmentLabel")}
