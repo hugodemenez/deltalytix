@@ -140,12 +140,14 @@ export default {
   "connections.sections.rithmicProtocol": "Rithmic Protocol",
   "connections.sections.tradovate": "Tradovate",
   "connections.sections.dxfeed": "DxFeed",
+  "connections.sections.ig": "IG",
   "connections.sections.thor": "Thor",
   "connections.sections.standalone": "Comptes autonomes",
   "connections.add.rithmic": "Ajouter une connexion Rithmic",
   "connections.add.rithmicProtocol": "Ajouter une connexion Rithmic Protocol",
   "connections.add.tradovate": "Ajouter une connexion Tradovate",
   "connections.add.dxfeed": "Ajouter une connexion DxFeed",
+  "connections.add.ig": "Ajouter une connexion IG",
   "connections.add.thor": "Ajouter une connexion Thor",
   "connections.add.etp": "Ajouter une connexion ETP",
   "connections.emptySection": "Aucune connexion. Utilisez + pour en ajouter une.",
@@ -2565,6 +2567,78 @@ export default {
         "Aucun trade clôturé trouvé pour {accountId}.",
     },
   },
+  igSync: {
+    title: "Synchronisation IG",
+    description:
+      "Connectez votre compte IG avec une clé API Labs pour importer automatiquement les deals clôturés depuis l'historique des transactions.",
+    connected: "Compte IG connecté avec succès",
+    error: {
+      credentialsRequired:
+        "Saisissez l'identifiant, le mot de passe, la clé API et la date de début du compte",
+      authFailed: "Impossible de se connecter à IG",
+    },
+    errors: {
+      USER_NOT_AUTHENTICATED: "Vous devez être connecté pour lier IG.",
+      CREDENTIALS_REQUIRED:
+        "Saisissez l'identifiant, le mot de passe et la clé API.",
+      AUTH_FAILED: "Échec de la connexion IG : {reason}",
+      NO_ACCOUNTS: "Aucun compte de trading n'a été renvoyé pour cet identifiant.",
+      HISTORY_START_REQUIRED:
+        "Choisissez une date de début de compte valide (au plus tard aujourd'hui).",
+      INVALID_STORED_CREDENTIALS:
+        "Les données de connexion enregistrées sont invalides. Reconnectez-vous.",
+      NO_TOKEN_RECONNECT:
+        "Cette connexion n'a pas d'identifiants. Reconnectez-vous.",
+      DUPLICATE_TRADES: "Ces trades sont déjà dans votre journal.",
+      SYNC_FAILED:
+        "La synchronisation a échoué. Réessayez dans quelques minutes.",
+      SYNC_FETCH_FAILED:
+        "Impossible de charger les transactions IG ({failures} sur {total} comptes en échec). Reconnectez-vous et réessayez.",
+      SAVE_TRADES_FAILED:
+        "Les trades ont été récupérés mais n'ont pas pu être enregistrés : {detail}",
+      ACCOUNT_ID_REQUIRED: "Identifiant de compte manquant.",
+      LOAD_SYNCHRONIZATIONS_FAILED:
+        "Impossible de charger vos connexions IG.",
+      DELETE_SYNC_FAILED: "Impossible de supprimer cette connexion.",
+    },
+    addAccount: {
+      title: "Connecter IG",
+      description:
+        "Connectez-vous avec votre identifiant et mot de passe IG, puis collez la clé API créée sur",
+      environmentLabel: "Environnement",
+      environmentLive: "Réel",
+      environmentDemo: "Démo",
+      usernameLabel: "Identifiant",
+      passwordLabel: "Mot de passe",
+      apiKeyLabel: "Clé API",
+      apiKeyHelp:
+        "Créez une clé API personnelle sur labs.ig.com (Mon compte → Clés API). Utilisez une clé démo avec l'environnement Démo.",
+      historyStartLabel: "Date de début du compte",
+      historyStartHelp:
+        "Indiquez le jour où vous avez commencé à trader sur ce compte. Nous importons les deals clôturés depuis cette date jusqu'à aujourd'hui.",
+      connecting: "Connexion…",
+      connect: "Connecter",
+    },
+    sync: {
+      tokenMissing: "Identifiants manquants — reconnectez-vous",
+      accountNotFound: "Compte introuvable. Actualisez la liste.",
+    },
+    multiAccount: {
+      empty: "Aucune connexion IG. Cliquez sur Connecter pour en ajouter une.",
+      accountsCount: "comptes de trading",
+      syncAll: "Tout synchroniser",
+      syncNow: "Synchroniser",
+      remove: "Supprimer",
+      removeTitle: "Supprimer la connexion",
+      removeDescription:
+        'Supprimer la connexion « {accountId} » ? Les trades déjà importés restent dans Deltalytix.',
+      connectionRemoved: 'Connexion « {accountId} » supprimée.',
+      removeError: 'Échec de la suppression de « {accountId} ».',
+      accountsReloaded: "Comptes rechargés avec succès",
+      reloadError: "Échec du rechargement des comptes",
+      lastSynced: "Dernière synchronisation",
+    },
+  },
   "import.type.thorSync.name": "Thor",
   "import.type.thorSync.description":
     "Synchronisation directe de vos comptes connectés à Thor",
@@ -2580,6 +2654,11 @@ export default {
     "Synchronisation directe de compte avec DxFeed",
   "import.type.dxfeedSync.details":
     "Importez vos trades clôturés depuis votre propfirm (DxFeed / Volumetrica). Sélectionnez la propfirm, puis connectez-vous avec vos identifiants plateforme.",
+  "import.type.igSync.name": "IG Sync",
+  "import.type.igSync.description":
+    "Synchronisation directe de compte avec IG",
+  "import.type.igSync.details":
+    "Connectez-vous avec votre identifiant IG, mot de passe et clé API Labs pour importer automatiquement les deals clôturés depuis l'historique des transactions. L'import CSV reste disponible en secours.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "Fichier Excel ATAS",
   "import.type.atas.details":

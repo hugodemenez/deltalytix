@@ -7,6 +7,7 @@ export type ConnectionService =
   | 'dxfeed'
   | 'thor'
   | 'etp'
+  | 'ig'
 
 export type ConnectionStatus = 'connected' | 'error'
 

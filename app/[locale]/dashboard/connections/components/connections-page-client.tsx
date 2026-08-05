@@ -52,6 +52,7 @@ import { useTradovateSyncContext } from '@/context/tradovate-sync-context'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
 import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
 import { useRithmicProtocolSyncContext } from '@/context/rithmic-protocol-sync-context'
+import { useIgSyncContext } from '@/context/ig-sync-context'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ServiceMonochromeLogo } from '@/components/monochrome-logo'
@@ -76,6 +77,7 @@ const SERVICE_SECTIONS: {
   },
   { service: 'tradovate', labelKey: 'connections.sections.tradovate' },
   { service: 'dxfeed', labelKey: 'connections.sections.dxfeed' },
+  { service: 'ig', labelKey: 'connections.sections.ig' },
   { service: 'thor', labelKey: 'connections.sections.thor' },
 ]
 
@@ -88,6 +90,7 @@ const SYNCABLE_SERVICES = new Set<string>([
   'rithmic-protocol',
   'tradovate',
   'dxfeed',
+  'ig',
 ])
 
 const iconButtonClassName =
@@ -371,17 +374,24 @@ function ConnectionRow({
     performSyncForAccount: syncRithmicProtocol,
     isAccountSyncing: isRithmicProtocolSyncing,
   } = useRithmicProtocolSyncContext()
+  const {
+    performSyncForAccount: syncIg,
+    isAccountSyncing: isIgSyncing,
+  } = useIgSyncContext()
   const protocolSyncing =
     connection.service === 'rithmic-protocol' &&
     isRithmicProtocolSyncing(connection.accountId)
-  const rowSyncing = protocolSyncing || syncing
+  const igContextSyncing =
+    connection.service === 'ig' && isIgSyncing(connection.accountId)
+  const rowSyncing = protocolSyncing || igContextSyncing || syncing
   // Red = expired/missing auth, or the last sync attempt failed.
   const needsReconnect = syncFailed || connection.status !== 'connected'
   // Rithmic and Thor sync from their own flows, not from this row.
   const canSyncRow =
     connection.service === 'tradovate' ||
     connection.service === 'dxfeed' ||
-    connection.service === 'rithmic-protocol'
+    connection.service === 'rithmic-protocol' ||
+    connection.service === 'ig'
 
   const canSchedule = supportsDailySync(connection.service)
   const nextSyncAt = useMemo(
@@ -462,7 +472,8 @@ function ConnectionRow({
   )
 
   const handleSync = useCallback(async () => {
-    const usesLocalSyncState = connection.service !== 'rithmic-protocol'
+    const usesLocalSyncState =
+      connection.service !== 'rithmic-protocol' && connection.service !== 'ig'
     if (usesLocalSyncState) setSyncing(true)
     try {
       let result: { success?: boolean } | void
@@ -473,6 +484,8 @@ function ConnectionRow({
       } else if (connection.service === 'rithmic-protocol') {
         // Loading/error feedback comes from Protocol sync context (row spinner).
         result = await syncRithmicProtocol(connection.accountId)
+      } else if (connection.service === 'ig') {
+        result = await syncIg(connection.accountId)
       } else {
         toast.message(t('connections.sync.manualOnly'))
         return
@@ -495,7 +508,15 @@ function ConnectionRow({
     } finally {
       if (usesLocalSyncState) setSyncing(false)
     }
-  }, [connection, onChanged, syncDxFeed, syncRithmicProtocol, syncTradovate, t])
+  }, [
+    connection,
+    onChanged,
+    syncDxFeed,
+    syncIg,
+    syncRithmicProtocol,
+    syncTradovate,
+    t,
+  ])
 
   const handleReconnect = useCallback(async () => {
     // Tradovate can re-auth in place via OAuth without opening the add sheet.
@@ -1057,6 +1078,7 @@ export function ConnectionsPageClient({
   const { performSyncForCredential: syncRithmic } = useRithmicSyncContext()
   const { performSyncForAccount: syncRithmicProtocol } =
     useRithmicProtocolSyncContext()
+  const { performSyncForAccount: syncIg } = useIgSyncContext()
   const storeHydrated = useTradovateSyncStore.persist?.hasHydrated?.() ?? true
   const [tradovateStoreReady, setTradovateStoreReady] = useState(storeHydrated)
 
@@ -1314,6 +1336,8 @@ export function ConnectionsPageClient({
             result = await syncDxFeed(connection.accountId)
           } else if (connection.service === 'rithmic-protocol') {
             result = await syncRithmicProtocol(connection.accountId)
+          } else if (connection.service === 'ig') {
+            result = await syncIg(connection.accountId)
           } else {
             result = await syncRithmic(connection.accountId)
           }
@@ -1338,6 +1362,7 @@ export function ConnectionsPageClient({
   }, [
     load,
     syncDxFeed,
+    syncIg,
     syncRithmic,
     syncRithmicProtocol,
     syncTradovate,

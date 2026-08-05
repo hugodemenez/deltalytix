@@ -5,6 +5,7 @@ import { TradovateSync } from '../tradovate/sync/tradovate-sync'
 import { DxFeedSync } from '../dxfeed/sync/dxfeed-sync'
 import { RithmicSyncWrapper } from '../rithmic/sync/rithmic-sync-connection'
 import { RithmicProtocolSync } from '../rithmic-protocol/sync/rithmic-protocol-sync'
+import { IgSync } from '../ig/sync/ig-sync'
 import type { ComponentType } from 'react'
 import ImportTypeSelection from '../import-type-selection'
 import FileUpload from '../file-upload'
@@ -297,6 +298,36 @@ export const platforms: PlatformConfig[] = [
         title: 'import.steps.connectAccount',
         description: 'import.steps.connectAccountDescription',
         component: RithmicProtocolSync,
+        isLastStep: true
+      }
+    ]
+  },
+  {
+    platformName: 'ig-sync',
+    type: 'ig-sync',
+    name: 'import.type.igSync.name',
+    description: 'import.type.igSync.description',
+    category: 'Direct Account Sync',
+    videoUrl: '',
+    details: 'import.type.igSync.details',
+    logo: {
+      path: '/logos/monochrome/ig-black.svg',
+      darkPath: '/logos/monochrome/ig-white.svg',
+      alt: 'IG Logo'
+    },
+    customComponent: IgSync,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'complete',
+        title: 'import.steps.connectAccount',
+        description: 'import.steps.connectAccountDescription',
+        component: IgSync,
         isLastStep: true
       }
     ]

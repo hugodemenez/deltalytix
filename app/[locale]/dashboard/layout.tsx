@@ -11,6 +11,7 @@ import { RithmicSyncContextProvider } from "@/context/rithmic-sync-context";
 import { TradovateSyncContextProvider } from "@/context/tradovate-sync-context";
 import { DxFeedSyncContextProvider } from "@/context/dxfeed-sync-context";
 import { RithmicProtocolSyncContextProvider } from "@/context/rithmic-protocol-sync-context";
+import { IgSyncContextProvider } from "@/context/ig-sync-context";
 import { ConsentBanner } from "@/components/consent-banner";
 import { PostHogIdentity } from "@/components/posthog-identity";
 import { createClient } from "@/server/auth";
@@ -65,11 +66,13 @@ export default function RootLayout({
               <RithmicProtocolSyncContextProvider>
                 <TradovateSyncContextProvider>
                   <DxFeedSyncContextProvider>
-                    <RithmicSyncNotifications />
-                    <Toaster />
-                    <Navbar />
-                    {children}
-                    <Modals />
+                    <IgSyncContextProvider>
+                      <RithmicSyncNotifications />
+                      <Toaster />
+                      <Navbar />
+                      {children}
+                      <Modals />
+                    </IgSyncContextProvider>
                   </DxFeedSyncContextProvider>
                 </TradovateSyncContextProvider>
               </RithmicProtocolSyncContextProvider>

@@ -10,6 +10,7 @@ export const DAILY_SYNC_SERVICES = [
   'tradovate',
   'dxfeed',
   'rithmic-protocol',
+  'ig',
 ] as const
 
 export type DailySyncService = (typeof DAILY_SYNC_SERVICES)[number]

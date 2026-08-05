@@ -42,7 +42,8 @@ function deriveConnectionStatus(
 ): ConnectionsPageConnection['status'] {
   if (
     connection.service === 'rithmic' ||
-    connection.service === 'rithmic-protocol'
+    connection.service === 'rithmic-protocol' ||
+    connection.service === 'ig'
   ) {
     return 'connected'
   }

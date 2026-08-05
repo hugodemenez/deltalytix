@@ -5,6 +5,7 @@ import { decryptConnectionToken } from '@/lib/connection-token-crypto'
 import { isDailySyncDue } from '@/lib/daily-sync-schedule'
 import { getDxFeedTrades } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/actions'
 import { getRithmicProtocolTrades } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions'
+import { getIgTrades } from '@/app/[locale]/dashboard/components/import/ig/sync/actions'
 import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connections/data'
 
 export const maxDuration = 300
@@ -14,7 +15,7 @@ export const maxDuration = 300
  * schedule is already driven by /api/cron/renew-tradovate-token, which has to
  * refresh the OAuth token in the same pass.
  */
-const SYNCABLE_SERVICES = ['dxfeed', 'rithmic-protocol'] as const
+const SYNCABLE_SERVICES = ['dxfeed', 'rithmic-protocol', 'ig'] as const
 
 /** Stop starting new syncs past this point so the function returns before its limit. */
 const WALL_CLOCK_BUDGET_MS = 240_000
@@ -42,12 +43,19 @@ async function syncConnection(connection: {
             accountId: connection.externalId,
           })
         ).error
-      : (
-          await getRithmicProtocolTrades(storedTokenJson, {
-            userId: connection.userId,
-            connectionId: connection.id,
-          })
-        ).error
+      : connection.service === 'ig'
+        ? (
+            await getIgTrades(storedTokenJson, {
+              userId: connection.userId,
+              connectionId: connection.id,
+            })
+          ).error
+        : (
+            await getRithmicProtocolTrades(storedTokenJson, {
+              userId: connection.userId,
+              connectionId: connection.id,
+            })
+          ).error
 
   if (!error || error === DUPLICATE_TRADES) return { ok: true }
   return { ok: false, reason: error }

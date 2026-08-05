@@ -42,6 +42,7 @@ const SERVICE_SECTIONS: {
   },
   { service: 'tradovate', labelKey: 'connections.sections.tradovate' },
   { service: 'dxfeed', labelKey: 'connections.sections.dxfeed' },
+  { service: 'ig', labelKey: 'connections.sections.ig' },
   { service: 'thor', labelKey: 'connections.sections.thor' },
 ]
 
