@@ -76,7 +76,7 @@ function ConversationItem({
     item.stage === "response" || item.stage === "insight";
 
   return (
-    <div className="space-y-2.5 sm:space-y-3" data-demo-turn={item.id}>
+    <div className="space-y-2" data-demo-turn={item.id}>
       {showQuestion && (
         <div
           className={cn(
@@ -108,7 +108,7 @@ function ConversationItem({
                 {t("landing.features.chat-feature.analyzing")}
               </span>
             </div>
-            <div className="t-skel-content box-border flex min-h-[96px] items-start p-3">
+            <div className="t-skel-content box-border flex items-start p-3">
               <p className="text-[10px] leading-relaxed sm:text-[11px]">
                 {responseText}
               </p>
@@ -333,7 +333,7 @@ export default function TradingChatAssistant({
             data-demo-stage={activeTurn.stage}
             className="min-h-0 flex-1 overflow-hidden overscroll-none"
           >
-            <div className="flex min-h-full flex-col justify-end gap-4 px-3.5 py-3 sm:px-5 sm:py-4">
+            <div className="flex min-h-full flex-col justify-end gap-2 px-3.5 py-3 sm:px-5 sm:py-4">
               <div className="flex items-center gap-2 text-[9px] text-muted-foreground sm:text-[10px]">
                 <Database className="size-3 shrink-0" />
                 <span className="truncate">
