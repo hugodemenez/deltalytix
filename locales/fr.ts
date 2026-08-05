@@ -2810,18 +2810,38 @@ export default {
     addAccount: {
       title: "Connecter IG",
       description:
-        "Connectez-vous avec votre identifiant et mot de passe IG, puis collez la clé API créée sur",
+        "Connectez-vous avec votre identifiant et mot de passe IG, puis collez une clé API Labs personnelle.",
       environmentLabel: "Environnement",
       environmentLive: "Réel",
       environmentDemo: "Démo",
       usernameLabel: "Identifiant",
       passwordLabel: "Mot de passe",
       apiKeyLabel: "Clé API",
-      apiKeyHelp:
-        "Créez une clé API personnelle sur labs.ig.com (Mon compte → Clés API). Utilisez une clé démo avec l'environnement Démo.",
+      apiKeyGuideTitle: "Créer votre clé API",
+      apiKeyStep1:
+        "Connectez-vous à la plateforme web IG avec un compte réel (un compte démo seul ne permet pas de créer une clé).",
+      apiKeyStep2:
+        "Ouvrez Mon compte → Paramètres → Clés API (menu de gauche).",
+      apiKeyStep3:
+        "Donnez un nom (par exemple Deltalytix) puis cliquez sur Générer une nouvelle clé. Copiez-la immédiatement — IG peut ne plus la réafficher.",
+      apiKeyStep4:
+        "Pour la sync Démo : basculez d’abord en démo via le sélecteur de compte, puis créez une clé démo de la même façon.",
+      apiKeyScopeTitle: "Ce que Deltalytix fait avec cette clé",
+      apiKeyScopeIntro:
+        "Les clés API IG n’ont pas de scopes OAuth ni de cases à cocher de permissions. Une clé identifie votre application ; l’accès suit votre login IG. Deltalytix n’appelle que :",
+      apiKeyScopeRead:
+        "Connexion, liste des comptes, et lecture de l’historique des transactions clôturées (pas de streaming de cours).",
+      apiKeyScopeNoTrade:
+        "Nous n’ouvrons, ne modifions ni ne fermons jamais de positions — la sync est en lecture seule pour votre journal.",
+      apiKeyScopeMatchEnv:
+        "Associez clé Réel + environnement Réel, ou clé Démo + environnement Démo. IG limite à une clé par environnement.",
+      apiKeyLinkLabs: "IG Labs — créer une clé API (EN)",
+      apiKeyLinkEnGuide: "IG — utiliser les API de trading (EN)",
+      apiKeyLinkFrGuide: "IG France — guide API (FR)",
+      apiKeyLinkFrHelp: "IG France — accès à l’API (FR)",
       historyStartLabel: "Date de début du compte",
       historyStartHelp:
-        "Indiquez le jour où vous avez commencé à trader sur ce compte. Nous importons les deals clôturés depuis cette date jusqu'à aujourd'hui.",
+        "Indiquez le jour où vous avez commencé à trader sur ce compte. Nous importons les deals clôturés depuis cette date jusqu’à aujourd’hui.",
       connecting: "Connexion…",
       connect: "Connecter",
     },
@@ -2869,7 +2889,7 @@ export default {
   "import.type.igSync.description":
     "Synchronisation directe de compte avec IG",
   "import.type.igSync.details":
-    "Connectez-vous avec votre identifiant IG, mot de passe et clé API Labs pour importer automatiquement les deals clôturés depuis l'historique des transactions. L'import CSV reste disponible en secours.",
+    "Connectez-vous avec votre identifiant IG, mot de passe et clé API Labs. Deltalytix lit uniquement l’historique des transactions clôturées — aucun ordre n’est passé. Créez la clé via Mon compte → Paramètres → Clés API (voir le guide IG Labs).",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "Fichier Excel ATAS",
   "import.type.atas.details":

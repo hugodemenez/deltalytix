@@ -2,7 +2,6 @@
 
 import { useCallback, useState, type Dispatch, type SetStateAction } from "react";
 import { Loader2 } from "lucide-react";
-import Link from "next/link";
 import { useI18n } from "@/locales/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +18,7 @@ import { useIgSyncContext } from "@/context/ig-sync-context";
 import { toast } from "sonner";
 import { authenticateIg } from "./actions";
 import { IgCredentialsManager } from "./ig-credentials-manager";
+import { IgApiKeyHelp } from "./ig-api-key-help";
 import type { IgApiEnvironment } from "@/lib/ig-api/types";
 
 const fieldClassName =
@@ -147,17 +147,10 @@ function IgConnectView({
       </div>
 
       <p className="text-sm leading-relaxed text-black/55 dark:text-white/55">
-        {t("igSync.addAccount.description")}{" "}
-        <Link
-          href="https://labs.ig.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline underline-offset-2 hover:text-black dark:hover:text-white"
-        >
-          labs.ig.com
-        </Link>
-        .
+        {t("igSync.addAccount.description")}
       </p>
+
+      <IgApiKeyHelp />
 
       <div className="space-y-2">
         <Label
@@ -215,9 +208,6 @@ function IgConnectView({
           required
           className={fieldClassName}
         />
-        <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
-          {t("igSync.addAccount.apiKeyHelp")}
-        </p>
       </div>
 
       <div className="space-y-2">

@@ -2662,15 +2662,35 @@ export default {
     addAccount: {
       title: "Connect IG",
       description:
-        "Sign in with your IG username and password, then paste the API key you create on",
+        "Sign in with your IG username and password, then paste a personal Labs API key.",
       environmentLabel: "Environment",
       environmentLive: "Live",
       environmentDemo: "Demo",
       usernameLabel: "Username",
       passwordLabel: "Password",
       apiKeyLabel: "API key",
-      apiKeyHelp:
-        "Create a personal API key at labs.ig.com (My Account → API keys). Use a demo key with the Demo environment.",
+      apiKeyGuideTitle: "Create your API key",
+      apiKeyStep1:
+        "Log into the IG web platform with a live account (demo-only logins cannot create keys).",
+      apiKeyStep2:
+        "Open My Account → Settings → API keys (left menu).",
+      apiKeyStep3:
+        "Enter a name (for example Deltalytix) and click Generate new key. Copy the key once — IG may not show it again.",
+      apiKeyStep4:
+        "For Demo sync: use the account switcher to switch to demo first, then create a demo key the same way.",
+      apiKeyScopeTitle: "What Deltalytix uses this key for",
+      apiKeyScopeIntro:
+        "IG API keys have no OAuth-style scopes or permission checkboxes. One key identifies your app; access follows your IG login. Deltalytix only calls:",
+      apiKeyScopeRead:
+        "Login, list accounts, and read closed Transaction History (no market data streaming).",
+      apiKeyScopeNoTrade:
+        "We never open, modify, or close positions — sync is read-only for your journal.",
+      apiKeyScopeMatchEnv:
+        "Match Live key + Live environment, or Demo key + Demo environment. IG limits you to one key per environment.",
+      apiKeyLinkLabs: "IG Labs — create API key (EN)",
+      apiKeyLinkEnGuide: "IG — how to use trading APIs (EN)",
+      apiKeyLinkFrGuide: "IG France — guide API (FR)",
+      apiKeyLinkFrHelp: "IG France — accès API (FR)",
       historyStartLabel: "Account start date",
       historyStartHelp:
         "Pick the day you started trading this account. We import closed deals from then until today.",
@@ -2721,7 +2741,7 @@ export default {
   "import.type.igSync.description":
     "Direct account synchronization with IG",
   "import.type.igSync.details":
-    "Connect with your IG username, password, and Labs API key to import closed deals from Transaction History automatically. CSV import remains available as a fallback.",
+    "Connect with your IG username, password, and Labs API key. Deltalytix only reads closed Transaction History — it never places trades. Create the key under My Account → Settings → API keys (see IG Labs getting started).",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "ATAS Excel file",
   "import.type.atas.details":
