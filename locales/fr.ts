@@ -2774,9 +2774,9 @@ export default {
     },
   },
   igSync: {
-    title: "Synchronisation IG",
+    title: "IG",
     description:
-      "Connectez votre compte IG avec une clé API Labs pour importer automatiquement les deals clôturés depuis l'historique des transactions.",
+      "Connectez votre compte IG avec une clé API personnelle pour importer automatiquement les deals clôturés depuis l'historique des transactions.",
     connected: "Compte IG connecté avec succès",
     error: {
       credentialsRequired:
@@ -2788,6 +2788,20 @@ export default {
       CREDENTIALS_REQUIRED:
         "Saisissez l'identifiant, le mot de passe et la clé API.",
       AUTH_FAILED: "Échec de la connexion IG : {reason}",
+      IG_INVALID_CREDENTIALS:
+        "IG a refusé cet identifiant ou ce mot de passe. Vérifiez-les sur ig.com puis réessayez.",
+      IG_API_KEY_REJECTED:
+        "IG a refusé cette clé API. Vérifiez qu'elle a bien été créée pour l'environnement {environment} — une clé créée pour un environnement ne fonctionne jamais sur l'autre.",
+      IG_API_KEY_DISABLED:
+        "Cette clé API est désactivée ou révoquée chez IG. Générez-en une nouvelle via Mon compte → Paramètres → Clés API.",
+      IG_ACCOUNT_LOCKED:
+        "IG a bloqué cet identifiant après trop de tentatives échouées. Débloquez-le sur ig.com, puis reconnectez-vous.",
+      IG_PASSWORD_ENCRYPTION_REQUIRED:
+        "Ce compte IG exige une connexion chiffrée, que Deltalytix ne prend pas encore en charge. Importez plutôt votre historique des transactions en CSV.",
+      IG_RATE_LIMITED:
+        "IG limite temporairement cette clé API. Patientez quelques minutes et réessayez.",
+      ENCRYPTION_KEY_MISSING:
+        "Ce serveur Deltalytix n'a pas de clé de chiffrement configurée : les identifiants IG ne peuvent pas être enregistrés. Contactez votre administrateur.",
       NO_ACCOUNTS: "Aucun compte de trading n'a été renvoyé pour cet identifiant.",
       HISTORY_START_REQUIRED:
         "Choisissez une date de début de compte valide (au plus tard aujourd'hui).",
@@ -2810,40 +2824,58 @@ export default {
     addAccount: {
       title: "Connecter IG",
       description:
-        "Connectez-vous avec votre identifiant et mot de passe IG, puis collez une clé API Labs personnelle.",
+        "Connectez-vous avec votre identifiant et mot de passe IG, puis collez une clé API personnelle.",
+      intro:
+        "L’API d’IG demande deux choses : votre identifiant IG, qui prouve que le compte est le vôtre, et une clé API personnelle, qui identifie Deltalytix auprès d’IG. Vous créez la clé vous-même chez IG — c’est gratuit et cela prend une minute.",
       environmentLabel: "Environnement",
       environmentLive: "Réel",
       environmentDemo: "Démo",
       usernameLabel: "Identifiant",
       passwordLabel: "Mot de passe",
       apiKeyLabel: "Clé API",
-      apiKeyGuideTitle: "Créer votre clé API",
-      apiKeyStep1:
-        "Connectez-vous à la plateforme web IG avec un compte réel (un compte démo seul ne permet pas de créer une clé).",
-      apiKeyStep2:
-        "Ouvrez Mon compte → Paramètres → Clés API (menu de gauche).",
-      apiKeyStep3:
-        "Donnez un nom (par exemple Deltalytix) puis cliquez sur Générer une nouvelle clé. Copiez-la immédiatement — IG peut ne plus la réafficher.",
-      apiKeyStep4:
-        "Pour la sync Démo : basculez d’abord en démo via le sélecteur de compte, puis créez une clé démo de la même façon.",
-      apiKeyScopeTitle: "Ce que Deltalytix fait avec cette clé",
-      apiKeyScopeIntro:
-        "Les clés API IG n’ont pas de scopes OAuth ni de cases à cocher de permissions. Une clé identifie votre application ; l’accès suit votre login IG. Deltalytix n’appelle que :",
-      apiKeyScopeRead:
-        "Connexion, liste des comptes, et lecture de l’historique des transactions clôturées (pas de streaming de cours).",
-      apiKeyScopeNoTrade:
-        "Nous n’ouvrons, ne modifions ni ne fermons jamais de positions — la sync est en lecture seule pour votre journal.",
-      apiKeyScopeMatchEnv:
-        "Associez clé Réel + environnement Réel, ou clé Démo + environnement Démo. IG limite à une clé par environnement.",
-      apiKeyLinkLabs: "IG Labs — créer une clé API (EN)",
-      apiKeyLinkEnGuide: "IG — utiliser les API de trading (EN)",
-      apiKeyLinkFrGuide: "IG France — guide API (FR)",
-      apiKeyLinkFrHelp: "IG France — accès à l’API (FR)",
+      apiKeyHelp: "Créée chez IG, pas ici — voir les questions ci-dessous.",
       historyStartLabel: "Date de début du compte",
       historyStartHelp:
         "Indiquez le jour où vous avez commencé à trader sur ce compte. Nous importons les deals clôturés depuis cette date jusqu’à aujourd’hui.",
       connecting: "Connexion…",
       connect: "Connecter",
+    },
+    faq: {
+      title: "Questions",
+      whyBothQuestion:
+        "Pourquoi mon identifiant et une clé API sont-ils tous les deux nécessaires ?",
+      whyBothAnswer:
+        "Ils ne servent pas à la même chose. Votre identifiant et votre mot de passe prouvent que le compte est le vôtre : c’est avec eux qu’IG vous connecte. La clé API, elle, identifie Deltalytix comme l’application qui fait la requête, et IG refuse tout appel qui n’en contient pas. L’un ne fonctionne pas sans l’autre.",
+      createKeyQuestion: "Comment créer ma clé API ?",
+      createKeyStep1:
+        "Connectez-vous à la plateforme web IG avec un compte réel (un compte démo seul ne permet pas de créer une clé).",
+      createKeyStep2: "Ouvrez Mon compte → Paramètres → Clés API (menu de gauche).",
+      createKeyStep3:
+        "Donnez un nom (par exemple Deltalytix) puis cliquez sur Générer une nouvelle clé. Copiez-la immédiatement — IG peut ne plus la réafficher.",
+      createKeyStep4:
+        "Pour la synchronisation Démo : basculez d’abord en démo via le sélecteur de compte, puis créez une clé démo de la même façon.",
+      linkLabs: "IG Labs — créer une clé API (EN)",
+      linkEnGuide: "IG — utiliser les API de trading (EN)",
+      linkFrGuide: "IG France — guide API (FR)",
+      linkFrHelp: "IG France — accès à l’API (FR)",
+      scopeQuestion: "Que fait Deltalytix avec cette clé ?",
+      scopeIntro:
+        "Les clés API IG n’ont pas de scopes OAuth ni de cases à cocher de permissions. Une clé identifie votre application, et l’accès suit votre login IG. Deltalytix se contente de :",
+      scopeSignIn:
+        "Se connecter, lister vos comptes et basculer de l’un à l’autre pour les lire chacun à leur tour.",
+      scopeHistory:
+        "Lire votre historique des transactions clôturées — aucun streaming de cours.",
+      scopeNoTrade:
+        "Ne jamais ouvrir, modifier ni fermer de position. La synchronisation est en lecture seule pour votre journal.",
+      scopeMatchEnv:
+        "Utiliser l’environnement choisi ici : une clé Réel avec Réel, une clé Démo avec Démo. Une clé créée pour un environnement ne fonctionne pas sur l’autre.",
+      storageQuestion: "Comment mes identifiants sont-ils stockés ?",
+      storageEncrypted:
+        "Votre identifiant, votre mot de passe et votre clé API sont chiffrés (AES-256-GCM) avant d’être enregistrés, et déchiffrés uniquement sur notre serveur au moment d’une synchronisation.",
+      storageWhyPassword:
+        "L’API d’IG ne propose ni OAuth ni jeton de rafraîchissement : chaque synchronisation doit se connecter en votre nom. Votre mot de passe est donc conservé plutôt qu’échangé contre un jeton révocable — nous préférons le dire clairement que parler de « stockage sécurisé » en vous laissant deviner.",
+      storageRevoke:
+        "Supprimer la connexion efface les identifiants stockés. Changer votre mot de passe IG coupe l’accès immédiatement.",
     },
     sync: {
       tokenMissing: "Identifiants manquants — reconnectez-vous",
@@ -2857,7 +2889,7 @@ export default {
       remove: "Supprimer",
       removeTitle: "Supprimer la connexion",
       removeDescription:
-        'Supprimer la connexion « {accountId} » ? Les trades déjà importés restent dans Deltalytix.',
+        'Supprimer la connexion « {accountId} » ? Vos identifiants IG stockés sont effacés. Les trades déjà importés restent dans Deltalytix.',
       connectionRemoved: 'Connexion « {accountId} » supprimée.',
       removeError: 'Échec de la suppression de « {accountId} ».',
       accountsReloaded: "Comptes rechargés avec succès",
@@ -2885,11 +2917,11 @@ export default {
     "Synchronisation directe de compte avec Interactive Brokers",
   "import.type.ibkrSync.details":
     "Importez automatiquement votre historique de trades IBKR via une Flex Query. Vous créez la requête une fois dans le Client Portal, collez le token et l'ID de requête ici, et nous gardons tout synchronisé.",
-  "import.type.igSync.name": "IG Sync",
+  "import.type.igSync.name": "IG",
   "import.type.igSync.description":
     "Synchronisation directe de compte avec IG",
   "import.type.igSync.details":
-    "Connectez-vous avec votre identifiant IG, mot de passe et clé API Labs. Deltalytix lit uniquement l’historique des transactions clôturées — aucun ordre n’est passé. Créez la clé via Mon compte → Paramètres → Clés API (voir le guide IG Labs).",
+    "Connectez-vous avec votre identifiant et mot de passe IG, plus une clé API personnelle que vous créez chez IG. Deltalytix lit uniquement l’historique des transactions clôturées — aucun ordre n’est passé. Créez la clé via Mon compte → Paramètres → Clés API.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "Fichier Excel ATAS",
   "import.type.atas.details":

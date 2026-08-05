@@ -35,7 +35,7 @@ import { authenticateIg } from "./actions";
 import { useIgSyncContext } from "@/context/ig-sync-context";
 import { captureConnectionCreated } from "@/lib/connection-analytics";
 import type { IgApiEnvironment } from "@/lib/ig-api/types";
-import { IgApiKeyHelp } from "./ig-api-key-help";
+import { IgConnectIntro, IgFaq } from "./ig-faq";
 
 const fieldClassName =
   "h-11 rounded-sm border-black/10 bg-transparent text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30";
@@ -109,7 +109,7 @@ export function IgCredentialsManager() {
         ) => string;
         toast.error(
           translate(`igSync.errors.${result.error}`, {
-            reason: String(result.errorParams?.reason ?? ""),
+            ...(result.errorParams ?? {}),
           }),
         );
         return;
@@ -297,7 +297,7 @@ export function IgCredentialsManager() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <IgApiKeyHelp />
+            <IgConnectIntro />
             <div className="space-y-2">
               <Label htmlFor="ig-mgr-environment">
                 {t("igSync.addAccount.environmentLabel")}
@@ -355,6 +355,9 @@ export function IgCredentialsManager() {
                 onChange={(e) => setApiKey(e.target.value)}
                 className={fieldClassName}
               />
+              <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
+                {t("igSync.addAccount.apiKeyHelp")}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="ig-mgr-history-start">
@@ -382,6 +385,8 @@ export function IgCredentialsManager() {
                 t("igSync.addAccount.connect")
               )}
             </button>
+
+            <IgFaq />
           </div>
         </DialogContent>
       </Dialog>

@@ -2630,9 +2630,9 @@ export default {
     },
   },
   igSync: {
-    title: "IG Sync",
+    title: "IG",
     description:
-      "Connect your IG account with a Labs API key to import closed deals from Transaction History automatically.",
+      "Connect your IG account with a personal API key to import closed deals from Transaction History automatically.",
     connected: "IG account connected successfully",
     error: {
       credentialsRequired:
@@ -2644,6 +2644,20 @@ export default {
       CREDENTIALS_REQUIRED:
         "Enter username, password, and API key to continue.",
       AUTH_FAILED: "IG login failed: {reason}",
+      IG_INVALID_CREDENTIALS:
+        "IG rejected this username or password. Check them on ig.com and try again.",
+      IG_API_KEY_REJECTED:
+        "IG rejected this API key. Make sure it was created for the {environment} environment — a key made for one environment never works on the other.",
+      IG_API_KEY_DISABLED:
+        "This API key is disabled or revoked on IG. Generate a new one under My Account → Settings → API keys.",
+      IG_ACCOUNT_LOCKED:
+        "IG locked this login after too many failed attempts. Unlock it on ig.com, then reconnect.",
+      IG_PASSWORD_ENCRYPTION_REQUIRED:
+        "This IG account requires encrypted logins, which Deltalytix does not support yet. Import your Transaction History as a CSV instead.",
+      IG_RATE_LIMITED:
+        "IG is rate-limiting this API key. Wait a few minutes and try again.",
+      ENCRYPTION_KEY_MISSING:
+        "This Deltalytix server has no credential encryption key configured, so IG credentials cannot be stored. Contact your administrator.",
       NO_ACCOUNTS: "No trading accounts were returned for this login.",
       HISTORY_START_REQUIRED:
         "Choose a valid account start date (on or before today).",
@@ -2662,40 +2676,57 @@ export default {
     addAccount: {
       title: "Connect IG",
       description:
-        "Sign in with your IG username and password, then paste a personal Labs API key.",
+        "Sign in with your IG username and password, then paste a personal API key.",
+      intro:
+        "IG's API needs two things: your IG login, which proves the account is yours, and a personal API key, which identifies Deltalytix to IG. You create the key yourself on IG — it's free and takes about a minute.",
       environmentLabel: "Environment",
       environmentLive: "Live",
       environmentDemo: "Demo",
       usernameLabel: "Username",
       passwordLabel: "Password",
       apiKeyLabel: "API key",
-      apiKeyGuideTitle: "Create your API key",
-      apiKeyStep1:
-        "Log into the IG web platform with a live account (demo-only logins cannot create keys).",
-      apiKeyStep2:
-        "Open My Account → Settings → API keys (left menu).",
-      apiKeyStep3:
-        "Enter a name (for example Deltalytix) and click Generate new key. Copy the key once — IG may not show it again.",
-      apiKeyStep4:
-        "For Demo sync: use the account switcher to switch to demo first, then create a demo key the same way.",
-      apiKeyScopeTitle: "What Deltalytix uses this key for",
-      apiKeyScopeIntro:
-        "IG API keys have no OAuth-style scopes or permission checkboxes. One key identifies your app; access follows your IG login. Deltalytix only calls:",
-      apiKeyScopeRead:
-        "Login, list accounts, and read closed Transaction History (no market data streaming).",
-      apiKeyScopeNoTrade:
-        "We never open, modify, or close positions — sync is read-only for your journal.",
-      apiKeyScopeMatchEnv:
-        "Match Live key + Live environment, or Demo key + Demo environment. IG limits you to one key per environment.",
-      apiKeyLinkLabs: "IG Labs — create API key (EN)",
-      apiKeyLinkEnGuide: "IG — how to use trading APIs (EN)",
-      apiKeyLinkFrGuide: "IG France — guide API (FR)",
-      apiKeyLinkFrHelp: "IG France — accès API (FR)",
+      apiKeyHelp: "Created on IG, not here — see the questions below.",
       historyStartLabel: "Account start date",
       historyStartHelp:
         "Pick the day you started trading this account. We import closed deals from then until today.",
       connecting: "Connecting…",
       connect: "Connect",
+    },
+    faq: {
+      title: "Questions",
+      whyBothQuestion: "Why do you need my login and an API key?",
+      whyBothAnswer:
+        "They do different jobs. Your username and password prove the account is yours — IG signs you in with them. The API key identifies Deltalytix as the app making the request, and IG rejects any API call that does not carry one. Neither works without the other.",
+      createKeyQuestion: "How do I create my API key?",
+      createKeyStep1:
+        "Log into the IG web platform with a live account (demo-only logins cannot create keys).",
+      createKeyStep2: "Open My Account → Settings → API keys (left menu).",
+      createKeyStep3:
+        "Enter a name (for example Deltalytix) and click Generate new key. Copy the key once — IG may not show it again.",
+      createKeyStep4:
+        "For Demo sync: use the account switcher to switch to demo first, then create a demo key the same way.",
+      linkLabs: "IG Labs — create API key (EN)",
+      linkEnGuide: "IG — how to use trading APIs (EN)",
+      linkFrGuide: "IG France — guide API (FR)",
+      linkFrHelp: "IG France — accès API (FR)",
+      scopeQuestion: "What does Deltalytix do with the key?",
+      scopeIntro:
+        "IG API keys have no OAuth-style scopes or permission checkboxes. One key identifies your app, and access follows your IG login. Deltalytix only ever:",
+      scopeSignIn:
+        "Signs in, lists your accounts, and switches between them to read each one in turn.",
+      scopeHistory:
+        "Reads your closed Transaction History — no market data streaming.",
+      scopeNoTrade:
+        "Never opens, modifies, or closes a position. Sync is read-only for your journal.",
+      scopeMatchEnv:
+        "Uses the environment you pick here: a Live key with Live, a Demo key with Demo. A key created for one environment does not work on the other.",
+      storageQuestion: "How are my credentials stored?",
+      storageEncrypted:
+        "Your username, password, and API key are encrypted (AES-256-GCM) before they are saved, and decrypted only on our server when a sync runs.",
+      storageWhyPassword:
+        "IG's API has no OAuth and no refresh tokens, so every sync has to sign in as you. That means your password is stored rather than exchanged for a revocable token — we would rather say so plainly than call it \"stored securely\" and leave you guessing.",
+      storageRevoke:
+        "Removing the connection deletes the stored credentials. Changing your IG password cuts access immediately.",
     },
     sync: {
       tokenMissing: "Connection missing credentials — reconnect",
@@ -2709,7 +2740,7 @@ export default {
       remove: "Remove",
       removeTitle: "Remove connection",
       removeDescription:
-        'Remove the connection "{accountId}"? Already imported trades stay in Deltalytix.',
+        'Remove the connection "{accountId}"? Your stored IG credentials are deleted. Already imported trades stay in Deltalytix.',
       connectionRemoved: 'Connection "{accountId}" removed.',
       removeError: 'Failed to remove connection "{accountId}".',
       accountsReloaded: "Accounts reloaded successfully",
@@ -2737,11 +2768,11 @@ export default {
     "Direct account synchronization with Interactive Brokers",
   "import.type.ibkrSync.details":
     "Import your IBKR trade history automatically using a Flex Query. You create the query once in Client Portal, paste the token and query ID here, and we keep it in sync.",
-  "import.type.igSync.name": "IG Sync",
+  "import.type.igSync.name": "IG",
   "import.type.igSync.description":
     "Direct account synchronization with IG",
   "import.type.igSync.details":
-    "Connect with your IG username, password, and Labs API key. Deltalytix only reads closed Transaction History — it never places trades. Create the key under My Account → Settings → API keys (see IG Labs getting started).",
+    "Sign in with your IG username and password, plus a personal API key you create on IG. Deltalytix only reads closed Transaction History — it never places trades. Create the key under My Account → Settings → API keys.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "ATAS Excel file",
   "import.type.atas.details":
