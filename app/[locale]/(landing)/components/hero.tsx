@@ -1,6 +1,6 @@
 "use client";
 import { useCurrentLocale, useI18n } from "@/locales/landing-client";
-import { localizeLandingHref } from "@/lib/landing-nav-paths";
+import { localizeLandingHref, scrollToLandingHash } from "@/lib/landing-nav-paths";
 import Link, { useLinkStatus } from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -117,6 +117,13 @@ export default function Hero() {
             </Link>
             <Link
               href="#features"
+              onClick={(event) => {
+                event.preventDefault();
+                scrollToLandingHash("features");
+                if (window.location.hash !== "#features") {
+                  window.history.pushState(null, "", "#features");
+                }
+              }}
               className="inline-flex h-12 items-center justify-center rounded-sm border border-black/20 px-6 text-sm font-medium transition-[colors,transform] hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:hover:bg-white/5"
             >
               {t("landing.features.heading")} <span className="ml-3">↓</span>
