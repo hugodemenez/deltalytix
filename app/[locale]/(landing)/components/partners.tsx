@@ -19,7 +19,7 @@ export default function Partners() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <span className="relative h-6 w-full max-w-[144px] opacity-65 outline outline-1 outline-black/5 transition-opacity duration-150 ease-out group-hover:opacity-100 dark:outline-white/5 md:h-5 md:max-w-[120px] md:opacity-55">
+          <span className="relative h-6 w-full max-w-[144px] opacity-65 transition-opacity duration-150 ease-out group-hover:opacity-100 md:h-5 md:max-w-[120px] md:opacity-55">
             <Image
               src="/logos/ninjatrader-ob.svg"
               alt="NinjaTrader"
@@ -31,7 +31,7 @@ export default function Partners() {
           </span>
         </a>
         <div className="flex min-h-20 items-center justify-center px-6">
-          <span className="relative h-6 w-full max-w-[402px] opacity-65 outline outline-1 outline-black/5 dark:outline-white/5 md:h-5 md:max-w-[335px] md:opacity-55">
+          <span className="relative h-6 w-full max-w-[402px] opacity-65 md:h-5 md:max-w-[335px] md:opacity-55">
             <Image
               src="/logos/rithmic-logo-black.png"
               alt="Rithmic"
