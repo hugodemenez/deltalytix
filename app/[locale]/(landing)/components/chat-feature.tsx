@@ -8,8 +8,6 @@ import {
   useState,
 } from "react";
 import {
-  BarChart3,
-  Check,
   Database,
   Plus,
   RotateCcw,
@@ -33,10 +31,6 @@ type DemoStage =
 type ConversationTurn = {
   question: string;
   response: string;
-  metric: string;
-  value: string;
-  insight: string;
-  trend: "positive" | "negative";
 };
 
 type DemoTurn = {
@@ -60,48 +54,6 @@ const STAGE_TIMINGS: Record<DemoStage, number> = {
   insight: 3400,
 };
 
-function AnalysisCard({
-  turn,
-  t,
-}: {
-  turn: ConversationTurn;
-  t: ReturnType<typeof useI18n>;
-}) {
-  const isPositive = turn.trend === "positive";
-
-  return (
-    <div className="coach-insight overflow-hidden rounded-xl border border-border bg-background">
-      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <div className="flex min-w-0 items-center gap-2 text-[10px] font-medium text-muted-foreground sm:text-[11px]">
-          <BarChart3 className="size-3.5 shrink-0" />
-          <span className="truncate">{turn.metric}</span>
-        </div>
-        <span
-          className={cn(
-            "flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] sm:text-[9px]",
-            isPositive
-              ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-              : "bg-amber-500/10 text-amber-800 dark:text-amber-300",
-          )}
-        >
-          <Check className="size-2.5" />
-          {isPositive
-            ? t("landing.features.chat-feature.analysis.trends.positive")
-            : t("landing.features.chat-feature.analysis.trends.negative")}
-        </span>
-      </div>
-      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 px-3 py-2.5">
-        <span className="whitespace-nowrap text-lg font-medium tracking-[-0.03em] sm:text-xl">
-          {turn.value}
-        </span>
-        <p className="min-w-0 text-[9px] leading-relaxed text-muted-foreground sm:text-[10px]">
-          {turn.insight}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function ConversationItem({
   item,
   turn,
@@ -122,10 +74,9 @@ function ConversationItem({
     item.stage === "insight";
   const responseRevealed =
     item.stage === "response" || item.stage === "insight";
-  const insightRevealed = item.stage === "insight";
 
   return (
-    <div className="space-y-2.5 sm:space-y-3" data-demo-turn={item.id}>
+    <div className="space-y-1.5" data-demo-turn={item.id}>
       {showQuestion && (
         <div
           className={cn(
@@ -144,29 +95,23 @@ function ConversationItem({
             isActive && "coach-message-enter",
           )}
         >
-          <div
-            className={cn(
-              "t-skel overflow-hidden rounded-xl bg-muted text-foreground",
-              responseRevealed && "is-revealed",
-            )}
-          >
-            <div className="t-skel-skeleton is-pulsing flex flex-col justify-center gap-2 px-3 py-3">
-              <span className="h-2 w-[88%] rounded-full bg-foreground/10" />
-              <span className="h-2 w-[68%] rounded-full bg-foreground/[0.08]" />
+          {!responseRevealed ? (
+            <div className="flex flex-col justify-center gap-2 rounded-xl bg-muted px-3 py-3">
+              <span className="h-2 w-[88%] animate-pulse rounded-full bg-foreground/10" />
+              <span className="h-2 w-[68%] animate-pulse rounded-full bg-foreground/[0.08]" />
               <span className="mt-0.5 text-[9px] text-muted-foreground sm:text-[10px]">
                 {t("landing.features.chat-feature.analyzing")}
               </span>
             </div>
-            <div className="t-skel-content box-border flex min-h-[96px] items-start p-3">
+          ) : (
+            <div className="rounded-xl bg-muted px-3 py-2 text-foreground">
               <p className="text-[10px] leading-relaxed sm:text-[11px]">
                 {responseText}
               </p>
             </div>
-          </div>
+          )}
         </div>
       )}
-
-      {insightRevealed && <AnalysisCard turn={turn} t={t} />}
     </div>
   );
 }
@@ -179,28 +124,14 @@ export default function TradingChatAssistant({
     {
       question: t("landing.features.chat-feature.conversation.patterns"),
       response: t("landing.features.chat-feature.responses.patterns"),
-      metric: t("landing.features.chat-feature.analysis.revengeTrading.metric"),
-      value: t("landing.features.chat-feature.analysis.revengeTrading.value"),
-      insight: t(
-        "landing.features.chat-feature.analysis.revengeTrading.insight",
-      ),
-      trend: "negative",
     },
     {
       question: t("landing.features.chat-feature.conversation.analyze"),
       response: t("landing.features.chat-feature.responses.analyze"),
-      metric: t("landing.features.chat-feature.analysis.winRate.metric"),
-      value: t("landing.features.chat-feature.analysis.winRate.value"),
-      insight: t("landing.features.chat-feature.analysis.winRate.insight"),
-      trend: "positive",
     },
     {
       question: t("landing.features.chat-feature.conversation.riskManagement"),
       response: t("landing.features.chat-feature.responses.riskManagement"),
-      metric: t("landing.features.chat-feature.analysis.riskReward.metric"),
-      value: t("landing.features.chat-feature.analysis.riskReward.value"),
-      insight: t("landing.features.chat-feature.analysis.riskReward.insight"),
-      trend: "positive",
     },
   ];
 
@@ -398,7 +329,7 @@ export default function TradingChatAssistant({
             data-demo-stage={activeTurn.stage}
             className="min-h-0 flex-1 overflow-hidden overscroll-none"
           >
-            <div className="flex min-h-full flex-col justify-end gap-4 px-3.5 py-3 sm:px-5 sm:py-4">
+            <div className="flex min-h-full flex-col justify-end gap-1.5 px-3.5 py-3 sm:px-5 sm:py-4">
               <div className="flex items-center gap-2 text-[9px] text-muted-foreground sm:text-[10px]">
                 <Database className="size-3 shrink-0" />
                 <span className="truncate">
@@ -456,63 +387,13 @@ export default function TradingChatAssistant({
       </div>
 
       <style jsx global>{`
-        .coach-message-enter,
-        .coach-insight {
+        .coach-message-enter {
           animation: coach-enter 240ms cubic-bezier(0.23, 1, 0.32, 1) both;
           will-change: transform, opacity;
         }
 
-        .coach-insight {
-          animation-delay: 30ms;
-        }
-
         .coach-caret {
           animation: coach-caret 900ms ease-in-out infinite;
-        }
-
-        .t-skel {
-          position: relative;
-        }
-
-        .t-skel-skeleton {
-          position: absolute;
-          inset: 0;
-        }
-
-        .t-skel-content {
-          position: relative;
-        }
-
-        .t-skel-skeleton {
-          z-index: 1;
-          opacity: 1;
-          filter: blur(0);
-          transition:
-            opacity 140ms cubic-bezier(0.23, 1, 0.32, 1),
-            filter 140ms cubic-bezier(0.23, 1, 0.32, 1);
-        }
-
-        .t-skel-content {
-          z-index: 2;
-          opacity: 0;
-          filter: blur(2px);
-          transition:
-            opacity 180ms cubic-bezier(0.23, 1, 0.32, 1) 120ms,
-            filter 180ms cubic-bezier(0.23, 1, 0.32, 1) 120ms;
-        }
-
-        .t-skel.is-revealed .t-skel-skeleton {
-          opacity: 0;
-          filter: blur(2px);
-        }
-
-        .t-skel.is-revealed .t-skel-content {
-          opacity: 1;
-          filter: blur(0);
-        }
-
-        .t-skel-skeleton.is-pulsing > * {
-          animation: t-skel-pulse 1000ms ease-in-out 1;
         }
 
         @keyframes coach-enter {
@@ -538,27 +419,10 @@ export default function TradingChatAssistant({
           }
         }
 
-        @keyframes t-skel-pulse {
-          0%,
-          100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.5;
-          }
-        }
-
         @media (prefers-reduced-motion: reduce) {
           .coach-message-enter,
-          .coach-insight,
-          .coach-caret,
-          .t-skel-skeleton.is-pulsing > * {
+          .coach-caret {
             animation: none;
-          }
-
-          .t-skel-skeleton,
-          .t-skel-content {
-            transition: none;
           }
         }
       `}</style>
