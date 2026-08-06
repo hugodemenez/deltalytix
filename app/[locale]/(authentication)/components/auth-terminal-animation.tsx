@@ -170,22 +170,23 @@ export function AuthTerminalAnimation({ className }: { className?: string }) {
 
             <div className="absolute inset-0 flex items-stretch gap-[3px] px-1 pb-1 pt-2">
               {bars.map((bar) => {
-                const height = `${12 + Math.abs(bar.value) * 82}%`;
+                const magnitude = `${10 + Math.abs(bar.value) * 38}%`;
                 const positive = bar.value >= 0;
                 return (
                   <div
                     key={bar.id}
-                    className="flex min-h-0 min-w-0 flex-1 items-end justify-center"
+                    className="relative flex min-h-0 min-w-0 flex-1 justify-center"
                   >
+                    <div className="absolute inset-x-[10%] top-1/2 h-px bg-white/[0.12]" />
                     <div
                       className={cn(
-                        "w-full max-w-[14px] origin-bottom rounded-[1px] transition-[height,background-color] duration-700 ease-out motion-reduce:transition-none",
+                        "absolute inset-x-[12%] max-w-[14px] rounded-[1px] transition-[height,background-color] duration-700 ease-out motion-reduce:transition-none",
                         positive
-                          ? "bg-[oklch(0.78_0.12_155)]"
-                          : "bg-[oklch(0.72_0.14_25)]",
+                          ? "bottom-1/2 origin-bottom bg-[oklch(0.78_0.12_155)]"
+                          : "top-1/2 origin-top bg-[oklch(0.72_0.14_25)]",
                         !prefersReducedMotion && "auth-bar-enter",
                       )}
-                      style={{ height }}
+                      style={{ height: magnitude }}
                     />
                   </div>
                 );
@@ -254,7 +255,7 @@ export function AuthTerminalAnimation({ className }: { className?: string }) {
         @keyframes auth-bar-enter {
           from {
             opacity: 0.35;
-            transform: scaleY(0.72);
+            transform: scaleY(0.55);
           }
           to {
             opacity: 1;
@@ -263,7 +264,6 @@ export function AuthTerminalAnimation({ className }: { className?: string }) {
         }
 
         .auth-bar-enter {
-          transform-origin: bottom;
           animation: auth-bar-enter 520ms cubic-bezier(0.23, 1, 0.32, 1) both;
         }
 
