@@ -2685,19 +2685,7 @@ export default {
       usernameLabel: "Username",
       passwordLabel: "Password",
       apiKeyLabel: "API key",
-      apiKeyHelp: "Created on IG, not here — see the questions below.",
-      historyStartLabel: "Account start date",
-      historyStartHelp:
-        "Pick the day you started trading this account. We import closed deals from then until today.",
-      connecting: "Connecting…",
-      connect: "Connect",
-    },
-    faq: {
-      title: "Questions",
-      whyBothQuestion: "Why do you need my login and an API key?",
-      whyBothAnswer:
-        "They do different jobs. Your username and password prove the account is yours — IG signs you in with them. The API key identifies Deltalytix as the app making the request, and IG rejects any API call that does not carry one. Neither works without the other.",
-      createKeyQuestion: "How do I create my API key?",
+      createKeyToggle: "How do I create one?",
       createKeyStep1:
         "Log into the IG web platform with a live account (demo-only logins cannot create keys).",
       createKeyStep2: "Open My Account → Settings → API keys (left menu).",
@@ -2709,6 +2697,17 @@ export default {
       linkEnGuide: "IG — how to use trading APIs (EN)",
       linkFrGuide: "IG France — guide API (FR)",
       linkFrHelp: "IG France — accès API (FR)",
+      historyStartLabel: "Account start date",
+      historyStartHelp:
+        "Pick the day you started trading this account. We import closed deals from then until today.",
+      connecting: "Connecting…",
+      connect: "Connect",
+    },
+    faq: {
+      title: "Questions",
+      whyBothQuestion: "Why do you need my login and an API key?",
+      whyBothAnswer:
+        "They do different jobs. Your username and password prove the account is yours — IG signs you in with them. The API key identifies Deltalytix as the app making the request, and IG rejects any API call that does not carry one. Neither works without the other.",
       scopeQuestion: "What does Deltalytix do with the key?",
       scopeIntro:
         "IG API keys have no OAuth-style scopes or permission checkboxes. One key identifies your app, and access follows your IG login. Deltalytix only ever:",

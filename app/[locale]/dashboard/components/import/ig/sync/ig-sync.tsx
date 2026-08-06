@@ -18,7 +18,7 @@ import { useIgSyncContext } from "@/context/ig-sync-context";
 import { toast } from "sonner";
 import { authenticateIg } from "./actions";
 import { IgCredentialsManager } from "./ig-credentials-manager";
-import { IgConnectIntro, IgFaq } from "./ig-faq";
+import { IgApiKeyFieldHelp, IgConnectIntro, IgFaq } from "./ig-faq";
 import type { IgApiEnvironment } from "@/lib/ig-api/types";
 
 const fieldClassName =
@@ -204,9 +204,7 @@ function IgConnectView({
           required
           className={fieldClassName}
         />
-        <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
-          {t("igSync.addAccount.apiKeyHelp")}
-        </p>
+        <IgApiKeyFieldHelp />
       </div>
 
       <div className="space-y-2">

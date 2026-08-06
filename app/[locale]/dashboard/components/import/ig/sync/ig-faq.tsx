@@ -1,13 +1,18 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { ExternalLink } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { ChevronDown, ExternalLink } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useCurrentLocale, useI18n } from "@/locales/client";
 
 /** Official IG docs — Labs steps are English-only; France has a French overview. */
@@ -43,6 +48,62 @@ const contentClassName =
   "space-y-2 pb-3 text-xs leading-relaxed text-black/65 dark:text-white/65";
 
 /**
+ * Key creation happens on IG's site, in another tab. Keep the steps next to the
+ * field they unblock rather than in the FAQ below the submit button, where
+ * someone stuck on "where do I get this?" would never scroll to find them.
+ */
+export function IgApiKeyFieldHelp() {
+  const t = useI18n();
+  const locale = useCurrentLocale();
+  const isFr = locale === "fr";
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <CollapsibleTrigger className="inline-flex items-center gap-1 text-xs text-black/45 underline underline-offset-2 transition-opacity hover:opacity-70 dark:text-white/45">
+        {t("igSync.addAccount.createKeyToggle")}
+        <ChevronDown
+          className={`h-3 w-3 shrink-0 transition-transform duration-200 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+          strokeWidth={1.75}
+          aria-hidden
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+        <div className="mt-2 space-y-2 rounded-sm border border-black/10 bg-black/[0.02] p-3 text-xs leading-relaxed text-black/65 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/65">
+          <ol className="list-decimal space-y-1 pl-4">
+            <li>{t("igSync.addAccount.createKeyStep1")}</li>
+            <li>{t("igSync.addAccount.createKeyStep2")}</li>
+            <li>{t("igSync.addAccount.createKeyStep3")}</li>
+            <li>{t("igSync.addAccount.createKeyStep4")}</li>
+          </ol>
+          <div className="flex flex-col gap-1.5 pt-1 sm:flex-row sm:flex-wrap sm:gap-x-4">
+            <DocLink href={IG_API_KEY_DOCS.labsGettingStarted}>
+              {t("igSync.addAccount.linkLabs")}
+            </DocLink>
+            {isFr ? (
+              <>
+                <DocLink href={IG_API_KEY_DOCS.frHowTo}>
+                  {t("igSync.addAccount.linkFrGuide")}
+                </DocLink>
+                <DocLink href={IG_API_KEY_DOCS.frHelp}>
+                  {t("igSync.addAccount.linkFrHelp")}
+                </DocLink>
+              </>
+            ) : (
+              <DocLink href={IG_API_KEY_DOCS.enHowTo}>
+                {t("igSync.addAccount.linkEnGuide")}
+              </DocLink>
+            )}
+          </div>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+/**
  * The one line users must read before the fields: IG needs two credentials and
  * they do different jobs. Everything else lives collapsed in <IgFaq />.
  */
@@ -57,14 +118,12 @@ export function IgConnectIntro() {
 }
 
 /**
- * Collapsed answers to what the connect form raises: why two secrets, how to
- * create the key, what we call with it, and how the credentials are stored.
- * IG keys have no OAuth-style scopes — we document Deltalytix's usage instead.
+ * Collapsed answers to what the connect form raises: why two secrets, what we
+ * call with the key, and how the credentials are stored. Creating the key is
+ * not here — that one belongs beside the field, in <IgApiKeyFieldHelp />.
  */
 export function IgFaq() {
   const t = useI18n();
-  const locale = useCurrentLocale();
-  const isFr = locale === "fr";
 
   return (
     <div className="space-y-1">
@@ -81,42 +140,6 @@ export function IgFaq() {
           </AccordionTrigger>
           <AccordionContent className={contentClassName}>
             <p>{t("igSync.faq.whyBothAnswer")}</p>
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem
-          value="create-key"
-          className="border-black/10 dark:border-white/10"
-        >
-          <AccordionTrigger className={triggerClassName}>
-            {t("igSync.faq.createKeyQuestion")}
-          </AccordionTrigger>
-          <AccordionContent className={contentClassName}>
-            <ol className="list-decimal space-y-1 pl-4">
-              <li>{t("igSync.faq.createKeyStep1")}</li>
-              <li>{t("igSync.faq.createKeyStep2")}</li>
-              <li>{t("igSync.faq.createKeyStep3")}</li>
-              <li>{t("igSync.faq.createKeyStep4")}</li>
-            </ol>
-            <div className="flex flex-col gap-1.5 pt-1 sm:flex-row sm:flex-wrap sm:gap-x-4">
-              <DocLink href={IG_API_KEY_DOCS.labsGettingStarted}>
-                {t("igSync.faq.linkLabs")}
-              </DocLink>
-              {isFr ? (
-                <>
-                  <DocLink href={IG_API_KEY_DOCS.frHowTo}>
-                    {t("igSync.faq.linkFrGuide")}
-                  </DocLink>
-                  <DocLink href={IG_API_KEY_DOCS.frHelp}>
-                    {t("igSync.faq.linkFrHelp")}
-                  </DocLink>
-                </>
-              ) : (
-                <DocLink href={IG_API_KEY_DOCS.enHowTo}>
-                  {t("igSync.faq.linkEnGuide")}
-                </DocLink>
-              )}
-            </div>
           </AccordionContent>
         </AccordionItem>
 
