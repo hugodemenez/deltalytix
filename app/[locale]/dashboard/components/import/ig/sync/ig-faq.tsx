@@ -55,8 +55,19 @@ const contentClassName =
 export function IgApiKeyFieldHelp() {
   const t = useI18n();
   const locale = useCurrentLocale();
-  const isFr = locale === "fr";
   const [isOpen, setIsOpen] = useState(false);
+  // Send readers only to docs in their own language. IG's Labs pages are
+  // English-only, so the French sheet points at IG France's own API guides.
+  const docs =
+    locale === "fr"
+      ? {
+          primary: IG_API_KEY_DOCS.frHowTo,
+          secondary: IG_API_KEY_DOCS.frHelp,
+        }
+      : {
+          primary: IG_API_KEY_DOCS.labsGettingStarted,
+          secondary: IG_API_KEY_DOCS.enHowTo,
+        };
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -79,23 +90,12 @@ export function IgApiKeyFieldHelp() {
             <li>{t("igSync.addAccount.createKeyStep4")}</li>
           </ol>
           <div className="flex flex-col gap-1.5 pt-1 sm:flex-row sm:flex-wrap sm:gap-x-4">
-            <DocLink href={IG_API_KEY_DOCS.labsGettingStarted}>
-              {t("igSync.addAccount.linkLabs")}
+            <DocLink href={docs.primary}>
+              {t("igSync.addAccount.linkPrimary")}
             </DocLink>
-            {isFr ? (
-              <>
-                <DocLink href={IG_API_KEY_DOCS.frHowTo}>
-                  {t("igSync.addAccount.linkFrGuide")}
-                </DocLink>
-                <DocLink href={IG_API_KEY_DOCS.frHelp}>
-                  {t("igSync.addAccount.linkFrHelp")}
-                </DocLink>
-              </>
-            ) : (
-              <DocLink href={IG_API_KEY_DOCS.enHowTo}>
-                {t("igSync.addAccount.linkEnGuide")}
-              </DocLink>
-            )}
+            <DocLink href={docs.secondary}>
+              {t("igSync.addAccount.linkSecondary")}
+            </DocLink>
           </div>
         </div>
       </CollapsibleContent>
