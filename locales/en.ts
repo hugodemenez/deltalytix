@@ -2693,10 +2693,8 @@ export default {
         "Enter a name (for example Deltalytix) and click Generate new key. Copy the key once — IG may not show it again.",
       createKeyStep4:
         "For Demo sync: use the account switcher to switch to demo first, then create a demo key the same way.",
-      linkLabs: "IG Labs — create API key (EN)",
-      linkEnGuide: "IG — how to use trading APIs (EN)",
-      linkFrGuide: "IG France — guide API (FR)",
-      linkFrHelp: "IG France — accès API (FR)",
+      linkPrimary: "IG Labs — create your API key",
+      linkSecondary: "IG — how to use trading APIs",
       historyStartLabel: "Account start date",
       historyStartHelp:
         "Pick the day you started trading this account. We import closed deals from then until today.",

@@ -2841,10 +2841,8 @@ export default {
         "Donnez un nom (par exemple Deltalytix) puis cliquez sur Générer une nouvelle clé. Copiez-la immédiatement — IG peut ne plus la réafficher.",
       createKeyStep4:
         "Pour la synchronisation Démo : basculez d’abord en démo via le sélecteur de compte, puis créez une clé démo de la même façon.",
-      linkLabs: "IG Labs — créer une clé API (EN)",
-      linkEnGuide: "IG — utiliser les API de trading (EN)",
-      linkFrGuide: "IG France — guide API (FR)",
-      linkFrHelp: "IG France — accès à l’API (FR)",
+      linkPrimary: "IG France — utiliser les API de trading",
+      linkSecondary: "IG France — accéder à l’API",
       historyStartLabel: "Date de début du compte",
       historyStartHelp:
         "Indiquez le jour où vous avez commencé à trader sur ce compte. Nous importons les deals clôturés depuis cette date jusqu’à aujourd’hui.",
