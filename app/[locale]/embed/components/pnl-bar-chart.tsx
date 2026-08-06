@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoBubble } from "@/components/ui/info-bubble"
 import { useI18n } from "@/locales/client";
+import { cn } from "@/lib/utils";
 
 export type EmbedTrade = {
   pnl: number;
@@ -33,8 +34,14 @@ function formatCurrency(value: number) {
 
 export default function DailyPnLChartEmbed({
   trades,
+  className,
+  animated = false,
+  showInfo = true,
 }: {
   trades: EmbedTrade[];
+  className?: string;
+  animated?: boolean;
+  showInfo?: boolean;
 }) {
   const t = useI18n();
 
@@ -138,21 +145,28 @@ export default function DailyPnLChartEmbed({
   };
 
   return (
-    <Card className="h-[500px] flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
-        <div className="flex items-center justify-between w-full">
+    <Card
+      className={cn(
+        "flex h-[500px] flex-col transition-[border-color,transform,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:border-border/80 hover:shadow-md",
+        className,
+      )}
+    >
+      <CardHeader className="flex h-14 shrink-0 flex-row items-center justify-between space-y-0 border-b p-3 sm:p-4">
+        <div className="flex w-full items-center justify-between">
           <div className="flex items-center gap-1.5">
             <CardTitle className="line-clamp-1 text-base">
               {t("embed.pnl.title")}
             </CardTitle>
-            <InfoBubble side="top" iconClassName="size-4">
-              <p>{t("embed.pnl.description")}</p>
-            </InfoBubble>
+            {showInfo && (
+              <InfoBubble side="top" iconClassName="size-4">
+                <p>{t("embed.pnl.description")}</p>
+              </InfoBubble>
+            )}
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 p-2 sm:p-4">
-        <div className="w-full h-full">
+      <CardContent className="min-h-0 flex-1 p-2 sm:p-4">
+        <div className="h-full w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
@@ -160,7 +174,7 @@ export default function DailyPnLChartEmbed({
             >
               <CartesianGrid
                 strokeDasharray="3 3"
-                className="text-border dark:opacity-[0.12] opacity-[0.2]"
+                className="text-border opacity-[0.2] dark:opacity-[0.12]"
               />
               <XAxis
                 dataKey="date"
@@ -188,6 +202,9 @@ export default function DailyPnLChartEmbed({
                 dataKey="pnl"
                 radius={[3, 3, 0, 0]}
                 maxBarSize={40}
+                isAnimationActive={animated}
+                animationDuration={650}
+                animationEasing="ease-out"
                 className="transition-all duration-300 ease-in-out"
               >
                 {chartData.map((entry, idx) => (
@@ -198,6 +215,7 @@ export default function DailyPnLChartEmbed({
                         ? "hsl(var(--chart-win))"
                         : "hsl(var(--chart-loss))"
                     }
+                    className="transition-opacity duration-200 hover:opacity-80"
                   />
                 ))}
               </Bar>

@@ -23,6 +23,7 @@ type SparkChartProps<T extends Record<string, unknown>> = {
   colors?: Partial<Record<Extract<keyof T, string>, string>>
   className?: string
   height?: number
+  animated?: boolean
 }
 
 function useSparkConfig<K extends string>(
@@ -71,7 +72,7 @@ function SparkChartFrame<T extends Record<string, unknown>>({
 export function SparkAreaChart<T extends Record<string, unknown>>(
   props: SparkChartProps<T>
 ) {
-  const { data, index, categories, colors, className, height } = props
+  const { data, index, categories, colors, className, height, animated = false } = props
 
   return (
     <SparkChartFrame
@@ -95,7 +96,9 @@ export function SparkAreaChart<T extends Record<string, unknown>>(
             strokeWidth={1.5}
             fillOpacity={0.25}
             dot={false}
-            isAnimationActive={false}
+            isAnimationActive={animated}
+            animationDuration={650}
+            animationEasing="ease-out"
             baseValue={0}
           />
         ))}

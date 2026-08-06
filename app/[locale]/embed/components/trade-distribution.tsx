@@ -15,6 +15,7 @@ import type { PolarViewBox } from "recharts/types/util/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InfoBubble } from "@/components/ui/info-bubble"
 import { useI18n } from "@/locales/client";
+import { cn } from "@/lib/utils";
 import {
   BreakevenRange,
   DEFAULT_BREAKEVEN_RANGE,
@@ -23,9 +24,15 @@ import {
 export default function TradeDistributionChartEmbed({
   trades,
   breakevenRange = DEFAULT_BREAKEVEN_RANGE,
+  className,
+  animated = false,
+  showInfo = true,
 }: {
   trades: { pnl: number; commission?: number }[];
   breakevenRange?: BreakevenRange;
+  className?: string;
+  animated?: boolean;
+  showInfo?: boolean;
 }) {
   const t = useI18n();
 
@@ -124,21 +131,28 @@ export default function TradeDistributionChartEmbed({
   };
 
   return (
-    <Card className="h-[500px] flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-14">
-        <div className="flex items-center justify-between w-full">
+    <Card
+      className={cn(
+        "flex h-[500px] flex-col transition-[border-color,transform,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:border-border/80 hover:shadow-md",
+        className,
+      )}
+    >
+      <CardHeader className="flex h-14 shrink-0 flex-row items-center justify-between space-y-0 border-b p-3 sm:p-4">
+        <div className="flex w-full items-center justify-between">
           <div className="flex items-center gap-1.5">
             <CardTitle className="line-clamp-1 text-base">
               {t("embed.tradeDistribution.title")}
             </CardTitle>
-            <InfoBubble side="top" iconClassName="size-4">
-              <p>{t("embed.tradeDistribution.description")}</p>
-            </InfoBubble>
+            {showInfo && (
+              <InfoBubble side="top" iconClassName="size-4">
+                <p>{t("embed.tradeDistribution.description")}</p>
+              </InfoBubble>
+            )}
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 p-2 sm:p-4">
-        <div className="w-full h-full">
+      <CardContent className="min-h-0 flex-1 p-2 sm:p-4">
+        <div className="h-full w-full">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -153,6 +167,9 @@ export default function TradeDistributionChartEmbed({
                 endAngle={-270}
                 stroke="hsl(var(--background))"
                 strokeWidth={1}
+                isAnimationActive={animated}
+                animationDuration={650}
+                animationEasing="ease-out"
               >
                 {chartData.map((entry, idx) => (
                   <Cell
