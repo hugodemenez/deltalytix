@@ -2627,7 +2627,18 @@ export default {
       usernameLabel: "Identifiant",
       passwordLabel: "Mot de passe",
       apiKeyLabel: "Clé API",
-      apiKeyHelp: "Créée chez IG, pas ici — voir les questions ci-dessous.",
+      createKeyToggle: "Comment en créer une ?",
+      createKeyStep1:
+        "Connectez-vous à la plateforme web IG avec un compte réel (un compte démo seul ne permet pas de créer une clé).",
+      createKeyStep2: "Ouvrez Mon compte → Paramètres → Clés API (menu de gauche).",
+      createKeyStep3:
+        "Donnez un nom (par exemple Deltalytix) puis cliquez sur Générer une nouvelle clé. Copiez-la immédiatement — IG peut ne plus la réafficher.",
+      createKeyStep4:
+        "Pour la synchronisation Démo : basculez d’abord en démo via le sélecteur de compte, puis créez une clé démo de la même façon.",
+      linkLabs: "IG Labs — créer une clé API (EN)",
+      linkEnGuide: "IG — utiliser les API de trading (EN)",
+      linkFrGuide: "IG France — guide API (FR)",
+      linkFrHelp: "IG France — accès à l’API (FR)",
       historyStartLabel: "Date de début du compte",
       historyStartHelp:
         "Indiquez le jour où vous avez commencé à trader sur ce compte. Nous importons les deals clôturés depuis cette date jusqu’à aujourd’hui.",
@@ -2640,18 +2651,6 @@ export default {
         "Pourquoi mon identifiant et une clé API sont-ils tous les deux nécessaires ?",
       whyBothAnswer:
         "Ils ne servent pas à la même chose. Votre identifiant et votre mot de passe prouvent que le compte est le vôtre : c’est avec eux qu’IG vous connecte. La clé API, elle, identifie Deltalytix comme l’application qui fait la requête, et IG refuse tout appel qui n’en contient pas. L’un ne fonctionne pas sans l’autre.",
-      createKeyQuestion: "Comment créer ma clé API ?",
-      createKeyStep1:
-        "Connectez-vous à la plateforme web IG avec un compte réel (un compte démo seul ne permet pas de créer une clé).",
-      createKeyStep2: "Ouvrez Mon compte → Paramètres → Clés API (menu de gauche).",
-      createKeyStep3:
-        "Donnez un nom (par exemple Deltalytix) puis cliquez sur Générer une nouvelle clé. Copiez-la immédiatement — IG peut ne plus la réafficher.",
-      createKeyStep4:
-        "Pour la synchronisation Démo : basculez d’abord en démo via le sélecteur de compte, puis créez une clé démo de la même façon.",
-      linkLabs: "IG Labs — créer une clé API (EN)",
-      linkEnGuide: "IG — utiliser les API de trading (EN)",
-      linkFrGuide: "IG France — guide API (FR)",
-      linkFrHelp: "IG France — accès à l’API (FR)",
       scopeQuestion: "Que fait Deltalytix avec cette clé ?",
       scopeIntro:
         "Les clés API IG n’ont pas de scopes OAuth ni de cases à cocher de permissions. Une clé identifie votre application, et l’accès suit votre login IG. Deltalytix se contente de :",
