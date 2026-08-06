@@ -7,11 +7,6 @@ export interface IgStoredCredentials {
   environment: IgApiEnvironment;
   accountIds?: string[];
   accountNames?: Record<string, string>;
-  /**
-   * UTC calendar date (YYYY-MM-DD) when the user started trading.
-   * Sync walks from this date to today via /history/transactions.
-   */
-  historyStartDate?: string;
 }
 
 export interface IgSyncStats {

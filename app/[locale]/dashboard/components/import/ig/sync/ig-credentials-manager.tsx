@@ -62,12 +62,10 @@ export function IgCredentialsManager() {
   const [password, setPassword] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [environment, setEnvironment] = useState<IgApiEnvironment>("live");
-  const [historyStartDate, setHistoryStartDate] = useState("");
   const [actionsMenuAccountId, setActionsMenuAccountId] = useState<
     string | null
   >(null);
   const t = useI18n();
-  const todayUtc = new Date().toISOString().slice(0, 10);
 
   const handleRemoveConnection = useCallback(
     async (accountId: string) => {
@@ -86,7 +84,7 @@ export function IgCredentialsManager() {
   );
 
   const handleAddAccount = useCallback(async () => {
-    if (!identifier || !password || !apiKey || !historyStartDate) {
+    if (!identifier || !password || !apiKey) {
       toast.error(t("igSync.error.credentialsRequired"));
       return;
     }
@@ -99,7 +97,6 @@ export function IgCredentialsManager() {
         password,
         apiKey,
         environment,
-        historyStartDate,
       );
 
       if ("error" in result && result.error) {
@@ -121,7 +118,6 @@ export function IgCredentialsManager() {
       setIdentifier("");
       setPassword("");
       setApiKey("");
-      setHistoryStartDate("");
       await loadAccounts();
       void performSyncForAccount(connectedIdentifier);
     } catch (error) {
@@ -135,7 +131,6 @@ export function IgCredentialsManager() {
     password,
     apiKey,
     environment,
-    historyStartDate,
     t,
     loadAccounts,
     performSyncForAccount,
@@ -356,20 +351,6 @@ export function IgCredentialsManager() {
                 className={fieldClassName}
               />
               <IgApiKeyFieldHelp />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ig-mgr-history-start">
-                {t("igSync.addAccount.historyStartLabel")}
-              </Label>
-              <Input
-                id="ig-mgr-history-start"
-                type="date"
-                value={historyStartDate}
-                onChange={(e) => setHistoryStartDate(e.target.value)}
-                min="2010-01-01"
-                max={todayUtc}
-                className={fieldClassName}
-              />
             </div>
             <button
               type="button"

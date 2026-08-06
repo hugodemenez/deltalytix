@@ -2574,7 +2574,7 @@ export default {
     connected: "Compte IG connecté avec succès",
     error: {
       credentialsRequired:
-        "Saisissez l'identifiant, le mot de passe, la clé API et la date de début du compte",
+        "Saisissez l'identifiant, le mot de passe et la clé API",
       authFailed: "Impossible de se connecter à IG",
     },
     errors: {
@@ -2597,8 +2597,6 @@ export default {
       ENCRYPTION_KEY_MISSING:
         "Ce serveur Deltalytix n'a pas de clé de chiffrement configurée : les identifiants IG ne peuvent pas être enregistrés. Contactez votre administrateur.",
       NO_ACCOUNTS: "Aucun compte de trading n'a été renvoyé pour cet identifiant.",
-      HISTORY_START_REQUIRED:
-        "Choisissez une date de début de compte valide (au plus tard aujourd'hui).",
       INVALID_STORED_CREDENTIALS:
         "Les données de connexion enregistrées sont invalides. Reconnectez-vous.",
       NO_TOKEN_RECONNECT:
@@ -2637,9 +2635,6 @@ export default {
         "Pour la synchronisation Démo : basculez d’abord en démo via le sélecteur de compte, puis créez une clé démo de la même façon.",
       linkPrimary: "IG France — utiliser les API de trading",
       linkSecondary: "IG France — accéder à l’API",
-      historyStartLabel: "Date de début du compte",
-      historyStartHelp:
-        "Indiquez le jour où vous avez commencé à trader sur ce compte. Nous importons les deals clôturés depuis cette date jusqu’à aujourd’hui.",
       connecting: "Connexion…",
       connect: "Connecter",
     },
