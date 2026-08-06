@@ -131,12 +131,7 @@ export default function TradeDistributionChartEmbed({
   };
 
   return (
-    <Card
-      className={cn(
-        "flex h-[500px] flex-col transition-[border-color,transform,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:border-border/80 hover:shadow-md",
-        className,
-      )}
-    >
+    <Card className={cn("flex h-[500px] flex-col", className)}>
       <CardHeader className="flex h-14 shrink-0 flex-row items-center justify-between space-y-0 border-b p-3 sm:p-4">
         <div className="flex w-full items-center justify-between">
           <div className="flex items-center gap-1.5">

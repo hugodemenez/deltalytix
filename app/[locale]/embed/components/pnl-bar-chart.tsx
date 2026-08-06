@@ -145,12 +145,7 @@ export default function DailyPnLChartEmbed({
   };
 
   return (
-    <Card
-      className={cn(
-        "flex h-[500px] flex-col transition-[border-color,transform,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:border-border/80 hover:shadow-md",
-        className,
-      )}
-    >
+    <Card className={cn("flex h-[500px] flex-col", className)}>
       <CardHeader className="flex h-14 shrink-0 flex-row items-center justify-between space-y-0 border-b p-3 sm:p-4">
         <div className="flex w-full items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -205,7 +200,6 @@ export default function DailyPnLChartEmbed({
                 isAnimationActive={animated}
                 animationDuration={650}
                 animationEasing="ease-out"
-                className="transition-all duration-300 ease-in-out"
               >
                 {chartData.map((entry, idx) => (
                   <Cell
@@ -215,7 +209,6 @@ export default function DailyPnLChartEmbed({
                         ? "hsl(var(--chart-win))"
                         : "hsl(var(--chart-loss))"
                     }
-                    className="transition-opacity duration-200 hover:opacity-80"
                   />
                 ))}
               </Bar>
