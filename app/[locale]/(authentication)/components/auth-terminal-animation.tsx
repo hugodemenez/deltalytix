@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import DailyPnLChartEmbed, {
   type EmbedTrade,
@@ -11,6 +11,7 @@ import { Tracker } from "@/components/ui/tracker";
 import { cn } from "@/lib/utils";
 
 const VISIBLE_DAYS = 12;
+const STORAGE_KEY = "deltalytix.auth-terminal.demo-trades";
 
 function randomBetween(min: number, max: number) {
   return min + Math.random() * (max - min);
@@ -44,7 +45,27 @@ function buildRandomTrades(dayCount: number): EmbedTrade[] {
   return trades;
 }
 
-function buildRandomEquity(trades: EmbedTrade[]) {
+function readStoredTrades(): EmbedTrade[] | null {
+  try {
+    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as EmbedTrade[];
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function storeTrades(trades: EmbedTrade[]) {
+  try {
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+  } catch {
+    // Ignore quota / private-mode failures.
+  }
+}
+
+function buildEquity(trades: EmbedTrade[]) {
   const byDate = new Map<string, number>();
   for (const trade of trades) {
     if (!trade.entryDate) continue;
@@ -58,7 +79,7 @@ function buildRandomEquity(trades: EmbedTrade[]) {
     );
   }
 
-  let equity = Math.round(randomBetween(48000, 56000));
+  let equity = 52000;
   return [...byDate.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, pnl]) => {
@@ -68,10 +89,28 @@ function buildRandomEquity(trades: EmbedTrade[]) {
 }
 
 export function AuthTerminalAnimation({ className }: { className?: string }) {
-  const [trades] = useState(() => buildRandomTrades(VISIBLE_DAYS));
-  const equityPoints = useMemo(() => buildRandomEquity(trades), [trades]);
+  const [trades, setTrades] = useState<EmbedTrade[] | null>(null);
+
+  useEffect(() => {
+    const stored = readStoredTrades();
+    if (stored) {
+      setTrades(stored);
+      return;
+    }
+
+    const next = buildRandomTrades(VISIBLE_DAYS);
+    storeTrades(next);
+    setTrades(next);
+  }, []);
+
+  const equityPoints = useMemo(
+    () => (trades ? buildEquity(trades) : []),
+    [trades],
+  );
 
   const trackerData = useMemo(() => {
+    if (!trades) return [];
+
     const byDate = new Map<string, number>();
     for (const trade of trades) {
       if (!trade.entryDate) continue;
@@ -97,17 +136,16 @@ export function AuthTerminalAnimation({ className }: { className?: string }) {
       }));
   }, [trades]);
 
-  const sessionPnl = useMemo(
-    () =>
-      trades.reduce(
-        (sum, trade) => sum + trade.pnl - (trade.commission ?? 0),
-        0,
-      ),
-    [trades],
-  );
+  const sessionPnl = useMemo(() => {
+    if (!trades) return 0;
+    return trades.reduce(
+      (sum, trade) => sum + trade.pnl - (trade.commission ?? 0),
+      0,
+    );
+  }, [trades]);
 
   const winRate = useMemo(() => {
-    if (trades.length === 0) return 0;
+    if (!trades || trades.length === 0) return 0;
     const wins = trades.filter(
       (trade) => trade.pnl - (trade.commission ?? 0) > 0,
     ).length;
@@ -133,87 +171,102 @@ export function AuthTerminalAnimation({ className }: { className?: string }) {
       />
 
       <div className="absolute inset-x-6 top-28 bottom-32 flex min-h-0 flex-col gap-3 sm:inset-x-8 sm:top-32">
-        <DailyPnLChartEmbed
-          trades={trades}
-          showInfo={false}
-          className="min-h-0 flex-1 !h-auto rounded-sm border-white/10 bg-card/80 shadow-none"
-        />
+        {trades ? (
+          <>
+            <DailyPnLChartEmbed
+              trades={trades}
+              showInfo={false}
+              className="!h-0 min-h-0 flex-1 rounded-sm border-white/10 bg-card/80 shadow-none"
+            />
 
-        <div className="grid min-h-[168px] grid-cols-5 gap-3">
-          <TradeDistributionChartEmbed
-            trades={trades}
-            showInfo={false}
-            className="col-span-2 !h-full rounded-sm border-white/10 bg-card/80 shadow-none"
-          />
-
-          <div className="col-span-3 flex h-full flex-col gap-3">
-            <div className="flex min-h-0 flex-1 flex-col rounded-sm border border-white/10 bg-card/80 p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-medium">Equity</p>
-                <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                  Spark
-                </p>
-              </div>
-              <div className="min-h-0 flex-1">
-                <SparkAreaChart
-                  data={equityPoints}
-                  index="date"
-                  categories={["equity"]}
-                  colors={{ equity: "hsl(var(--chart-win))" }}
-                  height={72}
-                  className="h-[72px]"
-                />
-              </div>
-              <Tracker
-                className="mt-3 h-6"
-                data={trackerData}
-                defaultBackgroundColor="bg-muted"
+            <div className="grid h-[200px] shrink-0 grid-cols-5 gap-3">
+              <TradeDistributionChartEmbed
+                trades={trades}
+                showInfo={false}
+                className="col-span-2 !h-full rounded-sm border-white/10 bg-card/80 shadow-none"
               />
-            </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                {
-                  id: "session",
-                  label: "Session",
-                  value: `${sessionPnl >= 0 ? "+" : ""}${Math.round(sessionPnl).toLocaleString("en-US")}`,
-                  tone: sessionPnl >= 0 ? "win" : "loss",
-                },
-                {
-                  id: "winrate",
-                  label: "Win rate",
-                  value: `${winRate}%`,
-                  tone: winRate >= 50 ? "win" : "loss",
-                },
-                {
-                  id: "trades",
-                  label: "Trades",
-                  value: String(trades.length),
-                  tone: "amber",
-                },
-              ].map((stat) => (
-                <div
-                  key={stat.id}
-                  className="rounded-sm border border-white/10 bg-card/80 px-2.5 py-2"
-                >
-                  <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground">
-                    {stat.label}
-                  </p>
-                  <p
-                    className={cn(
-                      "mt-1 font-mono text-sm tabular-nums tracking-tight",
-                      stat.tone === "win" && "text-[hsl(var(--chart-win))]",
-                      stat.tone === "loss" && "text-[hsl(var(--chart-loss))]",
-                      stat.tone === "amber" && "text-[oklch(0.82_0.12_75)]",
-                    )}
-                  >
-                    {stat.value}
-                  </p>
+              <div className="col-span-3 flex h-full flex-col gap-3">
+                <div className="flex min-h-0 flex-1 flex-col rounded-sm border border-white/10 bg-card/80 p-3">
+                  <div className="mb-2 flex shrink-0 items-center justify-between">
+                    <p className="text-sm font-medium">Equity</p>
+                    <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                      Spark
+                    </p>
+                  </div>
+                  <div className="min-h-0 flex-1">
+                    <SparkAreaChart
+                      data={equityPoints}
+                      index="date"
+                      categories={["equity"]}
+                      colors={{ equity: "hsl(var(--chart-win))" }}
+                      height={72}
+                      className="h-full min-h-[56px]"
+                    />
+                  </div>
+                  <Tracker
+                    className="mt-3 h-6 shrink-0"
+                    data={trackerData}
+                    defaultBackgroundColor="bg-muted"
+                  />
                 </div>
-              ))}
+
+                <div className="grid shrink-0 grid-cols-3 gap-2">
+                  {[
+                    {
+                      id: "session",
+                      label: "Session",
+                      value: `${sessionPnl >= 0 ? "+" : ""}${Math.round(sessionPnl).toLocaleString("en-US")}`,
+                      tone: sessionPnl >= 0 ? "win" : "loss",
+                    },
+                    {
+                      id: "winrate",
+                      label: "Win rate",
+                      value: `${winRate}%`,
+                      tone: winRate >= 50 ? "win" : "loss",
+                    },
+                    {
+                      id: "trades",
+                      label: "Trades",
+                      value: String(trades.length),
+                      tone: "amber",
+                    },
+                  ].map((stat) => (
+                    <div
+                      key={stat.id}
+                      className="rounded-sm border border-white/10 bg-card/80 px-2.5 py-2"
+                    >
+                      <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground">
+                        {stat.label}
+                      </p>
+                      <p
+                        className={cn(
+                          "mt-1 font-mono text-sm tabular-nums tracking-tight",
+                          stat.tone === "win" &&
+                            "text-[hsl(var(--chart-win))]",
+                          stat.tone === "loss" &&
+                            "text-[hsl(var(--chart-loss))]",
+                          stat.tone === "amber" &&
+                            "text-[oklch(0.82_0.12_75)]",
+                        )}
+                      >
+                        {stat.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col gap-3">
+            <div className="min-h-0 flex-1 rounded-sm border border-white/10 bg-card/50" />
+            <div className="grid h-[200px] shrink-0 grid-cols-5 gap-3">
+              <div className="col-span-2 rounded-sm border border-white/10 bg-card/50" />
+              <div className="col-span-3 rounded-sm border border-white/10 bg-card/50" />
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-[oklch(0.17_0_0)] via-[oklch(0.17_0_0)]/85 to-transparent" />
