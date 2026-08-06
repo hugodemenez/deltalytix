@@ -1,11 +1,9 @@
 'use client'
 
-import Image from "next/image"
 import Link from "next/link"
 
-import { cn } from "@/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
 import { UserAuthForm } from "../components/user-auth-form"
+import { AuthTerminalAnimation } from "../components/auth-terminal-animation"
 import { Logo } from "@/components/logo"
 import { useI18n } from '@/locales/client'
 
@@ -15,10 +13,8 @@ export default function AuthenticationPageClient() {
   return (
     <div>
       <div className="flex relative h-screen flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-        <div className="relative hidden h-full flex-col bg-gray-900 p-10 text-white dark:border-r lg:flex">
-          <div className="absolute inset-0 overflow-hidden">
-          <Image src={"/auth-background.jpeg"} width={928} height={1232} className="opacity-35 w-full" alt="Auth abstract image background"></Image>
-          </div>
+        <div className="relative hidden h-full flex-col overflow-hidden bg-[oklch(0.17_0_0)] p-10 text-white dark:border-r lg:flex">
+          <AuthTerminalAnimation />
           <div className="relative z-20 flex items-center text-lg font-medium">
             <Link href="/" className="flex items-center gap-2">
               <Logo className="w-10 h-10 fill-white"/>
@@ -30,7 +26,7 @@ export default function AuthenticationPageClient() {
               <p className="text-lg">
                 {t('authentication.testimonial')}
               </p>
-              <footer className="text-sm">{t('authentication.testimonialAuthor')}</footer>
+              <footer className="text-sm text-white/70">{t('authentication.testimonialAuthor')}</footer>
             </blockquote>
           </div>
         </div>
