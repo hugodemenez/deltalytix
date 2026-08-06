@@ -2636,7 +2636,7 @@ export default {
     connected: "IG account connected successfully",
     error: {
       credentialsRequired:
-        "Enter username, password, API key, and account start date to continue",
+        "Enter username, password, and API key to continue",
       authFailed: "Could not connect to IG",
     },
     errors: {
@@ -2659,8 +2659,6 @@ export default {
       ENCRYPTION_KEY_MISSING:
         "This Deltalytix server has no credential encryption key configured, so IG credentials cannot be stored. Contact your administrator.",
       NO_ACCOUNTS: "No trading accounts were returned for this login.",
-      HISTORY_START_REQUIRED:
-        "Choose a valid account start date (on or before today).",
       INVALID_STORED_CREDENTIALS: "Saved connection data is invalid. Reconnect.",
       NO_TOKEN_RECONNECT: "This connection is missing credentials. Reconnect.",
       DUPLICATE_TRADES: "These trades are already in your journal.",
@@ -2695,9 +2693,6 @@ export default {
         "For Demo sync: use the account switcher to switch to demo first, then create a demo key the same way.",
       linkPrimary: "IG Labs — create your API key",
       linkSecondary: "IG — how to use trading APIs",
-      historyStartLabel: "Account start date",
-      historyStartHelp:
-        "Pick the day you started trading this account. We import closed deals from then until today.",
       connecting: "Connecting…",
       connect: "Connect",
     },

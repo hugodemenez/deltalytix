@@ -28,7 +28,15 @@ import type {
 } from "./ig-types";
 
 const SERVICE = "ig";
-const HISTORY_START_MIN = "2010-01-01";
+/**
+ * Every sync pulls the full history. Pagination is driven by transaction count,
+ * not by span, so an early floor costs nothing for a recent account, and saving
+ * trades is idempotent (deterministic ids + duplicate check). Syncing forward
+ * from `lastSyncedAt` instead would be faster but unsound: the watermark
+ * advances even when individual accounts fail, and IG can book deals with a
+ * date earlier than when they appear.
+ */
+const HISTORY_START = "2000-01-01";
 
 const logger = {
   info: (message: string) => console.log(`[IG] ${message}`),
@@ -81,31 +89,6 @@ function mapIgAuthError(
   }
 
   return { error: "AUTH_FAILED", errorParams: { reason } };
-}
-
-function parseHistoryStartDate(value: string): string | null {
-  const trimmed = value.trim();
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  if (
-    date.getUTCFullYear() !== year ||
-    date.getUTCMonth() !== month - 1 ||
-    date.getUTCDate() !== day
-  ) {
-    return null;
-  }
-  const today = new Date();
-  const todayUtc = new Date(
-    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
-  );
-  if (date.getTime() > todayUtc.getTime()) return null;
-  const min = new Date(`${HISTORY_START_MIN}T00:00:00.000Z`);
-  if (date.getTime() < min.getTime()) return null;
-  return trimmed;
 }
 
 function parseStoredCredentials(
@@ -171,17 +154,11 @@ export async function authenticateIg(
   password: string,
   apiKey: string,
   environment: IgApiEnvironment,
-  historyStartDate: string,
 ): Promise<IgActionResult> {
   try {
     const userId = await getUserId();
     if (!userId) {
       return { error: "USER_NOT_AUTHENTICATED" };
-    }
-
-    const normalizedHistoryStart = parseHistoryStartDate(historyStartDate);
-    if (!normalizedHistoryStart) {
-      return { error: "HISTORY_START_REQUIRED" };
     }
 
     const trimmedIdentifier = identifier.trim();
@@ -233,7 +210,6 @@ export async function authenticateIg(
       environment,
       accountIds,
       accountNames,
-      historyStartDate: normalizedHistoryStart,
     };
 
     const connection = await persistIgCredentials(
@@ -245,9 +221,7 @@ export async function authenticateIg(
     await upsertAccountsForNumbers(userId, accountIds, connection.id);
     await invalidateConnectionsPageCache(userId);
 
-    logger.info(
-      `Login ok accounts=${accountIds.length} historyStart=${normalizedHistoryStart}`,
-    );
+    logger.info(`Login ok accounts=${accountIds.length}`);
 
     return {
       success: true,
@@ -372,9 +346,6 @@ export async function getIgTrades(
       return { error: "USER_NOT_AUTHENTICATED", syncStats };
     }
 
-    const historyStart =
-      parseHistoryStartDate(credentials.historyStartDate ?? "") ??
-      HISTORY_START_MIN;
     const historyEnd = todayUtcDate();
 
     logger.info(
@@ -461,7 +432,7 @@ export async function getIgTrades(
           apiKey: credentials.apiKey,
           environment: credentials.environment,
           tokens,
-          from: historyStart,
+          from: HISTORY_START,
           to: historyEnd,
           type: "ALL_DEAL",
         });

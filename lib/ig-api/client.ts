@@ -145,6 +145,9 @@ export async function switchIgAccount(params: {
   }
 }
 
+/** Ceiling on pages per account, so a bad `totalPages` cannot loop forever. */
+const MAX_TRANSACTION_PAGES = 200;
+
 /**
  * Fetch paginated transaction history (v2) for the active account.
  * `from` / `to` are YYYY-MM-DD.
@@ -162,9 +165,9 @@ export async function fetchIgTransactions(params: {
   const type = params.type ?? "ALL_DEAL";
   const transactions: IgApiTransaction[] = [];
   let pageNumber = 1;
-  let totalPages = 1;
+  let totalPages: number | null = null;
 
-  while (pageNumber <= totalPages) {
+  while (pageNumber <= MAX_TRANSACTION_PAGES) {
     const search = new URLSearchParams({
       type,
       from: params.from,
@@ -209,11 +212,20 @@ export async function fetchIgTransactions(params: {
 
     const pageData =
       body.metadata?.pageData ?? body.metaData?.pageData ?? undefined;
-    totalPages = Math.max(1, pageData?.totalPages ?? 1);
-    pageNumber += 1;
+    if (typeof pageData?.totalPages === "number" && pageData.totalPages > 0) {
+      totalPages = pageData.totalPages;
+    }
 
-    // Safety: if IG returns an empty page without metadata, stop.
-    if (page.length === 0 && !pageData) break;
+    if (totalPages !== null) {
+      if (pageNumber >= totalPages) break;
+    } else if (page.length < pageSize) {
+      // No usable metadata: a short page is the only reliable end-of-history
+      // signal. Stopping on `totalPages ?? 1` instead would silently truncate
+      // every account whose first page came back full.
+      break;
+    }
+
+    pageNumber += 1;
   }
 
   return transactions;

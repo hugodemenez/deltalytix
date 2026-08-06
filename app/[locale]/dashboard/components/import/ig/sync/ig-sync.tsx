@@ -46,13 +46,10 @@ function IgConnectView({
   const [password, setPassword] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [environment, setEnvironment] = useState<IgApiEnvironment>("live");
-  const [historyStartDate, setHistoryStartDate] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const todayUtc = new Date().toISOString().slice(0, 10);
-
   const handleConnect = useCallback(async () => {
-    if (!identifier || !password || !apiKey || !historyStartDate) {
+    if (!identifier || !password || !apiKey) {
       toast.error(t("igSync.error.credentialsRequired"));
       return;
     }
@@ -65,7 +62,6 @@ function IgConnectView({
         password,
         apiKey,
         environment,
-        historyStartDate,
       );
 
       if ("error" in result && result.error) {
@@ -86,7 +82,6 @@ function IgConnectView({
       setIdentifier("");
       setPassword("");
       setApiKey("");
-      setHistoryStartDate("");
       await loadAccounts();
       onConnected?.();
       void performSyncForAccount(connectedIdentifier);
@@ -101,7 +96,6 @@ function IgConnectView({
     password,
     apiKey,
     environment,
-    historyStartDate,
     t,
     loadAccounts,
     performSyncForAccount,
@@ -207,33 +201,10 @@ function IgConnectView({
         <IgApiKeyFieldHelp />
       </div>
 
-      <div className="space-y-2">
-        <Label
-          htmlFor="ig-history-start"
-          className="text-sm text-black/55 dark:text-white/55"
-        >
-          {t("igSync.addAccount.historyStartLabel")}
-        </Label>
-        <Input
-          id="ig-history-start"
-          name="historyStartDate"
-          type="date"
-          value={historyStartDate}
-          onChange={(e) => setHistoryStartDate(e.target.value)}
-          min="2010-01-01"
-          max={todayUtc}
-          required
-          className={fieldClassName}
-        />
-        <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
-          {t("igSync.addAccount.historyStartHelp")}
-        </p>
-      </div>
-
       <button
         type="submit"
         disabled={
-          isLoading || !identifier || !password || !apiKey || !historyStartDate
+          isLoading || !identifier || !password || !apiKey
         }
         className={primaryButtonClassName}
       >
