@@ -658,12 +658,16 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     []
   );
   const chartRef = React.useRef<React.ComponentRef<typeof LineChart>>(null);
+  // Mirrors pointerValue for the activeDot renderer, which runs during the
+  // chart's own render and can't wait for the state update to land.
+  const pointerValueRef = React.useRef<number | null>(null);
 
   // Convert the pointer position to an equity value using the Y axis scale so
   // the legend can be ordered by distance to the cursor.
   const handleChartMouseMove = React.useCallback(
     (state: { isTooltipActive?: boolean; chartY?: number }) => {
       if (!state?.isTooltipActive || typeof state.chartY !== "number") {
+        pointerValueRef.current = null;
         setPointerValue(null);
         return;
       }
@@ -671,9 +675,10 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       const invert = (yAxis?.scale as { invert?: (pixel: number) => number })
         ?.invert;
       const value = invert?.(state.chartY);
-      setPointerValue(
-        typeof value === "number" && !isNaN(value) ? value : null
-      );
+      const nextValue =
+        typeof value === "number" && !isNaN(value) ? value : null;
+      pointerValueRef.current = nextValue;
+      setPointerValue(nextValue);
     },
     []
   );
@@ -894,6 +899,35 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
 
     const maxAccounts = 8; // Aligned with 8-color palette
     const accountsToShow = Array.from(selectedAccounts).slice(0, maxAccounts);
+    const drawnKeys = accountsToShow.map((acc) => `equity_${acc}`);
+
+    // Only the line nearest the pointer gets an active dot, so a dense chart
+    // highlights the one series being read instead of all of them. Reads the
+    // pointer from a ref because recharts calls this while it renders.
+    const renderClosestActiveDot = (props: any) => {
+      const { payload, dataKey, cx, cy, fill } = props;
+      // recharts types activeDot as returning an element, so "no dot" is an
+      // r=0 circle rather than null — same idiom as renderDot above.
+      const noDot = <circle cx={cx} cy={cy} r={0} fill="none" />;
+      const pointerValue = pointerValueRef.current;
+      if (pointerValue === null || !payload) return noDot;
+
+      let closestKey: string | null = null;
+      let closestDistance = Infinity;
+      for (const key of drawnKeys) {
+        const value = payload[key];
+        if (typeof value !== "number") continue;
+        const distance = Math.abs(value - pointerValue);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestKey = key;
+        }
+      }
+
+      if (dataKey !== closestKey) return noDot;
+      return <circle cx={cx} cy={cy} r={3} fill={fill} />;
+    };
+
     return accountsToShow.map((accountNumber) => {
       // Use the same color mapping as legend to ensure consistency
       const color =
@@ -907,7 +941,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
           strokeWidth={1.5} // Thinner lines for better performance
           dot={renderDot}
           isAnimationActive={false}
-          activeDot={{ r: 3, style: { fill: color } }}
+          activeDot={renderClosestActiveDot}
           stroke={color}
           connectNulls={false}
         />
@@ -994,9 +1028,13 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
                         ? { left: 10, right: 4, top: 4, bottom: 20 }
                         : { left: 10, right: 8, top: 8, bottom: 24 }
                     }
+                    // Entering fires onMouseEnter, not onMouseMove, so the
+                    // first hover would otherwise have no pointer value yet.
+                    onMouseEnter={handleChartMouseMove}
                     onMouseMove={handleChartMouseMove}
                     onMouseLeave={() => {
                       setHoveredData(null);
+                      pointerValueRef.current = null;
                       setPointerValue(null);
                     }}
                   >
