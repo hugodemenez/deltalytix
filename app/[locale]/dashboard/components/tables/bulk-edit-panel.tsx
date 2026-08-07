@@ -268,7 +268,7 @@ export function BulkEditPanel({
                 placeholder={t('trade-table.bulkEdit.newInstrumentName')}
                 value={instrumentValue}
                 onChange={(e) => setInstrumentValue(e.target.value)}
-                className="h-8 text-xs"
+                className="h-8 text-base sm:text-xs"
               />
             )}
 
@@ -330,7 +330,7 @@ export function BulkEditPanel({
                 placeholder={instrumentAction === 'prefix' ? t('trade-table.bulkEdit.textToPrepend') : t('trade-table.bulkEdit.textToAppend')}
                 value={instrumentValue}
                 onChange={(e) => setInstrumentValue(e.target.value)}
-                className="h-8 text-xs"
+                className="h-8 text-base sm:text-xs"
               />
             )}
 

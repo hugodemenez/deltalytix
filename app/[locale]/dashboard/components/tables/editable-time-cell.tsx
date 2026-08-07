@@ -116,7 +116,7 @@ export function EditableTimeCell({
           onChange={(e) => setTempValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="HH:mm:ss"
-          className="h-7 text-xs font-mono border-blue-500 focus-visible:ring-1"
+          className="h-7 text-base sm:text-xs font-mono border-blue-500 focus-visible:ring-1"
           disabled={isSaving}
         />
         <Button

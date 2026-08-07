@@ -430,7 +430,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={cn(
                   "flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0",
-                  size === 'small' ? "h-7 text-xs" : "h-8 text-sm"
+                  size === 'small' ? "h-7 text-base sm:text-xs" : "h-8 text-base sm:text-sm"
                 )}
               />
             </div>
