@@ -75,14 +75,14 @@ export function PnlFilterSimple({ className }: PnlFilterSimpleProps) {
                 placeholder={t('filters.min')}
                 value={customMin}
                 onChange={(e) => setCustomMin(e.target.value)}
-                className="h-8 text-xs"
+                className="h-8 text-base sm:text-xs"
               />
               <Input
                 type="number"
                 placeholder={t('filters.max')}
                 value={customMax}
                 onChange={(e) => setCustomMax(e.target.value)}
-                className="h-8 text-xs"
+                className="h-8 text-base sm:text-xs"
               />
             </div>
             <Button 

@@ -386,7 +386,7 @@ export default function BillingManagement() {
                             </label>
                             <select
                               id="cancellationReason"
-                              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                              className="w-full rounded-md border border-input bg-background px-3 py-2 text-base sm:text-sm ring-offset-background"
                               value={cancellationReason}
                               onChange={(e) => setCancellationReason(e.target.value)}
                             >
@@ -404,7 +404,7 @@ export default function BillingManagement() {
                             </label>
                             <textarea
                               id="feedback"
-                              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                              className="w-full rounded-md border border-input bg-background px-3 py-2 text-base sm:text-sm ring-offset-background"
                               rows={3}
                               value={feedback}
                               onChange={(e) => setFeedback(e.target.value)}

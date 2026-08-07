@@ -37,7 +37,7 @@ const DEFAULT_PROP_FIRM_ID = DXFEED_PROP_FIRM_OPTIONS[0]?.id ?? ''
 const PROP_FIRM_SEARCH_THRESHOLD = 5
 
 const fieldClassName =
-  'h-11 rounded-sm border-black/10 bg-transparent text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30'
+  'h-11 rounded-sm border-black/10 bg-transparent text-base sm:text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30'
 
 const configSelectClassName =
   'inline-flex h-8 max-w-full items-center gap-1 rounded-sm border border-black/10 bg-transparent px-2 text-xs font-normal shadow-none transition-colors duration-150 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/5'

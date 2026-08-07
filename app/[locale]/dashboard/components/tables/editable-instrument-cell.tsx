@@ -90,7 +90,7 @@ export function EditableInstrumentCell({
           onKeyDown={handleKeyDown}
           onBlur={handleSave}
           placeholder="Instrument"
-          className="h-7 text-xs font-medium border-blue-500 focus-visible:ring-1"
+          className="h-7 text-base sm:text-xs font-medium border-blue-500 focus-visible:ring-1"
           disabled={isSaving}
         />
         <Button

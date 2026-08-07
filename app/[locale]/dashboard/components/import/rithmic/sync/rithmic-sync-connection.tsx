@@ -22,7 +22,7 @@ import { captureConnectionCreated } from '@/lib/connection-analytics'
 import { cn } from '@/lib/utils'
 
 const fieldClassName =
-  'h-11 rounded-sm border-black/10 bg-transparent text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30'
+  'h-11 rounded-sm border-black/10 bg-transparent text-base sm:text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30'
 
 const configSelectClassName =
   'h-8 w-auto min-w-0 max-w-full gap-1 rounded-sm border-black/10 bg-transparent px-2 text-xs shadow-none focus:ring-0 focus:ring-offset-0 dark:border-white/10 [&>span]:truncate'

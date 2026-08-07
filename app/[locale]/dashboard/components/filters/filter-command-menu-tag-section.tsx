@@ -220,7 +220,7 @@ export function TagSection({ searchValue }: TagSectionProps) {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder={t('widgets.tags.namePlaceholder')}
                   disabled={isLoading}
-                  className="h-8 text-sm"
+                  className="h-8 text-base sm:text-sm"
                   autoFocus
                 />
               </div>
@@ -232,7 +232,7 @@ export function TagSection({ searchValue }: TagSectionProps) {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder={t('widgets.tags.descriptionPlaceholder')}
                   disabled={isLoading}
-                  className="resize-none h-16 text-sm"
+                  className="resize-none h-16 text-base sm:text-sm"
                 />
               </div>
               <div className="space-y-2">
