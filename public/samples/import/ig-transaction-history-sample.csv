@@ -1,0 +1,2 @@
+TextDate,Summary,MarketName,Period,ProfitAndLoss,Transaction type,Reference,Open level,Close level,Size,Currency,PL Amount,Cash transaction,DateUtc,OpenDateUtc,CurrencyIsoCode
+04/08/26,Closed position,Spot Gold ($1) converted at 0.861122464,-,EUR 10.06,ORDER,IG-CLOSE-001,4061.4,4073.08,+1,EUR,10.06,false,2026-08-04T11:47:24,2026-08-04T11:30:06,EUR

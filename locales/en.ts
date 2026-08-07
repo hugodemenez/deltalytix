@@ -1018,13 +1018,13 @@ export default {
       reset: "Reset",
       selectAccounts: "Select Accounts",
       maxAccounts: "Max Accounts",
-      selected: "Selected",
-      of: "of",
       search: "Search accounts...",
       clearSearch: "Clear search",
+      noAccounts: "No accounts available",
+      noAccountsFound: "No accounts found",
       confirm: "Confirm",
-      maxAccountsInfo:
-        "Maximum 10 accounts can be displayed simultaneously for optimal performance",
+      selectionSummary: "{selected} of {total} selected, max {max}",
+      maxAccountsInfo: "At most {max} accounts can be charted at once",
     },
   },
   "pnl.title": "Daily Profit/Loss",
@@ -2449,6 +2449,20 @@ export default {
   "import.type.ftmo.description": "FTMO journal CSV",
   "import.type.ftmo.details":
     "Import trades from FTMO trading journal CSV exports. The system automatically detects the column positions regardless of language.",
+  "import.type.ig.name": "IG",
+  "import.type.ig.description": "IG Transaction History CSV",
+  "import.type.ig.details":
+    "Import completed trades from an IG Transaction History CSV export. Activity History files are not required.",
+  "import.ig.error.title": "Unable to read this IG export",
+  "import.ig.error.activityHistory":
+    "This is an IG Activity History file. Download and upload Transaction History instead.",
+  "import.ig.error.invalidFile":
+    "Upload an IG Transaction History CSV containing the market, reference, prices, size, P&L, and UTC date columns.",
+  "import.ig.skippedRows":
+    "Skipped {count} non-trade or unsupported row(s). IG fractional quantities are not supported yet.",
+  "import.ig.noTrades": "No completed IG trades found",
+  "import.ig.noTradesDescription":
+    "Make sure the selected period contains closed trades and that you exported Transaction History rather than Activity History.",
   "import.type.manualEntry.name": "Manual Entry",
   "import.type.manualEntry.description": "Add trades in a form",
   "import.type.manualEntry.details":

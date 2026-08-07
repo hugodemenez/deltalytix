@@ -51,6 +51,8 @@ export const LABELS = {
     feedback: /^send feedback$/i,
     feedbackHeading: /^share your feedback$/i,
     addConnection: /^add connection$/i,
+    uploadFileImport: /^upload a file$/i,
+    next: /^next$/i,
   },
   fr: {
     acceptCookies: /tout accepter/i,
@@ -72,6 +74,8 @@ export const LABELS = {
     feedback: /^envoyer un retour$/i,
     feedbackHeading: /^partagez votre retour$/i,
     addConnection: /^ajouter une connexion$/i,
+    uploadFileImport: /^ajouter avec un fichier$/i,
+    next: /^suivant$/i,
   },
 }
 

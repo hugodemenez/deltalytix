@@ -13,6 +13,7 @@ Example files for Deltalytix file importers. Served at `/samples/import/<filenam
 | Rithmic Performance | `rithmic-performance-sample.csv` |
 | Rithmic Orders | `rithmic-orders-sample.csv` |
 | FTMO | `ftmo-sample.csv` |
+| IG | `ig-transaction-history-sample.csv` |
 | ATAS | `atas-journal-sample.xlsx` |
 | IBKR PDF | `ibkr-statement-sample.pdf` |
 

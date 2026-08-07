@@ -24,6 +24,7 @@ import PdfProcessing from '../ibkr-pdf/pdf-processing'
 import AtasFileUpload from '../atas/atas-file-upload'
 import AtasProcessor from '../atas/atas-processor'
 import FtmoProcessor from '../ftmo/ftmo-processor'
+import IgProcessor from '../ig/ig-processor'
 import ManualProcessor from '../manual/manual-processor'
 import { Step } from '../import-button'
 import { Sparkles, PenTool } from 'lucide-react'
@@ -132,6 +133,7 @@ type StepComponent =
   | typeof AtasFileUpload
   | typeof AtasProcessor
   | typeof FtmoProcessor
+  | typeof IgProcessor
   | typeof ManualProcessor
 
 
@@ -817,6 +819,53 @@ export const platforms: PlatformConfig[] = [
         title: 'import.steps.processTrades',
         description: 'import.steps.processTradesDescription',
         component: AtasProcessor,
+        isLastStep: true
+      }
+    ]
+  },
+  {
+    platformName: 'ig',
+    type: 'ig',
+    name: 'import.type.ig.name',
+    description: 'import.type.ig.description',
+    category: 'Platform CSV Import',
+    videoUrl: '',
+    details: 'import.type.ig.details',
+    tutorialLink: 'https://www.ig.com/en-ch/help-and-support/accounts-and-statements/statements/how-to-generate-a-statement-or-an-account-ledger-summary',
+    sampleFile: '/samples/import/ig-transaction-history-sample.csv',
+    logo: {
+      path: '/logos/monochrome/ig-black.svg',
+      darkPath: '/logos/monochrome/ig-white.svg',
+      alt: 'IG Logo'
+    },
+    requiresAccountSelection: true,
+    skipHeaderSelection: true,
+    processFile: processStandardCsv,
+    processorComponent: IgProcessor,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'upload-file',
+        title: 'import.steps.uploadFile',
+        description: 'import.steps.uploadFileDescription',
+        component: FileUpload
+      },
+      {
+        id: 'select-account',
+        title: 'import.steps.selectAccount',
+        description: 'import.steps.selectAccountDescription',
+        component: AccountSelection
+      },
+      {
+        id: 'preview-trades',
+        title: 'import.steps.processTrades',
+        description: 'import.steps.processTradesDescription',
+        component: IgProcessor,
         isLastStep: true
       }
     ]

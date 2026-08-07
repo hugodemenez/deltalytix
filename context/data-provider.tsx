@@ -64,7 +64,10 @@ import { useEquityChartDataStore } from "@/store/widgets/equity-chart-data-store
 import { useStripeSubscriptionStore } from "@/store/stripe-subscription-store";
 import { useBreakevenStore } from "@/store/widgets/breakeven-store";
 import { getSubscriptionData } from "@/server/billing";
-import { computeEquityChartData } from "@/lib/equity-chart";
+import {
+  computeEquityChartData,
+  MAX_ACCOUNTS_DISPLAYED,
+} from "@/lib/equity-chart";
 import { defaultLayouts } from "@/lib/default-layouts";
 import { getTimeRangeKey } from "@/lib/time-range";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -380,7 +383,7 @@ export const DataProvider: React.FC<{
       tagFilter,
       timezone,
       showIndividual: equityChartConfig.showIndividual,
-      maxAccounts: 8,
+      maxAccounts: MAX_ACCOUNTS_DISPLAYED,
       dataSampling: equityChartConfig.dataSampling,
       selectedAccounts: equityChartConfig.selectedAccountsToDisplay ?? [],
     }),

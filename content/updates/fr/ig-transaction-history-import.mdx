@@ -1,0 +1,27 @@
+---
+title: 'Importez vos trades IG depuis l''historique des transactions'
+description: 'IG rejoint les imports CSV : chargez votre historique des transactions, choisissez un compte et vérifiez les trades clôturés avant de valider.'
+date: '2026-08-04'
+status: completed
+completedDate: '2026-08-04'
+image: '/updates/pr-394/fr/ig-import-preview.png'
+---
+
+# Importez vos trades IG depuis l'historique des transactions
+
+**IG** figure désormais parmi les sources d'import sur **Tableau de bord → Connexions**. Sélectionnez-le, chargez le CSV d'**historique des transactions** téléchargé depuis IG, indiquez le compte Deltalytix concerné, puis vérifiez l'aperçu avant de valider.
+
+![Le sélecteur Ajouter avec un fichier ouvert sur la page Connexions, déroulé jusqu'à IG](/updates/pr-394/fr/ig-import-picker.png)
+
+L'import lit les positions clôturées : marché, référence de l'ordre, niveaux d'ouverture et de clôture, taille, montant du PnL et horodatages UTC d'ouverture et de clôture. Comme les horodatages viennent de l'export, le sens et la durée en position sont lus et non déduits : une taille positive donne un **achat**, une taille négative une **vente**. Les noms de marché conservent l'instrument et perdent le suffixe de conversion d'IG : `Spot Gold ($1) converted at 0.861122464` devient **Spot Gold ($1)**. Les montants en notation comptable ou au format européen, comme `(25,50 €)`, sont bien interprétés comme −25,50.
+
+![Étape d'aperçu listant trois trades IG analysés au-dessus du PnL total, avec un avis comptant deux lignes ignorées](/updates/pr-394/fr/ig-import-preview.png)
+
+Deux types de lignes sont volontairement écartés, et tous deux sont signalés dans l'avis au-dessus de l'aperçu :
+
+- Les **mouvements de trésorerie** (versements, frais, intérêts) sont ignorés plutôt que transformés en trades.
+- Les **tailles fractionnaires** sont ignorées. Deltalytix enregistre la quantité en nombre entier : l'import signale ces lignes au lieu de les arrondir sans le dire.
+
+Si vous chargez par erreur un fichier d'**historique d'activité**, un message nomme le problème et vous demande l'historique des transactions, au lieu d'afficher un aperçu vide.
+
+Pour voir le format attendu, [téléchargez l'export IG d'exemple](/samples/import/ig-transaction-history-sample.csv), puis [lancez un import IG](/fr/dashboard/connections).

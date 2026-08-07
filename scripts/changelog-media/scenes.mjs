@@ -1,8 +1,10 @@
 import fs from 'fs'
+import path from 'path'
 
 import {
   assertNoDevIssues,
   clickTab,
+  clipAround,
   dismissCookies,
   ensureCookiesDismissed,
   injectBillingPaymentHistoryMock,
@@ -11,10 +13,85 @@ import {
   recordVideo,
   screenshot,
   waitForDashboard,
+  waitForNavbarBadgeSettled,
 } from './helpers.mjs'
 import { LABELS, viewport } from './constants.mjs'
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image'} ChangelogScene */
+/** Seeded standalone account the IG import capture targets. */
+const CAPTURE_ACCOUNT = 'LOCAL-SIM-001'
+
+/** Multi-trade IG export with one cash row and one fractional row, for capture only. */
+const IG_CAPTURE_FIXTURE = path.join(
+  process.cwd(),
+  'scripts/changelog-media/fixtures/ig-transaction-history-capture.csv',
+)
+
+/**
+ * Query typed into the import picker search field. Narrows the list sharply
+ * while still leaving more than one result, so the filtering is unmistakable.
+ */
+const IMPORT_PICKER_SEARCH_QUERY = 'rithmic'
+
+/**
+ * Connections page, warmed enough for a clean capture: trades loaded, seeded
+ * accounts rendered, sync toasts gone, and the navbar badge resolved.
+ *
+ * Reached by clicking the dashboard navbar link rather than a fresh document
+ * load. `ConnectionRow` formats sync timestamps differently on the server and
+ * the client, so server-rendering `/<locale>/dashboard/connections` trips the
+ * dev hydration overlay in French. Navigating in-app keeps the capture on the
+ * client render path without touching product code.
+ */
+async function openConnectionsForImport(page, locale, siteUrl) {
+  await waitForDashboard(page, locale, siteUrl)
+  await page.locator('#import-data').first().click()
+  await page.waitForURL(/\/dashboard\/connections/, { timeout: 60_000 })
+  await dismissCookies(page, locale)
+  await page.getByText(CAPTURE_ACCOUNT).first().waitFor({ timeout: 90_000 })
+  await page
+    .locator('[data-sonner-toast]')
+    .first()
+    .waitFor({ state: 'hidden', timeout: 20_000 })
+    .catch(() => {})
+  await waitForNavbarBadgeSettled(page)
+  await ensureCookiesDismissed(page, locale)
+}
+
+/**
+ * Open the file-import platform picker. Returns the page heading and trigger
+ * alongside the popover so captures can be framed on the whole control.
+ */
+async function openImportPicker(page, locale) {
+  const heading = page.getByRole('heading', { level: 1 }).first()
+  const trigger = page
+    .getByRole('button', { name: LABELS[locale].uploadFileImport })
+    .first()
+  await trigger.waitFor({ timeout: 30_000 })
+  await trigger.click()
+  const picker = page.locator('[cmdk-root]').first()
+  await picker.waitFor({ timeout: 15_000 })
+  await page.waitForTimeout(700)
+  return { heading, trigger, picker }
+}
+
+/** Scroll the picker's own list so a named option is visible in the capture. */
+async function revealPickerOption(page, name) {
+  await page.evaluate((optionName) => {
+    const list = document.querySelector('[cmdk-list]')
+    const scroller = list?.querySelector('[cmdk-list-sizer]')?.parentElement ?? list
+    const option = Array.from(document.querySelectorAll('[cmdk-item]')).find(
+      (item) => (item.textContent ?? '').trim() === optionName,
+    )
+    if (!scroller || !option) return
+    scroller.scrollTop = Math.max(
+      0,
+      option.offsetTop - scroller.clientHeight + option.offsetHeight + 8,
+    )
+  }, name)
+  await page.waitForTimeout(600)
+}
+
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image'} ChangelogScene */
 
 /**
  * @param {import('playwright-core').Browser} browser
@@ -590,6 +667,97 @@ export async function captureScene(browser, options) {
       const out = `${outputDir(batch, locale)}/${file}.png`
       fs.writeFileSync(out, body)
       console.log('Saved', out)
+      await page.close()
+      return
+    }
+
+    case 'connections-import-picker': {
+      // Connections page with the file-import platform picker open on its full,
+      // unfiltered list so IG is visible among the supported platforms.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await openConnectionsForImport(page, locale, siteUrl)
+      const { heading, trigger, picker } = await openImportPicker(page, locale)
+      await page.getByRole('option', { name: /^IG$/ }).first().waitFor({ timeout: 15_000 })
+      await revealPickerOption(page, 'IG')
+      await assertNoDevIssues(page, `${locale} connections import picker`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [heading, trigger, picker], 24),
+      })
+      await page.close()
+      return
+    }
+
+    case 'connections-import-picker-search': {
+      // Same picker with a query typed, proving the list filters as you type.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await openConnectionsForImport(page, locale, siteUrl)
+      const { heading, trigger, picker } = await openImportPicker(page, locale)
+      await page.keyboard.type(IMPORT_PICKER_SEARCH_QUERY, { delay: 90 })
+      await page.waitForFunction(
+        (expected) => {
+          const root = document.querySelector('[cmdk-root]')
+          if (!root) return false
+          const count = root.querySelectorAll('[cmdk-item]').length
+          return count > 0 && count < expected
+        },
+        13,
+        { timeout: 15_000 },
+      )
+      await page.waitForTimeout(800)
+      await assertNoDevIssues(page, `${locale} connections import picker search`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [heading, trigger, picker], 24),
+      })
+      await page.close()
+      return
+    }
+
+    case 'connections-ig-import-preview': {
+      // Final IG import step: parsed Transaction History trades plus the notice
+      // that counts the rows the importer refused to guess at. Driven by the
+      // capture fixture, and stopped before the trades are saved.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await openConnectionsForImport(page, locale, siteUrl)
+      const { picker } = await openImportPicker(page, locale)
+      await page.getByRole('option', { name: /^IG$/ }).first().click()
+      await picker.waitFor({ state: 'detached', timeout: 15_000 }).catch(() => {})
+      await page.waitForTimeout(1500)
+
+      await page
+        .locator('input[type=file]')
+        .first()
+        .setInputFiles(IG_CAPTURE_FIXTURE)
+      // Accepting the file advances to account selection on its own.
+      await page.getByText(CAPTURE_ACCOUNT).first().waitFor({ timeout: 30_000 })
+      await page.waitForTimeout(1200)
+      await page.getByText(CAPTURE_ACCOUNT).first().click()
+
+      const next = page.getByRole('button', { name: LABELS[locale].next }).first()
+      await next.waitFor({ timeout: 15_000 })
+      if (!(await next.isEnabled())) {
+        throw new Error(`Account selection did not enable Next for ${locale} IG import`)
+      }
+      await next.click()
+
+      const notice = page.locator('[role="status"]').first()
+      await notice.waitFor({ timeout: 30_000 })
+      const panel = notice.locator('xpath=..')
+      await panel.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(1200)
+      await waitForNavbarBadgeSettled(page)
+      await assertNoDevIssues(page, `${locale} IG import preview`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [panel], 20),
+      })
       await page.close()
       return
     }
