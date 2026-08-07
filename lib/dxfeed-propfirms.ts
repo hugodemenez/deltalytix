@@ -13,6 +13,8 @@ export interface DxFeedPropFirmDefinition {
   id: string
   /** Display name in UI */
   name: string
+  /** Alternate names returned by auth or commonly used by the provider */
+  aliases?: string[]
   /** Optional marketing / login site */
   website?: string
   /** Root domain for host construction (e.g. miltraders.com) */
@@ -33,6 +35,16 @@ export const DXFEED_PROP_FIRMS: DxFeedPropFirmDefinition[] = [
     domain: 'miltraders.com',
     historicalSubdomain: 'volumetrica',
     tradingSubdomain: 'trading-volumetrica',
+    enabled: true,
+  },
+  {
+    id: 'myfundedfutures',
+    name: 'My Funded Futures',
+    aliases: ['MFFU'],
+    website: 'https://dxfeed.myfundedfutures.com',
+    domain: 'myfundedfutures.com',
+    historicalSubdomain: 'dxfeed',
+    tradingSubdomain: 'dxfeed',
     enabled: true,
   },
   {
@@ -95,7 +107,8 @@ export function getDxFeedPropFirmByAuthName(
     (f) =>
       normalizeDxFeedPropfirmKey(f.name) === key ||
       normalizeDxFeedPropfirmKey(f.id) === key ||
-      normalizeDxFeedPropfirmKey(f.domain.split('.')[0]) === key,
+      normalizeDxFeedPropfirmKey(f.domain.split('.')[0]) === key ||
+      f.aliases?.some((alias) => normalizeDxFeedPropfirmKey(alias) === key),
   )
 }
 
@@ -125,6 +138,7 @@ export function authPropfirmMatchesSelection(
     normalizeDxFeedPropfirmKey(selectedFirm.id),
     normalizeDxFeedPropfirmKey(selectedFirm.name),
     normalizeDxFeedPropfirmKey(selectedFirm.domain.split('.')[0]),
+    ...(selectedFirm.aliases ?? []).map(normalizeDxFeedPropfirmKey),
   ])
 
   return selectedKeys.has(authKey)
