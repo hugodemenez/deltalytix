@@ -17,8 +17,10 @@ import type { IbkrSyncStats } from './ibkr-types'
 const primaryButtonClassName =
   'inline-flex h-11 w-full items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]'
 
+// text-base on mobile keeps the paste field at 16px, below which iOS Safari
+// zooms the page on focus; sm+ drops back to the app's field size.
 const fieldClassName =
-  'rounded-sm border-black/10 bg-transparent font-mono text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30'
+  'rounded-sm border-black/10 bg-transparent font-mono text-base sm:text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30'
 
 /** Shows only the last few characters so the user can confirm what we detected
  *  without the full secret sitting on screen. */
