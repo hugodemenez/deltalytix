@@ -23,7 +23,9 @@ type EquityChartStore = {
 const defaultConfig: EquityChartConfig = {
   showIndividual: true,
   showDailyPnL: true,
-  maxAccountsDisplayed: 10,
+  // Individual mode draws one line per displayed account and the chart palette has 8
+  // distinct colors, so the equity chart clamps this to MAX_INDIVIDUAL_ACCOUNT_LINES.
+  maxAccountsDisplayed: 8,
   dataSampling: 'all',
   selectedAccountsToDisplay: [],
 }

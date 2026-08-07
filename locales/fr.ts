@@ -1002,7 +1002,7 @@ export default {
       noAccountsFound: "Aucun compte trouvé",
       confirm: "Confirmer",
       maxAccountsInfo:
-        "Maximum 10 comptes peuvent être affichés simultanément pour des performances optimales",
+        "Jusqu'à {max} comptes affichés, profits les plus élevés en premier",
     },
   },
   "widgets.screenshot": "Capture",

@@ -1025,8 +1025,7 @@ export default {
       noAccounts: "No accounts available",
       noAccountsFound: "No accounts found",
       confirm: "Confirm",
-      maxAccountsInfo:
-        "Maximum 10 accounts can be displayed simultaneously for optimal performance",
+      maxAccountsInfo: "Up to {max} accounts are charted, highest equity first",
     },
   },
   "pnl.title": "Daily Profit/Loss",
