@@ -1022,6 +1022,8 @@ export default {
       of: "of",
       search: "Search accounts...",
       clearSearch: "Clear search",
+      noAccounts: "No accounts available",
+      noAccountsFound: "No accounts found",
       confirm: "Confirm",
       maxAccountsInfo:
         "Maximum 10 accounts can be displayed simultaneously for optimal performance",

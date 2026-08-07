@@ -419,6 +419,7 @@ const AccountsLegend = React.memo(
     selectedAccounts,
     chartData,
     hoveredData,
+    pointerValue,
     onToggleAccount,
     t,
     dateLocale,
@@ -428,6 +429,7 @@ const AccountsLegend = React.memo(
     selectedAccounts: Set<string>;
     chartData: ChartDataPoint[];
     hoveredData: ChartDataPoint | null;
+    pointerValue: number | null;
     onToggleAccount: (accountNumber: string) => void;
     t: any;
     dateLocale: any;
@@ -440,7 +442,8 @@ const AccountsLegend = React.memo(
     const latestData = chartData[chartData.length - 1];
     const isHovered = !!hoveredData;
 
-    // Sort by latest equity values to maintain consistent order
+    // Ordered by proximity to the pointer while hovering, otherwise by latest
+    // equity so the resting order stays consistent
     const accountsWithEquity = accountNumbers
       .filter((acc) => selectedAccounts.has(acc))
       .map((acc) => ({
@@ -448,6 +451,10 @@ const AccountsLegend = React.memo(
         equity:
           (displayData?.[`equity_${acc}` as keyof ChartDataPoint] as number) ||
           0,
+        // Whether this account actually has a point on the hovered date
+        hasPoint:
+          typeof displayData?.[`equity_${acc}` as keyof ChartDataPoint] ===
+          "number",
         latestEquity:
           (latestData?.[`equity_${acc}` as keyof ChartDataPoint] as number) ||
           0,
@@ -467,26 +474,40 @@ const AccountsLegend = React.memo(
             `payoutAmount_${acc}` as keyof ChartDataPoint
           ] as number) || 0,
       }))
-      .sort((a, b) => b.latestEquity - a.latestEquity);
+      .sort((a, b) => {
+        // While hovering, order by how close each account's point is to the
+        // pointer so the line under the cursor is listed first.
+        if (isHovered && pointerValue !== null) {
+          if (a.hasPoint !== b.hasPoint) return a.hasPoint ? -1 : 1;
+          if (a.hasPoint && b.hasPoint) {
+            const distanceDelta =
+              Math.abs(a.equity - pointerValue) -
+              Math.abs(b.equity - pointerValue);
+            if (distanceDelta !== 0) return distanceDelta;
+          }
+        }
+        return b.latestEquity - a.latestEquity;
+      });
 
     return (
       <div className="border-t pt-0 mt-2 h-fit flex flex-col">
-        <div className="flex items-center justify-between mb-2 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t("equity.legend.title")}
-              {isHovered && displayData && (
-                <span className="ml-2 text-xs text-primary">
-                  -{" "}
-                  {format(new Date(displayData.date), "MMM d, yyyy", {
-                    locale: dateLocale,
-                  })}
-                </span>
+        <div className="flex items-center justify-between gap-2 mb-2 shrink-0">
+          {/* Always render the date so hovering never reflows the row */}
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span
+              className={cn(
+                "text-xs font-medium truncate",
+                isHovered ? "text-primary" : "text-muted-foreground"
               )}
+            >
+              {displayData
+                ? format(new Date(displayData.date), "MMM d, yyyy", {
+                    locale: dateLocale,
+                  })
+                : null}
             </span>
-            <span className="text-xs text-muted-foreground">
-              ({accountsWithEquity.length} {t("equity.legend.accounts")})
-            </span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
             <InfoBubble
               side="top"
               iconClassName="size-3"
@@ -496,13 +517,13 @@ const AccountsLegend = React.memo(
                 {t("equity.legend.maxAccountsInfo")}
               </p>
             </InfoBubble>
+            <AccountSelectionPopover
+              accountNumbers={accountNumbers}
+              selectedAccounts={Array.from(selectedAccounts)}
+              onToggleAccount={onToggleAccount}
+              t={t}
+            />
           </div>
-          <AccountSelectionPopover
-            accountNumbers={accountNumbers}
-            selectedAccounts={Array.from(selectedAccounts)}
-            onToggleAccount={onToggleAccount}
-            t={t}
-          />
         </div>
         <div className="flex gap-3 overflow-x-auto max-w-full flex-1 scrollbar-hide">
           <div className="flex gap-3 min-w-max">
@@ -603,6 +624,8 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   const [hoveredData, setHoveredData] = React.useState<ChartDataPoint | null>(
     null
   );
+  // Equity value under the pointer, used to order the legend by proximity
+  const [pointerValue, setPointerValue] = React.useState<number | null>(null);
   // Local state only for shared/team view (client-side computation)
   const [localChartData, setLocalChartData] = React.useState<ChartDataPoint[]>(
     []
@@ -634,7 +657,26 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     }, []),
     []
   );
-  const yAxisRef = React.useRef<any>(null);
+  const chartRef = React.useRef<React.ComponentRef<typeof LineChart>>(null);
+
+  // Convert the pointer position to an equity value using the Y axis scale so
+  // the legend can be ordered by distance to the cursor.
+  const handleChartMouseMove = React.useCallback(
+    (state: { isTooltipActive?: boolean; chartY?: number }) => {
+      if (!state?.isTooltipActive || typeof state.chartY !== "number") {
+        setPointerValue(null);
+        return;
+      }
+      const yAxis = Object.values(chartRef.current?.state?.yAxisMap ?? {})[0];
+      const invert = (yAxis?.scale as { invert?: (pixel: number) => number })
+        ?.invert;
+      const value = invert?.(state.chartY);
+      setPointerValue(
+        typeof value === "number" && !isNaN(value) ? value : null
+      );
+    },
+    []
+  );
   const t = useI18n();
   const locale = useCurrentLocale();
   const dateLocale = locale === "fr" ? fr : enUS;
@@ -945,13 +987,18 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
               <ChartContainer config={chartConfig} className="w-full h-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
+                    ref={chartRef}
                     data={chartData}
                     margin={
                       size === "small"
                         ? { left: 10, right: 4, top: 4, bottom: 20 }
                         : { left: 10, right: 8, top: 8, bottom: 24 }
                     }
-                    onMouseLeave={() => setHoveredData(null)}
+                    onMouseMove={handleChartMouseMove}
+                    onMouseLeave={() => {
+                      setHoveredData(null);
+                      setPointerValue(null);
+                    }}
                   >
                     <CartesianGrid
                       strokeDasharray="3 3"
@@ -972,7 +1019,6 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
                       }
                     />
                     <YAxis
-                      ref={yAxisRef}
                       tickLine={false}
                       axisLine={false}
                       width={60}
@@ -1025,6 +1071,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
                 selectedAccounts={selectedAccounts}
                 chartData={chartData}
                 hoveredData={hoveredData}
+                pointerValue={pointerValue}
                 onToggleAccount={handleToggleAccount}
                 t={t}
                 dateLocale={dateLocale}

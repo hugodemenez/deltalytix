@@ -998,6 +998,8 @@ export default {
       of: "sur",
       search: "Rechercher des comptes...",
       clearSearch: "Effacer la recherche",
+      noAccounts: "Aucun compte disponible",
+      noAccountsFound: "Aucun compte trouvé",
       confirm: "Confirmer",
       maxAccountsInfo:
         "Maximum 10 comptes peuvent être affichés simultanément pour des performances optimales",
