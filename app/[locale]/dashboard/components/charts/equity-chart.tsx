@@ -41,6 +41,7 @@ import { useCurrentLocale } from "@/locales/client";
 import { useUserStore } from "@/store/user-store";
 import { useEquityChartStore } from "@/store/widgets/equity-chart-store";
 import { useEquityChartDataStore } from "@/store/widgets/equity-chart-data-store";
+import { MAX_ACCOUNTS_DISPLAYED } from "@/lib/equity-chart";
 import { Payout as PrismaPayout } from "@/prisma/generated/prisma/browser";
 import { AccountSelectionPopover } from "./account-selection-popover";
 import {
@@ -71,19 +72,22 @@ interface ChartDataPoint {
 const formatCurrency = (value: number) =>
   `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// Theme-aware chart colors defined in globals.css. This palette is why
+// MAX_ACCOUNTS_DISPLAYED is what it is — keep the two in step.
+const CHART_COLOR_VARS = [
+  "hsl(var(--chart-loss))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-win))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+  "hsl(var(--chart-6))",
+  "hsl(var(--chart-7))",
+  "hsl(var(--chart-8))",
+];
+
 // Map account numbers to theme-aware chart colors defined in globals.css
 function getChartColorByIndex(index: number): string {
-  const paletteVars = [
-    "hsl(var(--chart-loss))",
-    "hsl(var(--chart-2))",
-    "hsl(var(--chart-win))",
-    "hsl(var(--chart-4))",
-    "hsl(var(--chart-5))",
-    "hsl(var(--chart-6))",
-    "hsl(var(--chart-7))",
-    "hsl(var(--chart-8))",
-  ];
-  return paletteVars[index % paletteVars.length];
+  return CHART_COLOR_VARS[index % CHART_COLOR_VARS.length];
 }
 
 // Generate consistent theme-aware color based on accountNumber string
@@ -94,7 +98,7 @@ function generateAccountColor(accountNumber: string): string {
     hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }
-  const index = Math.abs(hash) % 8;
+  const index = Math.abs(hash) % CHART_COLOR_VARS.length;
   return getChartColorByIndex(index);
 }
 
@@ -415,6 +419,7 @@ OptimizedTooltip.displayName = "OptimizedTooltip";
 const AccountsLegend = React.memo(
   ({
     accountNumbers,
+    displayedAccounts,
     accountColorMap,
     selectedAccounts,
     chartData,
@@ -425,6 +430,7 @@ const AccountsLegend = React.memo(
     dateLocale,
   }: {
     accountNumbers: string[];
+    displayedAccounts: string[];
     accountColorMap: Map<string, string>;
     selectedAccounts: Set<string>;
     chartData: ChartDataPoint[];
@@ -442,10 +448,12 @@ const AccountsLegend = React.memo(
     const latestData = chartData[chartData.length - 1];
     const isHovered = !!hoveredData;
 
-    // Ordered by proximity to the pointer while hovering, otherwise by latest
-    // equity so the resting order stays consistent
-    const accountsWithEquity = accountNumbers
-      .filter((acc) => selectedAccounts.has(acc))
+    // One row per drawn line: `displayedAccounts` is the single list the chart
+    // lines are built from, so the legend never lists an account whose line
+    // isn't on the chart. Rows are then ordered by proximity to the pointer
+    // while hovering, otherwise by latest equity so the resting order stays
+    // consistent.
+    const accountsWithEquity = displayedAccounts
       .map((acc) => ({
         accountNumber: acc,
         equity:
@@ -514,7 +522,9 @@ const AccountsLegend = React.memo(
               contentClassName="z-9999 max-w-xs"
             >
               <p className="text-xs">
-                {t("equity.legend.maxAccountsInfo")}
+                {t("equity.legend.maxAccountsInfo", {
+                  max: MAX_ACCOUNTS_DISPLAYED,
+                })}
               </p>
             </InfoBubble>
             <AccountSelectionPopover
@@ -527,61 +537,53 @@ const AccountsLegend = React.memo(
         </div>
         <div className="flex gap-3 overflow-x-auto max-w-full flex-1 scrollbar-hide">
           <div className="flex gap-3 min-w-max">
-            {accountsWithEquity
-              .slice(0, 20)
-              .map(
-                ({
-                  accountNumber,
-                  equity,
-                  color,
-                  hasPayout,
-                  hasReset,
-                  payoutStatus,
-                  payoutAmount,
-                }) => (
-                  <div
-                    key={accountNumber}
-                    className="flex items-center gap-1.5 shrink-0"
-                  >
-                    <div className="flex flex-col h-[50px] justify-start">
-                      <span className="text-xs font-medium text-foreground leading-tight relative mb-1"
-                      >
-                        {accountNumber}
-                        <span 
-                      className="w-full h-1 rounded-full shrink-0 absolute -bottom-1 left-0"
-                      style={{ backgroundColor: color}}
-                        ></span>
-                      </span>
-                      <span className="text-xs text-muted-foreground leading-tight tabular-nums">
-                        {formatCurrency(equity)}
-                      </span>
-                      <div className="min-h-3.5 flex flex-col">
-                        {hasPayout && (
-                          <span
-                            className="text-xs leading-tight tabular-nums"
-                            style={{ color: getPayoutColors(payoutStatus).fg }}
-                          >
-                            {t("equity.legend.payout")}:{" "}
-                            {formatCurrency(payoutAmount)}
-                          </span>
-                        )}
-                        {hasReset && (
-                          <span
-                            className="text-xs leading-tight"
-                            style={{ color: "hsl(var(--destructive))" }}
-                          >
-                            {t("equity.legend.reset")}
-                          </span>
-                        )}
-                      </div>
+            {accountsWithEquity.map(
+              ({
+                accountNumber,
+                equity,
+                color,
+                hasPayout,
+                hasReset,
+                payoutStatus,
+                payoutAmount,
+              }) => (
+                <div
+                  key={accountNumber}
+                  className="flex items-center gap-1.5 shrink-0"
+                >
+                  <div className="flex flex-col h-[50px] justify-start">
+                    <span className="text-xs font-medium text-foreground leading-tight relative mb-1">
+                      {accountNumber}
+                      <span
+                        className="w-full h-1 rounded-full shrink-0 absolute -bottom-1 left-0"
+                        style={{ backgroundColor: color }}
+                      ></span>
+                    </span>
+                    <span className="text-xs text-muted-foreground leading-tight tabular-nums">
+                      {formatCurrency(equity)}
+                    </span>
+                    <div className="min-h-3.5 flex flex-col">
+                      {hasPayout && (
+                        <span
+                          className="text-xs leading-tight tabular-nums"
+                          style={{ color: getPayoutColors(payoutStatus).fg }}
+                        >
+                          {t("equity.legend.payout")}:{" "}
+                          {formatCurrency(payoutAmount)}
+                        </span>
+                      )}
+                      {hasReset && (
+                        <span
+                          className="text-xs leading-tight"
+                          style={{ color: "hsl(var(--destructive))" }}
+                        >
+                          {t("equity.legend.reset")}
+                        </span>
+                      )}
                     </div>
                   </div>
-                )
-              )}
-            {accountsWithEquity.length > 20 && (
-              <div className="flex items-center gap-1.5 shrink-0 text-xs text-muted-foreground h-[50px]">
-                +{accountsWithEquity.length - 20} more
-              </div>
+                </div>
+              )
             )}
           </div>
         </div>
@@ -686,7 +688,8 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   const locale = useCurrentLocale();
   const dateLocale = locale === "fr" ? fr : enUS;
 
-  // Account selection handlers
+  // Account selection handlers. The store refuses selections past the cap, so
+  // the picker's count always matches what the chart draws.
   const handleToggleAccount = React.useCallback(
     (accountNumber: string) => {
       toggleAccountSelection(accountNumber);
@@ -694,31 +697,25 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     [toggleAccountSelection]
   );
 
-  // Initialize selected accounts if empty OR validate existing selections
+  // Seed the selection, drop accounts that no longer exist, and trim anything
+  // over the cap — persisted selections predate it and can be arbitrarily long.
   React.useEffect(() => {
     if (availableAccountNumbers.length === 0) return;
 
-    // Filter to only valid accounts that actually exist
-    const validSelection =
-      config.selectedAccountsToDisplay?.filter((acc) =>
-        availableAccountNumbers.includes(acc)
-      ) || [];
+    const current = config.selectedAccountsToDisplay || [];
+    const validSelection = current.filter((acc) =>
+      availableAccountNumbers.includes(acc)
+    );
+    const nextSelection = (
+      validSelection.length === 0 ? availableAccountNumbers : validSelection
+    ).slice(0, MAX_ACCOUNTS_DISPLAYED);
 
-    // Reset if empty OR if none of the selected accounts are valid
-    if (validSelection.length === 0) {
-      console.log(
-        "[EquityChart] Resetting account selection to all available accounts"
-      );
-      setSelectedAccountsToDisplay(availableAccountNumbers);
-    } else if (
-      validSelection.length !== config.selectedAccountsToDisplay?.length
-    ) {
-      // Some accounts were invalid, update to only valid ones
-      console.log(
-        "[EquityChart] Updating account selection to remove invalid accounts"
-      );
-      setSelectedAccountsToDisplay(validSelection);
-    }
+    const isUnchanged =
+      nextSelection.length === current.length &&
+      nextSelection.every((acc, index) => acc === current[index]);
+    if (isUnchanged) return;
+
+    setSelectedAccountsToDisplay(nextSelection);
   }, [
     config.selectedAccountsToDisplay,
     availableAccountNumbers,
@@ -733,6 +730,20 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   const accountColorMap = React.useMemo(
     () => createAccountColorMap(availableAccountNumbers),
     [availableAccountNumbers]
+  );
+
+  // Single source of truth for individual mode: the accounts that get a drawn line.
+  // Chart lines, chart config, the nearest-line active dot and the legend all read
+  // this same list, so none of them can list an account the chart didn't draw.
+  // Selection is already capped, so the slice is only a guard for state that
+  // predates the cap; it mirrors how computeEquityChartData picks its accounts,
+  // which is what decides who actually has equity data to plot.
+  const displayedAccounts = React.useMemo(
+    () =>
+      availableAccountNumbers
+        .filter((acc) => selectedAccounts.has(acc))
+        .slice(0, MAX_ACCOUNTS_DISPLAYED),
+    [availableAccountNumbers, selectedAccounts]
   );
 
   // Client-side computation for shared view
@@ -860,9 +871,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       } as ChartConfig;
     }
 
-    const maxAccounts = 8; // Aligned with 8-color palette
-    const accountsToShow = Array.from(selectedAccounts).slice(0, maxAccounts);
-    return accountsToShow.reduce((acc, accountNumber) => {
+    return displayedAccounts.reduce((acc, accountNumber) => {
       acc[`equity_${accountNumber}`] = {
         label: `Account ${accountNumber}`,
         color:
@@ -872,7 +881,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       return acc;
     }, {} as ChartConfig);
   }, [
-    selectedAccounts,
+    displayedAccounts,
     showIndividual,
     accountColorMap,
     isSharedView,
@@ -897,9 +906,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       );
     }
 
-    const maxAccounts = 8; // Aligned with 8-color palette
-    const accountsToShow = Array.from(selectedAccounts).slice(0, maxAccounts);
-    const drawnKeys = accountsToShow.map((acc) => `equity_${acc}`);
+    const drawnKeys = displayedAccounts.map((acc) => `equity_${acc}`);
 
     // Only the line nearest the pointer gets an active dot, so a dense chart
     // highlights the one series being read instead of all of them. Reads the
@@ -928,7 +935,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       return <circle cx={cx} cy={cy} r={3} fill={fill} />;
     };
 
-    return accountsToShow.map((accountNumber) => {
+    return displayedAccounts.map((accountNumber) => {
       // Use the same color mapping as legend to ensure consistency
       const color =
         accountColorMap.get(accountNumber) ||
@@ -947,7 +954,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
         />
       );
     });
-  }, [selectedAccounts, showIndividual, accountColorMap, isSharedView]);
+  }, [displayedAccounts, showIndividual, accountColorMap, isSharedView]);
 
   // Debug logging
   React.useEffect(() => {
@@ -1105,6 +1112,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
             size !== "small" && (
               <AccountsLegend
                 accountNumbers={availableAccountNumbers}
+                displayedAccounts={displayedAccounts}
                 accountColorMap={accountColorMap}
                 selectedAccounts={selectedAccounts}
                 chartData={chartData}

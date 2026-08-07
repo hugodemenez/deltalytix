@@ -62,6 +62,15 @@ interface ChartEvent {
   accountNumber: string;
 }
 
+/**
+ * How many accounts individual mode can chart at once. Bounded by the equity
+ * chart's line palette: it has this many distinct colors, and past that lines
+ * repeat colors and the legend swatches stop identifying anything. The account
+ * picker caps selection to match, so nothing is ever silently dropped — raise
+ * this only alongside the palette in equity-chart.tsx.
+ */
+export const MAX_ACCOUNTS_DISPLAYED = 8;
+
 export interface EquityChartParams {
   instruments: string[];
   accountNumbers: string[];
