@@ -6,6 +6,7 @@ const SERVICE_SLUGS = {
   'rithmic-protocol': 'rithmic',
   tradovate: 'tradovate',
   dxfeed: 'dxfeed',
+  ibkr: 'ibkr',
   thor: 'thor',
   etp: 'thor',
 } as const

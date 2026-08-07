@@ -139,12 +139,14 @@ export default {
   "connections.sections.rithmicProtocol": "Rithmic Protocol",
   "connections.sections.tradovate": "Tradovate",
   "connections.sections.dxfeed": "DxFeed",
+  "connections.sections.ibkr": "Interactive Brokers",
   "connections.sections.thor": "Thor",
   "connections.sections.standalone": "Standalone accounts",
   "connections.add.rithmic": "Add Rithmic connection",
   "connections.add.rithmicProtocol": "Add Rithmic Protocol connection",
   "connections.add.tradovate": "Add Tradovate connection",
   "connections.add.dxfeed": "Add DxFeed connection",
+  "connections.add.ibkr": "Add Interactive Brokers connection",
   "connections.add.thor": "Add Thor connection",
   "connections.add.etp": "Add ETP connection",
   "connections.emptySection": "No connections yet. Use + to add one.",
@@ -2356,6 +2358,171 @@ export default {
       },
     },
   },
+  ibkrSync: {
+    title: "Interactive Brokers Sync",
+    description:
+      "Import your IBKR trade history automatically using a Flex Query. Set it up once in Client Portal and paste the two values below.",
+    setup: {
+      title: "Set up in IBKR Client Portal",
+      openPortal: "Open Client Portal",
+      step1: "Sign in to IBKR Client Portal and go to Performance & Reports → Flex Queries.",
+      step2:
+        "Under Flex Web Service Configuration, turn the service on and copy the token.",
+      step2Hint:
+        "When asked how long the token should last, choose one year. Shorter tokens stop the sync silently when they expire.",
+      step3:
+        'Create a new Activity Flex Query, name it "Deltalytix", and add the Trades section.',
+      step3Hint:
+        "Click the Trades section header to select every field at once — no need to pick them one by one.",
+      step4: "Set the delivery options to match these, then save the query.",
+      step4Hint:
+        "Any date format other than yyyyMMdd is ambiguous, so we refuse to guess and skip those rows instead of importing them on the wrong day.",
+      step5: "Copy the query ID shown next to the saved query, then paste both values below.",
+      summarySection: "Section",
+      summaryPeriod: "Period",
+      summaryFormat: "Format",
+      summaryDateFormat: "Date / time",
+      readOnlyNote:
+        "The Flex Web Service is read-only: it can download reports and nothing else. It cannot place, modify or cancel orders, and it cannot move funds.",
+    },
+    connect: {
+      title: "Connect Interactive Brokers",
+      description:
+        "Create the Flex Query once, then paste your token and query ID together — we work out which is which.",
+      pasteLabel: "Token and query ID",
+      pastePlaceholder: "Paste both values here, in any order",
+      pasteHint:
+        "You can paste them on separate lines, side by side, or with the labels from Client Portal.",
+      detectedToken: "Token",
+      detectedQueryId: "Query ID",
+      notDetected: "not found yet",
+      verifyAndConnect: "Verify and connect",
+      verifying: "Checking with IBKR...",
+      verifiedTitle: "Connection verified",
+      importedTrades:
+        "Imported {savedCount} new trade(s) out of {tradesCount} found.",
+      nothingNew:
+        "Found {tradesCount} completed trade(s); all of them were already in your journal.",
+      done: "Done",
+    },
+    manage: {
+      savedConnections: "Saved connections",
+      addNew: "Add new",
+      syncAll: "Sync all",
+      syncNow: "Sync now",
+      noConnections: "No Interactive Brokers connection yet",
+      queryLabel: "Flex Query {queryId}",
+      connected: "Connected",
+      expired: "Needs reconnecting",
+      reconnect: "Reconnect",
+      lastSync: "Last sync",
+      dailySync: "Daily sync",
+      scheduleSync: "Schedule",
+      multiCurrency:
+        "Trades in several currencies ({currencies}). P&L is stored as reported, without conversion.",
+      removeConnection: "Remove connection",
+      removeConfirm:
+        'Remove the connection for Flex Query "{accountId}"? Trades already imported stay in your journal.',
+      remove: "Remove",
+      connectionRemoved: "Connection {accountId} removed.",
+      removeError: "Could not remove connection {accountId}.",
+      reloaded: "Connections reloaded",
+      dailySyncTimeTitle: "Set daily sync time",
+      dailySyncTimeDescription:
+        "Pick a time and we import each day automatically. IBKR statements cover a rolling window, so a missed run is picked up by the next one. Leave empty to sync manually only.",
+      dailySyncTimeLabel: "Sync time (local time)",
+      dailySyncTimeTimezoneNote: "Time is in your local timezone ({timezone})",
+      dailySyncTimeUpdated: "Daily sync time updated",
+      dailySyncTimeUpdateError: "Could not update the daily sync time",
+    },
+    sync: {
+      inProgress: "Syncing Flex Query {accountId}...",
+      completeForAccount:
+        "Imported {savedCount} new trade(s) out of {tradesCount} found for {accountId}.",
+      noNewTradesForAccount:
+        "Checked {accountId}: {tradesCount} trade(s) found, all already in your journal.",
+      multiCurrencyWarning:
+        "This statement mixes currencies ({currencies}); P&L is stored as reported, without conversion.",
+      skippedDatesWarning:
+        "{count} row(s) were skipped because their date format was ambiguous — set the query's date format to yyyyMMdd.",
+    },
+    errors: {
+      UNKNOWN:
+        "Something went wrong. Try again, or contact Support if the problem continues.",
+      USER_NOT_AUTHENTICATED:
+        "You must be signed in to connect Interactive Brokers. Sign in and try again.",
+      CREDENTIALS_REQUIRED: "Paste your Flex token and query ID to continue.",
+      TOKEN_MALFORMED:
+        "We could not find a Flex token in what you pasted. It is a long number from the Flex Web Service Configuration panel.",
+      QUERY_ID_MALFORMED:
+        "We could not find a query ID in what you pasted. It is the short number shown next to your saved Flex Query.",
+      INVALID_STORED_CREDENTIALS:
+        "The saved connection data could not be read. Remove the connection and add it again.",
+      NO_CREDENTIALS_RECONNECT:
+        "This connection has no saved credentials. Add it again with a fresh token and query ID.",
+      DUPLICATE_CONNECTION: "This Flex Query is already connected.",
+      FLEX_HTTP_ERROR:
+        "Interactive Brokers returned an unexpected response (HTTP {status}). Try again shortly.",
+      FLEX_UNREACHABLE:
+        "We could not reach Interactive Brokers. Check your connection and try again.",
+      FLEX_MALFORMED_RESPONSE:
+        "Interactive Brokers returned a response we could not read. Try again shortly.",
+      FLEX_STATEMENT_TIMEOUT:
+        "Interactive Brokers is still generating the report. Try again in a minute.",
+      FLEX_TOKEN_EXPIRED:
+        "Your Flex token has expired. Generate a new one in Client Portal and reconnect.",
+      FLEX_TOKEN_INVALID:
+        "Interactive Brokers rejected this Flex token. Generate a new one and reconnect.",
+      FLEX_IP_RESTRICTED:
+        "This Flex token is restricted to a specific IP address, so our servers cannot use it.",
+      FLEX_QUERY_INVALID:
+        "Interactive Brokers does not recognise this query ID. Check it against the saved query in Client Portal.",
+      FLEX_REFERENCE_INVALID:
+        "The report reference expired before we could download it. Try again.",
+      FLEX_ACCOUNT_INVALID:
+        "The account on this Flex Query is not valid. Check the query's account selection in Client Portal.",
+      FLEX_SERVICE_INACTIVE:
+        "The Flex Web Service is switched off for this account. Turn it back on in Client Portal.",
+      FLEX_RATE_LIMITED:
+        "Interactive Brokers is rate limiting this token (max 10 requests per minute). Wait a minute and try again.",
+      FLEX_LEGACY_QUERY:
+        "This is a legacy Flex Query, which IBKR no longer supports. Create a new Activity Flex Query instead.",
+      FLEX_STATEMENT_FAILED:
+        "Interactive Brokers could not generate the report ({code}): {detail}",
+      FLEX_UNKNOWN_ERROR:
+        "Interactive Brokers returned error {code}: {detail}",
+      QUERY_HAS_NO_TRADES_SECTION:
+        "This Flex Query returned no trade data. Edit it in Client Portal and add the Trades section.",
+      QUERY_MISSING_FIELDS:
+        "This Flex Query is missing fields we need. Open the Trades section and select all of its fields.",
+      QUERY_UNPARSEABLE_DATES:
+        "None of the {count} rows in this statement had a date we could read unambiguously.",
+      NO_TRADES_IN_RANGE:
+        "The statement came back empty. Check the query's period covers the days you traded.",
+      OPEN_POSITIONS_ONLY:
+        "This statement only contains positions that are still open, so there is nothing to import yet.",
+      DUPLICATE_TRADES: "These trades are already in your journal.",
+      SAVE_TRADES_FAILED:
+        "Trades were downloaded but could not be saved: {detail}",
+      SYNC_FAILED: "The sync failed. Try again in a few minutes.",
+      ACCOUNT_ID_REQUIRED:
+        "Connection identifier is missing. Refresh the page and try again.",
+      LOAD_SYNCHRONIZATIONS_FAILED:
+        "Could not load your saved Interactive Brokers connections. Refresh the page.",
+      DELETE_SYNC_FAILED: "Could not remove this connection. Try again.",
+      UPDATE_SYNC_TIME_FAILED: "Could not update the daily sync time. Try again.",
+      hintEditQuery:
+        "Open Client Portal → Performance & Reports → Flex Queries, edit your query, and check the Trades section and period.",
+      hintRegenerateToken:
+        "Open Client Portal → Performance & Reports → Flex Queries → Flex Web Service Configuration, generate a new token, then reconnect here.",
+      hintRetryShortly:
+        "This is usually temporary. Wait a minute and run the sync again.",
+      hintDateFormat:
+        "In your Flex Query's delivery settings, set the date format to yyyyMMdd and the time format to HHmmss.",
+      hintIpRestriction:
+        "Generate the token again without an IP restriction, or allow our servers' address.",
+    },
+  },
   rithmicProtocolSync: {
     title: "Rithmic Protocol Sync",
     description:
@@ -2441,6 +2608,11 @@ export default {
     "Direct account synchronization with DxFeed",
   "import.type.dxfeedSync.details":
     "Import closed trades from your prop firm (DxFeed / Volumetrica). Select your firm, then sign in with your platform credentials.",
+  "import.type.ibkrSync.name": "Interactive Brokers",
+  "import.type.ibkrSync.description":
+    "Direct account synchronization with Interactive Brokers",
+  "import.type.ibkrSync.details":
+    "Import your IBKR trade history automatically using a Flex Query. You create the query once in Client Portal, paste the token and query ID here, and we keep it in sync.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "ATAS Excel file",
   "import.type.atas.details":

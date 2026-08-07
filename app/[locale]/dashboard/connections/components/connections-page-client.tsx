@@ -50,6 +50,7 @@ import {
 import { useTradovateSyncStore } from '@/store/tradovate-sync-store'
 import { useTradovateSyncContext } from '@/context/tradovate-sync-context'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
+import { useIbkrSyncContext } from '@/context/ibkr-sync-context'
 import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
 import { useRithmicProtocolSyncContext } from '@/context/rithmic-protocol-sync-context'
 import { toast } from 'sonner'
@@ -76,6 +77,7 @@ const SERVICE_SECTIONS: {
   },
   { service: 'tradovate', labelKey: 'connections.sections.tradovate' },
   { service: 'dxfeed', labelKey: 'connections.sections.dxfeed' },
+  { service: 'ibkr', labelKey: 'connections.sections.ibkr' },
   { service: 'thor', labelKey: 'connections.sections.thor' },
 ]
 
@@ -88,6 +90,7 @@ const SYNCABLE_SERVICES = new Set<string>([
   'rithmic-protocol',
   'tradovate',
   'dxfeed',
+  'ibkr',
 ])
 
 const iconButtonClassName =
@@ -367,6 +370,7 @@ function ConnectionRow({
   const tradovateStore = useTradovateSyncStore()
   const { performSyncForAccount: syncTradovate } = useTradovateSyncContext()
   const { performSyncForAccount: syncDxFeed } = useDxFeedSyncContext()
+  const { performSyncForAccount: syncIbkr } = useIbkrSyncContext()
   const {
     performSyncForAccount: syncRithmicProtocol,
     isAccountSyncing: isRithmicProtocolSyncing,
@@ -381,6 +385,7 @@ function ConnectionRow({
   const canSyncRow =
     connection.service === 'tradovate' ||
     connection.service === 'dxfeed' ||
+    connection.service === 'ibkr' ||
     connection.service === 'rithmic-protocol'
 
   const canSchedule = supportsDailySync(connection.service)
@@ -470,6 +475,8 @@ function ConnectionRow({
         result = await syncTradovate(connection.accountId)
       } else if (connection.service === 'dxfeed') {
         result = await syncDxFeed(connection.accountId)
+      } else if (connection.service === 'ibkr') {
+        result = await syncIbkr(connection.accountId)
       } else if (connection.service === 'rithmic-protocol') {
         // Loading/error feedback comes from Protocol sync context (row spinner).
         result = await syncRithmicProtocol(connection.accountId)
@@ -495,7 +502,7 @@ function ConnectionRow({
     } finally {
       if (usesLocalSyncState) setSyncing(false)
     }
-  }, [connection, onChanged, syncDxFeed, syncRithmicProtocol, syncTradovate, t])
+  }, [connection, onChanged, syncDxFeed, syncIbkr, syncRithmicProtocol, syncTradovate, t])
 
   const handleReconnect = useCallback(async () => {
     // Tradovate can re-auth in place via OAuth without opening the add sheet.
@@ -1054,6 +1061,7 @@ export function ConnectionsPageClient({
     loadAccounts: loadDxFeed,
     performSyncForAccount: syncDxFeed,
   } = useDxFeedSyncContext()
+  const { performSyncForAccount: syncIbkr } = useIbkrSyncContext()
   const { performSyncForCredential: syncRithmic } = useRithmicSyncContext()
   const { performSyncForAccount: syncRithmicProtocol } =
     useRithmicProtocolSyncContext()
@@ -1312,6 +1320,8 @@ export function ConnectionsPageClient({
             result = await syncTradovate(connection.accountId)
           } else if (connection.service === 'dxfeed') {
             result = await syncDxFeed(connection.accountId)
+          } else if (connection.service === 'ibkr') {
+            result = await syncIbkr(connection.accountId)
           } else if (connection.service === 'rithmic-protocol') {
             result = await syncRithmicProtocol(connection.accountId)
           } else {
@@ -1338,6 +1348,7 @@ export function ConnectionsPageClient({
   }, [
     load,
     syncDxFeed,
+    syncIbkr,
     syncRithmic,
     syncRithmicProtocol,
     syncTradovate,

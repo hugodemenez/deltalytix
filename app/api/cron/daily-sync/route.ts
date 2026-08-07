@@ -5,6 +5,7 @@ import { decryptConnectionToken } from '@/lib/connection-token-crypto'
 import { isDailySyncDue } from '@/lib/daily-sync-schedule'
 import { getDxFeedTrades } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/actions'
 import { getRithmicProtocolTrades } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions'
+import { syncIbkrAccount } from '@/app/[locale]/dashboard/components/import/ibkr/sync/actions'
 import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connections/data'
 
 export const maxDuration = 300
@@ -14,7 +15,13 @@ export const maxDuration = 300
  * schedule is already driven by /api/cron/renew-tradovate-token, which has to
  * refresh the OAuth token in the same pass.
  */
-const SYNCABLE_SERVICES = ['dxfeed', 'rithmic-protocol'] as const
+const SYNCABLE_SERVICES = ['dxfeed', 'rithmic-protocol', 'ibkr'] as const
+
+/**
+ * IBKR statements cover a rolling window rather than only the latest day, so a
+ * run that finds nothing new is a healthy no-op, not a failure to report.
+ */
+const IBKR_EMPTY_RESULTS = new Set(['NO_TRADES_IN_RANGE', 'OPEN_POSITIONS_ONLY'])
 
 /** Stop starting new syncs past this point so the function returns before its limit. */
 const WALL_CLOCK_BUDGET_MS = 240_000
@@ -34,20 +41,30 @@ async function syncConnection(connection: {
     return { ok: false, reason: 'NO_TOKEN' }
   }
 
-  const error =
-    connection.service === 'dxfeed'
-      ? (
-          await getDxFeedTrades(storedTokenJson, {
-            userId: connection.userId,
-            accountId: connection.externalId,
-          })
-        ).error
-      : (
-          await getRithmicProtocolTrades(storedTokenJson, {
-            userId: connection.userId,
-            connectionId: connection.id,
-          })
-        ).error
+  let error: string | undefined
+
+  if (connection.service === 'dxfeed') {
+    error = (
+      await getDxFeedTrades(storedTokenJson, {
+        userId: connection.userId,
+        accountId: connection.externalId,
+      })
+    ).error
+  } else if (connection.service === 'ibkr') {
+    // IBKR re-reads and decrypts the bundle itself; the check above is only a
+    // cheap guard against scheduling a connection with no credentials left.
+    const result = await syncIbkrAccount(connection.externalId, {
+      userId: connection.userId,
+    })
+    error = result.error && !IBKR_EMPTY_RESULTS.has(result.error) ? result.error : undefined
+  } else {
+    error = (
+      await getRithmicProtocolTrades(storedTokenJson, {
+        userId: connection.userId,
+        connectionId: connection.id,
+      })
+    ).error
+  }
 
   if (!error || error === DUPLICATE_TRADES) return { ok: true }
   return { ok: false, reason: error }
