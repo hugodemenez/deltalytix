@@ -217,16 +217,16 @@ function LandingCalendarPreview({
                         $0
                       </div>
                     )}
-                    <div
-                      className={cn(
-                        "text-[7px] sm:text-[9px] text-muted-foreground truncate text-center",
-                        !isCurrentMonth && "opacity-50",
-                      )}
-                    >
-                      {dayData
-                        ? `${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t("calendar.trades") : t("calendar.trade")}`
-                        : t("calendar.noTrades")}
-                    </div>
+                    {dayData && (
+                      <div
+                        className={cn(
+                          "text-[7px] sm:text-[9px] text-muted-foreground truncate text-center",
+                          !isCurrentMonth && "opacity-50",
+                        )}
+                      >
+                        {`${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t("calendar.trades") : t("calendar.trade")}`}
+                      </div>
+                    )}
                   </div>
                 </div>
                 {isLastDayOfWeek &&
