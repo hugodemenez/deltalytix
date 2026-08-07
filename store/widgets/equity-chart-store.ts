@@ -1,10 +1,13 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import { MAX_ACCOUNTS_DISPLAYED } from '@/lib/equity-chart'
 
+// How many accounts may be selected is not configurable: it is fixed by the
+// equity chart's line palette. The cap is enforced on every write below, so
+// persisted state can never hold more accounts than the chart can draw.
 type EquityChartConfig = {
   showIndividual: boolean
   showDailyPnL: boolean
-  maxAccountsDisplayed: number
   dataSampling: 'all' | 'sample'
   selectedAccountsToDisplay: string[]
 }
@@ -13,7 +16,6 @@ type EquityChartStore = {
   config: EquityChartConfig
   setShowIndividual: (showIndividual: boolean) => void
   setShowDailyPnL: (showDailyPnL: boolean) => void
-  setMaxAccountsDisplayed: (maxAccounts: number) => void
   setSelectedAccountsToDisplay: (accounts: string[]) => void
   toggleAccountSelection: (accountNumber: string) => void
   setConfig: (config: Partial<EquityChartConfig>) => void
@@ -23,7 +25,6 @@ type EquityChartStore = {
 const defaultConfig: EquityChartConfig = {
   showIndividual: true,
   showDailyPnL: true,
-  maxAccountsDisplayed: 10,
   dataSampling: 'all',
   selectedAccountsToDisplay: [],
 }
@@ -43,25 +44,28 @@ export const useEquityChartStore = create<EquityChartStore>()(
           config: { ...state.config, showDailyPnL } 
         })),
       
-      setMaxAccountsDisplayed: (maxAccounts) => 
-        set((state) => ({ 
-          config: { ...state.config, maxAccountsDisplayed: maxAccounts } 
+      setSelectedAccountsToDisplay: (accounts) =>
+        set((state) => ({
+          config: {
+            ...state.config,
+            selectedAccountsToDisplay: accounts.slice(0, MAX_ACCOUNTS_DISPLAYED),
+          },
         })),
-      
-      setSelectedAccountsToDisplay: (accounts) => 
-        set((state) => ({ 
-          config: { ...state.config, selectedAccountsToDisplay: accounts } 
-        })),
-      
-      toggleAccountSelection: (accountNumber) => 
+
+      toggleAccountSelection: (accountNumber) =>
         set((state) => {
           const current = state.config.selectedAccountsToDisplay
           const isSelected = current.includes(accountNumber)
-          const newSelection = isSelected 
+          // Selecting past the cap is refused, not queued: the chart cannot draw
+          // the extra line, so accepting the click would be a lie.
+          if (!isSelected && current.length >= MAX_ACCOUNTS_DISPLAYED) {
+            return state
+          }
+          const newSelection = isSelected
             ? current.filter(acc => acc !== accountNumber)
             : [...current, accountNumber]
-          return { 
-            config: { ...state.config, selectedAccountsToDisplay: newSelection } 
+          return {
+            config: { ...state.config, selectedAccountsToDisplay: newSelection }
           }
         }),
       

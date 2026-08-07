@@ -1,26 +1,42 @@
 "use client"
 
 import * as React from "react"
-import { Search, X } from "lucide-react"
+import { Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { Settings } from "lucide-react"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { cn } from "@/lib/utils"
+import { MAX_ACCOUNTS_DISPLAYED } from "@/lib/equity-chart"
 
 interface AccountSelectionPopoverProps {
   accountNumbers: string[]
   selectedAccounts: string[]
   onToggleAccount: (accountNumber: string) => void
-  t: (key: string) => string
+  t: (key: string, params?: Record<string, string | number>) => string
 }
 
-export const AccountSelectionPopover = React.memo(({ 
+export const AccountSelectionPopover = React.memo(({
   accountNumbers,
   selectedAccounts,
   onToggleAccount,
@@ -28,93 +44,127 @@ export const AccountSelectionPopover = React.memo(({
 }: AccountSelectionPopoverProps) => {
   const [open, setOpen] = React.useState(false)
   const [searchTerm, setSearchTerm] = React.useState('')
-  
+  const isMobile = useIsMobile()
+
   // Filter accounts based on search term
   const filteredAccounts = React.useMemo(() => {
     if (!searchTerm.trim()) return accountNumbers
-    return accountNumbers.filter(account => 
+    return accountNumbers.filter(account =>
       account.toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [accountNumbers, searchTerm])
-  
+
   // Calculate actual selected count (only accounts that exist in accountNumbers)
   const actualSelectedCount = React.useMemo(() => {
     return selectedAccounts.filter(account => accountNumbers.includes(account)).length
   }, [selectedAccounts, accountNumbers])
-  
-  // Clear search
-  const clearSearch = () => {
-    setSearchTerm('')
+
+  // Reset the search each time the surface closes so it reopens clean
+  React.useEffect(() => {
+    if (!open) setSearchTerm('')
+  }, [open])
+
+  // The chart can only draw MAX_ACCOUNTS_DISPLAYED lines, so the picker refuses
+  // to select more rather than letting the chart drop the extras silently.
+  const isAtCap = actualSelectedCount >= MAX_ACCOUNTS_DISPLAYED
+
+  const summary = t('equity.legend.selectionSummary', {
+    selected: actualSelectedCount,
+    total: accountNumbers.length,
+    max: MAX_ACCOUNTS_DISPLAYED,
+  })
+
+  const trigger = (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+    >
+      <Settings className="h-3 w-3 mr-1" />
+      {t('equity.legend.selectAccounts')}
+    </Button>
+  )
+
+  // `shouldFilter={false}`: the list is already filtered above, and cmdk's own
+  // scoring would reorder accounts away from their numeric order.
+  const accountList = (listClassName: string) => (
+    <Command shouldFilter={false}>
+      <CommandInput
+        value={searchTerm}
+        onValueChange={setSearchTerm}
+        placeholder={t('equity.legend.search')}
+      />
+      <CommandList className={listClassName}>
+        <CommandEmpty>
+          {accountNumbers.length === 0
+            ? t('equity.legend.noAccounts')
+            : t('equity.legend.noAccountsFound')}
+        </CommandEmpty>
+        <CommandGroup>
+          {filteredAccounts.map((accountNumber) => {
+            const isSelected = selectedAccounts?.includes(accountNumber) || false
+            // At the cap only deselection is left, so unchecked rows go inert
+            // instead of accepting a click the chart would then ignore.
+            const isDisabled = !isSelected && isAtCap
+            return (
+              <CommandItem
+                key={accountNumber}
+                value={accountNumber}
+                disabled={isDisabled}
+                onSelect={() => onToggleAccount(accountNumber)}
+                className={cn(
+                  "flex items-center gap-2",
+                  isDisabled ? "cursor-not-allowed" : "cursor-pointer"
+                )}
+              >
+                <Checkbox
+                  checked={isSelected}
+                  disabled={isDisabled}
+                  // The item's onSelect already toggles; the checkbox is a visual
+                  // state indicator so it must not fire a second toggle.
+                  tabIndex={-1}
+                  className="h-4 w-4 pointer-events-none"
+                />
+                <span className="flex-1 truncate">{accountNumber}</span>
+              </CommandItem>
+            )
+          })}
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  )
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={setOpen}>
+        <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+        <DrawerContent className="max-h-[85svh]">
+          <DrawerHeader className="pb-2">
+            <DrawerTitle className="text-base">
+              {t('equity.legend.selectAccounts')}
+            </DrawerTitle>
+            <DrawerDescription>{summary}</DrawerDescription>
+          </DrawerHeader>
+          {/* pb-safe: keep the last row clear of the home indicator */}
+          {accountList("max-h-[50svh] pb-[max(0.5rem,env(safe-area-inset-bottom))]")}
+        </DrawerContent>
+      </Drawer>
+    )
   }
-  
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-        >
-          <Settings className="h-3 w-3 mr-1" />
-          {t('equity.legend.selectAccounts')}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="h-[min(20rem,var(--radix-popover-content-available-height))] w-[min(24rem,calc(100vw-2rem))] p-4" align="start">
-        <div className="space-y-3 h-full flex flex-col">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium">
-                  {t('equity.legend.selected')} {actualSelectedCount} {t('equity.legend.of')} {accountNumbers.length}
-                </Label>
-                {searchTerm && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearSearch}
-                    className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-3 w-3 mr-1" />
-                    {t('equity.legend.clearSearch')}
-                  </Button>
-                )}
-              </div>
-              
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={t('equity.legend.search')}
-                  className="h-8 pl-7 pr-3 text-xs"
-                />
-              </div>
-              
-              <div className="flex-1 overflow-y-auto space-y-1 pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-                {filteredAccounts.length === 0 ? (
-                  <div className="text-xs text-muted-foreground text-center py-4">
-                    {searchTerm ? 'No accounts found' : 'No accounts available'}
-                  </div>
-                ) : (
-                  filteredAccounts.map((accountNumber) => (
-                    <div key={accountNumber} className="flex items-center space-x-2 py-1">
-                      <Checkbox
-                        id={`account-${accountNumber}`}
-                        checked={selectedAccounts?.includes(accountNumber) || false}
-                        onCheckedChange={() => onToggleAccount(accountNumber)}
-                        className="h-4 w-4"
-                      />
-                      <Label
-                        htmlFor={`account-${accountNumber}`}
-                        className="text-xs font-normal cursor-pointer flex-1 hover:text-foreground"
-                      >
-                        {accountNumber}
-                      </Label>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <PopoverContent
+        className="w-[min(24rem,calc(100vw-2rem))] p-0"
+        align="start"
+      >
+        <div className="px-3 pt-3 pb-1 text-xs font-medium text-muted-foreground">
+          {summary}
         </div>
+        {accountList(
+          "max-h-[min(18rem,calc(var(--radix-popover-content-available-height)-6rem))]"
+        )}
       </PopoverContent>
     </Popover>
   )

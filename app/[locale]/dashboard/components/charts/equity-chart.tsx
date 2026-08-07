@@ -41,6 +41,7 @@ import { useCurrentLocale } from "@/locales/client";
 import { useUserStore } from "@/store/user-store";
 import { useEquityChartStore } from "@/store/widgets/equity-chart-store";
 import { useEquityChartDataStore } from "@/store/widgets/equity-chart-data-store";
+import { MAX_ACCOUNTS_DISPLAYED } from "@/lib/equity-chart";
 import { Payout as PrismaPayout } from "@/prisma/generated/prisma/browser";
 import { AccountSelectionPopover } from "./account-selection-popover";
 import {
@@ -71,19 +72,22 @@ interface ChartDataPoint {
 const formatCurrency = (value: number) =>
   `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// Theme-aware chart colors defined in globals.css. This palette is why
+// MAX_ACCOUNTS_DISPLAYED is what it is — keep the two in step.
+const CHART_COLOR_VARS = [
+  "hsl(var(--chart-loss))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-win))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+  "hsl(var(--chart-6))",
+  "hsl(var(--chart-7))",
+  "hsl(var(--chart-8))",
+];
+
 // Map account numbers to theme-aware chart colors defined in globals.css
 function getChartColorByIndex(index: number): string {
-  const paletteVars = [
-    "hsl(var(--chart-loss))",
-    "hsl(var(--chart-2))",
-    "hsl(var(--chart-win))",
-    "hsl(var(--chart-4))",
-    "hsl(var(--chart-5))",
-    "hsl(var(--chart-6))",
-    "hsl(var(--chart-7))",
-    "hsl(var(--chart-8))",
-  ];
-  return paletteVars[index % paletteVars.length];
+  return CHART_COLOR_VARS[index % CHART_COLOR_VARS.length];
 }
 
 // Generate consistent theme-aware color based on accountNumber string
@@ -94,7 +98,7 @@ function generateAccountColor(accountNumber: string): string {
     hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }
-  const index = Math.abs(hash) % 8;
+  const index = Math.abs(hash) % CHART_COLOR_VARS.length;
   return getChartColorByIndex(index);
 }
 
@@ -415,19 +419,23 @@ OptimizedTooltip.displayName = "OptimizedTooltip";
 const AccountsLegend = React.memo(
   ({
     accountNumbers,
+    displayedAccounts,
     accountColorMap,
     selectedAccounts,
     chartData,
     hoveredData,
+    pointerValue,
     onToggleAccount,
     t,
     dateLocale,
   }: {
     accountNumbers: string[];
+    displayedAccounts: string[];
     accountColorMap: Map<string, string>;
     selectedAccounts: Set<string>;
     chartData: ChartDataPoint[];
     hoveredData: ChartDataPoint | null;
+    pointerValue: number | null;
     onToggleAccount: (accountNumber: string) => void;
     t: any;
     dateLocale: any;
@@ -440,14 +448,21 @@ const AccountsLegend = React.memo(
     const latestData = chartData[chartData.length - 1];
     const isHovered = !!hoveredData;
 
-    // Sort by latest equity values to maintain consistent order
-    const accountsWithEquity = accountNumbers
-      .filter((acc) => selectedAccounts.has(acc))
+    // One row per drawn line: `displayedAccounts` is the single list the chart
+    // lines are built from, so the legend never lists an account whose line
+    // isn't on the chart. Rows are then ordered by proximity to the pointer
+    // while hovering, otherwise by latest equity so the resting order stays
+    // consistent.
+    const accountsWithEquity = displayedAccounts
       .map((acc) => ({
         accountNumber: acc,
         equity:
           (displayData?.[`equity_${acc}` as keyof ChartDataPoint] as number) ||
           0,
+        // Whether this account actually has a point on the hovered date
+        hasPoint:
+          typeof displayData?.[`equity_${acc}` as keyof ChartDataPoint] ===
+          "number",
         latestEquity:
           (latestData?.[`equity_${acc}` as keyof ChartDataPoint] as number) ||
           0,
@@ -467,100 +482,108 @@ const AccountsLegend = React.memo(
             `payoutAmount_${acc}` as keyof ChartDataPoint
           ] as number) || 0,
       }))
-      .sort((a, b) => b.latestEquity - a.latestEquity);
+      .sort((a, b) => {
+        // While hovering, order by how close each account's point is to the
+        // pointer so the line under the cursor is listed first.
+        if (isHovered && pointerValue !== null) {
+          if (a.hasPoint !== b.hasPoint) return a.hasPoint ? -1 : 1;
+          if (a.hasPoint && b.hasPoint) {
+            const distanceDelta =
+              Math.abs(a.equity - pointerValue) -
+              Math.abs(b.equity - pointerValue);
+            if (distanceDelta !== 0) return distanceDelta;
+          }
+        }
+        return b.latestEquity - a.latestEquity;
+      });
 
     return (
       <div className="border-t pt-0 mt-2 h-fit flex flex-col">
-        <div className="flex items-center justify-between mb-2 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t("equity.legend.title")}
-              {isHovered && displayData && (
-                <span className="ml-2 text-xs text-primary">
-                  -{" "}
-                  {format(new Date(displayData.date), "MMM d, yyyy", {
-                    locale: dateLocale,
-                  })}
-                </span>
+        <div className="flex items-center justify-between gap-2 mb-2 shrink-0">
+          {/* Always render the date so hovering never reflows the row */}
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span
+              className={cn(
+                "text-xs font-medium truncate",
+                isHovered ? "text-primary" : "text-muted-foreground"
               )}
+            >
+              {displayData
+                ? format(new Date(displayData.date), "MMM d, yyyy", {
+                    locale: dateLocale,
+                  })
+                : null}
             </span>
-            <span className="text-xs text-muted-foreground">
-              ({accountsWithEquity.length} {t("equity.legend.accounts")})
-            </span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
             <InfoBubble
               side="top"
               iconClassName="size-3"
               contentClassName="z-9999 max-w-xs"
             >
               <p className="text-xs">
-                {t("equity.legend.maxAccountsInfo")}
+                {t("equity.legend.maxAccountsInfo", {
+                  max: MAX_ACCOUNTS_DISPLAYED,
+                })}
               </p>
             </InfoBubble>
+            <AccountSelectionPopover
+              accountNumbers={accountNumbers}
+              selectedAccounts={Array.from(selectedAccounts)}
+              onToggleAccount={onToggleAccount}
+              t={t}
+            />
           </div>
-          <AccountSelectionPopover
-            accountNumbers={accountNumbers}
-            selectedAccounts={Array.from(selectedAccounts)}
-            onToggleAccount={onToggleAccount}
-            t={t}
-          />
         </div>
         <div className="flex gap-3 overflow-x-auto max-w-full flex-1 scrollbar-hide">
           <div className="flex gap-3 min-w-max">
-            {accountsWithEquity
-              .slice(0, 20)
-              .map(
-                ({
-                  accountNumber,
-                  equity,
-                  color,
-                  hasPayout,
-                  hasReset,
-                  payoutStatus,
-                  payoutAmount,
-                }) => (
-                  <div
-                    key={accountNumber}
-                    className="flex items-center gap-1.5 shrink-0"
-                  >
-                    <div className="flex flex-col h-[50px] justify-start">
-                      <span className="text-xs font-medium text-foreground leading-tight relative mb-1"
-                      >
-                        {accountNumber}
-                        <span 
-                      className="w-full h-1 rounded-full shrink-0 absolute -bottom-1 left-0"
-                      style={{ backgroundColor: color}}
-                        ></span>
-                      </span>
-                      <span className="text-xs text-muted-foreground leading-tight tabular-nums">
-                        {formatCurrency(equity)}
-                      </span>
-                      <div className="min-h-3.5 flex flex-col">
-                        {hasPayout && (
-                          <span
-                            className="text-xs leading-tight tabular-nums"
-                            style={{ color: getPayoutColors(payoutStatus).fg }}
-                          >
-                            {t("equity.legend.payout")}:{" "}
-                            {formatCurrency(payoutAmount)}
-                          </span>
-                        )}
-                        {hasReset && (
-                          <span
-                            className="text-xs leading-tight"
-                            style={{ color: "hsl(var(--destructive))" }}
-                          >
-                            {t("equity.legend.reset")}
-                          </span>
-                        )}
-                      </div>
+            {accountsWithEquity.map(
+              ({
+                accountNumber,
+                equity,
+                color,
+                hasPayout,
+                hasReset,
+                payoutStatus,
+                payoutAmount,
+              }) => (
+                <div
+                  key={accountNumber}
+                  className="flex items-center gap-1.5 shrink-0"
+                >
+                  <div className="flex flex-col h-[50px] justify-start">
+                    <span className="text-xs font-medium text-foreground leading-tight relative mb-1">
+                      {accountNumber}
+                      <span
+                        className="w-full h-1 rounded-full shrink-0 absolute -bottom-1 left-0"
+                        style={{ backgroundColor: color }}
+                      ></span>
+                    </span>
+                    <span className="text-xs text-muted-foreground leading-tight tabular-nums">
+                      {formatCurrency(equity)}
+                    </span>
+                    <div className="min-h-3.5 flex flex-col">
+                      {hasPayout && (
+                        <span
+                          className="text-xs leading-tight tabular-nums"
+                          style={{ color: getPayoutColors(payoutStatus).fg }}
+                        >
+                          {t("equity.legend.payout")}:{" "}
+                          {formatCurrency(payoutAmount)}
+                        </span>
+                      )}
+                      {hasReset && (
+                        <span
+                          className="text-xs leading-tight"
+                          style={{ color: "hsl(var(--destructive))" }}
+                        >
+                          {t("equity.legend.reset")}
+                        </span>
+                      )}
                     </div>
                   </div>
-                )
-              )}
-            {accountsWithEquity.length > 20 && (
-              <div className="flex items-center gap-1.5 shrink-0 text-xs text-muted-foreground h-[50px]">
-                +{accountsWithEquity.length - 20} more
-              </div>
+                </div>
+              )
             )}
           </div>
         </div>
@@ -603,6 +626,8 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   const [hoveredData, setHoveredData] = React.useState<ChartDataPoint | null>(
     null
   );
+  // Equity value under the pointer, used to order the legend by proximity
+  const [pointerValue, setPointerValue] = React.useState<number | null>(null);
   // Local state only for shared/team view (client-side computation)
   const [localChartData, setLocalChartData] = React.useState<ChartDataPoint[]>(
     []
@@ -634,12 +659,37 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     }, []),
     []
   );
-  const yAxisRef = React.useRef<any>(null);
+  const chartRef = React.useRef<React.ComponentRef<typeof LineChart>>(null);
+  // Mirrors pointerValue for the activeDot renderer, which runs during the
+  // chart's own render and can't wait for the state update to land.
+  const pointerValueRef = React.useRef<number | null>(null);
+
+  // Convert the pointer position to an equity value using the Y axis scale so
+  // the legend can be ordered by distance to the cursor.
+  const handleChartMouseMove = React.useCallback(
+    (state: { isTooltipActive?: boolean; chartY?: number }) => {
+      if (!state?.isTooltipActive || typeof state.chartY !== "number") {
+        pointerValueRef.current = null;
+        setPointerValue(null);
+        return;
+      }
+      const yAxis = Object.values(chartRef.current?.state?.yAxisMap ?? {})[0];
+      const invert = (yAxis?.scale as { invert?: (pixel: number) => number })
+        ?.invert;
+      const value = invert?.(state.chartY);
+      const nextValue =
+        typeof value === "number" && !isNaN(value) ? value : null;
+      pointerValueRef.current = nextValue;
+      setPointerValue(nextValue);
+    },
+    []
+  );
   const t = useI18n();
   const locale = useCurrentLocale();
   const dateLocale = locale === "fr" ? fr : enUS;
 
-  // Account selection handlers
+  // Account selection handlers. The store refuses selections past the cap, so
+  // the picker's count always matches what the chart draws.
   const handleToggleAccount = React.useCallback(
     (accountNumber: string) => {
       toggleAccountSelection(accountNumber);
@@ -647,31 +697,25 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     [toggleAccountSelection]
   );
 
-  // Initialize selected accounts if empty OR validate existing selections
+  // Seed the selection, drop accounts that no longer exist, and trim anything
+  // over the cap — persisted selections predate it and can be arbitrarily long.
   React.useEffect(() => {
     if (availableAccountNumbers.length === 0) return;
 
-    // Filter to only valid accounts that actually exist
-    const validSelection =
-      config.selectedAccountsToDisplay?.filter((acc) =>
-        availableAccountNumbers.includes(acc)
-      ) || [];
+    const current = config.selectedAccountsToDisplay || [];
+    const validSelection = current.filter((acc) =>
+      availableAccountNumbers.includes(acc)
+    );
+    const nextSelection = (
+      validSelection.length === 0 ? availableAccountNumbers : validSelection
+    ).slice(0, MAX_ACCOUNTS_DISPLAYED);
 
-    // Reset if empty OR if none of the selected accounts are valid
-    if (validSelection.length === 0) {
-      console.log(
-        "[EquityChart] Resetting account selection to all available accounts"
-      );
-      setSelectedAccountsToDisplay(availableAccountNumbers);
-    } else if (
-      validSelection.length !== config.selectedAccountsToDisplay?.length
-    ) {
-      // Some accounts were invalid, update to only valid ones
-      console.log(
-        "[EquityChart] Updating account selection to remove invalid accounts"
-      );
-      setSelectedAccountsToDisplay(validSelection);
-    }
+    const isUnchanged =
+      nextSelection.length === current.length &&
+      nextSelection.every((acc, index) => acc === current[index]);
+    if (isUnchanged) return;
+
+    setSelectedAccountsToDisplay(nextSelection);
   }, [
     config.selectedAccountsToDisplay,
     availableAccountNumbers,
@@ -686,6 +730,20 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   const accountColorMap = React.useMemo(
     () => createAccountColorMap(availableAccountNumbers),
     [availableAccountNumbers]
+  );
+
+  // Single source of truth for individual mode: the accounts that get a drawn line.
+  // Chart lines, chart config, the nearest-line active dot and the legend all read
+  // this same list, so none of them can list an account the chart didn't draw.
+  // Selection is already capped, so the slice is only a guard for state that
+  // predates the cap; it mirrors how computeEquityChartData picks its accounts,
+  // which is what decides who actually has equity data to plot.
+  const displayedAccounts = React.useMemo(
+    () =>
+      availableAccountNumbers
+        .filter((acc) => selectedAccounts.has(acc))
+        .slice(0, MAX_ACCOUNTS_DISPLAYED),
+    [availableAccountNumbers, selectedAccounts]
   );
 
   // Client-side computation for shared view
@@ -813,9 +871,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       } as ChartConfig;
     }
 
-    const maxAccounts = 8; // Aligned with 8-color palette
-    const accountsToShow = Array.from(selectedAccounts).slice(0, maxAccounts);
-    return accountsToShow.reduce((acc, accountNumber) => {
+    return displayedAccounts.reduce((acc, accountNumber) => {
       acc[`equity_${accountNumber}`] = {
         label: `Account ${accountNumber}`,
         color:
@@ -825,7 +881,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       return acc;
     }, {} as ChartConfig);
   }, [
-    selectedAccounts,
+    displayedAccounts,
     showIndividual,
     accountColorMap,
     isSharedView,
@@ -850,9 +906,36 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       );
     }
 
-    const maxAccounts = 8; // Aligned with 8-color palette
-    const accountsToShow = Array.from(selectedAccounts).slice(0, maxAccounts);
-    return accountsToShow.map((accountNumber) => {
+    const drawnKeys = displayedAccounts.map((acc) => `equity_${acc}`);
+
+    // Only the line nearest the pointer gets an active dot, so a dense chart
+    // highlights the one series being read instead of all of them. Reads the
+    // pointer from a ref because recharts calls this while it renders.
+    const renderClosestActiveDot = (props: any) => {
+      const { payload, dataKey, cx, cy, fill } = props;
+      // recharts types activeDot as returning an element, so "no dot" is an
+      // r=0 circle rather than null — same idiom as renderDot above.
+      const noDot = <circle cx={cx} cy={cy} r={0} fill="none" />;
+      const pointerValue = pointerValueRef.current;
+      if (pointerValue === null || !payload) return noDot;
+
+      let closestKey: string | null = null;
+      let closestDistance = Infinity;
+      for (const key of drawnKeys) {
+        const value = payload[key];
+        if (typeof value !== "number") continue;
+        const distance = Math.abs(value - pointerValue);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestKey = key;
+        }
+      }
+
+      if (dataKey !== closestKey) return noDot;
+      return <circle cx={cx} cy={cy} r={3} fill={fill} />;
+    };
+
+    return displayedAccounts.map((accountNumber) => {
       // Use the same color mapping as legend to ensure consistency
       const color =
         accountColorMap.get(accountNumber) ||
@@ -865,13 +948,13 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
           strokeWidth={1.5} // Thinner lines for better performance
           dot={renderDot}
           isAnimationActive={false}
-          activeDot={{ r: 3, style: { fill: color } }}
+          activeDot={renderClosestActiveDot}
           stroke={color}
           connectNulls={false}
         />
       );
     });
-  }, [selectedAccounts, showIndividual, accountColorMap, isSharedView]);
+  }, [displayedAccounts, showIndividual, accountColorMap, isSharedView]);
 
   // Debug logging
   React.useEffect(() => {
@@ -945,13 +1028,22 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
               <ChartContainer config={chartConfig} className="w-full h-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
+                    ref={chartRef}
                     data={chartData}
                     margin={
                       size === "small"
                         ? { left: 10, right: 4, top: 4, bottom: 20 }
                         : { left: 10, right: 8, top: 8, bottom: 24 }
                     }
-                    onMouseLeave={() => setHoveredData(null)}
+                    // Entering fires onMouseEnter, not onMouseMove, so the
+                    // first hover would otherwise have no pointer value yet.
+                    onMouseEnter={handleChartMouseMove}
+                    onMouseMove={handleChartMouseMove}
+                    onMouseLeave={() => {
+                      setHoveredData(null);
+                      pointerValueRef.current = null;
+                      setPointerValue(null);
+                    }}
                   >
                     <CartesianGrid
                       strokeDasharray="3 3"
@@ -972,7 +1064,6 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
                       }
                     />
                     <YAxis
-                      ref={yAxisRef}
                       tickLine={false}
                       axisLine={false}
                       width={60}
@@ -1021,10 +1112,12 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
             size !== "small" && (
               <AccountsLegend
                 accountNumbers={availableAccountNumbers}
+                displayedAccounts={displayedAccounts}
                 accountColorMap={accountColorMap}
                 selectedAccounts={selectedAccounts}
                 chartData={chartData}
                 hoveredData={hoveredData}
+                pointerValue={pointerValue}
                 onToggleAccount={handleToggleAccount}
                 t={t}
                 dateLocale={dateLocale}
