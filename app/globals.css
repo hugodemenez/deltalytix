@@ -548,7 +548,7 @@
   }
 
   .landing-carousel-progress {
-    animation: landing-carousel-progress 6s linear forwards;
+    animation: landing-carousel-progress 3s linear forwards;
   }
 
   .performance-carousel[data-autoplay-paused='true'] .landing-carousel-progress {
