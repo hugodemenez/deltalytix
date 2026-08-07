@@ -24,6 +24,7 @@ function formatDateForAPI(date: Date): string {
   return formatDateToTimestamp(date)
 }
 
+
 // Helper function to format duration in a readable format (e.g., "1min 34sec")
 function formatDuration(seconds: number): string {
   if (seconds < 60) {
@@ -1519,15 +1520,17 @@ export async function storeTradovateToken(
       }
     })
 
-    await capturePostHogEvent({
-      distinctId: user.id,
-      event: 'integration_connected',
-      properties: {
-        integration: 'tradovate',
-        environment,
-        is_first_connection: !existingConnection,
-      },
-    })
+    if (!existingConnection) {
+      await capturePostHogEvent({
+        distinctId: user.id,
+        event: 'integration_connected',
+        properties: {
+          integration: 'tradovate',
+          environment,
+          is_first_connection: true,
+        },
+      })
+    }
 
     return { success: true }
   } catch (error) {
@@ -2068,5 +2071,3 @@ export async function updateDailySyncTimeAction(
     return { success: false, error: 'Failed to update daily sync time' }
   }
 }
-
-
