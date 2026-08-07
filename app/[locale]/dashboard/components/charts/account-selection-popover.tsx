@@ -26,12 +26,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { cn } from "@/lib/utils"
+import { MAX_ACCOUNTS_DISPLAYED } from "@/lib/equity-chart"
 
 interface AccountSelectionPopoverProps {
   accountNumbers: string[]
   selectedAccounts: string[]
   onToggleAccount: (accountNumber: string) => void
-  t: (key: string) => string
+  t: (key: string, params?: Record<string, string | number>) => string
 }
 
 export const AccountSelectionPopover = React.memo(({
@@ -62,7 +64,15 @@ export const AccountSelectionPopover = React.memo(({
     if (!open) setSearchTerm('')
   }, [open])
 
-  const summary = `${t('equity.legend.selected')} ${actualSelectedCount} ${t('equity.legend.of')} ${accountNumbers.length}`
+  // The chart can only draw MAX_ACCOUNTS_DISPLAYED lines, so the picker refuses
+  // to select more rather than letting the chart drop the extras silently.
+  const isAtCap = actualSelectedCount >= MAX_ACCOUNTS_DISPLAYED
+
+  const summary = t('equity.legend.selectionSummary', {
+    selected: actualSelectedCount,
+    total: accountNumbers.length,
+    max: MAX_ACCOUNTS_DISPLAYED,
+  })
 
   const trigger = (
     <Button
@@ -91,23 +101,34 @@ export const AccountSelectionPopover = React.memo(({
             : t('equity.legend.noAccountsFound')}
         </CommandEmpty>
         <CommandGroup>
-          {filteredAccounts.map((accountNumber) => (
-            <CommandItem
-              key={accountNumber}
-              value={accountNumber}
-              onSelect={() => onToggleAccount(accountNumber)}
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <Checkbox
-                checked={selectedAccounts?.includes(accountNumber) || false}
-                // The item's onSelect already toggles; the checkbox is a visual
-                // state indicator so it must not fire a second toggle.
-                tabIndex={-1}
-                className="h-4 w-4 pointer-events-none"
-              />
-              <span className="flex-1 truncate">{accountNumber}</span>
-            </CommandItem>
-          ))}
+          {filteredAccounts.map((accountNumber) => {
+            const isSelected = selectedAccounts?.includes(accountNumber) || false
+            // At the cap only deselection is left, so unchecked rows go inert
+            // instead of accepting a click the chart would then ignore.
+            const isDisabled = !isSelected && isAtCap
+            return (
+              <CommandItem
+                key={accountNumber}
+                value={accountNumber}
+                disabled={isDisabled}
+                onSelect={() => onToggleAccount(accountNumber)}
+                className={cn(
+                  "flex items-center gap-2",
+                  isDisabled ? "cursor-not-allowed" : "cursor-pointer"
+                )}
+              >
+                <Checkbox
+                  checked={isSelected}
+                  disabled={isDisabled}
+                  // The item's onSelect already toggles; the checkbox is a visual
+                  // state indicator so it must not fire a second toggle.
+                  tabIndex={-1}
+                  className="h-4 w-4 pointer-events-none"
+                />
+                <span className="flex-1 truncate">{accountNumber}</span>
+              </CommandItem>
+            )
+          })}
         </CommandGroup>
       </CommandList>
     </Command>

@@ -41,6 +41,7 @@ import { useCurrentLocale } from "@/locales/client";
 import { useUserStore } from "@/store/user-store";
 import { useEquityChartStore } from "@/store/widgets/equity-chart-store";
 import { useEquityChartDataStore } from "@/store/widgets/equity-chart-data-store";
+import { MAX_ACCOUNTS_DISPLAYED } from "@/lib/equity-chart";
 import { Payout as PrismaPayout } from "@/prisma/generated/prisma/browser";
 import { AccountSelectionPopover } from "./account-selection-popover";
 import {
@@ -71,7 +72,8 @@ interface ChartDataPoint {
 const formatCurrency = (value: number) =>
   `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-// Theme-aware chart colors defined in globals.css
+// Theme-aware chart colors defined in globals.css. This palette is why
+// MAX_ACCOUNTS_DISPLAYED is what it is — keep the two in step.
 const CHART_COLOR_VARS = [
   "hsl(var(--chart-loss))",
   "hsl(var(--chart-2))",
@@ -82,10 +84,6 @@ const CHART_COLOR_VARS = [
   "hsl(var(--chart-7))",
   "hsl(var(--chart-8))",
 ];
-
-// Past one line per palette entry colors repeat, so this also bounds how many
-// accounts individual mode can show at once.
-export const MAX_INDIVIDUAL_ACCOUNT_LINES = CHART_COLOR_VARS.length;
 
 // Map account numbers to theme-aware chart colors defined in globals.css
 function getChartColorByIndex(index: number): string {
@@ -422,8 +420,6 @@ const AccountsLegend = React.memo(
   ({
     accountNumbers,
     displayedAccounts,
-    selectedAccountCount,
-    maxAccountsDisplayed,
     accountColorMap,
     selectedAccounts,
     chartData,
@@ -435,8 +431,6 @@ const AccountsLegend = React.memo(
   }: {
     accountNumbers: string[];
     displayedAccounts: string[];
-    selectedAccountCount: number;
-    maxAccountsDisplayed: number;
     accountColorMap: Map<string, string>;
     selectedAccounts: Set<string>;
     chartData: ChartDataPoint[];
@@ -455,7 +449,7 @@ const AccountsLegend = React.memo(
     const isHovered = !!hoveredData;
 
     // One row per drawn line: `displayedAccounts` is the single list the chart
-    // lines are built from, so the legend never ranks an account whose line
+    // lines are built from, so the legend never lists an account whose line
     // isn't on the chart. Rows are then ordered by proximity to the pointer
     // while hovering, otherwise by latest equity so the resting order stays
     // consistent.
@@ -502,7 +496,6 @@ const AccountsLegend = React.memo(
         }
         return b.latestEquity - a.latestEquity;
       });
-    const hasHiddenAccounts = selectedAccountCount > accountsWithEquity.length;
 
     return (
       <div className="border-t pt-0 mt-2 h-fit flex flex-col">
@@ -530,7 +523,7 @@ const AccountsLegend = React.memo(
             >
               <p className="text-xs">
                 {t("equity.legend.maxAccountsInfo", {
-                  max: maxAccountsDisplayed,
+                  max: MAX_ACCOUNTS_DISPLAYED,
                 })}
               </p>
             </InfoBubble>
@@ -591,14 +584,6 @@ const AccountsLegend = React.memo(
                   </div>
                 </div>
               )
-            )}
-            {hasHiddenAccounts && (
-              <div className="flex items-center gap-1.5 shrink-0 text-xs text-muted-foreground h-[50px]">
-                {t("equity.tooltip.showingTopAccounts", {
-                  count: accountsWithEquity.length,
-                  total: selectedAccountCount,
-                })}
-              </div>
             )}
           </div>
         </div>
@@ -703,7 +688,8 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   const locale = useCurrentLocale();
   const dateLocale = locale === "fr" ? fr : enUS;
 
-  // Account selection handlers
+  // Account selection handlers. The store refuses selections past the cap, so
+  // the picker's count always matches what the chart draws.
   const handleToggleAccount = React.useCallback(
     (accountNumber: string) => {
       toggleAccountSelection(accountNumber);
@@ -711,31 +697,25 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     [toggleAccountSelection]
   );
 
-  // Initialize selected accounts if empty OR validate existing selections
+  // Seed the selection, drop accounts that no longer exist, and trim anything
+  // over the cap — persisted selections predate it and can be arbitrarily long.
   React.useEffect(() => {
     if (availableAccountNumbers.length === 0) return;
 
-    // Filter to only valid accounts that actually exist
-    const validSelection =
-      config.selectedAccountsToDisplay?.filter((acc) =>
-        availableAccountNumbers.includes(acc)
-      ) || [];
+    const current = config.selectedAccountsToDisplay || [];
+    const validSelection = current.filter((acc) =>
+      availableAccountNumbers.includes(acc)
+    );
+    const nextSelection = (
+      validSelection.length === 0 ? availableAccountNumbers : validSelection
+    ).slice(0, MAX_ACCOUNTS_DISPLAYED);
 
-    // Reset if empty OR if none of the selected accounts are valid
-    if (validSelection.length === 0) {
-      console.log(
-        "[EquityChart] Resetting account selection to all available accounts"
-      );
-      setSelectedAccountsToDisplay(availableAccountNumbers);
-    } else if (
-      validSelection.length !== config.selectedAccountsToDisplay?.length
-    ) {
-      // Some accounts were invalid, update to only valid ones
-      console.log(
-        "[EquityChart] Updating account selection to remove invalid accounts"
-      );
-      setSelectedAccountsToDisplay(validSelection);
-    }
+    const isUnchanged =
+      nextSelection.length === current.length &&
+      nextSelection.every((acc, index) => acc === current[index]);
+    if (isUnchanged) return;
+
+    setSelectedAccountsToDisplay(nextSelection);
   }, [
     config.selectedAccountsToDisplay,
     availableAccountNumbers,
@@ -752,39 +732,19 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     [availableAccountNumbers]
   );
 
-  // Persisted configs can carry a stale cap, and the palette can't tell more than
-  // MAX_INDIVIDUAL_ACCOUNT_LINES lines apart, so clamp before anything derives from it.
-  const maxAccountsDisplayed = Math.min(
-    Math.max(1, config.maxAccountsDisplayed || MAX_INDIVIDUAL_ACCOUNT_LINES),
-    MAX_INDIVIDUAL_ACCOUNT_LINES
-  );
-
   // Single source of truth for individual mode: the accounts that get a drawn line.
   // Chart lines, chart config, the nearest-line active dot and the legend all read
-  // this same list, so none of them can rank an account the chart didn't draw.
-  const { displayedAccounts, selectedAccountCount } = React.useMemo(() => {
-    const selected = availableAccountNumbers.filter((acc) =>
-      selectedAccounts.has(acc)
-    );
-    const latestData = chartData[chartData.length - 1];
-    const latestEquity = (acc: string) =>
-      (latestData?.[`equity_${acc}` as keyof ChartDataPoint] as number) || 0;
-
-    // Highest equity first; account number breaks ties so the set is stable.
-    const ranked = [...selected].sort(
-      (a, b) => latestEquity(b) - latestEquity(a) || a.localeCompare(b)
-    );
-
-    return {
-      displayedAccounts: ranked.slice(0, maxAccountsDisplayed),
-      selectedAccountCount: selected.length,
-    };
-  }, [
-    availableAccountNumbers,
-    selectedAccounts,
-    chartData,
-    maxAccountsDisplayed,
-  ]);
+  // this same list, so none of them can list an account the chart didn't draw.
+  // Selection is already capped, so the slice is only a guard for state that
+  // predates the cap; it mirrors how computeEquityChartData picks its accounts,
+  // which is what decides who actually has equity data to plot.
+  const displayedAccounts = React.useMemo(
+    () =>
+      availableAccountNumbers
+        .filter((acc) => selectedAccounts.has(acc))
+        .slice(0, MAX_ACCOUNTS_DISPLAYED),
+    [availableAccountNumbers, selectedAccounts]
+  );
 
   // Client-side computation for shared view
   const computeClientSideData = React.useCallback(() => {
@@ -1153,8 +1113,6 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
               <AccountsLegend
                 accountNumbers={availableAccountNumbers}
                 displayedAccounts={displayedAccounts}
-                selectedAccountCount={selectedAccountCount}
-                maxAccountsDisplayed={maxAccountsDisplayed}
                 accountColorMap={accountColorMap}
                 selectedAccounts={selectedAccounts}
                 chartData={chartData}
