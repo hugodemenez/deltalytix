@@ -66,6 +66,25 @@ export function resolveInternalDestination(
 }
 
 /**
+ * Resolves the `next` value the proxy itself writes.
+ *
+ * The proxy strips the leading slash when it builds `next` (`dashboard?tab=x`),
+ * so the slash is restored before resolution. Restoring it is not enough on its
+ * own: `next=/evil.example` becomes `//evil.example`, which is a
+ * protocol-relative URL to another origin, and `next=\evil.example` is
+ * normalised to the same thing. Containment therefore still runs on the result.
+ */
+export function resolveNextPath(
+  nextParam: string | null | undefined,
+  origin: string,
+): string {
+  if (!nextParam) return DEFAULT_DESTINATION;
+
+  const url = resolveInternalDestination(`/${nextParam}`, origin);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+/**
  * Client-side counterpart: takes a `next` value and returns the path to
  * navigate to, with the signup marker applied and any query string or hash
  * preserved.

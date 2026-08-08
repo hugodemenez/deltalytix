@@ -4,6 +4,7 @@ import {
   applySignupSuccess,
   hasSignupSuccess,
   resolveInternalDestination,
+  resolveNextPath,
   signupRedirectPath,
 } from "./signup-redirect";
 
@@ -79,6 +80,44 @@ describe("resolveInternalDestination", () => {
     expect(resolveInternalDestination(target, ORIGIN).href).toBe(
       `${ORIGIN}/dashboard`,
     );
+  });
+});
+
+describe("resolveNextPath", () => {
+  it.each([
+    ["dashboard", "/dashboard"],
+    ["fr/dashboard", "/fr/dashboard"],
+    ["dashboard/settings?tab=billing", "/dashboard/settings?tab=billing"],
+    ["teams/dashboard?team=1#members", "/teams/dashboard?team=1#members"],
+  ])("keeps the internal destination %s", (nextParam, expected) => {
+    expect(resolveNextPath(nextParam, ORIGIN)).toBe(expected);
+  });
+
+  it.each([null, undefined, ""])("falls back to the dashboard for %s", (nextParam) => {
+    expect(resolveNextPath(nextParam, ORIGIN)).toBe("/dashboard");
+  });
+
+  // A `next` that re-prefixes into a protocol-relative URL would otherwise turn
+  // the authentication redirect into an open redirect.
+  it.each(["/evil.example", "/evil.example/steal", "\\evil.example", "/\\evil.example"])(
+    "refuses the protocol-relative destination %s",
+    (nextParam) => {
+      expect(resolveNextPath(nextParam, ORIGIN)).toBe("/dashboard");
+    },
+  );
+
+  // The returned value is used as a redirect target, so the invariant that
+  // matters is that it can never resolve off this origin — whether it lands on
+  // the dashboard or on a harmless same-origin path.
+  it.each([
+    "/evil.example",
+    "\\evil.example",
+    "https://evil.example/steal",
+    "javascript:alert(1)",
+    "%2F%2Fevil.example",
+  ])("never resolves %s off-origin", (nextParam) => {
+    const resolved = new URL(resolveNextPath(nextParam, ORIGIN), ORIGIN);
+    expect(resolved.origin).toBe(ORIGIN);
   });
 });
 
