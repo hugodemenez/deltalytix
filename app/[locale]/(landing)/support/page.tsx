@@ -575,16 +575,18 @@ const ChatBotDemo = () => {
                                           {message.id.startsWith('error-') && (
                                             <Action
                                               onClick={() => {
-                                                const previousUserText = [...messages]
-                                                  .slice(
-                                                    0,
-                                                    messages.findIndex(
-                                                      (candidate) => candidate.id === message.id,
-                                                    ),
-                                                  )
+                                                const errorIndex = messages.findIndex(
+                                                  (candidate) => candidate.id === message.id,
+                                                );
+                                                const previousUser = messages
+                                                  .slice(0, errorIndex)
                                                   .reverse()
-                                                  .find((candidate) => candidate.role === 'user')
-                                                  ?.parts.filter((candidate) => candidate.type === 'text')
+                                                  .find((candidate) => candidate.role === 'user');
+                                                const previousUserText = previousUser?.parts
+                                                  .filter(
+                                                    (candidate): candidate is { type: 'text'; text: string } =>
+                                                      candidate.type === 'text',
+                                                  )
                                                   .map((candidate) => candidate.text.trim())
                                                   .find(Boolean);
 
