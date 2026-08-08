@@ -34,13 +34,12 @@ bundle via `SUPPORT_SEARCH_TRACE_INCLUDES`.
 ## Agent
 
 `lib/ai/support-agent.ts` — a `ToolLoopAgent`. Model defaults to `openai/gpt-5-mini` (via the
-Vercel AI Gateway; override with `SUPPORT_AGENT_MODEL`). The system prompt requires the model to
-search before answering, search at least twice before concluding something does not exist, and
-escalate rather than ask a second round of clarifying questions.
+Vercel AI Gateway; override with `SUPPORT_AGENT_MODEL`). Instructions stay short: use tools,
+search before answering, escalate when stuck, and do not re-introduce or title replies (the UI
+already greets the user).
 
 The support page sends the current UI `locale` (`en` | `fr`) with every request. `prepareCall`
-injects a UI-locale block so reasoning titles and answers follow `/en` or `/fr` instead of
-guessing from the first message.
+appends a one-line locale hint so replies follow `/en` or `/fr`.
 
 ## Request flow
 

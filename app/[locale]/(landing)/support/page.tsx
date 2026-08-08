@@ -282,17 +282,25 @@ const ChatBotDemo = () => {
   const startEditing = useCallback((messageId: string, text: string) => {
     setPendingEditMessageId(messageId);
     setInput(text);
-    requestAnimationFrame(() => {
-      const composer = composerRef.current;
-      composer?.focus();
-      composer?.setSelectionRange(composer.value.length, composer.value.length);
-    });
   }, []);
 
   const cancelEditing = useCallback(() => {
     setPendingEditMessageId(null);
     setInput('');
   }, []);
+
+  // Focus after React commits the edited text — rAF from the click handler races
+  // the controlled value update and often never lands on the textarea.
+  useEffect(() => {
+    if (!pendingEditMessageId) return;
+
+    const composer = composerRef.current;
+    if (!composer) return;
+
+    composer.focus();
+    const cursor = composer.value.length;
+    composer.setSelectionRange(cursor, cursor);
+  }, [pendingEditMessageId]);
 
   const pendingEditIndex = pendingEditMessageId
     ? messages.findIndex((message) => message.id === pendingEditMessageId)
