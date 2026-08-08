@@ -30,36 +30,36 @@ export default function AuthenticationPageClient() {
           </div>
           <div className="relative z-20 mt-auto">
             <blockquote className="space-y-2">
-              <p className="text-lg text-foreground/90">
+              <p className="text-pretty text-lg leading-relaxed text-black/60 dark:text-white/60">
                 {t('authentication.testimonial')}
               </p>
-              <footer className="text-sm text-muted-foreground">{t('authentication.testimonialAuthor')}</footer>
+              <footer className="text-sm text-black/45 dark:text-white/45">{t('authentication.testimonialAuthor')}</footer>
             </blockquote>
           </div>
         </div>
         <div className="flex h-full items-center justify-center bg-card p-4 lg:p-8">
-          <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-            <div className="flex flex-col space-y-2 text-center">
-              <h1 className="text-2xl font-semibold tracking-tight">
+          <div className="mx-auto flex w-full flex-col justify-center gap-8 sm:w-[380px]">
+            <div className="flex flex-col gap-3">
+              <h1 className="text-balance text-3xl font-normal tracking-[-0.04em] md:text-4xl">
                 {t('authentication.title')}
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-pretty leading-relaxed text-black/55 dark:text-white/55">
                 {t('authentication.description')}
               </p>
             </div>
             <UserAuthForm />
-            <p className="px-8 text-center text-sm text-muted-foreground">
+            <p className="text-pretty text-sm leading-relaxed text-black/45 dark:text-white/45">
               {t('authentication.termsAndPrivacy.prefix')}{" "}
               <Link
                 href="/terms"
-                className="underline underline-offset-4 hover:text-primary"
+                className="underline underline-offset-4 transition-colors duration-150 hover:text-black dark:hover:text-white"
               >
                 {t('authentication.termsAndPrivacy.terms')}
               </Link>{" "}
               {t('authentication.termsAndPrivacy.and')}{" "}
               <Link
                 href="/privacy"
-                className="underline underline-offset-4 hover:text-primary"
+                className="underline underline-offset-4 transition-colors duration-150 hover:text-black dark:hover:text-white"
               >
                 {t('authentication.termsAndPrivacy.privacy')}
               </Link>
