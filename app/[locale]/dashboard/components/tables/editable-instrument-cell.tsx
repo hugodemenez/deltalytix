@@ -90,26 +90,30 @@ export function EditableInstrumentCell({
           onKeyDown={handleKeyDown}
           onBlur={handleSave}
           placeholder="Instrument"
-          className="h-7 text-base sm:text-xs font-medium border-blue-500 focus-visible:ring-1"
+          className="h-7 text-base sm:text-xs font-medium border-ring focus-visible:ring-1"
           disabled={isSaving}
         />
+        {/* Save and cancel are disambiguated by their icons and accessible
+            names; a green tick and a red cross add no further meaning. */}
         <Button
           size="sm"
           variant="ghost"
-          className="h-7 w-7 p-0 hover:bg-green-100"
+          className="h-7 w-7 p-0"
           onClick={handleSave}
           disabled={isSaving}
+          aria-label={t('common.save')}
         >
-          <Check className="h-3 w-3 text-green-600" />
+          <Check className="h-3 w-3" />
         </Button>
         <Button
           size="sm"
           variant="ghost"
-          className="h-7 w-7 p-0 hover:bg-red-100"
+          className="h-7 w-7 p-0"
           onClick={handleCancel}
           disabled={isSaving}
+          aria-label={t('common.cancel')}
         >
-          <X className="h-3 w-3 text-red-600" />
+          <X className="h-3 w-3" />
         </Button>
       </div>
     )
@@ -118,13 +122,13 @@ export function EditableInstrumentCell({
   return (
     <div
       className={cn(
-        "group cursor-pointer hover:bg-accent/50 rounded px-2 py-1 transition-colors border border-transparent hover:border-accent-foreground/20 flex items-center gap-2",
+        "group cursor-pointer hover:bg-accent/50 rounded px-2 py-1 motion-safe:transition-colors border border-transparent hover:border-accent-foreground/20 flex items-center gap-2",
         className
       )}
       onClick={handleStartEdit}
     >
       <span className="text-sm font-medium">{value}</span>
-      <Edit3 className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+      <Edit3 className="h-3 w-3 opacity-0 group-hover:opacity-60 motion-safe:transition-opacity" />
     </div>
   )
 }

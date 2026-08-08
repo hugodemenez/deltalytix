@@ -154,19 +154,19 @@ export function TradeVideoUrl({ tradeIds, videoUrl: initialVideoUrl, onVideoUrlC
                     className={cn(
                       "pr-8",
                       !isValid && draftUrl && "border-destructive focus-visible:ring-destructive",
-                      showSuccess && "border-green-500 focus-visible:ring-green-500",
+                      showSuccess && "border-success focus-visible:ring-success",
                       isUpdating && "border-primary/50"
                     )}
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     {isUpdating && (
                       <div className="h-4 w-4">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-r-transparent" />
+                        <div className="h-4 w-4 motion-safe:animate-spin rounded-full border-2 border-primary border-r-transparent" />
                       </div>
                     )}
                     {showSuccess && !isUpdating && (
                       <svg
-                        className="h-4 w-4 text-green-500"
+                        className="h-4 w-4 text-success"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         stroke="currentColor"

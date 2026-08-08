@@ -199,7 +199,7 @@ export function TradeTag({ trade, tradeIds }: TradeTagProps) {
           </Command>
           {isUpdating && (
             <div className="absolute right-2 top-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+              <div className="motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
             </div>
           )}
         </PopoverContent>

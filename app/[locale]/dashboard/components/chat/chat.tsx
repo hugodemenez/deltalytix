@@ -4,7 +4,7 @@ import type React from "react";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, MessageSquare } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { WidgetBody, WidgetCard } from "../widgets";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -326,14 +326,14 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
 
   return (
     <MessageScrollerProvider autoScroll>
-      <Card className="h-full flex flex-col bg-background relative overflow-clip">
+      <WidgetCard className="relative bg-background">
         <ChatHeader
           title="AI Assistant"
           onReset={handleReset}
           isLoading={isProcessingResponse}
           size={size}
         />
-        <CardContent className="flex-1 flex flex-col min-h-0 p-0 relative">
+        <WidgetBody flush className="relative flex flex-col">
           <MessageScroller className="flex-1 min-h-0">
             <MessageScrollerViewport>
               <MessageScrollerContent className="p-4" aria-busy={isProcessingResponse}>
@@ -673,7 +673,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
           onFilesChange={setFiles}
           files={files}
         />
-      </CardContent>
+      </WidgetBody>
       {!isStarted && !isLoadingMessages && storedMessages.length === 0 && (
         <div className="absolute inset-0 bg-background/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-md p-4 sm:p-6 space-y-4 sm:space-y-6 text-center">
@@ -705,7 +705,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
           </div>
         </div>
       )}
-    </Card>
+    </WidgetCard>
     </MessageScrollerProvider>
   );
 }

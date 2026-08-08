@@ -114,18 +114,18 @@ export function TradeComment({ tradeIds, comment: initialComment, onCommentChang
                   onChange={(e) => setLocalComment(e.target.value)}
                   className={cn(
                     "w-full px-3 py-2 text-base sm:text-sm bg-transparent border rounded min-h-[100px]",
-                    "focus:outline-hidden focus:ring-2 focus:ring-primary resize-none transition-all duration-200",
-                    showSuccess && "border-green-500 ring-2 ring-green-500/20",
+                    "focus:outline-hidden focus:ring-2 focus:ring-primary resize-none motion-safe:transition-colors motion-safe:duration-150",
+                    showSuccess && "border-success ring-2 ring-success/20",
                     isUpdating && "border-primary/50"
                   )}
                 />
                 {isUpdating && (
                   <div className="absolute right-2 top-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                    <div className="motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
                   </div>
                 )}
                 {showSuccess && !isUpdating && (
-                  <div className="absolute right-2 top-2 text-green-500 animate-in fade-in zoom-in duration-300">
+                  <div className="absolute right-2 top-2 text-success motion-safe:animate-in motion-safe:fade-in motion-safe:duration-150">
                     <svg
                       className="h-4 w-4"
                       fill="none"

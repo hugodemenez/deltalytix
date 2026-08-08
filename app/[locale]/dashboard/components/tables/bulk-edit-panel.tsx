@@ -4,9 +4,8 @@ import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { WidgetBody, WidgetCard, WidgetHeader, widgetType } from '../widgets'
 import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
 import { Clock, Edit3, Plus, Minus, X } from 'lucide-react'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
@@ -122,31 +121,35 @@ export function BulkEditPanel({
   if (!isVisible) return null
 
   return (
-    <Card className={cn(
-      "fixed bottom-4 right-4 w-96 z-50 shadow-2xl border-2 transition-all duration-150 ease-out",
+    // A floating panel earns its elevation, but one border is enough to say it
+    // sits above the table.
+    <WidgetCard className={cn(
+      "fixed bottom-4 right-4 z-50 h-auto w-96 shadow-lg motion-safe:transition-all motion-safe:duration-150 motion-safe:ease-out",
       isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
       className
     )}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            {t('trade-table.bulkEdit.title')}
-            <Badge variant="secondary" className="text-xs">
-              {selectedTrades.length} {t('trade-table.bulkEdit.trades')}
-            </Badge>
-          </CardTitle>
+      <WidgetHeader
+        title={t('trade-table.bulkEdit.title')}
+        actions={
           <Button
             variant="ghost"
             size="sm"
             onClick={handleClose}
             className="h-6 w-6 p-0"
+            aria-label={t('common.close')}
           >
             <X className="h-4 w-4" />
           </Button>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
+        }
+      >
+        {/* The selection count is ordinary metadata, so it reads as text
+            rather than as a badge. */}
+        <span className={cn(widgetType.caption, "shrink-0 tabular-nums")}>
+          {selectedTrades.length} {t('trade-table.bulkEdit.trades')}
+        </span>
+      </WidgetHeader>
+
+      <WidgetBody className="space-y-4">
         {/* Time Adjustments */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -346,7 +349,7 @@ export function BulkEditPanel({
             )}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </WidgetBody>
+    </WidgetCard>
   )
 }

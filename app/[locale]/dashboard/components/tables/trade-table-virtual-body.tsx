@@ -31,7 +31,7 @@ function TradeTableBodyRow<TData>({
     <tr
       data-state={row.getIsSelected() && "selected"}
       className={cn(
-        "border-b border-border transition-colors duration-75 hover:bg-muted/40 group",
+        "border-b border-border motion-safe:transition-colors duration-75 hover:bg-muted/40 group",
         row.getIsSelected() &&
           "bg-accent/50 hover:bg-accent data-[state=selected]:bg-muted",
         row.getIsExpanded()

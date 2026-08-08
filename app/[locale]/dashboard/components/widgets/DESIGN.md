@@ -13,11 +13,17 @@ In a trading dashboard "significant meaning" is a short list:
 
 | Meaning                     | Token                                    |
 | --------------------------- | ---------------------------------------- |
-| Positive / winning P&L      | `hsl(var(--chart-win))` / `text-success`  |
-| Negative / losing P&L       | `hsl(var(--chart-loss))` / `text-destructive` |
+| Positive / winning P&L      | `pnlToneClass('positive')` → `--chart-win` |
+| Negative / losing P&L       | `pnlToneClass('negative')` → `--chart-loss` |
 | Breakeven / neutral         | `hsl(var(--muted-foreground))`            |
+| Action succeeded (transient)| `text-success` / `border-success`         |
+| Action failed / destructive | `text-destructive`                        |
 | Active selection / filter   | `hsl(var(--primary))`                     |
 | Categorical series (3+)     | `--chart-1` … `--chart-8`, in order       |
+
+`success` is distinct from `--chart-win`: the former marks a completed action
+(a save confirmed), the latter marks a positive financial result. Do not
+substitute one for the other.
 
 Everything else — magnitude bars, distributions, timelines, axis furniture — is
 `foreground` / `muted-foreground` / `border`. Never hardcode `text-green-500`,
