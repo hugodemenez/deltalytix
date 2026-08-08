@@ -22,15 +22,22 @@ import StatisticsWidget from '../components/statistics/statistics-widget'
 import { TradeTableReview } from '../components/tables/trade-table-review'
 import { MoodSelector } from '../components/calendar/mood-selector'
 import TradeDistributionChart from '../components/charts/trade-distribution'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetChartSkeleton,
+  WidgetHeader,
+  WidgetSkeleton,
+  WidgetStatListSkeleton,
+  widgetType,
+} from '../components/widgets'
 import { AccountsOverview } from '../components/accounts/accounts-overview'
 import { TagWidget } from '../components/filters/tag-widget'
 import ProfitFactorCard from '../components/statistics/profit-factor-card'
 import DailyTickTargetChart from '../components/charts/daily-tick-target'
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import { MindsetWidget } from '../components/mindset/mindset-widget'
 import ChatWidget from '../components/chat/chat'
 import { useI18n } from '@/locales/client'
@@ -50,160 +57,139 @@ export interface WidgetConfig {
   getPreview: () => React.JSX.Element
 }
 
+/**
+ * A preview is a sample of a widget, not a loading state. `WidgetSkeleton`
+ * carries `motion-safe:animate-pulse` for the real loading case; inside a
+ * preview every placeholder is frozen so nothing on the picker shimmers.
+ */
+const previewStatic = '[&_*]:motion-safe:animate-none!'
+
+/**
+ * Every preview is the same shell the real widget renders — one `WidgetCard`,
+ * one `WidgetHeader`, one `WidgetBody` — so what a user previews is the frame
+ * they get on the canvas.
+ */
+function PreviewShell({
+  title,
+  actions,
+  flush = false,
+  bodyClassName,
+  children,
+}: {
+  title: React.ReactNode
+  actions?: React.ReactNode
+  flush?: boolean
+  bodyClassName?: string
+  children: React.ReactNode
+}) {
+  return (
+    <WidgetCard className={previewStatic}>
+      <WidgetHeader title={title} actions={actions} />
+      <WidgetBody
+        flush={flush}
+        className={cn('overflow-hidden', bodyClassName)}
+      >
+        {children}
+      </WidgetBody>
+    </WidgetCard>
+  )
+}
+
 // Helper function to create table preview
 function createTablePreview(type: 'tradeTableReview' | 'consistencyTable') {
+  // Column widths mirror the real table: an id column, a wide label column,
+  // then right-aligned numeric columns.
+  const columns =
+    type === 'tradeTableReview'
+      ? ['w-14', 'w-20', 'w-10', 'w-12', 'w-12']
+      : ['w-20', 'w-20', 'w-10', 'w-10', 'w-10']
+
   return (
-    <Card className="h-[300px]">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium">
-          {type === 'tradeTableReview' ? 'Trade Review' : 'Consistency Analysis'}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pb-2">
-        <div className="w-full flex flex-col gap-2">
-          <div className="flex items-center gap-2 sm:gap-4 px-2 sm:px-3 py-2 bg-muted rounded-md border">
-            {Array(type === 'tradeTableReview' ? 4 : 5).fill(0).map((_, i) => (
-              <div key={i} className={cn(
-                "h-4 bg-muted-foreground/20 rounded",
-                type === 'tradeTableReview' 
-                  ? i === 1 ? "flex-3" : "flex-2"
-                  : i < 2 ? "flex-2" : "flex-1"
-              )} />
+    <PreviewShell
+      title={type === 'tradeTableReview' ? 'Trade review' : 'Consistency analysis'}
+      flush
+      bodyClassName="flex flex-col"
+    >
+      <div className="flex shrink-0 items-center gap-4 border-b bg-muted/50 px-4 py-2">
+        {columns.map((width, index) => (
+          <WidgetSkeleton key={index} className={cn('h-2.5', width)} />
+        ))}
+      </div>
+      <div className="flex min-h-0 flex-col">
+        {Array.from({ length: 5 }).map((_, rowIndex) => (
+          <div
+            key={rowIndex}
+            className="flex items-center gap-4 border-b px-4 py-2.5 last:border-b-0"
+          >
+            {columns.map((width, index) => (
+              <WidgetSkeleton key={index} className={cn('h-2', width)} />
             ))}
           </div>
-          {[...Array(4)].map((_, rowIndex) => (
-            <div key={rowIndex} className="flex items-center gap-2 sm:gap-4 px-2 sm:px-3 py-2 border border-border/50 rounded-md">
-              {Array(type === 'tradeTableReview' ? 4 : 5).fill(0).map((_, i) => (
-                <div key={i} className={cn(
-                  "h-3 bg-muted-foreground/10 rounded",
-                  type === 'tradeTableReview' 
-                    ? i === 1 ? "flex-3" : "flex-2"
-                    : i < 2 ? "flex-2" : "flex-1"
-                )} />
-              ))}
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+        ))}
+      </div>
+    </PreviewShell>
   )
 }
 
 function createPropfirmPreview() {
-  // Sample data for the preview
-  const data = [
-    { name: '1', equity: 100, drawdown: 95 },
-    { name: '2', equity: 120, drawdown: 110 },
-    { name: '3', equity: 115, drawdown: 105 },
-    { name: '4', equity: 130, drawdown: 120 },
-    { name: '5', equity: 140, drawdown: 130 },
-    { name: '6', equity: 150, drawdown: 140 },
-  ]
-
   return (
-    <Card className="h-[300px]">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium">Propfirm</CardTitle>
-      </CardHeader>
-      <CardContent className="pb-2">
-        <div className="w-full flex flex-col gap-3">
-          {[...Array(2)].map((_, index) => (
-            <div key={index} className="flex flex-col gap-2 p-3 bg-muted rounded-md border">
-              <div className="flex justify-between items-center">
-                <div className="h-4 w-24 bg-muted-foreground/20 rounded" />
-                <div className="h-4 w-16 bg-muted-foreground/20 rounded" />
-              </div>
-              <div className="h-20 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-                    <XAxis dataKey="name" hide />
-                    <YAxis hide />
-                    <Line
-                      type="monotone"
-                      dataKey="equity"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="drawdown"
-                      stroke="hsl(var(--destructive))"
-                      strokeWidth={2}
-                      strokeDasharray="4 2"
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          ))}
+    <PreviewShell title="Prop firm" bodyClassName="flex flex-col gap-4">
+      {[0, 1].map((index) => (
+        <div key={index} className="flex min-w-0 flex-col gap-2">
+          <div className="flex items-center justify-between gap-3">
+            <WidgetSkeleton className="h-2.5 w-24" />
+            <WidgetSkeleton className="h-2.5 w-16" />
+          </div>
+          <div className="h-16">
+            <WidgetChartSkeleton />
+          </div>
+          <WidgetStatListSkeleton rows={2} />
         </div>
-      </CardContent>
-    </Card>
+      ))}
+    </PreviewShell>
   )
 }
 
-function createMindsetPreview() {
+function CreateMindsetPreview() {
   const t = useI18n()
   return (
-    <Card className="h-[300px] flex flex-col">
-      <CardHeader className="pb-3 border-b">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">{t('mindset.title')}</CardTitle>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-              <div className="h-1.5 w-1.5 rounded-full bg-muted" />
-              <div className="h-1.5 w-1.5 rounded-full bg-muted" />
-            </div>
+    <PreviewShell title={t('mindset.title')} flush bodyClassName="flex flex-row">
+      {/* Day rail: the current day is the one selection worth a color. */}
+      <div className="flex w-14 shrink-0 flex-col items-center gap-1 border-r py-3">
+        {Array.from({ length: 7 }).map((_, index) => (
+          <div key={index} className="flex flex-col items-center gap-1">
+            <div
+              aria-hidden
+              className={cn(
+                'size-2 rounded-full',
+                index === 2 ? 'bg-primary' : 'bg-muted-foreground/30',
+              )}
+            />
+            {index < 6 ? (
+              <div aria-hidden className="h-4 w-px bg-border" />
+            ) : null}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-4 p-4">
+        <div className="flex flex-col gap-2">
+          <WidgetSkeleton className="h-2.5 w-28" />
+          <div className="flex gap-2">
+            <WidgetSkeleton className="h-5 w-14 rounded-full" />
+            <WidgetSkeleton className="h-5 w-16 rounded-full" />
+            <WidgetSkeleton className="h-5 w-12 rounded-full" />
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="flex-1 p-0 flex flex-row">
-        {/* Timeline mock */}
-        <div className="w-16 border-r p-2 flex flex-col gap-1">
-          {[...Array(7)].map((_, index) => (
-            <div key={index} className="flex flex-col items-center gap-1">
-              <div className={cn(
-                "h-6 w-6 rounded-full border-2 flex items-center justify-center",
-                index === 2 ? "bg-primary border-primary" : "border-muted-foreground/20"
-              )}>
-                <div className="h-1 w-1 rounded-full bg-white" />
-              </div>
-              {index < 6 && <div className="h-4 w-px bg-muted-foreground/20" />}
-            </div>
-          ))}
+
+        <div className="flex flex-col gap-2">
+          <WidgetSkeleton className="h-2.5 w-20" />
+          <WidgetSkeleton className="h-14 w-full" />
         </div>
-        
-        {/* Content area mock */}
-        <div className="flex-1 p-4 flex flex-col gap-3">
-          <div className="flex flex-col gap-2">
-            <div className="h-4 w-32 bg-muted-foreground/20 rounded" />
-            <div className="flex gap-2">
-              <div className="h-6 w-16 bg-muted rounded-full" />
-              <div className="h-6 w-20 bg-muted rounded-full" />
-              <div className="h-6 w-18 bg-muted rounded-full" />
-            </div>
-          </div>
-          
-          <div className="flex flex-col gap-2">
-            <div className="h-4 w-24 bg-muted-foreground/20 rounded" />
-            <div className="h-16 w-full bg-muted rounded border" />
-          </div>
-          
-          <div className="flex flex-col gap-2">
-            <div className="h-4 w-28 bg-muted-foreground/20 rounded" />
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 bg-muted rounded-full" />
-              <div className="h-2 flex-1 bg-muted-foreground/10 rounded-full">
-                <div className="h-2 w-1/2 bg-primary rounded-full" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+
+        <WidgetStatListSkeleton rows={2} />
+      </div>
+    </PreviewShell>
   )
 }
 
@@ -220,57 +206,52 @@ function CreateCalendarPreview() {
   ] as const
 
   return (
-    <Card className="h-[500px] flex flex-col">
-      <CardHeader className="pb-3 border-b">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CardTitle className="text-sm font-medium">Calendar</CardTitle>
+    <PreviewShell
+      title="Calendar"
+      bodyClassName="flex flex-col gap-2"
+      actions={
+        <>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            aria-label="Previous month"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            aria-label="Next month"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </>
+      }
+    >
+      {/* Weekday headers */}
+      <div className="grid shrink-0 grid-cols-7 gap-1">
+        {weekdays.map((day) => (
+          <div key={day} className={cn(widgetType.label, 'text-center')}>
+            {translateWeekday(t, day)}
           </div>
-          <div className="flex items-center gap-1.5">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="h-7 w-7 sm:h-8 sm:w-8"
-              aria-label="Previous month"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="h-7 w-7 sm:h-8 sm:w-8"
-              aria-label="Next month"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+        ))}
+      </div>
+
+      {/* Calendar grid: the cell borders are the real structure of a month grid */}
+      <div className="grid min-h-0 flex-1 grid-cols-7 gap-1">
+        {Array.from({ length: 35 }, (_, i) => (
+          <div
+            key={i}
+            className="flex min-h-0 flex-col justify-between rounded-sm border p-1"
+          >
+            <WidgetSkeleton className="h-1.5 w-4" />
+            <WidgetSkeleton className="h-2 w-full" />
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-1 p-4">
-        {/* Weekday headers */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
-          {weekdays.map((day) => (
-            <div key={day} className="text-center text-xs font-medium text-muted-foreground p-1">
-              {translateWeekday(t, day)}
-            </div>
-          ))}
-        </div>
-        
-        {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-1 h-[calc(100%-40px)]">
-          {/* Calendar days - just empty boxes showing the structure */}
-          {Array.from({ length: 35 }, (_, i) => (
-            <div 
-              key={i} 
-              className="flex flex-col items-center justify-center p-1 rounded border border-border hover:bg-accent transition-colors cursor-pointer"
-            >
-              <div className="h-4 w-full bg-muted-foreground/10 rounded mb-0.5" />
-              <div className="h-2 w-3/4 bg-muted-foreground/5 rounded" />
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+        ))}
+      </div>
+    </PreviewShell>
   )
 }
 
@@ -278,69 +259,52 @@ function CreateChatPreview() {
   const t = useI18n()
 
   return (
-    <Card className="h-[300px] flex flex-col bg-background relative">
-      {/* Header */}
-      <CardHeader className="pb-3 border-b">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">AI Assistant</CardTitle>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-            Reset
-          </Button>
+    <PreviewShell
+      title={t('chat.title')}
+      flush
+      bodyClassName="flex flex-col"
+      actions={
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+          {t('chat.resetConversation')}
+        </Button>
+      }
+    >
+      <div className="flex min-h-0 flex-1 flex-col gap-3 p-4">
+        {/* Assistant turn */}
+        <div className="flex flex-col gap-1.5 self-start">
+          <WidgetSkeleton className="h-2.5 w-40" />
+          <WidgetSkeleton className="h-2.5 w-28" />
         </div>
-      </CardHeader>
-      
-      {/* Chat area */}
-      <CardContent className="flex-1 flex flex-col min-h-0 p-0 relative">
-        <div className="flex-1 min-h-0 w-full overflow-y-auto">
-          <div className="p-4 space-y-3">
-            {/* Bot message */}
-            <div className="flex items-start gap-2">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <div className="w-3 h-3 rounded-full bg-primary" />
-              </div>
-              <div className="bg-muted rounded-lg p-2 max-w-[80%]">
-                <div className="h-3 w-32 bg-muted-foreground/20 rounded mb-1" />
-                <div className="h-3 w-24 bg-muted-foreground/20 rounded" />
-              </div>
-            </div>
-            
-            {/* User message */}
-            <div className="flex items-start gap-2 justify-end">
-              <div className="bg-primary rounded-lg p-2 max-w-[80%]">
-                <div className="h-3 w-20 bg-primary-foreground/40 rounded" />
-              </div>
-              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <div className="w-3 h-3 rounded-full bg-muted-foreground" />
-              </div>
-            </div>
-            
-            {/* Bot message */}
-            <div className="flex items-start gap-2">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <div className="w-3 h-3 rounded-full bg-primary" />
-              </div>
-              <div className="bg-muted rounded-lg p-2 max-w-[80%]">
-                <div className="h-3 w-40 bg-muted-foreground/20 rounded mb-1" />
-                <div className="h-3 w-28 bg-muted-foreground/20 rounded mb-1" />
-                <div className="h-3 w-16 bg-muted-foreground/20 rounded" />
-              </div>
-            </div>
-          </div>
+
+        {/* The reader's own turn, right aligned like the real transcript */}
+        <div className="flex flex-col items-end gap-1.5 self-end rounded-md bg-muted px-3 py-2">
+          <WidgetSkeleton className="h-2.5 w-24" />
         </div>
-        
-        {/* Input area */}
-        <div className="border-t p-3">
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-9 bg-muted rounded-md border flex items-center px-3">
-              <div className="h-3 w-24 bg-muted-foreground/20 rounded" />
-            </div>
-            <Button size="sm" className="h-9 px-3">
-              Send
-            </Button>
-          </div>
+
+        {/* Assistant turn */}
+        <div className="flex flex-col gap-1.5 self-start">
+          <WidgetSkeleton className="h-2.5 w-44" />
+          <WidgetSkeleton className="h-2.5 w-32" />
+          <WidgetSkeleton className="h-2.5 w-20" />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Composer. The preview is a static sample, so the send affordance is
+          inert and hidden from assistive tech rather than given invented copy. */}
+      <div className="flex shrink-0 items-center gap-2 border-t p-3">
+        <div className="flex h-9 flex-1 items-center rounded-md border px-3">
+          <span className="text-xs text-muted-foreground">
+            {t('chat.writeMessage')}
+          </span>
+        </div>
+        <div
+          aria-hidden
+          className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground"
+        >
+          <ArrowUp className="size-4" />
+        </div>
+      </div>
+    </PreviewShell>
   )
 }
 
@@ -569,7 +533,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     category: 'other',
     previewHeight: 300,
     getComponent: ({ size }) => <MindsetWidget size={size} />,
-    getPreview: () => createMindsetPreview()
+    getPreview: () => <CreateMindsetPreview />
   },
   tagWidget: {
     type: 'tagWidget',

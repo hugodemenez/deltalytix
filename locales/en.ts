@@ -1512,6 +1512,8 @@ export default {
       profitFactor: "Profit Factor",
       bestTrade: "Best Trade",
       worstTrade: "Worst Trade",
+      win: "Win",
+      loss: "Loss",
     },
     activity: {
       title: "Activity",
@@ -1917,6 +1919,8 @@ export default {
   "disclaimer.hypothetical.title": "Hypothetical Performance Warning",
   "disclaimer.hypothetical.content":
     "Hypothetical performance results have many inherent limitations, some of which are described below. No representation is being made that any account will or is likely to achieve profits or losses similar to those shown; in fact, there are frequently sharp differences between hypothetical performance results and the actual results subsequently achieved by any particular trading program. One of the limitations of hypothetical performance results is that they are generally prepared with the benefit of hindsight. In addition, hypothetical trading does not involve financial risk, and no hypothetical trading record can completely account for the impact of financial risk in actual trading. For example, the ability to withstand losses or to adhere to a particular trading program in spite of trading losses are material points which can also adversely affect actual trading results. There are numerous other factors related to the markets in general or to the implementation of any specific trading program which cannot be fully accounted for in the preparation of hypothetical performance results and all of which can adversely affect actual trading results.",
+  "widgets.empty.noTrades":
+    "No trades in the selected period. Adjust your filters or import trades to see this metric.",
   "widgets.cumulativePnl.tooltip":
     "Your total profit or loss across all trades, including fees. This metric shows your overall trading performance and helps you track your long-term profitability.",
   "widgets.averagePositionTime.tooltip":

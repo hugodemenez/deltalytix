@@ -4,22 +4,35 @@ import * as React from "react";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartConfig } from "@/components/ui/chart";
+import type { CategoricalChartState } from "recharts/types/chart/types";
 import { useData } from "@/context/data-provider";
 import { cn } from "@/lib/utils";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
-import { InfoBubble } from "@/components/ui/info-bubble";
-import { useI18n } from "@/locales/client";
+import { useCurrentLocale, useI18n } from "@/locales/client";
 import { Button } from "@/components/ui/button";
 import { useTickDetailsStore } from "@/store/tick-details-store";
+import {
+  axisProps,
+  chartColors,
+  chartMargin,
+  chartTickFontSize,
+  formatCount,
+  formatTicks,
+  isCompactSize,
+  WidgetBody,
+  WidgetCard,
+  WidgetChartGrid,
+  WidgetChartInteractive,
+  WidgetEmpty,
+  WidgetHeader,
+  WidgetTooltip,
+} from "../widgets";
 import {
   BarChartLoadingSkeleton,
   LOADING_MOCK_TICKS,
@@ -34,63 +47,34 @@ interface ChartDataPoint {
   count: number;
 }
 
-interface TooltipProps {
+interface TickTooltipProps {
   active?: boolean;
-  payload?: Array<{
-    payload: ChartDataPoint;
-  }>;
-  label?: string;
+  payload?: Array<{ payload: ChartDataPoint }>;
+  t: ReturnType<typeof useI18n>;
+  locale: string;
 }
 
-const chartConfig = {
-  count: {
-    label: "Count",
-    color: "hsl(var(--chart-7))",
-  },
-} satisfies ChartConfig;
-
-const CustomTooltip = ({ active, payload }: TooltipProps) => {
-  const t = useI18n();
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="rounded-lg border bg-background p-2 shadow-xs">
-        <div className="grid gap-2">
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {t("tickDistribution.tooltip.ticks")}
-            </span>
-            <span className="font-bold text-muted-foreground">
-              {data.ticks}{" "}
-              {parseInt(data.ticks) !== 1
-                ? t("tickDistribution.tooltip.ticks_plural")
-                : t("tickDistribution.tooltip.tick")}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {t("tickDistribution.tooltip.trades")}
-            </span>
-            <span className="font-bold">
-              {data.count}{" "}
-              {data.count !== 1
-                ? t("tickDistribution.tooltip.trades_plural")
-                : t("tickDistribution.tooltip.trade")}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
-
-const formatCount = (value: number) => {
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(1)}k`;
-  }
-  return value.toString();
-};
+function TickTooltip({ active, payload, t, locale }: TickTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+  const data = payload[0].payload;
+  const tickValue = Number(data.ticks.replace("+", ""));
+  const tickLabel = `${tickValue > 0 ? "+" : ""}${formatTicks(tickValue, locale)}`;
+  return (
+    <WidgetTooltip
+      title={`${tickLabel} ${
+        Math.abs(tickValue) === 1
+          ? t("tickDistribution.tooltip.tick")
+          : t("tickDistribution.tooltip.ticks_plural")
+      }`}
+      rows={[
+        {
+          label: t("tickDistribution.tooltip.trades"),
+          value: formatCount(data.count, locale),
+        },
+      ]}
+    />
+  );
+}
 
 export default function TickDistributionChart({
   size = "medium",
@@ -98,9 +82,11 @@ export default function TickDistributionChart({
   const { formattedTrades: trades, tickFilter, setTickFilter, isLoading } =
     useData();
   const tickDetails = useTickDetailsStore((state) => state.tickDetails);
+  const [activeTicks, setActiveTicks] = React.useState<string | null>(null);
   const t = useI18n();
+  const locale = useCurrentLocale();
 
-  const chartData = React.useMemo(() => {
+  const chartData = React.useMemo<ChartDataPoint[]>(() => {
     if (!trades.length) return [];
 
     // Create a map to store tick counts
@@ -137,163 +123,150 @@ export default function TickDistributionChart({
       );
   }, [trades, tickDetails]);
 
-  const handleBarClick = (data: any) => {
-    if (!data || !trades.length) return;
-    const clickedTicks = data.ticks;
-    if (tickFilter.value === clickedTicks) {
+  const handleActivate = React.useCallback(() => {
+    if (activeTicks === null) return;
+    if (tickFilter.value === activeTicks) {
       setTickFilter({ value: null });
     } else {
-      setTickFilter({ value: clickedTicks });
+      setTickFilter({ value: activeTicks });
     }
-  };
+  }, [activeTicks, tickFilter.value, setTickFilter]);
+
+  const handleMouseMove = React.useCallback((state: CategoricalChartState) => {
+    const point = state?.activePayload?.[0]?.payload as
+      | ChartDataPoint
+      | undefined;
+    setActiveTicks(point ? point.ticks : null);
+  }, []);
+
+  const handleMouseLeave = React.useCallback(() => setActiveTicks(null), []);
+
+  const hasFilter = Boolean(tickFilter.value);
+  const interactiveLabel =
+    activeTicks !== null
+      ? `${t("filters.title")}: ${activeTicks} ${t("tickDistribution.tooltip.ticks")}`
+      : `${t("filters.title")}: ${t("tickDistribution.title")}`;
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader
-        className={cn(
-          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === "small" ? "p-2 h-10" : "p-3 sm:p-4 h-14",
-        )}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1",
-                size === "small" ? "text-sm" : "text-base",
-              )}
-            >
-              {t("tickDistribution.title")}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
-            >
-              <p>{t("tickDistribution.description")}</p>
-            </InfoBubble>
-          </div>
-          {tickFilter.value && (
+    <WidgetCard>
+      <WidgetHeader
+        size={size}
+        title={t("tickDistribution.title")}
+        description={t("tickDistribution.description")}
+        actions={
+          hasFilter ? (
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 lg:px-3"
+              className="h-7 px-2"
               onClick={() => setTickFilter({ value: null })}
             >
               {t("tickDistribution.clearFilter")}
             </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "flex-1 min-h-0",
-          size === "small" ? "p-1" : "p-2 sm:p-4",
-        )}
+          ) : null
+        }
+      />
+      <WidgetBody
+        size={size}
+        flush
+        className={cn(isCompactSize(size) ? "p-1" : "p-2")}
       >
-        <div className={cn("w-full h-full")}>
-          {isLoading ? (
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_TICKS}
-              xDataKey="ticks"
-              yDataKey="count"
-              yAxisWidth={45}
-              showReferenceLine={false}
-              domain={[
-                0,
-                Math.max(...LOADING_MOCK_TICKS.map((d) => d.count)) * 1.1,
-              ]}
-            />
-          ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={
-                size === "small"
-                  ? { left: 0, right: 4, top: 4, bottom: 20 }
-                  : { left: 0, right: 8, top: 8, bottom: 24 }
-              }
-              onClick={(e) =>
-                e?.activePayload && handleBarClick(e.activePayload[0].payload)
-              }
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                className="text-border dark:opacity-[0.12] opacity-[0.2]"
-              />
-              <XAxis
-                dataKey="ticks"
-                tickLine={false}
-                axisLine={false}
-                height={size === "small" ? 20 : 24}
-                tickMargin={size === "small" ? 4 : 8}
-                tick={(props) => {
-                  const { x, y, payload } = props;
-                  return (
-                    <g transform={`translate(${x},${y})`}>
-                      <text
-                        x={0}
-                        y={0}
-                        dy={size === "small" ? 8 : 4}
-                        textAnchor={size === "small" ? "end" : "middle"}
-                        fill="currentColor"
-                        fontSize={size === "small" ? 9 : 11}
-                        transform={
-                          size === "small" ? "rotate(-45)" : "rotate(0)"
-                        }
-                      >
-                        {payload.value}
-                      </text>
-                    </g>
-                  );
-                }}
-                interval="preserveStartEnd"
-                allowDataOverflow={true}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={45}
-                tickMargin={4}
-                tickFormatter={formatCount}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-              />
-              <Tooltip
-                content={<CustomTooltip />}
-                wrapperStyle={{
-                  fontSize: size === "small" ? "10px" : "12px",
-                  zIndex: 1000,
-                }}
-              />
-              <Bar
-                dataKey="count"
-                fill={chartConfig.count.color}
-                radius={[3, 3, 0, 0]}
-                maxBarSize={size === "small" ? 25 : 40}
-                className="transition-opacity duration-300 ease-out"
-                opacity={tickFilter.value ? 0.3 : 1}
+        {isLoading ? (
+          <BarChartLoadingSkeleton
+            size={size}
+            data={LOADING_MOCK_TICKS}
+            xDataKey="ticks"
+            yDataKey="count"
+            yAxisWidth={45}
+            showReferenceLine={false}
+            domain={[
+              0,
+              Math.max(...LOADING_MOCK_TICKS.map((d) => d.count)) * 1.1,
+            ]}
+          />
+        ) : chartData.length === 0 ? (
+          <WidgetEmpty size={size} message={t("chat.noTradesAvailable")} />
+        ) : (
+          <WidgetChartInteractive
+            onActivate={handleActivate}
+            label={interactiveLabel}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={chartMargin(size)}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
               >
-                {chartData.map((entry) => (
-                  <Cell
-                    key={`cell-${entry.ticks}`}
-                    opacity={
-                      tickFilter.value === entry.ticks
-                        ? 1
-                        : tickFilter.value
-                          ? 0.3
-                          : 1
-                    }
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+                <WidgetChartGrid />
+                <XAxis
+                  dataKey="ticks"
+                  {...axisProps(size)}
+                  height={isCompactSize(size) ? 20 : 24}
+                  interval="preserveStartEnd"
+                  allowDataOverflow
+                  tick={(props: {
+                    x: number;
+                    y: number;
+                    payload: { value: string };
+                  }) => {
+                    const { x, y, payload } = props;
+                    return (
+                      <g transform={`translate(${x},${y})`}>
+                        <text
+                          x={0}
+                          y={0}
+                          dy={isCompactSize(size) ? 8 : 4}
+                          textAnchor={isCompactSize(size) ? "end" : "middle"}
+                          fill={chartColors.tick}
+                          fontSize={chartTickFontSize(size)}
+                          transform={
+                            isCompactSize(size) ? "rotate(-45)" : "rotate(0)"
+                          }
+                        >
+                          {payload.value}
+                        </text>
+                      </g>
+                    );
+                  }}
+                />
+                <YAxis
+                  {...axisProps(size)}
+                  width={45}
+                  tickFormatter={(value: number) => formatCount(value, locale)}
+                />
+                <Tooltip
+                  content={<TickTooltip t={t} locale={locale} />}
+                  cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4 }}
+                  wrapperStyle={{ zIndex: 1000 }}
+                />
+                <Bar
+                  dataKey="count"
+                  fill={chartColors.neutral}
+                  radius={[3, 3, 0, 0]}
+                  maxBarSize={isCompactSize(size) ? 25 : 40}
+                  isAnimationActive={false}
+                >
+                  {chartData.map((entry) => (
+                    <Cell
+                      key={`cell-${entry.ticks}`}
+                      fill={
+                        tickFilter.value === entry.ticks
+                          ? chartColors.primary
+                          : chartColors.neutral
+                      }
+                      fillOpacity={
+                        !hasFilter || tickFilter.value === entry.ticks ? 1 : 0.3
+                      }
+                      className="motion-safe:transition-opacity motion-safe:duration-150 motion-safe:ease-out"
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </WidgetChartInteractive>
+        )}
+      </WidgetBody>
+    </WidgetCard>
   );
 }

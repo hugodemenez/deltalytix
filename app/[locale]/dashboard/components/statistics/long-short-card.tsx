@@ -1,12 +1,20 @@
 'use client'
 
 import { useData } from '@/context/data-provider'
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { ArrowLeftRight, ArrowUpFromLine, ArrowDownFromLine } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '../../types/dashboard'
-import { useI18n } from '@/locales/client'
-import { InfoBubble } from "@/components/ui/info-bubble"
+import { useCurrentLocale, useI18n } from '@/locales/client'
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetEmpty,
+  WidgetHeader,
+  WidgetStat,
+  WidgetStatList,
+  formatPercent,
+  isCompactSize,
+  widgetType,
+} from "../widgets"
 
 interface LongShortPerformanceCardProps {
   size?: WidgetSize
@@ -14,7 +22,8 @@ interface LongShortPerformanceCardProps {
 
 export default function LongShortPerformanceCard({ size = 'medium' }: LongShortPerformanceCardProps) {
   const { calendarData } = useData()
-  const  t  = useI18n()
+  const t = useI18n()
+  const locale = useCurrentLocale()
 
   // Calculate long/short data
   const chartData = Object.entries(calendarData).map(([date, values]) => ({
@@ -27,31 +36,49 @@ export default function LongShortPerformanceCard({ size = 'medium' }: LongShortP
   const longNumber = chartData.reduce((acc, curr) => acc + curr.longNumber, 0)
   const shortNumber = chartData.reduce((acc, curr) => acc + curr.shortNumber, 0)
   const totalTrades = longNumber + shortNumber
-  const longRate = Number((longNumber / totalTrades * 100).toFixed(2))
-  const shortRate = Number((shortNumber / totalTrades * 100).toFixed(2))
+  // Guarded: an empty dataset used to divide by zero and render "NaN%".
+  const longRate = totalTrades > 0 ? (longNumber / totalTrades) * 100 : 0
+  const shortRate = totalTrades > 0 ? (shortNumber / totalTrades) * 100 : 0
 
-    return (
-      <Card className="h-full">
-        <div className="flex items-center justify-center h-full gap-1.5">
-          <div className="flex items-center gap-1">
-            <ArrowUpFromLine className="h-3 w-3 text-green-500" />
-            <span className="font-medium text-sm tabular-nums">{longRate}%</span>
-          </div>
-          <span className="text-muted-foreground">/</span>
-          <div className="flex items-center gap-1">
-            <ArrowDownFromLine className="h-3 w-3 text-red-500" />
-            <span className="font-medium text-sm tabular-nums">{shortRate}%</span>
-          </div>
-          <InfoBubble
-            icon="help"
-            side="bottom"
-            sideOffset={5}
-            iconClassName="size-3"
-            contentClassName="max-w-[300px]"
-          >
-            {t('widgets.longShortPerformance.tooltip')}
-          </InfoBubble>
-        </div>
-      </Card>
-    )
-  }
+  const rows = [
+    { label: t('statistics.distribution.long'), value: formatPercent(longRate, locale) },
+    { label: t('statistics.distribution.short'), value: formatPercent(shortRate, locale) },
+  ]
+
+  return (
+    <WidgetCard>
+      <WidgetHeader
+        size={size}
+        title={t('widgets.types.longShortPerformance')}
+        description={t('widgets.longShortPerformance.tooltip')}
+      />
+      {totalTrades === 0 ? (
+        <WidgetEmpty
+          size={size}
+          className="flex-1"
+          message={t('widgets.empty.noTrades')}
+        />
+      ) : isCompactSize(size) ? (
+        <WidgetBody
+          size={size}
+          className="flex items-baseline justify-center gap-x-4 overflow-hidden"
+        >
+          {rows.map((row) => (
+            <div key={row.label} className="flex min-w-0 items-baseline gap-1.5">
+              <span className={cn(widgetType.label, "truncate")}>{row.label}</span>
+              <span className={cn(widgetType.value, "shrink-0")}>{row.value}</span>
+            </div>
+          ))}
+        </WidgetBody>
+      ) : (
+        <WidgetBody size={size}>
+          <WidgetStatList>
+            {rows.map((row) => (
+              <WidgetStat key={row.label} label={row.label} value={row.value} />
+            ))}
+          </WidgetStatList>
+        </WidgetBody>
+      )}
+    </WidgetCard>
+  )
+}

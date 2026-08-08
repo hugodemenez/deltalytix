@@ -1,19 +1,24 @@
 'use client'
 
 import { useData } from "@/context/data-provider"
-import { Card } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { WidgetSize } from '../../types/dashboard'
-import { Scale } from "lucide-react"
-import { useI18n } from '@/locales/client'
+import { useCurrentLocale, useI18n } from '@/locales/client'
 import { useMemo } from "react"
-import { InfoBubble } from "@/components/ui/info-bubble"
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetEmpty,
+  WidgetHeader,
+  WidgetMetric,
+  WidgetStat,
+  WidgetStatList,
+  formatCurrency,
+  formatRatio,
+  isCompactSize,
+  pnlTone,
+  pnlToneClass,
+  widgetMetricClass,
+} from "../widgets"
 
 interface RiskRewardRatioCardProps {
   size?: WidgetSize
@@ -22,8 +27,9 @@ interface RiskRewardRatioCardProps {
 export default function RiskRewardRatioCard({ size = 'tiny' }: RiskRewardRatioCardProps) {
   const { formattedTrades } = useData()
   const t = useI18n()
-  
-  const { avgWin, avgLoss, riskRewardRatio, profitPercentage } = useMemo(() => {
+  const locale = useCurrentLocale()
+
+  const { avgWin, avgLoss, riskRewardRatio } = useMemo(() => {
     // Filter winning and losing trades
     const winningTrades = formattedTrades.filter(trade => trade.pnl > 0)
     const losingTrades = formattedTrades.filter(trade => trade.pnl < 0)
@@ -38,51 +44,55 @@ export default function RiskRewardRatioCard({ size = 'tiny' }: RiskRewardRatioCa
       : 0
 
     // Calculate Risk-Reward ratio
-    const riskRewardRatio = Math.abs(avgLoss) > 0 
-      ? Number((avgWin / Math.abs(avgLoss)).toFixed(2)) 
+    const riskRewardRatio = Math.abs(avgLoss) > 0
+      ? avgWin / Math.abs(avgLoss)
       : 0
-    
-    // Calculate progress percentage for visualization
-    const totalValue = Math.abs(avgLoss) + Math.abs(avgWin)
-    const profitPercentage = totalValue > 0 
-      ? (Math.abs(avgWin) / totalValue) * 100 
-      : 50
 
-    return { avgWin, avgLoss, riskRewardRatio, profitPercentage }
+    return { avgWin, avgLoss, riskRewardRatio }
   }, [formattedTrades])
 
+  const ratio = formatRatio(riskRewardRatio, locale)
+
   return (
-    <Card className="h-full">
-      <div className="flex flex-col items-center justify-center h-full gap-2 p-2">
-        <div className="flex items-center gap-1.5">
-          <Scale className="h-3 w-3 text-primary" />
-          <span className="font-medium text-sm tabular-nums">RR {riskRewardRatio}</span>
-          <InfoBubble
-            icon="help"
-            side="bottom"
-            sideOffset={5}
-            iconClassName="size-3"
-            contentClassName="max-w-[300px]"
-          >
-            {t('widgets.riskRewardRatio.tooltip')}
-          </InfoBubble>
-        </div>
-        <TooltipProvider delayDuration={100}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="w-full px-1 py-1.5 cursor-pointer">
-                <Progress value={profitPercentage} className="h-1.5" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={5}>
-              <div className="text-xs space-y-0.5 tabular-nums">
-                <div className="text-green-500">Avg. Win: ${avgWin.toFixed(2)}</div>
-                <div className="text-red-500">Avg. Loss: ${avgLoss.toFixed(2)}</div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-    </Card>
+    <WidgetCard>
+      <WidgetHeader
+        size={size}
+        title={t('widgets.types.riskRewardRatio')}
+        description={t('widgets.riskRewardRatio.tooltip')}
+      />
+      {formattedTrades.length === 0 ? (
+        <WidgetEmpty
+          size={size}
+          className="flex-1"
+          message={t('widgets.empty.noTrades')}
+        />
+      ) : isCompactSize(size) ? (
+        <WidgetBody size={size} className="flex items-center justify-center">
+          <span className={widgetMetricClass(size)}>{ratio}</span>
+        </WidgetBody>
+      ) : (
+        <WidgetBody size={size} className="flex flex-col gap-4">
+          <WidgetMetric
+            size={size}
+            label={t('widgets.types.riskRewardRatio')}
+            value={ratio}
+          />
+          {/* Averages the ratio is built from: evidence beside the claim, not
+              hidden behind a hover tooltip. */}
+          <WidgetStatList>
+            <WidgetStat
+              label={t('statistics.performance.avgWin')}
+              value={formatCurrency(avgWin, locale)}
+              toneClassName={pnlToneClass(pnlTone(avgWin))}
+            />
+            <WidgetStat
+              label={t('statistics.performance.avgLoss')}
+              value={formatCurrency(avgLoss, locale)}
+              toneClassName={pnlToneClass(pnlTone(avgLoss))}
+            />
+          </WidgetStatList>
+        </WidgetBody>
+      )}
+    </WidgetCard>
   )
 }

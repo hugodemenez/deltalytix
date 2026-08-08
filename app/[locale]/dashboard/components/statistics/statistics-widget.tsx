@@ -1,54 +1,38 @@
 "use client"
 
 import * as React from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useData } from "@/context/data-provider"
-import { Clock, PiggyBank, Award, BarChart } from "lucide-react"
-import { InfoBubble } from "@/components/ui/info-bubble"
 import { cn, calculateStatistics } from "@/lib/utils"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { useBreakevenStore } from "@/store/widgets/breakeven-store"
-import { Progress } from "@/components/ui/progress"
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
 import { Trade } from "@/prisma/generated/prisma/browser"
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetEmpty,
+  WidgetHeader,
+  WidgetSection,
+  WidgetStat,
+  WidgetStatList,
+  formatCount,
+  formatCurrency,
+  formatDuration,
+  formatPercent,
+  pnlTone,
+  pnlToneClass,
+} from "../widgets"
 
 interface StatisticsWidgetProps {
   size?: 'tiny' | 'small' | 'medium' | 'large' | 'small-long' | 'extra-large'
   dayData?: CalendarEntry // Optional: if provided, show statistics for this specific day only
 }
 
-function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null
-  return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout)
-    timeout = setTimeout(() => func(...args), wait)
-  }
-}
-
 export default function StatisticsWidget({ size = 'medium', dayData }: StatisticsWidgetProps) {
   const dataContext = useData()
   const breakevenRange = useBreakevenStore((state) => state.range)
-  const [activeTooltip, setActiveTooltip] = React.useState<string | null>(null)
-  const [isTouch, setIsTouch] = React.useState(false)
-  const cardRef = React.useRef<HTMLDivElement>(null)
-  const lastTouchTime = React.useRef(0)
   const t = useI18n()
   const locale = useCurrentLocale()
-
-  // Number formatter for currency with thousands separators based on locale
-  const formatCurrency = (value: number) => {
-    const formatted = new Intl.NumberFormat(locale === 'fr' ? 'fr-FR' : 'en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value)
-    
-    // Always use $ symbol with proper spacing for French
-    if (locale === 'fr') {
-      return `${formatted} $`
-    } else {
-      return `$${formatted}`
-    }
-  }
 
   // Calculate statistics - either for a specific day or for all data
   const statistics = React.useMemo(() => {
@@ -73,9 +57,9 @@ export default function StatisticsWidget({ size = 'medium', dayData }: Statistic
     return dataContext.calendarData
   }, [dayData, dataContext.calendarData])
 
-  const { 
-    nbWin, nbLoss, nbBe, nbTrades, 
-    averagePositionTime, 
+  const {
+    nbWin, nbLoss, nbBe, nbTrades,
+    totalPositionTime,
     cumulativePnl, cumulativeFees,
     winningStreak,
     grossLosses,
@@ -87,24 +71,28 @@ export default function StatisticsWidget({ size = 'medium', dayData }: Statistic
   // Calculate Net P&L including payouts
   const netPnlWithPayouts = cumulativePnl - cumulativeFees - totalPayouts
 
-  // Calculate rates
-  const winRate = Number((nbWin / nbTrades * 100).toFixed(2))
-  const lossRate = Number((nbLoss / nbTrades * 100).toFixed(2))
-  const beRate = Number((nbBe / nbTrades * 100).toFixed(2))
+  // Calculate rates. Guarded: dividing by an empty dataset used to render "NaN%".
+  const winRate = nbTrades > 0 ? (nbWin / nbTrades) * 100 : 0
+  const lossRate = nbTrades > 0 ? (nbLoss / nbTrades) * 100 : 0
+  const beRate = nbTrades > 0 ? (nbBe / nbTrades) * 100 : 0
+  const averagePositionSeconds = nbTrades > 0 ? totalPositionTime / nbTrades : 0
 
   // Calculate long/short data
-  const chartData = Object.entries(calendarData).map(([date, values]) => ({
-    date,
-    pnl: values.pnl,
-    shortNumber: values.shortNumber,
-    longNumber: values.longNumber,
-  }))
+  const chartData = React.useMemo(
+    () => Object.entries(calendarData).map(([date, values]) => ({
+      date,
+      pnl: values.pnl,
+      shortNumber: values.shortNumber,
+      longNumber: values.longNumber,
+    })),
+    [calendarData],
+  )
 
   const longNumber = chartData.reduce((acc, curr) => acc + curr.longNumber, 0)
   const shortNumber = chartData.reduce((acc, curr) => acc + curr.shortNumber, 0)
   const totalTrades = longNumber + shortNumber
-  const longRate = Number((longNumber / totalTrades * 100).toFixed(2))
-  const shortRate = Number((shortNumber / totalTrades * 100).toFixed(2))
+  const longRate = totalTrades > 0 ? (longNumber / totalTrades) * 100 : 0
+  const shortRate = totalTrades > 0 ? (shortNumber / totalTrades) * 100 : 0
 
   // Calculate average win/loss based on daily P&L
   // For single day mode, use the day's P&L directly; for multi-day, calculate average
@@ -114,8 +102,8 @@ export default function StatisticsWidget({ size = 'medium', dayData }: Statistic
       return dayData.pnl > 0 ? dayData.pnl : 0
     }
     const winningDays = chartData.filter(day => day.pnl > 0)
-    return winningDays.length > 0 
-      ? winningDays.reduce((sum, day) => sum + day.pnl, 0) / winningDays.length 
+    return winningDays.length > 0
+      ? winningDays.reduce((sum, day) => sum + day.pnl, 0) / winningDays.length
       : 0
   }, [dayData, chartData])
 
@@ -125,230 +113,141 @@ export default function StatisticsWidget({ size = 'medium', dayData }: Statistic
       return dayData.pnl < 0 ? Math.abs(dayData.pnl) : 0
     }
     const losingDays = chartData.filter(day => day.pnl < 0)
-    return losingDays.length > 0 
+    return losingDays.length > 0
       ? Math.abs(losingDays.reduce((sum, day) => sum + day.pnl, 0) / losingDays.length)
       : 0
   }, [dayData, chartData])
 
-  // Colors
-  const positiveColor = "hsl(var(--chart-win))"
-  const negativeColor = "hsl(var(--chart-loss))"
-  const neutralColor = "hsl(var(--muted))"
+  const isTiny = size === 'tiny'
 
-  // Performance data
-  const performanceData = [
-    { name: 'Win', value: winRate, color: positiveColor },
-    { name: 'BE', value: beRate, color: neutralColor },
-    { name: 'Loss', value: lossRate, color: negativeColor },
-  ]
+  // Deductions carry their own minus sign, so the tone color is never the only
+  // thing telling the reader the figure works against them.
+  const losses = -grossLosses
+  const fees = -cumulativeFees
+  const payouts = -totalPayouts
+  const avgLoss = -avgLossPerDay
 
-  // Long/Short data
-  const sideData = [
-    { name: 'Long', value: longRate, color: positiveColor, number: longNumber },
-    { name: 'Short', value: shortRate, color: negativeColor, number: shortNumber },
-  ]
-
-  // Touch event handlers
-  React.useEffect(() => {
-    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
-      if (cardRef.current && !cardRef.current.contains(event.target as Node)) {
-        setActiveTooltip(null)
-      }
-    }
-
-    const handleTouchStart = () => {
-      setIsTouch(true)
-    }
-
-    document.addEventListener('mousedown', handleOutsideClick)
-    document.addEventListener('touchstart', handleOutsideClick)
-    window.addEventListener('touchstart', handleTouchStart, { once: true })
-
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick)
-      document.removeEventListener('touchstart', handleOutsideClick)
-      window.removeEventListener('touchstart', handleTouchStart)
-    }
-  }, [])
+  if (nbTrades === 0) {
+    return (
+      <WidgetCard>
+        <WidgetHeader
+          size={size}
+          title={t('statistics.title')}
+          description={t('statistics.tooltip')}
+        />
+        <WidgetEmpty
+          size={size}
+          className="flex-1"
+          message={t('widgets.empty.noTrades')}
+        />
+      </WidgetCard>
+    )
+  }
 
   return (
-    <Card className="h-full flex flex-col" ref={cardRef}>
-      <CardHeader 
-        className={cn(
-          "flex-none border-b",
-          size === 'tiny' 
-            ? "py-1 px-2"
-            : (size === 'small' || size === 'small-long')
-              ? "py-2 px-3" 
-              : "py-3 px-4"
-        )}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CardTitle 
-              className={cn(
-                "line-clamp-1",
-                size === 'tiny'
-                  ? "text-xs"
-                  : (size === 'small' || size === 'small-long') 
-                    ? "text-sm" 
-                    : "text-base"
+    <WidgetCard>
+      <WidgetHeader
+        size={size}
+        title={t('statistics.title')}
+        description={t('statistics.tooltip')}
+      />
+      <WidgetBody size={size} className="overflow-y-auto">
+        {/* Four groups, read as groups through spacing and alignment. The card
+            border is the only border; no quadrant boxes inside it. */}
+        <div className={cn("grid grid-cols-2", isTiny ? "gap-x-3 gap-y-3" : "gap-x-6 gap-y-4")}>
+          <WidgetSection title={t('statistics.profitLoss.title')} className="gap-1.5">
+            <WidgetStatList>
+              <WidgetStat
+                label={t('statistics.profitLoss.profits')}
+                value={formatCurrency(grossWin, locale)}
+                toneClassName={pnlToneClass(pnlTone(grossWin))}
+              />
+              <WidgetStat
+                label={t('statistics.profitLoss.losses')}
+                value={formatCurrency(losses, locale)}
+                toneClassName={pnlToneClass(pnlTone(losses))}
+              />
+              <WidgetStat
+                label={t('statistics.profitLoss.fees')}
+                value={formatCurrency(fees, locale)}
+                toneClassName={pnlToneClass(pnlTone(fees))}
+              />
+              <WidgetStat
+                label={`${t('statistics.profitLoss.payouts')} (${formatCount(nbPayouts, locale)})`}
+                value={formatCurrency(payouts, locale)}
+                toneClassName={pnlToneClass(pnlTone(payouts))}
+              />
+            </WidgetStatList>
+            {/* The conclusion of the group. Separated by space, not by a rule. */}
+            <WidgetStat
+              label={t('statistics.profitLoss.net')}
+              value={formatCurrency(netPnlWithPayouts, locale)}
+              toneClassName={cn(pnlToneClass(pnlTone(netPnlWithPayouts)), "font-semibold")}
+            />
+          </WidgetSection>
+
+          <WidgetSection title={t('statistics.performance.title')} className="gap-1.5">
+            <WidgetStatList>
+              <WidgetStat
+                label={t('statistics.performance.winRate')}
+                value={formatPercent(winRate, locale)}
+              />
+              <WidgetStat
+                label={t('statistics.performance.avgWin')}
+                description={t('statistics.performance.avgWinTooltip')}
+                value={formatCurrency(avgWinPerDay, locale)}
+                toneClassName={pnlToneClass(pnlTone(avgWinPerDay))}
+              />
+              {!isTiny && (
+                <WidgetStat
+                  label={t('statistics.performance.avgLoss')}
+                  description={t('statistics.performance.avgLossTooltip')}
+                  value={formatCurrency(avgLoss, locale)}
+                  toneClassName={pnlToneClass(pnlTone(avgLoss))}
+                />
               )}
-            >
-              {t('statistics.title')}
-            </CardTitle>
-            <InfoBubble iconClassName="size-3.5">
-              <p>{t('statistics.tooltip')}</p>
-            </InfoBubble>
-          </div>
-          <BarChart className="h-3.5 w-3.5 text-muted-foreground" />
+            </WidgetStatList>
+          </WidgetSection>
+
+          <WidgetSection title={t('statistics.activity.title')} className="gap-1.5">
+            <WidgetStatList>
+              <WidgetStat
+                label={t('statistics.activity.totalTrades')}
+                value={formatCount(nbTrades, locale)}
+              />
+              <WidgetStat
+                label={t('statistics.activity.winningTrades')}
+                value={formatCount(nbWin, locale)}
+              />
+              {!isTiny && (
+                <WidgetStat
+                  label={t('statistics.activity.avgDuration')}
+                  value={formatDuration(averagePositionSeconds)}
+                />
+              )}
+            </WidgetStatList>
+          </WidgetSection>
+
+          <WidgetSection title={t('statistics.distribution.title')} className="gap-1.5">
+            <WidgetStatList>
+              <WidgetStat
+                label={t('statistics.distribution.long')}
+                value={formatPercent(longRate, locale)}
+              />
+              {!isTiny && (
+                <WidgetStat
+                  label={t('statistics.distribution.short')}
+                  value={formatPercent(shortRate, locale)}
+                />
+              )}
+              <WidgetStat
+                label={t('statistics.distribution.winningStreak')}
+                value={formatCount(winningStreak, locale)}
+              />
+            </WidgetStatList>
+          </WidgetSection>
         </div>
-      </CardHeader>
-      <CardContent className="flex-1 p-0">
-        <div className="grid h-full grid-cols-2">
-          {/* Profit/Loss Section */}
-          <div className={cn(
-            "flex flex-col border-r border-b",
-            size === 'tiny' ? "p-1.5" : "p-3"
-          )}>
-            <h3 className="text-xs font-medium mb-1.5">{t('statistics.profitLoss.title')}</h3>
-            <div className="flex-1 flex flex-col justify-center gap-0.5">
-              {/* Profits */}
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs">{t('statistics.profitLoss.profits')}</span>
-                <span className="text-xs font-medium text font-mono tabular-nums">{formatCurrency(grossWin)}</span>
-              </div>
-              
-              {/* Losses */}
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs">- {t('statistics.profitLoss.losses')}</span>
-                <span className="text-xs font-medium text-red-500 font-mono tabular-nums">{formatCurrency(grossLosses)}</span>
-              </div>
-              
-              {/* Fees */}
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs">- {t('statistics.profitLoss.fees')}</span>
-                <span className="text-xs font-medium text-red-500 font-mono tabular-nums">{formatCurrency(cumulativeFees)}</span>
-              </div>
-              
-              {/* Payouts */}
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs">- {t('statistics.profitLoss.payouts')} ({nbPayouts})</span>
-                <span className="text-xs font-medium text-red-500 font-mono tabular-nums">{formatCurrency(totalPayouts)}</span>
-              </div>
-              
-              {/* Divider */}
-              <div className="border-t border-dashed my-1"></div>
-              
-              {/* Net Result */}
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs font-medium">{t('statistics.profitLoss.net')}</span>
-                <span className={cn(
-                  "text-sm font-bold font-mono tabular-nums",
-                  netPnlWithPayouts > 0 ? "text-green-500" : "text-red-500"
-                )}>
-                  {formatCurrency(netPnlWithPayouts)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Performance Section */}
-          <div className={cn(
-            "flex flex-col border-b",
-            size === 'tiny' ? "p-1.5" : "p-3"
-          )}>
-            <h3 className="text-xs font-medium mb-1.5">{t('statistics.performance.title')}</h3>
-            <div className="flex-1 flex flex-col justify-center gap-1.5">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs">{t('statistics.performance.winRate')}</span>
-                <span className="text-sm font-medium tabular-nums">{winRate}%</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-1">
-                  <span className="text-muted-foreground text-xs">{t('statistics.performance.avgWin')}</span>
-                  <InfoBubble iconClassName="size-3">
-                    <p>{t('statistics.performance.avgWinTooltip')}</p>
-                  </InfoBubble>
-                </div>
-                <span className="text-sm font-medium text-green-500 font-mono tabular-nums">{formatCurrency(avgWinPerDay)}</span>
-              </div>
-              {size !== 'tiny' && (
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground text-xs">{t('statistics.performance.avgLoss')}</span>
-                    <InfoBubble iconClassName="size-3">
-                      <p>{t('statistics.performance.avgLossTooltip')}</p>
-                    </InfoBubble>
-                  </div>
-                  <span className="text-sm font-medium text-red-500 font-mono tabular-nums">-{formatCurrency(avgLossPerDay)}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Activity Section */}
-          <div className={cn(
-            "flex flex-col border-r",
-            size === 'tiny' ? "p-1.5" : "p-3"
-          )}>
-            <h3 className="text-xs font-medium mb-1.5">{t('statistics.activity.title')}</h3>
-            <div className="flex-1 flex flex-col justify-center gap-1.5">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs">{t('statistics.activity.totalTrades')}</span>
-                <span className="text-sm font-medium tabular-nums">{nbTrades}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs">{t('statistics.activity.winningTrades')}</span>
-                <span className="text-sm font-medium text-green-500 tabular-nums">{nbWin}</span>
-              </div>
-              {size !== 'tiny' && (
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground text-xs">{t('statistics.activity.avgDuration')}</span>
-                  <span className="text-sm font-medium tabular-nums">{averagePositionTime}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Distribution Section */}
-          <div className={cn(
-            "flex flex-col",
-            size === 'tiny' ? "p-1.5" : "p-3"
-          )}>
-            <h3 className="text-xs font-medium mb-1.5">{t('statistics.distribution.title')}</h3>
-            <div className="flex-1 flex flex-col justify-center gap-1.5">
-              <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground text-xs">{t('statistics.distribution.long')}</span>
-                  <span className="text-sm font-medium tabular-nums">{longRate}%</span>
-                </div>
-                <Progress value={longRate} className="h-1" />
-              </div>
-              {size !== 'tiny' ? (
-                <>
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground text-xs">{t('statistics.distribution.short')}</span>
-                      <span className="text-sm font-medium tabular-nums">{shortRate}%</span>
-                    </div>
-                    <Progress value={shortRate} className="h-1" />
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground text-xs">{t('statistics.distribution.winningStreak')}</span>
-                    <span className="text-sm font-medium tabular-nums">{winningStreak}</span>
-                  </div>
-                </>
-              ) : (
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground text-xs">{t('statistics.distribution.winningStreak')}</span>
-                  <span className="text-sm font-medium tabular-nums">{winningStreak}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      </WidgetBody>
+    </WidgetCard>
   )
 }

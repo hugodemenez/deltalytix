@@ -1,41 +1,63 @@
+'use client'
+
 import { useData } from "@/context/data-provider"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { PiggyBank } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '../../types/dashboard'
-import { useI18n } from '@/locales/client'
-import { InfoBubble } from "@/components/ui/info-bubble"
+import { useCurrentLocale, useI18n } from '@/locales/client'
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetEmpty,
+  WidgetHeader,
+  WidgetMetric,
+  formatCurrency,
+  isCompactSize,
+  pnlTone,
+  pnlToneClass,
+  widgetMetricClass,
+} from "../widgets"
 
 interface CumulativePnlCardProps {
   size?: WidgetSize
 }
 
 export default function CumulativePnlCard({ size = 'medium' }: CumulativePnlCardProps) {
-  const { statistics: { cumulativePnl, cumulativeFees } } = useData()
-  const totalPnl = cumulativePnl - cumulativeFees
-  const isPositive = totalPnl > 0
+  const { statistics: { cumulativePnl, cumulativeFees, nbTrades } } = useData()
   const t = useI18n()
+  const locale = useCurrentLocale()
 
-    return (
-      <Card className="flex items-center justify-center h-full p-2">
-        <div className="flex items-center gap-1.5">
-          <PiggyBank className="h-4 w-4 text-muted-foreground" />
-          <span className={cn(
-            "font-semibold text-base tabular-nums",
-            isPositive ? "text-green-500" : "text-red-500"
-          )}>
-            ${Math.abs(totalPnl).toFixed(2)}
-          </span>
-          <InfoBubble
-            icon="help"
-            side="bottom"
-            sideOffset={5}
-            iconClassName="size-3"
-            contentClassName="max-w-[300px]"
-          >
-            {t('widgets.cumulativePnl.tooltip')}
-          </InfoBubble>
-        </div>
-      </Card>
-    )
-  }
+  const totalPnl = cumulativePnl - cumulativeFees
+  const toneClassName = pnlToneClass(pnlTone(totalPnl))
+  // The sign stays on the number, so the tone color is never the only signal.
+  const value = formatCurrency(totalPnl, locale)
+
+  return (
+    <WidgetCard>
+      <WidgetHeader
+        size={size}
+        title={t('widgets.types.cumulativePnl')}
+        description={t('widgets.cumulativePnl.tooltip')}
+      />
+      {nbTrades === 0 ? (
+        <WidgetEmpty
+          size={size}
+          className="flex-1"
+          message={t('widgets.empty.noTrades')}
+        />
+      ) : isCompactSize(size) ? (
+        <WidgetBody size={size} className="flex items-center justify-center">
+          <span className={cn(widgetMetricClass(size), toneClassName)}>{value}</span>
+        </WidgetBody>
+      ) : (
+        <WidgetBody size={size} className="flex items-center">
+          <WidgetMetric
+            size={size}
+            label={t('statistics.profitLoss.net')}
+            value={value}
+            toneClassName={toneClassName}
+          />
+        </WidgetBody>
+      )}
+    </WidgetCard>
+  )
+}

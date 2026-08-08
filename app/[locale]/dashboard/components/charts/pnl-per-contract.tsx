@@ -4,93 +4,64 @@ import * as React from "react";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
   Cell,
   ResponsiveContainer,
-  ReferenceLine,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartConfig } from "@/components/ui/chart";
+
 import { useData } from "@/context/data-provider";
-import { cn } from "@/lib/utils";
-import { InfoBubble } from "@/components/ui/info-bubble";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
-import { useI18n } from "@/locales/client";
+import { useCurrentLocale, useI18n } from "@/locales/client";
+
 import {
   BarChartLoadingSkeleton,
   LOADING_MOCK_AVERAGE_PNL,
 } from "./chart-loading-skeleton";
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetChartGrid,
+  WidgetEmpty,
+  WidgetFooter,
+  WidgetHeader,
+  WidgetTooltip,
+  WidgetZeroLine,
+  axisProps,
+  chartMargin,
+  formatCompactCurrency,
+  formatCount,
+  formatCurrency,
+  formatPercent,
+  isCompactSize,
+  pnlTone,
+  pnlToneClass,
+  pnlToneFill,
+} from "../widgets";
 
 interface PnLPerContractChartProps {
   size?: WidgetSize;
 }
 
-const chartConfig = {
-  pnl: {
-    label: "Avg P/L per Contract",
-    color: "hsl(var(--chart-loss))",
-  },
-} satisfies ChartConfig;
-
-const formatCurrency = (value: number) =>
-  value.toLocaleString("en-US", { style: "currency", currency: "USD" });
-
-const CustomTooltip = ({ active, payload, label }: any) => {
-  const t = useI18n();
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="rounded-lg border bg-background p-2 shadow-xs">
-        <div className="grid gap-2">
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {t("pnlPerContract.tooltip.averagePnl")}
-            </span>
-            <span className="font-bold">{formatCurrency(data.averagePnl)}</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {t("pnlPerContract.tooltip.totalPnl")}
-            </span>
-            <span className="font-bold text-muted-foreground">
-              {formatCurrency(data.totalPnl)}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {t("pnlPerContract.tooltip.trades")}
-            </span>
-            <span className="font-bold text-muted-foreground">
-              {data.tradeCount} {t("pnlPerContract.tooltip.trades")} (
-              {((data.winCount / data.tradeCount) * 100).toFixed(1)}%{" "}
-              {t("pnlPerContract.tooltip.winRate")})
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {t("pnlPerContract.tooltip.totalContracts")}
-            </span>
-            <span className="font-bold text-muted-foreground">
-              {data.totalContracts} {t("pnlPerContract.tooltip.contracts")}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
+interface InstrumentRow {
+  instrument: string;
+  averagePnl: number;
+  totalPnl: number;
+  tradeCount: number;
+  winCount: number;
+  totalContracts: number;
+}
 
 export default function PnLPerContractChart({
   size = "medium",
 }: PnLPerContractChartProps) {
   const { formattedTrades: trades, isLoading } = useData();
   const t = useI18n();
+  const locale = useCurrentLocale();
+  const compact = isCompactSize(size);
 
-  const chartData = React.useMemo(() => {
+  const chartData = React.useMemo<InstrumentRow[]>(() => {
     // Group trades by instrument
     const instrumentGroups = trades.reduce(
       (acc, trade) => {
@@ -138,127 +109,139 @@ export default function PnLPerContractChart({
       .sort((a, b) => b.averagePnl - a.averagePnl); // Sort by average PnL descending
   }, [trades]);
 
-  const maxPnL = Math.max(...chartData.map((d) => d.averagePnl));
-  const minPnL = Math.min(...chartData.map((d) => d.averagePnl));
-  const absMax = Math.max(Math.abs(maxPnL), Math.abs(minPnL));
+  const totals = React.useMemo(
+    () =>
+      chartData.reduce(
+        (acc, row) => ({
+          trades: acc.trades + row.tradeCount,
+          contracts: acc.contracts + row.totalContracts,
+        }),
+        { trades: 0, contracts: 0 },
+      ),
+    [chartData],
+  );
 
-  const getColor = (value: number) => {
-    const ratio = Math.abs(value / absMax);
-    const baseColorVar = value >= 0 ? "--chart-win" : "--chart-4";
-    const intensity = Math.max(0.2, ratio);
-    return `hsl(var(${baseColorVar}) / ${intensity})`;
-  };
+  // Bar length is a magnitude encoding, so the domain always contains zero.
+  // The 10% headroom only ever extends away from the baseline.
+  const yDomain = React.useMemo<[number, number]>(() => {
+    if (chartData.length === 0) return [0, 0];
+    const values = chartData.map((row) => row.averagePnl);
+    return [
+      Math.min(Math.min(...values) * 1.1, 0),
+      Math.max(Math.max(...values) * 1.1, 0),
+    ];
+  }, [chartData]);
+
+  const hasData = chartData.length > 0;
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader
-        className={cn(
-          "flex flex-col items-stretch space-y-0 border-b shrink-0",
-          size === "small" ? "p-2" : "p-3 sm:p-4",
-        )}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1",
-                size === "small" ? "text-sm" : "text-base",
-              )}
-            >
-              {t("pnlPerContract.title")}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
-            >
-              <p>{t("pnlPerContract.description")}</p>
-            </InfoBubble>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "flex-1 min-h-0",
-          size === "small" ? "p-1" : "p-2 sm:p-4",
-        )}
-      >
-        <div className={cn("w-full h-full")}>
-          {isLoading ? (
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_AVERAGE_PNL}
-              xDataKey="instrument"
-              yDataKey="averagePnl"
-              showReferenceLine
-            />
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={
-                  size === "small"
-                    ? { left: 10, right: 4, top: 4, bottom: 20 }
-                    : { left: 10, right: 8, top: 8, bottom: 24 }
+    <WidgetCard>
+      <WidgetHeader
+        size={size}
+        title={t("pnlPerContract.title")}
+        description={t("pnlPerContract.description")}
+      />
+      <WidgetBody size={size} className="min-h-0">
+        {isLoading ? (
+          <BarChartLoadingSkeleton
+            size={size}
+            data={LOADING_MOCK_AVERAGE_PNL}
+            xDataKey="instrument"
+            yDataKey="averagePnl"
+            showReferenceLine
+          />
+        ) : !hasData ? (
+          <WidgetEmpty size={size} message={t("widgets.empty.noTrades")} />
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={chartMargin(size)}>
+              <WidgetChartGrid />
+              <XAxis
+                dataKey="instrument"
+                {...axisProps(size)}
+                height={compact ? 32 : 40}
+                angle={-45}
+                textAnchor="end"
+                interval={0}
+              />
+              <YAxis
+                {...axisProps(size)}
+                width={compact ? 44 : 52}
+                tickFormatter={(value: number) =>
+                  formatCompactCurrency(value, locale)
                 }
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  className="text-border dark:opacity-[0.12] opacity-[0.2]"
-                />
-                <XAxis
-                  dataKey="instrument"
-                  tickLine={false}
-                  axisLine={false}
-                  height={size === "small" ? 20 : 24}
-                  tickMargin={size === "small" ? 4 : 8}
-                  tick={{
-                    fontSize: size === "small" ? 9 : 11,
-                    fill: "currentColor",
-                  }}
-                  angle={size === "small" ? -45 : -45}
-                  textAnchor="end"
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  width={60}
-                  tickMargin={4}
-                  tick={{
-                    fontSize: size === "small" ? 9 : 11,
-                    fill: "currentColor",
-                  }}
-                  tickFormatter={formatCurrency}
-                  domain={[
-                    Math.min(minPnL * 1.1, 0),
-                    Math.max(maxPnL * 1.1, 0),
-                  ]}
-                />
-                <ReferenceLine y={0} stroke="hsl(var(--border))" />
-                <Tooltip
-                  content={<CustomTooltip />}
-                  wrapperStyle={{
-                    fontSize: size === "small" ? "10px" : "12px",
-                    zIndex: 1000,
-                  }}
-                />
-                <Bar
-                  dataKey="averagePnl"
-                  radius={[3, 3, 0, 0]}
-                  maxBarSize={size === "small" ? 25 : 40}
-                  className="transition-opacity duration-300 ease-out"
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={getColor(entry.averagePnl)}
+                domain={yDomain}
+              />
+              <WidgetZeroLine />
+              <Tooltip
+                cursor={{ fill: "hsl(var(--muted) / 0.4)" }}
+                isAnimationActive={false}
+                content={({ active, payload }: any) => {
+                  if (!active || !payload?.length) return null;
+                  const row = payload[0].payload as InstrumentRow;
+                  const winRate =
+                    row.tradeCount > 0
+                      ? (row.winCount / row.tradeCount) * 100
+                      : 0;
+                  return (
+                    <WidgetTooltip
+                      title={row.instrument}
+                      rows={[
+                        {
+                          label: t("pnlPerContract.tooltip.averagePnl"),
+                          value: formatCurrency(row.averagePnl, locale),
+                          toneClassName: pnlToneClass(pnlTone(row.averagePnl)),
+                        },
+                        {
+                          label: t("pnlPerContract.tooltip.totalPnl"),
+                          value: formatCurrency(row.totalPnl, locale),
+                          toneClassName: pnlToneClass(pnlTone(row.totalPnl)),
+                        },
+                        {
+                          label: t("pnlPerContract.tooltip.trades"),
+                          value: formatCount(row.tradeCount, locale),
+                        },
+                        {
+                          label: t("pnlPerContract.tooltip.winRate"),
+                          value: formatPercent(winRate, locale),
+                        },
+                        {
+                          label: t("pnlPerContract.tooltip.totalContracts"),
+                          value: formatCount(row.totalContracts, locale),
+                        },
+                      ]}
                     />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+                  );
+                }}
+              />
+              <Bar
+                dataKey="averagePnl"
+                radius={[3, 3, 0, 0]}
+                maxBarSize={compact ? 25 : 40}
+                isAnimationActive={false}
+              >
+                {chartData.map((entry) => (
+                  <Cell
+                    key={entry.instrument}
+                    // Sign is the only meaning color carries here; magnitude is
+                    // already carried by bar length, so no opacity ramp.
+                    fill={pnlToneFill(pnlTone(entry.averagePnl))}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </WidgetBody>
+      <WidgetFooter size={size}>
+        <span>USD</span>
+        <span className="tabular-nums">
+          {formatCount(totals.trades, locale)}{" "}
+          {t("tickDistribution.tooltip.trades")} ·{" "}
+          {formatCount(totals.contracts, locale)}{" "}
+          {t("pnlPerContract.tooltip.contracts")}
+        </span>
+      </WidgetFooter>
+    </WidgetCard>
   );
 }

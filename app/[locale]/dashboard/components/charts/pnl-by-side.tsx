@@ -4,22 +4,37 @@ import * as React from "react";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
   Cell,
   ResponsiveContainer,
-  ReferenceLine,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartConfig } from "@/components/ui/chart";
 import { useData } from "@/context/data-provider";
 import { cn } from "@/lib/utils";
-import { InfoBubble } from "@/components/ui/info-bubble";
 import { Switch } from "@/components/ui/switch";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
-import { useI18n } from "@/locales/client";
+import { useCurrentLocale, useI18n } from "@/locales/client";
+import {
+  axisProps,
+  chartMargin,
+  formatCompactCurrency,
+  formatCount,
+  formatCurrency,
+  formatPercent,
+  isCompactSize,
+  pnlTone,
+  pnlToneClass,
+  pnlToneFill,
+  widgetType,
+  WidgetBody,
+  WidgetCard,
+  WidgetChartGrid,
+  WidgetEmpty,
+  WidgetHeader,
+  WidgetTooltip,
+  WidgetZeroLine,
+} from "../widgets";
 import {
   BarChartLoadingSkeleton,
   LOADING_MOCK_SIDE_PNL,
@@ -29,62 +44,55 @@ interface PnLBySideChartProps {
   size?: WidgetSize;
 }
 
-const chartConfig = {
-  pnl: {
-    label: "P/L",
-    color: "hsl(var(--chart-loss))",
-  },
-} satisfies ChartConfig;
+interface SideDatum {
+  side: string;
+  pnl: number;
+  tradeCount: number;
+  winCount: number;
+  isAverage: boolean;
+}
 
-const formatCurrency = (value: number) =>
-  value.toLocaleString("en-US", { style: "currency", currency: "USD" });
+interface SideTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: SideDatum }>;
+  t: ReturnType<typeof useI18n>;
+  locale: string;
+}
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  const t = useI18n();
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="rounded-lg border bg-background p-2 shadow-xs">
-        <div className="grid gap-2">
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {t("pnlBySide.tooltip.side")}
-            </span>
-            <span className="font-bold text-muted-foreground">{data.side}</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {data.isAverage ? t("pnlBySide.tooltip.averageTotal") : "Total"}{" "}
-              P/L
-            </span>
-            <span className="font-bold">{formatCurrency(data.pnl)}</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {t("pnlBySide.tooltip.winRate")}
-            </span>
-            <span className="font-bold text-muted-foreground">
-              {((data.winCount / data.tradeCount) * 100).toFixed(1)}%
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {t("pnlBySide.tooltip.trades")}
-            </span>
-            <span className="font-bold text-muted-foreground">
-              {data.tradeCount} {t("pnlBySide.tooltip.trades")} ({data.winCount}{" "}
-              {data.winCount === 1
-                ? t("pnlBySide.tooltip.wins")
-                : t("pnlBySide.tooltip.wins_plural")}
-              )
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
+function SideTooltip({ active, payload, t, locale }: SideTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+  const data = payload[0].payload;
+  const winRate =
+    data.tradeCount > 0 ? (data.winCount / data.tradeCount) * 100 : 0;
+
+  return (
+    <WidgetTooltip
+      title={data.side}
+      rows={[
+        {
+          label: data.isAverage
+            ? t("pnlBySide.tooltip.averageTotal")
+            : t("pnl.tooltip.pnl"),
+          value: formatCurrency(data.pnl, locale),
+          toneClassName: pnlToneClass(pnlTone(data.pnl)),
+        },
+        {
+          label: t("pnlBySide.tooltip.winRate"),
+          value: formatPercent(winRate, locale),
+        },
+        {
+          label: t("pnlBySide.tooltip.trades"),
+          value: formatCount(data.tradeCount, locale),
+        },
+      ]}
+      caption={`${formatCount(data.winCount, locale)} ${
+        data.winCount === 1
+          ? t("pnlBySide.tooltip.wins")
+          : t("pnlBySide.tooltip.wins_plural")
+      }`}
+    />
+  );
+}
 
 export default function PnLBySideChart({
   size = "medium",
@@ -92,8 +100,9 @@ export default function PnLBySideChart({
   const { formattedTrades: trades, isLoading } = useData();
   const [showAverage, setShowAverage] = React.useState(true);
   const t = useI18n();
+  const locale = useCurrentLocale();
 
-  const chartData = React.useMemo(() => {
+  const chartData = React.useMemo<SideDatum[]>(() => {
     const longTrades = trades.filter(
       (trade) => trade.side?.toLowerCase() === "long",
     );
@@ -135,136 +144,85 @@ export default function PnLBySideChart({
 
   const maxPnL = Math.max(...chartData.map((d) => d.pnl));
   const minPnL = Math.min(...chartData.map((d) => d.pnl));
-  const absMax = Math.max(Math.abs(maxPnL), Math.abs(minPnL));
+  const hasData = chartData.some((entry) => entry.tradeCount > 0);
 
-  const getColor = (value: number) => {
-    const ratio = Math.abs(value / absMax);
-    const baseColorVar = value >= 0 ? "--chart-win" : "--chart-4";
-    const intensity = Math.max(0.2, ratio);
-    return `hsl(var(${baseColorVar}) / ${intensity})`;
-  };
+  const switchId = React.useId();
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader
-        className={cn(
-          "flex flex-col items-stretch space-y-0 border-b shrink-0",
-          size === "small" ? "p-2" : "p-3 sm:p-4",
-        )}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1",
-                size === "small" ? "text-sm" : "text-base",
-              )}
-            >
-              {t("pnlBySide.title")}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
-            >
-              <p>{t("pnlBySide.description")}</p>
-            </InfoBubble>
-          </div>
+    <WidgetCard>
+      <WidgetHeader
+        size={size}
+        title={t("pnlBySide.title")}
+        description={t("pnlBySide.description")}
+        actions={
           <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "text-muted-foreground",
-                size === "small" ? "text-xs" : "text-sm",
-              )}
-            >
+            <label htmlFor={switchId} className={widgetType.label}>
               {t("pnlBySide.toggle.showAverage")}
-            </span>
+            </label>
             <Switch
+              id={switchId}
               checked={showAverage}
               onCheckedChange={setShowAverage}
-              className="data-[state=checked]:bg-primary"
             />
           </div>
-        </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "flex-1 min-h-0",
-          size === "small" ? "p-1" : "p-2 sm:p-4",
-        )}
+        }
+      />
+      <WidgetBody
+        size={size}
+        flush
+        className={cn(isCompactSize(size) ? "p-1" : "p-2")}
       >
-        <div className={cn("w-full h-full")}>
-          {isLoading ? (
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_SIDE_PNL}
-              xDataKey="side"
-              yDataKey="pnl"
-              showReferenceLine
-              xTickCount={2}
-            />
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={
-                  size === "small"
-                    ? { left: 10, right: 4, top: 4, bottom: 20 }
-                    : { left: 10, right: 8, top: 8, bottom: 24 }
+        {isLoading ? (
+          <BarChartLoadingSkeleton
+            size={size}
+            data={LOADING_MOCK_SIDE_PNL}
+            xDataKey="side"
+            yDataKey="pnl"
+            showReferenceLine
+            xTickCount={2}
+          />
+        ) : !hasData ? (
+          <WidgetEmpty size={size} message={t("chat.noTradesAvailable")} />
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={chartMargin(size)}>
+              <WidgetChartGrid />
+              <XAxis
+                dataKey="side"
+                {...axisProps(size)}
+                height={isCompactSize(size) ? 20 : 24}
+              />
+              <YAxis
+                {...axisProps(size)}
+                width={56}
+                tickFormatter={(value: number) =>
+                  formatCompactCurrency(value, locale)
                 }
+                domain={[Math.min(minPnL * 1.1, 0), Math.max(maxPnL * 1.1, 0)]}
+              />
+              <WidgetZeroLine />
+              <Tooltip
+                content={<SideTooltip t={t} locale={locale} />}
+                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4 }}
+                wrapperStyle={{ zIndex: 1000 }}
+              />
+              <Bar
+                dataKey="pnl"
+                radius={[3, 3, 0, 0]}
+                maxBarSize={isCompactSize(size) ? 25 : 40}
+                isAnimationActive={false}
               >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  className="text-border dark:opacity-[0.12] opacity-[0.2]"
-                />
-                <XAxis
-                  dataKey="side"
-                  tickLine={false}
-                  axisLine={false}
-                  height={size === "small" ? 20 : 24}
-                  tickMargin={size === "small" ? 4 : 8}
-                  tick={{
-                    fontSize: size === "small" ? 9 : 11,
-                    fill: "currentColor",
-                  }}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  width={60}
-                  tickMargin={4}
-                  tick={{
-                    fontSize: size === "small" ? 9 : 11,
-                    fill: "currentColor",
-                  }}
-                  tickFormatter={formatCurrency}
-                  domain={[
-                    Math.min(minPnL * 1.1, 0),
-                    Math.max(maxPnL * 1.1, 0),
-                  ]}
-                />
-                <ReferenceLine y={0} stroke="hsl(var(--border))" />
-                <Tooltip
-                  content={<CustomTooltip />}
-                  wrapperStyle={{
-                    fontSize: size === "small" ? "10px" : "12px",
-                    zIndex: 1000,
-                  }}
-                />
-                <Bar
-                  dataKey="pnl"
-                  radius={[3, 3, 0, 0]}
-                  maxBarSize={size === "small" ? 25 : 40}
-                  className="transition-opacity duration-300 ease-out"
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={getColor(entry.pnl)} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+                {chartData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={pnlToneFill(pnlTone(entry.pnl))}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </WidgetBody>
+    </WidgetCard>
   );
 }

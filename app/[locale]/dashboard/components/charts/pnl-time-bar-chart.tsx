@@ -4,24 +4,40 @@ import * as React from "react";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
   Cell,
   ResponsiveContainer,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartConfig } from "@/components/ui/chart";
+import type { CategoricalChartState } from "recharts/types/chart/types";
 import { useData } from "@/context/data-provider";
 import { Trade } from "@/prisma/generated/prisma/browser";
 import { cn } from "@/lib/utils";
-import { InfoBubble } from "@/components/ui/info-bubble";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
-import { useI18n } from "@/locales/client";
+import { useCurrentLocale, useI18n } from "@/locales/client";
 import { formatInTimeZone } from "date-fns-tz";
 import { Button } from "@/components/ui/button";
 import { useUserStore } from "../../../../../store/user-store";
+import {
+  axisProps,
+  chartMargin,
+  formatCompactCurrency,
+  formatCount,
+  formatCurrency,
+  isCompactSize,
+  pnlTone,
+  pnlToneClass,
+  pnlToneFill,
+  WidgetBody,
+  WidgetCard,
+  WidgetChartGrid,
+  WidgetChartInteractive,
+  WidgetEmpty,
+  WidgetHeader,
+  WidgetTooltip,
+  WidgetZeroLine,
+} from "../widgets";
 import {
   BarChartLoadingSkeleton,
   LOADING_MOCK_HOURLY,
@@ -31,15 +47,43 @@ interface TimeOfDayTradeChartProps {
   size?: WidgetSize;
 }
 
-const chartConfig = {
-  avgPnl: {
-    label: "Average P/L",
-    color: "hsl(var(--chart-loss))",
-  },
-} satisfies ChartConfig;
+interface HourDatum {
+  hour: number;
+  avgPnl: number;
+  tradeCount: number;
+}
 
-const formatCurrency = (value: number) =>
-  value.toLocaleString("en-US", { style: "currency", currency: "USD" });
+function hourRangeLabel(hour: number) {
+  return `${hour}:00 - ${(hour + 1) % 24}:00`;
+}
+
+interface HourTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: HourDatum }>;
+  t: ReturnType<typeof useI18n>;
+  locale: string;
+}
+
+function HourTooltip({ active, payload, t, locale }: HourTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+  const data = payload[0].payload;
+  return (
+    <WidgetTooltip
+      title={hourRangeLabel(data.hour)}
+      rows={[
+        {
+          label: t("pnlTime.tooltip.averagePnl"),
+          value: formatCurrency(data.avgPnl, locale),
+          toneClassName: pnlToneClass(pnlTone(data.avgPnl)),
+        },
+        {
+          label: t("pnlTime.tooltip.trades"),
+          value: formatCount(data.tradeCount, locale),
+        },
+      ]}
+    />
+  );
+}
 
 export default function TimeOfDayTradeChart({
   size = "medium",
@@ -53,8 +97,9 @@ export default function TimeOfDayTradeChart({
   const timezone = useUserStore((state) => state.timezone);
   const [activeHour, setActiveHour] = React.useState<number | null>(null);
   const t = useI18n();
+  const locale = useCurrentLocale();
 
-  const handleClick = React.useCallback(() => {
+  const handleActivate = React.useCallback(() => {
     if (activeHour === null) return;
     if (hourFilter.hour === activeHour) {
       setHourFilter({ hour: null });
@@ -63,7 +108,14 @@ export default function TimeOfDayTradeChart({
     }
   }, [activeHour, hourFilter.hour, setHourFilter]);
 
-  const chartData = React.useMemo(() => {
+  const handleMouseMove = React.useCallback((state: CategoricalChartState) => {
+    const point = state?.activePayload?.[0]?.payload as HourDatum | undefined;
+    setActiveHour(point ? point.hour : null);
+  }, []);
+
+  const handleMouseLeave = React.useCallback(() => setActiveHour(null), []);
+
+  const chartData = React.useMemo<HourDatum[]>(() => {
     const hourlyData: { [hour: string]: { totalPnl: number; count: number } } =
       {};
 
@@ -89,191 +141,109 @@ export default function TimeOfDayTradeChart({
       .sort((a, b) => a.hour - b.hour);
   }, [trades, timezone]);
 
-  const maxTradeCount = Math.max(...chartData.map((data) => data.tradeCount));
-  const maxPnL = Math.max(...chartData.map((data) => data.avgPnl));
-  const minPnL = Math.min(...chartData.map((data) => data.avgPnl));
+  const hasData = chartData.some((entry) => entry.tradeCount > 0);
+  const hasFilter = hourFilter.hour !== null;
 
-  const getColor = (count: number) => {
-    const intensity = Math.max(0.2, count / maxTradeCount);
-    return `hsl(var(--chart-4) / ${intensity})`;
-  };
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    React.useEffect(() => {
-      if (active && payload && payload.length) {
-        setActiveHour(payload[0].payload.hour);
-      } else {
-        setActiveHour(null);
-      }
-    }, [active, payload]);
-
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="rounded-lg border bg-background p-2 shadow-xs">
-          <div className="grid gap-2">
-            <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t("pnlTime.tooltip.time")}
-              </span>
-              <span className="font-bold text-muted-foreground">
-                {`${label}:00 - ${(label + 1) % 24}:00`}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t("pnlTime.tooltip.averagePnl")}
-              </span>
-              <span className="font-bold">{formatCurrency(data.avgPnl)}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t("pnlTime.tooltip.trades")}
-              </span>
-              <span className="font-bold text-muted-foreground">
-                {data.tradeCount}{" "}
-                {data.tradeCount === 1
-                  ? t("pnlTime.tooltip.trade")
-                  : t("pnlTime.tooltip.trades_plural")}
-              </span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
+  const interactiveLabel =
+    activeHour !== null
+      ? `${t("filters.title")}: ${hourRangeLabel(activeHour)}`
+      : `${t("filters.title")}: ${t("pnlTime.title")}`;
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader
-        className={cn(
-          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === "small" ? "p-2 h-10" : "p-3 sm:p-4 h-14",
-        )}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1",
-                size === "small" ? "text-sm" : "text-base",
-              )}
-            >
-              {t("pnlTime.title")}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
-            >
-              <p>{t("pnlTime.description")}</p>
-            </InfoBubble>
-          </div>
-          {hourFilter.hour !== null && (
+    <WidgetCard>
+      <WidgetHeader
+        size={size}
+        title={t("pnlTime.title")}
+        description={t("pnlTime.description")}
+        actions={
+          hasFilter ? (
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 lg:px-3"
+              className="h-7 px-2"
               onClick={() => setHourFilter({ hour: null })}
             >
               {t("pnlTime.clearFilter")}
             </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "flex-1 min-h-0",
-          size === "small" ? "p-1" : "p-2 sm:p-4",
-        )}
+          ) : null
+        }
+      />
+      <WidgetBody
+        size={size}
+        flush
+        className={cn(isCompactSize(size) ? "p-1" : "p-2")}
       >
-        <div className="w-full h-full cursor-pointer" onClick={handleClick}>
-          {isLoading ? (
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_HOURLY}
-              xDataKey="hour"
-              yDataKey="avgPnl"
-              marginVariant="hourly"
-              yAxisWidth={45}
-              xTickCount={8}
-            />
-          ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={
-                size === "small"
-                  ? { left: 0, right: 4, top: 4, bottom: 20 }
-                  : { left: 0, right: 8, top: 8, bottom: 24 }
-              }
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                className="text-border dark:opacity-[0.12] opacity-[0.2]"
-              />
-              <XAxis
-                dataKey="hour"
-                tickLine={false}
-                axisLine={false}
-                height={size === "small" ? 20 : 24}
-                tickMargin={size === "small" ? 4 : 8}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-                tickFormatter={(value) => `${value}h`}
-                ticks={
-                  size === "small"
-                    ? [0, 6, 12, 18]
-                    : [0, 3, 6, 9, 12, 15, 18, 21]
-                }
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={45}
-                tickMargin={4}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-                tickFormatter={formatCurrency}
-              />
-              <Tooltip
-                content={<CustomTooltip />}
-                wrapperStyle={{
-                  fontSize: size === "small" ? "10px" : "12px",
-                  zIndex: 1000,
-                }}
-              />
-              <Bar
-                dataKey="avgPnl"
-                fill={chartConfig.avgPnl.color}
-                radius={[3, 3, 0, 0]}
-                maxBarSize={size === "small" ? 25 : 40}
-                className="transition-opacity duration-300 ease-out"
-                opacity={hourFilter.hour !== null ? 0.3 : 1}
+        {isLoading ? (
+          <BarChartLoadingSkeleton
+            size={size}
+            data={LOADING_MOCK_HOURLY}
+            xDataKey="hour"
+            yDataKey="avgPnl"
+            marginVariant="hourly"
+            yAxisWidth={45}
+            xTickCount={8}
+          />
+        ) : !hasData ? (
+          <WidgetEmpty size={size} message={t("chat.noTradesAvailable")} />
+        ) : (
+          <WidgetChartInteractive
+            onActivate={handleActivate}
+            label={interactiveLabel}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={chartMargin(size)}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
               >
-                {chartData.map((entry) => (
-                  <Cell
-                    key={`cell-${entry.hour}`}
-                    fill={getColor(entry.tradeCount)}
-                    opacity={
-                      hourFilter.hour === entry.hour
-                        ? 1
-                        : hourFilter.hour !== null
-                          ? 0.3
-                          : 1
-                    }
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+                <WidgetChartGrid />
+                <XAxis
+                  dataKey="hour"
+                  {...axisProps(size)}
+                  height={isCompactSize(size) ? 20 : 24}
+                  tickFormatter={(value) => `${value}h`}
+                  ticks={
+                    isCompactSize(size)
+                      ? [0, 6, 12, 18]
+                      : [0, 3, 6, 9, 12, 15, 18, 21]
+                  }
+                />
+                <YAxis
+                  {...axisProps(size)}
+                  width={52}
+                  tickFormatter={(value: number) =>
+                    formatCompactCurrency(value, locale)
+                  }
+                />
+                <WidgetZeroLine />
+                <Tooltip
+                  content={<HourTooltip t={t} locale={locale} />}
+                  cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4 }}
+                  wrapperStyle={{ zIndex: 1000 }}
+                />
+                <Bar
+                  dataKey="avgPnl"
+                  radius={[3, 3, 0, 0]}
+                  maxBarSize={isCompactSize(size) ? 25 : 40}
+                  isAnimationActive={false}
+                >
+                  {chartData.map((entry) => (
+                    <Cell
+                      key={`cell-${entry.hour}`}
+                      fill={pnlToneFill(pnlTone(entry.avgPnl))}
+                      fillOpacity={
+                        !hasFilter || hourFilter.hour === entry.hour ? 1 : 0.3
+                      }
+                      className="motion-safe:transition-opacity motion-safe:duration-150 motion-safe:ease-out"
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </WidgetChartInteractive>
+        )}
+      </WidgetBody>
+    </WidgetCard>
   );
 }

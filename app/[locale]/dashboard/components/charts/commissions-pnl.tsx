@@ -1,233 +1,239 @@
 "use client";
 
 import * as React from "react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
-  Label,
-} from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartConfig } from "@/components/ui/chart";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Label } from "recharts";
+
 import { useData } from "@/context/data-provider";
 import { cn } from "@/lib/utils";
-import { InfoBubble } from "@/components/ui/info-bubble";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
-import { useI18n } from "@/locales/client";
+import { useCurrentLocale, useI18n } from "@/locales/client";
+
 import { DonutChartLoadingSkeleton } from "./chart-loading-skeleton";
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetEmpty,
+  WidgetFooter,
+  WidgetHeader,
+  WidgetTooltip,
+  chartColors,
+  formatCount,
+  formatCurrency,
+  formatPercent,
+  isCompactSize,
+  pnlTone,
+  pnlToneClass,
+  pnlToneFill,
+  widgetType,
+} from "../widgets";
 
 interface CommissionsPnLChartProps {
   size?: WidgetSize;
 }
 
-
-const chartConfig = {
-  pnl: {
-    label: "Net P/L",
-    color: "hsl(var(--chart-win))",
-  },
-  commissions: {
-    label: "Commissions",
-    color: "hsl(var(--chart-loss))",
-  },
-} satisfies ChartConfig;
-
-const formatCurrency = (value: number) =>
-  value.toLocaleString("en-US", { style: "currency", currency: "USD" });
+interface CommissionsSlice {
+  key: "pnl" | "commissions";
+  name: string;
+  /** Share of the combined gross magnitude, 0-100. */
+  value: number;
+  color: string;
+  /** The signed amount the slice stands for, in USD. */
+  raw: number;
+  toneClassName?: string;
+}
 
 export default function CommissionsPnLChart({
   size = "medium",
 }: CommissionsPnLChartProps) {
   const { formattedTrades: trades, isLoading } = useData();
   const t = useI18n();
+  const locale = useCurrentLocale();
+  const compact = isCompactSize(size);
 
-
-  const chartData = React.useMemo(() => {
-    const totalPnL = trades.reduce((sum, trade) => sum + trade.pnl, 0);
-    const totalCommissions = trades.reduce(
+  const chartData = React.useMemo<CommissionsSlice[]>(() => {
+    const pnl = trades.reduce((sum, trade) => sum + trade.pnl, 0);
+    const commissions = trades.reduce(
       (sum, trade) => sum + trade.commission,
       0,
     );
-    const total = Math.abs(totalPnL) + Math.abs(totalCommissions);
-    const pnlPercent = total > 0 ? Number(((Math.abs(totalPnL) / total) * 100).toFixed(2)) : 0;
-    const commPercent = total > 0 ? Number(((Math.abs(totalCommissions) / total) * 100).toFixed(2)) : 0;
+    // A donut encodes share of a whole, so the parts have to be non negative.
+    // The whole here is the combined gross magnitude of both figures; the
+    // signed amounts are stated verbatim under the plot so nothing is hidden.
+    const total = Math.abs(pnl) + Math.abs(commissions);
+    const pnlPercent = total > 0 ? (Math.abs(pnl) / total) * 100 : 0;
+    const commPercent = total > 0 ? (Math.abs(commissions) / total) * 100 : 0;
+
     return [
       {
+        key: "pnl",
         name: t("commissions.legend.netPnl"),
         value: pnlPercent,
-        color: chartConfig.pnl.color,
-        raw: totalPnL,
+        // The only figure here that carries a sign, so the only one that earns color.
+        color: pnlToneFill(pnlTone(pnl)),
+        raw: pnl,
+        toneClassName: pnlToneClass(pnlTone(pnl)),
       },
       {
+        key: "commissions",
         name: t("commissions.legend.commissions"),
         value: commPercent,
-        color: chartConfig.commissions.color,
-        raw: totalCommissions,
+        // A cost magnitude, not a signed result: it stays monochrome.
+        color: chartColors.neutral,
+        raw: commissions,
       },
     ];
   }, [trades, t]);
 
+  const hasData = trades.length > 0 && chartData.some((slice) => slice.value > 0);
 
-  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: any }> }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="rounded-lg border bg-background p-2 shadow-xs">
-          <div className="grid gap-2">
-            <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t("commissions.tooltip.type")}
-              </span>
-              <span className="font-bold text-muted-foreground">
-                {data.name}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t("commissions.tooltip.amount")}
-              </span>
-              <span className="font-bold">{formatCurrency(data.raw)}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t("commissions.tooltip.percentage")}
-              </span>
-              <span className="font-bold text-muted-foreground">
-                {data.value.toFixed(2)}%</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
-
-  const renderColorfulLegendText = (value: string, entry: any) => {
-    return <span className="text-xs text-muted-foreground">{value}</span>;
-  };
-
-
-  // Pie radii for consistency with trade-distribution
-  const getInnerRadius = () => (size === 'small' ? '60%' : '65%');
-  const getOuterRadius = () => (size === 'small' ? '80%' : '85%');
+  const innerRadius = compact ? "60%" : "65%";
+  const outerRadius = compact ? "80%" : "85%";
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader
-        className={cn(
-          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === 'small' ? "p-2 h-10" : "p-3 sm:p-4 h-14"
-        )}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1",
-                size === 'small' ? "text-sm" : "text-base"
-              )}
-            >
-              {t("commissions.title")}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === 'small' ? "size-3.5" : "size-4")}
-            >
-              <p>{t("commissions.tooltip.description")}</p>
-            </InfoBubble>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "flex-1 min-h-0",
-          size === 'small' ? "p-1" : "p-2 sm:p-4"
-        )}
-      >
-        <div className="w-full h-full">
-          {isLoading ? (
-            <DonutChartLoadingSkeleton size={size} />
-          ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="45%"
-                innerRadius={getInnerRadius()}
-                outerRadius={getOuterRadius()}
-                paddingAngle={2}
-                dataKey="value"
-                nameKey="name"
-                startAngle={90}
-                endAngle={-270}
-                stroke="hsl(var(--background))"
-                strokeWidth={1}
-              >
-                {chartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.color}
-                    className="transition-opacity duration-300 ease-out hover:opacity-80 dark:brightness-90"
-                  />
-                ))}
-                {/* Centered percentage labels */}
-                <Label
-                  position="center"
-                  content={(props: any) => {
-                    if (!props.viewBox) return null;
-                    const viewBox = props.viewBox;
-                    if (!viewBox.cx || !viewBox.cy) return null;
-                    const cx = viewBox.cx;
-                    const cy = viewBox.cy;
-                    const labelRadius = Math.min(cx, cy) * (size === 'small' ? 0.95 : 1.1);
-                    return chartData.map((entry, index) => {
-                      const angle = -90 + (360 * (entry.value / 100) / 2) + (360 * chartData.slice(0, index).reduce((acc, curr) => acc + curr.value, 0) / 100);
-                      const x = cx + labelRadius * Math.cos((angle * Math.PI) / 180);
-                      const y = cy + labelRadius * Math.sin((angle * Math.PI) / 180);
+    <WidgetCard>
+      <WidgetHeader
+        size={size}
+        title={t("commissions.title")}
+        description={t("commissions.tooltip.description")}
+      />
+      <WidgetBody size={size} className="flex min-h-0 flex-col gap-4">
+        {isLoading ? (
+          <DonutChartLoadingSkeleton size={size} />
+        ) : !hasData ? (
+          <WidgetEmpty size={size} message={t("widgets.empty.noTrades")} />
+        ) : (
+          <>
+            <div className="min-h-0 flex-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={innerRadius}
+                    outerRadius={outerRadius}
+                    paddingAngle={2}
+                    dataKey="value"
+                    nameKey="name"
+                    startAngle={90}
+                    endAngle={-270}
+                    stroke="hsl(var(--background))"
+                    strokeWidth={1}
+                    isAnimationActive={false}
+                  >
+                    {chartData.map((entry) => (
+                      <Cell key={entry.key} fill={entry.color} />
+                    ))}
+                    {/* Direct labels on the arcs: two series never earn a legend. */}
+                    <Label
+                      position="center"
+                      content={(props: any) => {
+                        const viewBox = props?.viewBox;
+                        if (!viewBox?.cx || !viewBox?.cy) return null;
+                        const { cx, cy } = viewBox;
+                        const labelRadius = Math.min(cx, cy) * (compact ? 0.95 : 1.1);
+                        return (
+                          <>
+                            {chartData.map((entry, index) => {
+                              if (entry.value <= 5) return null;
+                              const precedingShare = chartData
+                                .slice(0, index)
+                                .reduce((acc, curr) => acc + curr.value, 0);
+                              const angle =
+                                -90 +
+                                (360 * (entry.value / 100)) / 2 +
+                                (360 * precedingShare) / 100;
+                              const x =
+                                cx + labelRadius * Math.cos((angle * Math.PI) / 180);
+                              const y =
+                                cy + labelRadius * Math.sin((angle * Math.PI) / 180);
+                              return (
+                                <text
+                                  key={entry.key}
+                                  x={x}
+                                  y={y}
+                                  textAnchor="middle"
+                                  dominantBaseline="middle"
+                                  className="fill-muted-foreground tabular-nums"
+                                  style={{ fontSize: compact ? 10 : 11 }}
+                                >
+                                  {formatPercent(entry.value, locale, {
+                                    maximumFractionDigits: 0,
+                                  })}
+                                </text>
+                              );
+                            })}
+                          </>
+                        );
+                      }}
+                    />
+                  </Pie>
+                  <Tooltip
+                    cursor={false}
+                    isAnimationActive={false}
+                    content={({ active, payload }: any) => {
+                      if (!active || !payload?.length) return null;
+                      const slice = payload[0].payload as CommissionsSlice;
                       return (
-                        <text
-                          key={index}
-                          x={x}
-                          y={y}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                          className="fill-muted-foreground font-medium translate-y-2"
-                          style={{ fontSize: size === 'small' ? '10px' : '12px' }}
-                        >
-                          {entry.value > 5 ? `${Math.round(entry.value)}%` : ''}
-                        </text>
+                        <WidgetTooltip
+                          title={slice.name}
+                          rows={[
+                            {
+                              label: t("commissions.tooltip.amount"),
+                              value: formatCurrency(slice.raw, locale),
+                              toneClassName: slice.toneClassName,
+                            },
+                            {
+                              label: t("commissions.tooltip.percentage"),
+                              value: formatPercent(slice.value, locale),
+                            },
+                          ]}
+                        />
                       );
-                    });
-                  }}
-                />
-              </Pie>
-              <Legend
-                verticalAlign="bottom"
-                align="center"
-                iconSize={8}
-                iconType="circle"
-                formatter={renderColorfulLegendText}
-                wrapperStyle={{
-                  paddingTop: size === 'small' ? 0 : 16
-                }}
-              />
-              <Tooltip
-                content={<CustomTooltip />}
-                wrapperStyle={{
-                  fontSize: size === 'small' ? '10px' : '12px',
-                  zIndex: 1000
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* The exact, auditable figures behind the shares. */}
+            <div className="flex shrink-0 flex-col gap-1.5">
+              {chartData.map((slice) => (
+                <div
+                  key={slice.key}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span
+                      aria-hidden
+                      className="size-2 shrink-0 rounded-[2px]"
+                      style={{ backgroundColor: slice.color }}
+                    />
+                    <span className={cn(widgetType.label, "truncate")}>
+                      {slice.name}
+                    </span>
+                  </div>
+                  <span
+                    className={cn(
+                      widgetType.value,
+                      "shrink-0 text-right",
+                      slice.toneClassName,
+                    )}
+                  >
+                    {formatCurrency(slice.raw, locale)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </WidgetBody>
+      <WidgetFooter size={size}>
+        <span>USD</span>
+        <span className="tabular-nums">
+          {formatCount(trades.length)} {t("tickDistribution.tooltip.trades")}
+        </span>
+      </WidgetFooter>
+    </WidgetCard>
   );
 }

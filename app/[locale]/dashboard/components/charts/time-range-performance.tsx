@@ -1,24 +1,51 @@
 "use client"
 
 import * as React from "react"
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Bar, BarChart, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
+
 import { useData } from "@/context/data-provider"
-import { cn } from "@/lib/utils"
-import { InfoBubble } from "@/components/ui/info-bubble"
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
-import { useI18n } from "@/locales/client"
+import { useCurrentLocale, useI18n } from "@/locales/client"
 import { Trade } from "@/prisma/generated/prisma/browser"
 import { Button } from "@/components/ui/button"
-import { ChartConfig } from "@/components/ui/chart"
 import { getTimeRangeKey } from "@/lib/time-range"
+
 import {
   BarChartLoadingSkeleton,
   LOADING_MOCK_TIME_RANGE,
 } from "./chart-loading-skeleton"
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetChartGrid,
+  WidgetChartInteractive,
+  WidgetEmpty,
+  WidgetFooter,
+  WidgetHeader,
+  WidgetTooltip,
+  WidgetZeroLine,
+  axisProps,
+  chartColors,
+  chartMargin,
+  formatCompactCurrency,
+  formatCount,
+  formatCurrency,
+  formatPercent,
+  isCompactSize,
+  pnlTone,
+  pnlToneClass,
+} from "../widgets"
 
 interface TimeRangePerformanceChartProps {
   size?: WidgetSize
+}
+
+interface TimeRangeRow {
+  range: string
+  avgPnl: number
+  winRate: number
+  trades: number
+  color: string
 }
 
 function getTimeRangeLabel(range: string): string {
@@ -36,24 +63,24 @@ function getTimeRangeLabel(range: string): string {
   return labels[range] || range
 }
 
-function getColorByWinRate(winRate: number): string {
-  if (winRate === 0) return "hsl(var(--muted-foreground))"
-  return winRate >= 50 ? "hsl(var(--chart-win))" : "hsl(var(--chart-loss))"
+/**
+ * Bar color states whether the bucket wins more often than it loses. It is
+ * always paired with the numeric win rate in the tooltip, so the meaning never
+ * rests on color alone.
+ */
+function getColorByWinRate(winRate: number, trades: number): string {
+  if (trades === 0) return chartColors.neutral
+  return winRate >= 50 ? chartColors.win : chartColors.loss
 }
-
-const chartConfig = {
-  avgPnl: {
-    label: "Average PnL",
-    color: "hsl(var(--chart-1))",
-  },
-} satisfies ChartConfig
 
 export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRangePerformanceChartProps) {
   const { formattedTrades: trades, timeRange, setTimeRange, isLoading } = useData()
   const t = useI18n()
+  const locale = useCurrentLocale()
+  const compact = isCompactSize(size)
   const [activeRange, setActiveRange] = React.useState<string | null>(null)
 
-  const chartData = React.useMemo(() => {
+  const chartData = React.useMemo<TimeRangeRow[]>(() => {
     const timeRangeData: Record<string, {
       totalPnl: number
       winCount: number
@@ -89,10 +116,26 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
         avgPnl: data.totalTrades > 0 ? data.totalPnl / data.totalTrades : 0,
         winRate,
         trades: data.totalTrades,
-        color: getColorByWinRate(winRate)
+        color: getColorByWinRate(winRate, data.totalTrades)
       }
     })
   }, [trades])
+
+  // Bar length is a magnitude encoding, so the domain always contains zero and
+  // the headroom only ever extends away from the baseline.
+  const yDomain = React.useMemo<[number, number]>(() => {
+    const values = chartData.map((row) => row.avgPnl)
+    if (values.length === 0) return [0, 0]
+    return [
+      Math.min(Math.min(...values) * 1.1, 0),
+      Math.max(Math.max(...values) * 1.1, 0),
+    ]
+  }, [chartData])
+
+  const totalTrades = React.useMemo(
+    () => chartData.reduce((sum, row) => sum + row.trades, 0),
+    [chartData],
+  )
 
   const handleClick = React.useCallback(() => {
     if (!activeRange) return
@@ -103,200 +146,133 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
     }
   }, [activeRange, timeRange.range, setTimeRange])
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    React.useEffect(() => {
-      if (active && payload && payload.length) {
-        setActiveRange(payload[0].payload.range)
-      } else {
-        setActiveRange(null)
-      }
-    }, [active, payload])
-
-    if (active && payload && payload.length) {
-      const data = payload[0].payload
-      return (
-        <div className="rounded-lg border bg-background p-2 shadow-xs">
-          <div className="grid gap-2">
-            <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t('timeRangePerformance.tooltip.timeRange')}
-              </span>
-              <span className={cn(
-                "font-bold",
-                timeRange.range === data.range ? "text-primary" : "text-muted-foreground"
-              )}>
-                {getTimeRangeLabel(label)}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t('timeRangePerformance.tooltip.avgPnl')}
-              </span>
-              <span className="font-bold">
-                {data.avgPnl.toFixed(2)}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t('timeRangePerformance.tooltip.winRate')}
-              </span>
-              <span className="font-bold" style={{ color: data.color }}>
-                {data.winRate.toFixed(1)}%
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t('timeRangePerformance.tooltip.trades.one', { count: data.trades })}
-              </span>
-              <span className="font-bold text-muted-foreground">
-                {data.trades === 1 
-                  ? t('timeRangePerformance.tooltip.trades.one', { count: data.trades })
-                  : t('timeRangePerformance.tooltip.trades.other', { count: data.trades })
-                }
-              </span>
-            </div>
-          </div>
-        </div>
-      )
-    }
-    return null
-  }
+  const hasData = totalTrades > 0
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader 
-        className={cn(
-          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === 'small' ? "p-2 h-10" : "p-3 sm:p-4 h-14"
-        )}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-1.5">
-            <CardTitle 
-              className={cn(
-                "line-clamp-1",
-                size === 'small' ? "text-sm" : "text-base"
-              )}
-            >
-              {t('timeRangePerformance.title')}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === 'small' ? "size-3.5" : "size-4")}
-            >
-              <p>{t('timeRangePerformance.description')}</p>
-            </InfoBubble>
-          </div>
-          {timeRange.range && (
+    <WidgetCard>
+      <WidgetHeader
+        size={size}
+        title={t('timeRangePerformance.title')}
+        description={t('timeRangePerformance.description')}
+        actions={
+          timeRange.range ? (
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 lg:px-3"
+              className="h-7 px-2 text-xs font-normal text-muted-foreground motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out hover:text-foreground"
               onClick={() => setTimeRange({ range: null })}
             >
               {t('timeRangePerformance.clearFilter')}
             </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent 
-        className={cn(
-          "flex-1 min-h-0",
-          size === 'small' ? "p-1" : "p-2 sm:p-4"
+          ) : null
+        }
+      />
+      <WidgetBody size={size} className="min-h-0">
+        {isLoading ? (
+          <BarChartLoadingSkeleton
+            size={size}
+            data={LOADING_MOCK_TIME_RANGE}
+            xDataKey="range"
+            yDataKey="avgPnl"
+            yAxisWidth={45}
+            showReferenceLine
+          />
+        ) : !hasData ? (
+          <WidgetEmpty size={size} message={t('widgets.empty.noTrades')} />
+        ) : (
+          <WidgetChartInteractive
+            onActivate={handleClick}
+            label={`${t('timeRangePerformance.title')}. ${t('timeRangePerformance.description')}`}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={chartMargin(size)}>
+                <WidgetChartGrid />
+                <XAxis
+                  dataKey="range"
+                  {...axisProps(size)}
+                  height={compact ? 32 : 24}
+                  angle={compact ? -45 : 0}
+                  textAnchor={compact ? 'end' : 'middle'}
+                  interval={0}
+                  tickFormatter={getTimeRangeLabel}
+                />
+                <YAxis
+                  {...axisProps(size)}
+                  width={compact ? 44 : 52}
+                  domain={yDomain}
+                  tickFormatter={(value: number) => formatCompactCurrency(value, locale)}
+                />
+                <WidgetZeroLine />
+                <Tooltip
+                  cursor={{ fill: "hsl(var(--muted) / 0.4)" }}
+                  isAnimationActive={false}
+                  content={({ active, payload }: any) => {
+                    const row: TimeRangeRow | undefined = active && payload?.length
+                      ? payload[0].payload
+                      : undefined
+                    // Recharts owns hover state; mirror it so a click knows the target.
+                    if ((row?.range ?? null) !== activeRange) {
+                      setActiveRange(row?.range ?? null)
+                    }
+                    if (!row) return null
+                    return (
+                      <WidgetTooltip
+                        title={getTimeRangeLabel(row.range)}
+                        rows={[
+                          {
+                            label: t('timeRangePerformance.tooltip.avgPnl'),
+                            value: formatCurrency(row.avgPnl, locale),
+                            toneClassName: pnlToneClass(pnlTone(row.avgPnl)),
+                          },
+                          {
+                            label: t('timeRangePerformance.tooltip.winRate'),
+                            value: formatPercent(row.winRate, locale),
+                          },
+                          {
+                            label: t('timeRangePerformance.tooltip.timeRange'),
+                            value: row.trades === 1
+                              ? t('timeRangePerformance.tooltip.trades.one', { count: row.trades })
+                              : t('timeRangePerformance.tooltip.trades.other', { count: formatCount(row.trades, locale) }),
+                          },
+                        ]}
+                        caption={
+                          timeRange.range === row.range
+                            ? t('timeRangePerformance.clearFilter')
+                            : undefined
+                        }
+                      />
+                    )
+                  }}
+                />
+                <Bar
+                  dataKey="avgPnl"
+                  fill={chartColors.neutral}
+                  radius={[3, 3, 0, 0]}
+                  maxBarSize={compact ? 25 : 40}
+                  isAnimationActive={false}
+                >
+                  {chartData.map((entry) => (
+                    <Cell
+                      key={`cell-${entry.range}`}
+                      fill={entry.color}
+                      // Dimming is the selection state, not decoration.
+                      opacity={
+                        timeRange.range && timeRange.range !== entry.range ? 0.3 : 1
+                      }
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </WidgetChartInteractive>
         )}
-      >
-        <div 
-          className="w-full h-full cursor-pointer" 
-          onClick={handleClick}
-        >
-          {isLoading ? (
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_TIME_RANGE}
-              xDataKey="range"
-              yDataKey="avgPnl"
-              yAxisWidth={45}
-              showReferenceLine
-            />
-          ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={
-                size === 'small'
-                  ? { left: 0, right: 4, top: 4, bottom: 20 }
-                  : { left: 0, right: 8, top: 8, bottom: 24 }
-              }
-            >
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                className="text-border dark:opacity-[0.12] opacity-[0.2]"
-              />
-              <XAxis
-                dataKey="range"
-                tickLine={false}
-                axisLine={false}
-                height={size === 'small' ? 20 : 24}
-                tickMargin={size === 'small' ? 4 : 8}
-                tick={(props) => {
-                  const { x, y, payload } = props;
-                  return (
-                    <g transform={`translate(${x},${y})`}>
-                      <text
-                        x={0}
-                        y={0}
-                        dy={size === 'small' ? 8 : 4}
-                        textAnchor={size === 'small' ? 'end' : 'middle'}
-                        fill="currentColor"
-                        fontSize={size === 'small' ? 9 : 11}
-                        transform={size === 'small' ? 'rotate(-45)' : 'rotate(0)'}
-                      >
-                        {getTimeRangeLabel(payload.value)}
-                      </text>
-                    </g>
-                  );
-                }}
-                interval="preserveStartEnd"
-                allowDataOverflow={true}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={45}
-                tickMargin={4}
-                tick={{ 
-                  fontSize: size === 'small' ? 9 : 11,
-                  fill: 'currentColor'
-                }}
-              />
-              <Tooltip 
-                content={<CustomTooltip />}
-                wrapperStyle={{ 
-                  fontSize: size === 'small' ? '10px' : '12px',
-                  zIndex: 1000
-                }} 
-              />
-              <Bar
-                dataKey="avgPnl"
-                fill={chartConfig.avgPnl.color}
-                radius={[3, 3, 0, 0]}
-                maxBarSize={size === 'small' ? 25 : 40}
-                className="transition-opacity duration-300 ease-out"
-                opacity={timeRange.range ? 0.3 : 1}
-              >
-                {chartData.map((entry) => (
-                  <Cell
-                    key={`cell-${entry.range}`}
-                    fill={entry.color}
-                    opacity={timeRange.range === entry.range ? 1 : (timeRange.range ? 0.3 : 1)}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      </WidgetBody>
+      <WidgetFooter size={size}>
+        <span>USD</span>
+        <span className="tabular-nums">
+          {formatCount(totalTrades, locale)} {t('tickDistribution.tooltip.trades')}
+        </span>
+      </WidgetFooter>
+    </WidgetCard>
   )
 }

@@ -1,34 +1,56 @@
+'use client'
+
 import { useData } from "@/context/data-provider"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Award } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { WidgetSize } from '../../types/dashboard'
-import { useI18n } from '@/locales/client'
-import { InfoBubble } from "@/components/ui/info-bubble"
+import { useCurrentLocale, useI18n } from '@/locales/client'
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetEmpty,
+  WidgetHeader,
+  WidgetMetric,
+  formatCount,
+  isCompactSize,
+  widgetMetricClass,
+} from "../widgets"
 
 interface WinningStreakCardProps {
   size?: WidgetSize
 }
 
 export default function WinningStreakCard({ size = 'medium' }: WinningStreakCardProps) {
-  const { statistics: { winningStreak } } = useData()
-  const  t  = useI18n()
+  const { statistics: { winningStreak, nbTrades } } = useData()
+  const t = useI18n()
+  const locale = useCurrentLocale()
 
-    return (
-      <Card className="h-full">
-        <div className="flex items-center justify-center h-full gap-1.5">
-          <Award className="h-3 w-3 text-yellow-500" />
-          <div className="font-medium text-sm tabular-nums">{winningStreak}</div>
-          <InfoBubble
-            icon="help"
-            side="bottom"
-            sideOffset={5}
-            iconClassName="size-3"
-            contentClassName="max-w-[300px]"
-          >
-            {t('widgets.winningStreak.tooltip')}
-          </InfoBubble>
-        </div>
-      </Card>
-    )
-  }
+  const value = formatCount(winningStreak, locale)
+
+  return (
+    <WidgetCard>
+      <WidgetHeader
+        size={size}
+        title={t('widgets.types.winningStreak')}
+        description={t('widgets.winningStreak.tooltip')}
+      />
+      {nbTrades === 0 ? (
+        <WidgetEmpty
+          size={size}
+          className="flex-1"
+          message={t('widgets.empty.noTrades')}
+        />
+      ) : isCompactSize(size) ? (
+        <WidgetBody size={size} className="flex items-center justify-center">
+          <span className={widgetMetricClass(size)}>{value}</span>
+        </WidgetBody>
+      ) : (
+        <WidgetBody size={size} className="flex items-center">
+          <WidgetMetric
+            size={size}
+            label={t('statistics.distribution.winningStreak')}
+            value={value}
+          />
+        </WidgetBody>
+      )}
+    </WidgetCard>
+  )
+}

@@ -1081,6 +1081,8 @@ export default {
       profitFactor: "Facteur de Profit",
       bestTrade: "Meilleur Trade",
       worstTrade: "Pire Trade",
+      win: "Gain",
+      loss: "Perte",
     },
     activity: {
       title: "Activité",
@@ -2037,6 +2039,8 @@ export default {
     "Les résultats des performances hypothétiques ont de nombreuses limitations inhérentes, dont certaines sont décrites ci-dessous. Aucune déclaration n'est faite selon laquelle un compte réalisera ou est susceptible de réaliser des profits ou des pertes similaires à ceux indiqués ; en fait, il existe souvent des différences marquées entre les résultats de performance hypothétiques et les résultats réels obtenus par la suite par un programme de trading particulier. L'une des limites des résultats de performance hypothétiques est qu'ils sont généralement préparés avec le bénéfice du recul. De plus, la négociation hypothétique n'implique pas de risque financier, et aucun résultat de négociation hypothétique ne peut complètement rendre compte de l'impact du risque financier de la négociation réelle. Par exemple, la capacité à supporter les pertes ou à adhérer à un programme de négociation particulier malgré les pertes de négociation sont des points importants qui peuvent également affecter négativement les résultats de négociation réels. Il existe de nombreux autres facteurs liés aux marchés en général ou à la mise en œuvre d'un programme de trading spécifique qui ne peuvent pas être entièrement pris en compte dans la préparation de résultats de performance hypothétiques et qui peuvent tous avoir un impact négatif sur les résultats de trading.",
   "widgets.averagePositionTime.tooltip":
     "Temps moyen de détention de vos positions. Cette métrique vous aide à comprendre votre période de détention typique et peut être utile pour identifier si vous tendez à garder les positions trop longtemps ou à sortir trop rapidement.",
+  "widgets.empty.noTrades":
+    "Aucun trade sur la période sélectionnée. Ajustez vos filtres ou importez des trades pour voir cette métrique.",
   "widgets.cumulativePnl.tooltip":
     "Votre profit ou perte total sur tous les trades, frais inclus. Cette métrique montre votre performance globale de trading et vous aide à suivre votre rentabilité à long terme.",
   "widgets.longShortPerformance.tooltip":
