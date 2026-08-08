@@ -183,12 +183,17 @@ async function persistTrades(
  * one Flex round-trip fewer — IBKR allows only 10 requests per minute per
  * token, and each statement costs several.
  */
-export async function connectIbkrFlexAccount(rawInput: string): Promise<IbkrConnectResult> {
-  let userId: string
-  try {
-    userId = await getUserId()
-  } catch {
-    return { error: IbkrErrorCode.USER_NOT_AUTHENTICATED }
+export async function connectIbkrFlexAccount(
+  rawInput: string,
+  options?: { userId?: string },
+): Promise<IbkrConnectResult> {
+  let userId = options?.userId
+  if (!userId) {
+    try {
+      userId = await getUserId()
+    } catch {
+      return { error: IbkrErrorCode.USER_NOT_AUTHENTICATED }
+    }
   }
 
   const { token, queryId } = parseIbkrCredentialsInput(rawInput)

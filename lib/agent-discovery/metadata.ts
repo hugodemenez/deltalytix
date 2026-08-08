@@ -16,24 +16,33 @@ export function absoluteUrl(path: string, request?: NextRequest | Request) {
 }
 
 export function getOAuthIssuer(request?: NextRequest | Request) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-  if (supabaseUrl) {
-    return new URL("/auth/v1", supabaseUrl).toString().replace(/\/$/, "");
-  }
-
-  return absoluteUrl("/auth/v1", request);
+  return absoluteUrl("/", request).replace(/\/$/, "")
 }
 
 export function getOAuthEndpoint(path: string, request?: NextRequest | Request) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-  if (supabaseUrl) {
-    return new URL(`/auth/v1/${path.replace(/^\//, "")}`, supabaseUrl).toString();
+  const normalized = path.replace(/^\//, "")
+  if (normalized === "authorize") {
+    return absoluteUrl("/oauth/authorize", request)
   }
-
-  return absoluteUrl(`/auth/v1/${path.replace(/^\//, "")}`, request);
+  if (normalized === "token") {
+    return absoluteUrl("/api/oauth/token", request)
+  }
+  if (normalized === "revoke") {
+    return absoluteUrl("/api/oauth/revoke", request)
+  }
+  return absoluteUrl(`/api/oauth/${normalized}`, request)
 }
+
+export const FIRST_PARTY_API_SCOPES = [
+  "profile:read",
+  "trades:read",
+  "trades:write",
+  "accounts:read",
+  "connections:read",
+  "connections:write",
+  "imports:write",
+  "metrics:read",
+] as const
 
 export function linkHeaderValue() {
   return [

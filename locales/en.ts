@@ -15,6 +15,7 @@ import faq from "./en/faq";
 import support from "./en/support";
 import feedback from "./en/feedback";
 import landingPreview from "./en/landing-preview";
+import apiAccess from "./en/api-access";
 export default {
   ...shared,
   ...landing,
@@ -33,6 +34,7 @@ export default {
   ...faq,
   ...support,
   ...feedback,
+  ...apiAccess,
   "footer.heading": "Footer",
   "footer.description": "Advanced analytics for modern traders.",
   "footer.product.title": "Product",
@@ -68,6 +70,12 @@ export default {
   "updates.completed": "Latest updates",
   "updates.shipped": "{count} improvements shipped",
   "updates.weeklyVideo": "📺 Latest Weekly Video",
+  "docs.title": "API documentation.",
+  "docs.description":
+    "Authenticate with OAuth or personal access tokens, then read and write trades, accounts, connections, imports, and metrics through the Deltalytix Public API v1.",
+  "docs.sections": "Guides",
+  "docs.sectionLabel": "Section {number}",
+  "docs.openApi": "OpenAPI reference",
   "notification.title": "Rithmic Sync Progress",
   "notification.noAccount": "No account being processed",
   "notification.processingAccount": "Processing account: {account}",

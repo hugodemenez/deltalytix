@@ -1,6 +1,6 @@
 'use server'
 import { Trade, Prisma, DashboardLayout } from '@/prisma/generated/prisma/client'
-import { revalidatePath, revalidateTag, updateTag } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { Widget, Layouts } from '@/app/[locale]/dashboard/types/dashboard'
 import { createClient, getUserId } from './auth'
 import { startOfDay } from 'date-fns'
@@ -9,22 +9,10 @@ import { prisma } from '@/lib/prisma'
 import { unstable_cache } from 'next/cache'
 import { defaultLayouts } from '@/lib/default-layouts'
 import { formatTimestamp } from '@/lib/date-utils'
-import { v5 as uuidv5 } from 'uuid'
-import { capturePostHogEvent } from '@/lib/posthog-server'
-
-type TradeError =
-  | 'DUPLICATE_TRADES'
-  | 'NO_TRADES_ADDED'
-  | 'DATABASE_ERROR'
-  | 'INVALID_DATA'
-
-interface TradeResponse {
-  error: TradeError | false
-  numberOfTradesAdded: number
-  details?: unknown
-  /** Trades prepared with server-assigned IDs/accountIds for client merge */
-  trades?: Trade[]
-}
+import {
+  saveTradesCore,
+  type TradeSaveResult as TradeResponse,
+} from '@/lib/trades/save-trades-core'
 
 export async function revalidateCache(tags: string[]) {
   console.log(`[revalidateCache] Starting cache invalidation for tags:`, tags)
@@ -42,166 +30,16 @@ export async function revalidateCache(tags: string[]) {
   console.log(`[revalidateCache] Completed cache invalidation for ${tags.length} tags`)
 }
 
-// Namespace UUID for deterministic trade ID generation
-const TRADE_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
-
-/**
- * Generates a deterministic UUID v5 from all trade fields
- * This ensures the same trade always gets the same UUID
- */
-function generateTradeUUID(trade: Partial<Trade>): string {
-  // Create a deterministic string from all trade fields
-  const tradeSignature = [
-    trade.userId || '',
-    trade.accountNumber || '',
-    trade.instrument || '',
-    trade.entryDate || '',
-    trade.closeDate || '',
-    trade.entryPrice || '',
-    trade.closePrice || '',
-    (trade.quantity || 0).toString(),
-    trade.entryId || '',
-    trade.closeId || '',
-    (trade.timeInPosition || 0).toString(),
-    trade.side || '',
-    (trade.pnl || 0).toString(),
-    (trade.commission || 0).toString(),
-  ].join('|')
-  
-  // Generate UUID v5 from the signature
-  return uuidv5(tradeSignature, TRADE_NAMESPACE)
-}
-
 export async function saveTradesAction(
   data: Trade[],
   options?: { userId?: string; connectionId?: string | null }
 ): Promise<TradeResponse> {
   console.log('[saveTrades] Saving trades:', data.length)
   const userId = options?.userId ?? await getUserId()
-  if (!Array.isArray(data) || data.length === 0) {
-    return {
-      error: 'INVALID_DATA',
-      numberOfTradesAdded: 0,
-      details: 'No trades provided'
-    }
-  }
-
-  try {
-    const hadExistingTrades = Boolean(await prisma.trade.findFirst({
-      where: { userId },
-      select: { id: true },
-    }))
-
-    const accountNumbers = data
-      .map((trade) => trade.accountNumber)
-      .filter((n): n is string => Boolean(n))
-
-    const { upsertAccountsForNumbers } = await import('@/server/connections')
-    const accountIdByNumber = await upsertAccountsForNumbers(
-      userId,
-      accountNumbers,
-      options?.connectionId
-    )
-
-    // Clean the data to remove undefined values and ensure all required fields are present
-    const userAssignedTrades = data.map(trade => {
-      const accountId =
-        trade.accountId ||
-        (trade.accountNumber
-          ? accountIdByNumber.get(trade.accountNumber)
-          : undefined) ||
-        null
-
-      return {
-        ...trade,
-        userId: userId,
-        accountId,
-        id: generateTradeUUID({...trade, userId: userId}), // Generate a unique ID for the trade using UUID v5 based on all trade properties
-      } as Trade
-    })
-
-    const result = await prisma.trade.createMany({
-      data: userAssignedTrades,
-      skipDuplicates: true
-    })
-
-    // Log potential duplicates if no trades were added
-    if (result.count === 0) {
-      console.log('[saveTrades] No trades added. Checking for duplicates:', { attempted: data.length })
-      const tradeIds = userAssignedTrades.map(trade => trade.id)
-      const existingTrades = await prisma.trade.findMany({
-        where: { id: { in: tradeIds } },
-        select: {
-          id: true,
-          entryDate: true,
-          instrument: true
-        }
-      })
-
-      if (existingTrades.length > 0) {
-        console.log('[saveTrades] Found existing trades:', existingTrades)
-        return {
-          error: 'DUPLICATE_TRADES',
-          numberOfTradesAdded: 0,
-          details: existingTrades
-        }
-      }
-    }
-
-    // Prefer updateTag: in a Server Action context (e.g. client-side import)
-    // it expires AND immediately refreshes the cache, so the caller reads its
-    // own writes without a separate refetch. updateTag throws when called from
-    // a Route Handler (e.g. /api/dxfeed/sync, /api/thor/store), so fall back to
-    // revalidateTag there — that's expected, not an error.
-    try {
-      updateTag(`trades-${userId}`)
-      updateTag(`user-data-${userId}`)
-    } catch {
-      revalidateTag(`trades-${userId}`, { expire: 0 })
-      revalidateTag(`user-data-${userId}`, { expire: 0 })
-    }
-
-    if (result.count > 0) {
-      const sources = Array.from(new Set(
-        userAssignedTrades.flatMap((trade) => trade.tags ?? [])
-      ))
-
-      await capturePostHogEvent({
-        distinctId: userId,
-        event: 'trades_imported',
-        properties: {
-          imported_trade_count: result.count,
-          attempted_trade_count: data.length,
-          import_sources: sources.join(','),
-          is_first_import: !hadExistingTrades,
-        },
-      })
-
-      if (!hadExistingTrades) {
-        await capturePostHogEvent({
-          distinctId: userId,
-          event: 'first_trade_imported',
-          properties: {
-            imported_trade_count: result.count,
-            import_sources: sources.join(','),
-          },
-        })
-      }
-    }
-
-    return {
-      error: result.count === 0 ? 'NO_TRADES_ADDED' : false,
-      numberOfTradesAdded: result.count,
-      trades: result.count > 0 ? userAssignedTrades : undefined,
-    }
-  } catch (error) {
-    console.error('[saveTrades] Database error:', error)
-    return {
-      error: 'DATABASE_ERROR',
-      numberOfTradesAdded: 0,
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }
-  }
+  return saveTradesCore(data, {
+    userId,
+    connectionId: options?.connectionId,
+  })
 }
 
 // Create cache function dynamically for each user/subscription combination

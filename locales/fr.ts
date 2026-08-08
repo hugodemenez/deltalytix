@@ -15,6 +15,7 @@ import faq from "./fr/faq";
 import support from "./fr/support";
 import feedback from "./fr/feedback";
 import landingPreview from "./fr/landing-preview";
+import apiAccess from "./fr/api-access";
 
 export default {
   ...shared,
@@ -34,6 +35,7 @@ export default {
   ...faq,
   ...support,
   ...feedback,
+  ...apiAccess,
   "footer.heading": "Pied de page",
   "footer.description": "Analyses avancées pour les traders modernes.",
   "footer.product.title": "Produit",
@@ -69,6 +71,12 @@ export default {
   "updates.completed": "Dernières mises à jour",
   "updates.shipped": "{count} améliorations publiées",
   "updates.weeklyVideo": "📺 Dernière vidéo de la semaine",
+  "docs.title": "Documentation API.",
+  "docs.description":
+    "Authentifiez-vous avec OAuth ou des personal access tokens, puis lisez et écrivez trades, comptes, connexions, imports et métriques via l’API publique Deltalytix v1.",
+  "docs.sections": "Guides",
+  "docs.sectionLabel": "Section {number}",
+  "docs.openApi": "Référence OpenAPI",
   "notification.title": "Progrès de synchronisation Rithmic",
   "notification.noAccount": "Aucun compte en cours de traitement",
   "notification.processingAccount": "Traitement du compte : {account}",
