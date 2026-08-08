@@ -4,23 +4,40 @@ import * as React from "react";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   Cell,
   ComposedChart,
   Line,
   LineChart,
   Pie,
   PieChart,
-  ReferenceLine,
   ResponsiveContainer,
   XAxis,
   YAxis,
 } from "recharts";
-import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
+import {
+  WidgetChartGrid,
+  WidgetSkeleton,
+  WidgetZeroLine,
+  axisProps,
+  chartColors,
+  chartMargin,
+  isCompactSize,
+} from "../widgets";
 
-const MUTED_BAR_FILL = "hsl(var(--muted-foreground) / 0.35)";
+/**
+ * Loading geometry for the dashboard charts.
+ *
+ * Every placeholder mirrors the margins, axis gutters, and bar sizes of the
+ * real chart it stands in for, so nothing shifts when the data lands. Colors
+ * come from theme tokens, and the only motion is the shared skeleton pulse,
+ * which is inert under `prefers-reduced-motion`.
+ */
+
+/** The one placeholder fill: a neutral magnitude, never a colored series. */
+const MUTED_BAR_FILL = chartColors.neutral;
+const MUTED_FILL_OPACITY = 0.35;
 const DEFAULT_LOADING_LABEL = "Loading chart data...";
 
 interface ChartLoadingContainerProps {
@@ -53,25 +70,17 @@ export function getChartMargins(
   size: WidgetSize = "medium",
   variant: ChartMarginVariant = "default",
 ) {
-  if (variant === "hourly") {
-    return size === "small"
-      ? { left: 0, right: 4, top: 4, bottom: 20 }
-      : { left: 0, right: 8, top: 8, bottom: 24 };
-  }
-
-  if (variant === "calendar") {
-    return { left: 10, right: 16, top: 8, bottom: 35 };
-  }
-
-  if (size === "small") {
-    return { left: 10, right: 4, top: 4, bottom: 20 };
-  }
-
-  if (size === "large") {
-    return { left: 10, right: 12, top: 12, bottom: 28 };
-  }
-
-  return { left: 10, right: 8, top: 8, bottom: 24 };
+  // The real charts all plot on `chartMargin(size)` now, so the skeleton uses
+  // the same frame for every variant and the plot never shifts on load.
+  const base = chartMargin(size);
+  // The calendar charts carry a taller category axis under the plot.
+  const bottom = variant === "calendar" ? base.bottom + 24 : base.bottom;
+  return {
+    left: base.left,
+    right: base.right,
+    top: base.top,
+    bottom,
+  };
 }
 
 export function getAxisDimensions(
@@ -80,7 +89,7 @@ export function getAxisDimensions(
 ) {
   return {
     yAxisWidth,
-    xAxisHeight: size === "small" ? 20 : 24,
+    xAxisHeight: isCompactSize(size) ? 20 : 24,
   };
 }
 
@@ -89,6 +98,8 @@ export function getSignedDomain(values: number[]) {
     return [0, 0] as [number, number];
   }
 
+  // A length encoding needs its zero: the headroom only ever extends away
+  // from the baseline, never crops it.
   const min = Math.min(...values);
   const max = Math.max(...values);
   return [Math.min(min * 1.1, 0), Math.max(max * 1.1, 0)] as [number, number];
@@ -107,10 +118,11 @@ export function ChartAxisSkeletonOverlay({
   size = "medium",
   margin,
   yAxisWidth = 60,
-  xAxisHeight = size === "small" ? 20 : 24,
+  xAxisHeight = isCompactSize(size) ? 20 : 24,
   yTickCount = 5,
   xTickCount = 6,
 }: ChartAxisSkeletonOverlayProps) {
+  const compact = isCompactSize(size);
   return (
     <>
       <div
@@ -123,7 +135,7 @@ export function ChartAxisSkeletonOverlay({
         }}
       >
         {Array.from({ length: yTickCount }).map((_, i) => (
-          <Skeleton key={`y-${i}`} className="h-3 w-10" />
+          <WidgetSkeleton key={`y-${i}`} className="h-2.5 w-10" />
         ))}
       </div>
       <div
@@ -136,9 +148,9 @@ export function ChartAxisSkeletonOverlay({
         }}
       >
         {Array.from({ length: xTickCount }).map((_, i) => (
-          <Skeleton
+          <WidgetSkeleton
             key={`x-${i}`}
-            className={cn(size === "small" ? "h-3 w-8" : "h-3.5 w-10")}
+            className={cn(compact ? "h-2.5 w-6" : "h-3 w-8")}
           />
         ))}
       </div>
@@ -173,16 +185,17 @@ export function BarChartLoadingSkeleton({
   xTickCount = 6,
   loadingLabel,
 }: BarChartLoadingSkeletonProps) {
+  const compact = isCompactSize(size);
   const margin = getChartMargins(size, marginVariant);
   const { xAxisHeight } = getAxisDimensions(size, yAxisWidth);
   const values = data.map((row) => Number(row[yDataKey]));
   const yDomain = domain ?? getSignedDomain(values);
-  const barSize = maxBarSize ?? (size === "small" ? 25 : 40);
+  const barSize = maxBarSize ?? (compact ? 25 : 40);
 
   return (
     <ChartLoadingContainer
       loadingLabel={loadingLabel}
-      className="animate-pulse"
+      className="motion-safe:animate-pulse"
     >
       <ChartAxisSkeletonOverlay
         size={size}
@@ -193,38 +206,35 @@ export function BarChartLoadingSkeleton({
       />
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={margin}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            className="text-border dark:opacity-[0.12] opacity-[0.2]"
-          />
+          <WidgetChartGrid />
           <XAxis
             dataKey={xDataKey}
-            tickLine={false}
-            axisLine={false}
+            {...axisProps(size)}
             height={xAxisHeight}
             tick={false}
-            minTickGap={size === "small" ? 30 : 50}
+            minTickGap={compact ? 30 : 50}
           />
           <YAxis
-            tickLine={false}
-            axisLine={false}
+            {...axisProps(size)}
             width={yAxisWidth}
-            tickMargin={4}
             tick={false}
             domain={yDomain}
           />
-          {showReferenceLine ? (
-            <ReferenceLine y={0} stroke="hsl(var(--border))" />
-          ) : null}
+          {showReferenceLine ? <WidgetZeroLine /> : null}
           <Bar
             dataKey={yDataKey}
             radius={[3, 3, 0, 0]}
             maxBarSize={barSize}
-            className="transition-none"
             fill={MUTED_BAR_FILL}
+            fillOpacity={MUTED_FILL_OPACITY}
+            isAnimationActive={false}
           >
             {data.map((_, index) => (
-              <Cell key={`skeleton-cell-${index}`} fill={MUTED_BAR_FILL} />
+              <Cell
+                key={`skeleton-cell-${index}`}
+                fill={MUTED_BAR_FILL}
+                fillOpacity={MUTED_FILL_OPACITY}
+              />
             ))}
           </Bar>
         </BarChart>
@@ -250,13 +260,14 @@ export function LineChartLoadingSkeleton({
   showReferenceLine = true,
   loadingLabel,
 }: LineChartLoadingSkeletonProps) {
+  const compact = isCompactSize(size);
   const margin = getChartMargins(size);
   const { yAxisWidth, xAxisHeight } = getAxisDimensions(size);
 
   return (
     <ChartLoadingContainer
       loadingLabel={loadingLabel}
-      className="animate-pulse"
+      className="motion-safe:animate-pulse"
     >
       <ChartAxisSkeletonOverlay
         size={size}
@@ -266,40 +277,24 @@ export function LineChartLoadingSkeleton({
       />
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={margin}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            className="text-border dark:opacity-[0.12] opacity-[0.2]"
-          />
+          <WidgetChartGrid />
           <XAxis
             dataKey={xDataKey}
-            tickLine={false}
-            axisLine={false}
+            {...axisProps(size)}
             height={xAxisHeight}
             tick={false}
-            minTickGap={size === "small" ? 30 : 50}
+            minTickGap={compact ? 30 : 50}
           />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={yAxisWidth}
-            tickMargin={4}
-            tick={false}
-          />
-          {showReferenceLine ? (
-            <ReferenceLine
-              y={0}
-              stroke="hsl(var(--muted-foreground))"
-              strokeDasharray="3 3"
-              strokeOpacity={0.5}
-            />
-          ) : null}
+          <YAxis {...axisProps(size)} width={yAxisWidth} tick={false} />
+          {showReferenceLine ? <WidgetZeroLine /> : null}
           <Line
             type="monotone"
             dataKey={yDataKey}
             stroke={MUTED_BAR_FILL}
+            strokeOpacity={MUTED_FILL_OPACITY}
             strokeWidth={2}
             dot={false}
-            className="transition-none"
+            isAnimationActive={false}
           />
         </LineChart>
       </ResponsiveContainer>
@@ -316,6 +311,7 @@ export function DonutChartLoadingSkeleton({
   size = "medium",
   loadingLabel,
 }: DonutChartLoadingSkeletonProps) {
+  const compact = isCompactSize(size);
   const mockData = [
     { name: "a", value: 55 },
     { name: "b", value: 10 },
@@ -325,7 +321,7 @@ export function DonutChartLoadingSkeleton({
   return (
     <ChartLoadingContainer
       loadingLabel={loadingLabel}
-      className="animate-pulse flex flex-col"
+      className="motion-safe:animate-pulse flex flex-col"
     >
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
@@ -333,33 +329,39 @@ export function DonutChartLoadingSkeleton({
             <Pie
               data={mockData}
               cx="50%"
-              cy="45%"
-              innerRadius={size === "small" ? "60%" : "65%"}
-              outerRadius={size === "small" ? "80%" : "85%"}
+              cy="50%"
+              innerRadius={compact ? "60%" : "65%"}
+              outerRadius={compact ? "80%" : "85%"}
               paddingAngle={2}
               dataKey="value"
               startAngle={90}
               endAngle={-270}
               stroke="hsl(var(--background))"
               strokeWidth={1}
+              isAnimationActive={false}
             >
               {mockData.map((_, index) => (
-                <Cell key={`skeleton-cell-${index}`} fill={MUTED_BAR_FILL} />
+                <Cell
+                  key={`skeleton-cell-${index}`}
+                  fill={MUTED_BAR_FILL}
+                  fillOpacity={MUTED_FILL_OPACITY}
+                />
               ))}
             </Pie>
           </PieChart>
         </ResponsiveContainer>
       </div>
+      {/* Matches the direct-label row the real donut renders underneath. */}
       <div
         className={cn(
           "flex items-center justify-center gap-4 shrink-0",
-          size === "small" ? "pb-1" : "pb-2 pt-2",
+          compact ? "pt-1" : "pt-3",
         )}
       >
         {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton
+          <WidgetSkeleton
             key={`legend-${i}`}
-            className={cn(size === "small" ? "h-3 w-16" : "h-3.5 w-20")}
+            className={cn(compact ? "h-2.5 w-14" : "h-3 w-20")}
           />
         ))}
       </div>
@@ -384,13 +386,14 @@ export function ComposedChartLoadingSkeleton({
   lineDataKey,
   loadingLabel,
 }: ComposedChartLoadingSkeletonProps) {
+  const compact = isCompactSize(size);
   const margin = getChartMargins(size, "calendar");
   const { yAxisWidth, xAxisHeight } = getAxisDimensions(size);
 
   return (
     <ChartLoadingContainer
       loadingLabel={loadingLabel}
-      className="animate-pulse"
+      className="motion-safe:animate-pulse"
     >
       <ChartAxisSkeletonOverlay
         size={size}
@@ -401,43 +404,39 @@ export function ComposedChartLoadingSkeleton({
       />
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={margin}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            className="text-border dark:opacity-[0.12] opacity-[0.2]"
-          />
+          <WidgetChartGrid />
           <XAxis
             dataKey={xDataKey}
-            tickLine={false}
-            axisLine={false}
+            {...axisProps(size)}
             height={xAxisHeight}
             tick={false}
           />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={yAxisWidth}
-            tickMargin={4}
-            tick={false}
-          />
-          <ReferenceLine y={0} stroke="hsl(var(--border))" />
+          <YAxis {...axisProps(size)} width={yAxisWidth} tick={false} />
+          <WidgetZeroLine />
           <Bar
             dataKey={barDataKey}
             radius={[3, 3, 0, 0]}
-            maxBarSize={size === "small" ? 20 : 30}
-            className="transition-none"
+            maxBarSize={compact ? 20 : 30}
             fill={MUTED_BAR_FILL}
+            fillOpacity={MUTED_FILL_OPACITY}
+            isAnimationActive={false}
           >
             {data.map((_, index) => (
-              <Cell key={`bar-${index}`} fill={MUTED_BAR_FILL} />
+              <Cell
+                key={`bar-${index}`}
+                fill={MUTED_BAR_FILL}
+                fillOpacity={MUTED_FILL_OPACITY}
+              />
             ))}
           </Bar>
           <Line
             type="stepAfter"
             dataKey={lineDataKey}
             stroke={MUTED_BAR_FILL}
+            strokeOpacity={MUTED_FILL_OPACITY}
             strokeWidth={2}
             dot={false}
-            className="transition-none"
+            isAnimationActive={false}
           />
         </ComposedChart>
       </ResponsiveContainer>

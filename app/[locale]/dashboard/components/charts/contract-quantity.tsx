@@ -4,48 +4,55 @@ import * as React from "react";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
-  Cell,
+  ResponsiveContainer,
 } from "recharts";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { useData } from "@/context/data-provider";
 import { Trade } from "@/prisma/generated/prisma/browser";
+import { cn } from "@/lib/utils";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
-import { useI18n } from "@/locales/client";
+import { useCurrentLocale, useI18n } from "@/locales/client";
 import { formatInTimeZone } from "date-fns-tz";
 import {
   BarChartLoadingSkeleton,
   LOADING_MOCK_HOURLY_QUANTITY,
 } from "./chart-loading-skeleton";
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetChartGrid,
+  WidgetEmpty,
+  WidgetFooter,
+  WidgetHeader,
+  WidgetTooltip,
+  axisProps,
+  chartColors,
+  chartMargin,
+  formatCount,
+  isCompactSize,
+} from "../widgets";
 
 interface ContractQuantityChartProps {
   size?: WidgetSize;
 }
 
-const chartConfig = {
-  totalQuantity: {
-    label: "Total Number of Contracts",
-    color: "hsl(var(--chart-loss))",
-  },
-} satisfies ChartConfig;
+interface HourQuantityDatum {
+  hour: number;
+  totalQuantity: number;
+  tradeCount: number;
+}
 
 export default function ContractQuantityChart({
   size = "medium",
 }: ContractQuantityChartProps) {
   const { formattedTrades: trades, isLoading } = useData();
   const t = useI18n();
+  const locale = useCurrentLocale();
+  const compact = isCompactSize(size);
 
-  const chartData = React.useMemo(() => {
+  const chartData = React.useMemo<HourQuantityDatum[]>(() => {
     const hourlyData: {
       [hour: string]: { totalQuantity: number; count: number };
     } = {};
@@ -72,103 +79,115 @@ export default function ContractQuantityChart({
       .sort((a, b) => a.hour - b.hour);
   }, [trades]);
 
-  const maxTradeCount = Math.max(...chartData.map((data) => data.tradeCount));
+  const totals = React.useMemo(
+    () =>
+      chartData.reduce(
+        (acc, row) => ({
+          trades: acc.trades + row.tradeCount,
+          contracts: acc.contracts + row.totalQuantity,
+        }),
+        { trades: 0, contracts: 0 },
+      ),
+    [chartData],
+  );
 
-  const getColor = (count: number) => {
-    const intensity = Math.max(0.2, count / maxTradeCount);
-    return `hsl(var(--chart-loss) / ${intensity})`;
-  };
+  const hasData = totals.trades > 0;
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-background p-2 border rounded shadow-xs">
-          <p className="font-semibold">{`${label}${t("contracts.tooltip.hour")} - ${(label + 1) % 24}${t("contracts.tooltip.hour")}`}</p>
-          <p className="font-bold">
-            {t("contracts.tooltip.totalContracts")}: {data.totalQuantity}
-          </p>
-          <p>
-            {t("contracts.tooltip.numberOfTrades")}: {data.tradeCount}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
+  const hourRangeLabel = React.useCallback(
+    (hour: number) =>
+      `${hour}${t("contracts.tooltip.hour")} - ${(hour + 1) % 24}${t("contracts.tooltip.hour")}`,
+    [t],
+  );
 
   return (
-    <Card>
-      <CardHeader className="sm:min-h-[120px] flex flex-col items-stretch space-y-0 border-b p-6">
-        <CardTitle>{t("contracts.title")}</CardTitle>
-        <CardDescription>{t("contracts.description")}</CardDescription>
-      </CardHeader>
-      <CardContent className="px-2 sm:p-6">
+    <WidgetCard>
+      <WidgetHeader
+        size={size}
+        title={t("contracts.title")}
+        description={t("contracts.description")}
+      />
+      <WidgetBody size={size} flush className={cn(compact ? "p-1" : "p-2")}>
         {isLoading ? (
-          <div className="aspect-auto h-[350px] w-full">
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_HOURLY_QUANTITY}
-              xDataKey="hour"
-              yDataKey="totalQuantity"
-              marginVariant="hourly"
-              yAxisWidth={45}
-              xTickCount={8}
-            />
-          </div>
+          <BarChartLoadingSkeleton
+            size={size}
+            data={LOADING_MOCK_HOURLY_QUANTITY}
+            xDataKey="hour"
+            yDataKey="totalQuantity"
+            marginVariant="hourly"
+            yAxisWidth={45}
+            xTickCount={8}
+          />
+        ) : !hasData ? (
+          <WidgetEmpty size={size} message={t("widgets.empty.noTrades")} />
         ) : (
-        <ChartContainer
-          config={chartConfig}
-          className="aspect-auto h-[350px] w-full"
-        >
-          <BarChart
-            data={chartData}
-            margin={{
-              left: 12,
-              right: 12,
-              top: 12,
-              bottom: 12,
-            }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              className="text-border dark:opacity-[0.12] opacity-[0.2]"
-            />
-            <XAxis
-              dataKey="hour"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value: number) =>
-                `${value}${t("contracts.tooltip.hour")}`
-              }
-              ticks={[0, 3, 6, 9, 12, 15, 18, 21]}
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value: number) => value.toFixed(0)}
-              label={{
-                value: t("contracts.axis.contracts"),
-                angle: -90,
-                position: "insideLeft",
-              }}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Bar
-              dataKey="totalQuantity"
-              radius={[4, 4, 0, 0]}
-              className="transition-all duration-300 ease-in-out"
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={getColor(entry.tradeCount)} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ChartContainer>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={chartMargin(size)}>
+              <WidgetChartGrid />
+              <XAxis
+                dataKey="hour"
+                {...axisProps(size)}
+                height={compact ? 20 : 24}
+                tickFormatter={(value: number) =>
+                  `${value}${t("contracts.tooltip.hour")}`
+                }
+                ticks={
+                  compact ? [0, 6, 12, 18] : [0, 3, 6, 9, 12, 15, 18, 21]
+                }
+              />
+              <YAxis
+                {...axisProps(size)}
+                width={compact ? 36 : 44}
+                // A count of contracts: unsigned, so the domain starts at zero
+                // and bar length reads as magnitude directly.
+                allowDecimals={false}
+                tickFormatter={(value: number) => formatCount(value, locale)}
+              />
+              <Tooltip
+                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4 }}
+                isAnimationActive={false}
+                wrapperStyle={{ zIndex: 1000 }}
+                content={({ active, payload }: any) => {
+                  if (!active || !payload?.length) return null;
+                  const row = payload[0].payload as HourQuantityDatum;
+                  return (
+                    <WidgetTooltip
+                      title={hourRangeLabel(row.hour)}
+                      rows={[
+                        {
+                          label: t("contracts.tooltip.totalContracts"),
+                          value: formatCount(row.totalQuantity, locale),
+                        },
+                        {
+                          label: t("contracts.tooltip.numberOfTrades"),
+                          value: formatCount(row.tradeCount, locale),
+                        },
+                      ]}
+                    />
+                  );
+                }}
+              />
+              <Bar
+                dataKey="totalQuantity"
+                radius={[3, 3, 0, 0]}
+                maxBarSize={compact ? 25 : 40}
+                // Volume is an unsigned magnitude, so it stays monochrome; bar
+                // length already carries how busy the hour was.
+                fill={chartColors.neutral}
+                isAnimationActive={false}
+              />
+            </BarChart>
+          </ResponsiveContainer>
         )}
-      </CardContent>
-    </Card>
+      </WidgetBody>
+      <WidgetFooter size={size}>
+        <span>{t("contracts.axis.contracts")} · UTC</span>
+        <span className="tabular-nums">
+          {formatCount(totals.contracts, locale)}{" "}
+          {t("contracts.axis.contracts")} ·{" "}
+          {formatCount(totals.trades, locale)}{" "}
+          {t("tickDistribution.tooltip.trades")}
+        </span>
+      </WidgetFooter>
+    </WidgetCard>
   );
 }

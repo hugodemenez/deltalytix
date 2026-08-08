@@ -4,54 +4,57 @@ import * as React from "react";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
-  Cell,
   ResponsiveContainer,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartConfig } from "@/components/ui/chart";
 import { useData } from "@/context/data-provider";
 import { Trade } from "@/prisma/generated/prisma/browser";
 import { cn } from "@/lib/utils";
-import { InfoBubble } from "@/components/ui/info-bubble";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
-import { useI18n } from "@/locales/client";
+import { useCurrentLocale, useI18n } from "@/locales/client";
 import { formatInTimeZone } from "date-fns-tz";
 import {
   BarChartLoadingSkeleton,
   LOADING_MOCK_HOURLY_TIME,
 } from "./chart-loading-skeleton";
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetChartGrid,
+  WidgetEmpty,
+  WidgetFooter,
+  WidgetHeader,
+  WidgetTooltip,
+  axisProps,
+  chartColors,
+  chartMargin,
+  formatCount,
+  formatDuration,
+  isCompactSize,
+} from "../widgets";
 
 interface TimeInPositionChartProps {
   size?: WidgetSize;
 }
 
-const chartConfig = {
-  avgTimeInPosition: {
-    label: "Average Time in Position",
-    color: "hsl(var(--chart-7))",
-  },
-} satisfies ChartConfig;
-
-const formatTime = (minutes: number) => {
-  const hours = Math.floor(minutes / 60);
-  const mins = Math.round(minutes % 60);
-  if (hours > 0) {
-    return mins > 0 ? `${hours}h${mins}m` : `${hours}h`;
-  }
-  return `${mins}m`;
-};
+interface HourDurationDatum {
+  hour: number;
+  /** Average holding time for the hour, in seconds. */
+  avgTimeInPosition: number;
+  tradeCount: number;
+}
 
 export default function TimeInPositionChart({
   size = "medium",
 }: TimeInPositionChartProps) {
   const { formattedTrades: trades, isLoading } = useData();
   const t = useI18n();
+  const locale = useCurrentLocale();
+  const compact = isCompactSize(size);
 
-  const chartData = React.useMemo(() => {
+  const chartData = React.useMemo<HourDurationDatum[]>(() => {
     const hourlyData: { [hour: string]: { totalTime: number; count: number } } =
       {};
 
@@ -60,10 +63,10 @@ export default function TimeInPositionChart({
       hourlyData[i.toString()] = { totalTime: 0, count: 0 };
     }
 
-    // Sum up time in position and count trades for each hour in UTC
+    // Sum up time in position (seconds) and count trades for each hour in UTC
     trades.forEach((trade: Trade) => {
       const hour = formatInTimeZone(new Date(trade.entryDate), "UTC", "H");
-      hourlyData[hour].totalTime += trade.timeInPosition / 60; // Convert seconds to minutes
+      hourlyData[hour].totalTime += trade.timeInPosition;
       hourlyData[hour].count++;
     });
 
@@ -71,170 +74,115 @@ export default function TimeInPositionChart({
     return Object.entries(hourlyData)
       .map(([hour, data]) => ({
         hour: parseInt(hour),
+        // Guard the division: an hour with no trades is 0s, never NaN.
         avgTimeInPosition: data.count > 0 ? data.totalTime / data.count : 0,
         tradeCount: data.count,
       }))
       .sort((a, b) => a.hour - b.hour);
   }, [trades]);
 
-  const maxTradeCount = Math.max(...chartData.map((data) => data.tradeCount));
+  const totals = React.useMemo(
+    () =>
+      chartData.reduce(
+        (acc, row) => ({
+          trades: acc.trades + row.tradeCount,
+          time: acc.time + row.avgTimeInPosition * row.tradeCount,
+        }),
+        { trades: 0, time: 0 },
+      ),
+    [chartData],
+  );
 
-  const getColor = (count: number) => {
-    const intensity = Math.max(0.2, count / maxTradeCount);
-    return `hsl(var(--chart-8) / ${intensity})`;
-  };
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="rounded-lg border bg-background p-2 shadow-xs">
-          <div className="grid gap-2">
-            <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t("timeInPosition.tooltip.time")}
-              </span>
-              <span className="font-bold text-muted-foreground">
-                {`${label}:00 - ${(label + 1) % 24}:00`}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t("timeInPosition.tooltip.averageDuration")}
-              </span>
-              <span className="font-bold">
-                {formatTime(data.avgTimeInPosition)}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t("timeInPosition.tooltip.trades")}
-              </span>
-              <span className="font-bold text-muted-foreground">
-                {data.tradeCount}{" "}
-                {data.tradeCount !== 1
-                  ? t("timeInPosition.tooltip.trades_plural")
-                  : t("timeInPosition.tooltip.trade")}
-              </span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
+  const hasData = totals.trades > 0;
+  const overallAverage = hasData ? totals.time / totals.trades : 0;
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader
-        className={cn(
-          "flex flex-col items-stretch space-y-0 border-b shrink-0",
-          size === "small" ? "p-2" : "p-3 sm:p-4",
-        )}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1",
-                size === "small" ? "text-sm" : "text-base",
-              )}
-            >
-              {t("timeInPosition.title")}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
-            >
-              <p>{t("timeInPosition.description")}</p>
-            </InfoBubble>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "flex-1 min-h-0",
-          size === "small" ? "p-1" : "p-2 sm:p-4",
-        )}
-      >
-        <div className={cn("w-full h-full")}>
-          {isLoading ? (
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_HOURLY_TIME}
-              xDataKey="hour"
-              yDataKey="avgTimeInPosition"
-              marginVariant="hourly"
-              yAxisWidth={45}
-              xTickCount={8}
-            />
-          ) : (
+    <WidgetCard>
+      <WidgetHeader
+        size={size}
+        title={t("timeInPosition.title")}
+        description={t("timeInPosition.description")}
+      />
+      <WidgetBody size={size} flush className={cn(compact ? "p-1" : "p-2")}>
+        {isLoading ? (
+          <BarChartLoadingSkeleton
+            size={size}
+            data={LOADING_MOCK_HOURLY_TIME}
+            xDataKey="hour"
+            yDataKey="avgTimeInPosition"
+            marginVariant="hourly"
+            yAxisWidth={45}
+            xTickCount={8}
+          />
+        ) : !hasData ? (
+          <WidgetEmpty size={size} message={t("widgets.empty.noTrades")} />
+        ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={
-                size === "small"
-                  ? { left: 0, right: 4, top: 4, bottom: 20 }
-                  : { left: 0, right: 8, top: 8, bottom: 24 }
-              }
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                className="text-border dark:opacity-[0.12] opacity-[0.2]"
-              />
+            <BarChart data={chartData} margin={chartMargin(size)}>
+              <WidgetChartGrid />
               <XAxis
                 dataKey="hour"
-                tickLine={false}
-                axisLine={false}
-                height={size === "small" ? 20 : 24}
-                tickMargin={size === "small" ? 4 : 8}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-                tickFormatter={(value) => `${value}h`}
+                {...axisProps(size)}
+                height={compact ? 20 : 24}
+                tickFormatter={(value: number) => `${value}h`}
                 ticks={
-                  size === "small"
-                    ? [0, 6, 12, 18]
-                    : [0, 3, 6, 9, 12, 15, 18, 21]
+                  compact ? [0, 6, 12, 18] : [0, 3, 6, 9, 12, 15, 18, 21]
                 }
               />
               <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={45}
-                tickMargin={4}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-                tickFormatter={formatTime}
+                {...axisProps(size)}
+                width={compact ? 40 : 48}
+                // A duration is unsigned, so the length encoding sits on its
+                // natural zero baseline with no cropped domain.
+                tickFormatter={(value: number) => formatDuration(value)}
               />
               <Tooltip
-                content={<CustomTooltip />}
-                wrapperStyle={{
-                  fontSize: size === "small" ? "10px" : "12px",
-                  zIndex: 1000,
+                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4 }}
+                isAnimationActive={false}
+                wrapperStyle={{ zIndex: 1000 }}
+                content={({ active, payload }: any) => {
+                  if (!active || !payload?.length) return null;
+                  const row = payload[0].payload as HourDurationDatum;
+                  return (
+                    <WidgetTooltip
+                      title={`${row.hour}:00 - ${(row.hour + 1) % 24}:00`}
+                      rows={[
+                        {
+                          label: t("timeInPosition.tooltip.averageDuration"),
+                          value: formatDuration(row.avgTimeInPosition),
+                        },
+                        {
+                          label: t("timeInPosition.tooltip.trades"),
+                          value: formatCount(row.tradeCount, locale),
+                        },
+                      ]}
+                    />
+                  );
                 }}
               />
               <Bar
                 dataKey="avgTimeInPosition"
                 radius={[3, 3, 0, 0]}
-                maxBarSize={size === "small" ? 25 : 40}
-                className="transition-opacity duration-300 ease-out"
-              >
-                {chartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={getColor(entry.tradeCount)}
-                  />
-                ))}
-              </Bar>
+                maxBarSize={compact ? 25 : 40}
+                // Holding time is an unsigned magnitude already carried by bar
+                // length, so it stays monochrome: no intensity ramp.
+                fill={chartColors.neutral}
+                isAnimationActive={false}
+              />
             </BarChart>
           </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+        )}
+      </WidgetBody>
+      <WidgetFooter size={size}>
+        <span>
+          {t("timeInPosition.tooltip.averageDuration")} · UTC
+        </span>
+        <span className="tabular-nums">
+          {formatDuration(overallAverage)} ·{" "}
+          {formatCount(totals.trades, locale)}{" "}
+          {t("tickDistribution.tooltip.trades")}
+        </span>
+      </WidgetFooter>
+    </WidgetCard>
   );
 }
