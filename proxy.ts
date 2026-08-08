@@ -302,6 +302,7 @@ export default async function proxy(req: NextRequest) {
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/") ||
+    pathname.startsWith("/oauth/") ||
     pathname === "/docs/api" ||
     pathname.includes(".") ||
     pathname.includes("/videos/") ||

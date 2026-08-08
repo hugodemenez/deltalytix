@@ -369,6 +369,26 @@
     padding: 1rem 0;
   }
 
+  /* rehype-pretty-code dual themes: shiki inlines --shiki-light/--shiki-dark
+     per token; pick the one matching the active color scheme. */
+  [data-rehype-pretty-code-figure] code span[style*="--shiki-light"] {
+    color: var(--shiki-light);
+    background-color: var(--shiki-light-bg);
+  }
+
+  .dark [data-rehype-pretty-code-figure] code span[style*="--shiki-dark"] {
+    color: var(--shiki-dark);
+    background-color: var(--shiki-dark-bg);
+  }
+
+  [data-rehype-pretty-code-figure] pre[style*="--shiki-light-bg"] {
+    background-color: var(--shiki-light-bg);
+  }
+
+  .dark [data-rehype-pretty-code-figure] pre[style*="--shiki-dark-bg"] {
+    background-color: var(--shiki-dark-bg);
+  }
+
   pre [data-line] {
     padding: 0 1rem;
   }

@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     : []
   const showIndividual = searchParams.get("showIndividual") === "true"
 
-  const [trades, accounts, groups] = await Promise.all([
+  const [allTrades, accounts, groups] = await Promise.all([
     prisma.trade.findMany({ where: { userId: auth.auth.userId } }),
     prisma.account.findMany({
       where: { userId: auth.auth.userId },
@@ -27,6 +27,23 @@ export async function GET(request: NextRequest) {
       include: { accounts: { select: { number: true } } },
     }),
   ])
+
+  // computeEquityChartData only applies its date-range filter in
+  // per-account mode (the dashboard pre-filters trades in grouped mode),
+  // so the API pre-filters here to honor from/to in both modes.
+  const fromDate = from ? new Date(from) : null
+  const toDate = to ? new Date(to) : null
+  if (toDate) toDate.setUTCHours(23, 59, 59, 999)
+  const trades =
+    fromDate || toDate
+      ? allTrades.filter((trade) => {
+          const entryDate = new Date(trade.entryDate)
+          if (Number.isNaN(entryDate.getTime())) return false
+          if (fromDate && entryDate < fromDate) return false
+          if (toDate && entryDate > toDate) return false
+          return true
+        })
+      : allTrades
 
   const result = computeEquityChartData(
     trades,
