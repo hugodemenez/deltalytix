@@ -1,13 +1,6 @@
 "use client";
 
 import React from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,8 +12,8 @@ import { format } from "date-fns";
 import { useUserStore } from "../../../../../store/user-store";
 import { useMoodStore } from "@/store/widgets/mood-store";
 
-import { Skeleton } from "@/components/ui/skeleton";
 import { TiptapEditor } from "@/components/tiptap-editor";
+import { WidgetSkeleton, widgetType } from "../widgets";
 
 interface DailyCommentProps {
   dayData: CalendarEntry | undefined;
@@ -144,9 +137,7 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
         )}
       >
         {isLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-[400px] w-full" />
-          </div>
+          <WidgetSkeleton className="h-[400px] w-full" />
         ) : (
           <TiptapEditor
             key={`${(selectedDate instanceof Date ? selectedDate : new Date(selectedDate)).toISOString()}-${comment ? "has-content" : "no-content"}`}
@@ -159,14 +150,17 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
           />
         )}
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 pt-2">
         {isSavingComment && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
+          <div className={cn(widgetType.label, "flex items-center gap-2")}>
+            <Loader2
+              aria-hidden
+              className="h-3.5 w-3.5 motion-safe:animate-spin"
+            />
             {t("calendar.charts.saving")}
           </div>
         )}
-        {saveError && <p className="text-sm text-destructive">{saveError}</p>}
+        {saveError && <p className="text-xs text-destructive">{saveError}</p>}
         <Button
           onClick={handleSaveComment}
           disabled={isLoading || isSavingComment || !comment.trim()}

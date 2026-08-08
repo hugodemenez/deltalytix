@@ -6,6 +6,7 @@ import { EmotionSelector } from "./emotion-selector"
 import { DayTagSelector } from "./day-tag-selector"
 import { FinancialEvent, Trade } from "@/prisma/generated/prisma/browser"
 import { TiptapEditor } from "@/components/tiptap-editor"
+import { widgetType } from "../widgets"
 
 interface JournalingProps {
   content: string
@@ -36,18 +37,19 @@ export function Journaling({
 }: JournalingProps) {
   const t = useI18n()
 
+  /* Groups are separated by spacing, not by a box each. */
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex-none">
-        <h3 className="text-sm font-medium mb-2">{t("mindset.emotion.title")}</h3>
+    <div className="flex h-full flex-col gap-6">
+      <section className="flex flex-none flex-col gap-2">
+        <h3 className={widgetType.section}>{t("mindset.emotion.title")}</h3>
         <EmotionSelector value={emotionValue} onChange={onEmotionChange} />
-      </div>
+      </section>
 
-      <div className="flex-none mt-6">
+      <div className="flex-none">
         <DayTagSelector trades={trades} date={date} onApplyTagToAll={onApplyTagToAll} />
       </div>
 
-      <div className="flex-1 min-h-0 mt-6 flex flex-col">
+      <div className="flex min-h-0 flex-1 flex-col">
         <TiptapEditor
           content={content}
           onChange={onChange}
@@ -61,7 +63,7 @@ export function Journaling({
         />
       </div>
 
-      <div className="flex-none flex gap-4 mt-6">
+      <div className="flex flex-none gap-4">
         <Button onClick={onSave} className="w-full">
           {t("mindset.journaling.save")}
         </Button>

@@ -1,38 +1,25 @@
 "use client"
 
 import React from 'react'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
-import { useI18n } from '@/locales/client'
-import { DailyMood } from './daily-mood'
+import { useCurrentLocale, useI18n } from '@/locales/client'
+import {
+  WidgetMetric,
+  formatCount,
+  formatCurrency,
+  formatDuration,
+  pnlTone,
+  pnlToneClass,
+} from "../widgets"
 
 interface DailyStatsProps {
   dayData: CalendarEntry | undefined;
   isWeekly?: boolean;
 }
 
-const formatCurrency = (value: number | undefined | null) => {
-  if (value == null) return '$0.00'
-  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
-const formatDuration = (seconds: number) => {
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const remainingSeconds = Math.floor(seconds % 60)
-  
-  if (hours > 0) return `${hours}h ${minutes}m ${remainingSeconds}s`
-  if (minutes > 0) return `${minutes}m ${remainingSeconds}s`
-  return `${remainingSeconds}s`
-}
-
 export function DailyStats({ dayData, isWeekly = false }: DailyStatsProps) {
   const t = useI18n()
+  const locale = useCurrentLocale()
 
   // Calculate stats
   const { totalPnL, avgTimeInPosition, accountCount, maxDrawdown, maxProfit } = React.useMemo(() => {
@@ -98,71 +85,47 @@ export function DailyStats({ dayData, isWeekly = false }: DailyStatsProps) {
     return null
   }
 
+  const tradeCount = dayData.trades.length
+
+  /*
+   * The modal is already a surface: these four figures are a stat row separated
+   * by spacing, not four nested cards. Only the P&L values carry tone, and each
+   * one keeps its sign so the color is never the only signal.
+   */
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="flex flex-col">
-          <CardHeader className="pb-1 flex-1">
-            <CardTitle className="text-base md:text-lg">
-              {isWeekly ? t('calendar.charts.weeklyPnlAfterComm') : t('calendar.charts.dailyPnlAfterComm')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-2 mt-auto">
-            <p className={`text-xl md:text-2xl font-bold ${totalPnL >= 0 ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--destructive))]'}`}>
-              {formatCurrency(totalPnL)}
-            </p>
-            <p className="text-xs md:text-sm text-muted-foreground mt-1">
-              {t('calendar.charts.across')} {accountCount} {accountCount > 1 
-                ? t('calendar.charts.accounts') 
-                : t('calendar.charts.account')}
-            </p>
-          </CardContent>
-        </Card>
+    <div className="grid grid-cols-2 gap-x-6 gap-y-4 lg:grid-cols-4">
+      <WidgetMetric
+        size="small"
+        label={isWeekly ? t('calendar.charts.weeklyPnlAfterComm') : t('calendar.charts.dailyPnlAfterComm')}
+        value={formatCurrency(totalPnL, locale)}
+        toneClassName={pnlToneClass(pnlTone(totalPnL))}
+        caption={`${t('calendar.charts.across')} ${formatCount(accountCount, locale)} ${accountCount > 1
+          ? t('calendar.charts.accounts')
+          : t('calendar.charts.account')}`}
+      />
 
-        <Card className="flex flex-col">
-          <CardHeader className="pb-1 flex-1">
-            <CardTitle className="text-base md:text-lg">
-              {isWeekly ? t('calendar.charts.weeklyAvgTimeInPosition') : t('calendar.charts.avgTimeInPosition')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-2 mt-auto">
-            <p className="text-xl md:text-2xl font-bold">
-              {formatDuration(avgTimeInPosition)}
-            </p>
-            <p className="text-xs md:text-sm text-muted-foreground mt-1">
-              {t('calendar.charts.over')} {dayData.trades.length} {dayData.trades.length > 1 
-                ? t('calendar.charts.trades') 
-                : t('calendar.charts.trade')}
-            </p>
-          </CardContent>
-        </Card>
+      <WidgetMetric
+        size="small"
+        label={isWeekly ? t('calendar.charts.weeklyAvgTimeInPosition') : t('calendar.charts.avgTimeInPosition')}
+        value={formatDuration(avgTimeInPosition)}
+        caption={`${t('calendar.charts.over')} ${formatCount(tradeCount, locale)} ${tradeCount > 1
+          ? t('calendar.charts.trades')
+          : t('calendar.charts.trade')}`}
+      />
 
-        <Card className="flex flex-col">
-          <CardHeader className="pb-1 flex-1">
-            <CardTitle className="text-base md:text-lg">
-              {isWeekly ? t('calendar.charts.weeklyMaxDrawdown') : t('calendar.charts.dailyMaxDrawdown')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-2 mt-auto">
-            <p className={`text-xl md:text-2xl font-bold ${maxDrawdown > 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
-              -{formatCurrency(maxDrawdown)}
-            </p>
-          </CardContent>
-        </Card>
+      <WidgetMetric
+        size="small"
+        label={isWeekly ? t('calendar.charts.weeklyMaxDrawdown') : t('calendar.charts.dailyMaxDrawdown')}
+        value={formatCurrency(-maxDrawdown, locale)}
+        toneClassName={pnlToneClass(pnlTone(-maxDrawdown))}
+      />
 
-        <Card className="flex flex-col">
-          <CardHeader className="pb-1 flex-1">
-            <CardTitle className="text-base md:text-lg">
-              {isWeekly ? t('calendar.charts.weeklyMaxProfit') : t('calendar.charts.dailyMaxProfit')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-2 mt-auto">
-            <p className={`text-xl md:text-2xl font-bold ${maxProfit > 0 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
-              {formatCurrency(maxProfit)}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <WidgetMetric
+        size="small"
+        label={isWeekly ? t('calendar.charts.weeklyMaxProfit') : t('calendar.charts.dailyMaxProfit')}
+        value={formatCurrency(maxProfit, locale)}
+        toneClassName={pnlToneClass(pnlTone(maxProfit))}
+      />
     </div>
   )
-} 
+}

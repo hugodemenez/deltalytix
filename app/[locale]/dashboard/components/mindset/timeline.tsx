@@ -6,7 +6,7 @@ import { format, isToday, compareDesc } from "date-fns"
 import { fr, enUS } from "date-fns/locale"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Calendar, Trash2, Plus } from "lucide-react"
+import { Trash2, Plus } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +25,7 @@ import {
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { useState } from "react"
 import { toast } from "sonner"
+import { WidgetEmpty, widgetType } from "../widgets"
 
 interface TimelineProps {
   onSelectDate: (date: Date) => void
@@ -42,12 +43,16 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
   const [entryToDelete, setEntryToDelete] = useState<Date | null>(null)
   const [datePickerOpen, setDatePickerOpen] = useState(false)
 
-  const getEmotionColor = (value: number) => {
-    if (value < 20) return 'bg-red-500'
-    if (value < 40) return 'bg-orange-500'
-    if (value < 60) return 'bg-yellow-500'
-    if (value < 80) return 'bg-green-500'
-    return 'bg-emerald-500'
+  /*
+   * Emotional state is ordinary metadata, so it reads as a word rather than a
+   * colored dot: one encoding per state, and that encoding is the label itself.
+   */
+  const getEmotionLabel = (value: number) => {
+    if (value < 20) return t('mindset.emotion.verySad')
+    if (value < 40) return t('mindset.emotion.sad')
+    if (value < 60) return t('mindset.emotion.neutral')
+    if (value < 80) return t('mindset.emotion.happy')
+    return t('mindset.emotion.veryHappy')
   }
 
   const handleDeleteClick = (e: React.MouseEvent, date: Date) => {
@@ -96,51 +101,43 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
   return (
     <>
       <div className={cn(
-        "h-full border-r overflow-hidden flex flex-col",
+        "flex h-full flex-col overflow-hidden border-r",
         "w-[180px] sm:w-[200px] md:w-[220px]",
         className
       )}>
         <div className="flex-1 overflow-y-auto">
-          <div className="space-y-1 p-2">
+          <div className="flex flex-col gap-0.5 p-2">
             {/* Always show Today entry if no entry exists for today */}
             {!todayEntry && (
-              <div className="group relative">
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start gap-2 h-auto p-2",
-                    "hover:bg-accent/50 transition-colors border-l-2 border-dashed border-muted-foreground/30",
-                    isToday(selectedDate) && "bg-accent"
-                  )}
-                  onClick={handleTodayClick}
-                >
-                  <div className="flex flex-col items-center justify-center gap-1 min-w-10">
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
-                  </div>
-                  <div className="flex-1 text-left min-w-0 flex items-center">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      {t('mindset.today')}
-                    </p>
-                  </div>
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "h-auto w-full justify-start p-2 text-left",
+                  "motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out",
+                  isToday(selectedDate) && "bg-accent"
+                )}
+                aria-current={isToday(selectedDate) ? "date" : undefined}
+                onClick={handleTodayClick}
+              >
+                <span className="truncate text-sm font-medium text-muted-foreground">
+                  {t('mindset.today')}
+                </span>
+              </Button>
             )}
 
             {/* Show existing entries or empty state */}
             {!sortedMoodHistory?.length && todayEntry === undefined ? (
-              <div className="flex flex-col items-center justify-center p-4 text-center">
-                <Calendar className="h-6 w-6 text-muted-foreground mb-2" />
-                <p className="text-xs text-muted-foreground">
-                  {t('mindset.noEntries')}
-                </p>
-              </div>
+              <WidgetEmpty size="small" message={t('mindset.noEntries')} />
             ) : (
               sortedMoodHistory.map((mood) => {
                 if (!mood?.day) return null
                 const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
                 const isSelected = moodDate.toDateString() === selectedDate.toDateString()
                 const isCurrentDay = isToday(moodDate)
-                
+                const dateLabel = isCurrentDay
+                  ? t('mindset.today')
+                  : `${format(moodDate, 'EEE', { locale: dateLocale }).slice(0, 3)} ${format(moodDate, 'd', { locale: dateLocale })} ${format(moodDate, 'MMM', { locale: dateLocale }).slice(0, 3)}`
+
                 return (
                   <div
                     key={moodDate.toISOString()}
@@ -149,36 +146,33 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
                     <Button
                       variant="ghost"
                       className={cn(
-                        "w-full justify-start gap-2 h-auto p-2",
-                        "hover:bg-accent/50 transition-colors",
-                        isSelected && "bg-accent",
-                        isCurrentDay && "border-l-2 border-primary"
+                        "h-auto w-full justify-start p-2 pr-8 text-left",
+                        "motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out",
+                        isSelected && "bg-accent"
                       )}
+                      aria-current={isSelected ? "date" : undefined}
                       onClick={() => onSelectDate(moodDate)}
                     >
-                      <div className="flex flex-col items-center justify-center gap-1 min-w-10">
-                        <div className={cn(
-                          "w-2 h-2 rounded-full transition-colors",
-                          getEmotionColor(mood.emotionValue)
-                        )} />
-                      </div>
-                      <div className="flex-1 text-left min-w-0 flex items-center">
-                        <p className="text-sm font-medium truncate">
-                          {isCurrentDay ? t('mindset.today') : `${format(moodDate, 'EEE', { locale: dateLocale }).slice(0, 3)} ${format(moodDate, 'd', { locale: dateLocale })} ${format(moodDate, 'MMM', { locale: dateLocale }).slice(0, 3)}`}
-                        </p>
-                      </div>
+                      <span className="flex min-w-0 flex-col items-start gap-0.5">
+                        <span className="truncate text-sm font-medium">{dateLabel}</span>
+                        <span className={cn(widgetType.caption, "truncate")}>
+                          {getEmotionLabel(mood.emotionValue)}
+                        </span>
+                      </span>
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={`${t('mindset.delete')}: ${dateLabel}`}
                       className={cn(
-                        "absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6",
-                        "opacity-0 group-hover:opacity-100 transition-opacity",
-                        "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        "absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2",
+                        "opacity-0 focus-visible:opacity-100 group-hover:opacity-100",
+                        "motion-safe:transition-opacity motion-safe:duration-150 motion-safe:ease-out",
+                        "text-muted-foreground hover:text-destructive"
                       )}
                       onClick={(e) => handleDeleteClick(e, moodDate)}
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-3 w-3" aria-hidden />
                     </Button>
                   </div>
                 )
@@ -186,8 +180,8 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
             )}
           </div>
         </div>
-        
-        <div className="p-2 border-t">
+
+        <div className="border-t p-2">
           <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -195,7 +189,7 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
                 className="w-full justify-start gap-2 text-xs"
                 size="sm"
               >
-                <Plus className="h-4 w-4 shrink-0" />
+                <Plus className="h-4 w-4 shrink-0" aria-hidden />
                 {t('mindset.addEntry')}
               </Button>
             </PopoverTrigger>
@@ -238,4 +232,4 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
       </AlertDialog>
     </>
   )
-} 
+}

@@ -29,6 +29,13 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { useUserStore } from "../../../../../store/user-store";
 import { TradeTableReview } from "../tables/trade-table-review";
 import StatisticsWidget from "../statistics/statistics-widget";
+import {
+  formatCount,
+  formatCurrency,
+  pnlTone,
+  pnlToneClass,
+  widgetType,
+} from "../widgets";
 
 interface CalendarModalProps {
   isOpen: boolean;
@@ -45,15 +52,12 @@ interface DailyTabsProps {
   layout: "dialog" | "drawer";
 }
 
-const formatSignedCurrency = (value: number) => {
-  const formatted = Math.abs(value).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
+/** Whole-dollar money for the modal header. Sans + tabular-nums, sign on the number. */
+const formatSignedCurrency = (value: number, locale: string) =>
+  formatCurrency(value, locale, {
     maximumFractionDigits: 0,
+    signDisplay: "always",
   });
-  return value < 0 ? `-${formatted}` : `+${formatted}`;
-};
 
 function DailyTabs({ selectedDate, dayData, isLoading, layout }: DailyTabsProps) {
   const t = useI18n();
@@ -164,19 +168,18 @@ export function CalendarModal({
               {dayData && (
                 <span
                   className={cn(
-                    "text-sm font-semibold shrink-0",
-                    dayData.pnl >= 0
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-red-600 dark:text-red-400",
+                    widgetType.value,
+                    "shrink-0",
+                    pnlToneClass(pnlTone(dayData.pnl)),
                   )}
                 >
-                  {formatSignedCurrency(dayData.pnl)}
+                  {formatSignedCurrency(dayData.pnl, locale)}
                 </span>
               )}
             </div>
             <DrawerDescription className="text-xs">
               {tradeCount > 0
-                ? `${tradeCount} ${tradeCount > 1 ? t("calendar.trades") : t("calendar.trade")}`
+                ? `${formatCount(tradeCount, locale)} ${tradeCount > 1 ? t("calendar.trades") : t("calendar.trade")}`
                 : t("calendar.modal.noTrades")}
             </DrawerDescription>
           </DrawerHeader>

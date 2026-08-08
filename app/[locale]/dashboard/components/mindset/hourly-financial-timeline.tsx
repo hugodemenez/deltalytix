@@ -8,41 +8,64 @@ import { useCurrentLocale, useI18n } from "@/locales/client"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { Clock, ExternalLink, MoreHorizontal, DollarSign } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { Clock, ExternalLink, MoreHorizontal } from "lucide-react"
 import type { FinancialEvent } from "@/prisma/generated/prisma/browser"
 import type { Locale } from "date-fns"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useUserStore } from "@/store/user-store"
+import {
+  formatCount,
+  formatCurrency,
+  pnlTone,
+  pnlToneClass,
+  seriesColor,
+  widgetType,
+} from "../widgets"
+
+type SessionKey = "ASIA" | "LONDON" | "US"
 
 interface Session {
-  name: string
+  key: SessionKey
   startHour: number
   endHour: number
-  color: string
+  /** Index into the categorical series scale. Sessions are categories, not states. */
+  colorIndex: number
 }
 
 const SESSIONS: Session[] = [
-  {
-    name: "Tokyo Session",
-    startHour: 0,
-    endHour: 8,
-    color: "bg-red-500/20 border-red-500"
-  },
-  {
-    name: "London Session",
-    startHour: 8,
-    endHour: 16,
-    color: "bg-blue-500/20 border-blue-500"
-  },
-  {
-    name: "New York Session",
-    startHour: 13,
-    endHour: 21,
-    color: "bg-green-500/20 border-green-500"
-  }
+  { key: "ASIA", startHour: 0, endHour: 8, colorIndex: 0 },
+  { key: "LONDON", startHour: 8, endHour: 16, colorIndex: 1 },
+  { key: "US", startHour: 13, endHour: 21, colorIndex: 2 },
 ]
+
+function useSessionLabel() {
+  const t = useI18n()
+  return (key: SessionKey) => {
+    switch (key) {
+      case "LONDON":
+        return t("mindset.newsImpact.session.LONDON")
+      case "US":
+        return t("mindset.newsImpact.session.US")
+      default:
+        return t("mindset.newsImpact.session.ASIA")
+    }
+  }
+}
+
+function useImportanceLabel() {
+  const t = useI18n()
+  return (importance: string) => {
+    switch (importance.toUpperCase()) {
+      case "HIGH":
+        return t("mindset.newsImpact.importanceFilter.high")
+      case "MEDIUM":
+        return t("mindset.newsImpact.importanceFilter.medium")
+      default:
+        return t("mindset.newsImpact.importanceFilter.low")
+    }
+  }
+}
 
 interface HourlyFinancialTimelineProps {
   date: Date
@@ -62,8 +85,9 @@ interface HourlyFinancialTimelineProps {
   selectedEventIds?: string[]
 }
 
-function SessionIndicator({ session, hourElements, containerRef }: { 
-  session: Session; 
+function SessionIndicator({ session, label, hourElements, containerRef }: {
+  session: Session;
+  label: string;
   hourElements: HTMLDivElement[];
   containerRef: React.RefObject<HTMLDivElement | null>;
 }) {
@@ -88,52 +112,67 @@ function SessionIndicator({ session, hourElements, containerRef }: {
   }
 
   return (
-    <div 
+    <button
+      type="button"
       className={cn(
-        "absolute left-0 w-1 border-l cursor-pointer transition-all hover:w-2 hover:opacity-100",
-        session.color,
-        "opacity-60"
+        "absolute left-0 w-1 cursor-pointer rounded-sm outline-none",
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        "motion-safe:transition-opacity motion-safe:duration-150 motion-safe:ease-out",
+        "opacity-70 hover:opacity-100",
       )}
       style={{
         top: `${startPosition}px`,
-        height: `${height}px`
+        height: `${height}px`,
+        backgroundColor: seriesColor(session.colorIndex),
       }}
       onClick={handleClick}
-      role="button"
-      aria-label={`Scroll to ${session.name}`}
+      aria-label={label}
     />
   )
 }
 
 function SessionLegend({ containerRef }: { containerRef: React.RefObject<HTMLDivElement | null> }) {
+  const sessionLabel = useSessionLabel()
+
   return (
-    <div className="p-2 bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60 border-t shadow-lg">
-      <div className="flex items-center justify-center gap-4 text-xs">
+    <div className="shrink-0 border-t bg-background p-2">
+      <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
         {SESSIONS.map((session) => (
-          <div 
-            key={session.name} 
-            className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => {
-              if (!containerRef.current) return
-              const hourElement = containerRef.current.querySelector(`[data-hour="${session.startHour}"]`)
-              if (!hourElement) return
-              containerRef.current.scrollTo({
-                top: hourElement.getBoundingClientRect().top - containerRef.current.getBoundingClientRect().top + containerRef.current.scrollTop,
-                behavior: 'smooth'
-              })
-            }}
-          >
-            <div className={cn("w-2 h-2 rounded-full", session.color.replace("border", "bg"))} />
-            <span className="text-muted-foreground">{session.name}</span>
-          </div>
+          <li key={session.key}>
+            <button
+              type="button"
+              className={cn(
+                "flex items-center gap-1.5 rounded-sm outline-none",
+                "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                "motion-safe:transition-opacity motion-safe:duration-150 motion-safe:ease-out",
+                "hover:opacity-80",
+              )}
+              onClick={() => {
+                if (!containerRef.current) return
+                const hourElement = containerRef.current.querySelector(`[data-hour="${session.startHour}"]`)
+                if (!hourElement) return
+                containerRef.current.scrollTo({
+                  top: hourElement.getBoundingClientRect().top - containerRef.current.getBoundingClientRect().top + containerRef.current.scrollTop,
+                  behavior: 'smooth'
+                })
+              }}
+            >
+              <span
+                aria-hidden
+                className="size-2 shrink-0 rounded-[2px]"
+                style={{ backgroundColor: seriesColor(session.colorIndex) }}
+              />
+              <span className={widgetType.label}>{sessionLabel(session.key)}</span>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   )
 }
 
-export function HourlyFinancialTimeline({ 
-  date, 
+export function HourlyFinancialTimeline({
+  date,
   events,
   trades = [],
   onEventClick,
@@ -147,6 +186,7 @@ export function HourlyFinancialTimeline({
   const locale = useCurrentLocale()
   const dateLocale = locale === "fr" ? fr : enUS
   const t = useI18n()
+  const sessionLabel = useSessionLabel()
   const containerRef = useRef<HTMLDivElement>(null)
   const [hourElements, setHourElements] = useState<HTMLDivElement[]>([])
 
@@ -163,7 +203,7 @@ export function HourlyFinancialTimeline({
     if (!preventScrollPropagation || !events.length) return
 
     // Sort events by date to find the earliest one
-    const sortedEvents = [...events].sort((a, b) => 
+    const sortedEvents = [...events].sort((a, b) =>
       new Date(a.date).getTime() - new Date(b.date).getTime()
     )
     const firstEvent = sortedEvents[0]
@@ -269,7 +309,7 @@ export function HourlyFinancialTimeline({
       if (hourTrades.length > 0) {
         const totalPnL = hourTrades.reduce((sum, trade) => sum + (trade.pnl - trade.commission), 0)
         const uniqueSymbols = new Set(hourTrades.map(trade => trade.instrument))
-        
+
         hourMap.get(hour)?.push({
           type: 'trade',
           id: `trade-${hour}`,
@@ -302,51 +342,58 @@ export function HourlyFinancialTimeline({
     return formatInTimeZone(date, timezone, "EEE d MMM yyyy", { locale: dateLocale })
   }, [date, timezone, dateLocale])
 
+  /*
+   * A sub-panel, not a second card: the surface it sits on already owns the
+   * border, so this only keeps the rules that separate header, scroll area and
+   * legend.
+   */
   return (
-    <div className={cn("flex flex-col h-full border rounded-lg overflow-hidden relative", className)}>
+    <div className={cn("relative flex h-full flex-col overflow-hidden", className)}>
       {/* Header with date */}
-      <div className="p-2 text-center font-medium border-b bg-muted/20">{formattedDate}</div>
+      <div className={cn(widgetType.section, "shrink-0 border-b p-2 text-center")}>
+        {formattedDate}
+      </div>
 
       {/* Timeline content */}
-      <div 
+      <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto relative "
-        style={{ 
+        className="relative flex-1 overflow-y-auto"
+        style={{
           overscrollBehavior: preventScrollPropagation ? 'contain' : 'auto'
         }}
       >
         {/* Session indicators */}
-        <div className="absolute left-0 top-0 bottom-0 w-1">
+        <div className="absolute bottom-0 left-0 top-0 w-1">
           {SESSIONS.map((session) => (
-            <SessionIndicator 
-              key={session.name} 
-              session={session} 
+            <SessionIndicator
+              key={session.key}
+              session={session}
+              label={sessionLabel(session.key)}
               hourElements={hourElements}
               containerRef={containerRef}
             />
           ))}
         </div>
 
-        <div className="flex flex-col divide-y pl-2 pb-16">
+        <div className="flex flex-col divide-y pb-16 pl-2">
           {hours.map((hour) => {
             const hourEvents = eventsByHour.get(hour.getHours()) || []
-            const hasEvents = hourEvents.length > 0
             const hasMultipleEvents = hourEvents.length > 2
             const displayEvents = hasMultipleEvents ? hourEvents.slice(0, 2) : hourEvents
 
             return (
-              <div 
-                key={hour.getTime()} 
-                className={cn("relative min-h-[60px]", hasEvents ? "bg-muted/5" : "")}
+              <div
+                key={hour.getTime()}
+                className="relative min-h-[60px]"
                 data-hour={hour.getHours()}
               >
-                {/* Time indicator */}
-                <div className="absolute left-0 top-0 text-xs text-muted-foreground p-1">
+                {/* Time indicator: a timestamp, the one place mono belongs */}
+                <div className={cn(widgetType.mono, "absolute left-0 top-0 p-1 text-muted-foreground")}>
                   {formatInTimeZone(hour, timezone, "HH:mm", { locale: dateLocale })}
                 </div>
 
                 {/* Events for this hour */}
-                <div className="pt-6 px-1 space-y-1">
+                <div className="flex flex-col gap-1 px-1 pt-6">
                   {displayEvents.map((item) => (
                     item.type === 'trade' ? (
                       <TradeCard
@@ -380,16 +427,16 @@ export function HourlyFinancialTimeline({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="w-full h-auto py-1 text-xs text-muted-foreground flex items-center justify-center"
+                          className="flex h-auto w-full items-center justify-center py-1 text-xs text-muted-foreground"
                         >
-                          <MoreHorizontal className="h-3 w-3 mr-1" />
+                          <MoreHorizontal className="mr-1 h-3 w-3" aria-hidden />
                           {t('mindset.newsImpact.moreEvents', { count: hourEvents.length - 2 })}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-72 p-2 max-h-96 overflow-y-auto">
-                        <div className="space-y-2">
-                          <h4 className="text-sm font-medium">{format(hour, "HH:mm")}</h4>
-                          <div className="space-y-2">
+                      <PopoverContent className="max-h-96 w-72 overflow-y-auto p-2">
+                        <div className="flex flex-col gap-2">
+                          <h4 className={cn(widgetType.mono, "text-foreground")}>{format(hour, "HH:mm")}</h4>
+                          <div className="flex flex-col gap-2">
                             {hourEvents.slice(2).map((item) => (
                               item.type === 'trade' ? (
                                 <TradeCard
@@ -442,61 +489,63 @@ interface FinancialEventCardProps {
 
 function FinancialEventCard({ event, onClick, timezone, dateLocale, expanded = false, isSelected = false }: FinancialEventCardProps) {
   const t = useI18n()
+  const importanceLabel = useImportanceLabel()
 
-  // Get color class based on event importance
-  const getImportanceColorClass = (importance: string) => {
-    switch (importance) {
-      case "HIGH":
-        return "bg-red-100 border-red-300 text-red-800 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400"
-      case "MEDIUM":
-        return "bg-yellow-100 border-yellow-300 text-yellow-800 dark:bg-yellow-900/30 dark:border-yellow-800 dark:text-yellow-400"
-      case "LOW":
-        return "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400"
-      default:
-        return "bg-gray-100 border-gray-300 text-gray-800 dark:bg-gray-800/30 dark:border-gray-700 dark:text-gray-300"
-    }
-  }
-
+  /*
+   * Importance is ordinary metadata: it reads as a word, not a colored tile.
+   * The only state that earns a token here is selection, and it is announced
+   * with `aria-pressed` as well as the ring.
+   */
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
       className={cn(
-        "rounded-md p-2 cursor-pointer transition-colors hover:opacity-90",
-        getImportanceColorClass(event.importance),
-        !isSelected && "border-l-4",
-        isSelected && "border-2 border-current"
+        "w-full cursor-pointer rounded-md border px-2 py-1.5 text-left outline-none",
+        "hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        "motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out",
+        isSelected && "border-primary",
       )}
       onClick={(e) => {
         // Ensure clicks within child elements don't bubble to outside popovers
         e.stopPropagation()
         onClick?.()
       }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          e.stopPropagation()
+          onClick?.()
+        }
+      }}
     >
-      <div className="font-medium text-sm truncate">{event.title}</div>
+      <div className="truncate text-sm font-medium">{event.title}</div>
 
-      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs">
-        {event.country && (
-          <Badge variant="outline" className="text-xs h-5 px-1.5 rounded-sm font-normal">
-            {event.country}
-          </Badge>
-        )}
-
-        <div className="flex items-center">
-          <Clock className="h-3 w-3 mr-1 shrink-0" />
-          <span>{formatInTimeZone(new Date(event.date), timezone, "HH:mm", { locale: dateLocale })}</span>
-        </div>
+      <div className={cn(widgetType.caption, "mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5")}>
+        <span>{importanceLabel(event.importance)}</span>
+        {event.country && <span className="truncate">{event.country}</span>}
+        <span className="flex items-center gap-1">
+          <Clock className="h-3 w-3 shrink-0" aria-hidden />
+          <span className="tabular-nums">
+            {formatInTimeZone(new Date(event.date), timezone, "HH:mm", { locale: dateLocale })}
+          </span>
+        </span>
       </div>
 
-      {expanded && event.description && <p className="text-xs mt-2">{event.description}</p>}
+      {expanded && event.description && (
+        <p className={cn(widgetType.caption, "mt-2")}>{event.description}</p>
+      )}
 
       {expanded && event.sourceUrl && (
         <a
           href={event.sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs mt-2 text-primary hover:text-primary/80"
+          className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
           onClick={(e) => e.stopPropagation()}
         >
-          <ExternalLink className="h-3 w-3" />
+          <ExternalLink className="h-3 w-3" aria-hidden />
           {t("calendar.events.viewSource")}
         </a>
       )}
@@ -528,6 +577,7 @@ interface TradeCardProps {
 
 function TradeCard({ trade, onClick, timezone, dateLocale, expanded = false, date }: TradeCardProps) {
   const t = useI18n()
+  const locale = useCurrentLocale()
   const hourDate = new Date(date)
   hourDate.setHours(trade.hour)
 
@@ -545,52 +595,49 @@ function TradeCard({ trade, onClick, timezone, dateLocale, expanded = false, dat
     return dateA.getTime() - dateB.getTime()
   })
 
+  const totalTone = pnlTone(trade.totalPnL)
+  const earliestTime = formatInTimeZone(new Date(earliestTrade.entryDate), timezone, "HH:mm", { locale: dateLocale })
+
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <div
+        <button
+          type="button"
           className={cn(
-            "border-l-4 rounded-r-md p-2 cursor-pointer transition-colors hover:opacity-90",
-            trade.totalPnL > 0 
-              ? "bg-green-100 border-green-300 text-green-800 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400"
-              : "bg-red-100 border-red-300 text-red-800 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400"
+            "w-full cursor-pointer rounded-md border px-2 py-1.5 text-left outline-none",
+            "hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+            "motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out",
           )}
+          onClick={() => onClick?.()}
         >
-          <div className="font-medium text-sm">
+          <span className="block text-sm font-medium">
             {t('mindset.newsImpact.tradedHour')}
-          </div>
+          </span>
 
-          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs">
-            <div className="flex items-center">
-              <Clock className="h-3 w-3 mr-1 shrink-0" />
-              <span>{formatInTimeZone(new Date(earliestTrade.entryDate), timezone, "HH:mm", { locale: dateLocale })}</span>
-            </div>
+          <span className={cn(widgetType.caption, "mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5")}>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3 shrink-0" aria-hidden />
+              <span className="tabular-nums">{earliestTime}</span>
+            </span>
+            <span className={cn(widgetType.value, pnlToneClass(totalTone))}>
+              {formatCurrency(trade.totalPnL, locale)}
+            </span>
+          </span>
 
-            <div className="flex items-center">
-              <DollarSign className="h-3 w-3 mr-1 shrink-0" />
-              <span>{trade.totalPnL.toFixed(2)}</span>
-            </div>
-          </div>
-
-          <div className="mt-1 text-xs text-muted-foreground underline">
+          <span className={cn(widgetType.caption, "mt-1 block")}>
             {t('mindset.newsImpact.clickToSeeMore')}
-          </div>
-        </div>
+          </span>
+        </button>
       </PopoverTrigger>
       <PopoverContent className="w-[500px] p-0" align="start">
-        <div className="p-4 border-b">
-          <h4 className="font-medium">
-            {formatInTimeZone(new Date(earliestTrade.entryDate), timezone, "HH:mm", { locale: dateLocale })} - {trade.tradeCount} {trade.tradeCount === 1 ? 'Trade' : 'Trades'}
+        <div className="flex items-baseline justify-between gap-3 border-b p-4">
+          <h4 className={widgetType.title}>
+            {earliestTime} · {formatCount(trade.tradeCount, locale)}{' '}
+            {trade.tradeCount === 1 ? t('mindset.tags.trade') : t('mindset.tags.trades')}
           </h4>
-          <div className="flex items-center gap-2 mt-1">
-            <DollarSign className="h-4 w-4" />
-            <span className={cn(
-              "font-medium",
-              trade.totalPnL > 0 ? "text-green-500" : "text-red-500"
-            )}>
-              {trade.totalPnL.toFixed(2)}
-            </span>
-          </div>
+          <span className={cn(widgetType.value, "shrink-0", pnlToneClass(totalTone))}>
+            {formatCurrency(trade.totalPnL, locale)}
+          </span>
         </div>
         <ScrollArea className="h-[300px]">
           <Table>
@@ -604,33 +651,30 @@ function TradeCard({ trade, onClick, timezone, dateLocale, expanded = false, dat
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedTrades.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium">{t.instrument}</TableCell>
-                  <TableCell>
-                    {formatInTimeZone(new Date(t.entryDate), timezone, "HH:mm:ss", { locale: dateLocale })}
-                  </TableCell>
-                  <TableCell className={cn(
-                    "text-right",
-                    t.pnl > 0 ? "text-green-500" : "text-red-500"
-                  )}>
-                    {t.pnl.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {t.commission.toFixed(2)}
-                  </TableCell>
-                  <TableCell className={cn(
-                    "text-right font-medium",
-                    (t.pnl - t.commission) > 0 ? "text-green-500" : "text-red-500"
-                  )}>
-                    {(t.pnl - t.commission).toFixed(2)}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {sortedTrades.map((row) => {
+                const net = row.pnl - row.commission
+                return (
+                  <TableRow key={row.id}>
+                    <TableCell className="font-medium">{row.instrument}</TableCell>
+                    <TableCell className={widgetType.mono}>
+                      {formatInTimeZone(new Date(row.entryDate), timezone, "HH:mm:ss", { locale: dateLocale })}
+                    </TableCell>
+                    <TableCell className={cn("text-right tabular-nums", pnlToneClass(pnlTone(row.pnl)))}>
+                      {formatCurrency(row.pnl, locale)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {formatCurrency(row.commission, locale)}
+                    </TableCell>
+                    <TableCell className={cn("text-right font-medium tabular-nums", pnlToneClass(pnlTone(net)))}>
+                      {formatCurrency(net, locale)}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </ScrollArea>
       </PopoverContent>
     </Popover>
   )
-} 
+}

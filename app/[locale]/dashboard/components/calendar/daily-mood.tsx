@@ -3,18 +3,14 @@
 import React from 'react'
 import { Frown, Meh, Smile } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
 import { toast } from "sonner"
 import { useI18n } from '@/locales/client'
 import { saveMood, getMoodForDay } from '@/server/journal'
 import { format } from 'date-fns'
 import { useUserStore } from '../../../../../store/user-store'
+import { widgetType } from "../widgets"
 
 interface DailyMoodProps {
   dayData: CalendarEntry | undefined;
@@ -24,11 +20,19 @@ interface DailyMoodProps {
 
 const STORAGE_KEY = 'daily_mood'
 
+type MoodValue = 'bad' | 'okay' | 'great'
+
+const MOOD_ICONS = {
+  bad: Frown,
+  okay: Meh,
+  great: Smile,
+} as const
+
 export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMoodProps) {
   const user = useUserStore(state => state.user)
   const t = useI18n()
-  const [isLoading, setIsLoading] = React.useState<'bad' | 'okay' | 'great' | null>(null)
-  const [selectedMood, setSelectedMood] = React.useState<'bad' | 'okay' | 'great' | null>(null)
+  const [isLoading, setIsLoading] = React.useState<MoodValue | null>(null)
+  const [selectedMood, setSelectedMood] = React.useState<MoodValue | null>(null)
 
   // Load mood from localStorage or fetch from server on mount
   React.useEffect(() => {
@@ -38,7 +42,7 @@ export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMood
       // Check localStorage first
       const focusedDay = selectedDate.toISOString().split('T')[0]
       const storedMoodData = localStorage.getItem(STORAGE_KEY)
-      
+
       if (storedMoodData) {
         const storedMood = JSON.parse(storedMoodData)
         if (storedMood.date === focusedDay) {
@@ -52,7 +56,7 @@ export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMood
         const dateKey = format(selectedDate, 'yyyy-MM-dd')
         const mood = await getMoodForDay(dateKey)
         if (mood) {
-          setSelectedMood(mood.mood as 'bad' | 'okay' | 'great')
+          setSelectedMood(mood.mood as MoodValue)
           // Update localStorage
           localStorage.setItem(STORAGE_KEY, JSON.stringify({
             mood: mood.mood,
@@ -67,7 +71,7 @@ export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMood
     loadMood()
   }, [user?.id, selectedDate])
 
-  const handleMoodSelect = async (mood: 'bad' | 'okay' | 'great') => {
+  const handleMoodSelect = async (mood: MoodValue) => {
     if (!user?.id) {
       toast.error(t('auth.required'))
       return
@@ -81,7 +85,7 @@ export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMood
       const dateKey = format(selectedDate, 'yyyy-MM-dd')
       await saveMood(mood, [], dateKey)
       setSelectedMood(mood)
-      
+
       // Save to localStorage
       const focusedDay = date.toISOString().split('T')[0]
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -98,116 +102,62 @@ export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMood
     }
   }
 
-  if (!dayData?.trades?.length) {
-    return (
-      <div className="space-y-4">
-        <Card className="flex flex-col">
-          <CardHeader className="pb-1 flex-1">
-            <CardTitle className="text-base md:text-lg">
-              {isWeekly ? t('calendar.charts.weeklyMood') : t('calendar.charts.howWasYourDay')}
-            </CardTitle>
-          </CardHeader>
-          {!isWeekly && (
-            <CardContent className="pt-2 mt-auto">
-              <div className="flex justify-around items-center">
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className={`flex flex-col items-center h-auto py-2 px-4 ${selectedMood === 'bad' ? 'text-red-500' : ''}`}
-                  onClick={() => handleMoodSelect('bad')}
-                  disabled={isLoading !== null}
-                >
-                  <Frown className={`h-6 w-6 ${isLoading === 'bad' ? 'animate-pulse' : ''}`} />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className={`flex flex-col items-center h-auto py-2 px-4 ${selectedMood === 'okay' ? 'text-yellow-500' : ''}`}
-                  onClick={() => handleMoodSelect('okay')}
-                  disabled={isLoading !== null}
-                >
-                  <Meh className={`h-6 w-6 ${isLoading === 'okay' ? 'animate-pulse' : ''}`} />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className={`flex flex-col items-center h-auto py-2 px-4 ${selectedMood === 'great' ? 'text-green-500' : ''}`}
-                  onClick={() => handleMoodSelect('great')}
-                  disabled={isLoading !== null}
-                >
-                  <Smile className={`h-6 w-6 ${isLoading === 'great' ? 'animate-pulse' : ''}`} />
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground mt-4 text-center">
-                {t('calendar.modal.noTrades')}
-              </p>
-            </CardContent>
-          )}
-          {isWeekly && (
-            <CardContent className="pt-2 mt-auto">
-              <p className="text-sm text-muted-foreground">
-                {t('calendar.charts.weeklyMoodNotAvailable')}
-              </p>
-            </CardContent>
-          )}
-        </Card>
-      </div>
-    )
-  }
+  const moods: { value: MoodValue; label: string }[] = [
+    { value: 'bad', label: t('mood.bad') },
+    { value: 'okay', label: t('mood.okay') },
+    { value: 'great', label: t('mood.great') },
+  ]
 
+  const hasTrades = Boolean(dayData?.trades?.length)
+
+  /*
+   * This sits inside a modal, which is already a surface: a titled group with
+   * spacing, not a card. Mood is ordinary metadata, so it stays monochrome and
+   * every state carries its own text label.
+   */
   return (
-    <div className="space-y-4">
-      <Card className="flex flex-col">
-        <CardHeader className="pb-1 flex-1">
-          <CardTitle className="text-base md:text-lg">
-            {isWeekly ? t('calendar.charts.weeklyMood') : t('calendar.charts.howWasYourDay')}
-          </CardTitle>
-        </CardHeader>
-        {!isWeekly && (
-          <CardContent className="pt-2 mt-auto">
-            <div className="flex justify-around items-center">
-              <Button
-                variant="ghost"
-                size="lg"
-                className={`flex flex-col items-center h-auto py-2 px-4 ${selectedMood === 'bad' ? 'text-red-500' : ''}`}
-                onClick={() => handleMoodSelect('bad')}
-                disabled={isLoading !== null}
-              >
-                <Frown className={`h-6 w-6 ${isLoading === 'bad' ? 'animate-pulse' : ''}`} />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="lg"
-                className={`flex flex-col items-center h-auto py-2 px-4 ${selectedMood === 'okay' ? 'text-yellow-500' : ''}`}
-                onClick={() => handleMoodSelect('okay')}
-                disabled={isLoading !== null}
-              >
-                <Meh className={`h-6 w-6 ${isLoading === 'okay' ? 'animate-pulse' : ''}`} />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="lg"
-                className={`flex flex-col items-center h-auto py-2 px-4 ${selectedMood === 'great' ? 'text-green-500' : ''}`}
-                onClick={() => handleMoodSelect('great')}
-                disabled={isLoading !== null}
-              >
-                <Smile className={`h-6 w-6 ${isLoading === 'great' ? 'animate-pulse' : ''}`} />
-              </Button>
-            </div>
-          </CardContent>
-        )}
-        {isWeekly && (
-          <CardContent className="pt-2 mt-auto">
-            <p className="text-sm text-muted-foreground">
-              {t('calendar.charts.weeklyMoodNotAvailable')}
-            </p>
-          </CardContent>
-        )}
-      </Card>
-    </div>
+    <section className="flex flex-col gap-2">
+      <h4 className={widgetType.section}>
+        {isWeekly ? t('calendar.charts.weeklyMood') : t('calendar.charts.howWasYourDay')}
+      </h4>
+      {isWeekly ? (
+        <p className={widgetType.label}>
+          {t('calendar.charts.weeklyMoodNotAvailable')}
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-1">
+            {moods.map(({ value, label }) => {
+              const Icon = MOOD_ICONS[value]
+              const isSelected = selectedMood === value
+              return (
+                <Button
+                  key={value}
+                  type="button"
+                  variant={isSelected ? 'secondary' : 'ghost'}
+                  size="sm"
+                  aria-pressed={isSelected}
+                  className="h-8 gap-1.5 px-2"
+                  onClick={() => handleMoodSelect(value)}
+                  disabled={isLoading !== null}
+                >
+                  <Icon
+                    aria-hidden
+                    className={cn(
+                      "h-4 w-4",
+                      isLoading === value && "motion-safe:animate-pulse",
+                    )}
+                  />
+                  <span className="text-xs">{label}</span>
+                </Button>
+              )
+            })}
+          </div>
+          {!hasTrades && (
+            <p className={widgetType.label}>{t('calendar.modal.noTrades')}</p>
+          )}
+        </>
+      )}
+    </section>
   )
-} 
+}

@@ -2,14 +2,14 @@
 
 import React from 'react'
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { Frown, Meh, Smile } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { useI18n } from '@/locales/client'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { saveMood, getMoodForDay } from '@/server/journal'
 import { toast } from "sonner"
 import { format } from 'date-fns'
 import { useUserStore } from '../../../../../store/user-store'
+import { WidgetBody, WidgetCard, WidgetHeader } from "../widgets"
 
 interface MoodSelectorProps {
   onMoodSelect?: (mood: 'bad' | 'okay' | 'great') => void;
@@ -17,16 +17,24 @@ interface MoodSelectorProps {
 
 const STORAGE_KEY = 'daily_mood'
 
+type MoodValue = 'bad' | 'okay' | 'great'
+
 type StoredMood = {
-  mood: 'bad' | 'okay' | 'great';
+  mood: MoodValue;
   date: string;
 }
+
+const MOOD_ICONS = {
+  bad: Frown,
+  okay: Meh,
+  great: Smile,
+} as const
 
 export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
   const t = useI18n()
   const user = useUserStore(state => state.user)
-  const [isLoading, setIsLoading] = React.useState<'bad' | 'okay' | 'great' | null>(null)
-  const [selectedMood, setSelectedMood] = React.useState<'bad' | 'okay' | 'great' | null>(null)
+  const [isLoading, setIsLoading] = React.useState<MoodValue | null>(null)
+  const [selectedMood, setSelectedMood] = React.useState<MoodValue | null>(null)
 
   // Load mood from localStorage or fetch from server on mount
   React.useEffect(() => {
@@ -36,7 +44,7 @@ export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
       // Check localStorage first
       const today = new Date().toISOString().split('T')[0]
       const storedMoodData = localStorage.getItem(STORAGE_KEY)
-      
+
       if (storedMoodData) {
         const storedMood: StoredMood = JSON.parse(storedMoodData)
         if (storedMood.date === today) {
@@ -50,7 +58,7 @@ export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
         const dateKey = format(new Date(), 'yyyy-MM-dd')
         const mood = await getMoodForDay(dateKey)
         if (mood) {
-          setSelectedMood(mood.mood as 'bad' | 'okay' | 'great')
+          setSelectedMood(mood.mood as MoodValue)
           // Update localStorage
           localStorage.setItem(STORAGE_KEY, JSON.stringify({
             mood: mood.mood,
@@ -65,7 +73,7 @@ export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
     loadMood()
   }, [user?.id])
 
-  const handleMoodSelect = async (mood: 'bad' | 'okay' | 'great') => {
+  const handleMoodSelect = async (mood: MoodValue) => {
     if (!user?.id) {
       toast.error(t('auth.required'))
       return
@@ -76,7 +84,7 @@ export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
       await saveMood(mood)
       setSelectedMood(mood)
       onMoodSelect?.(mood)
-      
+
       // Save to localStorage
       const today = new Date().toISOString().split('T')[0]
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -93,80 +101,49 @@ export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
     }
   }
 
-  const getMoodButtonStyle = (moodType: 'bad' | 'okay' | 'great') => {
-    if (selectedMood === moodType) {
-      switch (moodType) {
-        case 'bad': return 'text-red-500'
-        case 'okay': return 'text-yellow-500'
-        case 'great': return 'text-green-500'
-      }
-    }
-    return ''
-  }
+  const moods: { value: MoodValue; label: string }[] = [
+    { value: 'bad', label: t('mood.bad') },
+    { value: 'okay', label: t('mood.okay') },
+    { value: 'great', label: t('mood.great') },
+  ]
 
+  /*
+   * Mood is ordinary metadata, so it stays monochrome: selection is carried by
+   * one encoding (the pressed button) plus the visible label, never by a
+   * colored pill or an emoji standing in for the word.
+   */
   return (
-    <Card className="h-full">
-      <div className="flex items-center justify-between h-full p-2">
-        <span className="text-sm font-medium">{t('mood.question')}</span>
-        <div className="flex items-center gap-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`h-6 w-6 p-0 hover:text-red-500 ${getMoodButtonStyle('bad')}`}
-                  onClick={() => handleMoodSelect('bad')}
-                  disabled={isLoading !== null}
-                >
-                  <Frown className={`h-3 w-3 ${isLoading === 'bad' ? 'animate-pulse' : ''}`} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t('mood.bad')}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`h-6 w-6 p-0 hover:text-yellow-500 ${getMoodButtonStyle('okay')}`}
-                  onClick={() => handleMoodSelect('okay')}
-                  disabled={isLoading !== null}
-                >
-                  <Meh className={`h-3 w-3 ${isLoading === 'okay' ? 'animate-pulse' : ''}`} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t('mood.okay')}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`h-6 w-6 p-0 hover:text-green-500 ${getMoodButtonStyle('great')}`}
-                  onClick={() => handleMoodSelect('great')}
-                  disabled={isLoading !== null}
-                >
-                  <Smile className={`h-3 w-3 ${isLoading === 'great' ? 'animate-pulse' : ''}`} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t('mood.great')}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+    <WidgetCard>
+      <WidgetHeader size="small" title={t('mood.question')} />
+      <WidgetBody size="small" className="flex items-center">
+        <div className="flex w-full flex-wrap items-center gap-1">
+          {moods.map(({ value, label }) => {
+            const Icon = MOOD_ICONS[value]
+            const isSelected = selectedMood === value
+            return (
+              <Button
+                key={value}
+                type="button"
+                variant={isSelected ? 'secondary' : 'ghost'}
+                size="sm"
+                aria-pressed={isSelected}
+                className="h-7 gap-1.5 px-2"
+                onClick={() => handleMoodSelect(value)}
+                disabled={isLoading !== null}
+              >
+                <Icon
+                  aria-hidden
+                  className={cn(
+                    "h-3.5 w-3.5",
+                    isLoading === value && "motion-safe:animate-pulse",
+                  )}
+                />
+                <span className="text-xs">{label}</span>
+              </Button>
+            )
+          })}
         </div>
-      </div>
-    </Card>
+      </WidgetBody>
+    </WidgetCard>
   )
-} 
+}

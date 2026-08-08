@@ -1,15 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel"
 import { Journaling } from "./journaling"
 import { Timeline } from "./timeline"
 import { MindsetSummary } from "./mindset-summary"
 import { useI18n } from "@/locales/client"
-import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Download } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { InfoBubble } from "@/components/ui/info-bubble"
 import {
   Tooltip as UITooltip,
   TooltipContent,
@@ -18,6 +16,13 @@ import {
 } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard"
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetHeader,
+  formatCount,
+  widgetType,
+} from "../widgets"
 import type { EmblaCarouselType as CarouselApi } from "embla-carousel"
 import { toast } from "sonner"
 import { saveMindset, deleteMindset } from "@/server/journal"
@@ -366,31 +371,13 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   ]
 
   return (
-    <Card className="flex flex-col p-0 h-full w-full">
-      <CardHeader 
-        className={cn(
-          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === 'small' ? "p-2 h-10" : "p-3 sm:p-4 h-14"
-        )}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-1.5">
-            <CardTitle 
-              className={cn(
-                "line-clamp-1",
-                size === 'small' ? "text-sm" : "text-base"
-              )}
-            >
-              {t('mindset.title')}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={size === 'small' ? 'size-3.5' : 'size-4'}
-            >
-              <p>{t('mindset.description')}</p>
-            </InfoBubble>
-          </div>
-          <div className="flex items-center gap-2">
+    <WidgetCard>
+      <WidgetHeader
+        size={size}
+        title={t('mindset.title')}
+        description={t('mindset.description')}
+        actions={
+          <>
             <TooltipProvider>
               <UITooltip>
                 <TooltipTrigger asChild>
@@ -399,9 +386,10 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
                     size="icon"
                     onClick={handleExportAllPdf}
                     disabled={isExporting}
-                    className="h-6 w-6"
+                    aria-label={t("mindset.exportAllPdf")}
+                    className="h-7 w-7"
                   >
-                    <Download className="h-3 w-3" />
+                    <Download className="h-3.5 w-3.5" aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
@@ -413,47 +401,40 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
                 </TooltipContent>
               </UITooltip>
             </TooltipProvider>
-            <div className="flex items-center gap-1.5">
-              {steps.map((_, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full transition-colors",
-                    current === index
-                      ? "bg-primary"
-                      : "bg-muted"
-                  )}
-                />
-              ))}
-            </div>
-            <div className="flex items-center gap-1">
+            {/* Step position as a figure, not a color-only dot row */}
+            <span className={cn(widgetType.caption, "tabular-nums")}>
+              {formatCount(current + 1, locale)}/{formatCount(steps.length, locale)}
+            </span>
+            <div className="flex items-center gap-0.5">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => api?.scrollPrev()}
                 disabled={current === 0}
-                className="h-6 w-6"
+                aria-label={t('mindset.back')}
+                className="h-7 w-7"
               >
-                <ChevronLeft className="h-3 w-3" />
+                <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => api?.scrollNext()}
                 disabled={current === steps.length - 1}
-                className="h-6 w-6"
+                aria-label={t('mindset.next')}
+                className="h-7 w-7"
               >
-                <ChevronRight className="h-3 w-3" />
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden />
               </Button>
             </div>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-1 overflow-hidden p-0 flex flex-row relative">
-        {/* Timeline with animation */}
-        <div 
+          </>
+        }
+      />
+      <WidgetBody size={size} flush className="relative flex flex-row overflow-hidden">
+        {/* Timeline, which collapses to give the editor the frame */}
+        <div
           className={cn(
-            "relative transition-[width] duration-300 ease-out-quart motion-reduce:transition-none",
+            "relative motion-safe:transition-[width] motion-safe:duration-150 motion-safe:ease-out",
             isTimelineVisible ? "w-auto" : "w-0 overflow-hidden"
           )}
         >
@@ -474,12 +455,14 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
                     variant="secondary"
                     size="icon"
                     onClick={toggleTimeline}
-                    className="h-8 w-4 rounded-r-none rounded-l-md border-r-0"
+                    aria-label={isTimelineVisible ? t('mindset.hideTimeline') : t('mindset.showTimeline')}
+                    aria-pressed={isTimelineVisible}
+                    className="h-8 w-4 rounded-l-md rounded-r-none border-r-0"
                   >
                     {isTimelineVisible ? (
-                      <ChevronLeft className="h-3 w-3" />
+                      <ChevronLeft className="h-3 w-3" aria-hidden />
                     ) : (
-                      <ChevronRight className="h-3 w-3" />
+                      <ChevronRight className="h-3 w-3" aria-hidden />
                     )}
                   </Button>
                 </TooltipTrigger>
@@ -501,9 +484,11 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
                     variant="secondary"
                     size="icon"
                     onClick={toggleTimeline}
+                    aria-label={t('mindset.showTimeline')}
+                    aria-pressed={false}
                     className="h-8 w-4 rounded-l-none rounded-r-md border-l-0"
                   >
-                    <ChevronRight className="h-3 w-3" />
+                    <ChevronRight className="h-3 w-3" aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
@@ -527,7 +512,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
             }
           }}
           setApi={setApi}
-          className="flex-1 min-w-0 h-full flex flex-col"
+          className="flex h-full min-w-0 flex-1 flex-col"
         >
           <CarouselContent className="h-full flex-1 pl-4">
             {steps.map((step, index) => (
@@ -537,7 +522,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
             ))}
           </CarouselContent>
         </Carousel>
-      </CardContent>
-    </Card>
+      </WidgetBody>
+    </WidgetCard>
   )
 }

@@ -16,8 +16,7 @@ import { Label } from "@/components/ui/label"
 import { useUserStore } from "@/store/user-store"
 import { useTradesStore } from "@/store/trades-store"
 import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
-
-type ImpactLevel = "low" | "medium" | "high"
+import { widgetType } from "../widgets"
 
 interface MindsetSummaryProps {
   date: Date
@@ -27,12 +26,38 @@ interface MindsetSummaryProps {
   onEdit: (section?: 'emotion' | 'journal' | 'news') => void
 }
 
-export function MindsetSummary({ 
-  date, 
-  emotionValue, 
-  selectedNews, 
+/** Section name plus the one control that acts on it. No pill, no icon tile. */
+function SummarySectionHeader({
+  title,
+  editLabel,
+  onEdit,
+}: {
+  title: string
+  editLabel: string
+  onEdit: () => void
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <h4 className={widgetType.section}>{title}</h4>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6"
+        aria-label={editLabel}
+        onClick={onEdit}
+      >
+        <Pencil className="h-3 w-3" aria-hidden />
+      </Button>
+    </div>
+  )
+}
+
+export function MindsetSummary({
+  date,
+  emotionValue,
+  selectedNews,
   journalContent,
-  onEdit 
+  onEdit
 }: MindsetSummaryProps) {
   const t = useI18n()
   const { locale } = useParams()
@@ -50,18 +75,22 @@ export function MindsetSummary({
       const matchesDate = eventDate.toDateString() === date.toDateString()
       const matchesLocale = event.lang === locale
       const matchesSelectedNews = !showOnlySelectedNews || selectedNews.includes(event.id)
-      
+
       return matchesDate && matchesLocale && matchesSelectedNews
     })
     setEvents(dateEvents)
   }, [date, financialEvents, locale, selectedNews, showOnlySelectedNews])
 
+  /*
+   * Emotional state is ordinary metadata: it reads as a word, not as a colored
+   * band, so nothing here competes with the P&L evidence elsewhere.
+   */
   const getEmotionLabel = (value: number) => {
-    if (value < 20) return { label: t('mindset.emotion.verySad'), color: "text-red-500" }
-    if (value < 40) return { label: t('mindset.emotion.sad'), color: "text-orange-500" }
-    if (value < 60) return { label: t('mindset.emotion.neutral'), color: "text-yellow-500" }
-    if (value < 80) return { label: t('mindset.emotion.happy'), color: "text-green-500" }
-    return { label: t('mindset.emotion.veryHappy'), color: "text-emerald-500" }
+    if (value < 20) return t('mindset.emotion.verySad')
+    if (value < 40) return t('mindset.emotion.sad')
+    if (value < 60) return t('mindset.emotion.neutral')
+    if (value < 80) return t('mindset.emotion.happy')
+    return t('mindset.emotion.veryHappy')
   }
 
   // Filter trades for the selected date
@@ -72,89 +101,63 @@ export function MindsetSummary({
     return tradeDateString === selectedDateString
   })
 
-  const [emotion, setEmotion] = useState<{ label: string; color: string }>(getEmotionLabel(emotionValue))
-
-  useEffect(() => {
-   setEmotion(getEmotionLabel(emotionValue))
-  }, [emotionValue])
+  const emotionLabel = getEmotionLabel(emotionValue)
 
   return (
-    <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">
-          {format(date, 'MMMM d, yyyy', { locale: dateLocale })}
-        </h2>
-      </div>
+    <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
+      <h3 className={cn(widgetType.title, "capitalize")}>
+        {format(date, 'MMMM d, yyyy', { locale: dateLocale })}
+      </h3>
 
-      <div className="grid gap-4">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <p className="text-sm text-muted-foreground">
-                  {t('mindset.emotion.title')}
-                </p>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit('emotion')}>
-                  <Pencil className="h-3 w-3" />
-                </Button>
-              </div>
-              <p className={cn("text-sm", emotion.color)}>
-                {emotion.label}
-              </p>
-            </div>
-          </div>
-        </div>
+      <section className="flex flex-col gap-1">
+        <SummarySectionHeader
+          title={t('mindset.emotion.title')}
+          editLabel={`${t('mindset.edit')}: ${t('mindset.emotion.title')}`}
+          onEdit={() => onEdit('emotion')}
+        />
+        <p className="text-sm">{emotionLabel}</p>
+      </section>
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-muted-foreground">
-              {t('mindset.journaling.title')}
-            </p>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit('journal')}>
-              <Pencil className="h-3 w-3" />
-            </Button>
-          </div>
-          {!journalContent ? (
-            <p className="text-sm text-muted-foreground">{t('mindset.noData')}</p>
-          ) : (
-            <div 
-              key={journalContent}
-              className="prose prose-sm dark:prose-invert max-w-none [&_.ProseMirror]:outline-hidden [&_.ProseMirror]:relative [&_.ProseMirror]:h-full"
-              dangerouslySetInnerHTML={{ __html: journalContent }}
-            />
-          )}
-        </div>
-        <div className="space-y-2">
-          <div className="flex justify-between flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-muted-foreground">
-                {t('mindset.newsImpact.title')}
-              </p>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit('news')}>
-                <Pencil className="h-3 w-3" />
-              </Button>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="show-only-selected"
-                  checked={showOnlySelectedNews}
-                  onCheckedChange={(checked) => setShowOnlySelectedNews(checked === true)}
-                />
-                <Label htmlFor="show-only-selected" className="text-xs text-muted-foreground">
-                  {t('mindset.newsImpact.showOnlySelectedNews')}
-                </Label>
-              </div>
-            </div>
-          </div>
-          <HourlyFinancialTimeline
-            date={date}
-            events={events}
-            trades={dayTrades}
-            selectedEventIds={selectedNews}
+      <section className="flex flex-col gap-2">
+        <SummarySectionHeader
+          title={t('mindset.journaling.title')}
+          editLabel={`${t('mindset.edit')}: ${t('mindset.journaling.title')}`}
+          onEdit={() => onEdit('journal')}
+        />
+        {!journalContent ? (
+          <p className={widgetType.label}>{t('mindset.noData')}</p>
+        ) : (
+          <div
+            key={journalContent}
+            className="prose prose-sm dark:prose-invert max-w-none [&_.ProseMirror]:outline-hidden [&_.ProseMirror]:relative [&_.ProseMirror]:h-full"
+            dangerouslySetInnerHTML={{ __html: journalContent }}
           />
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <SummarySectionHeader
+          title={t('mindset.newsImpact.title')}
+          editLabel={`${t('mindset.edit')}: ${t('mindset.newsImpact.title')}`}
+          onEdit={() => onEdit('news')}
+        />
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="show-only-selected"
+            checked={showOnlySelectedNews}
+            onCheckedChange={(checked) => setShowOnlySelectedNews(checked === true)}
+          />
+          <Label htmlFor="show-only-selected" className={widgetType.label}>
+            {t('mindset.newsImpact.showOnlySelectedNews')}
+          </Label>
         </div>
-      </div>
+        <HourlyFinancialTimeline
+          date={date}
+          events={events}
+          trades={dayTrades}
+          selectedEventIds={selectedNews}
+        />
+      </section>
     </div>
   )
-} 
+}

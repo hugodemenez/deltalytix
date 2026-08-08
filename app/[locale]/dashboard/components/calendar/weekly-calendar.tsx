@@ -1,7 +1,7 @@
 'use client'
 
 import React from "react"
-import { format, eachWeekOfInterval, getWeek, getMonth, getYear, addDays, getDay } from "date-fns"
+import { format, eachWeekOfInterval, getWeek, getMonth, getYear, addDays } from "date-fns"
 import { fr, enUS } from 'date-fns/locale'
 import { cn } from "@/lib/utils"
 import { Trade } from "@/prisma/generated/prisma/browser"
@@ -19,43 +19,37 @@ import {
 } from "@/components/ui/accordion"
 import { useUserStore } from "../../../../../store/user-store"
 import { CalendarResponsiveOverlay } from "./calendar-responsive-overlay"
+import {
+  formatCompactCurrency,
+  formatCount,
+  formatCurrency,
+  pnlTone,
+  pnlToneClass,
+  pnlToneFill,
+  widgetType,
+} from "../widgets"
 
-const formatCurrency = (value: number, options?: { signed?: boolean }) => {
-  const formatted = value.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+/** Whole-dollar money for the dense grid. Sans + tabular-nums, sign on the number. */
+function signedWholeCurrency(value: number, locale: string) {
+  return formatCurrency(value, locale, {
+    maximumFractionDigits: 0,
+    signDisplay: "always",
   })
-  if (options?.signed && value > 0) {
-    return `+${formatted}`
-  }
-  return formatted
-}
-
-const formatCurrencyCompact = (value: number) => {
-  const absValue = Math.abs(value)
-  const sign = value > 0 ? '+' : value < 0 ? '-' : ''
-  if (absValue >= 1_000_000) {
-    return `${sign}$${(absValue / 1_000_000).toFixed(1)}M`
-  }
-  if (absValue >= 1_000) {
-    return `${sign}$${(absValue / 1_000).toFixed(1)}K`
-  }
-  return formatCurrency(value, { signed: true })
 }
 
 function ResponsiveCurrency({
   value,
+  locale,
   className,
 }: {
   value: number
+  locale: string
   className?: string
 }) {
   return (
     <>
-      <span className={cn("sm:hidden", className)}>{formatCurrencyCompact(value)}</span>
-      <span className={cn("hidden sm:inline", className)}>{formatCurrency(value, { signed: true })}</span>
+      <span className={cn("sm:hidden", className)}>{formatCompactCurrency(value, locale)}</span>
+      <span className={cn("hidden sm:inline", className)}>{signedWholeCurrency(value, locale)}</span>
     </>
   )
 }
@@ -70,26 +64,25 @@ function WeekDetailContent({
   pnl,
   trades,
   dateLocale,
+  locale,
   t,
 }: {
   weekStart: Date
   pnl: number
   trades: { [key: string]: { trades: Trade[], pnl: number } }
   dateLocale: typeof enUS
+  locale: string
   t: ReturnType<typeof useI18n>
 }) {
   return (
     <div className="sm:p-4">
-      <div className="hidden sm:flex items-center justify-between mb-4">
-        <h4 className="font-semibold text-sm">
+      <div className="mb-4 hidden items-baseline justify-between gap-3 sm:flex">
+        <h4 className={widgetType.title}>
           {format(weekStart, 'MMM d', { locale: dateLocale })} - {format(addDays(weekStart, 6), 'MMM d, yyyy', { locale: dateLocale })}
         </h4>
-        <div className={cn(
-          "text-sm font-semibold",
-          pnl > 0 ? "text-green-600 dark:text-green-400" : pnl < 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
-        )}>
-          {formatCurrency(pnl, { signed: true })}
-        </div>
+        <span className={cn(widgetType.value, "shrink-0", pnlToneClass(pnlTone(pnl)))}>
+          {signedWholeCurrency(pnl, locale)}
+        </span>
       </div>
       <div className="max-h-[400px] overflow-y-auto pr-2">
         {Object.entries(trades).length > 0 ? (
@@ -97,53 +90,48 @@ function WeekDetailContent({
             {Object.entries(trades).map(([date, { trades: dayTrades, pnl: dayPnl }]) => (
               <AccordionItem key={date} value={date}>
                 <AccordionTrigger className="px-2 hover:no-underline">
-                  <div className="flex items-center justify-between w-full pr-4">
-                    <div className="flex flex-col items-start">
-                      <h5 className="text-sm font-medium">
+                  <div className="flex w-full items-center justify-between gap-3 pr-4">
+                    <div className="flex min-w-0 flex-col items-start gap-0.5">
+                      <h5 className="truncate text-sm font-medium">
                         {format(new Date(date), 'EEEE, MMM d, yyyy', { locale: dateLocale })}
                       </h5>
-                      <span className="text-xs text-muted-foreground">
-                        {dayTrades.length} {t('calendar.trades')}
+                      <span className={widgetType.caption}>
+                        {formatCount(dayTrades.length, locale)} {t('calendar.trades')}
                       </span>
                     </div>
-                    <div className={cn(
-                      "text-sm font-semibold",
-                      dayPnl > 0 ? "text-green-600 dark:text-green-400" : dayPnl < 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
-                    )}>
-                      {formatCurrency(dayPnl, { signed: true })}
-                    </div>
+                    <span className={cn(widgetType.value, "shrink-0", pnlToneClass(pnlTone(dayPnl)))}>
+                      {signedWholeCurrency(dayPnl, locale)}
+                    </span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-2 pt-2">
+                  {/* Trade rows sit on a shared rule, never in a box each */}
+                  <ul className="divide-y">
                     {dayTrades.map((trade, index) => (
-                      <div
+                      <li
                         key={index}
-                        className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                        className="flex items-center justify-between gap-3 py-2"
                       >
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">{trade.instrument}</span>
-                          <span className="text-xs text-muted-foreground">
+                        <div className="flex min-w-0 flex-col gap-0.5">
+                          <span className="truncate text-sm font-medium">{trade.instrument}</span>
+                          <span className={cn(widgetType.mono, "text-muted-foreground")}>
                             {format(new Date(trade.entryDate), 'HH:mm', { locale: dateLocale })}
                           </span>
                         </div>
-                        <div className={cn(
-                          "text-sm font-semibold",
-                          trade.pnl > 0 ? "text-green-600 dark:text-green-400" : trade.pnl < 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
-                        )}>
-                          {formatCurrency(trade.pnl, { signed: true })}
-                        </div>
-                      </div>
+                        <span className={cn(widgetType.value, "shrink-0", pnlToneClass(pnlTone(trade.pnl)))}>
+                          {signedWholeCurrency(trade.pnl, locale)}
+                        </span>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
         ) : (
-          <div className="text-sm text-muted-foreground text-center py-4">
+          <p className={cn(widgetType.label, "py-4 text-center")}>
             {t('calendar.noTrades')}
-          </div>
+          </p>
         )}
       </div>
     </div>
@@ -213,39 +201,38 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
   ));
 
   return (
-    <div className="flex flex-col gap-1 sm:gap-2 p-1 sm:p-2 h-full min-h-0">
+    <div className="flex h-full min-h-0 flex-col gap-1 p-1 sm:gap-2 sm:p-2">
       <div
-        className="overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:mx-0 sm:px-0 sm:overflow-visible"
+        className="-mx-1 overflow-x-auto overscroll-x-contain px-1 sm:mx-0 sm:overflow-visible sm:px-0"
         role="region"
         aria-label={String(year)}
       >
-        <div className="min-w-[680px] sm:min-w-0 flex flex-col gap-1 sm:gap-2">
-          {/* Month Headers and Totals */}
+        <div className="flex min-w-[680px] flex-col gap-1 sm:min-w-0 sm:gap-2">
+          {/* Month headers and totals */}
           <div className="grid grid-cols-12 gap-0.5 sm:gap-1">
             {Array.from({ length: 12 }, (_, i) => {
               const monthlyPnl = getMonthPnl(i)
               return (
-                <div key={i} className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
-                  <div className="text-center text-[10px] sm:text-xs font-medium text-muted-foreground truncate">
+                <div key={i} className="flex min-w-0 flex-col gap-0.5 sm:gap-1">
+                  <div className={cn(widgetType.label, "truncate text-center font-medium")}>
                     {format(new Date(year, i, 1), 'MMM', { locale: dateLocale })}
                   </div>
-                  <div className={cn(
-                    "text-center text-[10px] sm:text-xs font-semibold px-0.5 sm:px-1 py-0.5 rounded transition-colors truncate",
-                    monthlyPnl > 0
-                      ? "text-green-700 dark:text-green-400 bg-green-50/50 dark:bg-green-950/30"
-                      : monthlyPnl < 0
-                        ? "text-red-600 dark:text-red-400/90 bg-red-50/50 dark:bg-red-950/30"
-                        : "text-muted-foreground bg-muted/20"
-                  )}>
-                    <ResponsiveCurrency value={monthlyPnl} />
+                  {/* The sign is on the number, so tone is never the only signal */}
+                  <div
+                    className={cn(
+                      "truncate px-0.5 text-center text-[10px] font-semibold tabular-nums sm:px-1 sm:text-xs",
+                      pnlToneClass(pnlTone(monthlyPnl)),
+                    )}
+                  >
+                    <ResponsiveCurrency value={monthlyPnl} locale={locale} />
                   </div>
                 </div>
               )
             })}
           </div>
 
-          {/* Weeks Grid */}
-          <div className="grid grid-cols-12 gap-0.5 sm:gap-1 flex-1">
+          {/* Weeks grid */}
+          <div className="grid flex-1 grid-cols-12 gap-0.5 sm:gap-1">
             {Array.from({ length: 12 }, (_, monthIndex) => {
               const monthWeeks = weeksToDisplay.filter(weekStart => {
                 const weekYear = getYear(weekStart);
@@ -261,14 +248,14 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
               }
 
               return (
-                <div key={monthIndex} className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
+                <div key={monthIndex} className="flex min-w-0 flex-col gap-0.5 sm:gap-1">
                   {allWeeks.map((weekStart, weekIndex) => {
                     if (!weekStart) {
                       return (
                         <div
                           key={weekIndex}
                           aria-hidden="true"
-                          className="min-h-10 sm:min-h-12 flex-1 rounded border bg-muted/10 dark:bg-muted/5"
+                          className="min-h-10 flex-1 rounded ring-1 ring-border sm:min-h-12"
                         />
                       )
                     }
@@ -277,37 +264,48 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
                     const trades = getWeekTrades(weekStart)
                     const weekNumber = getWeek(weekStart, { locale: dateLocale })
                     const weekRange = `${format(weekStart, 'MMM d', { locale: dateLocale })} - ${format(addDays(weekStart, 6), 'MMM d, yyyy', { locale: dateLocale })}`
-                    const ariaLabel = `${t('calendar.week')} ${weekNumber}, ${formatCurrency(pnl, { signed: true })}`
+                    const tone = pnlTone(pnl)
+                    const ariaLabel = `${t('calendar.week')} ${weekNumber}, ${signedWholeCurrency(pnl, locale)}`
 
                     return (
                       <CalendarResponsiveOverlay
                         key={`${weekStart.toISOString()}-${weekIndex}`}
                         popoverClassName="w-[400px] p-0 z-50"
                         drawerTitle={weekRange}
-                        drawerDescription={formatCurrencyCompact(pnl)}
+                        drawerDescription={signedWholeCurrency(pnl, locale)}
                         trigger={({ onClick }) => (
                           <button
                             type="button"
                             aria-label={ariaLabel}
                             className={cn(
-                              "flex w-full flex-col items-center justify-center rounded border p-0.5 sm:p-1 min-h-10 sm:min-h-12 flex-1 cursor-pointer",
-                              "transition-all duration-200 hover:scale-[1.02] hover:shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-                              pnl > 0
-                                ? "bg-green-50/80 dark:bg-green-950/40 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/50"
-                                : pnl < 0
-                                  ? "bg-red-50/60 dark:bg-red-950/30 text-red-600 dark:text-red-400/90 border-red-100/80 dark:border-red-900/40"
-                                  : "bg-muted/20 dark:bg-muted/10 text-muted-foreground border-border"
+                              "relative flex min-h-10 w-full flex-1 cursor-pointer flex-col items-center justify-center rounded p-0.5 sm:min-h-12 sm:p-1",
+                              "ring-1 ring-border outline-none hover:z-10 hover:ring-foreground/40",
+                              "focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                              "motion-safe:transition-shadow motion-safe:duration-150 motion-safe:ease-out",
                             )}
                             onClick={(e) => {
                               e.stopPropagation()
                               onClick?.()
                             }}
                           >
-                            <span className="hidden sm:block text-[10px] font-medium text-muted-foreground leading-none">
+                            {/* P&L sign is the one thing on this cell that earns color. */}
+                            {tone !== "neutral" ? (
+                              <span
+                                aria-hidden
+                                className="pointer-events-none absolute inset-0 rounded opacity-[0.10]"
+                                style={{ backgroundColor: pnlToneFill(tone) }}
+                              />
+                            ) : null}
+                            <span className={cn(widgetType.label, "hidden leading-none tabular-nums sm:block")}>
                               {weekNumber}
                             </span>
-                            <span className="text-[10px] sm:text-xs font-bold leading-tight truncate max-w-full px-0.5">
-                              <ResponsiveCurrency value={pnl} />
+                            <span
+                              className={cn(
+                                "max-w-full truncate px-0.5 text-[10px] font-semibold leading-tight tabular-nums sm:text-xs",
+                                pnlToneClass(tone),
+                              )}
+                            >
+                              <ResponsiveCurrency value={pnl} locale={locale} />
                             </span>
                           </button>
                         )}
@@ -317,6 +315,7 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
                           pnl={pnl}
                           trades={trades}
                           dateLocale={dateLocale}
+                          locale={locale}
                           t={t}
                         />
                       </CalendarResponsiveOverlay>

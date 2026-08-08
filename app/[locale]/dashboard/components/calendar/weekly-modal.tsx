@@ -13,6 +13,13 @@ import { useI18n, useCurrentLocale } from "@/locales/client"
 import { calendarDateKeyFromZoned } from "@/lib/calendar-timezone"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
+import {
+  formatCount,
+  formatCurrency,
+  pnlTone,
+  pnlToneClass,
+  widgetType,
+} from "../widgets"
 
 interface WeeklyModalProps {
   isOpen: boolean;
@@ -22,15 +29,12 @@ interface WeeklyModalProps {
   isLoading: boolean;
 }
 
-const formatSignedCurrency = (value: number) => {
-  const formatted = Math.abs(value).toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
+/** Whole-dollar money for the modal header. Sans + tabular-nums, sign on the number. */
+const formatSignedCurrency = (value: number, locale: string) =>
+  formatCurrency(value, locale, {
     maximumFractionDigits: 0,
+    signDisplay: 'always',
   })
-  return value < 0 ? `-${formatted}` : `+${formatted}`
-}
 
 function WeeklyTabs({
   weeklyData,
@@ -124,17 +128,16 @@ export function WeeklyModal({
             <div className="flex items-baseline justify-between gap-3">
               <DrawerTitle className="text-base capitalize truncate">{dateRange}</DrawerTitle>
               <span className={cn(
-                "text-sm font-semibold shrink-0",
-                weeklyData.pnl >= 0
-                  ? "text-green-600 dark:text-green-400"
-                  : "text-red-600 dark:text-red-400"
+                widgetType.value,
+                "shrink-0",
+                pnlToneClass(pnlTone(weeklyData.pnl)),
               )}>
-                {formatSignedCurrency(weeklyData.pnl)}
+                {formatSignedCurrency(weeklyData.pnl, locale)}
               </span>
             </div>
             <DrawerDescription className="text-xs">
               {weeklyData.tradeNumber > 0
-                ? `${weeklyData.tradeNumber} ${weeklyData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}`
+                ? `${formatCount(weeklyData.tradeNumber, locale)} ${weeklyData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}`
                 : t('calendar.modal.noTrades')}
             </DrawerDescription>
           </DrawerHeader>
