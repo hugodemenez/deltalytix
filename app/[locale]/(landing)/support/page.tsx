@@ -542,7 +542,7 @@ const ChatBotDemo = () => {
                                   />
                                 ))}
                                 <ChatMessage align={isUser ? 'end' : 'start'}>
-                                  <MessageContent>
+                                  <MessageContent className="relative pb-0">
                                     <Bubble
                                       variant={isUser ? 'default' : 'muted'}
                                       align={isUser ? 'end' : 'start'}
@@ -552,15 +552,15 @@ const ChatBotDemo = () => {
                                       </BubbleContent>
                                     </Bubble>
                                     {message.role === 'assistant' && (
-                                      <MessageFooter>
+                                      <MessageFooter className="absolute top-full z-10 mt-0.5 px-0">
                                         <Actions
                                           className={cn(
-                                            message.id.startsWith('error-') &&
-                                              'opacity-0 pointer-events-none transition-opacity group-hover/message:opacity-100 group-hover/message:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto',
+                                            'opacity-0 pointer-events-none transition-opacity group-hover/message:opacity-100 group-hover/message:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto',
                                           )}
                                         >
                                           {!message.id.startsWith('error-') && (
                                             <Action
+                                              className="size-7"
                                               onClick={() => {
                                                 navigator.clipboard.writeText(contentWithoutThink);
                                                 toast.success(t('support.copied'), {
@@ -569,11 +569,12 @@ const ChatBotDemo = () => {
                                               }}
                                               label={t('common.copy')}
                                             >
-                                              <ClipboardCheckIcon size={16} className="mr-2" />
+                                              <ClipboardCheckIcon size={14} className="mr-2" />
                                             </Action>
                                           )}
                                           {message.id.startsWith('error-') && (
                                             <Action
+                                              className="size-7"
                                               onClick={() => {
                                                 const errorIndex = messages.findIndex(
                                                   (candidate) => candidate.id === message.id,
@@ -597,7 +598,7 @@ const ChatBotDemo = () => {
                                               }}
                                               label={t('common.retry')}
                                             >
-                                              <RefreshCcwIcon size={16} className="mr-2" />
+                                              <RefreshCcwIcon size={14} />
                                             </Action>
                                           )}
                                         </Actions>
@@ -605,13 +606,14 @@ const ChatBotDemo = () => {
                                     )}
                                     {isUser &&
                                       !message.parts.some((candidate) => candidate.type === 'file') && (
-                                      <MessageFooter>
+                                      <MessageFooter className="absolute top-full right-0 z-10 mt-0.5 px-0">
                                         <Actions className="justify-end opacity-0 pointer-events-none transition-opacity group-hover/message:opacity-100 group-hover/message:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto">
                                           <Action
+                                            className="size-7"
                                             onClick={() => startEditing(message.id, part.text)}
                                             label={t('common.edit')}
                                           >
-                                            <PencilIcon size={16} className="mr-2" />
+                                            <PencilIcon size={14} />
                                           </Action>
                                         </Actions>
                                       </MessageFooter>
