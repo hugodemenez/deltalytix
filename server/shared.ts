@@ -4,7 +4,9 @@ import { Trade, Prisma, PrismaClient, Group, TickDetails } from '@/prisma/genera
 import { endOfDay, startOfDay } from 'date-fns'
 import { parseISO, isValid } from 'date-fns'
 import { revalidatePath } from 'next/cache'
+import { randomInt } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
+import { getUserId } from './auth'
 import { GroupWithAccounts } from './groups'
 
 export interface SharedParams {
@@ -30,8 +32,15 @@ interface DateRange {
   to?: string;
 }
 
-export async function createShared(data: SharedParams): Promise<string> {
+// Every export here is a server action, so each argument is caller-supplied.
+// A share exposes the owner's trades to anyone holding the slug, which is why the
+// owner is read from the session rather than taken as a parameter.
+export async function createShared(
+  data: Omit<SharedParams, 'userId'>,
+): Promise<string> {
   try {
+    const userId = await getUserId()
+
     // Validate date range
     if (!data.dateRange?.from) {
       throw new Error('Start date is required')
@@ -48,7 +57,7 @@ export async function createShared(data: SharedParams): Promise<string> {
       try {
         const sharedTrades = await prisma.shared.create({
           data: {
-            userId: data.userId,
+            userId,
             title: data.title,
             description: data.description,
             isPublic: data.isPublic,
@@ -179,8 +188,10 @@ export async function getShared(slug: string): Promise<{params: SharedParams, tr
   }
 }
 
-export async function getUserShared(userId: string) {
+export async function getUserShared() {
   try {
+    const userId = await getUserId()
+
     const sharedTrades = await prisma.shared.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -193,8 +204,10 @@ export async function getUserShared(userId: string) {
   }
 }
 
-export async function deleteShared(slug: string, userId: string) {
+export async function deleteShared(slug: string) {
   try {
+    const userId = await getUserId()
+
     const shared = await prisma.shared.findUnique({
       where: { slug },
     })
@@ -214,8 +227,10 @@ export async function deleteShared(slug: string, userId: string) {
   }
 }
 
-export async function updateSharedAccountNumbers(slug: string, userId: string, accountNumbers: string[]) {
+export async function updateSharedAccountNumbers(slug: string, accountNumbers: string[]) {
   try {
+    const userId = await getUserId()
+
     const shared = await prisma.shared.findUnique({
       where: { slug },
     })
@@ -243,12 +258,14 @@ export async function updateSharedAccountNumbers(slug: string, userId: string, a
   }
 }
 
-// Helper function to generate a unique slug
+// The slug is the only thing standing between a visitor and the owner's trades,
+// so it is drawn from a CSPRNG: Math.random's state is recoverable from a handful
+// of observed outputs, which would make other users' slugs predictable.
 function generateSlug(length = 10): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
   let result = ''
   for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
+    result += chars.charAt(randomInt(chars.length))
   }
   return result
 } 

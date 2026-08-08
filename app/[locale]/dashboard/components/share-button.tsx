@@ -234,7 +234,6 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         setIsSharing(true)
 
         const slug = await createShared({
-          userId: user.id,
           title: shareTitle || `Shared trades${shareAllAccounts ? ' for all accounts' : ` for ${selectedAccounts.length} accounts`}`,
           description: `Trades from ${selectedDateRange.from.toLocaleDateString()}${selectedDateRange.to ? ` to ${selectedDateRange.to.toLocaleDateString()}` : ''}`,
           isPublic: true,

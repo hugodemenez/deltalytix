@@ -118,7 +118,7 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
 
   const loadSharedLayouts = useCallback(async () => {
     try {
-      const layouts = await getUserShared(user!.id)
+      const layouts = await getUserShared()
       const transformedLayouts = layouts.map(layout => ({
         ...layout,
         dateRange: layout.dateRange as { from: string; to?: string }
@@ -132,7 +132,7 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [user, t])
+  }, [t])
 
   useEffect(() => {
     if (user) {
@@ -148,7 +148,7 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
     setSelectedLayout(null)
 
     try {
-      await deleteShared(layoutToDelete.slug, user!.id)
+      await deleteShared(layoutToDelete.slug)
       setSharedLayouts(prev => prev.filter(layout => layout.slug !== layoutToDelete.slug))
       toast.success(t('share.deleteSuccess'))
     } catch (error) {
@@ -214,7 +214,7 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
 
     setIsUpdatingAccounts(true)
     try {
-      await updateSharedAccountNumbers(accountsLayout.slug, user.id, normalizedAccountNumbers)
+      await updateSharedAccountNumbers(accountsLayout.slug, normalizedAccountNumbers)
 
       setSharedLayouts(prev => prev.map(layout =>
         layout.slug === accountsLayout.slug
