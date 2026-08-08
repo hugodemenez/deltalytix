@@ -6,6 +6,7 @@ import { headers } from 'next/headers'
 import { format, subDays, isEqual, startOfDay } from 'date-fns'
 import { enUS, fr } from 'date-fns/locale'
 import RenewalNoticeEmail from '@/components/emails/renewal-notice'
+import { isAuthorizedCronRequest } from '@/lib/cron-auth'
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -82,7 +83,7 @@ export async function GET(req: Request) {
     const headersList = await headers()
     const authHeader = headersList.get('authorization')
     
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isAuthorizedCronRequest(authHeader)) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

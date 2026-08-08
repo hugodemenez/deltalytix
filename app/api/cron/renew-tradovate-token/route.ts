@@ -5,6 +5,7 @@ import {
   encryptConnectionToken,
 } from '@/lib/connection-token-crypto';
 import { NextRequest } from 'next/server';
+import { isAuthorizedCronRequest } from '@/lib/cron-auth';
 
 /**
  * Helper function to check if current time matches the configured daily sync time
@@ -32,7 +33,7 @@ function shouldPerformDailySync(dailySyncTime: Date | null): boolean {
 export async function GET(request: NextRequest) {
   // Verify this is a cron request
   const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorizedCronRequest(authHeader)) {
     return new Response('Unauthorized', { status: 401 });
   }
 

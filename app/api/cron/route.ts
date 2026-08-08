@@ -3,6 +3,7 @@ import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { Resend } from 'resend'
 import { headers } from 'next/headers'
+import { isAuthorizedCronRequest } from '@/lib/cron-auth'
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -36,7 +37,7 @@ export async function GET(req: Request) {
     const headersList = await headers()
     const authHeader = headersList.get('authorization')
     
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isAuthorizedCronRequest(authHeader)) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

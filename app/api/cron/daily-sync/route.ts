@@ -7,6 +7,7 @@ import { getDxFeedTrades } from '@/app/[locale]/dashboard/components/import/dxfe
 import { getRithmicProtocolTrades } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions'
 import { syncIbkrAccount } from '@/app/[locale]/dashboard/components/import/ibkr/sync/actions'
 import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connections/data'
+import { isAuthorizedCronRequest } from '@/lib/cron-auth'
 
 export const maxDuration = 300
 
@@ -72,7 +73,7 @@ async function syncConnection(connection: {
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorizedCronRequest(authHeader)) {
     return new Response('Unauthorized', { status: 401 })
   }
 

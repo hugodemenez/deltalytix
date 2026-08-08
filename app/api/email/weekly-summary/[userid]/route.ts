@@ -6,6 +6,7 @@ import { render } from "@react-email/render"
 import { generateTradingAnalysis } from "./actions/analysis"
 import { getUserData, computeTradingStats } from "./actions/user-data"
 import { Resend } from "resend"
+import { isAuthorizedCronRequest } from "@/lib/cron-auth"
 
 export async function POST(req: Request, props: { params: Promise<{ userid: string }> }) {
   const params = await props.params;
@@ -14,7 +15,7 @@ export async function POST(req: Request, props: { params: Promise<{ userid: stri
     const headersList = await headers()
     const authHeader = headersList.get('authorization')
     
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isAuthorizedCronRequest(authHeader)) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
