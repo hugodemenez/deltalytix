@@ -125,9 +125,6 @@ const MAX_REASONING_LABEL_LENGTH = 60;
 /**
  * Prefer a short first-line label from the reasoning summary when present;
  * otherwise fall back to the localized thinking / thought-process copy.
- *
- * Only used for English UI — OpenAI reasoning summaries stay English even when
- * the reply is French, so non-EN UIs never surface that text as a title.
  */
 const getReasoningLabel = (text: string): string | undefined => {
   const firstLine = text
@@ -162,27 +159,7 @@ function ReasoningBlock({
   className?: string;
 }) {
   const t = useI18n();
-  const locale = useCurrentLocale();
-  const localizedLabel = isStreaming ? t('support.thinking') : t('support.thoughtProcess');
-  // Provider reasoning summaries ignore the UI locale; keep FR/other chats local.
-  const showModelReasoning = locale === 'en';
-  const label = showModelReasoning ? (getReasoningLabel(text) ?? localizedLabel) : localizedLabel;
-
-  if (!showModelReasoning) {
-    return (
-      <div
-        className={cn(
-          'mb-4 flex w-full items-center gap-2 text-sm text-muted-foreground',
-          className,
-        )}
-      >
-        <BrainIcon className="size-4 shrink-0" />
-        <span className={cn('min-w-0 truncate text-left', isStreaming && 'shimmer')}>
-          {label}
-        </span>
-      </div>
-    );
-  }
+  const label = getReasoningLabel(text);
 
   return (
     <Reasoning
@@ -194,7 +171,7 @@ function ReasoningBlock({
       <ReasoningTrigger className="group">
         <BrainIcon className="size-4 shrink-0" />
         <span className={cn('min-w-0 truncate text-left', isStreaming && 'shimmer')}>
-          {label}
+          {label ?? (isStreaming ? t('support.thinking') : t('support.thoughtProcess'))}
         </span>
         <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
       </ReasoningTrigger>

@@ -38,15 +38,28 @@ Search before answering. If the first search is empty, reword or switch tools. P
 Call askForEmailForm for human requests, billing/account issues, or when you cannot answer confidently. One clarifying question max, then escalate. The UI already greets the user — do not re-introduce yourself or add reply titles.`;
 
 function getLocaleInstructions(locale: SupportAgentLocale): string {
-  const language = locale === "fr" ? "French" : "English";
+  if (locale === "fr") {
+    return `LANGUE — PRIORITÉ ABSOLUE (UI fr)
+Tu dois raisonner et répondre UNIQUEMENT en français.
+- Les reasoning summaries / thought process affichés à l'utilisateur doivent être en français (pas d'anglais).
+- Commence chaque résumé de raisonnement par une courte ligne-titre en français, ex. "**Recherche de Taurus et DxFeed**" ou "**Vérification des variables d'environnement**".
+- Interdit: titres ou monologues internes en anglais ("Searching…", "The user is asking…", "Identifying…").
+- La réponse finale est aussi en français.
+Passe locale "fr" à askForEmailForm et searchCodebase.`;
+  }
 
-  return `Reply in ${language} (UI locale ${locale}). Pass locale "${locale}" to askForEmailForm and searchCodebase. Write user-facing answers only in ${language} — the UI localizes status labels itself.`;
+  return `LANGUAGE — highest priority (UI en)
+Reason and reply in English only.
+- Reasoning summaries / thought process shown in the UI must be English.
+- Start each reasoning summary with a short English title line, e.g. "**Searching Taurus and DxFeed**".
+Pass locale "en" to askForEmailForm and searchCodebase.`;
 }
 
 export function buildSupportAgentInstructions(locale: SupportAgentLocale): string {
-  return `${SUPPORT_AGENT_INSTRUCTIONS}
+  // Language first — models often overweight the start of the system prompt.
+  return `${getLocaleInstructions(locale)}
 
-${getLocaleInstructions(locale)}`;
+${SUPPORT_AGENT_INSTRUCTIONS}`;
 }
 
 export const supportAgent = new ToolLoopAgent<SupportAgentCallOptions>({
