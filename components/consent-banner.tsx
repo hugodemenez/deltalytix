@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerFooter,
@@ -17,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { motion, AnimatePresence } from "framer-motion"
 import { useMediaQuery } from "@/hooks/use-media-query"
@@ -79,6 +78,78 @@ function syncPostHogConsent(analyticsEnabled: boolean) {
 }
 
 type ConsentTranslator = ReturnType<typeof useI18n>
+
+function ConsentOption({
+  id,
+  title,
+  description,
+  checked,
+  onCheckedChange,
+  disabled,
+}: {
+  id: string
+  title: string
+  description: string
+  checked: boolean
+  onCheckedChange?: (checked: boolean) => void
+  disabled?: boolean
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <Checkbox
+        id={id}
+        checked={checked}
+        onCheckedChange={(value) => onCheckedChange?.(value === true)}
+        disabled={disabled}
+        className="mt-1"
+      />
+      <div>
+        <Label htmlFor={id} className="text-sm font-medium text-foreground">
+          {title}
+        </Label>
+        <p className="text-sm text-muted-foreground mt-1">{description}</p>
+      </div>
+    </div>
+  )
+}
+
+function ConsentOptions({
+  t,
+  settings,
+  setSettings,
+  idPrefix,
+}: {
+  t: ConsentTranslator
+  settings: ConsentSettings
+  setSettings: (settings: ConsentSettings) => void
+  idPrefix: string
+}) {
+  return (
+    <div className="space-y-4">
+      <ConsentOption
+        id={`${idPrefix}-necessary`}
+        title={t('landing.consent.preferences.strictlyNecessary.title')}
+        description={t('landing.consent.preferences.strictlyNecessary.description')}
+        checked
+        disabled
+      />
+      <ConsentOption
+        id={`${idPrefix}-analytics`}
+        title={t('landing.consent.preferences.analytics.title')}
+        description={t('landing.consent.preferences.analytics.description')}
+        checked={settings.analytics_storage}
+        onCheckedChange={(checked) => setSettings({ ...settings, analytics_storage: checked })}
+      />
+      <ConsentOption
+        id={`${idPrefix}-marketing`}
+        title={t('landing.consent.preferences.marketing.title')}
+        description={t('landing.consent.preferences.marketing.description')}
+        checked={settings.ad_storage}
+        onCheckedChange={(checked) => setSettings({ ...settings, ad_storage: checked })}
+      />
+    </div>
+  )
+}
 
 function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
   const [isVisible, setIsVisible] = useState(false)
@@ -270,9 +341,8 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
                 >
                   {t('landing.consent.banner.rejectNonEssential')}
                 </Button>
-                <Button 
+                <Button
                   size="sm"
-                  className="bg-black text-white hover:bg-black/90"
                   onClick={handleAcceptAll}
                 >
                   {t('landing.consent.banner.acceptAll')}
@@ -286,156 +356,66 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
           <>
             {showDetails && <div className="fixed inset-0 z-9998 bg-black/20 backdrop-blur-xs" />}
             <Dialog open={showDetails} onOpenChange={setShowDetails}>
-                            <DialogContent className="fixed left-[50%] top-[50%] z-9999 translate-x-[-50%] translate-y-[-50%] bg-white rounded-lg shadow-xl max-w-[480px] w-[90vw] max-h-[80vh] overflow-hidden border-0">
+              <DialogContent className="fixed left-[50%] top-[50%] z-9999 translate-x-[-50%] translate-y-[-50%] rounded-lg shadow-xl max-w-[480px] w-[90vw] max-h-[80vh] overflow-hidden">
                 <DialogHeader className="p-6 pb-4">
-                  <DialogTitle className="text-lg font-medium text-gray-900">
+                  <DialogTitle className="text-lg font-medium text-foreground">
                     {t('landing.consent.preferences.title')}
                   </DialogTitle>
-                  <DialogDescription className="text-sm text-gray-600 mt-2 leading-relaxed">
+                  <DialogDescription className="text-sm text-muted-foreground mt-2 leading-relaxed">
                     {t('landing.consent.preferences.description')}{' '}
-                    <a href="#" className="text-blue-600 underline">{t('landing.consent.preferences.learnMore')}</a>.
+                    <a href="#" className="text-info underline">{t('landing.consent.preferences.learnMore')}</a>.
                   </DialogDescription>
                 </DialogHeader>
-              
-              <div className="px-6 pb-6">
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <input 
-                      type="checkbox" 
-                      checked={true} 
-                      disabled 
-                      className="mt-1 h-4 w-4 rounded border-gray-300 bg-gray-100"
-                    />
-                    <div>
-                      <label className="text-sm font-medium text-gray-900">
-                        {t('landing.consent.preferences.strictlyNecessary.title')}
-                      </label>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {t('landing.consent.preferences.strictlyNecessary.description')}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <input 
-                      type="checkbox" 
-                      checked={settings.analytics_storage}
-                      onChange={(e) => setSettings({ ...settings, analytics_storage: e.target.checked })}
-                      className="mt-1 h-4 w-4 rounded border-gray-300"
-                    />
-                    <div>
-                      <label className="text-sm font-medium text-gray-900">
-                        {t('landing.consent.preferences.analytics.title')}
-                      </label>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {t('landing.consent.preferences.analytics.description')}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <input 
-                      type="checkbox" 
-                      checked={settings.ad_storage}
-                      onChange={(e) => setSettings({ ...settings, ad_storage: e.target.checked })}
-                      className="mt-1 h-4 w-4 rounded border-gray-300"
-                    />
-                    <div>
-                      <label className="text-sm font-medium text-gray-900">
-                        {t('landing.consent.preferences.marketing.title')}
-                      </label>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {t('landing.consent.preferences.marketing.description')}
-                      </p>
-                    </div>
+
+                <div className="px-6 pb-6">
+                  <ConsentOptions
+                    t={t}
+                    settings={settings}
+                    setSettings={setSettings}
+                    idPrefix="consent-dialog"
+                  />
+
+                  <div className="mt-6">
+                    <Button
+                      onClick={handleSavePreferences}
+                      className="w-full rounded-lg h-11"
+                    >
+                      {t('landing.consent.preferences.done')}
+                    </Button>
                   </div>
                 </div>
-                
-                <div className="mt-6">
-                  <Button 
-                    onClick={handleSavePreferences}
-                    className="w-full bg-black text-white hover:bg-black/90 rounded-lg h-11"
-                  >
-                    {t('landing.consent.preferences.done')}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
+              </DialogContent>
             </Dialog>
           </>
         ) : (
           <Drawer open={showDetails} onOpenChange={setShowDetails}>
-            <DrawerContent className="z-10000 bg-white rounded-t-lg">
+            <DrawerContent className="z-10000 rounded-t-lg">
               <div className="h-[80vh] flex flex-col">
                 <DrawerHeader className="text-left px-6 py-6">
-                  <DrawerTitle className="text-lg font-medium text-gray-900">
+                  <DrawerTitle className="text-lg font-medium text-foreground">
                     {t('landing.consent.preferences.title')}
                   </DrawerTitle>
-                  <DrawerDescription className="text-sm text-gray-600 mt-2 leading-relaxed">
+                  <DrawerDescription className="text-sm text-muted-foreground mt-2 leading-relaxed">
                     {t('landing.consent.preferences.description')}{' '}
-                    <a href="#" className="text-blue-600 underline">{t('landing.consent.preferences.learnMore')}</a>.
+                    <a href="#" className="text-info underline">{t('landing.consent.preferences.learnMore')}</a>.
                   </DrawerDescription>
                 </DrawerHeader>
-                
+
                 <div className="flex-1 overflow-y-auto px-6">
-                  <div className="space-y-4 pb-6">
-                    <div className="flex items-start gap-3">
-                      <input 
-                        type="checkbox" 
-                        checked={true} 
-                        disabled 
-                        className="mt-1 h-4 w-4 rounded border-gray-300 bg-gray-100"
-                      />
-                      <div>
-                        <label className="text-sm font-medium text-gray-900">
-                          {t('landing.consent.preferences.strictlyNecessary.title')}
-                        </label>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {t('landing.consent.preferences.strictlyNecessary.description')}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start gap-3">
-                      <input 
-                        type="checkbox" 
-                        checked={settings.analytics_storage}
-                        onChange={(e) => setSettings({ ...settings, analytics_storage: e.target.checked })}
-                        className="mt-1 h-4 w-4 rounded border-gray-300"
-                      />
-                      <div>
-                        <label className="text-sm font-medium text-gray-900">
-                          {t('landing.consent.preferences.analytics.title')}
-                        </label>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {t('landing.consent.preferences.analytics.description')}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start gap-3">
-                      <input 
-                        type="checkbox" 
-                        checked={settings.ad_storage}
-                        onChange={(e) => setSettings({ ...settings, ad_storage: e.target.checked })}
-                        className="mt-1 h-4 w-4 rounded border-gray-300"
-                      />
-                      <div>
-                        <label className="text-sm font-medium text-gray-900">
-                          {t('landing.consent.preferences.marketing.title')}
-                        </label>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {t('landing.consent.preferences.marketing.description')}
-                        </p>
-                      </div>
-                    </div>
+                  <div className="pb-6">
+                    <ConsentOptions
+                      t={t}
+                      settings={settings}
+                      setSettings={setSettings}
+                      idPrefix="consent-drawer"
+                    />
                   </div>
                 </div>
-                
+
                 <DrawerFooter className="px-6 pb-6">
-                  <Button 
+                  <Button
                     onClick={handleSavePreferences}
-                    className="w-full bg-black text-white hover:bg-black/90 rounded-lg h-11"
+                    className="w-full rounded-lg h-11"
                   >
                     {t('landing.consent.preferences.done')}
                   </Button>
