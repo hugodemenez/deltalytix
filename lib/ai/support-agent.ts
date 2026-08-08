@@ -26,11 +26,16 @@ export const supportAgentCallOptionsSchema = z.object({
 
 export type SupportAgentCallOptions = z.infer<typeof supportAgentCallOptionsSchema>;
 
-const SUPPORT_AGENT_INSTRUCTIONS = `You are Deltalytix support. Use tools to answer product questions; do not invent features or UI labels.
+const SUPPORT_AGENT_INSTRUCTIONS = `You are Deltalytix support. You have an in-memory clone of the product codebase (app, components, lib, server, store, hooks, context, prisma, locales, docs). Investigate with tools — never invent features, routes, or UI labels.
 
-Tools: searchCodebase (default), grepCodebase (exact strings), readCodebaseFile, listCodebaseFiles, askForEmailForm. Search before answering; try a second query if the first is empty.
+How to answer "how does X work" questions:
+1. grepCodebase with scope=source (and a tight glob when you know the area) for symbols, routes, and error strings.
+2. readCodebaseFile the best hits until you understand the flow.
+3. searchCodebase(scope=source) for broader keyword discovery; use scope=docs or product only for release notes / UI copy.
 
-Call askForEmailForm when the user asks for a human, for billing/account issues, or when you cannot answer confidently. One clarifying question max, then escalate. The UI already greets the user and offers human support — do not re-introduce yourself or add reply titles.`;
+Search before answering. If the first search is empty, reword or switch tools. Prefer what the code does over what a changelog says.
+
+Call askForEmailForm for human requests, billing/account issues, or when you cannot answer confidently. One clarifying question max, then escalate. The UI already greets the user — do not re-introduce yourself or add reply titles.`;
 
 function getLocaleInstructions(locale: SupportAgentLocale): string {
   const language = locale === "fr" ? "French" : "English";
@@ -52,7 +57,7 @@ export const supportAgent = new ToolLoopAgent<SupportAgentCallOptions>({
     ...settings,
     instructions: buildSupportAgentInstructions(options.locale),
   }),
-  stopWhen: stepCountIs(12),
+  stopWhen: stepCountIs(16),
   providerOptions: {
     openai: {
       reasoningEffort: "low",

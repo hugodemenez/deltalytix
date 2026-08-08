@@ -1,6 +1,8 @@
 # Deltalytix Support Assistant
 
-The support assistant answers product questions from the real repository and, crucially, never leaves a user stuck: a human hand-off is always one click away.
+The support assistant answers product questions from an in-memory clone of the
+repository and, crucially, never leaves a user stuck: a human hand-off is always
+one click away.
 
 ## Two escape hatches, always available
 
@@ -12,34 +14,42 @@ The UI (`app/[locale]/(landing)/support/page.tsx`) owns escalation, not the mode
 
 This is deliberate: routing "I want a human" through the model is exactly the loop we removed.
 
-## Knowledge: real search over the repo
+## Knowledge: repo clone + grep
 
-The agent reads the actual codebase through `lib/ai/search-codebase.ts`, backed by an
-in-memory index built in `lib/ai/codebase-index.ts` (`CORPUS_ROOTS` defines the scope:
-`content/**`, root markdown, `locales/**`, and application source under `app`, `components`,
-`lib`, `server`, `hooks`, `store`, `context`, plus `prisma/schema.prisma`).
+The agent reads the real codebase through `lib/ai/search-codebase.ts`, backed by an
+in-memory index in `lib/ai/codebase-index.ts`. `CORPUS_ROOTS` is the clone scope:
+`content/**`, root markdown, `locales/**`, application source under `app`,
+`components`, `lib`, `server`, `hooks`, `store`, `context`, plus
+`prisma/schema.prisma`.
 
-Tools exposed to the model (`tools/search-codebase.ts`):
+Default ranking prefers **source** over changelog prose so "how does X work"
+questions land in implementation. Tools also accept a `scope`:
 
-- **searchCodebase** — ranked keyword search (TF-IDF-ish scoring, doc/locale weighted above
-  source, locale-aware) returning the strongest files with surrounding context lines.
-- **grepCodebase** — regex grep with an optional glob filter, for exact strings (UI labels,
-  error messages, env vars, route names).
+- `source` — code + prisma (how the product actually works)
+- `docs` — markdown / release notes
+- `product` — docs + locale UI labels
+- `all` — everything (default)
+
+Tools (`tools/search-codebase.ts`):
+
+- **searchCodebase** — ranked keyword search with optional scope/locale.
+- **grepCodebase** — regex grep with optional glob + scope (primary tool for
+  symbols, routes, env vars, error strings).
 - **readCodebaseFile** — read a file or line range a search returned.
-- **listCodebaseFiles** — enumerate files matching a glob (e.g. every release note).
+- **listCodebaseFiles** — enumerate files matching a glob before grepping an area.
 
-The corpus is read from disk at runtime, so `next.config.ts` traces it into the serverless
-bundle via `SUPPORT_SEARCH_TRACE_INCLUDES`.
+The corpus is read from disk at runtime, so `next.config.ts` traces it into the
+serverless bundle via `SUPPORT_SEARCH_TRACE_INCLUDES`.
 
 ## Agent
 
-`lib/ai/support-agent.ts` — a `ToolLoopAgent`. Model defaults to `openai/gpt-5-mini` (via the
-Vercel AI Gateway; override with `SUPPORT_AGENT_MODEL`). Instructions stay short: use tools,
-search before answering, escalate when stuck, and do not re-introduce or title replies (the UI
-already greets the user).
+`lib/ai/support-agent.ts` — a `ToolLoopAgent`. Model defaults to `openai/gpt-5-mini`
+(via the Vercel AI Gateway; override with `SUPPORT_AGENT_MODEL`). Instructions tell
+the model to investigate with `grepCodebase(scope=source)` → `readCodebaseFile`
+before answering behavioural questions, and not to invent features from memory.
 
-The support page sends the current UI `locale` (`en` | `fr`) with every request. `prepareCall`
-appends a one-line locale hint so replies follow `/en` or `/fr`.
+The support page sends the current UI `locale` (`en` | `fr`) with every request.
+`prepareCall` appends a one-line locale hint so replies follow `/en` or `/fr`.
 
 ## Request flow
 
