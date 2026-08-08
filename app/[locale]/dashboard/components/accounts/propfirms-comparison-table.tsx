@@ -11,15 +11,29 @@ import {
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { useCurrentLocale } from '@/locales/client';
 import { propFirms, AccountSize } from './config';
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetHeader,
+  formatCount,
+  formatCurrency,
+  formatPercent,
+} from '../widgets';
+
+/** A value the compared account does not define. */
+const NO_VALUE = '-';
 
 export function ComparisonTable() {
+  const locale = useCurrentLocale();
   const [firstSelection, setFirstSelection] = useState<{
     propFirm: string;
     account: string;
@@ -37,16 +51,25 @@ export function ComparisonTable() {
     : null;
 
   const renderValue = (value: any) => {
-    if (value === null) return '-';
+    if (value === null || value === undefined) return NO_VALUE;
     if (typeof value === 'boolean') return value ? 'Yes' : 'No';
     if (typeof value === 'number') {
       if (value >= 1000) {
-        return `$${value.toLocaleString()}`;
+        return formatCurrency(value, locale, { maximumFractionDigits: 0 });
       }
-      return value;
+      return formatCount(value, locale);
     }
     return value;
   };
+
+  /*
+   * Peer figures share one precision, picked once in the shared formatters
+   * rather than re-derived per row with template strings.
+   */
+  const money = (v: any) =>
+    v === null || v === undefined ? NO_VALUE : formatCurrency(Number(v), locale, { maximumFractionDigits: 0 });
+  const percent = (v: any) =>
+    v === null || v === undefined ? NO_VALUE : formatPercent(Number(v), locale);
 
   const comparisonFields: {
     label: string;
@@ -54,26 +77,24 @@ export function ComparisonTable() {
     format?: (value: any) => string;
   }[] = [
     { label: 'Account Name', key: 'name' },
-    { label: 'Price', key: 'price', format: (v) => `$${v}` },
-    { label: 'Price with Promo', key: 'priceWithPromo', format: (v) => `$${v}` },
-    { label: 'Target', key: 'target', format: (v) => `$${v}` },
-    { label: 'Daily Loss', key: 'dailyLoss', format: (v) => v ? `$${v}` : '-' },
-    { label: 'Drawdown', key: 'drawdown', format: (v) => `$${v}` },
+    { label: 'Price', key: 'price', format: money },
+    { label: 'Price with Promo', key: 'priceWithPromo', format: money },
+    { label: 'Target', key: 'target', format: money },
+    { label: 'Daily Loss', key: 'dailyLoss', format: money },
+    { label: 'Drawdown', key: 'drawdown', format: money },
     { label: 'Min Days', key: 'minDays' },
-    { label: 'Consistency', key: 'consistency', format: (v) => v ? `${v}%` : '-' },
+    { label: 'Consistency', key: 'consistency', format: percent },
     { label: 'Trading News Allowed', key: 'tradingNewsAllowed' },
-    { label: 'Profit Sharing', key: 'profitSharing', format: (v) => `${v}%` },
-    { label: 'Min Payout', key: 'minPayout', format: (v) => `$${v}` },
+    { label: 'Profit Sharing', key: 'profitSharing', format: percent },
+    { label: 'Min Payout', key: 'minPayout', format: money },
     { label: 'Max Funded Accounts', key: 'maxFundedAccounts' },
   ];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Prop Firm Comparison</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex gap-4 mb-6">
+    <WidgetCard>
+      <WidgetHeader title="Prop firm comparison" />
+      <WidgetBody className="overflow-auto">
+        <div className="mb-6 flex gap-4">
           <div className="flex-1">
             <Select
               value={firstSelection?.propFirm}
@@ -165,49 +186,54 @@ export function ComparisonTable() {
 
         {(firstAccount || secondAccount) && (
           <Table>
+            <TableCaption className="sr-only">
+              Feature by feature comparison of the two selected prop firm accounts
+            </TableCaption>
             <TableHeader>
               <TableRow>
-                <TableHead>Feature</TableHead>
-                <TableHead>
+                <TableHead scope="col">Feature</TableHead>
+                {/* Both value columns hold a mix of words and figures, so they
+                    are aligned as text and the numbers stay tabular. */}
+                <TableHead scope="col">
                   {firstAccount
                     ? `${propFirms[firstSelection!.propFirm].name} - ${
                         firstAccount.name
                       }`
-                    : '-'}
+                    : NO_VALUE}
                 </TableHead>
-                <TableHead>
+                <TableHead scope="col">
                   {secondAccount
                     ? `${propFirms[secondSelection!.propFirm].name} - ${
                         secondAccount.name
                       }`
-                    : '-'}
+                    : NO_VALUE}
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {comparisonFields.map(({ label, key, format }) => (
                 <TableRow key={key}>
-                  <TableCell className="font-medium">{label}</TableCell>
-                  <TableCell>
+                  <TableCell scope="row" className="font-medium">{label}</TableCell>
+                  <TableCell className={cn('tabular-nums')}>
                     {firstAccount
                       ? format
                         ? format(firstAccount[key])
                         : renderValue(firstAccount[key])
-                      : '-'}
+                      : NO_VALUE}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className={cn('tabular-nums')}>
                     {secondAccount
                       ? format
                         ? format(secondAccount[key])
                         : renderValue(secondAccount[key])
-                      : '-'}
+                      : NO_VALUE}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         )}
-      </CardContent>
-    </Card>
+      </WidgetBody>
+    </WidgetCard>
   );
-} 
+}

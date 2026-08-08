@@ -1,13 +1,24 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
-import { useI18n } from "@/locales/client"
+import { useCurrentLocale, useI18n } from "@/locales/client"
 import { TradeProgressChart } from "./trade-progress-chart"
 import { Account } from "@/context/data-provider"
 import { WidgetSize } from '../../types/dashboard'
 import { Loader2 } from "lucide-react"
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetStat,
+  WidgetStatList,
+  formatCount,
+  formatCurrency,
+  formatTicks,
+  isCompactSize,
+  widgetHeaderPadding,
+  widgetType,
+} from "../widgets"
 
 interface AccountCardProps {
   account: Account
@@ -29,7 +40,8 @@ export function AccountCard({
   showRithmicBalance = false,
 }: AccountCardProps) {
   const t = useI18n()
-  
+  const locale = useCurrentLocale()
+
   // Extract metrics from account (computed server-side)
   const metrics = account.metrics
   const isConfigured = metrics?.isConfigured ?? false
@@ -40,10 +52,18 @@ export function AccountCard({
   const remainingLoss = metrics?.remainingLoss ?? 0
 
   const isCarouselLayout = layout === 'carousel'
+  const compact = isCompactSize(size)
   const showChart = size === 'large' || size === 'extra-large'
   const accountLabel = account.propfirm
     ? `${account.propfirm} (${account.number})`
     : account.number || t('propFirm.card.unnamedAccount')
+
+  const daysToPayment = account.nextPaymentDate
+    ? Math.floor((new Date(account.nextPaymentDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null
+  const paymentIsImminent = daysToPayment !== null && daysToPayment < 5
+
+  const isDrawdownBreached = remainingLoss <= 0
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!onClick) return
@@ -54,12 +74,17 @@ export function AccountCard({
   }
 
   return (
-    <Card
+    /*
+     * One card per account is real grouping: each account is a separate subject.
+     * Inside it there are no more cards — the sections are separated by spacing
+     * and by the one rule under the header.
+     */
+    <WidgetCard
       className={cn(
-        "flex flex-col cursor-pointer hover:border-primary/50 transition-colors shadow-xs hover:shadow-md",
+        "cursor-pointer motion-safe:transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         isCarouselLayout
           ? "h-full w-full max-w-full min-h-0"
-          : size === 'small' || size === 'small-long'
+          : compact
             ? "w-72"
             : "w-96"
       )}
@@ -69,205 +94,176 @@ export function AccountCard({
       onClick={onClick}
       onKeyDown={handleKeyDown}
     >
-      <CardHeader className={cn(
-        "flex-none pb-2",
-        size === 'small' || size === 'small-long' ? "p-2" : "p-3"
-      )}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0 w-full">
-            <div className="truncate w-full">
-              <CardTitle className={cn(
-                "truncate flex items-center gap-2 w-full",
-                size === 'small' || size === 'small-long' ? "text-xs" : "text-sm"
-              )}>
-
-                <div className="flex w-full justify-between min-w-0">
-                  <span className="truncate">{account.propfirm || t('propFirm.card.unnamedAccount')}</span>
-                  {
-                    account.nextPaymentDate && (
-                      <div className={cn(
-                        "self-center ml-2 shrink-0",
-                        size === 'small' || size === 'small-long' ? "text-xs" : "text-xs",
-                        Math.floor((new Date(account.nextPaymentDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) < 5 ? 'text-red-500 blink' : 'text-muted-foreground'
-                      )}>
-                        {Math.floor((new Date(account.nextPaymentDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))}
-                        {t('propFirm.card.daysBeforeNextPayment')}
-                      </div>
-                    )
-                  }
-                </div>
-              </CardTitle>
-              <p className={cn(
-                "text-muted-foreground truncate",
-                size === 'small' || size === 'small-long' ? "text-xs" : "text-xs"
-              )}>
-                {account.number}
-              </p>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className={cn(
-        "flex-1 pt-0",
-        isCarouselLayout
-          ? "flex min-h-0 flex-col overflow-hidden p-3"
-          : size === 'small' || size === 'small-long'
-            ? "p-2 space-y-1.5"
-            : "p-3 space-y-2"
-      )}>
-        <div className="flex justify-between items-baseline">
-          <span className={cn(
-            "text-muted-foreground",
-            size === 'small' || size === 'small-long' ? "text-xs" : "text-sm"
-          )}>{t('propFirm.card.balance')}</span>
-          <span className={cn(
-            "font-semibold truncate ml-2",
-            size === 'small' || size === 'small-long' ? "text-sm" : "text-base"
-          )}>${currentBalance.toFixed(2)}</span>
-        </div>
-        {showRithmicBalance && (
-          <div className="flex justify-between items-baseline">
-            <span className={cn(
-              "text-muted-foreground",
-              size === 'small' || size === 'small-long' ? "text-xs" : "text-xs"
-            )}>{t('propFirm.card.rithmicBalance')}</span>
-            {rithmicBalanceLoading ? (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                {t('propFirm.card.rithmicBalanceLoading')}
-              </span>
-            ) : rithmicBalance != null ? (
-              <span className={cn(
-                "font-medium truncate ml-2",
-                size === 'small' || size === 'small-long' ? "text-xs" : "text-sm"
-              )}>{Number.isFinite(rithmicBalance) ? `$${rithmicBalance.toFixed(2)}` : "—"}</span>
-            ) : (
-              <span className="text-xs text-muted-foreground">—</span>
-            )}
-          </div>
+      <div
+        className={cn(
+          "flex shrink-0 items-start justify-between gap-2 border-b",
+          widgetHeaderPadding(size),
         )}
+      >
+        <div className="flex min-w-0 flex-col gap-1">
+          <h3 className={cn(widgetType.title, "truncate")}>
+            {account.propfirm || t('propFirm.card.unnamedAccount')}
+          </h3>
+          {/* An account number is an operational identifier: mono is correct here. */}
+          <span className={cn(widgetType.mono, "truncate text-muted-foreground")}>
+            {account.number}
+          </span>
+        </div>
+        {daysToPayment !== null && (
+          <span
+            className={cn(
+              widgetType.caption,
+              "shrink-0 text-right",
+              paymentIsImminent && "text-destructive",
+            )}
+          >
+            {formatCount(daysToPayment, locale)}
+            {t('propFirm.card.daysBeforeNextPayment')}
+          </span>
+        )}
+      </div>
+
+      <WidgetBody
+        size={size}
+        className={cn(
+          "flex flex-col gap-4",
+          isCarouselLayout && "overflow-hidden",
+        )}
+      >
+        <WidgetStatList>
+          <WidgetStat
+            label={t('propFirm.card.balance')}
+            value={formatCurrency(currentBalance, locale)}
+          />
+          {showRithmicBalance && rithmicBalanceLoading && (
+            <WidgetStat
+              label={t('propFirm.card.rithmicBalance')}
+              value={
+                <span className="inline-flex items-center gap-1 font-normal text-muted-foreground">
+                  <Loader2 aria-hidden className="h-3 w-3 motion-safe:animate-spin" />
+                  {t('propFirm.card.rithmicBalanceLoading')}
+                </span>
+              }
+            />
+          )}
+          {showRithmicBalance && !rithmicBalanceLoading && rithmicBalance != null && Number.isFinite(rithmicBalance) && (
+            <WidgetStat
+              label={t('propFirm.card.rithmicBalance')}
+              value={formatCurrency(rithmicBalance, locale)}
+            />
+          )}
+        </WidgetStatList>
+
         {isConfigured ? (
-          <div className={cn(
-            isCarouselLayout
-              ? "flex min-h-0 flex-1 flex-col gap-2"
-              : size === 'small' || size === 'small-long'
-                ? "space-y-1.5"
-                : "space-y-2"
-          )}>
+          <div
+            className={cn(
+              "flex flex-col gap-4",
+              isCarouselLayout && "min-h-0 flex-1",
+            )}
+          >
             {/* Trade Progress Chart - only show for larger sizes */}
             {showChart && account.payouts && (
               <TradeProgressChart
                 account={account}
+                size={size}
                 fillHeight={isCarouselLayout}
               />
             )}
 
-            {/* Profit Target Section */}
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">{t('propFirm.card.remainingToTarget')}</span>
-                <span>${remainingToTarget.toFixed(2)}</span>
-              </div>
+            {/* Distance to the profit target. The bar encodes distance from a
+                boundary, so the boundary itself is stated, not implied. */}
+            <div className="flex flex-col gap-1.5">
+              <WidgetStat
+                label={t('propFirm.card.remainingToTarget')}
+                value={formatCurrency(remainingToTarget, locale)}
+              />
               <Progress
                 value={progress}
-                className={cn(
-                  size === 'small' || size === 'small-long' ? "h-1" : "h-1.5"
-                )}
-                indicatorClassName={cn(
-                  "transition-colors duration-300",
-                  "bg-[hsl(var(--chart-6))]",
-                  progress <= 20 ? "opacity-20" :
-                    progress <= 40 ? "opacity-40" :
-                      progress <= 60 ? "opacity-60" :
-                        progress <= 80 ? "opacity-80" :
-                          "opacity-100"
-                )}
+                className={compact ? "h-1" : "h-1.5"}
+                indicatorClassName="bg-foreground"
               />
+              <span className={widgetType.caption}>
+                {t('propFirm.card.target')}: {formatCurrency(account.profitTarget ?? 0, locale)}
+              </span>
             </div>
 
-            {/* Drawdown Section */}
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">{t('propFirm.card.drawdown')}</span>
-                <span className={cn(
-                  "font-medium",
-                  remainingLoss > account.drawdownThreshold * 0.5 ? "text-success" :
-                    remainingLoss > account.drawdownThreshold * 0.2 ? "text-warning" : "text-destructive"
-                )}>
-                  {remainingLoss > 0
-                    ? t('propFirm.card.remainingLoss', { amount: remainingLoss.toFixed(2) })
-                    : t('propFirm.card.drawdownBreached')}
-                </span>
-              </div>
+            {/* Distance to the drawdown boundary. Color marks only the breach,
+                which is a genuine state, and the words say so too. */}
+            <div className="flex flex-col gap-1.5">
+              <WidgetStat
+                label={t('propFirm.card.drawdown')}
+                value={
+                  isDrawdownBreached
+                    ? t('propFirm.card.drawdownBreached')
+                    : t('propFirm.card.remainingLoss', { amount: formatTicks(remainingLoss, locale, { maximumFractionDigits: 2 }) })
+                }
+                toneClassName={isDrawdownBreached ? "text-destructive" : undefined}
+              />
               <Progress
                 value={drawdownProgress}
-                className={cn(
-                  size === 'small' || size === 'small-long' ? "h-1" : "h-1.5"
-                )}
-                indicatorClassName={cn(
-                  "transition-colors duration-300",
-                  "bg-destructive",
-                  drawdownProgress <= 20 ? "opacity-20" :
-                    drawdownProgress <= 40 ? "opacity-40" :
-                      drawdownProgress <= 60 ? "opacity-60" :
-                        drawdownProgress <= 80 ? "opacity-80" :
-                          "opacity-100"
-                )}
+                className={compact ? "h-1" : "h-1.5"}
+                indicatorClassName={isDrawdownBreached ? "bg-destructive" : "bg-foreground"}
               />
+              <span className={widgetType.caption}>
+                {t('propFirm.card.maxLoss', { amount: formatTicks(account.drawdownThreshold ?? 0, locale, { maximumFractionDigits: 2 }) })}
+              </span>
             </div>
 
             {/* Consistency Section - only show for larger sizes */}
             {metrics && (size === 'large' || size === 'extra-large') && (
-              <div className="space-y-1 pt-2 border-t">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">{t('propFirm.card.consistency')}</span>
-                  <span className={cn(
-                    "font-medium",
-                    !metrics.hasProfitableData ? "text-muted-foreground italic" :
-                      (metrics.isConsistent || account.consistencyPercentage === 100) ? "text-success" : "text-destructive"
-                  )}>
-                    {!metrics.hasProfitableData ? t('propFirm.status.unprofitable') :
-                      (metrics.isConsistent || account.consistencyPercentage === 100) ? t('propFirm.status.consistent') : t('propFirm.status.inconsistent')}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{t('propFirm.card.maxAllowedDailyProfit')}</span>
-                  <span>${metrics.maxAllowedDailyProfit?.toFixed(2) || '-'}</span>
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{t('propFirm.card.highestDailyProfit')}</span>
-                  <span>${metrics.highestProfitDay?.toFixed(2) || '-'}</span>
-                </div>
-                
-                {/* Trading Days Section */}
-                {metrics && (
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{t('propFirm.card.tradingDays')}</span>
-                    <span className={cn(
-                      "font-medium",
-                      metrics.validTradingDays === metrics.totalTradingDays ? "text-success" : "text-warning"
-                    )}>
-                      {metrics.validTradingDays}/{metrics.totalTradingDays}
-                      {account.minPnlToCountAsDay && account.minPnlToCountAsDay > 0 && (
-                        <span className="ml-1 text-xs opacity-75">
-                          (≥${account.minPnlToCountAsDay})
+              <WidgetStatList>
+                <WidgetStat
+                  label={t('propFirm.card.consistency')}
+                  value={
+                    !metrics.hasProfitableData
+                      ? t('propFirm.status.unprofitable')
+                      : (metrics.isConsistent || account.consistencyPercentage === 100)
+                        ? t('propFirm.status.consistent')
+                        : t('propFirm.status.inconsistent')
+                  }
+                  toneClassName={cn(
+                    !metrics.hasProfitableData && "text-muted-foreground",
+                    metrics.hasProfitableData
+                      && !(metrics.isConsistent || account.consistencyPercentage === 100)
+                      && "text-destructive",
+                  )}
+                />
+                <WidgetStat
+                  label={t('propFirm.card.maxAllowedDailyProfit')}
+                  value={
+                    metrics.maxAllowedDailyProfit != null
+                      ? formatCurrency(metrics.maxAllowedDailyProfit, locale)
+                      : formatCurrency(0, locale)
+                  }
+                />
+                <WidgetStat
+                  label={t('propFirm.card.highestDailyProfit')}
+                  value={formatCurrency(metrics.highestProfitDay ?? 0, locale)}
+                />
+                <WidgetStat
+                  label={t('propFirm.card.tradingDays')}
+                  value={
+                    <>
+                      {formatCount(metrics.validTradingDays, locale)}
+                      {'/'}
+                      {formatCount(metrics.totalTradingDays, locale)}
+                      {account.minPnlToCountAsDay && account.minPnlToCountAsDay > 0 ? (
+                        <span className={cn(widgetType.caption, "ml-1")}>
+                          {`(≥${formatCurrency(account.minPnlToCountAsDay, locale)})`}
                         </span>
-                      )}
-                    </span>
-                  </div>
-                )}
-              </div>
+                      ) : null}
+                    </>
+                  }
+                />
+              </WidgetStatList>
             )}
           </div>
         ) : (
-          <p className={cn(
-            "text-muted-foreground text-center pt-2",
-            size === 'small' || size === 'small-long' ? "text-xs" : "text-sm"
-          )}>
+          <p className={widgetType.label}>
             {t('propFirm.card.needsConfiguration')}
           </p>
         )}
-      </CardContent>
-    </Card>
+      </WidgetBody>
+    </WidgetCard>
   )
-} 
+}

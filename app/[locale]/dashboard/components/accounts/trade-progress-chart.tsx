@@ -1,12 +1,28 @@
 'use client'
 
-import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, ReferenceLine, Tooltip } from "recharts"
+import { Line, LineChart, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
 import { ChartContainer } from "@/components/ui/chart"
 import { cn } from "@/lib/utils"
-import { useI18n } from "@/locales/client"
+import { useCurrentLocale, useI18n } from "@/locales/client"
 import { useMemo } from "react"
 import { Account } from "@/context/data-provider"
 import { useTradesStore } from "@/store/trades-store"
+import { WidgetSize } from "../../types/dashboard"
+import {
+  WidgetChartGrid,
+  WidgetEmpty,
+  WidgetTooltip,
+  WidgetZeroLine,
+  axisProps,
+  chartColors,
+  chartMargin,
+  formatCompactCurrency,
+  formatCurrency,
+  formatTicks,
+  pnlTone,
+  pnlToneClass,
+  widgetType,
+} from "../widgets"
 
 // Add interface for event type
 interface ChartEvent {
@@ -35,15 +51,31 @@ interface TradeProgressChartProps {
   account: Account
   className?: string
   fillHeight?: boolean
+  size?: WidgetSize
+}
+
+/**
+ * A payout's status is genuine state, so it earns a color — but the status word
+ * always travels with it in the tooltip, so the color is never the only signal.
+ */
+function payoutColor(status: string): string {
+  switch (status) {
+    case 'PAID': return chartColors.win
+    case 'REFUSED': return chartColors.loss
+    case 'VALIDATED': return chartColors.foreground
+    default: return chartColors.neutral
+  }
 }
 
 export function TradeProgressChart({
   account,
   className,
   fillHeight = false,
+  size = 'medium',
 }: TradeProgressChartProps) {
   const t = useI18n()
-  
+  const locale = useCurrentLocale()
+
   // Prefer filtered trades from account (buffer-aware), fallback to store
   const allTrades = useTradesStore(state => state.trades)
   const trades = useMemo(() => {
@@ -51,31 +83,34 @@ export function TradeProgressChart({
     return allTrades.filter(trade => trade.accountNumber === account.number)
   }, [allTrades, account.trades, account.number])
 
+  // Three series: the balance is the subject, the two boundaries are the
+  // thresholds it is measured against. Colors come from theme tokens so the
+  // chart survives the theme swap without a `darkMode` branch.
   const chartConfig = {
     balance: {
       label: t('propFirm.chart.balance'),
-      color: "#2563eb",
+      color: chartColors.foreground,
     },
     drawdown: {
       label: t('propFirm.chart.drawdownLevel'),
-      color: "#dc2626",
+      color: chartColors.loss,
     },
     target: {
       label: t('propFirm.chart.profitTarget'),
-      color: "#16a34a",
+      color: chartColors.win,
     },
     payout: {
       label: t('propFirm.chart.payout'),
-      color: "#9333ea",
+      color: chartColors.neutral,
     }
   }
 
   // Extract account properties
-  const { 
-    startingBalance, 
-    drawdownThreshold, 
-    profitTarget, 
-    trailingDrawdown = false, 
+  const {
+    startingBalance,
+    drawdownThreshold,
+    profitTarget,
+    trailingDrawdown = false,
     trailingStopProfit,
     payouts = [],
     resetDate
@@ -108,7 +143,7 @@ export function TradeProgressChart({
   const chartData = allEvents.reduce((acc, event, index) => {
     let balance: number
     let highestBalance: number
-    
+
     if (event.isReset) {
       // Reset the balance to starting balance
       balance = startingBalance
@@ -116,17 +151,17 @@ export function TradeProgressChart({
     } else {
       const prevBalance = index > 0 ? acc[index - 1].balance : startingBalance
       balance = prevBalance + event.amount
-      
+
       // Calculate highest balance up to this point
       const previousHighest = index > 0 ? acc[index - 1].highestBalance : startingBalance
       highestBalance = event.isPayout ? previousHighest : Math.max(previousHighest, balance)
     }
-    
+
     // Calculate drawdown level based on trailing or fixed drawdown
     let drawdownLevel
     if (trailingDrawdown) {
       const profitMade = Math.max(0, highestBalance - startingBalance)
-      
+
       // If we've hit trailing stop profit, lock the drawdown to that level
       if (trailingStopProfit && profitMade >= trailingStopProfit) {
         drawdownLevel = (startingBalance + trailingStopProfit) - drawdownThreshold
@@ -154,22 +189,12 @@ export function TradeProgressChart({
     }]
   }, [] as ChartDataPoint[])
 
-  const getPayoutColor = (status: string) => {
-    switch (status) {
-      case 'PENDING': return '#9CA3AF'
-      case 'VALIDATED': return '#F97316'
-      case 'REFUSED': return '#DC2626'
-      case 'PAID': return '#16A34A'
-      default: return '#9CA3AF'
-    }
-  }
-
   const renderDot = (props: any) => {
     const { cx, cy, payload, index } = props
     if (typeof cx !== 'number' || typeof cy !== 'number') {
       return <circle key={`dot-${index}-empty`} cx={cx} cy={cy} r={0} fill="none" />
     }
-    
+
     if (payload?.isReset) {
       return (
         <circle
@@ -177,13 +202,13 @@ export function TradeProgressChart({
           cx={cx}
           cy={cy}
           r={5}
-          fill="#ff6b6b"
-          stroke="white"
+          fill={chartColors.primary}
+          stroke="hsl(var(--card))"
           strokeWidth={2}
         />
       )
     }
-    
+
     if (payload?.isPayout) {
       return (
         <circle
@@ -191,13 +216,13 @@ export function TradeProgressChart({
           cx={cx}
           cy={cy}
           r={4}
-          fill={getPayoutColor(payload.payoutStatus || '')}
-          stroke="white"
+          fill={payoutColor(payload.payoutStatus || '')}
+          stroke="hsl(var(--card))"
           strokeWidth={1}
         />
       )
     }
-    
+
     return <circle key={`dot-${index}-empty`} cx={cx} cy={cy} r={0} fill="none" />
   }
 
@@ -205,7 +230,7 @@ export function TradeProgressChart({
     <div
       className={cn(
         "w-full",
-        fillHeight ? "flex min-h-0 flex-1 flex-col" : "space-y-2"
+        fillHeight ? "flex min-h-0 flex-1 flex-col gap-1.5" : "flex flex-col gap-1.5"
       )}
     >
       <ChartContainer
@@ -217,80 +242,66 @@ export function TradeProgressChart({
       >
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={chartData}
-              margin={{
-                top: 20,
-                right: 30,
-                left: 20,
-                bottom: 20,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
+            <LineChart data={chartData} margin={chartMargin(size)}>
+              <WidgetChartGrid />
               <XAxis
                 dataKey="tradeIndex"
-                tickLine={false}
-                axisLine={true}
-                tickMargin={8}
+                {...axisProps(size)}
                 tick={false}
               />
               <YAxis
-                tickFormatter={(value) => `$${value.toLocaleString()}`}
+                {...axisProps(size)}
+                width={52}
+                tickFormatter={(value: number) => formatCompactCurrency(value, locale)}
                 domain={[
                   (dataMin: number) => Math.floor(Math.min(dataMin, startingBalance - drawdownThreshold) / 1000) * 1000,
                   (dataMax: number) => Math.ceil(Math.max(dataMax, startingBalance + profitTarget) / 1000) * 1000
                 ]}
-                axisLine={true}
               />
               <Tooltip
-                cursor={{ stroke: '#666', strokeWidth: 1, strokeDasharray: '3 3' }}
+                cursor={{ stroke: chartColors.grid, strokeWidth: 1, strokeDasharray: '3 3' }}
                 content={({ active, payload }) => {
-                  if (active && payload && payload.length) {
-                    const data = payload[0].payload as ChartDataPoint;
-                    return (
-                      <div className="bg-background/80 backdrop-blur-lg p-2 border rounded shadow-xs text-xs space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">#{data.tradeIndex}</span>
-                          <span className="text-muted-foreground">{data.date}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-blue-600">${data.balance.toLocaleString()}</span>
-                          {!data.isPayout && !data.isReset && (
-                            <span className={cn(
-                              "text-sm",
-                              data.pnl >= 0 ? "text-green-600" : "text-red-600"
-                            )}>
-                              {data.pnl >= 0 ? '+' : ''}{data.pnl.toLocaleString()}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-red-600">DD: ${data.drawdownLevel.toLocaleString()}</span>
-                          <span className="text-blue-600">High: ${data.highestBalance.toLocaleString()}</span>
-                        </div>
-                        {data.isReset && (
-                          <div className="flex items-center gap-2 text-red-500">
-                            <span className="font-medium">{t('propFirm.chart.accountReset')}</span>
-                          </div>
-                        )}
-                        {data.isPayout && data.payoutStatus && (
-                          <div className={cn(
-                            "flex items-center gap-2",
-                            {
-                              "text-gray-500": data.payoutStatus === 'PENDING',
-                              "text-orange-500": data.payoutStatus === 'VALIDATED',
-                              "text-red-500": data.payoutStatus === 'REFUSED',
-                              "text-green-500": data.payoutStatus === 'PAID',
-                            }
-                          )}>
-                            <span>${data.payoutAmount.toLocaleString()}</span>
-                            <span className="text-xs">({data.payoutStatus.toLowerCase()})</span>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  }
-                  return null
+                  if (!active || !payload || !payload.length) return null
+                  const data = payload[0].payload as ChartDataPoint
+                  const rows = [
+                    {
+                      label: t('propFirm.chart.balance'),
+                      value: formatCurrency(data.balance, locale),
+                    },
+                    ...(!data.isPayout && !data.isReset
+                      ? [{
+                          label: t('propFirm.dailyStats.pnl'),
+                          value: formatCurrency(data.pnl, locale, { signDisplay: 'always' as const }),
+                          toneClassName: pnlToneClass(pnlTone(data.pnl)),
+                        }]
+                      : []),
+                    {
+                      label: t('propFirm.chart.drawdownLevel'),
+                      value: formatCurrency(data.drawdownLevel, locale),
+                      color: chartColors.loss,
+                    },
+                    ...(data.isPayout && data.payoutStatus
+                      ? [{
+                          label: `${t('propFirm.chart.payout')} (${data.payoutStatus.toLowerCase()})`,
+                          value: formatCurrency(data.payoutAmount, locale),
+                          color: payoutColor(data.payoutStatus),
+                        }]
+                      : []),
+                  ]
+                  const highestBalanceCaption = t('propFirm.chart.highestBalance', {
+                    amount: formatTicks(data.highestBalance, locale, { maximumFractionDigits: 2 }),
+                  })
+                  return (
+                    <WidgetTooltip
+                      title={`${t('propFirm.chart.tradeNumber', { number: data.tradeIndex })} · ${data.date}`}
+                      rows={rows}
+                      caption={
+                        data.isReset
+                          ? `${highestBalanceCaption} · ${t('propFirm.chart.accountReset')}`
+                          : highestBalanceCaption
+                      }
+                    />
+                  )
                 }}
               />
               <Line
@@ -300,6 +311,7 @@ export function TradeProgressChart({
                 stroke={chartConfig.balance.color}
                 strokeWidth={2}
                 dot={renderDot}
+                isAnimationActive={false}
               />
               <Line
                 type="monotone"
@@ -309,6 +321,7 @@ export function TradeProgressChart({
                 strokeWidth={1.5}
                 strokeDasharray="3 3"
                 dot={false}
+                isAnimationActive={false}
               />
               <Line
                 type="monotone"
@@ -318,26 +331,21 @@ export function TradeProgressChart({
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={false}
+                isAnimationActive={false}
               />
-              <ReferenceLine
-                y={startingBalance}
-                stroke="#666"
-                strokeDasharray="3 3"
-                label={{
-                  value: t('propFirm.chart.startingBalance'),
-                  position: "right",
-                  fill: "#666",
-                  fontSize: 12,
-                }}
-              />
+              {/* The honest baseline for this chart is the starting balance, not
+                  screen zero: every level above is profit, every level below is
+                  drawdown. It is stated in the caption, not only drawn. */}
+              <WidgetZeroLine y={startingBalance} />
             </LineChart>
           </ResponsiveContainer>
         ) : (
-          <div className="flex h-full items-center justify-center">
-            <p className="text-muted-foreground">{t('propFirm.chart.noTrades')}</p>
-          </div>
+          <WidgetEmpty message={t('propFirm.chart.noTrades')} />
         )}
       </ChartContainer>
+      <p className={widgetType.caption}>
+        {t('propFirm.chart.startingBalance')}: {formatCurrency(startingBalance, locale)}
+      </p>
     </div>
   )
-} 
+}

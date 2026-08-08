@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus, X, Edit2, Trash2, Search } from 'lucide-react'
-import { InfoBubble } from '@/components/ui/info-bubble'
+import { Plus, Edit2, Trash2, Search } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
@@ -19,14 +18,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Tooltip,
@@ -52,6 +43,14 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useTradesStore } from '../../../../../store/trades-store'
 import { useUserStore } from '../../../../../store/user-store'
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetEmpty,
+  WidgetHeader,
+  isCompactSize,
+  widgetType,
+} from '../widgets'
 
 interface TagType {
   id: string
@@ -285,44 +284,24 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
     setFilteredTags(filteredTags)
   }, [tags, searchQuery])
 
+  const compact = isCompactSize(size)
+  const iconClass = compact ? "h-3.5 w-3.5" : "h-4 w-4"
+  const actionButtonClass = compact ? "h-6 w-6" : "h-7 w-7"
+
   return (
     <>
-      <Card className="h-full flex flex-col">
-        <CardHeader 
-          className={cn(
-            "flex flex-row items-center justify-between space-y-0 pb-2 shrink-0",
-            size === 'small' ? "p-2 h-10" : "p-3 sm:p-4 h-14"
-          )}
-        >
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-1.5">
-              <CardTitle 
-                className={cn(
-                  "line-clamp-1",
-                  size === 'small' ? "text-sm" : "text-base"
-                )}
-              >
-                {t('widgets.tags.title')}
-              </CardTitle>
-              <InfoBubble
-                side="top"
-                iconClassName={size === 'small' ? 'size-3.5' : 'size-4'}
-                contentClassName="max-w-[300px]"
-              >
-                <div className="space-y-1">
-                  <p className="font-medium wrap-break-word">{t('widgets.tags.description')}</p>
-                </div>
-              </InfoBubble>
-            </div>
-            <div className="flex items-center gap-2">
+      <WidgetCard>
+        <WidgetHeader
+          size={size}
+          title={t('widgets.tags.title')}
+          description={t('widgets.tags.description')}
+          actions={
+            <>
               {tagFilter.tags.length > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={cn(
-                    "h-8 px-2 lg:px-3 text-xs hover:bg-muted/50",
-                    size === 'small' ? "h-6" : "h-8"
-                  )}
+                  className={cn("px-2 text-xs", compact ? "h-6" : "h-7")}
                   onClick={() => setTagFilter({ tags: [] })}
                 >
                   {t('widgets.tags.clearFilter')}
@@ -330,18 +309,14 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
               )}
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="icon"
-                    className={cn(
-                      "shrink-0 hover:bg-muted/50",
-                      size === 'small' ? "h-6 w-6" : "h-8 w-8"
-                    )}
+                    className={cn("shrink-0", actionButtonClass)}
                     disabled={isLoading}
+                    aria-label={t('widgets.tags.addTag')}
                   >
-                    <Plus className={cn(
-                      size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
-                    )} />
+                    <Plus className={iconClass} />
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px]">
@@ -397,7 +372,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                       <Button type="submit" disabled={isLoading}>
                         {isLoading ? (
                           <div className="flex items-center gap-2">
-                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                            <div className="h-4 w-4 rounded-full border-2 border-background border-t-transparent motion-safe:animate-spin" />
                             {t('widgets.tags.saving')}
                           </div>
                         ) : (
@@ -408,148 +383,136 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                   </form>
                 </DialogContent>
               </Dialog>
-            </div>
+            </>
+          }
+        />
+        <WidgetBody size={size} className="flex flex-col gap-3 overflow-hidden">
+          {/* Search input: a form control, not a nested panel. */}
+          <div className="relative shrink-0">
+            <Search
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground",
+                iconClass,
+              )}
+            />
+            <Input
+              placeholder={t('widgets.tags.searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={cn(
+                "pl-7",
+                // 16px on mobile so iOS does not zoom the viewport on focus (#404)
+                compact ? "h-7 text-base sm:text-xs" : "h-8 text-base sm:text-sm"
+              )}
+            />
           </div>
-        </CardHeader>
-        <CardContent 
-          className={cn(
-            "flex-1 min-h-0 overflow-hidden pt-0",
-            size === 'small' ? "px-1" : "px-2 sm:px-4"
-          )}
-        >
-          <div className="flex flex-col h-full space-y-3">
-            {/* Search input */}
-            <div className="flex items-center gap-2 shrink-0 bg-muted/30 rounded-md px-2">
-              <Search className={cn(
-                "text-muted-foreground",
-                size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
-              )} />
-              <Input
-                placeholder={t('widgets.tags.searchPlaceholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={cn(
-                  "flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0",
-                  size === 'small' ? "h-7 text-base sm:text-xs" : "h-8 text-base sm:text-sm"
-                )}
-              />
-            </div>
 
-            {/* Tag filters */}
-            <div className="flex-1 min-h-0 -mx-1">
-              <ScrollArea 
-                className="h-full px-1"
+          {/* Tag filters */}
+          <div className="min-h-0 flex-1">
+              <ScrollArea
+                className="h-full"
                 type="hover"
               >
-                <div className={cn(
-                  "space-y-0.5",
-                  size === 'small' ? "min-h-[150px]" : "min-h-[200px]"
-                )}>
-                  {filteredTags.map((tag) => (
-                    <div
-                      key={tag.id}
-                      className={cn(
-                        "flex items-center justify-between rounded-md hover:bg-muted/50 transition-colors group",
-                        size === 'small' ? "p-1" : "p-1.5"
-                      )}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Checkbox
-                          checked={tagFilter.tags.includes(tag.name)}
-                          onCheckedChange={(checked) => {
-                            setTagFilter(prev => ({
-                              tags: checked 
-                                ? [...prev.tags, tag.name]
-                                : prev.tags.filter(t => t !== tag.name)
-                            }))
-                          }}
-                          id={`tag-${tag.id}`}
-                          className={cn(
-                            size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
-                          )}
-                        />
-                        <div
-                          className={cn(
-                            "rounded-full shrink-0",
-                            size === 'small' ? "w-2.5 h-2.5" : "w-3 h-3"
-                          )}
-                          style={{ backgroundColor: tag.color || '#CBD5E1' }}
-                        />
-                        <label
-                          htmlFor={`tag-${tag.id}`}
-                          className={cn(
-                            "font-medium cursor-pointer truncate flex-1",
-                            size === 'small' ? "text-xs" : "text-sm"
-                          )}
-                        >
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className={cn(
-                                  "font-medium cursor-pointer truncate flex-1",
-                                  size === 'small' ? "text-xs" : "text-sm"
-                                )}>
-                                  {tag.name.length > 35 ? `${tag.name.slice(0, 35)}...` : tag.name}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="max-w-[300px]">
-                                <div className="space-y-1">
-                                  <p className="font-medium wrap-break-word">{tag.name}</p>
-                                  {tag.description && (
-                                    <p className="text-sm text-muted-foreground wrap-break-word whitespace-pre-wrap">{tag.description}</p>
-                                  )}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </label>
+                {filteredTags.length === 0 ? (
+                  <WidgetEmpty
+                    size={size}
+                    className="min-h-[150px]"
+                    message={searchQuery ? t('widgets.tags.noResults') : t('widgets.tags.noTags')}
+                  />
+                ) : (
+                  <div className="flex flex-col gap-0.5">
+                    {filteredTags.map((tag) => (
+                      <div
+                        key={tag.id}
+                        className={cn(
+                          "group flex items-center justify-between gap-2 rounded-md motion-safe:transition-colors hover:bg-muted/50",
+                          compact ? "p-1" : "p-1.5"
+                        )}
+                      >
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Checkbox
+                            checked={tagFilter.tags.includes(tag.name)}
+                            onCheckedChange={(checked) => {
+                              setTagFilter(prev => ({
+                                tags: checked
+                                  ? [...prev.tags, tag.name]
+                                  : prev.tags.filter(t => t !== tag.name)
+                              }))
+                            }}
+                            id={`tag-${tag.id}`}
+                            className={compact ? "h-3.5 w-3.5" : "h-4 w-4"}
+                          />
+                          {/* A tag pill: monochrome unless the tag carries a
+                              user-chosen color, which is real information. */}
+                          <label
+                            htmlFor={`tag-${tag.id}`}
+                            className="flex min-w-0 flex-1 cursor-pointer items-center"
+                          >
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span
+                                    className={cn(
+                                      "inline-flex min-w-0 items-center gap-1.5 rounded-full border px-2 py-0.5",
+                                      compact ? "text-xs" : "text-sm",
+                                    )}
+                                    style={tag.color ? { borderColor: tag.color } : undefined}
+                                  >
+                                    {tag.color ? (
+                                      <span
+                                        aria-hidden
+                                        className="size-2 shrink-0 rounded-full"
+                                        style={{ backgroundColor: tag.color }}
+                                      />
+                                    ) : null}
+                                    <span className="truncate">
+                                      {tag.name.length > 35 ? `${tag.name.slice(0, 35)}...` : tag.name}
+                                    </span>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[300px]">
+                                  <div className="space-y-1">
+                                    <p className="font-medium wrap-break-word">{tag.name}</p>
+                                    {tag.description && (
+                                      <p className={cn(widgetType.caption, "wrap-break-word whitespace-pre-wrap")}>{tag.description}</p>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </label>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1 opacity-0 motion-safe:transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={actionButtonClass}
+                            onClick={() => handleEdit(tag)}
+                            disabled={isLoading}
+                            aria-label={t('widgets.tags.editTag')}
+                          >
+                            <Edit2 className={iconClass} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn("text-destructive hover:text-destructive", actionButtonClass)}
+                            onClick={() => handleDelete(tag)}
+                            disabled={isLoading}
+                            aria-label={t('widgets.tags.confirmDelete')}
+                          >
+                            <Trash2 className={iconClass} />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn(
-                            "hover:bg-muted",
-                            size === 'small' ? "h-6 w-6" : "h-7 w-7"
-                          )}
-                          onClick={() => handleEdit(tag)}
-                          disabled={isLoading}
-                        >
-                          <Edit2 className={cn(
-                            size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
-                          )} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn(
-                            "text-destructive hover:text-destructive hover:bg-destructive/10",
-                            size === 'small' ? "h-6 w-6" : "h-7 w-7"
-                          )}
-                          onClick={() => handleDelete(tag)}
-                          disabled={isLoading}
-                        >
-                          <Trash2 className={cn(
-                            size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
-                          )} />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {filteredTags.length === 0 && (
-                    <div className={cn(
-                      "flex items-center justify-center text-muted-foreground h-[200px]",
-                      size === 'small' ? "text-xs" : "text-sm"
-                    )}>
-                      {searchQuery ? t('widgets.tags.noResults') : t('widgets.tags.noTags')}
-                    </div>
-                  )}
-                </div>
+                    ))}
+                  </div>
+                )}
               </ScrollArea>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+        </WidgetBody>
+      </WidgetCard>
 
       <AlertDialog open={!!tagToDelete} onOpenChange={(open) => !open && setTagToDelete(null)}>
         <AlertDialogContent>
@@ -570,7 +533,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                  <div className="h-4 w-4 rounded-full border-2 border-background border-t-transparent motion-safe:animate-spin" />
                   {t('widgets.tags.deleting')}
                 </div>
               ) : (

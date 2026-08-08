@@ -146,7 +146,7 @@ export function AccountsToolbar({
 
           <Button
             variant="ghost"
-            className="h-10 w-10 rounded-full p-0 transition-[transform] duration-150 active:scale-95"
+            className="h-10 w-10 rounded-full p-0 motion-safe:transition-transform motion-safe:duration-150 motion-safe:active:scale-95"
             aria-label={t("accounts.toolbar.searchAccounts")}
             title={t("accounts.toolbar.searchAccounts")}
             onClick={() => setSearchOpen(true)}
@@ -158,7 +158,7 @@ export function AccountsToolbar({
 
           <Button
             variant="ghost"
-            className="h-10 w-10 rounded-full p-0 transition-[transform] duration-150 active:scale-95"
+            className="h-10 w-10 rounded-full p-0 motion-safe:transition-transform motion-safe:duration-150 motion-safe:active:scale-95"
             aria-label={t("accounts.toolbar.createGroup")}
             title={t("accounts.toolbar.createGroup")}
             onClick={() => setCreateGroupOpen(true)}
@@ -168,7 +168,7 @@ export function AccountsToolbar({
 
           <Button
             variant="ghost"
-            className="h-10 w-10 rounded-full p-0 transition-[transform] duration-150 active:scale-95"
+            className="h-10 w-10 rounded-full p-0 motion-safe:transition-transform motion-safe:duration-150 motion-safe:active:scale-95"
             aria-label={t("accounts.toolbar.editGroups")}
             title={t("accounts.toolbar.editGroups")}
             onClick={() => setAccountGroupBoardOpen(true)}
@@ -214,7 +214,7 @@ export function AccountsToolbar({
             </Button>
             <Button onClick={() => void handleCreateGroup()} disabled={isCreating || !groupName.trim()}>
               {isCreating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 aria-hidden className="h-4 w-4 motion-safe:animate-spin" />
               ) : (
                 t("accounts.toolbar.createGroup")
               )}

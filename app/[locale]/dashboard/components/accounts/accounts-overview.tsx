@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -27,7 +26,6 @@ import {
   Table,
   RefreshCw,
 } from "lucide-react"
-import { InfoBubble } from "@/components/ui/info-bubble"
 import { Calendar } from "@/components/ui/calendar"
 import { format, Locale } from "date-fns"
 import { cn, calculateTradingDays } from "@/lib/utils"
@@ -81,6 +79,16 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetHeader,
+  formatCount,
+  formatTicks,
+  isCompactSize,
+  widgetPadding,
+  widgetType,
+} from '../widgets'
 
 
 interface Payout {
@@ -635,7 +643,7 @@ function PayoutDialog({
                 >
                   {isDeleting ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="w-4 h-4 mr-2 motion-safe:animate-spin" />
                       {t('common.deleting')}
                     </>
                   ) : (
@@ -650,7 +658,7 @@ function PayoutDialog({
                 <AlertDialogHeader>
                   <AlertDialogTitle>{t('propFirm.payout.delete')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    {t('propFirm.payout.deleteConfirm')} ${existingPayout.amount.toFixed(2)} on {format(existingPayout.date, 'PP', { locale: dateLocale })}
+                    {t('propFirm.payout.deleteConfirm')} ${formatTicks(existingPayout.amount, locale, { maximumFractionDigits: 2 })} on {format(existingPayout.date, 'PP', { locale: dateLocale })}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -662,7 +670,7 @@ function PayoutDialog({
                   >
                     {isDeleting ? (
                       <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <Loader2 className="w-4 h-4 mr-2 motion-safe:animate-spin" />
                         {t('common.deleting')}
                       </>
                     ) : (
@@ -692,7 +700,7 @@ function PayoutDialog({
           >
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 mr-2 motion-safe:animate-spin" />
                 {t('common.saving')}
               </>
             ) : existingPayout ? (
@@ -1272,7 +1280,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       title={t("rithmic.balances.refreshTitle")}
     >
       {rithmicBalancesLoading ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <Loader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
       ) : (
         <RefreshCw className="h-3.5 w-3.5" />
       )}
@@ -1283,28 +1291,30 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   )
 
   const unconfiguredAccountsBanner = (unconfiguredAccounts.length > 0 && !isLoading) && (
-    <div className="border-b border-orange-200/30 bg-orange-50/40 dark:border-orange-700/30 dark:bg-orange-950/30">
+    /* A prompt to act, not an alarm: the words carry the state, so no color
+       band, no pulsing dot, and no pill around each account id. */
+    <div className="shrink-0 border-b bg-muted/40">
       <div className="px-3 py-2 sm:px-4">
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex shrink-0 items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-orange-400 motion-safe:animate-pulse" />
-            <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
+            <span className={widgetType.section}>
               {t('propFirm.status.needsConfiguration')}:
             </span>
           </div>
-          <div className="flex min-w-0 gap-2 overflow-x-auto pb-1">
+          <div className="flex min-w-0 items-center gap-3 overflow-x-auto pb-1">
             {unconfiguredAccounts.map((accountNumber) => (
               <div
                 key={accountNumber}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-orange-100 dark:bg-orange-900/50"
+                className="inline-flex items-center gap-1"
               >
-                <span className="text-xs font-medium text-orange-800 dark:text-orange-200">
+                <span className={cn(widgetType.mono, "text-muted-foreground")}>
                   {accountNumber}
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="relative h-5 w-5 p-0 after:absolute after:inset-[-10px] hover:bg-orange-200 dark:hover:bg-orange-800/50"
+                  className="relative h-5 w-5 p-0 after:absolute after:inset-[-10px]"
+                  aria-label={t('propFirm.setup.message')}
                   onClick={() => {
                     const tempAccount = {
                       id: '',
@@ -1322,7 +1332,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                     setSelectedAccountForTable(tempAccount as any)
                   }}
                 >
-                  <Settings className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+                  <Settings className="h-3 w-3 text-muted-foreground" />
                 </Button>
               </div>
             ))}
@@ -1544,42 +1554,25 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   }
 
   return (
-    <Card className="w-full h-full min-w-0 flex flex-col">
-      <CardHeader
-        className={cn(
-          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === 'small' ? "p-2 min-h-10" : "p-3 sm:p-4 min-h-14"
-        )}
-      >
-        <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1",
-                size === 'small' ? "text-sm" : "text-base"
-              )}
-            >
-              {t('propFirm.title')}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={size === 'small' ? 'size-3.5' : 'size-4'}
-            >
-              <p>{t('propFirm.description')}</p>
-            </InfoBubble>
-          </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
+    <WidgetCard className="w-full">
+      <WidgetHeader
+        size={size}
+        title={t('propFirm.title')}
+        description={t('propFirm.description')}
+        className="flex-wrap"
+        actions={
+          <>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setAccountGroupBoardOpen(true)}
               className={cn(
                 "gap-1.5",
-                size === "small" ? "h-7 px-2 text-xs" : "h-8 px-2 sm:px-3"
+                isCompactSize(size) ? "h-7 px-2 text-xs" : "h-8 px-2 sm:px-3"
               )}
             >
               <Settings className="h-3.5 w-3.5" />
-              <span className={cn((size === "small") && "sr-only", "hidden min-[420px]:inline")}>
+              <span className={cn(isCompactSize(size) && "sr-only", "hidden min-[420px]:inline")}>
                 {t("filters.manageAccounts")}
               </span>
             </Button>
@@ -1588,33 +1581,34 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
               <Button
                 variant="outline"
                 size="sm"
-                className={cn(size === "small" ? "h-7 px-2" : "h-8")}
+                className={cn(isCompactSize(size) ? "h-7 px-2" : "h-8")}
                 onClick={() => void refreshRithmicBalances()}
                 disabled={rithmicBalancesLoading}
                 title={t("rithmic.balances.refreshTitle")}
               >
                 {rithmicBalancesLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
                 ) : (
                   <RefreshCw className="h-3.5 w-3.5" />
                 )}
-                <span className={cn("ml-1.5", size === "small" && "sr-only")}>
+                <span className={cn("ml-1.5", isCompactSize(size) && "sr-only")}>
                   {t("rithmic.balances.refresh")}
                 </span>
               </Button>
             )}
             {chartsTableToggle}
-          </div>
-        </div>
-      </CardHeader>
+          </>
+        }
+      />
 
       {unconfiguredAccountsBanner}
 
-      <CardContent
+      <WidgetBody
+        size={size}
+        flush
         className={cn(
-          "flex-1 overflow-hidden",
-          view === "table" && "p-0",
-          useMobileAccountCarousel && "flex min-h-0 flex-col p-0"
+          "overflow-hidden",
+          useMobileAccountCarousel && "flex min-h-0 flex-col"
         )}
       >
         {useMobileAccountCarousel ? (
@@ -1630,7 +1624,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
               return (
                 <div className="flex h-full min-h-0 flex-col gap-2">
                   {slide.groupName && (
-                    <p className="shrink-0 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <p className={cn(widgetType.section, "shrink-0 px-1")}>
                       {slide.groupName}
                     </p>
                   )}
@@ -1648,45 +1642,30 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
             }}
           />
         ) : view === "cards" ? (
-          <div className="flex-1 overflow-y-auto h-full">
-            <div className="mt-4">
-              <div className="space-y-6">
-                {sortedGroupEntries.map(({ group, accounts: orderedAccounts }, groupIndex) => {
-                  // Generate a consistent color for each group based on group index
-                  const groupColors = [
-                    'border-blue-200/50 bg-blue-50/30 dark:border-blue-800/30 dark:bg-blue-950/20',
-                    'border-purple-200/50 bg-purple-50/30 dark:border-purple-800/30 dark:bg-purple-950/20',
-                    'border-green-200/50 bg-green-50/30 dark:border-green-800/30 dark:bg-green-950/20',
-                    'border-orange-200/50 bg-orange-50/30 dark:border-orange-800/30 dark:bg-orange-950/20',
-                    'border-pink-200/50 bg-pink-50/30 dark:border-pink-800/30 dark:bg-pink-950/20',
-                    'border-cyan-200/50 bg-cyan-50/30 dark:border-cyan-800/30 dark:bg-cyan-950/20',
-                  ];
-
-                  const groupColorClass = groupColors[groupIndex % groupColors.length];
-
+          <div className="h-full flex-1 overflow-y-auto">
+            <div className={cn("flex flex-col gap-6", widgetPadding(size))}>
+                {sortedGroupEntries.map(({ group, accounts: orderedAccounts }) => {
+                  /*
+                   * A group is a heading plus its row of cards. The old colored
+                   * bands encoded nothing but the group's index, so they are
+                   * gone: spacing and the heading carry the grouping.
+                   */
                   return (
-                    <div
-                      key={group.id}
-                      className={cn(
-                        "relative border-l-4 rounded-r-lg",
-                        groupColorClass,
-                        "transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-md motion-reduce:transition-none"
-                      )}
-                    >
-                      {/* Group header with subtle styling */}
-                      <div className="px-4 py-3 border-b border-current/10">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-sm font-semibold text-foreground/80 tracking-wide uppercase">
-                            {group.name}
-                          </h3>
-                          <div className="text-xs text-muted-foreground bg-white/50 dark:bg-black/20 px-2 py-1 rounded-full">
-                            {orderedAccounts.length} {orderedAccounts.length === 1 ? 'account' : 'accounts'}
-                          </div>
-                        </div>
+                    <section key={group.id} className="flex min-w-0 flex-col gap-2">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <h3 className={widgetType.section}>
+                          {group.name}
+                        </h3>
+                        <span className={widgetType.caption}>
+                          {formatCount(orderedAccounts.length, locale)}{' '}
+                          {orderedAccounts.length === 1
+                            ? t('propFirm.renewal.account')
+                            : t('propFirm.renewal.accounts')}
+                        </span>
                       </div>
 
                       {/* Cards container with optimized spacing */}
-                      <div className="p-4 pt-3">
+                      <div>
                         <DndContext
                           sensors={sensors}
                           collisionDetection={closestCenter}
@@ -1714,7 +1693,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                           </SortableContext>
                         </DndContext>
                       </div>
-                    </div>
+                    </section>
                   );
                 })}
 
@@ -1723,26 +1702,22 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                   if (sortedUngroupedAccounts.length === 0) return null;
 
                   return (
-                    <div
-                      className={cn(
-                        "relative border-l-4 border-gray-200/50 bg-gray-50/30 dark:border-gray-700/30 dark:bg-gray-900/20 rounded-r-lg",
-                        "transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-md motion-reduce:transition-none"
-                      )}
-                    >
+                    <section className="flex min-w-0 flex-col gap-2">
                       {/* Ungrouped header */}
-                      <div className="px-4 py-3 border-b border-gray-200/20 dark:border-gray-700/20">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">
-                            {t('propFirm.ungrouped')}
-                          </h3>
-                          <div className="text-xs text-muted-foreground bg-white/50 dark:bg-black/20 px-2 py-1 rounded-full">
-                            {sortedUngroupedAccounts.length} {sortedUngroupedAccounts.length === 1 ? 'account' : 'accounts'}
-                          </div>
-                        </div>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <h3 className={widgetType.section}>
+                          {t('propFirm.ungrouped')}
+                        </h3>
+                        <span className={widgetType.caption}>
+                          {formatCount(sortedUngroupedAccounts.length, locale)}{' '}
+                          {sortedUngroupedAccounts.length === 1
+                            ? t('propFirm.renewal.account')
+                            : t('propFirm.renewal.accounts')}
+                        </span>
                       </div>
 
                       {/* Cards container */}
-                      <div className="p-4 pt-3">
+                      <div>
                         <DndContext
                           sensors={sensors}
                           collisionDetection={closestCenter}
@@ -1770,10 +1745,9 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                           </SortableContext>
                         </DndContext>
                       </div>
-                    </div>
+                    </section>
                   );
                 })()}
-              </div>
             </div>
           </div>
         ) : (
@@ -1781,9 +1755,9 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
             {accountsTableView}
           </div>
         )}
-      </CardContent>
+      </WidgetBody>
 
       {dialogs}
-    </Card>
+    </WidgetCard>
   )
 }

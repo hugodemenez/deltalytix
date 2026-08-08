@@ -30,6 +30,11 @@ interface DataTableColumnHeaderProps<TData, TValue>
   toggleLabel?: string
   onToggleChange?: (value: boolean) => void
   toggleValue?: boolean
+  /**
+   * Header alignment. It must match the alignment of the cells underneath:
+   * text reads from the left, numbers line up on the right.
+   */
+  align?: "left" | "right"
 }
 
 export function DataTableColumnHeader<TData, TValue>({
@@ -42,6 +47,7 @@ export function DataTableColumnHeader<TData, TValue>({
   toggleLabel,
   onToggleChange,
   toggleValue = false,
+  align = "left",
 }: DataTableColumnHeaderProps<TData, TValue>) {
   const { updateColumnVisibility } = useTableConfigStore()
   const t = useI18n()
@@ -88,18 +94,29 @@ export function DataTableColumnHeader<TData, TValue>({
   const isFiltered = column.getFilterValue() !== undefined
 
   if (!column.getCanSort()) {
-    return <div className={cn(className)}>{title}</div>
+    return (
+      <div className={cn(align === "right" && "text-right", className)}>
+        {title}
+      </div>
+    )
   }
 
   return (
-    <div className={cn("flex items-center space-x-2", className)}>
+    <div
+      className={cn(
+        "flex items-center space-x-2",
+        align === "right" && "justify-end",
+        className,
+      )}
+    >
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
             size="sm"
             className={cn(
-              "-ml-3 h-8 data-[state=open]:bg-accent",
+              "h-8 data-[state=open]:bg-accent",
+              align === "right" ? "-mr-3" : "-ml-3",
               isFiltered && "bg-accent"
             )}
           >

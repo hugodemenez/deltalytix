@@ -19,11 +19,22 @@ import { Progress } from "@/components/ui/progress"
 import { useAccountOrderStore } from "@/store/account-order-store"
 import { useAccountsGroupExpansionStore } from "../../../../../store/accounts-group-expansion-store"
 import { DataTableColumnHeader } from "../tables/column-header"
-import { CheckCircle, ChevronDown, ChevronRight, Loader2, XCircle } from "lucide-react"
+import { ChevronDown, ChevronRight, Loader2, XCircle } from "lucide-react"
 import {
   getPrimaryRithmicBalance,
   RithmicAccountBalance,
 } from "@/lib/rithmic-api"
+import {
+  formatCount,
+  formatCurrency,
+  formatTicks,
+  widgetType,
+} from "../widgets"
+
+/** Numeric cells are right-aligned and share one right edge with their header. */
+const numericCell = "text-right tabular-nums"
+/** A value the data does not have. Never an em dash in interface copy. */
+const NO_VALUE = "-"
 
 type AccountGroupRow = {
   kind: "group"
@@ -230,6 +241,7 @@ function AccountsTableSection({
   totalSummary?: SummaryRow | null
 }) {
   const t = useI18n()
+  const locale = useCurrentLocale()
   const expanded = useAccountsGroupExpansionStore((state) => state.expanded)
   const setExpanded = useAccountsGroupExpansionStore((state) => state.setExpanded)
   const tableWrapperRef = useRef<HTMLDivElement | null>(null)
@@ -322,83 +334,82 @@ function AccountsTableSection({
         )
       case "account":
       case "propfirm":
-        return <span className="text-sm text-muted-foreground">—</span>
+        return <span className="text-sm text-muted-foreground">{NO_VALUE}</span>
       case "startDate":
         return (
-          <div className="text-sm text-muted-foreground text-center">—</div>
+          <div className="text-sm text-muted-foreground text-center">{NO_VALUE}</div>
         )
       case "funded":
         return (
-          <div className="flex items-center justify-center text-xs text-muted-foreground">
-            {summary.summary.fundedCount}/{summary.accountCount}
+          <div className={cn(numericCell, widgetType.label)}>
+            {formatCount(summary.summary.fundedCount, locale)}/{formatCount(summary.accountCount, locale)}
           </div>
         )
       case "balance":
         return (
-          <div className="text-right font-semibold">
-            ${summary.summary.totalBalance.toFixed(2)}
+          <div className={cn(numericCell, "font-semibold")}>
+            {formatCurrency(summary.summary.totalBalance, locale)}
           </div>
         )
       case "rithmicBalance":
         return summary.summary.rithmicBalanceCount > 0 ? (
-          <div className="text-right font-semibold">
-            ${summary.summary.totalRithmicBalance.toFixed(2)}
+          <div className={cn(numericCell, "font-semibold")}>
+            {formatCurrency(summary.summary.totalRithmicBalance, locale)}
           </div>
         ) : (
-          <div className="text-right text-sm text-muted-foreground">—</div>
+          <div className={cn(numericCell, "text-muted-foreground")}>{NO_VALUE}</div>
         )
       case "targetProgress": {
         const isConfigured = summary.summary.configuredCount > 0
         if (!isConfigured) {
           return (
-            <div className="text-xs text-muted-foreground">
+            <div className={widgetType.label}>
               {t("accounts.table.notConfigured")}
             </div>
           )
         }
         return (
           <div className="min-w-[160px] space-y-1">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{t("accounts.table.remaining")}</span>
-              <span>${summary.summary.totalRemainingToTarget.toFixed(2)}</span>
+            <div className="flex items-center justify-between gap-2">
+              <span className={widgetType.label}>{t("accounts.table.remaining")}</span>
+              <span className={cn(widgetType.label, "tabular-nums")}>
+                {formatCurrency(summary.summary.totalRemainingToTarget, locale)}
+              </span>
             </div>
             <Progress
               value={summary.summary.averageProgress}
               className="h-1.5"
-              indicatorClassName={cn(
-                "transition-colors duration-300",
-                "bg-[hsl(var(--chart-6))]"
-              )}
+              indicatorClassName="bg-foreground"
             />
           </div>
         )
       }
       case "totalPayout":
         return (
-          <div className="text-right font-semibold">
-            ${summary.summary.totalPayouts.toFixed(2)}
+          <div className={cn(numericCell, "font-semibold")}>
+            {formatCurrency(summary.summary.totalPayouts, locale)}
           </div>
         )
       case "totalFee":
         return (
-          <div className="text-right font-semibold">
-            ${summary.summary.totalFee.toFixed(2)}
+          <div className={cn(numericCell, "font-semibold")}>
+            {formatCurrency(summary.summary.totalFee, locale)}
           </div>
         )
       case "drawdown":
         return (
-          <div className="text-right text-sm text-muted-foreground">
-            ${summary.summary.totalRemainingLoss.toFixed(2)}
+          <div className={cn(numericCell, "text-muted-foreground")}>
+            {formatCurrency(summary.summary.totalRemainingLoss, locale)}
           </div>
         )
       case "consistency":
       case "maxDailyProfit":
       case "tradingDays":
         return (
-          <div className="text-right text-sm text-muted-foreground">—</div>
+          <div className={cn(numericCell, "text-muted-foreground")}>{NO_VALUE}</div>
         )
       default:
-        return <span className="text-sm text-muted-foreground">—</span>
+        return <span className="text-sm text-muted-foreground">{NO_VALUE}</span>
     }
   }
 
@@ -409,16 +420,24 @@ function AccountsTableSection({
           className="w-full border-separate border-spacing-0 text-sm"
           style={{ minWidth: table.getTotalSize() }}
         >
-          <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b [&_tr]:border-b">
+          <caption className="sr-only">{t("accounts.table.total")}</caption>
+          <thead className="sticky top-0 z-10 border-b bg-card [&_tr]:border-b">
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr
-                key={headerGroup.id}
-                className="border-b transition-colors hover:bg-muted/50"
-              >
+              <tr key={headerGroup.id} className="border-b">
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="whitespace-nowrap px-2 py-2 text-left text-xs font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l align-middle text-muted-foreground sm:px-3 sm:text-sm"
+                    scope="col"
+                    aria-sort={
+                      header.column.getIsSorted() === "asc"
+                        ? "ascending"
+                        : header.column.getIsSorted() === "desc"
+                          ? "descending"
+                          : header.column.getCanSort()
+                            ? "none"
+                            : undefined
+                    }
+                    className="whitespace-nowrap border-b bg-card px-2 py-2 text-left align-middle text-xs font-medium text-muted-foreground sm:px-3"
                     style={{ width: header.getSize() }}
                   >
                     {header.isPlaceholder
@@ -443,7 +462,7 @@ function AccountsTableSection({
                     {table.getVisibleLeafColumns().map((column) => (
                       <td
                         key={`${entry.summary.id}-${column.id}`}
-                        className="px-2 py-2 text-xs border-r border-border/50 last:border-r-0 first:border-l align-middle sm:px-3 sm:text-sm"
+                        className="px-2 py-2 align-middle text-xs sm:px-3 sm:text-sm"
                         style={{ width: column.getSize() }}
                       >
                         {renderSummaryCell(column.id, entry.summary)}
@@ -458,8 +477,7 @@ function AccountsTableSection({
                 <tr
                   key={row.id}
                   className={cn(
-                    "border-b border-border transition-all duration-75 hover:bg-muted/40",
-                    rowIndex % 2 === 1 && "bg-muted/20",
+                    "border-b border-border motion-safe:transition-colors hover:bg-muted/40",
                     row.getCanExpand() && "bg-muted/30 font-medium",
                     isDrawdownBreached(row.original) && "opacity-50",
                     (row.getCanExpand() || row.depth > 0) && "cursor-pointer"
@@ -476,7 +494,7 @@ function AccountsTableSection({
                     <td
                       key={cell.id}
                       className={cn(
-                        "px-2 py-2 text-xs border-r border-border/50 last:border-r-0 first:border-l align-middle sm:px-3 sm:text-sm",
+                        "px-2 py-2 align-middle text-xs sm:px-3 sm:text-sm",
                         row.depth > 0 && cell.column.id === "account" && "pl-6"
                       )}
                       style={{ width: cell.column.getSize() }}
@@ -527,6 +545,7 @@ export function AccountsTableView({
 }: AccountsTableViewProps) {
   const t = useI18n()
   const currentLocale = useCurrentLocale()
+  const locale = currentLocale
   const dateFormatter = useMemo(
     () => new Intl.DateTimeFormat(currentLocale, { dateStyle: "medium" }),
     [currentLocale]
@@ -548,7 +567,7 @@ export function AccountsTableView({
                 event.stopPropagation()
                 row.toggleExpanded()
               }}
-              className="flex items-center justify-center h-6 w-6 rounded hover:bg-muted/60 transition-colors"
+              className="flex h-6 w-6 items-center justify-center rounded hover:bg-muted/60 motion-safe:transition-colors"
               aria-label={
                 row.getIsExpanded()
                   ? t("accounts.table.collapseGroup")
@@ -581,7 +600,7 @@ export function AccountsTableView({
                 {row.original.name} ({row.original.accounts.length})
               </span>
             ) : (
-              <span className="text-sm text-muted-foreground">—</span>
+              <span className="text-sm text-muted-foreground">{NO_VALUE}</span>
             )}
           </div>
         ),
@@ -603,16 +622,18 @@ export function AccountsTableView({
           />
         ),
         cell: ({ row }) => (
-          <div className="flex flex-col min-w-[160px]">
+          <div className="flex min-w-[160px] flex-col">
             {isGroupRow(row.original) ? (
-              <span className="text-sm text-muted-foreground">—</span>
+              <span className="text-sm text-muted-foreground">{NO_VALUE}</span>
             ) : (
               <>
-                <span className="font-medium truncate">
+                {/* An account number is an operational identifier, so mono is
+                    the right role here — unlike money, which never is. */}
+                <span className={cn(widgetType.mono, "truncate text-foreground")}>
                   {row.original.number}
                 </span>
                 {row.original.accountSizeName && (
-                  <span className="text-xs text-muted-foreground truncate">
+                  <span className={cn(widgetType.caption, "truncate")}>
                     {row.original.accountSizeName}
                   </span>
                 )}
@@ -644,7 +665,7 @@ export function AccountsTableView({
         cell: ({ row }) => (
           <div className="min-w-[160px] font-medium truncate">
             {isGroupRow(row.original)
-              ? "—"
+              ? NO_VALUE
               : row.original.propfirm || t("propFirm.card.unnamedAccount")}
           </div>
         ),
@@ -674,13 +695,13 @@ export function AccountsTableView({
         cell: ({ row }) => {
           if (isGroupRow(row.original)) {
             return (
-              <div className="text-sm text-muted-foreground text-center">—</div>
+              <div className="text-sm text-muted-foreground text-center">{NO_VALUE}</div>
             )
           }
           const startDate = getAccountStartDate(row.original)
           if (!startDate) {
             return (
-              <div className="text-sm text-muted-foreground text-center">—</div>
+              <div className="text-sm text-muted-foreground text-center">{NO_VALUE}</div>
             )
           }
           return (
@@ -714,30 +735,22 @@ export function AccountsTableView({
           <DataTableColumnHeader
             column={column}
             title={t("accounts.table.funded")}
+            align="right"
           />
         ),
         cell: ({ row }) => {
           if (isGroupRow(row.original)) {
             return (
-              <div className="flex items-center justify-center text-xs text-muted-foreground">
-                {row.original.summary.fundedCount}/{row.original.accounts.length}
+              <div className={cn(numericCell, widgetType.label)}>
+                {formatCount(row.original.summary.fundedCount, locale)}/{formatCount(row.original.accounts.length, locale)}
               </div>
             )
           }
           const isFunded = row.original.isPerformance === true
+          /* Funded status is ordinary metadata: a word, not a colored glyph. */
           return (
-            <div className="flex items-center justify-center">
-              {isFunded ? (
-                <>
-                  <CheckCircle className="h-4 w-4 text-success text-green-500" />
-                  <span className="sr-only">{t("accounts.table.fundedYes")}</span>
-                </>
-              ) : (
-                <>
-                  <XCircle className="h-4 w-4 text-muted-foreground/60" />
-                  <span className="sr-only">{t("accounts.table.fundedNo")}</span>
-                </>
-              )}
+            <div className={cn("text-xs", !isFunded && "text-muted-foreground")}>
+              {isFunded ? t("accounts.table.fundedYes") : t("accounts.table.fundedNo")}
             </div>
           )
         },
@@ -764,6 +777,7 @@ export function AccountsTableView({
           <DataTableColumnHeader
             column={column}
             title={t("accounts.table.balance")}
+            align="right"
           />
         ),
         cell: ({ row }) => {
@@ -771,8 +785,8 @@ export function AccountsTableView({
             ? row.original.summary.totalBalance
             : getAccountBalance(row.original)
           return (
-            <div className="text-right font-medium">
-              ${currentBalance?.toFixed(2)}
+            <div className={cn(numericCell, "font-medium")}>
+              {formatCurrency(currentBalance ?? 0, locale)}
             </div>
           )
         },
@@ -799,16 +813,17 @@ export function AccountsTableView({
                 <DataTableColumnHeader
                   column={column}
                   title={t("accounts.table.rithmicBalance")}
+                  align="right"
                 />
               ),
               cell: ({ row }: { row: any }) => {
                 if (isGroupRow(row.original)) {
                   return row.original.summary.rithmicBalanceCount > 0 ? (
-                    <div className="text-right font-medium">
-                      ${row.original.summary.totalRithmicBalance.toFixed(2)}
+                    <div className={cn(numericCell, "font-medium")}>
+                      {formatCurrency(row.original.summary.totalRithmicBalance, locale)}
                     </div>
                   ) : (
-                    <div className="text-right text-sm text-muted-foreground">—</div>
+                    <div className={cn(numericCell, "text-muted-foreground")}>{NO_VALUE}</div>
                   )
                 }
 
@@ -825,17 +840,17 @@ export function AccountsTableView({
                 ) {
                   return (
                     <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
-                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <Loader2 aria-hidden className="h-3 w-3 motion-safe:animate-spin" />
                     </div>
                   )
                 }
 
                 return rithmicBalance != null ? (
-                  <div className="text-right font-medium">
-                    ${rithmicBalance.toFixed(2)}
+                  <div className={cn(numericCell, "font-medium")}>
+                    {formatCurrency(rithmicBalance, locale)}
                   </div>
                 ) : (
-                  <div className="text-right text-sm text-muted-foreground">—</div>
+                  <div className={cn(numericCell, "text-muted-foreground")}>{NO_VALUE}</div>
                 )
               },
               sortingFn: (rowA: any, rowB: any) => {
@@ -861,6 +876,7 @@ export function AccountsTableView({
           <DataTableColumnHeader
             column={column}
             title={t("accounts.table.totalPayout")}
+            align="right"
           />
         ),
         cell: ({ row }) => {
@@ -868,8 +884,8 @@ export function AccountsTableView({
             ? row.original.summary.totalPayouts
             : getAccountTotalPayouts(row.original)
           return (
-            <div className="text-right font-medium">
-              ${totalPayouts.toFixed(2)}
+            <div className={cn(numericCell, "font-medium")}>
+              {formatCurrency(totalPayouts, locale)}
             </div>
           )
         },
@@ -892,6 +908,7 @@ export function AccountsTableView({
           <DataTableColumnHeader
             column={column}
             title={t("accounts.table.totalFee")}
+            align="right"
           />
         ),
         cell: ({ row }) => {
@@ -899,8 +916,8 @@ export function AccountsTableView({
             ? row.original.summary.totalFee
             : getAccountTotalFee(row.original)
           return (
-            <div className="text-right font-medium">
-              ${totalFee.toFixed(2)}
+            <div className={cn(numericCell, "font-medium")}>
+              {formatCurrency(totalFee, locale)}
             </div>
           )
         },
@@ -941,7 +958,7 @@ export function AccountsTableView({
 
           if (!isConfigured) {
             return (
-              <div className="text-xs text-muted-foreground">
+              <div className={widgetType.label}>
                 {t("accounts.table.notConfigured")}
               </div>
             )
@@ -949,17 +966,16 @@ export function AccountsTableView({
 
           return (
             <div className="min-w-[160px] space-y-1">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{t("accounts.table.remaining")}</span>
-                <span>${remainingToTarget.toFixed(2)}</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className={widgetType.label}>{t("accounts.table.remaining")}</span>
+                <span className={cn(widgetType.label, "tabular-nums")}>
+                  {formatCurrency(remainingToTarget, locale)}
+                </span>
               </div>
               <Progress
                 value={progress}
                 className="h-1.5"
-                indicatorClassName={cn(
-                  "transition-colors duration-300",
-                  "bg-[hsl(var(--chart-6))]"
-                )}
+                indicatorClassName="bg-foreground"
               />
             </div>
           )
@@ -985,13 +1001,14 @@ export function AccountsTableView({
           <DataTableColumnHeader
             column={column}
             title={t("accounts.table.drawdownRemaining")}
+            align="right"
           />
         ),
         cell: ({ row }) => {
           if (isGroupRow(row.original)) {
             return (
-              <div className="text-right text-sm text-muted-foreground">
-                ${row.original.summary.totalRemainingLoss.toFixed(2)}
+              <div className={cn(numericCell, "text-muted-foreground")}>
+                {formatCurrency(row.original.summary.totalRemainingLoss, locale)}
               </div>
             )
           }
@@ -1001,30 +1018,29 @@ export function AccountsTableView({
 
           if (!isConfigured) {
             return (
-              <div className="text-xs text-muted-foreground">
+              <div className={widgetType.label}>
                 {t("accounts.table.notConfigured")}
               </div>
             )
           }
 
+          /* Distance from the drawdown boundary. The boundary is named in the
+             caption instead of being implied by a green/amber/red ramp; color
+             marks only the breach, which is a real state. */
+          const isBreached = remainingLoss <= 0
           return (
-            <div className="text-right text-sm">
-              <span
-                className={cn(
-                  "font-medium",
-                  remainingLoss > (row.original.drawdownThreshold ?? 0) * 0.5
-                    ? "text-success"
-                    : remainingLoss >
-                      (row.original.drawdownThreshold ?? 0) * 0.2
-                      ? "text-warning"
-                      : "text-destructive"
-                )}
-              >
-                {remainingLoss > 0
-                  ? t("propFirm.card.remainingLoss", {
-                    amount: remainingLoss.toFixed(2),
-                  })
-                  : t("propFirm.card.drawdownBreached")}
+            <div className={cn(numericCell, "flex flex-col items-end gap-0.5")}>
+              <span className={cn("font-medium", isBreached && "text-destructive")}>
+                {isBreached
+                  ? t("propFirm.card.drawdownBreached")
+                  : t("propFirm.card.remainingLoss", {
+                    amount: formatTicks(remainingLoss, locale, { maximumFractionDigits: 2 }),
+                  })}
+              </span>
+              <span className={widgetType.caption}>
+                {t("propFirm.card.maxLoss", {
+                  amount: formatTicks(row.original.drawdownThreshold ?? 0, locale, { maximumFractionDigits: 2 }),
+                })}
               </span>
             </div>
           )
@@ -1057,20 +1073,20 @@ export function AccountsTableView({
         cell: ({ row }) => {
           if (isGroupRow(row.original)) {
             return (
-              <div className="text-sm text-muted-foreground text-center">—</div>
+              <div className="text-sm text-muted-foreground text-center">{NO_VALUE}</div>
             )
           }
           const metrics = row.original.metrics
           if (!metrics?.isConfigured) {
             return (
-              <div className="text-xs text-muted-foreground">
+              <div className={widgetType.label}>
                 {t("accounts.table.notConfigured")}
               </div>
             )
           }
           if (!metrics.hasProfitableData) {
             return (
-              <div className="text-xs text-muted-foreground italic">
+              <div className={widgetType.label}>
                 {t("propFirm.status.unprofitable")}
               </div>
             )
@@ -1081,7 +1097,7 @@ export function AccountsTableView({
             <div
               className={cn(
                 "text-xs font-medium",
-                isConsistent ? "text-success" : "text-destructive"
+                !isConsistent && "text-destructive"
               )}
             >
               {isConsistent
@@ -1119,23 +1135,24 @@ export function AccountsTableView({
           <DataTableColumnHeader
             column={column}
             title={t("propFirm.card.highestDailyProfit")}
+            align="right"
           />
         ),
         cell: ({ row }) => {
           if (isGroupRow(row.original)) {
             return (
-              <div className="text-right text-sm text-muted-foreground">—</div>
+              <div className="text-right text-sm text-muted-foreground">{NO_VALUE}</div>
             )
           }
           const maxDailyProfit = row.original.metrics?.highestProfitDay
           if (maxDailyProfit === undefined) {
             return (
-              <div className="text-right text-sm text-muted-foreground">—</div>
+              <div className="text-right text-sm text-muted-foreground">{NO_VALUE}</div>
             )
           }
           return (
-            <div className="text-right text-sm font-medium">
-              ${maxDailyProfit.toFixed(2)}
+            <div className={cn(numericCell, "font-medium")}>
+              {formatCurrency(maxDailyProfit, locale)}
             </div>
           )
         },
@@ -1158,18 +1175,19 @@ export function AccountsTableView({
           <DataTableColumnHeader
             column={column}
             title={t("propFirm.card.tradingDays")}
+            align="right"
           />
         ),
         cell: ({ row }) => {
           if (isGroupRow(row.original)) {
             return (
-              <div className="text-right text-sm text-muted-foreground">—</div>
+              <div className="text-right text-sm text-muted-foreground">{NO_VALUE}</div>
             )
           }
           const metrics = row.original.metrics
           if (!metrics?.isConfigured) {
             return (
-              <div className="text-xs text-muted-foreground">
+              <div className={widgetType.label}>
                 {t("accounts.table.notConfigured")}
               </div>
             )
@@ -1177,17 +1195,8 @@ export function AccountsTableView({
           const totalTradingDays = metrics.totalTradingDays ?? 0
           const validTradingDays = metrics.validTradingDays ?? 0
           return (
-            <div className="text-right text-sm">
-              <span
-                className={cn(
-                  "font-medium",
-                  validTradingDays === totalTradingDays
-                    ? "text-success"
-                    : "text-warning"
-                )}
-              >
-                {validTradingDays}/{totalTradingDays}
-              </span>
+            <div className={cn(numericCell, "font-medium")}>
+              {formatCount(validTradingDays, locale)}/{formatCount(totalTradingDays, locale)}
             </div>
           )
         },

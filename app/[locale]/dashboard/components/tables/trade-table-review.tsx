@@ -40,7 +40,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, parsePositionTime } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useI18n } from "@/locales/client";
+import { useCurrentLocale, useI18n } from "@/locales/client";
 import { TradeComment } from "./trade-comment";
 import { TradeVideoUrl } from "./trade-video-url";
 import { TradeTag } from "./trade-tag";
@@ -53,13 +53,6 @@ import {
 } from "@/components/ui/tooltip";
 import { DataTableColumnHeader } from "./column-header";
 import { createClient } from "@/lib/supabase";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -109,6 +102,22 @@ import {
   DEFAULT_TRADE_TABLE_PAGE_SIZE,
   sanitizeTablePageSize,
 } from "@/store/widgets/table-config-store";
+import {
+  WidgetBody,
+  WidgetCard,
+  WidgetFooter,
+  WidgetHeader,
+  formatCount,
+  formatCurrency,
+  formatDuration,
+  formatTicks,
+  pnlTone,
+  pnlToneClass,
+  widgetType,
+} from "../widgets";
+
+/** Numeric cells and their headers share one right edge and tabular figures. */
+const numericCell = "text-right tabular-nums";
 
 // Custom Tags Header Component
 function TagsColumnHeader() {
@@ -167,14 +176,17 @@ function TagsColumnHeader() {
                 </p>
               </div>
 
-              {/* Search input */}
-              <div className="flex items-center gap-2 bg-muted/30 rounded-md px-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
+              {/* Search input: a form control, not a nested panel. */}
+              <div className="relative">
+                <Search
+                  aria-hidden
+                  className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                />
                 <Input
                   placeholder={t("widgets.tags.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-8 text-base sm:text-sm"
+                  className="h-8 pl-8 text-base sm:text-sm"
                 />
               </div>
 
@@ -185,9 +197,9 @@ function TagsColumnHeader() {
                     {filteredTags.map((tag) => (
                       <div
                         key={tag.id}
-                        className="flex items-center justify-between rounded-md hover:bg-muted/50 transition-colors p-1.5"
+                        className="flex items-center justify-between rounded-md p-1.5 motion-safe:transition-colors hover:bg-muted/50"
                       >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
                           <Checkbox
                             checked={tagFilter.tags.includes(tag.name)}
                             onCheckedChange={(checked) => {
@@ -200,13 +212,17 @@ function TagsColumnHeader() {
                             id={`tag-filter-${tag.id}`}
                             className="h-4 w-4"
                           />
-                          <div
-                            className="w-3 h-3 rounded-full shrink-0"
-                            style={{ backgroundColor: tag.color || "#CBD5E1" }}
-                          />
+                          {/* Only a user-chosen tag color earns a swatch. */}
+                          {tag.color ? (
+                            <span
+                              aria-hidden
+                              className="size-2.5 shrink-0 rounded-full"
+                              style={{ backgroundColor: tag.color }}
+                            />
+                          ) : null}
                           <label
                             htmlFor={`tag-filter-${tag.id}`}
-                            className="font-medium cursor-pointer truncate flex-1 text-sm"
+                            className="flex-1 cursor-pointer truncate text-sm"
                           >
                             {tag.name}
                           </label>
@@ -300,6 +316,7 @@ function getColumnDefId(columnDef: ColumnDef<ExtendedTrade>): string | undefined
 
 export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps) {
   const t = useI18n();
+  const locale = useCurrentLocale();
   const { formattedTrades, updateTrades, deleteTrades } = useData();
   const tags = useUserStore((state) => state.tags);
   const timezone = useUserStore((state) => state.timezone);
@@ -750,11 +767,19 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
               <div className="flex items-center gap-1">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <div className="flex items-center justify-center w-fit min-w-5 px-1.5 h-5 rounded-full bg-muted text-[10px] font-medium cursor-pointer hover:bg-muted/80 transition-colors sm:min-w-6 sm:px-2 sm:h-6 sm:text-xs">
+                    {/* An account id is an identifier, so mono is right here.
+                        It is not state, so it gets no pill. */}
+                    <button
+                      type="button"
+                      className={cn(
+                        widgetType.mono,
+                        "cursor-pointer rounded-sm underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      )}
+                    >
                       {accounts.length === 1
                         ? `${accounts[0].slice(0, 2)}${accounts[0].slice(-2)}`
                         : `+${accounts.length}`}
-                    </div>
+                    </button>
                   </PopoverTrigger>
                   <PopoverContent
                     className="w-fit p-0"
@@ -775,8 +800,8 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                 </Popover>
               </div>
               {trade.trades.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  ({trade.trades.length})
+                <span className={cn(widgetType.caption, "tabular-nums")}>
+                  ({formatCount(trade.trades.length, locale)})
                 </span>
               )}
             </div>
@@ -793,12 +818,15 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             tableId="trade-table"
           />
         ),
-        cell: ({ row }) =>
-          formatInTimeZone(
-            new Date(row.original.entryDate),
-            timezone,
-            "yyyy-MM-dd",
-          ),
+        cell: ({ row }) => (
+          <span className={widgetType.mono}>
+            {formatInTimeZone(
+              new Date(row.original.entryDate),
+              timezone,
+              "yyyy-MM-dd",
+            )}
+          </span>
+        ),
         sortingFn: (rowA, rowB, columnId) => {
           const a = new Date(rowA.getValue(columnId)).getTime();
           const b = new Date(rowB.getValue(columnId)).getTime();
@@ -824,7 +852,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
               : [trade.id];
 
           return (
-            <div className="text-right">
+            <div className="text-left">
               <EditableInstrumentCell
                 value={trade.instrument}
                 tradeIds={tradeIds}
@@ -845,9 +873,12 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
         ),
         size: 100,
         cell: ({ row }) => {
+          // Ordinary metadata: plain text, sentence case, no pill and no
+          // all-caps eyebrow.
+          const side = row.original.side ?? "";
           return (
-            <div className="text-right font-medium">
-              {row.original.side?.toUpperCase()}
+            <div className="text-left">
+              {side ? side.charAt(0).toUpperCase() + side.slice(1).toLowerCase() : ""}
             </div>
           );
         },
@@ -870,13 +901,14 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             column={column}
             title={t("trade-table.entryPrice")}
             tableId="trade-table"
+            align="right"
           />
         ),
         cell: ({ row }) => {
           const entryPrice = parseFloat(row.original.entryPrice);
           return (
-            <div className="text-right font-medium">
-              ${entryPrice.toFixed(2)}
+            <div className={cn(numericCell, "font-medium")}>
+              {formatCurrency(entryPrice, locale)}
             </div>
           );
         },
@@ -889,13 +921,14 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             column={column}
             title={t("trade-table.exitPrice")}
             tableId="trade-table"
+            align="right"
           />
         ),
         cell: ({ row }) => {
           const exitPrice = parseFloat(row.original.closePrice);
           return (
-            <div className="text-right font-medium">
-              ${exitPrice.toFixed(2)}
+            <div className={cn(numericCell, "font-medium")}>
+              {formatCurrency(exitPrice, locale)}
             </div>
           );
         },
@@ -908,11 +941,12 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             column={column}
             title={t("trade-table.positionTime")}
             tableId="trade-table"
+            align="right"
           />
         ),
         cell: ({ row }) => {
           const timeInPosition = row.original.timeInPosition || 0;
-          return <div>{parsePositionTime(timeInPosition)}</div>;
+          return <div className={numericCell}>{formatDuration(timeInPosition)}</div>;
         },
         sortingFn: (rowA, rowB, columnId) => {
           const a = rowA.original.timeInPosition || 0;
@@ -983,17 +1017,16 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             column={column}
             title={t("trade-table.pnl")}
             tableId="trade-table"
+            align="right"
           />
         ),
         cell: ({ row }) => {
           const pnl = row.original.pnl;
+          // The number keeps its own sign, so the tone is a reinforcement and
+          // never the only carrier of meaning.
           return (
-            <div className="text-right font-medium">
-              <span
-                className={cn(pnl >= 0 ? "text-green-600" : "text-red-600")}
-              >
-                {pnl.toFixed(2)}
-              </span>
+            <div className={cn(numericCell, "font-medium", pnlToneClass(pnlTone(pnl)))}>
+              {formatCurrency(pnl, locale)}
             </div>
           );
         },
@@ -1012,8 +1045,8 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
         cell: ({ row }) => {
           const commission = row.original.commission;
           return (
-            <div className="text-right font-medium">
-              ${commission.toFixed(2)}
+            <div className={cn(numericCell, "font-medium")}>
+              {formatCurrency(commission, locale)}
             </div>
           );
         },
@@ -1026,13 +1059,14 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             column={column}
             title={t("trade-table.quantity")}
             tableId="trade-table"
+            align="right"
           />
         ),
         cell: ({ row }) => {
           const quantity = row.original.quantity;
           return (
-            <div className="text-right font-medium">
-              {quantity.toLocaleString()}
+            <div className={cn(numericCell, "font-medium")}>
+              {formatCount(quantity, locale)}
             </div>
           );
         },
@@ -1048,6 +1082,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
               showPoints ? t("trade-table.points") : t("trade-table.ticks")
             }
             tableId="trade-table"
+            align="right"
             showFilter={true}
             showToggle={true}
             toggleLabel={t("table.showPoints")}
@@ -1069,12 +1104,10 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           );
           const value = showPoints ? calculation.points : calculation.ticks;
           return (
-            <div className="text-right font-medium">
-              <span
-                className={cn(value >= 0 ? "text-green-600" : "text-red-600")}
-              >
-                {showPoints ? value.toFixed(2) : value}
-              </span>
+            <div className={cn(numericCell, "font-medium", pnlToneClass(pnlTone(value)))}>
+              {formatTicks(value, locale, {
+                maximumFractionDigits: showPoints ? 2 : 0,
+              })}
             </div>
           );
         },
@@ -1293,30 +1326,17 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   const visibleColumns = table.getVisibleLeafColumns();
 
   return (
-    <Card
-      className="h-full flex min-w-0 flex-col w-full"
+    <WidgetCard
+      className="w-full"
       style={cardStyle}
     >
       {showHeader && (
-        <CardHeader className="border-b shrink-0 p-2 sm:p-4">
-        <div className="flex w-full min-w-0 flex-col gap-2 sm:gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex min-w-0 items-center justify-between gap-1.5">
-            <div className="flex min-w-0 items-center gap-1.5">
-              <CardTitle className="line-clamp-1 text-sm sm:text-base">
-                {t("trade-table.title")}
-              </CardTitle>
-              <InfoBubble
-                side="top"
-                iconClassName="size-3.5 sm:size-4"
-              >
-                <p>{t("trade-table.description")}</p>
-              </InfoBubble>
-            </div>
-            {isMobile && !config?.disableColumnConfig && (
-              <ColumnConfigDialog tableId="trade-table" trigger={columnConfigTrigger} />
-            )}
-          </div>
-          <div className="grid w-full min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-2 sm:gap-2 xl:flex xl:w-auto xl:flex-wrap xl:items-center xl:justify-end">
+        <WidgetHeader
+          className="flex-wrap items-start"
+          title={t("trade-table.title")}
+          description={t("trade-table.description")}
+          actions={
+            <div className="grid w-full min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-2 sm:gap-2 xl:flex xl:w-auto xl:flex-wrap xl:items-center xl:justify-end">
             {selectedTrades.length > 0 && (
               <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
                 <AlertDialogTrigger asChild>
@@ -1448,29 +1468,37 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                 </SelectContent>
               </Select>
             )}
-            {!config?.disableColumnConfig && !isMobile && (
+            {!config?.disableColumnConfig && (
               <ColumnConfigDialog tableId="trade-table" trigger={columnConfigTrigger} />
             )}
-          </div>
-        </div>
-      </CardHeader>
+            </div>
+          }
+        />
       )}
-      <CardContent ref={setTableScrollElement} className="flex-1 min-h-0 overflow-auto p-0">
+      <WidgetBody flush ref={setTableScrollElement} className="overflow-auto">
         <div className="relative w-full min-w-max">
           <table
             className="w-full border-separate border-spacing-0 caption-bottom text-sm"
             style={{ minWidth: table.getTotalSize() }}
           >
-            <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b [&_tr]:border-b">
+            <caption className="sr-only">{t("trade-table.description")}</caption>
+            <thead className="sticky top-0 z-10 border-b bg-card [&_tr]:border-b">
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <tr
-                    key={headerGroup.id}
-                    className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-                  >
+                  <tr key={headerGroup.id} className="border-b">
                     {headerGroup.headers.map((header) => (
                       <th
                         key={header.id}
-                        className="whitespace-nowrap px-2 py-1 text-left text-xs font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l h-8 sm:h-12 sm:px-3 sm:py-2 sm:text-sm align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                        scope="col"
+                        aria-sort={
+                          header.column.getIsSorted() === "asc"
+                            ? "ascending"
+                            : header.column.getIsSorted() === "desc"
+                              ? "descending"
+                              : header.column.getCanSort()
+                                ? "none"
+                                : undefined
+                        }
+                        className="h-8 whitespace-nowrap border-b bg-card px-2 py-1 text-left align-middle text-xs font-medium text-muted-foreground sm:h-12 sm:px-3 sm:py-2 [&:has([role=checkbox])]:pr-0"
                         style={{ width: header.getSize() }}
                       >
                         {header.isPlaceholder
@@ -1491,8 +1519,8 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
               columnCount={visibleColumns.length}
               compact={isMobile}
             />
-            <tfoot className="sticky bottom-0 z-10 bg-muted/90 backdrop-blur-xs border-t-2 border-border">
-              <tr className="border-b transition-colors">
+            <tfoot className="sticky bottom-0 z-10 border-t bg-card">
+              <tr>
                 {visibleColumns.map((column, index) => {
                   const columnId = column.id;
                   
@@ -1510,9 +1538,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                     return (
                       <td
                         key={columnId || index}
-                        className={cn(
-                          "px-2 py-1.5 align-middle whitespace-nowrap text-xs font-semibold border-r border-border/50 last:border-r-0 first:border-l sm:px-3 sm:py-2 sm:text-sm",
-                        )}
+                        className="whitespace-nowrap px-2 py-1.5 align-middle text-xs font-medium sm:px-3 sm:py-2 sm:text-sm"
                         style={{ width: column.getSize() }}
                       >
                         {t("trade-table.subtotal")}
@@ -1525,9 +1551,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                     return (
                       <td
                         key={columnId || index}
-                        className={cn(
-                          "px-2 py-1.5 align-middle whitespace-nowrap text-xs border-r border-border/50 last:border-r-0 sm:px-3 sm:py-2 sm:text-sm",
-                        )}
+                        className="whitespace-nowrap px-2 py-1.5 align-middle text-xs sm:px-3 sm:py-2 sm:text-sm"
                       style={{ width: column.getSize() }}
                       />
                     );
@@ -1539,17 +1563,13 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                       <td
                         key={columnId}
                         className={cn(
-                          "px-2 py-1.5 align-middle whitespace-nowrap text-xs font-semibold text-right border-r border-border/50 last:border-r-0 sm:px-3 sm:py-2 sm:text-sm",
+                          "whitespace-nowrap px-2 py-1.5 align-middle text-xs font-medium sm:px-3 sm:py-2 sm:text-sm",
+                          numericCell,
+                          pnlToneClass(pnlTone(currentPageTotals.totalPnl)),
                         )}
                       style={{ width: column.getSize() }}
                       >
-                        <span
-                          className={cn(
-                            currentPageTotals.totalPnl >= 0 ? "text-green-600" : "text-red-600"
-                          )}
-                        >
-                          {currentPageTotals.totalPnl.toFixed(2)}
-                        </span>
+                        {formatCurrency(currentPageTotals.totalPnl, locale)}
                       </td>
                     );
                   }
@@ -1559,11 +1579,12 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                       <td
                         key={columnId}
                         className={cn(
-                          "px-2 py-1.5 align-middle whitespace-nowrap text-xs font-semibold text-right border-r border-border/50 last:border-r-0 sm:px-3 sm:py-2 sm:text-sm",
+                          "whitespace-nowrap px-2 py-1.5 align-middle text-xs font-medium sm:px-3 sm:py-2 sm:text-sm",
+                          numericCell,
                         )}
                       style={{ width: column.getSize() }}
                       >
-                        ${currentPageTotals.totalCommission.toFixed(2)}
+                        {formatCurrency(currentPageTotals.totalCommission, locale)}
                       </td>
                     );
                   }
@@ -1573,11 +1594,12 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                       <td
                         key={columnId}
                         className={cn(
-                          "px-2 py-1.5 align-middle whitespace-nowrap text-xs font-semibold text-right border-r border-border/50 last:border-r-0 sm:px-3 sm:py-2 sm:text-sm",
+                          "whitespace-nowrap px-2 py-1.5 align-middle text-xs font-medium sm:px-3 sm:py-2 sm:text-sm",
+                          numericCell,
                         )}
                       style={{ width: column.getSize() }}
                       >
-                        {currentPageTotals.totalQuantity.toLocaleString()}
+                        {formatCount(currentPageTotals.totalQuantity, locale)}
                       </td>
                     );
                   }
@@ -1586,9 +1608,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                   return (
                     <td
                       key={columnId || index}
-                      className={cn(
-                        "px-2 py-1.5 align-middle whitespace-nowrap text-xs border-r border-border/50 last:border-r-0 sm:px-3 sm:py-2 sm:text-sm",
-                      )}
+                      className="whitespace-nowrap px-2 py-1.5 align-middle text-xs sm:px-3 sm:py-2 sm:text-sm"
                       style={{ width: column.getSize() }}
                     />
                   );
@@ -1597,9 +1617,9 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             </tfoot>
           </table>
         </div>
-      </CardContent>
-      <CardFooter className="flex shrink-0 items-center justify-between gap-2 border-t bg-background px-2 py-1.5 sm:px-4 sm:py-3">
-        <div className="text-xs text-muted-foreground sm:text-sm">
+      </WidgetBody>
+      <WidgetFooter>
+        <div className={widgetType.caption}>
           {t("trade-table.totalTrades", { count: groupedTrades.length })}
         </div>
         <div className="flex items-center gap-1 sm:gap-2">
@@ -1613,7 +1633,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="min-w-[4.5rem] text-center text-xs whitespace-nowrap sm:text-sm">
+          <span className="min-w-[4.5rem] whitespace-nowrap text-center text-xs tabular-nums">
             {isMobile
               ? `${table.getState().pagination.pageIndex + 1}/${table.getPageCount()}`
               : t("trade-table.pageInfo", {
@@ -1724,7 +1744,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             </>
           )}
         </div>
-      </CardFooter>
+      </WidgetFooter>
 
       {showBulkEdit && (
         <BulkEditPanel
@@ -1734,6 +1754,6 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           onClose={() => setShowBulkEdit(false)}
         />
       )}
-    </Card>
+    </WidgetCard>
   );
 }

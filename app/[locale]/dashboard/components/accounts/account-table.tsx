@@ -1,14 +1,21 @@
 'use client'
 
 import { format } from "date-fns"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import { useI18n, useCurrentLocale } from "@/locales/client"
-import { Badge } from "@/components/ui/badge"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { fr, enUS } from 'date-fns/locale'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
+import {
+  formatCurrency,
+  formatPercent,
+  formatTicks,
+  pnlTone,
+  pnlToneClass,
+  widgetType,
+} from "../widgets"
 
 interface DailyMetric {
   date: Date
@@ -36,8 +43,11 @@ interface AccountTableProps {
   onEditPayout?: (payout: { id: string, amount: number, date: Date, status: string, propfirmSharingPercentage?: number | null }) => void
 }
 
-export function AccountTable({ 
-  accountNumber, 
+/** Every numeric column is right-aligned in both the head and the body. */
+const numericCell = "text-right tabular-nums"
+
+export function AccountTable({
+  accountNumber,
   startingBalance,
   profitTarget,
   dailyMetrics,
@@ -54,7 +64,7 @@ export function AccountTable({
   // Helper function to safely calculate percentage of target
   const calculatePercentageOfTarget = (runningBalance: number, startingBalance: number, profitTarget: number) => {
     if (profitTarget <= 0) return '-'
-    return `${((runningBalance - startingBalance) / profitTarget * 100).toFixed(1)}%`
+    return formatPercent((runningBalance - startingBalance) / profitTarget * 100, locale)
   }
 
   // Check if account is configured and has no pending changes
@@ -65,18 +75,21 @@ export function AccountTable({
       <div className="space-y-4">
         <div className="rounded-md border">
           <Table className="min-w-[760px]">
+            <TableCaption className="sr-only">
+              {t('propFirm.dailyStats.title')} {accountNumber}
+            </TableCaption>
             {renderTableHeader()}
             <TableBody>
               <TableRow>
-                <TableCell colSpan={7} className="h-[400px] text-center relative">
-                  <div className="absolute inset-0 backdrop-blur-[2px] bg-background/80 flex flex-col items-center justify-center gap-2">
-                    <h3 className="font-semibold text-lg">
-                      {hasPendingChanges 
-                        ? t('propFirm.setup.saveFirst.title') 
+                <TableCell colSpan={8} className="h-[400px] text-center relative">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background">
+                    <h3 className="text-sm font-medium">
+                      {hasPendingChanges
+                        ? t('propFirm.setup.saveFirst.title')
                         : t('propFirm.setup.configureFirst.title')}
                     </h3>
-                    <p className="text-muted-foreground">
-                      {hasPendingChanges 
+                    <p className={widgetType.label}>
+                      {hasPendingChanges
                         ? t('propFirm.setup.saveFirst.description')
                         : t('propFirm.setup.configureFirst.description')}
                     </p>
@@ -94,10 +107,10 @@ export function AccountTable({
   const sortedMetrics = [...dailyMetrics].sort((a, b) => a.date.getTime() - b.date.getTime())
 
   // Split metrics into before and after reset
-  const metricsBeforeReset = resetDate 
+  const metricsBeforeReset = resetDate
     ? sortedMetrics.filter(metric => metric.date < resetDate)
     : []
-  
+
   const metricsAfterReset = resetDate
     ? sortedMetrics.filter(metric => metric.date > resetDate)
     : sortedMetrics
@@ -111,13 +124,13 @@ export function AccountTable({
       <TableHeader className="sticky top-0 bg-background z-10">
         <TableRow>
           <TableHead>{t('propFirm.dailyStats.date')}</TableHead>
-          <TableHead className="text-right">{t('propFirm.dailyStats.pnl')}</TableHead>
-          <TableHead className="text-right">{t('propFirm.dailyStats.balance')}</TableHead>
-          <TableHead className="text-right">{t('propFirm.dailyStats.target')}</TableHead>
-          <TableHead className="text-right">{t('propFirm.consistency.modal.percentageOfTotal')}</TableHead>
-          <TableHead className="text-right">{t('propFirm.dailyStats.maxAllowed')}</TableHead>
-          <TableHead className="text-right">{t('propFirm.dailyStats.status')}</TableHead>
-          <TableHead className="text-right">{t('propFirm.dailyStats.payout')}</TableHead>
+          <TableHead className={numericCell}>{t('propFirm.dailyStats.pnl')}</TableHead>
+          <TableHead className={numericCell}>{t('propFirm.dailyStats.balance')}</TableHead>
+          <TableHead className={numericCell}>{t('propFirm.dailyStats.target')}</TableHead>
+          <TableHead className={numericCell}>{t('propFirm.consistency.modal.percentageOfTotal')}</TableHead>
+          <TableHead className={numericCell}>{t('propFirm.dailyStats.maxAllowed')}</TableHead>
+          <TableHead>{t('propFirm.dailyStats.status')}</TableHead>
+          <TableHead className={numericCell}>{t('propFirm.dailyStats.payout')}</TableHead>
         </TableRow>
       </TableHeader>
     )
@@ -147,50 +160,43 @@ export function AccountTable({
     return (
       <TableRow key={metric.date.toISOString()}>
         <TableCell>{format(metric.date, 'PP', { locale: dateLocale })}</TableCell>
-        <TableCell className={cn(
-          "text-right font-medium",
-          metric.pnl > 0 ? "text-green-500" : metric.pnl < 0 ? "text-destructive" : ""
-        )}>
-          ${metric.pnl.toFixed(2)}
+        {/* The sign travels with the figure, so the tone is never the only cue. */}
+        <TableCell className={cn(numericCell, "font-medium", pnlToneClass(pnlTone(metric.pnl)))}>
+          {formatCurrency(metric.pnl, locale)}
         </TableCell>
-        <TableCell className="text-right">
-          ${runningBalance.toFixed(2)}
+        <TableCell className={numericCell}>
+          {formatCurrency(runningBalance, locale)}
         </TableCell>
-        <TableCell className="text-right">
+        <TableCell className={numericCell}>
           {calculatePercentageOfTarget(runningBalance, startingBalance, profitTarget)}
         </TableCell>
-        <TableCell className="text-right">
-          {percentageOfTotal !== null ? `${percentageOfTotal.toFixed(1)}%` : '-'}
+        <TableCell className={numericCell}>
+          {percentageOfTotal !== null ? formatPercent(percentageOfTotal, locale) : '-'}
         </TableCell>
-        <TableCell className="text-right font-medium">
-          ${maxAllowedDailyProfit.toFixed(2)}
+        <TableCell className={cn(numericCell, "font-medium")}>
+          {formatCurrency(maxAllowedDailyProfit, locale)}
         </TableCell>
-        <TableCell className={cn(
-          "text-right font-medium",
-          !isConsistent ? "text-destructive" : "text-green-500"
-        )}>
+        <TableCell className={cn("font-medium", !isConsistent && "text-destructive")}>
           {isConsistent ? t('propFirm.status.consistent') : t('propFirm.status.inconsistent')}
         </TableCell>
-        <TableCell className="text-right">
+        <TableCell className={numericCell}>
           {metric.payout && (
             <div className="flex items-center justify-end gap-2">
-              <div 
+              <div
                 className={cn(
-                  "flex items-center gap-2",
-                  onEditPayout && "cursor-pointer hover:opacity-80 transition-opacity"
+                  "flex items-center justify-end gap-2",
+                  onEditPayout && "cursor-pointer motion-safe:transition-opacity hover:opacity-80"
                 )}
                 onClick={() => onEditPayout?.(metric.payout!)}
               >
-                <span className={cn(
-                  metric.payout.status === 'PAID' && "text-destructive font-medium"
-                )}>
-                  -${metric.payout.amount.toFixed(2)}
+                {/* A payout leaves the account, so it carries its own minus sign.
+                    Its status is ordinary metadata: plain text, not a pill. */}
+                <span className="font-medium">
+                  {formatCurrency(-metric.payout.amount, locale)}
                 </span>
-                <Badge 
-                  variant={metric.payout.status === 'PENDING' ? 'secondary' : 'default'}
-                >
+                <span className={widgetType.caption}>
                   {metric.payout.status}
-                </Badge>
+                </span>
               </div>
               {onDeletePayout && (
                 <AlertDialog>
@@ -198,7 +204,8 @@ export function AccountTable({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                      className="h-6 w-6 p-0 hover:text-destructive"
+                      aria-label={t('propFirm.payout.delete')}
                     >
                       <X className="h-3 w-3" />
                     </Button>
@@ -207,7 +214,7 @@ export function AccountTable({
                     <AlertDialogHeader>
                       <AlertDialogTitle>{t('propFirm.payout.delete')}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        {t('propFirm.payout.deleteConfirm')} ${metric.payout!.amount.toFixed(2)} on {format(metric.payout!.date, 'PP', { locale: dateLocale })}
+                        {t('propFirm.payout.deleteConfirm')} ${formatTicks(metric.payout!.amount, locale, { maximumFractionDigits: 2 })} on {format(metric.payout!.date, 'PP', { locale: dateLocale })}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -232,7 +239,7 @@ export function AccountTable({
 
   function renderTotalRow(metrics: typeof sortedMetrics, totalPnL: number, runningBalance: number) {
     // Calculate total payouts
-    const totalPayouts = metrics.reduce((sum, metric) => 
+    const totalPayouts = metrics.reduce((sum, metric) =>
       sum + (metric.payout?.status === 'PAID' ? metric.payout.amount : 0), 0)
 
     // Calculate profits after payouts
@@ -241,42 +248,36 @@ export function AccountTable({
     // Calculate the base amount for consistency (profit target until exceeded)
     const baseAmount = profitsAfterPayouts <= profitTarget ? profitTarget : profitsAfterPayouts
     const maxAllowedDailyProfit = baseAmount * (consistencyPercentage / 100)
-    
+
     // Check if any daily PnL exceeds the max allowed
     const hasInconsistentDays = metrics.some(metric => metric.pnl > maxAllowedDailyProfit)
 
     return (
       <TableRow className="bg-muted/50 font-medium">
         <TableCell>{t('calendar.modal.total')}</TableCell>
-        <TableCell className={cn(
-          "text-right",
-          totalPnL > 0 ? "text-green-500" : totalPnL < 0 ? "text-destructive" : ""
-        )}>
-          ${totalPnL.toFixed(2)}
+        <TableCell className={cn(numericCell, pnlToneClass(pnlTone(totalPnL)))}>
+          {formatCurrency(totalPnL, locale)}
         </TableCell>
-        <TableCell className="text-right">
-          ${runningBalance.toFixed(2)}
+        <TableCell className={numericCell}>
+          {formatCurrency(runningBalance, locale)}
         </TableCell>
-        <TableCell className="text-right">
+        <TableCell className={numericCell}>
           {calculatePercentageOfTarget(runningBalance, startingBalance, profitTarget)}
         </TableCell>
-        <TableCell className="text-right">
-          {totalPnL > 0 ? '100%' : '-'}
+        <TableCell className={numericCell}>
+          {totalPnL > 0 ? formatPercent(100, locale) : '-'}
         </TableCell>
-        <TableCell className="text-right">
-          ${maxAllowedDailyProfit.toFixed(2)}
+        <TableCell className={numericCell}>
+          {formatCurrency(maxAllowedDailyProfit, locale)}
         </TableCell>
-        <TableCell className={cn(
-          "text-right",
-          hasInconsistentDays ? "text-destructive" : "text-green-500"
-        )}>
-          {hasInconsistentDays ? 
-            t('propFirm.consistency.inconsistent') : 
+        <TableCell className={cn(hasInconsistentDays && "text-destructive")}>
+          {hasInconsistentDays ?
+            t('propFirm.consistency.inconsistent') :
             t('propFirm.consistency.consistent')
           }
         </TableCell>
-        <TableCell className="text-right">
-          -${totalPayouts.toFixed(2)}
+        <TableCell className={numericCell}>
+          {formatCurrency(-totalPayouts, locale)}
         </TableCell>
       </TableRow>
     )
@@ -286,11 +287,14 @@ export function AccountTable({
     <div className="min-w-0 space-y-8">
       {resetDate && metricsBeforeReset.length > 0 && (
         <div>
-          <div className="mb-2 text-sm font-medium text-muted-foreground">
+          <div className={cn(widgetType.section, "mb-2")}>
             {t('propFirm.beforeReset')}
           </div>
           <div className="rounded-md border">
             <Table className="min-w-[760px]">
+              <TableCaption className="sr-only">
+                {t('propFirm.dailyStats.title')} {accountNumber} {t('propFirm.beforeReset')}
+              </TableCaption>
               {renderTableHeader()}
               <TableBody>
                 {(() => {
@@ -317,15 +321,17 @@ export function AccountTable({
       )}
 
       {resetDate && (
-        <div className="rounded-md border bg-yellow-100/50 dark:bg-yellow-900/20 p-4">
+        /* The reset is a boundary between two periods, not an alarm: it is a
+           labelled row of facts, with no color band around it. */
+        <div className="rounded-md border p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="font-medium">{t('propFirm.resetDate.label')}</div>
-              <div className="text-sm text-muted-foreground">{format(resetDate, 'PP', { locale: dateLocale })}</div>
+            <div className="flex flex-col gap-1">
+              <span className={widgetType.label}>{t('propFirm.resetDate.label')}</span>
+              <span className={widgetType.value}>{format(resetDate, 'PP', { locale: dateLocale })}</span>
             </div>
-            <div className="sm:text-right">
-              <div className="text-sm text-muted-foreground">{t('propFirm.startingBalance')}</div>
-              <div className="font-medium">${startingBalance.toFixed(2)}</div>
+            <div className="flex flex-col gap-1 sm:items-end">
+              <span className={widgetType.label}>{t('propFirm.startingBalance')}</span>
+              <span className={widgetType.value}>{formatCurrency(startingBalance, locale)}</span>
             </div>
           </div>
         </div>
@@ -333,12 +339,15 @@ export function AccountTable({
 
       <div>
         {resetDate && (
-          <div className="mb-2 text-sm font-medium text-muted-foreground">
+          <div className={cn(widgetType.section, "mb-2")}>
             {t('propFirm.afterReset')}
           </div>
         )}
         <div className="rounded-md border">
           <Table className="min-w-[760px]">
+            <TableCaption className="sr-only">
+              {t('propFirm.dailyStats.title')} {accountNumber}
+            </TableCaption>
             {renderTableHeader()}
             <TableBody>
               {(() => {
@@ -364,4 +373,4 @@ export function AccountTable({
       </div>
     </div>
   )
-} 
+}

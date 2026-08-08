@@ -93,15 +93,16 @@ interface WidgetBodyProps extends React.HTMLAttributes<HTMLDivElement> {
   flush?: boolean
 }
 
-/** The evidence. Fills the remaining height and may shrink below its content. */
-export function WidgetBody({
-  size = "medium",
-  flush = false,
-  className,
-  ...props
-}: WidgetBodyProps) {
-  return (
+/**
+ * The evidence. Fills the remaining height and may shrink below its content.
+ *
+ * Forwards its ref: scrolling and virtualized bodies need to measure this
+ * element, and a table should not have to wrap it in another div to do so.
+ */
+export const WidgetBody = React.forwardRef<HTMLDivElement, WidgetBodyProps>(
+  ({ size = "medium", flush = false, className, ...props }, ref) => (
     <div
+      ref={ref}
       className={cn(
         "min-h-0 min-w-0 flex-1",
         flush ? "p-0" : widgetPadding(size),
@@ -109,8 +110,9 @@ export function WidgetBody({
       )}
       {...props}
     />
-  )
-}
+  ),
+)
+WidgetBody.displayName = "WidgetBody"
 
 /** Units, period, population — the qualifiers that make a figure auditable. */
 export function WidgetFooter({
