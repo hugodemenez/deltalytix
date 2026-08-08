@@ -40,7 +40,7 @@ Call askForEmailForm for human requests, billing/account issues, or when you can
 function getLocaleInstructions(locale: SupportAgentLocale): string {
   const language = locale === "fr" ? "French" : "English";
 
-  return `Reply in ${language} (UI locale ${locale}). Pass locale "${locale}" to askForEmailForm and searchCodebase. Keep reasoning short and in ${language}.`;
+  return `Reply in ${language} (UI locale ${locale}). Pass locale "${locale}" to askForEmailForm and searchCodebase. Write user-facing answers only in ${language} — the UI localizes status labels itself.`;
 }
 
 export function buildSupportAgentInstructions(locale: SupportAgentLocale): string {
