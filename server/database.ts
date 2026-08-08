@@ -26,9 +26,18 @@ interface TradeResponse {
 }
 
 export async function revalidateCache(tags: string[]) {
-  console.log(`[revalidateCache] Starting cache invalidation for tags:`, tags)
+  const userId = await getUserId()
+  const { filterSessionScopedCacheTags } = await import('@/lib/cache-tag-scope')
+  const scopedTags = filterSessionScopedCacheTags(tags, userId)
 
-  tags.forEach(tag => {
+  if (scopedTags.length === 0) {
+    console.warn('[revalidateCache] No session-scoped tags to revalidate')
+    return
+  }
+
+  console.log(`[revalidateCache] Starting cache invalidation for tags:`, scopedTags)
+
+  scopedTags.forEach(tag => {
     try {
       console.log(`[revalidateCache] Revalidating tag: ${tag}`)
       updateTag(tag)
@@ -38,7 +47,7 @@ export async function revalidateCache(tags: string[]) {
     }
   })
 
-  console.log(`[revalidateCache] Completed cache invalidation for ${tags.length} tags`)
+  console.log(`[revalidateCache] Completed cache invalidation for ${scopedTags.length} tags`)
 }
 
 export async function saveTradesAction(

@@ -443,6 +443,16 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
     throw new Error('User ID is required');
   }
 
+  // Never trust a caller-supplied User object alone — this is an exported
+  // Server Action. Bind identity to the authenticated session.
+  const supabase = await createClient()
+  const { data: { user: sessionUser } } = await supabase.auth.getUser()
+  if (!sessionUser?.id || sessionUser.id !== user.id) {
+    console.log('[ensureUserInDatabase] ERROR: Session does not match provided user')
+    throw new Error('Unauthorized')
+  }
+  user = sessionUser
+
   try {
     // First try to find user by auth_user_id
     const existingUserByAuthId = await prisma.user.findUnique({

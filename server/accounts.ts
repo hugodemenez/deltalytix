@@ -381,6 +381,27 @@ export async function savePayoutAction(payout: Payout) {
       throw new Error('Account not found')
     }
 
+    // Reject cross-user hijacks: an upsert by id must not reassign another
+    // user's payout onto the caller's account.
+    if (payout.id) {
+      const existing = await prisma.payout.findFirst({
+        where: {
+          id: payout.id,
+          account: { userId },
+        },
+        select: { id: true },
+      })
+      if (!existing) {
+        const anyExisting = await prisma.payout.findUnique({
+          where: { id: payout.id },
+          select: { id: true },
+        })
+        if (anyExisting) {
+          throw new Error('Unauthorized')
+        }
+      }
+    }
+
     const result = await prisma.payout.upsert({
       where: {
         id: payout.id
@@ -481,30 +502,6 @@ export async function renameInstrumentAction(accountNumber: string, oldInstrumen
       throw error
     }
     throw new Error('Failed to rename instrument')
-  }
-}
-
-export async function checkAndResetAccountsAction() {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const accountsToReset = await prisma.account.findMany({
-    where: {
-      resetDate: {
-        lte: today,
-      },
-    },
-  })
-
-  for (const account of accountsToReset) {
-    await prisma.account.update({
-      where: {
-        id: account.id
-      },
-      data: {
-        resetDate: null,
-      }
-    })
   }
 }
 

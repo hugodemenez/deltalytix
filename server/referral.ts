@@ -1,4 +1,4 @@
-'use server'
+import 'server-only'
 
 import { randomInt } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
@@ -21,6 +21,7 @@ function generateReferralSlug(length = 6): string {
 }
 
 // Get or create a referral for the session user.
+// Not a Server Action — call only from authenticated route handlers / trusted server code.
 export async function getOrCreateReferral(userId?: string) {
   try {
     const sessionUserId = await getUserId()
@@ -73,7 +74,8 @@ export async function getOrCreateReferral(userId?: string) {
   }
 }
 
-// Add a referred user to a referral
+// Add a referred user to a referral.
+// Trusted callers only (Stripe webhook, authenticated /api/referral). Not an RPC.
 export async function addReferredUser(referralId: string, referredUserId: string) {
   try {
     const referral = await prisma.referral.findUnique({
@@ -106,18 +108,19 @@ export async function addReferredUser(referralId: string, referredUserId: string
   }
 }
 
-// Get referral by slug
+// Get referral by slug (public lookup for checkout / apply-code flows).
+// Omits owner PII — callers only need referral.userId for ownership checks.
 export async function getReferralBySlug(slug: string) {
   try {
     const referral = await prisma.referral.findUnique({
       where: { slug },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-          },
-        },
+      select: {
+        id: true,
+        userId: true,
+        slug: true,
+        referredUserIds: true,
+        createdAt: true,
+        updatedAt: true,
       },
     })
 
@@ -178,4 +181,3 @@ export async function getNextTier(count: number): Promise<{ count: number; rewar
     }
   }
 }
-

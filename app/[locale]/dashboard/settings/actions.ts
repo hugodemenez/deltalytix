@@ -49,39 +49,14 @@ export async function createTeam(name: string) {
   }
 }
 
-export async function joinTeam(teamId: string) {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user?.id) {
-      throw new Error('Unauthorized')
-    }
-
-    const team = await prisma.team.findUnique({
-      where: { id: teamId },
-    })
-
-    if (!team) {
-      throw new Error('Team not found')
-    }
-
-    // Add the user to the traderIds array if not already present
-    const updatedTraderIds = team.traderIds.includes(user.id)
-      ? team.traderIds
-      : [...team.traderIds, user.id]
-
-    await prisma.team.update({
-      where: { id: teamId },
-      data: {
-        traderIds: updatedTraderIds,
-      },
-    })
-
-    revalidatePath('/dashboard/settings')
-    return { success: true }
-  } catch (error) {
-    console.error('Error joining team:', error)
-    return { success: false, error: 'Failed to join team' }
+/**
+ * Open join-by-team-id is disabled. Membership requires a valid invitation —
+ * use {@link joinTeamByInvitation} instead.
+ */
+export async function joinTeam(_teamId: string) {
+  return {
+    success: false as const,
+    error: 'Joining a team requires a valid invitation. Use your invitation link instead.',
   }
 }
 

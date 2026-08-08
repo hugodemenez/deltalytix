@@ -599,6 +599,7 @@ interface TradovateUserListResponse {
 }
 
 export async function getTradovateUsername(accessToken: string, environment: TradovateEnvironment = 'demo'): Promise<string> {
+  await getUserId()
   const apiBaseUrl = getApiBaseUrl(environment)
   const response = await fetch(`${apiBaseUrl}/v1/user/list`, {
     headers: {
@@ -787,6 +788,7 @@ async function getFirstTradovateAccountName(
 }
 
 export async function getPropfirmName(accessToken: string, environment: TradovateEnvironment = 'demo'): Promise<string> {
+  await getUserId()
   const apiBaseUrl = getApiBaseUrl(environment)
   const response = await fetch(`${apiBaseUrl}/v1/organization/list`, {
     headers: {
@@ -1100,6 +1102,7 @@ export async function refreshTradovateToken(refreshToken: string, environment: T
 // Test authentication with demo user list endpoint
 export async function testTradovateAuth(accessToken: string, environment: TradovateEnvironment = 'demo') {
   try {
+    await getUserId()
     const apiBaseUrl = getApiBaseUrl(environment)
     console.log(`Testing Tradovate authentication with ${environment} user list endpoint`)
     
@@ -1133,6 +1136,7 @@ export async function testTradovateAuth(accessToken: string, environment: Tradov
 
 export async function getTradovateAccounts(accessToken: string, environment: TradovateEnvironment = 'demo'): Promise<TradovateAccountsResult> {
   try {
+    await getUserId()
     const apiBaseUrl = getApiBaseUrl(environment)
     console.log(`Fetching Tradovate accounts (${environment}):`, {
       apiBaseUrl,
@@ -1745,6 +1749,7 @@ export async function testCustomTradovateToken(
   environment: TradovateEnvironment = 'demo'
 ) {
   try {
+    await getUserId()
     // Validate token format (basic check)
     if (!accessToken || accessToken.length < 10) {
       return { error: 'Invalid access token format' }
