@@ -553,41 +553,63 @@ const ChatBotDemo = () => {
                                     </Bubble>
                                     {message.role === 'assistant' && (
                                       <MessageFooter>
-                                        <Actions>
-                                          <Action
-                                            onClick={() => {
-                                              navigator.clipboard.writeText(contentWithoutThink);
-                                              toast.success(t('support.copied'), {
-                                                position: 'top-right',
-                                              });
-                                            }}
-                                            label={t('common.copy')}
-                                          >
-                                            <ClipboardCheckIcon size={16} className="mr-2" />
-                                          </Action>
+                                        <Actions
+                                          className={cn(
+                                            message.id.startsWith('error-') &&
+                                              'opacity-0 pointer-events-none transition-opacity group-hover/message:opacity-100 group-hover/message:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto',
+                                          )}
+                                        >
+                                          {!message.id.startsWith('error-') && (
+                                            <Action
+                                              onClick={() => {
+                                                navigator.clipboard.writeText(contentWithoutThink);
+                                                toast.success(t('support.copied'), {
+                                                  position: 'top-right',
+                                                });
+                                              }}
+                                              label={t('common.copy')}
+                                            >
+                                              <ClipboardCheckIcon size={16} className="mr-2" />
+                                            </Action>
+                                          )}
+                                          {message.id.startsWith('error-') && (
+                                            <Action
+                                              onClick={() => {
+                                                const previousUserText = [...messages]
+                                                  .slice(
+                                                    0,
+                                                    messages.findIndex(
+                                                      (candidate) => candidate.id === message.id,
+                                                    ),
+                                                  )
+                                                  .reverse()
+                                                  .find((candidate) => candidate.role === 'user')
+                                                  ?.parts.filter((candidate) => candidate.type === 'text')
+                                                  .map((candidate) => candidate.text.trim())
+                                                  .find(Boolean);
+
+                                                if (!previousUserText) return;
+
+                                                truncateFrom(message.id);
+                                                sendMessage({ text: previousUserText });
+                                              }}
+                                              label={t('common.retry')}
+                                            >
+                                              <RefreshCcwIcon size={16} className="mr-2" />
+                                            </Action>
+                                          )}
                                         </Actions>
                                       </MessageFooter>
                                     )}
-                                    {isUser && (
+                                    {isUser &&
+                                      !message.parts.some((candidate) => candidate.type === 'file') && (
                                       <MessageFooter>
-                                        <Actions className="justify-end">
-                                          {/* Editing re-sends without the attachment, so only offer it on plain text. */}
-                                          {!message.parts.some((p) => p.type === 'file') && (
-                                            <Action
-                                              onClick={() => startEditing(message.id, part.text)}
-                                              label={t('common.edit')}
-                                            >
-                                              <PencilIcon size={16} className="mr-2" />
-                                            </Action>
-                                          )}
+                                        <Actions className="justify-end opacity-0 pointer-events-none transition-opacity group-hover/message:opacity-100 group-hover/message:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto">
                                           <Action
-                                            onClick={() => {
-                                              truncateFrom(message.id);
-                                              sendMessage({ text: part.text });
-                                            }}
-                                            label={t('common.retry')}
+                                            onClick={() => startEditing(message.id, part.text)}
+                                            label={t('common.edit')}
                                           >
-                                            <RefreshCcwIcon size={16} className="mr-2" />
+                                            <PencilIcon size={16} className="mr-2" />
                                           </Action>
                                         </Actions>
                                       </MessageFooter>
