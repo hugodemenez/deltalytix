@@ -293,5 +293,5 @@ LandingPageUpdateEmail.PreviewProps = {
   firstName: "Trader",
   language: "en" as Language,
   unsubscribeUrl:
-    "https://deltalytix.app/api/email/unsubscribe?email=trader%40example.com",
+    "http://localhost:3000/api/email/unsubscribe?email=trader%40example.com&token=preview",
 };

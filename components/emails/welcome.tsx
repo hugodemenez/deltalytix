@@ -15,6 +15,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import { buildAppUnsubscribeUrl } from "@/lib/unsubscribe-token";
 
 export interface WelcomeEmailProps {
   firstName?: string;
@@ -305,14 +306,14 @@ function getWelcomeEmailData({
   youtubeId,
 }: Pick<WelcomeEmailProps, "email" | "language" | "youtubeId">) {
   const locale: WelcomeLocale = language === "fr" ? "fr" : "en";
-  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://deltalytix.app").replace(/\/$/, "");
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
   const dashboardUrl = `${baseUrl}/${locale}/dashboard?utm_source=welcome_email&utm_medium=email&utm_campaign=welcome`;
   const privacyUrl = `${baseUrl}/${locale}/privacy`;
   const resolvedYoutubeId = youtubeId || WELCOME_VIDEO_IDS[locale];
   const videoUrl = `https://youtu.be/${resolvedYoutubeId}`;
   const thumbnailUrl = `${baseUrl}/api/email/thumbnail/${resolvedYoutubeId}/maxresdefault`;
   const unsubscribeUrl = email
-    ? `${baseUrl}/api/email/unsubscribe?email=${encodeURIComponent(email)}`
+    ? buildAppUnsubscribeUrl(email)
     : `${baseUrl}/${locale}/profile`;
 
   return {

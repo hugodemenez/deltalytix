@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   CONNECTION_TOKEN_ENC_PREFIX,
   decryptConnectionToken,
@@ -40,9 +40,18 @@ describe('connection-token-crypto', () => {
     expect(decryptConnectionToken(b)).toBe('same-secret')
   })
 
-  it('passes through legacy plaintext on decrypt', () => {
+  it('passes through legacy plaintext on decrypt outside production', () => {
     process.env.ENCRYPTION_KEY = 'c'.repeat(64)
+    vi.stubEnv('NODE_ENV', 'development')
     expect(decryptConnectionToken('plain-oauth-token')).toBe('plain-oauth-token')
+    vi.unstubAllEnvs()
+  })
+
+  it('rejects legacy plaintext on decrypt in production', () => {
+    process.env.ENCRYPTION_KEY = 'c'.repeat(64)
+    vi.stubEnv('NODE_ENV', 'production')
+    expect(() => decryptConnectionToken('plain-oauth-token')).toThrow(/plaintext/)
+    vi.unstubAllEnvs()
   })
 
   it('is idempotent for already-encrypted values', () => {

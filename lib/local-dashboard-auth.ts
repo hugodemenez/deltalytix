@@ -6,7 +6,7 @@ const isServer = typeof window === "undefined"
 
 function isTruthy(value: string | undefined): boolean {
   if (!value) return false
-  return TRUTHY_VALUES.has(value.toLowerCase())
+  return TRUTHY_VALUES.has(value.trim().toLowerCase())
 }
 
 function isBypassRequestedFromEnv(): boolean {
@@ -17,28 +17,39 @@ function isBypassRequestedFromEnv(): boolean {
   return isTruthy(process.env.NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS)
 }
 
+/** Vercel (and similar) hosted deployments — never treat as local self-host. */
+function isHostedCloudDeployment(): boolean {
+  return Boolean(
+    process.env.VERCEL ||
+      process.env.VERCEL_ENV ||
+      process.env.CF_PAGES ||
+      process.env.NETLIFY,
+  )
+}
+
 function assertBypassAllowedInCurrentEnvironment(): void {
-  if (!isServer) {
-    return
-  }
-
-  if (process.env.NODE_ENV !== "production") {
-    return
-  }
-
   if (isTruthy(process.env.LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION)) {
     return
   }
 
-  throw new Error(
-    "LOCAL_DASHBOARD_AUTH_BYPASS is not allowed when NODE_ENV=production. " +
-      "Unset bypass env vars or set LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION=1 only for intentional testing.",
-  )
+  if (process.env.NODE_ENV === "production" || isHostedCloudDeployment()) {
+    throw new Error(
+      "LOCAL_DASHBOARD_AUTH_BYPASS is not allowed on production or hosted deployments. " +
+        "Unset bypass env vars, or set LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION=1 only for intentional isolated testing.",
+    )
+  }
 }
 
 export function isLocalDashboardAuthBypassEnabled(): boolean {
   if (!isBypassRequestedFromEnv()) {
     return false
+  }
+
+  // Client bundles: never activate the auth stub in production builds, even if
+  // NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS was baked in. Server bypass remains
+  // separately gated via LOCAL_DASHBOARD_AUTH_BYPASS (+ ALLOW_PRODUCTION).
+  if (!isServer) {
+    return process.env.NODE_ENV !== "production"
   }
 
   assertBypassAllowedInCurrentEnvironment()

@@ -7,9 +7,24 @@ const IV_LENGTH = 12
 const AUTH_TAG_LENGTH = 16
 const KEY_LENGTH = 32
 
+/** Documented / docker-compose placeholders — never use as production keys. */
+const KNOWN_INSECURE_ENCRYPTION_KEYS = new Set([
+  'your_encryption_key_here',
+  '0123456789abcdef0123456789abcdef',
+  '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+])
+
 function resolveEncryptionKeyBytes(): Buffer | null {
   const raw = process.env.ENCRYPTION_KEY?.trim()
   if (!raw || raw === 'your_encryption_key_here') {
+    return null
+  }
+
+  // Documented docker/quickstart placeholders must not ship as production keys.
+  if (
+    process.env.NODE_ENV === 'production' &&
+    KNOWN_INSECURE_ENCRYPTION_KEYS.has(raw)
+  ) {
     return null
   }
 
@@ -66,12 +81,21 @@ export function encryptConnectionToken(plaintext: string | null | undefined): st
 
 /**
  * Decrypt a stored connection token.
- * Plaintext legacy values pass through unchanged (migration-friendly).
+ * Plaintext legacy values pass through in non-production (migration-friendly).
+ * In production, plaintext is rejected so leaked DB rows cannot be used until
+ * `bun run migrate:encrypt-connection-tokens` has been run.
  */
 export function decryptConnectionToken(stored: string | null | undefined): string | null {
   if (stored == null) return null
   if (stored === '') return ''
-  if (!isEncryptedConnectionToken(stored)) return stored
+  if (!isEncryptedConnectionToken(stored)) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'Refusing to use plaintext connection token in production. Run migrate:encrypt-connection-tokens.',
+      )
+    }
+    return stored
+  }
 
   const payload = stored.slice(CONNECTION_TOKEN_ENC_PREFIX.length)
   const separator = payload.indexOf(':')

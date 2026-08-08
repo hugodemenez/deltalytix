@@ -2,7 +2,7 @@ import { connection } from "next/server"
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
-import { redirect } from "next/navigation"
+import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token"
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -15,12 +15,20 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url)
-    const email = searchParams.get('email')
+    const email = searchParams.get("email")
+    const token = searchParams.get("token")
 
     if (!email) {
       return NextResponse.json(
-        { error: 'Email parameter is required' },
-        { status: 400 }
+        { error: "Email parameter is required" },
+        { status: 400 },
+      )
+    }
+
+    if (!verifyUnsubscribeToken(email, token)) {
+      return NextResponse.json(
+        { error: "Invalid or missing unsubscribe token" },
+        { status: 401 },
       )
     }
 
@@ -30,19 +38,22 @@ export async function GET(request: Request) {
       update: { isActive: false },
       create: {
         email,
-        isActive: false
-      }
+        isActive: false,
+      },
     })
 
     // Redirect to the newsletter preferences page
     return NextResponse.redirect(
-      new URL(`/newsletter?status=unsubscribed&email=${encodeURIComponent(email)}`, request.url)
+      new URL(
+        `/newsletter?status=unsubscribed&email=${encodeURIComponent(email)}`,
+        request.url,
+      ),
     )
   } catch (error) {
-    console.error('Unsubscribe error:', error)
+    console.error("Unsubscribe error:", error)
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     )
   }
 }

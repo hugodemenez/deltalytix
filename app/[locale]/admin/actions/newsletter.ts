@@ -9,6 +9,7 @@ import NewsletterEmail from '@/components/emails/new-feature'
 import { revalidatePath } from "next/cache"
 import { parse } from "csv-parse"
 import { render } from "@react-email/render"
+import { buildAppUnsubscribeUrl } from '@/lib/unsubscribe-token'
 
 // Initialize PrismaClient outside of the actions
 const adapter = new PrismaPg({
@@ -147,7 +148,7 @@ export async function sendNewsletter({
     for (const batch of batches) {
       try {
         const emailBatch = batch.map(({ email, firstName }) => {
-          const unsubscribeUrl = `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(email)}`
+          const unsubscribeUrl = buildAppUnsubscribeUrl(email)
           
           return {
             from: 'Deltalytix <newsletter@eu.updates.deltalytix.app>',
@@ -198,7 +199,7 @@ export async function sendTestNewsletter(email: string, firstName: string, param
     }
     const resend = new Resend(process.env.RESEND_API_KEY)
 
-    const unsubscribeUrl = `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(email)}`
+    const unsubscribeUrl = buildAppUnsubscribeUrl(email)
 
     await resend.emails.send({
       from: 'Deltalytix <newsletter@eu.updates.deltalytix.app>',
@@ -242,7 +243,7 @@ export async function renderEmailPreview(params: {
         features: params.features,
         email: "preview@example.com",
         firstName: params.firstName,
-        unsubscribeUrl: `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent("preview@example.com")}`
+        unsubscribeUrl: buildAppUnsubscribeUrl("preview@example.com")
       })
     )
 

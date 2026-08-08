@@ -5,6 +5,7 @@ import { Resend } from 'resend'
 import WelcomeEmail, { renderWelcomeEmailText, WELCOME_VIDEO_IDS } from '@/components/emails/welcome'
 import { getLatestVideoFromPlaylist } from "@/app/[locale]/admin/actions/youtube"
 import { isAuthorizedWebhookRequest } from "@/lib/cron-auth"
+import { buildAppUnsubscribeUrl } from '@/lib/unsubscribe-token'
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -32,7 +33,12 @@ export async function POST(req: Request) {
     }
 
     const { record } = payload
-    console.log(record)
+    console.log('[welcome] processing INSERT for user', {
+      hasEmail: Boolean(record?.email),
+      hasName: Boolean(
+        record?.raw_user_meta_data?.name || record?.raw_user_meta_data?.full_name,
+      ),
+    })
 
     // Identify user based on email
 
@@ -53,7 +59,7 @@ export async function POST(req: Request) {
       }
     })
 
-    const unsubscribeUrl = `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(record.email)}`
+    const unsubscribeUrl = buildAppUnsubscribeUrl(record.email)
 
     // Check user language preference from database
     const user = await prisma.user.findUnique({

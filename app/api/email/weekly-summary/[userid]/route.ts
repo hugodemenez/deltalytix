@@ -7,6 +7,7 @@ import { generateTradingAnalysis } from "./actions/analysis"
 import { getUserData, computeTradingStats } from "./actions/user-data"
 import { Resend } from "resend"
 import { isAuthorizedCronRequest } from "@/lib/cron-auth"
+import { buildAppUnsubscribeUrl } from '@/lib/unsubscribe-token'
 
 export async function POST(req: Request, props: { params: Promise<{ userid: string }> }) {
   const params = await props.params;
@@ -60,7 +61,7 @@ export async function POST(req: Request, props: { params: Promise<{ userid: stri
       ? baseUrl 
       : `http://${baseUrl}`
 
-    const unsubscribeUrl = `${apiUrl}/api/email/unsubscribe?email=${encodeURIComponent(user.email)}`
+    const unsubscribeUrl = buildAppUnsubscribeUrl(user.email)
 
     const weeklyStatsEmailHtml = await render(
       TraderStatsEmail({

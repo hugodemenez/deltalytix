@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma"
 import { createClient, type User } from "@supabase/supabase-js"
 import { render } from "@react-email/render"
 import { renderWelcomeEmailText } from "@/components/emails/welcome"
+import { buildAppUnsubscribeUrl } from '@/lib/unsubscribe-token'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -94,13 +95,13 @@ export async function getDefaultTemplateProps(template: EmailTemplate): Promise<
         youtubeId: "ZBrIZpCh_7Q",
         introMessage: "Sample intro message",
         features: ["Feature 1", "Feature 2"],
-        unsubscribeUrl: "https://deltalytix.app/api/email/unsubscribe?email=user%40example.com",
+        unsubscribeUrl: "http://localhost:3000/api/email/unsubscribe?email=user%40example.com&token=preview",
       }
     case "landing-page-update":
       return {
         firstName: "Trader",
         language: "en",
-        unsubscribeUrl: "https://deltalytix.app/api/email/unsubscribe?email=user%40example.com",
+        unsubscribeUrl: "http://localhost:3000/api/email/unsubscribe?email=user%40example.com&token=preview",
       }
     case "renewal-notice":
       return {
@@ -112,7 +113,7 @@ export async function getDefaultTemplateProps(template: EmailTemplate): Promise<
         daysUntilRenewal: 7,
         paymentFrequency: "monthly",
         language: "en",
-        unsubscribeUrl: "https://deltalytix.app/api/email/unsubscribe?email=user%40example.com",
+        unsubscribeUrl: "http://localhost:3000/api/email/unsubscribe?email=user%40example.com&token=preview",
       }
     case "team-invitation":
       return {
@@ -339,7 +340,7 @@ export async function sendEmailsToUsers(
     for (const batch of batches) {
       try {
         const emailBatch = batch.map((user) => {
-          const unsubscribeUrl = `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(user.email)}`
+          const unsubscribeUrl = buildAppUnsubscribeUrl(user.email)
           const mergedProps: TemplateProps = {
             ...customProps,
             firstName: user.firstName,
