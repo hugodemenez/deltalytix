@@ -14,11 +14,15 @@ import { getPreviousConversation } from "./tools/get-previous-conversation";
 import { generateEquityChart } from "./tools/generate-equity-chart";
 import { startOfWeek, endOfWeek, subWeeks } from "date-fns";
 import { buildSystemPrompt } from "./prompts";
+import { requireApiUserId } from "@/lib/api-auth"
 
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
+  const auth = await requireApiUserId()
+  if (auth.error) return auth.error
+
       const { messages, username, locale, timezone } = await req.json();
       console.log('[Chat Route] Received messages:', JSON.stringify(messages, null, 2));
       

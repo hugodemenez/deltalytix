@@ -1,13 +1,14 @@
 'use server'
 
 import { createClient } from '@/server/auth'
-import { saveTradesAction } from '@/server/database'
+import { persistTradesForUser } from '@/server/trades-persist'
 import { Trade } from '@/prisma/generated/prisma/client'
 import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
 import { prisma } from '@/lib/prisma'
 import { formatTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
+import { resolveActionUserId } from '@/lib/action-user'
 import { upsertAccountsForNumbers } from '@/server/connections'
 import {
   coerceDxFeedHistoricalHostForSync,
@@ -529,17 +530,11 @@ export async function getDxFeedTrades(
     // Prefer host from connect; remap mistaken trading WSS hosts; fall back to catalog.
     const historicalHost = coerceDxFeedHistoricalHostForSync(credentials.historicalHost, propFirm)
 
-    let userId = options?.userId ?? null
     let syncAccountId: string | null = options?.accountId ?? null
-    if (!userId) {
-      const supabase = await createClient()
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) {
-        return { error: DxFeedErrorCode.USER_NOT_AUTHENTICATED }
-      }
-      userId = user.id
-    }
-    if (!userId) {
+    let userId: string
+    try {
+      userId = await resolveActionUserId(options?.userId)
+    } catch {
       return { error: DxFeedErrorCode.USER_NOT_AUTHENTICATED }
     }
     const resolvedUserId = userId
@@ -738,8 +733,7 @@ export async function getDxFeedTrades(
         })
       : null
 
-    const saveResult = await saveTradesAction(allTrades, {
-      userId: resolvedUserId,
+    const saveResult = await persistTradesForUser(resolvedUserId, allTrades, {
       connectionId: connection?.id,
     })
 

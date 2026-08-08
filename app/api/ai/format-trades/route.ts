@@ -3,6 +3,7 @@ import { streamObject } from "ai";
 import { NextRequest } from "next/server";
 import { tradeSchema } from "./schema";
 import { z } from 'zod/v3';
+import { requireApiUserId } from "@/lib/api-auth"
 
 export const maxDuration = 30;
 
@@ -13,6 +14,9 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+  const auth = await requireApiUserId()
+  if (auth.error) return auth.error
+
     const body = await req.json();
     const { headers, rows } = requestSchema.parse(body);
 console.log(headers, rows);

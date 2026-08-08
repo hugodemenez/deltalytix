@@ -2,12 +2,16 @@ import { openai } from "@ai-sdk/openai";
 import { Output, streamObject, streamText } from "ai";
 import { NextRequest } from "next/server";
 import { mappingSchema } from "./schema";
+import { requireApiUserId } from "@/lib/api-auth"
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
+  const auth = await requireApiUserId()
+  if (auth.error) return auth.error
+
     const body = await req.json();
     const { fieldColumns, firstRows } =
       typeof body === "string" ? JSON.parse(body) : body;

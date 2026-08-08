@@ -4,6 +4,7 @@ import { PrismaPg } from "@prisma/adapter-pg"
 import { Resend } from 'resend'
 import WelcomeEmail, { renderWelcomeEmailText, WELCOME_VIDEO_IDS } from '@/components/emails/welcome'
 import { getLatestVideoFromPlaylist } from "@/app/[locale]/admin/actions/youtube"
+import { isAuthorizedWebhookRequest } from "@/lib/cron-auth"
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -13,6 +14,10 @@ const prisma = new PrismaClient({ adapter })
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: Request) {
+  if (!isAuthorizedWebhookRequest(req.headers.get("authorization"))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   const fifteenMinutesFromNow = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
   try {

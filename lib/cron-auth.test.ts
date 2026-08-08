@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest"
 
-import { isAuthorizedCronRequest } from "./cron-auth"
+import { isAuthorizedCronRequest, isAuthorizedWebhookRequest } from "./cron-auth"
 
 const ORIGINAL_SECRET = process.env.CRON_SECRET
 
@@ -47,5 +47,30 @@ describe("isAuthorizedCronRequest", () => {
   it("refuses a correct-looking header when the secret is empty", () => {
     process.env.CRON_SECRET = ""
     expect(isAuthorizedCronRequest("Bearer ")).toBe(false)
+  })
+})
+
+describe("isAuthorizedWebhookRequest", () => {
+  const ORIGINAL_WEBHOOK = process.env.SUPABASE_WEBHOOK_SECRET
+
+  afterEach(() => {
+    if (ORIGINAL_WEBHOOK === undefined) {
+      delete process.env.SUPABASE_WEBHOOK_SECRET
+    } else {
+      process.env.SUPABASE_WEBHOOK_SECRET = ORIGINAL_WEBHOOK
+    }
+  })
+
+  it("prefers SUPABASE_WEBHOOK_SECRET when set", () => {
+    process.env.SUPABASE_WEBHOOK_SECRET = "webhook-secret"
+    process.env.CRON_SECRET = "cron-secret"
+    expect(isAuthorizedWebhookRequest("Bearer webhook-secret")).toBe(true)
+    expect(isAuthorizedWebhookRequest("Bearer cron-secret")).toBe(false)
+  })
+
+  it("falls back to CRON_SECRET when the webhook secret is unset", () => {
+    delete process.env.SUPABASE_WEBHOOK_SECRET
+    process.env.CRON_SECRET = "cron-secret"
+    expect(isAuthorizedWebhookRequest("Bearer cron-secret")).toBe(true)
   })
 })

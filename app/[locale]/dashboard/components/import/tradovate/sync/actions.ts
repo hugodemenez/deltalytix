@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/server/auth'
-import { saveTradesAction } from '@/server/database'
+import { persistTradesForUser } from '@/server/trades-persist'
 import { Trade, TickDetails } from '@/prisma/generated/prisma/client'
 import crypto from 'crypto'
 import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
@@ -13,6 +13,7 @@ import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connect
 import { formatTimestamp, formatDateToTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
+import { resolveActionUserId } from '@/lib/action-user'
 import { capturePostHogEvent } from '@/lib/posthog-server'
 import {
   decryptConnectionToken,
@@ -1826,20 +1827,13 @@ export async function getTradovateTrades(
     const includedFeeTypes: TradovateIncludedFeeTypes | boolean =
       options?.includedFeeTypes ?? (options?.includeAllFees ? true : DEFAULT_INCLUDED_FEE_TYPES)
 
-    // Resolve userId either from caller (e.g. cron) or current session
-    let userId = options?.userId ?? null
-    if (!userId) {
-      const supabase = await createClient()
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) {
-        return { error: 'User not authenticated' }
-      }
-      userId = user.id
-    }
-    if (!userId) {
+    // Resolve userId from the session, or from cron Authorization + options.userId
+    let resolvedUserId: string
+    try {
+      resolvedUserId = await resolveActionUserId(options?.userId)
+    } catch {
       return { error: 'User not authenticated' }
     }
-    const resolvedUserId = userId
     const connectionExternalId = options?.connectionExternalId ?? null
 
     const apiBaseUrl = getApiBaseUrl(environment)
@@ -1999,8 +1993,7 @@ export async function getTradovateTrades(
 
     // Save trades to database
     logger.info(`Attempting to save ${processedTrades.length} fill pair trades to database`)
-    const saveResult = await saveTradesAction(processedTrades, {
-      userId: resolvedUserId,
+    const saveResult = await persistTradesForUser(resolvedUserId, processedTrades, {
       connectionId: connection?.id,
     })
     

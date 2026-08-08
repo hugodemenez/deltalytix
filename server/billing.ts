@@ -384,6 +384,21 @@ function createLifetimeSubscriptionData(localSubscription: any, invoices: any[])
 
 export async function updateSubscription(action: 'pause' | 'resume' | 'cancel', subscriptionId: string) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.email) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+    const customerId = typeof subscription.customer === 'string'
+      ? subscription.customer
+      : subscription.customer.id
+    const customer = await stripe.customers.retrieve(customerId)
+    if (customer.deleted || !('email' in customer) || customer.email !== user.email) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
     if (action === 'pause' || action === 'cancel') {
       // Cancel at period end for all subscriptions
       await stripe.subscriptions.update(subscriptionId, {

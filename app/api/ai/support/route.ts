@@ -1,6 +1,7 @@
 import { createAgentUIStreamResponse, type UIMessage } from "ai";
 import { hasUnsupportedFileUrls } from "@/lib/ai/convert-file-ui-parts";
 import { supportAgent } from "@/lib/ai/support-agent";
+import { requireApiUserId } from "@/lib/api-auth"
 import {
   hasUserMessage,
   stripInitialAssistantGreeting,
@@ -11,6 +12,9 @@ export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
+  const auth = await requireApiUserId()
+  if (auth.error) return auth.error
+
     const body = await req.json();
     const parsed = supportChatRequestSchema.safeParse(body);
 

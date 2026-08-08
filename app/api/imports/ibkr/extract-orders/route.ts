@@ -1,5 +1,6 @@
 import { orderSchema } from '../fifo-computation/schema'
 import { type FinancialInstrument } from './schema'
+import { requireApiUserId } from "@/lib/api-auth"
 
 export const maxDuration = 60 // Allow up to 60 seconds for AI processing
 
@@ -134,6 +135,9 @@ const parseInstrumentInformation = (text: string): FinancialInstrument[] => {
 
 export async function POST(request: Request) {
   try {
+  const auth = await requireApiUserId()
+  if (auth.error) return auth.error
+
     const json = await request.json()
     const { text } = json
 

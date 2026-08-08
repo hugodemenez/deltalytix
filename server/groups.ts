@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { Group, Account } from '@/context/data-provider'
-import { createClient } from './auth'
+import { createClient, getUserId } from './auth'
 
 export interface GroupWithAccounts extends Group {
   accounts: Account[]
@@ -27,7 +27,16 @@ export async function getGroupsAction(): Promise<GroupWithAccounts[]> {
 }
 
 export async function renameGroupAction(groupId: string, name: string): Promise<Group> {
+  const userId = await getUserId()
   try {
+    const owned = await prisma.group.findFirst({
+      where: { id: groupId, userId },
+      select: { id: true },
+    })
+    if (!owned) {
+      throw new Error('Unauthorized')
+    }
+
     const group = await prisma.group.update({
       where: { id: groupId },
       data: { name },
@@ -75,7 +84,16 @@ export async function saveGroupAction(name: string): Promise<Group> {
 }
 
 export async function updateGroupAction(groupId: string, name: string): Promise<Group> {
+  const userId = await getUserId()
   try {
+    const owned = await prisma.group.findFirst({
+      where: { id: groupId, userId },
+      select: { id: true },
+    })
+    if (!owned) {
+      throw new Error('Unauthorized')
+    }
+
     const group = await prisma.group.update({
       where: { id: groupId },
       data: { name },
@@ -91,7 +109,16 @@ export async function updateGroupAction(groupId: string, name: string): Promise<
 }
 
 export async function deleteGroupAction(groupId: string): Promise<void> {
+  const userId = await getUserId()
   try {
+    const owned = await prisma.group.findFirst({
+      where: { id: groupId, userId },
+      select: { id: true },
+    })
+    if (!owned) {
+      throw new Error('Unauthorized')
+    }
+
     await prisma.group.delete({
       where: { id: groupId },
     })
@@ -102,7 +129,26 @@ export async function deleteGroupAction(groupId: string): Promise<void> {
 }
 
 export async function moveAccountToGroupAction(accountId: string, targetGroupId: string | null): Promise<void> {
+  const userId = await getUserId()
   try {
+    const account = await prisma.account.findFirst({
+      where: { id: accountId, userId },
+      select: { id: true },
+    })
+    if (!account) {
+      throw new Error('Unauthorized')
+    }
+
+    if (targetGroupId) {
+      const group = await prisma.group.findFirst({
+        where: { id: targetGroupId, userId },
+        select: { id: true },
+      })
+      if (!group) {
+        throw new Error('Unauthorized')
+      }
+    }
+
     await prisma.account.update({
       where: { id: accountId },
       data: { groupId: targetGroupId },

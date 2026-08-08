@@ -2,6 +2,7 @@ import { streamText } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
 import { openai } from "@ai-sdk/openai";
+import { requireApiUserId } from "@/lib/api-auth"
 
 // Analysis Tools
 import { generateAnalysisComponent } from "../accounts/generate-analysis-component";
@@ -76,6 +77,9 @@ You are analyzing performance based on time patterns and trading sessions in the
 
 export async function POST(req: NextRequest) {
   try {
+  const auth = await requireApiUserId()
+  if (auth.error) return auth.error
+
     const { username, locale, timezone } = await req.json();
     
     // Add debugging to see what locale is being received

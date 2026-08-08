@@ -3,7 +3,8 @@
 import { Trade } from '@/prisma/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/server/auth'
-import { saveTradesAction } from '@/server/database'
+import { persistTradesForUser } from '@/server/trades-persist'
+import { resolveActionUserId } from '@/lib/action-user'
 import { ensureConnection, upsertAccountsForNumbers } from '@/server/connections'
 import { decryptConnectionToken } from '@/lib/connection-token-crypto'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
@@ -158,7 +159,7 @@ async function persistTrades(
   connectionId: string,
 ): Promise<PersistResult> {
   const processedTrades = toPrismaTrades(trades, userId)
-  const saveResult = await saveTradesAction(processedTrades, { userId, connectionId })
+  const saveResult = await persistTradesForUser(userId, processedTrades, { connectionId })
 
   if (saveResult.error) {
     if (saveResult.error === 'DUPLICATE_TRADES') {
@@ -281,15 +282,12 @@ export async function syncIbkrAccount(
   accountId: string,
   options?: { userId?: string },
 ): Promise<IbkrTradesResult> {
-  let userId = options?.userId
-  if (!userId) {
-    try {
-      userId = await getUserId()
-    } catch {
-      return { error: IbkrErrorCode.USER_NOT_AUTHENTICATED }
-    }
+  let resolvedUserId: string
+  try {
+    resolvedUserId = await resolveActionUserId(options?.userId)
+  } catch {
+    return { error: IbkrErrorCode.USER_NOT_AUTHENTICATED }
   }
-  const resolvedUserId = userId
 
   const connection = await prisma.connection.findUnique({
     where: {

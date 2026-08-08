@@ -4,6 +4,7 @@ import { PrismaPg } from "@prisma/adapter-pg"
 import { openai } from "@ai-sdk/openai"
 import { generateText, Output } from "ai"
 import { z } from "zod"
+import { isAuthorizedCronRequest } from "@/lib/cron-auth"
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -25,6 +26,10 @@ const nameInferenceSchema = z.object({
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
+  if (!isAuthorizedCronRequest(req.headers.get("authorization"))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   try {
     const body = await req.json()
     const { batchSize = 10, forceUpdate = false, emails: targetEmails }: { batchSize?: number, forceUpdate?: boolean, emails?: string[] } = body
@@ -186,6 +191,10 @@ Return the inferred names with confidence levels:
 
 // GET endpoint to check how many subscribers need name inference
 export async function GET(req: NextRequest) {
+  if (!isAuthorizedCronRequest(req.headers.get("authorization"))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   try {
     const { searchParams } = new URL(req.url)
     const forceUpdate = searchParams.get('forceUpdate') === 'true'

@@ -3,6 +3,7 @@ import { streamObject } from "ai"
 import { tradeSchema, orderSchema } from './schema'
 import { type FinancialInstrument } from '../extract-orders/schema'
 import { z } from 'zod/v3';
+import { requireApiUserId } from "@/lib/api-auth"
 
 export const maxDuration = 60 // Allow up to 60 seconds for AI processing
 
@@ -125,6 +126,9 @@ function matchOrdersWithFIFO(orders: Order[], instruments: FinancialInstrument[]
 
 export async function POST(request: Request) {
     try {
+  const auth = await requireApiUserId()
+  if (auth.error) return auth.error
+
         const json = await request.json()
         const { orders, instruments } = json
 

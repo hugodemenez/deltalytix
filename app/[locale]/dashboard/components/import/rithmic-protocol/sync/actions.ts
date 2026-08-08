@@ -1,7 +1,8 @@
 'use server'
 
 import { createClient, getUserId } from '@/server/auth'
-import { saveTradesAction } from '@/server/database'
+import { persistTradesForUser } from '@/server/trades-persist'
+import { resolveActionUserId } from '@/lib/action-user'
 import { prisma } from '@/lib/prisma'
 import {
   decryptConnectionToken,
@@ -381,19 +382,10 @@ export async function getRithmicProtocolTrades(
       return { error: 'INVALID_STORED_CREDENTIALS', syncStats }
     }
 
-    let userId = options?.userId ?? null
-    if (!userId) {
-      const supabase = await createClient()
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser()
-      if (authError || !user) {
-        return { error: 'USER_NOT_AUTHENTICATED', syncStats }
-      }
-      userId = user.id
-    }
-    if (!userId) {
+    let userId: string
+    try {
+      userId = await resolveActionUserId(options?.userId)
+    } catch {
       return { error: 'USER_NOT_AUTHENTICATED', syncStats }
     }
 
@@ -506,11 +498,11 @@ export async function getRithmicProtocolTrades(
       data: { lastSyncedAt: new Date() },
     })
 
-    // saveTradesAction links every account number it sees on the trades to this
+    // persistTradesForUser links every account number it sees on the trades to this
     // Connection, so accounts that only appear on fills are covered too.
     const saveResult =
       trades.length > 0
-        ? await saveTradesAction(trades, { userId, connectionId })
+        ? await persistTradesForUser(userId, trades, { connectionId })
         : null
 
     // Invalidate after the save so the trade-derived account links are picked

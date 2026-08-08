@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { requireApiUserId } from "@/lib/api-auth"
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -7,6 +8,9 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
+  const auth = await requireApiUserId()
+  if (auth.error) return auth.error
+
     const formData = await request.formData()
     const audioFile = formData.get('audio') as File
     

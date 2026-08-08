@@ -11,8 +11,22 @@ import { timingSafeEqual } from "node:crypto"
 export function isAuthorizedCronRequest(
   authorizationHeader: string | null | undefined,
 ): boolean {
-  const secret = process.env.CRON_SECRET
+  return isAuthorizedBearerSecret(authorizationHeader, process.env.CRON_SECRET)
+}
 
+/** Webhook/admin batch routes: prefer a dedicated secret, fall back to CRON_SECRET. */
+export function isAuthorizedWebhookRequest(
+  authorizationHeader: string | null | undefined,
+): boolean {
+  const secret =
+    process.env.SUPABASE_WEBHOOK_SECRET || process.env.CRON_SECRET
+  return isAuthorizedBearerSecret(authorizationHeader, secret)
+}
+
+function isAuthorizedBearerSecret(
+  authorizationHeader: string | null | undefined,
+  secret: string | undefined,
+): boolean {
   if (!secret || !authorizationHeader) {
     return false
   }

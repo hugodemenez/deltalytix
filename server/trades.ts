@@ -5,9 +5,10 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { getUserId } from './auth'
 
 export async function addTagToTrade(tradeId: string, tag: string) {
-    try {
-    const trade = await prisma.trade.findUnique({
-      where: { id: tradeId },
+  const userId = await getUserId()
+  try {
+    const trade = await prisma.trade.findFirst({
+      where: { id: tradeId, userId },
       select: { tags: true }
     })
 
@@ -35,9 +36,10 @@ export async function addTagToTrade(tradeId: string, tag: string) {
 }
 
 export async function removeTagFromTrade(tradeId: string, tagToRemove: string) {
+  const userId = await getUserId()
   try {
-    const trade = await prisma.trade.findUnique({
-      where: { id: tradeId },
+    const trade = await prisma.trade.findFirst({
+      where: { id: tradeId, userId },
       select: { tags: true }
     })
 
@@ -106,11 +108,12 @@ export async function updateTradeImage(
   imageData: string | null, 
   field: 'imageBase64' | 'imageBase64Second' = 'imageBase64'
 ) {
+  const userId = await getUserId()
   console.log('Updating trade image:', tradeIds)
   try {
-    // Verify all trades exist
+    // Verify all trades exist and belong to the session user
     const trades = await prisma.trade.findMany({
-      where: { id: { in: tradeIds } }
+      where: { id: { in: tradeIds }, userId }
     })
 
     if (trades.length !== tradeIds.length) {
@@ -119,7 +122,7 @@ export async function updateTradeImage(
 
     // Update all trades with the image data (can be base64 or URL)
     await prisma.trade.updateMany({
-      where: { id: { in: tradeIds } },
+      where: { id: { in: tradeIds }, userId },
       data: {
         [field]: imageData
       }

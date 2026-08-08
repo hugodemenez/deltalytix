@@ -5,6 +5,7 @@ import { openai } from "@ai-sdk/openai";
 import { getCurrentDayData } from "./tools/get-current-day-data";
 import { ActionSchema } from "./schema";
 import { getDayData } from "./tools/get-trading-summary";
+import { requireApiUserId } from "@/lib/api-auth"
 
 export const maxDuration = 90;
 
@@ -98,6 +99,9 @@ const getTools = (action: EditorAction) => {
 };
 
 export async function POST(req: NextRequest) {
+  const auth = await requireApiUserId()
+  if (auth.error) return auth.error
+
   console.log("POST request received");
   try {
     const body = await req.json();

@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { startOfWeek, endOfWeek, subWeeks, parseISO, format } from "date-fns";
+import { isAuthorizedCronRequest } from "@/lib/cron-auth";
 
 // PURPOSE:
 // - Compute MAE and MFE for all trades of the week
@@ -291,8 +292,12 @@ async function processInstrumentTrades(instrumentData: InstrumentData): Promise<
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   await connection();
+
+  if (!isAuthorizedCronRequest(request.headers.get("authorization"))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     console.log('Starting MAE/MFE computation cron job');

@@ -1,6 +1,7 @@
 import { convertToModelMessages, streamText, UIMessage, stepCountIs } from "ai";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
+import { requireApiUserId } from "@/lib/api-auth"
 
 // Analysis Tools
 import { generateAnalysisComponent } from "./generate-analysis-component";
@@ -75,6 +76,9 @@ You are analyzing performance across different trading accounts. Your primary ta
 
 export async function POST(req: NextRequest) {
   try {
+  const auth = await requireApiUserId()
+  if (auth.error) return auth.error
+
     const {
       messages,
       username,

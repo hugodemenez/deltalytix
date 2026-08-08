@@ -6,6 +6,7 @@ import {
   type MappedFinancialEvent,
 } from '@/lib/investing-calendar'
 import { upsertFinancialEvents } from '@/lib/financial-events-store'
+import { isAuthorizedCronRequest } from '@/lib/cron-auth'
 
 /**
  * Weekly financial-events sync from Investing.com.
@@ -14,9 +15,7 @@ import { upsertFinancialEvents } from '@/lib/financial-events-store'
  * from datacenter IPs, so the cron fetches it through Jina Reader and parses
  * the returned markdown. Optional JINA_API_KEY raises rate limits.
  *
- * Not CRON_SECRET-gated today (unlike other cron handlers). Vercel only
- * schedules crons on production; the HTTP endpoint can still be invoked on
- * preview for verification.
+ * Requires Authorization: Bearer $CRON_SECRET (same as other cron handlers).
  */
 export const maxDuration = 60
 
@@ -101,6 +100,10 @@ async function replaceEventsInWindow(events: MappedFinancialEvent[]) {
 }
 
 export async function GET(request: Request) {
+  if (!isAuthorizedCronRequest(request.headers.get('authorization'))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const langParam = searchParams.get('lang')
