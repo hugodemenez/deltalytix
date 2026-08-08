@@ -48,6 +48,9 @@ import { Suggestion, Suggestions } from '@/components/ai-elements/suggestion';
 import { DefaultChatTransport, ToolUIPart } from 'ai';
 import { ClipboardCheckIcon } from '@/components/animated-icons/clipboard-check';
 import SupportForm from './components/support-form';
+import {
+  resolveStableReasoningLabel,
+} from './reasoning-label';
 import { toast } from 'sonner';
 import {
   MessageScroller,
@@ -120,46 +123,42 @@ const preprocessContent = (content: string) => {
 
 const ATTACHMENT_ONLY_PLACEHOLDER = 'Sent with attachments';
 
-const MAX_REASONING_LABEL_LENGTH = 60;
-
 /**
- * Prefer a short first-line label from the reasoning summary when present;
- * otherwise fall back to the localized thinking / thought-process copy.
+ * Lock the title once the first line is complete so streaming does not flicker
+ * between a growing title, a dropped label, and a static i18n string.
  */
-const getReasoningLabel = (text: string): string | undefined => {
-  const firstLine = text
-    .split('\n')
-    .map((line) => line.trim())
-    .find(Boolean);
+function useStableReasoningLabel(text: string, isStreaming: boolean, lockKey: string): string {
+  const lockedRef = useRef<string | null>(null);
+  const lockKeyRef = useRef(lockKey);
 
-  if (!firstLine) return undefined;
+  if (lockKeyRef.current !== lockKey) {
+    lockKeyRef.current = lockKey;
+    lockedRef.current = null;
+  }
 
-  const looksLikeHeading =
-    /^#{1,6}\s+/.test(firstLine) || /^\*\*.+\*\*$/.test(firstLine);
+  const resolved = resolveStableReasoningLabel({
+    text,
+    isStreaming,
+    locked: lockedRef.current,
+  });
+  lockedRef.current = resolved.locked;
 
-  const cleaned = firstLine
-    .replace(/^#{1,6}\s+/, '')
-    .replace(/\*\*/g, '')
-    .replace(/[:.]+$/, '')
-    .trim();
-
-  if (!cleaned) return undefined;
-  if (!looksLikeHeading && cleaned.length > MAX_REASONING_LABEL_LENGTH) return undefined;
-
-  return cleaned;
-};
+  return resolved.label;
+}
 
 function ReasoningBlock({
   text,
   isStreaming = false,
+  lockKey,
   className,
 }: {
   text: string;
   isStreaming?: boolean;
+  /** Stable id for this reasoning step — changing it clears the locked title. */
+  lockKey: string;
   className?: string;
 }) {
-  const t = useI18n();
-  const label = getReasoningLabel(text);
+  const label = useStableReasoningLabel(text, isStreaming, lockKey);
 
   return (
     <Reasoning
@@ -171,22 +170,13 @@ function ReasoningBlock({
       <ReasoningTrigger className="group">
         <BrainIcon className="size-4 shrink-0" />
         <span className={cn('min-w-0 truncate text-left', isStreaming && 'shimmer')}>
-          {label ?? (isStreaming ? t('support.thinking') : t('support.thoughtProcess'))}
+          {/* Keep height stable while waiting for the first model tokens. */}
+          {label || '\u00A0'}
         </span>
         <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
       </ReasoningTrigger>
       {text.trim() ? <ReasoningContent>{text}</ReasoningContent> : null}
     </Reasoning>
-  );
-}
-
-/** Optimistic status row — same chrome as reasoning so the brain never vanishes mid-wait. */
-function PendingIndicator({ label }: { label: string }) {
-  return (
-    <div className="mb-4 flex w-full items-center gap-2 text-sm text-muted-foreground">
-      <BrainIcon className="size-4 shrink-0" />
-      <span className="min-w-0 truncate text-left shimmer">{label}</span>
-    </div>
   );
 }
 
@@ -196,14 +186,17 @@ function hasActiveReasoningRow(
 ) {
   if (!message || message.role !== 'assistant') return false;
 
-  return message.parts.some((part, index) => {
-    if (part.type !== 'reasoning') return false;
+  const lastReasoningIndex = message.parts.reduce(
+    (last, part, index) => (part.type === 'reasoning' ? index : last),
+    -1,
+  );
+  if (lastReasoningIndex === -1) return false;
 
-    const isStreamingReasoning =
-      status === 'streaming' && index === message.parts.length - 1;
+  const part = message.parts[lastReasoningIndex];
+  if (part?.type !== 'reasoning') return false;
 
-    return Boolean(part.text?.trim()) || isStreamingReasoning;
-  });
+  const isStreamingReasoning = status === 'streaming';
+  return Boolean(part.text?.trim()) || isStreamingReasoning;
 }
 
 function SupportPromptSubmit({
@@ -544,6 +537,7 @@ const ChatBotDemo = () => {
                                 {think.map((thought, index) => (
                                   <ReasoningBlock
                                     key={`${message.id}-${i}-think-${index}`}
+                                    lockKey={`${message.id}-${i}-think-${index}`}
                                     text={thought}
                                   />
                                 ))}
@@ -604,9 +598,14 @@ const ChatBotDemo = () => {
                             );
                           }
                           case 'reasoning': {
+                            const lastReasoningIndex = message.parts.reduce(
+                              (last, candidate, index) =>
+                                candidate.type === 'reasoning' ? index : last,
+                              -1,
+                            );
                             const isStreamingReasoning =
                               status === 'streaming' &&
-                              i === message.parts.length - 1 &&
+                              i === lastReasoningIndex &&
                               message.id === messages.at(-1)?.id;
 
                             // Keep the brain visible while reasoning tokens are still empty.
@@ -616,7 +615,8 @@ const ChatBotDemo = () => {
 
                             return (
                               <ReasoningBlock
-                                key={`${message.id}-${i}`}
+                                key={`${message.id}-reasoning-${i}`}
+                                lockKey={`${message.id}-reasoning-${i}`}
                                 text={part.text ?? ''}
                                 isStreaming={isStreamingReasoning}
                               />
@@ -706,7 +706,11 @@ const ChatBotDemo = () => {
                   ))}
 
                   {showPendingIndicator && (
-                    <PendingIndicator label={t('support.generating')} />
+                    <ReasoningBlock
+                      lockKey={`pending-${messages.at(-1)?.id ?? 'new'}`}
+                      text=""
+                      isStreaming
+                    />
                   )}
                 </MessageScrollerContent>
               </MessageScrollerViewport>
