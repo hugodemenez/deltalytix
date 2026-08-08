@@ -2646,6 +2646,8 @@ export default {
       AUTH_FAILED: "IG login failed: {reason}",
       IG_INVALID_CREDENTIALS:
         "IG rejected this username or password. Check them on ig.com and try again.",
+      IG_IDENTIFIER_INVALID:
+        "IG's API does not accept an email address as the login. Use your IG username (letters, numbers, hyphen, underscore — max 30 characters), not the email you use on the website. Find it under My IG → Settings → Personal details, or recover it via IG’s lost-details page.",
       IG_API_KEY_REJECTED:
         "IG rejected this API key. Make sure it was created for the {environment} environment — a key made for one environment never works on the other.",
       IG_API_KEY_DISABLED:
@@ -2676,11 +2678,13 @@ export default {
       description:
         "Sign in with your IG username and password, then paste a personal API key.",
       intro:
-        "IG's API needs two things: your IG login, which proves the account is yours, and a personal API key, which identifies Deltalytix to IG. You create the key yourself on IG — it's free and takes about a minute.",
+        "IG's API needs two things: your IG username (not your email), which proves the account is yours, and a personal API key, which identifies Deltalytix to IG. You create the key yourself on IG — it's free and takes about a minute.",
       environmentLabel: "Environment",
       environmentLive: "Live",
       environmentDemo: "Demo",
       usernameLabel: "Username",
+      usernameHint:
+        "Not your email. IG's API only accepts the username (letters, numbers, - and _), which you can find under My IG → Settings → Personal details.",
       passwordLabel: "Password",
       apiKeyLabel: "API key",
       createKeyToggle: "How do I create one?",
@@ -2701,6 +2705,11 @@ export default {
       whyBothQuestion: "Why do you need my login and an API key?",
       whyBothAnswer:
         "They do different jobs. Your username and password prove the account is yours — IG signs you in with them. The API key identifies Deltalytix as the app making the request, and IG rejects any API call that does not carry one. Neither works without the other.",
+      usernameQuestion: "I log into IG with my email — which username do I use?",
+      usernameAnswer:
+        "The website accepts your email; the API does not. Enter the IG username from My IG → Settings → Personal details (letters, numbers, hyphen, or underscore only — no @). If you only remember the email, use IG’s lost-details page to recover the username.",
+      usernameLinkPersonalInfo: "IG — update personal details (username)",
+      usernameLinkLostDetails: "IG — recover forgotten username",
       scopeQuestion: "What does Deltalytix do with the key?",
       scopeIntro:
         "IG API keys have no OAuth-style scopes or permission checkboxes. One key identifies your app, and access follows your IG login. Deltalytix only ever:",
@@ -2764,7 +2773,7 @@ export default {
   "import.type.igSync.description":
     "Direct account synchronization with IG",
   "import.type.igSync.details":
-    "Sign in with your IG username and password, plus a personal API key you create on IG. Deltalytix only reads closed Transaction History — it never places trades. Create the key under My Account → Settings → API keys.",
+    "Sign in with your IG username (not email) and password, plus a personal API key you create on IG. Deltalytix only reads closed Transaction History — it never places trades. Create the key under My Account → Settings → API keys.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "ATAS Excel file",
   "import.type.atas.details":

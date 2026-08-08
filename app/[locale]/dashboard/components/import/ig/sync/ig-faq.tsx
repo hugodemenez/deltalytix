@@ -23,6 +23,14 @@ export const IG_API_KEY_DOCS = {
     "https://www.ig.com/fr/plateformes-de-trading/api-de-trading/comment-utiliser-les-api-de-trading-ig",
   frHelp:
     "https://www.ig.com/fr/portail-d-aide/plateformes/questions-generales/comment-puis-je-acceder-a-l-api-ig-et-a-quoi-cela-sert-il",
+  /** Recover forgotten username via the email on the account. */
+  frLostDetails: "https://www.ig.com/fr/lost-details",
+  enLostDetails: "https://www.ig.com/uk/lost-details",
+  /** My IG → Configuration → Informations personnelles (username is editable there). */
+  frPersonalInfo:
+    "https://www.ig.com/fr/portail-d-aide/comptes-et-releves/mon-compte/comment-puis-je-mettre-a-jour-mes-informations-personnelles",
+  enPersonalInfo:
+    "https://www.ig.com/uk/help-and-support/account-and-trading/your-ig-account/how-do-i-update-my-personal-details",
 } as const;
 
 const linkClassName =
@@ -124,6 +132,17 @@ export function IgConnectIntro() {
  */
 export function IgFaq() {
   const t = useI18n();
+  const locale = useCurrentLocale();
+  const usernameDocs =
+    locale === "fr"
+      ? {
+          personalInfo: IG_API_KEY_DOCS.frPersonalInfo,
+          lostDetails: IG_API_KEY_DOCS.frLostDetails,
+        }
+      : {
+          personalInfo: IG_API_KEY_DOCS.enPersonalInfo,
+          lostDetails: IG_API_KEY_DOCS.enLostDetails,
+        };
 
   return (
     <div className="space-y-1">
@@ -140,6 +159,26 @@ export function IgFaq() {
           </AccordionTrigger>
           <AccordionContent className={contentClassName}>
             <p>{t("igSync.faq.whyBothAnswer")}</p>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem
+          value="username"
+          className="border-black/10 dark:border-white/10"
+        >
+          <AccordionTrigger className={triggerClassName}>
+            {t("igSync.faq.usernameQuestion")}
+          </AccordionTrigger>
+          <AccordionContent className={contentClassName}>
+            <p>{t("igSync.faq.usernameAnswer")}</p>
+            <div className="flex flex-col gap-1.5 pt-1 sm:flex-row sm:flex-wrap sm:gap-x-4">
+              <DocLink href={usernameDocs.personalInfo}>
+                {t("igSync.faq.usernameLinkPersonalInfo")}
+              </DocLink>
+              <DocLink href={usernameDocs.lostDetails}>
+                {t("igSync.faq.usernameLinkLostDetails")}
+              </DocLink>
+            </div>
           </AccordionContent>
         </AccordionItem>
 

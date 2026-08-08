@@ -2780,16 +2780,18 @@ export default {
     connected: "Compte IG connecté avec succès",
     error: {
       credentialsRequired:
-        "Saisissez l'identifiant, le mot de passe et la clé API",
+        "Saisissez le nom d'utilisateur, le mot de passe et la clé API",
       authFailed: "Impossible de se connecter à IG",
     },
     errors: {
       USER_NOT_AUTHENTICATED: "Vous devez être connecté pour lier IG.",
       CREDENTIALS_REQUIRED:
-        "Saisissez l'identifiant, le mot de passe et la clé API.",
+        "Saisissez le nom d'utilisateur, le mot de passe et la clé API.",
       AUTH_FAILED: "Échec de la connexion IG : {reason}",
       IG_INVALID_CREDENTIALS:
         "IG a refusé cet identifiant ou ce mot de passe. Vérifiez-les sur ig.com puis réessayez.",
+      IG_IDENTIFIER_INVALID:
+        "L’API d’IG n’accepte pas une adresse e-mail comme identifiant. Utilisez votre nom d’utilisateur IG (lettres, chiffres, tiret, underscore — 30 caractères max), pas l’e-mail avec lequel vous vous connectez sur le site. Vous le trouverez dans My IG → Configuration → Informations personnelles, ou via la page Identifiants perdus d’IG.",
       IG_API_KEY_REJECTED:
         "IG a refusé cette clé API. Vérifiez qu'elle a bien été créée pour l'environnement {environment} — une clé créée pour un environnement ne fonctionne jamais sur l'autre.",
       IG_API_KEY_DISABLED:
@@ -2822,13 +2824,15 @@ export default {
     addAccount: {
       title: "Connecter IG",
       description:
-        "Connectez-vous avec votre identifiant et mot de passe IG, puis collez une clé API personnelle.",
+        "Connectez-vous avec votre nom d'utilisateur et mot de passe IG, puis collez une clé API personnelle.",
       intro:
-        "L’API d’IG demande deux choses : votre identifiant IG, qui prouve que le compte est le vôtre, et une clé API personnelle, qui identifie Deltalytix auprès d’IG. Vous créez la clé vous-même chez IG — c’est gratuit et cela prend une minute.",
+        "L’API d’IG demande deux choses : votre nom d’utilisateur IG (pas votre e-mail), qui prouve que le compte est le vôtre, et une clé API personnelle, qui identifie Deltalytix auprès d’IG. Vous créez la clé vous-même chez IG — c’est gratuit et cela prend une minute.",
       environmentLabel: "Environnement",
       environmentLive: "Réel",
       environmentDemo: "Démo",
-      usernameLabel: "Identifiant",
+      usernameLabel: "Nom d'utilisateur",
+      usernameHint:
+        "Pas votre e-mail. L’API n’accepte que le nom d’utilisateur IG (lettres, chiffres, - et _), visible dans My IG → Configuration → Informations personnelles.",
       passwordLabel: "Mot de passe",
       apiKeyLabel: "Clé API",
       createKeyToggle: "Comment en créer une ?",
@@ -2850,6 +2854,14 @@ export default {
         "Pourquoi mon identifiant et une clé API sont-ils tous les deux nécessaires ?",
       whyBothAnswer:
         "Ils ne servent pas à la même chose. Votre identifiant et votre mot de passe prouvent que le compte est le vôtre : c’est avec eux qu’IG vous connecte. La clé API, elle, identifie Deltalytix comme l’application qui fait la requête, et IG refuse tout appel qui n’en contient pas. L’un ne fonctionne pas sans l’autre.",
+      usernameQuestion:
+        "Je me connecte à IG avec mon e-mail — quel nom d’utilisateur utiliser ?",
+      usernameAnswer:
+        "Le site web accepte votre e-mail ; l’API, non. Saisissez le nom d’utilisateur IG indiqué dans My IG → Configuration → Informations personnelles (lettres, chiffres, tiret ou underscore uniquement — pas de @). Si vous ne vous souvenez que de l’e-mail, utilisez la page IG « Identifiants perdus » pour le recevoir.",
+      usernameLinkPersonalInfo:
+        "IG France — modifier l’identifiant (infos personnelles)",
+      usernameLinkLostDetails:
+        "IG France — récupérer un identifiant oublié",
       scopeQuestion: "Que fait Deltalytix avec cette clé ?",
       scopeIntro:
         "Les clés API IG n’ont pas de scopes OAuth ni de cases à cocher de permissions. Une clé identifie votre application, et l’accès suit votre login IG. Deltalytix se contente de :",
@@ -2913,7 +2925,7 @@ export default {
   "import.type.igSync.description":
     "Synchronisation directe de compte avec IG",
   "import.type.igSync.details":
-    "Connectez-vous avec votre identifiant et mot de passe IG, plus une clé API personnelle que vous créez chez IG. Deltalytix lit uniquement l’historique des transactions clôturées — aucun ordre n’est passé. Créez la clé via Mon compte → Paramètres → Clés API.",
+    "Connectez-vous avec votre nom d’utilisateur IG (pas l’e-mail) et votre mot de passe, plus une clé API personnelle que vous créez chez IG. Deltalytix lit uniquement l’historique des transactions clôturées — aucun ordre n’est passé. Créez la clé via Mon compte → Paramètres → Clés API.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "Fichier Excel ATAS",
   "import.type.atas.details":
