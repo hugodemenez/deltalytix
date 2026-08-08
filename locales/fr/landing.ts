@@ -243,6 +243,7 @@ export default {
       joinCommunity: "Rejoindre la communauté",
       api: "API",
       pricing: "Tarifs",
+      support: "Support",
       updates: "Mises à jour",
       logo: {
         title: "Navigation",

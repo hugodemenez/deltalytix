@@ -326,6 +326,10 @@ export default function Component() {
       path: "/pricing",
     },
     {
+      title: t("landing.navbar.support"),
+      path: "/support",
+    },
+    {
       title: t("landing.navbar.updates"),
       children: [
         {
@@ -487,6 +491,19 @@ export default function Component() {
                     </ListItem>
                   </ul>
                 </NavigationMenuContent>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <NavigationMenuLink asChild>
+                  <Link
+                    href={localize("/support")}
+                    className={cn(
+                      navigationMenuTriggerStyle(),
+                      "bg-transparent",
+                    )}
+                  >
+                    {t("landing.navbar.support")}
+                  </Link>
+                </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem
                 onMouseEnter={() => setHoveredItem("updates")}

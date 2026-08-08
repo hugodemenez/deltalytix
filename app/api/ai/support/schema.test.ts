@@ -25,6 +25,30 @@ describe("supportChatRequestSchema", () => {
     });
 
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.locale).toBe("en");
+    }
+  });
+
+  it("accepts an explicit UI locale", () => {
+    const result = supportChatRequestSchema.safeParse({
+      messages: [userMessage],
+      locale: "fr",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.locale).toBe("fr");
+    }
+  });
+
+  it("rejects unsupported locales", () => {
+    const result = supportChatRequestSchema.safeParse({
+      messages: [userMessage],
+      locale: "de",
+    });
+
+    expect(result.success).toBe(false);
   });
 
   it("rejects client-supplied system messages", () => {

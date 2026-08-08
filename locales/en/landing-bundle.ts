@@ -41,5 +41,8 @@ export default {
   common: {
     copy: "Copy",
     retry: "Retry",
+    edit: "Edit",
+    cancel: "Cancel",
+    send: "Send",
   },
 } as const;

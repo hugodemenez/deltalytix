@@ -20,11 +20,19 @@ import {
   Actions,
   Action,
 } from '@/components/ai-elements/actions';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { Response } from '@/components/ai-elements/response';
-import { HeadsetIcon, RefreshCcwIcon } from 'lucide-react';
-import { useI18n } from '@/locales/landing-client';
+import {
+  BrainIcon,
+  ChevronDownIcon,
+  HeadsetIcon,
+  PencilIcon,
+  RefreshCcwIcon,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { useCurrentLocale, useI18n } from '@/locales/landing-client';
 import {
   Source,
   Sources,
@@ -59,19 +67,9 @@ import { Marker, MarkerContent } from '@/components/ui/marker';
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 
 const DISCORD_INVITE_URL = process.env.NEXT_PUBLIC_DISCORD_INVITATION;
-
-function DiscordIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z" />
-    </svg>
-  );
-}
 
 type askForEmailFormToolInput = {
   summary: string;
@@ -79,6 +77,7 @@ type askForEmailFormToolInput = {
 
 type askForEmailFormToolOutput = {
   summary: string;
+  locale: 'en' | 'fr';
 };
 
 type askForEmailFormToolUIPart = ToolUIPart<{
@@ -121,6 +120,92 @@ const preprocessContent = (content: string) => {
 
 const ATTACHMENT_ONLY_PLACEHOLDER = 'Sent with attachments';
 
+const MAX_REASONING_LABEL_LENGTH = 60;
+
+/**
+ * Prefer a short first-line label from the reasoning summary when present;
+ * otherwise fall back to the localized thinking / thought-process copy.
+ */
+const getReasoningLabel = (text: string): string | undefined => {
+  const firstLine = text
+    .split('\n')
+    .map((line) => line.trim())
+    .find(Boolean);
+
+  if (!firstLine) return undefined;
+
+  const looksLikeHeading =
+    /^#{1,6}\s+/.test(firstLine) || /^\*\*.+\*\*$/.test(firstLine);
+
+  const cleaned = firstLine
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/\*\*/g, '')
+    .replace(/[:.]+$/, '')
+    .trim();
+
+  if (!cleaned) return undefined;
+  if (!looksLikeHeading && cleaned.length > MAX_REASONING_LABEL_LENGTH) return undefined;
+
+  return cleaned;
+};
+
+function ReasoningBlock({
+  text,
+  isStreaming = false,
+  className,
+}: {
+  text: string;
+  isStreaming?: boolean;
+  className?: string;
+}) {
+  const t = useI18n();
+  const label = getReasoningLabel(text);
+
+  return (
+    <Reasoning
+      className={cn('w-full', className)}
+      defaultOpen={false}
+      disableAutoClose
+      isStreaming={isStreaming}
+    >
+      <ReasoningTrigger className="group">
+        <BrainIcon className="size-4 shrink-0" />
+        <span className={cn('min-w-0 truncate text-left', isStreaming && 'shimmer')}>
+          {label ?? (isStreaming ? t('support.thinking') : t('support.thoughtProcess'))}
+        </span>
+        <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
+      </ReasoningTrigger>
+      {text.trim() ? <ReasoningContent>{text}</ReasoningContent> : null}
+    </Reasoning>
+  );
+}
+
+/** Optimistic status row — same chrome as reasoning so the brain never vanishes mid-wait. */
+function PendingIndicator({ label }: { label: string }) {
+  return (
+    <div className="mb-4 flex w-full items-center gap-2 text-sm text-muted-foreground">
+      <BrainIcon className="size-4 shrink-0" />
+      <span className="min-w-0 truncate text-left shimmer">{label}</span>
+    </div>
+  );
+}
+
+function hasActiveReasoningRow(
+  message: ReturnType<typeof useChat>['messages'][number] | undefined,
+  status: ReturnType<typeof useChat>['status'],
+) {
+  if (!message || message.role !== 'assistant') return false;
+
+  return message.parts.some((part, index) => {
+    if (part.type !== 'reasoning') return false;
+
+    const isStreamingReasoning =
+      status === 'streaming' && index === message.parts.length - 1;
+
+    return Boolean(part.text?.trim()) || isStreamingReasoning;
+  });
+}
+
 function SupportPromptSubmit({
   input,
   status,
@@ -137,12 +222,35 @@ function SupportPromptSubmit({
   );
 }
 
+/** Falls back to the user's own words when the assistant has not summarised anything. */
+const buildConversationSummary = (messages: ReturnType<typeof useChat>['messages']) =>
+  messages
+    .filter((message) => message.role === 'user')
+    .flatMap((message) =>
+      message.parts
+        .filter((part) => part.type === 'text')
+        .map((part) => part.text.trim()),
+    )
+    .filter((text) => text && text !== ATTACHMENT_ONLY_PLACEHOLDER)
+    .join('\n\n')
+    .slice(0, 2000);
+
 const ChatBotDemo = () => {
   const t = useI18n();
+  const locale = useCurrentLocale();
   const [input, setInput] = useState('');
-  const { messages, sendMessage, status, setMessages } = useChat({
+  const [contactForm, setContactForm] = useState({ open: false, summary: '' });
+  // Set while the composer holds an earlier message being rewritten.
+  const [pendingEditMessageId, setPendingEditMessageId] = useState<string | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  // Tool-driven escalations should pop the dialog once, not on every re-render.
+  const autoOpenedEscalations = useRef(new Set<string>());
+  const { messages, sendMessage, status, setMessages, stop } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/ai/support',
+      body: () => ({
+        locale,
+      }),
     }),
     onError: (error) => {
       console.error('Chat error:', error);
@@ -162,12 +270,89 @@ const ChatBotDemo = () => {
     },
   });
 
+  const openContactForm = useCallback(
+    (summary?: string) => {
+      setContactForm((current) => ({
+        open: true,
+        summary: summary ?? current.summary,
+      }));
+    },
+    [],
+  );
+
+  const requestHumanSupport = useCallback(() => {
+    openContactForm(buildConversationSummary(messages));
+  }, [messages, openContactForm]);
+
+  /**
+   * Drop `messageId` and everything after it. `setMessages` writes through to the
+   * chat store synchronously, so a send issued right after already sees the
+   * truncated history.
+   */
+  const truncateFrom = useCallback(
+    (messageId: string) => {
+      if (status === 'submitted' || status === 'streaming') {
+        stop();
+      }
+
+      setMessages((current) => {
+        const index = current.findIndex((message) => message.id === messageId);
+        return index === -1 ? current : current.slice(0, index);
+      });
+    },
+    [status, stop, setMessages],
+  );
+
+  // Editing pulls the message back into the composer; the messages it would
+  // replace stay visible but dimmed until the user sends or cancels.
+  const startEditing = useCallback((messageId: string, text: string) => {
+    setPendingEditMessageId(messageId);
+    setInput(text);
+  }, []);
+
+  const cancelEditing = useCallback(() => {
+    setPendingEditMessageId(null);
+    setInput('');
+  }, []);
+
+  // Focus after React commits the edited text — rAF from the click handler races
+  // the controlled value update and often never lands on the textarea.
+  useEffect(() => {
+    if (!pendingEditMessageId) return;
+
+    const composer = composerRef.current;
+    if (!composer) return;
+
+    composer.focus();
+    const cursor = composer.value.length;
+    composer.setSelectionRange(cursor, cursor);
+  }, [pendingEditMessageId]);
+
+  const pendingEditIndex = pendingEditMessageId
+    ? messages.findIndex((message) => message.id === pendingEditMessageId)
+    : -1;
+
+  // The assistant can also escalate on its own — surface its summary in the form.
+  useEffect(() => {
+    for (const message of messages) {
+      for (const part of message.parts) {
+        if (part.type !== 'tool-askForEmailForm') continue;
+
+        const toolPart = part as askForEmailFormToolUIPart;
+        if (toolPart.state !== 'output-available' || !toolPart.toolCallId) continue;
+        if (autoOpenedEscalations.current.has(toolPart.toolCallId)) continue;
+
+        autoOpenedEscalations.current.add(toolPart.toolCallId);
+        setContactForm({ open: true, summary: toolPart.output?.summary ?? '' });
+      }
+    }
+  }, [messages]);
+
   const suggestions = useMemo(
     () => [
       t('support.suggestionImport'),
       t('support.suggestionBilling'),
       t('support.suggestionBug'),
-      t('support.suggestionHuman'),
     ],
     [t],
   );
@@ -197,6 +382,12 @@ const ChatBotDemo = () => {
       return;
     }
 
+    // Sending while editing replaces the original message and everything after it.
+    if (pendingEditMessageId) {
+      truncateFrom(pendingEditMessageId);
+      setPendingEditMessageId(null);
+    }
+
     if (hasText) {
       sendMessage({
         text: message.text!,
@@ -213,27 +404,72 @@ const ChatBotDemo = () => {
   };
 
   const isBusy = status === 'submitted' || status === 'streaming';
+  const hasStarted = messages.some((message) => message.role === 'user');
   const showStarterActions = messages.length <= 1 && !isBusy;
+  // Once the conversation has started, the human escape hatch stays available.
+  const showHumanHandoff = hasStarted && !isBusy;
+  const showPendingIndicator =
+    isBusy && !hasActiveReasoningRow(messages.at(-1), status);
 
   return (
     <MessageScrollerProvider autoScroll>
       <div className="mx-auto flex size-full h-[calc(100vh-64px)] max-w-4xl flex-col gap-4 p-4 sm:p-6">
+        {/* Page title lives outside the chat surface, like /updates. */}
+        <header className="space-y-1">
+          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+            <HeadsetIcon className="size-6 text-primary" />
+            {t('support.pageTitle')}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {t('support.pageDescription')}
+            {DISCORD_INVITE_URL && (
+              <>
+                {' '}
+                {t('support.discordPrompt')}{' '}
+                <a
+                  href={DISCORD_INVITE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-foreground underline underline-offset-4 hover:text-primary"
+                >
+                  {t('support.joinDiscordInline')}
+                </a>
+                .
+              </>
+            )}
+          </p>
+        </header>
+
         <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0">
-          <CardHeader className="gap-1 border-b py-4">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <HeadsetIcon className="size-5 text-primary" />
-              {t('support.pageTitle')}
-            </CardTitle>
-          </CardHeader>
+          {/* Escalation appears only once the conversation has started. */}
+          {showHumanHandoff && (
+            <div className="flex justify-end border-b px-4 py-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={requestHumanSupport}
+              >
+                <HeadsetIcon className="size-4" />
+                {t('support.requestHumanSupport')}
+              </Button>
+            </div>
+          )}
 
           <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
             <MessageScroller className="min-h-0 flex-1">
               <MessageScrollerViewport>
                 <MessageScrollerContent aria-busy={isBusy} className="gap-4 p-4">
-                  {messages.map((message) => (
+                  {messages.map((message, messageIndex) => (
                     <MessageScrollerItem
                       key={message.id}
                       scrollAnchor={message.role === 'user'}
+                      // Dimmed = will be discarded when the edit is sent.
+                      className={
+                        pendingEditIndex !== -1 && messageIndex >= pendingEditIndex
+                          ? 'opacity-40 transition-opacity'
+                          : 'transition-opacity'
+                      }
                     >
                       {message.role === 'assistant' &&
                         message.parts.filter((part) => part.type === 'source-url').length > 0 && (
@@ -306,13 +542,10 @@ const ChatBotDemo = () => {
                             return (
                               <Fragment key={`${message.id}-${i}`}>
                                 {think.map((thought, index) => (
-                                  <Reasoning
+                                  <ReasoningBlock
                                     key={`${message.id}-${i}-think-${index}`}
-                                    className="w-full"
-                                  >
-                                    <ReasoningTrigger />
-                                    <ReasoningContent>{thought}</ReasoningContent>
-                                  </Reasoning>
+                                    text={thought}
+                                  />
                                 ))}
                                 <ChatMessage align={isUser ? 'end' : 'start'}>
                                   <MessageContent>
@@ -341,11 +574,23 @@ const ChatBotDemo = () => {
                                         </Actions>
                                       </MessageFooter>
                                     )}
-                                    {message.role === 'user' && (
+                                    {isUser && (
                                       <MessageFooter>
                                         <Actions className="justify-end">
+                                          {/* Editing re-sends without the attachment, so only offer it on plain text. */}
+                                          {!message.parts.some((p) => p.type === 'file') && (
+                                            <Action
+                                              onClick={() => startEditing(message.id, part.text)}
+                                              label={t('common.edit')}
+                                            >
+                                              <PencilIcon size={16} className="mr-2" />
+                                            </Action>
+                                          )}
                                           <Action
-                                            onClick={() => sendWithOptions(part.text)}
+                                            onClick={() => {
+                                              truncateFrom(message.id);
+                                              sendMessage({ text: part.text });
+                                            }}
                                             label={t('common.retry')}
                                           >
                                             <RefreshCcwIcon size={16} className="mr-2" />
@@ -359,37 +604,44 @@ const ChatBotDemo = () => {
                             );
                           }
                           case 'reasoning': {
-                            if (!part.text?.trim()) {
+                            const isStreamingReasoning =
+                              status === 'streaming' &&
+                              i === message.parts.length - 1 &&
+                              message.id === messages.at(-1)?.id;
+
+                            // Keep the brain visible while reasoning tokens are still empty.
+                            if (!part.text?.trim() && !isStreamingReasoning) {
                               return null;
                             }
 
                             return (
-                              <Reasoning
+                              <ReasoningBlock
                                 key={`${message.id}-${i}`}
-                                className="w-full"
-                                disableAutoClose
-                                isStreaming={
-                                  status === 'streaming' &&
-                                  i === message.parts.length - 1 &&
-                                  message.id === messages.at(-1)?.id
-                                }
-                              >
-                                <ReasoningTrigger />
-                                <ReasoningContent>{part.text}</ReasoningContent>
-                              </Reasoning>
+                                text={part.text ?? ''}
+                                isStreaming={isStreamingReasoning}
+                              />
                             );
                           }
-                          case 'tool-searchCodebase': {
+                          case 'tool-searchCodebase':
+                          case 'tool-listCodebaseFiles':
+                          case 'tool-grepCodebase':
+                          case 'tool-readCodebaseFile': {
                             switch (part.state) {
                               case 'input-available':
-                              case 'input-streaming':
+                              case 'input-streaming': {
+                                const label =
+                                  part.type === 'tool-readCodebaseFile'
+                                    ? t('support.tool.readingFile')
+                                    : part.type === 'tool-grepCodebase'
+                                      ? t('support.tool.grepping')
+                                      : t('support.tool.searchingDocs');
+
                                 return (
                                   <Marker key={`${message.id}-${i}`}>
-                                    <MarkerContent className="shimmer">
-                                      {t('support.tool.searchingDocs')}
-                                    </MarkerContent>
+                                    <MarkerContent className="shimmer">{label}</MarkerContent>
                                   </Marker>
                                 );
+                              }
                               default:
                                 return null;
                             }
@@ -404,26 +656,29 @@ const ChatBotDemo = () => {
                                     </MarkerContent>
                                   </Marker>
                                 );
-                              case 'output-available':
-                                if (
+                              case 'output-available': {
+                                const summary =
                                   part.output &&
                                   typeof part.output === 'object' &&
-                                  'summary' in part.output &&
-                                  'locale' in part.output
-                                ) {
-                                  return (
-                                    <div key={`${message.id}-${i}`}>
-                                      <SupportForm
-                                        locale={part.output.locale as 'en' | 'fr'}
-                                        messages={messages}
-                                        summary={part.output.summary as string}
-                                        setMessages={setMessages}
-                                        sendMessage={sendMessage}
-                                      />
-                                    </div>
-                                  );
-                                }
-                                return null;
+                                  'summary' in part.output
+                                    ? (part.output.summary as string)
+                                    : '';
+
+                                return (
+                                  <Marker key={`${message.id}-${i}`} variant="border">
+                                    <MarkerContent className="flex flex-wrap items-center justify-between gap-2">
+                                      {t('support.tool.requestReady')}
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        onClick={() => openContactForm(summary)}
+                                      >
+                                        {t('support.openContactForm')}
+                                      </Button>
+                                    </MarkerContent>
+                                  </Marker>
+                                );
+                              }
                               case 'output-error':
                                 return (
                                   <Marker key={`${message.id}-${i}`} variant="border">
@@ -450,35 +705,8 @@ const ChatBotDemo = () => {
                     </MessageScrollerItem>
                   ))}
 
-                  {showStarterActions && DISCORD_INVITE_URL && (
-                    <MessageScrollerItem>
-                      <ChatMessage align="start">
-                        <MessageContent>
-                          <div className="flex max-w-sm flex-col gap-2">
-                            <a
-                              href={DISCORD_INVITE_URL}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex w-fit items-center gap-2.5 rounded-xl bg-[#5865F2] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#4752C4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5865F2]/60 focus-visible:ring-offset-2"
-                            >
-                              <DiscordIcon className="size-5 shrink-0" />
-                              {t('support.joinDiscord')}
-                            </a>
-                            <p className="text-xs text-muted-foreground">
-                              {t('support.discordDescription')}
-                            </p>
-                          </div>
-                        </MessageContent>
-                      </ChatMessage>
-                    </MessageScrollerItem>
-                  )}
-
-                  {status === 'submitted' && (
-                    <Marker>
-                      <MarkerContent className="shimmer">
-                        {t('support.generating')}
-                      </MarkerContent>
-                    </Marker>
+                  {showPendingIndicator && (
+                    <PendingIndicator label={t('support.generating')} />
                   )}
                 </MessageScrollerContent>
               </MessageScrollerViewport>
@@ -495,35 +723,76 @@ const ChatBotDemo = () => {
                       onClick={sendWithOptions}
                     />
                   ))}
+                  {/* Goes straight to the form — routing it through the model is the loop we are fixing. */}
+                  <Suggestion
+                    suggestion={t('support.suggestionHuman')}
+                    onClick={requestHumanSupport}
+                  />
                 </Suggestions>
               </div>
             )}
+
+            {/* Input is docked inside the chat panel so it reads as one conversation surface. */}
+            <div
+              className="border-t p-3 sm:p-4"
+              // Escape bubbles up from the textarea, which owns its own onKeyDown.
+              onKeyDown={(event) => {
+                if (event.key === 'Escape' && pendingEditMessageId) {
+                  cancelEditing();
+                }
+              }}
+            >
+              {pendingEditMessageId && (
+                <Marker className="mb-2">
+                  <MarkerContent className="flex flex-wrap items-center justify-between gap-2">
+                    {t('support.editingNotice')}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={cancelEditing}
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                  </MarkerContent>
+                </Marker>
+              )}
+              <PromptInput accept="image/*" onSubmit={handleSubmit} globalDrop multiple>
+                <PromptInputBody>
+                  <PromptInputAttachments>
+                    {(attachment) => <PromptInputAttachment data={attachment} />}
+                  </PromptInputAttachments>
+                  <PromptInputTextarea
+                    ref={composerRef}
+                    onChange={(e) => setInput(e.target.value)}
+                    value={input}
+                    placeholder={t('support.inputPlaceholder')}
+                  />
+                </PromptInputBody>
+                <PromptInputToolbar>
+                  <PromptInputTools>
+                    <PromptInputActionMenu>
+                      <PromptInputActionMenuTrigger />
+                      <PromptInputActionMenuContent>
+                        <PromptInputActionAddAttachments />
+                      </PromptInputActionMenuContent>
+                    </PromptInputActionMenu>
+                  </PromptInputTools>
+                  <SupportPromptSubmit input={input} status={status} />
+                </PromptInputToolbar>
+              </PromptInput>
+            </div>
           </CardContent>
         </Card>
 
-        <PromptInput accept="image/*" onSubmit={handleSubmit} globalDrop multiple>
-          <PromptInputBody>
-            <PromptInputAttachments>
-              {(attachment) => <PromptInputAttachment data={attachment} />}
-            </PromptInputAttachments>
-            <PromptInputTextarea
-              onChange={(e) => setInput(e.target.value)}
-              value={input}
-              placeholder={t('support.inputPlaceholder')}
-            />
-          </PromptInputBody>
-          <PromptInputToolbar>
-            <PromptInputTools>
-              <PromptInputActionMenu>
-                <PromptInputActionMenuTrigger />
-                <PromptInputActionMenuContent>
-                  <PromptInputActionAddAttachments />
-                </PromptInputActionMenuContent>
-              </PromptInputActionMenu>
-            </PromptInputTools>
-            <SupportPromptSubmit input={input} status={status} />
-          </PromptInputToolbar>
-        </PromptInput>
+        <SupportForm
+          open={contactForm.open}
+          onOpenChange={(open) => setContactForm((current) => ({ ...current, open }))}
+          summary={contactForm.summary}
+          locale={locale}
+          messages={messages}
+          setMessages={setMessages}
+        />
       </div>
     </MessageScrollerProvider>
   );

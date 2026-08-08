@@ -19,16 +19,19 @@ export default {
     emailConfirmation:
       "Merci, {name}. J'ai rassemblé vos informations et envoyé votre demande de support à notre équipe. Ils examineront votre cas et vous recontacteront à l'adresse {email} dès que possible. Y a-t-il autre chose avec quoi je peux vous aider ?",
     form: {
-      name: "Nom",
       email: "Email",
       additionalInfo: "Informations supplémentaires",
       additionalInfoPlaceholder:
         "Ajoutez des détails supplémentaires qui pourraient aider notre équipe de support à comprendre votre problème...",
       submit: "Envoyer",
       cancel: "Annuler",
-      summary: "Résumé",
       sending: "Envoi en cours...",
     },
+    openContactForm: "Ouvrir le formulaire de contact",
+    editingNotice:
+      "Modification en cours — les réponses suivantes seront supprimées.",
+    thinking: "Réflexion…",
+    thoughtProcess: "Raisonnement",
     evaluatingSupport:
       "Examen de votre message pour déterminer la meilleure façon de vous aider...",
     evaluationError:
@@ -37,10 +40,11 @@ export default {
       "Préparation de votre demande de support pour notre équipe...",
     emailPreparationError:
       "Il y a eu une erreur lors de la préparation de votre demande de support.",
-    joinDiscord: "Rejoindre la Communauté Discord",
-    discordDescription:
-      "Obtenez une aide instantanée de notre communauté de traders et développeurs.",
+    joinDiscordInline: "rejoignez notre communauté Discord",
     pageTitle: "Assistant Support",
+    pageDescription:
+      "Obtenez des réponses rapides de notre assistant IA, basé sur notre base de connaissances ouverte.",
+    discordPrompt: "Vous ne trouvez pas ce qu'il vous faut ?",
     generating: "Génération de la réponse…",
     suggestionImport: "Aide pour importer des trades",
     suggestionBilling: "Question sur la facturation ou l'abonnement",
@@ -49,8 +53,12 @@ export default {
     tool: {
       searchingDocs:
         "Recherche dans la documentation produit...",
+      grepping: "Recherche dans le code source...",
+      readingFile: "Lecture de la documentation...",
       preparingRequest:
         "Préparation de votre demande de support pour notre équipe...",
+      requestReady:
+        "Votre demande de support est prête à être envoyée à notre équipe.",
       requestError:
         "Il y a eu une erreur lors de la préparation de votre demande de support.",
       requestErrorDetails: "Détails de l'erreur : {error}",
