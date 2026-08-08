@@ -2585,7 +2585,7 @@ export default {
       IG_INVALID_CREDENTIALS:
         "IG a refusé cet identifiant ou ce mot de passe. Vérifiez-les sur ig.com puis réessayez.",
       IG_IDENTIFIER_INVALID:
-        "L’API d’IG n’accepte pas une adresse e-mail comme identifiant. Utilisez votre nom d’utilisateur IG (lettres, chiffres, tiret, underscore — 30 caractères max), pas l’e-mail avec lequel vous vous connectez sur le site. Vous le trouverez dans Mon compte sur ig.com.",
+        "L’API d’IG n’accepte pas une adresse e-mail comme identifiant. Utilisez votre nom d’utilisateur IG (lettres, chiffres, tiret, underscore — 30 caractères max), pas l’e-mail avec lequel vous vous connectez sur le site. Vous le trouverez dans My IG → Configuration → Informations personnelles, ou via la page Identifiants perdus d’IG.",
       IG_API_KEY_REJECTED:
         "IG a refusé cette clé API. Vérifiez qu'elle a bien été créée pour l'environnement {environment} — une clé créée pour un environnement ne fonctionne jamais sur l'autre.",
       IG_API_KEY_DISABLED:
@@ -2626,7 +2626,7 @@ export default {
       environmentDemo: "Démo",
       usernameLabel: "Nom d'utilisateur",
       usernameHint:
-        "Pas votre e-mail. L’API n’accepte que le nom d’utilisateur IG (lettres, chiffres, - et _), visible dans Mon compte sur ig.com.",
+        "Pas votre e-mail. L’API n’accepte que le nom d’utilisateur IG (lettres, chiffres, - et _), visible dans My IG → Configuration → Informations personnelles.",
       passwordLabel: "Mot de passe",
       apiKeyLabel: "Clé API",
       createKeyToggle: "Comment en créer une ?",
@@ -2651,7 +2651,11 @@ export default {
       usernameQuestion:
         "Je me connecte à IG avec mon e-mail — quel nom d’utilisateur utiliser ?",
       usernameAnswer:
-        "Le site web accepte votre e-mail ; l’API, non. Saisissez le nom d’utilisateur IG indiqué dans Mon compte (lettres, chiffres, tiret ou underscore uniquement — pas de @). Un e-mail provoque une erreur de validation de format côté IG.",
+        "Le site web accepte votre e-mail ; l’API, non. Saisissez le nom d’utilisateur IG indiqué dans My IG → Configuration → Informations personnelles (lettres, chiffres, tiret ou underscore uniquement — pas de @). Si vous ne vous souvenez que de l’e-mail, utilisez la page IG « Identifiants perdus » pour le recevoir.",
+      usernameLinkPersonalInfo:
+        "IG France — modifier l’identifiant (infos personnelles)",
+      usernameLinkLostDetails:
+        "IG France — récupérer un identifiant oublié",
       scopeQuestion: "Que fait Deltalytix avec cette clé ?",
       scopeIntro:
         "Les clés API IG n’ont pas de scopes OAuth ni de cases à cocher de permissions. Une clé identifie votre application, et l’accès suit votre login IG. Deltalytix se contente de :",
