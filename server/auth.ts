@@ -443,6 +443,17 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
     throw new Error('User ID is required');
   }
 
+  // This module is 'use server', so every export is a callable Server Action and
+  // `user` is caller-supplied. Bind it to the verified session before it reaches
+  // Prisma, otherwise a forged User object can create or rewrite arbitrary rows.
+  const sessionSupabase = await createClient();
+  const { data: { user: sessionUser } } = await sessionSupabase.auth.getUser();
+  if (!sessionUser?.id || sessionUser.id !== user.id) {
+    console.log('[ensureUserInDatabase] ERROR: Session does not match provided user');
+    throw new Error('Unauthorized');
+  }
+  user = sessionUser;
+
   try {
     // First try to find user by auth_user_id
     const existingUserByAuthId = await prisma.user.findUnique({
@@ -603,25 +614,14 @@ export async function verifyOtp(email: string, token: string, type: 'email' | 's
   }
 }
 
-// Optimized function that uses middleware data when available
-export async function getUserId(): Promise<string> {
-  if (isLocalDashboardAuthBypassEnabled()) {
-    await ensureLocalDashboardUserInDatabase()
-    return getLocalDashboardUserId()
-  }
-
-  // First try to get user ID from middleware headers
-  const headersList = await headers()
-  const userIdFromMiddleware = headersList.get("x-user-id")
-
-  if (userIdFromMiddleware) {
-    console.log("[Auth] Using user ID from middleware")
-    return userIdFromMiddleware
-  }
-
-  // Fallback to Supabase call (for API routes or edge cases)
+// The proxy publishes the resolved identity as *response* headers (x-user-id,
+// x-user-email) for observability. It never rewrites the inbound request —
+// NextResponse.next({ request: { headers } }) forwards the caller's own headers
+// untouched — and it does not run for /api/* at all. Reading those names back
+// off the incoming request therefore only ever returns a value the caller
+// supplied, so identity is always resolved from the verified Supabase session.
+async function getAuthenticatedUser(): Promise<User> {
   try {
-    console.log("[Auth] Fallback to Supabase call")
     const supabase = await createClient()
     const {
       data: { user },
@@ -632,10 +632,21 @@ export async function getUserId(): Promise<string> {
       throw new Error("User not authenticated")
     }
 
-    return user.id
+    return user
   } catch (error: any) {
     handleAuthError(error)
   }
+}
+
+export async function getUserId(): Promise<string> {
+  if (isLocalDashboardAuthBypassEnabled()) {
+    await ensureLocalDashboardUserInDatabase()
+    return getLocalDashboardUserId()
+  }
+
+  const user = await getAuthenticatedUser()
+
+  return user.id
 }
 
 export async function getUserEmail(): Promise<string> {
@@ -643,10 +654,9 @@ export async function getUserEmail(): Promise<string> {
     return getLocalDashboardUserEmail()
   }
 
-  const headersList = await headers()
-  const userEmail = headersList.get("x-user-email")
-  console.log("[Auth] getUserEmail FROM HEADERS", userEmail)
-  return userEmail || ""
+  const user = await getAuthenticatedUser()
+
+  return user.email || ""
 }
 
 // Lightweight updater for user language without full ensure logic
