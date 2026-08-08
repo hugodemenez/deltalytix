@@ -1,4 +1,5 @@
 'use server'
+import { requireAdminUser } from "@/lib/admin-auth"
 import { render } from "@react-email/render"
 import TraderStatsEmail from "@/components/emails/weekly-recap"
 import { PrismaClient } from "@/prisma/generated/prisma/client"
@@ -39,6 +40,7 @@ function formatPnL(value: number): string {
 }
 
 export async function generateAnalysis(content: WeeklyRecapContent) {
+  await requireAdminUser()
   try {
     // Sort dailyPnL by date before analysis
     const sortedContent = {
@@ -65,6 +67,7 @@ export async function generateAnalysis(content: WeeklyRecapContent) {
 }
 
 export async function renderEmail(content: WeeklyRecapContent, analysis: { resultAnalysisIntro: string, tipsForNextWeek: string }) {
+  await requireAdminUser()
   try {
     const html = await render(
       TraderStatsEmail({
@@ -110,6 +113,7 @@ export async function renderEmail(content: WeeklyRecapContent, analysis: { resul
 }
 
 export async function loadInitialContent(email?: string, userId?: string) {
+  await requireAdminUser()
   // If no userId is provided, use the default admin user
   const targetUserId = userId || process.env.ALLOWED_ADMIN_USER_ID
   
@@ -134,6 +138,7 @@ export async function loadInitialContent(email?: string, userId?: string) {
 }
 
 export async function listUsers() {
+  await requireAdminUser()
   let allUsers: any[] = []
   let page = 1
   const perPage = 1000

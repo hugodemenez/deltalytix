@@ -1,4 +1,4 @@
-'use server'
+import 'server-only'
 
 import { encryptConnectionToken } from '@/lib/connection-token-crypto'
 import { prisma } from '@/lib/prisma'

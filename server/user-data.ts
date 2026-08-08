@@ -200,8 +200,10 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
   }
 }
 
-export async function getDashboardLayout(userId: string): Promise<DashboardLayout | null> {
-  console.log('getDashboardLayout')
+export async function getDashboardLayout(): Promise<DashboardLayout | null> {
+  // Layouts are private preferences; never accept a caller-supplied userId.
+  // This action is reachable from public pages that import the data provider.
+  const userId = await getUserId()
   return await prisma.dashboardLayout.findUnique({
     where: {
       userId: userId

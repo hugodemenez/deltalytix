@@ -1,5 +1,7 @@
 "use server"
 
+import { requireAdminUser } from "@/lib/admin-auth"
+
 import * as React from "react"
 import { Resend } from "resend"
 import { prisma } from "@/lib/prisma"
@@ -64,6 +66,7 @@ async function getEmailTemplate(template: EmailTemplate): Promise<TemplateCompon
 }
 
 export async function getDefaultTemplateProps(template: EmailTemplate): Promise<TemplateProps> {
+  await requireAdminUser()
   switch (template) {
     case "black-friday":
       return { firstName: "Trader", locale: "fr" }
@@ -150,6 +153,7 @@ export async function getDefaultTemplateProps(template: EmailTemplate): Promise<
 }
 
 export async function getRequiredTemplateProps(template: EmailTemplate): Promise<string[]> {
+  await requireAdminUser()
   switch (template) {
     case "black-friday":
       return ["firstName"]
@@ -185,6 +189,7 @@ export async function getRequiredTemplateProps(template: EmailTemplate): Promise
 }
 
 export async function renderEmailPreview(template: EmailTemplate, props: TemplateProps) {
+  await requireAdminUser()
   try {
     const EmailComponent = await getEmailTemplate(template)
     const html = await render(React.createElement(EmailComponent, props))
@@ -219,6 +224,7 @@ interface UserListItem {
 }
 
 export async function getUsersList(): Promise<UserListItem[]> {
+  await requireAdminUser()
   try {
     let allUsers: User[] = []
     let page = 1
@@ -275,6 +281,7 @@ export async function sendEmailsToUsers(
   customProps: TemplateProps,
   subject?: string
 ) {
+  await requireAdminUser()
   try {
     if (!process.env.RESEND_API_KEY) {
       throw new Error("RESEND_API_KEY is not configured")

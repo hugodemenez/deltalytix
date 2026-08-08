@@ -1,5 +1,7 @@
 'use server'
 
+import { requireAdminUser } from "@/lib/admin-auth"
+
 import { createClient, User } from '@supabase/supabase-js'
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, {
   auth: {
@@ -10,6 +12,7 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
 import { prisma } from '@/lib/prisma'
 
 export async function getUserStats() {
+  await requireAdminUser()
   let allUsers: any[] = []
   let page = 1
   const perPage = 1000
@@ -61,6 +64,7 @@ export async function getUserStats() {
 }
 
 export async function getFreeUsers(){
+  await requireAdminUser()
   console.log('Starting getFreeUsers function')
 
   // Get all trades with their user IDs

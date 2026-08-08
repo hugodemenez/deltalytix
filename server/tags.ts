@@ -4,14 +4,18 @@ import { createClient } from './auth'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
-export async function getTagsAction(userId: string) {
-  console.log('getTags', userId)
+export async function getTagsAction() {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
 
+  if (authError || !user) {
+    throw new Error('Unauthorized')
+  }
 
   try {
     const tags = await prisma.tag.findMany({
       where: {
-        userId: userId,
+        userId: user.id,
       },
       orderBy: {
         createdAt: 'desc',

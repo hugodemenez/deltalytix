@@ -1,5 +1,7 @@
 "use server"
 
+import { requireAdminUser } from "@/lib/admin-auth"
+
 import { YoutubeTranscript } from 'youtube-transcript'
 import { generateText, Output } from "ai"
 import { z } from 'zod/v3';
@@ -11,6 +13,7 @@ const summarySchema = z.object({
 })
 
 export async function generateTranscriptSummary(transcript: string): Promise<string | null> {
+  await requireAdminUser()
   try {
     const { output } = await generateText({
       model: 'openai/gpt-5-mini',
@@ -39,6 +42,7 @@ ${transcript}`,
 }
 
 export async function fetchTranscriptServer(videoId: string): Promise<string | null> {
+  await requireAdminUser()
   "use server"
   
   try {
@@ -63,6 +67,7 @@ export async function fetchTranscriptServer(videoId: string): Promise<string | n
 }
 
 export async function getLatestVideoFromPlaylist(): Promise<string | null> {
+  // Used by public landing pages and the welcome-email route; not admin-gated.
   try {
     const playlistId = 'PLHyK_WJWO5vcsSKePM0GvJmeY5QRBW40S';
     const apiKey = process.env.YOUTUBE_API_KEY;
@@ -210,6 +215,7 @@ async function fetchPlaylistMap(): Promise<Map<string, PlaylistVideo> | null> {
 }
 
 export async function getAllVideosFromPlaylistAction(): Promise<Map<string, PlaylistVideo> | null> {
+  // Used at content-build time via findVideoIdForPostDateAction; not admin-gated.
   if (!playlistMapPromise) {
     playlistMapPromise = fetchPlaylistMap().then((result) => {
       if (result === null) {
@@ -226,6 +232,7 @@ export async function getAllVideosFromPlaylistAction(): Promise<Map<string, Play
  * This should be called at build time to match videos to posts
  */
 export async function findVideoIdForPostDateAction(postDate: string): Promise<string | null> {
+  // Used by lib/posts.ts when rendering public update posts; not admin-gated.
   try {
     const videoMap = await getAllVideosFromPlaylistAction();
     

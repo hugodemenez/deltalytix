@@ -507,7 +507,7 @@ export const DataProvider: React.FC<{
       // But check if the layout is already in the state
       // TODO: Cache layout client side (lightweight)
       if (!dashboardLayout) {
-        const dashboardLayoutResponse = await getDashboardLayout(user.id);
+        const dashboardLayoutResponse = await getDashboardLayout();
         if (dashboardLayoutResponse) {
           setDashboardLayout(
             // Convert from JSONB to DashboardLayoutWithWidgets type

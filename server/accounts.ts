@@ -49,20 +49,17 @@ export async function removeAccountFromTradesAction(accountNumber: string): Prom
   updateTag(`user-data-${userId}`)
 }
 
-export async function deleteInstrumentGroupAction(accountNumber: string, instrumentGroup: string, userId: string): Promise<void> {
-  const currentUserId = await getUserId()
-  const effectiveUserId = currentUserId ?? userId
+export async function deleteInstrumentGroupAction(accountNumber: string, instrumentGroup: string): Promise<void> {
+  const userId = await getUserId()
   await prisma.trade.deleteMany({
     where: {
       accountNumber: accountNumber,
       instrument: { startsWith: instrumentGroup },
-      userId: effectiveUserId
+      userId,
     }
   })
-  if (effectiveUserId) {
-    updateTag(`trades-${effectiveUserId}`)
-    updateTag(`user-data-${effectiveUserId}`)
-  }
+  updateTag(`trades-${userId}`)
+  updateTag(`user-data-${userId}`)
 }
 
 export async function updateCommissionForGroupAction(accountNumber: string, instrumentGroup: string, newCommission: number): Promise<void> {

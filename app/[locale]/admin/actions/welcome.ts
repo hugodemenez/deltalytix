@@ -1,5 +1,7 @@
 "use server"
 
+import { requireAdminUser } from "@/lib/admin-auth"
+
 import { render } from "@react-email/render"
 import WelcomeEmail, { renderWelcomeEmailText, WELCOME_VIDEO_IDS } from "@/components/emails/welcome"
 import { getLatestVideoFromPlaylist } from "./youtube"
@@ -9,6 +11,7 @@ export async function renderWelcomeEmailPreview(params: {
   email: string
   language: string
 }) {
+  await requireAdminUser()
   try {
     const locale = params.language === "fr" ? "fr" : "en"
     const youtubeId = locale === "fr"

@@ -1,6 +1,8 @@
 'use server'
 
+import { randomInt } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
+import { getUserId } from '@/server/auth'
 
 export type ReferralTier = {
   level: number
@@ -13,17 +15,23 @@ function generateReferralSlug(length = 6): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
   let result = ''
   for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
+    result += chars.charAt(randomInt(chars.length))
   }
   return result
 }
 
-// Get or create a referral for a user
-export async function getOrCreateReferral(userId: string) {
+// Get or create a referral for the session user.
+export async function getOrCreateReferral(userId?: string) {
   try {
+    const sessionUserId = await getUserId()
+    if (userId && userId !== sessionUserId) {
+      throw new Error('Unauthorized')
+    }
+    const resolvedUserId = sessionUserId
+
     // Try to get existing referral
     let referral = await prisma.referral.findUnique({
-      where: { userId },
+      where: { userId: resolvedUserId },
     })
 
     // If no referral exists, create one
@@ -37,7 +45,7 @@ export async function getOrCreateReferral(userId: string) {
         try {
           referral = await prisma.referral.create({
             data: {
-              userId,
+              userId: resolvedUserId,
               slug,
             },
           })

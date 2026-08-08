@@ -8,8 +8,11 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
   }
 })
 import { prisma } from '@/lib/prisma'
+import { requireAdminUser } from '@/lib/admin-auth'
+import { requireTeamAccess } from '@/lib/team-auth'
 
 export async function getUserStats() {
+  await requireAdminUser()
   let allUsers: any[] = []
   let page = 1
   const perPage = 1000
@@ -61,6 +64,7 @@ export async function getUserStats() {
 }
 
 export async function getTradeStats() {
+  await requireAdminUser()
   const trades = await prisma.trade.findMany({
     select: {
       createdAt: true
@@ -90,6 +94,7 @@ export async function getTradeStats() {
 } 
 
 export async function getFreeUsers(){
+  await requireAdminUser()
   console.log('Starting getFreeUsers function')
 
   // Get all trades with their user IDs
@@ -157,6 +162,7 @@ export async function getFreeUsers(){
 }
 
 export async function getUserEquityData(page: number = 1, limit: number = 10) {
+  await requireAdminUser()
   console.log('Starting getUserEquityData function')
 
   // First, get all unique user IDs that have trades, with pagination
@@ -306,6 +312,7 @@ export async function getUserEquityData(page: number = 1, limit: number = 10) {
 }
 
 export async function getIndividualUserEquityData(userId: string) {
+  await requireAdminUser()
   console.log(`Starting getIndividualUserEquityData for user ${userId}`)
 
   // Get user from Supabase auth
@@ -389,6 +396,7 @@ export async function getIndividualUserEquityData(userId: string) {
 }
 
 export async function getTeamEquityData(teamId: string, page: number = 1, limit: number = 100) {
+  await requireTeamAccess(teamId)
   console.log(`Starting getTeamEquityData for team ${teamId}`)
 
   // First, get the team to find trader IDs
@@ -552,6 +560,7 @@ function calculateMaxDrawdown(equityCurve: { cumulativePnL: number }[]): number 
 }
 
 export async function exportTeamTradesAction(teamId: string): Promise<string> {
+  await requireTeamAccess(teamId)
   console.log(`Starting exportTeamTradesAction for team ${teamId}`)
 
   // Get the team to find trader IDs

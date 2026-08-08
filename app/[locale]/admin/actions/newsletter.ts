@@ -1,5 +1,7 @@
 "use server"
 
+import { requireAdminUser } from "@/lib/admin-auth"
+
 import { PrismaClient, User } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { Resend } from 'resend'
@@ -23,6 +25,7 @@ interface SendNewsletterParams {
 }
 
 export async function getSubscribers() {
+  await requireAdminUser()
   try {
     const subscribers = await prisma.newsletter.findMany({
       select: {
@@ -40,6 +43,7 @@ export async function getSubscribers() {
 }
 
 export async function deleteSubscriber(email: string) {
+  await requireAdminUser()
   try {
     await prisma.newsletter.delete({
       where: { email }
@@ -53,6 +57,7 @@ export async function deleteSubscriber(email: string) {
 }
 
 export async function importSubscribers(file: File) {
+  await requireAdminUser()
   try {
     const text = await file.text()
     const records: Record<string, string>[] = await new Promise((resolve, reject) => {
@@ -104,6 +109,7 @@ export async function sendNewsletter({
   introMessage,
   features,
 }: SendNewsletterParams) {
+  await requireAdminUser()
   try {
     if (!process.env.RESEND_API_KEY) {
       throw new Error("RESEND_API_KEY is not configured")
@@ -185,6 +191,7 @@ export async function sendNewsletter({
 
   
 export async function sendTestNewsletter(email: string, firstName: string, params: SendNewsletterParams) {
+  await requireAdminUser()
   try {
     if (!process.env.RESEND_API_KEY) {
       throw new Error("RESEND_API_KEY is not configured")
@@ -226,6 +233,7 @@ export async function renderEmailPreview(params: {
   firstName: string
   subject?: string
 }) {
+  await requireAdminUser()
   try {
     const html = await render(
       NewsletterEmail({

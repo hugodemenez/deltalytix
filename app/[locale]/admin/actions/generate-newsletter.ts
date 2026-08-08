@@ -1,5 +1,7 @@
 'use server'
 
+import { requireAdminUser } from "@/lib/admin-auth"
+
 import { generateText, Output } from "ai"
 import { z } from 'zod';
 
@@ -17,6 +19,7 @@ interface GenerateNewsletterProps {
 }
 
 export async function generateNewsletterContent({ youtubeUrl, description }: GenerateNewsletterProps) {
+  await requireAdminUser()
   try {
     const { output } = await generateText({
       model: 'openai/gpt-5-mini',

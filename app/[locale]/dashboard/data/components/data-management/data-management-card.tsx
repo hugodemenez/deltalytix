@@ -113,7 +113,7 @@ export function DataManagementCard() {
 
   const handleDeleteInstrument = useCallback(async (accountNumber: string, instrumentGroup: string) => {
     try {
-      await deleteInstrumentGroupAction(accountNumber, instrumentGroup, user!.id)
+      await deleteInstrumentGroupAction(accountNumber, instrumentGroup)
       // Optimistically drop matching trades locally
       setTradesStore(
         trades.filter(
