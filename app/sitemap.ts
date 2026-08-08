@@ -28,6 +28,27 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
+      url: siteUrl('/docs'),
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    },
+    ...[
+      'overview',
+      'authentication',
+      'trades',
+      'accounts',
+      'connections',
+      'imports',
+      'metrics',
+      'errors',
+    ].map((slug) => ({
+      url: siteUrl(`/docs/${slug}`),
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.6,
+    })),
+    {
       url: siteUrl('/support'),
       lastModified: new Date(),
       changeFrequency: 'monthly',

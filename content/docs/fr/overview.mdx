@@ -1,0 +1,113 @@
+---
+title: Vue d’ensemble
+description: Ce que propose l’API publique Deltalytix, l’URL de base, le versionnement et les conventions partagées.
+order: 1
+---
+
+# Vue d’ensemble
+
+L’API publique Deltalytix vous permet de lire et d’écrire des données de trading, de gérer des connexions broker, d’importer des fichiers et de calculer des métriques de performance par programme. Elle est conçue pour des scripts personnels, des intégrations tierces et des applications OAuth first-party.
+
+## URL de base
+
+Tous les endpoints REST sont servis depuis :
+
+```text
+https://www.deltalytix.app
+```
+
+Les exemples de cette documentation utilisent cet hôte. Les chemins relatifs comme `/api/v1/trades` sont toujours ancrés à la même origine.
+
+## Versionnement
+
+La surface stable actuelle est **API v1**, montée sous `/api/v1/*`. Les changements incompatibles sont publiés sous un nouveau chemin de version majeure. Des champs additifs peuvent apparaître dans v1 sans incrément de version.
+
+Découverte machine-readable :
+
+- OpenAPI 3.1 : [`/openapi.json`](/openapi.json)
+- Métadonnées OAuth : [`/.well-known/openid-configuration`](/.well-known/openid-configuration)
+- Métadonnées de ressource protégée : [`/.well-known/oauth-protected-resource`](/.well-known/oauth-protected-resource)
+
+## Ce que vous pouvez faire
+
+| Domaine | Capacités |
+| --- | --- |
+| Profil | Lire l’utilisateur authentifié (`GET /api/v1/me`) |
+| Trades | Lister et créer des trades |
+| Comptes | Lister les comptes, éventuellement avec métriques |
+| Connexions | Lister, créer une connexion IBKR Flex, déclencher une sync |
+| Imports | Envoyer des fichiers CSV/XLSX avec IA ou parseurs de plateforme |
+| Métriques | Statistiques, courbes d’équité, métriques par compte |
+
+## Authentification
+
+Chaque requête `/api/v1/*` exige un jeton Bearer :
+
+```http
+Authorization: Bearer dltx_at_…
+```
+
+Les jetons sont soit :
+
+- des access tokens OAuth issus du flux authorization code (`dltx_at_…`)
+- des personal access tokens créés dans le tableau de bord (`dltx_pat_…`)
+
+Voir [Authentification](/docs/authentication) pour les scopes, OAuth et les PAT.
+
+## Conventions partagées
+
+### Pagination
+
+Les endpoints de liste acceptent :
+
+| Paramètre | Défaut | Max | Description |
+| --- | --- | --- | --- |
+| `limit` | `100` | `500` | Taille de page |
+| `cursor` | — | — | Curseur opaque issu d’une réponse précédente |
+
+Les réponses utilisent :
+
+```json
+{
+  "data": [],
+  "nextCursor": null
+}
+```
+
+Lorsque `nextCursor` est une chaîne, passez-le comme `cursor` à la requête suivante. Lorsqu’il vaut `null`, vous avez atteint la dernière page.
+
+### Dates
+
+Les timestamps et filtres de date sont des chaînes ISO 8601 (par exemple `2026-03-15T14:30:00.000Z`).
+
+### Erreurs
+
+Les requêtes en échec renvoient :
+
+```json
+{
+  "error": "machine_code",
+  "message": "Explication lisible",
+  "details": {}
+}
+```
+
+Voir [Erreurs](/docs/errors) pour les codes HTTP et les formes d’erreur OAuth.
+
+## Démarrage rapide
+
+```bash
+curl https://www.deltalytix.app/api/v1/me \
+  -H "Authorization: Bearer dltx_pat_YOUR_TOKEN"
+```
+
+```js
+const res = await fetch("https://www.deltalytix.app/api/v1/me", {
+  headers: {
+    Authorization: "Bearer dltx_pat_YOUR_TOKEN",
+  },
+});
+const me = await res.json();
+```
+
+Suite : [Authentification](/docs/authentication).

@@ -100,6 +100,10 @@ function isPublicRoute(pathname: string) {
     return true
   }
 
+  if (normalizedPathname === "/docs" || normalizedPathname.startsWith("/docs/")) {
+    return true
+  }
+
   return false
 }
 
@@ -458,7 +462,7 @@ export default async function proxy(req: NextRequest) {
     }
   } else {
     // Authenticated - redirect from auth to dashboard
-    if (pathname.includes("/authentication")) {
+    if (withoutLocale(pathname) === "/authentication") {
       const nextParam = req.nextUrl.searchParams.get("next")
       const redirectUrl = nextParam ? `/${nextParam}` : "/dashboard"
       return NextResponse.redirect(new URL(redirectUrl, req.url))

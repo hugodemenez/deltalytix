@@ -1,0 +1,166 @@
+---
+title: Trades
+description: List and create trades with filters, pagination, and the shared import/dedupe pipeline.
+order: 3
+---
+
+# Trades
+
+Manage the authenticated user’s trade history.
+
+## List trades
+
+```http
+GET /api/v1/trades
+```
+
+**Scope:** `trades:read`
+
+### Query parameters
+
+| Parameter | Description |
+| --- | --- |
+| `accountNumber` | Filter by account number |
+| `instrument` | Filter by instrument symbol |
+| `side` | Filter by side |
+| `from` | Inclusive lower bound on `entryDate` (ISO 8601) |
+| `to` | Inclusive upper bound on `entryDate` (ISO 8601) |
+| `cursor` | Opaque pagination cursor |
+| `limit` | Page size (default `100`, max `500`) |
+
+### Example
+
+```bash
+curl "https://www.deltalytix.app/api/v1/trades?accountNumber=SIM-001&limit=50" \
+  -H "Authorization: Bearer dltx_at_…"
+```
+
+```js
+const params = new URLSearchParams({
+  accountNumber: "SIM-001",
+  from: "2026-01-01T00:00:00.000Z",
+  limit: "50",
+});
+
+const res = await fetch(`https://www.deltalytix.app/api/v1/trades?${params}`, {
+  headers: { Authorization: `Bearer ${accessToken}` },
+});
+const page = await res.json();
+```
+
+### Response `200`
+
+```json
+{
+  "data": [
+    {
+      "id": "trade_01HZX…",
+      "accountNumber": "SIM-001",
+      "instrument": "ES",
+      "side": "long",
+      "quantity": 2,
+      "entryPrice": 5120.25,
+      "closePrice": 5128.5,
+      "entryDate": "2026-03-15T14:30:00.000Z",
+      "closeDate": "2026-03-15T15:10:00.000Z",
+      "pnl": 825,
+      "commission": 8.64,
+      "timeInPosition": 2400,
+      "tags": ["breakout"],
+      "comment": "Morning continuation",
+      "createdAt": "2026-03-15T15:12:01.000Z"
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+## Create trades
+
+```http
+POST /api/v1/trades
+```
+
+**Scope:** `trades:write`
+
+Creates one or more trades using the same dedupe pipeline as the dashboard (`UUID v5` identity + `createMany` with `skipDuplicates`). Duplicate payloads are counted, not treated as hard failures.
+
+### Request body
+
+```json
+{
+  "trades": [
+    {
+      "accountNumber": "SIM-001",
+      "instrument": "ES",
+      "quantity": 2,
+      "entryPrice": 5120.25,
+      "closePrice": 5128.5,
+      "entryDate": "2026-03-15T14:30:00.000Z",
+      "closeDate": "2026-03-15T15:10:00.000Z",
+      "pnl": 825,
+      "side": "long",
+      "commission": 8.64,
+      "entryId": "optional-broker-entry-id",
+      "closeId": "optional-broker-close-id",
+      "timeInPosition": 2400,
+      "tags": ["breakout"],
+      "comment": "Morning continuation"
+    }
+  ]
+}
+```
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `accountNumber` | Yes | Target account |
+| `instrument` | Yes | Symbol / contract |
+| `quantity` | Yes | Size |
+| `entryPrice` | Yes | Entry price |
+| `closePrice` | Yes | Exit price |
+| `entryDate` | Yes | ISO 8601 |
+| `closeDate` | Yes | ISO 8601 |
+| `pnl` | Yes | Realized P&amp;L |
+| `side` | No | e.g. `long` / `short` |
+| `commission` | No | Fees |
+| `entryId` | No | Broker entry identifier |
+| `closeId` | No | Broker exit identifier |
+| `timeInPosition` | No | Duration in seconds |
+| `tags` | No | String array |
+| `comment` | No | Free text |
+
+### Example
+
+```bash
+curl -X POST https://www.deltalytix.app/api/v1/trades \
+  -H "Authorization: Bearer dltx_at_…" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "trades": [
+      {
+        "accountNumber": "SIM-001",
+        "instrument": "ES",
+        "quantity": 2,
+        "entryPrice": 5120.25,
+        "closePrice": 5128.5,
+        "entryDate": "2026-03-15T14:30:00.000Z",
+        "closeDate": "2026-03-15T15:10:00.000Z",
+        "pnl": 825,
+        "side": "long",
+        "commission": 8.64
+      }
+    ]
+  }'
+```
+
+### Response `201`
+
+```json
+{
+  "imported": 1,
+  "duplicates": 0,
+  "total": 1
+}
+```
+
+If every row is a duplicate, the response still returns success with counts (for example `"imported": 0, "duplicates": 3, "total": 3`), not an error status.

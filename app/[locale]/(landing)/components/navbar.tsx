@@ -366,9 +366,10 @@ export default function Component() {
           icon: <FileText className="h-4 w-4" />,
         },
         {
-          path: "/api",
+          path: "/openapi.json",
           title: t("landing.navbar.api"),
           icon: <Cpu className="h-4 w-4" />,
+          external: true,
         },
       ].filter((child) => child.path.length > 0),
     },
@@ -568,6 +569,22 @@ export default function Component() {
                         {t("landing.navbar.joinCommunityDescription")}
                       </ListItem>
                     )}
+                    <ListItem
+                      href={localize("/docs")}
+                      title={t("landing.navbar.documentation")}
+                      icon={<FileText className="h-4 w-4" />}
+                    >
+                      {t("landing.navbar.documentationDescription")}
+                    </ListItem>
+                    <ListItem
+                      href="/openapi.json"
+                      title={t("landing.navbar.api")}
+                      icon={<Cpu className="h-4 w-4" />}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t("landing.navbar.apiDescription")}
+                    </ListItem>
                   </ul>
                 </NavigationMenuContent>
               </NavigationMenuItem>

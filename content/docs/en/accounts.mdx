@@ -1,0 +1,73 @@
+---
+title: Accounts
+description: List trading accounts, payouts, and optional per-account performance metrics.
+order: 4
+---
+
+# Accounts
+
+Read the authenticated user’s accounts and related payout information.
+
+## List accounts
+
+```http
+GET /api/v1/accounts
+```
+
+**Scope:** `accounts:read`
+
+### Query parameters
+
+| Parameter | Description |
+| --- | --- |
+| `includeMetrics` | When `true`, attaches per-account metrics from `computeMetricsForAccounts` |
+
+### Example
+
+```bash
+curl "https://www.deltalytix.app/api/v1/accounts?includeMetrics=true" \
+  -H "Authorization: Bearer dltx_at_…"
+```
+
+```js
+const res = await fetch(
+  "https://www.deltalytix.app/api/v1/accounts?includeMetrics=true",
+  {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  },
+);
+const payload = await res.json();
+```
+
+### Response `200`
+
+```json
+{
+  "data": [
+    {
+      "id": "acc_01HZX…",
+      "accountNumber": "SIM-001",
+      "name": "Evaluation A",
+      "payouts": [
+        {
+          "id": "pay_01HZX…",
+          "amount": 2500,
+          "date": "2026-02-01T00:00:00.000Z",
+          "status": "paid"
+        }
+      ],
+      "metrics": {
+        "balance": 52480.12,
+        "drawdown": 3.4,
+        "consistency": 0.82,
+        "progress": 0.61
+      }
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+`metrics` is present only when `includeMetrics=true`. Metric fields include balance, drawdown, consistency, and progress toward account targets.
+
+For portfolio-level analytics across all accounts, prefer the [Metrics](/docs/metrics) endpoints.

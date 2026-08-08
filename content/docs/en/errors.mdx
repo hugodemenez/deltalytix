@@ -1,0 +1,98 @@
+---
+title: Errors
+description: REST error envelope, HTTP status codes, and OAuth error responses.
+order: 8
+---
+
+# Errors
+
+## REST error envelope
+
+API v1 errors use a consistent JSON body:
+
+```json
+{
+  "error": "machine_code",
+  "message": "Human-readable explanation",
+  "details": {}
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `error` | Stable machine-readable code |
+| `message` | Human-readable explanation |
+| `details` | Optional structured context (validation issues, supported values, …) |
+
+## HTTP status codes
+
+| Status | Typical cause |
+| --- | --- |
+| `400` | Validation error (malformed query/body) |
+| `401` | Missing, expired, revoked, or invalid Bearer token |
+| `403` | Authenticated but missing required scope |
+| `404` | Resource not found |
+| `422` | Semantically invalid request (unsupported service/type) |
+| `500` | Unexpected server error |
+
+### Unauthorized (`401`)
+
+```json
+{
+  "error": "unauthorized",
+  "message": "Missing or invalid access token"
+}
+```
+
+Responses include:
+
+```http
+WWW-Authenticate: Bearer resource_metadata="https://www.deltalytix.app/.well-known/oauth-protected-resource"
+```
+
+### Insufficient scope (`403`)
+
+```json
+{
+  "error": "insufficient_scope",
+  "message": "Token is missing required scope trades:write"
+}
+```
+
+### Unsupported service (`422`)
+
+```json
+{
+  "error": "unsupported_service",
+  "message": "Only IBKR Flex is supported in this API version",
+  "details": {
+    "supported": ["ibkr"]
+  }
+}
+```
+
+## OAuth errors
+
+Token endpoint failures use the RFC 6749 shape (not the REST envelope):
+
+```json
+{
+  "error": "invalid_grant",
+  "error_description": "Authorization code is invalid or expired"
+}
+```
+
+Common OAuth `error` values include `invalid_request`, `invalid_client`, `invalid_grant`, `unauthorized_client`, `unsupported_grant_type`, and `invalid_scope`.
+
+Authorization endpoint denials redirect to the registered `redirect_uri` with `error=access_denied` (and the original `state` when provided).
+
+## Non-error counts
+
+Some write endpoints report duplicate or zero-import outcomes with HTTP success and count fields instead of an error body. For example, [`POST /api/v1/trades`](/docs/trades) returns `201` with `"imported": 0` when every row already exists.
+
+## Handling tips
+
+1. Branch first on HTTP status, then on `error`.
+2. Surface `message` to developers; use `error` for programmatic handling.
+3. Treat `details.supported` as the authoritative allow-list when present.
+4. On `401`, refresh the OAuth access token or prompt for a new PAT; do not retry indefinitely.

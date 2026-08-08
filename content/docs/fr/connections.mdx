@@ -1,0 +1,148 @@
+---
+title: Connexions
+description: Lister les connexions broker, créer une connexion IBKR Flex et déclencher une synchronisation serveur.
+order: 5
+---
+
+# Connexions
+
+Les connexions broker synchronisent les trades dans Deltalytix. Les jetons bruts du broker ne sont jamais renvoyés par l’API.
+
+## Lister les connexions
+
+```http
+GET /api/v1/connections
+```
+
+**Scope :** `connections:read`
+
+### Exemple
+
+```bash
+curl https://www.deltalytix.app/api/v1/connections \
+  -H "Authorization: Bearer dltx_at_…"
+```
+
+### Réponse `200`
+
+```json
+{
+  "data": [
+    {
+      "id": "conn_01HZX…",
+      "service": "ibkr",
+      "externalId": "flex-query-123",
+      "lastSyncedAt": "2026-03-15T16:00:00.000Z",
+      "environment": "live",
+      "accountNumbers": ["U1234567"]
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+| Champ | Description |
+| --- | --- |
+| `id` | Identifiant de connexion |
+| `service` | Clé du fournisseur (`ibkr`, …) |
+| `externalId` | Identifiant côté fournisseur (jamais un secret) |
+| `lastSyncedAt` | Horodatage de la dernière sync réussie, ou `null` |
+| `environment` | ex. live / demo le cas échéant |
+| `accountNumbers` | Numéros de comptes Deltalytix liés |
+
+## Créer une connexion IBKR Flex
+
+```http
+POST /api/v1/connections
+```
+
+**Scope :** `connections:write`
+
+Service MVP supporté : **IBKR Flex**.
+
+### Corps de requête
+
+```json
+{
+  "service": "ibkr",
+  "token": "<flex token>",
+  "queryId": "<flex query id>"
+}
+```
+
+### Exemple
+
+```bash
+curl -X POST https://www.deltalytix.app/api/v1/connections \
+  -H "Authorization: Bearer dltx_at_…" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "service": "ibkr",
+    "token": "YOUR_FLEX_TOKEN",
+    "queryId": "YOUR_FLEX_QUERY_ID"
+  }'
+```
+
+```js
+const res = await fetch("https://www.deltalytix.app/api/v1/connections", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    service: "ibkr",
+    token: process.env.IBKR_FLEX_TOKEN,
+    queryId: process.env.IBKR_FLEX_QUERY_ID,
+  }),
+});
+```
+
+En cas de succès, l’API crée la connexion et les comptes liés, lance une sync initiale, et renvoie l’objet connexion (sans le token Flex).
+
+### Service non supporté → `422`
+
+```json
+{
+  "error": "unsupported_service",
+  "message": "Only IBKR Flex is supported in this API version",
+  "details": {
+    "supported": ["ibkr"]
+  }
+}
+```
+
+## Déclencher une synchronisation
+
+```http
+POST /api/v1/connections/{id}/sync
+```
+
+**Scope :** `connections:write`
+
+Déclenche une sync pour les services disposant d’une logique de synchronisation serveur réutilisable. IBKR est supporté a minima ; des services supplémentaires comme `tradovate`, `dxfeed` et `rithmic-protocol` peuvent être disponibles lorsque leurs actions de sync sont réutilisables.
+
+### Exemple
+
+```bash
+curl -X POST https://www.deltalytix.app/api/v1/connections/conn_01HZX…/sync \
+  -H "Authorization: Bearer dltx_at_…"
+```
+
+### Réponse `200` (terminée)
+
+```json
+{
+  "status": "completed",
+  "imported": 42,
+  "duplicates": 3
+}
+```
+
+### Réponse `202` (asynchrone)
+
+```json
+{
+  "status": "started"
+}
+```

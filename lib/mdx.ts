@@ -31,6 +31,70 @@ function normalizePostMeta(meta: Record<string, any>, slug: string) {
   }
 }
 
+/** Shared MDX compile pipeline (rehype-pretty-code, slug, autolink, GFM). */
+export async function compileMdxSource(rawContent: string) {
+  const hasCodeBlocks = /^```|<pre|<code/m.test(rawContent)
+  const hasImages = /!\[|<img|<Image/.test(rawContent)
+  const rehypePlugins: any[] = [
+    (await import('rehype-slug')).default,
+    [(await import('rehype-autolink-headings')).default, {
+      behavior: 'wrap',
+      properties: {
+        className: ['anchor'],
+        'aria-label': 'Link to this section'
+      }
+    }],
+  ]
+
+  if (hasImages) {
+    rehypePlugins.push([
+      (await import('rehype-img-size')).default,
+      {
+        dir: path.join(process.cwd(), 'public')
+      },
+    ])
+  }
+
+  if (hasCodeBlocks) {
+    rehypePlugins.push([
+      (await import('rehype-pretty-code')).default,
+      {
+        theme: {
+          dark: 'github-dark',
+          light: 'github-light',
+        },
+        keepBackground: true,
+        onVisitLine(node: any) {
+          if (node.children.length === 0) {
+            node.children = [{ type: 'text', value: ' ' }]
+          }
+        },
+        onVisitHighlightedLine(node: any) {
+          node.properties.className.push('line--highlighted')
+        },
+        onVisitHighlightedWord(node: any) {
+          node.properties.className = ['word--highlighted']
+        },
+      },
+    ])
+  }
+
+  const { content } = await compileMDX({
+    source: rawContent,
+    options: {
+      mdxOptions: {
+        remarkPlugins: [
+          (await import('remark-gfm')).default,
+          (await import('remark-squeeze-paragraphs')).default,
+        ],
+        rehypePlugins,
+      },
+    },
+  })
+
+  return content
+}
+
 export const getPostMetadata = cache(async (slug: string, locale: string) => {
   const fullPath = getPostPath(slug, locale)
 
@@ -84,65 +148,7 @@ export const getPost = cache(async (slug: string, locale: string) => {
   try {
     const fileContents = fs.readFileSync(fullPath, 'utf8')
     const { data: meta, content: rawContent } = matter(fileContents)
-    const hasCodeBlocks = /^```|<pre|<code/m.test(rawContent)
-    const hasImages = /!\[|<img|<Image/.test(rawContent)
-    const rehypePlugins: any[] = [
-      (await import('rehype-slug')).default,
-      [(await import('rehype-autolink-headings')).default, {
-        behavior: 'wrap',
-        properties: {
-          className: ['anchor'],
-          'aria-label': 'Link to this section'
-        }
-      }],
-    ]
-
-    if (hasImages) {
-      rehypePlugins.push([
-        (await import('rehype-img-size')).default,
-        {
-          dir: path.join(process.cwd(), 'public')
-        },
-      ])
-    }
-
-    if (hasCodeBlocks) {
-      rehypePlugins.push([
-        (await import('rehype-pretty-code')).default,
-        {
-          theme: {
-            dark: 'github-dark',
-            light: 'github-light',
-          },
-          keepBackground: true,
-          onVisitLine(node: any) {
-            if (node.children.length === 0) {
-              node.children = [{ type: 'text', value: ' ' }]
-            }
-          },
-          onVisitHighlightedLine(node: any) {
-            node.properties.className.push('line--highlighted')
-          },
-          onVisitHighlightedWord(node: any) {
-            node.properties.className = ['word--highlighted']
-          },
-        },
-      ])
-    }
-
-    const { content } = await compileMDX({
-      source: rawContent,
-      options: { 
-        mdxOptions: {
-          remarkPlugins: [
-            (await import('remark-gfm')).default,
-            // Add remark-squeeze-paragraphs to remove empty paragraphs
-            (await import('remark-squeeze-paragraphs')).default,
-          ],
-          rehypePlugins,
-        },
-      },
-    })
+    const content = await compileMdxSource(rawContent)
 
     return {
       meta: normalizePostMeta(meta, slug),
