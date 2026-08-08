@@ -345,20 +345,14 @@ export default async function proxy(req: NextRequest) {
   // Embed route check
   if (pathname.includes("/embed")) {
     response.headers.delete('X-Frame-Options'); // Allow framing
-    
-    // Check if request is from a local file or development environment
-    const origin = req.headers.get('origin');
-    const referer = req.headers.get('referer');
-    const isLocalFile = origin === 'null' || referer?.startsWith('file://') || (!origin && !referer);
+
+    // `origin` and `referer` are set by the embedding page, so "looks like a
+    // file:// embed" cannot gate the policy: any site can suppress both — an
+    // Origin of "null" from a sandboxed iframe, or no Referer at all under
+    // referrerpolicy="no-referrer" — and would otherwise strip frame-ancestors
+    // entirely. Genuine file:// embedding stays covered by the "file:" source in
+    // the policy below, so CSP is only omitted for local development.
     const isDev = process.env.NODE_ENV === 'development';
-    
-    console.log('Embed request debug:', { origin, referer, isLocalFile, nodeEnv: process.env.NODE_ENV, pathname });
-    
-    // If embedding from a local file (file://), omit CSP entirely so browsers don't block
-    if (isLocalFile) {
-      response.headers.delete('Content-Security-Policy');
-      return addAgentDiscoveryHeaders(response, req);
-    }
 
     // Development: omit CSP entirely to prevent frame-ancestors blocking during local testing
     if (isDev) {
