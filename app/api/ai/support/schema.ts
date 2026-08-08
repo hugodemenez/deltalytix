@@ -6,6 +6,9 @@ const MAX_MESSAGE_PARTS = 50;
 const MAX_PART_TYPE_LENGTH = 80;
 const MAX_TEXT_PART_LENGTH = 8_000;
 
+export const supportAgentLocaleSchema = z.enum(["en", "fr"]);
+export type SupportAgentLocale = z.infer<typeof supportAgentLocaleSchema>;
+
 const uiMessagePartSchema = z
   .object({
     type: z.string().min(1).max(MAX_PART_TYPE_LENGTH),
@@ -41,6 +44,7 @@ export const supportChatRequestSchema = z.object({
     .array(supportChatMessageSchema)
     .min(1, "At least one message is required")
     .max(MAX_SUPPORT_MESSAGES, "Too many messages"),
+  locale: supportAgentLocaleSchema.default("en"),
 });
 
 export type SupportChatRequest = z.infer<typeof supportChatRequestSchema>;

@@ -38,12 +38,16 @@ Vercel AI Gateway; override with `SUPPORT_AGENT_MODEL`). The system prompt requi
 search before answering, search at least twice before concluding something does not exist, and
 escalate rather than ask a second round of clarifying questions.
 
+The support page sends the current UI `locale` (`en` | `fr`) with every request. `prepareCall`
+injects a UI-locale block so reasoning titles and answers follow `/en` or `/fr` instead of
+guessing from the first message.
+
 ## Request flow
 
 `route.ts` validates the request (`schema.ts`), strips the initial greeting, rejects unsupported
-file URLs, then streams `supportAgent` via `createAgentUIStreamResponse`. Errors map to typed
-JSON (`rate_limit_exceeded`, `service_unavailable`, `internal_error`) that the client turns into
-localized messages.
+file URLs, then streams `supportAgent` via `createAgentUIStreamResponse` with
+`options: { locale }`. Errors map to typed JSON (`rate_limit_exceeded`, `service_unavailable`,
+`internal_error`) that the client turns into localized messages.
 
 ## Environment
 

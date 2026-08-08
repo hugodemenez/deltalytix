@@ -1,4 +1,5 @@
 import { ToolLoopAgent, stepCountIs } from "ai";
+import { z } from "zod";
 import { askForEmailForm } from "@/app/api/ai/support/tools/ask-for-email-form";
 import {
   grepCodebaseTool,
@@ -6,12 +7,24 @@ import {
   readCodebaseFileTool,
   searchCodebaseTool,
 } from "@/app/api/ai/support/tools/search-codebase";
+import {
+  supportAgentLocaleSchema,
+  type SupportAgentLocale,
+} from "@/app/api/ai/support/schema";
 
 /**
  * Tool-loop search needs a model that reliably chains calls; nano tends to
  * answer from memory instead of searching. Override per environment if needed.
  */
 const SUPPORT_AGENT_MODEL = process.env.SUPPORT_AGENT_MODEL ?? "openai/gpt-5-mini";
+
+export type { SupportAgentLocale };
+
+export const supportAgentCallOptionsSchema = z.object({
+  locale: supportAgentLocaleSchema,
+});
+
+export type SupportAgentCallOptions = z.infer<typeof supportAgentCallOptionsSchema>;
 
 const SUPPORT_AGENT_INSTRUCTIONS = `You are the Deltalytix support assistant — a trading journaling platform. You help users with product questions and troubleshooting, and you hand off to human support the moment that is the faster path.
 
@@ -32,20 +45,40 @@ Call **askForEmailForm** immediately, without further questions, when:
 - You have given one substantive answer and the user is still blocked.
 - Your research did not produce a confident answer.
 
-Never ask a second round of clarifying questions before escalating. At most one clarifying question per conversation — after that, escalate. Pass a summary written in the user's language that states the problem, what was already tried, and what the user needs.
+Never ask a second round of clarifying questions before escalating. At most one clarifying question per conversation — after that, escalate. Pass a summary written in the UI locale that states the problem, what was already tried, and what the user needs.
 
 The interface also shows the user a permanent "Talk to a human" button, so never tell them there is no way to reach a person.
 
 ## COMMUNICATION STYLE
 - Be concise, friendly, and actionable; Markdown for steps and lists.
 - Say you are an AI assistant when the conversation starts.
-- Match the user's language (English or French) — in your reasoning summaries as well as your answers. A French user must never see English reasoning.
-- Open each reasoning summary with a short title line describing what you are doing (e.g. "**Exporting PDF instructions**"), written in the user's language. The interface shows that title while you work.
+- Open each reasoning summary with a short title line describing what you are doing (e.g. "**Exporting PDF instructions**" / "**Instructions d'export PDF**"). The interface shows that title while you work.
 - Never invent feature names, UI labels, settings, or steps you did not find. If you are unsure, say so and escalate.`;
 
-export const supportAgent = new ToolLoopAgent({
+function getLocaleInstructions(locale: SupportAgentLocale): string {
+  const language = locale === "fr" ? "French" : "English";
+
+  return `## UI LOCALE
+The support page is currently in \`${locale}\` (${language}).
+- Write every reasoning summary title and body in ${language}. Never mix languages in reasoning.
+- Prefer ${language} for answers unless the user clearly writes in the other supported language.
+- When calling askForEmailForm or searchCodebase, pass locale: "${locale}".`;
+}
+
+export function buildSupportAgentInstructions(locale: SupportAgentLocale): string {
+  return `${SUPPORT_AGENT_INSTRUCTIONS}
+
+${getLocaleInstructions(locale)}`;
+}
+
+export const supportAgent = new ToolLoopAgent<SupportAgentCallOptions>({
   model: SUPPORT_AGENT_MODEL,
   instructions: SUPPORT_AGENT_INSTRUCTIONS,
+  callOptionsSchema: supportAgentCallOptionsSchema,
+  prepareCall: ({ options, ...settings }) => ({
+    ...settings,
+    instructions: buildSupportAgentInstructions(options.locale),
+  }),
   stopWhen: stepCountIs(12),
   providerOptions: {
     openai: {

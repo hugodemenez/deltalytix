@@ -222,6 +222,9 @@ const ChatBotDemo = () => {
   const { messages, sendMessage, status, setMessages, stop } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/ai/support',
+      body: () => ({
+        locale,
+      }),
     }),
     onError: (error) => {
       console.error('Chat error:', error);
