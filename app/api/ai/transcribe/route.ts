@@ -21,6 +21,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const MAX_AUDIO_BYTES = 25 * 1024 * 1024
+    const allowedMimePrefixes = ['audio/', 'video/webm', 'video/mp4']
+    const mime = audioFile.type || ''
+    if (!allowedMimePrefixes.some((prefix) => mime.startsWith(prefix))) {
+      return NextResponse.json(
+        { error: 'Invalid audio file type' },
+        { status: 400 }
+      )
+    }
+    if (audioFile.size > MAX_AUDIO_BYTES) {
+      return NextResponse.json(
+        { error: 'Audio exceeds the 25MB size limit' },
+        { status: 413 }
+      )
+    }
+
     // Convert File to the format expected by OpenAI
     const audioBuffer = await audioFile.arrayBuffer()
     const audioBlob = new Blob([audioBuffer], { type: audioFile.type })

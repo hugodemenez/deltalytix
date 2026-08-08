@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { createClient } from './auth';
 import { Mood } from '@/prisma/generated/prisma/client';
+import { sanitizeJournalHtml } from '@/lib/sanitize-html'
 
 export type Conversation = {
   role: 'user' | 'assistant' | 'system';
@@ -48,6 +49,8 @@ export async function saveMindset(
       return 'VERY_HAPPY'
     }
 
+    const journalContent = sanitizeJournalHtml(data.journalContent)
+
     // Check if mood already exists for today
     const existingMood = await prisma.mood.findFirst({
       where: {
@@ -66,7 +69,7 @@ export async function saveMindset(
         data: {
           emotionValue: data.emotionValue,
           selectedNews: data.selectedNews,
-          journalContent: data.journalContent,
+          journalContent,
           mood: getMoodLabel(data.emotionValue),
           updatedAt: now,
         },
@@ -82,7 +85,7 @@ export async function saveMindset(
         day: today,
         emotionValue: data.emotionValue,
         selectedNews: data.selectedNews,
-        journalContent: data.journalContent,
+        journalContent,
         mood: getMoodLabel(data.emotionValue),
       },
     })

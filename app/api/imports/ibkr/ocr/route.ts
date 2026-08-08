@@ -94,6 +94,14 @@ export async function POST(request: Request) {
       });
     }
 
+    const MAX_PDF_BYTES = 10 * 1024 * 1024
+    if (pdfBuffer.byteLength > MAX_PDF_BYTES) {
+      return new Response(JSON.stringify({ error: 'PDF exceeds the 10MB size limit' }), {
+        status: 413,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Extract text from PDF
     const extractedText = await extractTextFromPdf(pdfBuffer)
     console.log(extractedText.slice(0, 100))

@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase";
 import { useCompletion } from "@ai-sdk/react";
 import { FinancialEvent } from "@/prisma/generated/prisma/browser";
+import { escapeHtml } from "@/lib/sanitize-html";
 import { z } from "zod";
 import { OptimizedBubbleMenu } from "@/components/tiptap/optimized-bubble-menu";
 import { ResponsiveMenuBar } from "@/components/tiptap/menu-bar";
@@ -491,11 +492,12 @@ export function TiptapEditor({
             hour12: false,
           });
 
-          const location = event.country || "Unknown";
-          const eventName = event.title;
-          const impactLevel = event.importance.toUpperCase();
+          const location = escapeHtml(event.country || "Unknown");
+          const eventName = escapeHtml(event.title || "");
+          const impactLevel = escapeHtml(event.importance.toUpperCase());
+          const newsId = escapeHtml(String(event.id));
 
-          return `<p data-news-id="${event.id}" class="news-event-inline text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 px-2 py-1 rounded border-l-2 border-blue-500 my-1">${eventTime} - ${location} - ${eventName} - ${impactLevel}</p>`;
+          return `<p data-news-id="${newsId}" class="news-event-inline text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 px-2 py-1 rounded border-l-2 border-blue-500 my-1">${eventTime} - ${location} - ${eventName} - ${impactLevel}</p>`;
         })
         .join("");
 

@@ -8,6 +8,7 @@ import {
   type ExportJournalPdfPayload,
 } from "@/lib/pdf/journal"
 import { makePdfTranslator } from "@/lib/pdf/locale"
+import { requireApiUserId } from "@/lib/api-auth"
 
 export const maxDuration = 60
 
@@ -27,6 +28,9 @@ function buildStrings(t: (key: string) => string): JournalStrings {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireApiUserId()
+    if (auth.error) return auth.error
+
     const body = (await request.json()) as Partial<ExportJournalPdfPayload>
     const entries = sanitizeJournalEntries(body.entries)
 

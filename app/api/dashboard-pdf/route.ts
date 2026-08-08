@@ -6,6 +6,7 @@ import { StatementDocument, type StatementStrings } from "@/lib/pdf/statement-do
 import { makePdfTranslator } from "@/lib/pdf/locale"
 import { sanitizeTrades, type ExportPdfPayload } from "@/lib/pdf/statement"
 import { DEFAULT_BREAKEVEN_RANGE, type BreakevenRange } from "@/types/breakeven"
+import { requireApiUserId } from "@/lib/api-auth"
 
 // Generate the dashboard PDF on the server. Moving rendering off the client
 // avoids the mobile tab-reload/out-of-memory failures that html2canvas caused:
@@ -59,6 +60,9 @@ function sanitizeBreakevenRange(input: unknown): BreakevenRange {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireApiUserId()
+    if (auth.error) return auth.error
+
     const body = (await request.json()) as Partial<ExportPdfPayload>
     const trades = sanitizeTrades(body.trades)
 

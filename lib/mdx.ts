@@ -11,8 +11,32 @@ type AllPostMetadata = PostMetadataEntry[]
 
 const allPostMetadataByLocale = new Map<string, Promise<AllPostMetadata>>()
 
+function isSafePathSegment(value: string): boolean {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length < 200 &&
+    !value.includes('..') &&
+    !value.includes('/') &&
+    !value.includes('\\') &&
+    !path.isAbsolute(value)
+  )
+}
+
 function getPostPath(slug: string, locale: string) {
-  return path.join(postsDirectory, locale, `${slug}.mdx`)
+  if (!isSafePathSegment(slug) || !isSafePathSegment(locale)) {
+    throw new Error('Invalid post path segment')
+  }
+  const fullPath = path.join(postsDirectory, locale, `${slug}.mdx`)
+  const resolvedPostsRoot = path.resolve(postsDirectory)
+  const resolvedPath = path.resolve(fullPath)
+  if (
+    resolvedPath !== resolvedPostsRoot &&
+    !resolvedPath.startsWith(resolvedPostsRoot + path.sep)
+  ) {
+    throw new Error('Invalid post path')
+  }
+  return fullPath
 }
 
 function normalizePostMeta(meta: Record<string, any>, slug: string) {
@@ -32,9 +56,8 @@ function normalizePostMeta(meta: Record<string, any>, slug: string) {
 }
 
 export const getPostMetadata = cache(async (slug: string, locale: string) => {
-  const fullPath = getPostPath(slug, locale)
-
   try {
+    const fullPath = getPostPath(slug, locale)
     const fileContents = fs.readFileSync(fullPath, 'utf8')
     const { data: meta } = matter(fileContents)
 
@@ -43,7 +66,7 @@ export const getPostMetadata = cache(async (slug: string, locale: string) => {
       slug,
     }
   } catch (error) {
-    console.error(`Error reading MDX metadata: ${fullPath}`, error)
+    console.error(`Error reading MDX metadata for ${locale}/${slug}:`, error)
     return null
   }
 })
@@ -79,9 +102,8 @@ export const getAllPostMetadata = cache(async (locale: string) => {
 
 // Cache the MDX compilation results
 export const getPost = cache(async (slug: string, locale: string) => {
-  const fullPath = getPostPath(slug, locale)
-
   try {
+    const fullPath = getPostPath(slug, locale)
     const fileContents = fs.readFileSync(fullPath, 'utf8')
     const { data: meta, content: rawContent } = matter(fileContents)
     const hasCodeBlocks = /^```|<pre|<code/m.test(rawContent)
@@ -150,7 +172,7 @@ export const getPost = cache(async (slug: string, locale: string) => {
       slug,
     }
   } catch (error) {
-    console.error(`Error reading MDX file: ${fullPath}`, error)
+    console.error(`Error reading MDX file for ${locale}/${slug}:`, error)
     return null
   }
 })
