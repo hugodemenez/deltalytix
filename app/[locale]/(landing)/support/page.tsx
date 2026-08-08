@@ -123,8 +123,8 @@ const ATTACHMENT_ONLY_PLACEHOLDER = 'Sent with attachments';
 const MAX_REASONING_LABEL_LENGTH = 60;
 
 /**
- * Reasoning summaries open with a short title ("**Exporting PDF instructions**").
- * Surfacing that beats "Thought for 1 seconds"; fall back when there is no title.
+ * Prefer a short first-line label from the reasoning summary when present;
+ * otherwise fall back to the localized thinking / thought-process copy.
  */
 const getReasoningLabel = (text: string): string | undefined => {
   const firstLine = text
@@ -175,9 +175,35 @@ function ReasoningBlock({
         </span>
         <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
       </ReasoningTrigger>
-      <ReasoningContent>{text}</ReasoningContent>
+      {text.trim() ? <ReasoningContent>{text}</ReasoningContent> : null}
     </Reasoning>
   );
+}
+
+/** Optimistic status row — same chrome as reasoning so the brain never vanishes mid-wait. */
+function PendingIndicator({ label }: { label: string }) {
+  return (
+    <div className="mb-4 flex w-full items-center gap-2 text-sm text-muted-foreground">
+      <BrainIcon className="size-4 shrink-0" />
+      <span className="min-w-0 truncate text-left shimmer">{label}</span>
+    </div>
+  );
+}
+
+function hasActiveReasoningRow(
+  message: ReturnType<typeof useChat>['messages'][number] | undefined,
+  status: ReturnType<typeof useChat>['status'],
+) {
+  if (!message || message.role !== 'assistant') return false;
+
+  return message.parts.some((part, index) => {
+    if (part.type !== 'reasoning') return false;
+
+    const isStreamingReasoning =
+      status === 'streaming' && index === message.parts.length - 1;
+
+    return Boolean(part.text?.trim()) || isStreamingReasoning;
+  });
 }
 
 function SupportPromptSubmit({
@@ -382,6 +408,8 @@ const ChatBotDemo = () => {
   const showStarterActions = messages.length <= 1 && !isBusy;
   // Once the conversation has started, the human escape hatch stays available.
   const showHumanHandoff = hasStarted && !isBusy;
+  const showPendingIndicator =
+    isBusy && !hasActiveReasoningRow(messages.at(-1), status);
 
   return (
     <MessageScrollerProvider autoScroll>
@@ -576,19 +604,21 @@ const ChatBotDemo = () => {
                             );
                           }
                           case 'reasoning': {
-                            if (!part.text?.trim()) {
+                            const isStreamingReasoning =
+                              status === 'streaming' &&
+                              i === message.parts.length - 1 &&
+                              message.id === messages.at(-1)?.id;
+
+                            // Keep the brain visible while reasoning tokens are still empty.
+                            if (!part.text?.trim() && !isStreamingReasoning) {
                               return null;
                             }
 
                             return (
                               <ReasoningBlock
                                 key={`${message.id}-${i}`}
-                                text={part.text}
-                                isStreaming={
-                                  status === 'streaming' &&
-                                  i === message.parts.length - 1 &&
-                                  message.id === messages.at(-1)?.id
-                                }
+                                text={part.text ?? ''}
+                                isStreaming={isStreamingReasoning}
                               />
                             );
                           }
@@ -675,12 +705,8 @@ const ChatBotDemo = () => {
                     </MessageScrollerItem>
                   ))}
 
-                  {status === 'submitted' && (
-                    <Marker>
-                      <MarkerContent className="shimmer">
-                        {t('support.generating')}
-                      </MarkerContent>
-                    </Marker>
+                  {showPendingIndicator && (
+                    <PendingIndicator label={t('support.generating')} />
                   )}
                 </MessageScrollerContent>
               </MessageScrollerViewport>
