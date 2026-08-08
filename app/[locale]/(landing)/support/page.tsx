@@ -20,13 +20,12 @@ import {
   Actions,
   Action,
 } from '@/components/ai-elements/actions';
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { Response } from '@/components/ai-elements/response';
 import {
   BrainIcon,
   ChevronDownIcon,
-  HeadsetIcon,
   PencilIcon,
   RefreshCcwIcon,
 } from 'lucide-react';
@@ -44,7 +43,6 @@ import {
   ReasoningContent,
   ReasoningTrigger,
 } from '@/components/ai-elements/reasoning';
-import { Suggestion, Suggestions } from '@/components/ai-elements/suggestion';
 import { DefaultChatTransport, ToolUIPart } from 'ai';
 import { ClipboardCheckIcon } from '@/components/animated-icons/clipboard-check';
 import SupportForm from './components/support-form';
@@ -67,10 +65,6 @@ import {
 } from '@/components/ui/message';
 import { Bubble, BubbleContent } from '@/components/ui/bubble';
 import { Marker, MarkerContent } from '@/components/ui/marker';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
 
 const DISCORD_INVITE_URL = process.env.NEXT_PUBLIC_DISCORD_INVITATION;
 
@@ -341,15 +335,6 @@ const ChatBotDemo = () => {
     }
   }, [messages]);
 
-  const suggestions = useMemo(
-    () => [
-      t('support.suggestionImport'),
-      t('support.suggestionBilling'),
-      t('support.suggestionBug'),
-    ],
-    [t],
-  );
-
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([
@@ -392,64 +377,57 @@ const ChatBotDemo = () => {
     setInput('');
   };
 
-  const sendWithOptions = (text: string) => {
-    sendMessage({ text });
-  };
-
   const isBusy = status === 'submitted' || status === 'streaming';
-  const hasStarted = messages.some((message) => message.role === 'user');
-  const showStarterActions = messages.length <= 1 && !isBusy;
-  // Once the conversation has started, the human escape hatch stays available.
-  const showHumanHandoff = hasStarted && !isBusy;
   const showPendingIndicator =
     isBusy && !hasActiveReasoningRow(messages.at(-1), status);
 
   return (
     <MessageScrollerProvider autoScroll>
-      <div className="mx-auto flex size-full h-[calc(100vh-64px)] max-w-4xl flex-col gap-4 p-4 sm:p-6">
-        {/* Page title lives outside the chat surface, like /updates. */}
-        <header className="space-y-1">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            <HeadsetIcon className="size-6 text-primary" />
-            {t('support.pageTitle')}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t('support.pageDescription')}
-            {DISCORD_INVITE_URL && (
-              <>
-                {' '}
-                {t('support.discordPrompt')}{' '}
-                <a
-                  href={DISCORD_INVITE_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-medium text-foreground underline underline-offset-4 hover:text-primary"
-                >
-                  {t('support.joinDiscordInline')}
-                </a>
-                .
-              </>
-            )}
-          </p>
-        </header>
-
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0">
-          {/* Escalation appears only once the conversation has started. */}
-          {showHumanHandoff && (
-            <div className="flex justify-end border-b px-4 py-2">
+      <main className="min-h-screen">
+        <header className="border-b border-black/10 dark:border-white/10">
+          <div className="mx-auto w-full max-w-[1440px] px-5 py-16 sm:px-8 sm:py-24 lg:px-12 lg:py-32">
+            <p className="mb-7 text-sm text-black/55 dark:text-white/55">
+              Deltalytix
+            </p>
+            <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h1 className="max-w-[960px] text-[clamp(3rem,7.2vw,7.25rem)] font-normal leading-[0.92] tracking-[-0.06em]">
+                  {t('support.pageTitle')}
+                </h1>
+                <p className="mt-7 max-w-[680px] text-lg leading-relaxed text-black/60 dark:text-white/60 md:text-xl">
+                  {t('support.pageDescription')}
+                  {DISCORD_INVITE_URL && (
+                    <>
+                      {' '}
+                      {t('support.discordPrompt')}{' '}
+                      <a
+                        href={DISCORD_INVITE_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-black underline underline-offset-4 hover:text-black/80 dark:text-white dark:hover:text-white/80"
+                      >
+                        {t('support.joinDiscordInline')}
+                      </a>
+                      .
+                    </>
+                  )}
+                </p>
+              </div>
               <Button
                 type="button"
-                size="sm"
                 variant="outline"
+                className="shrink-0 border-black/15 bg-transparent text-black hover:bg-black/5 dark:border-white/15 dark:text-white dark:hover:bg-white/5"
                 onClick={requestHumanSupport}
               >
-                <HeadsetIcon className="size-4" />
-                {t('support.requestHumanSupport')}
+                {t('support.fillSupportRequest')}
               </Button>
             </div>
-          )}
+          </div>
+        </header>
 
-          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+        <section>
+          <div className="mx-auto flex w-full max-w-[1440px] flex-col px-5 py-12 sm:px-8 md:py-16 lg:px-12">
+            <div className="flex min-h-[min(70vh,720px)] flex-col overflow-hidden border border-black/10 dark:border-white/10">
             <MessageScroller className="min-h-0 flex-1">
               <MessageScrollerViewport>
                 <MessageScrollerContent aria-busy={isBusy} className="gap-4 p-4">
@@ -743,28 +721,8 @@ const ChatBotDemo = () => {
               <MessageScrollerButton />
             </MessageScroller>
 
-            {showStarterActions && (
-              <div className="border-t px-4 py-3">
-                <Suggestions>
-                  {suggestions.map((suggestion) => (
-                    <Suggestion
-                      key={suggestion}
-                      suggestion={suggestion}
-                      onClick={sendWithOptions}
-                    />
-                  ))}
-                  {/* Goes straight to the form — routing it through the model is the loop we are fixing. */}
-                  <Suggestion
-                    suggestion={t('support.suggestionHuman')}
-                    onClick={requestHumanSupport}
-                  />
-                </Suggestions>
-              </div>
-            )}
-
-            {/* Input is docked inside the chat panel so it reads as one conversation surface. */}
             <div
-              className="border-t p-3 sm:p-4"
+              className="border-t border-black/10 p-3 dark:border-white/10 sm:p-4"
               // Escape bubbles up from the textarea, which owns its own onKeyDown.
               onKeyDown={(event) => {
                 if (event.key === 'Escape' && pendingEditMessageId) {
@@ -812,8 +770,9 @@ const ChatBotDemo = () => {
                 </PromptInputToolbar>
               </PromptInput>
             </div>
-          </CardContent>
-        </Card>
+            </div>
+          </div>
+        </section>
 
         <SupportForm
           open={contactForm.open}
@@ -823,7 +782,7 @@ const ChatBotDemo = () => {
           messages={messages}
           setMessages={setMessages}
         />
-      </div>
+      </main>
     </MessageScrollerProvider>
   );
 };
