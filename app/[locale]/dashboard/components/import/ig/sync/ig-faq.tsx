@@ -144,6 +144,18 @@ export function IgFaq() {
         </AccordionItem>
 
         <AccordionItem
+          value="username"
+          className="border-black/10 dark:border-white/10"
+        >
+          <AccordionTrigger className={triggerClassName}>
+            {t("igSync.faq.usernameQuestion")}
+          </AccordionTrigger>
+          <AccordionContent className={contentClassName}>
+            <p>{t("igSync.faq.usernameAnswer")}</p>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem
           value="scope"
           className="border-black/10 dark:border-white/10"
         >

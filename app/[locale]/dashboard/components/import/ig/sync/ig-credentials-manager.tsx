@@ -326,6 +326,9 @@ export function IgCredentialsManager() {
                 onChange={(e) => setIdentifier(e.target.value)}
                 className={fieldClassName}
               />
+              <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
+                {t("igSync.addAccount.usernameHint")}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="ig-mgr-password">

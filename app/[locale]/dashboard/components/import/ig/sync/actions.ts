@@ -20,6 +20,7 @@ import {
   switchIgAccount,
   type IgApiEnvironment,
 } from "@/lib/ig-api/client";
+import { isValidIgIdentifier } from "@/lib/ig-api/identifier";
 import { mapIgApiTransactions } from "@/lib/ig-api/transactions-to-trades";
 import type {
   IgActionResult,
@@ -64,6 +65,14 @@ function mapIgAuthError(
 
   if (code.includes("invalid-details")) {
     return { error: "IG_INVALID_CREDENTIALS" };
+  }
+  // Email logins work on ig.com; the REST API only accepts the username
+  // pattern [A-Za-z0-9_-]{1,30}. Surface that before a generic AUTH_FAILED.
+  if (
+    code.includes("authenticationrequest.identifier") ||
+    (code.includes("pattern.invalid") && code.includes("identifier"))
+  ) {
+    return { error: "IG_IDENTIFIER_INVALID" };
   }
   if (code.includes("api-key-disabled") || code.includes("api-key-revoked")) {
     return { error: "IG_API_KEY_DISABLED" };
@@ -172,6 +181,15 @@ export async function authenticateIg(
     if (!hasConnectionTokenEncryptionKey()) {
       logger.error("ENCRYPTION_KEY is not configured — refusing to connect IG");
       return { error: "ENCRYPTION_KEY_MISSING" };
+    }
+
+    // Same gate IG applies server-side. Catch emails (and other web-login forms)
+    // here so the trader gets a clear message instead of the raw pattern code.
+    if (!isValidIgIdentifier(trimmedIdentifier)) {
+      logger.warn(
+        `Rejecting identifier that does not match IG API pattern (length=${trimmedIdentifier.length})`,
+      );
+      return { error: "IG_IDENTIFIER_INVALID" };
     }
 
     logger.info(
