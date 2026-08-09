@@ -21,6 +21,7 @@ import {
   Action,
 } from '@/components/ai-elements/actions';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useChat } from '@ai-sdk/react';
 import { Response } from '@/components/ai-elements/response';
 import {
@@ -229,6 +230,60 @@ function ReasoningLabelSkeleton({ label }: { label: string }) {
   );
 }
 
+function ReasoningLabelSwap({
+  showSkeleton,
+  skeletonLabel,
+  label,
+  isStreaming,
+}: {
+  showSkeleton: boolean;
+  skeletonLabel: string;
+  label: string;
+  isStreaming: boolean;
+}) {
+  const reduceMotion = useReducedMotion();
+  const transition = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.28, ease: 'easeInOut' as const };
+
+  return (
+    <span className="relative min-h-5 min-w-0 flex-1 overflow-hidden text-left">
+      {/* Invisible sizer keeps the trigger height stable during the crossfade. */}
+      <span className="invisible block truncate" aria-hidden>
+        {showSkeleton ? skeletonLabel : label || skeletonLabel}
+      </span>
+      <AnimatePresence initial={false} mode="sync">
+        {showSkeleton ? (
+          <motion.span
+            key="skeleton"
+            className="absolute inset-y-0 left-0 right-0 flex items-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={transition}
+          >
+            <ReasoningLabelSkeleton label={skeletonLabel} />
+          </motion.span>
+        ) : (
+          <motion.span
+            key="label"
+            className={cn(
+              'absolute inset-y-0 left-0 right-0 truncate',
+              isStreaming && 'shimmer',
+            )}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={transition}
+          >
+            {label}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </span>
+  );
+}
+
 function ReasoningBlock({
   text,
   isStreaming = false,
@@ -270,18 +325,12 @@ function ReasoningBlock({
         disabled={!canExpand}
         aria-label={showSkeleton ? pendingLabel : label}
       >
-        {showSkeleton ? (
-          <ReasoningLabelSkeleton label={pendingLabel} />
-        ) : (
-          <span
-            className={cn(
-              'min-w-0 truncate text-left',
-              isStreaming && 'shimmer',
-            )}
-          >
-            {label}
-          </span>
-        )}
+        <ReasoningLabelSwap
+          showSkeleton={showSkeleton}
+          skeletonLabel={pendingLabel}
+          label={label}
+          isStreaming={isStreaming}
+        />
         {canExpand ? (
           <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
         ) : null}
