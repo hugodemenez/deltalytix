@@ -24,7 +24,6 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { Response } from '@/components/ai-elements/response';
 import {
-  BrainIcon,
   ChevronDownIcon,
   PencilIcon,
   RefreshCcwIcon,
@@ -121,7 +120,7 @@ const ATTACHMENT_ONLY_PLACEHOLDER = 'Sent with attachments';
  * Lock the title once the first line is complete so streaming does not flicker
  * between a growing title, a dropped label, and a static i18n string.
  */
-function useStableReasoningLabel(text: string, isStreaming: boolean, lockKey: string): string {
+function useStableReasoningLabel(text: string, isStreaming: boolean, lockKey: string) {
   const lockedRef = useRef<string | null>(null);
   const lockKeyRef = useRef(lockKey);
 
@@ -137,39 +136,157 @@ function useStableReasoningLabel(text: string, isStreaming: boolean, lockKey: st
   });
   lockedRef.current = resolved.locked;
 
-  return resolved.label;
+  return {
+    liveLabel: resolved.label,
+    lockedSource: resolved.locked,
+  };
+}
+
+/**
+ * For non-English locales, translate the locked first-line title once it
+ * stabilizes. Keep a shimmer skeleton until the translation is ready so we
+ * never flash English into a French UI.
+ */
+function useLocalizedReasoningLabel(args: {
+  text: string;
+  isStreaming: boolean;
+  lockKey: string;
+  locale: 'en' | 'fr';
+}): { label: string; showSkeleton: boolean } {
+  const { liveLabel, lockedSource } = useStableReasoningLabel(
+    args.text,
+    args.isStreaming,
+    args.lockKey,
+  );
+  const [translated, setTranslated] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const requestKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    setTranslated(null);
+    setIsTranslating(false);
+    requestKeyRef.current = null;
+  }, [args.lockKey]);
+
+  useEffect(() => {
+    if (args.locale === 'en' || !lockedSource) return;
+
+    const requestKey = `${args.lockKey}:${lockedSource}`;
+    if (requestKeyRef.current === requestKey) return;
+    requestKeyRef.current = requestKey;
+
+    let cancelled = false;
+    setIsTranslating(true);
+
+    void (async () => {
+      try {
+        const response = await fetch('/api/ai/support/translate-label', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: lockedSource, locale: args.locale }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`translate-label failed: ${response.status}`);
+        }
+
+        const data = (await response.json()) as { label?: string };
+        if (cancelled) return;
+        setTranslated((data.label?.trim() || lockedSource));
+      } catch {
+        if (cancelled) return;
+        // Fail soft — better a stable English title than an empty row forever.
+        setTranslated(lockedSource);
+      } finally {
+        if (!cancelled) setIsTranslating(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [args.locale, args.lockKey, lockedSource]);
+
+  if (args.locale === 'en') {
+    return {
+      label: liveLabel,
+      showSkeleton: !liveLabel,
+    };
+  }
+
+  return {
+    label: translated ?? '',
+    showSkeleton: !translated || isTranslating,
+  };
+}
+
+function ReasoningLabelSkeleton({ label }: { label: string }) {
+  // `shimmer` is a text utility (background-clip: text) — needs real characters.
+  return (
+    <span className="shimmer min-w-0 truncate text-left text-muted-foreground">
+      {label}
+    </span>
+  );
 }
 
 function ReasoningBlock({
   text,
   isStreaming = false,
   lockKey,
+  locale,
+  skeletonLabel,
   className,
 }: {
   text: string;
   isStreaming?: boolean;
   /** Stable id for this reasoning step — changing it clears the locked title. */
   lockKey: string;
+  locale: 'en' | 'fr';
+  /** Localized shimmer copy shown before a title is ready. */
+  skeletonLabel?: string;
   className?: string;
 }) {
-  const label = useStableReasoningLabel(text, isStreaming, lockKey);
+  const t = useI18n();
+  const { label, showSkeleton } = useLocalizedReasoningLabel({
+    text,
+    isStreaming,
+    lockKey,
+    locale,
+  });
+  const canExpand = Boolean(text.trim());
+  const pendingLabel =
+    skeletonLabel ??
+    (isStreaming ? t('support.thinking') : t('support.thoughtProcess'));
 
   return (
     <Reasoning
       className={cn('w-full', className)}
       defaultOpen={false}
       disableAutoClose
-      isStreaming={isStreaming}
+      isStreaming={isStreaming || showSkeleton}
     >
-      <ReasoningTrigger className="group">
-        <BrainIcon className="size-4 shrink-0" />
-        <span className={cn('min-w-0 truncate text-left', isStreaming && 'shimmer')}>
-          {/* Keep height stable while waiting for the first model tokens. */}
-          {label || '\u00A0'}
-        </span>
-        <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
+      <ReasoningTrigger
+        className="group"
+        disabled={!canExpand}
+        aria-label={showSkeleton ? pendingLabel : label}
+      >
+        {showSkeleton ? (
+          <ReasoningLabelSkeleton label={pendingLabel} />
+        ) : (
+          <span
+            className={cn(
+              'min-w-0 truncate text-left',
+              isStreaming && 'shimmer',
+            )}
+          >
+            {label}
+          </span>
+        )}
+        {canExpand ? (
+          <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
+        ) : null}
       </ReasoningTrigger>
-      {text.trim() ? <ReasoningContent>{text}</ReasoningContent> : null}
+      {canExpand ? <ReasoningContent>{text}</ReasoningContent> : null}
     </Reasoning>
   );
 }
@@ -514,6 +631,7 @@ const ChatBotDemo = () => {
                                     key={`${message.id}-${i}-think-${index}`}
                                     lockKey={`${message.id}-${i}-think-${index}`}
                                     text={thought}
+                                    locale={locale}
                                   />
                                 ))}
                                 <ChatMessage align={isUser ? 'end' : 'start'}>
@@ -609,7 +727,7 @@ const ChatBotDemo = () => {
                               i === lastReasoningIndex &&
                               message.id === messages.at(-1)?.id;
 
-                            // Keep the brain visible while reasoning tokens are still empty.
+                            // Keep a shimmer skeleton while reasoning tokens are still empty.
                             if (!part.text?.trim() && !isStreamingReasoning) {
                               return null;
                             }
@@ -620,6 +738,7 @@ const ChatBotDemo = () => {
                                 lockKey={`${message.id}-reasoning-${i}`}
                                 text={part.text ?? ''}
                                 isStreaming={isStreamingReasoning}
+                                locale={locale}
                               />
                             );
                           }
@@ -711,6 +830,8 @@ const ChatBotDemo = () => {
                       lockKey={`pending-${messages.at(-1)?.id ?? 'new'}`}
                       text=""
                       isStreaming
+                      locale={locale}
+                      skeletonLabel={t('support.generating')}
                     />
                   )}
                 </MessageScrollerContent>

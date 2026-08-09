@@ -49,7 +49,12 @@ the model to investigate with `grepCodebase(scope=source)` → `readCodebaseFile
 before answering behavioural questions, and not to invent features from memory.
 
 The support page sends the current UI `locale` (`en` | `fr`) with every request.
-`prepareCall` appends a one-line locale hint so replies follow `/en` or `/fr`.
+`prepareCall` prepends a hard locale rule so replies follow `/en` or `/fr`.
+
+OpenAI reasoning summaries are still often English over the API. For `/fr`, the
+UI translates the locked first-line title through
+`POST /api/ai/support/translate-label` (`openai/gpt-5-nano`, reasoning off) and
+keeps a shimmer skeleton until that title is ready.
 
 ## Request flow
 
