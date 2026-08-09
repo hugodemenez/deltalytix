@@ -386,9 +386,6 @@ const ChatBotDemo = () => {
       <main className="min-h-screen">
         <header className="border-b border-black/10 dark:border-white/10">
           <div className="mx-auto w-full max-w-[1440px] px-5 py-16 sm:px-8 sm:py-24 lg:px-12 lg:py-32">
-            <p className="mb-7 text-sm text-black/55 dark:text-white/55">
-              Deltalytix
-            </p>
             <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <h1 className="max-w-[960px] text-[clamp(3rem,7.2vw,7.25rem)] font-normal leading-[0.92] tracking-[-0.06em]">
