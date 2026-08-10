@@ -134,7 +134,6 @@ export default async function DocsPage(props: PageProps) {
             {t("docs.tryIt")}
           </h2>
           <div className="mt-6">
-            {/* Sibling agent owns the playground implementation */}
             <DocsApiPlayground />
           </div>
         </section>
@@ -170,7 +169,6 @@ export default async function DocsPage(props: PageProps) {
             </Link>
           </p>
           <div className="mt-6">
-            {/* Sibling agent owns the OpenAPI reference UI */}
             <DocsOpenApiReference />
           </div>
         </section>
