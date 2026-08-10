@@ -1,34 +1,49 @@
-import Link from "next/link";
-import { cacheLife } from "next/cache";
-import { setStaticParamsLocale } from "next-international/server";
-import { getI18n } from "@/locales/server";
-import { getStaticParams as getLocaleStaticParams } from "@/locales/server";
-import { getAllDocMetadata } from "@/lib/docs";
-import { LANDING_SECTION_CONTAINER_CLASSNAME } from "../components/landing-section-container";
-import type { Metadata } from "next";
-import { siteUrl } from "@/lib/site-url";
-import { truncateForSocialDescription } from "@/lib/og/site-metadata";
+import type { Metadata } from "next"
+import Link from "next/link"
+import { cacheLife } from "next/cache"
+import { setStaticParamsLocale } from "next-international/server"
+import { getI18n } from "@/locales/server"
+import { getStaticParams as getLocaleStaticParams } from "@/locales/server"
+import { getAllDocs } from "@/lib/docs"
+import { LANDING_SECTION_CONTAINER_CLASSNAME } from "../components/landing-section-container"
+import { DocsPageShell } from "@/components/docs/docs-page-shell"
+import type { DocsNavItem } from "@/components/docs/docs-section-nav"
+import { DocsApiPlayground } from "@/components/docs/api-playground"
+import { DocsOpenApiReference } from "@/components/docs/openapi-reference"
+import { siteUrl } from "@/lib/site-url"
+import { truncateForSocialDescription } from "@/lib/og/site-metadata"
 
 interface PageProps {
   params: Promise<{
-    locale: string;
-  }>;
+    locale: string
+  }>
 }
 
+const DOCS_PROSE_CLASSNAME = `prose prose-neutral dark:prose-invert max-w-none
+  prose-headings:tracking-tight prose-headings:font-normal
+  prose-pre:p-0 prose-pre:bg-transparent
+  prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-neutral-100 prose-code:text-neutral-800
+  dark:prose-code:bg-neutral-800 dark:prose-code:text-neutral-200
+  prose-table:w-full prose-table:mt-6 prose-table:mb-8
+  prose-thead:border-b prose-thead:border-neutral-200 dark:prose-thead:border-neutral-800
+  prose-th:px-6 prose-th:py-3 prose-th:text-left prose-th:font-semibold
+  prose-td:px-6 prose-td:py-3 prose-td:border-b prose-td:border-neutral-200 dark:prose-td:border-neutral-800
+  prose-tr:transition-colors prose-tr:hover:bg-neutral-50 dark:prose-tr:hover:bg-neutral-900/30`
+
 export function generateStaticParams() {
-  return getLocaleStaticParams();
+  return getLocaleStaticParams()
 }
 
 async function getCachedDocsIndexMetadata(locale: string): Promise<Metadata> {
-  "use cache";
-  cacheLife("hours");
+  "use cache"
+  cacheLife("hours")
 
-  setStaticParamsLocale(locale);
+  setStaticParamsLocale(locale)
 
-  const t = await getI18n();
-  const url = siteUrl(`/${locale}/docs`);
-  const title = t("docs.title");
-  const description = truncateForSocialDescription(t("docs.description"));
+  const t = await getI18n()
+  const url = siteUrl(`/${locale}/docs`)
+  const title = t("docs.title")
+  const description = truncateForSocialDescription(t("docs.description"))
 
   return {
     title,
@@ -53,98 +68,113 @@ async function getCachedDocsIndexMetadata(locale: string): Promise<Metadata> {
       title: `${title} | Deltalytix`,
       description,
     },
-  };
+  }
 }
 
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  const { locale } = await params;
-  return getCachedDocsIndexMetadata(locale);
+  const { locale } = await params
+  return getCachedDocsIndexMetadata(locale)
 }
 
-async function CachedDocsPage({ locale }: { locale: string }) {
-  "use cache";
-  cacheLife("hours");
+export default async function DocsPage(props: PageProps) {
+  const { locale } = await props.params
 
-  setStaticParamsLocale(locale);
+  setStaticParamsLocale(locale)
 
-  const t = await getI18n();
-  const docs = await getAllDocMetadata(locale);
+  const t = await getI18n()
+  const docs = await getAllDocs(locale)
+
+  const navItems: DocsNavItem[] = [
+    { id: "try-it", title: t("docs.tryIt") },
+    ...docs.map((doc) => ({
+      id: doc.slug,
+      title: doc.meta.title,
+    })),
+    { id: "openapi", title: t("docs.openApi") },
+  ]
 
   return (
     <main className="min-h-screen">
       <header className="border-b border-black/10 dark:border-white/10">
         <div
-          className={`${LANDING_SECTION_CONTAINER_CLASSNAME} w-full py-16 sm:py-24 lg:py-32`}
+          className={`${LANDING_SECTION_CONTAINER_CLASSNAME} w-full py-10 sm:py-14 lg:py-16`}
         >
-          <p className="mb-7 text-sm text-black/55 dark:text-white/55">
+          <p className="mb-4 text-sm text-black/55 dark:text-white/55">
             Deltalytix
           </p>
-          <h1 className="max-w-[960px] text-balance text-[clamp(3rem,7.2vw,7.25rem)] font-normal leading-[0.92] tracking-[-0.06em]">
+          <h1 className="max-w-[960px] text-balance text-[clamp(2.25rem,5vw,4.5rem)] font-normal leading-[0.95] tracking-[-0.06em]">
             {t("docs.title")}
           </h1>
-          <p className="mt-7 max-w-[680px] text-pretty text-lg leading-relaxed text-black/60 dark:text-white/60 md:text-xl">
+          <p className="mt-5 max-w-[680px] text-pretty text-base leading-relaxed text-black/60 dark:text-white/60 sm:text-lg">
             {t("docs.description")}
+          </p>
+          <p className="mt-6">
+            <Link
+              href="/openapi.json"
+              className="text-sm text-black/55 underline-offset-4 transition-colors hover:text-black hover:underline dark:text-white/55 dark:hover:text-white"
+            >
+              {t("docs.openApiJson")}
+            </Link>
           </p>
         </div>
       </header>
 
-      <section>
-        <div
-          className={`${LANDING_SECTION_CONTAINER_CLASSNAME} w-full py-12 sm:py-16`}
+      <DocsPageShell
+        navItems={navItems}
+        navLabel={t("docs.onThisPage")}
+        jumpLabel={t("docs.jumpToSection")}
+      >
+        <section
+          id="try-it"
+          className="scroll-mt-24 border-b border-black/10 pb-12 dark:border-white/10 sm:pb-16"
         >
-          <div className="border-b border-black/10 pb-8 dark:border-white/10">
-            <h2 className="text-sm font-medium text-black/55 dark:text-white/55">
-              {t("docs.sections")}
+          <h2 className="text-balance text-2xl font-normal tracking-[-0.03em] sm:text-3xl">
+            {t("docs.tryIt")}
+          </h2>
+          <div className="mt-6">
+            {/* Sibling agent owns the playground implementation */}
+            <DocsApiPlayground />
+          </div>
+        </section>
+
+        {docs.map((doc) => (
+          <section
+            key={doc.slug}
+            id={doc.slug}
+            className="scroll-mt-24 border-b border-black/10 py-12 dark:border-white/10 sm:py-16"
+          >
+            <h2 className="text-balance text-2xl font-normal tracking-[-0.03em] sm:text-3xl">
+              {doc.meta.title}
             </h2>
-          </div>
+            {doc.meta.description ? (
+              <p className="mt-3 max-w-2xl text-pretty leading-relaxed text-black/60 dark:text-white/60">
+                {doc.meta.description}
+              </p>
+            ) : null}
+            <div className={`mt-8 ${DOCS_PROSE_CLASSNAME}`}>{doc.content}</div>
+          </section>
+        ))}
 
-          <div>
-            {docs.map((doc, index) => (
-              <article
-                key={doc.slug}
-                className="border-b border-black/10 dark:border-white/10"
-              >
-                <Link
-                  href={`/${locale}/docs/${doc.slug}`}
-                  className="group grid gap-6 py-10 outline-hidden md:grid-cols-[minmax(180px,0.35fr)_minmax(0,1fr)] md:py-14"
-                >
-                  <div className="flex items-start justify-between gap-4 md:block">
-                    <span className="text-sm text-black/50 dark:text-white/50">
-                      {t("docs.sectionLabel", {
-                        number: String(index + 1).padStart(2, "0"),
-                      })}
-                    </span>
-                  </div>
-
-                  <div className="flex items-start justify-between gap-6">
-                    <div className="max-w-3xl">
-                      <h3 className="text-2xl font-normal leading-tight tracking-[-0.03em] text-balance transition-opacity group-hover:opacity-60 sm:text-3xl">
-                        {doc.meta.title}
-                      </h3>
-                      <p className="mt-4 max-w-2xl text-pretty leading-relaxed text-black/60 dark:text-white/60">
-                        {doc.meta.description}
-                      </p>
-                    </div>
-                    <span
-                      className="mt-1 text-xl transition-transform duration-200 group-hover:translate-x-1"
-                      aria-hidden
-                    >
-                      →
-                    </span>
-                  </div>
-                </Link>
-              </article>
-            ))}
+        <section id="openapi" className="scroll-mt-24 py-12 sm:py-16">
+          <h2 className="text-balance text-2xl font-normal tracking-[-0.03em] sm:text-3xl">
+            {t("docs.openApi")}
+          </h2>
+          <p className="mt-3 max-w-2xl text-pretty leading-relaxed text-black/60 dark:text-white/60">
+            <Link
+              href="/openapi.json"
+              className="underline-offset-4 hover:underline"
+            >
+              {t("docs.openApiJson")}
+            </Link>
+          </p>
+          <div className="mt-6">
+            {/* Sibling agent owns the OpenAPI reference UI */}
+            <DocsOpenApiReference />
           </div>
-        </div>
-      </section>
+        </section>
+      </DocsPageShell>
     </main>
-  );
-}
-
-export default async function DocsPage(props: PageProps) {
-  const { locale } = await props.params;
-  return <CachedDocsPage locale={locale} />;
+  )
 }

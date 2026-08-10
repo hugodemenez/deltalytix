@@ -79,13 +79,18 @@ export const getAllDocMetadata = cache(async (locale: string): Promise<DocMetada
   }
 })
 
+/** Drop the file's top-level `# Title` so single-page docs can own the section heading. */
+function stripLeadingMarkdownH1(rawContent: string): string {
+  return rawContent.replace(/^#\s+[^\n]*\n+/, '')
+}
+
 export const getDoc = cache(async (slug: string, locale: string): Promise<Doc | null> => {
   const fullPath = getDocPath(slug, locale)
 
   try {
     const fileContents = fs.readFileSync(fullPath, 'utf8')
     const { data: meta, content: rawContent } = matter(fileContents)
-    const content = await compileMdxSource(rawContent)
+    const content = await compileMdxSource(stripLeadingMarkdownH1(rawContent))
 
     return {
       meta: normalizeDocMeta(meta, slug),
