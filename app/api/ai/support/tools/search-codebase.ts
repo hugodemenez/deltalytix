@@ -7,29 +7,38 @@ import {
   searchCodebase,
 } from "@/lib/ai/search-codebase";
 
+const corpusScopeSchema = z
+  .enum(["all", "source", "docs", "product"])
+  .optional()
+  .describe(
+    "Corpus slice. Use source for how the product works (app/lib/components/server/store/hooks/context + prisma). Use docs for release notes/markdown. Use product for docs + locale UI labels. Default all.",
+  );
+
 export const searchCodebaseTool = tool({
   description:
-    "Ranked keyword search across Deltalytix product docs (content/**), release notes, locale strings (every UI label lives there), and application source (app, components, lib, server, store, hooks, prisma schema). Start here for any question about features, imports, integrations, billing, dashboard behaviour, or self-hosting. Returns the strongest files with surrounding context lines.",
+    "Ranked keyword search over the Deltalytix repo clone (docs, locales, and application source). For how a feature works, set scope=source so results come from code instead of changelog prose. Returns the strongest files with surrounding context lines.",
   inputSchema: z.object({
     query: z
       .string()
       .describe(
-        "Keywords describing what to look up, e.g. 'Tradovate CSV import timezone' or 'subscription cancel billing portal'",
+        "Keywords describing what to look up, e.g. 'Tradovate OAuth connect' or 'subscription cancel billing portal'",
       ),
     locale: z
       .enum(["en", "fr"])
       .optional()
       .describe("Prefer documentation and locale strings in this language"),
+    scope: corpusScopeSchema,
   }),
-  execute: async ({ query, locale }) => {
-    const result = await searchCodebase(query, { locale });
+  execute: async ({ query, locale, scope }) => {
+    const result = await searchCodebase(query, { locale, scope });
 
     if (result.matchCount === 0) {
       return {
         found: false,
         query: result.query,
+        scope: result.scope,
         message:
-          "No matches. Try fewer or different keywords, or use grepCodebase with a specific identifier, UI label, or error string.",
+          "No matches. Try fewer keywords, switch scope (source vs docs), or use grepCodebase with a concrete identifier.",
         matches: [],
       };
     }
@@ -37,6 +46,7 @@ export const searchCodebaseTool = tool({
     return {
       found: true,
       query: result.query,
+      scope: result.scope,
       matchCount: result.matchCount,
       matches: result.matches,
     };
@@ -45,19 +55,20 @@ export const searchCodebaseTool = tool({
 
 export const grepCodebaseTool = tool({
   description:
-    "Regex grep over the Deltalytix repository (docs, locales, and source). Use this when you know an exact string to look for — a UI label, an error message, an env var, a function or route name — or to narrow a search to specific files with a glob. Prefer searchCodebase for open-ended questions.",
+    "Regex grep over the Deltalytix repo clone. Prefer this to understand real behaviour: search function names, route paths, env vars, error strings, and UI labels in source (scope=source, glob like 'app/**/*.ts' or 'lib/**/*.ts'). Then readCodebaseFile the hits.",
   inputSchema: z.object({
     pattern: z
       .string()
       .describe(
-        "JavaScript regular expression, e.g. 'RESEND_API_KEY' or 'stripe.*checkout'. Case-insensitive by default.",
+        "JavaScript regular expression, e.g. 'cancelSubscription' or 'stripe.*portal'. Case-insensitive by default.",
       ),
     glob: z
       .string()
       .optional()
       .describe(
-        "Optional path filter, comma-separated. Examples: 'content/updates/en/**/*.mdx', 'locales/**/*.ts', 'app/api/**/*.ts'",
+        "Optional path filter, comma-separated. Examples: 'lib/**/*.ts', 'app/api/**/*.ts', 'app/**/billing/**/*.tsx'",
       ),
+    scope: corpusScopeSchema,
     caseSensitive: z.boolean().optional().describe("Match case exactly (default false)"),
     contextLines: z
       .number()
@@ -67,19 +78,31 @@ export const grepCodebaseTool = tool({
       .optional()
       .describe("Lines of context around each match (default 2)"),
   }),
-  execute: async ({ pattern, glob, caseSensitive, contextLines }) => {
-    const result = await grepCodebase(pattern, { glob, caseSensitive, contextLines });
+  execute: async ({ pattern, glob, scope, caseSensitive, contextLines }) => {
+    const result = await grepCodebase(pattern, {
+      glob,
+      scope,
+      caseSensitive,
+      contextLines,
+    });
 
     if (result.error) {
-      return { found: false, pattern: result.pattern, error: result.error, matches: [] };
+      return {
+        found: false,
+        pattern: result.pattern,
+        scope: result.scope,
+        error: result.error,
+        matches: [],
+      };
     }
 
     if (result.matchCount === 0) {
       return {
         found: false,
         pattern: result.pattern,
+        scope: result.scope,
         message:
-          "No matches. Loosen the pattern, drop the glob, or fall back to searchCodebase.",
+          "No matches. Loosen the pattern, drop the glob, try scope=all, or fall back to searchCodebase.",
         matches: [],
       };
     }
@@ -87,6 +110,7 @@ export const grepCodebaseTool = tool({
     return {
       found: true,
       pattern: result.pattern,
+      scope: result.scope,
       matchCount: result.matchCount,
       truncated: result.truncated,
       matches: result.matches,
@@ -96,7 +120,7 @@ export const grepCodebaseTool = tool({
 
 export const readCodebaseFileTool = tool({
   description:
-    "Read a file (or a line range) that searchCodebase or grepCodebase returned. Use it when a snippet is not enough to answer confidently — for example to read a whole release note or a full locale section.",
+    "Read a file (or line range) from the repo clone. Use after grep/search when a snippet is not enough to explain behaviour confidently.",
   inputSchema: z.object({
     file: z
       .string()
@@ -109,12 +133,13 @@ export const readCodebaseFileTool = tool({
 
 export const listCodebaseFilesTool = tool({
   description:
-    "List searchable files matching a glob. Useful to discover what documentation exists, e.g. 'content/updates/en/**/*.mdx' to see every release note.",
+    "List files in the repo clone matching a glob. Useful to map a feature area before grepping, e.g. 'app/**/tradovate/**/*.ts' or 'lib/ibkr*.ts'.",
   inputSchema: z.object({
     glob: z
       .string()
       .optional()
-      .describe("Glob pattern, e.g. 'content/**/*.mdx' or 'locales/en/*.ts'"),
+      .describe("Glob pattern, e.g. 'app/**/billing/**' or 'lib/**/*stripe*'"),
+    scope: corpusScopeSchema,
   }),
-  execute: async ({ glob }) => listCodebaseFiles(glob),
+  execute: async ({ glob, scope }) => listCodebaseFiles(glob, { scope }),
 });

@@ -20,13 +20,12 @@ import {
   Actions,
   Action,
 } from '@/components/ai-elements/actions';
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useChat } from '@ai-sdk/react';
 import { Response } from '@/components/ai-elements/response';
 import {
-  BrainIcon,
   ChevronDownIcon,
-  HeadsetIcon,
   PencilIcon,
   RefreshCcwIcon,
 } from 'lucide-react';
@@ -44,10 +43,12 @@ import {
   ReasoningContent,
   ReasoningTrigger,
 } from '@/components/ai-elements/reasoning';
-import { Suggestion, Suggestions } from '@/components/ai-elements/suggestion';
 import { DefaultChatTransport, ToolUIPart } from 'ai';
 import { ClipboardCheckIcon } from '@/components/animated-icons/clipboard-check';
 import SupportForm from './components/support-form';
+import {
+  resolveStableReasoningLabel,
+} from './reasoning-label';
 import { toast } from 'sonner';
 import {
   MessageScroller,
@@ -64,10 +65,6 @@ import {
 } from '@/components/ui/message';
 import { Bubble, BubbleContent } from '@/components/ui/bubble';
 import { Marker, MarkerContent } from '@/components/ui/marker';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
 
 const DISCORD_INVITE_URL = process.env.NEXT_PUBLIC_DISCORD_INVITATION;
 
@@ -120,73 +117,226 @@ const preprocessContent = (content: string) => {
 
 const ATTACHMENT_ONLY_PLACEHOLDER = 'Sent with attachments';
 
-const MAX_REASONING_LABEL_LENGTH = 60;
+/**
+ * Lock the title once the first line is complete so streaming does not flicker
+ * between a growing title, a dropped label, and a static i18n string.
+ */
+function useStableReasoningLabel(text: string, isStreaming: boolean, lockKey: string) {
+  const lockedRef = useRef<string | null>(null);
+  const lockKeyRef = useRef(lockKey);
+
+  if (lockKeyRef.current !== lockKey) {
+    lockKeyRef.current = lockKey;
+    lockedRef.current = null;
+  }
+
+  const resolved = resolveStableReasoningLabel({
+    text,
+    isStreaming,
+    locked: lockedRef.current,
+  });
+  lockedRef.current = resolved.locked;
+
+  return {
+    liveLabel: resolved.label,
+    lockedSource: resolved.locked,
+  };
+}
 
 /**
- * Prefer a short first-line label from the reasoning summary when present;
- * otherwise fall back to the localized thinking / thought-process copy.
+ * For non-English locales, translate the locked first-line title once it
+ * stabilizes. Keep a shimmer skeleton until the translation is ready so we
+ * never flash English into a French UI.
  */
-const getReasoningLabel = (text: string): string | undefined => {
-  const firstLine = text
-    .split('\n')
-    .map((line) => line.trim())
-    .find(Boolean);
+function useLocalizedReasoningLabel(args: {
+  text: string;
+  isStreaming: boolean;
+  lockKey: string;
+  locale: 'en' | 'fr';
+}): { label: string; showSkeleton: boolean } {
+  const { liveLabel, lockedSource } = useStableReasoningLabel(
+    args.text,
+    args.isStreaming,
+    args.lockKey,
+  );
+  const [translated, setTranslated] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const requestKeyRef = useRef<string | null>(null);
 
-  if (!firstLine) return undefined;
+  useEffect(() => {
+    setTranslated(null);
+    setIsTranslating(false);
+    requestKeyRef.current = null;
+  }, [args.lockKey]);
 
-  const looksLikeHeading =
-    /^#{1,6}\s+/.test(firstLine) || /^\*\*.+\*\*$/.test(firstLine);
+  useEffect(() => {
+    if (args.locale === 'en' || !lockedSource) return;
 
-  const cleaned = firstLine
-    .replace(/^#{1,6}\s+/, '')
-    .replace(/\*\*/g, '')
-    .replace(/[:.]+$/, '')
-    .trim();
+    const requestKey = `${args.lockKey}:${lockedSource}`;
+    if (requestKeyRef.current === requestKey) return;
+    requestKeyRef.current = requestKey;
 
-  if (!cleaned) return undefined;
-  if (!looksLikeHeading && cleaned.length > MAX_REASONING_LABEL_LENGTH) return undefined;
+    let cancelled = false;
+    setIsTranslating(true);
 
-  return cleaned;
-};
+    void (async () => {
+      try {
+        const response = await fetch('/api/ai/support/translate-label', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: lockedSource, locale: args.locale }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`translate-label failed: ${response.status}`);
+        }
+
+        const data = (await response.json()) as { label?: string };
+        if (cancelled) return;
+        setTranslated((data.label?.trim() || lockedSource));
+      } catch {
+        if (cancelled) return;
+        // Fail soft — better a stable English title than an empty row forever.
+        setTranslated(lockedSource);
+      } finally {
+        if (!cancelled) setIsTranslating(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [args.locale, args.lockKey, lockedSource]);
+
+  if (args.locale === 'en') {
+    return {
+      label: liveLabel,
+      showSkeleton: !liveLabel,
+    };
+  }
+
+  return {
+    label: translated ?? '',
+    showSkeleton: !translated || isTranslating,
+  };
+}
+
+function ReasoningLabelSkeleton({ label }: { label: string }) {
+  // `shimmer` is a text utility (background-clip: text) — needs real characters.
+  return (
+    <span className="shimmer min-w-0 truncate text-left text-muted-foreground">
+      {label}
+    </span>
+  );
+}
+
+function ReasoningLabelSwap({
+  showSkeleton,
+  skeletonLabel,
+  label,
+  isStreaming,
+}: {
+  showSkeleton: boolean;
+  skeletonLabel: string;
+  label: string;
+  isStreaming: boolean;
+}) {
+  const reduceMotion = useReducedMotion();
+  const transition = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.28, ease: 'easeInOut' as const };
+
+  return (
+    <span className="relative min-h-5 min-w-0 flex-1 overflow-hidden text-left">
+      {/* Invisible sizer keeps the trigger height stable during the crossfade. */}
+      <span className="invisible block truncate" aria-hidden>
+        {showSkeleton ? skeletonLabel : label || skeletonLabel}
+      </span>
+      <AnimatePresence initial={false} mode="sync">
+        {showSkeleton ? (
+          <motion.span
+            key="skeleton"
+            className="absolute inset-y-0 left-0 right-0 flex items-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={transition}
+          >
+            <ReasoningLabelSkeleton label={skeletonLabel} />
+          </motion.span>
+        ) : (
+          <motion.span
+            key="label"
+            className={cn(
+              'absolute inset-y-0 left-0 right-0 truncate',
+              isStreaming && 'shimmer',
+            )}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={transition}
+          >
+            {label}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </span>
+  );
+}
 
 function ReasoningBlock({
   text,
   isStreaming = false,
+  lockKey,
+  locale,
+  skeletonLabel,
   className,
 }: {
   text: string;
   isStreaming?: boolean;
+  /** Stable id for this reasoning step — changing it clears the locked title. */
+  lockKey: string;
+  locale: 'en' | 'fr';
+  /** Localized shimmer copy shown before a title is ready. */
+  skeletonLabel?: string;
   className?: string;
 }) {
   const t = useI18n();
-  const label = getReasoningLabel(text);
+  const { label, showSkeleton } = useLocalizedReasoningLabel({
+    text,
+    isStreaming,
+    lockKey,
+    locale,
+  });
+  const canExpand = Boolean(text.trim());
+  const pendingLabel =
+    skeletonLabel ??
+    (isStreaming ? t('support.thinking') : t('support.thoughtProcess'));
 
   return (
     <Reasoning
       className={cn('w-full', className)}
       defaultOpen={false}
       disableAutoClose
-      isStreaming={isStreaming}
+      isStreaming={isStreaming || showSkeleton}
     >
-      <ReasoningTrigger className="group">
-        <BrainIcon className="size-4 shrink-0" />
-        <span className={cn('min-w-0 truncate text-left', isStreaming && 'shimmer')}>
-          {label ?? (isStreaming ? t('support.thinking') : t('support.thoughtProcess'))}
-        </span>
-        <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
+      <ReasoningTrigger
+        className="group"
+        disabled={!canExpand}
+        aria-label={showSkeleton ? pendingLabel : label}
+      >
+        <ReasoningLabelSwap
+          showSkeleton={showSkeleton}
+          skeletonLabel={pendingLabel}
+          label={label}
+          isStreaming={isStreaming}
+        />
+        {canExpand ? (
+          <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
+        ) : null}
       </ReasoningTrigger>
-      {text.trim() ? <ReasoningContent>{text}</ReasoningContent> : null}
+      {canExpand ? <ReasoningContent>{text}</ReasoningContent> : null}
     </Reasoning>
-  );
-}
-
-/** Optimistic status row — same chrome as reasoning so the brain never vanishes mid-wait. */
-function PendingIndicator({ label }: { label: string }) {
-  return (
-    <div className="mb-4 flex w-full items-center gap-2 text-sm text-muted-foreground">
-      <BrainIcon className="size-4 shrink-0" />
-      <span className="min-w-0 truncate text-left shimmer">{label}</span>
-    </div>
   );
 }
 
@@ -196,14 +346,17 @@ function hasActiveReasoningRow(
 ) {
   if (!message || message.role !== 'assistant') return false;
 
-  return message.parts.some((part, index) => {
-    if (part.type !== 'reasoning') return false;
+  const lastReasoningIndex = message.parts.reduce(
+    (last, part, index) => (part.type === 'reasoning' ? index : last),
+    -1,
+  );
+  if (lastReasoningIndex === -1) return false;
 
-    const isStreamingReasoning =
-      status === 'streaming' && index === message.parts.length - 1;
+  const part = message.parts[lastReasoningIndex];
+  if (part?.type !== 'reasoning') return false;
 
-    return Boolean(part.text?.trim()) || isStreamingReasoning;
-  });
+  const isStreamingReasoning = status === 'streaming';
+  return Boolean(part.text?.trim()) || isStreamingReasoning;
 }
 
 function SupportPromptSubmit({
@@ -348,15 +501,6 @@ const ChatBotDemo = () => {
     }
   }, [messages]);
 
-  const suggestions = useMemo(
-    () => [
-      t('support.suggestionImport'),
-      t('support.suggestionBilling'),
-      t('support.suggestionBug'),
-    ],
-    [t],
-  );
-
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([
@@ -399,64 +543,54 @@ const ChatBotDemo = () => {
     setInput('');
   };
 
-  const sendWithOptions = (text: string) => {
-    sendMessage({ text });
-  };
-
   const isBusy = status === 'submitted' || status === 'streaming';
-  const hasStarted = messages.some((message) => message.role === 'user');
-  const showStarterActions = messages.length <= 1 && !isBusy;
-  // Once the conversation has started, the human escape hatch stays available.
-  const showHumanHandoff = hasStarted && !isBusy;
   const showPendingIndicator =
     isBusy && !hasActiveReasoningRow(messages.at(-1), status);
 
   return (
     <MessageScrollerProvider autoScroll>
-      <div className="mx-auto flex size-full h-[calc(100vh-64px)] max-w-4xl flex-col gap-4 p-4 sm:p-6">
-        {/* Page title lives outside the chat surface, like /updates. */}
-        <header className="space-y-1">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            <HeadsetIcon className="size-6 text-primary" />
-            {t('support.pageTitle')}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t('support.pageDescription')}
-            {DISCORD_INVITE_URL && (
-              <>
-                {' '}
-                {t('support.discordPrompt')}{' '}
-                <a
-                  href={DISCORD_INVITE_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-medium text-foreground underline underline-offset-4 hover:text-primary"
-                >
-                  {t('support.joinDiscordInline')}
-                </a>
-                .
-              </>
-            )}
-          </p>
-        </header>
-
-        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0">
-          {/* Escalation appears only once the conversation has started. */}
-          {showHumanHandoff && (
-            <div className="flex justify-end border-b px-4 py-2">
+      <main className="min-h-screen">
+        <header className="border-b border-black/10 dark:border-white/10">
+          <div className="mx-auto w-full max-w-[1440px] px-5 py-16 sm:px-8 sm:py-24 lg:px-12 lg:py-32">
+            <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h1 className="max-w-[960px] text-[clamp(3rem,7.2vw,7.25rem)] font-normal leading-[0.92] tracking-[-0.06em]">
+                  {t('support.pageTitle')}
+                </h1>
+                <p className="mt-7 max-w-[680px] text-lg leading-relaxed text-black/60 dark:text-white/60 md:text-xl">
+                  {t('support.pageDescription')}
+                  {DISCORD_INVITE_URL && (
+                    <>
+                      {' '}
+                      {t('support.discordPrompt')}{' '}
+                      <a
+                        href={DISCORD_INVITE_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-black underline underline-offset-4 hover:text-black/80 dark:text-white dark:hover:text-white/80"
+                      >
+                        {t('support.joinDiscordInline')}
+                      </a>
+                      .
+                    </>
+                  )}
+                </p>
+              </div>
               <Button
                 type="button"
-                size="sm"
                 variant="outline"
+                className="shrink-0 border-black/15 bg-transparent text-black hover:bg-black/5 dark:border-white/15 dark:text-white dark:hover:bg-white/5"
                 onClick={requestHumanSupport}
               >
-                <HeadsetIcon className="size-4" />
-                {t('support.requestHumanSupport')}
+                {t('support.fillSupportRequest')}
               </Button>
             </div>
-          )}
+          </div>
+        </header>
 
-          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+        <section>
+          <div className="mx-auto flex w-full max-w-[1440px] flex-col px-5 py-12 sm:px-8 md:py-16 lg:px-12">
+            <div className="flex min-h-[min(70vh,720px)] flex-col overflow-hidden border border-black/10 dark:border-white/10">
             <MessageScroller className="min-h-0 flex-1">
               <MessageScrollerViewport>
                 <MessageScrollerContent aria-busy={isBusy} className="gap-4 p-4">
@@ -544,11 +678,13 @@ const ChatBotDemo = () => {
                                 {think.map((thought, index) => (
                                   <ReasoningBlock
                                     key={`${message.id}-${i}-think-${index}`}
+                                    lockKey={`${message.id}-${i}-think-${index}`}
                                     text={thought}
+                                    locale={locale}
                                   />
                                 ))}
                                 <ChatMessage align={isUser ? 'end' : 'start'}>
-                                  <MessageContent>
+                                  <MessageContent className="relative pb-0">
                                     <Bubble
                                       variant={isUser ? 'default' : 'muted'}
                                       align={isUser ? 'end' : 'start'}
@@ -558,42 +694,68 @@ const ChatBotDemo = () => {
                                       </BubbleContent>
                                     </Bubble>
                                     {message.role === 'assistant' && (
-                                      <MessageFooter>
-                                        <Actions>
-                                          <Action
-                                            onClick={() => {
-                                              navigator.clipboard.writeText(contentWithoutThink);
-                                              toast.success(t('support.copied'), {
-                                                position: 'top-right',
-                                              });
-                                            }}
-                                            label={t('common.copy')}
-                                          >
-                                            <ClipboardCheckIcon size={16} className="mr-2" />
-                                          </Action>
+                                      <MessageFooter className="absolute top-full z-10 mt-0.5 px-0">
+                                        <Actions
+                                          className={cn(
+                                            'opacity-0 pointer-events-none transition-opacity group-hover/message:opacity-100 group-hover/message:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto',
+                                          )}
+                                        >
+                                          {!message.id.startsWith('error-') && (
+                                            <Action
+                                              className="size-7"
+                                              onClick={() => {
+                                                navigator.clipboard.writeText(contentWithoutThink);
+                                                toast.success(t('support.copied'), {
+                                                  position: 'top-right',
+                                                });
+                                              }}
+                                              label={t('common.copy')}
+                                            >
+                                              <ClipboardCheckIcon size={14} className="mr-2" />
+                                            </Action>
+                                          )}
+                                          {message.id.startsWith('error-') && (
+                                            <Action
+                                              className="size-7"
+                                              onClick={() => {
+                                                const errorIndex = messages.findIndex(
+                                                  (candidate) => candidate.id === message.id,
+                                                );
+                                                const previousUser = messages
+                                                  .slice(0, errorIndex)
+                                                  .reverse()
+                                                  .find((candidate) => candidate.role === 'user');
+                                                const previousUserText = previousUser?.parts
+                                                  .filter(
+                                                    (candidate): candidate is { type: 'text'; text: string } =>
+                                                      candidate.type === 'text',
+                                                  )
+                                                  .map((candidate) => candidate.text.trim())
+                                                  .find(Boolean);
+
+                                                if (!previousUserText) return;
+
+                                                truncateFrom(message.id);
+                                                sendMessage({ text: previousUserText });
+                                              }}
+                                              label={t('common.retry')}
+                                            >
+                                              <RefreshCcwIcon size={14} />
+                                            </Action>
+                                          )}
                                         </Actions>
                                       </MessageFooter>
                                     )}
-                                    {isUser && (
-                                      <MessageFooter>
-                                        <Actions className="justify-end">
-                                          {/* Editing re-sends without the attachment, so only offer it on plain text. */}
-                                          {!message.parts.some((p) => p.type === 'file') && (
-                                            <Action
-                                              onClick={() => startEditing(message.id, part.text)}
-                                              label={t('common.edit')}
-                                            >
-                                              <PencilIcon size={16} className="mr-2" />
-                                            </Action>
-                                          )}
+                                    {isUser &&
+                                      !message.parts.some((candidate) => candidate.type === 'file') && (
+                                      <MessageFooter className="absolute top-full right-0 z-10 mt-0.5 px-0">
+                                        <Actions className="justify-end opacity-0 pointer-events-none transition-opacity group-hover/message:opacity-100 group-hover/message:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto">
                                           <Action
-                                            onClick={() => {
-                                              truncateFrom(message.id);
-                                              sendMessage({ text: part.text });
-                                            }}
-                                            label={t('common.retry')}
+                                            className="size-7"
+                                            onClick={() => startEditing(message.id, part.text)}
+                                            label={t('common.edit')}
                                           >
-                                            <RefreshCcwIcon size={16} className="mr-2" />
+                                            <PencilIcon size={14} />
                                           </Action>
                                         </Actions>
                                       </MessageFooter>
@@ -604,21 +766,28 @@ const ChatBotDemo = () => {
                             );
                           }
                           case 'reasoning': {
+                            const lastReasoningIndex = message.parts.reduce(
+                              (last, candidate, index) =>
+                                candidate.type === 'reasoning' ? index : last,
+                              -1,
+                            );
                             const isStreamingReasoning =
                               status === 'streaming' &&
-                              i === message.parts.length - 1 &&
+                              i === lastReasoningIndex &&
                               message.id === messages.at(-1)?.id;
 
-                            // Keep the brain visible while reasoning tokens are still empty.
+                            // Keep a shimmer skeleton while reasoning tokens are still empty.
                             if (!part.text?.trim() && !isStreamingReasoning) {
                               return null;
                             }
 
                             return (
                               <ReasoningBlock
-                                key={`${message.id}-${i}`}
+                                key={`${message.id}-reasoning-${i}`}
+                                lockKey={`${message.id}-reasoning-${i}`}
                                 text={part.text ?? ''}
                                 isStreaming={isStreamingReasoning}
+                                locale={locale}
                               />
                             );
                           }
@@ -706,35 +875,21 @@ const ChatBotDemo = () => {
                   ))}
 
                   {showPendingIndicator && (
-                    <PendingIndicator label={t('support.generating')} />
+                    <ReasoningBlock
+                      lockKey={`pending-${messages.at(-1)?.id ?? 'new'}`}
+                      text=""
+                      isStreaming
+                      locale={locale}
+                      skeletonLabel={t('support.generating')}
+                    />
                   )}
                 </MessageScrollerContent>
               </MessageScrollerViewport>
               <MessageScrollerButton />
             </MessageScroller>
 
-            {showStarterActions && (
-              <div className="border-t px-4 py-3">
-                <Suggestions>
-                  {suggestions.map((suggestion) => (
-                    <Suggestion
-                      key={suggestion}
-                      suggestion={suggestion}
-                      onClick={sendWithOptions}
-                    />
-                  ))}
-                  {/* Goes straight to the form — routing it through the model is the loop we are fixing. */}
-                  <Suggestion
-                    suggestion={t('support.suggestionHuman')}
-                    onClick={requestHumanSupport}
-                  />
-                </Suggestions>
-              </div>
-            )}
-
-            {/* Input is docked inside the chat panel so it reads as one conversation surface. */}
             <div
-              className="border-t p-3 sm:p-4"
+              className="border-t border-black/10 p-3 dark:border-white/10 sm:p-4"
               // Escape bubbles up from the textarea, which owns its own onKeyDown.
               onKeyDown={(event) => {
                 if (event.key === 'Escape' && pendingEditMessageId) {
@@ -782,8 +937,9 @@ const ChatBotDemo = () => {
                 </PromptInputToolbar>
               </PromptInput>
             </div>
-          </CardContent>
-        </Card>
+            </div>
+          </div>
+        </section>
 
         <SupportForm
           open={contactForm.open}
@@ -793,7 +949,7 @@ const ChatBotDemo = () => {
           messages={messages}
           setMessages={setMessages}
         />
-      </div>
+      </main>
     </MessageScrollerProvider>
   );
 };

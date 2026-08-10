@@ -8,7 +8,7 @@ export default {
     copied: "Copié dans le presse-papiers",
     description:
       "Faites-nous savoir quel problème vous rencontrez ou avec quoi vous avez besoin d'aide dans votre journal de trading. Je vous aiderai à collecter les informations nécessaires pour notre équipe de support.",
-    requestHumanSupport: "Demander une assistance humaine",
+    fillSupportRequest: "Remplir une demande de support via le formulaire",
     contactInformation: "Informations de contact",
     contactInformationDescription:
       "Veuillez fournir vos informations de contact pour que notre équipe de support puisse vous recontacter par email.",
@@ -46,10 +46,6 @@ export default {
       "Obtenez des réponses rapides de notre assistant IA, basé sur notre base de connaissances ouverte.",
     discordPrompt: "Vous ne trouvez pas ce qu'il vous faut ?",
     generating: "Génération de la réponse…",
-    suggestionImport: "Aide pour importer des trades",
-    suggestionBilling: "Question sur la facturation ou l'abonnement",
-    suggestionBug: "Signaler un bug ou un problème",
-    suggestionHuman: "Parler à un humain",
     tool: {
       searchingDocs:
         "Recherche dans la documentation produit...",

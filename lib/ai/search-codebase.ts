@@ -1,25 +1,27 @@
 import path from "node:path";
 import {
   type CorpusKind,
+  type CorpusScope,
   type IndexedFile,
   createGlobMatcher,
+  fileMatchesScope,
   getCorpus,
   shouldLogSearchDebug,
 } from "./codebase-index";
 
-export { SUPPORT_SEARCH_TRACE_INCLUDES } from "./codebase-index";
-export type { CorpusKind } from "./codebase-index";
+export { SUPPORT_SEARCH_TRACE_INCLUDES, kindsForScope } from "./codebase-index";
+export type { CorpusKind, CorpusScope } from "./codebase-index";
 
-const MAX_FILES = 6;
+const MAX_FILES = 8;
 const MAX_BLOCKS_PER_FILE = 3;
 const CONTEXT_RADIUS = 3;
-const MAX_BLOCK_CHARS = 900;
+const MAX_BLOCK_CHARS = 1_200;
 const MAX_LINE_CHARS = 240;
 const MAX_TERM_OCCURRENCES = 8;
 
-const MAX_GREP_MATCHES = 25;
+const MAX_GREP_MATCHES = 40;
 const MAX_GREP_PATTERN_LENGTH = 200;
-const GREP_TIME_BUDGET_MS = 2_500;
+const GREP_TIME_BUDGET_MS = 3_500;
 
 const MAX_READ_LINES = 400;
 
@@ -32,19 +34,23 @@ const SEARCH_STOP_WORDS = new Set([
   "my", "me", "i", "we", "you", "your", "our", "it", "its", "this", "that",
   "about", "with", "from", "into", "please", "help", "need", "want",
   "documentation", "docs", "doc", "guide", "setup", "instructions", "information",
-  "details", "deltalytix", "app", "platform",
+  "details", "deltalytix", "app", "platform", "work", "works", "working",
   // French equivalents — the assistant answers in both languages.
   "le", "la", "les", "un", "une", "des", "de", "du", "et", "ou", "pour", "dans",
   "sur", "avec", "comment", "pourquoi", "quand", "est", "sont", "je", "tu", "il",
-  "nous", "vous", "mon", "ma", "mes", "aide", "besoin", "faire",
+  "nous", "vous", "mon", "ma", "mes", "aide", "besoin", "faire", "marche",
 ]);
 
-/** Weight by how likely a file is to hold a user-facing answer. */
+/**
+ * Default ranking prefers implementation over changelog prose so "how does X
+ * work" questions land in source. Docs/locales still win when the query only
+ * matches there, or when scope is narrowed to docs/product.
+ */
 const KIND_WEIGHT: Record<CorpusKind, number> = {
-  doc: 1.7,
-  locale: 1.3,
-  schema: 1.1,
-  source: 1,
+  source: 1.35,
+  schema: 1.25,
+  locale: 1.05,
+  doc: 0.85,
 };
 
 export type CodebaseSearchMatch = {
@@ -58,12 +64,14 @@ export type CodebaseSearchMatch = {
 
 export type CodebaseSearchResult = {
   query: string;
+  scope: CorpusScope;
   matchCount: number;
   matches: CodebaseSearchMatch[];
 };
 
 export type CodebaseGrepResult = {
   pattern: string;
+  scope: CorpusScope;
   matchCount: number;
   matches: CodebaseSearchMatch[];
   truncated: boolean;
@@ -277,20 +285,27 @@ function extractBlocks(file: IndexedFile, terms: SearchTerm[]): CodebaseSearchMa
   }));
 }
 
+async function corpusForScope(scope: CorpusScope): Promise<IndexedFile[]> {
+  const files = await getCorpus();
+  if (scope === "all") return files;
+  return files.filter((file) => fileMatchesScope(file.kind, scope));
+}
+
 export async function searchCodebase(
   query: string,
-  options?: { locale?: "en" | "fr"; limit?: number },
+  options?: { locale?: "en" | "fr"; limit?: number; scope?: CorpusScope },
 ): Promise<CodebaseSearchResult> {
   const trimmedQuery = query.trim();
+  const scope = options?.scope ?? "all";
   if (!trimmedQuery) {
-    return { query: trimmedQuery, matchCount: 0, matches: [] };
+    return { query: trimmedQuery, scope, matchCount: 0, matches: [] };
   }
 
-  const files = await getCorpus();
+  const files = await corpusForScope(scope);
   const terms = buildSearchTerms(trimmedQuery);
   const scored = scoreFiles(files, terms, trimmedQuery.toLowerCase(), options?.locale);
 
-  const fileLimit = Math.max(1, Math.min(options?.limit ?? MAX_FILES, 10));
+  const fileLimit = Math.max(1, Math.min(options?.limit ?? MAX_FILES, 12));
   const matches: CodebaseSearchMatch[] = [];
 
   for (const { file, score } of scored.slice(0, fileLimit)) {
@@ -302,6 +317,7 @@ export async function searchCodebase(
   if (shouldLogSearchDebug()) {
     console.log("[searchCodebase]", {
       query: trimmedQuery,
+      scope,
       locale: options?.locale,
       terms: terms.map((term) => term.term),
       corpusFiles: files.length,
@@ -309,7 +325,7 @@ export async function searchCodebase(
     });
   }
 
-  return { query: trimmedQuery, matchCount: matches.length, matches };
+  return { query: trimmedQuery, scope, matchCount: matches.length, matches };
 }
 
 export async function grepCodebase(
@@ -320,16 +336,19 @@ export async function grepCodebase(
     isRegex?: boolean;
     contextLines?: number;
     maxResults?: number;
+    scope?: CorpusScope;
   },
 ): Promise<CodebaseGrepResult> {
   const trimmedPattern = pattern.trim();
+  const scope = options?.scope ?? "all";
   if (!trimmedPattern) {
-    return { pattern: trimmedPattern, matchCount: 0, matches: [], truncated: false };
+    return { pattern: trimmedPattern, scope, matchCount: 0, matches: [], truncated: false };
   }
 
   if (trimmedPattern.length > MAX_GREP_PATTERN_LENGTH) {
     return {
       pattern: trimmedPattern,
+      scope,
       matchCount: 0,
       matches: [],
       truncated: false,
@@ -344,6 +363,7 @@ export async function grepCodebase(
   } catch (error) {
     return {
       pattern: trimmedPattern,
+      scope,
       matchCount: 0,
       matches: [],
       truncated: false,
@@ -351,7 +371,7 @@ export async function grepCodebase(
     };
   }
 
-  const files = await getCorpus();
+  const files = await corpusForScope(scope);
   const matchesGlob = createGlobMatcher(options?.glob);
   const contextRadius = Math.max(0, Math.min(options?.contextLines ?? 2, 6));
   const maxResults = Math.max(1, Math.min(options?.maxResults ?? MAX_GREP_MATCHES, MAX_GREP_MATCHES));
@@ -372,12 +392,16 @@ export async function grepCodebase(
     if (!matchesGlob(file.path)) continue;
     if (!regex.test(file.content)) continue;
 
+    // Reset lastIndex in case a future caller enables the global flag.
+    regex.lastIndex = 0;
+
     for (let index = 0; index < file.lines.length; index += 1) {
       if (matches.length >= maxResults) {
         truncated = true;
         break;
       }
       if (!regex.test(file.lines[index])) continue;
+      regex.lastIndex = 0;
 
       const start = Math.max(0, index - contextRadius);
       const end = Math.min(file.lines.length - 1, index + contextRadius);
@@ -399,13 +423,14 @@ export async function grepCodebase(
   if (shouldLogSearchDebug()) {
     console.log("[grepCodebase]", {
       pattern: trimmedPattern,
+      scope,
       glob: options?.glob,
       matchCount: matches.length,
       truncated,
     });
   }
 
-  return { pattern: trimmedPattern, matchCount: matches.length, matches, truncated };
+  return { pattern: trimmedPattern, scope, matchCount: matches.length, matches, truncated };
 }
 
 export async function readCodebaseFile(
@@ -457,14 +482,23 @@ export async function readCodebaseFile(
 
 export async function listCodebaseFiles(
   glob?: string,
-  limit = 40,
-): Promise<{ glob: string; fileCount: number; files: string[]; truncated: boolean }> {
-  const files = await getCorpus();
+  options?: { limit?: number; scope?: CorpusScope },
+): Promise<{
+  glob: string;
+  scope: CorpusScope;
+  fileCount: number;
+  files: string[];
+  truncated: boolean;
+}> {
+  const scope = options?.scope ?? "all";
+  const limit = options?.limit ?? 60;
+  const files = await corpusForScope(scope);
   const matchesGlob = createGlobMatcher(glob);
   const matched = files.filter((file) => matchesGlob(file.path)).map((file) => file.path);
 
   return {
     glob: glob?.trim() ?? "**/*",
+    scope,
     fileCount: matched.length,
     files: matched.slice(0, limit),
     truncated: matched.length > limit,

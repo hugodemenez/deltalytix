@@ -4,6 +4,9 @@ import path from "node:path";
 
 export type CorpusKind = "doc" | "locale" | "source" | "schema";
 
+/** Tool-facing corpus slices — `source` is the live product behaviour. */
+export type CorpusScope = "all" | "source" | "docs" | "product";
+
 type CorpusRoot = {
   /** Repo-relative directory or file. */
   path: string;
@@ -13,12 +16,11 @@ type CorpusRoot = {
 };
 
 const DOC_EXTENSIONS = [".md", ".mdx"] as const;
-const SOURCE_EXTENSIONS = [".ts", ".tsx"] as const;
+const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".mjs"] as const;
 
 /**
- * Everything the support agent is allowed to search or read. Product docs and
- * locale strings answer most questions, but the agent also needs the real
- * source to explain behaviour that was never written down.
+ * In-memory clone of the product surface the support agent may search.
+ * Source trees are first-class: docs alone cannot explain runtime behaviour.
  */
 export const CORPUS_ROOTS: readonly CorpusRoot[] = [
   { path: "content", kind: "doc", extensions: DOC_EXTENSIONS },
@@ -36,6 +38,27 @@ export const CORPUS_ROOTS: readonly CorpusRoot[] = [
   { path: "context", kind: "source", extensions: SOURCE_EXTENSIONS },
   { path: "prisma/schema.prisma", kind: "schema", extensions: [".prisma"] },
 ];
+
+const SCOPE_KINDS: Record<CorpusScope, readonly CorpusKind[]> = {
+  all: ["doc", "locale", "source", "schema"],
+  /** Application code + schema — how the product actually works. */
+  source: ["source", "schema"],
+  /** Release notes and markdown docs only. */
+  docs: ["doc"],
+  /** User-facing copy + docs (labels, changelog), excluding implementation. */
+  product: ["doc", "locale"],
+};
+
+export function kindsForScope(scope: CorpusScope = "all"): readonly CorpusKind[] {
+  return SCOPE_KINDS[scope];
+}
+
+export function fileMatchesScope(
+  kind: CorpusKind,
+  scope: CorpusScope = "all",
+): boolean {
+  return kindsForScope(scope).includes(kind);
+}
 
 const IGNORED_DIRECTORY_NAMES = new Set([
   "node_modules",
