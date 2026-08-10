@@ -6,6 +6,20 @@ export interface RithmicProtocolAccount {
   currency?: string
 }
 
+/** Live account balance / PnL fields from the Protocol PnL plant. */
+export interface RithmicProtocolAccountBalance {
+  account_id: string
+  fcm_id?: string
+  ib_id?: string
+  account_balance?: number
+  cash_on_hand?: number
+  margin_balance?: number
+  available_buying_power?: number
+  open_pnl?: number
+  closed_pnl?: number
+  day_pnl?: number
+}
+
 export interface RithmicProtocolFill {
   accountId: string
   fcmId?: string

@@ -13,9 +13,11 @@ import { upsertAccountsForNumbers } from '@/server/connections'
 import { getTickDetails } from '@/server/tick-details'
 import {
   connectAndListAccounts,
+  fetchAccountBalances,
   fetchAvailableSystems,
   fetchFillsForAccounts,
 } from '@/lib/rithmic-protocol/client'
+import type { RithmicProtocolAccountBalance } from '@/lib/rithmic-protocol/types'
 import { buildTradesFromRithmicFills } from '@/lib/rithmic-protocol/fills-to-trades'
 import {
   gatewayUri as gatewayUriFor,
@@ -330,6 +332,159 @@ export async function getRithmicProtocolSynchronizations() {
   } catch (error) {
     logger.error('getRithmicProtocolSynchronizations failed', error)
     return { error: 'LOAD_SYNCHRONIZATIONS_FAILED' as const }
+  }
+}
+
+export type RithmicProtocolBalancesResult =
+  | {
+      success: true
+      hasConnections: boolean
+      balances: RithmicProtocolAccountBalance[]
+      linkedAccountNumbers: string[]
+      errors: string[]
+    }
+  | {
+      success: false
+      error: string
+      hasConnections?: boolean
+      balances?: RithmicProtocolAccountBalance[]
+      linkedAccountNumbers?: string[]
+    }
+
+/**
+ * Live Solde Rithmic via Protocol PnL plant, using stored connection credentials.
+ */
+export async function getRithmicProtocolBalancesAction(): Promise<RithmicProtocolBalancesResult> {
+  try {
+    const userId = await getUserId()
+    if (!userId) {
+      return { success: false, error: 'USER_NOT_AUTHENTICATED' }
+    }
+
+    const connections = await prisma.connection.findMany({
+      where: { userId, service: SERVICE },
+      select: {
+        id: true,
+        externalId: true,
+        token: true,
+        accounts: { select: { number: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    })
+
+    if (connections.length === 0) {
+      return {
+        success: true,
+        hasConnections: false,
+        balances: [],
+        linkedAccountNumbers: [],
+        errors: [],
+      }
+    }
+
+    const balancesByAccountId = new Map<string, RithmicProtocolAccountBalance>()
+    const linkedAccountNumbers = new Set<string>()
+    const errors: string[] = []
+
+    for (const connection of connections) {
+      if (!connection.token) {
+        errors.push(`${connection.externalId}: missing credentials`)
+        continue
+      }
+
+      let tokenJson: string | null
+      try {
+        tokenJson = decryptConnectionToken(connection.token)
+      } catch (error) {
+        errors.push(
+          `${connection.externalId}: decrypt failed (${
+            error instanceof Error ? error.message : String(error)
+          })`,
+        )
+        continue
+      }
+
+      if (!tokenJson) {
+        errors.push(`${connection.externalId}: empty credentials`)
+        continue
+      }
+
+      const credentials = parseStoredCredentials(tokenJson)
+      if (!credentials) {
+        errors.push(`${connection.externalId}: invalid stored credentials`)
+        continue
+      }
+
+      let accountIds =
+        credentials.accountIds && credentials.accountIds.length > 0
+          ? [...credentials.accountIds]
+          : connection.accounts.map((account) => account.number).filter(Boolean)
+
+      try {
+        if (accountIds.length === 0) {
+          const listed = await connectAndListAccounts({
+            gatewayUri: credentials.gatewayUri,
+            systemName: credentials.systemName,
+            username: credentials.username,
+            password: credentials.password,
+          })
+          accountIds = listed.accounts.map((account) => account.accountId)
+          credentials.accountIds = accountIds
+          credentials.fcmId = listed.fcmId ?? credentials.fcmId
+          credentials.ibId = listed.ibId ?? credentials.ibId
+          await persistRithmicProtocolCredentials(
+            userId,
+            JSON.stringify(credentials),
+            credentials.username,
+          )
+        }
+
+        for (const accountId of accountIds) {
+          linkedAccountNumbers.add(accountId)
+        }
+
+        if (accountIds.length === 0) {
+          errors.push(`${connection.externalId}: no trading accounts`)
+          continue
+        }
+
+        const { balances } = await fetchAccountBalances({
+          gatewayUri: credentials.gatewayUri,
+          systemName: credentials.systemName,
+          username: credentials.username,
+          password: credentials.password,
+          fcmId: credentials.fcmId,
+          ibId: credentials.ibId,
+          accountIds,
+        })
+
+        for (const balance of balances) {
+          balancesByAccountId.set(balance.account_id, balance)
+          linkedAccountNumbers.add(balance.account_id)
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        logger.error(
+          `getRithmicProtocolBalancesAction failed for ${connection.externalId}`,
+          error,
+        )
+        errors.push(`${connection.externalId}: ${message}`)
+      }
+    }
+
+    return {
+      success: true,
+      hasConnections: true,
+      balances: [...balancesByAccountId.values()],
+      linkedAccountNumbers: [...linkedAccountNumbers],
+      errors,
+    }
+  } catch (error) {
+    logger.error('getRithmicProtocolBalancesAction failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'BALANCES_FETCH_FAILED',
+    }
   }
 }
 

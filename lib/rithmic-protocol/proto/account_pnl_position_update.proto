@@ -1,0 +1,42 @@
+
+package rti;
+
+// Account-level PnL / balance snapshot or update from the PnL plant (template 451).
+message AccountPnLPositionUpdate
+	{
+	required int32    template_id                   = 154467;
+	optional bool     is_snapshot                   = 110121;
+
+	optional string   fcm_id                        = 154013;
+	optional string   ib_id                         = 154014;
+	optional string   account_id                    = 154008;
+
+	optional int32    fill_buy_qty                  = 154041;
+	optional int32    fill_sell_qty                 = 154042;
+	optional int32    order_buy_qty                 = 154037;
+	optional int32    order_sell_qty                = 154038;
+	optional int32    buy_qty                       = 154260;
+	optional int32    sell_qty                      = 154261;
+
+	optional string   open_position_pnl             = 156961;
+	optional int32    open_position_quantity        = 156962;
+	optional string   closed_position_pnl           = 156963;
+	optional int32    closed_position_quantity      = 156964;
+	optional int32    net_quantity                  = 156967;
+
+	optional string   margin_balance                = 156977;
+	optional string   min_margin_balance            = 156976;
+	optional string   min_account_balance           = 156968;
+	optional string   account_balance               = 156970;
+	optional string   cash_on_hand                  = 156971;
+	optional string   available_buying_power        = 157015;
+	optional string   used_buying_power             = 157014;
+	optional string   reserved_buying_power         = 157013;
+
+	optional string   day_open_pnl                  = 157954;
+	optional string   day_closed_pnl                = 157955;
+	optional string   day_pnl                       = 157956;
+
+	optional int32    ssboe                         = 150100;
+	optional int32    usecs                         = 150101;
+	}
