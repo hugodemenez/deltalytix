@@ -39,9 +39,11 @@ const primaryButtonClassName =
 
 function RithmicProtocolConnectView({
   onConnected,
+  onSynced,
   initialUsername,
 }: {
   onConnected?: () => void
+  onSynced?: () => void
   initialUsername?: string
 }) {
   const t = useI18n()
@@ -101,7 +103,9 @@ function RithmicProtocolConnectView({
       await loadAccounts()
       onConnected?.()
       // One sync pulls every trading account stored on this connection.
-      void performSyncForAccount(connectedUsername)
+      void performSyncForAccount(connectedUsername).finally(() => {
+        onSynced?.()
+      })
     } catch (error) {
       console.error('Rithmic Protocol connect error:', error)
       toast.error(t('rithmicProtocolSync.error.authFailed'))
@@ -118,6 +122,7 @@ function RithmicProtocolConnectView({
     loadAccounts,
     performSyncForAccount,
     onConnected,
+    onSynced,
   ])
 
   return (
@@ -294,6 +299,8 @@ interface RithmicProtocolSyncProps {
   /** Prefill username when reconnecting. */
   initialUsername?: string
   onConnected?: () => void
+  /** Fired once the sync that connecting kicks off has settled. */
+  onSynced?: () => void
   /** Accepted for PlatformConfig customComponent compatibility; unused here. */
   setIsOpen?: Dispatch<SetStateAction<boolean>> | ((open: boolean) => void)
 }
@@ -302,6 +309,7 @@ export function RithmicProtocolSync({
   initialShowAccountsManager = true,
   initialUsername,
   onConnected,
+  onSynced,
   setIsOpen: _setIsOpen,
 }: RithmicProtocolSyncProps = {}) {
   const t = useI18n()
@@ -312,6 +320,7 @@ export function RithmicProtocolSync({
         {!initialShowAccountsManager ? (
           <RithmicProtocolConnectView
             onConnected={onConnected}
+            onSynced={onSynced}
             initialUsername={initialUsername}
           />
         ) : (

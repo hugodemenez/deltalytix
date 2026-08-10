@@ -112,7 +112,8 @@ interface DxFeedSyncContextType {
   performSyncForAllAccounts: () => Promise<void>
   isAutoSyncing: boolean
   accounts: DxFeedSyncAccount[]
-  loadAccounts: () => Promise<void>
+  /** Resolves with the freshly loaded accounts so callers can act on them right away. */
+  loadAccounts: () => Promise<DxFeedSyncAccount[]>
   deleteAccount: (accountId: string) => Promise<void>
   syncInterval: number
   setSyncInterval: (interval: number) => void
@@ -126,6 +127,7 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
   const [isAutoSyncing, setIsAutoSyncing] = useState(false)
   const isAutoSyncingRef = useRef(false)
   const [accounts, setAccounts] = useState<DxFeedSyncAccount[]>([])
+  const accountsRef = useRef<DxFeedSyncAccount[]>([])
   const [syncInterval, setSyncInterval] = useState(15)
   const [enableAutoSync, setEnableAutoSync] = useState(false)
 
@@ -164,18 +166,27 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
 
       const result = await response.json()
       const data = Array.isArray(result.data) ? result.data : []
-      setAccounts(data.map(normalizeSynchronization))
+      const next: DxFeedSyncAccount[] = data.map(normalizeSynchronization)
+      // Keep the ref in sync immediately so a post-connect sync can resolve the
+      // new connection before React re-renders with setAccounts.
+      accountsRef.current = next
+      setAccounts(next)
+      return next
     } catch (error) {
       console.warn('Failed to load DxFeed accounts:', error)
       showToastWithCopy('error', formatDxFeedError(t, 'LOAD_SYNCHRONIZATIONS_FAILED'), {
         description: t('dxfeedSync.errors.hintContactSupport'),
         copyLabel: t('common.copy'),
       })
+      return accountsRef.current
     }
   }, [normalizeSynchronization, t])
 
   const deleteAccount = useCallback(async (accountId: string) => {
-    setAccounts((prev) => prev.filter((acc) => acc.accountId !== accountId))
+    accountsRef.current = accountsRef.current.filter(
+      (acc) => acc.accountId !== accountId,
+    )
+    setAccounts(accountsRef.current)
     await fetch('/api/dxfeed/synchronizations', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -185,7 +196,7 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
 
   const performSyncForAccount = useCallback(
     async (accountId: string) => {
-      const account = accounts.find((acc) => acc.accountId === accountId)
+      const account = accountsRef.current.find((acc) => acc.accountId === accountId)
       if (!account) {
         return { success: false, message: t('dxfeedSync.sync.accountNotFound') }
       }
@@ -262,7 +273,7 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
         return { success: false, message: formatDxFeedError(t, code, params) }
       }
     },
-    [accounts, t, refreshTradesOnly, loadAccounts],
+    [t, refreshTradesOnly, loadAccounts],
   )
 
   const performSyncForAllAccounts = useCallback(async () => {

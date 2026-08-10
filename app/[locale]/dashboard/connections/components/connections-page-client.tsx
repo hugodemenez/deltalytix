@@ -1226,6 +1226,14 @@ export function ConnectionsPageClient({
         writeConnectionsPageCache(next)
         setOauthPending(null)
         await Promise.allSettled([loadTradovate(), loadDxFeed()])
+        // Connecting is only half the job — pull the trades right away so the
+        // user never has to follow up with a manual "sync", then reload the
+        // list so the row shows what that sync imported.
+        if (resolvedExternalId) {
+          void syncTradovate(resolvedExternalId).finally(() => {
+            void load({ quiet: true })
+          })
+        }
       } catch (error) {
         console.error(error)
         toast.error(
@@ -1241,9 +1249,11 @@ export function ConnectionsPageClient({
 
     void run()
   }, [
+    load,
     loadDxFeed,
     loadTradovate,
     searchParams,
+    syncTradovate,
     t,
     tradovateStore,
     tradovateStoreReady,

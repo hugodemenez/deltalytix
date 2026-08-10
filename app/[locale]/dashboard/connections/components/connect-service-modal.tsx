@@ -21,10 +21,17 @@ export function ConnectServiceModal({
   service,
   prefill,
   onClose,
+  onSynced,
 }: {
   service: ConnectionService | null
   prefill?: ConnectPrefill | null
   onClose: () => void
+  /**
+   * Fired when the sync a connection kicks off on itself has settled. The sheet
+   * is already closed by then, so this is what refreshes the row with the
+   * trades that sync just imported.
+   */
+  onSynced?: () => void
 }) {
   const t = useI18n()
   const open = service !== null
@@ -90,6 +97,7 @@ export function ConnectServiceModal({
               initialShowAccountsManager={false}
               initialUsername={prefill?.accountId}
               onConnected={onClose}
+              onSynced={onSynced}
             />
           )}
           {service === 'tradovate' && (
@@ -104,6 +112,7 @@ export function ConnectServiceModal({
                 initialEmail={prefill?.accountId}
                 initialPropFirmName={prefill?.displayName}
                 onConnected={onClose}
+                onSynced={onSynced}
               />
             </div>
           )}

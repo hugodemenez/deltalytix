@@ -301,6 +301,7 @@ function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
           closeConnect()
           refresh()
         }}
+        onSynced={refresh}
       />
     </div>
   )

@@ -109,6 +109,10 @@ export function DxFeedCredentialsManager() {
       return
     }
 
+    // The connection is keyed by the login email; capture it before the fields
+    // are cleared so the post-connect sync still knows what to pull.
+    const connectedAccountId = loginEmail
+
     try {
       setIsLoading(true)
       const result = await authenticateDxFeed(loginEmail, loginPassword, selectedPropFirmId)
@@ -134,6 +138,10 @@ export function DxFeedCredentialsManager() {
       setLoginEmail('')
       setLoginPassword('')
       await loadAccounts()
+      // Connecting is only half the job — pull the trades right away so the
+      // user never has to follow up with a manual "sync". One sync covers
+      // every trading account stored on this connection.
+      void performSyncForAccount(connectedAccountId)
     } catch (error) {
       console.error('DxFeed connect error:', error)
       showToastWithCopy('error', t('dxfeedSync.error.authFailed'), {
@@ -143,7 +151,14 @@ export function DxFeedCredentialsManager() {
     } finally {
       setIsLoading(false)
     }
-  }, [loginEmail, loginPassword, selectedPropFirmId, t, loadAccounts])
+  }, [
+    loginEmail,
+    loginPassword,
+    selectedPropFirmId,
+    t,
+    loadAccounts,
+    performSyncForAccount,
+  ])
 
   function formatDate(dateString: string) {
     return new Date(dateString).toLocaleString()

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, useCallback, ReactNode } from 'react'
 import { useData } from '@/context/data-provider'
 import { toast } from 'sonner'
 import { useI18n } from "@/locales/client"
@@ -17,7 +17,8 @@ interface TradovateSyncContextType {
   
   // Account management
   accounts: ConnectionView[]
-  loadAccounts: () => Promise<void>
+  /** Resolves with the freshly loaded accounts so callers can act on them right away. */
+  loadAccounts: () => Promise<ConnectionView[]>
   deleteAccount: (accountId: string) => Promise<void>
   
   // Per-account fee config (stored in DB)
@@ -36,6 +37,7 @@ const TradovateSyncContext = createContext<TradovateSyncContextType | undefined>
 export function TradovateSyncContextProvider({ children }: { children: ReactNode }) {
   const [isAutoSyncing, setIsAutoSyncing] = useState(false)
   const [accounts, setAccounts] = useState<ConnectionView[]>([])
+  const accountsRef = useRef<ConnectionView[]>([])
   const [syncInterval, setSyncInterval] = useState(15) // 15 minutes default
   const [enableAutoSync, setEnableAutoSync] = useState(false)
 
@@ -81,9 +83,15 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
 
       const result = await response.json()
       const data = Array.isArray(result.data) ? result.data : []
-      setAccounts(data.map(normalizeSynchronization))
+      const next: ConnectionView[] = data.map(normalizeSynchronization)
+      // Keep the ref in sync immediately so a post-OAuth sync can resolve the
+      // new connection before React re-renders with setAccounts.
+      accountsRef.current = next
+      setAccounts(next)
+      return next
     } catch (error) {
       console.warn('Failed to load Tradovate accounts:', error)
+      return accountsRef.current
     }
   }, [normalizeSynchronization])
 
@@ -105,7 +113,8 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
   )
 
   const deleteAccount = useCallback(async (accountId: string) => {
-    setAccounts(prev => prev.filter(acc => acc.accountId !== accountId))
+    accountsRef.current = accountsRef.current.filter(acc => acc.accountId !== accountId)
+    setAccounts(accountsRef.current)
     await fetch("/api/tradovate/synchronizations", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -115,7 +124,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
 
   // Perform sync for a specific account
   const performSyncForAccount = useCallback(async (accountId: string) => {
-    const account = accounts.find(acc => acc.accountId === accountId)
+    const account = accountsRef.current.find(acc => acc.accountId === accountId)
     if (!account) {
       const errorMsg = `Account ${accountId} not found`
       return { success: false, message: errorMsg }
@@ -201,7 +210,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       console.error('Sync error:', error)
       return { success: false, message: errorMsg }
     }
-  }, [accounts, t, refreshTradesOnly, loadAccounts])
+  }, [t, refreshTradesOnly, loadAccounts])
 
   // Perform sync for all accounts
   const performSyncForAllAccounts = useCallback(async () => {

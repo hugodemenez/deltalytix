@@ -56,15 +56,17 @@ function resolvePrefillPropFirmId(propFirmName?: string) {
 
 function DxFeedConnectView({
   onConnected,
+  onSynced,
   initialEmail,
   initialPropFirmName,
 }: {
   onConnected?: () => void
+  onSynced?: () => void
   initialEmail?: string
   initialPropFirmName?: string
 }) {
   const t = useI18n()
-  const { loadAccounts } = useDxFeedSyncContext()
+  const { loadAccounts, performSyncForAccount } = useDxFeedSyncContext()
   const [loginEmail, setLoginEmail] = useState(initialEmail ?? '')
   const [loginPassword, setLoginPassword] = useState('')
   const [selectedPropFirmId, setSelectedPropFirmId] = useState(() =>
@@ -96,6 +98,10 @@ function DxFeedConnectView({
       return
     }
 
+    // The connection is keyed by the login email; capture it before the fields
+    // are cleared so the post-connect sync still knows what to pull.
+    const connectedAccountId = loginEmail
+
     try {
       setIsLoading(true)
       const result = await authenticateDxFeed(
@@ -125,6 +131,12 @@ function DxFeedConnectView({
       setLoginPassword('')
       await loadAccounts()
       onConnected?.()
+      // Connecting is only half the job — pull the trades right away so the
+      // user never has to follow up with a manual "sync". One sync covers
+      // every trading account stored on this connection.
+      void performSyncForAccount(connectedAccountId).finally(() => {
+        onSynced?.()
+      })
     } catch (error) {
       console.error('DxFeed connect error:', error)
       showToastWithCopy('error', t('dxfeedSync.error.authFailed'), {
@@ -140,7 +152,9 @@ function DxFeedConnectView({
     selectedPropFirmId,
     t,
     loadAccounts,
+    performSyncForAccount,
     onConnected,
+    onSynced,
   ])
 
   return (
@@ -320,6 +334,8 @@ interface DxFeedSyncProps {
   /** Prefill prop firm (name or id) when reconnecting. */
   initialPropFirmName?: string
   onConnected?: () => void
+  /** Fired once the sync that connecting kicks off has settled. */
+  onSynced?: () => void
   /** Accepted for PlatformConfig customComponent compatibility; unused here. */
   setIsOpen?: Dispatch<SetStateAction<boolean>> | ((open: boolean) => void)
 }
@@ -329,6 +345,7 @@ export function DxFeedSync({
   initialEmail,
   initialPropFirmName,
   onConnected,
+  onSynced,
   setIsOpen: _setIsOpen,
 }: DxFeedSyncProps = {}) {
   const t = useI18n()
@@ -337,6 +354,7 @@ export function DxFeedSync({
     return (
       <DxFeedConnectView
         onConnected={onConnected}
+        onSynced={onSynced}
         initialEmail={initialEmail}
         initialPropFirmName={initialPropFirmName}
       />
