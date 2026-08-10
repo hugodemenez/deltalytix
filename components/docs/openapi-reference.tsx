@@ -155,6 +155,8 @@ function methodClassName(method: string): string {
   }
 }
 
+type OpenApiCopy = (typeof COPY)[keyof typeof COPY]
+
 function PathOperation({
   path,
   method,
@@ -164,7 +166,7 @@ function PathOperation({
   path: string
   method: string
   operation: OpenApiOperation
-  labels: (typeof COPY)["en"]
+  labels: OpenApiCopy
 }) {
   const [open, setOpen] = useState(false)
   const bodyContent = operation.requestBody?.content
@@ -374,25 +376,21 @@ export function DocsOpenApiReference({
   }, [document])
 
   return (
-    <section className="border-t border-black/10 dark:border-white/10">
-      <div className="flex flex-col gap-4 border-b border-black/10 pb-8 dark:border-white/10 sm:flex-row sm:items-end sm:justify-between">
-        <div className="max-w-2xl">
-          <h2 className="text-sm font-medium text-black/55 dark:text-white/55">
-            {labels.title}
-          </h2>
-          <p className="mt-3 text-pretty text-base leading-relaxed text-black/60 dark:text-white/60">
-            {document?.info?.description || labels.description}
+    <div>
+      <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {document?.info?.version ? (
+          <p className="font-mono text-xs text-black/45 dark:text-white/45">
+            {document.info.title ?? "API"} · v{document.info.version}
           </p>
-          {document?.info?.version ? (
-            <p className="mt-2 font-mono text-xs text-black/45 dark:text-white/45">
-              {document.info.title ?? "API"} · v{document.info.version}
-            </p>
-          ) : null}
-        </div>
+        ) : (
+          <p className="text-sm text-black/55 dark:text-white/55">
+            {labels.description}
+          </p>
+        )}
         <a
           href={openApiUrl}
           download="openapi.json"
-          className="shrink-0 text-sm text-black underline-offset-4 hover:underline dark:text-white"
+          className="shrink-0 text-sm text-black/55 underline-offset-4 hover:text-black hover:underline dark:text-white/55 dark:hover:text-white"
         >
           {labels.download}
         </a>
@@ -424,7 +422,7 @@ export function DocsOpenApiReference({
       ) : null}
 
       {!loading && !error && operations.length > 0 ? (
-        <div>
+        <div className="border-t border-black/10 dark:border-white/10">
           {operations.map(({ path, method, operation }) => (
             <PathOperation
               key={`${method}:${path}`}
@@ -436,7 +434,7 @@ export function DocsOpenApiReference({
           ))}
         </div>
       ) : null}
-    </section>
+    </div>
   )
 }
 

@@ -8,12 +8,18 @@ import {
   getDocsPlaygroundAuthAction,
   revokeDocsPlaygroundTokenAction,
 } from "@/app/[locale]/(landing)/docs/actions"
-import {
-  DOCS_PLAYGROUND_READ_SCOPES,
-} from "@/app/[locale]/(landing)/docs/actions"
 
 const TOKEN_STORAGE_KEY = "deltalytix.docs.playground.token"
 const TOKEN_ID_STORAGE_KEY = "deltalytix.docs.playground.tokenId"
+
+/** Mirrors server default read scopes; keep in sync with docs/actions.ts */
+const READ_SCOPES = [
+  "profile:read",
+  "trades:read",
+  "accounts:read",
+  "connections:read",
+  "metrics:read",
+] as const
 
 const WRITE_SCOPES = [
   "trades:write",
@@ -255,7 +261,7 @@ export function DocsApiPlayground() {
   const handleGenerateToken = () => {
     setTokenActionError(null)
     startTransition(async () => {
-      const scopes = [...DOCS_PLAYGROUND_READ_SCOPES, ...writeScopes]
+      const scopes = [...READ_SCOPES, ...writeScopes]
       const result = await createDocsPlaygroundTokenAction(scopes)
       if ("error" in result) {
         setTokenActionError(result.error || labels.tokenError)
@@ -366,22 +372,15 @@ export function DocsApiPlayground() {
   }
 
   return (
-    <section className="border-t border-black/10 dark:border-white/10">
-      <div className="border-b border-black/10 pb-8 dark:border-white/10">
-        <h2 className="text-sm font-medium text-black/55 dark:text-white/55">
-          {labels.title}
-        </h2>
-        <p className="mt-3 max-w-2xl text-pretty text-base leading-relaxed text-black/60 dark:text-white/60">
-          {labels.description}
-        </p>
-      </div>
-
-      <div className="grid gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        <div className="space-y-6">
-          <div className="space-y-3">
-            {!authChecked ? (
-              <p className="text-sm text-black/45 dark:text-white/45">…</p>
-            ) : authenticated ? (
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <p className="text-sm text-black/60 dark:text-white/60">
+            {labels.description}
+          </p>
+          {!authChecked ? (
+            <p className="text-sm text-black/45 dark:text-white/45">…</p>
+          ) : authenticated ? (
               <>
                 <p className="text-sm text-black/60 dark:text-white/60">
                   {signedInLabel}
@@ -614,7 +613,6 @@ export function DocsApiPlayground() {
           )}
         </div>
       </div>
-    </section>
   )
 }
 
