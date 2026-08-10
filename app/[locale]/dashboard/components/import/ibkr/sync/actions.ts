@@ -410,7 +410,11 @@ export async function updateIbkrDailySyncTimeAction(
     const userId = await getUserId()
     await prisma.connection.updateMany({
       where: { userId, service: SERVICE, externalId: accountId },
-      data: { dailySyncTime: utcTimeString ? new Date(utcTimeString) : null },
+      // Clearing the interval keeps a single active schedule per connection.
+      data: {
+        syncIntervalMinutes: null,
+        dailySyncTime: utcTimeString ? new Date(utcTimeString) : null,
+      },
     })
     await invalidateConnectionsPageCache(userId)
     return { success: true }

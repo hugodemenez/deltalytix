@@ -352,6 +352,8 @@ export async function updateRithmicProtocolDailySyncTimeAction(
         },
       },
       data: {
+        // Clearing the interval keeps a single active schedule per connection.
+        syncIntervalMinutes: null,
         dailySyncTime: utcTimeString ? new Date(utcTimeString) : null,
       },
     })

@@ -2061,6 +2061,8 @@ export async function updateDailySyncTimeAction(
         externalId: accountId
       },
       data: {
+        // Clearing the interval keeps a single active schedule per connection.
+        syncIntervalMinutes: null,
         dailySyncTime: syncDateTime
       }
     })
