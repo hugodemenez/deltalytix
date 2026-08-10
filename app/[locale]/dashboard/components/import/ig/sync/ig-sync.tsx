@@ -193,13 +193,13 @@ function IgConnectView({
         <Input
           id="ig-api-key"
           name="apiKey"
-          type="password"
+          type="text"
           autoComplete="off"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           spellCheck={false}
           required
-          className={fieldClassName}
+          className={`${fieldClassName} font-mono`}
         />
         <IgApiKeyFieldHelp />
       </div>

@@ -20,6 +20,10 @@ import {
   switchIgAccount,
   type IgApiEnvironment,
 } from "@/lib/ig-api/client";
+import {
+  igApiKeyFingerprint,
+  sanitizeIgApiKey,
+} from "@/lib/ig-api/api-key";
 import { isValidIgIdentifier } from "@/lib/ig-api/identifier";
 import { mapIgApiTransactions } from "@/lib/ig-api/transactions-to-trades";
 import type {
@@ -53,6 +57,9 @@ const logger = {
  * IG reports failures as dotted error codes (`error.security.invalid-details`).
  * Map the ones a trader can act on to their own message; anything unmapped
  * still surfaces the raw code so support has something to go on.
+ *
+ * `error.security.api-key-invalid` is the same code for a mistyped key and for
+ * a Live/Demo mismatch — do not lead with environment alone.
  */
 function mapIgAuthError(
   error: unknown,
@@ -78,6 +85,9 @@ function mapIgAuthError(
     return { error: "IG_API_KEY_DISABLED" };
   }
   if (code.includes("api-key")) {
+    logger.warn(
+      `IG rejected API key (${environment}): ${reason}`,
+    );
     return {
       error: "IG_API_KEY_REJECTED",
       errorParams: { environment: environmentLabel },
@@ -105,15 +115,16 @@ function parseStoredCredentials(
 ): IgStoredCredentials | null {
   try {
     const parsed = JSON.parse(tokenField) as IgStoredCredentials;
+    const apiKey = sanitizeIgApiKey(parsed.apiKey ?? "");
     if (
       !parsed.identifier ||
       !parsed.password ||
-      !parsed.apiKey ||
+      !apiKey ||
       (parsed.environment !== "live" && parsed.environment !== "demo")
     ) {
       return null;
     }
-    return parsed;
+    return { ...parsed, apiKey };
   } catch {
     return null;
   }
@@ -171,7 +182,7 @@ export async function authenticateIg(
     }
 
     const trimmedIdentifier = identifier.trim();
-    const trimmedApiKey = apiKey.trim();
+    const trimmedApiKey = sanitizeIgApiKey(apiKey);
     if (!trimmedIdentifier || !password || !trimmedApiKey) {
       return { error: "CREDENTIALS_REQUIRED" };
     }
@@ -193,7 +204,7 @@ export async function authenticateIg(
     }
 
     logger.info(
-      `Authenticating ${trimmedIdentifier} on ${environment}`,
+      `Authenticating ${trimmedIdentifier} on ${environment} (apiKey ${igApiKeyFingerprint(trimmedApiKey)})`,
     );
 
     const session = await createIgSession({

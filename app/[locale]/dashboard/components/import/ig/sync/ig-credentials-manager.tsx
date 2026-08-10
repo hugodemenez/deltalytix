@@ -348,10 +348,12 @@ export function IgCredentialsManager() {
               </Label>
               <Input
                 id="ig-mgr-api-key"
-                type="password"
+                type="text"
+                autoComplete="off"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                className={fieldClassName}
+                spellCheck={false}
+                className={`${fieldClassName} font-mono`}
               />
               <IgApiKeyFieldHelp />
             </div>

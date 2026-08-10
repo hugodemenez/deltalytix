@@ -2793,7 +2793,7 @@ export default {
       IG_IDENTIFIER_INVALID:
         "L’API d’IG n’accepte pas une adresse e-mail comme identifiant. Utilisez votre nom d’utilisateur IG (lettres, chiffres, tiret, underscore — 30 caractères max), pas l’e-mail avec lequel vous vous connectez sur le site. Vous le trouverez dans My IG → Configuration → Informations personnelles, ou via la page Identifiants perdus d’IG.",
       IG_API_KEY_REJECTED:
-        "IG a refusé cette clé API. Vérifiez qu'elle a bien été créée pour l'environnement {environment} — une clé créée pour un environnement ne fonctionne jamais sur l'autre.",
+        "IG a refusé cette clé API ({environment}). Le plus souvent, la clé a été mal copiée (tronquée), contient des espaces, ou n’est pas « Activée » dans Mon compte → Paramètres → Clés API. Restez bien en Réel pour générer une clé Live, collez la valeur complète, puis réessayez — ou vérifiez les mêmes identifiants dans l’API Companion d’IG.",
       IG_API_KEY_DISABLED:
         "Cette clé API est désactivée ou révoquée chez IG. Générez-en une nouvelle via Mon compte → Paramètres → Clés API.",
       IG_ACCOUNT_LOCKED:
@@ -2837,14 +2837,15 @@ export default {
       apiKeyLabel: "Clé API",
       createKeyToggle: "Comment en créer une ?",
       createKeyStep1:
-        "Connectez-vous à la plateforme web IG avec un compte réel (un compte démo seul ne permet pas de créer une clé).",
+        "Connectez-vous à la plateforme web IG avec votre compte réel (restez en Réel — ne basculez pas en Démo).",
       createKeyStep2: "Ouvrez Mon compte → Paramètres → Clés API (menu de gauche).",
       createKeyStep3:
-        "Donnez un nom (par exemple Deltalytix) puis cliquez sur Générer une nouvelle clé. Copiez-la immédiatement — IG peut ne plus la réafficher.",
+        "Donnez un nom (par exemple Deltalytix) puis cliquez sur Générer une nouvelle clé. Copiez-la en entier immédiatement — IG peut ne plus la réafficher — et vérifiez que son statut est Activée.",
       createKeyStep4:
-        "Pour la synchronisation Démo : basculez d’abord en démo via le sélecteur de compte, puis créez une clé démo de la même façon.",
+        "Contrôle optionnel : collez le même identifiant, mot de passe et clé dans l’API Companion d’IG (Live). Si Companion refuse aussi la clé, le problème vient d’IG, pas de Deltalytix.",
       linkPrimary: "IG France — utiliser les API de trading",
-      linkSecondary: "IG France — accéder à l’API",
+      linkSecondary: "IG API Companion — tester la connexion",
+      linkTertiary: "IG France — accéder à l’API",
       connecting: "Connexion…",
       connect: "Connecter",
     },
@@ -2862,6 +2863,11 @@ export default {
         "IG France — modifier l’identifiant (infos personnelles)",
       usernameLinkLostDetails:
         "IG France — récupérer un identifiant oublié",
+      apiKeyRejectedQuestion:
+        "IG a refusé ma clé API — que dois-je vérifier ?",
+      apiKeyRejectedAnswer:
+        "Vérifiez que l’environnement est bien Réel si vous n’avez qu’un compte réel. Régénérez la clé en étant connecté en Réel (Mon compte → Paramètres → Clés API), copiez la valeur complète sans espaces, et contrôlez le statut Activée. IG n’autorise qu’une clé par compte — une ancienne clé cesse de fonctionner dès que vous en créez une nouvelle. Testez les trois valeurs dans l’API Companion d’IG ; si Companion échoue aussi, contactez le support IG.",
+      apiKeyRejectedLinkCompanion: "IG API Companion",
       scopeQuestion: "Que fait Deltalytix avec cette clé ?",
       scopeIntro:
         "Les clés API IG n’ont pas de scopes OAuth ni de cases à cocher de permissions. Une clé identifie votre application, et l’accès suit votre login IG. Deltalytix se contente de :",

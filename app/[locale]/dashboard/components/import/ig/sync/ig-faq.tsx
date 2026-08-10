@@ -18,6 +18,7 @@ import { useCurrentLocale, useI18n } from "@/locales/client";
 /** Official IG docs — Labs steps are English-only; France has a French overview. */
 export const IG_API_KEY_DOCS = {
   labsGettingStarted: "https://labs.ig.com/gettingstarted",
+  apiCompanion: "https://labs.ig.com/sample-apps/api-companion/index.html",
   enHowTo: "https://www.ig.com/en/trading-platforms/trading-apis/how-to-use-ig-api",
   frHowTo:
     "https://www.ig.com/fr/plateformes-de-trading/api-de-trading/comment-utiliser-les-api-de-trading-ig",
@@ -70,11 +71,13 @@ export function IgApiKeyFieldHelp() {
     locale === "fr"
       ? {
           primary: IG_API_KEY_DOCS.frHowTo,
-          secondary: IG_API_KEY_DOCS.frHelp,
+          secondary: IG_API_KEY_DOCS.apiCompanion,
+          tertiary: IG_API_KEY_DOCS.frHelp,
         }
       : {
           primary: IG_API_KEY_DOCS.labsGettingStarted,
-          secondary: IG_API_KEY_DOCS.enHowTo,
+          secondary: IG_API_KEY_DOCS.apiCompanion,
+          tertiary: IG_API_KEY_DOCS.enHowTo,
         };
 
   return (
@@ -103,6 +106,9 @@ export function IgApiKeyFieldHelp() {
             </DocLink>
             <DocLink href={docs.secondary}>
               {t("igSync.addAccount.linkSecondary")}
+            </DocLink>
+            <DocLink href={docs.tertiary}>
+              {t("igSync.addAccount.linkTertiary")}
             </DocLink>
           </div>
         </div>
@@ -177,6 +183,23 @@ export function IgFaq() {
               </DocLink>
               <DocLink href={usernameDocs.lostDetails}>
                 {t("igSync.faq.usernameLinkLostDetails")}
+              </DocLink>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem
+          value="api-key-rejected"
+          className="border-black/10 dark:border-white/10"
+        >
+          <AccordionTrigger className={triggerClassName}>
+            {t("igSync.faq.apiKeyRejectedQuestion")}
+          </AccordionTrigger>
+          <AccordionContent className={contentClassName}>
+            <p>{t("igSync.faq.apiKeyRejectedAnswer")}</p>
+            <div className="flex flex-col gap-1.5 pt-1 sm:flex-row sm:flex-wrap sm:gap-x-4">
+              <DocLink href={IG_API_KEY_DOCS.apiCompanion}>
+                {t("igSync.faq.apiKeyRejectedLinkCompanion")}
               </DocLink>
             </div>
           </AccordionContent>

@@ -2649,7 +2649,7 @@ export default {
       IG_IDENTIFIER_INVALID:
         "IG's API does not accept an email address as the login. Use your IG username (letters, numbers, hyphen, underscore — max 30 characters), not the email you use on the website. Find it under My IG → Settings → Personal details, or recover it via IG’s lost-details page.",
       IG_API_KEY_REJECTED:
-        "IG rejected this API key. Make sure it was created for the {environment} environment — a key made for one environment never works on the other.",
+        "IG rejected this API key ({environment}). Most often the key was mistyped, truncated when copied, or is not Enabled under My Account → Settings → API keys. Stay on Live when generating a Live key, paste the full value with no spaces, then retry — or confirm the same credentials work in IG’s API Companion.",
       IG_API_KEY_DISABLED:
         "This API key is disabled or revoked on IG. Generate a new one under My Account → Settings → API keys.",
       IG_ACCOUNT_LOCKED:
@@ -2689,14 +2689,15 @@ export default {
       apiKeyLabel: "API key",
       createKeyToggle: "How do I create one?",
       createKeyStep1:
-        "Log into the IG web platform with a live account (demo-only logins cannot create keys).",
+        "Log into the IG web platform with your live account (stay on Live — do not switch to Demo).",
       createKeyStep2: "Open My Account → Settings → API keys (left menu).",
       createKeyStep3:
-        "Enter a name (for example Deltalytix) and click Generate new key. Copy the key once — IG may not show it again.",
+        "Enter a name (for example Deltalytix) and click Generate new key. Copy the whole key once — IG may not show it again — and confirm its status is Enabled.",
       createKeyStep4:
-        "For Demo sync: use the account switcher to switch to demo first, then create a demo key the same way.",
+        "Optional check: paste the same username, password, and key into IG’s API Companion (Live). If Companion also rejects the key, the problem is on IG’s side, not Deltalytix.",
       linkPrimary: "IG Labs — create your API key",
-      linkSecondary: "IG — how to use trading APIs",
+      linkSecondary: "IG API Companion — test login",
+      linkTertiary: "IG — how to use trading APIs",
       connecting: "Connecting…",
       connect: "Connect",
     },
@@ -2710,6 +2711,10 @@ export default {
         "The website accepts your email; the API does not. Enter the IG username from My IG → Settings → Personal details (letters, numbers, hyphen, or underscore only — no @). If you only remember the email, use IG’s lost-details page to recover the username.",
       usernameLinkPersonalInfo: "IG — update personal details (username)",
       usernameLinkLostDetails: "IG — recover forgotten username",
+      apiKeyRejectedQuestion: "IG rejected my API key — what should I check?",
+      apiKeyRejectedAnswer:
+        "Confirm Environment is Live if you only have a real account. Regenerate the key while logged into Live (My Account → Settings → API keys), copy the full value with no spaces, and check status Enabled. IG allows one key per account — an older key stops working when you create a new one. Test the same three values in IG’s API Companion; if Companion fails too, contact IG support.",
+      apiKeyRejectedLinkCompanion: "IG API Companion",
       scopeQuestion: "What does Deltalytix do with the key?",
       scopeIntro:
         "IG API keys have no OAuth-style scopes or permission checkboxes. One key identifies your app, and access follows your IG login. Deltalytix only ever:",
