@@ -353,7 +353,13 @@ export async function getAccountsAction() {
             date: true,
             status: true,
           }
-        }
+        },
+        connection: {
+          select: {
+            id: true,
+            service: true,
+          },
+        },
       }
     })
 

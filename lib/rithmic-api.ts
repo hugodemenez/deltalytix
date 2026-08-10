@@ -17,6 +17,26 @@ export interface RithmicAccountBalance {
   closed_pnl?: number
 }
 
+/** Raw balance payloads may use snake_case or camelCase field names. */
+export type RithmicAccountBalanceInput = {
+  account_id?: string
+  accountId?: string
+  fcm_id?: string
+  ib_id?: string
+  account_balance?: number | string
+  accountBalance?: number | string
+  cash_on_hand?: number | string
+  cashOnHand?: number | string
+  margin_balance?: number | string
+  marginBalance?: number | string
+  available_buying_power?: number | string
+  availableBuyingPower?: number | string
+  open_pnl?: number | string
+  openPnl?: number | string
+  closed_pnl?: number | string
+  closedPnl?: number | string
+}
+
 export interface RithmicRateLimitInfo {
   remaining_attempts: number
   minutes_until_reset: number
@@ -175,21 +195,59 @@ function toNumericBalance(value: unknown): number | null {
   return null
 }
 
+export function normalizeRithmicAccountId(value: unknown): string {
+  return String(value ?? "").trim()
+}
+
 export function normalizeRithmicAccountBalance(
-  balance: RithmicAccountBalance
+  balance: RithmicAccountBalanceInput
 ): RithmicAccountBalance | null {
-  const accountId = String(balance.account_id ?? "").trim()
+  const accountId =
+    normalizeRithmicAccountId(balance.account_id) ||
+    normalizeRithmicAccountId(balance.accountId)
   if (!accountId) return null
 
   return {
-    ...balance,
     account_id: accountId,
-    account_balance: toNumericBalance(balance.account_balance) ?? undefined,
-    cash_on_hand: toNumericBalance(balance.cash_on_hand) ?? undefined,
-    margin_balance: toNumericBalance(balance.margin_balance) ?? undefined,
+    fcm_id: balance.fcm_id,
+    ib_id: balance.ib_id,
+    account_balance:
+      toNumericBalance(balance.account_balance ?? balance.accountBalance) ??
+      undefined,
+    cash_on_hand:
+      toNumericBalance(balance.cash_on_hand ?? balance.cashOnHand) ?? undefined,
+    margin_balance:
+      toNumericBalance(balance.margin_balance ?? balance.marginBalance) ??
+      undefined,
     available_buying_power:
-      toNumericBalance(balance.available_buying_power) ?? undefined,
-    open_pnl: toNumericBalance(balance.open_pnl) ?? undefined,
-    closed_pnl: toNumericBalance(balance.closed_pnl) ?? undefined,
+      toNumericBalance(
+        balance.available_buying_power ?? balance.availableBuyingPower
+      ) ?? undefined,
+    open_pnl: toNumericBalance(balance.open_pnl ?? balance.openPnl) ?? undefined,
+    closed_pnl:
+      toNumericBalance(balance.closed_pnl ?? balance.closedPnl) ?? undefined,
   }
+}
+
+/**
+ * Resolve a dashboard account number against fetched Rithmic balances.
+ * Prefers exact match, then trimmed/case-insensitive fallback.
+ */
+export function findRithmicBalanceForAccount(
+  accountNumber: string | null | undefined,
+  balancesByAccountId: Record<string, RithmicAccountBalance>
+): RithmicAccountBalance | null {
+  const needle = normalizeRithmicAccountId(accountNumber)
+  if (!needle) return null
+
+  const exact = balancesByAccountId[needle]
+  if (exact) return exact
+
+  const needleLower = needle.toLowerCase()
+  for (const [accountId, balance] of Object.entries(balancesByAccountId)) {
+    if (normalizeRithmicAccountId(accountId).toLowerCase() === needleLower) {
+      return balance
+    }
+  }
+  return null
 }

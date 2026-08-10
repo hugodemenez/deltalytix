@@ -64,6 +64,9 @@ export function isValidCredentialSet(data: any): data is RithmicCredentialSet {
 
 export function getAllRithmicData(): Record<string, RithmicCredentialSet> {
   try {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return {}
+    }
     const data = localStorage.getItem(STORAGE_KEY)
     if (!data) return {}
     
@@ -84,6 +87,33 @@ export function getAllRithmicData(): Record<string, RithmicCredentialSet> {
     localStorage.removeItem(STORAGE_KEY)
     return {}
   }
+}
+
+/**
+ * Account numbers currently linked for live balance display.
+ * When "sync all accounts" was used, older saves left selectedAccounts empty —
+ * callers should also treat fetched balance IDs as linked in that case.
+ */
+export function getLinkedRithmicAccountNumbers(
+  credentialSets: Iterable<RithmicCredentialSet> = Object.values(getAllRithmicData())
+): string[] {
+  const linked = new Set<string>()
+  for (const set of credentialSets) {
+    for (const accountId of set.selectedAccounts ?? []) {
+      const trimmed = String(accountId ?? '').trim()
+      if (trimmed) linked.add(trimmed)
+    }
+  }
+  return [...linked]
+}
+
+export function hasAnyRithmicAllAccountsMode(
+  credentialSets: Iterable<RithmicCredentialSet> = Object.values(getAllRithmicData())
+): boolean {
+  for (const set of credentialSets) {
+    if (set.allAccounts) return true
+  }
+  return false
 }
 
 export function clearRithmicData(id?: string): void {

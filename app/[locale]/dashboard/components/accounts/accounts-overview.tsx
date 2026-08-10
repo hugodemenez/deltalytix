@@ -60,7 +60,10 @@ import { useAccountsSortingStore } from '@/store/accounts-sorting-store'
 import { removeAccountsFromTradesAction } from '@/server/accounts'
 import { useModalStateStore } from '@/store/modal-state-store'
 import { useRithmicBalances } from "@/hooks/use-rithmic-balances"
-import { getPrimaryRithmicBalance } from "@/lib/rithmic-api"
+import {
+  findRithmicBalanceForAccount,
+  getPrimaryRithmicBalance,
+} from "@/lib/rithmic-api"
 import {
   DndContext,
   closestCenter,
@@ -757,15 +760,36 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
     () => new Set(rithmicBalancesDebug.linkedAccountNumbers),
     [rithmicBalancesDebug.linkedAccountNumbers]
   )
+  const hasRithmicConnectedAccounts = useMemo(
+    () =>
+      accounts.some((account) => {
+        const service = (
+          account as Account & { connection?: { service?: string | null } | null }
+        ).connection?.service
+        return service === "rithmic"
+      }),
+    [accounts]
+  )
+  const showRithmicBalances =
+    hasRithmicCredentials ||
+    hasRithmicConnectedAccounts ||
+    Object.keys(balancesByAccountId).length > 0
 
   const getRithmicBalanceProps = useCallback(
     (account: Account) => {
       const accountNumber = account.number ?? ""
-      const showRithmicBalance =
-        hasRithmicCredentials &&
-        (rithmicLinkedAccountNumbers.has(accountNumber) ||
-          accountNumber in balancesByAccountId)
-      const balanceEntry = balancesByAccountId[accountNumber]
+      const balanceEntry = findRithmicBalanceForAccount(
+        accountNumber,
+        balancesByAccountId
+      )
+      const connectionService = (
+        account as Account & { connection?: { service?: string | null } | null }
+      ).connection?.service
+      const isLinked =
+        rithmicLinkedAccountNumbers.has(accountNumber) ||
+        balanceEntry != null ||
+        connectionService === "rithmic"
+      const showRithmicBalance = showRithmicBalances && isLinked
 
       return {
         showRithmicBalance,
@@ -775,7 +799,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         rithmicBalanceLoading:
           rithmicBalancesLoading &&
           showRithmicBalance &&
-          balanceEntry == null,
+          balanceEntry == null &&
+          hasRithmicCredentials,
       }
     },
     [
@@ -783,6 +808,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       hasRithmicCredentials,
       rithmicBalancesLoading,
       rithmicLinkedAccountNumbers,
+      showRithmicBalances,
     ]
   )
 
@@ -1356,7 +1382,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       rithmicBalancesByAccountId={balancesByAccountId}
       rithmicBalancesLoading={rithmicBalancesLoading}
       rithmicLinkedAccountNumbers={rithmicLinkedAccountNumbers}
-      showRithmicBalances={hasRithmicCredentials}
+      showRithmicBalances={showRithmicBalances}
     />
   )
 

@@ -1,9 +1,15 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { getAllRithmicData, RITHMIC_STORAGE_UPDATED_EVENT } from "@/lib/rithmic-storage"
+import {
+  getAllRithmicData,
+  getLinkedRithmicAccountNumbers,
+  hasAnyRithmicAllAccountsMode,
+  RITHMIC_STORAGE_UPDATED_EVENT,
+} from "@/lib/rithmic-storage"
 import {
   fetchRithmicBalances,
+  findRithmicBalanceForAccount,
   getPrimaryRithmicBalance,
   getRithmicApiBaseUrl,
   normalizeRithmicAccountBalance,
@@ -58,8 +64,36 @@ export interface RithmicBalancesState {
   rateLimited: boolean
   lastFetchedAt: Date | null
   hasCredentials: boolean
+  /** True when any credential set uses "sync all accounts" (legacy empty selectedAccounts). */
+  syncsAllAccounts: boolean
   debug: RithmicBalancesDebugInfo
   refresh: () => Promise<void>
+}
+
+function readCredentialSnapshot() {
+  const credentialSets = Object.values(getAllRithmicData())
+  return {
+    credentialSets,
+    hasCredentials: credentialSets.length > 0,
+    syncsAllAccounts: hasAnyRithmicAllAccountsMode(credentialSets),
+    linkedAccountNumbers: getLinkedRithmicAccountNumbers(credentialSets),
+  }
+}
+
+function resolveLinkedAccountNumbers(
+  selectedLinked: string[],
+  balancesByAccountId: Record<string, RithmicAccountBalance>,
+  syncsAllAccounts: boolean
+): string[] {
+  const linked = new Set(selectedLinked)
+  // Legacy "all accounts" saves left selectedAccounts empty — treat fetched
+  // balance account IDs as linked so Solde Rithmic still renders on those rows.
+  if (syncsAllAccounts || selectedLinked.length === 0) {
+    for (const accountId of Object.keys(balancesByAccountId)) {
+      linked.add(accountId)
+    }
+  }
+  return [...linked]
 }
 
 function buildDebugSnapshot(
@@ -71,9 +105,14 @@ function buildDebugSnapshot(
     lastFetchedAt: Date | null
   }
 ): RithmicBalancesDebugInfo {
-  const credentialSets = Object.values(getAllRithmicData())
-  const linkedAccountNumbers = credentialSets.flatMap((set) => set.selectedAccounts)
+  const { credentialSets, linkedAccountNumbers, syncsAllAccounts } =
+    readCredentialSnapshot()
   const { lastFetchedAt, ...rest } = overrides
+  const resolvedLinked = resolveLinkedAccountNumbers(
+    linkedAccountNumbers,
+    overrides.balancesByAccountId,
+    syncsAllAccounts
+  )
 
   return {
     generatedAt: new Date().toISOString(),
@@ -88,15 +127,17 @@ function buildDebugSnapshot(
       selectedAccounts: set.selectedAccounts,
       allAccounts: set.allAccounts,
     })),
-    linkedAccountNumbers,
     fetchAttempts: [],
     balanceCount: Object.keys(overrides.balancesByAccountId).length,
     ...rest,
+    // Always use resolved linked accounts (includes fetched IDs in allAccounts mode)
+    linkedAccountNumbers: resolvedLinked,
     lastFetchedAt: lastFetchedAt?.toISOString() ?? null,
   }
 }
 
 export function useRithmicBalances(): RithmicBalancesState {
+  const initialSnapshot = readCredentialSnapshot()
   const [balancesByAccountId, setBalancesByAccountId] = useState<
     Record<string, RithmicAccountBalance>
   >({})
@@ -104,7 +145,12 @@ export function useRithmicBalances(): RithmicBalancesState {
   const [error, setError] = useState<string | null>(null)
   const [rateLimited, setRateLimited] = useState(false)
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null)
-  const [hasCredentials, setHasCredentials] = useState(false)
+  const [hasCredentials, setHasCredentials] = useState(
+    initialSnapshot.hasCredentials
+  )
+  const [syncsAllAccounts, setSyncsAllAccounts] = useState(
+    initialSnapshot.syncsAllAccounts
+  )
   const [debug, setDebug] = useState<RithmicBalancesDebugInfo>(() =>
     buildDebugSnapshot({
       balancesByAccountId: {},
@@ -130,8 +176,10 @@ export function useRithmicBalances(): RithmicBalancesState {
     abortControllerRef.current = abortController
 
     const apiBaseUrl = getRithmicApiBaseUrl()
-    const credentialSets = Object.values(getAllRithmicData())
-    setHasCredentials(credentialSets.length > 0)
+    const { credentialSets, hasCredentials: nextHasCredentials, syncsAllAccounts: nextSyncsAll } =
+      readCredentialSnapshot()
+    setHasCredentials(nextHasCredentials)
+    setSyncsAllAccounts(nextSyncsAll)
 
     if (!apiBaseUrl) {
       setBalancesByAccountId({})
@@ -302,6 +350,7 @@ export function useRithmicBalances(): RithmicBalancesState {
     rateLimited,
     lastFetchedAt,
     hasCredentials,
+    syncsAllAccounts,
     debug,
     refresh,
   }
@@ -309,9 +358,18 @@ export function useRithmicBalances(): RithmicBalancesState {
 
 export function isRithmicLinkedAccount(
   accountNumber: string,
-  balancesByAccountId: Record<string, RithmicAccountBalance>
+  balancesByAccountId: Record<string, RithmicAccountBalance>,
+  linkedAccountNumbers?: Set<string> | string[]
 ): boolean {
-  return accountNumber in balancesByAccountId
+  if (findRithmicBalanceForAccount(accountNumber, balancesByAccountId)) {
+    return true
+  }
+  if (!linkedAccountNumbers) return false
+  const linkedSet =
+    linkedAccountNumbers instanceof Set
+      ? linkedAccountNumbers
+      : new Set(linkedAccountNumbers)
+  return linkedSet.has(accountNumber)
 }
 
 export function buildRithmicBalancesDebugReport(
@@ -320,13 +378,18 @@ export function buildRithmicBalancesDebugReport(
 ): string {
   try {
     const linkedSet = new Set(debug.linkedAccountNumbers ?? [])
-    const balanceIds = new Set(Object.keys(debug.balancesByAccountId ?? {}))
     const dashboardSet = new Set(dashboardAccountNumbers)
+    const syncsAllAccounts = (debug.credentialSets ?? []).some(
+      (set) => set.allAccounts
+    )
 
     const accountDiagnostics = dashboardAccountNumbers.map((accountNumber) => {
       const inLinked = linkedSet.has(accountNumber)
-      const inBalances = balanceIds.has(accountNumber)
-      const balanceEntry = debug.balancesByAccountId?.[accountNumber]
+      const balanceEntry = findRithmicBalanceForAccount(
+        accountNumber,
+        debug.balancesByAccountId ?? {}
+      )
+      const inBalances = balanceEntry != null
       const primaryBalance = balanceEntry
         ? getPrimaryRithmicBalance(balanceEntry)
         : null
@@ -335,7 +398,7 @@ export function buildRithmicBalancesDebugReport(
         accountNumber,
         inLinkedAccounts: inLinked,
         inFetchedBalances: inBalances,
-        showRithmicBalance: inLinked || inBalances,
+        showRithmicBalance: inLinked || inBalances || syncsAllAccounts,
         primaryBalance,
         rawBalance: balanceEntry ?? null,
       }
