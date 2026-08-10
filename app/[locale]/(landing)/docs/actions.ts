@@ -8,9 +8,9 @@ import {
   sha256,
 } from "@/lib/api/tokens"
 
-export const DOCS_PLAYGROUND_TOKEN_NAME = "Docs playground"
+const DOCS_PLAYGROUND_TOKEN_NAME = "Docs playground"
 
-export const DOCS_PLAYGROUND_READ_SCOPES = [
+const DOCS_PLAYGROUND_READ_SCOPES = [
   "profile:read",
   "trades:read",
   "accounts:read",
