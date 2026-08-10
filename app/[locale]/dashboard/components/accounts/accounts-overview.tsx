@@ -715,10 +715,13 @@ function PayoutDialog({
 
 export function AccountsOverview({ size }: { size: WidgetSize }) {
   const trades = useTradesStore(state => state.trades)
+  const setTradesStore = useTradesStore(state => state.setTrades)
   const user = useUserStore(state => state.user)
   const isLoading = useUserStore(state => state.isLoading)
   const groups = useUserStore(state => state.groups)
+  const setGroups = useUserStore(state => state.setGroups)
   const accounts = useUserStore(state => state.accounts)
+  const setAccounts = useUserStore(state => state.setAccounts)
   const { accountNumbers, deletePayout, saveAccount, savePayout, isMobile } = useData()
   const { getOrderedAccounts, reorderAccounts } = useAccountOrderStore()
   const t = useI18n()
@@ -1147,11 +1150,22 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const handleDelete = async () => {
     if (!user || !selectedAccountForTable || !canDeleteAccount) return
 
+    const accountToDelete = selectedAccountForTable
+
     try {
       setIsDeleting(true)
       // Delete both account configuration and all associated trades
-      await removeAccountsFromTradesAction([selectedAccountForTable.number])
-      // DataProvider updates accounts/trades optimistically; no full refresh
+      await removeAccountsFromTradesAction([accountToDelete.number])
+      // Drop the account and its trades locally so the UI reflects the
+      // deletion immediately instead of waiting for a page refresh
+      setTradesStore(trades.filter(trade => trade.accountNumber !== accountToDelete.number))
+      setAccounts(accounts.filter(acc => acc.number !== accountToDelete.number))
+      setGroups(
+        groups.map(group => ({
+          ...group,
+          accounts: group.accounts.filter(acc => acc.number !== accountToDelete.number),
+        }))
+      )
       setSelectedAccountForTable(null)
 
       toast.success(t('propFirm.toast.deleteSuccess'), {
