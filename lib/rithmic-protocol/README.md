@@ -7,12 +7,24 @@ TypeScript client for Rithmic's WebSocket + protobuf **R | Protocol API**, used 
 
 - `proto/` — message definitions from RProtocolAPI kit (licensed from Rithmic)
 - `etc/rithmic_ssl_cert_auth_params` — SSL auth params from the kit
-- `client.ts` — system-info probe, ORDER_PLANT login, account list, fill / order-history fetch
+- `client.ts` — system-info probe, ORDER_PLANT login, account list, fill / order-history fetch, **PNL_PLANT live balances**
 - `fills-to-trades.ts` — FIFO round-trip matching into Deltalytix `Trade` rows
+- `balances.ts` — map `AccountPnLPositionUpdate` → Solde Rithmic balance rows
 
 Proto files are loaded from disk at runtime. On Vercel they must be listed in
 `next.config.ts` → `outputFileTracingIncludes` (including Connections server
 actions, not only `/api/rithmic-protocol/*`).
+
+## Live balances (Solde Rithmic)
+
+Account balances for the accounts table come from the **PnL plant**:
+
+1. Open `wss://…`, `RequestLogin` with `infra_type = PNL_PLANT` (4).
+2. For each trading account, `RequestPnLPositionSnapshot` (template 402).
+3. Collect `AccountPnLPositionUpdate` (451) rows (`account_balance`, `cash_on_hand`, …) until `ResponsePnLPositionSnapshot` (403).
+
+Server action: `getRithmicProtocolBalancesAction` (uses encrypted Connection credentials).
+This is separate from the classic R | API+ HTTP `/balances` path.
 
 ## Connection sequence (Rithmic)
 

@@ -829,7 +829,8 @@ export function AccountsTableView({
                 ).connection?.service
                 const isLinkedAccount =
                   rithmicLinkedAccountNumbers.has(accountNumber) ||
-                  connectionService === "rithmic"
+                  connectionService === "rithmic" ||
+                  connectionService === "rithmic-protocol"
                 if (
                   rithmicBalancesLoading &&
                   rithmicBalance == null &&

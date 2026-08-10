@@ -766,7 +766,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         const service = (
           account as Account & { connection?: { service?: string | null } | null }
         ).connection?.service
-        return service === "rithmic"
+        return service === "rithmic" || service === "rithmic-protocol"
       }),
     [accounts]
   )
@@ -788,7 +788,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       const isLinked =
         rithmicLinkedAccountNumbers.has(accountNumber) ||
         balanceEntry != null ||
-        connectionService === "rithmic"
+        connectionService === "rithmic" ||
+        connectionService === "rithmic-protocol"
       const showRithmicBalance = showRithmicBalances && isLinked
 
       return {
