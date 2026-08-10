@@ -299,6 +299,11 @@ export function RithmicSyncConnection({
   const saveCredentialsAndAccounts = useCallback(() => {
     if (shouldSaveCredentials) {
       const allData = getAllRithmicData()
+      // Persist concrete account IDs even when syncing "all accounts" so the
+      // accounts table can show Solde Rithmic for those rows.
+      const accountsToPersist = allAccounts
+        ? availableAccounts.map((acc) => acc.account_id)
+        : selectedAccounts
       
       // Find all credentials with the same username
       const existingCredentials = Object.values(allData).filter(
@@ -309,7 +314,7 @@ export function RithmicSyncConnection({
       if (existingCredentials.length > 0) {
         // Merge all selected accounts and remove duplicates
         const mergedSelectedAccounts = Array.from(new Set([
-          ...selectedAccounts,
+          ...accountsToPersist,
           ...existingCredentials.flatMap(cred => cred.selectedAccounts)
         ]))
 
@@ -361,7 +366,7 @@ export function RithmicSyncConnection({
             server_type: credentials.server_type,
             location: credentials.location
           },
-          selectedAccounts,
+          selectedAccounts: accountsToPersist,
           lastSyncTime: new Date().toISOString(),
           allAccounts
         }
@@ -370,7 +375,7 @@ export function RithmicSyncConnection({
         setCurrentCredentialId(dataToSave.id)
       }
     }
-  }, [credentials, selectedAccounts, shouldSaveCredentials, currentCredentialId, allAccounts, t])
+  }, [credentials, selectedAccounts, shouldSaveCredentials, currentCredentialId, allAccounts, availableAccounts, t])
 
   // Reset state when component mounts (modal opens)
   useEffect(() => {
@@ -664,8 +669,12 @@ export function RithmicSyncConnection({
                   checked={allAccounts}
                   onCheckedChange={(checked) => {
                     setAllAccounts(checked)
+                    // Keep selectedAccounts populated even in "all accounts" mode so
+                    // live balance linking (Solde Rithmic) knows which rows to show.
                     if (checked) {
-                      setSelectedAccounts([])
+                      setSelectedAccounts(
+                        availableAccounts.map((acc) => acc.account_id)
+                      )
                     }
                   }}
                 />

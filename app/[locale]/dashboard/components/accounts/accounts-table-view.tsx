@@ -21,6 +21,7 @@ import { useAccountsGroupExpansionStore } from "../../../../../store/accounts-gr
 import { DataTableColumnHeader } from "../tables/column-header"
 import { CheckCircle, ChevronDown, ChevronRight, Loader2, XCircle } from "lucide-react"
 import {
+  findRithmicBalanceForAccount,
   getPrimaryRithmicBalance,
   RithmicAccountBalance,
 } from "@/lib/rithmic-api"
@@ -143,7 +144,10 @@ function getRithmicBalanceValue(
   account: Account,
   balancesByAccountId: Record<string, RithmicAccountBalance>
 ): number | null {
-  const balance = balancesByAccountId[account.number ?? ""]
+  const balance = findRithmicBalanceForAccount(
+    account.number,
+    balancesByAccountId
+  )
   if (!balance) return null
   return getPrimaryRithmicBalance(balance)
 }
@@ -818,10 +822,18 @@ export function AccountsTableView({
                 )
 
                 const accountNumber = row.original.number ?? ""
+                const connectionService = (
+                  row.original as Account & {
+                    connection?: { service?: string | null } | null
+                  }
+                ).connection?.service
+                const isLinkedAccount =
+                  rithmicLinkedAccountNumbers.has(accountNumber) ||
+                  connectionService === "rithmic"
                 if (
                   rithmicBalancesLoading &&
                   rithmicBalance == null &&
-                  rithmicLinkedAccountNumbers.has(accountNumber)
+                  isLinkedAccount
                 ) {
                   return (
                     <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
