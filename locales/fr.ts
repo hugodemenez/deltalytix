@@ -2399,7 +2399,11 @@ export default {
     addAccount: {
       title: "Connecter un compte DxFeed",
       description:
-        "Choisissez votre propfirm, puis connectez-vous avec les mêmes identifiants que sur sa plateforme.",
+        "Choisissez d'abord votre propfirm, puis connectez-vous avec les mêmes identifiants que sur sa plateforme.",
+      propFirmStepDescription:
+        "Sélectionnez la propfirm où vous tradez avant de saisir vos identifiants.",
+      credentialsStepDescription:
+        "Connectez-vous avec les mêmes identifiants que sur la plateforme de cette propfirm.",
       propFirmLabel: "Propfirm",
       propFirmPlaceholder: "Sélectionnez votre propfirm",
       propFirmHint:
@@ -2412,6 +2416,7 @@ export default {
       emailPlaceholder: "E-mail de connexion à votre propfirm",
       passwordLabel: "Mot de passe",
       passwordPlaceholder: "Mot de passe de votre propfirm",
+      continueToCredentials: "Continuer",
       connecting: "Connexion...",
       connect: "Connecter",
     },

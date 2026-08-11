@@ -2268,7 +2268,11 @@ export default {
     addAccount: {
       title: "Connect DxFeed Account",
       description:
-        "Choose your prop firm, then sign in with the same credentials you use on that firm's platform.",
+        "Choose your prop firm first, then sign in with the same credentials you use on that firm's platform.",
+      propFirmStepDescription:
+        "Select the prop firm where you trade before entering your login.",
+      credentialsStepDescription:
+        "Sign in with the same credentials you use on that firm's platform.",
       propFirmLabel: "Prop firm",
       propFirmPlaceholder: "Select your prop firm",
       propFirmHint:
@@ -2281,6 +2285,7 @@ export default {
       emailPlaceholder: "Email from your prop firm login",
       passwordLabel: "Password",
       passwordPlaceholder: "Password from your prop firm login",
+      continueToCredentials: "Continue",
       connecting: "Connecting...",
       connect: "Connect",
     },
