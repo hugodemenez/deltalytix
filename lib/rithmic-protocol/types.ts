@@ -36,6 +36,8 @@ export interface RithmicProtocolCredentials {
   gatewayUri: string
   /** Trading account ids selected for sync; empty = all */
   accountIds?: string[]
+  /** Per-account FCM/IB from ResponseAccountList when available. */
+  accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
   fcmId?: string
   ibId?: string
 }

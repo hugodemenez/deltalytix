@@ -112,6 +112,61 @@ function rpMessage(rpCode: unknown): string {
   return rpCode.map(String).join(' ')
 }
 
+/**
+ * Map a ResponseShowFillHistory row. Some plants populate `price` /
+ * `avg_fill_price` without `fill_price` — accept any of the three.
+ */
+export function mapShowFillHistoryRow(
+  decoded: {
+    accountId?: string
+    fcmId?: string
+    ibId?: string
+    symbol?: string
+    exchange?: string
+    transactionType?: string | number
+    price?: number
+    fillPrice?: number
+    fillSize?: number | string
+    fillId?: string
+    fillDate?: string
+    fillTime?: string
+    basketId?: string
+    sequenceNumber?: string
+    ssboe?: number
+    usecs?: number
+    avgFillPrice?: number
+  },
+  fallbackAccountId: string,
+): RithmicProtocolFill | null {
+  if (!decoded.symbol) return null
+  const fillPrice = Number(
+    decoded.fillPrice ?? decoded.avgFillPrice ?? decoded.price ?? NaN,
+  )
+  if (!Number.isFinite(fillPrice)) return null
+  const fillSize = Number(decoded.fillSize ?? 0)
+  if (!Number.isFinite(fillSize) || fillSize <= 0) return null
+
+  return {
+    accountId: decoded.accountId || fallbackAccountId,
+    fcmId: decoded.fcmId,
+    ibId: decoded.ibId,
+    symbol: decoded.symbol,
+    exchange: decoded.exchange,
+    transactionType: String(decoded.transactionType ?? ''),
+    fillPrice,
+    fillSize,
+    fillId: decoded.fillId,
+    fillDate: decoded.fillDate,
+    fillTime: decoded.fillTime,
+    basketId: decoded.basketId,
+    sequenceNumber: decoded.sequenceNumber,
+    ssboe: decoded.ssboe,
+    usecs: decoded.usecs,
+    avgFillPrice:
+      decoded.avgFillPrice != null ? Number(decoded.avgFillPrice) : undefined,
+  }
+}
+
 type InboundMessage = {
   templateId: number
   raw: Buffer
@@ -384,6 +439,7 @@ export class RithmicProtocolClient {
           symbol?: string
           exchange?: string
           transactionType?: string
+          price?: number
           fillPrice?: number
           fillSize?: number | string
           fillId?: string
@@ -396,29 +452,8 @@ export class RithmicProtocolClient {
           avgFillPrice?: number
         }>(this.root!, 'rti.ResponseShowFillHistory', msg.raw)
 
-        if (decoded.symbol && decoded.fillPrice != null) {
-          fills.push({
-            accountId: decoded.accountId || params.accountId,
-            fcmId: decoded.fcmId,
-            ibId: decoded.ibId,
-            symbol: decoded.symbol,
-            exchange: decoded.exchange,
-            transactionType: String(decoded.transactionType ?? ''),
-            fillPrice: Number(decoded.fillPrice),
-            fillSize: Number(decoded.fillSize ?? 0),
-            fillId: decoded.fillId,
-            fillDate: decoded.fillDate,
-            fillTime: decoded.fillTime,
-            basketId: decoded.basketId,
-            sequenceNumber: decoded.sequenceNumber,
-            ssboe: decoded.ssboe,
-            usecs: decoded.usecs,
-            avgFillPrice:
-              decoded.avgFillPrice != null
-                ? Number(decoded.avgFillPrice)
-                : undefined,
-          })
-        }
+        const mapped = mapShowFillHistoryRow(decoded, params.accountId)
+        if (mapped) fills.push(mapped)
 
         if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
           if (rpOk(decoded.rpCode) || rpIsNoData(decoded.rpCode)) {
@@ -795,6 +830,8 @@ export async function fetchFillsForAccounts(params: {
   fcmId?: string
   ibId?: string
   accountIds: string[]
+  /** Optional cached per-account FCM/IB from connect time. */
+  accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
   /**
    * Preferred: UTC YYYY-MM-DD when the account started trading.
    * Sync walks from this date through today in serial ≤30-day windows.
@@ -815,13 +852,39 @@ export async function fetchFillsForAccounts(params: {
       password: params.password,
     })
     const info = await client.loginInfo()
-    const fcmId = params.fcmId || info.fcmId || login.fcmId
-    const ibId = params.ibId || info.ibId || login.ibId
+    const loginFcmId = params.fcmId || info.fcmId || login.fcmId
+    const loginIbId = params.ibId || info.ibId || login.ibId
     const uniqueUserId = login.uniqueUserId
 
     console.log(
       `[RITHMIC-PROTOCOL] Sync session unique_user_id=${uniqueUserId ?? '(none)'} at ${new Date().toISOString()} (UTC)`,
     )
+
+    // Prop-firm systems (e.g. LucidTrading) often stamp a different FCM/IB on
+    // each trading account than ResponseLogin. Prefer a fresh list from this
+    // session; fall back to cached connect-time metadata.
+    const accountMeta = new Map<
+      string,
+      { accountId: string; fcmId?: string; ibId?: string }
+    >()
+    for (const account of params.accounts ?? []) {
+      accountMeta.set(account.accountId, account)
+    }
+    try {
+      const listedAccounts = await client.listAccounts({
+        fcmId: loginFcmId,
+        ibId: loginIbId,
+        userType: info.userType,
+      })
+      for (const account of listedAccounts) {
+        accountMeta.set(account.accountId, account)
+      }
+    } catch (error) {
+      console.warn(
+        '[RITHMIC-PROTOCOL] Re-list accounts during sync failed; using cached FCM/IB',
+        error instanceof Error ? error.message : error,
+      )
+    }
 
     const end = utcCalendarDay(new Date())
     const start = resolveHistoryStartUtc(params.historyStartDate, params.lookbackDays, end)
@@ -838,7 +901,15 @@ export async function fetchFillsForAccounts(params: {
 
     // Accounts and ≤30-day windows are requested serially (await each response fully).
     for (const accountId of params.accountIds) {
-      let usedFallback = false
+      const meta = accountMeta.get(accountId)
+      const fcmId = meta?.fcmId || loginFcmId
+      const ibId = meta?.ibId || loginIbId
+      console.log(
+        `[RITHMIC-PROTOCOL] Account ${accountId} using fcm=${fcmId ?? '(none)'} ib=${ibId ?? '(none)'}`,
+      )
+
+      let historyFills = 0
+      let usedOrderHistoryFallback = false
       for (const window of windows) {
         try {
           const accountFills = await client.getFillHistory({
@@ -848,24 +919,54 @@ export async function fetchFillsForAccounts(params: {
             startDateYyyymmdd: toYyyymmddNumber(window.start),
             endDateYyyymmdd: toYyyymmddNumber(window.end),
           })
+          historyFills += accountFills.length
           fills.push(...accountFills)
         } catch (error) {
           console.warn(
             `[RITHMIC-PROTOCOL] Fill history failed for ${accountId} (${toYyyymmddString(window.start)}–${toYyyymmddString(window.end)}), falling back to order history`,
             error instanceof Error ? error.message : error,
           )
-          if (!usedFallback) {
-            usedFallback = true
+          if (!usedOrderHistoryFallback) {
+            usedOrderHistoryFallback = true
             const fallback = await client.getFillsViaOrderHistory({
               fcmId,
               ibId,
               accountId,
               startDateYyyymmdd: startYmdStr,
             })
+            console.log(
+              `[RITHMIC-PROTOCOL] Order-history fallback for ${accountId}: ${fallback.length} fill(s)`,
+            )
             fills.push(...fallback)
           }
           break
         }
+      }
+
+      // ShowFillHistory can return rp_code 7 (no data) with no exception — common
+      // on some prop-firm plants. Still try order-history dates before giving up.
+      if (historyFills === 0 && !usedOrderHistoryFallback) {
+        try {
+          const fallback = await client.getFillsViaOrderHistory({
+            fcmId,
+            ibId,
+            accountId,
+            startDateYyyymmdd: startYmdStr,
+          })
+          console.log(
+            `[RITHMIC-PROTOCOL] Empty ShowFillHistory for ${accountId}; order-history fallback: ${fallback.length} fill(s)`,
+          )
+          fills.push(...fallback)
+        } catch (error) {
+          console.warn(
+            `[RITHMIC-PROTOCOL] Order-history fallback failed for ${accountId}`,
+            error instanceof Error ? error.message : error,
+          )
+        }
+      } else {
+        console.log(
+          `[RITHMIC-PROTOCOL] ShowFillHistory for ${accountId}: ${historyFills} fill(s)`,
+        )
       }
 
       // Same-day fills on Test often land in ReplayExecutions before ShowFillHistory
