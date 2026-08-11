@@ -35,9 +35,7 @@ export function useRithmicProtocolConnectOptions(enabled = true) {
   const [systems, setSystems] = useState<string[]>(() =>
     getFallbackSystems(RITHMIC_PROTOCOL_CORE_GATEWAY_ID),
   )
-  const [systemName, setSystemName] = useState(
-    () => getFallbackSystems(RITHMIC_PROTOCOL_CORE_GATEWAY_ID)[0],
-  )
+  const [systemName, setSystemName] = useState('')
   const [loadingGateways, setLoadingGateways] = useState(false)
   const [loadingSystems, setLoadingSystems] = useState(false)
 
@@ -76,8 +74,10 @@ export function useRithmicProtocolConnectOptions(enabled = true) {
         if (cancelled || result.gatewayId !== gatewayId) return
         if (result.systems.length > 0) {
           setSystems(result.systems)
+          // Keep the user's pick when it still exists; otherwise clear so they
+          // must choose explicitly (credentials stay disabled until then).
           setSystemName((current) =>
-            result.systems.includes(current) ? current : result.systems[0],
+            result.systems.includes(current) ? current : '',
           )
         }
       } catch (error) {
@@ -86,7 +86,7 @@ export function useRithmicProtocolConnectOptions(enabled = true) {
           const fallback = getFallbackSystems(gatewayId)
           setSystems(fallback)
           setSystemName((current) =>
-            fallback.includes(current) ? current : fallback[0],
+            fallback.includes(current) ? current : '',
           )
         }
       } finally {

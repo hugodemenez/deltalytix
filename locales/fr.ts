@@ -2706,7 +2706,7 @@ export default {
     addAccount: {
       title: "Connecter Rithmic Protocol",
       description:
-        "Choisissez d'abord le système Rithmic de votre compte, puis connectez-vous avec vos identifiants.",
+        "Choisissez votre point de connexion et le système Rithmic, puis connectez-vous avec vos identifiants.",
       systemStepDescription:
         "Choisissez d'abord votre point de connexion et le système Rithmic (par exemple Rithmic 01 ou Rithmic Paper Trading).",
       credentialsStepDescription:

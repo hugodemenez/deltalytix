@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { Check, ChevronDown, ChevronLeft, Loader2 } from 'lucide-react'
+import { Check, ChevronDown, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
@@ -49,8 +49,6 @@ const pickerTriggerClassName =
 
 const primaryButtonClassName =
   'inline-flex h-11 w-full items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]'
-
-type ConnectStep = 'propFirm' | 'credentials'
 
 function resolvePrefillPropFirmId(propFirmName?: string) {
   if (!propFirmName) return ''
@@ -204,19 +202,14 @@ export function DxFeedConnectForm({
 }) {
   const t = useI18n()
   const { loadAccounts } = useDxFeedSyncContext()
-  const prefilledPropFirmId = resolvePrefillPropFirmId(initialPropFirmName)
-  const [step, setStep] = useState<ConnectStep>(
-    prefilledPropFirmId ? 'credentials' : 'propFirm',
-  )
   const [loginEmail, setLoginEmail] = useState(initialEmail ?? '')
   const [loginPassword, setLoginPassword] = useState('')
-  const [selectedPropFirmId, setSelectedPropFirmId] =
-    useState(prefilledPropFirmId)
+  const [selectedPropFirmId, setSelectedPropFirmId] = useState(() =>
+    resolvePrefillPropFirmId(initialPropFirmName),
+  )
   const [isLoading, setIsLoading] = useState(false)
 
-  const selectedPropFirm = DXFEED_PROP_FIRM_OPTIONS.find(
-    (firm) => firm.id === selectedPropFirmId,
-  )
+  const credentialsEnabled = Boolean(selectedPropFirmId)
 
   const handleConnect = useCallback(async () => {
     if (!selectedPropFirmId) {
@@ -260,7 +253,6 @@ export function DxFeedConnectForm({
       setLoginEmail('')
       setLoginPassword('')
       setSelectedPropFirmId('')
-      setStep('propFirm')
       await loadAccounts()
       onConnected?.()
     } catch (error) {
@@ -298,41 +290,6 @@ export function DxFeedConnectForm({
     )
   }
 
-  if (step === 'propFirm') {
-    return (
-      <div className="flex w-full min-w-0 flex-col space-y-5 overflow-x-hidden">
-        <p className="text-sm leading-relaxed text-black/55 dark:text-white/55">
-          {t('dxfeedSync.addAccount.propFirmStepDescription')}
-        </p>
-
-        <div className="min-w-0 space-y-2">
-          <Label
-            htmlFor="dxfeed-prop-firm"
-            className="text-sm text-black/55 dark:text-white/55"
-          >
-            {t('dxfeedSync.addAccount.propFirmLabel')}
-          </Label>
-          <PropFirmPicker
-            selectedPropFirmId={selectedPropFirmId}
-            onSelect={setSelectedPropFirmId}
-          />
-          <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
-            {t('dxfeedSync.addAccount.propFirmHint')}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          disabled={!selectedPropFirmId}
-          onClick={() => setStep('credentials')}
-          className={primaryButtonClassName}
-        >
-          {t('dxfeedSync.addAccount.continueToCredentials')}
-        </button>
-      </div>
-    )
-  }
-
   return (
     <form
       className="flex w-full min-w-0 flex-col space-y-5 overflow-x-hidden"
@@ -342,31 +299,25 @@ export function DxFeedConnectForm({
       }}
       autoComplete="on"
     >
-      <div className="flex min-w-0 flex-col gap-2 rounded-sm border border-black/10 px-3 py-2.5 dark:border-white/10">
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-black/45 dark:text-white/45">
-              {t('dxfeedSync.addAccount.propFirmLabel')}
-            </p>
-            <p className="truncate text-sm font-medium">
-              {selectedPropFirm?.name ??
-                t('dxfeedSync.addAccount.propFirmPlaceholder')}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setStep('propFirm')}
-            className="inline-flex shrink-0 items-center gap-1 text-xs text-black/55 transition-colors hover:text-black dark:text-white/55 dark:hover:text-white"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.75} />
-            {t('common.back')}
-          </button>
-        </div>
-      </div>
-
       <p className="text-sm leading-relaxed text-black/55 dark:text-white/55">
-        {t('dxfeedSync.addAccount.credentialsStepDescription')}
+        {t('dxfeedSync.addAccount.description')}
       </p>
+
+      <div className="min-w-0 space-y-2">
+        <Label
+          htmlFor="dxfeed-prop-firm"
+          className="text-sm text-black/55 dark:text-white/55"
+        >
+          {t('dxfeedSync.addAccount.propFirmLabel')}
+        </Label>
+        <PropFirmPicker
+          selectedPropFirmId={selectedPropFirmId}
+          onSelect={setSelectedPropFirmId}
+        />
+        <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
+          {t('dxfeedSync.addAccount.propFirmHint')}
+        </p>
+      </div>
 
       <div className="min-w-0 space-y-2">
         <Label
@@ -385,6 +336,7 @@ export function DxFeedConnectForm({
           placeholder={t('dxfeedSync.addAccount.emailPlaceholder')}
           className={fieldClassName}
           required
+          disabled={!credentialsEnabled}
         />
       </div>
 
@@ -405,12 +357,18 @@ export function DxFeedConnectForm({
           placeholder={t('dxfeedSync.addAccount.passwordPlaceholder')}
           className={fieldClassName}
           required
+          disabled={!credentialsEnabled}
         />
       </div>
 
       <button
         type="submit"
-        disabled={isLoading || !selectedPropFirmId || !loginEmail || !loginPassword}
+        disabled={
+          isLoading ||
+          !credentialsEnabled ||
+          !loginEmail ||
+          !loginPassword
+        }
         className={primaryButtonClassName}
       >
         {isLoading ? (

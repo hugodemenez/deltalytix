@@ -2565,7 +2565,7 @@ export default {
     addAccount: {
       title: "Connect Rithmic Protocol",
       description:
-        "Pick the Rithmic system your account lives on, then sign in with your username and password.",
+        "Pick your connect point and Rithmic system, then sign in with your username and password.",
       systemStepDescription:
         "Choose your connect point and Rithmic system first (for example Rithmic 01 or Rithmic Paper Trading).",
       credentialsStepDescription:

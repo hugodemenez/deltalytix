@@ -1,14 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import {
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  Eye,
-  EyeOff,
-  Loader2,
-} from 'lucide-react'
+import { Check, ChevronDown, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -62,8 +55,6 @@ const pickerTriggerClassName =
 
 const primaryButtonClassName =
   'inline-flex h-11 w-full items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]'
-
-type ConnectStep = 'system' | 'credentials'
 
 function SystemPicker({
   systems,
@@ -221,7 +212,6 @@ export function RithmicProtocolConnectForm({
 }) {
   const t = useI18n()
   const { loadAccounts, performSyncForAccount } = useRithmicProtocolSyncContext()
-  const [step, setStep] = useState<ConnectStep>('system')
   const [username, setUsername] = useState(initialUsername ?? '')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -239,13 +229,7 @@ export function RithmicProtocolConnectForm({
   const [isLoading, setIsLoading] = useState(false)
 
   const todayUtc = new Date().toISOString().slice(0, 10)
-  const selectedGateway = gateways.find((gateway) => gateway.id === gatewayId)
-  const systemReady =
-    !loadingGateways &&
-    !loadingSystems &&
-    gateways.length > 0 &&
-    systems.length > 0 &&
-    Boolean(systemName)
+  const credentialsEnabled = Boolean(systemName) && !loadingSystems
 
   const handleConnect = useCallback(async () => {
     if (!username || !password || !systemName || !historyStartDate) {
@@ -283,7 +267,7 @@ export function RithmicProtocolConnectForm({
       setPassword('')
       setShowPassword(false)
       setHistoryStartDate('')
-      setStep('system')
+      setSystemName('')
       await loadAccounts()
       onConnected?.()
       // One sync pulls every trading account stored on this connection.
@@ -304,77 +288,8 @@ export function RithmicProtocolConnectForm({
     loadAccounts,
     performSyncForAccount,
     onConnected,
+    setSystemName,
   ])
-
-  if (step === 'system') {
-    return (
-      <div className="flex w-full min-w-0 flex-col space-y-5 overflow-x-hidden">
-        <p className="text-sm leading-relaxed text-black/55 dark:text-white/55">
-          {t('rithmicProtocolSync.addAccount.systemStepDescription')}
-        </p>
-
-        <div className="min-w-0 space-y-2">
-          <Label
-            htmlFor="rithmic-protocol-gateway"
-            className="text-sm text-black/55 dark:text-white/55"
-          >
-            {t('rithmicProtocolSync.addAccount.gatewayLabel')}
-          </Label>
-          <Select
-            value={gatewayId}
-            onValueChange={setGatewayId}
-            disabled={loadingGateways || gateways.length === 0}
-          >
-            <SelectTrigger
-              id="rithmic-protocol-gateway"
-              className={selectTriggerClassName}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className={selectContentClassName}>
-              {gateways.map((gateway) => (
-                <SelectItem
-                  key={gateway.id}
-                  value={gateway.id}
-                  className="rounded-sm"
-                >
-                  {gateway.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
-            {t('rithmicProtocolSync.addAccount.gatewayHelp')}
-          </p>
-        </div>
-
-        <div className="min-w-0 space-y-2">
-          <Label
-            htmlFor="rithmic-protocol-system"
-            className="text-sm text-black/55 dark:text-white/55"
-          >
-            {t('rithmicProtocolSync.addAccount.systemLabel')}
-          </Label>
-          <SystemPicker
-            systems={systems}
-            systemName={systemName}
-            onSelect={setSystemName}
-            disabled={loadingGateways}
-            loading={loadingSystems}
-          />
-        </div>
-
-        <button
-          type="button"
-          disabled={!systemReady}
-          onClick={() => setStep('credentials')}
-          className={primaryButtonClassName}
-        >
-          {t('rithmicProtocolSync.addAccount.continueToCredentials')}
-        </button>
-      </div>
-    )
-  }
 
   return (
     <form
@@ -385,36 +300,60 @@ export function RithmicProtocolConnectForm({
       }}
       autoComplete="on"
     >
-      <div className="flex min-w-0 flex-col gap-2 rounded-sm border border-black/10 px-3 py-2.5 dark:border-white/10">
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-black/45 dark:text-white/45">
-              {t('rithmicProtocolSync.addAccount.systemLabel')}
-            </p>
-            <p className="truncate text-sm font-medium">{systemName}</p>
-            {selectedGateway ? (
-              <p className="truncate text-xs text-black/45 dark:text-white/45">
-                {selectedGateway.label}
-              </p>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setShowPassword(false)
-              setStep('system')
-            }}
-            className="inline-flex shrink-0 items-center gap-1 text-xs text-black/55 transition-colors hover:text-black dark:text-white/55 dark:hover:text-white"
+      <p className="text-sm leading-relaxed text-black/55 dark:text-white/55">
+        {t('rithmicProtocolSync.addAccount.description')}
+      </p>
+
+      <div className="min-w-0 space-y-2">
+        <Label
+          htmlFor="rithmic-protocol-gateway"
+          className="text-sm text-black/55 dark:text-white/55"
+        >
+          {t('rithmicProtocolSync.addAccount.gatewayLabel')}
+        </Label>
+        <Select
+          value={gatewayId}
+          onValueChange={setGatewayId}
+          disabled={loadingGateways || gateways.length === 0}
+        >
+          <SelectTrigger
+            id="rithmic-protocol-gateway"
+            className={selectTriggerClassName}
           >
-            <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.75} />
-            {t('common.back')}
-          </button>
-        </div>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className={selectContentClassName}>
+            {gateways.map((gateway) => (
+              <SelectItem
+                key={gateway.id}
+                value={gateway.id}
+                className="rounded-sm"
+              >
+                {gateway.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
+          {t('rithmicProtocolSync.addAccount.gatewayHelp')}
+        </p>
       </div>
 
-      <p className="text-sm leading-relaxed text-black/55 dark:text-white/55">
-        {t('rithmicProtocolSync.addAccount.credentialsStepDescription')}
-      </p>
+      <div className="min-w-0 space-y-2">
+        <Label
+          htmlFor="rithmic-protocol-system"
+          className="text-sm text-black/55 dark:text-white/55"
+        >
+          {t('rithmicProtocolSync.addAccount.systemLabel')}
+        </Label>
+        <SystemPicker
+          systems={systems}
+          systemName={systemName}
+          onSelect={setSystemName}
+          disabled={loadingGateways}
+          loading={loadingSystems}
+        />
+      </div>
 
       <div className="min-w-0 space-y-2">
         <Label
@@ -431,6 +370,7 @@ export function RithmicProtocolConnectForm({
           onChange={(e) => setUsername(e.target.value)}
           spellCheck={false}
           required
+          disabled={!credentialsEnabled}
           className={fieldClassName}
         />
       </div>
@@ -451,12 +391,14 @@ export function RithmicProtocolConnectForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            disabled={!credentialsEnabled}
             className={`${fieldClassName} pr-10`}
           />
           <Button
             type="button"
             variant="ghost"
             size="icon"
+            disabled={!credentialsEnabled}
             className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 text-black/45 hover:bg-transparent hover:text-black dark:text-white/45 dark:hover:text-white"
             onClick={() => setShowPassword((v) => !v)}
             aria-label={
@@ -490,6 +432,7 @@ export function RithmicProtocolConnectForm({
           min="2013-01-01"
           max={todayUtc}
           required
+          disabled={!credentialsEnabled}
           className={fieldClassName}
         />
         <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
@@ -500,7 +443,11 @@ export function RithmicProtocolConnectForm({
       <button
         type="submit"
         disabled={
-          isLoading || !username || !password || !systemName || !historyStartDate
+          isLoading ||
+          !credentialsEnabled ||
+          !username ||
+          !password ||
+          !historyStartDate
         }
         className={primaryButtonClassName}
       >
