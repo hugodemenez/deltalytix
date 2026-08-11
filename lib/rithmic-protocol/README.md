@@ -64,7 +64,11 @@ that predate the start-date field.
 
 Same-day fills are also pulled via `ReplayExecutions` (ssboe), because on Test the
 fill/order history date index often lags UTC “today”.
-Order-history fallback also requests dates one at a time.
+Order-history fallback also requests dates one at a time. When `ShowFillHistory`
+returns empty (rp_code `7 no data`) — common on prop-firm plants such as
+**LucidTrading** — sync still tries order-history dates before giving up. Fill
+requests use each account’s own FCM/IB from `ResponseAccountList`, not only the
+login-level ids.
 
 Protocol API has a **separate conformance** process from R | API+. Conformance is
 approved, so production connect points are live; Rithmic Test remains available for

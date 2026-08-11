@@ -6,6 +6,15 @@ export interface RithmicProtocolStoredCredentials {
   gatewayId?: string
   gatewayUri: string
   accountIds?: string[]
+  /**
+   * Per-account FCM/IB from ResponseAccountList. Prop-firm plants (LucidTrading,
+   * etc.) often differ from the login-level fcmId/ibId — prefer these on sync.
+   */
+  accounts?: Array<{
+    accountId: string
+    fcmId?: string
+    ibId?: string
+  }>
   fcmId?: string
   ibId?: string
   /** From ResponseLogin.unique_user_id — useful for Rithmic support/conformance. */

@@ -187,6 +187,11 @@ export async function authenticateRithmicProtocol(
       gatewayId: gateway.id,
       gatewayUri: resolvedUri,
       accountIds,
+      accounts: result.accounts.map((a) => ({
+        accountId: a.accountId,
+        fcmId: a.fcmId,
+        ibId: a.ibId,
+      })),
       fcmId: result.fcmId,
       ibId: result.ibId,
       uniqueUserId: result.uniqueUserId,
@@ -413,6 +418,11 @@ export async function getRithmicProtocolTrades(
       })
       resolvedAccountIds = listed.accounts.map((a) => a.accountId)
       credentials.accountIds = resolvedAccountIds
+      credentials.accounts = listed.accounts.map((a) => ({
+        accountId: a.accountId,
+        fcmId: a.fcmId,
+        ibId: a.ibId,
+      }))
       credentials.fcmId = listed.fcmId ?? credentials.fcmId
       credentials.ibId = listed.ibId ?? credentials.ibId
       await persistRithmicProtocolCredentials(
@@ -468,6 +478,7 @@ export async function getRithmicProtocolTrades(
       fcmId: credentials.fcmId,
       ibId: credentials.ibId,
       accountIds: resolvedAccountIds,
+      accounts: credentials.accounts,
       historyStartDate: credentials.historyStartDate,
       lookbackDays: DEFAULT_LOOKBACK_DAYS,
     })
