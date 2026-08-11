@@ -680,8 +680,12 @@ export const DataProvider: React.FC<{
         const userId = await getUserId();
         if (!userId) return;
 
-        // Dev-only: serve trades from IndexedDB to avoid DB hits when possible
-        if (process.env.NODE_ENV === "development" && !force) {
+        // Dev-only: serve trades from IndexedDB to avoid DB hits when possible.
+        // Only on the initial load: the cache is written on a debounce, so after
+        // a mutation (e.g. deleting an account) it may still hold the pre-mutation
+        // trades and would silently undo the optimistic update.
+        const hasLoadedTrades = useTradesStore.getState().trades.length > 0;
+        if (process.env.NODE_ENV === "development" && !force && !hasLoadedTrades) {
           const cachedTrades = await getTradesCache(userId);
           if (cachedTrades && Array.isArray(cachedTrades) && cachedTrades.length > 0) {
             setTrades(cachedTrades);
