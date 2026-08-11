@@ -18,7 +18,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ThemeAwareLogo } from '@/components/monochrome-logo'
-import { captureConnectionCreated } from '@/lib/connection-analytics'
+import {
+  captureConnectionCreated,
+  captureConnectionFailed,
+} from '@/lib/connection-analytics'
 import { useRithmicProtocolSyncContext } from '@/context/rithmic-protocol-sync-context'
 import { toast } from 'sonner'
 import { authenticateRithmicProtocol } from './actions'
@@ -59,6 +62,9 @@ function RithmicProtocolConnectView({
     loadingGateways,
     loadingSystems,
   } = useRithmicProtocolConnectOptions()
+  const selectedGateway = gateways.find((gateway) => gateway.id === gatewayId)
+  const gatewayLabel = selectedGateway?.label ?? gatewayId
+  const gatewayEnvironment = selectedGateway?.environment ?? 'production'
   const [isLoading, setIsLoading] = useState(false)
 
   const todayUtc = new Date().toISOString().slice(0, 10)
@@ -70,6 +76,14 @@ function RithmicProtocolConnectView({
     }
 
     const connectedUsername = username
+    const analyticsContext = {
+      source_ui: 'connect_view',
+      system_name: systemName,
+      gateway_id: gatewayId,
+      gateway_label: gatewayLabel,
+      environment: gatewayEnvironment,
+    }
+
     try {
       setIsLoading(true)
       const result = await authenticateRithmicProtocol(
@@ -81,6 +95,10 @@ function RithmicProtocolConnectView({
       )
 
       if ('error' in result && result.error) {
+        captureConnectionFailed('rithmic-protocol', {
+          ...analyticsContext,
+          error_code: result.error,
+        })
         const translate = t as (
           key: string,
           params?: Record<string, string | number>,
@@ -94,7 +112,7 @@ function RithmicProtocolConnectView({
       }
 
       toast.success(t('rithmicProtocolSync.connected'))
-      captureConnectionCreated('rithmic-protocol')
+      captureConnectionCreated('rithmic-protocol', analyticsContext)
       setUsername('')
       setPassword('')
       setHistoryStartDate('')
@@ -104,6 +122,10 @@ function RithmicProtocolConnectView({
       void performSyncForAccount(connectedUsername)
     } catch (error) {
       console.error('Rithmic Protocol connect error:', error)
+      captureConnectionFailed('rithmic-protocol', {
+        ...analyticsContext,
+        error_code: 'UNEXPECTED_ERROR',
+      })
       toast.error(t('rithmicProtocolSync.error.authFailed'))
     } finally {
       setIsLoading(false)
@@ -114,6 +136,8 @@ function RithmicProtocolConnectView({
     systemName,
     historyStartDate,
     gatewayId,
+    gatewayLabel,
+    gatewayEnvironment,
     t,
     loadAccounts,
     performSyncForAccount,

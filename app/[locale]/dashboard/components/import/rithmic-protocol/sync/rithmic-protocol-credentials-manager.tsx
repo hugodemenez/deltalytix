@@ -34,7 +34,10 @@ import { useI18n } from '@/locales/client'
 import { toast } from 'sonner'
 import { authenticateRithmicProtocol } from './actions'
 import { useRithmicProtocolSyncContext } from '@/context/rithmic-protocol-sync-context'
-import { captureConnectionCreated } from '@/lib/connection-analytics'
+import {
+  captureConnectionCreated,
+  captureConnectionFailed,
+} from '@/lib/connection-analytics'
 import { useRithmicProtocolConnectOptions } from './use-rithmic-protocol-connect-options'
 
 export function RithmicProtocolCredentialsManager() {
@@ -66,6 +69,9 @@ export function RithmicProtocolCredentialsManager() {
     loadingGateways,
     loadingSystems,
   } = useRithmicProtocolConnectOptions(isAddDialogOpen)
+  const selectedGateway = gateways.find((gateway) => gateway.id === gatewayId)
+  const gatewayLabel = selectedGateway?.label ?? gatewayId
+  const gatewayEnvironment = selectedGateway?.environment ?? 'production'
   const [actionsMenuAccountId, setActionsMenuAccountId] = useState<string | null>(
     null,
   )
@@ -97,6 +103,14 @@ export function RithmicProtocolCredentialsManager() {
     }
 
     const connectedUsername = username
+    const analyticsContext = {
+      source_ui: 'credentials_manager',
+      system_name: systemName,
+      gateway_id: gatewayId,
+      gateway_label: gatewayLabel,
+      environment: gatewayEnvironment,
+    }
+
     try {
       setIsLoading(true)
       const result = await authenticateRithmicProtocol(
@@ -108,6 +122,10 @@ export function RithmicProtocolCredentialsManager() {
       )
 
       if ('error' in result && result.error) {
+        captureConnectionFailed('rithmic-protocol', {
+          ...analyticsContext,
+          error_code: result.error,
+        })
         const translate = t as (
           key: string,
           params?: Record<string, string | number>,
@@ -121,7 +139,7 @@ export function RithmicProtocolCredentialsManager() {
       }
 
       toast.success(t('rithmicProtocolSync.connected'))
-      captureConnectionCreated('rithmic-protocol')
+      captureConnectionCreated('rithmic-protocol', analyticsContext)
       setIsAddDialogOpen(false)
       setUsername('')
       setPassword('')
@@ -131,6 +149,10 @@ export function RithmicProtocolCredentialsManager() {
       void performSyncForAccount(connectedUsername)
     } catch (error) {
       console.error('Rithmic Protocol connect error:', error)
+      captureConnectionFailed('rithmic-protocol', {
+        ...analyticsContext,
+        error_code: 'UNEXPECTED_ERROR',
+      })
       toast.error(t('rithmicProtocolSync.error.authFailed'))
     } finally {
       setIsLoading(false)
@@ -141,6 +163,8 @@ export function RithmicProtocolCredentialsManager() {
     systemName,
     historyStartDate,
     gatewayId,
+    gatewayLabel,
+    gatewayEnvironment,
     t,
     loadAccounts,
     performSyncForAccount,
