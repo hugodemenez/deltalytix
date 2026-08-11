@@ -24,11 +24,8 @@ const DOCS_PROSE_CLASSNAME = `prose prose-neutral dark:prose-invert max-w-none
   prose-pre:p-0 prose-pre:bg-transparent
   prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-neutral-100 prose-code:text-neutral-800
   dark:prose-code:bg-neutral-800 dark:prose-code:text-neutral-200
-  prose-table:w-full prose-table:mt-6 prose-table:mb-8
-  prose-thead:border-b prose-thead:border-neutral-200 dark:prose-thead:border-neutral-800
-  prose-th:px-6 prose-th:py-3 prose-th:text-left prose-th:font-semibold
-  prose-td:px-6 prose-td:py-3 prose-td:border-b prose-td:border-neutral-200 dark:prose-td:border-neutral-800
-  prose-tr:transition-colors prose-tr:hover:bg-neutral-50 dark:prose-tr:hover:bg-neutral-900/30`
+  prose-table:my-0 prose-table:w-max prose-table:min-w-full
+  [&_.mdx-table-scroll]:my-6`
 
 export function generateStaticParams() {
   return getLocaleStaticParams()

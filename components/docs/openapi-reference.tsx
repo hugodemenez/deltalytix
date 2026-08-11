@@ -204,7 +204,7 @@ function PathOperation({
       </button>
 
       {open ? (
-        <div className="space-y-5 pb-5 pl-[4.75rem] text-sm">
+        <div className="space-y-5 pb-5 pl-0 text-sm sm:pl-[4.75rem]">
           {operation.description ? (
             <p className="text-black/60 dark:text-white/60">
               {operation.description}
@@ -376,7 +376,7 @@ export function DocsOpenApiReference({
   }, [document])
 
   return (
-    <div>
+    <div className="min-w-0">
       <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {document?.info?.version ? (
           <p className="font-mono text-xs text-black/45 dark:text-white/45">
