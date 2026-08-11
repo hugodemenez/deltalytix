@@ -67,6 +67,7 @@ datafeeds/
 
 # csv files
 *.csv
+!scripts/changelog-media/fixtures/rithmic-performance-trade-date-capture.csv
 
 **/market/**
 

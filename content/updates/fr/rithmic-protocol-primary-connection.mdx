@@ -1,0 +1,24 @@
+---
+title: 'Rithmic Protocol devient la connexion Rithmic principale'
+description: 'Les nouvelles configurations Rithmic utilisent un parcours Protocol guidé, avec recherche des systèmes, identifiants plus clairs et récupération d''historique renforcée pour les comptes LucidTrading concernés.'
+date: '2026-08-11'
+status: completed
+completedDate: '2026-08-11'
+image: '/updates/pr-439/fr/rithmic-system-search.png'
+---
+
+# Rithmic Protocol devient la connexion Rithmic principale
+
+Les nouvelles connexions Rithmic passent désormais par **Rithmic Protocol**, côté serveur. Depuis [Connexions](/fr/dashboard/connections), la première étape demande un **Point de connexion** et un **Système Rithmic** accessible par recherche. Poursuivez avec votre nom d'utilisateur, votre mot de passe et la **Date de début du compte**, puis choisissez parmi les comptes détectés avec vos identifiants.
+
+![Configuration Rithmic Protocol avec un point de connexion sélectionné et la recherche de système ouverte](/updates/pr-439/fr/rithmic-system-search.png)
+
+Le mot de passe reste masqué tant que vous ne sélectionnez pas **Afficher le mot de passe**, et les indications intégrées signalent les informations incomplètes avant la connexion. La date de début doit être comprise entre 2013 et aujourd'hui ; Deltalytix récupère ensuite l'historique par fenêtres successives de 30 jours maximum.
+
+![Étape des identifiants Rithmic Protocol avec mot de passe synthétique masqué et date de début du compte](/updates/pr-439/fr/rithmic-credentials-step.png)
+
+## Un historique plus fiable pour les comptes LucidTrading
+
+Si la demande d'historique des exécutions ne renvoie aucune donnée, la synchronisation peut maintenant retrouver les exécutions finalisées dans l'historique des ordres, à l'aide des informations de routage propres au compte. Cette solution corrige l'historique vide rencontré sur certains comptes LucidTrading sans modifier le parcours de configuration.
+
+L'ancienne connexion Rithmic n'est plus proposée pour les nouvelles configurations, et cette version ne migre pas automatiquement les identifiants existants. Rithmic Protocol nécessite toujours un point d'accès configuré, des identifiants valides et les autorisations R | Protocol de votre broker ou prop firm ; tous les anciens comptes ne sont donc pas nécessairement compatibles.

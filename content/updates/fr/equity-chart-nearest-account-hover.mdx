@@ -1,0 +1,22 @@
+---
+title: 'Repérez la courbe de compte la plus proche'
+description: 'Le survol d''un graphique multi-comptes met désormais en avant la courbe la plus proche, réordonne la légende et limite clairement la sélection à huit comptes.'
+date: '2026-08-07'
+status: completed
+completedDate: '2026-08-07'
+image: '/updates/pr-439/fr/equity-nearest-line.png'
+---
+
+# Repérez la courbe de compte la plus proche
+
+Les courbes de comptes qui se chevauchent sont plus faciles à distinguer dans le widget d'equity du tableau de bord. En mode comptes individuels, approchez le pointeur d'une courbe pour afficher son point actif et placer le compte correspondant en tête de la légende. Les autres comptes disposant d'une valeur à cette date suivent selon leur distance avec le pointeur. Hors du graphique, la légende retrouve son classement par equity la plus récente.
+
+![Graphique d'equity par compte avec la courbe la plus proche mise en avant et la légende réordonnée](/updates/pr-439/fr/equity-nearest-line.png)
+
+## Choisissez les comptes à comparer
+
+**Sélectionner les comptes** permet maintenant d'effectuer une recherche sur ordinateur et s'ouvre dans un tiroir sur mobile. Le sélecteur indique le nombre de comptes retenus et limite le graphique à huit, soit le nombre de couleurs de courbes distinctes, au lieu d'accepter silencieusement des séries qu'il ne peut pas tracer.
+
+![Sélecteur de comptes avec recherche et limite de huit comptes pour le graphique](/updates/pr-439/fr/equity-account-selector.png)
+
+Cette légende de proximité complète est réservée au graphique principal en mode comptes individuels ; les vues partagées, d'équipe et compactes conservent une présentation simplifiée. [Ouvrir le tableau de bord](/fr/dashboard) pour l'essayer avec plusieurs courbes.

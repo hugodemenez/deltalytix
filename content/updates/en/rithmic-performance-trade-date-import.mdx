@@ -1,0 +1,20 @@
+---
+title: 'Import current Rithmic Performance exports as downloaded'
+description: 'Rithmic Performance CSV files with a leading Trade Date column now import directly, while legacy export layouts remain supported.'
+date: '2026-08-11'
+status: completed
+completedDate: '2026-08-11'
+image: '/updates/pr-439/en/rithmic-performance-preview.png'
+---
+
+# Import current Rithmic Performance exports as downloaded
+
+Current Rithmic Performance reports can now go straight from Rithmic into Deltalytix—there is no need to delete the leading **Trade Date** column first. The importer recognizes **Entry Order Number** wherever it appears in the trade header and keeps the leading date in place, so the account, instrument, entry and exit timestamps, prices, and other trade values stay correctly aligned.
+
+![Processed Rithmic Performance trades from a synthetic current-format CSV with correctly aligned values](/updates/pr-439/en/rithmic-performance-preview.png)
+
+Legacy Performance exports where **Entry Order Number** is the first trade column continue to work. This compatibility update applies specifically to the Rithmic Performance file workflow; Rithmic Orders imports and Rithmic Protocol synchronization are unchanged.
+
+![Connections file-import picker filtered to Rithmic Performance](/updates/pr-439/en/rithmic-performance-picker.png)
+
+[Open Connections](/en/dashboard/connections), choose **Upload a file**, then select **Rithmic Performance** to import an unedited report.
