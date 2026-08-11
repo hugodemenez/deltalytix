@@ -6,8 +6,9 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useI18n } from '@/locales/client'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -48,6 +49,7 @@ function RithmicProtocolConnectView({
   const { loadAccounts, performSyncForAccount } = useRithmicProtocolSyncContext()
   const [username, setUsername] = useState(initialUsername ?? '')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [historyStartDate, setHistoryStartDate] = useState('')
   const {
     gateways,
@@ -97,6 +99,7 @@ function RithmicProtocolConnectView({
       captureConnectionCreated('rithmic-protocol')
       setUsername('')
       setPassword('')
+      setShowPassword(false)
       setHistoryStartDate('')
       await loadAccounts()
       onConnected?.()
@@ -227,16 +230,36 @@ function RithmicProtocolConnectView({
         >
           {t('rithmicProtocolSync.addAccount.passwordLabel')}
         </Label>
-        <Input
-          id="rithmic-protocol-password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className={fieldClassName}
-        />
+        <div className="relative">
+          <Input
+            id="rithmic-protocol-password"
+            name="password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className={`${fieldClassName} pr-10`}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 text-black/45 hover:bg-transparent hover:text-black dark:text-white/45 dark:hover:text-white"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={
+              showPassword
+                ? t('rithmicProtocolSync.addAccount.hidePassword')
+                : t('rithmicProtocolSync.addAccount.showPassword')
+            }
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" strokeWidth={1.75} />
+            ) : (
+              <Eye className="h-4 w-4" strokeWidth={1.75} />
+            )}
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-2">

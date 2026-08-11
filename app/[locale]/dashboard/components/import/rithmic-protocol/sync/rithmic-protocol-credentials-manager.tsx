@@ -2,7 +2,15 @@
 
 import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Loader2, Trash2, Plus, RefreshCw, MoreVertical } from 'lucide-react'
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  Trash2,
+  Plus,
+  RefreshCw,
+  MoreVertical,
+} from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -55,6 +63,7 @@ export function RithmicProtocolCredentialsManager() {
   const [isReloading, setIsReloading] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [historyStartDate, setHistoryStartDate] = useState('')
   const {
     gateways,
@@ -125,6 +134,7 @@ export function RithmicProtocolCredentialsManager() {
       setIsAddDialogOpen(false)
       setUsername('')
       setPassword('')
+      setShowPassword(false)
       setHistoryStartDate('')
       await loadAccounts()
       // One sync pulls every trading account stored on this connection.
@@ -282,7 +292,13 @@ export function RithmicProtocolCredentialsManager() {
         </Accordion>
       )}
 
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      <Dialog
+        open={isAddDialogOpen}
+        onOpenChange={(open) => {
+          setIsAddDialogOpen(open)
+          if (!open) setShowPassword(false)
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('rithmicProtocolSync.addAccount.title')}</DialogTitle>
@@ -342,12 +358,33 @@ export function RithmicProtocolCredentialsManager() {
             </div>
             <div className="flex flex-col gap-1.5">
               <Label>{t('rithmicProtocolSync.addAccount.passwordLabel')}</Label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:bg-transparent hover:text-foreground"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={
+                    showPassword
+                      ? t('rithmicProtocolSync.addAccount.hidePassword')
+                      : t('rithmicProtocolSync.addAccount.showPassword')
+                  }
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label>

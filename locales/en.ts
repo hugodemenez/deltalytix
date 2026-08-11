@@ -2567,6 +2567,8 @@ export default {
       systemLabel: "Rithmic system",
       usernameLabel: "Username",
       passwordLabel: "Password",
+      showPassword: "Show password",
+      hidePassword: "Hide password",
       historyStartLabel: "Account start date",
       historyStartHelp:
         "Pick the day you started trading this account. We import fills from then until today in serial 30-day batches (Rithmic guidance).",

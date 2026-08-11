@@ -2708,6 +2708,8 @@ export default {
       systemLabel: "Système Rithmic",
       usernameLabel: "Nom d'utilisateur",
       passwordLabel: "Mot de passe",
+      showPassword: "Afficher le mot de passe",
+      hidePassword: "Masquer le mot de passe",
       historyStartLabel: "Date de début du compte",
       historyStartHelp:
         "Indiquez le jour où vous avez commencé à trader sur ce compte. Nous importons les fills depuis cette date jusqu'à aujourd'hui par lots de 30 jours (recommandation Rithmic).",

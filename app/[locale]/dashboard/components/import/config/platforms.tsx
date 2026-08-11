@@ -4,7 +4,6 @@ import { ThorSync } from '../thor/thor-sync'
 import { TradovateSync } from '../tradovate/sync/tradovate-sync'
 import { DxFeedSync } from '../dxfeed/sync/dxfeed-sync'
 import { IbkrSync } from '../ibkr/sync/ibkr-sync'
-import { RithmicSyncWrapper } from '../rithmic/sync/rithmic-sync-connection'
 import { RithmicProtocolSync } from '../rithmic-protocol/sync/rithmic-protocol-sync'
 import type { ComponentType } from 'react'
 import ImportTypeSelection from '../import-type-selection'
@@ -125,7 +124,6 @@ type StepComponent =
   | typeof NinjaTraderPerformanceProcessor
   | typeof RithmicPerformanceProcessor
   | typeof RithmicOrderProcessor
-  | typeof RithmicSyncWrapper
   | typeof ThorSync
   | typeof TradovateSync
   | typeof DxFeedSync
@@ -137,6 +135,7 @@ type StepComponent =
   | typeof FtmoProcessor
   | typeof IgProcessor
   | typeof ManualProcessor
+  | typeof RithmicProtocolSync
 
 
 export interface PlatformProcessorProps {
@@ -242,37 +241,6 @@ const processStandardCsv = (data: string[][]): ProcessedData => {
 };
 
 export const platforms: PlatformConfig[] = [
-  {
-    platformName: 'rithmic-sync',
-    type: 'rithmic-sync',
-    name: 'import.type.rithmicSync.name',
-    description: 'import.type.rithmicSync.description',
-    category: 'Direct Account Sync',
-    videoUrl: process.env.NEXT_PUBLIC_RITHMIC_SYNC_TUTORIAL_VIDEO || '',
-    details: 'import.type.rithmicSync.details',
-    logo: {
-      path: '/logos/monochrome/rithmic-black.png',
-      darkPath: '/logos/monochrome/rithmic-white.png',
-      alt: 'Rithmic Logo'
-    },
-    isRithmic: true,
-    customComponent: RithmicSyncWrapper,
-    steps: [
-      {
-        id: 'select-import-type',
-        title: 'import.steps.selectPlatform',
-        description: 'import.steps.selectPlatformDescription',
-        component: ImportTypeSelection
-      },
-      {
-        id: 'complete',
-        title: 'import.steps.connectAccount',
-        description: 'import.steps.connectAccountDescription',
-        component: RithmicSyncWrapper,
-        isLastStep: true
-      }
-    ]
-  },
   {
     platformName: 'rithmic-protocol-sync',
     type: 'rithmic-protocol-sync',
