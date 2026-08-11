@@ -13,6 +13,10 @@ import { ChevronDown, Loader2, Trash2 } from 'lucide-react'
 import { useCurrentLocale, useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import {
+  nextIntervalOccurrence,
+  syncScheduleMode,
+} from '@/lib/connection-sync-schedule'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -22,26 +26,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { captureConnectionCreated } from '@/lib/connection-analytics'
 import {
   deleteConnectionAction,
-  updateConnectionDailySyncTimeAction,
   type ConnectionStatus,
   type ConnectionsPageConnection,
   type ConnectionsPageData,
   type ConnectionService,
 } from '../actions'
 import { supportsDailySync } from '../daily-sync-services'
+import { SyncSchedulePicker } from './sync-schedule-picker'
 import {
   handleTradovateCallback,
   initiateTradovateOAuth,
@@ -95,12 +89,6 @@ const SYNCABLE_SERVICES = new Set<string>([
 
 const iconButtonClassName =
   'inline-flex h-8 w-8 items-center justify-center rounded-sm text-black/45 transition-[opacity,transform,background-color,color] duration-150 hover:bg-black/5 hover:text-black active:scale-[0.96] dark:text-white/45 dark:hover:bg-white/5 dark:hover:text-white'
-
-const secondaryButtonClassName =
-  'inline-flex h-9 items-center justify-center rounded-sm border border-black/20 bg-transparent px-3 text-sm font-medium transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:hover:bg-white/5'
-
-const primaryButtonClassName =
-  'inline-flex h-9 items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-4 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]'
 
 function formatRelative(date: Date | string | null | undefined, fallback: string) {
   if (!date) return fallback
@@ -245,17 +233,7 @@ function formatCountdown(next: Date, nowMs: number): string {
   return `${minutes}m`
 }
 
-function toLocalTimeInputValue(
-  dailySyncTime: Date | string | null | undefined
-): string {
-  if (!dailySyncTime) return ''
-  const d =
-    typeof dailySyncTime === 'string' ? new Date(dailySyncTime) : dailySyncTime
-  if (Number.isNaN(d.getTime())) return ''
-  const hours = d.getHours().toString().padStart(2, '0')
-  const minutes = d.getMinutes().toString().padStart(2, '0')
-  return `${hours}:${minutes}`
-}
+
 
 /**
  * Status and its remedy in a single control: the dot reports the state, the
@@ -361,9 +339,6 @@ function ConnectionRow({
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [syncFailed, setSyncFailed] = useState(false)
   const [reconnecting, setReconnecting] = useState(false)
-  const [scheduleOpen, setScheduleOpen] = useState(false)
-  const [dailySyncTime, setDailySyncTime] = useState('')
-  const [savingSchedule, setSavingSchedule] = useState(false)
   // Countdown must not SSR with Date.now() — minute boundaries cause hydration mismatches.
   const [nowMs, setNowMs] = useState<number | null>(null)
   const { openConnect } = useConnectionsRefresh()
@@ -389,82 +364,39 @@ function ConnectionRow({
     connection.service === 'rithmic-protocol'
 
   const canSchedule = supportsDailySync(connection.service)
-  const nextSyncAt = useMemo(
-    () => getNextDailySyncAt(connection.dailySyncTime),
-    [connection.dailySyncTime]
-  )
+  const scheduleMode = syncScheduleMode({
+    syncIntervalMinutes: connection.syncIntervalMinutes,
+    dailySyncTime: connection.dailySyncTime,
+  })
+  // A recurring cadence counts down to its next occurrence, so it needs `nowMs`;
+  // a daily time does not move between ticks.
+  const nextSyncAt = useMemo(() => {
+    if (scheduleMode === 'interval') {
+      // `nowMs` lands with the first client tick — same reason the countdown
+      // itself waits for it rather than reading the clock while rendering.
+      if (nowMs == null || !connection.syncIntervalMinutes) return null
+      return nextIntervalOccurrence(
+        connection.syncIntervalMinutes,
+        new Date(nowMs)
+      )
+    }
+    if (scheduleMode === 'daily') {
+      return getNextDailySyncAt(connection.dailySyncTime)
+    }
+    return null
+  }, [
+    connection.dailySyncTime,
+    connection.syncIntervalMinutes,
+    nowMs,
+    scheduleMode,
+  ])
 
   useEffect(() => {
-    if (!canSchedule || !nextSyncAt) return
+    if (!canSchedule || scheduleMode === 'off') return
     setNowMs(Date.now())
     const id = window.setInterval(() => setNowMs(Date.now()), 60_000)
     return () => window.clearInterval(id)
-  }, [canSchedule, nextSyncAt])
-
-  const openScheduleDialog = useCallback(() => {
-    setDailySyncTime(toLocalTimeInputValue(connection.dailySyncTime))
-    setScheduleOpen(true)
-  }, [connection.dailySyncTime])
-
-  const handlePresetTime = useCallback((preset: string) => {
-    let hours = 0
-    let minutes = 0
-    switch (preset) {
-      case 'morning':
-        hours = 8
-        break
-      case 'midday':
-        hours = 12
-        break
-      case 'after-close': {
-        const utcClose = new Date()
-        utcClose.setUTCHours(22, 0, 0, 0)
-        hours = utcClose.getHours()
-        minutes = utcClose.getMinutes()
-        break
-      }
-      case 'midnight':
-        hours = 0
-        break
-      default:
-        return
-    }
-    setDailySyncTime(
-      `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
-    )
-  }, [])
-
-  const handleSaveSchedule = useCallback(
-    async (clear = false) => {
-      setSavingSchedule(true)
-      try {
-        let utcTimeString: string | null = null
-        if (!clear && dailySyncTime) {
-          const [hours, minutes] = dailySyncTime.split(':').map(Number)
-          const localDate = new Date()
-          localDate.setHours(hours, minutes, 0, 0)
-          utcTimeString = localDate.toISOString()
-        }
-        const result = await updateConnectionDailySyncTimeAction(
-          connection.id,
-          clear ? null : utcTimeString
-        )
-        if ('error' in result) {
-          toast.error(t('connections.dailySync.updateFailed'))
-          return
-        }
-        toast.success(t('connections.dailySync.updated'))
-        setScheduleOpen(false)
-        onChanged()
-      } catch (error) {
-        console.error(error)
-        toast.error(t('connections.dailySync.updateFailed'))
-      } finally {
-        setSavingSchedule(false)
-      }
-    },
-    [connection.id, dailySyncTime, onChanged, t]
-  )
+  }, [canSchedule, scheduleMode])
 
   const handleSync = useCallback(async () => {
     const usesLocalSyncState = connection.service !== 'rithmic-protocol'
@@ -621,22 +553,26 @@ function ConnectionRow({
               t('connections.neverSynced')
             ),
           })}
-          {/* A countdown to the next daily sync is noise while the connection is
+          {/* A countdown to the next sync is noise while the connection is
               broken — nothing will sync until it is reconnected. */}
           {canSchedule && !needsReconnect && (
             <>
               {' · '}
-              <button
-                type="button"
-                className="underline decoration-black/20 underline-offset-2 transition-colors duration-150 hover:text-black dark:decoration-white/20 dark:hover:text-white"
-                onClick={openScheduleDialog}
-              >
-                {nextSyncAt && nowMs != null
-                  ? t('connections.nextSyncIn', {
-                      time: formatCountdown(nextSyncAt, nowMs),
-                    })
-                  : t('connections.nextSyncSchedule')}
-              </button>
+              <SyncSchedulePicker
+                connectionId={connection.id}
+                scheduleMode={scheduleMode}
+                intervalMinutes={connection.syncIntervalMinutes}
+                dailySyncTime={connection.dailySyncTime}
+                locale={locale}
+                label={
+                  nextSyncAt && nowMs != null
+                    ? t('connections.nextSyncIn', {
+                        time: formatCountdown(nextSyncAt, nowMs),
+                      })
+                    : t('connections.nextSyncSchedule')
+                }
+                onChanged={onChanged}
+              />
             </>
           )}
           {' · '}
@@ -729,90 +665,6 @@ function ConnectionRow({
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
-        <DialogContent className="rounded-sm border-black/10 dark:border-white/10">
-          <DialogHeader>
-            <DialogTitle className="font-normal tracking-tight">
-              {t('connections.dailySync.title')}
-            </DialogTitle>
-            <DialogDescription className="text-black/55 dark:text-white/55">
-              {t('connections.dailySync.description')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label
-                htmlFor={`daily-sync-${connection.id}`}
-                className="text-sm text-black/55 dark:text-white/55"
-              >
-                {t('connections.dailySync.label')}
-              </Label>
-              <Input
-                id={`daily-sync-${connection.id}`}
-                type="time"
-                value={dailySyncTime}
-                onChange={(e) => setDailySyncTime(e.target.value)}
-                className="h-11 rounded-sm border-black/10 bg-transparent shadow-none focus-visible:border-black/30 focus-visible:ring-0 dark:border-white/10"
-              />
-              <p className="text-sm text-black/45 dark:text-white/45">
-                {t('connections.dailySync.timezoneNote', {
-                  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                })}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(
-                [
-                  ['morning', 'connections.dailySync.presets.morning'],
-                  ['midday', 'connections.dailySync.presets.midday'],
-                  ['after-close', 'connections.dailySync.presets.afterClose'],
-                  ['midnight', 'connections.dailySync.presets.midnight'],
-                ] as const
-              ).map(([preset, labelKey]) => (
-                <button
-                  key={preset}
-                  type="button"
-                  className={secondaryButtonClassName}
-                  onClick={() => handlePresetTime(preset)}
-                >
-                  {t(labelKey)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <DialogFooter className="gap-2 sm:justify-between">
-            <button
-              type="button"
-              className={cn(secondaryButtonClassName, 'text-black/55 dark:text-white/55')}
-              disabled={savingSchedule || !connection.dailySyncTime}
-              onClick={() => void handleSaveSchedule(true)}
-            >
-              {t('connections.dailySync.clear')}
-            </button>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className={secondaryButtonClassName}
-                disabled={savingSchedule}
-                onClick={() => setScheduleOpen(false)}
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                type="button"
-                className={primaryButtonClassName}
-                disabled={savingSchedule || !dailySyncTime}
-                onClick={() => void handleSaveSchedule(false)}
-              >
-                {savingSchedule ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                {t('common.save')}
-              </button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

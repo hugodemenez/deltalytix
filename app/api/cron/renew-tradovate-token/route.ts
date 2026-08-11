@@ -7,28 +7,10 @@ import {
 import { NextRequest } from 'next/server';
 
 /**
- * Helper function to check if current time matches the configured daily sync time
- * @param dailySyncTime The configured sync time from database
- * @returns true if it's time to sync (within 15 minutes of configured time)
+ * Keeps Tradovate access tokens alive. Scheduled syncing itself lives in
+ * /api/cron/daily-sync, which drives every service off the same schedule maths
+ * (`lib/connection-sync-schedule.ts`) and reads the token this job refreshes.
  */
-function shouldPerformDailySync(dailySyncTime: Date | null): boolean {
-  if (!dailySyncTime) return false;
-  
-  const now = new Date();
-  const syncHour = dailySyncTime.getUTCHours();
-  const syncMinute = dailySyncTime.getUTCMinutes();
-  const currentHour = now.getUTCHours();
-  const currentMinute = now.getUTCMinutes();
-  
-  // Calculate difference in minutes
-  const syncTimeInMinutes = syncHour * 60 + syncMinute;
-  const currentTimeInMinutes = currentHour * 60 + currentMinute;
-  const diffInMinutes = Math.abs(currentTimeInMinutes - syncTimeInMinutes);
-  
-  // Check if we're within 15 minutes of the sync time (accounting for day wrap)
-  return diffInMinutes <= 15 || diffInMinutes >= (24 * 60 - 15);
-}
-
 export async function GET(request: NextRequest) {
   // Verify this is a cron request
   const authHeader = request.headers.get('authorization');
@@ -60,37 +42,21 @@ export async function GET(request: NextRequest) {
     const validSynchronizations = synchronizations.filter((s) => !!s.tokenExpiresAt);
 
     let tokenRenewals = 0;
-    let dailySyncs = 0;
 
-    const promises = validSynchronizations.map(async (synchronization) => {
-      let renewed = false;
-      let synced = false;
-      
-      // Always attempt renewal for each token
-      renewed = await renewUserToken(synchronization);
-      
-      // Check if we should perform daily sync
-      if (shouldPerformDailySync(synchronization.dailySyncTime)) {
-        synced = await performDailySync(synchronization);
-      }
-      
-      return { renewed, synced };
-    });
+    const results = await Promise.allSettled(
+      validSynchronizations.map((synchronization) => renewUserToken(synchronization))
+    );
 
-    const results = await Promise.allSettled(promises);
-    
     results.forEach((result) => {
       if (result.status === 'fulfilled' && result.value) {
-        if (result.value.renewed) tokenRenewals++;
-        if (result.value.synced) dailySyncs++;
+        tokenRenewals++;
       }
     });
-    
-    return Response.json({ 
-      success: true, 
+
+    return Response.json({
+      success: true,
       processed: synchronizations.length,
-      tokenRenewals,
-      dailySyncs
+      tokenRenewals
     });
   } catch (error) {
     console.error('Cron job error:', error);
@@ -157,45 +123,6 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
       where: { id: synchronization.id },
       data: { token: null, tokenExpiresAt: null }
     });
-    return false;
-  }
-}
-
-/**
- * Performs a daily sync for the given synchronization by fetching trades from Tradovate
- * 
- * @param synchronization The synchronization record containing user, token, and account info.
- */
-async function performDailySync(synchronization: any): Promise<boolean> {
-  try {
-    console.log(`[CRON] Performing daily sync for account ${synchronization.externalId}`);
-    
-    // Dynamically import the getTradovateTrades action to avoid circular dependencies
-    const { getTradovateTrades } = await import('@/app/[locale]/dashboard/components/import/tradovate/sync/actions');
-    
-    // Use account-level fee config from DB (includedFeeTypes on sync record)
-    const includedFeeTypes = synchronization.includedFeeTypes as Record<string, boolean> | null | undefined
-    const plaintextToken = decryptConnectionToken(synchronization.token)
-    if (!plaintextToken) {
-      console.error(`[CRON] Missing token for daily sync of account ${synchronization.externalId}`);
-      return false;
-    }
-    const result = await getTradovateTrades(plaintextToken, {
-      userId: synchronization.userId,
-      includedFeeTypes: includedFeeTypes ?? undefined,
-      environment: synchronization.environment === 'live' ? 'live' : 'demo',
-      connectionExternalId: synchronization.externalId,
-    });
-    
-    if (result.error) {
-      console.error(`[CRON] Failed to sync trades for account ${synchronization.externalId}:`, result.error);
-      return false;
-    }
-    
-    console.log(`[CRON] Successfully synced ${result.savedCount || 0} trades for account ${synchronization.externalId}`);
-    return true;
-  } catch (error) {
-    console.error(`[CRON] Error during daily sync for account ${synchronization.externalId}:`, error);
     return false;
   }
 }

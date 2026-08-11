@@ -20,8 +20,18 @@ export type ConnectionModel = runtime.Types.Result.DefaultSelection<Prisma.$Conn
 
 export type AggregateConnection = {
   _count: ConnectionCountAggregateOutputType | null
+  _avg: ConnectionAvgAggregateOutputType | null
+  _sum: ConnectionSumAggregateOutputType | null
   _min: ConnectionMinAggregateOutputType | null
   _max: ConnectionMaxAggregateOutputType | null
+}
+
+export type ConnectionAvgAggregateOutputType = {
+  syncIntervalMinutes: number | null
+}
+
+export type ConnectionSumAggregateOutputType = {
+  syncIntervalMinutes: number | null
 }
 
 export type ConnectionMinAggregateOutputType = {
@@ -35,6 +45,7 @@ export type ConnectionMinAggregateOutputType = {
   token: string | null
   tokenExpiresAt: Date | null
   dailySyncTime: Date | null
+  syncIntervalMinutes: number | null
   environment: string | null
 }
 
@@ -49,6 +60,7 @@ export type ConnectionMaxAggregateOutputType = {
   token: string | null
   tokenExpiresAt: Date | null
   dailySyncTime: Date | null
+  syncIntervalMinutes: number | null
   environment: string | null
 }
 
@@ -63,11 +75,20 @@ export type ConnectionCountAggregateOutputType = {
   token: number
   tokenExpiresAt: number
   dailySyncTime: number
+  syncIntervalMinutes: number
   includedFeeTypes: number
   environment: number
   _all: number
 }
 
+
+export type ConnectionAvgAggregateInputType = {
+  syncIntervalMinutes?: true
+}
+
+export type ConnectionSumAggregateInputType = {
+  syncIntervalMinutes?: true
+}
 
 export type ConnectionMinAggregateInputType = {
   id?: true
@@ -80,6 +101,7 @@ export type ConnectionMinAggregateInputType = {
   token?: true
   tokenExpiresAt?: true
   dailySyncTime?: true
+  syncIntervalMinutes?: true
   environment?: true
 }
 
@@ -94,6 +116,7 @@ export type ConnectionMaxAggregateInputType = {
   token?: true
   tokenExpiresAt?: true
   dailySyncTime?: true
+  syncIntervalMinutes?: true
   environment?: true
 }
 
@@ -108,6 +131,7 @@ export type ConnectionCountAggregateInputType = {
   token?: true
   tokenExpiresAt?: true
   dailySyncTime?: true
+  syncIntervalMinutes?: true
   includedFeeTypes?: true
   environment?: true
   _all?: true
@@ -151,6 +175,18 @@ export type ConnectionAggregateArgs<ExtArgs extends runtime.Types.Extensions.Int
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: ConnectionAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: ConnectionSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: ConnectionMinAggregateInputType
@@ -181,6 +217,8 @@ export type ConnectionGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   _count?: ConnectionCountAggregateInputType | true
+  _avg?: ConnectionAvgAggregateInputType
+  _sum?: ConnectionSumAggregateInputType
   _min?: ConnectionMinAggregateInputType
   _max?: ConnectionMaxAggregateInputType
 }
@@ -196,9 +234,12 @@ export type ConnectionGroupByOutputType = {
   token: string | null
   tokenExpiresAt: Date | null
   dailySyncTime: Date | null
+  syncIntervalMinutes: number | null
   includedFeeTypes: runtime.JsonValue | null
   environment: string
   _count: ConnectionCountAggregateOutputType | null
+  _avg: ConnectionAvgAggregateOutputType | null
+  _sum: ConnectionSumAggregateOutputType | null
   _min: ConnectionMinAggregateOutputType | null
   _max: ConnectionMaxAggregateOutputType | null
 }
@@ -232,6 +273,7 @@ export type ConnectionWhereInput = {
   token?: Prisma.StringNullableFilter<"Connection"> | string | null
   tokenExpiresAt?: Prisma.DateTimeNullableFilter<"Connection"> | Date | string | null
   dailySyncTime?: Prisma.DateTimeNullableFilter<"Connection"> | Date | string | null
+  syncIntervalMinutes?: Prisma.IntNullableFilter<"Connection"> | number | null
   includedFeeTypes?: Prisma.JsonNullableFilter<"Connection">
   environment?: Prisma.StringFilter<"Connection"> | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -249,6 +291,7 @@ export type ConnectionOrderByWithRelationInput = {
   token?: Prisma.SortOrderInput | Prisma.SortOrder
   tokenExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   dailySyncTime?: Prisma.SortOrderInput | Prisma.SortOrder
+  syncIntervalMinutes?: Prisma.SortOrderInput | Prisma.SortOrder
   includedFeeTypes?: Prisma.SortOrderInput | Prisma.SortOrder
   environment?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
@@ -270,6 +313,7 @@ export type ConnectionWhereUniqueInput = Prisma.AtLeast<{
   token?: Prisma.StringNullableFilter<"Connection"> | string | null
   tokenExpiresAt?: Prisma.DateTimeNullableFilter<"Connection"> | Date | string | null
   dailySyncTime?: Prisma.DateTimeNullableFilter<"Connection"> | Date | string | null
+  syncIntervalMinutes?: Prisma.IntNullableFilter<"Connection"> | number | null
   includedFeeTypes?: Prisma.JsonNullableFilter<"Connection">
   environment?: Prisma.StringFilter<"Connection"> | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -287,11 +331,14 @@ export type ConnectionOrderByWithAggregationInput = {
   token?: Prisma.SortOrderInput | Prisma.SortOrder
   tokenExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   dailySyncTime?: Prisma.SortOrderInput | Prisma.SortOrder
+  syncIntervalMinutes?: Prisma.SortOrderInput | Prisma.SortOrder
   includedFeeTypes?: Prisma.SortOrderInput | Prisma.SortOrder
   environment?: Prisma.SortOrder
   _count?: Prisma.ConnectionCountOrderByAggregateInput
+  _avg?: Prisma.ConnectionAvgOrderByAggregateInput
   _max?: Prisma.ConnectionMaxOrderByAggregateInput
   _min?: Prisma.ConnectionMinOrderByAggregateInput
+  _sum?: Prisma.ConnectionSumOrderByAggregateInput
 }
 
 export type ConnectionScalarWhereWithAggregatesInput = {
@@ -308,6 +355,7 @@ export type ConnectionScalarWhereWithAggregatesInput = {
   token?: Prisma.StringNullableWithAggregatesFilter<"Connection"> | string | null
   tokenExpiresAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Connection"> | Date | string | null
   dailySyncTime?: Prisma.DateTimeNullableWithAggregatesFilter<"Connection"> | Date | string | null
+  syncIntervalMinutes?: Prisma.IntNullableWithAggregatesFilter<"Connection"> | number | null
   includedFeeTypes?: Prisma.JsonNullableWithAggregatesFilter<"Connection">
   environment?: Prisma.StringWithAggregatesFilter<"Connection"> | string
 }
@@ -322,6 +370,7 @@ export type ConnectionCreateInput = {
   token?: string | null
   tokenExpiresAt?: Date | string | null
   dailySyncTime?: Date | string | null
+  syncIntervalMinutes?: number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: string
   user: Prisma.UserCreateNestedOneWithoutConnectionsInput
@@ -339,6 +388,7 @@ export type ConnectionUncheckedCreateInput = {
   token?: string | null
   tokenExpiresAt?: Date | string | null
   dailySyncTime?: Date | string | null
+  syncIntervalMinutes?: number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: string
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutConnectionInput
@@ -354,6 +404,7 @@ export type ConnectionUpdateInput = {
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncIntervalMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: Prisma.StringFieldUpdateOperationsInput | string
   user?: Prisma.UserUpdateOneRequiredWithoutConnectionsNestedInput
@@ -371,6 +422,7 @@ export type ConnectionUncheckedUpdateInput = {
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncIntervalMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: Prisma.StringFieldUpdateOperationsInput | string
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutConnectionNestedInput
@@ -387,6 +439,7 @@ export type ConnectionCreateManyInput = {
   token?: string | null
   tokenExpiresAt?: Date | string | null
   dailySyncTime?: Date | string | null
+  syncIntervalMinutes?: number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: string
 }
@@ -401,6 +454,7 @@ export type ConnectionUpdateManyMutationInput = {
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncIntervalMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: Prisma.StringFieldUpdateOperationsInput | string
 }
@@ -416,6 +470,7 @@ export type ConnectionUncheckedUpdateManyInput = {
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncIntervalMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: Prisma.StringFieldUpdateOperationsInput | string
 }
@@ -447,8 +502,13 @@ export type ConnectionCountOrderByAggregateInput = {
   token?: Prisma.SortOrder
   tokenExpiresAt?: Prisma.SortOrder
   dailySyncTime?: Prisma.SortOrder
+  syncIntervalMinutes?: Prisma.SortOrder
   includedFeeTypes?: Prisma.SortOrder
   environment?: Prisma.SortOrder
+}
+
+export type ConnectionAvgOrderByAggregateInput = {
+  syncIntervalMinutes?: Prisma.SortOrder
 }
 
 export type ConnectionMaxOrderByAggregateInput = {
@@ -462,6 +522,7 @@ export type ConnectionMaxOrderByAggregateInput = {
   token?: Prisma.SortOrder
   tokenExpiresAt?: Prisma.SortOrder
   dailySyncTime?: Prisma.SortOrder
+  syncIntervalMinutes?: Prisma.SortOrder
   environment?: Prisma.SortOrder
 }
 
@@ -476,7 +537,12 @@ export type ConnectionMinOrderByAggregateInput = {
   token?: Prisma.SortOrder
   tokenExpiresAt?: Prisma.SortOrder
   dailySyncTime?: Prisma.SortOrder
+  syncIntervalMinutes?: Prisma.SortOrder
   environment?: Prisma.SortOrder
+}
+
+export type ConnectionSumOrderByAggregateInput = {
+  syncIntervalMinutes?: Prisma.SortOrder
 }
 
 export type ConnectionNullableScalarRelationFilter = {
@@ -526,6 +592,14 @@ export type ConnectionUncheckedUpdateManyWithoutUserNestedInput = {
   deleteMany?: Prisma.ConnectionScalarWhereInput | Prisma.ConnectionScalarWhereInput[]
 }
 
+export type NullableIntFieldUpdateOperationsInput = {
+  set?: number | null
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type ConnectionCreateNestedOneWithoutAccountsInput = {
   create?: Prisma.XOR<Prisma.ConnectionCreateWithoutAccountsInput, Prisma.ConnectionUncheckedCreateWithoutAccountsInput>
   connectOrCreate?: Prisma.ConnectionCreateOrConnectWithoutAccountsInput
@@ -552,6 +626,7 @@ export type ConnectionCreateWithoutUserInput = {
   token?: string | null
   tokenExpiresAt?: Date | string | null
   dailySyncTime?: Date | string | null
+  syncIntervalMinutes?: number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: string
   accounts?: Prisma.AccountCreateNestedManyWithoutConnectionInput
@@ -567,6 +642,7 @@ export type ConnectionUncheckedCreateWithoutUserInput = {
   token?: string | null
   tokenExpiresAt?: Date | string | null
   dailySyncTime?: Date | string | null
+  syncIntervalMinutes?: number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: string
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutConnectionInput
@@ -612,6 +688,7 @@ export type ConnectionScalarWhereInput = {
   token?: Prisma.StringNullableFilter<"Connection"> | string | null
   tokenExpiresAt?: Prisma.DateTimeNullableFilter<"Connection"> | Date | string | null
   dailySyncTime?: Prisma.DateTimeNullableFilter<"Connection"> | Date | string | null
+  syncIntervalMinutes?: Prisma.IntNullableFilter<"Connection"> | number | null
   includedFeeTypes?: Prisma.JsonNullableFilter<"Connection">
   environment?: Prisma.StringFilter<"Connection"> | string
 }
@@ -626,6 +703,7 @@ export type ConnectionCreateWithoutAccountsInput = {
   token?: string | null
   tokenExpiresAt?: Date | string | null
   dailySyncTime?: Date | string | null
+  syncIntervalMinutes?: number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: string
   user: Prisma.UserCreateNestedOneWithoutConnectionsInput
@@ -642,6 +720,7 @@ export type ConnectionUncheckedCreateWithoutAccountsInput = {
   token?: string | null
   tokenExpiresAt?: Date | string | null
   dailySyncTime?: Date | string | null
+  syncIntervalMinutes?: number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: string
 }
@@ -672,6 +751,7 @@ export type ConnectionUpdateWithoutAccountsInput = {
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncIntervalMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: Prisma.StringFieldUpdateOperationsInput | string
   user?: Prisma.UserUpdateOneRequiredWithoutConnectionsNestedInput
@@ -688,6 +768,7 @@ export type ConnectionUncheckedUpdateWithoutAccountsInput = {
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncIntervalMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: Prisma.StringFieldUpdateOperationsInput | string
 }
@@ -702,6 +783,7 @@ export type ConnectionCreateManyUserInput = {
   token?: string | null
   tokenExpiresAt?: Date | string | null
   dailySyncTime?: Date | string | null
+  syncIntervalMinutes?: number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: string
 }
@@ -716,6 +798,7 @@ export type ConnectionUpdateWithoutUserInput = {
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncIntervalMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: Prisma.StringFieldUpdateOperationsInput | string
   accounts?: Prisma.AccountUpdateManyWithoutConnectionNestedInput
@@ -731,6 +814,7 @@ export type ConnectionUncheckedUpdateWithoutUserInput = {
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncIntervalMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: Prisma.StringFieldUpdateOperationsInput | string
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutConnectionNestedInput
@@ -746,6 +830,7 @@ export type ConnectionUncheckedUpdateManyWithoutUserInput = {
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncIntervalMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: Prisma.StringFieldUpdateOperationsInput | string
 }
@@ -792,6 +877,7 @@ export type ConnectionSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   token?: boolean
   tokenExpiresAt?: boolean
   dailySyncTime?: boolean
+  syncIntervalMinutes?: boolean
   includedFeeTypes?: boolean
   environment?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -810,6 +896,7 @@ export type ConnectionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   token?: boolean
   tokenExpiresAt?: boolean
   dailySyncTime?: boolean
+  syncIntervalMinutes?: boolean
   includedFeeTypes?: boolean
   environment?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -826,6 +913,7 @@ export type ConnectionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   token?: boolean
   tokenExpiresAt?: boolean
   dailySyncTime?: boolean
+  syncIntervalMinutes?: boolean
   includedFeeTypes?: boolean
   environment?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -842,11 +930,12 @@ export type ConnectionSelectScalar = {
   token?: boolean
   tokenExpiresAt?: boolean
   dailySyncTime?: boolean
+  syncIntervalMinutes?: boolean
   includedFeeTypes?: boolean
   environment?: boolean
 }
 
-export type ConnectionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "service" | "externalId" | "lastSyncedAt" | "createdAt" | "updatedAt" | "token" | "tokenExpiresAt" | "dailySyncTime" | "includedFeeTypes" | "environment", ExtArgs["result"]["connection"]>
+export type ConnectionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "service" | "externalId" | "lastSyncedAt" | "createdAt" | "updatedAt" | "token" | "tokenExpiresAt" | "dailySyncTime" | "syncIntervalMinutes" | "includedFeeTypes" | "environment", ExtArgs["result"]["connection"]>
 export type ConnectionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   accounts?: boolean | Prisma.Connection$accountsArgs<ExtArgs>
@@ -876,6 +965,13 @@ export type $ConnectionPayload<ExtArgs extends runtime.Types.Extensions.Internal
     token: string | null
     tokenExpiresAt: Date | null
     dailySyncTime: Date | null
+    /**
+     * *
+     *    * Recurring sync cadence in minutes (5, 15, 30, 60, 240, 720). When set it
+     *    * takes precedence over `dailySyncTime`; null means daily-at-a-time (or
+     *    * manual only when `dailySyncTime` is null too).
+     */
+    syncIntervalMinutes: number | null
     includedFeeTypes: runtime.JsonValue | null
     environment: string
   }, ExtArgs["result"]["connection"]>
@@ -1313,6 +1409,7 @@ export interface ConnectionFieldRefs {
   readonly token: Prisma.FieldRef<"Connection", 'String'>
   readonly tokenExpiresAt: Prisma.FieldRef<"Connection", 'DateTime'>
   readonly dailySyncTime: Prisma.FieldRef<"Connection", 'DateTime'>
+  readonly syncIntervalMinutes: Prisma.FieldRef<"Connection", 'Int'>
   readonly includedFeeTypes: Prisma.FieldRef<"Connection", 'Json'>
   readonly environment: Prisma.FieldRef<"Connection", 'String'>
 }

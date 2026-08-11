@@ -2,6 +2,7 @@
 
 import { getUserId } from '@/server/auth'
 import { prisma } from '@/lib/prisma'
+import { isSupportedSyncInterval } from '@/lib/connection-sync-schedule'
 import {
   getConnectionsPageDataFresh,
   invalidateConnectionsPageCache,
@@ -46,12 +47,20 @@ export async function deleteConnectionAction(
 }
 
 /**
- * Update daily sync time for a connection.
- * `utcTimeString` should be an ISO timestamp whose local hours/minutes represent the preferred sync time.
+ * How a connection should sync automatically.
+ * - `interval`: every N minutes, N being one of `SYNC_INTERVAL_OPTIONS`.
+ * - `daily`: once a day. `utcTimeString` is an ISO timestamp whose hours/minutes
+ *   carry the preferred time of day (the date part is ignored).
+ * - `off`: manual syncs only.
  */
-export async function updateConnectionDailySyncTimeAction(
+export type ConnectionSyncScheduleInput =
+  | { mode: 'off' }
+  | { mode: 'interval'; intervalMinutes: number }
+  | { mode: 'daily'; utcTimeString: string }
+
+export async function updateConnectionSyncScheduleAction(
   connectionId: string,
-  utcTimeString: string | null
+  schedule: ConnectionSyncScheduleInput
 ): Promise<{ success: true } | { error: string }> {
   const userId = await getUserId()
   if (!connectionId) {
@@ -70,13 +79,47 @@ export async function updateConnectionDailySyncTimeAction(
     return { error: 'UNSUPPORTED_SERVICE' }
   }
 
+  // Only one of the two columns ever describes the live schedule, so the unused
+  // one is cleared: a leftover interval would otherwise outrank a daily time.
+  let data: {
+    syncIntervalMinutes: number | null
+    dailySyncTime?: Date | null
+  }
+  if (schedule.mode === 'interval') {
+    if (!isSupportedSyncInterval(schedule.intervalMinutes)) {
+      return { error: 'UNSUPPORTED_SYNC_INTERVAL' }
+    }
+    // The saved time of day is kept so switching back to daily restores it.
+    data = { syncIntervalMinutes: schedule.intervalMinutes }
+  } else if (schedule.mode === 'daily') {
+    const dailySyncTime = new Date(schedule.utcTimeString)
+    if (Number.isNaN(dailySyncTime.getTime())) {
+      return { error: 'INVALID_SYNC_TIME' }
+    }
+    data = { syncIntervalMinutes: null, dailySyncTime }
+  } else {
+    data = { syncIntervalMinutes: null, dailySyncTime: null }
+  }
+
   await prisma.connection.update({
     where: { id: connectionId },
-    data: {
-      dailySyncTime: utcTimeString ? new Date(utcTimeString) : null,
-    },
+    data,
   })
   await invalidateConnectionsPageCache(userId)
 
   return { success: true }
+}
+
+/**
+ * Update daily sync time for a connection.
+ * `utcTimeString` should be an ISO timestamp whose local hours/minutes represent the preferred sync time.
+ */
+export async function updateConnectionDailySyncTimeAction(
+  connectionId: string,
+  utcTimeString: string | null
+): Promise<{ success: true } | { error: string }> {
+  return updateConnectionSyncScheduleAction(
+    connectionId,
+    utcTimeString ? { mode: 'daily', utcTimeString } : { mode: 'off' }
+  )
 }

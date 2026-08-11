@@ -2,20 +2,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { decryptConnectionToken } from '@/lib/connection-token-crypto'
-import { isDailySyncDue } from '@/lib/daily-sync-schedule'
+import { isConnectionSyncDue } from '@/lib/connection-sync-schedule'
 import { getDxFeedTrades } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/actions'
 import { getRithmicProtocolTrades } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions'
 import { syncIbkrAccount } from '@/app/[locale]/dashboard/components/import/ibkr/sync/actions'
+import { getTradovateTrades } from '@/app/[locale]/dashboard/components/import/tradovate/sync/actions'
 import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connections/data'
 
 export const maxDuration = 300
 
 /**
- * Services this cron can sync unattended. Tradovate is deliberately absent: its
- * schedule is already driven by /api/cron/renew-tradovate-token, which has to
- * refresh the OAuth token in the same pass.
+ * Services this cron can sync unattended.
+ *
+ * Tradovate rides along on the stored access token: keeping it fresh is the job
+ * of /api/cron/renew-tradovate-token, which no longer syncs itself so that
+ * every service honours the same schedule maths.
  */
-const SYNCABLE_SERVICES = ['dxfeed', 'rithmic-protocol', 'ibkr'] as const
+const SYNCABLE_SERVICES = ['dxfeed', 'rithmic-protocol', 'ibkr', 'tradovate'] as const
 
 /**
  * IBKR statements cover a rolling window rather than only the latest day, so a
@@ -29,21 +32,55 @@ const WALL_CLOCK_BUDGET_MS = 240_000
 /** The broker was reached and the connection is up to date — not a failure. */
 const DUPLICATE_TRADES = 'DUPLICATE_TRADES'
 
+/**
+ * Some services park the broker's rejection in the token slot instead of a
+ * credential (`{"authError": "..."}`). Such a connection cannot sync until the
+ * user reconnects, so there is nothing to gain from calling the broker with it.
+ */
+function storedAuthError(plaintextToken: string): string | null {
+  try {
+    const parsed = JSON.parse(plaintextToken) as { authError?: unknown }
+    return typeof parsed?.authError === 'string' && parsed.authError.length > 0
+      ? parsed.authError
+      : null
+  } catch {
+    // Plain access-token string — nothing to read.
+    return null
+  }
+}
+
 async function syncConnection(connection: {
   id: string
   service: string
   userId: string
   externalId: string
   token: string | null
+  environment: string
+  includedFeeTypes: unknown
 }): Promise<{ ok: boolean; reason?: string }> {
   const storedTokenJson = decryptConnectionToken(connection.token)
   if (!storedTokenJson) {
     return { ok: false, reason: 'NO_TOKEN' }
   }
+  if (storedAuthError(storedTokenJson)) {
+    return { ok: false, reason: 'AUTH_ERROR' }
+  }
 
   let error: string | undefined
 
-  if (connection.service === 'dxfeed') {
+  if (connection.service === 'tradovate') {
+    error = (
+      await getTradovateTrades(storedTokenJson, {
+        userId: connection.userId,
+        // Account-level fee config lives on the connection row.
+        includedFeeTypes:
+          (connection.includedFeeTypes as Record<string, boolean> | null) ??
+          undefined,
+        environment: connection.environment === 'live' ? 'live' : 'demo',
+        connectionExternalId: connection.externalId,
+      })
+    ).error
+  } else if (connection.service === 'dxfeed') {
     error = (
       await getDxFeedTrades(storedTokenJson, {
         userId: connection.userId,
@@ -84,12 +121,23 @@ export async function GET(request: NextRequest) {
       where: {
         service: { in: [...SYNCABLE_SERVICES] },
         token: { not: null },
-        dailySyncTime: { not: null },
-        // DxFeed stamps an epoch expiry when the broker rejects a token; without
-        // this the cron would retry a dead connection on every tick until the
-        // catch-up window closes. Rithmic Protocol stores credentials, not a
-        // token with an expiry, so its rows carry null here.
-        OR: [{ tokenExpiresAt: null }, { tokenExpiresAt: { gt: now } }],
+        AND: [
+          // Either schedule shape counts; `isConnectionSyncDue` decides which
+          // one applies and whether it has come round yet.
+          {
+            OR: [
+              { syncIntervalMinutes: { not: null } },
+              { dailySyncTime: { not: null } },
+            ],
+          },
+          // DxFeed stamps an epoch expiry when the broker rejects a token;
+          // without this the cron would retry a dead connection on every tick.
+          // Rithmic Protocol stores credentials, not a token with an expiry, so
+          // its rows carry null here.
+          {
+            OR: [{ tokenExpiresAt: null }, { tokenExpiresAt: { gt: now } }],
+          },
+        ],
       },
       select: {
         id: true,
@@ -97,13 +145,16 @@ export async function GET(request: NextRequest) {
         service: true,
         externalId: true,
         token: true,
+        environment: true,
+        includedFeeTypes: true,
         dailySyncTime: true,
+        syncIntervalMinutes: true,
         lastSyncedAt: true,
       },
     })
 
     const due = connections.filter((connection) =>
-      isDailySyncDue(connection.dailySyncTime, connection.lastSyncedAt, now),
+      isConnectionSyncDue(connection, connection.lastSyncedAt, now),
     )
 
     let synced = 0
