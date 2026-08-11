@@ -2701,11 +2701,20 @@ export default {
     addAccount: {
       title: "Connecter Rithmic Protocol",
       description:
-        "Connectez-vous avec votre identifiant Rithmic, puis choisissez le système de votre compte (par exemple Rithmic 01 ou Rithmic Paper Trading).",
+        "Choisissez d'abord le système Rithmic de votre compte, puis connectez-vous avec vos identifiants.",
+      systemStepDescription:
+        "Choisissez d'abord votre point de connexion et le système Rithmic (par exemple Rithmic 01 ou Rithmic Paper Trading).",
+      credentialsStepDescription:
+        "Connectez-vous avec les identifiants du système sélectionné.",
       gatewayLabel: "Point de connexion",
       gatewayHelp:
         "Choisissez le point de connexion Rithmic le plus proche. Core (Chicago) fonctionne partout ; un point régional réduit seulement la latence.",
       systemLabel: "Système Rithmic",
+      systemPlaceholder: "Sélectionner un système",
+      systemSearchPlaceholder: "Rechercher un système…",
+      systemSearchHelp:
+        "Recherchez et choisissez le système Rithmic de votre compte.",
+      noSystemFound: "Aucun système trouvé",
       usernameLabel: "Nom d'utilisateur",
       passwordLabel: "Mot de passe",
       showPassword: "Afficher le mot de passe",
@@ -2713,8 +2722,12 @@ export default {
       historyStartLabel: "Date de début du compte",
       historyStartHelp:
         "Indiquez le jour où vous avez commencé à trader sur ce compte. Nous importons les fills depuis cette date jusqu'à aujourd'hui par lots de 30 jours (recommandation Rithmic).",
+      continueToCredentials: "Continuer",
       connecting: "Connexion…",
       connect: "Connecter",
+    },
+    trademark: {
+      summary: "Marques et copyright",
     },
     sync: {
       inProgress: "Synchronisation des fills Rithmic pour {accountId}…",
