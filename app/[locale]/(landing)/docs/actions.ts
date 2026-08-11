@@ -18,6 +18,30 @@ const DOCS_PLAYGROUND_READ_SCOPES = [
   "metrics:read",
 ] as const
 
+const SCHEMA_MISSING_MESSAGE =
+  "OAuth token tables are missing on this database. Run `bunx prisma migrate deploy` (or apply the `add_oauth_tables` migration), then try again."
+
+function isMissingOAuthTableError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const candidate = error as {
+    code?: string
+    meta?: { modelName?: string; table?: string }
+    message?: string
+  }
+  if (candidate.code === "P2021") {
+    const haystack = [
+      candidate.meta?.modelName,
+      candidate.meta?.table,
+      candidate.message,
+    ]
+      .filter(Boolean)
+      .join(" ")
+    return /OAuthAccessToken|OAuthApp|OAuthAuthorizationCode/i.test(haystack)
+  }
+  return typeof candidate.message === "string"
+    && /OAuthAccessToken|relation .* does not exist/i.test(candidate.message)
+}
+
 async function resolveAuthenticatedDbUser(): Promise<{
   id: string
   email: string | null
@@ -76,45 +100,64 @@ export async function createDocsPlaygroundTokenAction(
     return { error: "At least one valid scope is required" }
   }
 
-  // Revoke previous playground tokens with the same name so regenerating stays tidy.
-  await prisma.oAuthAccessToken.updateMany({
-    where: {
-      userId: user.id,
-      appId: null,
-      name: DOCS_PLAYGROUND_TOKEN_NAME,
-      revokedAt: null,
-    },
-    data: { revokedAt: new Date() },
-  })
+  try {
+    // Revoke previous playground tokens with the same name so regenerating stays tidy.
+    await prisma.oAuthAccessToken.updateMany({
+      where: {
+        userId: user.id,
+        appId: null,
+        name: DOCS_PLAYGROUND_TOKEN_NAME,
+        revokedAt: null,
+      },
+      data: { revokedAt: new Date() },
+    })
 
-  const token = generatePersonalAccessToken()
-  const record = await prisma.oAuthAccessToken.create({
-    data: {
-      name: DOCS_PLAYGROUND_TOKEN_NAME,
-      tokenHash: sha256(token),
-      userId: user.id,
-      scopes: requested,
-      appId: null,
-      expiresAt: null,
-    },
-  })
+    const token = generatePersonalAccessToken()
+    const record = await prisma.oAuthAccessToken.create({
+      data: {
+        name: DOCS_PLAYGROUND_TOKEN_NAME,
+        tokenHash: sha256(token),
+        userId: user.id,
+        scopes: requested,
+        appId: null,
+        expiresAt: null,
+      },
+    })
 
-  return { id: record.id, token }
+    return { id: record.id, token }
+  } catch (error) {
+    console.error("[docs/playground] createDocsPlaygroundTokenAction failed", error)
+    if (isMissingOAuthTableError(error)) {
+      return { error: SCHEMA_MISSING_MESSAGE }
+    }
+    return { error: "Could not create a docs token. Please try again." }
+  }
 }
 
 export async function revokeDocsPlaygroundTokenAction(
   tokenId: string,
-): Promise<void> {
+): Promise<{ ok: true } | { error: string }> {
   const user = await resolveAuthenticatedDbUser()
-  if (!user || !tokenId) return
+  if (!user || !tokenId) {
+    return { ok: true }
+  }
 
-  await prisma.oAuthAccessToken.updateMany({
-    where: {
-      id: tokenId,
-      userId: user.id,
-      appId: null,
-      revokedAt: null,
-    },
-    data: { revokedAt: new Date() },
-  })
+  try {
+    await prisma.oAuthAccessToken.updateMany({
+      where: {
+        id: tokenId,
+        userId: user.id,
+        appId: null,
+        revokedAt: null,
+      },
+      data: { revokedAt: new Date() },
+    })
+    return { ok: true }
+  } catch (error) {
+    console.error("[docs/playground] revokeDocsPlaygroundTokenAction failed", error)
+    if (isMissingOAuthTableError(error)) {
+      return { error: SCHEMA_MISSING_MESSAGE }
+    }
+    return { error: "Could not revoke the docs token." }
+  }
 }

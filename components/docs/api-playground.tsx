@@ -261,13 +261,17 @@ export function DocsApiPlayground() {
   const handleGenerateToken = () => {
     setTokenActionError(null)
     startTransition(async () => {
-      const scopes = [...READ_SCOPES, ...writeScopes]
-      const result = await createDocsPlaygroundTokenAction(scopes)
-      if ("error" in result) {
-        setTokenActionError(result.error || labels.tokenError)
-        return
+      try {
+        const scopes = [...READ_SCOPES, ...writeScopes]
+        const result = await createDocsPlaygroundTokenAction(scopes)
+        if ("error" in result) {
+          setTokenActionError(result.error || labels.tokenError)
+          return
+        }
+        persistToken(result.token, result.id)
+      } catch {
+        setTokenActionError(labels.tokenError)
       }
-      persistToken(result.token, result.id)
     })
   }
 
@@ -282,7 +286,11 @@ export function DocsApiPlayground() {
     startTransition(async () => {
       if (id) {
         try {
-          await revokeDocsPlaygroundTokenAction(id)
+          const result = await revokeDocsPlaygroundTokenAction(id)
+          if (result && "error" in result) {
+            setTokenActionError(result.error)
+            return
+          }
         } catch {
           // Local clear still proceeds — token may already be gone.
         }
