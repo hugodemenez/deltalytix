@@ -78,8 +78,16 @@ export async function generateMetadata({
   return getCachedDocsIndexMetadata(locale)
 }
 
-export default async function DocsPage(props: PageProps) {
-  const { locale } = await props.params
+/**
+ * Cache the static docs shell + MDX. The playground / OpenAPI panels are
+ * client components that call server actions and fetch `/openapi.json` at
+ * runtime, so they do not need this page to be request-time dynamic.
+ * Without `"use cache"`, Cache Components prerender fails on unstable
+ * `Date.now()` in the landing tree (Vercel production build).
+ */
+async function CachedDocsPage({ locale }: { locale: string }) {
+  "use cache"
+  cacheLife("hours")
 
   setStaticParamsLocale(locale)
 
@@ -175,4 +183,9 @@ export default async function DocsPage(props: PageProps) {
       </DocsPageShell>
     </main>
   )
+}
+
+export default async function DocsPage(props: PageProps) {
+  const { locale } = await props.params
+  return <CachedDocsPage locale={locale} />
 }
