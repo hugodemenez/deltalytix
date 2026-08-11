@@ -192,6 +192,7 @@ export default {
   "connections.syncSchedule.daily": "Once a day",
   "connections.syncSchedule.turnOff": "Turn off",
   "connections.syncSchedule.timeLabel": "Sync time (local)",
+  "connections.syncSchedule.setTime": "Set",
   "connections.syncSchedule.timezoneNote": "Uses your local timezone ({timezone})",
   "connections.syncSchedule.updated": "Sync schedule updated",
   "connections.syncSchedule.turnedOff": "Automatic sync turned off",

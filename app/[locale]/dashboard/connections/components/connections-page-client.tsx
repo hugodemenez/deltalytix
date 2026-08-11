@@ -13,6 +13,10 @@ import { ChevronDown, Loader2, Trash2 } from 'lucide-react'
 import { useCurrentLocale, useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import {
+  nextIntervalOccurrence,
+  syncScheduleMode,
+} from '@/lib/connection-sync-schedule'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -22,33 +26,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { captureConnectionCreated } from '@/lib/connection-analytics'
 import {
-  SYNC_INTERVAL_OPTIONS,
-  nextIntervalOccurrence,
-  syncScheduleMode,
-  type SyncScheduleMode,
-} from '@/lib/connection-sync-schedule'
-import {
   deleteConnectionAction,
-  updateConnectionSyncScheduleAction,
-  type ConnectionSyncScheduleInput,
   type ConnectionStatus,
   type ConnectionsPageConnection,
   type ConnectionsPageData,
   type ConnectionService,
 } from '../actions'
 import { supportsDailySync } from '../daily-sync-services'
+import { SyncSchedulePicker } from './sync-schedule-picker'
 import {
   handleTradovateCallback,
   initiateTradovateOAuth,
@@ -102,23 +89,6 @@ const SYNCABLE_SERVICES = new Set<string>([
 
 const iconButtonClassName =
   'inline-flex h-8 w-8 items-center justify-center rounded-sm text-black/45 transition-[opacity,transform,background-color,color] duration-150 hover:bg-black/5 hover:text-black active:scale-[0.96] dark:text-white/45 dark:hover:bg-white/5 dark:hover:text-white'
-
-const secondaryButtonClassName =
-  'inline-flex h-9 items-center justify-center rounded-sm border border-black/20 bg-transparent px-3 text-sm font-medium transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:hover:bg-white/5'
-
-const primaryButtonClassName =
-  'inline-flex h-9 items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-4 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]'
-
-// Frequency chips: one toggle per cadence, so the selected one carries the
-// border weight rather than a separate radio glyph.
-const frequencyChipClassName =
-  'inline-flex h-9 items-center justify-center rounded-sm border px-3 text-sm font-medium transition-[opacity,transform,background-color,border-color] duration-150 active:scale-[0.96]'
-
-const frequencyChipSelectedClassName =
-  'border-black/60 bg-black/[0.06] dark:border-white/60 dark:bg-white/10'
-
-const frequencyChipIdleClassName =
-  'border-black/20 hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/5'
 
 function formatRelative(date: Date | string | null | undefined, fallback: string) {
   if (!date) return fallback
@@ -263,29 +233,7 @@ function formatCountdown(next: Date, nowMs: number): string {
   return `${minutes}m`
 }
 
-/** Cadence label: "Every 5 min", "Every hour", "Every 4 hours". */
-function formatSyncIntervalLabel(
-  minutes: number,
-  t: ReturnType<typeof useI18n>
-): string {
-  if (minutes < 60) {
-    return t('connections.syncSchedule.everyMinutes', { count: minutes })
-  }
-  if (minutes === 60) return t('connections.syncSchedule.everyHour')
-  return t('connections.syncSchedule.everyHours', { count: minutes / 60 })
-}
 
-function toLocalTimeInputValue(
-  dailySyncTime: Date | string | null | undefined
-): string {
-  if (!dailySyncTime) return ''
-  const d =
-    typeof dailySyncTime === 'string' ? new Date(dailySyncTime) : dailySyncTime
-  if (Number.isNaN(d.getTime())) return ''
-  const hours = d.getHours().toString().padStart(2, '0')
-  const minutes = d.getMinutes().toString().padStart(2, '0')
-  return `${hours}:${minutes}`
-}
 
 /**
  * Status and its remedy in a single control: the dot reports the state, the
@@ -391,15 +339,6 @@ function ConnectionRow({
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [syncFailed, setSyncFailed] = useState(false)
   const [reconnecting, setReconnecting] = useState(false)
-  const [scheduleOpen, setScheduleOpen] = useState(false)
-  const [dailySyncTime, setDailySyncTime] = useState('')
-  // Draft schedule, applied on save. `draftInterval` survives switching to the
-  // daily tab so the chip stays selected if the user switches back.
-  const [draftMode, setDraftMode] = useState<SyncScheduleMode>('off')
-  const [draftInterval, setDraftInterval] = useState<number>(
-    SYNC_INTERVAL_OPTIONS[0]
-  )
-  const [savingSchedule, setSavingSchedule] = useState(false)
   // Countdown must not SSR with Date.now() — minute boundaries cause hydration mismatches.
   const [nowMs, setNowMs] = useState<number | null>(null)
   const { openConnect } = useConnectionsRefresh()
@@ -458,87 +397,6 @@ function ConnectionRow({
     const id = window.setInterval(() => setNowMs(Date.now()), 60_000)
     return () => window.clearInterval(id)
   }, [canSchedule, scheduleMode])
-
-  const openScheduleDialog = useCallback(() => {
-    setDailySyncTime(toLocalTimeInputValue(connection.dailySyncTime))
-    setDraftMode(scheduleMode)
-    if (connection.syncIntervalMinutes) {
-      setDraftInterval(connection.syncIntervalMinutes)
-    }
-    setScheduleOpen(true)
-  }, [connection.dailySyncTime, connection.syncIntervalMinutes, scheduleMode])
-
-  const handlePresetTime = useCallback((preset: string) => {
-    let hours = 0
-    let minutes = 0
-    switch (preset) {
-      case 'morning':
-        hours = 8
-        break
-      case 'midday':
-        hours = 12
-        break
-      case 'after-close': {
-        const utcClose = new Date()
-        utcClose.setUTCHours(22, 0, 0, 0)
-        hours = utcClose.getHours()
-        minutes = utcClose.getMinutes()
-        break
-      }
-      case 'midnight':
-        hours = 0
-        break
-      default:
-        return
-    }
-    setDailySyncTime(
-      `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
-    )
-  }, [])
-
-  const handleSaveSchedule = useCallback(
-    async (mode: SyncScheduleMode) => {
-      let schedule: ConnectionSyncScheduleInput
-      if (mode === 'interval') {
-        schedule = { mode: 'interval', intervalMinutes: draftInterval }
-      } else if (mode === 'daily') {
-        if (!dailySyncTime) return
-        const [hours, minutes] = dailySyncTime.split(':').map(Number)
-        // Stored as an instant whose local hours/minutes are the chosen time;
-        // the cron reads the same instant back in UTC.
-        const localDate = new Date()
-        localDate.setHours(hours, minutes, 0, 0)
-        schedule = { mode: 'daily', utcTimeString: localDate.toISOString() }
-      } else {
-        schedule = { mode: 'off' }
-      }
-
-      setSavingSchedule(true)
-      try {
-        const result = await updateConnectionSyncScheduleAction(
-          connection.id,
-          schedule
-        )
-        if ('error' in result) {
-          toast.error(t('connections.syncSchedule.updateFailed'))
-          return
-        }
-        toast.success(
-          mode === 'off'
-            ? t('connections.syncSchedule.turnedOff')
-            : t('connections.syncSchedule.updated')
-        )
-        setScheduleOpen(false)
-        onChanged()
-      } catch (error) {
-        console.error(error)
-        toast.error(t('connections.syncSchedule.updateFailed'))
-      } finally {
-        setSavingSchedule(false)
-      }
-    },
-    [connection.id, dailySyncTime, draftInterval, onChanged, t]
-  )
 
   const handleSync = useCallback(async () => {
     const usesLocalSyncState = connection.service !== 'rithmic-protocol'
@@ -695,22 +553,26 @@ function ConnectionRow({
               t('connections.neverSynced')
             ),
           })}
-          {/* A countdown to the next daily sync is noise while the connection is
+          {/* A countdown to the next sync is noise while the connection is
               broken — nothing will sync until it is reconnected. */}
           {canSchedule && !needsReconnect && (
             <>
               {' · '}
-              <button
-                type="button"
-                className="underline decoration-black/20 underline-offset-2 transition-colors duration-150 hover:text-black dark:decoration-white/20 dark:hover:text-white"
-                onClick={openScheduleDialog}
-              >
-                {nextSyncAt && nowMs != null
-                  ? t('connections.nextSyncIn', {
-                      time: formatCountdown(nextSyncAt, nowMs),
-                    })
-                  : t('connections.nextSyncSchedule')}
-              </button>
+              <SyncSchedulePicker
+                connectionId={connection.id}
+                scheduleMode={scheduleMode}
+                intervalMinutes={connection.syncIntervalMinutes}
+                dailySyncTime={connection.dailySyncTime}
+                locale={locale}
+                label={
+                  nextSyncAt && nowMs != null
+                    ? t('connections.nextSyncIn', {
+                        time: formatCountdown(nextSyncAt, nowMs),
+                      })
+                    : t('connections.nextSyncSchedule')
+                }
+                onChanged={onChanged}
+              />
             </>
           )}
           {' · '}
@@ -803,152 +665,6 @@ function ConnectionRow({
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
-        <DialogContent className="rounded-sm border-black/10 dark:border-white/10">
-          <DialogHeader>
-            <DialogTitle className="font-normal tracking-tight">
-              {t('connections.syncSchedule.title')}
-            </DialogTitle>
-            <DialogDescription className="text-black/55 dark:text-white/55">
-              {t('connections.syncSchedule.description')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <span
-                id={`sync-frequency-${connection.id}`}
-                className="block text-sm text-black/55 dark:text-white/55"
-              >
-                {t('connections.syncSchedule.frequencyLabel')}
-              </span>
-              <div
-                role="group"
-                aria-labelledby={`sync-frequency-${connection.id}`}
-                className="flex flex-wrap gap-2"
-              >
-                {SYNC_INTERVAL_OPTIONS.map((minutes) => {
-                  const selected =
-                    draftMode === 'interval' && draftInterval === minutes
-                  return (
-                    <button
-                      key={minutes}
-                      type="button"
-                      aria-pressed={selected}
-                      className={cn(
-                        frequencyChipClassName,
-                        selected
-                          ? frequencyChipSelectedClassName
-                          : frequencyChipIdleClassName
-                      )}
-                      onClick={() => {
-                        setDraftMode('interval')
-                        setDraftInterval(minutes)
-                      }}
-                    >
-                      {formatSyncIntervalLabel(minutes, t)}
-                    </button>
-                  )
-                })}
-                <button
-                  type="button"
-                  aria-pressed={draftMode === 'daily'}
-                  className={cn(
-                    frequencyChipClassName,
-                    draftMode === 'daily'
-                      ? frequencyChipSelectedClassName
-                      : frequencyChipIdleClassName
-                  )}
-                  onClick={() => setDraftMode('daily')}
-                >
-                  {t('connections.syncSchedule.daily')}
-                </button>
-              </div>
-            </div>
-            {/* A time of day only means something for the once-a-day cadence. */}
-            {draftMode === 'daily' && (
-              <>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor={`daily-sync-${connection.id}`}
-                    className="text-sm text-black/55 dark:text-white/55"
-                  >
-                    {t('connections.syncSchedule.timeLabel')}
-                  </Label>
-                  <Input
-                    id={`daily-sync-${connection.id}`}
-                    type="time"
-                    value={dailySyncTime}
-                    onChange={(e) => setDailySyncTime(e.target.value)}
-                    className="h-11 rounded-sm border-black/10 bg-transparent shadow-none focus-visible:border-black/30 focus-visible:ring-0 dark:border-white/10"
-                  />
-                  <p className="text-sm text-black/45 dark:text-white/45">
-                    {t('connections.syncSchedule.timezoneNote', {
-                      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                    })}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {(
-                    [
-                      ['morning', 'connections.syncSchedule.presets.morning'],
-                      ['midday', 'connections.syncSchedule.presets.midday'],
-                      [
-                        'after-close',
-                        'connections.syncSchedule.presets.afterClose',
-                      ],
-                      ['midnight', 'connections.syncSchedule.presets.midnight'],
-                    ] as const
-                  ).map(([preset, labelKey]) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      className={secondaryButtonClassName}
-                      onClick={() => handlePresetTime(preset)}
-                    >
-                      {t(labelKey)}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-          <DialogFooter className="gap-2 sm:justify-between">
-            <button
-              type="button"
-              className={cn(secondaryButtonClassName, 'text-black/55 dark:text-white/55')}
-              disabled={savingSchedule || scheduleMode === 'off'}
-              onClick={() => void handleSaveSchedule('off')}
-            >
-              {t('connections.syncSchedule.turnOff')}
-            </button>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className={secondaryButtonClassName}
-                disabled={savingSchedule}
-                onClick={() => setScheduleOpen(false)}
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                type="button"
-                className={primaryButtonClassName}
-                disabled={
-                  savingSchedule ||
-                  draftMode === 'off' ||
-                  (draftMode === 'daily' && !dailySyncTime)
-                }
-                onClick={() => void handleSaveSchedule(draftMode)}
-              >
-                {savingSchedule ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                {t('common.save')}
-              </button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
