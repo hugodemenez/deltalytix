@@ -1,5 +1,6 @@
 'use client'
 import { Trade } from '@/prisma/generated/prisma/browser'
+import { processRithmicPerformance } from '@/lib/rithmic-performance-import'
 import { ThorSync } from '../thor/thor-sync'
 import { TradovateSync } from '../tradovate/sync/tradovate-sync'
 import { DxFeedSync } from '../dxfeed/sync/dxfeed-sync'
@@ -183,42 +184,6 @@ export interface PlatformConfig {
 }
 
 // Platform-specific processing functions
-const processRithmicPerformance = (data: string[][]): ProcessedData => {
-  const processedData: string[][] = [];
-  let currentAccountNumber = '';
-  let currentInstrument = '';
-  let headers: string[] = [];
-
-  const isAccountNumber = (value: string) => {
-    return value.length > 8 &&
-      !/^[A-Z]{3}\d$/.test(value) &&
-      !/^\d+$/.test(value) &&
-      value !== 'Account' &&
-      value !== 'Entry Order Number';
-  };
-
-  const isInstrument = (value: string) => {
-    // Match common futures instrument patterns:
-    // - 2-4 uppercase letters followed by 1-2 digits (e.g. ESZ4, MESZ4, ZNH3)
-    // - Optionally prefixed with 'M' for micro contracts
-    return /^[A-Z]{2,4}\d{1,2}$/.test(value);
-  };
-
-  data.forEach((row) => {
-    if (row[0] && isAccountNumber(row[0])) {
-      currentAccountNumber = row[0];
-    } else if (row[0] && isInstrument(row[0])) {
-      currentInstrument = row[0];
-    } else if (row[0] === 'Entry Order Number') {
-      headers = ['AccountNumber', 'Instrument', ...row];
-    } else if (headers.length > 0 && row[0] && row[0] !== 'Entry Order Number' && row[0] !== 'Account') {
-      processedData.push([currentAccountNumber, currentInstrument, ...row]);
-    }
-  });
-
-  return { headers, processedData };
-};
-
 const processRithmicOrders = (data: string[][]): ProcessedData => {
   const headerRowIndex = data.findIndex(row => row[0] === 'Completed Orders') + 1
   const headers = data[headerRowIndex].filter(header => header && header.trim() !== '')
