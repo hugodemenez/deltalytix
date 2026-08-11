@@ -38,7 +38,8 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { getDxFeedErrorToastContent } from '@/lib/dxfeed-client-messages'
 import { showToastWithCopy } from '@/lib/toast-copy'
-import { captureConnectionCreated } from '@/lib/connection-analytics'
+import { captureConnectionCreated, captureConnectionFailed } from '@/lib/connection-analytics'
+import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
 import { authenticateDxFeed, updateDxFeedDailySyncTimeAction } from './actions'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
 import { getEnabledDxFeedPropFirms } from '@/lib/dxfeed-propfirms'
@@ -74,6 +75,7 @@ export function DxFeedCredentialsManager() {
   const t = useI18n()
 
   const selectedPropFirm = DXFEED_PROP_FIRM_OPTIONS.find((f) => f.id === selectedPropFirmId)
+  const selectedPropFirmName = selectedPropFirm?.name ?? selectedPropFirmId
   const showPropFirmSearch = DXFEED_PROP_FIRM_OPTIONS.length > PROP_FIRM_SEARCH_THRESHOLD
   const filteredPropFirms = propFirmSearch
     ? DXFEED_PROP_FIRM_OPTIONS.filter((firm) =>
@@ -114,6 +116,14 @@ export function DxFeedCredentialsManager() {
       const result = await authenticateDxFeed(loginEmail, loginPassword, selectedPropFirmId)
 
       if (result.error) {
+        captureConnectionFailed('dxfeed', {
+          source_ui: 'credentials_manager',
+          prop_firm_id: selectedPropFirmId,
+          prop_firm_name: selectedPropFirmName,
+          error_code: result.error,
+          http_status:
+            typeof result.errorParams?.status === 'number' ? result.errorParams.status : undefined,
+        })
         const { title, description } = getDxFeedErrorToastContent(
           t,
           result.error,
@@ -129,13 +139,23 @@ export function DxFeedCredentialsManager() {
       showToastWithCopy('success', t('dxfeedSync.connected'), {
         copyLabel: t('common.copy'),
       })
-      captureConnectionCreated('dxfeed', { source_ui: 'credentials_manager' })
+      captureConnectionCreated('dxfeed', {
+        source_ui: 'credentials_manager',
+        prop_firm_id: selectedPropFirmId,
+        prop_firm_name: selectedPropFirmName,
+      })
       setIsAddDialogOpen(false)
       setLoginEmail('')
       setLoginPassword('')
       await loadAccounts()
     } catch (error) {
       console.error('DxFeed connect error:', error)
+      captureConnectionFailed('dxfeed', {
+        source_ui: 'credentials_manager',
+        prop_firm_id: selectedPropFirmId,
+        prop_firm_name: selectedPropFirmName,
+        error_code: DxFeedErrorCode.AUTH_UNEXPECTED,
+      })
       showToastWithCopy('error', t('dxfeedSync.error.authFailed'), {
         description: t('dxfeedSync.errors.hintCheckCredentials'),
         copyLabel: t('common.copy'),
@@ -143,7 +163,7 @@ export function DxFeedCredentialsManager() {
     } finally {
       setIsLoading(false)
     }
-  }, [loginEmail, loginPassword, selectedPropFirmId, t, loadAccounts])
+  }, [loginEmail, loginPassword, selectedPropFirmId, selectedPropFirmName, t, loadAccounts])
 
   function formatDate(dateString: string) {
     return new Date(dateString).toLocaleString()
