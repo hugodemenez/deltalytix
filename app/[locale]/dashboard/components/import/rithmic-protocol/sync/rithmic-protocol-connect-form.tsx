@@ -1,8 +1,16 @@
 'use client'
 
-import { useCallback, useState } from 'react'
-import { ChevronLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import {
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  Eye,
+  EyeOff,
+  Loader2,
+} from 'lucide-react'
 import { useI18n } from '@/locales/client'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,6 +21,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { captureConnectionCreated } from '@/lib/connection-analytics'
 import { useRithmicProtocolSyncContext } from '@/context/rithmic-protocol-sync-context'
 import { toast } from 'sonner'
@@ -20,18 +49,165 @@ import { authenticateRithmicProtocol } from './actions'
 import { useRithmicProtocolConnectOptions } from './use-rithmic-protocol-connect-options'
 
 const fieldClassName =
-  'h-11 rounded-sm border-black/10 bg-transparent text-base sm:text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30'
+  'h-11 w-full min-w-0 max-w-full rounded-sm border-black/10 bg-transparent text-base sm:text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30'
 
 const selectTriggerClassName =
-  'h-11 w-full rounded-sm border-black/10 bg-transparent text-base sm:text-sm shadow-none focus:ring-0 focus:ring-offset-0 dark:border-white/10'
+  'h-11 w-full min-w-0 max-w-full rounded-sm border-black/10 bg-transparent text-base sm:text-sm shadow-none focus:ring-0 focus:ring-offset-0 dark:border-white/10 [&>span]:truncate'
 
 const selectContentClassName =
   'rounded-sm border-black/10 bg-white shadow-none dark:border-white/10 dark:bg-black'
+
+const pickerTriggerClassName =
+  'inline-flex h-11 w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-sm border border-black/10 bg-transparent px-3 text-left text-base shadow-none transition-colors duration-150 hover:bg-black/5 disabled:pointer-events-none disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5 sm:text-sm'
 
 const primaryButtonClassName =
   'inline-flex h-11 w-full items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]'
 
 type ConnectStep = 'system' | 'credentials'
+
+function SystemPicker({
+  systems,
+  systemName,
+  onSelect,
+  disabled,
+  loading,
+}: {
+  systems: string[]
+  systemName: string
+  onSelect: (system: string) => void
+  disabled?: boolean
+  loading?: boolean
+}) {
+  const t = useI18n()
+  const isMobile = useIsMobile()
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const filteredSystems = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) return systems
+    return systems.filter((system) => system.toLowerCase().includes(query))
+  }, [systems, search])
+
+  const handleOpenChange = useCallback((next: boolean) => {
+    setOpen(next)
+    if (!next) setSearch('')
+  }, [])
+
+  const handleSelect = useCallback(
+    (system: string) => {
+      onSelect(system)
+      handleOpenChange(false)
+    },
+    [onSelect, handleOpenChange],
+  )
+
+  const triggerButton = (
+    <button
+      id="rithmic-protocol-system"
+      type="button"
+      role="combobox"
+      aria-expanded={open}
+      disabled={disabled || loading || systems.length === 0}
+      className={pickerTriggerClassName}
+    >
+      <span className="min-w-0 truncate">
+        {systemName || t('rithmicProtocolSync.addAccount.systemPlaceholder')}
+      </span>
+      {loading ? (
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-black/35 dark:text-white/35" />
+      ) : (
+        <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+      )}
+    </button>
+  )
+
+  const commandList = (
+    <Command shouldFilter={false} className="min-w-0">
+      <CommandInput
+        placeholder={t('rithmicProtocolSync.addAccount.systemSearchPlaceholder')}
+        value={search}
+        onValueChange={setSearch}
+        className="text-base sm:text-sm"
+      />
+      <CommandList className="max-h-[min(320px,50vh)] overflow-y-auto overflow-x-hidden">
+        <CommandEmpty>
+          {t('rithmicProtocolSync.addAccount.noSystemFound')}
+        </CommandEmpty>
+        <CommandGroup>
+          {filteredSystems.map((system) => (
+            <CommandItem
+              key={system}
+              value={system}
+              className="rounded-sm"
+              onSelect={() => handleSelect(system)}
+            >
+              <Check
+                className={cn(
+                  'mr-2 h-4 w-4 shrink-0',
+                  systemName === system ? 'opacity-100' : 'opacity-0',
+                )}
+              />
+              <span className="min-w-0 truncate">{system}</span>
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  )
+
+  if (isMobile) {
+    return (
+      <>
+        <button
+          id="rithmic-protocol-system"
+          type="button"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled || loading || systems.length === 0}
+          className={pickerTriggerClassName}
+          onClick={() => handleOpenChange(true)}
+        >
+          <span className="min-w-0 truncate">
+            {systemName || t('rithmicProtocolSync.addAccount.systemPlaceholder')}
+          </span>
+          {loading ? (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-black/35 dark:text-white/35" />
+          ) : (
+            <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+          )}
+        </button>
+        <Drawer open={open} onOpenChange={handleOpenChange}>
+          <DrawerContent className="rounded-t-sm border-black/10 dark:border-white/10">
+            <DrawerHeader className="text-left">
+              <DrawerTitle className="font-normal tracking-tight">
+                {t('rithmicProtocolSync.addAccount.systemLabel')}
+              </DrawerTitle>
+              <DrawerDescription className="text-black/55 dark:text-white/55">
+                {t('rithmicProtocolSync.addAccount.systemSearchHelp')}
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="min-w-0 overflow-x-hidden px-2 pb-4">
+              {commandList}
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </>
+    )
+  }
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] rounded-sm border-black/10 bg-white p-0 shadow-none dark:border-white/10 dark:bg-black"
+        align="start"
+      >
+        {commandList}
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 export function RithmicProtocolConnectForm({
   onConnected,
@@ -132,12 +308,12 @@ export function RithmicProtocolConnectForm({
 
   if (step === 'system') {
     return (
-      <div className="flex flex-col space-y-5">
+      <div className="flex w-full min-w-0 flex-col space-y-5 overflow-x-hidden">
         <p className="text-sm leading-relaxed text-black/55 dark:text-white/55">
           {t('rithmicProtocolSync.addAccount.systemStepDescription')}
         </p>
 
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Label
             htmlFor="rithmic-protocol-gateway"
             className="text-sm text-black/55 dark:text-white/55"
@@ -172,41 +348,20 @@ export function RithmicProtocolConnectForm({
           </p>
         </div>
 
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Label
             htmlFor="rithmic-protocol-system"
             className="text-sm text-black/55 dark:text-white/55"
           >
             {t('rithmicProtocolSync.addAccount.systemLabel')}
           </Label>
-          <div className="relative">
-            <Select
-              value={systemName}
-              onValueChange={setSystemName}
-              disabled={loadingSystems || systems.length === 0}
-            >
-              <SelectTrigger
-                id="rithmic-protocol-system"
-                className={selectTriggerClassName}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className={selectContentClassName}>
-                {systems.map((system) => (
-                  <SelectItem
-                    key={system}
-                    value={system}
-                    className="rounded-sm"
-                  >
-                    {system}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {loadingSystems ? (
-              <Loader2 className="pointer-events-none absolute right-10 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-black/35 dark:text-white/35" />
-            ) : null}
-          </div>
+          <SystemPicker
+            systems={systems}
+            systemName={systemName}
+            onSelect={setSystemName}
+            disabled={loadingGateways}
+            loading={loadingSystems}
+          />
         </div>
 
         <button
@@ -223,16 +378,16 @@ export function RithmicProtocolConnectForm({
 
   return (
     <form
-      className="flex flex-col space-y-5"
+      className="flex w-full min-w-0 flex-col space-y-5 overflow-x-hidden"
       onSubmit={(e) => {
         e.preventDefault()
         void handleConnect()
       }}
       autoComplete="on"
     >
-      <div className="flex flex-col gap-2 rounded-sm border border-black/10 px-3 py-2.5 dark:border-white/10">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+      <div className="flex min-w-0 flex-col gap-2 rounded-sm border border-black/10 px-3 py-2.5 dark:border-white/10">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <p className="text-xs text-black/45 dark:text-white/45">
               {t('rithmicProtocolSync.addAccount.systemLabel')}
             </p>
@@ -261,7 +416,7 @@ export function RithmicProtocolConnectForm({
         {t('rithmicProtocolSync.addAccount.credentialsStepDescription')}
       </p>
 
-      <div className="space-y-2">
+      <div className="min-w-0 space-y-2">
         <Label
           htmlFor="rithmic-protocol-username"
           className="text-sm text-black/55 dark:text-white/55"
@@ -280,14 +435,14 @@ export function RithmicProtocolConnectForm({
         />
       </div>
 
-      <div className="space-y-2">
+      <div className="min-w-0 space-y-2">
         <Label
           htmlFor="rithmic-protocol-password"
           className="text-sm text-black/55 dark:text-white/55"
         >
           {t('rithmicProtocolSync.addAccount.passwordLabel')}
         </Label>
-        <div className="relative">
+        <div className="relative min-w-0">
           <Input
             id="rithmic-protocol-password"
             name="password"
@@ -319,7 +474,7 @@ export function RithmicProtocolConnectForm({
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="min-w-0 space-y-2">
         <Label
           htmlFor="rithmic-protocol-history-start"
           className="text-sm text-black/55 dark:text-white/55"

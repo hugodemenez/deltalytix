@@ -2710,6 +2710,11 @@ export default {
       gatewayHelp:
         "Choisissez le point de connexion Rithmic le plus proche. Core (Chicago) fonctionne partout ; un point régional réduit seulement la latence.",
       systemLabel: "Système Rithmic",
+      systemPlaceholder: "Sélectionner un système",
+      systemSearchPlaceholder: "Rechercher un système…",
+      systemSearchHelp:
+        "Recherchez et choisissez le système Rithmic de votre compte.",
+      noSystemFound: "Aucun système trouvé",
       usernameLabel: "Nom d'utilisateur",
       passwordLabel: "Mot de passe",
       showPassword: "Afficher le mot de passe",
