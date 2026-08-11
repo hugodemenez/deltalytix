@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import type { Ref } from 'react'
 import { Check, ChevronDown, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useI18n } from '@/locales/client'
@@ -50,6 +51,37 @@ const pickerTriggerClassName =
 const primaryButtonClassName =
   'inline-flex h-11 w-full items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]'
 
+const invalidFieldClassName =
+  'border-destructive/60 focus-visible:border-destructive/70 dark:border-destructive/60 dark:focus-visible:border-destructive/70'
+
+type DxFeedFieldErrors = Partial<
+  Record<'propFirm' | 'email' | 'password', string>
+>
+
+function FieldBorderError({
+  id,
+  message,
+  className,
+}: {
+  id: string
+  message?: string
+  className?: string
+}) {
+  if (!message) return null
+
+  return (
+    <p
+      id={id}
+      className={cn(
+        'pointer-events-none absolute right-2 top-0 z-10 max-w-[calc(100%-1rem)] -translate-y-1/2 truncate bg-background px-1 text-[10px] font-medium leading-none text-destructive',
+        className,
+      )}
+    >
+      {message}
+    </p>
+  )
+}
+
 function resolvePrefillPropFirmId(propFirmName?: string) {
   if (!propFirmName) return ''
   return (
@@ -62,9 +94,15 @@ function resolvePrefillPropFirmId(propFirmName?: string) {
 function PropFirmPicker({
   selectedPropFirmId,
   onSelect,
+  triggerRef,
+  invalid,
+  describedBy,
 }: {
   selectedPropFirmId: string
   onSelect: (id: string) => void
+  triggerRef: Ref<HTMLButtonElement>
+  invalid: boolean
+  describedBy: string
 }) {
   const t = useI18n()
   const isMobile = useIsMobile()
@@ -132,11 +170,17 @@ function PropFirmPicker({
     return (
       <>
         <button
+          ref={triggerRef}
           id="dxfeed-prop-firm"
           type="button"
           role="combobox"
           aria-expanded={open}
-          className={pickerTriggerClassName}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
+          className={cn(
+            pickerTriggerClassName,
+            invalid && invalidFieldClassName,
+          )}
           onClick={() => handleOpenChange(true)}
         >
           <span className="min-w-0 truncate">
@@ -168,11 +212,17 @@ function PropFirmPicker({
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
+          ref={triggerRef}
           id="dxfeed-prop-firm"
           type="button"
           role="combobox"
           aria-expanded={open}
-          className={pickerTriggerClassName}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
+          className={cn(
+            pickerTriggerClassName,
+            invalid && invalidFieldClassName,
+          )}
         >
           <span className="min-w-0 truncate">
             {selectedPropFirm?.name ??
@@ -208,23 +258,52 @@ export function DxFeedConnectForm({
     resolvePrefillPropFirmId(initialPropFirmName),
   )
   const [isLoading, setIsLoading] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<DxFeedFieldErrors>({})
+  const propFirmTriggerRef = useRef<HTMLButtonElement>(null)
+  const emailInputRef = useRef<HTMLInputElement>(null)
+  const passwordInputRef = useRef<HTMLInputElement>(null)
 
-  const credentialsEnabled = Boolean(selectedPropFirmId)
+  const clearFieldError = useCallback((field: keyof DxFeedFieldErrors) => {
+    setFieldErrors((current) => {
+      if (!current[field]) return current
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
+  }, [])
+
+  const validateForm = useCallback(() => {
+    const errors: DxFeedFieldErrors = {}
+
+    if (!selectedPropFirmId) {
+      errors.propFirm = t('dxfeedSync.error.propFirmRequired')
+    }
+    if (!loginEmail.trim()) {
+      errors.email = t('dxfeedSync.error.emailRequired')
+    } else if (emailInputRef.current?.validity.typeMismatch) {
+      errors.email = t('dxfeedSync.error.emailInvalid')
+    }
+    if (!loginPassword) {
+      errors.password = t('dxfeedSync.error.passwordRequired')
+    }
+
+    setFieldErrors(errors)
+
+    const firstInvalidControl = errors.propFirm
+      ? propFirmTriggerRef.current
+      : errors.email
+        ? emailInputRef.current
+        : errors.password
+          ? passwordInputRef.current
+          : null
+    if (firstInvalidControl) {
+      requestAnimationFrame(() => firstInvalidControl.focus())
+    }
+
+    return Object.keys(errors).length === 0
+  }, [loginEmail, loginPassword, selectedPropFirmId, t])
 
   const handleConnect = useCallback(async () => {
-    if (!selectedPropFirmId) {
-      showToastWithCopy('error', t('dxfeedSync.error.propFirmRequired'), {
-        copyLabel: t('common.copy'),
-      })
-      return
-    }
-    if (!loginEmail || !loginPassword) {
-      showToastWithCopy('error', t('dxfeedSync.error.credentialsRequired'), {
-        copyLabel: t('common.copy'),
-      })
-      return
-    }
-
     try {
       setIsLoading(true)
       const result = await authenticateDxFeed(
@@ -253,6 +332,7 @@ export function DxFeedConnectForm({
       setLoginEmail('')
       setLoginPassword('')
       setSelectedPropFirmId('')
+      setFieldErrors({})
       await loadAccounts()
       onConnected?.()
     } catch (error) {
@@ -295,9 +375,11 @@ export function DxFeedConnectForm({
       className="flex w-full min-w-0 flex-col space-y-5 overflow-x-hidden"
       onSubmit={(e) => {
         e.preventDefault()
-        void handleConnect()
+        if (validateForm()) void handleConnect()
       }}
       autoComplete="on"
+      noValidate
+      aria-busy={isLoading}
     >
       <p className="text-sm leading-relaxed text-black/55 dark:text-white/55">
         {t('dxfeedSync.addAccount.description')}
@@ -310,11 +392,30 @@ export function DxFeedConnectForm({
         >
           {t('dxfeedSync.addAccount.propFirmLabel')}
         </Label>
-        <PropFirmPicker
-          selectedPropFirmId={selectedPropFirmId}
-          onSelect={setSelectedPropFirmId}
-        />
-        <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
+        <div className="relative min-w-0">
+          <PropFirmPicker
+            selectedPropFirmId={selectedPropFirmId}
+            onSelect={(id) => {
+              setSelectedPropFirmId(id)
+              clearFieldError('propFirm')
+            }}
+            triggerRef={propFirmTriggerRef}
+            invalid={Boolean(fieldErrors.propFirm)}
+            describedBy={
+              fieldErrors.propFirm
+                ? 'dxfeed-prop-firm-hint dxfeed-prop-firm-error'
+                : 'dxfeed-prop-firm-hint'
+            }
+          />
+          <FieldBorderError
+            id="dxfeed-prop-firm-error"
+            message={fieldErrors.propFirm}
+          />
+        </div>
+        <p
+          id="dxfeed-prop-firm-hint"
+          className="text-xs leading-relaxed text-black/45 dark:text-white/45"
+        >
           {t('dxfeedSync.addAccount.propFirmHint')}
         </p>
       </div>
@@ -326,18 +427,34 @@ export function DxFeedConnectForm({
         >
           {t('dxfeedSync.addAccount.emailLabel')}
         </Label>
-        <Input
-          id="dxfeed-email"
-          name="email"
-          type="email"
-          autoComplete="username"
-          value={loginEmail}
-          onChange={(e) => setLoginEmail(e.target.value)}
-          placeholder={t('dxfeedSync.addAccount.emailPlaceholder')}
-          className={fieldClassName}
-          required
-          disabled={!credentialsEnabled}
-        />
+        <div className="relative min-w-0">
+          <Input
+            ref={emailInputRef}
+            id="dxfeed-email"
+            name="email"
+            type="email"
+            autoComplete="username"
+            value={loginEmail}
+            onChange={(e) => {
+              setLoginEmail(e.target.value)
+              clearFieldError('email')
+            }}
+            placeholder={t('dxfeedSync.addAccount.emailPlaceholder')}
+            className={cn(
+              fieldClassName,
+              fieldErrors.email && invalidFieldClassName,
+            )}
+            required
+            aria-invalid={Boolean(fieldErrors.email)}
+            aria-describedby={
+              fieldErrors.email ? 'dxfeed-email-error' : undefined
+            }
+          />
+          <FieldBorderError
+            id="dxfeed-email-error"
+            message={fieldErrors.email}
+          />
+        </div>
       </div>
 
       <div className="min-w-0 space-y-2">
@@ -347,28 +464,39 @@ export function DxFeedConnectForm({
         >
           {t('dxfeedSync.addAccount.passwordLabel')}
         </Label>
-        <Input
-          id="dxfeed-password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          value={loginPassword}
-          onChange={(e) => setLoginPassword(e.target.value)}
-          placeholder={t('dxfeedSync.addAccount.passwordPlaceholder')}
-          className={fieldClassName}
-          required
-          disabled={!credentialsEnabled}
-        />
+        <div className="relative min-w-0">
+          <Input
+            ref={passwordInputRef}
+            id="dxfeed-password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            value={loginPassword}
+            onChange={(e) => {
+              setLoginPassword(e.target.value)
+              clearFieldError('password')
+            }}
+            placeholder={t('dxfeedSync.addAccount.passwordPlaceholder')}
+            className={cn(
+              fieldClassName,
+              fieldErrors.password && invalidFieldClassName,
+            )}
+            required
+            aria-invalid={Boolean(fieldErrors.password)}
+            aria-describedby={
+              fieldErrors.password ? 'dxfeed-password-error' : undefined
+            }
+          />
+          <FieldBorderError
+            id="dxfeed-password-error"
+            message={fieldErrors.password}
+          />
+        </div>
       </div>
 
       <button
         type="submit"
-        disabled={
-          isLoading ||
-          !credentialsEnabled ||
-          !loginEmail ||
-          !loginPassword
-        }
+        disabled={isLoading}
         className={primaryButtonClassName}
       >
         {isLoading ? (

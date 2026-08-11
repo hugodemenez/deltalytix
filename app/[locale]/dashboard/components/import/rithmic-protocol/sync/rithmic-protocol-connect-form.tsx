@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import type { Ref } from 'react'
 import { Check, ChevronDown, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
@@ -56,18 +57,55 @@ const pickerTriggerClassName =
 const primaryButtonClassName =
   'inline-flex h-11 w-full items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]'
 
+const invalidFieldClassName =
+  'border-destructive/60 focus-visible:border-destructive/70 dark:border-destructive/60 dark:focus-visible:border-destructive/70'
+
+type RithmicFieldErrors = Partial<
+  Record<'system' | 'username' | 'password' | 'historyStartDate', string>
+>
+
+function FieldBorderError({
+  id,
+  message,
+  className,
+}: {
+  id: string
+  message?: string
+  className?: string
+}) {
+  if (!message) return null
+
+  return (
+    <p
+      id={id}
+      className={cn(
+        'pointer-events-none absolute right-2 top-0 z-10 max-w-[calc(100%-1rem)] -translate-y-1/2 truncate bg-background px-1 text-[10px] font-medium leading-none text-destructive',
+        className,
+      )}
+    >
+      {message}
+    </p>
+  )
+}
+
 function SystemPicker({
   systems,
   systemName,
   onSelect,
   disabled,
   loading,
+  triggerRef,
+  invalid,
+  describedBy,
 }: {
   systems: string[]
   systemName: string
   onSelect: (system: string) => void
   disabled?: boolean
   loading?: boolean
+  triggerRef: Ref<HTMLButtonElement>
+  invalid: boolean
+  describedBy?: string
 }) {
   const t = useI18n()
   const isMobile = useIsMobile()
@@ -95,12 +133,18 @@ function SystemPicker({
 
   const triggerButton = (
     <button
+      ref={triggerRef}
       id="rithmic-protocol-system"
       type="button"
       role="combobox"
       aria-expanded={open}
+      aria-invalid={invalid}
+      aria-describedby={describedBy}
       disabled={disabled || loading || systems.length === 0}
-      className={pickerTriggerClassName}
+      className={cn(
+        pickerTriggerClassName,
+        invalid && invalidFieldClassName,
+      )}
     >
       <span className="min-w-0 truncate">
         {systemName || t('rithmicProtocolSync.addAccount.systemPlaceholder')}
@@ -151,12 +195,18 @@ function SystemPicker({
     return (
       <>
         <button
+          ref={triggerRef}
           id="rithmic-protocol-system"
           type="button"
           role="combobox"
           aria-expanded={open}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
           disabled={disabled || loading || systems.length === 0}
-          className={pickerTriggerClassName}
+          className={cn(
+            pickerTriggerClassName,
+            invalid && invalidFieldClassName,
+          )}
           onClick={() => handleOpenChange(true)}
         >
           <span className="min-w-0 truncate">
@@ -227,16 +277,68 @@ export function RithmicProtocolConnectForm({
     loadingSystems,
   } = useRithmicProtocolConnectOptions(enabled)
   const [isLoading, setIsLoading] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<RithmicFieldErrors>({})
+  const systemTriggerRef = useRef<HTMLButtonElement>(null)
+  const usernameInputRef = useRef<HTMLInputElement>(null)
+  const passwordInputRef = useRef<HTMLInputElement>(null)
+  const historyStartInputRef = useRef<HTMLInputElement>(null)
 
   const todayUtc = new Date().toISOString().slice(0, 10)
-  const credentialsEnabled = Boolean(systemName) && !loadingSystems
 
-  const handleConnect = useCallback(async () => {
-    if (!username || !password || !systemName || !historyStartDate) {
-      toast.error(t('rithmicProtocolSync.error.credentialsRequired'))
-      return
+  const clearFieldError = useCallback((field: keyof RithmicFieldErrors) => {
+    setFieldErrors((current) => {
+      if (!current[field]) return current
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
+  }, [])
+
+  const validateForm = useCallback(() => {
+    const errors: RithmicFieldErrors = {}
+
+    if (!systemName) {
+      errors.system = t('rithmicProtocolSync.error.systemRequired')
+    }
+    if (!username.trim()) {
+      errors.username = t('rithmicProtocolSync.error.usernameRequired')
+    }
+    if (!password) {
+      errors.password = t('rithmicProtocolSync.error.passwordRequired')
+    }
+    if (!historyStartDate) {
+      errors.historyStartDate = t(
+        'rithmicProtocolSync.error.historyStartRequired',
+      )
+    } else if (
+      historyStartInputRef.current?.validity.rangeUnderflow ||
+      historyStartInputRef.current?.validity.rangeOverflow ||
+      historyStartInputRef.current?.validity.badInput
+    ) {
+      errors.historyStartDate = t(
+        'rithmicProtocolSync.error.historyStartInvalid',
+      )
     }
 
+    setFieldErrors(errors)
+
+    const firstInvalidControl = errors.system
+      ? systemTriggerRef.current
+      : errors.username
+        ? usernameInputRef.current
+        : errors.password
+          ? passwordInputRef.current
+          : errors.historyStartDate
+            ? historyStartInputRef.current
+            : null
+    if (firstInvalidControl) {
+      requestAnimationFrame(() => firstInvalidControl.focus())
+    }
+
+    return Object.keys(errors).length === 0
+  }, [historyStartDate, password, systemName, t, username])
+
+  const handleConnect = useCallback(async () => {
     const connectedUsername = username
     try {
       setIsLoading(true)
@@ -268,6 +370,7 @@ export function RithmicProtocolConnectForm({
       setShowPassword(false)
       setHistoryStartDate('')
       setSystemName('')
+      setFieldErrors({})
       await loadAccounts()
       onConnected?.()
       // One sync pulls every trading account stored on this connection.
@@ -296,9 +399,11 @@ export function RithmicProtocolConnectForm({
       className="flex w-full min-w-0 flex-col space-y-5 overflow-x-hidden"
       onSubmit={(e) => {
         e.preventDefault()
-        void handleConnect()
+        if (validateForm()) void handleConnect()
       }}
       autoComplete="on"
+      noValidate
+      aria-busy={isLoading}
     >
       <p className="text-sm leading-relaxed text-black/55 dark:text-white/55">
         {t('rithmicProtocolSync.addAccount.description')}
@@ -346,13 +451,27 @@ export function RithmicProtocolConnectForm({
         >
           {t('rithmicProtocolSync.addAccount.systemLabel')}
         </Label>
-        <SystemPicker
-          systems={systems}
-          systemName={systemName}
-          onSelect={setSystemName}
-          disabled={loadingGateways}
-          loading={loadingSystems}
-        />
+        <div className="relative min-w-0">
+          <SystemPicker
+            systems={systems}
+            systemName={systemName}
+            onSelect={(system) => {
+              setSystemName(system)
+              clearFieldError('system')
+            }}
+            disabled={loadingGateways}
+            loading={loadingSystems}
+            triggerRef={systemTriggerRef}
+            invalid={Boolean(fieldErrors.system)}
+            describedBy={
+              fieldErrors.system ? 'rithmic-protocol-system-error' : undefined
+            }
+          />
+          <FieldBorderError
+            id="rithmic-protocol-system-error"
+            message={fieldErrors.system}
+          />
+        </div>
       </div>
 
       <div className="min-w-0 space-y-2">
@@ -362,17 +481,35 @@ export function RithmicProtocolConnectForm({
         >
           {t('rithmicProtocolSync.addAccount.usernameLabel')}
         </Label>
-        <Input
-          id="rithmic-protocol-username"
-          name="username"
-          autoComplete="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          spellCheck={false}
-          required
-          disabled={!credentialsEnabled}
-          className={fieldClassName}
-        />
+        <div className="relative min-w-0">
+          <Input
+            ref={usernameInputRef}
+            id="rithmic-protocol-username"
+            name="username"
+            autoComplete="username"
+            value={username}
+            onChange={(e) => {
+              setUsername(e.target.value)
+              clearFieldError('username')
+            }}
+            spellCheck={false}
+            required
+            className={cn(
+              fieldClassName,
+              fieldErrors.username && invalidFieldClassName,
+            )}
+            aria-invalid={Boolean(fieldErrors.username)}
+            aria-describedby={
+              fieldErrors.username
+                ? 'rithmic-protocol-username-error'
+                : undefined
+            }
+          />
+          <FieldBorderError
+            id="rithmic-protocol-username-error"
+            message={fieldErrors.username}
+          />
+        </div>
       </div>
 
       <div className="min-w-0 space-y-2">
@@ -384,21 +521,33 @@ export function RithmicProtocolConnectForm({
         </Label>
         <div className="relative min-w-0">
           <Input
+            ref={passwordInputRef}
             id="rithmic-protocol-password"
             name="password"
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value)
+              clearFieldError('password')
+            }}
             required
-            disabled={!credentialsEnabled}
-            className={`${fieldClassName} pr-10`}
+            className={cn(
+              fieldClassName,
+              'pr-10',
+              fieldErrors.password && invalidFieldClassName,
+            )}
+            aria-invalid={Boolean(fieldErrors.password)}
+            aria-describedby={
+              fieldErrors.password
+                ? 'rithmic-protocol-password-error'
+                : undefined
+            }
           />
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            disabled={!credentialsEnabled}
             className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 text-black/45 hover:bg-transparent hover:text-black dark:text-white/45 dark:hover:text-white"
             onClick={() => setShowPassword((v) => !v)}
             aria-label={
@@ -413,6 +562,11 @@ export function RithmicProtocolConnectForm({
               <Eye className="h-4 w-4" strokeWidth={1.75} />
             )}
           </Button>
+          <FieldBorderError
+            id="rithmic-protocol-password-error"
+            message={fieldErrors.password}
+            className="right-10 max-w-[calc(100%-3rem)]"
+          />
         </div>
       </div>
 
@@ -423,32 +577,47 @@ export function RithmicProtocolConnectForm({
         >
           {t('rithmicProtocolSync.addAccount.historyStartLabel')}
         </Label>
-        <Input
-          id="rithmic-protocol-history-start"
-          name="historyStartDate"
-          type="date"
-          value={historyStartDate}
-          onChange={(e) => setHistoryStartDate(e.target.value)}
-          min="2013-01-01"
-          max={todayUtc}
-          required
-          disabled={!credentialsEnabled}
-          className={fieldClassName}
-        />
-        <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
+        <div className="relative min-w-0">
+          <Input
+            ref={historyStartInputRef}
+            id="rithmic-protocol-history-start"
+            name="historyStartDate"
+            type="date"
+            value={historyStartDate}
+            onChange={(e) => {
+              setHistoryStartDate(e.target.value)
+              clearFieldError('historyStartDate')
+            }}
+            min="2013-01-01"
+            max={todayUtc}
+            required
+            className={cn(
+              fieldClassName,
+              fieldErrors.historyStartDate && invalidFieldClassName,
+            )}
+            aria-invalid={Boolean(fieldErrors.historyStartDate)}
+            aria-describedby={
+              fieldErrors.historyStartDate
+                ? 'rithmic-protocol-history-start-error rithmic-protocol-history-start-help'
+                : 'rithmic-protocol-history-start-help'
+            }
+          />
+          <FieldBorderError
+            id="rithmic-protocol-history-start-error"
+            message={fieldErrors.historyStartDate}
+          />
+        </div>
+        <p
+          id="rithmic-protocol-history-start-help"
+          className="text-xs leading-relaxed text-black/45 dark:text-white/45"
+        >
           {t('rithmicProtocolSync.addAccount.historyStartHelp')}
         </p>
       </div>
 
       <button
         type="submit"
-        disabled={
-          isLoading ||
-          !credentialsEnabled ||
-          !username ||
-          !password ||
-          !historyStartDate
-        }
+        disabled={isLoading}
         className={primaryButtonClassName}
       >
         {isLoading ? (

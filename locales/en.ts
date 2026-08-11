@@ -2206,6 +2206,9 @@ export default {
     error: {
       credentialsRequired: "Enter your email and password to continue",
       propFirmRequired: "Select your prop firm before connecting",
+      emailRequired: "Enter your email",
+      emailInvalid: "Enter a valid email",
+      passwordRequired: "Enter your password",
       authFailed: "Could not connect to DxFeed",
     },
     errors: {
@@ -2543,6 +2546,11 @@ export default {
     error: {
       credentialsRequired:
         "Enter username, password, system, and account start date to continue",
+      systemRequired: "Select a Rithmic system",
+      usernameRequired: "Enter your username",
+      passwordRequired: "Enter your password",
+      historyStartRequired: "Choose an account start date",
+      historyStartInvalid: "Choose a date from 2013 through today",
       authFailed: "Could not connect to Rithmic Protocol API",
     },
     errors: {
