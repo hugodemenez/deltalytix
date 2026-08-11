@@ -7,6 +7,7 @@ import { PrismaClient } from "@/prisma/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { sendSubscriptionErrorEmail } from "@/app/[locale]/(landing)/actions/send-support-email";
 import { capturePostHogEvent } from "@/lib/posthog-server";
+import { readUserIdMetadata, resolveLocalUser } from "@/server/stripe-webhook-identity";
 
 // Helper function to get current period end from subscription items
 function getCurrentPeriodEnd(subscription: Stripe.Subscription): number {
@@ -104,9 +105,16 @@ export async function POST(req: Request) {
             // If interval_count is 3 then it is quarterly
             const interval = price.recurring?.interval_count === 3 ? 'quarter' : price.recurring?.interval || 'month';
 
-            const user = await prisma.user.findUnique({
-              where: { email: data.customer_details?.email as string },
+            const user = await resolveLocalUser(prisma, {
+              metadataUserId: readUserIdMetadata(data.metadata, subscription.metadata),
+              email: data.customer_details?.email,
             });
+
+            if (!user) {
+              // Throwing returns a 500 so Stripe retries: on a fresh signup the
+              // local user row can still be in flight when checkout completes.
+              throw new Error(`No local user for checkout session ${data.id}`);
+            }
 
             const currentPeriodEnd = getCurrentPeriodEnd(subscription);
 
@@ -115,7 +123,7 @@ export async function POST(req: Request) {
             // And multiple business subscriptions for the same user will be registered as different subscriptions in the database
             await prisma.subscription.upsert({
               where: {
-                email: data.customer_details?.email as string,
+                userId: user.id,
               },
               update: {
                 plan: subscriptionPlan,
@@ -125,9 +133,9 @@ export async function POST(req: Request) {
                 interval: interval,
               },
               create: {
-                email: data.customer_details?.email as string,
+                email: user.email,
                 plan: subscriptionPlan,
-                user: { connect: { id: user?.id } },
+                user: { connect: { id: user.id } },
                 endDate: new Date(currentPeriodEnd * 1000),
                 status: 'ACTIVE',
                 trialEndsAt: null,
@@ -195,9 +203,14 @@ export async function POST(req: Request) {
                 const productName = (price.product as Stripe.Product).name;
                 const subscriptionPlan = productName.toUpperCase() || 'LIFETIME';
 
-                const user = await prisma.user.findUnique({
-                  where: { email: data.customer_details?.email as string },
+                const user = await resolveLocalUser(prisma, {
+                  metadataUserId: readUserIdMetadata(data.metadata),
+                  email: data.customer_details?.email,
                 });
+
+                if (!user) {
+                  throw new Error(`No local user for checkout session ${data.id}`);
+                }
 
                 // For lifetime plans, set end date far in the future (100 years)
                 const lifetimeEndDate = new Date();
@@ -205,7 +218,7 @@ export async function POST(req: Request) {
 
                 await prisma.subscription.upsert({
                   where: {
-                    email: data.customer_details?.email as string,
+                    userId: user.id,
                   },
                   update: {
                     plan: subscriptionPlan,
@@ -215,9 +228,9 @@ export async function POST(req: Request) {
                     interval: 'lifetime',
                   },
                   create: {
-                    email: data.customer_details?.email as string,
+                    email: user.email,
                     plan: subscriptionPlan,
-                    user: { connect: { id: user?.id } },
+                    user: { connect: { id: user.id } },
                     endDate: lifetimeEndDate,
                     status: 'ACTIVE',
                     trialEndsAt: null,
@@ -276,15 +289,22 @@ export async function POST(req: Request) {
             data.customer as string
           ) as Stripe.Customer;
 
-          if (customerData.email) {
+          const deletedSubscriptionUser = await resolveLocalUser(prisma, {
+            metadataUserId: readUserIdMetadata(data.metadata, customerData.metadata),
+            email: customerData.email,
+          });
+
+          if (deletedSubscriptionUser) {
             await prisma.subscription.update({
-              where: { email: customerData.email },
+              where: { userId: deletedSubscriptionUser.id },
               data: {
                 plan: 'FREE',
                 status: "CANCELLED",
                 endDate: new Date(data.ended_at! * 1000)
               }
             });
+          } else {
+            console.warn(`No local user for deleted subscription ${data.id}`);
           }
           console.log(`Subscription deleted and updated in DB: ${data.id}`);
           // TODO: Schedule an email to ask feedback on the cancellation
@@ -296,7 +316,12 @@ export async function POST(req: Request) {
             data.customer as string
           ) as Stripe.Customer;
 
-          if (updatedCustomerData.email) {
+          const updatedSubscriptionUser = await resolveLocalUser(prisma, {
+            metadataUserId: readUserIdMetadata(data.metadata, updatedCustomerData.metadata),
+            email: updatedCustomerData.email,
+          });
+
+          if (updatedSubscriptionUser) {
             // Get the current price information
             const currentItems = await stripe.subscriptionItems.list({
               subscription: data.id,
@@ -338,7 +363,7 @@ export async function POST(req: Request) {
               const currentPeriodEnd = getCurrentPeriodEndFromEventData(data);
 
               await prisma.subscription.update({
-                where: { email: updatedCustomerData.email },
+                where: { userId: updatedSubscriptionUser.id },
                 data: {
                   status: "SCHEDULED_CANCELLATION",
                   endDate: new Date(currentPeriodEnd * 1000)
@@ -353,7 +378,7 @@ export async function POST(req: Request) {
                 cancellationDetails?.comment) {
                 await prisma.subscriptionFeedback.create({
                   data: {
-                    email: updatedCustomerData.email,
+                    email: updatedSubscriptionUser.email,
                     event: "SCHEDULED_CANCELLATION",
                     cancellationReason: cancellationDetails.feedback || null,
                     feedback: cancellationDetails.comment || null
@@ -366,7 +391,7 @@ export async function POST(req: Request) {
               const currentPeriodEnd = getCurrentPeriodEndFromEventData(data);
 
               await prisma.subscription.update({
-                where: { email: updatedCustomerData.email },
+                where: { userId: updatedSubscriptionUser.id },
                 data: {
                   status: subscriptionStatus,
                   plan: data.ended_at ? 'free' : updatedPlan,
@@ -378,6 +403,8 @@ export async function POST(req: Request) {
               });
               console.log(`Subscription updated with status ${subscriptionStatus}: ${data.id}`);
             }
+          } else {
+            console.warn(`No local user for updated subscription ${data.id}`);
           }
           break;
         case "customer.subscription.created":
@@ -387,9 +414,10 @@ export async function POST(req: Request) {
             data.customer as string
           ) as Stripe.Customer;
 
-          if (newCustomerData.email) {
-            const user = await prisma.user.findUnique({
-              where: { email: newCustomerData.email },
+          {
+            const user = await resolveLocalUser(prisma, {
+              metadataUserId: readUserIdMetadata(data.metadata, newCustomerData.metadata),
+              email: newCustomerData.email,
             });
 
             if (user) {
@@ -412,7 +440,7 @@ export async function POST(req: Request) {
               const currentPeriodEnd = getCurrentPeriodEndFromEventData(data);
 
               await prisma.subscription.upsert({
-                where: { email: newCustomerData.email },
+                where: { userId: user.id },
                 update: {
                   status: data.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
                   plan: subscriptionPlan,
@@ -420,7 +448,7 @@ export async function POST(req: Request) {
                   trialEndsAt: data.trial_end ? new Date(data.trial_end * 1000) : null
                 },
                 create: {
-                  email: newCustomerData.email,
+                  email: user.email,
                   plan: subscriptionPlan,
                   user: { connect: { id: user.id } },
                   status: data.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
@@ -429,21 +457,30 @@ export async function POST(req: Request) {
                 }
               });
               console.log(`New subscription created and saved: ${data.id}`);
+            } else {
+              console.warn(`No local user for created subscription ${data.id}`);
             }
           }
           break;
         case "invoice.payment_failed":
           console.log('invoice.payment_failed')
           data = event.data.object as Stripe.Invoice;
-          const customerEmail = (await stripe.customers.retrieve(data.customer as string) as Stripe.Customer).email;
+          const invoiceCustomer = await stripe.customers.retrieve(data.customer as string) as Stripe.Customer;
 
-          if (customerEmail) {
+          const paymentFailedUser = await resolveLocalUser(prisma, {
+            metadataUserId: readUserIdMetadata(invoiceCustomer.metadata),
+            email: invoiceCustomer.email,
+          });
+
+          if (paymentFailedUser) {
             await prisma.subscription.update({
-              where: { email: customerEmail },
+              where: { userId: paymentFailedUser.id },
               data: {
                 status: "PAYMENT_FAILED",
               }
             });
+          } else {
+            console.warn(`No local user for failed invoice ${data.id}`);
           }
           console.log(`Payment failed for invoice: ${data.id}`);
           break;

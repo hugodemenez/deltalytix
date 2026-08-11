@@ -451,24 +451,113 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
 
     // If user exists by auth_user_id, update fields if needed
     if (existingUserByAuthId) {
-      const shouldUpdateEmail = existingUserByAuthId.email !== user.email;
+      const normalizedAuthEmail = user.email?.trim().toLowerCase();
+      const shouldUpdateEmail = !!normalizedAuthEmail && existingUserByAuthId.email !== normalizedAuthEmail;
       const shouldUpdateLanguage = !!locale && locale !== existingUserByAuthId.language;
 
       if (shouldUpdateEmail || shouldUpdateLanguage) {
         console.log('[ensureUserInDatabase] Updating existing user record');
         try {
-          const updatedUser = await prisma.user.update({
-            where: {
-              auth_user_id: user.id // Always use auth_user_id as the unique identifier
-            },
-            data: {
-              email: shouldUpdateEmail ? (user.email || existingUserByAuthId.email) : existingUserByAuthId.email,
-              language: shouldUpdateLanguage ? (locale as string) : existingUserByAuthId.language
-            },
+          const subscription = shouldUpdateEmail
+            ? await prisma.subscription.findUnique({
+                where: { userId: existingUserByAuthId.id },
+                select: { email: true, userId: true },
+              })
+            : null;
+
+          if (shouldUpdateEmail) {
+            const [userWithNewEmail, subscriptionWithNewEmail] = await Promise.all([
+              prisma.user.findUnique({
+                where: { email: normalizedAuthEmail },
+                select: { id: true },
+              }),
+              prisma.subscription.findUnique({
+                where: { email: normalizedAuthEmail },
+                select: { userId: true },
+              }),
+            ]);
+
+            if (
+              (userWithNewEmail && userWithNewEmail.id !== existingUserByAuthId.id) ||
+              (subscriptionWithNewEmail && subscriptionWithNewEmail.userId !== existingUserByAuthId.id)
+            ) {
+              throw new Error('Account conflict: Email already associated with another user');
+            }
+          }
+
+          // Stripe is renamed before the local write so that a failure here leaves
+          // the previous billing email on record to retry with. The reverse order
+          // would strand Stripe on an address nothing points at any more; that is
+          // only recoverable because user-id metadata, not the email, is the key.
+          if (shouldUpdateEmail) {
+            try {
+              const { synchronizeStripeCustomerEmailForUser } = await import('@/server/stripe-customer');
+              // Accounts without a Subscription row still have a Stripe customer
+              // (getSubscriptionData creates one on read), so fall back to the
+              // local user email rather than skipping the rename entirely.
+              const syncResult = await synchronizeStripeCustomerEmailForUser({
+                userId: user.id,
+                previousEmail: subscription?.email ?? existingUserByAuthId.email,
+                email: normalizedAuthEmail,
+              });
+
+              if (syncResult.status === 'ambiguous') {
+                // The previous email is the only remaining pointer to the legacy
+                // customer holding the subscription. Keep it so a later request
+                // can retry once the duplicates are merged in Stripe.
+                console.error('[ensureUserInDatabase] Ambiguous Stripe customers, keeping previous billing email', {
+                  userId: user.id,
+                  customerIds: syncResult.customerIds,
+                });
+                return { user: existingUserByAuthId, isNewUser: false };
+              }
+
+              if (syncResult.status === 'not_found') {
+                console.warn('[ensureUserInDatabase] No Stripe customer found for email synchronization', {
+                  userId: user.id,
+                });
+              }
+            } catch (stripeError) {
+              // Keep the previous local email so a later authenticated request can
+              // safely retry the Stripe lookup with the last known billing email.
+              console.error('[ensureUserInDatabase] Failed to synchronize Stripe customer email', {
+                userId: user.id,
+                error: stripeError instanceof Error ? stripeError.message : 'Unknown error',
+              });
+              return { user: existingUserByAuthId, isNewUser: false };
+            }
+          }
+
+          const updatedUser = await prisma.$transaction(async (transaction) => {
+            if (shouldUpdateEmail && subscription) {
+              // The subscription is selected and updated through the immutable user ID,
+              // never through the mutable previous email address.
+              await transaction.subscription.update({
+                where: { userId: existingUserByAuthId.id },
+                data: { email: normalizedAuthEmail },
+              });
+            }
+
+            return transaction.user.update({
+              where: {
+                auth_user_id: user.id // Always use auth_user_id as the unique identifier
+              },
+              data: {
+                email: shouldUpdateEmail ? normalizedAuthEmail : existingUserByAuthId.email,
+                language: shouldUpdateLanguage ? (locale as string) : existingUserByAuthId.language
+              },
+            });
           });
+
           console.log('[ensureUserInDatabase] SUCCESS: User updated successfully');
           return { user: updatedUser, isNewUser: false };
         } catch (updateError) {
+          // The outer handler routes on the 'Account conflict' message. Rewrapping
+          // it would fall through to the catch-all branch and sign the user out
+          // with "Critical database error" instead of showing the conflict.
+          if (updateError instanceof Error && updateError.message.includes('Account conflict')) {
+            throw updateError;
+          }
           console.error('[ensureUserInDatabase] ERROR: Failed to update user record:', updateError);
           throw new Error('Failed to update user');
         }

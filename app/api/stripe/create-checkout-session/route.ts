@@ -7,6 +7,7 @@ import { getSubscriptionDetails } from "@/server/subscription";
 import { getReferralBySlug } from "@/server/referral";
 import { capturePostHogEvent, hasAnalyticsConsent } from "@/lib/posthog-server";
 import { applySignupSuccess, hasSignupSuccess } from "@/lib/signup-redirect";
+import { resolveStripeCustomerForUser } from "@/server/stripe-customer";
 
 // This endpoint renders no page of ours — it redirects straight to Stripe — so
 // a signup marker arriving here would never reach the Google tag. Forward it to
@@ -54,35 +55,20 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         );
     }
 
-    // First, try to find existing customer
-    const existingCustomers = await stripe.customers.list({
+    const customer = await resolveStripeCustomerForUser({
+        userId: user.id,
         email: user.email,
-        limit: 1,
+        // Reaches the existing customer even when Stripe has not caught up with a
+        // recent email change, so checkout does not mint a duplicate.
+        previousEmail: subscriptionDetails?.billingEmail ?? undefined,
+        createIfMissing: true,
+        synchronizeEmail: true,
     });
-
-    let customerId: string;
-    let isFirstOrder = false;
-
-    if (existingCustomers.data.length > 0) {
-        // Use existing customer
-        customerId = existingCustomers.data[0].id;
-        
-        // Check if customer has any previous subscriptions
-        const subscriptions = await stripe.subscriptions.list({
-            customer: customerId,
-            status: 'all', // Include all subscription statuses
-            limit: 1
-        });
-        
-        isFirstOrder = subscriptions.data.length === 0;
-    } else {
-        // Create new customer if none exists
-        const newCustomer = await stripe.customers.create({
-            email: user.email,
-        });
-        customerId = newCustomer.id;
-        isFirstOrder = true;
+    if (!customer) {
+        throw new Error('Unable to resolve Stripe customer');
     }
+
+    const customerId = customer.id;
 
     const prices = await stripe.prices.list({
         lookup_keys: [lookup_key],
@@ -119,6 +105,7 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         customer: customerId,
         metadata: {
             plan: lookup_key,
+            user_id: user.id,
             ...(referral && { referral_code: referral }),
             ...(promo_code && { promo_code: promo_code }),
             ...(analyticsConsent && {
@@ -156,6 +143,11 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         if (trialDays > 0) {
             sessionConfig.subscription_data = {
                 trial_period_days: trialDays,
+                metadata: { user_id: user.id },
+            };
+        } else {
+            sessionConfig.subscription_data = {
+                metadata: { user_id: user.id },
             };
         }
     }
