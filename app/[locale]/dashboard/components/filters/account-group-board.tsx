@@ -63,6 +63,7 @@ export function AccountGroupBoard() {
   const setTradesStore = useTradesStore(state => state.setTrades)
   const existingAccounts = useUserStore(state => state.accounts)
   const setAccounts = useUserStore(state => state.setAccounts)
+  const setGroups = useUserStore(state => state.setGroups)
   const {
     saveGroup,
     renameGroup,
@@ -326,6 +327,14 @@ export function AccountGroupBoard() {
       if (setAccounts) {
         setAccounts(existingAccounts.filter((acc) => acc.id !== account.id))
       }
+      // Grouped accounts are rendered from `groups[].accounts`, so the board
+      // keeps showing the deleted account until the group membership is pruned
+      setGroups(
+        groups.map(group => ({
+          ...group,
+          accounts: group.accounts.filter(acc => acc.id !== account.id),
+        })),
+      )
       await refreshTradesOnly({ force: false })
       setSelectedAccountIds(prev => prev.filter(id => id !== account.id))
       toast.success(t("common.success"), {
@@ -338,7 +347,7 @@ export function AccountGroupBoard() {
       })
     }
     setDeletingAccountId(null)
-  }, [existingAccounts, refreshTradesOnly, setAccounts, setTradesStore, t, trades])
+  }, [existingAccounts, groups, refreshTradesOnly, setAccounts, setGroups, setTradesStore, t, trades])
 
   const confirmDeleteAccount = useCallback(async () => {
     if (!accountToDelete) return

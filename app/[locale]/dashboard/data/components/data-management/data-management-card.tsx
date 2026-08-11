@@ -36,6 +36,8 @@ export function DataManagementCard() {
   const user = useUserStore((state) => state.user)
   const accounts = useUserStore((state) => state.accounts)
   const setAccounts = useUserStore((state) => state.setAccounts)
+  const groups = useUserStore((state) => state.groups)
+  const setGroups = useUserStore((state) => state.setGroups)
   const trades = useTradesStore((state) => state.trades)
   const setTradesStore = useTradesStore((state) => state.setTrades)
 
@@ -95,6 +97,12 @@ export function DataManagementCard() {
       if (accounts && setAccounts) {
         setAccounts(accounts.filter((acc) => !accountsToDelete.includes(acc.number)))
       }
+      setGroups(
+        groups.map((group) => ({
+          ...group,
+          accounts: group.accounts.filter((acc) => !accountsToDelete.includes(acc.number)),
+        }))
+      )
       // Lightweight server cache update
       await refreshTradesOnly({ force: false })
       setSelectedAccounts([])
@@ -109,7 +117,7 @@ export function DataManagementCard() {
       setDeleteLoading(false)
       setDeleteDialogOpen(false)
     }
-  }, [user, deleteMode, groupedTrades, selectedAccounts, trades, setTradesStore, accounts, setAccounts, refreshTradesOnly, t])
+  }, [user, deleteMode, groupedTrades, selectedAccounts, trades, setTradesStore, accounts, setAccounts, groups, setGroups, refreshTradesOnly, t])
 
   const handleDeleteInstrument = useCallback(async (accountNumber: string, instrumentGroup: string) => {
     try {
