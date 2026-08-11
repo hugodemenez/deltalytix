@@ -3,9 +3,6 @@ title: Métriques
 description: Statistiques de synthèse, courbes d’équité et métriques de performance par compte.
 order: 7
 ---
-
-# Métriques
-
 Calculez des analyses de performance à partir des trades de l’utilisateur authentifié.
 
 Tous les endpoints de métriques exigent le scope `metrics:read`.
@@ -15,6 +12,8 @@ Tous les endpoints de métriques exigent le scope `metrics:read`.
 ```http
 GET /api/v1/metrics/summary
 ```
+
+<DocsEndpointTry method="GET" path="/api/v1/metrics/summary" />
 
 Utilise les mêmes filtres que [`GET /api/v1/trades`](/docs/trades). Les statistiques proviennent de `calculateStatistics` et de la formule de profit factor du tableau de bord (gains et pertes bruts nets de commission).
 
@@ -60,6 +59,8 @@ curl "https://www.deltalytix.app/api/v1/metrics/summary?from=2026-01-01T00:00:00
 ```http
 GET /api/v1/metrics/equity
 ```
+
+<DocsEndpointTry method="GET" path="/api/v1/metrics/equity" />
 
 Construit des points d’équité journaliers via `computeEquityChartData`.
 
@@ -125,6 +126,8 @@ L’objet `accounts` est inclus lorsque `accountNumbers` est demandé.
 ```http
 GET /api/v1/metrics/accounts
 ```
+
+<DocsEndpointTry method="GET" path="/api/v1/metrics/accounts" />
 
 Exécute `computeMetricsForAccounts` pour tous les comptes de l’utilisateur.
 

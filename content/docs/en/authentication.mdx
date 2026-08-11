@@ -3,9 +3,6 @@ title: Authentication
 description: OAuth 2.0 authorization code with PKCE, personal access tokens, scopes, and token formats.
 order: 2
 ---
-
-# Authentication
-
 Deltalytix is its own OAuth 2.0 authorization server. Humans still sign in with Supabase; API tokens are minted and validated by Deltalytix.
 
 ## Token formats
@@ -61,6 +58,8 @@ GET /oauth/authorize
   &code_challenge_method=S256
 ```
 
+<DocsEndpointTry method="GET" path="/oauth/authorize" />
+
 | Query | Required | Notes |
 | --- | --- | --- |
 | `client_id` | Yes | Registered OAuth app |
@@ -86,6 +85,8 @@ https://your-app.example/callback?error=access_denied&state=…
 ### 2. Exchange the code for tokens
 
 `POST /api/oauth/token` accepts form-urlencoded or JSON.
+
+<DocsEndpointTry method="POST" path="/api/oauth/token" />
 
 ```bash
 curl -X POST https://www.deltalytix.app/api/oauth/token \
@@ -163,6 +164,8 @@ curl -X POST https://www.deltalytix.app/api/oauth/revoke \
     "client_secret": "dltx_secret_…"
   }'
 ```
+
+<DocsEndpointTry method="POST" path="/api/oauth/revoke" />
 
 Revocation always returns `200`, whether or not the token was found.
 

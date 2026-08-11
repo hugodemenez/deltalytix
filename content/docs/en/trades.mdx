@@ -3,9 +3,6 @@ title: Trades
 description: List and create trades with filters, pagination, and the shared import/dedupe pipeline.
 order: 3
 ---
-
-# Trades
-
 Manage the authenticated user’s trade history.
 
 ## List trades
@@ -15,6 +12,8 @@ GET /api/v1/trades
 ```
 
 **Scope:** `trades:read`
+
+<DocsEndpointTry method="GET" path="/api/v1/trades" />
 
 ### Query parameters
 
@@ -82,6 +81,8 @@ POST /api/v1/trades
 ```
 
 **Scope:** `trades:write`
+
+<DocsEndpointTry method="POST" path="/api/v1/trades" />
 
 Creates one or more trades using the same dedupe pipeline as the dashboard (`UUID v5` identity + `createMany` with `skipDuplicates`). Duplicate payloads are counted, not treated as hard failures.
 

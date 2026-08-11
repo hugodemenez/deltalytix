@@ -1,68 +1,25 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { useCurrentLocale } from "@/locales/landing-client"
 import { ChevronDown } from "lucide-react"
+import {
+  DocsRouteTry,
+  useDocsPlayground,
+} from "@/components/docs/playground-token"
+import {
+  DOCS_HTTP_METHODS,
+  type DocsOpenApiDocument,
+  type JsonSchema,
+  type OpenApiOperation,
+} from "@/components/docs/openapi-schema"
 
-type JsonSchema = Record<string, unknown>
-
-type OpenApiParameter = {
-  name?: string
-  in?: string
-  required?: boolean
-  description?: string
-  schema?: JsonSchema
-}
-
-type OpenApiOperation = {
-  summary?: string
-  description?: string
-  parameters?: OpenApiParameter[]
-  requestBody?: {
-    required?: boolean
-    description?: string
-    content?: Record<
-      string,
-      {
-        schema?: JsonSchema
-      }
-    >
-  }
-  responses?: Record<
-    string,
-    {
-      description?: string
-    }
-  >
-  security?: unknown[]
-}
-
-type OpenApiPathItem = Record<string, OpenApiOperation | undefined>
-
-export type DocsOpenApiDocument = {
-  openapi?: string
-  info?: {
-    title?: string
-    version?: string
-    description?: string
-  }
-  paths?: Record<string, OpenApiPathItem>
-}
+export type { DocsOpenApiDocument } from "@/components/docs/openapi-schema"
 
 type DocsOpenApiReferenceProps = {
   document?: DocsOpenApiDocument | null
   openApiUrl?: string
 }
-
-const HTTP_METHODS = [
-  "get",
-  "post",
-  "put",
-  "patch",
-  "delete",
-  "options",
-  "head",
-] as const
 
 const COPY = {
   en: {
@@ -80,6 +37,10 @@ const COPY = {
     required: "required",
     noSummary: "No summary",
     schemaOutline: "Schema outline",
+    multipartHint:
+      "This multipart upload can’t be tried from the browser panel — use curl or your HTTP client with a bearer token.",
+    formEncodedHint:
+      "This form-urlencoded route can’t be tried from the browser panel — use curl or your HTTP client.",
   },
   fr: {
     title: "Référence OpenAPI",
@@ -96,6 +57,10 @@ const COPY = {
     required: "requis",
     noSummary: "Aucun résumé",
     schemaOutline: "Aperçu du schéma",
+    multipartHint:
+      "Cet upload multipart ne peut pas être testé depuis le panneau navigateur — utilisez curl ou votre client HTTP avec un jeton bearer.",
+    formEncodedHint:
+      "Cette route form-urlencoded ne peut pas être testée depuis le panneau navigateur — utilisez curl ou votre client HTTP.",
   },
 } as const
 
@@ -170,11 +135,28 @@ function PathOperation({
 }) {
   const [open, setOpen] = useState(false)
   const bodyContent = operation.requestBody?.content
-  const bodyMedia = bodyContent
-    ? Object.entries(bodyContent)[0]
-    : undefined
+  const bodyEntries = Object.entries(bodyContent ?? {})
+  const jsonBodyMedia = bodyEntries.find(
+    ([mediaType]) =>
+      mediaType === "application/json" || mediaType.endsWith("+json"),
+  )
+  const bodyMedia = jsonBodyMedia ?? bodyEntries[0]
   const parameters = operation.parameters ?? []
   const responses = Object.entries(operation.responses ?? {})
+  const requiresAuth = !(
+    Array.isArray(operation.security) && operation.security.length === 0
+  )
+  const isMultipart =
+    Boolean(bodyMedia?.[0]?.includes("multipart")) ||
+    path === "/api/v1/imports"
+  const isFormEncoded =
+    !jsonBodyMedia &&
+    Boolean(bodyMedia?.[0]?.includes("application/x-www-form-urlencoded"))
+  const canTryInBrowser = !isMultipart && !isFormEncoded
+  const defaultBody =
+    method === "post" && canTryInBrowser
+      ? "{\n  \n}"
+      : undefined
 
   return (
     <div className="border-b border-black/10 dark:border-white/10">
@@ -299,6 +281,21 @@ function PathOperation({
               </ul>
             </div>
           ) : null}
+
+          {canTryInBrowser ? (
+            <DocsRouteTry
+              method={method}
+              path={path}
+              requiresAuth={requiresAuth}
+              defaultBody={defaultBody}
+              parameters={parameters}
+              hasBody={Boolean(bodyMedia)}
+            />
+          ) : (
+            <p className="text-xs text-black/55 dark:text-white/55">
+              {isMultipart ? labels.multipartHint : labels.formEncodedHint}
+            </p>
+          )}
         </div>
       ) : null}
     </div>
@@ -311,48 +308,15 @@ export function DocsOpenApiReference({
 }: DocsOpenApiReferenceProps) {
   const locale = useCurrentLocale()
   const labels = COPY[locale === "fr" ? "fr" : "en"]
-  const [document, setDocument] = useState<DocsOpenApiDocument | null>(
-    documentProp ?? null,
-  )
-  const [loading, setLoading] = useState(!documentProp)
-  const [error, setError] = useState<string | null>(null)
-
-  const loadDocument = useCallback(async () => {
-    if (documentProp) {
-      setDocument(documentProp)
-      setLoading(false)
-      setError(null)
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await fetch(openApiUrl)
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
-      }
-      const json = (await response.json()) as DocsOpenApiDocument
-      setDocument(json)
-    } catch {
-      setError(labels.error)
-      setDocument(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [documentProp, labels.error, openApiUrl])
-
-  useEffect(() => {
-    void loadDocument()
-  }, [loadDocument])
-
-  useEffect(() => {
-    if (documentProp) {
-      setDocument(documentProp)
-      setLoading(false)
-      setError(null)
-    }
-  }, [documentProp])
+  const {
+    openApiDocument,
+    openApiLoading,
+    openApiError,
+    reloadOpenApi,
+  } = useDocsPlayground()
+  const document = documentProp ?? openApiDocument
+  const loading = documentProp ? false : openApiLoading
+  const error = documentProp || !openApiError ? null : labels.error
 
   const operations = useMemo(() => {
     const paths = document?.paths ?? {}
@@ -364,9 +328,13 @@ export function DocsOpenApiReference({
 
     for (const [path, pathItem] of Object.entries(paths)) {
       if (!pathItem) continue
-      for (const method of HTTP_METHODS) {
+      for (const method of DOCS_HTTP_METHODS) {
         const operation = pathItem[method]
-        if (operation && typeof operation === "object") {
+        if (
+          operation &&
+          typeof operation === "object" &&
+          !Array.isArray(operation)
+        ) {
           rows.push({ path, method, operation })
         }
       }
@@ -376,7 +344,7 @@ export function DocsOpenApiReference({
   }, [document])
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 space-y-8">
       <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {document?.info?.version ? (
           <p className="font-mono text-xs text-black/45 dark:text-white/45">
@@ -407,7 +375,7 @@ export function DocsOpenApiReference({
           <p className="text-sm text-black/55 dark:text-white/55">{error}</p>
           <button
             type="button"
-            onClick={() => void loadDocument()}
+            onClick={reloadOpenApi}
             className="text-sm underline-offset-4 hover:underline"
           >
             {labels.retry}

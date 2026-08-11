@@ -3,9 +3,6 @@ title: Erreurs
 description: Enveloppe d’erreur REST, codes de statut HTTP et réponses d’erreur OAuth.
 order: 8
 ---
-
-# Erreurs
-
 ## Enveloppe d’erreur REST
 
 Les erreurs de l’API v1 utilisent un corps JSON cohérent :
@@ -64,9 +61,9 @@ WWW-Authenticate: Bearer resource_metadata="https://www.deltalytix.app/.well-kno
 ```json
 {
   "error": "unsupported_service",
-  "message": "Only IBKR Flex is supported in this API version",
+  "message": "Only server-syncable connection services are supported in v1",
   "details": {
-    "supported": ["ibkr"]
+    "supported": ["ibkr", "tradovate", "dxfeed", "rithmic-protocol"]
   }
 }
 ```

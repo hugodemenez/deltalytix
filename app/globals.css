@@ -369,24 +369,32 @@
     padding: 1rem 0;
   }
 
-  /* rehype-pretty-code dual themes: shiki inlines --shiki-light/--shiki-dark
-     per token; pick the one matching the active color scheme. */
+  /* rehype-pretty-code dual themes: keep Shiki's syntax foregrounds, but use
+     one neutral surface instead of inheriting its background onto each token. */
+  [data-rehype-pretty-code-figure] {
+    --docs-code-surface: oklch(0.97 0 0);
+  }
+
+  .dark [data-rehype-pretty-code-figure] {
+    --docs-code-surface: oklch(0.18 0 0);
+  }
+
   [data-rehype-pretty-code-figure] code span[style*="--shiki-light"] {
     color: var(--shiki-light);
-    background-color: var(--shiki-light-bg);
+    background-color: transparent !important;
   }
 
   .dark [data-rehype-pretty-code-figure] code span[style*="--shiki-dark"] {
     color: var(--shiki-dark);
-    background-color: var(--shiki-dark-bg);
+    background-color: transparent !important;
   }
 
   [data-rehype-pretty-code-figure] pre[style*="--shiki-light-bg"] {
-    background-color: var(--shiki-light-bg);
+    background-color: var(--docs-code-surface);
   }
 
   .dark [data-rehype-pretty-code-figure] pre[style*="--shiki-dark-bg"] {
-    background-color: var(--shiki-dark-bg);
+    background-color: var(--docs-code-surface);
   }
 
   pre [data-line] {
@@ -443,6 +451,39 @@
     display: block;
     overflow-x: auto;
     border-radius: 0.375rem;
+  }
+
+  .prose [data-rehype-pretty-code-figure] {
+    margin: 1.5rem 0;
+    overflow: hidden;
+    border: 1px solid oklch(0 0 0 / 0.1);
+    border-radius: 0.375rem;
+    background-color: var(--docs-code-surface);
+  }
+
+  .dark .prose [data-rehype-pretty-code-figure] {
+    border-color: oklch(1 0 0 / 0.1);
+  }
+
+  .prose [data-rehype-pretty-code-figure] pre {
+    margin: 0;
+    padding: 1rem 0;
+    overflow-x: auto;
+    background-color: var(--docs-code-surface) !important;
+  }
+
+  .prose [data-rehype-pretty-code-figure] pre code {
+    box-sizing: border-box;
+    width: max-content;
+    min-width: 100%;
+    padding: 0;
+    overflow: visible;
+    border-radius: 0;
+    background-color: var(--docs-code-surface) !important;
+  }
+
+  .prose [data-rehype-pretty-code-figure] pre [data-line]:not([data-highlighted-line]) {
+    background-color: transparent !important;
   }
 
   /* MDX Typography Overrides */

@@ -3,9 +3,6 @@ title: Metrics
 description: Summary statistics, equity curves, and per-account performance metrics.
 order: 7
 ---
-
-# Metrics
-
 Compute performance analytics from the authenticated user’s trades.
 
 All metrics endpoints require the `metrics:read` scope.
@@ -15,6 +12,8 @@ All metrics endpoints require the `metrics:read` scope.
 ```http
 GET /api/v1/metrics/summary
 ```
+
+<DocsEndpointTry method="GET" path="/api/v1/metrics/summary" />
 
 Uses the same filters as [`GET /api/v1/trades`](/docs/trades). Statistics come from `calculateStatistics` plus the dashboard profit-factor formula (gross wins and losses net of commission).
 
@@ -60,6 +59,8 @@ curl "https://www.deltalytix.app/api/v1/metrics/summary?from=2026-01-01T00:00:00
 ```http
 GET /api/v1/metrics/equity
 ```
+
+<DocsEndpointTry method="GET" path="/api/v1/metrics/equity" />
 
 Builds daily equity points via `computeEquityChartData`.
 
@@ -125,6 +126,8 @@ The `accounts` object is included when `accountNumbers` is requested.
 ```http
 GET /api/v1/metrics/accounts
 ```
+
+<DocsEndpointTry method="GET" path="/api/v1/metrics/accounts" />
 
 Runs `computeMetricsForAccounts` for all of the user’s accounts.
 

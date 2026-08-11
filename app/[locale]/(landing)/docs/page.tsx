@@ -8,8 +8,12 @@ import { getAllDocs } from "@/lib/docs"
 import { LANDING_SECTION_CONTAINER_CLASSNAME } from "../components/landing-section-container"
 import { DocsPageShell } from "@/components/docs/docs-page-shell"
 import type { DocsNavItem } from "@/components/docs/docs-section-nav"
-import { DocsApiPlayground } from "@/components/docs/api-playground"
+import { MdxCodeCopy } from "@/components/mdx/code-copy"
 import { DocsOpenApiReference } from "@/components/docs/openapi-reference"
+import {
+  DocsBearerTokenPanel,
+  DocsPlaygroundTokenProvider,
+} from "@/components/docs/playground-token"
 import { siteUrl } from "@/lib/site-url"
 import { truncateForSocialDescription } from "@/lib/og/site-metadata"
 
@@ -76,11 +80,8 @@ export async function generateMetadata({
 }
 
 /**
- * Cache the static docs shell + MDX. The playground / OpenAPI panels are
- * client components that call server actions and fetch `/openapi.json` at
- * runtime, so they do not need this page to be request-time dynamic.
- * Without `"use cache"`, Cache Components prerender fails on unstable
- * `Date.now()` in the landing tree (Vercel production build).
+ * Cache the static docs shell + MDX. Playground / OpenAPI panels are client
+ * components that call server actions and fetch `/openapi.json` at runtime.
  */
 async function CachedDocsPage({ locale }: { locale: string }) {
   "use cache"
@@ -92,7 +93,6 @@ async function CachedDocsPage({ locale }: { locale: string }) {
   const docs = await getAllDocs(locale)
 
   const navItems: DocsNavItem[] = [
-    { id: "try-it", title: t("docs.tryIt") },
     ...docs.map((doc) => ({
       id: doc.slug,
       title: doc.meta.title,
@@ -126,58 +126,56 @@ async function CachedDocsPage({ locale }: { locale: string }) {
         </div>
       </header>
 
-      <DocsPageShell
-        navItems={navItems}
-        navLabel={t("docs.onThisPage")}
-        jumpLabel={t("docs.jumpToSection")}
-      >
-        <section
-          id="try-it"
-          className="scroll-mt-24 border-b border-black/10 pb-12 dark:border-white/10 sm:pb-16"
+      <DocsPlaygroundTokenProvider>
+        <DocsPageShell
+          navItems={navItems}
+          navLabel={t("docs.onThisPage")}
+          jumpLabel={t("docs.jumpToSection")}
+          closeLabel={t("common.close")}
         >
-          <h2 className="text-balance text-2xl font-normal tracking-[-0.03em] sm:text-3xl">
-            {t("docs.tryIt")}
-          </h2>
-          <div className="mt-6">
-            <DocsApiPlayground />
-          </div>
-        </section>
-
-        {docs.map((doc) => (
-          <section
-            key={doc.slug}
-            id={doc.slug}
-            className="scroll-mt-24 border-b border-black/10 py-12 dark:border-white/10 sm:py-16"
-          >
-            <h2 className="text-balance text-2xl font-normal tracking-[-0.03em] sm:text-3xl">
-              {doc.meta.title}
-            </h2>
-            {doc.meta.description ? (
-              <p className="mt-3 max-w-2xl text-pretty leading-relaxed text-black/60 dark:text-white/60">
-                {doc.meta.description}
-              </p>
-            ) : null}
-            <div className={`mt-8 ${DOCS_PROSE_CLASSNAME}`}>{doc.content}</div>
-          </section>
-        ))}
-
-        <section id="openapi" className="scroll-mt-24 py-12 sm:py-16">
-          <h2 className="text-balance text-2xl font-normal tracking-[-0.03em] sm:text-3xl">
-            {t("docs.openApi")}
-          </h2>
-          <p className="mt-3 max-w-2xl text-pretty leading-relaxed text-black/60 dark:text-white/60">
-            <Link
-              href="/openapi.json"
-              className="underline-offset-4 hover:underline"
+          {docs.map((doc) => (
+            <section
+              key={doc.slug}
+              id={doc.slug}
+              className="scroll-mt-24 border-b border-black/10 py-12 dark:border-white/10 sm:py-16"
             >
-              {t("docs.openApiJson")}
-            </Link>
-          </p>
-          <div className="mt-6">
-            <DocsOpenApiReference />
-          </div>
-        </section>
-      </DocsPageShell>
+              <h2 className="text-balance text-2xl font-normal tracking-[-0.03em] sm:text-3xl">
+                {doc.meta.title}
+              </h2>
+              {doc.meta.description ? (
+                <p className="mt-3 max-w-2xl text-pretty leading-relaxed text-black/60 dark:text-white/60">
+                  {doc.meta.description}
+                </p>
+              ) : null}
+              <div className={`mt-8 ${DOCS_PROSE_CLASSNAME}`}>
+                {doc.slug === "authentication" ? (
+                  <div className="not-prose mb-8">
+                    <DocsBearerTokenPanel />
+                  </div>
+                ) : null}
+                <MdxCodeCopy>{doc.content}</MdxCodeCopy>
+              </div>
+            </section>
+          ))}
+
+          <section id="openapi" className="scroll-mt-24 py-12 sm:py-16">
+            <h2 className="text-balance text-2xl font-normal tracking-[-0.03em] sm:text-3xl">
+              {t("docs.openApi")}
+            </h2>
+            <p className="mt-3 max-w-2xl text-pretty leading-relaxed text-black/60 dark:text-white/60">
+              <Link
+                href="/openapi.json"
+                className="underline-offset-4 hover:underline"
+              >
+                {t("docs.openApiJson")}
+              </Link>
+            </p>
+            <div className="mt-6">
+              <DocsOpenApiReference />
+            </div>
+          </section>
+        </DocsPageShell>
+      </DocsPlaygroundTokenProvider>
     </main>
   )
 }

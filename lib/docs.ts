@@ -81,7 +81,7 @@ export const getAllDocMetadata = cache(async (locale: string): Promise<DocMetada
 
 /** Drop the file's top-level `# Title` so single-page docs can own the section heading. */
 function stripLeadingMarkdownH1(rawContent: string): string {
-  return rawContent.replace(/^#\s+[^\n]*\n+/, '')
+  return rawContent.replace(/^\s*#\s+[^\n]*\n+/, '')
 }
 
 export const getDoc = cache(async (slug: string, locale: string): Promise<Doc | null> => {

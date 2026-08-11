@@ -3,9 +3,6 @@ title: Authentification
 description: OAuth 2.0 authorization code avec PKCE, personal access tokens, scopes et formats de jetons.
 order: 2
 ---
-
-# Authentification
-
 Deltalytix est son propre serveur d’autorisation OAuth 2.0. Les humains se connectent toujours via Supabase ; les jetons API sont émis et validés par Deltalytix.
 
 ## Formats de jetons
@@ -61,6 +58,8 @@ GET /oauth/authorize
   &code_challenge_method=S256
 ```
 
+<DocsEndpointTry method="GET" path="/oauth/authorize" />
+
 | Query | Requis | Notes |
 | --- | --- | --- |
 | `client_id` | Oui | Application OAuth enregistrée |
@@ -86,6 +85,8 @@ https://your-app.example/callback?error=access_denied&state=…
 ### 2. Échanger le code contre des jetons
 
 `POST /api/oauth/token` accepte du form-urlencoded ou du JSON.
+
+<DocsEndpointTry method="POST" path="/api/oauth/token" />
 
 ```bash
 curl -X POST https://www.deltalytix.app/api/oauth/token \
@@ -163,6 +164,8 @@ curl -X POST https://www.deltalytix.app/api/oauth/revoke \
     "client_secret": "dltx_secret_…"
   }'
 ```
+
+<DocsEndpointTry method="POST" path="/api/oauth/revoke" />
 
 La révocation renvoie toujours `200`, que le jeton ait été trouvé ou non.
 

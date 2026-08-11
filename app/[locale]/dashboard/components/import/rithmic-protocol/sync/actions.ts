@@ -166,11 +166,12 @@ export async function authenticateRithmicProtocol(
   systemName: string,
   historyStartDate: string,
   gatewayId?: string,
+  options?: { userId?: string },
 ): Promise<RithmicProtocolActionResult> {
   let authLogContext: string | null = null
 
   try {
-    const userId = await getUserId()
+    const userId = options?.userId ?? (await getUserId())
     if (!userId) {
       return { error: 'USER_NOT_AUTHENTICATED' }
     }
@@ -232,6 +233,7 @@ export async function authenticateRithmicProtocol(
     const connection = await storeRithmicProtocolToken(
       JSON.stringify(stored),
       username,
+      { userId },
     )
 
     await upsertAccountsForNumbers(userId, accountIds, connection.id)
@@ -296,8 +298,9 @@ async function persistRithmicProtocolCredentials(
 export async function storeRithmicProtocolToken(
   tokenJson: string,
   accountId: string,
+  options?: { userId?: string },
 ) {
-  const userId = await getUserId()
+  const userId = options?.userId ?? (await getUserId())
   if (!userId) throw new Error('Not authenticated')
 
   return persistRithmicProtocolCredentials(userId, tokenJson, accountId)

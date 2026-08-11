@@ -9,6 +9,7 @@ type DocsPageShellProps = {
   navItems: DocsNavItem[]
   navLabel: string
   jumpLabel: string
+  closeLabel: string
   children: ReactNode
 }
 
@@ -19,6 +20,7 @@ export function DocsPageShell({
   navItems,
   navLabel,
   jumpLabel,
+  closeLabel,
   children,
 }: DocsPageShellProps) {
   return (
@@ -30,6 +32,7 @@ export function DocsPageShell({
           items={navItems}
           label={navLabel}
           jumpLabel={jumpLabel}
+          closeLabel={closeLabel}
         />
         <div className="min-w-0 flex-1 pt-8 lg:pt-0">{children}</div>
       </div>

@@ -4,6 +4,7 @@ import matter from 'gray-matter'
 import { compileMDX } from 'next-mdx-remote/rsc'
 import { cache } from 'react'
 import { mdxTableComponents } from '@/components/mdx/table'
+import { DocsNarrativeRouteTry } from '@/components/docs/narrative-route-try'
 
 const postsDirectory = path.join(process.cwd(), 'content/updates')
 
@@ -82,7 +83,10 @@ export async function compileMdxSource(rawContent: string) {
 
   const { content } = await compileMDX({
     source: rawContent,
-    components: mdxTableComponents,
+    components: {
+      ...mdxTableComponents,
+      DocsEndpointTry: DocsNarrativeRouteTry,
+    },
     options: {
       mdxOptions: {
         remarkPlugins: [

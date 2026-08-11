@@ -1472,20 +1472,29 @@ export async function storeTradovateToken(
   accessToken: string,
   expiresAt: string,
   environment: TradovateEnvironment = 'demo',
-  accountId: string = 'default'
+  accountId: string = 'default',
+  options?: { userId?: string },
 ) {
   try {
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    let userId = options?.userId ?? null
+    if (!userId) {
+      const supabase = await createClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (authError || !user) {
+      if (authError || !user) {
+        return { error: 'User not authenticated' }
+      }
+      userId = user.id
+    }
+    if (!userId) {
       return { error: 'User not authenticated' }
     }
+    const resolvedUserId = userId
 
     const existingConnection = await prisma.connection.findUnique({
       where: {
         userId_service_externalId: {
-          userId: user.id,
+          userId: resolvedUserId,
           service: 'tradovate',
           externalId: accountId
         }
@@ -1497,7 +1506,7 @@ export async function storeTradovateToken(
     await prisma.connection.upsert({
       where: {
         userId_service_externalId: {
-          userId: user.id,
+          userId: resolvedUserId,
           service: 'tradovate',
           externalId: accountId
         }
@@ -1510,7 +1519,7 @@ export async function storeTradovateToken(
         updatedAt: new Date()
       },
       create: {
-        userId: user.id,
+        userId: resolvedUserId,
         service: 'tradovate',
         externalId: accountId,
         token: encryptConnectionToken(accessToken),
@@ -1522,7 +1531,7 @@ export async function storeTradovateToken(
 
     if (!existingConnection) {
       await capturePostHogEvent({
-        distinctId: user.id,
+        distinctId: resolvedUserId,
         event: 'integration_connected',
         properties: {
           integration: 'tradovate',
@@ -1692,14 +1701,17 @@ export async function setCustomTradovateToken(
   accessToken: string,
   expiresAt: string,
   accountId: string = 'custom',
-  environment: TradovateEnvironment = 'demo'
+  environment: TradovateEnvironment = 'demo',
+  options?: { userId?: string },
 ) {
   try {
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (!options?.userId) {
+      const supabase = await createClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (authError || !user) {
-      return { error: 'User not authenticated' }
+      if (authError || !user) {
+        return { error: 'User not authenticated' }
+      }
     }
 
     // Validate token format (basic check)
@@ -1714,7 +1726,13 @@ export async function setCustomTradovateToken(
     }
 
     // Store the custom token
-    const result = await storeTradovateToken(accessToken, expiresAt, environment, accountId)
+    const result = await storeTradovateToken(
+      accessToken,
+      expiresAt,
+      environment,
+      accountId,
+      { userId: options?.userId },
+    )
     
     if (result.error) {
       return result

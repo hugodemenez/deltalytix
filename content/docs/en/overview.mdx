@@ -3,9 +3,6 @@ title: Overview
 description: What the Deltalytix Public API offers, the base URL, versioning, and shared conventions.
 order: 1
 ---
-
-# Overview
-
 The Deltalytix Public API lets you read and write trading data, manage broker connections, import files, and compute performance metrics programmatically. It is designed for personal scripts, third-party integrations, and first-party OAuth apps.
 
 ## Base URL
@@ -35,7 +32,7 @@ Machine-readable discovery:
 | Profile | Read the authenticated user (`GET /api/v1/me`) |
 | Trades | List and create trades |
 | Accounts | List accounts, optionally with performance metrics |
-| Connections | List connections, create IBKR Flex connections, trigger sync |
+| Connections | List connections; create and sync `ibkr`, `tradovate`, `dxfeed`, `rithmic-protocol` |
 | Imports | Upload CSV/XLSX files with AI or platform-specific parsers |
 | Metrics | Summary statistics, equity curves, per-account metrics |
 
@@ -52,7 +49,7 @@ Tokens are either:
 - OAuth access tokens from the authorization code flow (`dltx_at_…`)
 - Personal access tokens created in the dashboard (`dltx_pat_…`)
 
-See [Authentication](/docs/authentication) for scopes, OAuth, and PATs.
+See [Authentication](#authentication) for scopes, OAuth, and PATs.
 
 ## Shared conventions
 
@@ -110,4 +107,6 @@ const res = await fetch("https://www.deltalytix.app/api/v1/me", {
 const me = await res.json();
 ```
 
-Next: [Authentication](/docs/authentication).
+<DocsEndpointTry method="GET" path="/api/v1/me" />
+
+Next: [Authentication](#authentication).

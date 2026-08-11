@@ -148,6 +148,25 @@ export function buildOpenApiDocument(request?: NextRequest) {
         post: {
           summary: "Revoke an access or refresh token",
           security: [],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["token"],
+                  properties: {
+                    token: {
+                      type: "string",
+                      description: "Access or refresh token to revoke",
+                    },
+                    client_id: { type: "string" },
+                    client_secret: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
           responses: {
             "200": { description: "Always succeeds" },
           },
@@ -307,26 +326,102 @@ export function buildOpenApiDocument(request?: NextRequest) {
           responses: { "200": { description: "Connections" } },
         },
         post: {
-          summary: "Create a connection (IBKR Flex)",
+          summary: "Create a server-syncable connection",
+          description:
+            "Create an IBKR Flex, Tradovate, DxFeed, or Rithmic Protocol connection. Request body is discriminated by `service`.",
           security: [{ oauth2: ["connections:write"] }, { bearerPat: [] }],
           requestBody: {
             required: true,
             content: {
               "application/json": {
                 schema: {
-                  type: "object",
-                  required: ["service", "token", "queryId"],
-                  properties: {
-                    service: { type: "string", enum: ["ibkr"] },
-                    token: { type: "string" },
-                    queryId: { type: "string" },
-                  },
+                  oneOf: [
+                    {
+                      type: "object",
+                      required: ["service", "token", "queryId"],
+                      properties: {
+                        service: { type: "string", enum: ["ibkr"] },
+                        token: {
+                          type: "string",
+                          description: "IBKR Flex Web Service token",
+                        },
+                        queryId: {
+                          type: "string",
+                          description: "IBKR Flex Query ID",
+                        },
+                      },
+                    },
+                    {
+                      type: "object",
+                      required: ["service", "accessToken", "expiresAt"],
+                      properties: {
+                        service: { type: "string", enum: ["tradovate"] },
+                        accessToken: { type: "string" },
+                        expiresAt: {
+                          type: "string",
+                          format: "date-time",
+                          description: "Token expiration (ISO 8601)",
+                        },
+                        environment: {
+                          type: "string",
+                          enum: ["demo", "live"],
+                          default: "demo",
+                        },
+                        externalId: {
+                          type: "string",
+                          description:
+                            "Connection external id (defaults to `default`)",
+                        },
+                      },
+                    },
+                    {
+                      type: "object",
+                      required: ["service", "login", "password", "propFirmId"],
+                      properties: {
+                        service: { type: "string", enum: ["dxfeed"] },
+                        login: { type: "string" },
+                        password: { type: "string", format: "password" },
+                        propFirmId: {
+                          type: "string",
+                          description:
+                            "DxFeed/Volumetrica prop firm id (e.g. miltraders, myfundedfutures)",
+                        },
+                      },
+                    },
+                    {
+                      type: "object",
+                      required: [
+                        "service",
+                        "username",
+                        "password",
+                        "systemName",
+                        "historyStartDate",
+                      ],
+                      properties: {
+                        service: {
+                          type: "string",
+                          enum: ["rithmic-protocol"],
+                        },
+                        username: { type: "string" },
+                        password: { type: "string", format: "password" },
+                        systemName: { type: "string" },
+                        historyStartDate: {
+                          type: "string",
+                          description: "ISO date (YYYY-MM-DD) for fill history start",
+                        },
+                        gatewayId: {
+                          type: "string",
+                          description: "Optional gateway id (e.g. core, nyc, test)",
+                        },
+                      },
+                    },
+                  ],
                 },
               },
             },
           },
           responses: {
-            "201": { description: "Connection created" },
+            "201": { description: "Connection created (initial sync attempted)" },
             "422": { description: "Unsupported service" },
           },
         },
@@ -334,12 +429,15 @@ export function buildOpenApiDocument(request?: NextRequest) {
       "/api/v1/connections/{id}/sync": {
         post: {
           summary: "Trigger a connection sync",
+          description:
+            "Supported services: ibkr, tradovate, dxfeed, rithmic-protocol.",
           security: [{ oauth2: ["connections:write"] }, { bearerPat: [] }],
           parameters: [
             { name: "id", in: "path", required: true, schema: { type: "string" } },
           ],
           responses: {
             "200": { description: "Sync completed" },
+            "422": { description: "Unsupported service" },
           },
         },
       },

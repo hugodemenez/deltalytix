@@ -3,9 +3,6 @@ title: Trades
 description: Lister et créer des trades avec filtres, pagination et le pipeline partagé d’import / déduplication.
 order: 3
 ---
-
-# Trades
-
 Gérez l’historique de trades de l’utilisateur authentifié.
 
 ## Lister les trades
@@ -15,6 +12,8 @@ GET /api/v1/trades
 ```
 
 **Scope :** `trades:read`
+
+<DocsEndpointTry method="GET" path="/api/v1/trades" />
 
 ### Paramètres de requête
 
@@ -82,6 +81,8 @@ POST /api/v1/trades
 ```
 
 **Scope :** `trades:write`
+
+<DocsEndpointTry method="POST" path="/api/v1/trades" />
 
 Crée un ou plusieurs trades via le même pipeline de déduplication que le tableau de bord (`UUID v5` + `createMany` avec `skipDuplicates`). Les doublons sont comptés, pas traités comme des erreurs dures.
 

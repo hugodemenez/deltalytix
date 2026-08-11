@@ -3,9 +3,6 @@ title: Errors
 description: REST error envelope, HTTP status codes, and OAuth error responses.
 order: 8
 ---
-
-# Errors
-
 ## REST error envelope
 
 API v1 errors use a consistent JSON body:
@@ -64,9 +61,9 @@ WWW-Authenticate: Bearer resource_metadata="https://www.deltalytix.app/.well-kno
 ```json
 {
   "error": "unsupported_service",
-  "message": "Only IBKR Flex is supported in this API version",
+  "message": "Only server-syncable connection services are supported in v1",
   "details": {
-    "supported": ["ibkr"]
+    "supported": ["ibkr", "tradovate", "dxfeed", "rithmic-protocol"]
   }
 }
 ```

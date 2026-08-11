@@ -1,12 +1,20 @@
 ---
 title: Connexions
-description: Lister les connexions broker, créer une connexion IBKR Flex et déclencher une synchronisation serveur.
+description: Lister les connexions broker, créer une connexion synchronisable côté serveur et déclencher une sync.
 order: 5
 ---
-
-# Connexions
-
 Les connexions broker synchronisent les trades dans Deltalytix. Les jetons bruts du broker ne sont jamais renvoyés par l’API.
+
+Services synchronisables côté serveur pour **création** et **sync** :
+
+| `service` | Champs de création | Notes |
+| --- | --- | --- |
+| `ibkr` | `token`, `queryId` | IBKR Flex Web Service |
+| `tradovate` | `accessToken`, `expiresAt`, optionnel `environment`, `externalId` | Jeton d’accès API Tradovate |
+| `dxfeed` | `login`, `password`, `propFirmId` | Prop firms Volumetrica / DxFeed |
+| `rithmic-protocol` | `username`, `password`, `systemName`, `historyStartDate`, optionnel `gatewayId` | Passerelle Rithmic Protocol |
+
+Les services classiques `rithmic`, `thor` et `etp` peuvent apparaître dans `GET`, mais ne sont ni créables ni synchronisables via cette API.
 
 ## Lister les connexions
 
@@ -15,6 +23,8 @@ GET /api/v1/connections
 ```
 
 **Scope :** `connections:read`
+
+<DocsEndpointTry method="GET" path="/api/v1/connections" />
 
 ### Exemple
 
@@ -44,13 +54,13 @@ curl https://www.deltalytix.app/api/v1/connections \
 | Champ | Description |
 | --- | --- |
 | `id` | Identifiant de connexion |
-| `service` | Clé du fournisseur (`ibkr`, …) |
+| `service` | Clé du fournisseur (`ibkr`, `tradovate`, `dxfeed`, `rithmic-protocol`, …) |
 | `externalId` | Identifiant côté fournisseur (jamais un secret) |
 | `lastSyncedAt` | Horodatage de la dernière sync réussie, ou `null` |
 | `environment` | ex. live / demo le cas échéant |
 | `accountNumbers` | Numéros de comptes Deltalytix liés |
 
-## Créer une connexion IBKR Flex
+## Créer une connexion
 
 ```http
 POST /api/v1/connections
@@ -58,9 +68,11 @@ POST /api/v1/connections
 
 **Scope :** `connections:write`
 
-Service MVP supporté : **IBKR Flex**.
+<DocsEndpointTry method="POST" path="/api/v1/connections" />
 
-### Corps de requête
+Le corps est discriminant sur `service`. En cas de succès, l’API stocke les identifiants (chiffrés), lie les comptes si disponibles, tente une sync initiale, et renvoie la connexion **sans** secrets.
+
+### IBKR Flex
 
 ```json
 {
@@ -69,8 +81,6 @@ Service MVP supporté : **IBKR Flex**.
   "queryId": "<flex query id>"
 }
 ```
-
-### Exemple
 
 ```bash
 curl -X POST https://www.deltalytix.app/api/v1/connections \
@@ -83,31 +93,71 @@ curl -X POST https://www.deltalytix.app/api/v1/connections \
   }'
 ```
 
-```js
-const res = await fetch("https://www.deltalytix.app/api/v1/connections", {
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${accessToken}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    service: "ibkr",
-    token: process.env.IBKR_FLEX_TOKEN,
-    queryId: process.env.IBKR_FLEX_QUERY_ID,
-  }),
-});
+### Tradovate
+
+```json
+{
+  "service": "tradovate",
+  "accessToken": "<tradovate access token>",
+  "expiresAt": "2026-03-16T12:00:00.000Z",
+  "environment": "demo",
+  "externalId": "default"
+}
 ```
 
-En cas de succès, l’API crée la connexion et les comptes liés, lance une sync initiale, et renvoie l’objet connexion (sans le token Flex).
+`environment` vaut `demo` ou `live` (défaut `demo`). `externalId` vaut `default` par défaut.
+
+### DxFeed
+
+```json
+{
+  "service": "dxfeed",
+  "login": "trader@example.com",
+  "password": "…",
+  "propFirmId": "miltraders"
+}
+```
+
+`propFirmId` doit être un id de firme activé (par ex. `miltraders`, `myfundedfutures`, `phoenixtraderfunding`).
+
+### Rithmic Protocol
+
+```json
+{
+  "service": "rithmic-protocol",
+  "username": "your-username",
+  "password": "…",
+  "systemName": "Rithmic Paper Trading",
+  "historyStartDate": "2026-01-01",
+  "gatewayId": "core"
+}
+```
+
+`historyStartDate` est au format `YYYY-MM-DD`. `gatewayId` est optionnel (ex. `core`, `nyc`, `test`).
+
+### Réponse `201`
+
+```json
+{
+  "id": "conn_01HZX…",
+  "service": "ibkr",
+  "externalId": "flex-query-123",
+  "accountNumbers": ["U1234567"],
+  "imported": 42,
+  "duplicates": 3
+}
+```
+
+Si la connexion est enregistrée mais que la sync initiale échoue, la réponse reste `201` avec `imported: 0` et un message `warning`.
 
 ### Service non supporté → `422`
 
 ```json
 {
   "error": "unsupported_service",
-  "message": "Only IBKR Flex is supported in this API version",
+  "message": "Only server-syncable connection services are supported in v1",
   "details": {
-    "supported": ["ibkr"]
+    "supported": ["ibkr", "tradovate", "dxfeed", "rithmic-protocol"]
   }
 }
 ```
@@ -120,7 +170,9 @@ POST /api/v1/connections/{id}/sync
 
 **Scope :** `connections:write`
 
-Déclenche une sync pour les services disposant d’une logique de synchronisation serveur réutilisable. IBKR est supporté a minima ; des services supplémentaires comme `tradovate`, `dxfeed` et `rithmic-protocol` peuvent être disponibles lorsque leurs actions de sync sont réutilisables.
+<DocsEndpointTry method="POST" path="/api/v1/connections/{id}/sync" />
+
+Disponible pour `ibkr`, `tradovate`, `dxfeed` et `rithmic-protocol`.
 
 ### Exemple
 
@@ -129,20 +181,12 @@ curl -X POST https://www.deltalytix.app/api/v1/connections/conn_01HZX…/sync \
   -H "Authorization: Bearer dltx_at_…"
 ```
 
-### Réponse `200` (terminée)
+### Réponse `200`
 
 ```json
 {
   "status": "completed",
   "imported": 42,
   "duplicates": 3
-}
-```
-
-### Réponse `202` (asynchrone)
-
-```json
-{
-  "status": "started"
 }
 ```
