@@ -30,7 +30,8 @@ import {
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
 import { authenticateDxFeed } from './actions'
 import { DxFeedCredentialsManager } from './dxfeed-credentials-manager'
-import { captureConnectionCreated } from '@/lib/connection-analytics'
+import { captureConnectionCreated, captureConnectionFailed } from '@/lib/connection-analytics'
+import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
 
 const DXFEED_PROP_FIRM_OPTIONS = getEnabledDxFeedPropFirms()
 const DEFAULT_PROP_FIRM_ID = DXFEED_PROP_FIRM_OPTIONS[0]?.id ?? ''
@@ -75,6 +76,7 @@ function DxFeedConnectView({
   const [propFirmSearch, setPropFirmSearch] = useState('')
 
   const selectedPropFirm = DXFEED_PROP_FIRM_OPTIONS.find((f) => f.id === selectedPropFirmId)
+  const selectedPropFirmName = selectedPropFirm?.name ?? selectedPropFirmId
   const showPropFirmSearch = DXFEED_PROP_FIRM_OPTIONS.length > PROP_FIRM_SEARCH_THRESHOLD
   const filteredPropFirms = propFirmSearch
     ? DXFEED_PROP_FIRM_OPTIONS.filter((firm) =>
@@ -105,6 +107,14 @@ function DxFeedConnectView({
       )
 
       if (result.error) {
+        captureConnectionFailed('dxfeed', {
+          source_ui: 'connect_view',
+          prop_firm_id: selectedPropFirmId,
+          prop_firm_name: selectedPropFirmName,
+          error_code: result.error,
+          http_status:
+            typeof result.errorParams?.status === 'number' ? result.errorParams.status : undefined,
+        })
         const { title, description } = getDxFeedErrorToastContent(
           t,
           result.error,
@@ -120,13 +130,23 @@ function DxFeedConnectView({
       showToastWithCopy('success', t('dxfeedSync.connected'), {
         copyLabel: t('common.copy'),
       })
-      captureConnectionCreated('dxfeed')
+      captureConnectionCreated('dxfeed', {
+        source_ui: 'connect_view',
+        prop_firm_id: selectedPropFirmId,
+        prop_firm_name: selectedPropFirmName,
+      })
       setLoginEmail('')
       setLoginPassword('')
       await loadAccounts()
       onConnected?.()
     } catch (error) {
       console.error('DxFeed connect error:', error)
+      captureConnectionFailed('dxfeed', {
+        source_ui: 'connect_view',
+        prop_firm_id: selectedPropFirmId,
+        prop_firm_name: selectedPropFirmName,
+        error_code: DxFeedErrorCode.AUTH_UNEXPECTED,
+      })
       showToastWithCopy('error', t('dxfeedSync.error.authFailed'), {
         description: t('dxfeedSync.errors.hintCheckCredentials'),
         copyLabel: t('common.copy'),
@@ -138,6 +158,7 @@ function DxFeedConnectView({
     loginEmail,
     loginPassword,
     selectedPropFirmId,
+    selectedPropFirmName,
     t,
     loadAccounts,
     onConnected,
