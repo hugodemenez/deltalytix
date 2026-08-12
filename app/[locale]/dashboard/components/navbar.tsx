@@ -72,7 +72,7 @@ export default function Navbar() {
               </TabsTrigger>
               <TabsTrigger
                 value="accounts"
-                className="h-7 rounded-[3px] px-2.5 text-xs tracking-[-0.01em] sm:px-3 sm:text-sm"
+                className="hidden h-7 rounded-[3px] px-2.5 text-xs tracking-[-0.01em] sm:inline-flex sm:px-3 sm:text-sm"
               >
                 {t('dashboard.tabs.accounts')}
               </TabsTrigger>

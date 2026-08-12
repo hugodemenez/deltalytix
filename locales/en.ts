@@ -210,7 +210,7 @@ export default {
   "connections.oauth.tradovate.connectingHint":
     "Finishing authentication and loading accounts",
   "connections.modal.close": "Close",
-  "connections.addChip": "+ Add",
+  "connections.addChip": "Add",
   "connections.manageConnection": "Manage connection",
   "connections.stripLabel": "Connections",
   "dashboard.planChip.aria": "Plan: {plan}. Open billing",

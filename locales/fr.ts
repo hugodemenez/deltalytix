@@ -213,7 +213,7 @@ export default {
   "connections.oauth.tradovate.connectingHint":
     "Finalisation de l'authentification et chargement des comptes",
   "connections.modal.close": "Fermer",
-  "connections.addChip": "+ Ajouter",
+  "connections.addChip": "Ajouter",
   "connections.manageConnection": "Gérer la connexion",
   "connections.stripLabel": "Connexions",
   "dashboard.planChip.aria": "Offre : {plan}. Ouvrir la facturation",
