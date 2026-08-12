@@ -35,7 +35,6 @@ const SERVICE_SECTIONS: {
   service: ConnectionService
   labelKey: string
 }[] = [
-  { service: 'rithmic', labelKey: 'connections.sections.rithmic' },
   {
     service: 'rithmic-protocol',
     labelKey: 'connections.sections.rithmicProtocol',

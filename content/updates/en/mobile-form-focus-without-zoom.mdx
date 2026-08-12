@@ -1,0 +1,17 @@
+---
+title: 'Mobile forms stay at the scale you chose'
+description: 'Dashboard text fields now avoid the automatic page zoom that iOS Safari can trigger when an input receives focus.'
+date: '2026-08-08'
+status: completed
+completedDate: '2026-08-08'
+---
+
+# Mobile forms stay at the scale you chose
+
+Focusing a compact dashboard field on iPhone no longer magnifies the whole page and leaves it enlarged after editing. Text fields, text areas, searches, selectors, comments, and inline trade edits now use an iOS-safe text size on narrow screens, while retaining their compact layout on larger displays.
+
+<video className="w-full rounded-lg" controls playsInline preload="metadata" aria-label="Mobile connection field receiving focus, text, and blur while the surrounding interface stays at the same scale">
+  <source src="/updates/pr-439/en/mobile-form-focus-stability.mp4" type="video/mp4" />
+</video>
+
+This applies across connection and import forms, filters and tags, account suggestions, sharing, billing, and table editing. [Open the dashboard on mobile](/en/dashboard) and focus a field to keep the surrounding context at the same scale.

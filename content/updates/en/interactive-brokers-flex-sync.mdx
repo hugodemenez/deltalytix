@@ -1,0 +1,30 @@
+---
+title: 'Synchronize Interactive Brokers trades with Flex Web Service'
+description: 'Connect a read-only IBKR Flex Query once, import completed trades, and run later manual or scheduled synchronizations from Connections.'
+date: '2026-08-08'
+status: completed
+completedDate: '2026-08-08'
+image: '/updates/pr-439/en/ibkr-read-only-guide.png'
+---
+
+# Synchronize Interactive Brokers trades with Flex Web Service
+
+Interactive Brokers traders can now bring completed trades into Deltalytix without repeatedly uploading statements. A one-time Flex Web Service connection stays available on [Connections](/en/dashboard/connections), where you can use **Sync now**, reconnect, remove the connection, or choose an automatic schedule.
+
+## Set up the read-only report once
+
+Choose **Add Interactive Brokers connection** and follow **Set up in IBKR Client Portal**. The in-app guide walks through an Activity Flex Query with these required settings:
+
+![Interactive Brokers read-only Flex Query setup guide](/updates/pr-439/en/ibkr-read-only-guide.png)
+
+- **Trades** section;
+- **Last 365 Calendar Days** period;
+- XML output with `yyyyMMdd` dates and `HHmmss` times.
+
+Paste the Flex token and query ID together, in either order, then select **Verify and connect**. The service is read-only: Deltalytix cannot place or cancel orders, or move funds through this connection.
+
+![Interactive Brokers verification form filled with a synthetic token and query ID](/updates/pr-439/en/ibkr-token-query-form.png)
+
+Only completed trades are imported. Rows with ambiguous dates are skipped, and P&L in different currencies is stored as IBKR reports it rather than converted. Removing the connection leaves previously imported journal trades in place.
+
+[Open Connections](/en/dashboard/connections) to follow the IBKR setup guide and connect your Flex Query.

@@ -2206,6 +2206,9 @@ export default {
     error: {
       credentialsRequired: "Enter your email and password to continue",
       propFirmRequired: "Select your prop firm before connecting",
+      emailRequired: "Enter your email",
+      emailInvalid: "Enter a valid email",
+      passwordRequired: "Enter your password",
       authFailed: "Could not connect to DxFeed",
     },
     errors: {
@@ -2268,7 +2271,11 @@ export default {
     addAccount: {
       title: "Connect DxFeed Account",
       description:
-        "Choose your prop firm, then sign in with the same credentials you use on that firm's platform.",
+        "Choose your prop firm first, then sign in with the same credentials you use on that firm's platform.",
+      propFirmStepDescription:
+        "Select the prop firm where you trade before entering your login.",
+      credentialsStepDescription:
+        "Sign in with the same credentials you use on that firm's platform.",
       propFirmLabel: "Prop firm",
       propFirmPlaceholder: "Select your prop firm",
       propFirmHint:
@@ -2281,6 +2288,7 @@ export default {
       emailPlaceholder: "Email from your prop firm login",
       passwordLabel: "Password",
       passwordPlaceholder: "Password from your prop firm login",
+      continueToCredentials: "Continue",
       connecting: "Connecting...",
       connect: "Connect",
     },
@@ -2538,6 +2546,11 @@ export default {
     error: {
       credentialsRequired:
         "Enter username, password, system, and account start date to continue",
+      systemRequired: "Select a Rithmic system",
+      usernameRequired: "Enter your username",
+      passwordRequired: "Enter your password",
+      historyStartRequired: "Choose an account start date",
+      historyStartInvalid: "Choose a date from 2013 through today",
       authFailed: "Could not connect to Rithmic Protocol API",
     },
     errors: {
@@ -2560,18 +2573,32 @@ export default {
     addAccount: {
       title: "Connect Rithmic Protocol",
       description:
-        "Sign in with your Rithmic username/password, then pick the system your account lives on (for example Rithmic 01 or Rithmic Paper Trading).",
+        "Pick your connect point and Rithmic system, then sign in with your username and password.",
+      systemStepDescription:
+        "Choose your connect point and Rithmic system first (for example Rithmic 01 or Rithmic Paper Trading).",
+      credentialsStepDescription:
+        "Sign in with the credentials for the system you selected.",
       gatewayLabel: "Connect point",
       gatewayHelp:
         "Choose the Rithmic connect point closest to you. Core (Chicago) works everywhere; a regional one only lowers latency.",
       systemLabel: "Rithmic system",
+      systemPlaceholder: "Select a system",
+      systemSearchPlaceholder: "Search systems…",
+      systemSearchHelp: "Search and pick the Rithmic system your account uses.",
+      noSystemFound: "No system found",
       usernameLabel: "Username",
       passwordLabel: "Password",
+      showPassword: "Show password",
+      hidePassword: "Hide password",
       historyStartLabel: "Account start date",
       historyStartHelp:
         "Pick the day you started trading this account. We import fills from then until today in serial 30-day batches (Rithmic guidance).",
+      continueToCredentials: "Continue",
       connecting: "Connecting…",
       connect: "Connect",
+    },
+    trademark: {
+      summary: "Trademarks & copyright",
     },
     sync: {
       inProgress: "Syncing Rithmic fills for {accountId}…",

@@ -1,0 +1,28 @@
+---
+title: 'Support that checks the product before answering'
+description: 'The support assistant now shows its source-first investigation, lets you revise questions, and keeps a direct path to human help.'
+date: '2026-08-08'
+status: completed
+completedDate: '2026-08-10'
+image: '/updates/pr-439/en/support-source-investigation.png'
+---
+
+# Support that checks the product before answering
+
+The [Support page](/en/support) now makes it clearer how an answer is found—and how to reach a person when you need one. For questions about Deltalytix behavior, the assistant searches and reads relevant product source files before replying instead of relying on changelog copy alone. Visible searching, reading, and reasoning states let you follow that investigation as it happens.
+
+![Support conversation showing codebase search, file reading, reasoning, and a sourced answer](/updates/pr-439/en/support-source-investigation.png)
+
+## Revise the question, not the whole conversation
+
+Use **Edit** on an earlier text question to refine it. The interface marks the later replies that will be removed, then resends from the corrected point, so the conversation does not keep answers built on an outdated prompt. Image attachments remain available for showing what you see.
+
+![Earlier support question in edit mode with later replies marked for removal](/updates/pr-439/en/support-question-edit.png)
+
+## Human support stays one action away
+
+Select **Fill out a support request through the form** in the refreshed header to contact the team directly. The assistant can also prepare a request summary and offer **Open contact form**; when you are signed in, your email address may already be filled in. The responsive form opens as a dialog or mobile drawer, and the Discord route remains available.
+
+![Support contact form filled with synthetic capture information and not submitted](/updates/pr-439/en/support-contact-form.png)
+
+AI answers still depend on service availability and can be wrong. The source-first workflow provides better evidence, while the direct contact path gives you a clear next step when a person should take over.

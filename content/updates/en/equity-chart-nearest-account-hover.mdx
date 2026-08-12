@@ -1,0 +1,22 @@
+---
+title: 'Find the nearest account line on equity charts'
+description: 'Hovering a multi-account equity chart now highlights the closest line, reorders the legend, and keeps selection within an explicit eight-account limit.'
+date: '2026-08-07'
+status: completed
+completedDate: '2026-08-07'
+image: '/updates/pr-439/en/equity-nearest-line.png'
+---
+
+# Find the nearest account line on equity charts
+
+Overlapping account lines are easier to tell apart in the dashboard equity widget. In individual-account mode, move the pointer near a line to give that account the active dot and move it to the top of the legend. Other accounts with equity at the same date follow in order of their distance from the pointer. Away from the chart, the legend returns to its latest-equity ordering.
+
+![Individual-account equity chart with the nearest line highlighted and ordered legend](/updates/pr-439/en/equity-nearest-line.png)
+
+## Choose the accounts you want to compare
+
+**Select Accounts** is now searchable on desktop and opens as a drawer on mobile. The selector shows how many accounts are selected and caps the chart at eight—the number of distinct series colors available—rather than silently accepting lines it cannot draw.
+
+![Searchable account selector showing the eight-account chart limit](/updates/pr-439/en/equity-account-selector.png)
+
+The full proximity legend is designed for the main individual-account chart; shared, team, and compact widget views keep their simpler presentation. [Open the dashboard](/en/dashboard) and move between several account lines to try it.

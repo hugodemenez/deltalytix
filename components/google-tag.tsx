@@ -5,11 +5,15 @@ import { useEffect } from "react";
 import {
   type ConsentSettings,
   isGoogleTagAllowed,
+  readStoredConsentSettings,
   toGoogleConsent,
 } from "@/lib/consent-settings";
 
-const GOOGLE_ANALYTICS_ID = "G-PYK62LTZRQ";
-const GOOGLE_ADS_ID = "AW-16864609071";
+const GOOGLE_ANALYTICS_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID?.trim() || "G-PYK62LTZRQ";
+/** Google Ads account tag. Override with NEXT_PUBLIC_GOOGLE_ADS_ID if needed. */
+const GOOGLE_ADS_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_ADS_ID?.trim() || "AW-16864609071";
 const CONSENT_UPDATED_EVENT = "deltalytix:consent-updated";
 
 function isProductionHost() {
@@ -17,17 +21,6 @@ function isProductionHost() {
     window.location.hostname === "deltalytix.app" ||
     window.location.hostname === "www.deltalytix.app"
   );
-}
-
-function readConsentSettings(): ConsentSettings | null {
-  const storedConsent = window.localStorage.getItem("cookieConsent");
-  if (!storedConsent) return null;
-
-  try {
-    return JSON.parse(storedConsent) as ConsentSettings;
-  } catch {
-    return null;
-  }
 }
 
 function configureGoogleTag(settings: ConsentSettings) {
@@ -72,7 +65,7 @@ function configureGoogleTag(settings: ConsentSettings) {
 
 export function GoogleTag() {
   useEffect(() => {
-    const initialSettings = readConsentSettings();
+    const initialSettings = readStoredConsentSettings();
     if (initialSettings) configureGoogleTag(initialSettings);
 
     const handleConsentUpdate = (event: Event) => {

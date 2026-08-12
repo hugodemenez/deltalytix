@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Loader2, Trash2, Plus, RefreshCw, MoreVertical, ChevronDown, Check } from 'lucide-react'
+import { Loader2, Trash2, Plus, RefreshCw, MoreVertical } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -23,30 +23,12 @@ import {
 } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
-import Link from 'next/link'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useI18n } from '@/locales/client'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
 import { getDxFeedErrorToastContent } from '@/lib/dxfeed-client-messages'
-import { showToastWithCopy } from '@/lib/toast-copy'
-import { captureConnectionCreated, captureConnectionFailed } from '@/lib/connection-analytics'
-import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
-import { authenticateDxFeed, updateDxFeedDailySyncTimeAction } from './actions'
+import { updateDxFeedDailySyncTimeAction } from './actions'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
-import { getEnabledDxFeedPropFirms } from '@/lib/dxfeed-propfirms'
-
-const DXFEED_PROP_FIRM_OPTIONS = getEnabledDxFeedPropFirms()
-const DEFAULT_PROP_FIRM_ID = DXFEED_PROP_FIRM_OPTIONS[0]?.id ?? ''
-const PROP_FIRM_SEARCH_THRESHOLD = 5
+import { DxFeedConnectForm } from './dxfeed-connect-form'
 
 export function DxFeedCredentialsManager() {
   const {
@@ -62,26 +44,11 @@ export function DxFeedCredentialsManager() {
   const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const [syncingId, setSyncingId] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
   const [isReloading, setIsReloading] = useState(false)
-  const [loginEmail, setLoginEmail] = useState('')
-  const [loginPassword, setLoginPassword] = useState('')
-  const [selectedPropFirmId, setSelectedPropFirmId] = useState(DEFAULT_PROP_FIRM_ID)
   const [dailySyncTime, setDailySyncTime] = useState<string>('')
   const [isSavingTime, setIsSavingTime] = useState(false)
   const [actionsMenuAccountId, setActionsMenuAccountId] = useState<string | null>(null)
-  const [propFirmOpen, setPropFirmOpen] = useState(false)
-  const [propFirmSearch, setPropFirmSearch] = useState('')
   const t = useI18n()
-
-  const selectedPropFirm = DXFEED_PROP_FIRM_OPTIONS.find((f) => f.id === selectedPropFirmId)
-  const selectedPropFirmName = selectedPropFirm?.name ?? selectedPropFirmId
-  const showPropFirmSearch = DXFEED_PROP_FIRM_OPTIONS.length > PROP_FIRM_SEARCH_THRESHOLD
-  const filteredPropFirms = propFirmSearch
-    ? DXFEED_PROP_FIRM_OPTIONS.filter((firm) =>
-        firm.name.toLowerCase().includes(propFirmSearch.toLowerCase()),
-      )
-    : DXFEED_PROP_FIRM_OPTIONS
 
   const closeActionsMenu = useCallback(() => {
     setActionsMenuAccountId(null)
@@ -100,70 +67,6 @@ export function DxFeedCredentialsManager() {
     },
     [t, deleteAccount],
   )
-
-  const handleAddAccount = useCallback(async () => {
-    if (!selectedPropFirmId) {
-      toast.error(t('dxfeedSync.error.propFirmRequired'))
-      return
-    }
-    if (!loginEmail || !loginPassword) {
-      toast.error(t('dxfeedSync.error.credentialsRequired'))
-      return
-    }
-
-    try {
-      setIsLoading(true)
-      const result = await authenticateDxFeed(loginEmail, loginPassword, selectedPropFirmId)
-
-      if (result.error) {
-        captureConnectionFailed('dxfeed', {
-          source_ui: 'credentials_manager',
-          prop_firm_id: selectedPropFirmId,
-          prop_firm_name: selectedPropFirmName,
-          error_code: result.error,
-          http_status:
-            typeof result.errorParams?.status === 'number' ? result.errorParams.status : undefined,
-        })
-        const { title, description } = getDxFeedErrorToastContent(
-          t,
-          result.error,
-          result.errorParams,
-        )
-        showToastWithCopy('error', title, {
-          description,
-          copyLabel: t('common.copy'),
-        })
-        return
-      }
-
-      showToastWithCopy('success', t('dxfeedSync.connected'), {
-        copyLabel: t('common.copy'),
-      })
-      captureConnectionCreated('dxfeed', {
-        source_ui: 'credentials_manager',
-        prop_firm_id: selectedPropFirmId,
-        prop_firm_name: selectedPropFirmName,
-      })
-      setIsAddDialogOpen(false)
-      setLoginEmail('')
-      setLoginPassword('')
-      await loadAccounts()
-    } catch (error) {
-      console.error('DxFeed connect error:', error)
-      captureConnectionFailed('dxfeed', {
-        source_ui: 'credentials_manager',
-        prop_firm_id: selectedPropFirmId,
-        prop_firm_name: selectedPropFirmName,
-        error_code: DxFeedErrorCode.AUTH_UNEXPECTED,
-      })
-      showToastWithCopy('error', t('dxfeedSync.error.authFailed'), {
-        description: t('dxfeedSync.errors.hintCheckCredentials'),
-        copyLabel: t('common.copy'),
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }, [loginEmail, loginPassword, selectedPropFirmId, selectedPropFirmName, t, loadAccounts])
 
   function formatDate(dateString: string) {
     return new Date(dateString).toLocaleString()
@@ -321,15 +224,10 @@ export function DxFeedCredentialsManager() {
           </Button>
           <Button
             onClick={() => setIsAddDialogOpen(true)}
-            disabled={isLoading}
             size="sm"
             className="h-8 flex-1 sm:flex-none"
           >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4 mr-2" />
-            )}
+            <Plus className="h-4 w-4 mr-2" />
             {t('dxfeedSync.multiAccount.addNew')}
           </Button>
         </div>
@@ -528,130 +426,12 @@ export function DxFeedCredentialsManager() {
             <DialogTitle>{t('dxfeedSync.addAccount.title')}</DialogTitle>
             <DialogDescription>{t('dxfeedSync.addAccount.description')}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 mt-4">
-            {DXFEED_PROP_FIRM_OPTIONS.length === 0 ? (
-              <Alert variant="destructive">
-                <AlertTitle>{t('dxfeedSync.addAccount.noPropFirmsTitle')}</AlertTitle>
-                <AlertDescription className="space-y-2">
-                  <p>{t('dxfeedSync.addAccount.noPropFirmsDescription')}</p>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href="/support">{t('dxfeedSync.addAccount.noPropFirmsAction')}</Link>
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            ) : (
-            <div className="space-y-2">
-              <Label htmlFor="dxfeed-prop-firm">{t('dxfeedSync.addAccount.propFirmLabel')}</Label>
-              <Popover
-                open={propFirmOpen}
-                onOpenChange={(open) => {
-                  setPropFirmOpen(open)
-                  if (!open) setPropFirmSearch('')
-                }}
-              >
-                <PopoverTrigger asChild>
-                  <Button
-                    id="dxfeed-prop-firm"
-                    type="button"
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={propFirmOpen}
-                    className="h-10 w-full justify-between font-normal"
-                  >
-                    <span className="truncate">
-                      {selectedPropFirm?.name ?? t('dxfeedSync.addAccount.propFirmPlaceholder')}
-                    </span>
-                    <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] p-0"
-                  align="start"
-                >
-                  <Command shouldFilter={false}>
-                    {showPropFirmSearch ? (
-                      <CommandInput
-                        placeholder={t('filters.searchPropfirm')}
-                        value={propFirmSearch}
-                        onValueChange={setPropFirmSearch}
-                      />
-                    ) : null}
-                    <CommandList
-                      className={
-                        showPropFirmSearch ? 'max-h-[min(280px,50vh)] overflow-y-auto' : undefined
-                      }
-                    >
-                      <CommandEmpty>{t('filters.noPropfirmFound')}</CommandEmpty>
-                      <CommandGroup>
-                        {filteredPropFirms.map((firm) => (
-                          <CommandItem
-                            key={firm.id}
-                            value={firm.id}
-                            onSelect={() => {
-                              setSelectedPropFirmId(firm.id)
-                              setPropFirmOpen(false)
-                              setPropFirmSearch('')
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                'mr-2 h-4 w-4 shrink-0',
-                                selectedPropFirmId === firm.id ? 'opacity-100' : 'opacity-0',
-                              )}
-                            />
-                            <span className="truncate">{firm.name}</span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="dxfeed-email">{t('dxfeedSync.addAccount.emailLabel')}</Label>
-              <Input
-                id="dxfeed-email"
-                type="email"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder={t('dxfeedSync.addAccount.emailPlaceholder')}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dxfeed-password">{t('dxfeedSync.addAccount.passwordLabel')}</Label>
-              <Input
-                id="dxfeed-password"
-                type="password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder={t('dxfeedSync.addAccount.passwordPlaceholder')}
-              />
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                onClick={handleAddAccount}
-                disabled={
-                  isLoading ||
-                  !selectedPropFirmId ||
-                  DXFEED_PROP_FIRM_OPTIONS.length === 0
-                }
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {t('dxfeedSync.addAccount.connecting')}
-                  </>
-                ) : (
-                  t('dxfeedSync.addAccount.connect')
-                )}
-              </Button>
-            </div>
-          </div>
+          {isAddDialogOpen ? (
+            <DxFeedConnectForm
+              onConnected={() => setIsAddDialogOpen(false)}
+              sourceUi="credentials_manager"
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
 

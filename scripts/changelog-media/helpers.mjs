@@ -201,8 +201,10 @@ export async function waitForDashboard(page, locale, siteUrl) {
       const text = document.body?.innerText ?? ''
       const charts = document.querySelectorAll('svg.recharts-surface').length
       const minCharts = window.innerWidth < 768 ? 1 : 3
-      return text.includes('LOCAL-SIM-001') && charts >= minCharts
+      const chartsSettled = !/Loading chart data|Chargement des données/i.test(text)
+      return chartsSettled && charts >= minCharts
     },
+    undefined,
     { timeout: 90_000 },
   )
   await page.waitForTimeout(2500)
@@ -228,8 +230,9 @@ export async function waitForNavbarBadgeSettled(page) {
         !Array.from(document.querySelectorAll('*')).some(
           (element) =>
             element.children.length === 0 &&
-            /^(loading\.\.\.|chargement\.\.\.)$/i.test((element.textContent ?? '').trim()),
+            /^(loading|chargement)(?:\.{3}|…)?$/i.test((element.textContent ?? '').trim()),
         ),
+      undefined,
       { timeout: 60_000 },
     )
     .catch(() => {
@@ -286,8 +289,16 @@ export async function screenshot(page, batch, locale, name, options = {}) {
   return out
 }
 
-export async function recordVideo(browser, batch, locale, name, run, playwrightLocale) {
-  const videoContext = viewport('desktop')
+export async function recordVideo(
+  browser,
+  batch,
+  locale,
+  name,
+  run,
+  playwrightLocale,
+  viewportPreset = 'desktop',
+) {
+  const videoContext = viewport(viewportPreset)
   const recordWidth = videoContext.viewport.width
   const recordHeight = videoContext.viewport.height
   const recordingStartedAt = Date.now()

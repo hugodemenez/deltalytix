@@ -2335,6 +2335,9 @@ export default {
     error: {
       credentialsRequired: "Saisissez votre e-mail et votre mot de passe",
       propFirmRequired: "Sélectionnez votre propfirm avant de vous connecter",
+      emailRequired: "Saisissez votre e-mail",
+      emailInvalid: "Saisissez un e-mail valide",
+      passwordRequired: "Saisissez votre mot de passe",
       authFailed: "Impossible de se connecter à DxFeed",
     },
     errors: {
@@ -2399,7 +2402,11 @@ export default {
     addAccount: {
       title: "Connecter un compte DxFeed",
       description:
-        "Choisissez votre propfirm, puis connectez-vous avec les mêmes identifiants que sur sa plateforme.",
+        "Choisissez d'abord votre propfirm, puis connectez-vous avec les mêmes identifiants que sur sa plateforme.",
+      propFirmStepDescription:
+        "Sélectionnez la propfirm où vous tradez avant de saisir vos identifiants.",
+      credentialsStepDescription:
+        "Connectez-vous avec les mêmes identifiants que sur la plateforme de cette propfirm.",
       propFirmLabel: "Propfirm",
       propFirmPlaceholder: "Sélectionnez votre propfirm",
       propFirmHint:
@@ -2412,6 +2419,7 @@ export default {
       emailPlaceholder: "E-mail de connexion à votre propfirm",
       passwordLabel: "Mot de passe",
       passwordPlaceholder: "Mot de passe de votre propfirm",
+      continueToCredentials: "Continuer",
       connecting: "Connexion...",
       connect: "Connecter",
     },
@@ -2673,6 +2681,11 @@ export default {
     error: {
       credentialsRequired:
         "Saisissez le nom d'utilisateur, le mot de passe, le système et la date de début du compte",
+      systemRequired: "Sélectionnez un système Rithmic",
+      usernameRequired: "Saisissez votre nom d'utilisateur",
+      passwordRequired: "Saisissez votre mot de passe",
+      historyStartRequired: "Choisissez une date de début de compte",
+      historyStartInvalid: "Choisissez une date entre 2013 et aujourd'hui",
       authFailed: "Impossible de se connecter à Rithmic Protocol API",
     },
     errors: {
@@ -2701,18 +2714,33 @@ export default {
     addAccount: {
       title: "Connecter Rithmic Protocol",
       description:
-        "Connectez-vous avec votre identifiant Rithmic, puis choisissez le système de votre compte (par exemple Rithmic 01 ou Rithmic Paper Trading).",
+        "Choisissez votre point de connexion et le système Rithmic, puis connectez-vous avec vos identifiants.",
+      systemStepDescription:
+        "Choisissez d'abord votre point de connexion et le système Rithmic (par exemple Rithmic 01 ou Rithmic Paper Trading).",
+      credentialsStepDescription:
+        "Connectez-vous avec les identifiants du système sélectionné.",
       gatewayLabel: "Point de connexion",
       gatewayHelp:
         "Choisissez le point de connexion Rithmic le plus proche. Core (Chicago) fonctionne partout ; un point régional réduit seulement la latence.",
       systemLabel: "Système Rithmic",
+      systemPlaceholder: "Sélectionner un système",
+      systemSearchPlaceholder: "Rechercher un système…",
+      systemSearchHelp:
+        "Recherchez et choisissez le système Rithmic de votre compte.",
+      noSystemFound: "Aucun système trouvé",
       usernameLabel: "Nom d'utilisateur",
       passwordLabel: "Mot de passe",
+      showPassword: "Afficher le mot de passe",
+      hidePassword: "Masquer le mot de passe",
       historyStartLabel: "Date de début du compte",
       historyStartHelp:
         "Indiquez le jour où vous avez commencé à trader sur ce compte. Nous importons les fills depuis cette date jusqu'à aujourd'hui par lots de 30 jours (recommandation Rithmic).",
+      continueToCredentials: "Continuer",
       connecting: "Connexion…",
       connect: "Connecter",
+    },
+    trademark: {
+      summary: "Marques et copyright",
     },
     sync: {
       inProgress: "Synchronisation des fills Rithmic pour {accountId}…",
