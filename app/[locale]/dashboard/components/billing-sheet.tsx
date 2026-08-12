@@ -1,9 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Check } from 'lucide-react'
-import { useI18n } from '@/locales/client'
+import { AlertCircle, Check } from 'lucide-react'
+import { useCurrentLocale, useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useModalStateStore } from '@/store/modal-state-store'
@@ -17,8 +17,25 @@ import {
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-
-type UpgradeOption = 'monthly' | 'lifetime'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { useBillingCurrency } from '@/hooks/use-billing-currency'
+import {
+  availableBillingPeriods,
+  billingLookupKey,
+  billingPeriodCharge,
+  billingPeriodMonthlyEquivalent,
+  formatBillingAmount,
+  isLifetimeSubscription,
+  type BillingPeriod,
+} from '@/lib/billing-plan-catalog'
+import { changeBillingPlan } from '@/lib/billing-plan-change.client'
 
 function planIsPaid(planName: string | undefined): boolean {
   if (!planName) return false
@@ -27,88 +44,117 @@ function planIsPaid(planName: string | undefined): boolean {
 }
 
 /**
- * Compact billing sheet: current plan + monthly/lifetime upgrade cards.
+ * Compact billing sheet backed by the same catalog and plan-change path as
+ * PricingPlans.
  * Desktop: right drawer. Mobile: bottom sheet.
  */
 export function BillingSheet() {
   const t = useI18n()
+  const locale = useCurrentLocale()
   const isMobile = useIsMobile()
+  const { currency } = useBillingCurrency()
   const open = useModalStateStore((state) => state.billingSheetOpen)
   const setOpen = useModalStateStore((state) => state.setBillingSheetOpen)
   const subscription = useStripeSubscriptionStore(
     (state) => state.stripeSubscription
   )
   const isLoading = useStripeSubscriptionStore((state) => state.isLoading)
-  const [selected, setSelected] = useState<UpgradeOption>('lifetime')
-  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [selected, setSelected] = useState<BillingPeriod>('monthly')
+  const [changeLoading, setChangeLoading] = useState(false)
+  const [pendingLifetime, setPendingLifetime] = useState(false)
+  const [referralCode, setReferralCode] = useState<string | null>(null)
 
   const currentLabel = subscription?.plan?.name?.trim() || t('pricing.free.name')
   const isPaid = planIsPaid(subscription?.plan?.name)
-  const isLifetime = subscription?.plan?.interval === 'lifetime'
+  const isLifetime = isLifetimeSubscription(subscription)
 
-  const options = useMemo(
-    () =>
-      [
-        {
-          id: 'monthly' as const,
-          title: t('dashboard.billingSheet.monthlyTitle'),
-          subtitle: t('dashboard.billingSheet.monthlySubtitle'),
-          price: t('dashboard.billingSheet.monthlyPrice'),
-        },
-        {
-          id: 'lifetime' as const,
-          title: t('dashboard.billingSheet.lifetimeTitle'),
-          subtitle: t('dashboard.billingSheet.lifetimeSubtitle'),
-          price: t('dashboard.billingSheet.lifetimePrice'),
-          badge: t('dashboard.billingSheet.bestValue'),
-        },
-      ] as const,
-    [t]
+  const periods = useMemo(
+    () => availableBillingPeriods(subscription),
+    [subscription]
   )
+  const effectiveSelected = periods.includes(selected)
+    ? selected
+    : (periods[0] ?? selected)
 
-  const startCheckout = async (period: UpgradeOption) => {
-    if (isLifetime) {
-      toast.error(t('billing.error'), {
-        description: t('billing.lifetimeAlreadyOwned'),
-      })
-      return
-    }
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    void import('@/lib/referral-storage').then(({ getReferralCode }) => {
+      setReferralCode(getReferralCode())
+    })
+  }, [])
 
-    setCheckoutLoading(true)
-    try {
-      // Currency is resolved server-side from geo/cookie; lookup_key uses usd as
-      // the client default — create-checkout-session remaps when needed.
-      const currency =
-        typeof document !== 'undefined' &&
-        document.cookie.includes('user-country=')
-          ? // Prefer EUR for eurozone cookie when present; otherwise USD.
-            /user-country=(FR|DE|ES|IT|NL|BE|AT|PT|IE|FI|GR|LU|SK|SI|EE|LV|LT|MT|CY)/i.test(
-              document.cookie
-            )
-            ? 'eur'
-            : 'usd'
-          : 'usd'
-      const lookupKey = `plus_${period}_${currency}`
-
-      const form = document.createElement('form')
-      form.method = 'POST'
-      form.action = '/api/stripe/create-checkout-session'
-      const input = document.createElement('input')
-      input.type = 'hidden'
-      input.name = 'lookup_key'
-      input.value = lookupKey
-      form.appendChild(input)
-      document.body.appendChild(form)
-      form.submit()
-    } catch {
-      toast.error(t('billing.error'))
-      setCheckoutLoading(false)
+  const periodLabel = (period: BillingPeriod) => {
+    switch (period) {
+      case 'monthly':
+        return t('pricing.monthly')
+      case 'quarterly':
+        return t('pricing.quarterly')
+      case 'yearly':
+        return t('pricing.yearly')
+      case 'lifetime':
+        return t('pricing.lifetime')
     }
   }
 
+  const periodDetail = (period: BillingPeriod) => {
+    if (period === 'lifetime') return t('pricing.oneTimePayment')
+
+    const monthly = formatBillingAmount(
+      billingPeriodMonthlyEquivalent(period),
+      currency,
+      locale
+    )
+    if (period === 'monthly') {
+      return `${monthly} / ${t('pricing.month')}`
+    }
+
+    const total = formatBillingAmount(
+      billingPeriodCharge(period),
+      currency,
+      locale
+    )
+    return period === 'quarterly'
+      ? `${monthly} / ${t('pricing.month')} · ${t('pricing.billedQuarterly', { total })}`
+      : `${monthly} / ${t('pricing.month')} · ${t('pricing.billedYearly', { total })}`
+  }
+
+  const executeChange = async (period: BillingPeriod) => {
+    setChangeLoading(true)
+    try {
+      const result = await changeBillingPlan({
+        lookupKey: billingLookupKey(period, currency),
+        hasSubscription: Boolean(subscription),
+        referralCode,
+      })
+      if (result.status === 'switched') {
+        toast.success(t('billing.planSwitched'), {
+          description: t('billing.planSwitchedDescription'),
+        })
+        window.location.reload()
+      } else if (result.status === 'error') {
+        toast.error(t('billing.error'), { description: result.error })
+      }
+    } catch {
+      toast.error(t('billing.error'), {
+        description: t('billing.planSwitchError'),
+      })
+    } finally {
+      setChangeLoading(false)
+    }
+  }
+
+  const requestChange = (period: BillingPeriod) => {
+    if (period === 'lifetime' && subscription) {
+      setPendingLifetime(true)
+      return
+    }
+    void executeChange(period)
+  }
+
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent
+    <>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent
         side={isMobile ? 'bottom' : 'right'}
         className={cn(
           'flex flex-col gap-0 overflow-hidden bg-[#FFFFFF] p-0 dark:bg-background',
@@ -152,21 +198,48 @@ export function BillingSheet() {
               {isLoading ? t('pricing.loading') : currentLabel}
             </p>
             <p className="mt-0.5 text-sm text-[#686D67] dark:text-muted-foreground">
-              {isPaid
-                ? t('dashboard.billingSheet.fullAccess')
-                : t('dashboard.billingSheet.limitedWidgets')}
+              {isLifetime
+                ? t('dashboard.billingSheet.lifetimeOwned')
+                : isPaid
+                  ? `${t('dashboard.billingSheet.fullAccess')} · ${subscription ? periodLabel(
+                      subscription.plan.interval === 'month'
+                        ? 'monthly'
+                        : subscription.plan.interval === 'quarter'
+                          ? 'quarterly'
+                          : 'yearly'
+                    ) : ''}`
+                  : t('dashboard.billingSheet.limitedWidgets')}
             </p>
           </div>
 
-          {!isLifetime && (
+          {isLifetime ? (
+            <div className="rounded-xl border border-[#E2E5DF] bg-[#F7F7F4] px-4 py-4 dark:border-border dark:bg-muted/30">
+              <p className="text-sm font-medium text-[#171917] dark:text-foreground">
+                {t('dashboard.billingSheet.noLifetimeChangesTitle')}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-[#686D67] dark:text-muted-foreground">
+                {t('dashboard.billingSheet.noLifetimeChangesDescription')}
+              </p>
+            </div>
+          ) : (
             <div className="grid gap-3">
-              {options.map((option) => {
-                const isSelected = selected === option.id
+              <p className="text-xs font-semibold tracking-[0.08em] text-[#686D67] uppercase dark:text-muted-foreground">
+                {subscription
+                  ? t('dashboard.billingSheet.availableChanges')
+                  : t('dashboard.billingSheet.availablePlans')}
+              </p>
+              {periods.map((period) => {
+                const isSelected = effectiveSelected === period
+                const price = formatBillingAmount(
+                  billingPeriodCharge(period),
+                  currency,
+                  locale
+                )
                 return (
                   <button
-                    key={option.id}
+                    key={period}
                     type="button"
-                    onClick={() => setSelected(option.id)}
+                    onClick={() => setSelected(period)}
                     className={cn(
                       'relative flex w-full items-start justify-between gap-3 rounded-xl border bg-white px-4 py-3 text-left transition-colors dark:bg-background',
                       isSelected
@@ -177,21 +250,21 @@ export function BillingSheet() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-semibold text-[#171917] dark:text-foreground">
-                          {option.title}
+                          {t('pricing.plus.name')} · {periodLabel(period)}
                         </span>
-                        {'badge' in option && option.badge ? (
+                        {period === 'lifetime' ? (
                           <span className="rounded-full bg-[#EFF5EC] px-2 py-0.5 text-[10px] font-medium text-[#3E7550] dark:bg-[#243028] dark:text-[#9BC4A8]">
-                            {option.badge}
+                            {t('pricing.lifetimeAccess')}
                           </span>
                         ) : null}
                       </div>
                       <p className="mt-0.5 text-xs text-[#686D67] dark:text-muted-foreground">
-                        {option.subtitle}
+                        {periodDetail(period)}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <span className="text-base font-semibold tabular-nums text-[#171917] dark:text-foreground">
-                        {option.price}
+                        {price}
                       </span>
                       {isSelected ? (
                         <Check
@@ -216,28 +289,87 @@ export function BillingSheet() {
           </Link>
         </div>
 
-        {!isLifetime && (
+        {!isLifetime && periods.length > 0 && (
           <div className="shrink-0 border-t border-[#E2E5DF] px-5 py-4 dark:border-border">
             <Button
               type="button"
-              disabled={checkoutLoading || isLoading}
-              onClick={() => startCheckout(selected)}
+              disabled={changeLoading || isLoading}
+              onClick={() => requestChange(effectiveSelected)}
               className="h-11 w-full rounded-xl bg-[#181A18] text-white hover:bg-[#181A18]/90 dark:bg-white dark:text-[#181A18]"
             >
-              {checkoutLoading
+              {changeLoading
                 ? t('billing.switching')
-                : selected === 'lifetime'
-                  ? t('dashboard.billingSheet.upgradeLifetime')
-                  : t('dashboard.billingSheet.upgradeMonthly')}
+                : subscription
+                  ? effectiveSelected === 'lifetime'
+                    ? t('pricing.upgradeToLifetime')
+                    : t('billing.changePlan')
+                  : t('pricing.trialPeriod')}
             </Button>
             <p className="mt-2 text-center text-xs text-[#686D67] dark:text-muted-foreground">
-              {selected === 'lifetime'
-                ? t('dashboard.billingSheet.orMonthly')
-                : t('dashboard.billingSheet.cancelAnytime')}
+              {periodDetail(effectiveSelected)}
             </p>
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+        </SheetContent>
+      </Sheet>
+
+      <Dialog open={pendingLifetime} onOpenChange={setPendingLifetime}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('pricing.lifetimeUpgrade.title')}</DialogTitle>
+            <DialogDescription>
+              {t('pricing.lifetimeUpgrade.description')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-600 dark:text-yellow-400" />
+              <div>
+                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  {t('pricing.lifetimeUpgrade.warning')}
+                </p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-yellow-700 dark:text-yellow-300">
+                  <li>
+                    {t(
+                      'pricing.lifetimeUpgrade.warningPoints.currentPlan'
+                    )}
+                  </li>
+                  <li>
+                    {t(
+                      'pricing.lifetimeUpgrade.warningPoints.immediateCancel'
+                    )}
+                  </li>
+                  <li>
+                    {t(
+                      'pricing.lifetimeUpgrade.warningPoints.oneTimePayment'
+                    )}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setPendingLifetime(false)}
+              disabled={changeLoading}
+            >
+              {t('pricing.lifetimeUpgrade.cancel')}
+            </Button>
+            <Button
+              onClick={() => {
+                setPendingLifetime(false)
+                void executeChange('lifetime')
+              }}
+              disabled={changeLoading}
+            >
+              {changeLoading
+                ? t('billing.lifetimeUpgrade')
+                : t('pricing.lifetimeUpgrade.confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
