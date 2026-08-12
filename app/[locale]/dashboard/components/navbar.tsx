@@ -8,7 +8,6 @@ import { useI18n } from "@/locales/client"
 import { useKeyboardShortcuts } from '../../../../hooks/use-keyboard-shortcuts'
 import UserMenu from './user-menu'
 import ReferralButton from './referral-button'
-import FeedbackButton from './feedback-button'
 import { PlanChip } from './plan-chip'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -82,7 +81,6 @@ export default function Navbar() {
         )}
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <FeedbackButton />
           <ReferralButton />
           <PlanChip />
           <UserMenu />
