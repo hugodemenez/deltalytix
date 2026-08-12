@@ -749,17 +749,6 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const [isDeletingPayout, setIsDeletingPayout] = useState(false)
   const { sorting, setSorting } = useAccountsSortingStore()
   const shouldUpdateSelectedAccount = useRef(false)
-  const {
-    balancesByAccountId,
-    isLoading: rithmicBalancesLoading,
-    hasCredentials: hasRithmicCredentials,
-    debug: rithmicBalancesDebug,
-    refresh: refreshRithmicBalances,
-  } = useRithmicBalances()
-  const rithmicLinkedAccountNumbers = useMemo(
-    () => new Set(rithmicBalancesDebug.linkedAccountNumbers),
-    [rithmicBalancesDebug.linkedAccountNumbers]
-  )
   const hasRithmicConnectedAccounts = useMemo(
     () =>
       accounts.some((account) => {
@@ -769,6 +758,29 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         return service === "rithmic" || service === "rithmic-protocol"
       }),
     [accounts]
+  )
+  const hasRithmicProtocolAccounts = useMemo(
+    () =>
+      accounts.some(
+        (account) =>
+          (
+            account as Account & {
+              connection?: { service?: string | null } | null
+            }
+          ).connection?.service === "rithmic-protocol"
+      ),
+    [accounts]
+  )
+  const {
+    balancesByAccountId,
+    isLoading: rithmicBalancesLoading,
+    hasCredentials: hasRithmicCredentials,
+    debug: rithmicBalancesDebug,
+    refresh: refreshRithmicBalances,
+  } = useRithmicBalances({ protocolEnabled: hasRithmicProtocolAccounts })
+  const rithmicLinkedAccountNumbers = useMemo(
+    () => new Set(rithmicBalancesDebug.linkedAccountNumbers),
+    [rithmicBalancesDebug.linkedAccountNumbers]
   )
   const showRithmicBalances =
     hasRithmicCredentials ||
@@ -1308,7 +1320,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       variant="outline"
       size="sm"
       className="h-8"
-      onClick={() => void refreshRithmicBalances()}
+      onClick={() => void refreshRithmicBalances({ force: true })}
       disabled={rithmicBalancesLoading}
       title={t("rithmic.balances.refreshTitle")}
     >
@@ -1630,7 +1642,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                 variant="outline"
                 size="sm"
                 className={cn(size === "small" ? "h-7 px-2" : "h-8")}
-                onClick={() => void refreshRithmicBalances()}
+                onClick={() => void refreshRithmicBalances({ force: true })}
                 disabled={rithmicBalancesLoading}
                 title={t("rithmic.balances.refreshTitle")}
               >
