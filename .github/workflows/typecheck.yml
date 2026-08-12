@@ -21,8 +21,10 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
+      # tsc does not need native addons. Skip install scripts so a canvas
+      # prebuild download flake cannot fall through to node-gyp (pixman).
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Typecheck
         run: bun run typecheck
