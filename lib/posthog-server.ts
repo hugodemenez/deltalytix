@@ -4,7 +4,15 @@ import { cookies } from "next/headers";
 
 const ANALYTICS_CONSENT_COOKIE = "deltalytix_analytics_consent";
 
-type PostHogProperties = Record<string, boolean | number | string | null | undefined>;
+type PostHogPropertyValue =
+  | boolean
+  | number
+  | string
+  | null
+  | undefined
+  | Record<string, boolean | number | string | null | undefined>;
+
+type PostHogProperties = Record<string, PostHogPropertyValue>;
 
 export async function hasAnalyticsConsent(): Promise<boolean> {
   try {

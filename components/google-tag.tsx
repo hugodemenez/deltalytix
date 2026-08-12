@@ -8,8 +8,11 @@ import {
   toGoogleConsent,
 } from "@/lib/consent-settings";
 
-const GOOGLE_ANALYTICS_ID = "G-PYK62LTZRQ";
-const GOOGLE_ADS_ID = "AW-16864609071";
+const GOOGLE_ANALYTICS_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID?.trim() || "G-PYK62LTZRQ";
+/** Google Ads account tag. Override with NEXT_PUBLIC_GOOGLE_ADS_ID if needed. */
+const GOOGLE_ADS_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_ADS_ID?.trim() || "AW-16864609071";
 const CONSENT_UPDATED_EVENT = "deltalytix:consent-updated";
 
 function isProductionHost() {

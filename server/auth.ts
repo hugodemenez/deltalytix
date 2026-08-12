@@ -14,6 +14,11 @@ import {
 import { createLocalDashboardBypassAuthStub } from '@/lib/local-dashboard-bypass-client'
 import { ensureLocalDashboardUserInDatabase } from '@/server/local-dashboard-bootstrap'
 import { capturePostHogEvent } from '@/lib/posthog-server'
+import {
+  attributionToPersonSetOnce,
+  attributionToPostHogProperties,
+} from '@/lib/attribution'
+import { readAttributionFromCookies } from '@/lib/attribution-server'
 import { getRequestOrigin } from '@/lib/site-url'
 import { resolveAuthEmailLocale } from '@/lib/auth-email-locale'
 
@@ -507,12 +512,28 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
       });
       console.log('[ensureUserInDatabase] SUCCESS: New user created successfully');
 
+      const attribution = await readAttributionFromCookies();
+      const attributionProps = attributionToPostHogProperties(attribution);
+      const setOnce = attributionToPersonSetOnce(attribution);
+      const authProvider = user.app_metadata?.provider || 'unknown';
+      // Ads contract uses method=email|google; keep auth_provider for existing reports.
+      const method =
+        authProvider === 'google'
+          ? 'google'
+          : authProvider === 'email' || authProvider === 'unknown'
+            ? 'email'
+            : authProvider;
+
       await capturePostHogEvent({
         distinctId: user.id,
         event: 'user_signed_up',
         properties: {
-          auth_provider: user.app_metadata?.provider || 'unknown',
+          auth_provider: authProvider,
+          method,
           language: locale || 'en',
+          lang: locale || 'en',
+          ...attributionProps,
+          ...(setOnce ? { $set_once: setOnce } : {}),
         },
       });
       
