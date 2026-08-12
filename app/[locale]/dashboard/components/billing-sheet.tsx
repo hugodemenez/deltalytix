@@ -147,14 +147,15 @@ export function BillingSheet() {
     <>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
-        side={isMobile ? 'bottom' : 'right'}
-        className={cn(
-          'flex flex-col gap-0 overflow-hidden bg-[#FFFFFF] p-0 dark:bg-background',
-          isMobile
-            ? 'h-[min(92dvh,720px)] rounded-t-[4px] border-t border-[#E5E5E5]'
-            : 'w-full border-l border-[#E5E5E5] sm:max-w-[420px]'
-        )}
-      >
+          side={isMobile ? 'bottom' : 'right'}
+          overlayClassName="bg-black/15 dark:bg-black/70"
+          className={cn(
+            'flex flex-col gap-0 overflow-hidden bg-[#FFFFFF] p-0 dark:bg-background',
+            isMobile
+              ? 'h-[min(92dvh,720px)] rounded-t-[4px] border-t border-[#E5E5E5]'
+              : 'w-full border-l border-[#E5E5E5] sm:max-w-[420px]'
+          )}
+        >
         {isMobile && (
           <div
             className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-black/15 dark:bg-white/20"
