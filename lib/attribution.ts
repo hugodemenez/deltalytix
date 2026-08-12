@@ -31,6 +31,8 @@ export type Attribution = Partial<Record<AttributionParamKey, string>>;
 export type PendingPurchase = {
   revenue: number;
   currency: string;
+  /** Stripe Checkout session id — passed to Ads gtag as `transaction_id`. */
+  transaction_id: string;
   plan?: string;
   billing_interval?: string;
 };
@@ -180,18 +182,24 @@ export function deserializePendingPurchase(
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as PendingPurchase;
+    const transactionId =
+      typeof parsed?.transaction_id === "string"
+        ? parsed.transaction_id.trim()
+        : "";
     if (
       typeof parsed?.revenue !== "number" ||
       !Number.isFinite(parsed.revenue) ||
       parsed.revenue <= 0 ||
       typeof parsed.currency !== "string" ||
-      !parsed.currency
+      !parsed.currency ||
+      !transactionId
     ) {
       return null;
     }
     return {
       revenue: parsed.revenue,
       currency: parsed.currency.toLowerCase(),
+      transaction_id: transactionId,
       ...(typeof parsed.plan === "string" ? { plan: parsed.plan } : {}),
       ...(typeof parsed.billing_interval === "string"
         ? { billing_interval: parsed.billing_interval }

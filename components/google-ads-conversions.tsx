@@ -61,20 +61,30 @@ function fireSignupConversion() {
   });
 }
 
-function firePurchaseConversion(value: number, currency: string) {
+function firePurchaseConversion({
+  value,
+  currency,
+  transactionId,
+}: {
+  value: number;
+  currency: string;
+  transactionId: string;
+}) {
   if (!PURCHASE_SEND_TO || !window.gtag) return;
-  if (!(value > 0)) return;
+  if (!(value > 0) || !transactionId) return;
   window.gtag("event", "conversion", {
     send_to: PURCHASE_SEND_TO,
     value,
     currency: currency.toUpperCase(),
+    transaction_id: transactionId,
   });
 }
 
 /**
  * Fires Google Ads conversion tags when env labels are configured:
  * - Sign-up ↔ `?signup=success` (primary bidding event; URL marker still present)
- * - Subscribe ↔ `?success=true` after Stripe, value from pending-purchase cookie
+ * - Subscribe ↔ `?success=true` after Stripe; value/currency/transaction_id
+ *   from the pending-purchase cookie (Stripe Checkout session id)
  *
  * Instrumentation only — no product UX changes.
  */
@@ -106,7 +116,11 @@ export function GoogleAdsConversions() {
           readCookie(PENDING_PURCHASE_COOKIE),
         );
         if (pending) {
-          firePurchaseConversion(pending.revenue, pending.currency);
+          firePurchaseConversion({
+            value: pending.revenue,
+            currency: pending.currency,
+            transactionId: pending.transaction_id,
+          });
           document.cookie = clearPendingPurchaseCookie();
         }
       }

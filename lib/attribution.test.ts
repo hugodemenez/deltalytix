@@ -70,8 +70,20 @@ describe("serialize/deserialize", () => {
   it("rejects invalid pending purchases and zero revenue", () => {
     expect(deserializePendingPurchase('{"revenue":0,"currency":"eur"}')).toBeNull();
     expect(
-      deserializePendingPurchase('{"revenue":29,"currency":"eur","plan":"PRO"}'),
-    ).toEqual({ revenue: 29, currency: "eur", plan: "PRO" });
+      deserializePendingPurchase(
+        '{"revenue":29,"currency":"eur","plan":"PRO"}',
+      ),
+    ).toBeNull();
+    expect(
+      deserializePendingPurchase(
+        '{"revenue":29,"currency":"eur","transaction_id":"cs_test_123","plan":"PRO"}',
+      ),
+    ).toEqual({
+      revenue: 29,
+      currency: "eur",
+      transaction_id: "cs_test_123",
+      plan: "PRO",
+    });
   });
 });
 

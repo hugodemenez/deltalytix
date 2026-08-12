@@ -224,6 +224,7 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
             pendingPurchaseSetCookieHeader({
                 revenue: revenueMajor,
                 currency: (session.currency || price.currency || 'eur').toLowerCase(),
+                transaction_id: session.id,
                 plan,
                 billing_interval: billingInterval,
             }),
