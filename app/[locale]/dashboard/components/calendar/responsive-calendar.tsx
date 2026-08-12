@@ -672,21 +672,17 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
                               !isCurrentMonth && "opacity-50"
                             )}>$0</div>
                           )}
-                          <div className={cn(
-                            "text-[10px] sm:text-[9px] text-muted-foreground truncate text-center leading-tight",
-                            !isCurrentMonth && "opacity-50"
-                          )}>
-                            {dayData
-                              ? (
-                                <>
-                                  <span className="sm:hidden">{dayData.tradeNumber}</span>
-                                  <span className="hidden sm:inline">
-                                    {`${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}`}
-                                  </span>
-                                </>
-                              )
-                              : <span className="hidden sm:inline">{t('calendar.noTrades')}</span>}
-                          </div>
+                          {dayData && (
+                            <div className={cn(
+                              "text-[10px] sm:text-[9px] text-muted-foreground truncate text-center leading-tight",
+                              !isCurrentMonth && "opacity-50"
+                            )}>
+                              <span className="sm:hidden">{dayData.tradeNumber}</span>
+                              <span className="hidden sm:inline">
+                                {`${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}`}
+                              </span>
+                            </div>
+                          )}
                           {dayData && showMaxProfitAndDrawdown && (
                             <>
                               <div className={cn(

@@ -1,0 +1,20 @@
+---
+title: 'Importez directement les exports Performance Rithmic actuels'
+description: 'Les CSV Performance Rithmic commençant par une colonne Trade Date s''importent désormais sans modification, tout en conservant la compatibilité avec les anciens formats.'
+date: '2026-08-11'
+status: completed
+completedDate: '2026-08-11'
+image: '/updates/pr-439/fr/rithmic-performance-preview.png'
+---
+
+# Importez directement les exports Performance Rithmic actuels
+
+Les rapports Performance Rithmic actuels peuvent désormais passer directement de Rithmic à Deltalytix : plus besoin de supprimer au préalable la colonne **Trade Date** placée au début du fichier. L'import reconnaît **Entry Order Number** où qu'il apparaisse dans l'en-tête des trades et conserve la date initiale, afin que le compte, l'instrument, les heures d'entrée et de sortie, les prix et les autres valeurs restent correctement alignés.
+
+![Aperçu des trades Performance Rithmic traités depuis un CSV synthétique au format actuel, avec des valeurs correctement alignées](/updates/pr-439/fr/rithmic-performance-preview.png)
+
+Les anciens exports Performance, dans lesquels **Entry Order Number** est la première colonne de trade, restent compatibles. Cette correction concerne uniquement l'import de fichiers Performance Rithmic ; l'import Ordres Rithmic et la synchronisation Rithmic Protocol ne changent pas.
+
+![Sélecteur d'import de fichier filtré sur Performance Rithmic dans Connexions](/updates/pr-439/fr/rithmic-performance-picker.png)
+
+[Ouvrez Connexions](/fr/dashboard/connections), choisissez **Ajouter avec un fichier**, puis **Performance Rithmic** pour importer un rapport sans le modifier.

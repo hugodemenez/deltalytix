@@ -201,6 +201,11 @@ export async function authenticateDxFeed(
       return { error: DxFeedErrorCode.USER_NOT_AUTHENTICATED }
     }
 
+    const environment = DXFEED_ENVIRONMENT === 0 ? 'production' : 'demo'
+    const authLogContext =
+      `userId=${user.id} propFirmId=${propFirm.id} ` +
+      `propFirmName=${JSON.stringify(propFirm.name)} environment=${environment}`
+
     const body: DxFeedLoginRequest = {
       login,
       password,
@@ -210,7 +215,7 @@ export async function authenticateDxFeed(
       connectOnlyTrading: true,
     }
 
-    logger.info('Sending auth request')
+    logger.info(`Sending auth request (${authLogContext})`)
 
     const response = await fetch(DXFEED_AUTH_URL, {
       method: 'POST',
@@ -223,7 +228,10 @@ export async function authenticateDxFeed(
 
     if (!response.ok) {
       const text = await response.text()
-      logger.error(`Auth request failed with status ${response.status}`)
+      logger.error(
+        `Auth request failed with status ${response.status} ` +
+          `errorCode=${DxFeedErrorCode.AUTH_HTTP_ERROR} (${authLogContext})`,
+      )
       return {
         error: DxFeedErrorCode.AUTH_HTTP_ERROR,
         errorParams: {
@@ -276,7 +284,7 @@ export async function authenticateDxFeed(
       }
     }
 
-    logger.info(`Auth successful for ${propFirm.name}`)
+    logger.info(`Auth successful for ${propFirm.name} (${authLogContext})`)
 
     const reportAccessToken = data.tradingRestReportToken
 
@@ -304,6 +312,8 @@ export async function authenticateDxFeed(
 
     const storeResult = await storeDxFeedToken(JSON.stringify(credentials), login, {
       tokenExpiresAt,
+      propFirmId: propFirm.id,
+      propFirmName: propFirm.name,
     })
     if (storeResult.error) {
       logger.warn('Failed to store token')
@@ -809,7 +819,11 @@ async function updateStoredCredentials(
 export async function storeDxFeedToken(
   tokenJson: string,
   accountId: string = 'default',
-  options?: { tokenExpiresAt?: Date | null },
+  options?: {
+    tokenExpiresAt?: Date | null
+    propFirmId?: string
+    propFirmName?: string
+  },
 ) {
   try {
     const supabase = await createClient()
@@ -855,15 +869,19 @@ export async function storeDxFeedToken(
       },
     })
 
-    await capturePostHogEvent({
-      distinctId: user.id,
-      event: 'integration_connected',
-      properties: {
-        integration: 'dxfeed',
-        environment: DXFEED_ENVIRONMENT === 0 ? 'production' : 'demo',
-        is_first_connection: !existingConnection,
-      },
-    })
+    if (!existingConnection) {
+      await capturePostHogEvent({
+        distinctId: user.id,
+        event: 'integration_connected',
+        properties: {
+          integration: 'dxfeed',
+          environment: DXFEED_ENVIRONMENT === 0 ? 'production' : 'demo',
+          is_first_connection: true,
+          prop_firm_id: options?.propFirmId,
+          prop_firm_name: options?.propFirmName,
+        },
+      })
+    }
 
     return { success: true }
   } catch (error) {
@@ -996,6 +1014,8 @@ export async function updateDxFeedDailySyncTimeAction(
         externalId: accountId,
       },
       data: {
+        // Clearing the interval keeps a single active schedule per connection.
+        syncIntervalMinutes: null,
         dailySyncTime: syncDateTime,
       },
     })

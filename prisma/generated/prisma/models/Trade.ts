@@ -351,7 +351,7 @@ export type TradeWhereInput = {
   id?: Prisma.StringFilter<"Trade"> | string
   accountNumber?: Prisma.StringFilter<"Trade"> | string
   accountId?: Prisma.StringNullableFilter<"Trade"> | string | null
-  quantity?: Prisma.IntFilter<"Trade"> | number
+  quantity?: Prisma.FloatFilter<"Trade"> | number
   entryId?: Prisma.StringNullableFilter<"Trade"> | string | null
   closeId?: Prisma.StringNullableFilter<"Trade"> | string | null
   instrument?: Prisma.StringFilter<"Trade"> | string
@@ -410,7 +410,7 @@ export type TradeWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.TradeWhereInput | Prisma.TradeWhereInput[]
   accountNumber?: Prisma.StringFilter<"Trade"> | string
   accountId?: Prisma.StringNullableFilter<"Trade"> | string | null
-  quantity?: Prisma.IntFilter<"Trade"> | number
+  quantity?: Prisma.FloatFilter<"Trade"> | number
   entryId?: Prisma.StringNullableFilter<"Trade"> | string | null
   closeId?: Prisma.StringNullableFilter<"Trade"> | string | null
   instrument?: Prisma.StringFilter<"Trade"> | string
@@ -473,7 +473,7 @@ export type TradeScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"Trade"> | string
   accountNumber?: Prisma.StringWithAggregatesFilter<"Trade"> | string
   accountId?: Prisma.StringNullableWithAggregatesFilter<"Trade"> | string | null
-  quantity?: Prisma.IntWithAggregatesFilter<"Trade"> | number
+  quantity?: Prisma.FloatWithAggregatesFilter<"Trade"> | number
   entryId?: Prisma.StringNullableWithAggregatesFilter<"Trade"> | string | null
   closeId?: Prisma.StringNullableWithAggregatesFilter<"Trade"> | string | null
   instrument?: Prisma.StringWithAggregatesFilter<"Trade"> | string
@@ -553,7 +553,7 @@ export type TradeUncheckedCreateInput = {
 export type TradeUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   accountNumber?: Prisma.StringFieldUpdateOperationsInput | string
-  quantity?: Prisma.IntFieldUpdateOperationsInput | number
+  quantity?: Prisma.FloatFieldUpdateOperationsInput | number
   entryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   closeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   instrument?: Prisma.StringFieldUpdateOperationsInput | string
@@ -581,7 +581,7 @@ export type TradeUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   accountNumber?: Prisma.StringFieldUpdateOperationsInput | string
   accountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  quantity?: Prisma.IntFieldUpdateOperationsInput | number
+  quantity?: Prisma.FloatFieldUpdateOperationsInput | number
   entryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   closeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   instrument?: Prisma.StringFieldUpdateOperationsInput | string
@@ -634,7 +634,7 @@ export type TradeCreateManyInput = {
 export type TradeUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   accountNumber?: Prisma.StringFieldUpdateOperationsInput | string
-  quantity?: Prisma.IntFieldUpdateOperationsInput | number
+  quantity?: Prisma.FloatFieldUpdateOperationsInput | number
   entryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   closeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   instrument?: Prisma.StringFieldUpdateOperationsInput | string
@@ -661,7 +661,7 @@ export type TradeUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   accountNumber?: Prisma.StringFieldUpdateOperationsInput | string
   accountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  quantity?: Prisma.IntFieldUpdateOperationsInput | number
+  quantity?: Prisma.FloatFieldUpdateOperationsInput | number
   entryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   closeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   instrument?: Prisma.StringFieldUpdateOperationsInput | string
@@ -805,7 +805,7 @@ export type StringFieldUpdateOperationsInput = {
   set?: string
 }
 
-export type IntFieldUpdateOperationsInput = {
+export type FloatFieldUpdateOperationsInput = {
   set?: number
   increment?: number
   decrement?: number
@@ -815,14 +815,6 @@ export type IntFieldUpdateOperationsInput = {
 
 export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
-}
-
-export type FloatFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
 }
 
 export type DateTimeFieldUpdateOperationsInput = {
@@ -966,7 +958,7 @@ export type TradeScalarWhereInput = {
   id?: Prisma.StringFilter<"Trade"> | string
   accountNumber?: Prisma.StringFilter<"Trade"> | string
   accountId?: Prisma.StringNullableFilter<"Trade"> | string | null
-  quantity?: Prisma.IntFilter<"Trade"> | number
+  quantity?: Prisma.FloatFilter<"Trade"> | number
   entryId?: Prisma.StringNullableFilter<"Trade"> | string | null
   closeId?: Prisma.StringNullableFilter<"Trade"> | string | null
   instrument?: Prisma.StringFilter<"Trade"> | string
@@ -1018,7 +1010,7 @@ export type TradeCreateManyAccountInput = {
 export type TradeUpdateWithoutAccountInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   accountNumber?: Prisma.StringFieldUpdateOperationsInput | string
-  quantity?: Prisma.IntFieldUpdateOperationsInput | number
+  quantity?: Prisma.FloatFieldUpdateOperationsInput | number
   entryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   closeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   instrument?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1044,7 +1036,7 @@ export type TradeUpdateWithoutAccountInput = {
 export type TradeUncheckedUpdateWithoutAccountInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   accountNumber?: Prisma.StringFieldUpdateOperationsInput | string
-  quantity?: Prisma.IntFieldUpdateOperationsInput | number
+  quantity?: Prisma.FloatFieldUpdateOperationsInput | number
   entryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   closeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   instrument?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1070,7 +1062,7 @@ export type TradeUncheckedUpdateWithoutAccountInput = {
 export type TradeUncheckedUpdateManyWithoutAccountInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   accountNumber?: Prisma.StringFieldUpdateOperationsInput | string
-  quantity?: Prisma.IntFieldUpdateOperationsInput | number
+  quantity?: Prisma.FloatFieldUpdateOperationsInput | number
   entryId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   closeId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   instrument?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1674,7 +1666,7 @@ export interface TradeFieldRefs {
   readonly id: Prisma.FieldRef<"Trade", 'String'>
   readonly accountNumber: Prisma.FieldRef<"Trade", 'String'>
   readonly accountId: Prisma.FieldRef<"Trade", 'String'>
-  readonly quantity: Prisma.FieldRef<"Trade", 'Int'>
+  readonly quantity: Prisma.FieldRef<"Trade", 'Float'>
   readonly entryId: Prisma.FieldRef<"Trade", 'String'>
   readonly closeId: Prisma.FieldRef<"Trade", 'String'>
   readonly instrument: Prisma.FieldRef<"Trade", 'String'>

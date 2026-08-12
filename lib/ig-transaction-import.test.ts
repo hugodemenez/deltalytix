@@ -91,7 +91,7 @@ describe("parseIgTransactionHistory", () => {
     );
   });
 
-  it("ignores cash activity and reports fractional quantities explicitly", () => {
+  it("imports fractional sizes and still ignores cash activity", () => {
     const cashRow = Array(headers.length).fill("");
     cashRow[12] = "true";
     const fractionalRow = [
@@ -102,10 +102,16 @@ describe("parseIgTransactionHistory", () => {
 
     const result = parseIgTransactionHistory(headers, [cashRow, fractionalRow]);
 
-    expect(result.trades).toEqual([]);
+    expect(result.trades).toEqual([
+      expect.objectContaining({
+        quantity: 0.5,
+        closeId: "CLOSE-2",
+        pnl: 1,
+        side: "long",
+      }),
+    ]);
     expect(result.skippedRows).toEqual([
       { rowNumber: 2, reason: "cash-transaction" },
-      { rowNumber: 3, reason: "fractional-quantity" },
     ]);
   });
 

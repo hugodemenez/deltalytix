@@ -526,7 +526,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                           <Input
                             readOnly
                             value={shareUrl}
-                            className="pr-24 font-mono text-sm bg-muted text-center"
+                            className="pr-24 font-mono text-base sm:text-sm bg-muted text-center"
                           />
                           <div className="absolute right-0 top-0 h-full flex items-center gap-1 pr-2">
                             <Button

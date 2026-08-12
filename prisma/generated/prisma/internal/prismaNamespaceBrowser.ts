@@ -224,6 +224,7 @@ export const ConnectionScalarFieldEnum = {
   token: 'token',
   tokenExpiresAt: 'tokenExpiresAt',
   dailySyncTime: 'dailySyncTime',
+  syncIntervalMinutes: 'syncIntervalMinutes',
   includedFeeTypes: 'includedFeeTypes',
   environment: 'environment'
 } as const

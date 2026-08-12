@@ -1,85 +1,71 @@
-# Deltalytix Support Assistant - Refined System
+# Deltalytix Support Assistant
 
-## Overview
-The support assistant has been refined to provide immediate, helpful responses while gathering comprehensive context with minimal questions. The system now focuses on efficiency and problem-solving rather than endless clarification.
+The support assistant answers product questions from an in-memory clone of the
+repository and, crucially, never leaves a user stuck: a human hand-off is always
+one click away.
 
-## Key Improvements
+## Two escape hatches, always available
 
-### 1. Smart Context Gathering
-- **gatherUserContext**: Captures comprehensive user information in one tool call
-- Gathers issue category, urgency, platform details, error messages, reproduction steps, and more
-- Eliminates the need for multiple back-and-forth questions
+The UI (`app/[locale]/(landing)/support/page.tsx`) owns escalation, not the model:
 
-### 2. Intelligent Issue Analysis
-- **analyzeIssueComplexity**: Automatically determines issue type and complexity
-- Suggests appropriate resolution paths (self-service, documentation, human support, etc.)
-- Prioritizes issues based on urgency and impact
+- A **Request Human Support** button in the header, plus a **Talk to a human** starter chip, open the contact form directly — no model round-trip.
+- After the user's first message, an inline **human hand-off** prompt appears under the conversation so a stuck user is never more than one click from a person.
+- The model can _also_ escalate by calling `askForEmailForm`; when it does, the UI opens the same contact form pre-filled with the model's summary.
 
-### 3. Proactive Response System
-- **provideInitialResponse**: Provides immediate solutions when possible
-- Offers partial solutions with clear next steps
-- Includes relevant resources and documentation links
+This is deliberate: routing "I want a human" through the model is exactly the loop we removed.
 
-### 4. Efficient Escalation
-- Only escalates when truly necessary
-- Provides clear escalation reasons
-- Maintains context throughout the support process
+## Knowledge: repo clone + grep
 
-## Tool Usage Flow
+The agent reads the real codebase through `lib/ai/search-codebase.ts`, backed by an
+in-memory index in `lib/ai/codebase-index.ts`. `CORPUS_ROOTS` is the clone scope:
+`content/**`, root markdown, `locales/**`, application source under `app`,
+`components`, `lib`, `server`, `hooks`, `store`, `context`, plus
+`prisma/schema.prisma`.
 
-1. **gatherUserContext** - Capture all available information from user's initial message
-2. **analyzeIssueComplexity** - Determine the best resolution approach
-3. **provideInitialResponse** - Provide helpful initial response with solutions/resources
-4. **askForEmailForm** - When ready for email support (if needed)
-5. **askForHumanHelp** - When human intervention is required
+Default ranking prefers **source** over changelog prose so "how does X work"
+questions land in implementation. Tools also accept a `scope`:
 
-## Example Scenarios
+- `source` — code + prisma (how the product actually works)
+- `docs` — markdown / release notes
+- `product` — docs + locale UI labels
+- `all` — everything (default)
 
-### Scenario 1: Simple Question
-**User**: "How do I import my trading data?"
-**Assistant**: 
-- Uses gatherUserContext to capture platform and data type
-- Uses analyzeIssueComplexity to identify as simple configuration help
-- Uses provideInitialResponse to give step-by-step instructions with documentation links
-- No additional questions needed
+Tools (`tools/search-codebase.ts`):
 
-### Scenario 2: Technical Issue
-**User**: "I'm getting an error when uploading my CSV file"
-**Assistant**:
-- Uses gatherUserContext to capture error details, file type, browser info
-- Uses analyzeIssueComplexity to identify as technical bug
-- Uses provideInitialResponse to provide troubleshooting steps and workarounds
-- May escalate to human support if complex
+- **searchCodebase** — ranked keyword search with optional scope/locale.
+- **grepCodebase** — regex grep with optional glob + scope (primary tool for
+  symbols, routes, env vars, error strings).
+- **readCodebaseFile** — read a file or line range a search returned.
+- **listCodebaseFiles** — enumerate files matching a glob before grepping an area.
 
-### Scenario 3: Account Issue
-**User**: "I can't access my dashboard"
-**Assistant**:
-- Uses gatherUserContext to capture account details and error messages
-- Uses analyzeIssueComplexity to identify as account issue requiring human help
-- Uses askForHumanHelp to escalate with comprehensive context
-- Provides immediate workarounds if available
+The corpus is read from disk at runtime, so `next.config.ts` traces it into the
+serverless bundle via `SUPPORT_SEARCH_TRACE_INCLUDES`.
 
-## Benefits
+## Agent
 
-1. **Reduced Support Load**: Fewer back-and-forth messages
-2. **Faster Resolution**: Immediate solutions for common issues
-3. **Better Context**: Comprehensive information gathering
-4. **Improved User Experience**: Less frustration, more solutions
-5. **Efficient Escalation**: Clear escalation paths with full context
+`lib/ai/support-agent.ts` — a `ToolLoopAgent`. Model defaults to `openai/gpt-5-mini`
+(via the Vercel AI Gateway; override with `SUPPORT_AGENT_MODEL`). Instructions tell
+the model to investigate with `grepCodebase(scope=source)` → `readCodebaseFile`
+before answering behavioural questions, and not to invent features from memory.
 
-## Configuration
+The support page sends the current UI `locale` (`en` | `fr`) with every request.
+`prepareCall` prepends a hard locale rule so replies follow `/en` or `/fr`.
 
-The system uses GPT-4o-mini with a temperature of 0.3 for consistent, focused responses. The system prompt emphasizes:
-- Efficiency over extensive questioning
-- Proactive problem solving
-- Immediate value provision
-- Smart context gathering
-- Clear escalation paths
+OpenAI reasoning summaries are still often English over the API. For `/fr`, the
+UI translates the locked first-line title through
+`POST /api/ai/support/translate-label` (`openai/gpt-5-nano`, reasoning off) and
+keeps a shimmer skeleton until that title is ready.
 
-## Monitoring
+## Request flow
 
-The system tracks:
-- Response types and success rates
-- Escalation patterns
-- User satisfaction with initial responses
-- Resolution time improvements
+`route.ts` validates the request (`schema.ts`), strips the initial greeting, rejects unsupported
+file URLs, then streams `supportAgent` via `createAgentUIStreamResponse` with
+`options: { locale }`. Errors map to typed JSON (`rate_limit_exceeded`, `service_unavailable`,
+`internal_error`) that the client turns into localized messages.
+
+## Environment
+
+- `AI_GATEWAY_API_KEY` — required for the agent to run (Vercel AI Gateway).
+- `SUPPORT_AGENT_MODEL` — optional model override.
+- `RESEND_API_KEY`, `SUPPORT_EMAIL` / `SUPPORT_TEAM_EMAIL` — support email delivery.
+- `SUPPORT_SEARCH_DEBUG=0` — silence search debug logging in development.

@@ -4,7 +4,9 @@ import { RithmicSyncWrapper } from '@/app/[locale]/dashboard/components/import/r
 import { RithmicProtocolSync } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/rithmic-protocol-sync'
 import { TradovateSync } from '@/app/[locale]/dashboard/components/import/tradovate/sync/tradovate-sync'
 import { DxFeedSync } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/dxfeed-sync'
+import { IbkrSync } from '@/app/[locale]/dashboard/components/import/ibkr/sync/ibkr-sync'
 import { ThorSync } from '@/app/[locale]/dashboard/components/import/thor/thor-sync'
+import { IgSync } from '@/app/[locale]/dashboard/components/import/ig/sync/ig-sync'
 import type { ConnectionService } from '../actions'
 import { useI18n } from '@/locales/client'
 import {
@@ -38,11 +40,15 @@ export function ConnectServiceModal({
           ? t('connections.add.tradovate')
           : service === 'dxfeed'
             ? t('connections.add.dxfeed')
+            : service === 'ibkr'
+              ? t('connections.add.ibkr')
             : service === 'thor'
               ? t('connections.add.thor')
               : service === 'etp'
                 ? t('connections.add.etp')
-                : t('connections.addConnection')
+                : service === 'ig'
+                  ? t('connections.add.ig')
+                  : t('connections.addConnection')
 
   const title = isReconnect ? t('connections.reconnect') : addTitle
 
@@ -72,7 +78,7 @@ export function ConnectServiceModal({
             {title}
           </SheetTitle>
         </SheetHeader>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-2 sm:p-4">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-hidden p-2 sm:p-4">
           {service === 'rithmic' && (
             <RithmicSyncWrapper
               initialShowCredentialsManager={false}
@@ -100,6 +106,23 @@ export function ConnectServiceModal({
                 initialShowAccountsManager={false}
                 initialEmail={prefill?.accountId}
                 initialPropFirmName={prefill?.displayName}
+                onConnected={onClose}
+              />
+            </div>
+          )}
+          {service === 'ibkr' && (
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <IbkrSync
+                initialShowAccountsManager={false}
+                onConnected={onClose}
+              />
+            </div>
+          )}
+          {service === 'ig' && (
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <IgSync
+                initialShowAccountsManager={false}
+                initialUsername={prefill?.accountId}
                 onConnected={onClose}
               />
             </div>

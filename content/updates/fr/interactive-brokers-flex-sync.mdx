@@ -1,0 +1,30 @@
+---
+title: 'Synchronisez vos trades Interactive Brokers avec Flex Web Service'
+description: 'Connectez une fois une requête Flex IBKR en lecture seule, importez les trades clôturés, puis lancez les synchronisations manuelles ou planifiées depuis Connexions.'
+date: '2026-08-08'
+status: completed
+completedDate: '2026-08-08'
+image: '/updates/pr-439/fr/ibkr-read-only-guide.png'
+---
+
+# Synchronisez vos trades Interactive Brokers avec Flex Web Service
+
+Les traders Interactive Brokers peuvent désormais importer leurs trades clôturés dans Deltalytix sans charger de relevé à chaque fois. La connexion Flex Web Service se configure une fois et reste disponible dans [Connexions](/fr/dashboard/connections), avec les actions **Synchroniser maintenant**, reconnecter, supprimer et planifier les prochaines synchronisations.
+
+## Configurez une fois le rapport en lecture seule
+
+Choisissez **Ajouter une connexion Interactive Brokers**, puis suivez le guide **Configuration dans le Client Portal IBKR**. Il détaille les réglages requis pour une requête Activity Flex :
+
+![Guide de configuration d'une requête Flex Interactive Brokers en lecture seule](/updates/pr-439/fr/ibkr-read-only-guide.png)
+
+- section **Trades** ;
+- période **Last 365 Calendar Days** (365 derniers jours calendaires) ;
+- sortie XML, dates au format `yyyyMMdd` et heures au format `HHmmss`.
+
+Collez ensemble le token Flex et l'ID de requête, dans l'ordre de votre choix, puis sélectionnez **Vérifier et connecter**. Le service est en lecture seule : Deltalytix ne peut ni placer ou annuler un ordre, ni déplacer des fonds avec cette connexion.
+
+![Formulaire de vérification Interactive Brokers rempli avec un token et un ID de requête synthétiques](/updates/pr-439/fr/ibkr-token-query-form.png)
+
+Seuls les trades clôturés sont importés. Les lignes dont la date est ambiguë sont ignorées, et les PnL dans plusieurs devises sont enregistrés tels qu'IBKR les fournit, sans conversion. La suppression de la connexion conserve les trades déjà ajoutés au journal.
+
+[Ouvrir Connexions](/fr/dashboard/connections) pour suivre le guide IBKR et connecter votre requête Flex.

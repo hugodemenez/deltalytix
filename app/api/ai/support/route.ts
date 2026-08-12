@@ -27,6 +27,7 @@ export async function POST(req: Request) {
       );
     }
 
+    const { locale } = parsed.data;
     const messages = stripInitialAssistantGreeting(parsed.data.messages);
 
     if (!hasUserMessage(messages)) {
@@ -56,6 +57,7 @@ export async function POST(req: Request) {
     return createAgentUIStreamResponse({
       agent: supportAgent,
       uiMessages: messages as UIMessage[],
+      options: { locale },
       sendReasoning: true,
       onStepFinish: (step) => {
         console.log(
@@ -64,6 +66,7 @@ export async function POST(req: Request) {
             {
               finishReason: step.finishReason,
               toolCalls: step.toolCalls?.map((toolCall) => toolCall.toolName),
+              locale,
             },
             null,
             2,

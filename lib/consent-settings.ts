@@ -16,6 +16,25 @@ export interface ConsentSettings {
   security_storage: boolean;
 }
 
+/** Where the banner persists its decision; read by every consent-gated script. */
+export const CONSENT_STORAGE_KEY = "cookieConsent";
+
+/**
+ * The banner's stored decision, or null when it has not been answered yet.
+ * Browser-only — callers are consent-gated client components.
+ */
+export function readStoredConsentSettings(): ConsentSettings | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const stored = window.localStorage.getItem(CONSENT_STORAGE_KEY);
+    if (!stored) return null;
+    return JSON.parse(stored) as ConsentSettings;
+  } catch {
+    return null;
+  }
+}
+
 export type GoogleConsentValue = "granted" | "denied";
 
 export type GoogleConsentState = Record<

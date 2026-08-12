@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "license": "CC-BY-NC-4.0",
+  "packageManager": "bun@1.3.14",
   "scripts": {
     "predev": "bunx prisma generate",
     "dev": "next dev",

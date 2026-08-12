@@ -10,7 +10,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { RithmicSyncContextProvider } from "@/context/rithmic-sync-context";
 import { TradovateSyncContextProvider } from "@/context/tradovate-sync-context";
 import { DxFeedSyncContextProvider } from "@/context/dxfeed-sync-context";
+import { IbkrSyncContextProvider } from "@/context/ibkr-sync-context";
 import { RithmicProtocolSyncContextProvider } from "@/context/rithmic-protocol-sync-context";
+import { IgSyncContextProvider } from "@/context/ig-sync-context";
 import { ConsentBanner } from "@/components/consent-banner";
 import { PostHogIdentity } from "@/components/posthog-identity";
 import { createClient } from "@/server/auth";
@@ -65,11 +67,15 @@ export default function RootLayout({
               <RithmicProtocolSyncContextProvider>
                 <TradovateSyncContextProvider>
                   <DxFeedSyncContextProvider>
-                    <RithmicSyncNotifications />
-                    <Toaster />
-                    <Navbar />
-                    {children}
-                    <Modals />
+                    <IbkrSyncContextProvider>
+                    <IgSyncContextProvider>
+                      <RithmicSyncNotifications />
+                      <Toaster />
+                      <Navbar />
+                      {children}
+                      <Modals />
+                    </IgSyncContextProvider>
+                    </IbkrSyncContextProvider>
                   </DxFeedSyncContextProvider>
                 </TradovateSyncContextProvider>
               </RithmicProtocolSyncContextProvider>

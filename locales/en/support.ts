@@ -8,7 +8,7 @@ export default {
     copied: "Copied to clipboard",
     description:
       "Let us know what problem you’re experiencing or what you need help with in your trading journal. I’ll help collect the information needed for our support team.",
-    requestHumanSupport: "Request Human Support",
+    fillSupportRequest: "Fill out a support request through the form",
     contactInformation: "Contact Information",
     contactInformationDescription:
       "Please provide your contact details so our support team can reach you by email.",
@@ -19,33 +19,35 @@ export default {
     emailConfirmation:
       "Thank you, {name}. I've gathered your information and sent your support request to our team. They will review your case and reach out to you at {email} as soon as possible. Is there anything else I can assist you with?",
     form: {
-      name: "Name",
       email: "Email",
       additionalInfo: "Additional Information",
       additionalInfoPlaceholder:
         "Add any extra details that might help our support team understand your issue...",
       submit: "Submit",
       cancel: "Cancel",
-      summary: "Summary",
       sending: "Sending...",
     },
+    openContactForm: "Open contact form",
+    editingNotice: "Editing — replies after this message will be removed.",
+    thinking: "Thinking…",
+    thoughtProcess: "Thought process",
     evaluatingSupport:
       "Reviewing your message to determine the best way to help...",
     evaluationError: "There was an error while evaluating your support needs.",
     preparingEmail: "Preparing your support request for our team...",
     emailPreparationError: "There was an error preparing your support request.",
-    joinDiscord: "Join Discord Community",
-    discordDescription:
-      "Get instant help from our community of traders and developers.",
+    joinDiscordInline: "join our Discord community",
     pageTitle: "Support Assistant",
+    pageDescription:
+      "Get quick answers from our AI assistant, built on our open knowledge base.",
+    discordPrompt: "Can't find what you need?",
     generating: "Generating response…",
-    suggestionImport: "Help with importing trades",
-    suggestionBilling: "Billing or subscription question",
-    suggestionBug: "Report a bug or issue",
-    suggestionHuman: "Talk to a human",
     tool: {
       searchingDocs: "Searching product documentation...",
+      grepping: "Searching the codebase...",
+      readingFile: "Reading documentation...",
       preparingRequest: "Preparing your support request for our team...",
+      requestReady: "Your support request is ready to send to our team.",
       requestError: "There was an error while preparing your support request.",
       requestErrorDetails: "Error details: {error}",
     },

@@ -66,9 +66,10 @@ export function ImportDialogFooter({
           className={cn(
             "inline-flex h-11 items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]",
             currentStepIndex === 0 &&
-              (importType === 'rithmic-sync' ||
+              (importType === 'rithmic-protocol-sync' ||
                 importType === 'tradovate-sync' ||
-                importType === 'dxfeed-sync') &&
+                importType === 'dxfeed-sync' ||
+                importType === 'ibkr-sync') &&
               "invisible"
           )}
         >
@@ -95,7 +96,7 @@ export function ImportDialogFooter({
           onClick={onNext}
           className={cn(
             "w-fit min-w-[80px] sm:min-w-[100px]",
-            (currentStepIndex === 0 && (importType === 'rithmic-sync' || importType === 'rithmic-protocol-sync' || importType === 'tradovate-sync' || importType === 'dxfeed-sync')) && "invisible"
+            (currentStepIndex === 0 && (importType === 'rithmic-protocol-sync' || importType === 'tradovate-sync' || importType === 'dxfeed-sync' || importType === 'ibkr-sync')) && "invisible"
           )}
           disabled={isNextDisabled || isSaving}
         >

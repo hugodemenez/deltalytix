@@ -1,0 +1,24 @@
+---
+title: 'Rithmic Protocol becomes the primary Rithmic connection'
+description: 'New Rithmic setups now use a guided Protocol flow with searchable systems, clearer credentials, and stronger history recovery for affected LucidTrading accounts.'
+date: '2026-08-11'
+status: completed
+completedDate: '2026-08-11'
+image: '/updates/pr-439/en/rithmic-system-search.png'
+---
+
+# Rithmic Protocol becomes the primary Rithmic connection
+
+New Rithmic connections now start with the server-side **Rithmic Protocol** path. From [Connections](/en/dashboard/connections), the first step asks for a **Connect point** and a searchable **Rithmic system**. Continue to enter your username, password, and **Account start date**, then choose among the accounts discovered with your credentials.
+
+![Rithmic Protocol setup with a selected connect point and searchable system picker](/updates/pr-439/en/rithmic-system-search.png)
+
+The password remains masked unless you select **Show password**, and inline guidance catches incomplete details before connecting. The start date must be between 2013 and today; Deltalytix retrieves history in consecutive windows of up to 30 days.
+
+![Rithmic Protocol credential step with a masked synthetic password and account start date](/updates/pr-439/en/rithmic-credentials-step.png)
+
+## More reliable history for LucidTrading accounts
+
+If a fill-history request returns no data, synchronization can now recover completed executions from order history using the account's own routing metadata. This addresses the zero-fill history seen by affected LucidTrading accounts without changing the guided setup.
+
+The previous Rithmic connection no longer appears for new setups, and this release does not automatically migrate existing credentials. Rithmic Protocol still requires a configured endpoint, valid credentials, and R | Protocol entitlements from your broker or prop firm; compatibility is not guaranteed for every legacy account.

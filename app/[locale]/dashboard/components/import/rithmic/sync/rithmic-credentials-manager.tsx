@@ -47,7 +47,7 @@ import { useRithmicSyncContext } from "@/context/rithmic-sync-context";
 import { cn } from "@/lib/utils";
 
 const fieldClassName =
-  "h-9 rounded-sm border-black/10 bg-transparent text-sm shadow-none focus:ring-0 focus:ring-offset-0 dark:border-white/10";
+  "h-9 rounded-sm border-black/10 bg-transparent text-base sm:text-sm shadow-none focus:ring-0 focus:ring-offset-0 dark:border-white/10";
 const primaryButtonClassName =
   "h-9 rounded-sm bg-[oklch(0.22_0.01_95)] px-4 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]";
 const secondaryButtonClassName =

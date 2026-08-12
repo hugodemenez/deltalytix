@@ -34,6 +34,7 @@ export default {
         openMailboxManualCheck: 'Check your inbox for the sign-in email from Deltalytix.',
         resendIn: 'Resend in',
         resendEmail: 'Resend Email',
+        changeEmail: 'Use a different email',
         verificationCode: 'Verification Code',
         verifyCode: 'Verify Code',
         // Identity linking

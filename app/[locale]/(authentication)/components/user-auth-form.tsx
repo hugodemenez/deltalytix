@@ -3,6 +3,7 @@
 import { signInWithDiscord, signInWithEmail, verifyOtp, signInWithGoogle, signInWithPasswordAction } from "@/server/auth"
 
 import * as React from "react"
+import { ArrowLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -28,12 +29,25 @@ import {
     InputOTPSlot,
     InputOTPSeparator
 } from "@/components/ui/input-otp"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
 // Link removed; unauthenticated users can't reach settings
 import { useAuthPreferenceStore } from "@/store/auth-preference-store"
 import { openMailbox } from "@/lib/open-mailbox"
 import { signupRedirectPath } from "@/lib/signup-redirect"
+
+/* Landing-page control language: rounded-sm, hairline borders, no shadows, a
+   filled oklch primary and hover washes instead of accent fills. Mirrors the
+   hero CTAs in app/[locale]/(landing)/components/hero.tsx. */
+const PRIMARY_ACTION =
+    "h-11 w-full rounded-sm bg-[oklch(0.22_0.01_95)] text-sm font-medium text-white shadow-none transition-[opacity,transform] duration-150 hover:bg-[oklch(0.22_0.01_95)] hover:opacity-85 active:scale-[0.96] disabled:opacity-40 dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)] dark:hover:bg-[oklch(0.94_0.01_95)]"
+
+const SECONDARY_ACTION =
+    "h-11 w-full rounded-sm border border-black/20 bg-transparent text-sm font-medium shadow-none transition-[colors,transform] duration-150 hover:bg-black/5 active:scale-[0.96] disabled:opacity-40 dark:border-white/20 dark:hover:bg-white/5"
+
+const OTP_SLOT =
+    "h-11 w-11 rounded-sm border-black/10 text-base shadow-none first:rounded-l-sm last:rounded-r-sm dark:border-white/10"
+
+const FIELD =
+    "h-11 rounded-sm border-black/10 bg-transparent shadow-none placeholder:text-black/40 focus-visible:ring-1 focus-visible:ring-black/25 focus-visible:ring-offset-0 dark:border-white/10 dark:placeholder:text-white/40 dark:focus-visible:ring-white/25"
 
 const formSchema = z.object({
     email: z.string().email(),
@@ -41,10 +55,6 @@ const formSchema = z.object({
         z.string().min(6, 'Password must be at least 6 characters'),
         z.literal('')
     ]).optional(),
-})
-
-const otpFormSchema = z.object({
-    otp: z.string().length(6, "Verification code must be 6 digits"),
 })
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
@@ -64,7 +74,11 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
     const router = useRouter()
     const { lastAuthPreference, setLastAuthPreference } = useAuthPreferenceStore()
-    const [tab, setTab] = React.useState<'magic' | 'password'>(lastAuthPreference)
+    const [usePassword, setUsePassword] = React.useState<boolean>(lastAuthPreference === 'password')
+    const [otp, setOtp] = React.useState<string>("")
+    /* Ref rather than state: the auto-verify guard has to be correct within a
+       single change event, before a state update could land. */
+    const isVerifyingRef = React.useRef(false)
     const t = useI18n()
     const locale = useCurrentLocale()
 
@@ -112,12 +126,22 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         },
     })
 
-    const otpForm = useForm<z.infer<typeof otpFormSchema>>({
-        resolver: zodResolver(otpFormSchema),
-        defaultValues: {
-            otp: "",
-        },
-    })
+    /* Sending the link locks the email field, so there has to be a way back out —
+       to fix a typo, or to switch to password sign-in instead. */
+    function resetEmailFlow() {
+        setIsEmailSent(false)
+        setShowOtpInput(false)
+        setOtp("")
+        setCountdown(0)
+        setAuthMethod(null)
+    }
+
+    function toggleUsePassword() {
+        const next = !usePassword
+        setUsePassword(next)
+        setLastAuthPreference(next ? 'password' : 'magic')
+        if (!next) form.setValue('password', '')
+    }
 
     async function onSubmitEmail(values: z.infer<typeof formSchema>) {
         if (countdown > 0) return
@@ -229,6 +253,15 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     }
 
     async function onSubmitPassword(values: z.infer<typeof formSchema>) {
+        /* The schema keeps password optional because the email flow shares it, so
+           the empty case has to be caught here rather than at the server. */
+        if (!values.password) {
+            form.setError('password', {
+                type: 'manual',
+                message: t('auth.passwordMinLength'),
+            })
+            return
+        }
         setIsLoading(true)
         setAuthMethod('email')
         try {
@@ -268,11 +301,13 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
     // Signup handled via magic link; no password signup flow here
 
-    async function onSubmitOtp(values: z.infer<typeof otpFormSchema>) {
+    async function verifyCode(code: string) {
+        if (isVerifyingRef.current) return
+        isVerifyingRef.current = true
         setIsLoading(true)
         try {
             const email = form.getValues('email')
-            const result = await verifyOtp(email, values.otp)
+            const result = await verifyOtp(email, code)
             toast.success("Successfully verified. Redirecting...", {
                 description: "Successfully verified. Redirecting...",
             })
@@ -283,9 +318,18 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
             toast.error("Error", {
                 description: error instanceof Error ? error.message : "Failed to verify code",
             })
+            /* Clear so the next keystroke can re-trigger auto-verify. */
+            setOtp("")
         } finally {
+            isVerifyingRef.current = false
             setIsLoading(false)
         }
+    }
+
+    /* No submit button: the code is fixed-length, so verify as soon as it's complete. */
+    function onOtpChange(value: string) {
+        setOtp(value)
+        if (value.length === 6) verifyCode(value)
     }
 
     async function onSubmitDiscord(event: React.SyntheticEvent) {
@@ -337,231 +381,200 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
     return (
         <div className={cn("grid gap-6", className)} {...props}>
-            <Tabs value={tab} onValueChange={(v) => { setTab(v as 'magic' | 'password'); setLastAuthPreference(v as 'magic' | 'password'); }}>
-                <TabsList className="flex w-full overflow-x-auto gap-1 sm:grid sm:grid-cols-2 sm:gap-0">
-                    <TabsTrigger value="magic" className="flex-1 min-w-0 text-xs sm:text-sm px-2 py-1">
-                        <span className="truncate">{t('auth.tabs.magic')}</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="password" className="relative flex-1 min-w-0 text-xs sm:text-sm px-2 py-1">
-                        <span className="truncate">{t('auth.tabs.password')}</span>
-                        <Badge
-                            variant="secondary"
-                            className="hidden sm:inline-flex absolute -top-1 -right-1 text-[9px] leading-3 px-1 py-0.5"
-                        >
-                            {t('auth.new')}
-                        </Badge>
-                    </TabsTrigger>
-                    {/* Signup tab removed: handled by Magic Link */}
-                </TabsList>
-
-                <TabsContent value="magic">
-                <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmitEmail)} className="grid gap-2">
+            <Form {...form}>
+                <form
+                    onSubmit={form.handleSubmit(usePassword && !isEmailSent ? onSubmitPassword : onSubmitEmail)}
+                    className="grid gap-3"
+                >
                     <FormField
                         control={form.control}
                         name="email"
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="sr-only">Email</FormLabel>
-                                <FormControl>
-                                    <Input
-                                        id="email"
-                                        placeholder={t('auth.emailPlaceholder')}
-                                        type="email"
-                                        autoCapitalize="none"
-                                        autoComplete="email"
-                                        autoCorrect="off"
-                                        disabled={isLoading || (isEmailSent || authMethod === 'discord' || authMethod === 'google')}
-                                        {...field}
-                                    />
-                                </FormControl>
+                                <div className="relative">
+                                    <FormControl>
+                                        <Input
+                                            id="email"
+                                            className={cn(FIELD, isEmailSent && "pr-11")}
+                                            placeholder={t('auth.emailPlaceholder')}
+                                            type="email"
+                                            autoCapitalize="none"
+                                            autoComplete="email"
+                                            autoCorrect="off"
+                                            disabled={isLoading || isEmailSent || authMethod === 'discord' || authMethod === 'google'}
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    {isEmailSent && (
+                                        <button
+                                            type="button"
+                                            onClick={resetEmailFlow}
+                                            aria-label={t('auth.changeEmail')}
+                                            title={t('auth.changeEmail')}
+                                            className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-sm text-black/45 transition-colors duration-150 hover:bg-black/5 hover:text-black dark:text-white/45 dark:hover:bg-white/5 dark:hover:text-white"
+                                        >
+                                            <ArrowLeft className="h-4 w-4" aria-hidden />
+                                        </button>
+                                    )}
+                                </div>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
+
+                    {/* Progressive disclosure instead of tabs. A 0fr->1fr grid row is
+                        animatable where height:auto is not, so the reveal doesn't snap. */}
+                    <div
+                        aria-hidden={!usePassword}
+                        className={cn(
+                            "grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
+                            usePassword ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                        )}
+                    >
+                        <div className="overflow-hidden">
+                            <FormField
+                                control={form.control}
+                                name="password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="sr-only">{t('auth.password')}</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                id="password_login"
+                                                className={FIELD}
+                                                placeholder={t('auth.passwordPlaceholder')}
+                                                type="password"
+                                                autoComplete="current-password"
+                                                disabled={isLoading || !usePassword}
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </div>
+
                     {!isEmailSent ? (
-                            <Button 
+                        <>
+                            <Button
+                                className={PRIMARY_ACTION}
                                 disabled={isLoading || countdown > 0 || authMethod === 'discord' || authMethod === 'google'}
                                 type="submit"
                             >
                                 {isLoading && authMethod === 'email' && (
                                     <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
                                 )}
-                                {t('auth.signInWithEmail')}
+                                {usePassword ? t('auth.signInWithPassword') : t('auth.signInWithEmail')}
                             </Button>
-                        ) : (
-                            <div className="space-y-2">
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    className="w-full"
-                                    onClick={openMailClient}
-                                    disabled={authMethod === 'discord' || authMethod === 'google'}
-                                >
-                                    <Icons.envelope className="mr-2 h-4 w-4" />
-                                    {t('auth.openMailbox')}
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    variant="ghost"
-                                    className="w-full"
-                                    disabled={countdown > 0 || authMethod === 'discord' || authMethod === 'google'}
-                                >
-                                    {countdown > 0 ? (
-                                        `${t('auth.resendIn')} ${countdown}s`
-                                    ) : (
-                                        t('auth.resendEmail')
-                                    )}
-                                </Button>
-                            </div>
-                        )}
+                            <button
+                                type="button"
+                                onClick={toggleUsePassword}
+                                className="justify-self-center rounded-sm text-sm text-black/55 underline underline-offset-4 transition-colors duration-150 hover:text-black dark:text-white/55 dark:hover:text-white"
+                            >
+                                {usePassword ? t('auth.useMagicLink') : t('auth.usePassword')}
+                            </button>
+                        </>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className={SECONDARY_ACTION}
+                                onClick={openMailClient}
+                                disabled={authMethod === 'discord' || authMethod === 'google'}
+                            >
+                                <Icons.envelope className="mr-2 h-4 w-4" />
+                                {t('auth.openMailbox')}
+                            </Button>
+                            <Button
+                                type="submit"
+                                variant="outline"
+                                className={SECONDARY_ACTION}
+                                disabled={countdown > 0 || authMethod === 'discord' || authMethod === 'google'}
+                            >
+                                {countdown > 0
+                                    ? `${t('auth.resendIn')} ${countdown}s`
+                                    : t('auth.resendEmail')}
+                            </Button>
+                        </div>
+                    )}
                 </form>
             </Form>
+
             {showOtpInput && (
-                <Form {...otpForm}>
-                    <form onSubmit={otpForm.handleSubmit(onSubmitOtp)} className="space-y-4">
-                        <FormField
-                            control={otpForm.control}
-                            name="otp"
-                            render={({ field }) => (
-                                <FormItem className="space-y-2">
-                                    <FormLabel className="text-center block">{t('auth.verificationCode')}</FormLabel>
-                                    <FormControl>
-                                        <div className="flex justify-center">
-                                            <InputOTP
-                                                maxLength={6}
-                                                value={field.value}
-                                                onChange={field.onChange}
-                                                className="gap-2"
-                                            >
-                                                <InputOTPGroup>
-                                                    <InputOTPSlot index={0} />
-                                                    <InputOTPSlot index={1} />
-                                                    <InputOTPSlot index={2} />
-                                                </InputOTPGroup>
-                                                <InputOTPSeparator />
-                                                <InputOTPGroup>
-                                                    <InputOTPSlot index={3} />
-                                                    <InputOTPSlot index={4} />
-                                                    <InputOTPSlot index={5} />
-                                                </InputOTPGroup>
-                                            </InputOTP>
-                                        </div>
-                                    </FormControl>
-                                    <FormMessage className="text-center" />
-                                </FormItem>
-                            )}
-                        />
-                        <Button 
-                            type="submit" 
-                            className="w-full"
+                <div className="grid gap-3">
+                    <p className="text-center text-sm text-black/55 dark:text-white/55">
+                        {t('auth.verificationCode')}
+                    </p>
+                    <div className="flex justify-center">
+                        <InputOTP
+                            maxLength={6}
+                            value={otp}
+                            onChange={onOtpChange}
                             disabled={isLoading}
+                            className="gap-2"
                         >
-                            {isLoading ? (
-                                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                            ) : null}
-                            {t('auth.verifyCode')}
-                        </Button>
-                    </form>
-                </Form>
+                            <InputOTPGroup>
+                                <InputOTPSlot index={0} className={OTP_SLOT} />
+                                <InputOTPSlot index={1} className={OTP_SLOT} />
+                                <InputOTPSlot index={2} className={OTP_SLOT} />
+                            </InputOTPGroup>
+                            <InputOTPSeparator />
+                            <InputOTPGroup>
+                                <InputOTPSlot index={3} className={OTP_SLOT} />
+                                <InputOTPSlot index={4} className={OTP_SLOT} />
+                                <InputOTPSlot index={5} className={OTP_SLOT} />
+                            </InputOTPGroup>
+                        </InputOTP>
+                    </div>
+                </div>
             )}
-            {/* Hint removed: settings not accessible unauthenticated */}
-                </TabsContent>
-
-                <TabsContent value="password">
-                <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmitPassword)} className="grid gap-2">
-                    <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="sr-only">Email</FormLabel>
-                                <FormControl>
-                                    <Input
-                                        id="email_password"
-                                        placeholder={t('auth.emailPlaceholder')}
-                                        type="email"
-                                        autoCapitalize="none"
-                                        autoComplete="email"
-                                        autoCorrect="off"
-                                        disabled={isLoading}
-                                        {...field}
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="sr-only">Password</FormLabel>
-                                <FormControl>
-                                    <Input
-                                        id="password_login"
-                                        placeholder={t('auth.passwordPlaceholder')}
-                                        type="password"
-                                        autoComplete="current-password"
-                                        disabled={isLoading}
-                                        {...field}
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <Button disabled={isLoading} type="submit">
-                        {isLoading && authMethod === 'email' && (
-                            <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        {t('auth.signInWithPassword')}
-                    </Button>
-                </form>
-                </Form>
-                </TabsContent>
-
-                {/* Signup content removed */}
-            </Tabs>
 
             <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
+                    <span className="w-full border-t border-black/10 dark:border-white/10" />
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
+                <div className="relative flex justify-center text-xs uppercase tracking-wide">
+                    {/* bg matches the panel, not --background, or the label sits on a grey chip. */}
+                    <span className="bg-card px-3 text-black/45 dark:text-white/45">
                         {t('auth.continueWith')}
                     </span>
                 </div>
             </div>
-            <Button 
-                variant="outline" 
-                type="button" 
-                disabled={isLoading || authMethod === 'email'} 
-                onClick={onSubmitDiscord}
-            >
-                {isLoading && authMethod === 'discord' ? (
-                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                    <Icons.discord className="mr-2 h-4 w-4" />
-                )}{" "}
-                {t('auth.signInWithDiscord')}
-            </Button>
-            <Button 
-                variant="outline" 
-                type="button" 
-                disabled={isLoading || authMethod === 'email'} 
-                onClick={onSubmitGoogle}
-            >
-                {isLoading && authMethod === 'google' ? (
-                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                    <Icons.google className="mr-2 h-4 w-4" />
-                )}{" "}
-                {t('auth.signInWithGoogle')}
-            </Button>
+
+            <div className="grid gap-3">
+                <Button
+                    variant="outline"
+                    type="button"
+                    className={SECONDARY_ACTION}
+                    disabled={isLoading || authMethod === 'email'}
+                    onClick={onSubmitDiscord}
+                >
+                    {isLoading && authMethod === 'discord' ? (
+                        <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Icons.discord className="mr-2 h-4 w-4" />
+                    )}{" "}
+                    {t('auth.signInWithDiscord')}
+                </Button>
+                <Button
+                    variant="outline"
+                    type="button"
+                    className={SECONDARY_ACTION}
+                    disabled={isLoading || authMethod === 'email'}
+                    onClick={onSubmitGoogle}
+                >
+                    {isLoading && authMethod === 'google' ? (
+                        <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Icons.google className="mr-2 h-4 w-4" />
+                    )}{" "}
+                    {t('auth.signInWithGoogle')}
+                </Button>
+            </div>
         </div>
     )
 }

@@ -75,6 +75,22 @@ const logger = {
     ),
 }
 
+function getSafeAuthenticationFailureCode(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const code = (error as { code?: unknown }).code
+    if (typeof code === 'string' && /^[A-Z0-9_]+$/.test(code)) {
+      return code
+    }
+  }
+  if (
+    error instanceof Error &&
+    error.message.startsWith('Rithmic login failed:')
+  ) {
+    return 'RITHMIC_LOGIN_REJECTED'
+  }
+  return 'AUTH_FAILED'
+}
+
 function parseStoredCredentials(
   tokenField: string,
 ): RithmicProtocolStoredCredentials | null {
@@ -151,22 +167,29 @@ export async function authenticateRithmicProtocol(
   historyStartDate: string,
   gatewayId?: string,
 ): Promise<RithmicProtocolActionResult> {
+  let authLogContext: string | null = null
+
   try {
     const userId = await getUserId()
     if (!userId) {
       return { error: 'USER_NOT_AUTHENTICATED' }
     }
 
+    const gateway = resolveGateway(gatewayId)
+    const resolvedUri = gatewayUriFor(gateway)
+    authLogContext =
+      `userId=${userId} systemName=${JSON.stringify(systemName)} ` +
+      `gatewayId=${gateway.id} environment=${gateway.environment}`
+
     const normalizedHistoryStart = parseHistoryStartDate(historyStartDate)
     if (!normalizedHistoryStart) {
+      logger.warn(
+        `Authentication rejected errorCode=HISTORY_START_REQUIRED (${authLogContext})`,
+      )
       return { error: 'HISTORY_START_REQUIRED' }
     }
 
-    const gateway = resolveGateway(gatewayId)
-    const resolvedUri = gatewayUriFor(gateway)
-    logger.info(
-      `Authenticating ${username} on ${systemName} via ${gateway.id} (${resolvedUri})`,
-    )
+    logger.info(`Authenticating (${authLogContext})`)
 
     const result = await connectAndListAccounts({
       gatewayUri: resolvedUri,
@@ -176,6 +199,9 @@ export async function authenticateRithmicProtocol(
     })
 
     if (result.accounts.length === 0) {
+      logger.warn(
+        `Authentication failed errorCode=NO_ACCOUNTS (${authLogContext})`,
+      )
       return { error: 'NO_ACCOUNTS' }
     }
 
@@ -187,6 +213,11 @@ export async function authenticateRithmicProtocol(
       gatewayId: gateway.id,
       gatewayUri: resolvedUri,
       accountIds,
+      accounts: result.accounts.map((a) => ({
+        accountId: a.accountId,
+        fcmId: a.fcmId,
+        ibId: a.ibId,
+      })),
       fcmId: result.fcmId,
       ibId: result.ibId,
       uniqueUserId: result.uniqueUserId,
@@ -195,7 +226,7 @@ export async function authenticateRithmicProtocol(
 
     const loginAt = new Date()
     logger.info(
-      `Login ok unique_user_id=${result.uniqueUserId ?? '(none)'} at ${loginAt.toISOString()} (UTC) accounts=${accountIds.length} historyStart=${normalizedHistoryStart}`,
+      `Login ok unique_user_id=${result.uniqueUserId ?? '(none)'} at ${loginAt.toISOString()} (UTC) accounts=${accountIds.length} historyStart=${normalizedHistoryStart} (${authLogContext})`,
     )
 
     const connection = await storeRithmicProtocolToken(
@@ -212,7 +243,10 @@ export async function authenticateRithmicProtocol(
       message: 'Connected',
     }
   } catch (error) {
-    logger.error('authenticateRithmicProtocol failed', error)
+    const upstreamCode = getSafeAuthenticationFailureCode(error)
+    logger.error(
+      `authenticateRithmicProtocol failed errorCode=AUTH_FAILED upstreamCode=${upstreamCode} (${authLogContext ?? 'context=unavailable'})`,
+    )
     return {
       error: 'AUTH_FAILED',
       errorParams: {
@@ -352,6 +386,8 @@ export async function updateRithmicProtocolDailySyncTimeAction(
         },
       },
       data: {
+        // Clearing the interval keeps a single active schedule per connection.
+        syncIntervalMinutes: null,
         dailySyncTime: utcTimeString ? new Date(utcTimeString) : null,
       },
     })
@@ -413,6 +449,11 @@ export async function getRithmicProtocolTrades(
       })
       resolvedAccountIds = listed.accounts.map((a) => a.accountId)
       credentials.accountIds = resolvedAccountIds
+      credentials.accounts = listed.accounts.map((a) => ({
+        accountId: a.accountId,
+        fcmId: a.fcmId,
+        ibId: a.ibId,
+      }))
       credentials.fcmId = listed.fcmId ?? credentials.fcmId
       credentials.ibId = listed.ibId ?? credentials.ibId
       await persistRithmicProtocolCredentials(
@@ -468,6 +509,7 @@ export async function getRithmicProtocolTrades(
       fcmId: credentials.fcmId,
       ibId: credentials.ibId,
       accountIds: resolvedAccountIds,
+      accounts: credentials.accounts,
       historyStartDate: credentials.historyStartDate,
       lookbackDays: DEFAULT_LOOKBACK_DAYS,
     })

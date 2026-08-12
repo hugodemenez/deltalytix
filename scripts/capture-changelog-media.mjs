@@ -56,6 +56,26 @@ async function main() {
   const batch = resolveBatch()
   const recipe = await loadRecipe(batch)
   const siteUrl = process.env.SITE_URL || SITE_URL
+  const include = process.env.CHANGELOG_MEDIA_INCLUDE
+  const exclude = process.env.CHANGELOG_MEDIA_EXCLUDE
+  const includedAssets = include
+    ? recipe.assets.filter((asset) => asset.file.includes(include) || asset.scene.includes(include))
+    : recipe.assets
+  const assets = exclude
+    ? includedAssets.filter((asset) => !asset.file.includes(exclude) && !asset.scene.includes(exclude))
+    : includedAssets
+  const requestedLocale = process.env.CHANGELOG_MEDIA_LOCALE
+  const locales = requestedLocale
+    ? LOCALES.filter((locale) => locale === requestedLocale)
+    : LOCALES
+
+  if (locales.length === 0) {
+    throw new Error(`Unsupported CHANGELOG_MEDIA_LOCALE="${requestedLocale}"`)
+  }
+
+  if (assets.length === 0) {
+    throw new Error(`No recipe assets matched CHANGELOG_MEDIA_INCLUDE="${include}"`)
+  }
 
   if (process.env.CHANGELOG_MEDIA_CAPTURE !== '1') {
     console.warn(
@@ -71,9 +91,9 @@ async function main() {
   })
 
   try {
-    for (const locale of LOCALES) {
+    for (const locale of locales) {
       console.log(`\n--- Capturing ${locale.toUpperCase()} (${batch}) ---`)
-      for (const asset of recipe.assets) {
+      for (const asset of assets) {
         console.log(`→ ${asset.scene}: ${asset.file}`)
         await captureScene(browser, {
           batch,

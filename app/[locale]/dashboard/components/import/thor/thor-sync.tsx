@@ -24,7 +24,7 @@ import { captureConnectionCreated } from "@/lib/connection-analytics"
 import { useUserStore } from "../../../../../../store/user-store"
 
 const fieldClassName =
-  'h-11 flex-1 rounded-sm border-black/10 bg-transparent font-mono text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30'
+  'h-11 flex-1 rounded-sm border-black/10 bg-transparent font-mono text-base sm:text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30'
 
 const iconButtonClassName =
   'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border border-black/20 bg-transparent text-black/55 shadow-none transition-[opacity,transform,background-color,color] duration-150 hover:bg-black/5 hover:text-black active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:border-white/20 dark:text-white/55 dark:hover:bg-white/5 dark:hover:text-white'

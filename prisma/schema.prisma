@@ -12,7 +12,7 @@ model Trade {
   id                String   @id @default(uuid())
   accountNumber     String
   accountId         String?
-  quantity          Int
+  quantity          Float
   entryId           String?  @default("")
   closeId           String?  @default("")
   instrument        String
@@ -153,20 +153,26 @@ model User {
 }
 
 model Connection {
-  id               String    @id @default(uuid())
-  userId           String
-  service          String
-  externalId       String    @map("accountId")
-  lastSyncedAt     DateTime
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  token            String?
-  tokenExpiresAt   DateTime?
-  dailySyncTime    DateTime?
-  includedFeeTypes Json?
-  environment      String    @default("demo")
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accounts         Account[]
+  id                  String    @id @default(uuid())
+  userId              String
+  service             String
+  externalId          String    @map("accountId")
+  lastSyncedAt        DateTime
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  token               String?
+  tokenExpiresAt      DateTime?
+  dailySyncTime       DateTime?
+  /**
+   * Recurring sync cadence in minutes (5, 15, 30, 60, 240, 720). When set it
+   * takes precedence over `dailySyncTime`; null means daily-at-a-time (or
+   * manual only when `dailySyncTime` is null too).
+   */
+  syncIntervalMinutes Int?
+  includedFeeTypes    Json?
+  environment         String    @default("demo")
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accounts            Account[]
 
   @@unique([userId, service, externalId], map: "Synchronization_userId_service_accountId_key")
   @@index([userId])

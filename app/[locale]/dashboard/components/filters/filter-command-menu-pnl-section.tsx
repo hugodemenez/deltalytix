@@ -84,14 +84,14 @@ export function PnlSection({ searchValue }: PnlSectionProps) {
               placeholder={t('filters.min')}
               value={customMin}
               onChange={(e) => setCustomMin(e.target.value)}
-              className="h-8 text-sm"
+              className="h-8 text-base sm:text-sm"
             />
             <Input
               type="number"
               placeholder={t('filters.max')}
               value={customMax}
               onChange={(e) => setCustomMax(e.target.value)}
-              className="h-8 text-sm"
+              className="h-8 text-base sm:text-sm"
             />
           </div>
           <Button

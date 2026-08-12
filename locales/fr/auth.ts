@@ -34,6 +34,7 @@ export default {
         openMailboxManualCheck: 'Consultez votre boîte de réception pour l\'e-mail de connexion Deltalytix.',
         resendIn: 'Renvoyer dans',
         resendEmail: 'Renvoyer l\'Email',
+        changeEmail: 'Utiliser une autre adresse',
         verificationCode: 'Code de Vérification',
         verifyCode: 'Vérifier le Code',
         // Identity linking

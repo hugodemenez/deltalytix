@@ -5,8 +5,10 @@ export type ConnectionService =
   | 'rithmic-protocol'
   | 'tradovate'
   | 'dxfeed'
+  | 'ibkr'
   | 'thor'
   | 'etp'
+  | 'ig'
 
 export type ConnectionStatus = 'connected' | 'error'
 

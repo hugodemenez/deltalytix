@@ -140,12 +140,16 @@ export default {
   "connections.sections.rithmicProtocol": "Rithmic Protocol",
   "connections.sections.tradovate": "Tradovate",
   "connections.sections.dxfeed": "DxFeed",
+  "connections.sections.ibkr": "Interactive Brokers",
+  "connections.sections.ig": "IG",
   "connections.sections.thor": "Thor",
   "connections.sections.standalone": "Comptes autonomes",
   "connections.add.rithmic": "Ajouter une connexion Rithmic",
   "connections.add.rithmicProtocol": "Ajouter une connexion Rithmic Protocol",
   "connections.add.tradovate": "Ajouter une connexion Tradovate",
   "connections.add.dxfeed": "Ajouter une connexion DxFeed",
+  "connections.add.ibkr": "Ajouter une connexion Interactive Brokers",
+  "connections.add.ig": "Ajouter une connexion IG",
   "connections.add.thor": "Ajouter une connexion Thor",
   "connections.add.etp": "Ajouter une connexion ETP",
   "connections.emptySection": "Aucune connexion. Utilisez + pour en ajouter une.",
@@ -180,19 +184,27 @@ export default {
   "connections.deleted": "Connexion supprimée",
   "connections.deleteFailed": "Impossible de supprimer la connexion",
   "connections.nextSyncIn": "Prochaine sync dans {time}",
-  "connections.nextSyncSchedule": "Planifier la sync quotidienne",
-  "connections.dailySync.title": "Heure de sync quotidienne",
-  "connections.dailySync.description":
-    "Choisissez l'heure à laquelle cette connexion doit se synchroniser chaque jour.",
-  "connections.dailySync.label": "Heure de sync (locale)",
-  "connections.dailySync.timezoneNote": "Fuseau horaire local ({timezone})",
-  "connections.dailySync.clear": "Effacer la planification",
-  "connections.dailySync.updated": "Heure de sync quotidienne mise à jour",
-  "connections.dailySync.updateFailed": "Impossible de mettre à jour l'heure de sync",
-  "connections.dailySync.presets.morning": "Matin (8:00)",
-  "connections.dailySync.presets.midday": "Midi (12:00)",
-  "connections.dailySync.presets.afterClose": "Après clôture",
-  "connections.dailySync.presets.midnight": "Minuit",
+  "connections.nextSyncSchedule": "Planifier la sync",
+  "connections.syncSchedule.title": "Planification de la sync",
+  "connections.syncSchedule.description":
+    "Synchronisez cette connexion à intervalle régulier, ou une fois par jour à une heure donnée.",
+  "connections.syncSchedule.frequencyLabel": "Fréquence",
+  "connections.syncSchedule.everyMinutes": "Toutes les {count} min",
+  "connections.syncSchedule.everyHour": "Toutes les heures",
+  "connections.syncSchedule.everyHours": "Toutes les {count} heures",
+  "connections.syncSchedule.daily": "Une fois par jour",
+  "connections.syncSchedule.turnOff": "Désactiver",
+  "connections.syncSchedule.timeLabel": "Heure de sync (locale)",
+  "connections.syncSchedule.setTime": "Définir",
+  "connections.syncSchedule.timezoneNote": "Fuseau horaire local ({timezone})",
+  "connections.syncSchedule.updated": "Planification de la sync mise à jour",
+  "connections.syncSchedule.turnedOff": "Sync automatique désactivée",
+  "connections.syncSchedule.updateFailed":
+    "Impossible de mettre à jour la planification de la sync",
+  "connections.syncSchedule.presets.morning": "Matin (8:00)",
+  "connections.syncSchedule.presets.midday": "Midi (12:00)",
+  "connections.syncSchedule.presets.afterClose": "Après clôture",
+  "connections.syncSchedule.presets.midnight": "Minuit",
   "connections.loadFailed": "Impossible de charger les connexions",
   "connections.oauth.tradovate.success": "Tradovate connecté",
   "connections.oauth.tradovate.errorRegistered":
@@ -2325,6 +2337,9 @@ export default {
     error: {
       credentialsRequired: "Saisissez votre e-mail et votre mot de passe",
       propFirmRequired: "Sélectionnez votre propfirm avant de vous connecter",
+      emailRequired: "Saisissez votre e-mail",
+      emailInvalid: "Saisissez un e-mail valide",
+      passwordRequired: "Saisissez votre mot de passe",
       authFailed: "Impossible de se connecter à DxFeed",
     },
     errors: {
@@ -2389,7 +2404,11 @@ export default {
     addAccount: {
       title: "Connecter un compte DxFeed",
       description:
-        "Choisissez votre propfirm, puis connectez-vous avec les mêmes identifiants que sur sa plateforme.",
+        "Choisissez d'abord votre propfirm, puis connectez-vous avec les mêmes identifiants que sur sa plateforme.",
+      propFirmStepDescription:
+        "Sélectionnez la propfirm où vous tradez avant de saisir vos identifiants.",
+      credentialsStepDescription:
+        "Connectez-vous avec les mêmes identifiants que sur la plateforme de cette propfirm.",
       propFirmLabel: "Propfirm",
       propFirmPlaceholder: "Sélectionnez votre propfirm",
       propFirmHint:
@@ -2402,6 +2421,7 @@ export default {
       emailPlaceholder: "E-mail de connexion à votre propfirm",
       passwordLabel: "Mot de passe",
       passwordPlaceholder: "Mot de passe de votre propfirm",
+      continueToCredentials: "Continuer",
       connecting: "Connexion...",
       connect: "Connecter",
     },
@@ -2487,6 +2507,174 @@ export default {
       },
     },
   },
+  ibkrSync: {
+    title: "Synchronisation Interactive Brokers",
+    description:
+      "Importez automatiquement votre historique de trades IBKR via une Flex Query. Configurez-la une fois dans le Client Portal et collez les deux valeurs ci-dessous.",
+    setup: {
+      title: "Configuration dans le Client Portal IBKR",
+      openPortal: "Ouvrir le Client Portal",
+      step1:
+        "Connectez-vous au Client Portal IBKR et allez dans Performance & Reports → Flex Queries.",
+      step2:
+        "Dans Flex Web Service Configuration, activez le service et copiez le token.",
+      step2Hint:
+        "Quand la durée de validité vous est demandée, choisissez un an. Un token plus court interrompt la synchronisation sans prévenir à son expiration.",
+      step3:
+        'Créez une nouvelle Activity Flex Query, nommez-la « Deltalytix » et ajoutez la section Trades.',
+      step3Hint:
+        "Cliquez sur l'en-tête de la section Trades pour sélectionner tous les champs d'un coup — inutile de les cocher un par un.",
+      step4:
+        "Réglez les options de livraison comme ci-dessous, puis enregistrez la requête.",
+      step4Hint:
+        "Tout format de date autre que yyyyMMdd est ambigu : nous refusons de deviner et ignorons ces lignes plutôt que de les importer au mauvais jour.",
+      step5:
+        "Copiez l'ID de requête affiché à côté de la requête enregistrée, puis collez les deux valeurs ci-dessous.",
+      summarySection: "Section",
+      summaryPeriod: "Période",
+      summaryFormat: "Format",
+      summaryDateFormat: "Date / heure",
+      readOnlyNote:
+        "Le Flex Web Service est en lecture seule : il ne peut que télécharger des rapports. Il ne peut ni passer, modifier ou annuler d'ordres, ni déplacer de fonds.",
+    },
+    connect: {
+      title: "Connecter Interactive Brokers",
+      description:
+        "Créez la Flex Query une fois, puis collez votre token et votre ID de requête ensemble — nous identifions lequel est lequel.",
+      pasteLabel: "Token et ID de requête",
+      pastePlaceholder: "Collez les deux valeurs ici, dans n'importe quel ordre",
+      pasteHint:
+        "Vous pouvez les coller sur deux lignes, côte à côte, ou avec les libellés du Client Portal.",
+      detectedToken: "Token",
+      detectedQueryId: "ID de requête",
+      notDetected: "pas encore trouvé",
+      verifyAndConnect: "Vérifier et connecter",
+      verifying: "Vérification auprès d'IBKR...",
+      verifiedTitle: "Connexion vérifiée",
+      importedTrades:
+        "{savedCount} nouveau(x) trade(s) importé(s) sur {tradesCount} trouvé(s).",
+      nothingNew:
+        "{tradesCount} trade(s) clôturé(s) trouvé(s) ; tous étaient déjà dans votre journal.",
+      done: "Terminé",
+    },
+    manage: {
+      savedConnections: "Connexions enregistrées",
+      addNew: "Ajouter",
+      syncAll: "Tout synchroniser",
+      syncNow: "Synchroniser",
+      noConnections: "Aucune connexion Interactive Brokers pour le moment",
+      queryLabel: "Flex Query {queryId}",
+      connected: "Connecté",
+      expired: "À reconnecter",
+      reconnect: "Reconnecter",
+      lastSync: "Dernière synchro",
+      dailySync: "Synchro quotidienne",
+      scheduleSync: "Planifier",
+      multiCurrency:
+        "Trades en plusieurs devises ({currencies}). Le P&L est enregistré tel quel, sans conversion.",
+      removeConnection: "Supprimer la connexion",
+      removeConfirm:
+        'Supprimer la connexion pour la Flex Query « {accountId} » ? Les trades déjà importés restent dans votre journal.',
+      remove: "Supprimer",
+      connectionRemoved: "Connexion {accountId} supprimée.",
+      removeError: "Impossible de supprimer la connexion {accountId}.",
+      reloaded: "Connexions rechargées",
+      dailySyncTimeTitle: "Définir l'heure de synchronisation quotidienne",
+      dailySyncTimeDescription:
+        "Choisissez une heure et nous importons chaque jour automatiquement. Les relevés IBKR couvrent une fenêtre glissante : une exécution manquée est rattrapée par la suivante. Laissez vide pour synchroniser manuellement.",
+      dailySyncTimeLabel: "Heure de synchronisation (heure locale)",
+      dailySyncTimeTimezoneNote: "L'heure est dans votre fuseau horaire ({timezone})",
+      dailySyncTimeUpdated: "Heure de synchronisation mise à jour",
+      dailySyncTimeUpdateError: "Impossible de mettre à jour l'heure de synchronisation",
+    },
+    sync: {
+      inProgress: "Synchronisation de la Flex Query {accountId}...",
+      completeForAccount:
+        "{savedCount} nouveau(x) trade(s) importé(s) sur {tradesCount} trouvé(s) pour {accountId}.",
+      noNewTradesForAccount:
+        "{accountId} vérifié : {tradesCount} trade(s) trouvé(s), tous déjà dans votre journal.",
+      multiCurrencyWarning:
+        "Ce relevé mélange plusieurs devises ({currencies}) ; le P&L est enregistré tel quel, sans conversion.",
+      skippedDatesWarning:
+        "{count} ligne(s) ignorée(s) car leur format de date était ambigu — réglez le format de date de la requête sur yyyyMMdd.",
+    },
+    errors: {
+      UNKNOWN:
+        "Une erreur est survenue. Réessayez ou contactez le support si le problème persiste.",
+      USER_NOT_AUTHENTICATED:
+        "Vous devez être connecté pour lier Interactive Brokers. Connectez-vous et réessayez.",
+      CREDENTIALS_REQUIRED: "Collez votre token Flex et votre ID de requête pour continuer.",
+      TOKEN_MALFORMED:
+        "Aucun token Flex trouvé dans ce que vous avez collé. C'est le long nombre affiché dans le panneau Flex Web Service Configuration.",
+      QUERY_ID_MALFORMED:
+        "Aucun ID de requête trouvé dans ce que vous avez collé. C'est le nombre court affiché à côté de votre Flex Query enregistrée.",
+      INVALID_STORED_CREDENTIALS:
+        "Les données de connexion enregistrées sont illisibles. Supprimez la connexion et recréez-la.",
+      NO_CREDENTIALS_RECONNECT:
+        "Cette connexion n'a plus d'identifiants enregistrés. Recréez-la avec un nouveau token et un ID de requête.",
+      DUPLICATE_CONNECTION: "Cette Flex Query est déjà connectée.",
+      FLEX_HTTP_ERROR:
+        "Interactive Brokers a renvoyé une réponse inattendue (HTTP {status}). Réessayez dans un instant.",
+      FLEX_UNREACHABLE:
+        "Impossible de joindre Interactive Brokers. Vérifiez votre connexion et réessayez.",
+      FLEX_MALFORMED_RESPONSE:
+        "Interactive Brokers a renvoyé une réponse illisible. Réessayez dans un instant.",
+      FLEX_STATEMENT_TIMEOUT:
+        "Interactive Brokers génère encore le rapport. Réessayez dans une minute.",
+      FLEX_TOKEN_EXPIRED:
+        "Votre token Flex a expiré. Générez-en un nouveau dans le Client Portal et reconnectez-vous.",
+      FLEX_TOKEN_INVALID:
+        "Interactive Brokers a rejeté ce token Flex. Générez-en un nouveau et reconnectez-vous.",
+      FLEX_IP_RESTRICTED:
+        "Ce token Flex est restreint à une adresse IP précise, nos serveurs ne peuvent donc pas l'utiliser.",
+      FLEX_QUERY_INVALID:
+        "Interactive Brokers ne reconnaît pas cet ID de requête. Vérifiez-le dans le Client Portal.",
+      FLEX_REFERENCE_INVALID:
+        "La référence du rapport a expiré avant que nous puissions le télécharger. Réessayez.",
+      FLEX_ACCOUNT_INVALID:
+        "Le compte de cette Flex Query n'est pas valide. Vérifiez la sélection de comptes de la requête dans le Client Portal.",
+      FLEX_SERVICE_INACTIVE:
+        "Le Flex Web Service est désactivé pour ce compte. Réactivez-le dans le Client Portal.",
+      FLEX_RATE_LIMITED:
+        "Interactive Brokers limite ce token (10 requêtes par minute maximum). Attendez une minute et réessayez.",
+      FLEX_LEGACY_QUERY:
+        "Il s'agit d'une Flex Query héritée, qu'IBKR ne prend plus en charge. Créez une nouvelle Activity Flex Query.",
+      FLEX_STATEMENT_FAILED:
+        "Interactive Brokers n'a pas pu générer le rapport ({code}) : {detail}",
+      FLEX_UNKNOWN_ERROR: "Interactive Brokers a renvoyé l'erreur {code} : {detail}",
+      QUERY_HAS_NO_TRADES_SECTION:
+        "Cette Flex Query n'a renvoyé aucune donnée de trade. Modifiez-la dans le Client Portal et ajoutez la section Trades.",
+      QUERY_MISSING_FIELDS:
+        "Il manque des champs à cette Flex Query. Ouvrez la section Trades et sélectionnez tous ses champs.",
+      QUERY_UNPARSEABLE_DATES:
+        "Aucune des {count} lignes de ce relevé n'avait de date lisible sans ambiguïté.",
+      NO_TRADES_IN_RANGE:
+        "Le relevé est vide. Vérifiez que la période de la requête couvre bien vos jours de trading.",
+      OPEN_POSITIONS_ONLY:
+        "Ce relevé ne contient que des positions encore ouvertes : il n'y a rien à importer pour l'instant.",
+      DUPLICATE_TRADES: "Ces trades sont déjà dans votre journal.",
+      SAVE_TRADES_FAILED:
+        "Les trades ont été téléchargés mais n'ont pas pu être enregistrés : {detail}",
+      SYNC_FAILED: "La synchronisation a échoué. Réessayez dans quelques minutes.",
+      ACCOUNT_ID_REQUIRED:
+        "Identifiant de connexion manquant. Actualisez la page et réessayez.",
+      LOAD_SYNCHRONIZATIONS_FAILED:
+        "Impossible de charger vos connexions Interactive Brokers. Actualisez la page.",
+      DELETE_SYNC_FAILED: "Impossible de supprimer cette connexion. Réessayez.",
+      UPDATE_SYNC_TIME_FAILED:
+        "Impossible de mettre à jour l'heure de synchronisation. Réessayez.",
+      hintEditQuery:
+        "Ouvrez Client Portal → Performance & Reports → Flex Queries, modifiez votre requête et vérifiez la section Trades et la période.",
+      hintRegenerateToken:
+        "Ouvrez Client Portal → Performance & Reports → Flex Queries → Flex Web Service Configuration, générez un nouveau token, puis reconnectez-vous ici.",
+      hintRetryShortly:
+        "C'est généralement temporaire. Attendez une minute et relancez la synchronisation.",
+      hintDateFormat:
+        "Dans les options de livraison de votre Flex Query, réglez le format de date sur yyyyMMdd et le format d'heure sur HHmmss.",
+      hintIpRestriction:
+        "Régénérez le token sans restriction d'IP, ou autorisez l'adresse de nos serveurs.",
+    },
+  },
   rithmicProtocolSync: {
     title: "Synchronisation Rithmic Protocol",
     description:
@@ -2495,6 +2683,11 @@ export default {
     error: {
       credentialsRequired:
         "Saisissez le nom d'utilisateur, le mot de passe, le système et la date de début du compte",
+      systemRequired: "Sélectionnez un système Rithmic",
+      usernameRequired: "Saisissez votre nom d'utilisateur",
+      passwordRequired: "Saisissez votre mot de passe",
+      historyStartRequired: "Choisissez une date de début de compte",
+      historyStartInvalid: "Choisissez une date entre 2013 et aujourd'hui",
       authFailed: "Impossible de se connecter à Rithmic Protocol API",
     },
     errors: {
@@ -2523,18 +2716,33 @@ export default {
     addAccount: {
       title: "Connecter Rithmic Protocol",
       description:
-        "Connectez-vous avec votre identifiant Rithmic, puis choisissez le système de votre compte (par exemple Rithmic 01 ou Rithmic Paper Trading).",
+        "Choisissez votre point de connexion et le système Rithmic, puis connectez-vous avec vos identifiants.",
+      systemStepDescription:
+        "Choisissez d'abord votre point de connexion et le système Rithmic (par exemple Rithmic 01 ou Rithmic Paper Trading).",
+      credentialsStepDescription:
+        "Connectez-vous avec les identifiants du système sélectionné.",
       gatewayLabel: "Point de connexion",
       gatewayHelp:
         "Choisissez le point de connexion Rithmic le plus proche. Core (Chicago) fonctionne partout ; un point régional réduit seulement la latence.",
       systemLabel: "Système Rithmic",
+      systemPlaceholder: "Sélectionner un système",
+      systemSearchPlaceholder: "Rechercher un système…",
+      systemSearchHelp:
+        "Recherchez et choisissez le système Rithmic de votre compte.",
+      noSystemFound: "Aucun système trouvé",
       usernameLabel: "Nom d'utilisateur",
       passwordLabel: "Mot de passe",
+      showPassword: "Afficher le mot de passe",
+      hidePassword: "Masquer le mot de passe",
       historyStartLabel: "Date de début du compte",
       historyStartHelp:
         "Indiquez le jour où vous avez commencé à trader sur ce compte. Nous importons les fills depuis cette date jusqu'à aujourd'hui par lots de 30 jours (recommandation Rithmic).",
+      continueToCredentials: "Continuer",
       connecting: "Connexion…",
       connect: "Connecter",
+    },
+    trademark: {
+      summary: "Marques et copyright",
     },
     sync: {
       inProgress: "Synchronisation des fills Rithmic pour {accountId}…",
@@ -2565,6 +2773,140 @@ export default {
         "Aucun trade clôturé trouvé pour {accountId}.",
     },
   },
+  igSync: {
+    title: "IG",
+    description:
+      "Connectez votre compte IG avec une clé API personnelle pour importer automatiquement les deals clôturés depuis l'historique des transactions.",
+    connected: "Compte IG connecté avec succès",
+    error: {
+      credentialsRequired:
+        "Saisissez le nom d'utilisateur, le mot de passe et la clé API",
+      authFailed: "Impossible de se connecter à IG",
+    },
+    errors: {
+      USER_NOT_AUTHENTICATED: "Vous devez être connecté pour lier IG.",
+      CREDENTIALS_REQUIRED:
+        "Saisissez le nom d'utilisateur, le mot de passe et la clé API.",
+      AUTH_FAILED: "Échec de la connexion IG : {reason}",
+      IG_INVALID_CREDENTIALS:
+        "IG a refusé cet identifiant ou ce mot de passe. Vérifiez-les sur ig.com puis réessayez.",
+      IG_IDENTIFIER_INVALID:
+        "L’API d’IG n’accepte pas une adresse e-mail comme identifiant. Utilisez votre nom d’utilisateur IG (lettres, chiffres, tiret, underscore — 30 caractères max), pas l’e-mail avec lequel vous vous connectez sur le site. Vous le trouverez dans My IG → Configuration → Informations personnelles, ou via la page Identifiants perdus d’IG.",
+      IG_API_KEY_REJECTED:
+        "IG a refusé cette clé API ({environment}). Le plus souvent, la clé a été mal copiée (tronquée), contient des espaces, ou n’est pas « Activée » dans Mon compte → Paramètres → Clés API. Restez bien en Réel pour générer une clé Live, collez la valeur complète, puis réessayez — ou vérifiez les mêmes identifiants dans l’API Companion d’IG.",
+      IG_API_KEY_DISABLED:
+        "Cette clé API est désactivée ou révoquée chez IG. Générez-en une nouvelle via Mon compte → Paramètres → Clés API.",
+      IG_ACCOUNT_LOCKED:
+        "IG a bloqué cet identifiant après trop de tentatives échouées. Débloquez-le sur ig.com, puis reconnectez-vous.",
+      IG_PASSWORD_ENCRYPTION_REQUIRED:
+        "Ce compte IG exige une connexion chiffrée, que Deltalytix ne prend pas encore en charge. Importez plutôt votre historique des transactions en CSV.",
+      IG_RATE_LIMITED:
+        "IG limite temporairement cette clé API. Patientez quelques minutes et réessayez.",
+      ENCRYPTION_KEY_MISSING:
+        "Ce serveur Deltalytix n'a pas de clé de chiffrement configurée : les identifiants IG ne peuvent pas être enregistrés. Contactez votre administrateur.",
+      NO_ACCOUNTS: "Aucun compte de trading n'a été renvoyé pour cet identifiant.",
+      INVALID_STORED_CREDENTIALS:
+        "Les données de connexion enregistrées sont invalides. Reconnectez-vous.",
+      NO_TOKEN_RECONNECT:
+        "Cette connexion n'a pas d'identifiants. Reconnectez-vous.",
+      DUPLICATE_TRADES: "Ces trades sont déjà dans votre journal.",
+      SYNC_FAILED:
+        "La synchronisation a échoué. Réessayez dans quelques minutes.",
+      SYNC_FETCH_FAILED:
+        "Impossible de charger les transactions IG ({failures} sur {total} comptes en échec). Reconnectez-vous et réessayez.",
+      SAVE_TRADES_FAILED:
+        "Les trades ont été récupérés mais n'ont pas pu être enregistrés : {detail}",
+      ACCOUNT_ID_REQUIRED: "Identifiant de compte manquant.",
+      LOAD_SYNCHRONIZATIONS_FAILED:
+        "Impossible de charger vos connexions IG.",
+      DELETE_SYNC_FAILED: "Impossible de supprimer cette connexion.",
+    },
+    addAccount: {
+      title: "Connecter IG",
+      description:
+        "Connectez-vous avec votre nom d'utilisateur et mot de passe IG, puis collez une clé API personnelle.",
+      intro:
+        "L’API d’IG demande deux choses : votre nom d’utilisateur IG (pas votre e-mail), qui prouve que le compte est le vôtre, et une clé API personnelle, qui identifie Deltalytix auprès d’IG. Vous créez la clé vous-même chez IG — c’est gratuit et cela prend une minute.",
+      environmentLabel: "Environnement",
+      environmentLive: "Réel",
+      environmentDemo: "Démo",
+      usernameLabel: "Nom d'utilisateur",
+      usernameHint:
+        "Pas votre e-mail. L’API n’accepte que le nom d’utilisateur IG (lettres, chiffres, - et _), visible dans My IG → Configuration → Informations personnelles.",
+      passwordLabel: "Mot de passe",
+      apiKeyLabel: "Clé API",
+      createKeyToggle: "Comment en créer une ?",
+      createKeyStep1:
+        "Connectez-vous à la plateforme web IG avec votre compte réel (restez en Réel — ne basculez pas en Démo).",
+      createKeyStep2: "Ouvrez Mon compte → Paramètres → Clés API (menu de gauche).",
+      createKeyStep3:
+        "Donnez un nom (par exemple Deltalytix) puis cliquez sur Générer une nouvelle clé. Copiez-la en entier immédiatement — IG peut ne plus la réafficher — et vérifiez que son statut est Activée.",
+      createKeyStep4:
+        "Contrôle optionnel : collez le même identifiant, mot de passe et clé dans l’API Companion d’IG (Live). Si Companion refuse aussi la clé, le problème vient d’IG, pas de Deltalytix.",
+      linkPrimary: "IG France — utiliser les API de trading",
+      linkSecondary: "IG API Companion — tester la connexion",
+      linkTertiary: "IG France — accéder à l’API",
+      connecting: "Connexion…",
+      connect: "Connecter",
+    },
+    faq: {
+      title: "Questions",
+      whyBothQuestion:
+        "Pourquoi mon identifiant et une clé API sont-ils tous les deux nécessaires ?",
+      whyBothAnswer:
+        "Ils ne servent pas à la même chose. Votre identifiant et votre mot de passe prouvent que le compte est le vôtre : c’est avec eux qu’IG vous connecte. La clé API, elle, identifie Deltalytix comme l’application qui fait la requête, et IG refuse tout appel qui n’en contient pas. L’un ne fonctionne pas sans l’autre.",
+      usernameQuestion:
+        "Je me connecte à IG avec mon e-mail — quel nom d’utilisateur utiliser ?",
+      usernameAnswer:
+        "Le site web accepte votre e-mail ; l’API, non. Saisissez le nom d’utilisateur IG indiqué dans My IG → Configuration → Informations personnelles (lettres, chiffres, tiret ou underscore uniquement — pas de @). Si vous ne vous souvenez que de l’e-mail, utilisez la page IG « Identifiants perdus » pour le recevoir.",
+      usernameLinkPersonalInfo:
+        "IG France — modifier l’identifiant (infos personnelles)",
+      usernameLinkLostDetails:
+        "IG France — récupérer un identifiant oublié",
+      apiKeyRejectedQuestion:
+        "IG a refusé ma clé API — que dois-je vérifier ?",
+      apiKeyRejectedAnswer:
+        "Vérifiez que l’environnement est bien Réel si vous n’avez qu’un compte réel. Régénérez la clé en étant connecté en Réel (Mon compte → Paramètres → Clés API), copiez la valeur complète sans espaces, et contrôlez le statut Activée. IG n’autorise qu’une clé par compte — une ancienne clé cesse de fonctionner dès que vous en créez une nouvelle. Deltalytix se connecte à IG depuis votre navigateur (comme l’API Companion). Testez d’abord les trois valeurs dans Companion ; si Companion échoue aussi, contactez le support IG.",
+      apiKeyRejectedLinkCompanion: "IG API Companion",
+      scopeQuestion: "Que fait Deltalytix avec cette clé ?",
+      scopeIntro:
+        "Les clés API IG n’ont pas de scopes OAuth ni de cases à cocher de permissions. Une clé identifie votre application, et l’accès suit votre login IG. Deltalytix se contente de :",
+      scopeSignIn:
+        "Se connecter, lister vos comptes et basculer de l’un à l’autre pour les lire chacun à leur tour.",
+      scopeHistory:
+        "Lire votre historique des transactions clôturées — aucun streaming de cours.",
+      scopeNoTrade:
+        "Ne jamais ouvrir, modifier ni fermer de position. La synchronisation est en lecture seule pour votre journal.",
+      scopeMatchEnv:
+        "Utiliser l’environnement choisi ici : une clé Réel avec Réel, une clé Démo avec Démo. Une clé créée pour un environnement ne fonctionne pas sur l’autre.",
+      storageQuestion: "Comment mes identifiants sont-ils stockés ?",
+      storageEncrypted:
+        "Votre identifiant, votre mot de passe et votre clé API sont chiffrés (AES-256-GCM) avant d’être enregistrés, et déchiffrés uniquement sur notre serveur au moment d’une synchronisation.",
+      storageWhyPassword:
+        "L’API d’IG ne propose ni OAuth ni jeton de rafraîchissement : chaque synchronisation doit se connecter en votre nom. Votre mot de passe est donc conservé plutôt qu’échangé contre un jeton révocable — nous préférons le dire clairement que parler de « stockage sécurisé » en vous laissant deviner.",
+      storageRevoke:
+        "Supprimer la connexion efface les identifiants stockés. Changer votre mot de passe IG coupe l’accès immédiatement.",
+    },
+    sync: {
+      tokenMissing: "Identifiants manquants — reconnectez-vous",
+      accountNotFound: "Compte introuvable. Actualisez la liste.",
+    },
+    multiAccount: {
+      empty: "Aucune connexion IG. Cliquez sur Connecter pour en ajouter une.",
+      accountsCount: "comptes de trading",
+      syncAll: "Tout synchroniser",
+      syncNow: "Synchroniser",
+      remove: "Supprimer",
+      removeTitle: "Supprimer la connexion",
+      removeDescription:
+        'Supprimer la connexion « {accountId} » ? Vos identifiants IG stockés sont effacés. Les trades déjà importés restent dans Deltalytix.',
+      connectionRemoved: 'Connexion « {accountId} » supprimée.',
+      removeError: 'Échec de la suppression de « {accountId} ».',
+      accountsReloaded: "Comptes rechargés avec succès",
+      reloadError: "Échec du rechargement des comptes",
+      lastSynced: "Dernière synchronisation",
+    },
+  },
   "import.type.thorSync.name": "Thor",
   "import.type.thorSync.description":
     "Synchronisation directe de vos comptes connectés à Thor",
@@ -2580,6 +2922,16 @@ export default {
     "Synchronisation directe de compte avec DxFeed",
   "import.type.dxfeedSync.details":
     "Importez vos trades clôturés depuis votre propfirm (DxFeed / Volumetrica). Sélectionnez la propfirm, puis connectez-vous avec vos identifiants plateforme.",
+  "import.type.ibkrSync.name": "Interactive Brokers",
+  "import.type.ibkrSync.description":
+    "Synchronisation directe de compte avec Interactive Brokers",
+  "import.type.ibkrSync.details":
+    "Importez automatiquement votre historique de trades IBKR via une Flex Query. Vous créez la requête une fois dans le Client Portal, collez le token et l'ID de requête ici, et nous gardons tout synchronisé.",
+  "import.type.igSync.name": "IG",
+  "import.type.igSync.description":
+    "Synchronisation directe de compte avec IG",
+  "import.type.igSync.details":
+    "Connectez-vous avec votre nom d’utilisateur IG (pas l’e-mail) et votre mot de passe, plus une clé API personnelle que vous créez chez IG. Deltalytix lit uniquement l’historique des transactions clôturées — aucun ordre n’est passé. Créez la clé via Mon compte → Paramètres → Clés API.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "Fichier Excel ATAS",
   "import.type.atas.details":
@@ -2598,7 +2950,7 @@ export default {
   "import.ig.error.invalidFile":
     "Importez un CSV d'historique des transactions IG contenant le marché, la référence, les prix, la taille, le PnL et les dates UTC.",
   "import.ig.skippedRows":
-    "{count} ligne(s) hors trade ou non prise(s) en charge ont été ignorées. Les quantités fractionnaires IG ne sont pas encore prises en charge.",
+    "{count} ligne(s) hors trade ou non prise(s) en charge ont été ignorées.",
   "import.ig.noTrades": "Aucun trade IG clôturé trouvé",
   "import.ig.noTradesDescription":
     "Vérifiez que la période contient des trades clôturés et que vous avez exporté l'historique des transactions plutôt que l'historique d'activité.",

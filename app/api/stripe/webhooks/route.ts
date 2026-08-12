@@ -7,6 +7,12 @@ import { PrismaClient } from "@/prisma/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { sendSubscriptionErrorEmail } from "@/app/[locale]/(landing)/actions/send-support-email";
 import { capturePostHogEvent } from "@/lib/posthog-server";
+import {
+  attributionFromStripeMetadata,
+  attributionToPersonSetOnce,
+  attributionToPostHogProperties,
+  resolveCheckoutRevenueMajor,
+} from "@/lib/attribution";
 
 // Helper function to get current period end from subscription items
 function getCurrentPeriodEnd(subscription: Stripe.Subscription): number {
@@ -138,6 +144,14 @@ export async function POST(req: Request) {
             console.log('subscription created/updated', subscription)
 
             if (data.metadata?.analytics_consent === 'granted' && user?.id) {
+              const attribution = attributionFromStripeMetadata(data.metadata);
+              const attributionProps = attributionToPostHogProperties(attribution);
+              const setOnce = attributionToPersonSetOnce(attribution);
+              const revenue = resolveCheckoutRevenueMajor({
+                amountTotal: data.amount_total,
+                priceUnitAmount: price.unit_amount,
+              });
+
               await capturePostHogEvent({
                 consentGranted: true,
                 distinctId: data.metadata.posthog_distinct_id || user.id,
@@ -147,8 +161,12 @@ export async function POST(req: Request) {
                   plan: subscriptionPlan,
                   billing_interval: interval,
                   currency: data.currency,
-                  revenue: data.amount_total ? data.amount_total / 100 : 0,
+                  // Prefer Stripe amount_total; fall back to catalog price so we
+                  // never invent 0 when Stripe has a real amount.
+                  ...(revenue !== null ? { revenue } : {}),
                   stripe_checkout_session_id: data.id,
+                  ...attributionProps,
+                  ...(setOnce ? { $set_once: setOnce } : {}),
                 },
               })
             }
@@ -228,6 +246,16 @@ export async function POST(req: Request) {
                 console.log('lifetime subscription created/updated')
 
                 if (data.metadata?.analytics_consent === 'granted' && user?.id) {
+                  const attribution = attributionFromStripeMetadata(data.metadata);
+                  const attributionProps = attributionToPostHogProperties(attribution);
+                  const setOnce = attributionToPersonSetOnce(attribution);
+                  const lineItemAmountTotal = lineItems[0]?.amount_total;
+                  const revenue = resolveCheckoutRevenueMajor({
+                    amountTotal: data.amount_total,
+                    lineItemAmountTotal,
+                    priceUnitAmount: price.unit_amount,
+                  });
+
                   await capturePostHogEvent({
                     consentGranted: true,
                     distinctId: data.metadata.posthog_distinct_id || user.id,
@@ -237,8 +265,10 @@ export async function POST(req: Request) {
                       plan: subscriptionPlan,
                       billing_interval: 'lifetime',
                       currency: data.currency,
-                      revenue: data.amount_total ? data.amount_total / 100 : 0,
+                      ...(revenue !== null ? { revenue } : {}),
                       stripe_checkout_session_id: data.id,
+                      ...attributionProps,
+                      ...(setOnce ? { $set_once: setOnce } : {}),
                     },
                   })
                 }

@@ -2,7 +2,13 @@
 
 import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Loader2, Trash2, Plus, RefreshCw, MoreVertical } from 'lucide-react'
+import {
+  Loader2,
+  Trash2,
+  Plus,
+  RefreshCw,
+  MoreVertical,
+} from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -21,21 +27,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { useI18n } from '@/locales/client'
 import { toast } from 'sonner'
-import { authenticateRithmicProtocol } from './actions'
 import { useRithmicProtocolSyncContext } from '@/context/rithmic-protocol-sync-context'
-import { captureConnectionCreated } from '@/lib/connection-analytics'
-import { useRithmicProtocolConnectOptions } from './use-rithmic-protocol-connect-options'
+import { RithmicProtocolConnectForm } from './rithmic-protocol-connect-form'
 
 export function RithmicProtocolCredentialsManager() {
   const {
@@ -51,26 +46,11 @@ export function RithmicProtocolCredentialsManager() {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
   const [isReloading, setIsReloading] = useState(false)
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [historyStartDate, setHistoryStartDate] = useState('')
-  const {
-    gateways,
-    gatewayId,
-    setGatewayId,
-    systems,
-    systemName,
-    setSystemName,
-    loadingGateways,
-    loadingSystems,
-  } = useRithmicProtocolConnectOptions(isAddDialogOpen)
   const [actionsMenuAccountId, setActionsMenuAccountId] = useState<string | null>(
     null,
   )
   const t = useI18n()
-  const todayUtc = new Date().toISOString().slice(0, 10)
 
   const handleRemoveConnection = useCallback(
     async (accountId: string) => {
@@ -89,62 +69,6 @@ export function RithmicProtocolCredentialsManager() {
     },
     [t, deleteAccount],
   )
-
-  const handleAddAccount = useCallback(async () => {
-    if (!username || !password || !systemName || !historyStartDate) {
-      toast.error(t('rithmicProtocolSync.error.credentialsRequired'))
-      return
-    }
-
-    const connectedUsername = username
-    try {
-      setIsLoading(true)
-      const result = await authenticateRithmicProtocol(
-        username,
-        password,
-        systemName,
-        historyStartDate,
-        gatewayId,
-      )
-
-      if ('error' in result && result.error) {
-        const translate = t as (
-          key: string,
-          params?: Record<string, string | number>,
-        ) => string
-        toast.error(
-          translate(`rithmicProtocolSync.errors.${result.error}`, {
-            reason: String(result.errorParams?.reason ?? ''),
-          }),
-        )
-        return
-      }
-
-      toast.success(t('rithmicProtocolSync.connected'))
-      captureConnectionCreated('rithmic-protocol')
-      setIsAddDialogOpen(false)
-      setUsername('')
-      setPassword('')
-      setHistoryStartDate('')
-      await loadAccounts()
-      // One sync pulls every trading account stored on this connection.
-      void performSyncForAccount(connectedUsername)
-    } catch (error) {
-      console.error('Rithmic Protocol connect error:', error)
-      toast.error(t('rithmicProtocolSync.error.authFailed'))
-    } finally {
-      setIsLoading(false)
-    }
-  }, [
-    username,
-    password,
-    systemName,
-    historyStartDate,
-    gatewayId,
-    t,
-    loadAccounts,
-    performSyncForAccount,
-  ])
 
   const handleReloadAccounts = useCallback(async () => {
     try {
@@ -290,103 +214,12 @@ export function RithmicProtocolCredentialsManager() {
               {t('rithmicProtocolSync.addAccount.description')}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label>{t('rithmicProtocolSync.addAccount.gatewayLabel')}</Label>
-              <Select
-                value={gatewayId}
-                onValueChange={setGatewayId}
-                disabled={loadingGateways || gateways.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {gateways.map((gateway) => (
-                    <SelectItem key={gateway.id} value={gateway.id}>
-                      {gateway.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {t('rithmicProtocolSync.addAccount.gatewayHelp')}
-              </p>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>{t('rithmicProtocolSync.addAccount.systemLabel')}</Label>
-              <Select
-                value={systemName}
-                onValueChange={setSystemName}
-                disabled={loadingSystems || systems.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {systems.map((system) => (
-                    <SelectItem key={system} value={system}>
-                      {system}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>{t('rithmicProtocolSync.addAccount.usernameLabel')}</Label>
-              <Input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>{t('rithmicProtocolSync.addAccount.passwordLabel')}</Label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>
-                {t('rithmicProtocolSync.addAccount.historyStartLabel')}
-              </Label>
-              <Input
-                type="date"
-                value={historyStartDate}
-                onChange={(e) => setHistoryStartDate(e.target.value)}
-                min="2013-01-01"
-                max={todayUtc}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                {t('rithmicProtocolSync.addAccount.historyStartHelp')}
-              </p>
-            </div>
-            <Button
-              onClick={() => void handleAddAccount()}
-              disabled={
-                isLoading ||
-                loadingGateways ||
-                loadingSystems ||
-                !systemName ||
-                !username ||
-                !password ||
-                !historyStartDate
-              }
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  {t('rithmicProtocolSync.addAccount.connecting')}
-                </>
-              ) : (
-                t('rithmicProtocolSync.addAccount.connect')
-              )}
-            </Button>
-          </div>
+          {isAddDialogOpen ? (
+            <RithmicProtocolConnectForm
+              onConnected={() => setIsAddDialogOpen(false)}
+              sourceUi="credentials_manager"
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
 

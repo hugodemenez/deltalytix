@@ -144,7 +144,7 @@ export const WebPreviewUrl = ({
 
   return (
     <Input
-      className="h-8 flex-1 text-sm"
+      className="h-8 flex-1 text-base sm:text-sm"
       onChange={onChange}
       onKeyDown={handleKeyDown}
       placeholder="Enter URL..."

@@ -100,14 +100,16 @@ export async function setRithmicSynchronization(
 
   await invalidateConnectionsPageCache(userId)
 
-  await capturePostHogEvent({
-    distinctId: userId,
-    event: 'integration_connected',
-    properties: {
-      integration: service,
-      is_first_connection: !existingConnection,
-    },
-  })
+  if (!existingConnection) {
+    await capturePostHogEvent({
+      distinctId: userId,
+      event: 'integration_connected',
+      properties: {
+        integration: service,
+        is_first_connection: true,
+      },
+    })
+  }
 
   return connection
 }

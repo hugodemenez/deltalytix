@@ -9,7 +9,6 @@ export default {
   "calendar.weekdays.weekly": "Hebdo",
   "calendar.trades": "trades",
   "calendar.trade": "trade",
-  "calendar.noTrades": "Aucun trade",
   embed: {
     pnlPerContract: {
       title: "P/L net moyen par contrat",
