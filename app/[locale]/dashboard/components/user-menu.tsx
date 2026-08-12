@@ -38,11 +38,14 @@ import {
   Cable,
   Settings,
   Building2,
+  ChevronRight,
 } from 'lucide-react'
-import { SubscriptionBadge } from './subscription-badge'
 import { signOut } from '@/server/auth'
 import { useMemo } from 'react'
 import { ThemeToggleIcon } from '@/components/theme-toggle-icon'
+import { useModalStateStore } from '@/store/modal-state-store'
+import { useStripeSubscriptionStore } from '@/store/stripe-subscription-store'
+import { cn } from '@/lib/utils'
 
 type Locale = 'en' | 'fr'
 
@@ -66,6 +69,18 @@ export default function UserMenu() {
   const user = useUserStore(state => state.supabaseUser)
   const timezone = useUserStore(state => state.timezone)
   const setTimezone = useUserStore(state => state.setTimezone)
+  const setBillingSheetOpen = useModalStateStore(
+    (state) => state.setBillingSheetOpen
+  )
+  const stripeSubscription = useStripeSubscriptionStore(
+    (state) => state.stripeSubscription
+  )
+  const planLabel =
+    stripeSubscription?.plan?.name?.trim() || t('pricing.free.name')
+  const isFreePlan = (() => {
+    const normalized = planLabel.trim().toLowerCase()
+    return !normalized || normalized === 'free' || normalized === 'basic'
+  })()
 
   const languages: { value: Locale; label: string }[] = useMemo(() => ([
     { value: 'en', label: 'English' },
@@ -80,15 +95,12 @@ export default function UserMenu() {
     <div className="relative">
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <div className="relative inline-block">
-            <Avatar className="cursor-pointer h-8 w-8">
-              <AvatarImage src={user?.user_metadata.avatar_url} />
-              <AvatarFallback className="uppercase text-xs bg-secondary text-secondary-foreground">
-                {user?.email![0]}
-              </AvatarFallback>
-            </Avatar>
-            <SubscriptionBadge className="absolute -bottom-1 -right-1 px-1 py-0 text-[10px] leading-3" />
-          </div>
+          <Avatar className="cursor-pointer h-8 w-8">
+            <AvatarImage src={user?.user_metadata.avatar_url} />
+            <AvatarFallback className="uppercase text-xs bg-secondary text-secondary-foreground">
+              {user?.email![0]}
+            </AvatarFallback>
+          </Avatar>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
@@ -98,6 +110,33 @@ export default function UserMenu() {
           <div className="px-2 py-1.5 text-sm text-muted-foreground">
             {user?.email}
           </div>
+          <DropdownMenuItem
+            className={cn(
+              'mx-1 mb-1 flex cursor-pointer flex-col items-stretch gap-0.5 rounded-lg px-3 py-2.5 focus:bg-[#EFF5EC] dark:focus:bg-[#243028]',
+              isFreePlan
+                ? 'bg-[#EFF5EC] dark:bg-[#243028]'
+                : 'bg-[#F2F2EE] dark:bg-muted/40'
+            )}
+            onSelect={(event) => {
+              event.preventDefault()
+              setBillingSheetOpen(true)
+            }}
+          >
+            <div className="flex w-full items-center justify-between gap-2">
+              <span className="text-sm font-medium text-[#171917] dark:text-foreground">
+                {t('dashboard.planChip.menuLabel', { plan: planLabel })}
+              </span>
+              <ChevronRight
+                className="h-4 w-4 shrink-0 text-[#686D67] dark:text-muted-foreground"
+                aria-hidden
+              />
+            </div>
+            {isFreePlan ? (
+              <span className="text-xs font-medium text-[#3E7550] dark:text-[#9BC4A8]">
+                {t('dashboard.planChip.upgradeToPro')}
+              </span>
+            ) : null}
+          </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/dashboard">
               <div className="flex items-center w-full">
@@ -116,14 +155,17 @@ export default function UserMenu() {
               </div>
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/dashboard/billing">
-              <div className="flex items-center w-full">
-                <CreditCard className="mr-2 h-4 w-4" />
-                <span>{t('dashboard.billing')}</span>
-                <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
-              </div>
-            </Link>
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault()
+              setBillingSheetOpen(true)
+            }}
+          >
+            <div className="flex items-center w-full">
+              <CreditCard className="mr-2 h-4 w-4" />
+              <span>{t('dashboard.billing')}</span>
+              <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
+            </div>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/dashboard/connections">

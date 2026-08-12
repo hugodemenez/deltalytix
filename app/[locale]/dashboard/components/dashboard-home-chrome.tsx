@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useI18n } from '@/locales/client'
 import { WidgetToolbarHostProvider } from './widget-toolbar-host'
+import { ConnectionsStrip } from './connections-strip'
 
 /**
  * Instant shell chrome for Dashboard home: real tab labels + layout math.
@@ -71,6 +72,9 @@ export function DashboardHomeChrome({ children }: { children: ReactNode }) {
     if (navbar) {
       resizeObserver.observe(navbar)
     }
+    if (tabsListRef.current) {
+      resizeObserver.observe(tabsListRef.current)
+    }
 
     const mutationObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -131,17 +135,20 @@ export function DashboardHomeChrome({ children }: { children: ReactNode }) {
       >
         <div
           ref={tabsListRef}
-          className="fixed inset-x-0 top-(--navbar-height,4rem) z-30 w-full overflow-x-auto border-b bg-background shadow-xs"
+          className="fixed inset-x-0 top-(--navbar-height,4rem) z-30 w-full border-b bg-background shadow-xs"
         >
-          <TabsList className="h-12 w-full min-w-max max-w-none rounded-none bg-muted/70 sm:min-w-0">
-            <TabsTrigger value="widgets">
-              {t('dashboard.tabs.widgets')}
-            </TabsTrigger>
-            <TabsTrigger value="table">{t('dashboard.tabs.table')}</TabsTrigger>
-            <TabsTrigger value="accounts">
-              {t('dashboard.tabs.accounts')}
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto">
+            <TabsList className="h-12 w-full min-w-max max-w-none rounded-none bg-muted/70 sm:min-w-0">
+              <TabsTrigger value="widgets">
+                {t('dashboard.tabs.widgets')}
+              </TabsTrigger>
+              <TabsTrigger value="table">{t('dashboard.tabs.table')}</TabsTrigger>
+              <TabsTrigger value="accounts">
+                {t('dashboard.tabs.accounts')}
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          <ConnectionsStrip className="border-t border-[#E2E5DF]/80 bg-[#F7F7F4]/80 dark:border-border dark:bg-background/80" />
         </div>
 
         <WidgetToolbarHostProvider active={tab === 'widgets'}>

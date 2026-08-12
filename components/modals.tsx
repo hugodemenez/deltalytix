@@ -12,6 +12,7 @@ import PricingPlans from '@/components/pricing-plans'
 import { redirect, useSearchParams } from 'next/navigation'
 import OnboardingModal from './onboarding-modal'
 import { AccountGroupBoard } from '@/app/[locale]/dashboard/components/filters/account-group-board'
+import { BillingSheet } from '@/app/[locale]/dashboard/components/billing-sheet'
 import { useModalStateStore } from '@/store/modal-state-store'
 import { useTradesStore } from '@/store/trades-store'
 import { toast } from 'sonner'
@@ -95,6 +96,7 @@ export default function Modals() {
   return (
     <>
       <OnboardingModal onDismiss={handleOnboardingDismiss} />
+      <BillingSheet />
 
       {/* Tooltip Portal for Sheet */}
       <div id="sheet-tooltip-portal" className="fixed inset-0 pointer-events-none z-100" />

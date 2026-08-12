@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { Globe, LayoutDashboard, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from '@/components/logo'
@@ -14,36 +14,23 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { UsersIcon, type UsersIconHandle } from '@/components/animated-icons/users'
-import { CableIcon, type CableIconHandle } from '@/components/animated-icons/cable'
-import { useModalStateStore } from '@/store/modal-state-store'
-import { useUserStore } from '@/store/user-store'
 import UserMenu from './user-menu'
 import ReferralButton from './referral-button'
 import FeedbackButton from './feedback-button'
+import { PlanChip } from './plan-chip'
 
 export default function Navbar() {
   const router = useRouter()
-  const  user = useUserStore(state => state.supabaseUser)
   const t = useI18n()
-  const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false)
-  const [showAccountNumbers, setShowAccountNumbers] = useState(true)
+  const [showAccountNumbers] = useState(true)
   const [isLogoPopoverOpen, setIsLogoPopoverOpen] = useState(false)
-  const usersIconRef = useRef<UsersIconHandle>(null)
-  const cableIconRef = useRef<CableIconHandle>(null)
-  const { accountGroupBoardOpen } = useModalStateStore()
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts()
 
   // Dashboard lives inside a closed logo popover, so its Link is not in the DOM
-  // on /connections and Partial Prefetching never warms the route. Connections
-  // is always visible → prefetched → feels instant. Prefetch dashboard explicitly.
+  // on /connections and Partial Prefetching never warms the route. Prefetch
+  // dashboard explicitly so Instant Navigations stay warm.
   useEffect(() => {
     router.prefetch('/dashboard')
   }, [router])
@@ -109,31 +96,10 @@ export default function Navbar() {
             inline
             className="hidden md:block flex-1 min-w-0"
           />
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Tooltip delayDuration={200}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  asChild
-                  className="h-9 rounded-sm px-2 active:scale-[0.96]"
-                >
-                  <Link
-                    href="/dashboard/connections"
-                    id="import-data"
-                    prefetch={true}
-                    aria-label={t('dashboard.connections')}
-                    onMouseEnter={() => cableIconRef.current?.startAnimation()}
-                    onMouseLeave={() => cableIconRef.current?.stopAnimation()}
-                  >
-                    <CableIcon ref={cableIconRef} className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('dashboard.connections')}</TooltipContent>
-            </Tooltip>
+          <div className="flex items-center gap-2 sm:gap-3">
             <FeedbackButton />
             <ReferralButton />
+            <PlanChip />
             <UserMenu />
           </div>
         </div>
