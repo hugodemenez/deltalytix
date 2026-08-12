@@ -2797,7 +2797,7 @@ export default {
   "import.ig.error.invalidFile":
     "Upload an IG Transaction History CSV containing the market, reference, prices, size, P&L, and UTC date columns.",
   "import.ig.skippedRows":
-    "Skipped {count} non-trade or unsupported row(s). IG fractional quantities are not supported yet.",
+    "Skipped {count} non-trade or unsupported row(s).",
   "import.ig.noTrades": "No completed IG trades found",
   "import.ig.noTradesDescription":
     "Make sure the selected period contains closed trades and that you exported Transaction History rather than Activity History.",

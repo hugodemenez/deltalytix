@@ -33,8 +33,7 @@ export type IgSkippedRowReason =
   | "cash-transaction"
   | "incomplete-trade"
   | "invalid-number"
-  | "invalid-date"
-  | "fractional-quantity";
+  | "invalid-date";
 
 export interface IgSkippedRow {
   rowNumber: number;
@@ -163,9 +162,6 @@ function mapOneIgTransaction(record: IgTransactionRecord): MapResult {
   }
 
   const quantity = Math.abs(signedSize);
-  if (!Number.isInteger(quantity)) {
-    return { ok: false, reason: "fractional-quantity" };
-  }
 
   if (!entryDate || !closeDate || new Date(closeDate) < new Date(entryDate)) {
     return { ok: false, reason: "invalid-date" };

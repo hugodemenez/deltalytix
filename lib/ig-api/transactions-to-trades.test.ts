@@ -44,16 +44,21 @@ describe("mapIgApiTransactions", () => {
     ]);
   });
 
-  it("skips cash rows and fractional sizes", () => {
+  it("skips cash rows and keeps fractional sizes", () => {
     const result = mapIgApiTransactions([
       sampleTx({ cashTransaction: true, reference: "CASH-1" }),
       sampleTx({ size: "+0.5", reference: "FRAC-1", profitAndLoss: "+1.0" }),
     ]);
 
-    expect(result.trades).toEqual([]);
+    expect(result.trades).toEqual([
+      expect.objectContaining({
+        quantity: 0.5,
+        closeId: "FRAC-1",
+        pnl: 1,
+      }),
+    ]);
     expect(result.skippedRows.map((row) => row.reason)).toEqual([
       "cash-transaction",
-      "fractional-quantity",
     ]);
   });
 });

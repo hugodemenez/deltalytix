@@ -2950,7 +2950,7 @@ export default {
   "import.ig.error.invalidFile":
     "Importez un CSV d'historique des transactions IG contenant le marché, la référence, les prix, la taille, le PnL et les dates UTC.",
   "import.ig.skippedRows":
-    "{count} ligne(s) hors trade ou non prise(s) en charge ont été ignorées. Les quantités fractionnaires IG ne sont pas encore prises en charge.",
+    "{count} ligne(s) hors trade ou non prise(s) en charge ont été ignorées.",
   "import.ig.noTrades": "Aucun trade IG clôturé trouvé",
   "import.ig.noTradesDescription":
     "Vérifiez que la période contient des trades clôturés et que vous avez exporté l'historique des transactions plutôt que l'historique d'activité.",

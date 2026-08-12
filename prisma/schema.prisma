@@ -12,7 +12,7 @@ model Trade {
   id                String   @id @default(uuid())
   accountNumber     String
   accountId         String?
-  quantity          Int
+  quantity          Float
   entryId           String?  @default("")
   closeId           String?  @default("")
   instrument        String
