@@ -124,7 +124,7 @@ export default function UserMenu() {
           >
             <div className="flex items-center w-full">
               <CreditCard className="mr-2 h-4 w-4" />
-              <span>{t('dashboard.billing')}</span>
+              <span>{t('dashboard.billing.manage')}</span>
               <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
             </div>
           </DropdownMenuItem>

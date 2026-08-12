@@ -227,6 +227,7 @@ export default {
   "dashboard.billingSheet.noLifetimeChangesDescription":
     "You already own Lifetime access. It cannot be downgraded, and there is nothing else to purchase.",
   "dashboard.billingSheet.manageFull": "Open full billing settings",
+  "dashboard.billing.manage": "Manage billing",
   "dashboard.refreshData": "Refresh Data",
   "dashboard.inviteUsers": "Invite users",
   "dashboard.email": "Email",

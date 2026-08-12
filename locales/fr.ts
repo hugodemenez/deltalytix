@@ -230,6 +230,7 @@ export default {
   "dashboard.billingSheet.noLifetimeChangesDescription":
     "Vous possédez déjà l’accès à vie. Il ne peut pas être rétrogradé et il n’y a rien d’autre à acheter.",
   "dashboard.billingSheet.manageFull": "Ouvrir les paramètres de facturation",
+  "dashboard.billing.manage": "Gérer la facturation",
   "dashboard.refreshData": "Actualiser les données",
   "dashboard.inviteUsers": "Inviter des utilisateurs",
   "dashboard.email": "Email",
