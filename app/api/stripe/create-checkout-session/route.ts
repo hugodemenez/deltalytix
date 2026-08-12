@@ -7,6 +7,16 @@ import { getSubscriptionDetails } from "@/server/subscription";
 import { getReferralBySlug } from "@/server/referral";
 import { capturePostHogEvent, hasAnalyticsConsent } from "@/lib/posthog-server";
 import { applySignupSuccess, hasSignupSuccess } from "@/lib/signup-redirect";
+import {
+  attributionToPersonSetOnce,
+  attributionToPostHogProperties,
+  attributionToStripeMetadata,
+  minorUnitsToMajor,
+} from "@/lib/attribution";
+import {
+  pendingPurchaseSetCookieHeader,
+  readAttributionFromCookies,
+} from "@/lib/attribution-server";
 
 // This endpoint renders no page of ours — it redirects straight to Stripe — so
 // a signup marker arriving here would never reach the Google tag. Forward it to
@@ -24,6 +34,17 @@ function buildReturnUrl(
     }
     applySignupSuccess(url, signupSuccess);
     return url.toString();
+}
+
+function billingIntervalFromPrice(price: {
+    type?: string | null;
+    recurring?: { interval?: string | null; interval_count?: number | null } | null;
+}, lookup_key: string): string {
+    if (price.type === 'one_time' || lookup_key.includes('lifetime')) {
+        return 'lifetime';
+    }
+    if (price.recurring?.interval_count === 3) return 'quarter';
+    return price.recurring?.interval || 'month';
 }
 
 async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: string, referral?: string | null, promo_code?: string | null, signupSuccess = false) {
@@ -95,6 +116,12 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
 
     const price = prices.data[0];
     const isLifetimePlan = price.type === 'one_time' || lookup_key.includes('lifetime');
+    const billingInterval = billingIntervalFromPrice(price, lookup_key);
+    const productName =
+        typeof price.product === 'object' && price.product && 'name' in price.product
+            ? String((price.product as { name?: string }).name || lookup_key)
+            : lookup_key;
+    const plan = productName.toUpperCase();
 
     // Calculate remaining trial days if there was a previous trial (only for recurring plans)
     let trialDays = 0;
@@ -115,12 +142,15 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
 
     // Create session with appropriate mode based on price type
     const analyticsConsent = await hasAnalyticsConsent();
+    const attribution = await readAttributionFromCookies();
+    const attributionMeta = attributionToStripeMetadata(attribution);
     const sessionConfig: any = {
         customer: customerId,
         metadata: {
             plan: lookup_key,
             ...(referral && { referral_code: referral }),
             ...(promo_code && { promo_code: promo_code }),
+            ...attributionMeta,
             ...(analyticsConsent && {
                 analytics_consent: 'granted',
                 posthog_distinct_id: user.id,
@@ -162,19 +192,46 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
 
+    const attributionProps = attributionToPostHogProperties(attribution);
+    const setOnce = attributionToPersonSetOnce(attribution);
+
     await capturePostHogEvent({
         distinctId: user.id,
         event: 'checkout_started',
         properties: {
             lookup_key,
+            plan,
+            billing_interval: billingInterval,
             is_lifetime: isLifetimePlan,
             has_referral: Boolean(referral),
             has_promo_code: Boolean(promo_code),
             stripe_checkout_session_id: session.id,
+            ...attributionProps,
+            ...(setOnce ? { $set_once: setOnce } : {}),
         },
     });
 
-    return NextResponse.redirect(session.url as string, 303);
+    const response = NextResponse.redirect(session.url as string, 303);
+
+    // Stash expected purchase value for the Google Ads conversion tag on return.
+    // Prefer Stripe session amount_total; fall back to the catalog unit_amount.
+    const revenueMajor =
+        minorUnitsToMajor(session.amount_total) ??
+        minorUnitsToMajor(price.unit_amount);
+    if (revenueMajor && revenueMajor > 0) {
+        response.headers.append(
+            'Set-Cookie',
+            pendingPurchaseSetCookieHeader({
+                revenue: revenueMajor,
+                currency: (session.currency || price.currency || 'eur').toLowerCase(),
+                transaction_id: session.id,
+                plan,
+                billing_interval: billingInterval,
+            }),
+        );
+    }
+
+    return response;
 }
 
 export async function POST(req: Request) {

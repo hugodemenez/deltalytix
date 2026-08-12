@@ -1,14 +1,19 @@
 /**
  * Post-authentication redirect targets.
  *
- * Newly created accounts land on a URL carrying `?signup=success`. Nothing in
- * the app reads it — it exists so Google Ads can match a completed signup on a
- * URL it could not otherwise distinguish from an ordinary sign-in.
+ * Newly created accounts land on a URL carrying `?signup=success`. Google Ads
+ * URL-contains matching can use that marker; the app also fires an event-snippet
+ * conversion via `GoogleAdsConversions` when
+ * `NEXT_PUBLIC_GOOGLE_ADS_SIGNUP_SEND_TO` is configured.
  *
  * The marker is applied to any *internal* destination rather than to
  * `/dashboard` alone: `next` legitimately points at checkout and team surfaces,
  * locale-prefixed paths (`/fr/dashboard`) are equally valid landings, and a
  * signup is a signup wherever the user ends up.
+ *
+ * Paid campaign landers should be marketing `/en` or `/fr` (not `/dashboard`).
+ * Attribution (`utm_*` / `gclid`) is persisted first-party before OAuth so it
+ * still reaches `user_signed_up` after Google login.
  *
  * `next` is attacker-controlled — it arrives on the query string — so both the
  * server redirect and the client navigation resolve it against the app's own
