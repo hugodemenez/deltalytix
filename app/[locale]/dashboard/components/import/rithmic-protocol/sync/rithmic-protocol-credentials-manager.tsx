@@ -217,6 +217,7 @@ export function RithmicProtocolCredentialsManager() {
           {isAddDialogOpen ? (
             <RithmicProtocolConnectForm
               onConnected={() => setIsAddDialogOpen(false)}
+              sourceUi="credentials_manager"
             />
           ) : null}
         </DialogContent>

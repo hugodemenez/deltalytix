@@ -25,3 +25,15 @@ export function captureConnectionCreated(
     ...extra,
   });
 }
+
+export function captureConnectionFailed(
+  service: string,
+  extra?: Record<string, string | boolean | number | null | undefined>
+) {
+  if (!canCapture()) return;
+  posthog.capture("connection_failed", {
+    service,
+    source: "connections_page",
+    ...extra,
+  });
+}
