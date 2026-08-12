@@ -20,6 +20,8 @@ jobs:
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
 
       # tsc does not need native addons. Skip install scripts so a canvas
       # prebuild download flake cannot fall through to node-gyp (pixman).
