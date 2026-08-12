@@ -22,6 +22,11 @@ import {
   normalizeGatewayUri,
 } from './systems'
 
+/** Wall-clock budget for a full PnL snapshot sweep across a user's accounts. */
+const PNL_SNAPSHOT_TOTAL_BUDGET_MS = 30_000
+/** Per-message wait inside that sweep. */
+const PNL_SNAPSHOT_MESSAGE_TIMEOUT_MS = 15_000
+
 /** Proto dir next to this module — traced into Vercel/serverless via next.config. */
 const PROTO_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'proto')
 
@@ -362,11 +367,24 @@ export class RithmicProtocolClient {
     fcmId?: string
     ibId?: string
     accountIds: string[]
+    /** Wall-clock budget for the whole sweep, not per account. */
+    deadlineMs?: number
   }): Promise<RithmicProtocolAccountBalance[]> {
     const balancesByAccountId = new Map<string, RithmicProtocolAccountBalance>()
+    const deadline =
+      Date.now() + (params.deadlineMs ?? PNL_SNAPSHOT_TOTAL_BUDGET_MS)
 
     for (const accountId of params.accountIds) {
       if (!accountId?.trim()) continue
+
+      // Accounts are swept sequentially, so one silent account must not be
+      // allowed to burn the budget of every account behind it.
+      if (Date.now() >= deadline) {
+        console.warn(
+          '[RITHMIC-PROTOCOL] PnL snapshot budget exhausted, skipping remaining accounts',
+        )
+        break
+      }
 
       await this.send('rti.RequestPnLPositionSnapshot', {
         templateId: RithmicTemplateId.PNL_POSITION_SNAPSHOT_REQUEST,
@@ -376,8 +394,17 @@ export class RithmicProtocolClient {
         accountId,
       })
 
+      let outOfTime = false
       for (;;) {
-        const msg = await this.nextMessage(45_000)
+        const remaining = deadline - Date.now()
+        if (remaining <= 0) {
+          outOfTime = true
+          break
+        }
+
+        const msg = await this.nextMessage(
+          Math.min(PNL_SNAPSHOT_MESSAGE_TIMEOUT_MS, remaining),
+        )
 
         if (msg.templateId === RithmicTemplateId.ACCOUNT_PNL_POSITION_UPDATE) {
           const decoded = decodeMessage<{
@@ -428,6 +455,13 @@ export class RithmicProtocolClient {
         }
 
         // Ignore heartbeats / unrelated pushes during the snapshot.
+      }
+
+      if (outOfTime) {
+        console.warn(
+          `[RITHMIC-PROTOCOL] PnL snapshot budget exhausted while waiting on ${accountId}`,
+        )
+        break
       }
     }
 
@@ -888,6 +922,8 @@ export async function fetchAccountBalances(params: {
   fcmId?: string
   ibId?: string
   accountIds: string[]
+  /** Wall-clock budget for the snapshot sweep once logged in. */
+  deadlineMs?: number
 }): Promise<{
   balances: RithmicProtocolAccountBalance[]
   fcmId?: string
@@ -913,6 +949,7 @@ export async function fetchAccountBalances(params: {
       fcmId,
       ibId,
       accountIds,
+      deadlineMs: params.deadlineMs,
     })
     return { balances, fcmId, ibId }
   } finally {

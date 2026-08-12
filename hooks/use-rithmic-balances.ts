@@ -71,7 +71,16 @@ export interface RithmicBalancesState {
   /** True when any credential set uses "sync all accounts" (legacy empty selectedAccounts). */
   syncsAllAccounts: boolean
   debug: RithmicBalancesDebugInfo
-  refresh: () => Promise<void>
+  refresh: (options?: { force?: boolean }) => Promise<void>
+}
+
+export interface UseRithmicBalancesOptions {
+  /**
+   * Whether to ask the server for Protocol balances. Each server fetch opens a
+   * WebSocket to the Rithmic gateway, so callers pass false until they know the
+   * user actually has a Protocol-linked account.
+   */
+  protocolEnabled?: boolean
 }
 
 function readCredentialSnapshot() {
@@ -140,8 +149,11 @@ function buildDebugSnapshot(
   }
 }
 
-export function useRithmicBalances(): RithmicBalancesState {
-  const initialSnapshot = readCredentialSnapshot()
+export function useRithmicBalances(
+  options: UseRithmicBalancesOptions = {}
+): RithmicBalancesState {
+  const { protocolEnabled = true } = options
+  const [initialSnapshot] = useState(readCredentialSnapshot)
   const [balancesByAccountId, setBalancesByAccountId] = useState<
     Record<string, RithmicAccountBalance>
   >({})
@@ -168,13 +180,18 @@ export function useRithmicBalances(): RithmicBalancesState {
   const abortControllerRef = useRef<AbortController | null>(null)
   const balancesRef = useRef(balancesByAccountId)
   const lastFetchedAtRef = useRef(lastFetchedAt)
+  const protocolEnabledRef = useRef(protocolEnabled)
 
   useEffect(() => {
     balancesRef.current = balancesByAccountId
     lastFetchedAtRef.current = lastFetchedAt
   }, [balancesByAccountId, lastFetchedAt])
 
-  const refresh = useCallback(async () => {
+  useEffect(() => {
+    protocolEnabledRef.current = protocolEnabled
+  }, [protocolEnabled])
+
+  const refresh = useCallback(async (refreshOptions: { force?: boolean } = {}) => {
     abortControllerRef.current?.abort()
     const abortController = new AbortController()
     abortControllerRef.current = abortController
@@ -202,14 +219,30 @@ export function useRithmicBalances(): RithmicBalancesState {
     let anySucceeded = false
 
     try {
-      // 1) Protocol PnL plant (preferred — stored server-side credentials)
+      // 1) Protocol PnL plant (preferred — stored server-side credentials).
+      // Skipped entirely unless the caller knows the user has a Protocol
+      // account: each server fetch can open a gateway WebSocket.
       try {
-        const protocolResult = await getRithmicProtocolBalancesAction()
+        const protocolResult = protocolEnabledRef.current
+          ? await getRithmicProtocolBalancesAction({
+              force: refreshOptions.force === true,
+            })
+          : null
         if (abortController.signal.aborted || fetchId !== fetchIdRef.current) {
           return
         }
 
-        if (protocolResult.success) {
+        if (protocolResult === null) {
+          fetchAttempts.push({
+            credentialId: "rithmic-protocol",
+            username: "protocol",
+            server_type: "rithmic-protocol",
+            location: "server",
+            success: true,
+            message: "Skipped — no Protocol-linked account",
+            source: "protocol",
+          })
+        } else if (protocolResult.success) {
           protocolHasConnections = protocolResult.hasConnections
           protocolErrors = protocolResult.errors
           protocolLinked.push(...protocolResult.linkedAccountNumbers)
@@ -396,9 +429,11 @@ export function useRithmicBalances(): RithmicBalancesState {
     }
   }, [])
 
+  // Re-runs when protocolEnabled flips: callers start false while accounts are
+  // still loading, so the Protocol pass has to happen once they are known.
   useEffect(() => {
     void refresh()
-  }, [refresh])
+  }, [refresh, protocolEnabled])
 
   useEffect(() => {
     const handleStorageUpdate = () => {

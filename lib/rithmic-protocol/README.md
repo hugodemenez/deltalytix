@@ -26,6 +26,21 @@ Account balances for the accounts table come from the **PnL plant**:
 Server action: `getRithmicProtocolBalancesAction` (uses encrypted Connection credentials).
 This is separate from the classic R | API+ HTTP `/balances` path.
 
+Every real fetch opens a WebSocket and performs a full `PNL_PLANT` login, so the
+action is throttled per user via `fetch-throttle.ts`:
+
+- automatic fetches (accounts widget mount) reuse a cached value for 60s;
+- the refresh button bypasses the TTL but still cannot fetch more than once
+  every 15s;
+- concurrent callers share one in-flight session;
+- the sweep has a 30s wall-clock budget (15s per message), so one silent
+  account cannot burn the budget of the accounts behind it;
+- the accounts table passes `protocolEnabled` so users with no Protocol-linked
+  account never reach the gateway at all.
+
+The cache is module scope, so on serverless it is per-instance and best-effort —
+enough to collapse one browsing session's mounts, not a global rate limiter.
+
 ## Connection sequence (Rithmic)
 
 1. Open `wss://…` (SSL only), send `RequestRithmicSystemInfo`, record `system_name` values, close.
