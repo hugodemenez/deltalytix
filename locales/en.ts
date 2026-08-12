@@ -214,8 +214,6 @@ export default {
   "connections.manageConnection": "Manage connection",
   "connections.stripLabel": "Connections",
   "dashboard.planChip.aria": "Plan: {plan}. Open billing",
-  "dashboard.planChip.menuLabel": "Plan · {plan}",
-  "dashboard.planChip.upgradeToPro": "Upgrade to Pro",
   "dashboard.billingSheet.title": "Billing",
   "dashboard.billingSheet.description": "Manage your plan and renewals",
   "dashboard.billingSheet.mobileDescription": "You are on {plan} · Upgrade anytime",

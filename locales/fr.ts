@@ -217,8 +217,6 @@ export default {
   "connections.manageConnection": "Gérer la connexion",
   "connections.stripLabel": "Connexions",
   "dashboard.planChip.aria": "Offre : {plan}. Ouvrir la facturation",
-  "dashboard.planChip.menuLabel": "Offre · {plan}",
-  "dashboard.planChip.upgradeToPro": "Passer à Pro",
   "dashboard.billingSheet.title": "Facturation",
   "dashboard.billingSheet.description": "Gérez votre offre et vos renouvellements",
   "dashboard.billingSheet.mobileDescription": "Vous êtes sur {plan} · Améliorez à tout moment",
