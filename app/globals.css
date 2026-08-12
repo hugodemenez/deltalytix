@@ -150,6 +150,16 @@
     letter-spacing: -0.01em;
   }
 
+  .dashboard-v5 .react-grid-item .rounded-lg,
+  .dashboard-v5 .react-grid-item .rounded-xl,
+  .dashboard-v5 .react-grid-item .rounded-2xl {
+    border-radius: 4px;
+  }
+
+  .dashboard-v5 .react-grid-item .bg-background {
+    background-color: #ffffff;
+  }
+
   .dark .dashboard-v5 {
     background-color: hsl(var(--background));
   }
@@ -157,6 +167,10 @@
   .dark .dashboard-v5 [data-slot='card'] {
     border-color: hsl(var(--border));
     background-color: hsl(var(--card));
+  }
+
+  .dark .dashboard-v5 .react-grid-item .bg-background {
+    background-color: hsl(var(--background));
   }
 
   .contribution-week-bar {

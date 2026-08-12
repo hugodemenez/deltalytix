@@ -192,9 +192,6 @@ export default function StatisticsWidget({ size = 'medium', dayData }: Statistic
                 </span>
               </div>
               
-              {/* Divider */}
-              <div className="border-t border-dashed my-1"></div>
-              
               {/* Net Result */}
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground text-xs font-medium">{t('statistics.profitLoss.net')}</span>
