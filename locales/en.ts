@@ -2713,7 +2713,7 @@ export default {
       usernameLinkLostDetails: "IG — recover forgotten username",
       apiKeyRejectedQuestion: "IG rejected my API key — what should I check?",
       apiKeyRejectedAnswer:
-        "Confirm Environment is Live if you only have a real account. Regenerate the key while logged into Live (My Account → Settings → API keys), copy the full value with no spaces, and check status Enabled. IG allows one key per account — an older key stops working when you create a new one. Test the same three values in IG’s API Companion; if Companion fails too, contact IG support.",
+        "Confirm Environment is Live if you only have a real account. Regenerate the key while logged into Live (My Account → Settings → API keys), copy the full value with no spaces, and check status Enabled. IG allows one key per account — an older key stops working when you create a new one. Deltalytix signs in to IG from your browser (same path as API Companion). Test the same three values in Companion first; if Companion fails too, contact IG support.",
       apiKeyRejectedLinkCompanion: "IG API Companion",
       scopeQuestion: "What does Deltalytix do with the key?",
       scopeIntro:

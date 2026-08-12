@@ -16,7 +16,7 @@ import { ThemeAwareLogo } from "@/components/monochrome-logo";
 import { captureConnectionCreated } from "@/lib/connection-analytics";
 import { useIgSyncContext } from "@/context/ig-sync-context";
 import { toast } from "sonner";
-import { authenticateIg } from "./actions";
+import { connectIgFromBrowser } from "./connect-ig-browser";
 import { IgCredentialsManager } from "./ig-credentials-manager";
 import { IgApiKeyFieldHelp, IgConnectIntro, IgFaq } from "./ig-faq";
 import type { IgApiEnvironment } from "@/lib/ig-api/types";
@@ -57,12 +57,12 @@ function IgConnectView({
     const connectedIdentifier = identifier.trim();
     try {
       setIsLoading(true);
-      const result = await authenticateIg(
-        connectedIdentifier,
+      const result = await connectIgFromBrowser({
+        identifier: connectedIdentifier,
         password,
         apiKey,
         environment,
-      );
+      });
 
       if ("error" in result && result.error) {
         const translate = t as (

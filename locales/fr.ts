@@ -2866,7 +2866,7 @@ export default {
       apiKeyRejectedQuestion:
         "IG a refusé ma clé API — que dois-je vérifier ?",
       apiKeyRejectedAnswer:
-        "Vérifiez que l’environnement est bien Réel si vous n’avez qu’un compte réel. Régénérez la clé en étant connecté en Réel (Mon compte → Paramètres → Clés API), copiez la valeur complète sans espaces, et contrôlez le statut Activée. IG n’autorise qu’une clé par compte — une ancienne clé cesse de fonctionner dès que vous en créez une nouvelle. Testez les trois valeurs dans l’API Companion d’IG ; si Companion échoue aussi, contactez le support IG.",
+        "Vérifiez que l’environnement est bien Réel si vous n’avez qu’un compte réel. Régénérez la clé en étant connecté en Réel (Mon compte → Paramètres → Clés API), copiez la valeur complète sans espaces, et contrôlez le statut Activée. IG n’autorise qu’une clé par compte — une ancienne clé cesse de fonctionner dès que vous en créez une nouvelle. Deltalytix se connecte à IG depuis votre navigateur (comme l’API Companion). Testez d’abord les trois valeurs dans Companion ; si Companion échoue aussi, contactez le support IG.",
       apiKeyRejectedLinkCompanion: "IG API Companion",
       scopeQuestion: "Que fait Deltalytix avec cette clé ?",
       scopeIntro:

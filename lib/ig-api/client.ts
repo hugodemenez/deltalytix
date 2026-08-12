@@ -62,9 +62,12 @@ export async function createIgSession(params: {
   const response = await fetch(url, {
     method: "POST",
     headers: authHeaders(params.apiKey, undefined, "2"),
+    // encryptedPassword: false matches IG API Companion / trading-ig defaults.
+    // Some regional accounts require true + RSA; those map to a dedicated error.
     body: JSON.stringify({
       identifier: params.identifier,
       password: params.password,
+      encryptedPassword: false,
     }),
   });
 

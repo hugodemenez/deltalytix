@@ -13,17 +13,13 @@ import { invalidateConnectionsPageCache } from "@/app/[locale]/dashboard/connect
 import { upsertAccountsForNumbers } from "@/server/connections";
 import { createTradeWithDefaults } from "@/lib/trade-factory";
 import { generateDeterministicTradeId } from "@/lib/trade-id-utils";
-import {
-  createIgSession,
-  fetchIgTransactions,
-  listIgAccounts,
-  switchIgAccount,
-  type IgApiEnvironment,
-} from "@/lib/ig-api/client";
+import type { IgApiAccount, IgApiEnvironment, IgApiTransaction } from "@/lib/ig-api/client";
 import {
   igApiKeyFingerprint,
   sanitizeIgApiKey,
 } from "@/lib/ig-api/api-key";
+import { mapIgAuthError } from "@/lib/ig-api/errors";
+import { fetchIgDealHistory } from "@/lib/ig-api/fetch-history";
 import { isValidIgIdentifier } from "@/lib/ig-api/identifier";
 import { mapIgApiTransactions } from "@/lib/ig-api/transactions-to-trades";
 import type {
@@ -52,63 +48,6 @@ const logger = {
       error instanceof Error ? error.message : (error ?? ""),
     ),
 };
-
-/**
- * IG reports failures as dotted error codes (`error.security.invalid-details`).
- * Map the ones a trader can act on to their own message; anything unmapped
- * still surfaces the raw code so support has something to go on.
- *
- * `error.security.api-key-invalid` is the same code for a mistyped key and for
- * a Live/Demo mismatch — do not lead with environment alone.
- */
-function mapIgAuthError(
-  error: unknown,
-  environment: IgApiEnvironment,
-): { error: string; errorParams?: Record<string, string | number> } {
-  const reason =
-    error instanceof Error ? error.message : "Unknown error";
-  const code = reason.toLowerCase();
-  const environmentLabel = environment === "demo" ? "Demo" : "Live";
-
-  if (code.includes("invalid-details")) {
-    return { error: "IG_INVALID_CREDENTIALS" };
-  }
-  // Email logins work on ig.com; the REST API only accepts the username
-  // pattern [A-Za-z0-9_-]{1,30}. Surface that before a generic AUTH_FAILED.
-  if (
-    code.includes("authenticationrequest.identifier") ||
-    (code.includes("pattern.invalid") && code.includes("identifier"))
-  ) {
-    return { error: "IG_IDENTIFIER_INVALID" };
-  }
-  if (code.includes("api-key-disabled") || code.includes("api-key-revoked")) {
-    return { error: "IG_API_KEY_DISABLED" };
-  }
-  if (code.includes("api-key")) {
-    logger.warn(
-      `IG rejected API key (${environment}): ${reason}`,
-    );
-    return {
-      error: "IG_API_KEY_REJECTED",
-      errorParams: { environment: environmentLabel },
-    };
-  }
-  if (
-    code.includes("too-many-failed-attempts") ||
-    code.includes("account-locked") ||
-    code.includes("client-suspended")
-  ) {
-    return { error: "IG_ACCOUNT_LOCKED" };
-  }
-  if (code.includes("encryption.required")) {
-    return { error: "IG_PASSWORD_ENCRYPTION_REQUIRED" };
-  }
-  if (code.includes("allowance") || code.includes("too-many-requests")) {
-    return { error: "IG_RATE_LIMITED" };
-  }
-
-  return { error: "AUTH_FAILED", errorParams: { reason } };
-}
 
 function parseStoredCredentials(
   tokenField: string,
@@ -169,33 +108,37 @@ async function persistIgCredentials(
   return connection;
 }
 
-export async function authenticateIg(
-  identifier: string,
-  password: string,
-  apiKey: string,
-  environment: IgApiEnvironment,
-): Promise<IgActionResult> {
+/**
+ * Persist an IG connection after the browser has already authenticated with
+ * IG (same egress as API Companion). Server-side POST /session from Vercel
+ * was rejected with api-key-invalid for keys that Companion accepted — so we
+ * never call IG from this action on connect.
+ */
+export async function saveIgConnection(params: {
+  identifier: string;
+  password: string;
+  apiKey: string;
+  environment: IgApiEnvironment;
+  accounts: IgApiAccount[];
+}): Promise<IgActionResult> {
+  const environment = params.environment;
   try {
     const userId = await getUserId();
     if (!userId) {
       return { error: "USER_NOT_AUTHENTICATED" };
     }
 
-    const trimmedIdentifier = identifier.trim();
-    const trimmedApiKey = sanitizeIgApiKey(apiKey);
-    if (!trimmedIdentifier || !password || !trimmedApiKey) {
+    const trimmedIdentifier = params.identifier.trim();
+    const trimmedApiKey = sanitizeIgApiKey(params.apiKey);
+    if (!trimmedIdentifier || !params.password || !trimmedApiKey) {
       return { error: "CREDENTIALS_REQUIRED" };
     }
 
-    // Fail before touching IG: without a key we could not store the credentials
-    // anyway, and the raw crypto error is meaningless to a trader.
     if (!hasConnectionTokenEncryptionKey()) {
       logger.error("ENCRYPTION_KEY is not configured — refusing to connect IG");
       return { error: "ENCRYPTION_KEY_MISSING" };
     }
 
-    // Same gate IG applies server-side. Catch emails (and other web-login forms)
-    // here so the trader gets a clear message instead of the raw pattern code.
     if (!isValidIgIdentifier(trimmedIdentifier)) {
       logger.warn(
         `Rejecting identifier that does not match IG API pattern (length=${trimmedIdentifier.length})`,
@@ -203,38 +146,26 @@ export async function authenticateIg(
       return { error: "IG_IDENTIFIER_INVALID" };
     }
 
-    logger.info(
-      `Authenticating ${trimmedIdentifier} on ${environment} (apiKey ${igApiKeyFingerprint(trimmedApiKey)})`,
-    );
-
-    const session = await createIgSession({
-      identifier: trimmedIdentifier,
-      password,
-      apiKey: trimmedApiKey,
-      environment,
-    });
-
-    let accounts = session.accounts;
-    if (accounts.length === 0) {
-      accounts = await listIgAccounts({
-        apiKey: trimmedApiKey,
-        environment,
-        tokens: { cst: session.cst, securityToken: session.securityToken },
-      });
-    }
-
-    if (accounts.length === 0) {
+    if (!Array.isArray(params.accounts) || params.accounts.length === 0) {
       return { error: "NO_ACCOUNTS" };
     }
 
-    const accountIds = accounts.map((a) => a.accountId);
+    const accountIds = params.accounts.map((a) => a.accountId).filter(Boolean);
+    if (accountIds.length === 0) {
+      return { error: "NO_ACCOUNTS" };
+    }
+
     const accountNames = Object.fromEntries(
-      accounts.map((a) => [a.accountId, a.accountName || a.accountId]),
+      params.accounts.map((a) => [a.accountId, a.accountName || a.accountId]),
+    );
+
+    logger.info(
+      `Saving IG connection ${trimmedIdentifier} on ${environment} (apiKey ${igApiKeyFingerprint(trimmedApiKey)}, accounts=${accountIds.length})`,
     );
 
     const stored: IgStoredCredentials = {
       identifier: trimmedIdentifier,
-      password,
+      password: params.password,
       apiKey: trimmedApiKey,
       environment,
       accountIds,
@@ -250,16 +181,261 @@ export async function authenticateIg(
     await upsertAccountsForNumbers(userId, accountIds, connection.id);
     await invalidateConnectionsPageCache(userId);
 
-    logger.info(`Login ok accounts=${accountIds.length}`);
-
     return {
       success: true,
       accountCount: accountIds.length,
       message: "Connected",
     };
   } catch (error) {
-    logger.error("authenticateIg failed", error);
+    logger.error("saveIgConnection failed", error);
     return mapIgAuthError(error, environment);
+  }
+}
+
+/** @deprecated Prefer browser login + saveIgConnection. Kept for callers. */
+export async function authenticateIg(
+  identifier: string,
+  password: string,
+  apiKey: string,
+  environment: IgApiEnvironment,
+  accounts?: IgApiAccount[],
+): Promise<IgActionResult> {
+  if (accounts && accounts.length > 0) {
+    return saveIgConnection({
+      identifier,
+      password,
+      apiKey,
+      environment,
+      accounts,
+    });
+  }
+  // Legacy path: no pre-fetched accounts. Refuse rather than server-login —
+  // IG rejects many valid keys from datacenter egress with api-key-invalid.
+  logger.warn(
+    "authenticateIg called without browser-fetched accounts — refusing server-side IG login",
+  );
+  return {
+    error: "AUTH_FAILED",
+    errorParams: {
+      reason:
+        "IG login must run in the browser (same path as API Companion). Refresh and try again.",
+    },
+  };
+}
+
+/**
+ * Decrypt stored IG credentials for an interactive (browser) sync.
+ * Only the connection owner can read them; clear from client memory after use.
+ */
+export async function getIgCredentialsForSync(accountId: string): Promise<
+  | { credentials: IgStoredCredentials; connectionId: string }
+  | { error: string }
+> {
+  const tokenResult = await getIgToken(accountId);
+  if (tokenResult.error || !tokenResult.storedTokenJson || !tokenResult.connectionId) {
+    return { error: tokenResult.error || "NO_TOKEN_RECONNECT" };
+  }
+  const credentials = parseStoredCredentials(tokenResult.storedTokenJson);
+  if (!credentials) {
+    return { error: "INVALID_STORED_CREDENTIALS" };
+  }
+  return { credentials, connectionId: tokenResult.connectionId };
+}
+
+/**
+ * Map + save transactions already fetched from IG in the browser (or server).
+ */
+export async function importIgSyncedHistory(params: {
+  accountId: string;
+  connectionId: string;
+  perAccount: Array<{
+    accountId: string;
+    transactions: IgApiTransaction[];
+    error?: string;
+  }>;
+  accounts?: IgApiAccount[];
+  /** Cron passes the owning user; interactive sync uses the session. */
+  userId?: string;
+  /** When set, skip re-loading/persisting credentials from the connection row. */
+  credentials?: IgStoredCredentials;
+}): Promise<IgTradesResult> {
+  const syncStats = {
+    tradingAccounts: 0,
+    rawTransactions: 0,
+    closedTrades: 0,
+    skippedRows: 0,
+    fetchFailures: 0,
+  };
+
+  try {
+    let userId = params.userId ?? null;
+    if (!userId) {
+      userId = await getUserId();
+    }
+    if (!userId) {
+      return { error: "USER_NOT_AUTHENTICATED", syncStats };
+    }
+
+    let credentials = params.credentials ?? null;
+    if (!credentials) {
+      const tokenResult = await getIgToken(params.accountId);
+      if (tokenResult.error || !tokenResult.storedTokenJson) {
+        return { error: tokenResult.error || "NO_TOKEN_RECONNECT", syncStats };
+      }
+      if (
+        tokenResult.connectionId &&
+        tokenResult.connectionId !== params.connectionId
+      ) {
+        return { error: "INVALID_STORED_CREDENTIALS", syncStats };
+      }
+      credentials = parseStoredCredentials(tokenResult.storedTokenJson);
+      if (!credentials) {
+        return { error: "INVALID_STORED_CREDENTIALS", syncStats };
+      }
+    }
+
+    if (params.accounts && params.accounts.length > 0) {
+      credentials.accountIds = params.accounts.map((a) => a.accountId);
+      credentials.accountNames = Object.fromEntries(
+        params.accounts.map((a) => [a.accountId, a.accountName || a.accountId]),
+      );
+      await persistIgCredentials(
+        userId,
+        JSON.stringify(credentials),
+        credentials.identifier,
+      );
+      await upsertAccountsForNumbers(
+        userId,
+        credentials.accountIds,
+        params.connectionId,
+      );
+    }
+
+    syncStats.tradingAccounts = params.perAccount.length;
+
+    const allTrades = [];
+    for (const entry of params.perAccount) {
+      if (entry.error) {
+        syncStats.fetchFailures += 1;
+        logger.warn(
+          `IG history fetch failed for ${entry.accountId}: ${entry.error}`,
+        );
+        continue;
+      }
+      const transactions = Array.isArray(entry.transactions)
+        ? entry.transactions
+        : [];
+      syncStats.rawTransactions += transactions.length;
+      const { trades, skippedRows } = mapIgApiTransactions(transactions);
+      syncStats.skippedRows += skippedRows.length;
+
+      for (const trade of trades) {
+        const tradeData = {
+          accountNumber: entry.accountId,
+          entryId: `ig_${trade.closeId}_entry`,
+          closeId: trade.closeId,
+          instrument: trade.instrument,
+          entryPrice: trade.entryPrice,
+          closePrice: trade.closePrice,
+          entryDate: trade.entryDate,
+          closeDate: trade.closeDate,
+          quantity: trade.quantity,
+          side: trade.side,
+          userId,
+        };
+        allTrades.push(
+          createTradeWithDefaults({
+            id: generateDeterministicTradeId(tradeData),
+            accountNumber: entry.accountId,
+            quantity: trade.quantity,
+            entryId: tradeData.entryId,
+            closeId: trade.closeId,
+            instrument: trade.instrument,
+            entryPrice: trade.entryPrice,
+            closePrice: trade.closePrice,
+            entryDate: trade.entryDate,
+            closeDate: trade.closeDate,
+            pnl: trade.pnl,
+            timeInPosition: trade.timeInPosition,
+            side: trade.side,
+            commission: trade.commission,
+            comment: trade.comment,
+            userId,
+          }),
+        );
+      }
+    }
+
+    syncStats.closedTrades = allTrades.length;
+
+    if (
+      syncStats.fetchFailures > 0 &&
+      syncStats.fetchFailures === params.perAccount.length &&
+      allTrades.length === 0
+    ) {
+      return {
+        error: "SYNC_FETCH_FAILED",
+        errorParams: {
+          failures: syncStats.fetchFailures,
+          total: params.perAccount.length,
+        },
+        syncStats,
+      };
+    }
+
+    await prisma.connection.updateMany({
+      where: {
+        userId,
+        service: SERVICE,
+        externalId: credentials.identifier,
+      },
+      data: { lastSyncedAt: new Date() },
+    });
+
+    const saveResult =
+      allTrades.length > 0
+        ? await saveTradesAction(allTrades, {
+            userId,
+            connectionId: params.connectionId,
+          })
+        : null;
+
+    await invalidateConnectionsPageCache(userId);
+
+    let savedCount = 0;
+    if (saveResult) {
+      if (saveResult.error === "DUPLICATE_TRADES") {
+        return {
+          error: "DUPLICATE_TRADES",
+          syncStats,
+          tradesCount: allTrades.length,
+        };
+      }
+      if (saveResult.error && saveResult.error !== "NO_TRADES_ADDED") {
+        return {
+          error: "SAVE_TRADES_FAILED",
+          errorParams: { detail: String(saveResult.error) },
+          syncStats,
+        };
+      }
+      savedCount = saveResult.numberOfTradesAdded;
+    }
+
+    return {
+      processedTrades: allTrades,
+      savedCount,
+      tradesCount: allTrades.length,
+      syncStats,
+    };
+  } catch (error) {
+    logger.error("importIgSyncedHistory failed", error);
+    return {
+      error: "SYNC_FAILED",
+      errorParams: {
+        reason: error instanceof Error ? error.message : "Unknown error",
+      },
+      syncStats,
+    };
   }
 }
 
@@ -378,34 +554,24 @@ export async function getIgTrades(
     const historyEnd = todayUtcDate();
 
     logger.info(
-      `Session login for ${credentials.identifier} (${credentials.environment})`,
+      `Session login for ${credentials.identifier} (${credentials.environment}) [server]`,
     );
 
-    const session = await createIgSession({
-      identifier: credentials.identifier,
-      password: credentials.password,
-      apiKey: credentials.apiKey,
-      environment: credentials.environment,
+    const history = await fetchIgDealHistory({
+      credentials,
+      from: HISTORY_START,
+      to: historyEnd,
     });
 
-    let accounts = session.accounts;
-    if (accounts.length === 0) {
-      accounts = await listIgAccounts({
-        apiKey: credentials.apiKey,
-        environment: credentials.environment,
-        tokens: { cst: session.cst, securityToken: session.securityToken },
-      });
-    }
-
     const accountIds =
-      accounts.length > 0
-        ? accounts.map((a) => a.accountId)
+      history.accounts.length > 0
+        ? history.accounts.map((a) => a.accountId)
         : (credentials.accountIds ?? []);
 
-    if (accounts.length > 0) {
+    if (history.accounts.length > 0) {
       credentials.accountIds = accountIds;
       credentials.accountNames = Object.fromEntries(
-        accounts.map((a) => [a.accountId, a.accountName || a.accountId]),
+        history.accounts.map((a) => [a.accountId, a.accountName || a.accountId]),
       );
       await persistIgCredentials(
         userId,
@@ -436,142 +602,18 @@ export async function getIgTrades(
     if (connectionId) {
       await upsertAccountsForNumbers(userId, accountIds, connectionId);
       await invalidateConnectionsPageCache(userId);
+    } else {
+      return { error: "NO_TOKEN_RECONNECT", syncStats };
     }
 
-    const tokens = {
-      cst: session.cst,
-      securityToken: session.securityToken,
-    };
-    let activeAccountId = session.currentAccountId;
-
-    const allTrades = [];
-    for (const accountId of accountIds) {
-      try {
-        if (activeAccountId !== accountId) {
-          await switchIgAccount({
-            apiKey: credentials.apiKey,
-            environment: credentials.environment,
-            tokens,
-            accountId,
-          });
-          activeAccountId = accountId;
-        }
-
-        const transactions = await fetchIgTransactions({
-          apiKey: credentials.apiKey,
-          environment: credentials.environment,
-          tokens,
-          from: HISTORY_START,
-          to: historyEnd,
-          type: "ALL_DEAL",
-        });
-
-        syncStats.rawTransactions += transactions.length;
-        const { trades, skippedRows } = mapIgApiTransactions(transactions);
-        syncStats.skippedRows += skippedRows.length;
-
-        for (const trade of trades) {
-          const tradeData = {
-            accountNumber: accountId,
-            entryId: `ig_${trade.closeId}_entry`,
-            closeId: trade.closeId,
-            instrument: trade.instrument,
-            entryPrice: trade.entryPrice,
-            closePrice: trade.closePrice,
-            entryDate: trade.entryDate,
-            closeDate: trade.closeDate,
-            quantity: trade.quantity,
-            side: trade.side,
-            userId,
-          };
-          allTrades.push(
-            createTradeWithDefaults({
-              id: generateDeterministicTradeId(tradeData),
-              accountNumber: accountId,
-              quantity: trade.quantity,
-              entryId: tradeData.entryId,
-              closeId: trade.closeId,
-              instrument: trade.instrument,
-              entryPrice: trade.entryPrice,
-              closePrice: trade.closePrice,
-              entryDate: trade.entryDate,
-              closeDate: trade.closeDate,
-              pnl: trade.pnl,
-              timeInPosition: trade.timeInPosition,
-              side: trade.side,
-              commission: trade.commission,
-              comment: trade.comment,
-              userId,
-            }),
-          );
-        }
-      } catch (error) {
-        syncStats.fetchFailures += 1;
-        logger.warn(
-          `Failed fetching transactions for ${accountId}: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
-      }
-    }
-
-    syncStats.closedTrades = allTrades.length;
-
-    if (
-      syncStats.fetchFailures > 0 &&
-      syncStats.fetchFailures === accountIds.length
-    ) {
-      return {
-        error: "SYNC_FETCH_FAILED",
-        errorParams: {
-          failures: syncStats.fetchFailures,
-          total: accountIds.length,
-        },
-        syncStats,
-      };
-    }
-
-    await prisma.connection.updateMany({
-      where: {
-        userId,
-        service: SERVICE,
-        externalId: credentials.identifier,
-      },
-      data: { lastSyncedAt: new Date() },
+    return importIgSyncedHistory({
+      accountId: credentials.identifier,
+      connectionId,
+      perAccount: history.perAccount,
+      accounts: history.accounts,
+      userId,
+      credentials,
     });
-
-    const saveResult =
-      allTrades.length > 0
-        ? await saveTradesAction(allTrades, { userId, connectionId })
-        : null;
-
-    await invalidateConnectionsPageCache(userId);
-
-    let savedCount = 0;
-    if (saveResult) {
-      if (saveResult.error === "DUPLICATE_TRADES") {
-        return {
-          error: "DUPLICATE_TRADES",
-          syncStats,
-          tradesCount: allTrades.length,
-        };
-      }
-      if (saveResult.error && saveResult.error !== "NO_TRADES_ADDED") {
-        return {
-          error: "SAVE_TRADES_FAILED",
-          errorParams: { detail: String(saveResult.error) },
-          syncStats,
-        };
-      }
-      savedCount = saveResult.numberOfTradesAdded;
-    }
-
-    return {
-      processedTrades: allTrades,
-      savedCount,
-      tradesCount: allTrades.length,
-      syncStats,
-    };
   } catch (error) {
     logger.error("getIgTrades failed", error);
     // Stored credentials go stale (password changed, key revoked). Say which,

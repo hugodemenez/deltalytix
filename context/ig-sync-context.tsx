@@ -28,14 +28,6 @@ export interface IgSyncAccount {
   updatedAt: Date;
 }
 
-interface SyncApiPayload {
-  success?: boolean;
-  message?: string;
-  errorParams?: Record<string, string | number>;
-  savedCount?: number;
-  tradesCount?: number;
-}
-
 interface IgSyncContextType {
   performSyncForAccount: (
     accountId: string,
@@ -162,21 +154,19 @@ export function IgSyncContextProvider({ children }: { children: ReactNode }) {
 
       beginAccountSync(accountId);
       try {
-        const response = await fetch("/api/ig/sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ accountId }),
-        });
-        const payload = (await response.json()) as SyncApiPayload;
+        const { syncIgFromBrowser } = await import(
+          "@/app/[locale]/dashboard/components/import/ig/sync/sync-ig-browser"
+        );
+        const syncResult = await syncIgFromBrowser(accountId);
 
-        if (payload?.message === "DUPLICATE_TRADES") {
+        if (syncResult?.error === "DUPLICATE_TRADES") {
           await loadAccounts();
           await refreshTradesOnly({ force: false });
           return { success: true, message: "DUPLICATE_TRADES" };
         }
 
-        if (!response.ok || !payload?.success) {
-          const code = payload?.message || "SYNC_FAILED";
+        if (syncResult?.error) {
+          const code = syncResult.error || "SYNC_FAILED";
           toast.error(
             (
               t as (
@@ -184,7 +174,7 @@ export function IgSyncContextProvider({ children }: { children: ReactNode }) {
                 params?: Record<string, string | number>,
               ) => string
             )(`igSync.errors.${code}`, {
-              ...(payload?.errorParams ?? {}),
+              ...(syncResult.errorParams ?? {}),
             }),
           );
           return { success: false, message: code };
