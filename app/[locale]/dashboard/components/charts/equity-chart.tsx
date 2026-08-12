@@ -647,14 +647,6 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     ? storeAccountNumbers
     : localAccountNumbers;
   const isLoading = isStoreView ? storeIsLoading : localLoading;
-  const firstEquity = chartData.find(
-    (point) => typeof point.equity === "number"
-  )?.equity;
-  const totalEquity = chartData.at(-1)?.equity ?? 0;
-  const equityChangePercentage =
-    typeof firstEquity === "number" && firstEquity !== 0
-      ? ((totalEquity - firstEquity) / Math.abs(firstEquity)) * 100
-      : null;
 
   // Throttled hover handler for better performance
   const throttledSetHoveredData = React.useCallback(
@@ -753,6 +745,20 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
         .slice(0, MAX_ACCOUNTS_DISPLAYED),
     [availableAccountNumbers, selectedAccounts]
   );
+  const equityForPoint = (point: ChartDataPoint | undefined) => {
+    if (!point) return 0;
+    if (!showIndividual) return point.equity ?? 0;
+    return displayedAccounts.reduce((total, account) => {
+      const value = point[`equity_${account}`];
+      return total + (typeof value === "number" ? value : 0);
+    }, 0);
+  };
+  const firstEquity = equityForPoint(chartData[0]);
+  const totalEquity = equityForPoint(chartData.at(-1));
+  const equityChangePercentage =
+    firstEquity !== 0
+      ? ((totalEquity - firstEquity) / Math.abs(firstEquity)) * 100
+      : null;
 
   // Client-side computation for shared view
   const computeClientSideData = React.useCallback(() => {
