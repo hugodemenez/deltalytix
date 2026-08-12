@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import {
   type ConsentSettings,
   isGoogleTagAllowed,
+  readStoredConsentSettings,
   toGoogleConsent,
 } from "@/lib/consent-settings";
 
@@ -20,17 +21,6 @@ function isProductionHost() {
     window.location.hostname === "deltalytix.app" ||
     window.location.hostname === "www.deltalytix.app"
   );
-}
-
-function readConsentSettings(): ConsentSettings | null {
-  const storedConsent = window.localStorage.getItem("cookieConsent");
-  if (!storedConsent) return null;
-
-  try {
-    return JSON.parse(storedConsent) as ConsentSettings;
-  } catch {
-    return null;
-  }
 }
 
 function configureGoogleTag(settings: ConsentSettings) {
@@ -75,7 +65,7 @@ function configureGoogleTag(settings: ConsentSettings) {
 
 export function GoogleTag() {
   useEffect(() => {
-    const initialSettings = readConsentSettings();
+    const initialSettings = readStoredConsentSettings();
     if (initialSettings) configureGoogleTag(initialSettings);
 
     const handleConsentUpdate = (event: Event) => {

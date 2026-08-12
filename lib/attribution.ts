@@ -37,13 +37,14 @@ export type PendingPurchase = {
   billing_interval?: string;
 };
 
-const UTM_TO_POSTHOG: Record<string, string> = {
-  utm_source: "$utm_source",
-  utm_medium: "$utm_medium",
-  utm_campaign: "$utm_campaign",
-  utm_content: "$utm_content",
-  utm_term: "$utm_term",
-};
+/**
+ * Namespace for the stored first-touch values.
+ *
+ * Deliberately *not* PostHog's own `$utm_*` / `$gclid`: those are last-touch and
+ * PostHog maintains them itself. Registering first-touch values under the same
+ * keys would shadow last-touch campaign data on every subsequent event.
+ */
+export const FIRST_TOUCH_PROPERTY_PREFIX = "first_touch_";
 
 function sanitizeValue(value: string | null | undefined): string | undefined {
   if (!value) return undefined;
@@ -119,8 +120,8 @@ export function deserializeAttribution(raw: string | null | undefined): Attribut
 }
 
 /**
- * Event + person properties for PostHog.
- * Uses `$utm_*` plus custom click-id keys; `$set_once` keeps first-touch on the person.
+ * Event + person properties for PostHog, namespaced under `first_touch_`.
+ * `$set_once` keeps the first-touch values on the person.
  */
 export function attributionToPostHogProperties(
   attribution: Attribution | null | undefined,
@@ -130,14 +131,7 @@ export function attributionToPostHogProperties(
   const properties: Record<string, string> = {};
   for (const key of ATTRIBUTION_PARAM_KEYS) {
     const value = attribution?.[key];
-    if (!value) continue;
-    if (key.startsWith("utm_")) {
-      const posthogKey = UTM_TO_POSTHOG[key];
-      if (posthogKey) properties[posthogKey] = value;
-      properties[key] = value;
-    } else {
-      properties[key] = value;
-    }
+    if (value) properties[`${FIRST_TOUCH_PROPERTY_PREFIX}${key}`] = value;
   }
   return properties;
 }
@@ -220,8 +214,12 @@ export function minorUnitsToMajor(amount: number | null | undefined): number | n
 
 /**
  * Resolve purchase revenue for analytics.
- * Prefer session `amount_total`; fall back to line-item totals / price unit_amount
- * so we never coerce a real Stripe amount into 0 via a nullish ternary.
+ *
+ * Each source is trusted as soon as it reports a number — including 0, which is
+ * a real total for a trial or a 100%-off coupon. Falling through a zero to the
+ * catalog price would bill Ads and PostHog for revenue that never existed.
+ * The catalog `unit_amount` is only a last resort, for sessions Stripe has not
+ * priced yet (subscription mode reports a null `amount_total` at creation).
  */
 export function resolveCheckoutRevenueMajor({
   amountTotal,
@@ -234,19 +232,36 @@ export function resolveCheckoutRevenueMajor({
 }): number | null {
   for (const candidate of [amountTotal, lineItemAmountTotal, priceUnitAmount]) {
     const major = minorUnitsToMajor(candidate);
-    if (major !== null && major > 0) return major;
+    if (major !== null) return major;
   }
-
-  // Explicit zero only when Stripe reported a zero total (trial / 100% off).
-  if (amountTotal === 0) return 0;
   return null;
 }
 
-export function clearPendingPurchaseCookie(): string {
-  return `${PENDING_PURCHASE_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
+/** Apex, www, and beta all share cookies via `Domain=.deltalytix.app`. */
+export function isDeltalytixHost(hostname: string): boolean {
+  return hostname === "deltalytix.app" || hostname.endsWith(".deltalytix.app");
 }
 
-function readBrowserCookie(name: string): string | null {
+/**
+ * Client-side deletion headers for the pending-purchase cookie.
+ *
+ * The server writes this cookie with `Domain=.deltalytix.app` (see
+ * `pendingPurchaseSetCookieHeader`), and a deletion that omits `Domain` targets
+ * a different cookie — leaving the original to re-fire the Subscribe conversion
+ * on every reload until it expires. Returns both variants so whichever one the
+ * browser holds is removed.
+ */
+export function clearPendingPurchaseCookie(hostname?: string): string[] {
+  const base = `${PENDING_PURCHASE_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
+  const host =
+    hostname ?? (typeof window !== "undefined" ? window.location.hostname : "");
+
+  return isDeltalytixHost(host)
+    ? [base, `${base}; Domain=.deltalytix.app`]
+    : [base];
+}
+
+export function readBrowserCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
   const entry = document.cookie
     .split("; ")

@@ -10,15 +10,35 @@ import {
   type Attribution,
   attributionToPostHogProperties,
   hasAttribution,
+  isDeltalytixHost,
   mergeAttributionFirstTouch,
   parseAttributionParams,
   readClientAttribution,
   serializeAttribution,
 } from "@/lib/attribution";
+import { isGoogleTagAllowed, readStoredConsentSettings } from "@/lib/consent-settings";
 
-function isDeltalytixHost() {
-  const host = window.location.hostname;
-  return host === "deltalytix.app" || host.endsWith(".deltalytix.app");
+const CONSENT_UPDATED_EVENT = "deltalytix:consent-updated";
+
+/**
+ * Campaign params seen on the landing URL, held in memory only.
+ *
+ * The banner is frequently accepted a page or two after the ad click, by which
+ * point `location.search` no longer carries the params. Buffering them here
+ * keeps them recoverable without writing anything before consent — the module
+ * lives as long as the tab, and is gone with it.
+ */
+let bufferedAttribution: Attribution | null = null;
+
+/**
+ * Attribution is marketing data, not a functional requirement, so it lives
+ * behind the same gate as the Google tag: no banner decision yet, or a decision
+ * that turned both analytics and ads off, means nothing is written anywhere.
+ */
+function attributionStorageAllowed(): boolean {
+  const settings = readStoredConsentSettings();
+  if (!settings) return false;
+  return isGoogleTagAllowed(settings);
 }
 
 function writeAttributionCookie(attribution: Attribution) {
@@ -27,7 +47,7 @@ function writeAttributionCookie(attribution: Attribution) {
   const attributes = `Max-Age=${ATTRIBUTION_MAX_AGE_SECONDS}; Path=/; SameSite=Lax${secure}`;
 
   document.cookie = `${ATTRIBUTION_COOKIE}=${value}; ${attributes}`;
-  if (isDeltalytixHost()) {
+  if (isDeltalytixHost(window.location.hostname)) {
     document.cookie = `${ATTRIBUTION_COOKIE}=${value}; ${attributes}; Domain=.deltalytix.app`;
   }
 }
@@ -52,29 +72,50 @@ function registerWithPostHog(attribution: Attribution) {
   if (Object.keys(props).length === 0) return;
 
   // Super properties attach to later client events (e.g. marketing_cta_clicked).
+  // Person properties are set server-side at sign-up and purchase instead: doing
+  // it here would create a profile for every anonymous visitor on a campaign
+  // link, which `identified_only` person processing exists to avoid.
   posthog.register(props);
-  // Second arg is $set_once — keep first-touch campaign props on the person.
-  posthog.setPersonProperties({}, props);
 }
 
 /**
  * Captures utm_* / gclid from the current URL on every app origin (marketing +
  * app). Persists first-touch attribution in a SameSite=Lax cookie so Google
  * OAuth redirects do not wipe campaign context.
+ *
+ * Capture is re-attempted when the banner reports a decision, so a visitor who
+ * lands on a campaign URL and accepts on a later page is still attributed —
+ * the params are re-read from the URL that is current at that moment, and
+ * first-touch merging keeps the earliest values seen after consent.
  */
 export function AttributionCapture() {
   useEffect(() => {
-    const fromUrl = parseAttributionParams(
-      new URLSearchParams(window.location.search),
-    );
-    const existing = readClientAttribution();
-    const merged = mergeAttributionFirstTouch(existing, fromUrl);
+    const capture = () => {
+      const fromUrl = parseAttributionParams(
+        new URLSearchParams(window.location.search),
+      );
+      bufferedAttribution = mergeAttributionFirstTouch(
+        bufferedAttribution,
+        fromUrl,
+      );
 
-    if (!hasAttribution(merged)) return;
+      if (!attributionStorageAllowed()) return;
 
-    // Re-persist so cookie Max-Age refreshes when we already had storage only.
-    persistAttribution(merged);
-    registerWithPostHog(merged);
+      const existing = readClientAttribution();
+      const merged = mergeAttributionFirstTouch(existing, bufferedAttribution);
+
+      if (!hasAttribution(merged)) return;
+
+      // Re-persist so cookie Max-Age refreshes when we already had storage only.
+      persistAttribution(merged);
+      registerWithPostHog(merged);
+    };
+
+    capture();
+
+    const onConsent = () => capture();
+    window.addEventListener(CONSENT_UPDATED_EVENT, onConsent);
+    return () => window.removeEventListener(CONSENT_UPDATED_EVENT, onConsent);
   }, []);
 
   return null;

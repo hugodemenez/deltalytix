@@ -269,7 +269,7 @@ export async function GET(req: Request) {
     const promo_code = searchParams.get('promo_code');
 
     if (!lookup_key) {
-        return NextResponse.json({ message: "Lookup key is required" }, { status: 404 });
+        return NextResponse.json({ message: "Lookup key is required" }, { status: 400 });
     }
 
     const supabase = await createClient();

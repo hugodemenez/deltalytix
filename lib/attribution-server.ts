@@ -4,14 +4,11 @@ import { cookies } from "next/headers";
 
 import {
   ATTRIBUTION_COOKIE,
-  ATTRIBUTION_MAX_AGE_SECONDS,
   type Attribution,
   deserializeAttribution,
-  hasAttribution,
   PENDING_PURCHASE_COOKIE,
   PENDING_PURCHASE_MAX_AGE_SECONDS,
   type PendingPurchase,
-  serializeAttribution,
   serializePendingPurchase,
 } from "@/lib/attribution";
 
@@ -44,12 +41,6 @@ export async function readAttributionFromCookies(): Promise<Attribution | null> 
   } catch {
     return null;
   }
-}
-
-export function attributionSetCookieHeader(attribution: Attribution): string | null {
-  if (!hasAttribution(attribution)) return null;
-  const value = encodeURIComponent(serializeAttribution(attribution));
-  return `${ATTRIBUTION_COOKIE}=${value}; Max-Age=${ATTRIBUTION_MAX_AGE_SECONDS}; Path=/; SameSite=Lax${cookieSecureSuffix()}${cookieDomainSuffix()}`;
 }
 
 export function pendingPurchaseSetCookieHeader(purchase: PendingPurchase): string {

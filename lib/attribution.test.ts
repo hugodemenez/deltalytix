@@ -4,6 +4,7 @@ import {
   attributionFromStripeMetadata,
   attributionToPostHogProperties,
   attributionToStripeMetadata,
+  clearPendingPurchaseCookie,
   deserializeAttribution,
   deserializePendingPurchase,
   hasAttribution,
@@ -88,19 +89,28 @@ describe("serialize/deserialize", () => {
 });
 
 describe("posthog + stripe mappers", () => {
-  it("emits $utm_* and gclid for PostHog", () => {
+  it("namespaces PostHog properties under first_touch_", () => {
     expect(
       attributionToPostHogProperties({
         utm_source: "google",
         utm_medium: "cpc",
         gclid: "abc",
       }),
-    ).toMatchObject({
-      $utm_source: "google",
+    ).toEqual({
+      first_touch_utm_source: "google",
+      first_touch_utm_medium: "cpc",
+      first_touch_gclid: "abc",
+    });
+  });
+
+  it("never emits PostHog's own last-touch campaign keys", () => {
+    const props = attributionToPostHogProperties({
       utm_source: "google",
-      $utm_medium: "cpc",
       gclid: "abc",
     });
+    // `$utm_*` / `$gclid` belong to PostHog and are last-touch; writing
+    // first-touch values there would shadow them on every later event.
+    expect(Object.keys(props).some((key) => key.startsWith("$"))).toBe(false);
   });
 
   it("round-trips through Stripe metadata", () => {
@@ -113,6 +123,23 @@ describe("posthog + stripe mappers", () => {
   it("hasAttribution is false for empty objects", () => {
     expect(hasAttribution({})).toBe(false);
     expect(hasAttribution({ gclid: "x" })).toBe(true);
+  });
+});
+
+describe("clearPendingPurchaseCookie", () => {
+  it("mirrors the Domain the server wrote on deltalytix hosts", () => {
+    const headers = clearPendingPurchaseCookie("beta.deltalytix.app");
+    expect(headers).toHaveLength(2);
+    expect(headers.some((header) => header.includes("Domain=.deltalytix.app"))).toBe(
+      true,
+    );
+    expect(headers.every((header) => header.includes("Max-Age=0"))).toBe(true);
+  });
+
+  it("omits Domain off the production hosts", () => {
+    expect(clearPendingPurchaseCookie("localhost")).toEqual([
+      "deltalytix_pending_purchase=; Max-Age=0; Path=/; SameSite=Lax",
+    ]);
   });
 });
 
@@ -145,12 +172,31 @@ describe("resolveCheckoutRevenueMajor", () => {
     ).toBe(99);
   });
 
-  it("returns 0 only for an explicit Stripe zero total", () => {
+  it("returns 0 for an explicit Stripe zero total", () => {
     expect(
       resolveCheckoutRevenueMajor({
         amountTotal: 0,
         lineItemAmountTotal: null,
         priceUnitAmount: null,
+      }),
+    ).toBe(0);
+  });
+
+  it("does not fall through a zero total to the catalog price", () => {
+    // 100%-off coupon or fully discounted trial: Stripe settled 0, so the
+    // list price must not be reported as revenue.
+    expect(
+      resolveCheckoutRevenueMajor({
+        amountTotal: 0,
+        priceUnitAmount: 2900,
+      }),
+    ).toBe(0);
+
+    expect(
+      resolveCheckoutRevenueMajor({
+        amountTotal: null,
+        lineItemAmountTotal: 0,
+        priceUnitAmount: 2900,
       }),
     ).toBe(0);
   });

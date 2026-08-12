@@ -516,13 +516,10 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
       const attributionProps = attributionToPostHogProperties(attribution);
       const setOnce = attributionToPersonSetOnce(attribution);
       const authProvider = user.app_metadata?.provider || 'unknown';
-      // Ads contract uses method=email|google; keep auth_provider for existing reports.
-      const method =
-        authProvider === 'google'
-          ? 'google'
-          : authProvider === 'email' || authProvider === 'unknown'
-            ? 'email'
-            : authProvider;
+      // Ads contract reads `method`; keep auth_provider for existing reports.
+      // Reported verbatim — folding 'unknown' into 'email' would silently
+      // inflate the email share of the signup-method breakdown.
+      const method = authProvider;
 
       await capturePostHogEvent({
         distinctId: user.id,
