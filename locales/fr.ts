@@ -295,6 +295,7 @@ export default {
   "dashboard.tabs.table": "Tableau",
   "dashboard.tabs.accounts": "Comptes",
   "dashboard.tabs.widgets": "Widgets",
+  "dashboard.tabs.ariaLabel": "Vues du tableau de bord",
   "dashboard.tabs.analysis": "Analyse",
   "analysis.title": "Analyse IA du Trading",
   "analysis.description":

@@ -1,29 +1,29 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Globe, LayoutDashboard, ChevronDown } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useEffect } from 'react'
 import { Logo } from '@/components/logo'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useI18n } from "@/locales/client"
 import { useKeyboardShortcuts } from '../../../../hooks/use-keyboard-shortcuts'
-import { ActiveFilterTags } from './filters/active-filter-tags'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import UserMenu from './user-menu'
 import ReferralButton from './referral-button'
 import FeedbackButton from './feedback-button'
 import { PlanChip } from './plan-chip'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  useDashboardHomeTabsStore,
+  type DashboardHomeTab,
+} from '@/store/dashboard-home-tabs-store'
 
 export default function Navbar() {
   const router = useRouter()
   const t = useI18n()
-  const [showAccountNumbers] = useState(true)
-  const [isLogoPopoverOpen, setIsLogoPopoverOpen] = useState(false)
+  const activeTab = useDashboardHomeTabsStore((state) => state.activeTab)
+  const setActiveTab = useDashboardHomeTabsStore((state) => state.setActiveTab)
+  const isDashboardHome = useDashboardHomeTabsStore(
+    (state) => state.homeActive
+  )
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts()
@@ -36,74 +36,58 @@ export default function Navbar() {
   }, [router])
 
   return (
-    <>
-      <nav className="sticky top-0 left-0 right-0 z-40 flex w-full flex-col border-b bg-background pt-safe text-primary shadow-xs">
-        <div className="flex items-center justify-between px-3 sm:px-6 lg:px-10 h-16 gap-3 sm:gap-4 py-2">
-          <div className="flex items-center gap-x-4">
-            <div className="flex flex-col items-center">
-              <Popover open={isLogoPopoverOpen} onOpenChange={setIsLogoPopoverOpen} modal={false}>
-                <PopoverTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-9 px-2 rounded-md hover:bg-accent hover:text-accent-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors"
-                    aria-haspopup="menu"
-                    aria-expanded={isLogoPopoverOpen}
-                    aria-label={t('landing.navbar.logo.title')}
-                  >
-                    <span className="flex items-center gap-1">
-                      <Logo className='fill-black h-6 w-6 dark:fill-white' />
-                      <ChevronDown 
-                        className={`h-4 w-4 transition-transform duration-200 ${isLogoPopoverOpen ? 'rotate-180' : 'rotate-0'}`}
-                        aria-hidden="true"
-                      />
-                    </span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64" align="start">
-                  <div className="space-y-2">
-                    <h4 className="font-medium leading-none mb-3">{t('landing.navbar.logo.title')}</h4>
-                    <div className="grid gap-2">
-                      <Link 
-                        href="/dashboard"
-                        prefetch={true}
-                        className="flex items-center gap-2 text-sm hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
-                        onClick={() => setIsLogoPopoverOpen(false)}
-                      >
-                        <div className="shrink-0 w-4 h-4">
-                          <LayoutDashboard className="h-full w-full" />
-                        </div>
-                        {t('landing.navbar.logo.dashboard')}
-                      </Link>
-                      <Link 
-                        href="/" 
-                        className="flex items-center gap-2 text-sm hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
-                        onClick={() => setIsLogoPopoverOpen(false)}
-                      >
-                        <div className="shrink-0 w-4 h-4">
-                          <Globe className="h-full w-full" />
-                        </div>
-                        {t('landing.navbar.logo.home')}
-                      </Link>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-          <ActiveFilterTags
-            showAccountNumbers={showAccountNumbers}
-            inline
-            className="hidden md:block flex-1 min-w-0"
-          />
-          <div className="flex items-center gap-2 sm:gap-3">
-            <FeedbackButton />
-            <ReferralButton />
-            <PlanChip />
-            <UserMenu />
-          </div>
+    <nav className="sticky top-0 left-0 right-0 z-40 flex w-full flex-col border-b bg-background pt-safe text-primary shadow-xs">
+      <div className="relative flex h-16 items-center justify-between gap-3 px-3 py-2 sm:gap-4 sm:px-6 lg:px-10">
+        <Link
+          href="/dashboard"
+          prefetch
+          aria-label={t('landing.navbar.logo.dashboard')}
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <Logo className="h-6 w-6 fill-black dark:fill-white" />
+        </Link>
+
+        {isDashboardHome && (
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) =>
+              setActiveTab(value as DashboardHomeTab)
+            }
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          >
+            <TabsList
+              aria-label={t('dashboard.tabs.ariaLabel')}
+              className="h-9 rounded-lg bg-[#F2F2EE] p-1 dark:bg-muted"
+            >
+              <TabsTrigger
+                value="widgets"
+                className="h-7 px-2.5 text-xs sm:px-3 sm:text-sm"
+              >
+                {t('dashboard.tabs.widgets')}
+              </TabsTrigger>
+              <TabsTrigger
+                value="table"
+                className="h-7 px-2.5 text-xs sm:px-3 sm:text-sm"
+              >
+                {t('dashboard.tabs.table')}
+              </TabsTrigger>
+              <TabsTrigger
+                value="accounts"
+                className="h-7 px-2.5 text-xs sm:px-3 sm:text-sm"
+              >
+                {t('dashboard.tabs.accounts')}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          <FeedbackButton />
+          <ReferralButton />
+          <PlanChip />
+          <UserMenu />
         </div>
-      </nav>
-    </>
+      </div>
+    </nav>
   )
 }

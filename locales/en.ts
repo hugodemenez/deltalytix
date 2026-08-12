@@ -290,6 +290,7 @@ export default {
   "dashboard.tabs.table": "Table",
   "dashboard.tabs.accounts": "Accounts",
   "dashboard.tabs.widgets": "Widgets",
+  "dashboard.tabs.ariaLabel": "Dashboard views",
   "dashboard.tabs.analysis": "Analysis",
   "analysis.title": "AI Trading Analysis",
   "analysis.description":
