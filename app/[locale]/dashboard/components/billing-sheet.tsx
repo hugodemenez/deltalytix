@@ -30,7 +30,6 @@ import {
   availableBillingPeriods,
   billingLookupKey,
   billingPeriodCharge,
-  billingPeriodMonthlyEquivalent,
   formatBillingAmount,
   isLifetimeSubscription,
   type BillingPeriod,
@@ -64,9 +63,11 @@ export function BillingSheet() {
   const [pendingLifetime, setPendingLifetime] = useState(false)
   const [referralCode, setReferralCode] = useState<string | null>(null)
 
-  const currentLabel = subscription?.plan?.name?.trim() || t('pricing.free.name')
-  const isPaid = planIsPaid(subscription?.plan?.name)
   const isLifetime = isLifetimeSubscription(subscription)
+  const currentLabel = isLifetime
+    ? `${t('pricing.plus.name')} · ${t('pricing.lifetime')}`
+    : subscription?.plan?.name?.trim() || t('pricing.free.name')
+  const isPaid = planIsPaid(subscription?.plan?.name)
 
   const periods = useMemo(
     () => availableBillingPeriods(subscription),
@@ -97,25 +98,16 @@ export function BillingSheet() {
   }
 
   const periodDetail = (period: BillingPeriod) => {
-    if (period === 'lifetime') return t('pricing.oneTimePayment')
-
-    const monthly = formatBillingAmount(
-      billingPeriodMonthlyEquivalent(period),
-      currency,
-      locale
-    )
-    if (period === 'monthly') {
-      return `${monthly} / ${t('pricing.month')}`
+    switch (period) {
+      case 'monthly':
+        return t('dashboard.billingSheet.monthlyDetail')
+      case 'quarterly':
+        return t('dashboard.billingSheet.quarterlyDetail')
+      case 'yearly':
+        return t('dashboard.billingSheet.yearlyDetail')
+      case 'lifetime':
+        return t('dashboard.billingSheet.lifetimeDetail')
     }
-
-    const total = formatBillingAmount(
-      billingPeriodCharge(period),
-      currency,
-      locale
-    )
-    return period === 'quarterly'
-      ? `${monthly} / ${t('pricing.month')} · ${t('pricing.billedQuarterly', { total })}`
-      : `${monthly} / ${t('pricing.month')} · ${t('pricing.billedYearly', { total })}`
   }
 
   const executeChange = async (period: BillingPeriod) => {
@@ -159,8 +151,8 @@ export function BillingSheet() {
         className={cn(
           'flex flex-col gap-0 overflow-hidden bg-[#FFFFFF] p-0 dark:bg-background',
           isMobile
-            ? 'h-[min(92dvh,720px)] rounded-t-2xl border-t border-[#E2E5DF]'
-            : 'w-full sm:max-w-md'
+            ? 'h-[min(92dvh,720px)] rounded-t-[4px] border-t border-[#E5E5E5]'
+            : 'w-full border-l border-[#E5E5E5] sm:max-w-[420px]'
         )}
       >
         {isMobile && (
@@ -169,8 +161,8 @@ export function BillingSheet() {
             aria-hidden
           />
         )}
-        <SheetHeader className="space-y-1 border-b border-[#E2E5DF] px-5 py-4 text-left dark:border-border">
-          <SheetTitle className="text-lg font-semibold tracking-tight text-[#171917] dark:text-foreground">
+        <SheetHeader className="space-y-1 border-b border-[#E5E5E5] px-5 py-4 text-left dark:border-border">
+          <SheetTitle className="text-lg font-semibold leading-tight tracking-[-0.025em] text-[#171717] dark:text-foreground">
             {t('dashboard.billingSheet.title')}
           </SheetTitle>
           <SheetDescription className="text-sm text-[#686D67] dark:text-muted-foreground">
@@ -185,13 +177,13 @@ export function BillingSheet() {
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-5">
           <div
             className={cn(
-              'rounded-xl border px-4 py-3',
+              'rounded-[4px] border px-4 py-3',
               isPaid
-                ? 'border-[#E2E5DF] bg-[#F2F2EE] dark:border-border dark:bg-muted/40'
-                : 'border-transparent bg-[#EFF5EC] dark:bg-[#243028]'
+                ? 'border-[#E5E5E5] bg-white dark:border-border dark:bg-muted/40'
+                : 'border-[#E5E5E5] bg-[#F7FBF5] dark:border-border dark:bg-[#243028]'
             )}
           >
-            <p className="text-[10px] font-semibold tracking-[0.08em] text-[#3E7550] uppercase dark:text-[#9BC4A8]">
+            <p className="text-xs font-medium tracking-[-0.01em] text-[#686D67] dark:text-muted-foreground">
               {t('dashboard.billingSheet.currentPlan')}
             </p>
             <p className="mt-1 text-base font-semibold text-[#171917] dark:text-foreground">
@@ -199,7 +191,7 @@ export function BillingSheet() {
             </p>
             <p className="mt-0.5 text-sm text-[#686D67] dark:text-muted-foreground">
               {isLifetime
-                ? t('dashboard.billingSheet.lifetimeOwned')
+                ? t('dashboard.billingSheet.lifetimePaid')
                 : isPaid
                   ? `${t('dashboard.billingSheet.fullAccess')} · ${subscription ? periodLabel(
                       subscription.plan.interval === 'month'
@@ -213,7 +205,7 @@ export function BillingSheet() {
           </div>
 
           {isLifetime ? (
-            <div className="rounded-xl border border-[#E2E5DF] bg-[#F7F7F4] px-4 py-4 dark:border-border dark:bg-muted/30">
+            <div className="rounded-[4px] border border-[#E5E5E5] bg-[#FAFAFA] px-4 py-4 dark:border-border dark:bg-muted/30">
               <p className="text-sm font-medium text-[#171917] dark:text-foreground">
                 {t('dashboard.billingSheet.noLifetimeChangesTitle')}
               </p>
@@ -223,7 +215,7 @@ export function BillingSheet() {
             </div>
           ) : (
             <div className="grid gap-3">
-              <p className="text-xs font-semibold tracking-[0.08em] text-[#686D67] uppercase dark:text-muted-foreground">
+              <p className="text-xs font-medium tracking-[-0.01em] text-[#686D67] dark:text-muted-foreground">
                 {subscription
                   ? t('dashboard.billingSheet.availableChanges')
                   : t('dashboard.billingSheet.availablePlans')}
@@ -241,10 +233,10 @@ export function BillingSheet() {
                     type="button"
                     onClick={() => setSelected(period)}
                     className={cn(
-                      'relative flex w-full items-start justify-between gap-3 rounded-xl border bg-white px-4 py-3 text-left transition-colors dark:bg-background',
+                      'relative flex w-full items-start justify-between gap-3 rounded-[4px] border bg-white px-4 py-3 text-left transition-colors dark:bg-background',
                       isSelected
                         ? 'border-[#181A18] dark:border-white'
-                        : 'border-[#E2E5DF] hover:border-black/30 dark:border-border dark:hover:border-white/40'
+                        : 'border-[#E5E5E5] hover:border-black/30 dark:border-border dark:hover:border-white/40'
                     )}
                   >
                     <div className="min-w-0">
@@ -252,9 +244,11 @@ export function BillingSheet() {
                         <span className="text-sm font-semibold text-[#171917] dark:text-foreground">
                           {t('pricing.plus.name')} · {periodLabel(period)}
                         </span>
-                        {period === 'lifetime' ? (
+                        {period === 'yearly' || period === 'lifetime' ? (
                           <span className="rounded-full bg-[#EFF5EC] px-2 py-0.5 text-[10px] font-medium text-[#3E7550] dark:bg-[#243028] dark:text-[#9BC4A8]">
-                            {t('pricing.lifetimeAccess')}
+                            {period === 'yearly'
+                              ? t('dashboard.billingSheet.save')
+                              : t('dashboard.billingSheet.bestValue')}
                           </span>
                         ) : null}
                       </div>
@@ -290,23 +284,41 @@ export function BillingSheet() {
         </div>
 
         {!isLifetime && periods.length > 0 && (
-          <div className="shrink-0 border-t border-[#E2E5DF] px-5 py-4 dark:border-border">
+          <div className="shrink-0 border-t border-[#E5E5E5] px-5 py-4 dark:border-border">
             <Button
               type="button"
               disabled={changeLoading || isLoading}
               onClick={() => requestChange(effectiveSelected)}
-              className="h-11 w-full rounded-xl bg-[#181A18] text-white hover:bg-[#181A18]/90 dark:bg-white dark:text-[#181A18]"
+              className="h-11 w-full rounded-[4px] bg-[#181A18] text-white hover:bg-[#181A18]/90 dark:bg-white dark:text-[#181A18]"
             >
               {changeLoading
                 ? t('billing.switching')
                 : subscription
-                  ? effectiveSelected === 'lifetime'
-                    ? t('pricing.upgradeToLifetime')
-                    : t('billing.changePlan')
-                  : t('pricing.trialPeriod')}
+                  ? t('dashboard.billingSheet.changeToPeriod', {
+                      period: periodLabel(effectiveSelected),
+                    })
+                  : t('dashboard.billingSheet.upgradeToPeriod', {
+                      period: periodLabel(effectiveSelected),
+                    })}
             </Button>
             <p className="mt-2 text-center text-xs text-[#686D67] dark:text-muted-foreground">
               {periodDetail(effectiveSelected)}
+            </p>
+          </div>
+        )}
+
+        {isLifetime && (
+          <div className="shrink-0 border-t border-[#E5E5E5] px-5 py-4 dark:border-border">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setOpen(false)}
+              className="h-11 w-full rounded-[4px]"
+            >
+              {t('dashboard.billingSheet.allSet')}
+            </Button>
+            <p className="mt-2 text-center text-xs text-[#686D67] dark:text-muted-foreground">
+              {t('dashboard.billingSheet.lifetimeIncludesFuture')}
             </p>
           </div>
         )}
@@ -321,7 +333,7 @@ export function BillingSheet() {
               {t('pricing.lifetimeUpgrade.description')}
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
+          <div className="rounded-[4px] border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
             <div className="flex items-start gap-3">
               <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-600 dark:text-yellow-400" />
               <div>

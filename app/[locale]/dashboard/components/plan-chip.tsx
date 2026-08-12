@@ -7,8 +7,13 @@ import { useModalStateStore } from '@/store/modal-state-store'
 
 function resolvePlanLabel(
   planName: string | undefined,
-  freeLabel: string
+  interval: string | undefined,
+  freeLabel: string,
+  lifetimeLabel: string
 ): { label: string; isFree: boolean } {
+  if (interval === 'lifetime') {
+    return { label: lifetimeLabel, isFree: false }
+  }
   if (!planName) {
     return { label: freeLabel, isFree: true }
   }
@@ -35,7 +40,9 @@ export function PlanChip({ className }: { className?: string }) {
 
   const { label, isFree } = resolvePlanLabel(
     stripeSubscription?.plan?.name,
-    t('pricing.free.name')
+    stripeSubscription?.plan?.interval,
+    t('pricing.free.name'),
+    t('pricing.lifetime')
   )
 
   return (

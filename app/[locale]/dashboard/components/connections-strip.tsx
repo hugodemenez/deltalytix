@@ -183,10 +183,10 @@ function ConnectionChip({
           aria-haspopup="menu"
           aria-expanded={open}
           className={cn(
-            'inline-flex h-9 max-w-[16rem] shrink-0 items-center gap-2 rounded-full border bg-white px-3 text-left text-sm transition-[background-color,border-color,transform] duration-150 hover:bg-[#F2F2EE] active:scale-[0.98] dark:bg-background dark:hover:bg-muted/50',
+            'inline-flex h-9 max-w-[16rem] shrink-0 items-center gap-2 rounded-[4px] border bg-white px-3 text-left text-sm tracking-[-0.01em] transition-[background-color,border-color,transform] duration-150 hover:bg-[#F5F5F5] active:scale-[0.96] dark:bg-background dark:hover:bg-muted/50',
             open
               ? 'border-[#181A18] dark:border-white'
-              : 'border-[#E2E5DF] dark:border-border'
+              : 'border-[#E5E5E5] dark:border-border'
           )}
         >
           <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
@@ -233,7 +233,7 @@ function ConnectionChip({
       <PopoverContent
         align="start"
         sideOffset={8}
-        className="w-72 rounded-xl border-[#E2E5DF] bg-white p-1 shadow-md dark:border-border dark:bg-background"
+        className="w-72 rounded-[4px] border-[#E5E5E5] bg-white p-1 shadow-md dark:border-border dark:bg-background"
       >
         <div role="menu" className="flex flex-col">
           {item.accounts.length === 0 ? (
@@ -250,7 +250,7 @@ function ConnectionChip({
                   type="button"
                   role="menuitemcheckbox"
                   aria-checked={selected}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-[#F2F2EE] dark:hover:bg-muted/50"
+                  className="flex w-full items-center gap-2 rounded-[3px] px-3 py-2.5 text-left text-sm transition-colors hover:bg-[#F5F5F5] dark:hover:bg-muted/50"
                   onClick={() => {
                     onSelectAccount(account.number)
                     setOpen(false)
@@ -277,11 +277,11 @@ function ConnectionChip({
               )
             })
           )}
-          <div className="my-1 border-t border-[#E2E5DF] dark:border-border" />
+          <div className="my-1 border-t border-[#E5E5E5] dark:border-border" />
           <Link
             href="/dashboard/connections"
             role="menuitem"
-            className="rounded-lg px-3 py-2.5 text-sm font-medium text-[#3E7550] transition-colors hover:bg-[#EFF5EC] dark:text-[#9BC4A8] dark:hover:bg-[#243028]"
+            className="rounded-[3px] px-3 py-2.5 text-sm font-medium text-[#3E7550] transition-colors hover:bg-[#EFF5EC] dark:text-[#9BC4A8] dark:hover:bg-[#243028]"
             onClick={() => setOpen(false)}
           >
             {t('connections.manageConnection')}
@@ -308,7 +308,7 @@ function AddConnectionChip({
           aria-haspopup="menu"
           aria-expanded={open}
           aria-label={t('connections.addChip')}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-dashed border-[#E2E5DF] bg-transparent px-3 text-sm font-medium text-[#686D67] transition-[background-color,border-color,transform,color] duration-150 hover:border-[#181A18]/40 hover:bg-[#F2F2EE] hover:text-[#171917] active:scale-[0.98] dark:border-border dark:hover:bg-muted/50 dark:hover:text-foreground"
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[4px] border border-[#E5E5E5] bg-white px-3 text-sm font-medium text-[#686D67] transition-[background-color,border-color,transform,color] duration-150 hover:border-[#181A18]/40 hover:bg-[#F5F5F5] hover:text-[#171917] active:scale-[0.96] dark:border-border dark:bg-background dark:hover:bg-muted/50 dark:hover:text-foreground"
         >
           <Plus className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
           {t('connections.addChip')}
@@ -317,7 +317,7 @@ function AddConnectionChip({
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-auto min-w-[12rem] rounded-xl border-[#E2E5DF] bg-white p-1 shadow-md dark:border-border dark:bg-background"
+        className="w-auto min-w-[12rem] rounded-[4px] border-[#E5E5E5] bg-white p-1 shadow-md dark:border-border dark:bg-background"
       >
         <div role="menu" className="flex flex-col">
           {SERVICE_SECTIONS.map((section) => (
@@ -325,7 +325,7 @@ function AddConnectionChip({
               key={section.service}
               type="button"
               role="menuitem"
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-[#F2F2EE] dark:hover:bg-muted/50"
+              className="flex w-full items-center gap-3 rounded-[3px] px-3 py-2.5 text-left text-sm transition-colors hover:bg-[#F5F5F5] dark:hover:bg-muted/50"
               onClick={() => {
                 setOpen(false)
                 captureConnectionAddClicked(section.service)
@@ -343,11 +343,11 @@ function AddConnectionChip({
               {t(section.labelKey as 'connections.sections.tradovate')}
             </button>
           ))}
-          <div className="my-1 border-t border-[#E2E5DF] dark:border-border" />
+          <div className="my-1 border-t border-[#E5E5E5] dark:border-border" />
           <Link
             href="/dashboard/connections"
             role="menuitem"
-            className="rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[#F2F2EE] dark:hover:bg-muted/50"
+            className="rounded-[3px] px-3 py-2.5 text-sm transition-colors hover:bg-[#F5F5F5] dark:hover:bg-muted/50"
             onClick={() => setOpen(false)}
           >
             {t('connections.importFile')}

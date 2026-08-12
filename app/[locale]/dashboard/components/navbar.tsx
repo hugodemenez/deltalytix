@@ -35,13 +35,13 @@ export default function Navbar() {
   }, [router])
 
   return (
-    <nav className="sticky top-0 left-0 right-0 z-40 flex w-full flex-col border-b bg-background pt-safe text-primary shadow-xs">
+    <nav className="sticky top-0 left-0 right-0 z-40 flex w-full flex-col border-b border-[#E5E5E5] bg-white pt-safe text-primary dark:border-border dark:bg-background">
       <div className="relative flex h-16 items-center justify-between gap-3 px-3 py-2 sm:gap-4 sm:px-6 lg:px-10">
         <Link
           href="/dashboard"
           prefetch
           aria-label={t('landing.navbar.logo.dashboard')}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px] transition-colors hover:bg-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <Logo className="h-6 w-6 fill-black dark:fill-white" />
         </Link>
@@ -56,23 +56,23 @@ export default function Navbar() {
           >
             <TabsList
               aria-label={t('dashboard.tabs.ariaLabel')}
-              className="h-9 rounded-lg bg-[#F2F2EE] p-1 dark:bg-muted"
+              className="h-9 rounded-[4px] bg-[#F5F5F5] p-1 dark:bg-muted"
             >
               <TabsTrigger
                 value="widgets"
-                className="h-7 px-2.5 text-xs sm:px-3 sm:text-sm"
+                className="h-7 rounded-[3px] px-2.5 text-xs tracking-[-0.01em] sm:px-3 sm:text-sm"
               >
                 {t('dashboard.tabs.widgets')}
               </TabsTrigger>
               <TabsTrigger
                 value="table"
-                className="h-7 px-2.5 text-xs sm:px-3 sm:text-sm"
+                className="h-7 rounded-[3px] px-2.5 text-xs tracking-[-0.01em] sm:px-3 sm:text-sm"
               >
                 {t('dashboard.tabs.table')}
               </TabsTrigger>
               <TabsTrigger
                 value="accounts"
-                className="h-7 px-2.5 text-xs sm:px-3 sm:text-sm"
+                className="h-7 rounded-[3px] px-2.5 text-xs tracking-[-0.01em] sm:px-3 sm:text-sm"
               >
                 {t('dashboard.tabs.accounts')}
               </TabsTrigger>
