@@ -245,6 +245,7 @@ export default {
   "dashboard.billingPage.upgradeWithPlus": "Passer à Plus",
   "dashboard.billingPage.cadenceNote":
     "Mensuel · Trimestriel · Annuel · À vie · Annulable à tout moment",
+  "dashboard.billingPage.switchToPeriod": "Passer à Plus · {period}",
   "dashboard.billingPage.invoices": "Factures",
   "dashboard.billingPage.noInvoicesTitle": "Aucune facture pour le moment",
   "dashboard.billingPage.noInvoicesDescription":

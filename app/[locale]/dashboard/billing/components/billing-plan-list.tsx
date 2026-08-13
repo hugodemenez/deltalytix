@@ -340,9 +340,12 @@ export function BillingPlanList({
               {changeLoading
                 ? t('billing.switching')
                 : subscription
-                  ? t('dashboard.billingSheet.changeToPeriod', {
-                      period: periodLabel(effectiveSelected),
-                    })
+                  ? t(
+                      isPage
+                        ? 'dashboard.billingPage.switchToPeriod'
+                        : 'dashboard.billingSheet.changeToPeriod',
+                      { period: periodLabel(effectiveSelected) }
+                    )
                   : t('dashboard.billingSheet.upgradeToPeriod', {
                       period: periodLabel(effectiveSelected),
                     })}

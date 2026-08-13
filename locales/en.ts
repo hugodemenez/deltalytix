@@ -242,6 +242,7 @@ export default {
   "dashboard.billingPage.upgradeWithPlus": "Upgrade with Plus",
   "dashboard.billingPage.cadenceNote":
     "Monthly · Quarterly · Yearly · Lifetime · Cancel anytime",
+  "dashboard.billingPage.switchToPeriod": "Switch to Plus · {period}",
   "dashboard.billingPage.invoices": "Invoices",
   "dashboard.billingPage.noInvoicesTitle": "No invoices yet",
   "dashboard.billingPage.noInvoicesDescription":
