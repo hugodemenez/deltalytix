@@ -252,7 +252,7 @@ export default function TraderStatsEmail({
   const weekRange = formatWeekRange(weekStart, t.months);
 
   return (
-    <Html>
+    <Html lang={locale}>
       <Head>
         <Font
           fontFamily="Inter"
