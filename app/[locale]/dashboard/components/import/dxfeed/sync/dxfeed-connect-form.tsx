@@ -37,7 +37,11 @@ import {
   getEnabledDxFeedPropFirms,
 } from '@/lib/dxfeed-propfirms'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
-import { captureConnectionCreated } from '@/lib/connection-analytics'
+import {
+  captureConnectionCreated,
+  captureConnectionFailed,
+} from '@/lib/connection-analytics'
+import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
 import { authenticateDxFeed } from './actions'
 
 const DXFEED_PROP_FIRM_OPTIONS = getEnabledDxFeedPropFirms()
@@ -245,10 +249,13 @@ export function DxFeedConnectForm({
   onConnected,
   initialEmail,
   initialPropFirmName,
+  sourceUi = 'connect_view',
 }: {
   onConnected?: () => void
   initialEmail?: string
   initialPropFirmName?: string
+  /** Which surface rendered this form; reported with connection analytics. */
+  sourceUi?: 'connect_view' | 'credentials_manager'
 }) {
   const t = useI18n()
   const { loadAccounts } = useDxFeedSyncContext()
@@ -257,6 +264,9 @@ export function DxFeedConnectForm({
   const [selectedPropFirmId, setSelectedPropFirmId] = useState(() =>
     resolvePrefillPropFirmId(initialPropFirmName),
   )
+  const selectedPropFirmName =
+    DXFEED_PROP_FIRM_OPTIONS.find((firm) => firm.id === selectedPropFirmId)
+      ?.name ?? selectedPropFirmId
   const [isLoading, setIsLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<DxFeedFieldErrors>({})
   const propFirmTriggerRef = useRef<HTMLButtonElement>(null)
@@ -313,6 +323,16 @@ export function DxFeedConnectForm({
       )
 
       if (result.error) {
+        captureConnectionFailed('dxfeed', {
+          source_ui: sourceUi,
+          prop_firm_id: selectedPropFirmId,
+          prop_firm_name: selectedPropFirmName,
+          error_code: result.error,
+          http_status:
+            typeof result.errorParams?.status === 'number'
+              ? result.errorParams.status
+              : undefined,
+        })
         const { title, description } = getDxFeedErrorToastContent(
           t,
           result.error,
@@ -328,7 +348,11 @@ export function DxFeedConnectForm({
       showToastWithCopy('success', t('dxfeedSync.connected'), {
         copyLabel: t('common.copy'),
       })
-      captureConnectionCreated('dxfeed')
+      captureConnectionCreated('dxfeed', {
+        source_ui: sourceUi,
+        prop_firm_id: selectedPropFirmId,
+        prop_firm_name: selectedPropFirmName,
+      })
       setLoginEmail('')
       setLoginPassword('')
       setSelectedPropFirmId('')
@@ -337,6 +361,12 @@ export function DxFeedConnectForm({
       onConnected?.()
     } catch (error) {
       console.error('DxFeed connect error:', error)
+      captureConnectionFailed('dxfeed', {
+        source_ui: sourceUi,
+        prop_firm_id: selectedPropFirmId,
+        prop_firm_name: selectedPropFirmName,
+        error_code: DxFeedErrorCode.AUTH_UNEXPECTED,
+      })
       showToastWithCopy('error', t('dxfeedSync.error.authFailed'), {
         description: t('dxfeedSync.errors.hintCheckCredentials'),
         copyLabel: t('common.copy'),
@@ -348,6 +378,8 @@ export function DxFeedConnectForm({
     loginEmail,
     loginPassword,
     selectedPropFirmId,
+    selectedPropFirmName,
+    sourceUi,
     t,
     loadAccounts,
     onConnected,

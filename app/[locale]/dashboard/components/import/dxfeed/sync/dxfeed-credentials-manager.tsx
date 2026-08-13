@@ -427,7 +427,10 @@ export function DxFeedCredentialsManager() {
             <DialogDescription>{t('dxfeedSync.addAccount.description')}</DialogDescription>
           </DialogHeader>
           {isAddDialogOpen ? (
-            <DxFeedConnectForm onConnected={() => setIsAddDialogOpen(false)} />
+            <DxFeedConnectForm
+              onConnected={() => setIsAddDialogOpen(false)}
+              sourceUi="credentials_manager"
+            />
           ) : null}
         </DialogContent>
       </Dialog>

@@ -6,6 +6,7 @@ import { TradovateSync } from '@/app/[locale]/dashboard/components/import/tradov
 import { DxFeedSync } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/dxfeed-sync'
 import { IbkrSync } from '@/app/[locale]/dashboard/components/import/ibkr/sync/ibkr-sync'
 import { ThorSync } from '@/app/[locale]/dashboard/components/import/thor/thor-sync'
+import { IgSync } from '@/app/[locale]/dashboard/components/import/ig/sync/ig-sync'
 import type { ConnectionService } from '../actions'
 import { useI18n } from '@/locales/client'
 import {
@@ -45,7 +46,9 @@ export function ConnectServiceModal({
               ? t('connections.add.thor')
               : service === 'etp'
                 ? t('connections.add.etp')
-                : t('connections.addConnection')
+                : service === 'ig'
+                  ? t('connections.add.ig')
+                  : t('connections.addConnection')
 
   const title = isReconnect ? t('connections.reconnect') : addTitle
 
@@ -111,6 +114,15 @@ export function ConnectServiceModal({
             <div className="min-h-0 flex-1 overflow-y-auto">
               <IbkrSync
                 initialShowAccountsManager={false}
+                onConnected={onClose}
+              />
+            </div>
+          )}
+          {service === 'ig' && (
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <IgSync
+                initialShowAccountsManager={false}
+                initialUsername={prefill?.accountId}
                 onConnected={onClose}
               />
             </div>

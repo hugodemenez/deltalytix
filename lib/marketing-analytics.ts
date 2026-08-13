@@ -1,5 +1,10 @@
 import posthog from "posthog-js";
 
+import {
+  attributionToPostHogProperties,
+  readClientAttribution,
+} from "@/lib/attribution";
+
 function canCapture() {
   if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return false;
   if (typeof window === "undefined") return false;
@@ -19,10 +24,13 @@ export function captureMarketingCtaClicked({
 }) {
   if (!canCapture()) return;
 
+  const attributionProps = attributionToPostHogProperties(readClientAttribution());
+
   posthog.capture("marketing_cta_clicked", {
     cta_id: ctaId,
     destination,
     locale,
     placement,
+    ...attributionProps,
   });
 }

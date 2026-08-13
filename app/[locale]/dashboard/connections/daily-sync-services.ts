@@ -12,6 +12,7 @@ export const DAILY_SYNC_SERVICES = [
   'dxfeed',
   'rithmic-protocol',
   'ibkr',
+  'ig',
 ] as const
 
 export type DailySyncService = (typeof DAILY_SYNC_SERVICES)[number]

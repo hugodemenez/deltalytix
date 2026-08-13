@@ -141,6 +141,7 @@ export default {
   "connections.sections.tradovate": "Tradovate",
   "connections.sections.dxfeed": "DxFeed",
   "connections.sections.ibkr": "Interactive Brokers",
+  "connections.sections.ig": "IG",
   "connections.sections.thor": "Thor",
   "connections.sections.standalone": "Comptes autonomes",
   "connections.add.rithmic": "Ajouter une connexion Rithmic",
@@ -148,6 +149,7 @@ export default {
   "connections.add.tradovate": "Ajouter une connexion Tradovate",
   "connections.add.dxfeed": "Ajouter une connexion DxFeed",
   "connections.add.ibkr": "Ajouter une connexion Interactive Brokers",
+  "connections.add.ig": "Ajouter une connexion IG",
   "connections.add.thor": "Ajouter une connexion Thor",
   "connections.add.etp": "Ajouter une connexion ETP",
   "connections.emptySection": "Aucune connexion. Utilisez + pour en ajouter une.",
@@ -2870,6 +2872,140 @@ export default {
         "Aucun trade clôturé trouvé pour {accountId}.",
     },
   },
+  igSync: {
+    title: "IG",
+    description:
+      "Connectez votre compte IG avec une clé API personnelle pour importer automatiquement les deals clôturés depuis l'historique des transactions.",
+    connected: "Compte IG connecté avec succès",
+    error: {
+      credentialsRequired:
+        "Saisissez le nom d'utilisateur, le mot de passe et la clé API",
+      authFailed: "Impossible de se connecter à IG",
+    },
+    errors: {
+      USER_NOT_AUTHENTICATED: "Vous devez être connecté pour lier IG.",
+      CREDENTIALS_REQUIRED:
+        "Saisissez le nom d'utilisateur, le mot de passe et la clé API.",
+      AUTH_FAILED: "Échec de la connexion IG : {reason}",
+      IG_INVALID_CREDENTIALS:
+        "IG a refusé cet identifiant ou ce mot de passe. Vérifiez-les sur ig.com puis réessayez.",
+      IG_IDENTIFIER_INVALID:
+        "L’API d’IG n’accepte pas une adresse e-mail comme identifiant. Utilisez votre nom d’utilisateur IG (lettres, chiffres, tiret, underscore — 30 caractères max), pas l’e-mail avec lequel vous vous connectez sur le site. Vous le trouverez dans My IG → Configuration → Informations personnelles, ou via la page Identifiants perdus d’IG.",
+      IG_API_KEY_REJECTED:
+        "IG a refusé cette clé API ({environment}). Le plus souvent, la clé a été mal copiée (tronquée), contient des espaces, ou n’est pas « Activée » dans Mon compte → Paramètres → Clés API. Restez bien en Réel pour générer une clé Live, collez la valeur complète, puis réessayez — ou vérifiez les mêmes identifiants dans l’API Companion d’IG.",
+      IG_API_KEY_DISABLED:
+        "Cette clé API est désactivée ou révoquée chez IG. Générez-en une nouvelle via Mon compte → Paramètres → Clés API.",
+      IG_ACCOUNT_LOCKED:
+        "IG a bloqué cet identifiant après trop de tentatives échouées. Débloquez-le sur ig.com, puis reconnectez-vous.",
+      IG_PASSWORD_ENCRYPTION_REQUIRED:
+        "Ce compte IG exige une connexion chiffrée, que Deltalytix ne prend pas encore en charge. Importez plutôt votre historique des transactions en CSV.",
+      IG_RATE_LIMITED:
+        "IG limite temporairement cette clé API. Patientez quelques minutes et réessayez.",
+      ENCRYPTION_KEY_MISSING:
+        "Ce serveur Deltalytix n'a pas de clé de chiffrement configurée : les identifiants IG ne peuvent pas être enregistrés. Contactez votre administrateur.",
+      NO_ACCOUNTS: "Aucun compte de trading n'a été renvoyé pour cet identifiant.",
+      INVALID_STORED_CREDENTIALS:
+        "Les données de connexion enregistrées sont invalides. Reconnectez-vous.",
+      NO_TOKEN_RECONNECT:
+        "Cette connexion n'a pas d'identifiants. Reconnectez-vous.",
+      DUPLICATE_TRADES: "Ces trades sont déjà dans votre journal.",
+      SYNC_FAILED:
+        "La synchronisation a échoué. Réessayez dans quelques minutes.",
+      SYNC_FETCH_FAILED:
+        "Impossible de charger les transactions IG ({failures} sur {total} comptes en échec). Reconnectez-vous et réessayez.",
+      SAVE_TRADES_FAILED:
+        "Les trades ont été récupérés mais n'ont pas pu être enregistrés : {detail}",
+      ACCOUNT_ID_REQUIRED: "Identifiant de compte manquant.",
+      LOAD_SYNCHRONIZATIONS_FAILED:
+        "Impossible de charger vos connexions IG.",
+      DELETE_SYNC_FAILED: "Impossible de supprimer cette connexion.",
+    },
+    addAccount: {
+      title: "Connecter IG",
+      description:
+        "Connectez-vous avec votre nom d'utilisateur et mot de passe IG, puis collez une clé API personnelle.",
+      intro:
+        "L’API d’IG demande deux choses : votre nom d’utilisateur IG (pas votre e-mail), qui prouve que le compte est le vôtre, et une clé API personnelle, qui identifie Deltalytix auprès d’IG. Vous créez la clé vous-même chez IG — c’est gratuit et cela prend une minute.",
+      environmentLabel: "Environnement",
+      environmentLive: "Réel",
+      environmentDemo: "Démo",
+      usernameLabel: "Nom d'utilisateur",
+      usernameHint:
+        "Pas votre e-mail. L’API n’accepte que le nom d’utilisateur IG (lettres, chiffres, - et _), visible dans My IG → Configuration → Informations personnelles.",
+      passwordLabel: "Mot de passe",
+      apiKeyLabel: "Clé API",
+      createKeyToggle: "Comment en créer une ?",
+      createKeyStep1:
+        "Connectez-vous à la plateforme web IG avec votre compte réel (restez en Réel — ne basculez pas en Démo).",
+      createKeyStep2: "Ouvrez Mon compte → Paramètres → Clés API (menu de gauche).",
+      createKeyStep3:
+        "Donnez un nom (par exemple Deltalytix) puis cliquez sur Générer une nouvelle clé. Copiez-la en entier immédiatement — IG peut ne plus la réafficher — et vérifiez que son statut est Activée.",
+      createKeyStep4:
+        "Contrôle optionnel : collez le même identifiant, mot de passe et clé dans l’API Companion d’IG (Live). Si Companion refuse aussi la clé, le problème vient d’IG, pas de Deltalytix.",
+      linkPrimary: "IG France — utiliser les API de trading",
+      linkSecondary: "IG API Companion — tester la connexion",
+      linkTertiary: "IG France — accéder à l’API",
+      connecting: "Connexion…",
+      connect: "Connecter",
+    },
+    faq: {
+      title: "Questions",
+      whyBothQuestion:
+        "Pourquoi mon identifiant et une clé API sont-ils tous les deux nécessaires ?",
+      whyBothAnswer:
+        "Ils ne servent pas à la même chose. Votre identifiant et votre mot de passe prouvent que le compte est le vôtre : c’est avec eux qu’IG vous connecte. La clé API, elle, identifie Deltalytix comme l’application qui fait la requête, et IG refuse tout appel qui n’en contient pas. L’un ne fonctionne pas sans l’autre.",
+      usernameQuestion:
+        "Je me connecte à IG avec mon e-mail — quel nom d’utilisateur utiliser ?",
+      usernameAnswer:
+        "Le site web accepte votre e-mail ; l’API, non. Saisissez le nom d’utilisateur IG indiqué dans My IG → Configuration → Informations personnelles (lettres, chiffres, tiret ou underscore uniquement — pas de @). Si vous ne vous souvenez que de l’e-mail, utilisez la page IG « Identifiants perdus » pour le recevoir.",
+      usernameLinkPersonalInfo:
+        "IG France — modifier l’identifiant (infos personnelles)",
+      usernameLinkLostDetails:
+        "IG France — récupérer un identifiant oublié",
+      apiKeyRejectedQuestion:
+        "IG a refusé ma clé API — que dois-je vérifier ?",
+      apiKeyRejectedAnswer:
+        "Vérifiez que l’environnement est bien Réel si vous n’avez qu’un compte réel. Régénérez la clé en étant connecté en Réel (Mon compte → Paramètres → Clés API), copiez la valeur complète sans espaces, et contrôlez le statut Activée. IG n’autorise qu’une clé par compte — une ancienne clé cesse de fonctionner dès que vous en créez une nouvelle. Deltalytix se connecte à IG depuis votre navigateur (comme l’API Companion). Testez d’abord les trois valeurs dans Companion ; si Companion échoue aussi, contactez le support IG.",
+      apiKeyRejectedLinkCompanion: "IG API Companion",
+      scopeQuestion: "Que fait Deltalytix avec cette clé ?",
+      scopeIntro:
+        "Les clés API IG n’ont pas de scopes OAuth ni de cases à cocher de permissions. Une clé identifie votre application, et l’accès suit votre login IG. Deltalytix se contente de :",
+      scopeSignIn:
+        "Se connecter, lister vos comptes et basculer de l’un à l’autre pour les lire chacun à leur tour.",
+      scopeHistory:
+        "Lire votre historique des transactions clôturées — aucun streaming de cours.",
+      scopeNoTrade:
+        "Ne jamais ouvrir, modifier ni fermer de position. La synchronisation est en lecture seule pour votre journal.",
+      scopeMatchEnv:
+        "Utiliser l’environnement choisi ici : une clé Réel avec Réel, une clé Démo avec Démo. Une clé créée pour un environnement ne fonctionne pas sur l’autre.",
+      storageQuestion: "Comment mes identifiants sont-ils stockés ?",
+      storageEncrypted:
+        "Votre identifiant, votre mot de passe et votre clé API sont chiffrés (AES-256-GCM) avant d’être enregistrés, et déchiffrés uniquement sur notre serveur au moment d’une synchronisation.",
+      storageWhyPassword:
+        "L’API d’IG ne propose ni OAuth ni jeton de rafraîchissement : chaque synchronisation doit se connecter en votre nom. Votre mot de passe est donc conservé plutôt qu’échangé contre un jeton révocable — nous préférons le dire clairement que parler de « stockage sécurisé » en vous laissant deviner.",
+      storageRevoke:
+        "Supprimer la connexion efface les identifiants stockés. Changer votre mot de passe IG coupe l’accès immédiatement.",
+    },
+    sync: {
+      tokenMissing: "Identifiants manquants — reconnectez-vous",
+      accountNotFound: "Compte introuvable. Actualisez la liste.",
+    },
+    multiAccount: {
+      empty: "Aucune connexion IG. Cliquez sur Connecter pour en ajouter une.",
+      accountsCount: "comptes de trading",
+      syncAll: "Tout synchroniser",
+      syncNow: "Synchroniser",
+      remove: "Supprimer",
+      removeTitle: "Supprimer la connexion",
+      removeDescription:
+        'Supprimer la connexion « {accountId} » ? Vos identifiants IG stockés sont effacés. Les trades déjà importés restent dans Deltalytix.',
+      connectionRemoved: 'Connexion « {accountId} » supprimée.',
+      removeError: 'Échec de la suppression de « {accountId} ».',
+      accountsReloaded: "Comptes rechargés avec succès",
+      reloadError: "Échec du rechargement des comptes",
+      lastSynced: "Dernière synchronisation",
+    },
+  },
   "import.type.thorSync.name": "Thor",
   "import.type.thorSync.description":
     "Synchronisation directe de vos comptes connectés à Thor",
@@ -2890,6 +3026,11 @@ export default {
     "Synchronisation directe de compte avec Interactive Brokers",
   "import.type.ibkrSync.details":
     "Importez automatiquement votre historique de trades IBKR via une Flex Query. Vous créez la requête une fois dans le Client Portal, collez le token et l'ID de requête ici, et nous gardons tout synchronisé.",
+  "import.type.igSync.name": "IG",
+  "import.type.igSync.description":
+    "Synchronisation directe de compte avec IG",
+  "import.type.igSync.details":
+    "Connectez-vous avec votre nom d’utilisateur IG (pas l’e-mail) et votre mot de passe, plus une clé API personnelle que vous créez chez IG. Deltalytix lit uniquement l’historique des transactions clôturées — aucun ordre n’est passé. Créez la clé via Mon compte → Paramètres → Clés API.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "Fichier Excel ATAS",
   "import.type.atas.details":
@@ -2908,7 +3049,7 @@ export default {
   "import.ig.error.invalidFile":
     "Importez un CSV d'historique des transactions IG contenant le marché, la référence, les prix, la taille, le PnL et les dates UTC.",
   "import.ig.skippedRows":
-    "{count} ligne(s) hors trade ou non prise(s) en charge ont été ignorées. Les quantités fractionnaires IG ne sont pas encore prises en charge.",
+    "{count} ligne(s) hors trade ou non prise(s) en charge ont été ignorées.",
   "import.ig.noTrades": "Aucun trade IG clôturé trouvé",
   "import.ig.noTradesDescription":
     "Vérifiez que la période contient des trades clôturés et que vous avez exporté l'historique des transactions plutôt que l'historique d'activité.",

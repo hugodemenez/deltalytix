@@ -140,6 +140,7 @@ export default {
   "connections.sections.tradovate": "Tradovate",
   "connections.sections.dxfeed": "DxFeed",
   "connections.sections.ibkr": "Interactive Brokers",
+  "connections.sections.ig": "IG",
   "connections.sections.thor": "Thor",
   "connections.sections.standalone": "Standalone accounts",
   "connections.add.rithmic": "Add Rithmic connection",
@@ -147,6 +148,7 @@ export default {
   "connections.add.tradovate": "Add Tradovate connection",
   "connections.add.dxfeed": "Add DxFeed connection",
   "connections.add.ibkr": "Add Interactive Brokers connection",
+  "connections.add.ig": "Add IG connection",
   "connections.add.thor": "Add Thor connection",
   "connections.add.etp": "Add ETP connection",
   "connections.emptySection": "No connections yet. Use + to add one.",
@@ -2725,6 +2727,131 @@ export default {
       syncCompleteNoOrdersForAccount: "No closed trades found for {accountId}.",
     },
   },
+  igSync: {
+    title: "IG",
+    description:
+      "Connect your IG account with a personal API key to import closed deals from Transaction History automatically.",
+    connected: "IG account connected successfully",
+    error: {
+      credentialsRequired:
+        "Enter username, password, and API key to continue",
+      authFailed: "Could not connect to IG",
+    },
+    errors: {
+      USER_NOT_AUTHENTICATED: "You must be signed in to connect IG.",
+      CREDENTIALS_REQUIRED:
+        "Enter username, password, and API key to continue.",
+      AUTH_FAILED: "IG login failed: {reason}",
+      IG_INVALID_CREDENTIALS:
+        "IG rejected this username or password. Check them on ig.com and try again.",
+      IG_IDENTIFIER_INVALID:
+        "IG's API does not accept an email address as the login. Use your IG username (letters, numbers, hyphen, underscore — max 30 characters), not the email you use on the website. Find it under My IG → Settings → Personal details, or recover it via IG’s lost-details page.",
+      IG_API_KEY_REJECTED:
+        "IG rejected this API key ({environment}). Most often the key was mistyped, truncated when copied, or is not Enabled under My Account → Settings → API keys. Stay on Live when generating a Live key, paste the full value with no spaces, then retry — or confirm the same credentials work in IG’s API Companion.",
+      IG_API_KEY_DISABLED:
+        "This API key is disabled or revoked on IG. Generate a new one under My Account → Settings → API keys.",
+      IG_ACCOUNT_LOCKED:
+        "IG locked this login after too many failed attempts. Unlock it on ig.com, then reconnect.",
+      IG_PASSWORD_ENCRYPTION_REQUIRED:
+        "This IG account requires encrypted logins, which Deltalytix does not support yet. Import your Transaction History as a CSV instead.",
+      IG_RATE_LIMITED:
+        "IG is rate-limiting this API key. Wait a few minutes and try again.",
+      ENCRYPTION_KEY_MISSING:
+        "This Deltalytix server has no credential encryption key configured, so IG credentials cannot be stored. Contact your administrator.",
+      NO_ACCOUNTS: "No trading accounts were returned for this login.",
+      INVALID_STORED_CREDENTIALS: "Saved connection data is invalid. Reconnect.",
+      NO_TOKEN_RECONNECT: "This connection is missing credentials. Reconnect.",
+      DUPLICATE_TRADES: "These trades are already in your journal.",
+      SYNC_FAILED: "Trade sync failed. Try again in a few minutes.",
+      SYNC_FETCH_FAILED:
+        "Could not load transactions from IG ({failures} of {total} accounts failed). Reconnect and try again.",
+      SAVE_TRADES_FAILED: "Trades were fetched but could not be saved: {detail}",
+      ACCOUNT_ID_REQUIRED: "Account identifier is missing.",
+      LOAD_SYNCHRONIZATIONS_FAILED:
+        "Could not load your saved IG connections.",
+      DELETE_SYNC_FAILED: "Could not remove this connection.",
+    },
+    addAccount: {
+      title: "Connect IG",
+      description:
+        "Sign in with your IG username and password, then paste a personal API key.",
+      intro:
+        "IG's API needs two things: your IG username (not your email), which proves the account is yours, and a personal API key, which identifies Deltalytix to IG. You create the key yourself on IG — it's free and takes about a minute.",
+      environmentLabel: "Environment",
+      environmentLive: "Live",
+      environmentDemo: "Demo",
+      usernameLabel: "Username",
+      usernameHint:
+        "Not your email. IG's API only accepts the username (letters, numbers, - and _), which you can find under My IG → Settings → Personal details.",
+      passwordLabel: "Password",
+      apiKeyLabel: "API key",
+      createKeyToggle: "How do I create one?",
+      createKeyStep1:
+        "Log into the IG web platform with your live account (stay on Live — do not switch to Demo).",
+      createKeyStep2: "Open My Account → Settings → API keys (left menu).",
+      createKeyStep3:
+        "Enter a name (for example Deltalytix) and click Generate new key. Copy the whole key once — IG may not show it again — and confirm its status is Enabled.",
+      createKeyStep4:
+        "Optional check: paste the same username, password, and key into IG’s API Companion (Live). If Companion also rejects the key, the problem is on IG’s side, not Deltalytix.",
+      linkPrimary: "IG Labs — create your API key",
+      linkSecondary: "IG API Companion — test login",
+      linkTertiary: "IG — how to use trading APIs",
+      connecting: "Connecting…",
+      connect: "Connect",
+    },
+    faq: {
+      title: "Questions",
+      whyBothQuestion: "Why do you need my login and an API key?",
+      whyBothAnswer:
+        "They do different jobs. Your username and password prove the account is yours — IG signs you in with them. The API key identifies Deltalytix as the app making the request, and IG rejects any API call that does not carry one. Neither works without the other.",
+      usernameQuestion: "I log into IG with my email — which username do I use?",
+      usernameAnswer:
+        "The website accepts your email; the API does not. Enter the IG username from My IG → Settings → Personal details (letters, numbers, hyphen, or underscore only — no @). If you only remember the email, use IG’s lost-details page to recover the username.",
+      usernameLinkPersonalInfo: "IG — update personal details (username)",
+      usernameLinkLostDetails: "IG — recover forgotten username",
+      apiKeyRejectedQuestion: "IG rejected my API key — what should I check?",
+      apiKeyRejectedAnswer:
+        "Confirm Environment is Live if you only have a real account. Regenerate the key while logged into Live (My Account → Settings → API keys), copy the full value with no spaces, and check status Enabled. IG allows one key per account — an older key stops working when you create a new one. Deltalytix signs in to IG from your browser (same path as API Companion). Test the same three values in Companion first; if Companion fails too, contact IG support.",
+      apiKeyRejectedLinkCompanion: "IG API Companion",
+      scopeQuestion: "What does Deltalytix do with the key?",
+      scopeIntro:
+        "IG API keys have no OAuth-style scopes or permission checkboxes. One key identifies your app, and access follows your IG login. Deltalytix only ever:",
+      scopeSignIn:
+        "Signs in, lists your accounts, and switches between them to read each one in turn.",
+      scopeHistory:
+        "Reads your closed Transaction History — no market data streaming.",
+      scopeNoTrade:
+        "Never opens, modifies, or closes a position. Sync is read-only for your journal.",
+      scopeMatchEnv:
+        "Uses the environment you pick here: a Live key with Live, a Demo key with Demo. A key created for one environment does not work on the other.",
+      storageQuestion: "How are my credentials stored?",
+      storageEncrypted:
+        "Your username, password, and API key are encrypted (AES-256-GCM) before they are saved, and decrypted only on our server when a sync runs.",
+      storageWhyPassword:
+        "IG's API has no OAuth and no refresh tokens, so every sync has to sign in as you. That means your password is stored rather than exchanged for a revocable token — we would rather say so plainly than call it \"stored securely\" and leave you guessing.",
+      storageRevoke:
+        "Removing the connection deletes the stored credentials. Changing your IG password cuts access immediately.",
+    },
+    sync: {
+      tokenMissing: "Connection missing credentials — reconnect",
+      accountNotFound: "Account not found. Refresh the list and try again.",
+    },
+    multiAccount: {
+      empty: "No IG connections yet. Click Connect to add one.",
+      accountsCount: "trading accounts",
+      syncAll: "Sync All",
+      syncNow: "Sync now",
+      remove: "Remove",
+      removeTitle: "Remove connection",
+      removeDescription:
+        'Remove the connection "{accountId}"? Your stored IG credentials are deleted. Already imported trades stay in Deltalytix.',
+      connectionRemoved: 'Connection "{accountId}" removed.',
+      removeError: 'Failed to remove connection "{accountId}".',
+      accountsReloaded: "Accounts reloaded successfully",
+      reloadError: "Failed to reload accounts",
+      lastSynced: "Last synced",
+    },
+  },
   "import.type.thorSync.name": "Thor",
   "import.type.thorSync.description":
     "Direct account synchronization with Thor",
@@ -2745,6 +2872,11 @@ export default {
     "Direct account synchronization with Interactive Brokers",
   "import.type.ibkrSync.details":
     "Import your IBKR trade history automatically using a Flex Query. You create the query once in Client Portal, paste the token and query ID here, and we keep it in sync.",
+  "import.type.igSync.name": "IG",
+  "import.type.igSync.description":
+    "Direct account synchronization with IG",
+  "import.type.igSync.details":
+    "Sign in with your IG username (not email) and password, plus a personal API key you create on IG. Deltalytix only reads closed Transaction History — it never places trades. Create the key under My Account → Settings → API keys.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "ATAS Excel file",
   "import.type.atas.details":
@@ -2763,7 +2895,7 @@ export default {
   "import.ig.error.invalidFile":
     "Upload an IG Transaction History CSV containing the market, reference, prices, size, P&L, and UTC date columns.",
   "import.ig.skippedRows":
-    "Skipped {count} non-trade or unsupported row(s). IG fractional quantities are not supported yet.",
+    "Skipped {count} non-trade or unsupported row(s).",
   "import.ig.noTrades": "No completed IG trades found",
   "import.ig.noTradesDescription":
     "Make sure the selected period contains closed trades and that you exported Transaction History rather than Activity History.",
