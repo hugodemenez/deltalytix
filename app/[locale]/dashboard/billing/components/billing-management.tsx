@@ -79,6 +79,20 @@ export default function BillingManagement() {
     subscription?.plan.interval !== 'lifetime' &&
     (subscription?.status === 'active' || subscription?.status === 'trialing')
   const portalUrl = process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL
+  const historyTitle = subscription
+    ? t('dashboard.billingPage.billingHistory')
+    : t('dashboard.billingPage.invoices')
+  const invoicePlanLabel =
+    subscription?.plan.interval === 'lifetime'
+      ? t('dashboard.billingPage.lifetimeInvoiceLabel')
+      : t('dashboard.billingPage.recurringInvoiceLabel', {
+          period:
+            subscription?.plan.interval === 'year'
+              ? t('pricing.yearly')
+              : subscription?.plan.interval === 'quarter'
+                ? t('pricing.quarterly')
+                : t('pricing.monthly'),
+        })
 
   return (
     <div className="space-y-8">
@@ -92,7 +106,7 @@ export default function BillingManagement() {
       <section>
         <div className="mb-3">
           <h2 className="text-xs font-medium text-[#686D67] dark:text-muted-foreground">
-            {t('dashboard.billingPage.invoices')}
+            {historyTitle}
           </h2>
         </div>
         <div className="overflow-hidden rounded-[4px] border border-[#E5E5E5] bg-white dark:border-border dark:bg-card">
@@ -119,14 +133,17 @@ export default function BillingManagement() {
                   className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <p className="text-sm font-medium tabular-nums">
-                      {formatAmount(invoice.amount_paid)}
+                    <p className="text-sm font-medium">
+                      {invoicePlanLabel}
                     </p>
                     <p className="mt-0.5 text-xs text-[#686D67] dark:text-muted-foreground">
                       {formatDate(invoice.created)}
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold tabular-nums">
+                      {formatAmount(invoice.amount_paid)}
+                    </span>
                     {invoice.hosted_invoice_url ? (
                       <Button
                         variant="outline"

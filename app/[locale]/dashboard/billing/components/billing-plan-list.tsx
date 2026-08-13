@@ -102,11 +102,21 @@ export function BillingPlanList({
         currency,
         locale
       )
+  const renewalDate =
+    subscription && !isLifetime
+      ? new Date(subscription.current_period_end * 1000).toLocaleDateString(
+          locale === 'fr' ? 'fr-FR' : 'en-GB',
+          { day: 'numeric', month: 'short', year: 'numeric' }
+        )
+      : null
   const pageCurrentMeta = !subscription
     ? t('dashboard.billingPage.freeIncluded', { price: currentPrice })
     : isLifetime
       ? t('dashboard.billingPage.lifetimeLocked')
-      : t('dashboard.billingPage.recurringRenews', { price: currentPrice })
+      : t('dashboard.billingPage.recurringRenews', {
+          price: currentPrice,
+          date: renewalDate ?? '',
+        })
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -406,7 +416,7 @@ export function BillingPlanList({
                       periods: periods.map(periodLabel).join(' · '),
                       current: currentPeriodLabel ?? '',
                     })
-                  : t('dashboard.billingPage.cancelAnytime')
+                  : t('dashboard.billingPage.freeCadenceNote')
                 : periodDetail(effectiveSelected)}
             </p>
           </div>

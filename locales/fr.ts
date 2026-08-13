@@ -246,7 +246,7 @@ export default {
   "dashboard.billingPage.changePlan": "Changer d’offre",
   "dashboard.billingPage.switchToPeriod": "Passer à Plus · {period}",
   "dashboard.billingPage.freeIncluded": "{price} · inclus",
-  "dashboard.billingPage.recurringRenews": "{price} · renouvelé",
+  "dashboard.billingPage.recurringRenews": "{price} · renouvelé le {date}",
   "dashboard.billingPage.lifetimeLocked": "Payé une fois · verrouillé",
   "dashboard.billingPage.monthlyDetail": "Facturé chaque mois",
   "dashboard.billingPage.quarterlyDetail":
@@ -255,13 +255,18 @@ export default {
   "dashboard.billingPage.lifetimeDetail": "Payez une fois · aucun renouvellement",
   "dashboard.billingPage.currentPlanNote":
     "{periods} · {current} est votre offre actuelle",
-  "dashboard.billingPage.cancelAnytime": "Annulable à tout moment",
+  "dashboard.billingPage.freeCadenceNote":
+    "Mensuel · Trimestriel · Annuel · À vie · Annulable à tout moment",
   "dashboard.billingPage.lifetimeLockedDescription":
     "Lifetime inclut toutes les fonctionnalités Plus, pour toujours. Aucun changement d’offre et aucun renouvellement sur ce compte.",
   "dashboard.billingPage.invoices": "Factures",
+  "dashboard.billingPage.billingHistory": "Historique de facturation",
+  "dashboard.billingPage.recurringInvoiceLabel": "Plus · {period}",
+  "dashboard.billingPage.lifetimeInvoiceLabel":
+    "Plus · Lifetime — paiement unique",
   "dashboard.billingPage.noInvoicesTitle": "Aucune facture pour le moment",
   "dashboard.billingPage.noInvoicesDescription":
-    "Les factures apparaîtront ici après votre premier paiement Plus.",
+    "Elles apparaîtront ici après votre premier paiement.",
   "dashboard.billingPage.freeManagementUnavailable":
     "La pause et l’annulation ne sont pas disponibles avec Free.",
   "dashboard.refreshData": "Actualiser les données",

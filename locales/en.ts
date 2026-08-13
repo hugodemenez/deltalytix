@@ -243,7 +243,7 @@ export default {
   "dashboard.billingPage.changePlan": "Change plan",
   "dashboard.billingPage.switchToPeriod": "Switch to Plus · {period}",
   "dashboard.billingPage.freeIncluded": "{price} · included",
-  "dashboard.billingPage.recurringRenews": "{price} · renews",
+  "dashboard.billingPage.recurringRenews": "{price} · renews {date}",
   "dashboard.billingPage.lifetimeLocked": "Paid once · locked",
   "dashboard.billingPage.monthlyDetail": "Billed every month",
   "dashboard.billingPage.quarterlyDetail":
@@ -252,13 +252,18 @@ export default {
   "dashboard.billingPage.lifetimeDetail": "Pay once · no renewals",
   "dashboard.billingPage.currentPlanNote":
     "{periods} · {current} is your current plan",
-  "dashboard.billingPage.cancelAnytime": "Cancel anytime",
+  "dashboard.billingPage.freeCadenceNote":
+    "Monthly · Quarterly · Yearly · Lifetime · Cancel anytime",
   "dashboard.billingPage.lifetimeLockedDescription":
     "Lifetime includes every Plus feature, forever. No plan changes and no renewals on this account.",
   "dashboard.billingPage.invoices": "Invoices",
+  "dashboard.billingPage.billingHistory": "Billing history",
+  "dashboard.billingPage.recurringInvoiceLabel": "Plus · {period}",
+  "dashboard.billingPage.lifetimeInvoiceLabel":
+    "Plus · Lifetime — one-time",
   "dashboard.billingPage.noInvoicesTitle": "No invoices yet",
   "dashboard.billingPage.noInvoicesDescription":
-    "Invoices appear here after your first Plus payment.",
+    "They'll appear here after your first charge.",
   "dashboard.billingPage.freeManagementUnavailable":
     "Pause / cancel isn't available on Free.",
   "dashboard.refreshData": "Refresh Data",
