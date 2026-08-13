@@ -43,6 +43,18 @@ describe("TraderStatsEmail weekly recap visual lock", () => {
     expect(html).not.toContain("72.0%");
     expect(html).toContain("Visit dashboard");
     expect(html).toContain("Book a call*");
+    expect(html).toContain("utm_source=resend");
+    expect(html).toContain("utm_medium=email");
+    expect(html).toContain("utm_campaign=weekly_recap");
+    expect(html).toContain("utm_content=2026-08-03");
+    expect(html).toContain(
+      "https://cal.com/hugo-demenez/deltalytix-discussion?utm_source=resend&amp;utm_medium=email&amp;utm_campaign=weekly_recap&amp;utm_content=2026-08-03",
+    );
+    expect(html).toContain(
+      "/dashboard?utm_source=resend&amp;utm_medium=email&amp;utm_campaign=weekly_recap&amp;utm_content=2026-08-03",
+    );
+    expect(html).toContain("/api/email/unsubscribe?email=");
+    expect(html).not.toMatch(/unsubscribe[^"]*utm_source/);
     expect(html).toContain("Hugo Demenez");
     expect(html).toContain("Founder of Deltalytix");
     expect(html).toContain("border-radius:4px");
