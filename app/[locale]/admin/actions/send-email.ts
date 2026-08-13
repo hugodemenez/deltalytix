@@ -78,10 +78,18 @@ export async function getDefaultTemplateProps(template: EmailTemplate): Promise<
       return {
         email: "user@example.com",
         firstName: "Trader",
-        dailyPnL: [],
-        winLossStats: { wins: 0, losses: 0 },
-        resultAnalysisIntro: "Sample analysis",
-        tipsForNextWeek: "Sample tips",
+        dailyPnL: [
+          { date: new Date(Date.UTC(2026, 7, 3)), pnl: 420 },
+          { date: new Date(Date.UTC(2026, 7, 4)), pnl: 150 },
+          { date: new Date(Date.UTC(2026, 7, 5)), pnl: -90 },
+          { date: new Date(Date.UTC(2026, 7, 6)), pnl: 310 },
+          { date: new Date(Date.UTC(2026, 7, 7)), pnl: 85 },
+        ],
+        winLossStats: { wins: 18, losses: 7 },
+        resultAnalysisIntro:
+          "Five sessions this week, Thursday carrying most of the size. Losses stayed small relative to wins.",
+        tipsForNextWeek:
+          "Keep sizing where the week already worked. Thursday’s +310€ came from fewer, cleaner trades. That’s the pattern to repeat.",
         language: "en",
       }
     case "new-feature":
@@ -395,8 +403,8 @@ function getDefaultSubject(template: EmailTemplate, language: string): string {
       fr: "Bienvenue sur Deltalytix",
     },
     "weekly-recap": {
-      en: "Your weekly trading statistics - Deltalytix",
-      fr: "Vos statistiques de trading de la semaine - Deltalytix",
+      en: "Your weekly trading recap - Deltalytix",
+      fr: "Votre récapitulatif de trading de la semaine - Deltalytix",
     },
     "new-feature": {
       en: "New features on Deltalytix",
