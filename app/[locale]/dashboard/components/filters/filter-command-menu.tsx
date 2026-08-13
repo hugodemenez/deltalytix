@@ -348,10 +348,7 @@ export function FilterCommandMenu({
   const CommandContent = (
     <Command 
       ref={commandRef} 
-      className={cn(
-        "rounded-none border-0",
-        (isMobileDevice || isMobile) && "h-full"
-      )} 
+      className="flex h-full flex-col rounded-none border-0"
       shouldFilter={false}
       onKeyDown={handleCommandKeyDown}
     >
@@ -402,14 +399,9 @@ export function FilterCommandMenu({
         showAccountNumbers
         inline
         showClearAll
-        className="border-b border-[#E5E5E5] bg-white px-3 py-2 dark:border-border dark:bg-background"
+        className="shrink-0 border-b border-[#E5E5E5] bg-white px-3 py-2 dark:border-border dark:bg-background"
       />
-      <CommandList className={cn(
-        "overflow-y-auto",
-        (isMobileDevice || isMobile) 
-          ? "max-h-full" 
-          : "max-h-[min(500px,calc(100vh-12rem))]"
-      )}>
+      <CommandList className="min-h-0 flex-1 max-h-none overflow-y-auto">
         <CommandEmpty>
           {isParsingDate ? t('filters.commandMenu.parsingDate') : t('filters.noResults')}
         </CommandEmpty>
