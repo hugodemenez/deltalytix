@@ -376,7 +376,7 @@ export function BillingPlanList({
             <Link
               href={fullSettingsHref}
               onClick={onOpenFullSettings}
-              className="text-sm font-medium text-[#3E7550] underline-offset-2 hover:underline dark:text-[#9BC4A8]"
+              className="inline-flex min-h-10 items-center text-sm font-medium text-[#3E7550] underline-offset-2 hover:underline dark:text-[#9BC4A8]"
             >
               {t('dashboard.billingSheet.manageFull')}
             </Link>

@@ -53,7 +53,7 @@ export function BillingSheet() {
 
         <BillingPlanList
           className="min-h-0 flex-1"
-          contentClassName="overflow-y-auto px-5 py-5"
+          contentClassName="overflow-y-auto px-5 py-5 pb-8 scroll-pb-8"
           footerClassName="px-5 py-4"
           fullSettingsHref={`/${locale}/dashboard/billing`}
           onOpenFullSettings={() => setOpen(false)}
