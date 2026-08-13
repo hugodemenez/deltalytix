@@ -44,7 +44,11 @@ type Plans = {
   [key: string]: Plan
 }
 
-export default function BillingManagement() {
+export default function BillingManagement({
+  showPlanSections = true,
+}: {
+  showPlanSections?: boolean
+}) {
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
   const [cancellationReason, setCancellationReason] = useState("")
   const [feedback, setFeedback] = useState("")
@@ -108,7 +112,8 @@ export default function BillingManagement() {
 
   return (
     <div className="w-full space-y-6">
-      <Card className="border-none shadow-none bg-transparent">
+      {showPlanSections ? (
+        <Card className="border-none shadow-none bg-transparent">
         <CardHeader className="px-0">
           <CardTitle>{t('billing.currentPlan')}</CardTitle>
           <div className="mt-1.5 text-sm text-muted-foreground flex items-center gap-2">
@@ -339,7 +344,8 @@ export default function BillingManagement() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      ) : null}
 
       {/* Subscription Management */}
       {!isLoading && (subscription?.status === 'active' || subscription?.status === 'trialing') && subscription?.plan?.interval !== 'lifetime' && (
@@ -470,15 +476,17 @@ export default function BillingManagement() {
       )}
 
       {/* Available Plans */}
-      <Card className="border-none shadow-none bg-transparent">
-        <CardHeader className="px-0">
-          <CardTitle>{t('billing.availablePlans')}</CardTitle>
-          <CardDescription>{t('billing.choosePlan')}</CardDescription>
-        </CardHeader>
-        <CardContent className="px-0">
-          <PricingPlans currentSubscription={subscription} />
-        </CardContent>
-      </Card>
+      {showPlanSections ? (
+        <Card className="border-none shadow-none bg-transparent">
+          <CardHeader className="px-0">
+            <CardTitle>{t('billing.availablePlans')}</CardTitle>
+            <CardDescription>{t('billing.choosePlan')}</CardDescription>
+          </CardHeader>
+          <CardContent className="px-0">
+            <PricingPlans currentSubscription={subscription} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Payment History */}
       <Card className="border-none shadow-none bg-transparent">
@@ -487,7 +495,7 @@ export default function BillingManagement() {
           <CardDescription>{t('billing.paymentHistoryDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="rounded-lg border bg-card overflow-hidden">
+          <div className="overflow-hidden rounded-[4px] border border-[#E5E5E5] bg-card dark:border-border">
             {isLoading ? (
               <div className="p-4 space-y-4">
                 {[1, 2, 3].map((i) => (

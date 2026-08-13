@@ -243,6 +243,8 @@ export default {
   "dashboard.billingSheet.manageFull": "Ouvrir les paramètres de facturation",
   "dashboard.billing.manage": "Gérer la facturation",
   "dashboard.refreshData": "Actualiser les données",
+  "filters.active.title": "Filtres actifs",
+  "filters.active.clearAll": "Tout effacer",
   "dashboard.inviteUsers": "Inviter des utilisateurs",
   "dashboard.email": "Email",
   "dashboard.message": "Message",

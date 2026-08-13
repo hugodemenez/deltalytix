@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList, CommandSeparator } from "@/components/ui/command"
 import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
 import { useMediaQuery } from "@/hooks/use-media-query"
@@ -16,6 +16,7 @@ import { DateRangeSection } from "./filter-command-menu-date-section"
 import { PnlSection } from "./filter-command-menu-pnl-section"
 import { InstrumentSection } from "./filter-command-menu-instrument-section"
 import { TagSection } from "./filter-command-menu-tag-section"
+import { ActiveFilterTags } from "./active-filter-tags"
 import { useUserStore } from "@/store/user-store"
 import { useParams } from "next/navigation"
 import { toast } from "sonner"
@@ -35,7 +36,7 @@ export function FilterCommandMenu({
   compact = false,
 }: FilterCommandMenuProps) {
   const t = useI18n()
-  const { isMobile, dateRange, setDateRange, setWeekdayFilter } = useData()
+  const { isMobile, setDateRange, setWeekdayFilter } = useData()
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [inputWidth, setInputWidth] = useState<number | undefined>(undefined)
@@ -460,6 +461,12 @@ export function FilterCommandMenu({
           )}
         </div>
       )}
+      <ActiveFilterTags
+        showAccountNumbers
+        inline
+        showClearAll
+        className="border-b border-[#E5E5E5] bg-white px-3 py-2 dark:border-border dark:bg-background"
+      />
       <div className="px-3 pt-3 pb-2 border-b bg-muted/40">
         <p className="text-xs font-medium text-muted-foreground mb-2">
           {t('filters.commandMenu.categories.title')}
@@ -562,7 +569,9 @@ export function FilterCommandMenu({
       {DesktopTriggerInput}
       <PopoverContent 
         className="p-0" 
-        style={{ width: inputWidth ? `${inputWidth}px` : 'min(400px, calc(100vw - 2rem))' }}
+        style={{
+          width: `min(${Math.max(inputWidth ?? 0, 400)}px, calc(100vw - 2rem))`,
+        }}
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
         onInteractOutside={(e) => {

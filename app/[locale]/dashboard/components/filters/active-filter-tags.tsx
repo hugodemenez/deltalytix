@@ -15,9 +15,15 @@ type ActiveFilterTagsProps = {
   showAccountNumbers: boolean
   inline?: boolean
   className?: string
+  showClearAll?: boolean
 }
 
-export function ActiveFilterTags({ showAccountNumbers, inline = false, className }: ActiveFilterTagsProps) {
+export function ActiveFilterTags({
+  showAccountNumbers,
+  inline = false,
+  className,
+  showClearAll = false,
+}: ActiveFilterTagsProps) {
   const { 
     accountNumbers, 
     instruments, 
@@ -79,7 +85,6 @@ export function ActiveFilterTags({ showAccountNumbers, inline = false, className
     
     const container = scrollRef.current
     const badges = container.querySelectorAll('.badge')
-    const containerLeft = container.scrollLeft
     const containerWidth = container.clientWidth
 
     // Find the first badge that's partially or fully out of view
@@ -136,6 +141,15 @@ export function ActiveFilterTags({ showAccountNumbers, inline = false, className
   }
 
   const handleRemoveWeekdayFilter = () => {
+    setWeekdayFilter({ days: [] })
+  }
+
+  const handleClearAll = () => {
+    setAccountNumbers([])
+    setInstruments([])
+    setDateRange(undefined)
+    setPnlRange({ min: undefined, max: undefined })
+    setTagFilter({ tags: [] })
     setWeekdayFilter({ days: [] })
   }
 
@@ -224,6 +238,22 @@ export function ActiveFilterTags({ showAccountNumbers, inline = false, className
       )}
     >
       <div className={cn(inline ? "py-1" : "px-10 py-2")}>
+        {showClearAll ? (
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="text-xs font-medium text-foreground">
+              {t('filters.active.title')}
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={handleClearAll}
+            >
+              {t('filters.active.clearAll')}
+            </Button>
+          </div>
+        ) : null}
         <div className="relative flex items-center overflow-hidden">
           <div 
             ref={scrollRef}

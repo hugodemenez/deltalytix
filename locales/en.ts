@@ -240,6 +240,8 @@ export default {
   "dashboard.billingSheet.manageFull": "Open full billing settings",
   "dashboard.billing.manage": "Manage billing",
   "dashboard.refreshData": "Refresh Data",
+  "filters.active.title": "Active filters",
+  "filters.active.clearAll": "Clear all",
   "dashboard.inviteUsers": "Invite users",
   "dashboard.email": "Email",
   "dashboard.message": "Message",

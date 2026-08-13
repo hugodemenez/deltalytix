@@ -42,7 +42,6 @@ import {
 import { signOut } from '@/server/auth'
 import { useMemo } from 'react'
 import { ThemeToggleIcon } from '@/components/theme-toggle-icon'
-import { useModalStateStore } from '@/store/modal-state-store'
 
 type Locale = 'en' | 'fr'
 
@@ -66,9 +65,6 @@ export default function UserMenu() {
   const user = useUserStore(state => state.supabaseUser)
   const timezone = useUserStore(state => state.timezone)
   const setTimezone = useUserStore(state => state.setTimezone)
-  const setBillingSheetOpen = useModalStateStore(
-    (state) => state.setBillingSheetOpen
-  )
 
   const languages: { value: Locale; label: string }[] = useMemo(() => ([
     { value: 'en', label: 'English' },
@@ -116,17 +112,14 @@ export default function UserMenu() {
               </div>
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={(event) => {
-              event.preventDefault()
-              setBillingSheetOpen(true)
-            }}
-          >
-            <div className="flex items-center w-full">
-              <CreditCard className="mr-2 h-4 w-4" />
-              <span>{t('dashboard.billing.manage')}</span>
-              <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
-            </div>
+          <DropdownMenuItem asChild>
+            <Link href={`/${currentLocale}/dashboard/billing`}>
+              <div className="flex items-center w-full">
+                <CreditCard className="mr-2 h-4 w-4" />
+                <span>{t('dashboard.billing.manage')}</span>
+                <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
+              </div>
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/dashboard/connections">
