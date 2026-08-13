@@ -36,7 +36,12 @@ const nextConfig: NextConfig = {
   ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
   // Hide the Next.js dev indicator during changelog media capture (see agents/skills/changelog-media/SKILL.md).
   ...(process.env.CHANGELOG_MEDIA_CAPTURE === '1' ? { devIndicators: false as const } : {}),
-  allowedDevOrigins: ["13.36.171.174", "192.168.0.178"],
+  allowedDevOrigins: [
+    "13.36.171.174",
+    "192.168.0.178",
+    "localhost",
+    "127.0.0.1",
+  ],
   // NOTE: Do not add hardcoded /en redirects for localized routes (e.g. /updates
   // -> /en/updates). next.config redirects run before middleware, so they force a
   // single locale and prevent the i18n middleware from routing by the user's
