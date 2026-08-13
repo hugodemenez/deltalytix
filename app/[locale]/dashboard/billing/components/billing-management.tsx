@@ -20,10 +20,12 @@ import { useCurrentLocale, useI18n } from '@/locales/client'
 import { useStripeSubscriptionStore } from '@/store/stripe-subscription-store'
 import { toast } from 'sonner'
 import { BillingPlanList } from './billing-plan-list'
+import { useBillingCurrency } from '@/hooks/use-billing-currency'
 
 export default function BillingManagement() {
   const t = useI18n()
   const locale = useCurrentLocale()
+  const { currency } = useBillingCurrency()
   const subscription = useStripeSubscriptionStore(
     (state) => state.stripeSubscription
   )
@@ -44,7 +46,7 @@ export default function BillingManagement() {
   const formatAmount = (amount: number) =>
     new Intl.NumberFormat(locale === 'fr' ? 'fr-FR' : 'en-US', {
       style: 'currency',
-      currency: 'EUR',
+      currency,
     }).format(amount / 100)
 
   const handleSubscriptionAction = async (
