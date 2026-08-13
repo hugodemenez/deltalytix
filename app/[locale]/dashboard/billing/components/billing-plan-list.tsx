@@ -21,6 +21,7 @@ import {
   availableBillingPeriods,
   billingLookupKey,
   billingPeriodCharge,
+  billingPeriodMonthlyEquivalent,
   formatBillingAmount,
   isLifetimeSubscription,
   type BillingPeriod,
@@ -101,6 +102,11 @@ export function BillingPlanList({
         currency,
         locale
       )
+  const pageCurrentMeta = !subscription
+    ? t('dashboard.billingPage.freeIncluded', { price: currentPrice })
+    : isLifetime
+      ? t('dashboard.billingPage.lifetimeLocked')
+      : t('dashboard.billingPage.recurringRenews', { price: currentPrice })
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -123,6 +129,31 @@ export function BillingPlanList({
   }
 
   const periodDetail = (period: BillingPeriod) => {
+    if (isPage) {
+      switch (period) {
+        case 'monthly':
+          return t('dashboard.billingPage.monthlyDetail')
+        case 'quarterly':
+          return t('dashboard.billingPage.quarterlyDetail', {
+            price: formatBillingAmount(
+              billingPeriodMonthlyEquivalent('quarterly'),
+              currency,
+              locale
+            ),
+          })
+        case 'yearly':
+          return t('dashboard.billingPage.yearlyDetail', {
+            price: formatBillingAmount(
+              billingPeriodMonthlyEquivalent('yearly'),
+              currency,
+              locale
+            ),
+          })
+        case 'lifetime':
+          return t('dashboard.billingPage.lifetimeDetail')
+      }
+    }
+
     switch (period) {
       case 'monthly':
         return t('dashboard.billingSheet.monthlyDetail')
@@ -185,21 +216,28 @@ export function BillingPlanList({
             ) : null}
             <div
               className={cn(
-                'rounded-[4px] border px-4 py-3',
+                'rounded-[4px] border border-[#E5E5E5] px-4 py-3 dark:border-border',
                 isPaid
-                  ? 'border-[#E5E5E5] bg-white dark:border-border dark:bg-muted/40'
-                  : 'border-[#E5E5E5] bg-[#F7FBF5] dark:border-border dark:bg-[#243028]',
+                  ? 'bg-white dark:bg-muted/40'
+                  : 'bg-[#F7FBF5] dark:bg-[#243028]',
                 (isPage || isLifetime) &&
                   'flex items-center justify-between gap-4'
               )}
             >
-              <div>
-                {!isPage ? (
+              {isPage ? (
+                <>
+                  <p className="text-base font-semibold text-[#171917] dark:text-foreground">
+                    {isLoading ? t('pricing.loading') : currentLabel}
+                  </p>
+                  <p className="shrink-0 text-sm text-[#686D67] dark:text-muted-foreground">
+                    {pageCurrentMeta}
+                  </p>
+                </>
+              ) : (
+                <div>
                   <p className="text-xs font-medium tracking-[-0.01em] text-[#686D67] dark:text-muted-foreground">
                     {t('dashboard.billingSheet.currentPlan')}
                   </p>
-                ) : null}
-                <div className={cn(isPage && 'flex flex-wrap items-baseline gap-2')}>
                   <p className="mt-1 text-base font-semibold text-[#171917] dark:text-foreground">
                     {isLoading ? t('pricing.loading') : currentLabel}
                   </p>
@@ -214,8 +252,8 @@ export function BillingPlanList({
                       : ''}
                   </p>
                 </div>
-              </div>
-              {isPage || isLifetime ? (
+              )}
+              {!isPage && isLifetime ? (
                 <span className="shrink-0 rounded-[4px] border border-[#CFE0D2] bg-[#EFF5EC] px-2 py-1 text-xs font-medium text-[#3E7550]">
                   {t('billing.status.active')}
                 </span>
@@ -226,10 +264,14 @@ export function BillingPlanList({
           {isLifetime ? (
             <div className="rounded-[4px] border border-[#E5E5E5] bg-[#FAFAFA] px-4 py-4 dark:border-border dark:bg-muted/30">
               <p className="text-sm font-medium text-[#171917] dark:text-foreground">
-                {t('dashboard.billingSheet.noLifetimeChangesTitle')}
+                {isPage
+                  ? t('dashboard.billingSheet.allSet')
+                  : t('dashboard.billingSheet.noLifetimeChangesTitle')}
               </p>
               <p className="mt-1 text-sm leading-relaxed text-[#686D67] dark:text-muted-foreground">
-                {t('dashboard.billingSheet.noLifetimeChangesDescription')}
+                {isPage
+                  ? t('dashboard.billingPage.lifetimeLockedDescription')
+                  : t('dashboard.billingSheet.noLifetimeChangesDescription')}
               </p>
             </div>
           ) : (
@@ -241,7 +283,9 @@ export function BillingPlanList({
                 )}
               >
                 {isPage
-                  ? t('dashboard.billingPage.upgradeWithPlus')
+                  ? subscription
+                    ? t('dashboard.billingPage.changePlan')
+                    : t('dashboard.billingPage.upgradeWithPlus')
                   : subscription
                     ? t('dashboard.billingSheet.availableChanges')
                     : t('dashboard.billingSheet.availablePlans')}
@@ -283,11 +327,16 @@ export function BillingPlanList({
                         <span className="text-sm font-semibold text-[#171917] dark:text-foreground">
                           {t('pricing.plus.name')} · {periodLabel(period)}
                         </span>
-                        {period === 'yearly' || period === 'lifetime' ? (
+                        {(isPage && period === 'yearly') ||
+                        (!isPage &&
+                          (period === 'yearly' ||
+                            period === 'lifetime')) ? (
                           <span className="rounded-full bg-[#EFF5EC] px-2 py-0.5 text-[10px] font-medium text-[#3E7550] dark:bg-[#243028] dark:text-[#9BC4A8]">
-                            {period === 'yearly'
-                              ? t('dashboard.billingSheet.save')
-                              : t('dashboard.billingSheet.bestValue')}
+                            {isPage
+                              ? t('dashboard.billingSheet.bestValue')
+                              : period === 'yearly'
+                                ? t('dashboard.billingSheet.save')
+                                : t('dashboard.billingSheet.bestValue')}
                           </span>
                         ) : null}
                       </div>
@@ -352,13 +401,18 @@ export function BillingPlanList({
             </Button>
             <p className="mt-2 text-center text-xs text-[#686D67] dark:text-muted-foreground">
               {isPage
-                ? t('dashboard.billingPage.cadenceNote')
+                ? subscription
+                  ? t('dashboard.billingPage.currentPlanNote', {
+                      periods: periods.map(periodLabel).join(' · '),
+                      current: currentPeriodLabel ?? '',
+                    })
+                  : t('dashboard.billingPage.cancelAnytime')
                 : periodDetail(effectiveSelected)}
             </p>
           </div>
         ) : null}
 
-        {isLifetime ? (
+        {isLifetime && !isPage ? (
           <div
             className={cn(
               'shrink-0 border-t border-[#E5E5E5] dark:border-border',

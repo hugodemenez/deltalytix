@@ -243,9 +243,21 @@ export default {
   "dashboard.billingSheet.manageFull": "Ouvrir les paramètres de facturation",
   "dashboard.billing.manage": "Gérer la facturation",
   "dashboard.billingPage.upgradeWithPlus": "Passer à Plus",
-  "dashboard.billingPage.cadenceNote":
-    "Mensuel · Trimestriel · Annuel · À vie · Annulable à tout moment",
+  "dashboard.billingPage.changePlan": "Changer d’offre",
   "dashboard.billingPage.switchToPeriod": "Passer à Plus · {period}",
+  "dashboard.billingPage.freeIncluded": "{price} · inclus",
+  "dashboard.billingPage.recurringRenews": "{price} · renouvelé",
+  "dashboard.billingPage.lifetimeLocked": "Payé une fois · verrouillé",
+  "dashboard.billingPage.monthlyDetail": "Facturé chaque mois",
+  "dashboard.billingPage.quarterlyDetail":
+    "{price} / mois facturé trimestriellement",
+  "dashboard.billingPage.yearlyDetail": "{price} / mois facturé annuellement",
+  "dashboard.billingPage.lifetimeDetail": "Payez une fois · aucun renouvellement",
+  "dashboard.billingPage.currentPlanNote":
+    "{periods} · {current} est votre offre actuelle",
+  "dashboard.billingPage.cancelAnytime": "Annulable à tout moment",
+  "dashboard.billingPage.lifetimeLockedDescription":
+    "Lifetime inclut toutes les fonctionnalités Plus, pour toujours. Aucun changement d’offre et aucun renouvellement sur ce compte.",
   "dashboard.billingPage.invoices": "Factures",
   "dashboard.billingPage.noInvoicesTitle": "Aucune facture pour le moment",
   "dashboard.billingPage.noInvoicesDescription":

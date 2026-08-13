@@ -240,9 +240,21 @@ export default {
   "dashboard.billingSheet.manageFull": "Open full billing settings",
   "dashboard.billing.manage": "Manage billing",
   "dashboard.billingPage.upgradeWithPlus": "Upgrade with Plus",
-  "dashboard.billingPage.cadenceNote":
-    "Monthly · Quarterly · Yearly · Lifetime · Cancel anytime",
+  "dashboard.billingPage.changePlan": "Change plan",
   "dashboard.billingPage.switchToPeriod": "Switch to Plus · {period}",
+  "dashboard.billingPage.freeIncluded": "{price} · included",
+  "dashboard.billingPage.recurringRenews": "{price} · renews",
+  "dashboard.billingPage.lifetimeLocked": "Paid once · locked",
+  "dashboard.billingPage.monthlyDetail": "Billed every month",
+  "dashboard.billingPage.quarterlyDetail":
+    "{price} / month billed quarterly",
+  "dashboard.billingPage.yearlyDetail": "{price} / month billed annually",
+  "dashboard.billingPage.lifetimeDetail": "Pay once · no renewals",
+  "dashboard.billingPage.currentPlanNote":
+    "{periods} · {current} is your current plan",
+  "dashboard.billingPage.cancelAnytime": "Cancel anytime",
+  "dashboard.billingPage.lifetimeLockedDescription":
+    "Lifetime includes every Plus feature, forever. No plan changes and no renewals on this account.",
   "dashboard.billingPage.invoices": "Invoices",
   "dashboard.billingPage.noInvoicesTitle": "No invoices yet",
   "dashboard.billingPage.noInvoicesDescription":
