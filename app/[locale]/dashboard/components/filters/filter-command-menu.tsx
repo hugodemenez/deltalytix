@@ -40,6 +40,7 @@ export function FilterCommandMenu({
   const [searchValue, setSearchValue] = useState("")
   const [isParsingDate, setIsParsingDate] = useState(false)
   const isMobileDevice = useMediaQuery(`(max-width: ${compactBreakpoint}px)`)
+  const useMobileSheet = isMobileDevice || isMobile
   const inputRef = useRef<HTMLInputElement>(null)
   const commandRef = useRef<HTMLDivElement>(null)
   const dateRangeSectionRef = useRef<HTMLDivElement>(null)
@@ -325,7 +326,7 @@ export function FilterCommandMenu({
         e.stopPropagation()
         
         // Focus back to the appropriate input
-        if (isMobileDevice || isMobile) {
+        if (useMobileSheet) {
           // For mobile, focus the CommandInput
           const commandInput = commandElement.querySelector('input[cmdk-input]') as HTMLInputElement
           if (commandInput) {
@@ -343,7 +344,7 @@ export function FilterCommandMenu({
         }
       }
     }
-  }, [isMobileDevice, isMobile])
+  }, [useMobileSheet])
 
   const CommandContent = (
     <Command 
@@ -353,7 +354,7 @@ export function FilterCommandMenu({
       onKeyDown={handleCommandKeyDown}
     >
       {/* Hidden CommandInput for desktop to enable arrow key navigation */}
-      {!isMobileDevice && !isMobile && (
+      {!useMobileSheet && (
         <div className="sr-only">
           <CommandInput
             value={searchValue}
@@ -362,7 +363,7 @@ export function FilterCommandMenu({
           />
         </div>
       )}
-      {(isMobileDevice || isMobile) && (
+      {useMobileSheet && (
         <div className="border-b relative">
           <CommandInput
             placeholder={t('filters.commandMenu.searchPlaceholder')}
@@ -460,15 +461,26 @@ export function FilterCommandMenu({
 
   return (
     <>
-      {isMobileDevice || isMobile
+      {useMobileSheet
         ? MobileTriggerButton
         : DesktopTriggerInput}
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetContent
-          side="right"
+          side={useMobileSheet ? "bottom" : "right"}
           overlayClassName="bg-black/15 dark:bg-black/70"
-          className="flex h-dvh w-[90vw] flex-col overflow-hidden border-l border-[#E5E5E5] bg-white p-0 dark:border-border dark:bg-background sm:max-w-[420px]"
+          className={cn(
+            "flex flex-col overflow-hidden bg-white p-0 dark:bg-background",
+            useMobileSheet
+              ? "h-[min(90dvh,720px)] w-full rounded-t-[4px] border-t border-[#E5E5E5] dark:border-border"
+              : "h-dvh w-[90vw] border-l border-[#E5E5E5] dark:border-border sm:max-w-[420px]"
+          )}
         >
+          {useMobileSheet ? (
+            <div
+              className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-black/15 dark:bg-white/20"
+              aria-hidden
+            />
+          ) : null}
           <SheetHeader className="shrink-0 border-b border-[#E5E5E5] px-4 py-4 text-left dark:border-border">
             <SheetTitle className="text-lg font-semibold tracking-[-0.025em]">
               {t('filters.title')}
