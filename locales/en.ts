@@ -247,7 +247,7 @@ export default {
   "dashboard.billingPage.noInvoicesDescription":
     "Invoices appear here after your first Plus payment.",
   "dashboard.billingPage.freeManagementUnavailable":
-    "Pause / cancel isn’t available on Free.",
+    "Pause / cancel isn't available on Free.",
   "dashboard.refreshData": "Refresh Data",
   "filters.active.title": "Active",
   "filters.active.clearAll": "Clear all",

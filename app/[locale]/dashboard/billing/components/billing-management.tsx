@@ -89,7 +89,7 @@ export default function BillingManagement() {
 
       <section>
         <div className="mb-3">
-          <h2 className="text-xs font-medium text-[#686D67] dark:text-muted-foreground">
+          <h2 className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#686D67] dark:text-muted-foreground">
             {t('dashboard.billingPage.invoices')}
           </h2>
         </div>
