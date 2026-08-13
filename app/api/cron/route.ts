@@ -29,7 +29,9 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = MAX_R
   }
 }
 
-// Vercel cron job handler - runs every Sunday at 8 AM UTC+1
+// Weekly performance recap. Vercel cron: path `/api/cron`, schedule `0 7 * * 0`.
+// Sunday 08:00 Lisbon. Summer WEST UTC+1 → 07:00 UTC (`0 7 * * 0`).
+// Winter WET UTC+0 → would need 08:00 UTC. Vercel cron objects only allow path + schedule.
 export async function GET(req: Request) {
   try {
     // Verify that this is a legitimate Vercel cron job request
