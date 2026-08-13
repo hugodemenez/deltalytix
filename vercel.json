@@ -18,8 +18,7 @@
     },
     {
       "path": "/api/cron",
-      "schedule": "0 7 * * 0",
-      "_comment": "Weekly performance recap. Sunday 08:00 Lisbon. Lisbon is WEST (UTC+1) in summer → 07:00 UTC. This UTC hour shifts with DST: in winter (WET/UTC+0), Sunday 08:00 Lisbon is 08:00 UTC."
+      "schedule": "0 7 * * 0"
     }
   ]
 }
