@@ -2,6 +2,10 @@
 
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
+import {
+  getLastCompleteWeekUtc,
+  isEntryInWeek,
+} from "@/lib/weekly-newsletter-window"
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -38,6 +42,7 @@ interface ComputedStats {
     pnl: number
     weekday: number
   }[]
+  /** Net PnL for the week: sum of (pnl − commission) per day */
   thisWeekPnL: number
   profitableDays: number
   totalDays: number
@@ -66,15 +71,10 @@ export async function getUserData(userId: string): Promise<UserData> {
     },
   })
 
-  // Keep the last 14 days of trades to ensure we have two full weeks
-  const last14DaysTrades = trades.filter((trade) => {
-    const tradeDate = new Date(trade.entryDate)
-    const today = new Date()
-    const diffTime = Math.abs(today.getTime() - tradeDate.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays <= 14
-  })
-  
+  // Last complete Monday–Sunday week (UTC v1) — not a rolling lookback
+  const week = getLastCompleteWeekUtc()
+  const weekTrades = trades.filter((trade) => isEntryInWeek(trade.entryDate, week))
+
   return {
     user: {
       id: user.id,
@@ -86,13 +86,13 @@ export async function getUserData(userId: string): Promise<UserData> {
       firstName: newsletter.firstName,
       isActive: newsletter.isActive
     },
-    trades: last14DaysTrades
+    trades: weekTrades
   }
 }
 
 export async function computeTradingStats(
   trades: UserData['trades'],
-  language: string
+  _language: string
 ): Promise<ComputedStats> {
   if (trades.length === 0) {
     return {
@@ -115,23 +115,24 @@ export async function computeTradingStats(
 
   const dailyPnL = trades.reduce((acc, trade) => {
     const tradeDate = new Date(trade.entryDate)
-    // Set time to 00:00:00 to ensure proper date comparison
-    tradeDate.setHours(0, 0, 0, 0)
-    
-    // Convert from Sunday-based (0-6) to Monday-based (0-6) weekday
-    const weekday = tradeDate.getDay() === 0 ? 6 : tradeDate.getDay() - 1
-    
-    const existingEntry = acc.find(entry => {
-      const entryDate = new Date(entry.date)
-      entryDate.setHours(0, 0, 0, 0)
-      return entryDate.getTime() === tradeDate.getTime()
-    })
+    // UTC midnight for date bucketing (UTC v1)
+    const dayUtc = new Date(Date.UTC(
+      tradeDate.getUTCFullYear(),
+      tradeDate.getUTCMonth(),
+      tradeDate.getUTCDate(),
+    ))
+
+    // Convert from Sunday-based (0-6) to Monday-based (0-6) weekday (UTC)
+    const utcDay = dayUtc.getUTCDay()
+    const weekday = utcDay === 0 ? 6 : utcDay - 1
+
+    const existingEntry = acc.find(entry => entry.date.getTime() === dayUtc.getTime())
 
     if (existingEntry) {
       existingEntry.pnl = Number((existingEntry.pnl + trade.pnl - trade.commission).toFixed(2))
     } else {
       acc.push({
-        date: tradeDate,
+        date: dayUtc,
         pnl: Number((trade.pnl - trade.commission).toFixed(2)),
         weekday
       })
@@ -154,4 +155,4 @@ export async function computeTradingStats(
     profitableDays,
     totalDays
   }
-} 
+}

@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server"
 import { headers } from 'next/headers'
 import TraderStatsEmail from "@/components/emails/weekly-recap"
-import MissingYouEmail from "@/components/emails/missing-data"
 import { render } from "@react-email/render"
 import { generateTradingAnalysis } from "./actions/analysis"
 import { getUserData, computeTradingStats } from "./actions/user-data"
-import { Resend } from "resend"
+import { shouldSendWeeklyRecap } from "@/lib/weekly-newsletter-window"
 
 export async function POST(req: Request, props: { params: Promise<{ userid: string }> }) {
   const params = await props.params;
@@ -21,29 +20,23 @@ export async function POST(req: Request, props: { params: Promise<{ userid: stri
       )
     }
 
-    // Get user data and compute stats
+    // Get user data and compute stats for the last complete Mon–Sun UTC week
     const { user, newsletter, trades } = await getUserData(params.userid)
     const stats = await computeTradingStats(trades, user.language)
 
-    // If no trades, return missing you email data
-    if (trades.length === 0) {
-      const missingYouEmailHtml = await render(
-        MissingYouEmail({
-          firstName: newsletter.firstName || 'trader',
-          email: newsletter.email,
-          language: user.language
-        })
-      )
-
+    // CPO gate: no trades or red week (net PnL < 0) → cron drops null emailData.
+    // Do not send missing-you / empty-week / consolation mail from this flow.
+    if (
+      !shouldSendWeeklyRecap({
+        tradeCount: trades.length,
+        netPnL: stats.thisWeekPnL,
+      })
+    ) {
       return NextResponse.json({
         success: true,
-        emailData: {
-          from: 'Deltalytix <newsletter@eu.updates.deltalytix.app>',
-          to: [newsletter.email],
-          replyTo: 'hugo.demenez@deltalytix.app',
-          subject: user.language === 'fr' ? 'Nous manquons de vous voir sur Deltalytix' : 'We miss you on Deltalytix',
-          html: missingYouEmailHtml
-        }
+        emailData: null,
+        skipped: true,
+        reason: trades.length === 0 ? "no_trades" : "negative_net_pnl",
       })
     }
 
@@ -86,7 +79,7 @@ export async function POST(req: Request, props: { params: Promise<{ userid: stri
           'List-Unsubscribe': `<${unsubscribeUrl}>`,
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
         },
-        replyTo: 'hugo.demenez@deltalytix.app'
+        replyTo: '[REDACTED]'
       }
     })
 
