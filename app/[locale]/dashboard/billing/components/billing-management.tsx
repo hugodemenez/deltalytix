@@ -204,11 +204,11 @@ export default function BillingManagement() {
             ) : null}
           </div>
         </section>
-      ) : (
+      ) : !isLoading && !subscription ? (
         <p className="text-sm text-[#A3A3A3]">
           {t('dashboard.billingPage.freeManagementUnavailable')}
         </p>
-      )}
+      ) : null}
 
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <DialogContent className="rounded-[4px]">
