@@ -60,6 +60,7 @@ export function Toolbar({
   const { isMobile } = useData()
   const { settings, setAutoHide } = useToolbarSettingsStore()
   const isCompactScreen = useMediaQuery(`(max-width: ${DASHBOARD_COMPACT_BREAKPOINT}px)`)
+  const isNarrowScreen = useMediaQuery("(max-width: 767px)")
   const [isConsentVisible, setIsConsentVisible] = useState(false)
 
   // Handle auto-hide toggle with proper state management
@@ -174,6 +175,7 @@ export function Toolbar({
   }
 
   const useCompactLayout = isMobile || isCompactScreen
+  const iconOnly = isMobile || isNarrowScreen
   const isVisible = !settings.autoHide || isHovered || isPinnedVisible
 
   useEffect(() => {
@@ -207,8 +209,7 @@ export function Toolbar({
         <motion.div
           ref={toolbarRef}
           className={cn(
-            "fixed inset-x-0 mx-auto z-10 max-w-[calc(100vw-1rem)] px-2 sm:px-0",
-            useCompactLayout ? "w-full sm:w-fit" : "w-fit",
+            "fixed inset-x-4 mx-auto z-10 w-auto md:inset-x-0 md:w-fit md:max-w-[calc(100vw-1rem)]",
             isConsentVisible ? "bottom-36 sm:bottom-20" : "bottom-4"
           )}
           style={{
@@ -230,43 +231,38 @@ export function Toolbar({
           )}
           <motion.div
             className={cn(
-              "flex items-center justify-center bg-background/95 border shadow-lg relative",
-              useCompactLayout
-                ? "max-h-[calc(100dvh-2rem)] max-w-full flex-wrap gap-2 overflow-y-auto rounded-3xl px-2.5 py-2"
-                : "gap-4 rounded-full p-3"
+              "relative flex max-h-[calc(100dvh-2rem)] max-w-full items-center justify-center gap-2 overflow-y-auto rounded-3xl border bg-background/95 px-2.5 py-2 shadow-lg md:gap-4 md:rounded-full md:p-3",
+              isCustomizing ? "flex-wrap" : "flex-nowrap"
             )}
           >
             <Button
               variant={isCustomizing ? "default" : "ghost"}
               onClick={onEditToggle}
               className={cn(
-                "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
-                useCompactLayout ? "w-10 shrink-0 p-0" : "min-w-[120px] gap-3 px-4"
+                "flex h-11 w-11 shrink-0 items-center justify-center rounded-full p-0 transition-transform active:scale-95 md:h-10 md:w-auto md:min-w-[120px] md:gap-3 md:px-4"
               )}
             >
               <Pencil className={cn(
                 "h-4 w-4 shrink-0",
                 isCustomizing && "text-background"
               )} />
-              {!useCompactLayout && (
-                <span className="text-sm font-medium">
-                  {isCustomizing ? t('widgets.done') : t('widgets.edit')}
-                </span>
-              )}
+              <span className="hidden text-sm font-medium md:inline">
+                {isCustomizing ? t('widgets.done') : t('widgets.edit')}
+              </span>
             </Button>
 
-            <ShareButton currentLayout={currentLayout} compact={useCompactLayout} />
+            <ShareButton currentLayout={currentLayout} compact={iconOnly} />
 
-            <AddWidgetSheet onAddWidget={onAddWidget} isCustomizing={isCustomizing} compact={useCompactLayout} />
+            <AddWidgetSheet onAddWidget={onAddWidget} isCustomizing={isCustomizing} compact={iconOnly} />
 
             <FilterCommandMenu
               variant="toolbar"
-              className={cn(useCompactLayout ? "w-10 p-0" : "w-auto")}
-              compactBreakpoint={DASHBOARD_COMPACT_BREAKPOINT}
-              compact={useCompactLayout}
+              className="h-11 w-11 p-0 md:h-10 md:w-auto"
+              compactBreakpoint={767}
+              compact={iconOnly}
             />
 
-            {minimapTrigger}
+            <div className="hidden md:contents">{minimapTrigger}</div>
 
             {isCustomizing && (
               <div className="flex items-center gap-2">

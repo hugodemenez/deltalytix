@@ -238,9 +238,9 @@ export function FilterCommandMenu({
       className={cn(
         "font-normal overflow-hidden",
         compact
-          ? "h-10 w-10 shrink-0 rounded-full p-0"
+          ? "h-11 w-11 shrink-0 rounded-full p-0"
           : "justify-start text-left",
-        variant === "toolbar" && "h-10 rounded-full max-w-full",
+        variant === "toolbar" && !compact && "h-10 rounded-full max-w-full",
         className
       )}
       onClick={() => setOpen(true)}
