@@ -256,7 +256,7 @@ export function BillingPlanList({
                         ) : null}
                       </span>
                     ) : null}
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-semibold text-[#171917] dark:text-foreground">
                           {t('pricing.plus.name')} · {periodLabel(period)}
