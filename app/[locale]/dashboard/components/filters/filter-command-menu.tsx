@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList, CommandSeparator } from "@/components/ui/command"
 import { useData } from "@/context/data-provider"
@@ -350,10 +349,7 @@ export function FilterCommandMenu({
   const CommandContent = (
     <Command 
       ref={commandRef} 
-      className={cn(
-        "flex flex-col rounded-none border-0",
-        useMobileSheet ? "h-full" : "max-h-[min(70vh,600px)]"
-      )}
+      className="flex h-full flex-col rounded-none border-0"
       shouldFilter={false}
       onKeyDown={handleCommandKeyDown}
     >
@@ -463,26 +459,11 @@ export function FilterCommandMenu({
     </Command>
   )
 
-  if (!useMobileSheet) {
-    return (
-      <Popover open={open} onOpenChange={handleOpenChange} modal={false}>
-        <PopoverAnchor asChild>{DesktopTriggerInput}</PopoverAnchor>
-        <PopoverContent
-          align="center"
-          side="top"
-          sideOffset={8}
-          className="w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-[4px] border-[#E5E5E5] bg-white p-0 shadow-lg dark:border-border dark:bg-background"
-          onOpenAutoFocus={(event) => event.preventDefault()}
-        >
-          {CommandContent}
-        </PopoverContent>
-      </Popover>
-    )
-  }
-
   return (
     <>
-      {MobileTriggerButton}
+      {useMobileSheet
+        ? MobileTriggerButton
+        : DesktopTriggerInput}
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetContent
           side={useMobileSheet ? "bottom" : "right"}
