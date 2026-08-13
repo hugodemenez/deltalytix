@@ -2,7 +2,6 @@
 
 import { useI18n } from '@/locales/client'
 import BillingManagement from './components/billing-management'
-import { BillingPlanList } from './components/billing-plan-list'
 
 export default function BillingPage() {
   const t = useI18n()
@@ -19,16 +18,7 @@ export default function BillingPage() {
           </p>
         </header>
 
-        <section className="overflow-hidden rounded-[4px] border border-[#E5E5E5] bg-white dark:border-border dark:bg-card">
-          <BillingPlanList
-            contentClassName="p-4 sm:p-6"
-            footerClassName="p-4 sm:p-6"
-          />
-        </section>
-
-        <div className="mt-8">
-          <BillingManagement showPlanSections={false} />
-        </div>
+        <BillingManagement />
       </div>
     </main>
   )
