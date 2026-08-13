@@ -1,11 +1,17 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Logo } from '@/components/logo'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useI18n } from "@/locales/client"
+import {
+  isDashboardHomePath,
+  resolveDashboardSubpage,
+  type DashboardSubpage,
+} from '@/lib/dashboard-subpage'
 import { useKeyboardShortcuts } from '../../../../hooks/use-keyboard-shortcuts'
+import { DashboardSubpageHeader } from './dashboard-subpage-header'
 import UserMenu from './user-menu'
 import ReferralButton from './referral-button'
 import { PlanChip } from './plan-chip'
@@ -15,14 +21,29 @@ import {
   type DashboardHomeTab,
 } from '@/store/dashboard-home-tabs-store'
 
+function subpageTitle(
+  subpage: DashboardSubpage,
+  t: ReturnType<typeof useI18n>
+) {
+  switch (subpage) {
+    case 'connections':
+      return t('connections.title')
+    case 'data':
+      return t('dashboard.data')
+    case 'settings':
+      return t('dashboard.settings')
+  }
+}
+
 export default function Navbar() {
   const router = useRouter()
+  const pathname = usePathname()
   const t = useI18n()
+  const navRef = useRef<HTMLElement>(null)
   const activeTab = useDashboardHomeTabsStore((state) => state.activeTab)
   const setActiveTab = useDashboardHomeTabsStore((state) => state.setActiveTab)
-  const isDashboardHome = useDashboardHomeTabsStore(
-    (state) => state.homeActive
-  )
+  const subpage = resolveDashboardSubpage(pathname)
+  const showHomeTabs = isDashboardHomePath(pathname)
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts()
@@ -34,8 +55,28 @@ export default function Navbar() {
     router.prefetch('/dashboard')
   }, [router])
 
+  useLayoutEffect(() => {
+    const nav = navRef.current
+    if (!nav) return
+
+    const applyHeight = () => {
+      document.documentElement.style.setProperty(
+        '--navbar-height',
+        `${nav.offsetHeight}px`
+      )
+    }
+
+    applyHeight()
+    const observer = new ResizeObserver(applyHeight)
+    observer.observe(nav)
+    return () => observer.disconnect()
+  }, [subpage])
+
   return (
-    <nav className="sticky top-0 left-0 right-0 z-40 flex w-full flex-col border-b border-[#E5E5E5] bg-white pt-safe text-primary dark:border-border dark:bg-background">
+    <nav
+      ref={navRef}
+      className="sticky top-0 left-0 right-0 z-40 flex w-full flex-col border-b border-[#E5E5E5] bg-white pt-safe text-primary dark:border-border dark:bg-background"
+    >
       <div className="relative flex h-16 items-center justify-between gap-3 px-3 py-2 sm:gap-4 sm:px-6 lg:px-10">
         <Link
           href="/dashboard"
@@ -46,7 +87,7 @@ export default function Navbar() {
           <Logo className="h-6 w-6 fill-black dark:fill-white" />
         </Link>
 
-        {isDashboardHome && (
+        {showHomeTabs && (
           <Tabs
             value={activeTab}
             onValueChange={(value) =>
@@ -86,6 +127,12 @@ export default function Navbar() {
           <UserMenu />
         </div>
       </div>
+      {subpage ? (
+        <DashboardSubpageHeader
+          title={subpageTitle(subpage, t)}
+          className="border-b-0 border-t"
+        />
+      ) : null}
     </nav>
   )
 }
