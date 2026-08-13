@@ -108,7 +108,7 @@ const colors = {
   muted: "#737373",
   faint: "#A3A3A3",
   hairline: "#E5E5E5",
-  canvas: "#F5F5F5",
+  canvas: "#FAFAFA",
   white: "#FFFFFF",
   positive: "#16A34A",
   negative: "#DC2626",
@@ -176,11 +176,8 @@ function formatWeekRange(
 }
 
 function formatPnLMagnitude(value: number): string {
-  const abs = Math.abs(value);
-  if (abs >= 1000) {
-    return `${Math.trunc(abs / 1000)}K`;
-  }
-  return Math.trunc(abs).toString();
+  // Lock shows full euro amounts (e.g. +875€) — never K-truncate in this recap.
+  return Math.trunc(Math.abs(value)).toString();
 }
 
 function formatSignedEuro(pnl: number): string {
@@ -268,10 +265,11 @@ export default function TraderStatsEmail({
           fontFamily="Inter"
           fallbackFontFamily={["Helvetica", "Arial", "sans-serif"]}
           webFont={{
+            // Inter static semibold (600) — required for 9OS-0; 400+700 alone cannot hit the lock.
             url: "https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff2",
             format: "woff2",
           }}
-          fontWeight={700}
+          fontWeight={600}
           fontStyle="normal"
         />
       </Head>
@@ -298,8 +296,8 @@ export default function TraderStatsEmail({
             <Text
               style={{
                 margin: "0 0 16px",
-                color: colors.muted,
-                fontSize: "13px",
+                color: colors.faint,
+                fontSize: "12px",
                 lineHeight: "18px",
                 fontFamily,
               }}
@@ -312,9 +310,9 @@ export default function TraderStatsEmail({
               style={{
                 margin: "0 0 8px",
                 color: colors.ink,
-                fontSize: "28px",
-                fontWeight: 700,
-                lineHeight: "34px",
+                fontSize: "22px",
+                fontWeight: 600,
+                lineHeight: "28px",
                 fontFamily,
               }}
             >
@@ -338,8 +336,8 @@ export default function TraderStatsEmail({
             <Text
               style={{
                 margin: "0 0 4px",
-                color: colors.muted,
-                fontSize: "13px",
+                color: colors.faint,
+                fontSize: "12px",
                 lineHeight: "18px",
                 fontFamily,
               }}
@@ -350,9 +348,9 @@ export default function TraderStatsEmail({
               style={{
                 margin: "0 0 20px",
                 color: pnlColor(weekPnL),
-                fontSize: "36px",
-                fontWeight: 700,
-                lineHeight: "42px",
+                fontSize: "32px",
+                fontWeight: 600,
+                lineHeight: "36px",
                 fontFamily,
                 fontVariantNumeric: "tabular-nums",
                 WebkitFontFeatureSettings: '"tnum"',
@@ -367,8 +365,8 @@ export default function TraderStatsEmail({
               style={{
                 margin: "0 0 32px",
                 color: colors.ink,
-                fontSize: "15px",
-                lineHeight: "24px",
+                fontSize: "14px",
+                lineHeight: "22px",
                 fontFamily,
               }}
             >
@@ -380,9 +378,9 @@ export default function TraderStatsEmail({
               style={{
                 margin: "0 0 12px",
                 color: colors.ink,
-                fontSize: "16px",
-                fontWeight: 700,
-                lineHeight: "22px",
+                fontSize: "13px",
+                fontWeight: 600,
+                lineHeight: "18px",
                 fontFamily,
               }}
             >
@@ -401,15 +399,16 @@ export default function TraderStatsEmail({
             >
               <tbody>
                 {weekDays.map((day, index) => {
-                  const isLast = index === weekDays.length - 1;
+                  const isFirst = index === 0;
                   return (
                     <tr key={dateKey(day.date)}>
                       <td
                         style={{
                           padding: "12px 0",
-                          borderBottom: isLast
-                            ? "none"
-                            : `1px solid ${colors.hairline}`,
+                          borderTop: isFirst
+                            ? `1px solid ${colors.hairline}`
+                            : "none",
+                          borderBottom: `1px solid ${colors.hairline}`,
                           verticalAlign: "middle",
                         }}
                       >
@@ -425,7 +424,7 @@ export default function TraderStatsEmail({
                         </span>
                         <span
                           style={{
-                            color: colors.faint,
+                            color: colors.muted,
                             fontSize: "14px",
                             lineHeight: "20px",
                             fontFamily,
@@ -439,9 +438,10 @@ export default function TraderStatsEmail({
                         align="right"
                         style={{
                           padding: "12px 0",
-                          borderBottom: isLast
-                            ? "none"
-                            : `1px solid ${colors.hairline}`,
+                          borderTop: isFirst
+                            ? `1px solid ${colors.hairline}`
+                            : "none",
+                          borderBottom: `1px solid ${colors.hairline}`,
                           verticalAlign: "middle",
                           textAlign: "right",
                           color:
@@ -449,7 +449,7 @@ export default function TraderStatsEmail({
                               ? colors.faint
                               : pnlColor(day.pnl),
                           fontSize: "14px",
-                          fontWeight: day.pnl === null ? 400 : 700,
+                          fontWeight: day.pnl === null ? 400 : 600,
                           lineHeight: "20px",
                           fontFamily,
                           fontVariantNumeric: "tabular-nums",
@@ -470,9 +470,9 @@ export default function TraderStatsEmail({
               style={{
                 margin: "0 0 12px",
                 color: colors.ink,
-                fontSize: "16px",
-                fontWeight: 700,
-                lineHeight: "22px",
+                fontSize: "13px",
+                fontWeight: 600,
+                lineHeight: "18px",
                 fontFamily,
               }}
             >
@@ -509,16 +509,13 @@ export default function TraderStatsEmail({
                     },
                   ] as const
                 ).map((row, index, rows) => {
-                  const isLast = index === rows.length - 1;
                   return (
                     <tr key={row.label}>
                       <td
                         style={{
                           padding: "12px 0",
-                          borderBottom: isLast
-                            ? "none"
-                            : `1px solid ${colors.hairline}`,
-                          color: colors.ink,
+                          borderBottom: `1px solid ${colors.hairline}`,
+                          color: colors.muted,
                           fontSize: "14px",
                           lineHeight: "20px",
                           fontFamily,
@@ -530,13 +527,11 @@ export default function TraderStatsEmail({
                         align="right"
                         style={{
                           padding: "12px 0",
-                          borderBottom: isLast
-                            ? "none"
-                            : `1px solid ${colors.hairline}`,
+                          borderBottom: `1px solid ${colors.hairline}`,
                           textAlign: "right",
                           color: row.color,
                           fontSize: "14px",
-                          fontWeight: 700,
+                          fontWeight: 600,
                           lineHeight: "20px",
                           fontFamily,
                           fontVariantNumeric: "tabular-nums",
@@ -557,8 +552,8 @@ export default function TraderStatsEmail({
               style={{
                 margin: "0 0 24px",
                 color: colors.ink,
-                fontSize: "15px",
-                lineHeight: "24px",
+                fontSize: "14px",
+                lineHeight: "22px",
                 fontFamily,
               }}
             >
@@ -584,7 +579,7 @@ export default function TraderStatsEmail({
                         borderRadius: "4px",
                         color: colors.white,
                         fontSize: "14px",
-                        fontWeight: 500,
+                        fontWeight: 600,
                         lineHeight: "20px",
                         fontFamily,
                         textAlign: "center",
@@ -605,7 +600,7 @@ export default function TraderStatsEmail({
                         borderRadius: "4px",
                         color: colors.ink,
                         fontSize: "14px",
-                        fontWeight: 500,
+                        fontWeight: 600,
                         lineHeight: "20px",
                         fontFamily,
                         textAlign: "center",
@@ -662,7 +657,7 @@ export default function TraderStatsEmail({
                 fontSize: "12px",
                 lineHeight: "18px",
                 fontFamily,
-                textAlign: "center",
+                textAlign: "left",
               }}
             >
               {`${t.sentBy} · `}

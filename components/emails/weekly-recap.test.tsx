@@ -48,6 +48,21 @@ describe("TraderStatsEmail weekly recap visual lock", () => {
     expect(html).toContain("border-radius:4px");
     expect(html).toContain("#171717");
     expect(html).toContain("#E5E5E5");
+    expect(html).toContain("#FAFAFA");
+    expect(html).not.toContain("#F5F5F5");
+    expect(html).toContain("#737373");
+    expect(html).toContain("font-size:22px");
+    expect(html).toContain("line-height:28px");
+    expect(html).toContain("font-size:32px");
+    expect(html).toContain("line-height:36px");
+    expect(html).toContain("font-size:13px");
+    expect(html).toContain("font-weight:600");
+    expect(html).toContain("font-size:14px");
+    expect(html).toContain("line-height:22px");
+    expect(html).toContain("border-top:1px solid #E5E5E5");
+    expect(html).toContain("text-align:left");
+    expect(html).toContain('font-weight:600');
+    expect(html).not.toContain('font-weight:700');
     expect(html).not.toContain("#3469DF");
     expect(html).not.toContain("Success Rate");
     expect(html).not.toContain("last 14 days");
@@ -90,5 +105,23 @@ describe("TraderStatsEmail weekly recap visual lock", () => {
     expect(html).toContain("+100€");
     expect(html).toContain("—");
     expect(html).not.toContain(">0€<");
+  });
+
+  test("does not K-truncate euro amounts", async () => {
+    const html = await render(
+      TraderStatsEmail({
+        ...baseProps,
+        language: "en",
+        dailyPnL: [
+          { date: new Date(Date.UTC(2026, 7, 3)), pnl: 1250 },
+          { date: new Date(Date.UTC(2026, 7, 4)), pnl: -1100 },
+        ],
+      }),
+    );
+
+    expect(html).toContain("+1250€");
+    expect(html).toContain("−1100€");
+    expect(html).not.toMatch(/\d+K€/);
+    expect(html).not.toContain("+1K");
   });
 });
