@@ -7,13 +7,21 @@ import {
 } from "./billing-plan-catalog";
 
 describe("billing plan catalog", () => {
-  it("offers every sold period to a free user", () => {
+  it("offers yearly-first Plus periods to a free user, without monthly", () => {
     expect(availableBillingPeriods(null)).toEqual([
-      "monthly",
       "quarterly",
       "yearly",
       "lifetime",
     ]);
+  });
+
+  it("never re-offers monthly Plus", () => {
+    expect(availableBillingPeriods(null)).not.toContain("monthly");
+    expect(
+      availableBillingPeriods({
+        plan: { name: "Plus", interval: "year" },
+      }),
+    ).not.toContain("monthly");
   });
 
   it("excludes the current recurring interval", () => {
@@ -22,7 +30,6 @@ describe("billing plan catalog", () => {
     };
 
     expect(availableBillingPeriods(subscription)).toEqual([
-      "monthly",
       "yearly",
       "lifetime",
     ]);

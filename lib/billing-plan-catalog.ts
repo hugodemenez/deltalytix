@@ -71,15 +71,25 @@ export function billingPeriodAvailability(
 }
 
 /**
+ * Periods offered in plan pickers. Monthly Plus is not sold; existing
+ * monthly subscribers can still be recognized via `isCurrentBillingPeriod`.
+ */
+export const OFFERED_BILLING_PERIODS: BillingPeriod[] = [
+  "quarterly",
+  "yearly",
+  "lifetime",
+];
+
+/**
  * Periods the user can actually move to:
- * - Free/no subscription: all sold Plus periods
- * - Recurring Plus: all periods except the current interval
+ * - Free/no subscription: offered Plus periods (no monthly)
+ * - Recurring Plus: offered periods except the current interval
  * - Lifetime: none (maximum ownership, no downgrade or repeat purchase)
  */
 export function availableBillingPeriods(
   subscription: BillingSubscriptionLike,
 ): BillingPeriod[] {
-  return BILLING_PERIODS.filter(
+  return OFFERED_BILLING_PERIODS.filter(
     (period) =>
       billingPeriodAvailability(period, subscription) === "available",
   );

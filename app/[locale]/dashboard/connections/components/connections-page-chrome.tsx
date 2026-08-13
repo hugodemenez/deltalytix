@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Loader2, Plus, RefreshCw, X } from 'lucide-react'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
+import { DashboardSubpageHeader } from '@/app/[locale]/dashboard/components/dashboard-subpage-header'
 import {
   Popover,
   PopoverContent,
@@ -129,7 +130,8 @@ function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
   )
 
   return (
-    <div className="min-h-[calc(100vh-var(--navbar-height,4rem))] bg-[oklch(0.97_0_0)] text-[oklch(0.17_0_0)] dark:bg-[oklch(0.17_0_0)] dark:text-[oklch(0.93_0_0)]">
+    <div className="min-h-[calc(100vh-var(--navbar-height,4rem))] bg-[#FAFAFA] text-[#171717] dark:bg-background dark:text-foreground">
+      <DashboardSubpageHeader title={t('connections.title')} />
       <div className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 md:py-14 lg:px-12">
         <header className={cn('mb-12 md:mb-16', 't-stagger')}>
           <h1 className="text-balance text-3xl font-normal tracking-[-0.04em] md:text-5xl">

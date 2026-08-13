@@ -2,6 +2,7 @@
 
 import React, {
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import Link from "next/link";
@@ -22,8 +23,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useBillingCurrency } from "@/hooks/use-billing-currency";
 import {
-  BILLING_PERIODS,
   PLUS_PLAN_PRICES,
+  availableBillingPeriods,
   billingLookupKey,
   billingPeriodAvailability,
   formatBillingAmount,
@@ -69,7 +70,7 @@ export default function PricingPlans({
   trigger,
   currentSubscription,
 }: PricingPlansProps) {
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("yearly");
   const [isLoading, setIsLoading] = useState(false);
   const [showLifetimeConfirm, setShowLifetimeConfirm] = useState(false);
   const [pendingLookupKey, setPendingLookupKey] = useState<string>("");
@@ -89,6 +90,15 @@ export default function PricingPlans({
       });
     }
   }, []);
+
+  const periods = useMemo(
+    () => availableBillingPeriods(currentSubscription ?? null),
+    [currentSubscription],
+  );
+  const lifetimeOwned = isLifetimeSubscription(currentSubscription ?? null);
+  const effectivePeriod = periods.includes(billingPeriod)
+    ? billingPeriod
+    : (periods[0] ?? "yearly");
 
   // Compatibility wrappers keep full pricing behavior on the shared catalog.
   const isCurrentPlan = (lookupKey: string) => {
@@ -289,16 +299,16 @@ export default function PricingPlans({
   );
 
   const currentPricing =
-    billingPeriod === "yearly"
+    effectivePeriod === "yearly"
       ? plans.plus.price.yearly / 12
-      : billingPeriod === "quarterly"
+      : effectivePeriod === "quarterly"
         ? plans.plus.price.quarterly / 3
-        : billingPeriod === "lifetime"
+        : effectivePeriod === "lifetime"
           ? plans.plus.price.lifetime
-          : plans.plus.price.monthly;
+          : plans.plus.price.yearly / 12;
 
   const billingDetail =
-    billingPeriod === "yearly"
+    effectivePeriod === "yearly"
       ? t("pricing.billedYearly", {
           total: formatBillingAmount(
             plans.plus.price.yearly,
@@ -306,7 +316,7 @@ export default function PricingPlans({
             locale,
           ),
         })
-      : billingPeriod === "quarterly"
+      : effectivePeriod === "quarterly"
         ? t("pricing.billedQuarterly", {
           total: formatBillingAmount(
               plans.plus.price.quarterly,
@@ -314,43 +324,40 @@ export default function PricingPlans({
               locale,
             ),
           })
-        : billingPeriod === "lifetime"
+        : effectivePeriod === "lifetime"
           ? t("pricing.oneTimePayment")
           : "\u00A0";
 
-  const billingPeriodSelector = (
-    <div className="grid w-full grid-cols-2 gap-1 rounded-sm bg-black/5 p-1 dark:bg-white/5 sm:grid-cols-4">
-      {(
-        BILLING_PERIODS.map((period) => [
-          period,
-          t(`pricing.${period}` as "pricing.monthly"),
-        ] as const)
-      ).map(([period, label]) => (
+  const billingPeriodSelector = periods.length > 0 ? (
+    <div className="grid w-full grid-cols-3 gap-1 rounded-sm bg-black/5 p-1 dark:bg-white/5">
+      {periods.map((period) => (
         <button
           key={period}
           type="button"
           onClick={() => setBillingPeriod(period)}
           className={cn(
-            "min-w-0 rounded-sm px-3 py-2 text-xs capitalize transition-colors duration-150 ease-out sm:min-w-24 sm:px-4",
-            billingPeriod === period
+            "min-w-0 rounded-sm px-3 py-2 text-xs capitalize transition-colors duration-150 ease-out sm:px-4",
+            effectivePeriod === period
               ? "bg-black text-white dark:bg-white dark:text-black"
               : "text-black/55 hover:text-black dark:text-white/55 dark:hover:text-white",
           )}
         >
-          {label}
+          {t(`pricing.${period}` as "pricing.yearly")}
         </button>
       ))}
     </div>
-  );
+  ) : null;
 
   const plusPlan = (
     <article className="flex min-h-[500px] min-w-0 flex-col rounded-sm bg-white p-5 dark:bg-black sm:p-6">
-      <div className="mb-6 md:hidden">
-        <p className="mb-2 text-xs font-medium text-black/55 dark:text-white/55">
-          {t("pricing.billingPeriod")}
-        </p>
-        {billingPeriodSelector}
-      </div>
+      {billingPeriodSelector ? (
+        <div className="mb-6 md:hidden">
+          <p className="mb-2 text-xs font-medium text-black/55 dark:text-white/55">
+            {t("pricing.billingPeriod")}
+          </p>
+          {billingPeriodSelector}
+        </div>
+      ) : null}
       <div>
         <div className="flex items-baseline justify-between gap-4">
           <h3 className="text-2xl font-normal tracking-tight">
@@ -368,7 +375,7 @@ export default function PricingPlans({
             <span
               className={cn(
                 "ml-1 text-sm text-black/55 dark:text-white/55",
-                billingPeriod === "lifetime" && "invisible",
+                effectivePeriod === "lifetime" && "invisible",
               )}
             >
               / {t("pricing.month")}
@@ -376,11 +383,7 @@ export default function PricingPlans({
           </div>
         </div>
         <p
-          aria-hidden={billingPeriod === "monthly"}
-          className={cn(
-            "mt-2 h-4 w-full overflow-hidden text-ellipsis whitespace-nowrap text-right text-xs text-black/55 dark:text-white/55",
-            billingPeriod === "monthly" && "invisible",
-          )}
+          className="mt-2 h-4 w-full overflow-hidden text-ellipsis whitespace-nowrap text-right text-xs text-black/55 dark:text-white/55"
         >
           {billingDetail}
         </p>
@@ -408,44 +411,55 @@ export default function PricingPlans({
         <div
           className={cn(
             "mb-4 space-y-1 border-t border-black/10 pt-3 text-[11px] leading-relaxed text-black/45 dark:border-white/10 dark:text-white/45",
-            billingPeriod !== "lifetime" && "invisible",
+            effectivePeriod !== "lifetime" && "invisible",
           )}
-          aria-hidden={billingPeriod !== "lifetime"}
+          aria-hidden={effectivePeriod !== "lifetime"}
         >
           <p>• {t("pricing.lifetimeDisclaimer1")}</p>
           <p>• {t("pricing.lifetimeDisclaimer2")}</p>
         </div>
         <div>
           {(() => {
-            const lookupKey = billingLookupKey(billingPeriod, currency);
+            const lookupKey = billingLookupKey(effectivePeriod, currency);
             const isCurrent = isCurrentPlan(lookupKey);
             const isBlockedRecurring = isBlockedFromRecurring(lookupKey);
             const isBlockedLifetime = isBlockedFromLifetime(lookupKey);
-            const isBlocked = isBlockedRecurring || isBlockedLifetime;
+            const isBlocked =
+              lifetimeOwned || isBlockedRecurring || isBlockedLifetime;
+            const periodLabel =
+              effectivePeriod === "lifetime"
+                ? t("pricing.lifetime")
+                : effectivePeriod === "yearly"
+                  ? t("pricing.yearly")
+                  : t("pricing.quarterly");
 
             return (
               <Button
                 onClick={() => handlePlanSwitch(lookupKey)}
-                disabled={isLoading || isCurrent || isBlocked}
+                disabled={
+                  isLoading ||
+                  isCurrent ||
+                  isBlocked ||
+                  periods.length === 0
+                }
                 variant={isCurrent || isBlocked ? "outline" : "default"}
                 className="h-11 w-full rounded-sm active:scale-[0.96]"
               >
                 {isLoading
-                  ? billingPeriod === "lifetime"
+                  ? effectivePeriod === "lifetime"
                     ? t("billing.lifetimeUpgrade")
                     : t("billing.switching")
-                  : isCurrent
-                    ? t("billing.currentPlan")
-                    : isBlockedLifetime
-                      ? t("billing.lifetimeOwned")
+                  : lifetimeOwned || isBlockedLifetime
+                    ? t("billing.lifetimeOwned")
+                    : isCurrent
+                      ? t("billing.currentPlan")
                       : isBlockedRecurring
                         ? t("billing.lifetimeActive")
                         : currentSubscription
-                          ? billingPeriod === "lifetime"
-                            ? t("pricing.upgradeToLifetime") ||
-                              "Upgrade to Lifetime"
-                            : t("billing.changePlan")
-                          : t("pricing.trialPeriod")}
+                          ? t("dashboard.billingPage.switchToPeriod", {
+                              period: periodLabel,
+                            })
+                          : t("dashboard.billingPage.upgradeWithPlus")}
               </Button>
             );
           })()}

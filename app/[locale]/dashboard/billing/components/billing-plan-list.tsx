@@ -36,7 +36,7 @@ function planIsPaid(planName: string | undefined): boolean {
 
 export function BillingPlanList({
   variant = 'sheet',
-  defaultPeriod = 'monthly',
+  defaultPeriod = 'yearly',
   className,
   contentClassName,
   footerClassName,
@@ -399,15 +399,10 @@ export function BillingPlanList({
               {changeLoading
                 ? t('billing.switching')
                 : subscription
-                  ? t(
-                      isPage
-                        ? 'dashboard.billingPage.switchToPeriod'
-                        : 'dashboard.billingSheet.changeToPeriod',
-                      { period: periodLabel(effectiveSelected) }
-                    )
-                  : t('dashboard.billingSheet.upgradeToPeriod', {
+                  ? t('dashboard.billingPage.switchToPeriod', {
                       period: periodLabel(effectiveSelected),
-                    })}
+                    })
+                  : t('dashboard.billingPage.upgradeWithPlus')}
             </Button>
             <p className="mt-2 text-center text-xs text-[#686D67] dark:text-muted-foreground">
               {isPage
