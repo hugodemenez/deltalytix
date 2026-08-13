@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/daily-sync",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron",
+      "schedule": "0 7 * * 0"
     }
   ]
 }
