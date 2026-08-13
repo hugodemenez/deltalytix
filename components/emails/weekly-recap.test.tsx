@@ -17,12 +17,11 @@ const baseProps = {
   winLossStats: { wins: 18, losses: 7 },
   resultAnalysisIntro:
     "Five sessions this week, Thursday carrying most of the size.",
-  tipsForNextWeek:
-    "Keep sizing where the week already worked.",
+  tipsForNextWeek: "Keep sizing where the week already worked.",
 };
 
-describe("TraderStatsEmail weekly recap visual lock", () => {
-  test("renders green-week EN layout locked to Paper 9OS-0", async () => {
+describe("TraderStatsEmail weekly recap Zeno chrome lock", () => {
+  test("renders green-week EN on Zeno 680px chrome (not 9OS-0 gray card)", async () => {
     const html = await render(
       TraderStatsEmail({
         ...baseProps,
@@ -30,6 +29,7 @@ describe("TraderStatsEmail weekly recap visual lock", () => {
       }),
     );
 
+    // Content lock (9OS-0 slot)
     expect(html).toContain("Week of 3–9 Aug");
     expect(html).toContain("Hello Sam,");
     expect(html).toContain(
@@ -43,47 +43,67 @@ describe("TraderStatsEmail weekly recap visual lock", () => {
     expect(html).not.toContain("72.0%");
     expect(html).toContain("Visit dashboard");
     expect(html).toContain("Book a call*");
-    expect(html).toContain("utm_source=resend");
-    expect(html).toContain("utm_medium=email");
-    expect(html).toContain("utm_campaign=weekly_recap");
-    expect(html).toContain("utm_content=2026-08-03");
-    expect(html).toContain(
-      "https://cal.com/hugo-demenez/deltalytix-discussion?utm_source=resend&amp;utm_medium=email&amp;utm_campaign=weekly_recap&amp;utm_content=2026-08-03",
-    );
-    expect(html).toContain(
-      "/dashboard?utm_source=resend&amp;utm_medium=email&amp;utm_campaign=weekly_recap&amp;utm_content=2026-08-03",
-    );
-    expect(html).toContain("/api/email/unsubscribe?email=");
-    expect(html).not.toMatch(/unsubscribe[^"]*utm_source/);
     expect(html).toContain("Hugo Demenez");
     expect(html).toContain("Founder of Deltalytix");
-    expect(html).toContain("border-radius:4px");
-    expect(html).toContain("#171717");
-    expect(html).toContain("#E5E5E5");
-    expect(html).toContain("#FAFAFA");
+    expect(html).toContain("—");
+
+    // Zeno chrome shell
+    expect(html).toContain('name="color-scheme" content="light dark"');
+    expect(html).toContain("supported-color-schemes");
+    expect(html).toContain("prefers-color-scheme: dark");
+    expect(html).toContain("[data-ogsc] .dm-bg");
+    expect(html).toContain(".dm-heading");
+    expect(html).toContain(".dm-button");
+    expect(html).toContain("Geist,Arial,Helvetica,sans-serif");
+    expect(html).toContain('width="680"');
+    expect(html).toContain("max-width:680px");
+    expect(html).toContain("padding-top:24px");
+    expect(html).toContain("padding-right:8px");
+    expect(html).toContain("padding-top:38px");
+    expect(html).toContain("padding-left:12px");
+    expect(html).toContain("deltalytix-mark.png");
+    expect(html).toContain("deltalytix-mark-light.png");
+    expect(html).toContain("brand-mark-light");
+    expect(html).toContain("brand-mark-dark");
+    expect(html).toContain("#EFF5EC");
+    expect(html).toContain("dm-surface-green");
+    expect(html).toContain("#222722");
+    expect(html).toContain("border-radius:6px");
+    expect(html).toContain("#e6e8e4");
+    expect(html).toContain("Privacy policy");
+    expect(html).toContain("opted in to weekly trading recaps");
+
+    // Not Drop 9OS-0 gray card
+    expect(html).not.toContain("#FAFAFA");
     expect(html).not.toContain("#F5F5F5");
-    expect(html).toContain("#737373");
-    expect(html).toContain("font-size:22px");
-    expect(html).toContain("line-height:28px");
-    expect(html).toContain("font-size:32px");
-    expect(html).toContain("line-height:36px");
-    expect(html).toContain("font-size:13px");
-    expect(html).toContain("font-weight:600");
-    expect(html).toContain("font-size:14px");
-    expect(html).toContain("line-height:22px");
-    expect(html).toContain("border-top:1px solid #E5E5E5");
-    expect(html).toContain("text-align:left");
-    expect(html).toContain('font-weight:600');
-    expect(html).not.toContain('font-weight:700');
+    expect(html).not.toContain("max-width:600px");
+    expect(html).not.toContain('maxWidth: "600px"');
+    expect(html).not.toContain("#171717");
+    expect(html).not.toContain("{{{RESEND_UNSUBSCRIBE_URL}}}");
+    expect(html).not.toContain("{{{FIRST_NAME|Trader}}}");
     expect(html).not.toContain("#3469DF");
     expect(html).not.toContain("Success Rate");
     expect(html).not.toContain("last 14 days");
     expect(html).not.toContain("learning opportunity");
     expect(html).not.toContain("Trading Activity");
-    expect(html).toContain("—");
+
+    // UTMs on CTAs; unsubscribe untagged
+    expect(html).toContain("utm_source=resend");
+    expect(html).toContain("utm_medium=email");
+    expect(html).toContain("utm_campaign=weekly_recap");
+    expect(html).toContain(
+      "cal.com/hugo-demenez/deltalytix-discussion?utm_source=resend",
+    );
+    expect(html).toContain("/en/dashboard?utm_source=resend");
+    expect(html).toContain(
+      "/api/email/unsubscribe?email=trader%40example.com",
+    );
+    expect(html).not.toMatch(
+      /unsubscribe\?email=[^"']+utm_/,
+    );
   });
 
-  test("renders green-week FR copy", async () => {
+  test("renders green-week FR copy with Zeno chrome", async () => {
     const html = await render(
       TraderStatsEmail({
         ...baseProps,
@@ -103,6 +123,11 @@ describe("TraderStatsEmail weekly recap visual lock", () => {
     expect(html).toContain("Taux de gains");
     expect(html).toContain("Visiter le tableau de bord");
     expect(html).toContain("Fondateur de Deltalytix");
+    expect(html).toContain("Politique de confidentialité");
+    expect(html).toContain("/fr/dashboard?utm_source=resend");
+    expect(html).toContain("/fr/privacy");
+    expect(html).toContain('width="680"');
+    expect(html).not.toContain("#FAFAFA");
   });
 
   test("empty weekdays render an em dash instead of zero", async () => {

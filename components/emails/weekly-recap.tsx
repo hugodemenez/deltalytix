@@ -1,16 +1,5 @@
 import * as React from "react";
-import {
-  Body,
-  Container,
-  Font,
-  Head,
-  Hr,
-  Html,
-  Link,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Head, Html, Preview } from "@react-email/components";
 
 export interface TraderStatsEmailProps {
   email: string;
@@ -29,6 +18,9 @@ export interface TraderStatsEmailProps {
 }
 
 type Locale = "en" | "fr";
+
+const FONT =
+  "Geist,Arial,Helvetica,sans-serif";
 
 const translations = {
   en: {
@@ -49,7 +41,9 @@ const translations = {
       "*This call is 100% free. Take it as an opportunity to speak with a fellow trader and reflect on your trading.",
     founder: "Founder of Deltalytix",
     unsubscribe: "Unsubscribe",
-    sentBy: "This email was sent to you by Deltalytix",
+    privacy: "Privacy policy",
+    optedIn:
+      "You’re receiving this email because you opted in to weekly trading recaps from Deltalytix.",
     weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const,
     months: [
       "Jan",
@@ -84,7 +78,9 @@ const translations = {
       "*Cet appel est 100% gratuit. Profitez-en pour échanger avec un autre trader et réfléchir à votre trading.",
     founder: "Fondateur de Deltalytix",
     unsubscribe: "Se désabonner",
-    sentBy: "Cet email vous a été envoyé par Deltalytix",
+    privacy: "Politique de confidentialité",
+    optedIn:
+      "Vous recevez cet email car vous avez choisi de recevoir le récapitulatif hebdomadaire de Deltalytix.",
     weekdays: ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"] as const,
     months: [
       "janv.",
@@ -103,19 +99,45 @@ const translations = {
   },
 } as const;
 
+/** Zeno PR439 chrome CSS — exact from live broadcasts EN b2119984 / FR 9d018101. */
+const zenoChromeCss = `
+:root { color-scheme: light dark; supported-color-schemes: light dark; }
+@media (prefers-color-scheme: dark) {
+  .dm-bg { background-color:#111411 !important; }
+  .dm-heading { color:#f3f6f2 !important; }
+  .dm-text { color:#b8c1b8 !important; }
+  .dm-surface-green { background-color:#19231b !important; }
+  .dm-surface-neutral { background-color:#1b1f1b !important; }
+  .dm-border { border-color:#343b34 !important; }
+  .dm-button { background-color:#edf2ec !important; }
+  .dm-button-link { color:#151915 !important; }
+  .dm-image { border-color:#394139 !important; }
+}
+[data-ogsc] .dm-bg { background-color:#111411 !important; }
+[data-ogsc] .dm-heading { color:#f3f6f2 !important; }
+[data-ogsc] .dm-text { color:#b8c1b8 !important; }
+[data-ogsc] .dm-surface-green { background-color:#19231b !important; }
+[data-ogsc] .dm-surface-neutral { background-color:#1b1f1b !important; }
+[data-ogsc] .dm-border { border-color:#343b34 !important; }
+[data-ogsc] .dm-button { background-color:#edf2ec !important; }
+[data-ogsc] .dm-button-link { color:#151915 !important; }
+[data-ogsc] .dm-image { border-color:#394139 !important; }
+img.brand-mark-dark { display: none !important; max-height: 0 !important; overflow: hidden !important; }
+@media (prefers-color-scheme: dark) {
+  img.brand-mark-light { display: none !important; max-height: 0 !important; overflow: hidden !important; }
+  img.brand-mark-dark { display: inline-block !important; max-height: none !important; overflow: visible !important; width: 22px !important; height: 22px !important; }
+}
+[data-ogsc] img.brand-mark-light { display: none !important; max-height: 0 !important; overflow: hidden !important; }
+[data-ogsc] img.brand-mark-dark { display: inline-block !important; max-height: none !important; overflow: visible !important; width: 22px !important; height: 22px !important; }
+`;
+
 const colors = {
-  ink: "#171717",
-  muted: "#737373",
-  faint: "#A3A3A3",
-  hairline: "#E5E5E5",
-  canvas: "#FAFAFA",
-  white: "#FFFFFF",
   positive: "#16A34A",
   negative: "#DC2626",
+  ink: "#1e231e",
+  hairline: "#E5E5E5",
+  listBorder: "#e7e9e5",
 } as const;
-
-const fontFamily =
-  'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
 function toUtcDate(date: Date): Date {
   return new Date(
@@ -187,17 +209,6 @@ function formatSignedEuro(pnl: number): string {
   return `${amount}€`;
 }
 
-function withWeeklyRecapUtms(url: string, weekStartIso: string): string {
-  const separator = url.includes("?") ? "&" : "?";
-  const params = new URLSearchParams({
-    utm_source: "resend",
-    utm_medium: "email",
-    utm_campaign: "weekly_recap",
-    utm_content: weekStartIso,
-  });
-  return `${url}${separator}${params.toString()}`;
-}
-
 function pnlColor(pnl: number): string {
   if (pnl > 0) return colors.positive;
   if (pnl < 0) return colors.negative;
@@ -222,6 +233,38 @@ function buildWeekDays(
   });
 }
 
+function withUtm(url: string): string {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}utm_source=resend&utm_medium=email&utm_campaign=weekly_recap`;
+}
+
+function Spacer({ height }: { height: number }) {
+  return (
+    <table
+      width="100%"
+      cellPadding={0}
+      cellSpacing={0}
+      border={0}
+      role="presentation"
+    >
+      <tbody>
+        <tr>
+          <td
+            height={height}
+            style={{
+              height: `${height}px`,
+              fontSize: "1px",
+              lineHeight: "1px",
+            }}
+          >
+            &nbsp;
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
 export default function TraderStatsEmail({
   email,
   firstName = "trader",
@@ -234,29 +277,22 @@ export default function TraderStatsEmail({
   const locale: Locale = language === "en" ? "en" : "fr";
   const t = translations[locale];
 
-  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "[REDACTED]").replace(
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://www.deltalytix.app").replace(
     /\/$/,
     "",
   );
-  const weekStart = resolveWeekStart(dailyPnL);
-  const weekStartIso = dateKey(weekStart);
-  const dashboardUrl = withWeeklyRecapUtms(
-    `${baseUrl}/dashboard`,
-    weekStartIso,
+  const dashboardUrl = withUtm(`${baseUrl}/${locale}/dashboard`);
+  const bookCallUrl = withUtm(
+    "https://cal.com/hugo-demenez/deltalytix-discussion",
   );
+  const privacyUrl = `${baseUrl}/${locale}/privacy`;
   const unsubscribeUrl = email
     ? `${baseUrl}/api/email/unsubscribe?email=${encodeURIComponent(email)}`
     : "#";
-  const bookCallUrl = withWeeklyRecapUtms(
-    "https://cal.com/hugo-demenez/deltalytix-discussion",
-    weekStartIso,
-  );
 
+  const weekStart = resolveWeekStart(dailyPnL);
   const weekDays = buildWeekDays(weekStart, dailyPnL);
-  const weekPnL = weekDays.reduce(
-    (sum, day) => sum + (day.pnl ?? 0),
-    0,
-  );
+  const weekPnL = weekDays.reduce((sum, day) => sum + (day.pnl ?? 0), 0);
 
   const totalTrades = winLossStats.wins + winLossStats.losses;
   const winRate =
@@ -265,433 +301,680 @@ export default function TraderStatsEmail({
       : Math.round((winLossStats.wins / totalTrades) * 100);
 
   const weekRange = formatWeekRange(weekStart, t.months);
+  const weekLabel = t.weekOf(weekRange);
+
+  const labelStyle: React.CSSProperties = {
+    fontFamily: FONT,
+    fontSize: "13px",
+    lineHeight: "18px",
+    color: "#687168",
+    fontWeight: 600,
+    letterSpacing: "0.01em",
+    marginTop: 0,
+    marginRight: 0,
+    marginBottom: "8px",
+    marginLeft: 0,
+  };
+
+  const bodyStyle: React.CSSProperties = {
+    fontFamily: FONT,
+    fontSize: "15px",
+    lineHeight: "24px",
+    color: "#5f665f",
+    marginTop: 0,
+    marginRight: 0,
+    marginBottom: "16px",
+    marginLeft: 0,
+  };
 
   return (
     <Html lang={locale}>
       <Head>
-        <Font
-          fontFamily="Inter"
-          fallbackFontFamily={["Helvetica", "Arial", "sans-serif"]}
-          webFont={{
-            url: "https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2",
-            format: "woff2",
-          }}
-          fontWeight={400}
-          fontStyle="normal"
-        />
-        <Font
-          fontFamily="Inter"
-          fallbackFontFamily={["Helvetica", "Arial", "sans-serif"]}
-          webFont={{
-            // Inter static semibold (600) — required for 9OS-0; 400+700 alone cannot hit the lock.
-            url: "https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff2",
-            format: "woff2",
-          }}
-          fontWeight={600}
-          fontStyle="normal"
-        />
+        <meta name="color-scheme" content="light dark" />
+        <meta name="supported-color-schemes" content="light dark" />
+        <style dangerouslySetInnerHTML={{ __html: zenoChromeCss }} />
       </Head>
       <Preview>{t.preview}</Preview>
-      <Body
+      {/* Zeno chrome shell — tables only, matching PR439 broadcasts */}
+      <body
+        className="dm-bg"
         style={{
-          margin: 0,
-          padding: "24px 0",
-          backgroundColor: colors.canvas,
-          fontFamily,
-          color: colors.ink,
+          marginTop: 0,
+          marginRight: 0,
+          marginBottom: 0,
+          marginLeft: 0,
+          backgroundColor: "#ffffff",
+          fontFamily: FONT,
         }}
       >
-        <Container
-          style={{
-            width: "100%",
-            maxWidth: "600px",
-            margin: "0 auto",
-            backgroundColor: colors.white,
-          }}
+        <table
+          className="dm-bg"
+          width="100%"
+          cellPadding={0}
+          cellSpacing={0}
+          border={0}
+          role="presentation"
+          bgcolor="#ffffff"
         >
-          <Section style={{ padding: "40px 32px 32px" }}>
-            {/* Eyebrow */}
-            <Text
-              style={{
-                margin: "0 0 16px",
-                color: colors.faint,
-                fontSize: "12px",
-                lineHeight: "18px",
-                fontFamily,
-              }}
-            >
-              {t.weekOf(weekRange)}
-            </Text>
-
-            {/* Greeting */}
-            <Text
-              style={{
-                margin: "0 0 8px",
-                color: colors.ink,
-                fontSize: "22px",
-                fontWeight: 600,
-                lineHeight: "28px",
-                fontFamily,
-              }}
-            >
-              {`${t.greeting} ${firstName},`}
-            </Text>
-
-            {/* Disclaimer */}
-            <Text
-              style={{
-                margin: "0 0 28px",
-                color: colors.faint,
-                fontSize: "12px",
-                lineHeight: "18px",
-                fontFamily,
-              }}
-            >
-              {t.disclaimer}
-            </Text>
-
-            {/* Hero Net P&L */}
-            <Text
-              style={{
-                margin: "0 0 4px",
-                color: colors.faint,
-                fontSize: "12px",
-                lineHeight: "18px",
-                fontFamily,
-              }}
-            >
-              {t.netPnL}
-            </Text>
-            <Text
-              style={{
-                margin: "0 0 20px",
-                color: pnlColor(weekPnL),
-                fontSize: "32px",
-                fontWeight: 600,
-                lineHeight: "36px",
-                fontFamily,
-                fontVariantNumeric: "tabular-nums",
-                WebkitFontFeatureSettings: '"tnum"',
-                fontFeatureSettings: '"tnum"',
-              }}
-            >
-              {formatSignedEuro(weekPnL)}
-            </Text>
-
-            {/* Summary */}
-            <Text
-              style={{
-                margin: "0 0 32px",
-                color: colors.ink,
-                fontSize: "14px",
-                lineHeight: "22px",
-                fontFamily,
-              }}
-            >
-              {resultAnalysisIntro}
-            </Text>
-
-            {/* Daily */}
-            <Text
-              style={{
-                margin: "0 0 12px",
-                color: colors.ink,
-                fontSize: "13px",
-                fontWeight: 600,
-                lineHeight: "18px",
-                fontFamily,
-              }}
-            >
-              {t.daily}
-            </Text>
-            <table
-              role="presentation"
-              width="100%"
-              cellPadding={0}
-              cellSpacing={0}
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                marginBottom: "32px",
-              }}
-            >
-              <tbody>
-                {weekDays.map((day, index) => {
-                  const isFirst = index === 0;
-                  return (
-                    <tr key={dateKey(day.date)}>
-                      <td
-                        style={{
-                          padding: "12px 0",
-                          borderTop: isFirst
-                            ? `1px solid ${colors.hairline}`
-                            : "none",
-                          borderBottom: `1px solid ${colors.hairline}`,
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        <span
-                          style={{
-                            color: colors.muted,
-                            fontSize: "14px",
-                            lineHeight: "20px",
-                            fontFamily,
-                          }}
-                        >
-                          {t.weekdays[index]}
-                        </span>
-                        <span
-                          style={{
-                            color: colors.muted,
-                            fontSize: "14px",
-                            lineHeight: "20px",
-                            fontFamily,
-                            marginLeft: "8px",
-                          }}
-                        >
-                          {formatDayMonth(day.date, t.months)}
-                        </span>
-                      </td>
-                      <td
-                        align="right"
-                        style={{
-                          padding: "12px 0",
-                          borderTop: isFirst
-                            ? `1px solid ${colors.hairline}`
-                            : "none",
-                          borderBottom: `1px solid ${colors.hairline}`,
-                          verticalAlign: "middle",
-                          textAlign: "right",
-                          color:
-                            day.pnl === null
-                              ? colors.faint
-                              : pnlColor(day.pnl),
-                          fontSize: "14px",
-                          fontWeight: day.pnl === null ? 400 : 600,
-                          lineHeight: "20px",
-                          fontFamily,
-                          fontVariantNumeric: "tabular-nums",
-                          WebkitFontFeatureSettings: '"tnum"',
-                          fontFeatureSettings: '"tnum"',
-                        }}
-                      >
-                        {day.pnl === null ? "—" : formatSignedEuro(day.pnl)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {/* Wins and losses */}
-            <Text
-              style={{
-                margin: "0 0 12px",
-                color: colors.ink,
-                fontSize: "13px",
-                fontWeight: 600,
-                lineHeight: "18px",
-                fontFamily,
-              }}
-            >
-              {t.winsAndLosses}
-            </Text>
-            <table
-              role="presentation"
-              width="100%"
-              cellPadding={0}
-              cellSpacing={0}
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                marginBottom: "28px",
-              }}
-            >
-              <tbody>
-                {(
-                  [
-                    {
-                      label: t.wins,
-                      value: String(winLossStats.wins),
-                      color: colors.positive,
-                    },
-                    {
-                      label: t.losses,
-                      value: String(winLossStats.losses),
-                      color: colors.negative,
-                    },
-                    {
-                      label: t.winRate,
-                      value: `${winRate}%`,
-                      color: colors.ink,
-                    },
-                  ] as const
-                ).map((row, index, rows) => {
-                  return (
-                    <tr key={row.label}>
-                      <td
-                        style={{
-                          padding: "12px 0",
-                          borderBottom: `1px solid ${colors.hairline}`,
-                          color: colors.muted,
-                          fontSize: "14px",
-                          lineHeight: "20px",
-                          fontFamily,
-                        }}
-                      >
-                        {row.label}
-                      </td>
-                      <td
-                        align="right"
-                        style={{
-                          padding: "12px 0",
-                          borderBottom: `1px solid ${colors.hairline}`,
-                          textAlign: "right",
-                          color: row.color,
-                          fontSize: "14px",
-                          fontWeight: 600,
-                          lineHeight: "20px",
-                          fontFamily,
-                          fontVariantNumeric: "tabular-nums",
-                          WebkitFontFeatureSettings: '"tnum"',
-                          fontFeatureSettings: '"tnum"',
-                        }}
-                      >
-                        {row.value}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {/* Insights */}
-            <Text
-              style={{
-                margin: "0 0 24px",
-                color: colors.ink,
-                fontSize: "14px",
-                lineHeight: "22px",
-                fontFamily,
-              }}
-            >
-              {tipsForNextWeek}
-            </Text>
-
-            {/* CTAs */}
-            <table
-              role="presentation"
-              width="100%"
-              cellPadding={0}
-              cellSpacing={0}
-              style={{ width: "100%", borderCollapse: "collapse" }}
-            >
-              <tbody>
-                <tr>
-                  <td style={{ width: "50%", paddingRight: "8px" }}>
-                    <Link
-                      href={bookCallUrl}
-                      style={{
-                        display: "block",
-                        backgroundColor: colors.ink,
-                        borderRadius: "4px",
-                        color: colors.white,
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        lineHeight: "20px",
-                        fontFamily,
-                        textAlign: "center",
-                        textDecoration: "none",
-                        padding: "12px 16px",
-                      }}
-                    >
-                      {t.bookCall}
-                    </Link>
-                  </td>
-                  <td style={{ width: "50%", paddingLeft: "8px" }}>
-                    <Link
-                      href={dashboardUrl}
-                      style={{
-                        display: "block",
-                        backgroundColor: colors.white,
-                        border: `1px solid ${colors.hairline}`,
-                        borderRadius: "4px",
-                        color: colors.ink,
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        lineHeight: "20px",
-                        fontFamily,
-                        textAlign: "center",
-                        textDecoration: "none",
-                        padding: "12px 16px",
-                      }}
-                    >
-                      {t.visitDashboard}
-                    </Link>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            <Text
-              style={{
-                margin: "12px 0 0",
-                color: colors.faint,
-                fontSize: "12px",
-                lineHeight: "18px",
-                fontFamily,
-              }}
-            >
-              {t.callDisclaimer}
-            </Text>
-
-            {/* Signature */}
-            <Text
-              style={{
-                margin: "32px 0 0",
-                color: colors.ink,
-                fontSize: "14px",
-                lineHeight: "22px",
-                fontFamily,
-              }}
-            >
-              Hugo Demenez
-              <br />
-              <span style={{ color: colors.muted }}>{t.founder}</span>
-            </Text>
-
-            <Hr
-              style={{
-                borderColor: colors.hairline,
-                borderTop: `1px solid ${colors.hairline}`,
-                margin: "28px 0 20px",
-              }}
-            />
-
-            <Text
-              style={{
-                margin: 0,
-                color: colors.faint,
-                fontSize: "12px",
-                lineHeight: "18px",
-                fontFamily,
-                textAlign: "left",
-              }}
-            >
-              {`${t.sentBy} · `}
-              <Link
-                href={unsubscribeUrl}
+          <tbody>
+            <tr>
+              <td
+                className="dm-bg"
+                align="center"
+                bgcolor="#ffffff"
                 style={{
-                  color: colors.faint,
-                  textDecoration: "underline",
+                  backgroundColor: "#ffffff",
+                  paddingTop: "24px",
+                  paddingRight: "8px",
+                  paddingBottom: "24px",
+                  paddingLeft: "8px",
                 }}
               >
-                {t.unsubscribe}
-              </Link>
-            </Text>
-          </Section>
-        </Container>
-      </Body>
+                <table
+                  className="dm-bg"
+                  width="680"
+                  cellPadding={0}
+                  cellSpacing={0}
+                  border={0}
+                  role="presentation"
+                  bgcolor="#ffffff"
+                  style={{
+                    width: "100%",
+                    maxWidth: "680px",
+                    backgroundColor: "#ffffff",
+                  }}
+                >
+                  <tbody>
+                    <tr>
+                      <td
+                        style={{
+                          paddingTop: "38px",
+                          paddingRight: "12px",
+                          paddingBottom: "40px",
+                          paddingLeft: "12px",
+                        }}
+                      >
+                        {/* Header: mark + wordmark | week label */}
+                        <table
+                          width="100%"
+                          cellPadding={0}
+                          cellSpacing={0}
+                          border={0}
+                          role="presentation"
+                        >
+                          <tbody>
+                            <tr>
+                              <td
+                                valign="middle"
+                                align="left"
+                                style={{
+                                  paddingTop: 0,
+                                  paddingRight: 0,
+                                  paddingBottom: "28px",
+                                  paddingLeft: 0,
+                                }}
+                              >
+                                <table
+                                  cellPadding={0}
+                                  cellSpacing={0}
+                                  border={0}
+                                  role="presentation"
+                                >
+                                  <tbody>
+                                    <tr>
+                                      <td
+                                        valign="middle"
+                                        style={{
+                                          paddingTop: 0,
+                                          paddingRight: "8px",
+                                          paddingBottom: 0,
+                                          paddingLeft: 0,
+                                        }}
+                                      >
+                                        <img
+                                          className="brand-mark-light dm-image"
+                                          src="https://www.deltalytix.app/brand/deltalytix-mark.png"
+                                          width={22}
+                                          height={22}
+                                          border={0}
+                                          alt="Deltalytix"
+                                          style={{
+                                            display: "inline-block",
+                                            width: "22px",
+                                            height: "22px",
+                                            border: 0,
+                                            outline: "none",
+                                            textDecoration: "none",
+                                          }}
+                                        />
+                                        <img
+                                          className="brand-mark-dark dm-image"
+                                          src="https://www.deltalytix.app/brand/deltalytix-mark-light.png"
+                                          width={22}
+                                          height={22}
+                                          border={0}
+                                          alt="Deltalytix"
+                                          style={{
+                                            display: "none",
+                                            width: "22px",
+                                            height: "22px",
+                                            border: 0,
+                                            outline: "none",
+                                            textDecoration: "none",
+                                          }}
+                                        />
+                                      </td>
+                                      <td
+                                        valign="middle"
+                                        style={{
+                                          paddingTop: 0,
+                                          paddingRight: 0,
+                                          paddingBottom: 0,
+                                          paddingLeft: 0,
+                                        }}
+                                      >
+                                        <p
+                                          className="dm-heading"
+                                          style={{
+                                            fontFamily: FONT,
+                                            fontSize: "15px",
+                                            lineHeight: "20px",
+                                            color: "#1e231e",
+                                            fontWeight: 700,
+                                            marginTop: 0,
+                                            marginRight: 0,
+                                            marginBottom: 0,
+                                            marginLeft: 0,
+                                          }}
+                                        >
+                                          Deltalytix
+                                        </p>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </td>
+                              <td
+                                valign="middle"
+                                align="right"
+                                style={{
+                                  paddingTop: 0,
+                                  paddingRight: 0,
+                                  paddingBottom: "28px",
+                                  paddingLeft: 0,
+                                }}
+                              >
+                                <p
+                                  className="dm-text"
+                                  style={{
+                                    fontFamily: FONT,
+                                    fontSize: "13px",
+                                    lineHeight: "20px",
+                                    color: "#8a908a",
+                                    fontWeight: 400,
+                                    marginTop: 0,
+                                    marginRight: 0,
+                                    marginBottom: 0,
+                                    marginLeft: 0,
+                                  }}
+                                >
+                                  {weekLabel}
+                                </p>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        {/* 9OS-0 content slot */}
+                        <p className="dm-text" style={bodyStyle}>
+                          {`${t.greeting} ${firstName},`}
+                        </p>
+                        <p
+                          className="dm-text"
+                          style={{
+                            ...bodyStyle,
+                            fontSize: "13px",
+                            lineHeight: "18px",
+                            color: "#8a908a",
+                            marginBottom: "24px",
+                          }}
+                        >
+                          {t.disclaimer}
+                        </p>
+
+                        <p className="dm-text" style={labelStyle}>
+                          {t.netPnL}
+                        </p>
+                        <h1
+                          className="dm-heading"
+                          style={{
+                            fontFamily: FONT,
+                            fontSize: "36px",
+                            lineHeight: "39px",
+                            color: pnlColor(weekPnL),
+                            fontWeight: 400,
+                            letterSpacing: "-0.045em",
+                            marginTop: 0,
+                            marginRight: 0,
+                            marginBottom: "16px",
+                            marginLeft: 0,
+                            fontVariantNumeric: "tabular-nums",
+                            WebkitFontFeatureSettings: '"tnum"',
+                            fontFeatureSettings: '"tnum"',
+                          }}
+                        >
+                          {formatSignedEuro(weekPnL)}
+                        </h1>
+
+                        <p className="dm-text" style={bodyStyle}>
+                          {resultAnalysisIntro}
+                        </p>
+
+                        <Spacer height={16} />
+
+                        <p className="dm-text" style={labelStyle}>
+                          {t.daily}
+                        </p>
+                        <table
+                          width="100%"
+                          cellPadding={0}
+                          cellSpacing={0}
+                          border={0}
+                          role="presentation"
+                          style={{ width: "100%", borderCollapse: "collapse" }}
+                        >
+                          <tbody>
+                            {weekDays.map((day, index) => {
+                              const isFirst = index === 0;
+                              return (
+                                <tr key={dateKey(day.date)}>
+                                  <td
+                                    className="dm-border"
+                                    style={{
+                                      paddingTop: "12px",
+                                      paddingBottom: "12px",
+                                      borderTop: isFirst
+                                        ? `1px solid ${colors.listBorder}`
+                                        : "none",
+                                      borderBottom: `1px solid ${colors.listBorder}`,
+                                      verticalAlign: "middle",
+                                    }}
+                                  >
+                                    <span
+                                      className="dm-text"
+                                      style={{
+                                        fontFamily: FONT,
+                                        fontSize: "15px",
+                                        lineHeight: "24px",
+                                        color: "#5f665f",
+                                      }}
+                                    >
+                                      {t.weekdays[index]}
+                                    </span>
+                                    <span
+                                      className="dm-text"
+                                      style={{
+                                        fontFamily: FONT,
+                                        fontSize: "15px",
+                                        lineHeight: "24px",
+                                        color: "#5f665f",
+                                        marginLeft: "8px",
+                                      }}
+                                    >
+                                      {formatDayMonth(day.date, t.months)}
+                                    </span>
+                                  </td>
+                                  <td
+                                    className="dm-border"
+                                    align="right"
+                                    style={{
+                                      paddingTop: "12px",
+                                      paddingBottom: "12px",
+                                      borderTop: isFirst
+                                        ? `1px solid ${colors.listBorder}`
+                                        : "none",
+                                      borderBottom: `1px solid ${colors.listBorder}`,
+                                      verticalAlign: "middle",
+                                      textAlign: "right",
+                                      color:
+                                        day.pnl === null
+                                          ? "#8a908a"
+                                          : pnlColor(day.pnl),
+                                      fontFamily: FONT,
+                                      fontSize: "15px",
+                                      fontWeight: day.pnl === null ? 400 : 600,
+                                      lineHeight: "24px",
+                                      fontVariantNumeric: "tabular-nums",
+                                      WebkitFontFeatureSettings: '"tnum"',
+                                      fontFeatureSettings: '"tnum"',
+                                    }}
+                                  >
+                                    {day.pnl === null
+                                      ? "—"
+                                      : formatSignedEuro(day.pnl)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+
+                        <Spacer height={28} />
+
+                        <p className="dm-text" style={labelStyle}>
+                          {t.winsAndLosses}
+                        </p>
+                        <table
+                          width="100%"
+                          cellPadding={0}
+                          cellSpacing={0}
+                          border={0}
+                          role="presentation"
+                          style={{ width: "100%", borderCollapse: "collapse" }}
+                        >
+                          <tbody>
+                            {(
+                              [
+                                {
+                                  label: t.wins,
+                                  value: String(winLossStats.wins),
+                                  color: colors.positive,
+                                },
+                                {
+                                  label: t.losses,
+                                  value: String(winLossStats.losses),
+                                  color: colors.negative,
+                                },
+                                {
+                                  label: t.winRate,
+                                  value: `${winRate}%`,
+                                  color: colors.ink,
+                                },
+                              ] as const
+                            ).map((row) => (
+                              <tr key={row.label}>
+                                <td
+                                  className="dm-border"
+                                  style={{
+                                    paddingTop: "12px",
+                                    paddingBottom: "12px",
+                                    borderBottom: `1px solid ${colors.listBorder}`,
+                                    fontFamily: FONT,
+                                    fontSize: "15px",
+                                    lineHeight: "24px",
+                                    color: "#5f665f",
+                                  }}
+                                >
+                                  {row.label}
+                                </td>
+                                <td
+                                  className="dm-border"
+                                  align="right"
+                                  style={{
+                                    paddingTop: "12px",
+                                    paddingBottom: "12px",
+                                    borderBottom: `1px solid ${colors.listBorder}`,
+                                    textAlign: "right",
+                                    color: row.color,
+                                    fontFamily: FONT,
+                                    fontSize: "15px",
+                                    fontWeight: 600,
+                                    lineHeight: "24px",
+                                    fontVariantNumeric: "tabular-nums",
+                                    WebkitFontFeatureSettings: '"tnum"',
+                                    fontFeatureSettings: '"tnum"',
+                                  }}
+                                >
+                                  {row.value}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+
+                        <Spacer height={28} />
+
+                        <p className="dm-text" style={bodyStyle}>
+                          {tipsForNextWeek}
+                        </p>
+
+                        {/* Soft green CTA panel — Zeno dm-surface-green */}
+                        <table
+                          className="dm-surface-green"
+                          width="100%"
+                          cellPadding={0}
+                          cellSpacing={0}
+                          border={0}
+                          role="presentation"
+                          bgcolor="#EFF5EC"
+                          style={{
+                            backgroundColor: "#EFF5EC",
+                            borderRadius: "12px",
+                          }}
+                        >
+                          <tbody>
+                            <tr>
+                              <td
+                                className="dm-surface-green"
+                                bgcolor="#EFF5EC"
+                                style={{
+                                  backgroundColor: "#EFF5EC",
+                                  paddingTop: "24px",
+                                  paddingRight: "18px",
+                                  paddingBottom: "24px",
+                                  paddingLeft: "18px",
+                                }}
+                              >
+                                <table
+                                  cellPadding={0}
+                                  cellSpacing={0}
+                                  border={0}
+                                  role="presentation"
+                                >
+                                  <tbody>
+                                    <tr>
+                                      <td
+                                        className="dm-button"
+                                        bgcolor="#222722"
+                                        style={{
+                                          backgroundColor: "#222722",
+                                          borderRadius: "6px",
+                                          paddingTop: "13px",
+                                          paddingRight: "18px",
+                                          paddingBottom: "13px",
+                                          paddingLeft: "18px",
+                                        }}
+                                      >
+                                        <a
+                                          className="dm-button-link"
+                                          href={bookCallUrl}
+                                          style={{
+                                            fontFamily: FONT,
+                                            fontSize: "14px",
+                                            lineHeight: "20px",
+                                            color: "#ffffff",
+                                            fontWeight: 700,
+                                            textDecoration: "none",
+                                          }}
+                                        >
+                                          {t.bookCall}
+                                        </a>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                                <p
+                                  className="dm-text"
+                                  style={{
+                                    fontFamily: FONT,
+                                    fontSize: "14px",
+                                    lineHeight: "22px",
+                                    color: "#5f665f",
+                                    marginTop: "16px",
+                                    marginRight: 0,
+                                    marginBottom: 0,
+                                    marginLeft: 0,
+                                  }}
+                                >
+                                  <a
+                                    className="dm-text"
+                                    href={dashboardUrl}
+                                    style={{
+                                      fontFamily: FONT,
+                                      fontSize: "14px",
+                                      lineHeight: "22px",
+                                      color: "#3E7550",
+                                      fontWeight: 600,
+                                      textDecoration: "underline",
+                                    }}
+                                  >
+                                    {t.visitDashboard}
+                                  </a>
+                                </p>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        <p
+                          className="dm-text"
+                          style={{
+                            fontFamily: FONT,
+                            fontSize: "12px",
+                            lineHeight: "19px",
+                            color: "#8a908a",
+                            marginTop: "12px",
+                            marginRight: 0,
+                            marginBottom: 0,
+                            marginLeft: 0,
+                          }}
+                        >
+                          {t.callDisclaimer}
+                        </p>
+
+                        <p
+                          className="dm-heading"
+                          style={{
+                            fontFamily: FONT,
+                            fontSize: "15px",
+                            lineHeight: "24px",
+                            color: "#1e231e",
+                            marginTop: "32px",
+                            marginRight: 0,
+                            marginBottom: 0,
+                            marginLeft: 0,
+                          }}
+                        >
+                          Hugo Demenez
+                          <br />
+                          <span
+                            className="dm-text"
+                            style={{
+                              fontFamily: FONT,
+                              fontSize: "13px",
+                              lineHeight: "20px",
+                              color: "#5f665f",
+                            }}
+                          >
+                            {t.founder}
+                          </span>
+                        </p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td
+                        className="dm-border"
+                        style={{
+                          borderTopWidth: "1px",
+                          borderTopStyle: "solid",
+                          borderTopColor: "#e6e8e4",
+                          paddingTop: "24px",
+                          paddingRight: "12px",
+                          paddingBottom: "30px",
+                          paddingLeft: "12px",
+                        }}
+                      >
+                        <p
+                          className="dm-text"
+                          style={{
+                            fontFamily: FONT,
+                            fontSize: "13px",
+                            lineHeight: "20px",
+                            color: "#777e77",
+                            fontWeight: 700,
+                            marginTop: 0,
+                            marginRight: 0,
+                            marginBottom: "6px",
+                            marginLeft: 0,
+                          }}
+                        >
+                          Deltalytix
+                        </p>
+                        <p
+                          className="dm-text"
+                          style={{
+                            fontFamily: FONT,
+                            fontSize: "12px",
+                            lineHeight: "19px",
+                            color: "#8a908a",
+                            marginTop: 0,
+                            marginRight: 0,
+                            marginBottom: "8px",
+                            marginLeft: 0,
+                          }}
+                        >
+                          {t.optedIn}
+                        </p>
+                        <p
+                          className="dm-text"
+                          style={{
+                            fontFamily: FONT,
+                            fontSize: "12px",
+                            lineHeight: "19px",
+                            color: "#7d837d",
+                            marginTop: 0,
+                            marginRight: 0,
+                            marginBottom: 0,
+                            marginLeft: 0,
+                          }}
+                        >
+                          <a
+                            className="dm-text"
+                            href={unsubscribeUrl}
+                            style={{
+                              fontFamily: FONT,
+                              fontSize: "12px",
+                              lineHeight: "19px",
+                              color: "#697069",
+                              textDecoration: "underline",
+                            }}
+                          >
+                            {t.unsubscribe}
+                          </a>
+                          {" · "}
+                          <a
+                            className="dm-text"
+                            href={privacyUrl}
+                            style={{
+                              fontFamily: FONT,
+                              fontSize: "12px",
+                              lineHeight: "19px",
+                              color: "#697069",
+                              textDecoration: "underline",
+                            }}
+                          >
+                            {t.privacy}
+                          </a>
+                        </p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </body>
     </Html>
   );
 }
