@@ -239,8 +239,17 @@ export default {
     "You already own Lifetime access. It cannot be downgraded, and there is nothing else to purchase.",
   "dashboard.billingSheet.manageFull": "Open full billing settings",
   "dashboard.billing.manage": "Manage billing",
+  "dashboard.billingPage.upgradeWithPlus": "Upgrade with Plus",
+  "dashboard.billingPage.cadenceNote":
+    "Monthly · Quarterly · Yearly · Lifetime · Cancel anytime",
+  "dashboard.billingPage.invoices": "Invoices",
+  "dashboard.billingPage.noInvoicesTitle": "No invoices yet",
+  "dashboard.billingPage.noInvoicesDescription":
+    "Invoices appear here after your first Plus payment.",
+  "dashboard.billingPage.freeManagementUnavailable":
+    "Pause / cancel isn’t available on Free.",
   "dashboard.refreshData": "Refresh Data",
-  "filters.active.title": "Active filters",
+  "filters.active.title": "Active",
   "filters.active.clearAll": "Clear all",
   "dashboard.inviteUsers": "Invite users",
   "dashboard.email": "Email",

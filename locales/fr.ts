@@ -242,8 +242,17 @@ export default {
     "Vous possédez déjà l’accès à vie. Il ne peut pas être rétrogradé et il n’y a rien d’autre à acheter.",
   "dashboard.billingSheet.manageFull": "Ouvrir les paramètres de facturation",
   "dashboard.billing.manage": "Gérer la facturation",
+  "dashboard.billingPage.upgradeWithPlus": "Passer à Plus",
+  "dashboard.billingPage.cadenceNote":
+    "Mensuel · Trimestriel · Annuel · À vie · Annulable à tout moment",
+  "dashboard.billingPage.invoices": "Factures",
+  "dashboard.billingPage.noInvoicesTitle": "Aucune facture pour le moment",
+  "dashboard.billingPage.noInvoicesDescription":
+    "Les factures apparaîtront ici après votre premier paiement Plus.",
+  "dashboard.billingPage.freeManagementUnavailable":
+    "La pause et l’annulation ne sont pas disponibles avec Free.",
   "dashboard.refreshData": "Actualiser les données",
-  "filters.active.title": "Filtres actifs",
+  "filters.active.title": "Actifs",
   "filters.active.clearAll": "Tout effacer",
   "dashboard.inviteUsers": "Inviter des utilisateurs",
   "dashboard.email": "Email",

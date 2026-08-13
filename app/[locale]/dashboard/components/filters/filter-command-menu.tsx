@@ -4,8 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList, CommandSeparator } from "@/components/ui/command"
 import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
@@ -39,7 +38,6 @@ export function FilterCommandMenu({
   const { isMobile, setDateRange, setWeekdayFilter } = useData()
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
-  const [inputWidth, setInputWidth] = useState<number | undefined>(undefined)
   const [isParsingDate, setIsParsingDate] = useState(false)
   const isMobileDevice = useMediaQuery(`(max-width: ${compactBreakpoint}px)`)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -53,36 +51,6 @@ export function FilterCommandMenu({
   const locale = params.locale as string
   const timezone = useUserStore(state => state.timezone)
   const dateParseTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Measure input width and focus when opened
-  useEffect(() => {
-    if (isMobileDevice) return
-
-    const updateWidth = () => {
-      if (inputRef.current) {
-        const width = inputRef.current.offsetWidth
-        setInputWidth(width)
-      }
-    }
-
-    // Initial measurement
-    updateWidth()
-
-    // Set up resize observer
-    const resizeObserver = new ResizeObserver(updateWidth)
-    if (inputRef.current) {
-      resizeObserver.observe(inputRef.current)
-    }
-
-    // Focus when opened
-    if (open && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 100)
-    }
-
-    return () => {
-      resizeObserver.disconnect()
-    }
-  }, [open, isMobileDevice])
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -287,60 +255,30 @@ export function FilterCommandMenu({
   // Check if search value contains date keywords to show hint
   const showDateHint = searchValue.trim().length >= 3 && containsDateKeywords(searchValue) && !isParsingDate
 
-  const handleCategoryClick = useCallback((sectionId: 'dateRange' | 'pnl' | 'instruments' | 'tags' | 'accounts') => {
-    const sectionMap = {
-      dateRange: dateRangeSectionRef,
-      pnl: pnlSectionRef,
-      instruments: instrumentSectionRef,
-      tags: tagSectionRef,
-      accounts: accountSectionRef,
-    }
-
-    const target = sectionMap[sectionId]?.current
-    if (!target) return
-
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
-
-    // Move focus to the first item inside the section for quick interaction
-    const firstItem = target.querySelector('[cmdk-item]') as HTMLElement | null
-    if (firstItem) {
-      requestAnimationFrame(() => firstItem.focus())
-    }
-  }, [])
-
-  const categories = [
-    { id: 'dateRange' as const, label: t('filters.commandMenu.sections.dateRange') },
-    { id: 'pnl' as const, label: t('filters.commandMenu.sections.pnl') },
-    { id: 'instruments' as const, label: t('filters.commandMenu.sections.instruments') },
-    { id: 'tags' as const, label: t('filters.commandMenu.sections.tags') },
-    { id: 'accounts' as const, label: t('filters.commandMenu.sections.accounts') },
-  ]
-
   // Trigger on desktop: real input that opens popover and controls search
   const DesktopTriggerInput = (
-    <PopoverAnchor asChild>
-      <div className={cn("relative w-full max-w-[400px]", className)}>
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
-        <Input
-          ref={inputRef}
-          value={searchValue}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onFocus={() => {
-            if (!open) setOpen(true)
-          }}
-          onClick={() => {
-            if (!open) setOpen(true)
-          }}
-          placeholder={t('filters.commandMenu.searchPlaceholder')}
-          className={cn(
-            "pl-9 pr-20 w-full transition-all",
-            variant === "toolbar" && "h-10 rounded-full",
-            isParsingDate && "opacity-50",
-            isParsingDate && "border-primary ring-2 ring-primary ring-offset-2 animate-pulse"
-          )}
-          disabled={isParsingDate}
-        />
+    <div className={cn("relative w-full max-w-[400px]", className)}>
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+      <Input
+        ref={inputRef}
+        value={searchValue}
+        onChange={(e) => handleSearchChange(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onFocus={() => {
+          if (!open) setOpen(true)
+        }}
+        onClick={() => {
+          if (!open) setOpen(true)
+        }}
+        placeholder={t('filters.commandMenu.searchPlaceholder')}
+        className={cn(
+          "pl-9 pr-20 w-full transition-all",
+          variant === "toolbar" && "h-10 rounded-full",
+          isParsingDate && "opacity-50",
+          isParsingDate && "border-primary ring-2 ring-primary ring-offset-2 animate-pulse"
+        )}
+        disabled={isParsingDate}
+      />
         {/* Animated outline when parsing */}
         {isParsingDate && (
           <>
@@ -351,16 +289,15 @@ export function FilterCommandMenu({
           </>
         )}
         {/* Date hint with Enter key */}
-        {showDateHint && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-muted-foreground pointer-events-none">
-            <span className="hidden sm:inline">Press</span>
-            <KbdGroup>
-              <Kbd>⏎</Kbd>
-            </KbdGroup>
-          </div>
-        )}
-      </div>
-    </PopoverAnchor>
+      {showDateHint && (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-muted-foreground pointer-events-none">
+          <span className="hidden sm:inline">Press</span>
+          <KbdGroup>
+            <Kbd>⏎</Kbd>
+          </KbdGroup>
+        </div>
+      )}
+    </div>
   )
 
   // Handle Command component keyboard events to detect when at top
@@ -412,7 +349,7 @@ export function FilterCommandMenu({
     <Command 
       ref={commandRef} 
       className={cn(
-        "rounded-lg border",
+        "rounded-none border-0",
         (isMobileDevice || isMobile) && "h-full"
       )} 
       shouldFilter={false}
@@ -467,24 +404,6 @@ export function FilterCommandMenu({
         showClearAll
         className="border-b border-[#E5E5E5] bg-white px-3 py-2 dark:border-border dark:bg-background"
       />
-      <div className="px-3 pt-3 pb-2 border-b bg-muted/40">
-        <p className="text-xs font-medium text-muted-foreground mb-2">
-          {t('filters.commandMenu.categories.title')}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {categories.map(category => (
-            <Button
-              key={category.id}
-              variant="secondary"
-              size="sm"
-              className="h-8 rounded-full"
-              onClick={() => handleCategoryClick(category.id)}
-            >
-              {category.label}
-            </Button>
-          ))}
-        </div>
-      </div>
       <CommandList className={cn(
         "overflow-y-auto",
         (isMobileDevice || isMobile) 
@@ -505,12 +424,12 @@ export function FilterCommandMenu({
 
         <CommandSeparator />
 
-        {/* PnL Section */}
+        {/* Accounts Section */}
         <CommandGroup
-          ref={pnlSectionRef}
-          heading={t('filters.commandMenu.sections.pnl')}
+          ref={accountSectionRef}
+          heading={t('filters.commandMenu.sections.accounts')}
         >
-          <PnlSection searchValue={searchValue} />
+          <AccountSection searchValue={searchValue} />
         </CommandGroup>
 
         <CommandSeparator />
@@ -535,59 +454,39 @@ export function FilterCommandMenu({
 
         <CommandSeparator />
 
-        {/* Accounts Section */}
+        {/* PnL Section */}
         <CommandGroup
-          ref={accountSectionRef}
-          heading={t('filters.commandMenu.sections.accounts')}
+          ref={pnlSectionRef}
+          heading={t('filters.commandMenu.sections.pnl')}
         >
-          <AccountSection searchValue={searchValue} />
+          <PnlSection searchValue={searchValue} />
         </CommandGroup>
+
       </CommandList>
     </Command>
   )
 
-  if (isMobileDevice || isMobile) {
-    return (
+  return (
+    <>
+      {isMobileDevice || isMobile
+        ? MobileTriggerButton
+        : DesktopTriggerInput}
       <Sheet open={open} onOpenChange={handleOpenChange}>
-        <SheetTrigger asChild>
-          {MobileTriggerButton}
-        </SheetTrigger>
-        <SheetContent side="right" className="w-[90vw] sm:max-w-[640px] flex flex-col h-dvh overflow-hidden p-0">
-          <SheetHeader className="px-4 pt-4">
-            <SheetTitle>{t('filters.title')}</SheetTitle>
+        <SheetContent
+          side="right"
+          overlayClassName="bg-black/15 dark:bg-black/70"
+          className="flex h-dvh w-[90vw] flex-col overflow-hidden border-l border-[#E5E5E5] bg-white p-0 dark:border-border dark:bg-background sm:max-w-[420px]"
+        >
+          <SheetHeader className="shrink-0 border-b border-[#E5E5E5] px-4 py-4 text-left dark:border-border">
+            <SheetTitle className="text-lg font-semibold tracking-[-0.025em]">
+              {t('filters.title')}
+            </SheetTitle>
           </SheetHeader>
-          <div className="flex-1 overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-hidden">
             {CommandContent}
           </div>
         </SheetContent>
       </Sheet>
-    )
-  }
-
-  return (
-    <Popover open={open} onOpenChange={handleOpenChange} modal={false}>
-      {DesktopTriggerInput}
-      <PopoverContent 
-        className="p-0" 
-        style={{
-          width: `min(${Math.max(inputWidth ?? 0, 400)}px, calc(100vw - 2rem))`,
-        }}
-        align="start"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onInteractOutside={(e) => {
-          // Don't close if clicking on the input or its container
-          const target = e.target as Node
-          if (inputRef.current && (
-            inputRef.current.contains(target) || 
-            inputRef.current === target ||
-            inputRef.current.parentElement?.contains(target)
-          )) {
-            e.preventDefault()
-          }
-        }}
-      >
-        {CommandContent}
-      </PopoverContent>
-    </Popover>
+    </>
   )
 }

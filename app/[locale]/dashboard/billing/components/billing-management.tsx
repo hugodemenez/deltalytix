@@ -80,64 +80,18 @@ export default function BillingManagement() {
 
   return (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-[4px] border border-[#E5E5E5] bg-white dark:border-border dark:bg-card">
-        <BillingPlanList
-          contentClassName="p-4 sm:p-6"
-          footerClassName="p-4 sm:p-6"
-        />
-      </section>
-
-      {canManageRecurring ? (
-        <section>
-          <div className="mb-3">
-            <h2 className="text-lg font-semibold tracking-[-0.025em] text-[#171717] dark:text-foreground">
-              {t('billing.manageSubscription')}
-            </h2>
-            <p className="mt-1 text-sm text-[#686D67] dark:text-muted-foreground">
-              {t('billing.manageSubscriptionDesc')}
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 rounded-[4px] border border-[#E5E5E5] bg-white p-4 dark:border-border dark:bg-card sm:flex-row sm:items-center">
-            {subscription.cancel_at_period_end ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-[4px]"
-                onClick={() => void handleSubscriptionAction('resume')}
-              >
-                {t('billing.resumeSubscription')}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-[4px] text-destructive hover:text-destructive"
-                onClick={() => setCancelOpen(true)}
-              >
-                {t('billing.cancelSubscription')}
-              </Button>
-            )}
-            {portalUrl ? (
-              <Button
-                variant="outline"
-                className="rounded-[4px]"
-                asChild
-              >
-                <Link href={portalUrl}>{t('billing.managePaymentMethod')}</Link>
-              </Button>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
+      <BillingPlanList
+        variant="page"
+        defaultPeriod="yearly"
+        contentClassName="gap-4"
+        footerClassName="pt-0"
+      />
 
       <section>
         <div className="mb-3">
-          <h2 className="text-lg font-semibold tracking-[-0.025em] text-[#171717] dark:text-foreground">
-            {t('billing.paymentHistory')}
+          <h2 className="text-xs font-medium text-[#686D67] dark:text-muted-foreground">
+            {t('dashboard.billingPage.invoices')}
           </h2>
-          <p className="mt-1 text-sm text-[#686D67] dark:text-muted-foreground">
-            {t('billing.paymentHistoryDesc')}
-          </p>
         </div>
         <div className="overflow-hidden rounded-[4px] border border-[#E5E5E5] bg-white dark:border-border dark:bg-card">
           {isLoading ? (
@@ -200,12 +154,61 @@ export default function BillingManagement() {
               ))}
             </div>
           ) : (
-            <p className="p-4 text-sm text-[#686D67] dark:text-muted-foreground">
-              {t('billing.noPaymentHistory')}
-            </p>
+            <div className="p-4">
+              <p className="text-sm font-medium text-[#171717] dark:text-foreground">
+                {t('dashboard.billingPage.noInvoicesTitle')}
+              </p>
+              <p className="mt-1 text-sm text-[#686D67] dark:text-muted-foreground">
+                {t('dashboard.billingPage.noInvoicesDescription')}
+              </p>
+            </div>
           )}
         </div>
       </section>
+
+      {canManageRecurring ? (
+        <section>
+          <div className="mb-3">
+            <h2 className="text-xs font-medium text-[#686D67] dark:text-muted-foreground">
+              {t('billing.manageSubscription')}
+            </h2>
+          </div>
+          <div className="flex flex-col gap-3 rounded-[4px] border border-[#E5E5E5] bg-white p-4 dark:border-border dark:bg-card sm:flex-row sm:items-center">
+            {subscription.cancel_at_period_end ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-[4px]"
+                onClick={() => void handleSubscriptionAction('resume')}
+              >
+                {t('billing.resumeSubscription')}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-[4px] text-destructive hover:text-destructive"
+                onClick={() => setCancelOpen(true)}
+              >
+                {t('billing.cancelSubscription')}
+              </Button>
+            )}
+            {portalUrl ? (
+              <Button
+                variant="outline"
+                className="rounded-[4px]"
+                asChild
+              >
+                <Link href={portalUrl}>{t('billing.managePaymentMethod')}</Link>
+              </Button>
+            ) : null}
+          </div>
+        </section>
+      ) : (
+        <p className="text-sm text-[#A3A3A3]">
+          {t('dashboard.billingPage.freeManagementUnavailable')}
+        </p>
+      )}
 
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <DialogContent className="rounded-[4px]">

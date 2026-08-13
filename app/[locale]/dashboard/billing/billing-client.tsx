@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useI18n } from '@/locales/client'
 import BillingManagement from './components/billing-management'
 
@@ -7,19 +8,24 @@ export default function BillingPage() {
   const t = useI18n()
 
   return (
-    <main className="min-h-[calc(100dvh-var(--navbar-height,4rem))] bg-[#FAFAFA] px-4 py-8 dark:bg-background sm:px-6 lg:px-10 lg:py-12">
-      <div className="mx-auto w-full max-w-3xl">
-        <header className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-[-0.03em] text-[#171717] dark:text-foreground sm:text-3xl">
-            {t('dashboard.billingSheet.title')}
-          </h1>
-          <p className="mt-1 text-sm text-[#686D67] dark:text-muted-foreground">
-            {t('dashboard.billingSheet.description')}
-          </p>
-        </header>
-
-        <BillingManagement />
+    <div className="min-h-[calc(100dvh-var(--navbar-height,4rem))] bg-[#FAFAFA] dark:bg-background">
+      <div className="flex h-12 items-center gap-4 border-b border-[#E5E5E5] px-4 text-sm dark:border-border sm:px-6 lg:px-10">
+        <Link
+          href="/dashboard"
+          className="text-[#686D67] transition-colors hover:text-[#171717] dark:text-muted-foreground dark:hover:text-foreground"
+        >
+          ← {t('landing.navbar.dashboard')}
+        </Link>
+        <span className="h-5 w-px bg-[#E5E5E5] dark:bg-border" aria-hidden />
+        <span className="font-semibold text-[#171717] dark:text-foreground">
+          {t('dashboard.billingSheet.title')}
+        </span>
       </div>
-    </main>
+      <main className="px-4 py-8 sm:px-6 lg:px-10">
+        <div className="mx-auto w-full max-w-xl">
+        <BillingManagement />
+        </div>
+      </main>
+    </div>
   )
 }
