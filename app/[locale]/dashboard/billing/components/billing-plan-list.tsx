@@ -179,7 +179,7 @@ export function BillingPlanList({
         >
           <div>
             {isPage ? (
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-[#686D67] dark:text-muted-foreground">
+              <p className="mb-2 text-xs font-medium text-[#686D67] dark:text-muted-foreground">
                 {t('dashboard.billingSheet.currentPlan')}
               </p>
             ) : null}
@@ -237,7 +237,7 @@ export function BillingPlanList({
               <p
                 className={cn(
                   'text-xs font-medium tracking-[-0.01em] text-[#686D67] dark:text-muted-foreground',
-                  isPage && 'text-[11px] uppercase tracking-[0.06em]'
+                  isPage && 'tracking-normal'
                 )}
               >
                 {isPage
