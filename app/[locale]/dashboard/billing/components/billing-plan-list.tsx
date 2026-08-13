@@ -41,7 +41,6 @@ export function BillingPlanList({
   footerClassName,
   fullSettingsHref,
   onOpenFullSettings,
-  onLifetimeDone,
 }: {
   variant?: 'sheet' | 'page'
   defaultPeriod?: BillingPeriod
@@ -50,7 +49,6 @@ export function BillingPlanList({
   footerClassName?: string
   fullSettingsHref?: string
   onOpenFullSettings?: () => void
-  onLifetimeDone?: () => void
 }) {
   const t = useI18n()
   const locale = useCurrentLocale()
@@ -65,9 +63,28 @@ export function BillingPlanList({
   const [referralCode, setReferralCode] = useState<string | null>(null)
 
   const isLifetime = isLifetimeSubscription(subscription)
-  const currentLabel = isLifetime
-    ? `${t('pricing.plus.name')} · ${t('pricing.lifetime')}`
-    : subscription?.plan?.name?.trim() || t('pricing.free.name')
+  const currentPeriod: BillingPeriod | null = !subscription
+    ? null
+    : subscription.plan.interval === 'lifetime'
+      ? 'lifetime'
+      : subscription.plan.interval === 'year'
+        ? 'yearly'
+        : subscription.plan.interval === 'quarter'
+          ? 'quarterly'
+          : 'monthly'
+  const currentPeriodLabel =
+    currentPeriod === 'lifetime'
+      ? t('pricing.lifetime')
+      : currentPeriod === 'yearly'
+        ? t('pricing.yearly')
+        : currentPeriod === 'quarterly'
+          ? t('pricing.quarterly')
+          : currentPeriod === 'monthly'
+            ? t('pricing.monthly')
+            : null
+  const currentLabel = subscription
+    ? `${t('pricing.plus.name')} · ${currentPeriodLabel}`
+    : t('pricing.free.name')
   const isPaid = planIsPaid(subscription?.plan?.name)
   const isPage = variant === 'page'
   const periods = useMemo(
@@ -79,9 +96,11 @@ export function BillingPlanList({
     : (periods[0] ?? selected)
   const currentPrice = !subscription
     ? formatBillingAmount(0, currency, locale)
-    : subscription.plan.interval === 'lifetime'
-      ? null
-      : formatBillingAmount(subscription.plan.amount / 100, currency, locale)
+    : formatBillingAmount(
+        billingPeriodCharge(currentPeriod ?? 'monthly'),
+        currency,
+        locale
+      )
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -170,7 +189,8 @@ export function BillingPlanList({
                 isPaid
                   ? 'border-[#E5E5E5] bg-white dark:border-border dark:bg-muted/40'
                   : 'border-[#E5E5E5] bg-[#F7FBF5] dark:border-border dark:bg-[#243028]',
-                isPage && 'flex items-center justify-between gap-4'
+                (isPage || isLifetime) &&
+                  'flex items-center justify-between gap-4'
               )}
             >
               <div>
@@ -187,18 +207,15 @@ export function BillingPlanList({
                     {isLifetime
                       ? t('dashboard.billingSheet.lifetimePaid')
                       : isPaid
-                        ? `${t('dashboard.billingSheet.fullAccess')} · ${subscription ? periodLabel(
-                            subscription.plan.interval === 'month'
-                              ? 'monthly'
-                              : subscription.plan.interval === 'quarter'
-                                ? 'quarterly'
-                                : 'yearly'
-                          ) : ''}`
-                        : `${t('dashboard.billingSheet.limitedWidgets')}${isPage && currentPrice ? ` · ${currentPrice}` : ''}`}
+                        ? `${t('dashboard.billingSheet.fullAccess')} · ${currentPeriodLabel}`
+                        : t('dashboard.billingSheet.limitedWidgets')}
+                    {(isPaid || isPage) && currentPrice
+                      ? ` · ${currentPrice}`
+                      : ''}
                   </p>
                 </div>
               </div>
-              {isPage ? (
+              {isPage || isLifetime ? (
                 <span className="shrink-0 rounded-[4px] border border-[#CFE0D2] bg-[#EFF5EC] px-2 py-1 text-xs font-medium text-[#3E7550]">
                   {t('billing.status.active')}
                 </span>
@@ -345,21 +362,10 @@ export function BillingPlanList({
               footerClassName
             )}
           >
-            {onLifetimeDone ? (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={onLifetimeDone}
-                className="h-11 w-full rounded-[4px]"
-              >
-                {t('dashboard.billingSheet.allSet')}
-              </Button>
-            ) : (
-              <div className="flex h-11 w-full items-center justify-center rounded-[4px] bg-secondary text-sm font-medium text-secondary-foreground">
-                {t('dashboard.billingSheet.allSet')}
-              </div>
-            )}
-            <p className="mt-2 text-center text-xs text-[#686D67] dark:text-muted-foreground">
+            <p className="text-center text-sm font-medium text-[#171717] dark:text-foreground">
+              {t('dashboard.billingSheet.allSet')}
+            </p>
+            <p className="mt-1 text-center text-xs text-[#686D67] dark:text-muted-foreground">
               {t('dashboard.billingSheet.lifetimeIncludesFuture')}
             </p>
           </div>

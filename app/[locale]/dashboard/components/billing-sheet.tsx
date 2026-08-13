@@ -57,7 +57,6 @@ export function BillingSheet() {
           footerClassName="px-5 py-4"
           fullSettingsHref={`/${locale}/dashboard/billing`}
           onOpenFullSettings={() => setOpen(false)}
-          onLifetimeDone={() => setOpen(false)}
         />
       </SheetContent>
     </Sheet>
