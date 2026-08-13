@@ -187,6 +187,17 @@ function formatSignedEuro(pnl: number): string {
   return `${amount}€`;
 }
 
+function withWeeklyRecapUtms(url: string, weekStartIso: string): string {
+  const separator = url.includes("?") ? "&" : "?";
+  const params = new URLSearchParams({
+    utm_source: "resend",
+    utm_medium: "email",
+    utm_campaign: "weekly_recap",
+    utm_content: weekStartIso,
+  });
+  return `${url}${separator}${params.toString()}`;
+}
+
 function pnlColor(pnl: number): string {
   if (pnl > 0) return colors.positive;
   if (pnl < 0) return colors.negative;
@@ -227,13 +238,20 @@ export default function TraderStatsEmail({
     /\/$/,
     "",
   );
-  const dashboardUrl = `${baseUrl}/dashboard`;
+  const weekStart = resolveWeekStart(dailyPnL);
+  const weekStartIso = dateKey(weekStart);
+  const dashboardUrl = withWeeklyRecapUtms(
+    `${baseUrl}/dashboard`,
+    weekStartIso,
+  );
   const unsubscribeUrl = email
     ? `${baseUrl}/api/email/unsubscribe?email=${encodeURIComponent(email)}`
     : "#";
-  const bookCallUrl = "https://cal.com/hugo-demenez/deltalytix-discussion";
+  const bookCallUrl = withWeeklyRecapUtms(
+    "https://cal.com/hugo-demenez/deltalytix-discussion",
+    weekStartIso,
+  );
 
-  const weekStart = resolveWeekStart(dailyPnL);
   const weekDays = buildWeekDays(weekStart, dailyPnL);
   const weekPnL = weekDays.reduce(
     (sum, day) => sum + (day.pnl ?? 0),
