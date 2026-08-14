@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
 import { ScrollLockFix } from "@/components/scroll-lock-fix";
+import { ThemeColorSync } from "@/components/theme-color-sync";
 import { getSiteOrigin, siteUrl } from "@/lib/site-url";
 import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
 import { cn } from "@/lib/utils";
@@ -148,18 +149,13 @@ export default function RootLayout({
                 var themeColor = resolvedTheme === 'dark'
                   ? '${CANVAS_THEME_COLOR.dark}'
                   : '${CANVAS_THEME_COLOR.light}';
-                var metas = document.querySelectorAll('meta[name="theme-color"]');
-                if (metas.length === 0) {
-                  var meta = document.createElement('meta');
-                  meta.setAttribute('name', 'theme-color');
-                  meta.setAttribute('content', themeColor);
-                  document.head.appendChild(meta);
-                } else {
-                  metas.forEach(function(el) {
-                    el.setAttribute('content', themeColor);
-                    el.removeAttribute('media');
-                  });
-                }
+                document.querySelectorAll('meta[name="theme-color"]').forEach(function(el) {
+                  el.remove();
+                });
+                var meta = document.createElement('meta');
+                meta.setAttribute('name', 'theme-color');
+                meta.setAttribute('content', themeColor);
+                document.head.appendChild(meta);
               } catch (e) {
                 // Fail silently to avoid blocking render
               }
@@ -379,6 +375,7 @@ export default function RootLayout({
         )}
       >
         <ScrollLockFix />
+        <ThemeColorSync />
         <GoogleTag />
         <AttributionCapture />
         <Suspense fallback={null}>

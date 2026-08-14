@@ -2,7 +2,11 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { OG_COLORS } from "./og/tokens";
-import { CANVAS_THEME_COLOR, canvasThemeColor } from "./canvas-theme-color";
+import {
+  CANVAS_THEME_COLOR,
+  canvasThemeColor,
+  resolvedCanvasThemeFromDocument,
+} from "./canvas-theme-color";
 
 describe("canvas theme-color tokens", () => {
   it("uses the landing oklch canvas, not pure black", () => {
@@ -19,6 +23,19 @@ describe("canvas theme-color tokens", () => {
     expect(canvasThemeColor("light")).toBe(CANVAS_THEME_COLOR.light);
     expect(canvasThemeColor("dark")).toBe(CANVAS_THEME_COLOR.dark);
   });
+
+  it("reads the resolved canvas from the html class", () => {
+    expect(
+      resolvedCanvasThemeFromDocument({
+        classList: { contains: (name: string) => name === "dark" },
+      }),
+    ).toBe("dark");
+    expect(
+      resolvedCanvasThemeFromDocument({
+        classList: { contains: () => false },
+      }),
+    ).toBe("light");
+  });
 });
 
 describe("root layout viewport theme-color", () => {
@@ -31,6 +48,21 @@ describe("root layout viewport theme-color", () => {
     expect(source).toContain('media: "(prefers-color-scheme: light)"');
     expect(source).toContain('media: "(prefers-color-scheme: dark)"');
     expect(source).not.toMatch(/themeColor:\s*["']#000/);
+    expect(source).toContain("ThemeColorSync");
+    expect(source).toContain("el.remove()");
+  });
+});
+
+describe("root theme-color listener", () => {
+  it("mounts a document-level observer, not only ThemeProvider effects", () => {
+    const sync = readFileSync("components/theme-color-sync.tsx", "utf8");
+    const provider = readFileSync("context/theme-provider.tsx", "utf8");
+
+    expect(sync).toContain("observeDocumentThemeColor");
+    expect(provider).toContain("applyTheme(newTheme)");
+    expect(provider).not.toMatch(
+      /startTransition\(\s*\(\)\s*=>\s*\{\s*applyTheme/,
+    );
   });
 });
 

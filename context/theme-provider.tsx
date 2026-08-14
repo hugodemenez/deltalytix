@@ -62,9 +62,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    startTransition(() => {
-      applyTheme(theme)
-    })
+    applyTheme(theme)
     localStorage.setItem('theme', theme)
     localStorage.setItem('intensity', intensity.toString())
 
@@ -86,6 +84,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [theme])
 
   const setTheme = (newTheme: Theme) => {
+    applyTheme(newTheme)
     setThemeState(newTheme)
   }
 
@@ -94,12 +93,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   const toggleTheme = () => {
-    setThemeState(prevTheme => {
-      if (prevTheme === 'system') {
-        return effectiveTheme === 'light' ? 'dark' : 'light'
-      }
-      return prevTheme === 'light' ? 'dark' : 'light'
-    })
+    const nextTheme =
+      theme === 'system'
+        ? effectiveTheme === 'light' ? 'dark' : 'light'
+        : theme === 'light' ? 'dark' : 'light'
+    applyTheme(nextTheme)
+    setThemeState(nextTheme)
   }
 
   const value = {
