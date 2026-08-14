@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   observeDocumentThemeColor,
+  resolvedCanvasThemeFromDocument,
   type CanvasTheme,
 } from "@/lib/canvas-theme-color";
 
@@ -12,7 +13,11 @@ import {
  * and remounts the top-edge sampler when `html` class changes.
  */
 export function ThemeColorSync() {
-  const [samplerTheme, setSamplerTheme] = useState<CanvasTheme>("light");
+  const [samplerTheme, setSamplerTheme] = useState<CanvasTheme>(() =>
+    typeof document === "undefined"
+      ? "light"
+      : resolvedCanvasThemeFromDocument(),
+  );
 
   useEffect(() => {
     return observeDocumentThemeColor((theme) => {

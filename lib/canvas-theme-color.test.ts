@@ -47,9 +47,20 @@ describe("root layout viewport theme-color", () => {
     expect(source).toContain("CANVAS_THEME_COLOR.dark");
     expect(source).toContain('media: "(prefers-color-scheme: light)"');
     expect(source).toContain('media: "(prefers-color-scheme: dark)"');
+    expect(source.indexOf("CANVAS_THEME_COLOR.dark")).toBeLessThan(
+      source.indexOf("CANVAS_THEME_COLOR.light"),
+    );
+    expect(source).toContain('colorScheme: "dark light"');
     expect(source).not.toMatch(/themeColor:\s*["']#000/);
     expect(source).toContain("ThemeColorSync");
     expect(source).toContain("el.remove()");
+    expect(source).toContain("html:not(.light)");
+  });
+
+  it("does not force color-scheme: light on :root before html.dark", () => {
+    const css = readFileSync("app/globals.css", "utf8");
+    expect(css).not.toMatch(/:root\s*\{[^}]*color-scheme:\s*light/);
+    expect(css).toContain("@media (prefers-color-scheme: dark)");
   });
 });
 
@@ -73,8 +84,8 @@ describe("landing header canvas", () => {
       "utf8",
     );
 
-    expect(source).toContain("canvas-bg pt-safe min-h-nav-safe");
-    expect(source).toContain("canvas-bg pt-safe text-foreground");
+    expect(source).toContain("canvas-bg bg-[oklch(0.97_0_0)] pt-safe min-h-nav-safe");
+    expect(source).toContain("canvas-bg bg-[oklch(0.97_0_0)] pt-safe text-foreground");
     expect(source).not.toMatch(
       /fixed top-0 left-0 right-0 z-50 bg-background pt-safe/,
     );

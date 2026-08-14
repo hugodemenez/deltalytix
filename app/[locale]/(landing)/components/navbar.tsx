@@ -382,10 +382,10 @@ export default function Component() {
       />
 
       <span
-        className={`fixed top-0 left-0 right-0 z-50 canvas-bg pt-safe min-h-nav-safe transition-transform duration-300 ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
+        className={`fixed top-0 left-0 right-0 z-50 canvas-bg bg-[oklch(0.97_0_0)] pt-safe min-h-nav-safe transition-transform duration-300 dark:bg-[oklch(0.17_0_0)] ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
       ></span>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 canvas-bg pt-safe text-foreground transition-transform duration-300 ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
+        className={`fixed top-0 left-0 right-0 z-50 canvas-bg bg-[oklch(0.97_0_0)] pt-safe text-foreground transition-transform duration-300 dark:bg-[oklch(0.17_0_0)] ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
       >
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">
         <Link href={localize("/")} className="flex items-center space-x-2">

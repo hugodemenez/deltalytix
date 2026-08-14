@@ -98,12 +98,12 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  colorScheme: "light dark",
-  // iOS Safari paints the status bar from theme-color. Use the landing
-  // canvas (oklch 0.97 / 0.17 → #f5f5f5 / #0f0f0f), never #000.
+  // Dark first: iOS Safari often applies the first listed scheme / theme-color
+  // on first paint, before html.dark exists.
+  colorScheme: "dark light",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: CANVAS_THEME_COLOR.light },
     { media: "(prefers-color-scheme: dark)", color: CANVAS_THEME_COLOR.dark },
+    { media: "(prefers-color-scheme: light)", color: CANVAS_THEME_COLOR.light },
   ],
 };
 
@@ -121,6 +121,31 @@ export default function RootLayout({
       style={{ ["--theme-intensity" as string]: "100%" }}
     >
       <head>
+        {/*
+          Unlayered, first-paint hint for iOS Safari. :root { color-scheme: light }
+          was painting a white status bar on dark-mode devices before JS.
+        */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              html { background-color: ${CANVAS_THEME_COLOR.light}; }
+              @media (prefers-color-scheme: dark) {
+                html:not(.light) {
+                  color-scheme: dark;
+                  background-color: ${CANVAS_THEME_COLOR.dark};
+                }
+              }
+              html.dark {
+                color-scheme: dark;
+                background-color: ${CANVAS_THEME_COLOR.dark};
+              }
+              html.light {
+                color-scheme: light;
+                background-color: ${CANVAS_THEME_COLOR.light};
+              }
+            `,
+          }}
+        />
         {/* Prevent Google Translate */}
         <meta name="google" content="notranslate" />
         <meta name="googlebot" content="notranslate" />
@@ -141,6 +166,7 @@ export default function RootLayout({
 
                 root.classList.remove('light', 'dark');
                 root.classList.add(resolvedTheme);
+                root.style.colorScheme = resolvedTheme;
 
                 var savedIntensity = localStorage.getItem('intensity');
                 var intensity = savedIntensity ? Number(savedIntensity) : 100;

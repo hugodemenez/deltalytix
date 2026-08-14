@@ -42,6 +42,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
 
     root.classList.add(newEffectiveTheme)
+    root.style.colorScheme = newEffectiveTheme
     setEffectiveTheme(newEffectiveTheme)
     syncDocumentThemeColor(newEffectiveTheme)
   }
