@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, startTransition } from 'react'
+import { syncDocumentThemeColor } from '@/lib/canvas-theme-color'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -42,6 +43,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     root.classList.add(newEffectiveTheme)
     setEffectiveTheme(newEffectiveTheme)
+    syncDocumentThemeColor(newEffectiveTheme)
   }
 
   useEffect(() => {

@@ -12,6 +12,7 @@ import { Suspense } from "react";
 import { GoogleTag } from "@/components/google-tag";
 import { AttributionCapture } from "@/components/attribution-capture";
 import { GoogleAdsConversions } from "@/components/google-ads-conversions";
+import { CANVAS_THEME_COLOR } from "@/lib/canvas-theme-color";
 
 const inter = Inter({ subsets: ["latin"] });
 const metadataBase = new URL(getSiteOrigin());
@@ -96,6 +97,13 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  colorScheme: "light dark",
+  // iOS Safari paints the status bar from theme-color. Use the landing
+  // canvas (oklch 0.97 / 0.17 → #f5f5f5 / #0f0f0f), never #000.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: CANVAS_THEME_COLOR.light },
+    { media: "(prefers-color-scheme: dark)", color: CANVAS_THEME_COLOR.dark },
+  ],
 };
 
 export default function RootLayout({
@@ -106,7 +114,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className="bg-background"
+      className="canvas-bg"
       translate="no"
       suppressHydrationWarning
       style={{ ["--theme-intensity" as string]: "100%" }}
@@ -136,6 +144,22 @@ export default function RootLayout({
                 var savedIntensity = localStorage.getItem('intensity');
                 var intensity = savedIntensity ? Number(savedIntensity) : 100;
                 root.style.setProperty('--theme-intensity', intensity + '%');
+
+                var themeColor = resolvedTheme === 'dark'
+                  ? '${CANVAS_THEME_COLOR.dark}'
+                  : '${CANVAS_THEME_COLOR.light}';
+                var metas = document.querySelectorAll('meta[name="theme-color"]');
+                if (metas.length === 0) {
+                  var meta = document.createElement('meta');
+                  meta.setAttribute('name', 'theme-color');
+                  meta.setAttribute('content', themeColor);
+                  document.head.appendChild(meta);
+                } else {
+                  metas.forEach(function(el) {
+                    el.setAttribute('content', themeColor);
+                    el.removeAttribute('media');
+                  });
+                }
               } catch (e) {
                 // Fail silently to avoid blocking render
               }
@@ -349,7 +373,10 @@ export default function RootLayout({
         </style>
       </head>
       <body
-        className={cn(inter.className, "antialiased [font-synthesis:none]")}
+        className={cn(
+          inter.className,
+          "canvas-bg antialiased [font-synthesis:none]",
+        )}
       >
         <ScrollLockFix />
         <GoogleTag />

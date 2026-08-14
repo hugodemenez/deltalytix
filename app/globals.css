@@ -173,6 +173,11 @@
 
 @layer base {
   :root {
+    color-scheme: light;
+    /* Landing canvas (oklch 0.97 / #f5f5f5). Used for html/body, iOS
+       overscroll, and status-bar chrome — not the intensity-based
+       --background token, which is white/black at 100%. */
+    --canvas: oklch(0.97 0 0);
     --background: 0 0% var(--theme-intensity, 100%);
     --foreground: 0 0% 3.9%;
     --card: 0 0% var(--theme-intensity, 100%);
@@ -223,6 +228,9 @@
   }
 
   .dark {
+    color-scheme: dark;
+    /* Landing canvas (oklch 0.17 / #0f0f0f). Charcoal, not #000. */
+    --canvas: oklch(0.17 0 0);
     --background: 0 0% calc(100% - var(--theme-intensity, 100%));
     --foreground: 0 0% 98%;
     --card: 0 0% calc(100% - var(--theme-intensity, 100%));
@@ -457,27 +465,32 @@
 
 @layer utilities {
   /*
-   * Safari samples a fixed top-edge element to tint its browser chrome.
-   * Prefer the active --background token so dashboard, landing, and other
-   * shells stay in sync. Fall back via prefers-color-scheme before the
-   * client theme script adds the light/dark class.
+   * Document / overscroll / iOS status-area canvas. Matches the landing
+   * shell (oklch 0.97 light, oklch 0.17 dark) so Safari chrome is never
+   * pure black against a charcoal page.
    */
-  .safari-theme-sampler {
-    background-color: hsl(var(--background));
-  }
-
   @media (prefers-color-scheme: dark) {
-    :root:not(.light) .safari-theme-sampler {
-      background-color: hsl(0 0% calc(100% - var(--theme-intensity, 100%)));
+    :root:not(.light) {
+      color-scheme: dark;
+      --canvas: oklch(0.17 0 0);
     }
   }
 
+  .canvas-bg {
+    background-color: var(--canvas);
+  }
+
+  html,
+  body {
+    background-color: var(--canvas);
+  }
+
   /*
-   * Keep an untransformed fixed element at the top viewport edge for Safari's
-   * browser-chrome sampler. Animated overlays are not reliably re-sampled
-   * when the theme changes.
+   * Safari samples a fixed top-edge element to tint its browser chrome.
+   * Use --canvas (landing charcoal/gray), not intensity-black --background.
    */
   .safari-theme-sampler {
+    background-color: var(--canvas);
     position: fixed;
     top: 0;
     left: 0;
