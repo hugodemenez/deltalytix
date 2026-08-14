@@ -5,7 +5,6 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
 import { ScrollLockFix } from "@/components/scroll-lock-fix";
-import { ThemeColorSync } from "@/components/theme-color-sync";
 import { getSiteOrigin, siteUrl } from "@/lib/site-url";
 import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
 import { cn } from "@/lib/utils";
@@ -98,12 +97,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  // Dark first: iOS Safari often applies the first listed scheme / theme-color
-  // on first paint, before html.dark exists.
-  colorScheme: "dark light",
+  colorScheme: "light dark",
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: CANVAS_THEME_COLOR.dark },
     { media: "(prefers-color-scheme: light)", color: CANVAS_THEME_COLOR.light },
+    { media: "(prefers-color-scheme: dark)", color: CANVAS_THEME_COLOR.dark },
   ],
 };
 
@@ -121,31 +118,6 @@ export default function RootLayout({
       style={{ ["--theme-intensity" as string]: "100%" }}
     >
       <head>
-        {/*
-          Unlayered, first-paint hint for iOS Safari. :root { color-scheme: light }
-          was painting a white status bar on dark-mode devices before JS.
-        */}
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-              html { background-color: ${CANVAS_THEME_COLOR.light}; }
-              @media (prefers-color-scheme: dark) {
-                html:not(.light) {
-                  color-scheme: dark;
-                  background-color: ${CANVAS_THEME_COLOR.dark};
-                }
-              }
-              html.dark {
-                color-scheme: dark;
-                background-color: ${CANVAS_THEME_COLOR.dark};
-              }
-              html.light {
-                color-scheme: light;
-                background-color: ${CANVAS_THEME_COLOR.light};
-              }
-            `,
-          }}
-        />
         {/* Prevent Google Translate */}
         <meta name="google" content="notranslate" />
         <meta name="googlebot" content="notranslate" />
@@ -166,22 +138,10 @@ export default function RootLayout({
 
                 root.classList.remove('light', 'dark');
                 root.classList.add(resolvedTheme);
-                root.style.colorScheme = resolvedTheme;
 
                 var savedIntensity = localStorage.getItem('intensity');
                 var intensity = savedIntensity ? Number(savedIntensity) : 100;
                 root.style.setProperty('--theme-intensity', intensity + '%');
-
-                var themeColor = resolvedTheme === 'dark'
-                  ? '${CANVAS_THEME_COLOR.dark}'
-                  : '${CANVAS_THEME_COLOR.light}';
-                document.querySelectorAll('meta[name="theme-color"]').forEach(function(el) {
-                  el.remove();
-                });
-                var meta = document.createElement('meta');
-                meta.setAttribute('name', 'theme-color');
-                meta.setAttribute('content', themeColor);
-                document.head.appendChild(meta);
               } catch (e) {
                 // Fail silently to avoid blocking render
               }
@@ -401,7 +361,6 @@ export default function RootLayout({
         )}
       >
         <ScrollLockFix />
-        <ThemeColorSync />
         <GoogleTag />
         <AttributionCapture />
         <Suspense fallback={null}>

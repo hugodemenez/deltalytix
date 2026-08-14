@@ -1,7 +1,6 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, startTransition } from 'react'
-import { syncDocumentThemeColor } from '@/lib/canvas-theme-color'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -42,9 +41,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
 
     root.classList.add(newEffectiveTheme)
-    root.style.colorScheme = newEffectiveTheme
     setEffectiveTheme(newEffectiveTheme)
-    syncDocumentThemeColor(newEffectiveTheme)
   }
 
   useEffect(() => {
@@ -63,7 +60,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    applyTheme(theme)
+    startTransition(() => {
+      applyTheme(theme)
+    })
     localStorage.setItem('theme', theme)
     localStorage.setItem('intensity', intensity.toString())
 
@@ -85,7 +84,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [theme])
 
   const setTheme = (newTheme: Theme) => {
-    applyTheme(newTheme)
     setThemeState(newTheme)
   }
 
@@ -94,12 +92,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   const toggleTheme = () => {
-    const nextTheme =
-      theme === 'system'
-        ? effectiveTheme === 'light' ? 'dark' : 'light'
-        : theme === 'light' ? 'dark' : 'light'
-    applyTheme(nextTheme)
-    setThemeState(nextTheme)
+    setThemeState(prevTheme => {
+      if (prevTheme === 'system') {
+        return effectiveTheme === 'light' ? 'dark' : 'light'
+      }
+      return prevTheme === 'light' ? 'dark' : 'light'
+    })
   }
 
   const value = {
