@@ -20,7 +20,7 @@ describe("site metadata copy", () => {
     expect(copy.description.toLowerCase()).toContain("futures");
     expect(copy.ogAlt.toLowerCase()).toContain("trading journal");
     expect(copy.ogAlt.toLowerCase()).toContain("futures");
-    expect(copy.ogHeadline).toBe("Master your trading journey.");
+    expect(copy.ogHeadline).toBe("One trading journal for every futures account.");
   });
 
   it("returns French copy with SEO-friendly description length", () => {

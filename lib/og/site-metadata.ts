@@ -17,9 +17,9 @@ const SITE_METADATA: Record<OgLocale, SiteMetadataCopy> = {
     description:
       "The trading journal built for futures traders. Store, journal, and understand your track-record. Import from your broker.",
     // Visible OG image still matches the current EN hero; crawl title/description/alt carry journal + futures.
-    ogHeadline: "Master your trading journey.",
+    ogHeadline: "One trading journal for every futures account.",
     ogSubheadline:
-      "Store, explore, and understand your track-record across brokers.",
+      "Import your brokers and funded accounts, then read P&L in one place.",
     ogCta: "Get Started →",
     ogAlt:
       "Deltalytix — The trading journal for futures traders. Store, journal, and understand your track-record. Get Started.",
