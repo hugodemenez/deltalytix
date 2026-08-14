@@ -13,16 +13,16 @@ export type SiteMetadataCopy = {
 
 const SITE_METADATA: Record<OgLocale, SiteMetadataCopy> = {
   en: {
-    title: "Deltalytix — Trading Analytics Dashboard for Futures Traders",
+    title: "Deltalytix — The Trading Journal for Futures Traders",
     description:
-      "Deltalytix is a trading dashboard for futures traders. Store, explore, and understand your track-record across brokers.",
-    // Match landing hero cadence: brand-first display line + quiet supporting sentence.
+      "The trading journal built for futures traders. Store, journal, and understand your track-record. Import from your broker.",
+    // Visible OG image still matches the current EN hero; crawl title/description/alt carry journal + futures.
     ogHeadline: "Master your trading journey.",
     ogSubheadline:
       "Store, explore, and understand your track-record across brokers.",
     ogCta: "Get Started →",
     ogAlt:
-      "Deltalytix — Master your trading journey. Trading analytics for futures traders. Get Started.",
+      "Deltalytix — The trading journal for futures traders. Store, journal, and understand your track-record. Get Started.",
   },
   fr: {
     title: "Deltalytix — Tableau de bord de trading pour traders futures",
