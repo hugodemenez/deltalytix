@@ -1,0 +1,6 @@
+{
+  "setup-worktree-unix": "setup-worktree-unix.sh",
+  "setup-worktree-windows": [
+    "if not exist .env.local if exist \"%ROOT_WORKTREE_PATH%\\.env.local\" copy /Y \"%ROOT_WORKTREE_PATH%\\.env.local\" .env.local"
+  ]
+}
