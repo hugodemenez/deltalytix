@@ -3,7 +3,10 @@ import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { Resend } from 'resend'
 import { headers } from 'next/headers'
-import { buildWeeklyRecapEmail } from "@/lib/weekly-recap-email"
+import {
+  buildWeeklyRecapEmail,
+  type WeeklyRecapEmailData,
+} from "@/lib/weekly-recap-email"
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -86,7 +89,9 @@ export async function GET(req: Request) {
         })
 
         // Filter out null values and send batch
-        const validEmails = (await Promise.all(emailBatch)).filter(Boolean)
+        const validEmails = (await Promise.all(emailBatch)).filter(
+          (email): email is WeeklyRecapEmailData => email != null,
+        )
         if (validEmails.length > 0) {
           try {
             const result = await resend.batch.send(validEmails)
