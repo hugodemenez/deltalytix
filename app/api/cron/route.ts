@@ -3,6 +3,21 @@ import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { Resend } from 'resend'
 import { headers } from 'next/headers'
+import {
+  buildWeeklyRecapEmail,
+  type WeeklyRecapEmailData,
+} from "@/lib/weekly-recap-email"
+import {
+  isResendIdempotentReplay,
+  weeklyRecapIdempotencyKey,
+} from "@/lib/weekly-recap-idempotency"
+import {
+  RESEND_RATE_LIMIT_RETRIES,
+  RESEND_RATE_LIMIT_RETRY_MS,
+  createResendRequestPacer,
+  isResendRateLimitError,
+} from "@/lib/resend-rate-limit"
+import { getRecapWeekUtc } from "@/lib/weekly-newsletter-window"
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -11,27 +26,15 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter })
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-// Retry configuration
-const MAX_RETRIES = 3
-const RETRY_DELAY = 1000 // 1 second
-
-async function fetchWithRetry(url: string, options: RequestInit, retries = MAX_RETRIES): Promise<Response> {
-  try {
-    const response = await fetch(url, options)
-    return response
-  } catch (error) {
-    if (retries > 0 && (error instanceof Error && error.message.includes('ECONNRESET'))) {
-      console.warn(`Retrying fetch (${MAX_RETRIES - retries + 1}/${MAX_RETRIES}) for ${url}`)
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
-      return fetchWithRetry(url, options, retries - 1)
-    }
-    throw error
-  }
-}
+// Every subscriber's recap is now built in-process: DB read + one LLM call +
+// email render each. The whole run must fit in a single invocation, so the
+// default duration is not enough once the subscriber list grows.
+export const maxDuration = 300
 
 // Weekly performance recap. Vercel cron: path `/api/cron`, schedule `0 7 * * 0`.
 // Sunday 08:00 Lisbon. Summer WEST UTC+1 → 07:00 UTC (`0 7 * * 0`).
 // Winter WET UTC+0 → would need 08:00 UTC. Vercel cron objects only allow path + schedule.
+// Covers the Mon–Sun week ending that same Sunday — see `getRecapWeekUtc`.
 export async function GET(req: Request) {
   try {
     // Verify that this is a legitimate Vercel cron job request
@@ -70,7 +73,8 @@ export async function GET(req: Request) {
       )
     }
 
-    // Process subscribers in batches of 100 (Resend's batch limit)
+    // Build subscribers in chunks of 100 (LLM/DB concurrency), then send
+    // one-by-one with a per-recipient idempotency key.
     const batchSize = 100
     const batches: typeof users[] = []
     for (let i = 0; i < users.length; i += batchSize) {
@@ -80,6 +84,13 @@ export async function GET(req: Request) {
 
     let successCount = 0
     let errorCount = 0
+    let skippedCount = 0
+    let duplicateCount = 0
+
+    // Identity of the recap being sent — anchors each per-recipient key.
+    const week = getRecapWeekUtc()
+    // Resend default is 10 req/s per team; each emails.send is one request.
+    const paceResendSend = createResendRequestPacer()
 
     // Process each batch
     for (const batch of batches) {
@@ -91,24 +102,15 @@ export async function GET(req: Request) {
           }
 
           try {
-            // Get email data from the weekly summary endpoint with retry logic
-            const response = await fetchWithRetry(
-              `${process.env.NEXT_PUBLIC_APP_URL}/api/email/weekly-summary/${user.id}`,
-              {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${process.env.CRON_SECRET}`
-                }
-              }
+            // In-process builder: avoid HTTP self-fetch via NEXT_PUBLIC_APP_URL.
+            // Apex deltalytix.app 308s to www (cross-origin); fetch then strips
+            // Authorization, so weekly-summary returned {"error":"Unauthorized"}.
+            // Same User.id the cron just loaded (email unique). Builder
+            // re-loads by that id and checks the email still matches.
+            const { emailData } = await buildWeeklyRecapEmail(
+              user.id,
+              user.email,
             )
-
-            if (!response.ok) {
-              const errorText = await response.text()
-              console.warn(`Failed to get email data for user ${user.id}:`, errorText)
-              return null
-            }
-
-            const { emailData } = await response.json()
             return emailData
           } catch (error) {
             console.warn(`Error processing user ${user.id}:`, error)
@@ -116,16 +118,72 @@ export async function GET(req: Request) {
           }
         })
 
-        // Filter out null values and send batch
-        const validEmails = (await Promise.all(emailBatch)).filter(Boolean)
-        if (validEmails.length > 0) {
+        const validEmails = (await Promise.all(emailBatch)).filter(
+          (email): email is WeeklyRecapEmailData => email != null,
+        )
+        // Users the green-week gate dropped are skips, not failures.
+        skippedCount += batch.length - validEmails.length
+
+        // One send per recipient. A set-level batch key changes when a new
+        // subscriber appears, someone unsubscribes, or a retry recovers more
+        // builds — and the original recipients get mailed twice. Per-email
+        // keys 409 those people and still deliver recoveries and newcomers.
+        for (const email of validEmails) {
+          const recipient = email.to[0]
+          if (!recipient) {
+            errorCount += 1
+            continue
+          }
+
           try {
-            const result = await resend.batch.send(validEmails)
-            successCount += result.data?.data.length || 0
-            errorCount += batch.length - (result.data?.data.length || 0)
+            let result: Awaited<ReturnType<typeof resend.emails.send>> | null =
+              null
+
+            for (
+              let attempt = 0;
+              attempt <= RESEND_RATE_LIMIT_RETRIES;
+              attempt += 1
+            ) {
+              await paceResendSend()
+              result = await resend.emails.send(email, {
+                idempotencyKey: weeklyRecapIdempotencyKey(
+                  week.start,
+                  recipient,
+                ),
+              })
+
+              if (!isResendRateLimitError(result.error)) {
+                break
+              }
+
+              if (attempt === RESEND_RATE_LIMIT_RETRIES) {
+                break
+              }
+
+              await new Promise((resolve) =>
+                setTimeout(resolve, RESEND_RATE_LIMIT_RETRY_MS),
+              )
+            }
+
+            if (result?.error) {
+              // Recap copy is LLM-generated, so a retry has a different
+              // payload under the same key: Resend 409s instead of sending
+              // again. That person already got this week's mail.
+              if (isResendIdempotentReplay(result.error)) {
+                duplicateCount += 1
+              } else {
+                console.error(
+                  `Failed to send weekly recap to ${recipient}:`,
+                  result.error,
+                )
+                errorCount += 1
+              }
+            } else {
+              successCount += 1
+            }
           } catch (error) {
-            console.error('Failed to send email batch:', error)
-            errorCount += validEmails.length
+            console.error(`Failed to send weekly recap to ${recipient}:`, error)
+            errorCount += 1
           }
         }
       } catch (error) {
@@ -134,12 +192,18 @@ export async function GET(req: Request) {
       }
     }
 
-    console.log(`Weekly emails processed: ${successCount} successful, ${errorCount} failed`)
+    const summary = `Weekly emails processed: ${successCount} successful, ${errorCount} failed, ${skippedCount} skipped (green-week gate), ${duplicateCount} already sent`
+    console.log(summary)
 
     return NextResponse.json({
       success: true,
-      message: `Weekly emails processed: ${successCount} successful, ${errorCount} failed`,
-      stats: { success: successCount, failed: errorCount }
+      message: summary,
+      stats: {
+        success: successCount,
+        failed: errorCount,
+        skipped: skippedCount,
+        duplicate: duplicateCount,
+      }
     })
 
   } catch (error) {
