@@ -4,25 +4,7 @@ import { cn } from '@/lib/utils'
 import { useI18n } from '@/locales/client'
 import { useStripeSubscriptionStore } from '@/store/stripe-subscription-store'
 import { useModalStateStore } from '@/store/modal-state-store'
-
-function resolvePlanLabel(
-  planName: string | undefined,
-  interval: string | undefined,
-  freeLabel: string,
-  lifetimeLabel: string
-): { label: string; isFree: boolean } {
-  if (interval === 'lifetime') {
-    return { label: lifetimeLabel, isFree: false }
-  }
-  if (!planName) {
-    return { label: freeLabel, isFree: true }
-  }
-  const normalized = planName.trim().toLowerCase()
-  if (!normalized || normalized === 'free' || normalized === 'basic') {
-    return { label: freeLabel, isFree: true }
-  }
-  return { label: planName, isFree: false }
-}
+import { resolvePlanLabel } from './plan-label'
 
 /**
  * Compact Free / paid plan chip beside the Account trigger.

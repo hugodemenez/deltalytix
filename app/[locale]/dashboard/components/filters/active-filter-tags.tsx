@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from 'framer-motion'
 import { useUserStore } from "@/store/user-store"
+import { hasActiveFilters, labelDateRange } from "./active-filter-model"
 
 type ActiveFilterTagsProps = {
   showAccountNumbers: boolean
@@ -211,18 +212,29 @@ export function ActiveFilterTags({
     return sortedDays.map(day => getWeekdayName(day)).join(', ')
   }
 
-  const hasActiveFilters =
-    Boolean(dateRange?.from) ||
-    pnlRange?.min !== undefined ||
-    pnlRange?.max !== undefined ||
-    Boolean(weekdayFilter?.days?.length) ||
-    Boolean(accountNumbers?.length) ||
-    Boolean(instruments?.length) ||
-    Boolean(tagFilter?.tags?.length)
+  const filtersOn = hasActiveFilters({
+    dateRange,
+    pnlRange,
+    weekdayFilter,
+    accountNumbers,
+    instruments,
+    tagFilter,
+  })
 
-  if (!hasActiveFilters) {
+  if (!filtersOn) {
     return null
   }
+
+  const dateRangeLabel = labelDateRange(
+    dateRange,
+    {
+      thisWeek: t('filters.thisWeek'),
+      thisMonth: t('filters.thisMonth'),
+      lastThreeMonths: t('filters.lastThreeMonths'),
+      lastSixMonths: t('filters.lastSixMonths'),
+    },
+    () => formatDateRange()
+  )
 
   return (
     <motion.div
@@ -261,7 +273,7 @@ export function ActiveFilterTags({
           >
             <AnimatePresence mode="popLayout">
               {/* Date Range Badge */}
-              {dateRange && formatDateRange() && (
+              {dateRange && dateRangeLabel && (
                 <motion.div
                   key="date-range"
                   initial={{ opacity: 0, scale: 0.8 }}
@@ -275,7 +287,7 @@ export function ActiveFilterTags({
                     className="gap-1 shrink-0 badge cursor-pointer"
                     onClick={handleRemoveDateRange}
                   >
-                    {formatDateRange()}
+                    {dateRangeLabel}
                     <X 
                       className="h-3 w-3" 
                     />

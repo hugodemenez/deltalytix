@@ -31,6 +31,8 @@ import { useMemo, useState, type ButtonHTMLAttributes } from 'react'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
 import ReferralButton from './referral-button'
+import { useStripeSubscriptionStore } from '@/store/stripe-subscription-store'
+import { resolvePlanLabel } from './plan-label'
 
 type Locale = 'en' | 'fr'
 
@@ -92,6 +94,19 @@ function AccountTrigger({
   )
 }
 
+function useBillingPlanLabel() {
+  const t = useI18n()
+  const subscription = useStripeSubscriptionStore(
+    (state) => state.stripeSubscription
+  )
+  return resolvePlanLabel(
+    subscription?.plan?.name,
+    subscription?.plan?.interval,
+    t('pricing.free.name'),
+    t('pricing.lifetime')
+  ).label
+}
+
 function MenuLinks({
   onNavigate,
   className,
@@ -101,6 +116,7 @@ function MenuLinks({
 }) {
   const t = useI18n()
   const currentLocale = useCurrentLocale()
+  const planLabel = useBillingPlanLabel()
   const itemClass =
     'flex w-full items-center px-2 py-1.5 text-sm text-[#171717] dark:text-foreground'
 
@@ -112,9 +128,12 @@ function MenuLinks({
       <Link
         href={`/${currentLocale}/dashboard/billing`}
         onClick={onNavigate}
-        className={itemClass}
+        className={cn(itemClass, 'justify-between gap-3')}
       >
-        {t('dashboard.billingSheet.title')}
+        <span>{t('dashboard.billingSheet.title')}</span>
+        <span className="text-[#686D67] dark:text-muted-foreground">
+          {planLabel}
+        </span>
       </Link>
       <Link
         href="/dashboard/connections"
@@ -246,6 +265,7 @@ export default function UserMenu() {
 
   const photoUrl = user?.user_metadata?.avatar_url as string | undefined
   const accountLabel = t('dashboard.account')
+  const planLabel = useBillingPlanLabel()
   const trigger = (
     <AccountTrigger
       email={user?.email}
@@ -384,8 +404,14 @@ export default function UserMenu() {
             <Link href="/dashboard/settings">{t('dashboard.settings')}</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href={`/${currentLocale}/dashboard/billing`}>
-              {t('dashboard.billingSheet.title')}
+            <Link
+              href={`/${currentLocale}/dashboard/billing`}
+              className="flex w-full items-center justify-between gap-3"
+            >
+              <span>{t('dashboard.billingSheet.title')}</span>
+              <span className="text-[#686D67] dark:text-muted-foreground">
+                {planLabel}
+              </span>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>

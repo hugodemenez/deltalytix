@@ -122,7 +122,7 @@ const PreviewCard = forwardRef<HTMLDivElement, PreviewCardProps>(
 PreviewCard.displayName = "PreviewCard"
 
 export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>(
-  ({ onAddWidget }, ref) => {
+  ({ onAddWidget, compact = false }, ref) => {
     const t = useI18n()
     const [isOpen, setIsOpen] = React.useState(false)
     const [loadedItems, setLoadedItems] = useState<Set<number>>(new Set())
@@ -209,12 +209,17 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
             ref={ref}
             variant="ghost"
             aria-label={t('widgets.addWidget')}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-foreground p-0 text-background transition-transform hover:bg-foreground/90 active:scale-95 md:h-10 md:w-auto md:min-w-[120px] md:gap-3 md:bg-transparent md:px-4 md:text-foreground md:hover:bg-accent"
+            className={cn(
+              'flex shrink-0 items-center justify-center rounded-full transition-transform active:scale-95',
+              compact ? 'h-10 w-10 p-0' : 'h-10 gap-2 px-3'
+            )}
           >
-            <Plus className="h-4 w-4 shrink-0" />
-            <span className="hidden text-sm font-medium md:inline">
-              {t('widgets.addWidget')}
-            </span>
+            <Plus className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+            {!compact ? (
+              <span className="text-sm font-medium">
+                {t('widgets.addWidget')}
+              </span>
+            ) : null}
           </Button>
         </SheetTrigger>
         <SheetContent side="right" className="w-[90vw] sm:max-w-[640px] flex flex-col h-dvh overflow-hidden">

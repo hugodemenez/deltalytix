@@ -51,6 +51,7 @@ interface ShareButtonProps {
     mobile: any[]
   }
   compact?: boolean
+  appearance?: "toolbar" | "navbar"
 }
 
 function triggerConfetti() {
@@ -97,7 +98,7 @@ function triggerConfetti() {
 }
 
 export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
-  ({ variant = "ghost", size = "icon", currentLayout }, ref) => {
+  ({ variant = "ghost", size = "icon", currentLayout, appearance = "toolbar" }, ref) => {
     const t = useI18n()
     const locale = useCurrentLocale()
     const dateLocale = locale === 'fr' ? fr : undefined
@@ -479,18 +480,29 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         }
       }}>
         <DialogTrigger asChild>
-          <Button 
-            ref={ref}
-            variant={variant}
-            size={size}
-            aria-label={t("share.button")}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full p-0 transition-transform active:scale-95 md:h-10 md:w-auto md:min-w-[120px] md:gap-3 md:px-4"
-          >
-            <Share className="h-4 w-4 shrink-0" />
-            <span className="hidden text-sm font-medium md:inline">
-              {t("share.button")}
-            </span>
-          </Button>
+          {appearance === "navbar" ? (
+            <button
+              ref={ref}
+              type="button"
+              aria-label={t("share.button")}
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[#171717] transition-colors hover:bg-[#FAFAFA] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-foreground dark:hover:bg-muted/40"
+            >
+              <Share className="h-4 w-4" strokeWidth={1.75} />
+            </button>
+          ) : (
+            <Button
+              ref={ref}
+              variant={variant}
+              size={size}
+              aria-label={t("share.button")}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full p-0 transition-transform active:scale-95 md:h-10 md:w-auto md:min-w-[120px] md:gap-3 md:px-4"
+            >
+              <Share className="h-4 w-4 shrink-0" />
+              <span className="hidden text-sm font-medium md:inline">
+                {t("share.button")}
+              </span>
+            </Button>
+          )}
         </DialogTrigger>
         <DialogContent className="sm:max-w-4xl h-[90vh] sm:h-[85vh] w-[95vw]">
           <div className="h-full flex flex-col overflow-y-hidden">

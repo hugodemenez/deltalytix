@@ -38,9 +38,9 @@ export function DashboardHomeChrome({ children }: { children: ReactNode }) {
       const navbar = document.querySelector(
         'nav[class*="sticky"]'
       ) as HTMLElement | null
-      // Match navbar.tsx: h-16 (4rem). Avoid the old 96/5rem fallback that
+      // Match navbar.tsx: h-14 (3.5rem). Avoid the old 96/5rem fallback that
       // left a visible strip between sticky nav and fixed tabs.
-      const navbarHeight = navbar?.offsetHeight || 64
+      const navbarHeight = navbar?.offsetHeight || 56
 
       const connectionsStrip = connectionsStripRef.current
       const connectionsStripHeight = connectionsStrip?.offsetHeight || 52

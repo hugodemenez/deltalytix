@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { Search } from "lucide-react"
+import { format } from "date-fns"
+import { fr } from "date-fns/locale"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -16,6 +18,10 @@ import { PnlSection } from "./filter-command-menu-pnl-section"
 import { InstrumentSection } from "./filter-command-menu-instrument-section"
 import { TagSection } from "./filter-command-menu-tag-section"
 import { ActiveFilterTags } from "./active-filter-tags"
+import {
+  countActiveFilters,
+  labelDateRange,
+} from "./active-filter-model"
 import { useUserStore } from "@/store/user-store"
 import { useParams } from "next/navigation"
 import { toast } from "sonner"
@@ -35,7 +41,44 @@ export function FilterCommandMenu({
   compact = false,
 }: FilterCommandMenuProps) {
   const t = useI18n()
-  const { isMobile, setDateRange, setWeekdayFilter } = useData()
+  const {
+    isMobile,
+    setDateRange,
+    setWeekdayFilter,
+    dateRange,
+    pnlRange,
+    weekdayFilter,
+    accountNumbers,
+    instruments,
+    tagFilter,
+  } = useData()
+  const params = useParams()
+  const locale = params.locale as string
+  const activeFilterCount = countActiveFilters({
+    dateRange,
+    pnlRange,
+    weekdayFilter,
+    accountNumbers,
+    instruments,
+    tagFilter,
+  })
+  const dateLocale = locale === 'fr' ? fr : undefined
+  const dateChipLabel =
+    labelDateRange(
+      dateRange,
+      {
+        thisWeek: t('filters.thisWeek'),
+        thisMonth: t('filters.thisMonth'),
+        lastThreeMonths: t('filters.lastThreeMonths'),
+        lastSixMonths: t('filters.lastSixMonths'),
+      },
+      (range) => {
+      if (!range.from) return null
+      if (range.to && range.from.getTime() !== range.to.getTime()) {
+        return `${format(range.from, 'LLL dd', { locale: dateLocale })} – ${format(range.to, 'LLL dd, y', { locale: dateLocale })}`
+      }
+      return format(range.from, 'LLL dd, y', { locale: dateLocale })
+    }) ?? t('filters.thisWeek')
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [isParsingDate, setIsParsingDate] = useState(false)
@@ -48,8 +91,6 @@ export function FilterCommandMenu({
   const instrumentSectionRef = useRef<HTMLDivElement>(null)
   const tagSectionRef = useRef<HTMLDivElement>(null)
   const accountSectionRef = useRef<HTMLDivElement>(null)
-  const params = useParams()
-  const locale = params.locale as string
   const timezone = useUserStore(state => state.timezone)
   const dateParseTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -230,6 +271,43 @@ export function FilterCommandMenu({
       }
     }
   }, [searchValue, containsDateKeywords, parseDateQuery, open])
+
+  const chromeButtonClass =
+    'inline-flex h-7 shrink-0 items-center rounded-[4px] border border-[#E5E5E5] bg-white text-sm font-medium text-[#171717] transition-colors hover:bg-[#FAFAFA] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40'
+
+  const NavbarTriggers = compact ? (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      aria-label={t('filters.addFilterAria')}
+      className={cn(chromeButtonClass, 'relative h-7 w-7 justify-center p-0', className)}
+    >
+      <Search className="h-3.5 w-3.5" strokeWidth={1.75} />
+      {activeFilterCount > 0 ? (
+        <span className="absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#171717] px-1 text-[10px] font-semibold leading-none text-white">
+          {activeFilterCount}
+        </span>
+      ) : null}
+    </button>
+  ) : (
+    <div className={cn('flex items-center gap-2', className)}>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={cn(chromeButtonClass, 'px-2.5')}
+      >
+        {dateChipLabel}
+      </button>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={t('filters.addFilterAria')}
+        className={cn(chromeButtonClass, 'px-2.5')}
+      >
+        {t('filters.addFilter')}
+      </button>
+    </div>
+  )
 
   // Trigger on mobile: button that opens drawer
   const MobileTriggerButton = (
@@ -461,9 +539,11 @@ export function FilterCommandMenu({
 
   return (
     <>
-      {useMobileSheet
-        ? MobileTriggerButton
-        : DesktopTriggerInput}
+      {variant === 'navbar'
+        ? NavbarTriggers
+        : useMobileSheet
+          ? MobileTriggerButton
+          : DesktopTriggerInput}
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetContent
           side={useMobileSheet ? "bottom" : "right"}

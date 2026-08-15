@@ -4,10 +4,8 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
 import { useData } from "@/context/data-provider"
-import { Pencil, Trash2, RotateCcw } from "lucide-react"
-import { ShareButton } from "./share-button"
+import { Check, Pencil, Trash2, RotateCcw } from "lucide-react"
 import { AddWidgetSheet } from "./add-widget-sheet"
-import { FilterCommandMenu } from "./filters/filter-command-menu"
 import { DASHBOARD_COMPACT_BREAKPOINT, WidgetType, WidgetSize, Layouts, Widget } from "../types/dashboard"
 import { MobileWidgetDeleteDialog } from "./mobile-widget-delete-dialog"
 import {
@@ -49,7 +47,6 @@ export function Toolbar({
   onAddWidget,
   isCustomizing,
   onEditToggle,
-  currentLayout,
   onRemoveAll,
   onRestoreDefaults,
   mobileActiveWidget = null,
@@ -238,29 +235,29 @@ export function Toolbar({
             <Button
               variant={isCustomizing ? "default" : "ghost"}
               onClick={onEditToggle}
+              aria-label={isCustomizing ? t('widgets.done') : t('widgets.edit')}
               className={cn(
-                "flex h-11 w-11 shrink-0 items-center justify-center rounded-full p-0 transition-transform active:scale-95 md:h-10 md:w-auto md:min-w-[120px] md:gap-3 md:px-4"
+                "flex shrink-0 items-center justify-center rounded-full transition-transform active:scale-95",
+                iconOnly
+                  ? "h-10 w-10 p-0"
+                  : "h-10 gap-2 px-3",
+                isCustomizing &&
+                  "bg-[#171717] text-white hover:bg-[#171717]/90 dark:bg-foreground dark:text-background"
               )}
             >
-              <Pencil className={cn(
-                "h-4 w-4 shrink-0",
-                isCustomizing && "text-background"
-              )} />
-              <span className="hidden text-sm font-medium md:inline">
-                {isCustomizing ? t('widgets.done') : t('widgets.edit')}
-              </span>
+              {isCustomizing ? (
+                <Check className="h-4 w-4 shrink-0" strokeWidth={2} />
+              ) : (
+                <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+              )}
+              {!iconOnly ? (
+                <span className="text-sm font-medium">
+                  {isCustomizing ? t('widgets.done') : t('widgets.edit')}
+                </span>
+              ) : null}
             </Button>
 
-            <ShareButton currentLayout={currentLayout} compact={iconOnly} />
-
             <AddWidgetSheet onAddWidget={onAddWidget} isCustomizing={isCustomizing} compact={iconOnly} />
-
-            <FilterCommandMenu
-              variant="toolbar"
-              className="h-11 w-11 p-0 md:h-10 md:w-auto"
-              compactBreakpoint={767}
-              compact={iconOnly}
-            />
 
             <div className="hidden md:contents">{minimapTrigger}</div>
 

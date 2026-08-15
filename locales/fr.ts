@@ -671,6 +671,8 @@ export default {
     singleDay: "Jour unique",
     dateRange: "Période",
     thisWeek: "Cette semaine",
+    addFilter: "+ Filtrer",
+    addFilterAria: "Filtres",
     thisMonth: "Ce mois",
     lastThreeMonths: "Derniers 3 mois",
     lastSixMonths: "Les 6 derniers mois",
