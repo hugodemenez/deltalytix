@@ -121,6 +121,58 @@
 }
 
 @layer components {
+  .dashboard-v5 {
+    background-color: #fafafa;
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .dashboard-v5 [data-slot='card'] {
+    border-color: #e5e5e5;
+    border-radius: 4px;
+    background-color: #ffffff;
+    box-shadow: none;
+  }
+
+  .dashboard-v5 [data-slot='card-title'] {
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  .dashboard-v5 .react-grid-item [data-slot='card-title'] {
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .dashboard-v5 .react-grid-item .uppercase {
+    text-transform: none;
+    letter-spacing: -0.01em;
+  }
+
+  .dashboard-v5 .react-grid-item .rounded-lg,
+  .dashboard-v5 .react-grid-item .rounded-xl,
+  .dashboard-v5 .react-grid-item .rounded-2xl {
+    border-radius: 4px;
+  }
+
+  .dashboard-v5 .react-grid-item .bg-background {
+    background-color: #ffffff;
+  }
+
+  .dark .dashboard-v5 {
+    background-color: hsl(var(--background));
+  }
+
+  .dark .dashboard-v5 [data-slot='card'] {
+    border-color: hsl(var(--border));
+    background-color: hsl(var(--card));
+  }
+
+  .dark .dashboard-v5 .react-grid-item .bg-background {
+    background-color: hsl(var(--background));
+  }
+
   .contribution-week-bar {
     position: relative;
     transform-origin: 50% 100%;
@@ -173,6 +225,7 @@
 
 @layer base {
   :root {
+    --canvas: oklch(0.97 0 0);
     --background: 0 0% var(--theme-intensity, 100%);
     --foreground: 0 0% 3.9%;
     --card: 0 0% var(--theme-intensity, 100%);
@@ -222,7 +275,18 @@
     --chart-win: 173 58% 39%;
   }
 
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+      --canvas: oklch(0.17 0 0);
+    }
+  }
+
+  .light {
+    --canvas: oklch(0.97 0 0);
+  }
+
   .dark {
+    --canvas: oklch(0.17 0 0);
     --background: 0 0% calc(100% - var(--theme-intensity, 100%));
     --foreground: 0 0% 98%;
     --card: 0 0% calc(100% - var(--theme-intensity, 100%));
@@ -457,27 +521,25 @@
 
 @layer utilities {
   /*
-   * Safari samples a fixed top-edge element to tint its browser chrome.
-   * Prefer the active --background token so dashboard, landing, and other
-   * shells stay in sync. Fall back via prefers-color-scheme before the
-   * client theme script adds the light/dark class.
+   * Document / overscroll / iOS status-area canvas. Matches the landing
+   * shell (oklch 0.97 light, oklch 0.17 dark) so Safari chrome is never
+   * pure black against a charcoal page.
    */
-  .safari-theme-sampler {
-    background-color: hsl(var(--background));
+  .canvas-bg {
+    background-color: var(--canvas);
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root:not(.light) .safari-theme-sampler {
-      background-color: hsl(0 0% calc(100% - var(--theme-intensity, 100%)));
-    }
+  html,
+  body {
+    background-color: var(--canvas);
   }
 
   /*
-   * Keep an untransformed fixed element at the top viewport edge for Safari's
-   * browser-chrome sampler. Animated overlays are not reliably re-sampled
-   * when the theme changes.
+   * Safari samples a fixed top-edge element to tint its browser chrome.
+   * Use --canvas (landing charcoal/gray), not intensity-black --background.
    */
   .safari-theme-sampler {
+    background-color: var(--canvas);
     position: fixed;
     top: 0;
     left: 0;

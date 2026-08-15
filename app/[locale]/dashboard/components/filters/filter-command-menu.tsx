@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { Search } from "lucide-react"
+import { format } from "date-fns"
+import { fr } from "date-fns/locale"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList, CommandSeparator } from "@/components/ui/command"
 import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
 import { useMediaQuery } from "@/hooks/use-media-query"
@@ -16,6 +17,11 @@ import { DateRangeSection } from "./filter-command-menu-date-section"
 import { PnlSection } from "./filter-command-menu-pnl-section"
 import { InstrumentSection } from "./filter-command-menu-instrument-section"
 import { TagSection } from "./filter-command-menu-tag-section"
+import { ActiveFilterTags } from "./active-filter-tags"
+import {
+  countActiveFilters,
+  labelDateRange,
+} from "./active-filter-model"
 import { useUserStore } from "@/store/user-store"
 import { useParams } from "next/navigation"
 import { toast } from "sonner"
@@ -35,12 +41,49 @@ export function FilterCommandMenu({
   compact = false,
 }: FilterCommandMenuProps) {
   const t = useI18n()
-  const { isMobile, dateRange, setDateRange, setWeekdayFilter } = useData()
+  const {
+    isMobile,
+    setDateRange,
+    setWeekdayFilter,
+    dateRange,
+    pnlRange,
+    weekdayFilter,
+    accountNumbers,
+    instruments,
+    tagFilter,
+  } = useData()
+  const params = useParams()
+  const locale = params.locale as string
+  const activeFilterCount = countActiveFilters({
+    dateRange,
+    pnlRange,
+    weekdayFilter,
+    accountNumbers,
+    instruments,
+    tagFilter,
+  })
+  const dateLocale = locale === 'fr' ? fr : undefined
+  const dateChipLabel =
+    labelDateRange(
+      dateRange,
+      {
+        thisWeek: t('filters.thisWeek'),
+        thisMonth: t('filters.thisMonth'),
+        lastThreeMonths: t('filters.lastThreeMonths'),
+        lastSixMonths: t('filters.lastSixMonths'),
+      },
+      (range) => {
+      if (!range.from) return null
+      if (range.to && range.from.getTime() !== range.to.getTime()) {
+        return `${format(range.from, 'LLL dd', { locale: dateLocale })} – ${format(range.to, 'LLL dd, y', { locale: dateLocale })}`
+      }
+      return format(range.from, 'LLL dd, y', { locale: dateLocale })
+    }) ?? t('filters.thisWeek')
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
-  const [inputWidth, setInputWidth] = useState<number | undefined>(undefined)
   const [isParsingDate, setIsParsingDate] = useState(false)
   const isMobileDevice = useMediaQuery(`(max-width: ${compactBreakpoint}px)`)
+  const useMobileSheet = isMobileDevice || isMobile
   const inputRef = useRef<HTMLInputElement>(null)
   const commandRef = useRef<HTMLDivElement>(null)
   const dateRangeSectionRef = useRef<HTMLDivElement>(null)
@@ -48,40 +91,8 @@ export function FilterCommandMenu({
   const instrumentSectionRef = useRef<HTMLDivElement>(null)
   const tagSectionRef = useRef<HTMLDivElement>(null)
   const accountSectionRef = useRef<HTMLDivElement>(null)
-  const params = useParams()
-  const locale = params.locale as string
   const timezone = useUserStore(state => state.timezone)
   const dateParseTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Measure input width and focus when opened
-  useEffect(() => {
-    if (isMobileDevice) return
-
-    const updateWidth = () => {
-      if (inputRef.current) {
-        const width = inputRef.current.offsetWidth
-        setInputWidth(width)
-      }
-    }
-
-    // Initial measurement
-    updateWidth()
-
-    // Set up resize observer
-    const resizeObserver = new ResizeObserver(updateWidth)
-    if (inputRef.current) {
-      resizeObserver.observe(inputRef.current)
-    }
-
-    // Focus when opened
-    if (open && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 100)
-    }
-
-    return () => {
-      resizeObserver.disconnect()
-    }
-  }, [open, isMobileDevice])
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -261,6 +272,45 @@ export function FilterCommandMenu({
     }
   }, [searchValue, containsDateKeywords, parseDateQuery, open])
 
+  const chromeButtonClass =
+    'inline-flex h-7 shrink-0 items-center rounded-[4px] border border-[#E5E5E5] bg-white transition-colors hover:bg-[#FAFAFA] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40'
+  const chromeTextClass = 'text-xs font-medium text-[#737373] dark:text-muted-foreground'
+  const chromeIconClass = 'text-sm font-medium text-[#171717] dark:text-foreground'
+
+  const NavbarTriggers = compact ? (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      aria-label={t('filters.addFilterAria')}
+      className={cn(chromeButtonClass, chromeIconClass, 'relative h-7 w-7 justify-center p-0', className)}
+    >
+      <Search className="h-3.5 w-3.5" strokeWidth={1.75} />
+      {activeFilterCount > 0 ? (
+        <span className="absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#171717] px-1 text-[10px] font-semibold leading-none text-white">
+          {activeFilterCount}
+        </span>
+      ) : null}
+    </button>
+  ) : (
+    <div className={cn('flex items-center gap-2', className)}>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={cn(chromeButtonClass, chromeTextClass, 'px-2.5')}
+      >
+        {dateChipLabel}
+      </button>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={t('filters.addFilterAria')}
+        className={cn(chromeButtonClass, chromeTextClass, 'px-2.5')}
+      >
+        {t('filters.addFilter')}
+      </button>
+    </div>
+  )
+
   // Trigger on mobile: button that opens drawer
   const MobileTriggerButton = (
     <Button
@@ -268,9 +318,9 @@ export function FilterCommandMenu({
       className={cn(
         "font-normal overflow-hidden",
         compact
-          ? "h-10 w-10 shrink-0 rounded-full p-0"
+          ? "h-11 w-11 shrink-0 rounded-full p-0"
           : "justify-start text-left",
-        variant === "toolbar" && "h-10 rounded-full max-w-full",
+        variant === "toolbar" && !compact && "h-10 rounded-full max-w-full",
         className
       )}
       onClick={() => setOpen(true)}
@@ -286,60 +336,30 @@ export function FilterCommandMenu({
   // Check if search value contains date keywords to show hint
   const showDateHint = searchValue.trim().length >= 3 && containsDateKeywords(searchValue) && !isParsingDate
 
-  const handleCategoryClick = useCallback((sectionId: 'dateRange' | 'pnl' | 'instruments' | 'tags' | 'accounts') => {
-    const sectionMap = {
-      dateRange: dateRangeSectionRef,
-      pnl: pnlSectionRef,
-      instruments: instrumentSectionRef,
-      tags: tagSectionRef,
-      accounts: accountSectionRef,
-    }
-
-    const target = sectionMap[sectionId]?.current
-    if (!target) return
-
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
-
-    // Move focus to the first item inside the section for quick interaction
-    const firstItem = target.querySelector('[cmdk-item]') as HTMLElement | null
-    if (firstItem) {
-      requestAnimationFrame(() => firstItem.focus())
-    }
-  }, [])
-
-  const categories = [
-    { id: 'dateRange' as const, label: t('filters.commandMenu.sections.dateRange') },
-    { id: 'pnl' as const, label: t('filters.commandMenu.sections.pnl') },
-    { id: 'instruments' as const, label: t('filters.commandMenu.sections.instruments') },
-    { id: 'tags' as const, label: t('filters.commandMenu.sections.tags') },
-    { id: 'accounts' as const, label: t('filters.commandMenu.sections.accounts') },
-  ]
-
   // Trigger on desktop: real input that opens popover and controls search
   const DesktopTriggerInput = (
-    <PopoverAnchor asChild>
-      <div className={cn("relative w-full max-w-[400px]", className)}>
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
-        <Input
-          ref={inputRef}
-          value={searchValue}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onFocus={() => {
-            if (!open) setOpen(true)
-          }}
-          onClick={() => {
-            if (!open) setOpen(true)
-          }}
-          placeholder={t('filters.commandMenu.searchPlaceholder')}
-          className={cn(
-            "pl-9 pr-20 w-full transition-all",
-            variant === "toolbar" && "h-10 rounded-full",
-            isParsingDate && "opacity-50",
-            isParsingDate && "border-primary ring-2 ring-primary ring-offset-2 animate-pulse"
-          )}
-          disabled={isParsingDate}
-        />
+    <div className={cn("relative w-full max-w-[400px]", className)}>
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+      <Input
+        ref={inputRef}
+        value={searchValue}
+        onChange={(e) => handleSearchChange(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onFocus={() => {
+          if (!open) setOpen(true)
+        }}
+        onClick={() => {
+          if (!open) setOpen(true)
+        }}
+        placeholder={t('filters.commandMenu.searchPlaceholder')}
+        className={cn(
+          "pl-9 pr-20 w-full transition-all",
+          variant === "toolbar" && "h-10 rounded-full",
+          isParsingDate && "opacity-50",
+          isParsingDate && "border-primary ring-2 ring-primary ring-offset-2 animate-pulse"
+        )}
+        disabled={isParsingDate}
+      />
         {/* Animated outline when parsing */}
         {isParsingDate && (
           <>
@@ -350,16 +370,15 @@ export function FilterCommandMenu({
           </>
         )}
         {/* Date hint with Enter key */}
-        {showDateHint && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-muted-foreground pointer-events-none">
-            <span className="hidden sm:inline">Press</span>
-            <KbdGroup>
-              <Kbd>⏎</Kbd>
-            </KbdGroup>
-          </div>
-        )}
-      </div>
-    </PopoverAnchor>
+      {showDateHint && (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-muted-foreground pointer-events-none">
+          <span className="hidden sm:inline">Press</span>
+          <KbdGroup>
+            <Kbd>⏎</Kbd>
+          </KbdGroup>
+        </div>
+      )}
+    </div>
   )
 
   // Handle Command component keyboard events to detect when at top
@@ -387,7 +406,7 @@ export function FilterCommandMenu({
         e.stopPropagation()
         
         // Focus back to the appropriate input
-        if (isMobileDevice || isMobile) {
+        if (useMobileSheet) {
           // For mobile, focus the CommandInput
           const commandInput = commandElement.querySelector('input[cmdk-input]') as HTMLInputElement
           if (commandInput) {
@@ -405,20 +424,17 @@ export function FilterCommandMenu({
         }
       }
     }
-  }, [isMobileDevice, isMobile])
+  }, [useMobileSheet])
 
   const CommandContent = (
     <Command 
       ref={commandRef} 
-      className={cn(
-        "rounded-lg border",
-        (isMobileDevice || isMobile) && "h-full"
-      )} 
+      className="flex h-full flex-col rounded-none border-0"
       shouldFilter={false}
       onKeyDown={handleCommandKeyDown}
     >
       {/* Hidden CommandInput for desktop to enable arrow key navigation */}
-      {!isMobileDevice && !isMobile && (
+      {!useMobileSheet && (
         <div className="sr-only">
           <CommandInput
             value={searchValue}
@@ -427,7 +443,7 @@ export function FilterCommandMenu({
           />
         </div>
       )}
-      {(isMobileDevice || isMobile) && (
+      {useMobileSheet && (
         <div className="border-b relative">
           <CommandInput
             placeholder={t('filters.commandMenu.searchPlaceholder')}
@@ -460,30 +476,13 @@ export function FilterCommandMenu({
           )}
         </div>
       )}
-      <div className="px-3 pt-3 pb-2 border-b bg-muted/40">
-        <p className="text-xs font-medium text-muted-foreground mb-2">
-          {t('filters.commandMenu.categories.title')}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {categories.map(category => (
-            <Button
-              key={category.id}
-              variant="secondary"
-              size="sm"
-              className="h-8 rounded-full"
-              onClick={() => handleCategoryClick(category.id)}
-            >
-              {category.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-      <CommandList className={cn(
-        "overflow-y-auto",
-        (isMobileDevice || isMobile) 
-          ? "max-h-full" 
-          : "max-h-[min(500px,calc(100vh-12rem))]"
-      )}>
+      <ActiveFilterTags
+        showAccountNumbers
+        inline
+        showClearAll
+        className="shrink-0 border-b border-[#E5E5E5] bg-white px-3 py-2 dark:border-border dark:bg-background"
+      />
+      <CommandList className="min-h-0 flex-1 max-h-none overflow-y-auto">
         <CommandEmpty>
           {isParsingDate ? t('filters.commandMenu.parsingDate') : t('filters.noResults')}
         </CommandEmpty>
@@ -498,12 +497,12 @@ export function FilterCommandMenu({
 
         <CommandSeparator />
 
-        {/* PnL Section */}
+        {/* Accounts Section */}
         <CommandGroup
-          ref={pnlSectionRef}
-          heading={t('filters.commandMenu.sections.pnl')}
+          ref={accountSectionRef}
+          heading={t('filters.commandMenu.sections.accounts')}
         >
-          <PnlSection searchValue={searchValue} />
+          <AccountSection searchValue={searchValue} />
         </CommandGroup>
 
         <CommandSeparator />
@@ -528,57 +527,52 @@ export function FilterCommandMenu({
 
         <CommandSeparator />
 
-        {/* Accounts Section */}
+        {/* PnL Section */}
         <CommandGroup
-          ref={accountSectionRef}
-          heading={t('filters.commandMenu.sections.accounts')}
+          ref={pnlSectionRef}
+          heading={t('filters.commandMenu.sections.pnl')}
         >
-          <AccountSection searchValue={searchValue} />
+          <PnlSection searchValue={searchValue} />
         </CommandGroup>
+
       </CommandList>
     </Command>
   )
 
-  if (isMobileDevice || isMobile) {
-    return (
+  return (
+    <>
+      {variant === 'navbar'
+        ? NavbarTriggers
+        : useMobileSheet
+          ? MobileTriggerButton
+          : DesktopTriggerInput}
       <Sheet open={open} onOpenChange={handleOpenChange}>
-        <SheetTrigger asChild>
-          {MobileTriggerButton}
-        </SheetTrigger>
-        <SheetContent side="right" className="w-[90vw] sm:max-w-[640px] flex flex-col h-dvh overflow-hidden p-0">
-          <SheetHeader className="px-4 pt-4">
-            <SheetTitle>{t('filters.title')}</SheetTitle>
+        <SheetContent
+          side={useMobileSheet ? "bottom" : "right"}
+          overlayClassName="bg-black/15 dark:bg-black/70"
+          className={cn(
+            "flex flex-col overflow-hidden bg-white p-0 dark:bg-background",
+            useMobileSheet
+              ? "h-[min(90dvh,720px)] w-full rounded-t-[4px] border-t border-[#E5E5E5] dark:border-border"
+              : "h-dvh w-[90vw] border-l border-[#E5E5E5] dark:border-border sm:max-w-[420px]"
+          )}
+        >
+          {useMobileSheet ? (
+            <div
+              className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-black/15 dark:bg-white/20"
+              aria-hidden
+            />
+          ) : null}
+          <SheetHeader className="shrink-0 border-b border-[#E5E5E5] px-4 py-4 text-left dark:border-border">
+            <SheetTitle className="text-lg font-semibold tracking-[-0.025em]">
+              {t('filters.title')}
+            </SheetTitle>
           </SheetHeader>
-          <div className="flex-1 overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-hidden">
             {CommandContent}
           </div>
         </SheetContent>
       </Sheet>
-    )
-  }
-
-  return (
-    <Popover open={open} onOpenChange={handleOpenChange} modal={false}>
-      {DesktopTriggerInput}
-      <PopoverContent 
-        className="p-0" 
-        style={{ width: inputWidth ? `${inputWidth}px` : 'min(400px, calc(100vw - 2rem))' }}
-        align="start"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onInteractOutside={(e) => {
-          // Don't close if clicking on the input or its container
-          const target = e.target as Node
-          if (inputRef.current && (
-            inputRef.current.contains(target) || 
-            inputRef.current === target ||
-            inputRef.current.parentElement?.contains(target)
-          )) {
-            e.preventDefault()
-          }
-        }}
-      >
-        {CommandContent}
-      </PopoverContent>
-    </Popover>
+    </>
   )
 }

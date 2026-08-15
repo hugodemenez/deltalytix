@@ -12,6 +12,7 @@ import { Suspense } from "react";
 import { GoogleTag } from "@/components/google-tag";
 import { AttributionCapture } from "@/components/attribution-capture";
 import { GoogleAdsConversions } from "@/components/google-ads-conversions";
+import { CANVAS_THEME_COLOR } from "@/lib/canvas-theme-color";
 
 const inter = Inter({ subsets: ["latin"] });
 const metadataBase = new URL(getSiteOrigin());
@@ -96,6 +97,11 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  colorScheme: "light dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: CANVAS_THEME_COLOR.light },
+    { media: "(prefers-color-scheme: dark)", color: CANVAS_THEME_COLOR.dark },
+  ],
 };
 
 export default function RootLayout({
@@ -106,7 +112,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className="bg-background"
+      className="canvas-bg"
       translate="no"
       suppressHydrationWarning
       style={{ ["--theme-intensity" as string]: "100%" }}
@@ -349,7 +355,10 @@ export default function RootLayout({
         </style>
       </head>
       <body
-        className={cn(inter.className, "antialiased [font-synthesis:none]")}
+        className={cn(
+          inter.className,
+          "canvas-bg antialiased [font-synthesis:none]",
+        )}
       >
         <ScrollLockFix />
         <GoogleTag />

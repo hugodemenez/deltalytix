@@ -14,6 +14,13 @@ describe("site metadata copy", () => {
     expect(copy.title.length).toBeLessThanOrEqual(70);
     expect(copy.description.length).toBeLessThanOrEqual(SOCIAL_DESCRIPTION_MAX_LENGTH);
     expect(copy.ogCta).toContain("→");
+    expect(copy.title.toLowerCase()).toContain("trading journal");
+    expect(copy.title.toLowerCase()).toContain("futures");
+    expect(copy.description.toLowerCase()).toContain("trading journal");
+    expect(copy.description.toLowerCase()).toContain("futures");
+    expect(copy.ogAlt.toLowerCase()).toContain("trading journal");
+    expect(copy.ogAlt.toLowerCase()).toContain("futures");
+    expect(copy.ogHeadline).toBe("One trading journal for every futures account.");
   });
 
   it("returns French copy with SEO-friendly description length", () => {

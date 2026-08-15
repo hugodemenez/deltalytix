@@ -125,7 +125,7 @@ export default function ReferralButton() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 px-2 rounded-md hover:bg-accent hover:text-accent-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors relative"
+              className="relative h-7 w-7 rounded-[4px] p-0 hover:bg-accent hover:text-accent-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors"
               aria-label={t('referral.title')}
               onMouseEnter={() => iconRef.current?.startAnimation()}
               onMouseLeave={() => iconRef.current?.stopAnimation()}

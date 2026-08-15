@@ -1,8 +1,8 @@
 export default {
   landing: {
-    title: "Master your trading journey.",
+    title: "One trading journal for every futures account.",
     description:
-      "Deltalytix is a trading dashboard for futures traders to store, explore and understand their track-record.",
+      "Import your brokers and funded accounts, then read P&L in one place.",
     cta: "Get Started",
     demoVideo: "Product demo video",
     updates: "Latest Product Updates →",

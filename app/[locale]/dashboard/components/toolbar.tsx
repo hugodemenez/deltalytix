@@ -4,10 +4,8 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
 import { useData } from "@/context/data-provider"
-import { Pencil, Trash2, RotateCcw } from "lucide-react"
-import { ShareButton } from "./share-button"
+import { Check, Pencil, Trash2, RotateCcw } from "lucide-react"
 import { AddWidgetSheet } from "./add-widget-sheet"
-import { FilterCommandMenu } from "./filters/filter-command-menu"
 import { DASHBOARD_COMPACT_BREAKPOINT, WidgetType, WidgetSize, Layouts, Widget } from "../types/dashboard"
 import { MobileWidgetDeleteDialog } from "./mobile-widget-delete-dialog"
 import {
@@ -21,17 +19,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import {
-  ContextMenu,
-  ContextMenuCheckboxItem,
-  ContextMenuContent,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu"
 import { useState, useEffect, useRef, type ReactNode } from "react"
-import { useToolbarSettingsStore } from "@/store/toolbar-settings-store"
-import { motion } from "framer-motion"
-import { toast } from "sonner"
 import { useMediaQuery } from "@/hooks/use-media-query"
+
+const PILL_CELL =
+  "inline-flex h-8 items-center justify-center gap-1.5 rounded-none px-2.5 text-sm font-medium text-[#171717] hover:bg-transparent"
+const PILL_ICON_CELL =
+  "inline-flex size-8 items-center justify-center rounded-none text-[#171717] hover:bg-transparent"
+const PILL_DELETE_CELL =
+  "inline-flex size-8 items-center justify-center rounded-none text-[#DC2626] hover:bg-transparent hover:text-[#DC2626]"
+
+function PillDivider() {
+  return <span aria-hidden className="h-4 w-px shrink-0 bg-[#E5E5E5]" />
+}
 
 interface ToolbarProps {
   onAddWidget: (type: WidgetType, size?: WidgetSize) => void
@@ -54,33 +54,12 @@ export function Toolbar({
   onRestoreDefaults,
   mobileActiveWidget = null,
   onRemoveWidget,
-  minimapTrigger,
 }: ToolbarProps) {
   const t = useI18n()
   const { isMobile } = useData()
-  const { settings, setAutoHide } = useToolbarSettingsStore()
   const isCompactScreen = useMediaQuery(`(max-width: ${DASHBOARD_COMPACT_BREAKPOINT}px)`)
+  const isNarrowScreen = useMediaQuery("(max-width: 767px)")
   const [isConsentVisible, setIsConsentVisible] = useState(false)
-
-  // Handle auto-hide toggle with proper state management
-  const handleAutoHideToggle = () => {
-    const newValue = !settings.autoHide
-    setAutoHide(newValue)
-
-    // Show toast notification
-    toast.success(
-      newValue ? t('toolbar.autoHideEnabled') : t('toolbar.autoHideDisabled'),
-      {
-        duration: 2000,
-      }
-    )
-  }
-
-  // Auto-hide functionality
-  const [isHovered, setIsHovered] = useState(false)
-  const [isPinnedVisible, setIsPinnedVisible] = useState(() => !settings.autoHide)
-  const [toolbarHeight, setToolbarHeight] = useState(0)
-  const autoHideTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -97,84 +76,8 @@ export function Toolbar({
     return () => observer.disconnect()
   }, [])
 
-  // Handle auto-hide functionality
-  useEffect(() => {
-    if (autoHideTimeoutRef.current) {
-      clearTimeout(autoHideTimeoutRef.current)
-      autoHideTimeoutRef.current = null
-    }
-
-    if (settings.autoHide && !isHovered) {
-      autoHideTimeoutRef.current = setTimeout(() => {
-        setIsPinnedVisible(false)
-      }, settings.autoHideDelay)
-    }
-
-    return () => {
-      if (autoHideTimeoutRef.current) {
-        clearTimeout(autoHideTimeoutRef.current)
-      }
-    }
-  }, [isHovered, settings.autoHide, settings.autoHideDelay])
-
-  // Show toolbar when mouse moves near it
-  useEffect(() => {
-    if (!settings.autoHide) return
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const viewportHeight = window.innerHeight
-      const viewportWidth = window.innerWidth
-      const mouseY = e.clientY
-      const mouseX = e.clientX
-      const threshold = settings.showThreshold
-
-      // Check if mouse is near bottom edge
-      const shouldShow = mouseY > viewportHeight - threshold
-
-      // Also check if mouse is near the toolbar area horizontally
-      const toolbarCenterX = viewportWidth / 2
-      const toolbarWidth = toolbarRef.current?.offsetWidth ?? 400
-      const horizontalThreshold = toolbarWidth / 2 + 50
-      const inHorizontalRange = Math.abs(mouseX - toolbarCenterX) < horizontalThreshold
-
-      if (shouldShow && inHorizontalRange) {
-        setIsPinnedVisible(true)
-        setIsHovered(true)
-      } else {
-        setIsHovered(false)
-      }
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    return () => document.removeEventListener('mousemove', handleMouseMove)
-  }, [settings.autoHide, settings.showThreshold])
-
-  // Animation variants
-  const toolbarVariants = {
-    visible: {
-      opacity: 1, // Always use full opacity
-      y: 0,
-      scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30
-      }
-    },
-    hidden: {
-      opacity: 1, // Always use full opacity
-      y: Math.max(toolbarHeight - 4, 0), // Show just 4px at the bottom
-      scale: 0.9,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30
-      }
-    }
-  }
-
   const useCompactLayout = isMobile || isCompactScreen
-  const isVisible = !settings.autoHide || isHovered || isPinnedVisible
+  const iconOnly = isMobile || isNarrowScreen
 
   useEffect(() => {
     const toolbar = toolbarRef.current
@@ -182,7 +85,6 @@ export function Toolbar({
 
     const updateToolbarMetrics = () => {
       const rect = toolbar.getBoundingClientRect()
-      setToolbarHeight(rect.height)
       document.documentElement.style.setProperty(
         "--mobile-toolbar-top",
         `${window.innerHeight - rect.top}px`
@@ -199,160 +101,137 @@ export function Toolbar({
       resizeObserver.disconnect()
       window.removeEventListener("resize", updateToolbarMetrics)
     }
-  }, [isConsentVisible, isVisible])
+  }, [isConsentVisible])
+
+  const restoreButton = (
+    <Button
+      variant="ghost"
+      className={PILL_ICON_CELL}
+      aria-label={t('widgets.restoreDefaults')}
+      title={t('widgets.restoreDefaults')}
+    >
+      <RotateCcw className="h-4 w-4" />
+    </Button>
+  )
+
+  const deleteIconButton = (
+    <Button
+      variant="ghost"
+      className={PILL_DELETE_CELL}
+      aria-label={t('widgets.deleteAll')}
+      title={t('widgets.deleteAll')}
+    >
+      <Trash2 className="h-4 w-4" />
+    </Button>
+  )
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger>
-        <motion.div
-          ref={toolbarRef}
-          className={cn(
-            "fixed inset-x-0 mx-auto z-10 max-w-[calc(100vw-1rem)] px-2 sm:px-0",
-            useCompactLayout ? "w-full sm:w-fit" : "w-fit",
-            isConsentVisible ? "bottom-36 sm:bottom-20" : "bottom-4"
-          )}
-          style={{
-            transform: 'translateZ(0)', // Force hardware acceleration
-            willChange: 'transform, opacity' // Optimize for animations
-          }}
-          variants={toolbarVariants}
-          // Skip mount animation (scale/y) so Instant Nav chrome stays size-stable —
-          // same idea as Connections `t-stagger` chrome that paints once. Auto-hide
-          // still animates when `animate` flips after mount.
-          initial={false}
-          animate={isVisible ? "visible" : "hidden"}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
-          {/* Gradient strip overlay for hidden state */}
-          {!isVisible && (
-            <div className="absolute inset-0 bg-linear-to-t from-background/90 via-background/40 to-transparent h-4 rounded-t-full pointer-events-none" />
-          )}
-          <motion.div
-            className={cn(
-              "flex items-center justify-center bg-background/95 border shadow-lg relative",
-              useCompactLayout
-                ? "max-h-[calc(100dvh-2rem)] max-w-full flex-wrap gap-2 overflow-y-auto rounded-3xl px-2.5 py-2"
-                : "gap-4 rounded-full p-3"
-            )}
-          >
+    <div
+      ref={toolbarRef}
+      className={cn(
+        "fixed inset-x-4 z-10 mx-auto w-auto md:inset-x-0 md:w-fit md:max-w-[calc(100vw-1rem)]",
+        isConsentVisible ? "bottom-36 sm:bottom-20" : "bottom-4"
+      )}
+    >
+      <div className="relative flex max-w-full items-center rounded-full border border-[#E5E5E5] bg-white px-2 py-[6px] shadow-none">
+        {isCustomizing ? (
+          <>
             <Button
-              variant={isCustomizing ? "default" : "ghost"}
               onClick={onEditToggle}
+              aria-label={t('widgets.done')}
               className={cn(
-                "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
-                useCompactLayout ? "w-10 shrink-0 p-0" : "min-w-[120px] gap-3 px-4"
+                "shadow-none",
+                iconOnly
+                  ? "size-8 rounded-full bg-[#171717] p-0 text-white hover:bg-[#171717]/90"
+                  : "h-8 rounded-full bg-[#171717] px-3.5 text-sm font-medium text-white hover:bg-[#171717]/90"
               )}
             >
-              <Pencil className={cn(
-                "h-4 w-4 shrink-0",
-                isCustomizing && "text-background"
-              )} />
-              {!useCompactLayout && (
-                <span className="text-sm font-medium">
-                  {isCustomizing ? t('widgets.done') : t('widgets.edit')}
-                </span>
-              )}
+              {iconOnly ? <Check className="h-4 w-4" strokeWidth={2} /> : t('widgets.done')}
             </Button>
-
-            <ShareButton currentLayout={currentLayout} compact={useCompactLayout} />
-
-            <AddWidgetSheet onAddWidget={onAddWidget} isCustomizing={isCustomizing} compact={useCompactLayout} />
-
-            <FilterCommandMenu
-              variant="toolbar"
-              className={cn(useCompactLayout ? "w-10 p-0" : "w-auto")}
-              compactBreakpoint={DASHBOARD_COMPACT_BREAKPOINT}
-              compact={useCompactLayout}
+            <PillDivider />
+            <AddWidgetSheet
+              onAddWidget={onAddWidget}
+              isCustomizing={isCustomizing}
+              currentLayout={currentLayout}
+              compact={iconOnly}
+              appearance="pill"
             />
-
-            {minimapTrigger}
-
-            {isCustomizing && (
-              <div className="flex items-center gap-2">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
-                      )}
-                      aria-label={t('widgets.restoreDefaults')}
-                      title={t('widgets.restoreDefaults')}
+            <PillDivider />
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                {restoreButton}
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t('widgets.restoreDefaultsConfirmTitle')}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t('widgets.restoreDefaultsConfirmDescription')}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                  <AlertDialogAction onClick={onRestoreDefaults}>
+                    {t('widgets.confirmRestoreDefaults')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <PillDivider />
+            {isMobile && onRemoveWidget ? (
+              <MobileWidgetDeleteDialog
+                activeWidget={mobileActiveWidget}
+                onRemoveWidget={onRemoveWidget}
+                onRemoveAll={onRemoveAll}
+                compact={useCompactLayout}
+                appearance="pill"
+              />
+            ) : (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  {deleteIconButton}
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t('widgets.deleteAllConfirmTitle')}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t('widgets.deleteAllConfirmDescription')}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={onRemoveAll}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                      <RotateCcw className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{t('widgets.restoreDefaultsConfirmTitle')}</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {t('widgets.restoreDefaultsConfirmDescription')}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                      <AlertDialogAction onClick={onRestoreDefaults}>
-                        {t('widgets.confirmRestoreDefaults')}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-
-                {isMobile && onRemoveWidget ? (
-                  <MobileWidgetDeleteDialog
-                    activeWidget={mobileActiveWidget}
-                    onRemoveWidget={onRemoveWidget}
-                    onRemoveAll={onRemoveAll}
-                    compact={useCompactLayout}
-                  />
-                ) : (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="destructive"
-                        className={cn(
-                          "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
-                        )}
-                        aria-label={t('widgets.deleteAll')}
-                        title={t('widgets.deleteAll')}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>{t('widgets.deleteAllConfirmTitle')}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {t('widgets.deleteAllConfirmDescription')}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={onRemoveAll}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          {t('widgets.confirmDeleteAll')}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
-              </div>
+                      {t('widgets.confirmDeleteAll')}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
-          </motion.div>
-        </motion.div>
-      </ContextMenuTrigger>
-
-      <ContextMenuContent className="w-48">
-        <ContextMenuCheckboxItem
-          checked={settings.autoHide}
-          onCheckedChange={handleAutoHideToggle}
-        >
-          {t('toolbar.autoHide')}
-        </ContextMenuCheckboxItem>
-      </ContextMenuContent>
-    </ContextMenu>
+          </>
+        ) : (
+          <>
+            <Button
+              variant="ghost"
+              onClick={onEditToggle}
+              aria-label={t('widgets.edit')}
+              className={iconOnly ? PILL_ICON_CELL : PILL_CELL}
+            >
+              <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+              {!iconOnly ? t('widgets.edit') : null}
+            </Button>
+            <PillDivider />
+            <AddWidgetSheet
+              onAddWidget={onAddWidget}
+              isCustomizing={isCustomizing}
+              currentLayout={currentLayout}
+              compact={iconOnly}
+              appearance="pill"
+            />
+          </>
+        )}
+      </div>
+    </div>
   )
 }

@@ -1,18 +1,16 @@
 'use client'
 
 import { useData } from '@/context/data-provider'
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { ArrowLeftRight, ArrowUpFromLine, ArrowDownFromLine } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { WidgetSize } from '../../types/dashboard'
 import { useI18n } from '@/locales/client'
-import { InfoBubble } from "@/components/ui/info-bubble"
+import { KpiCard } from './kpi-card'
 
 interface LongShortPerformanceCardProps {
   size?: WidgetSize
 }
 
-export default function LongShortPerformanceCard({ size = 'medium' }: LongShortPerformanceCardProps) {
+export default function LongShortPerformanceCard(_props: LongShortPerformanceCardProps) {
+  void _props
   const { calendarData } = useData()
   const  t  = useI18n()
 
@@ -30,28 +28,11 @@ export default function LongShortPerformanceCard({ size = 'medium' }: LongShortP
   const longRate = Number((longNumber / totalTrades * 100).toFixed(2))
   const shortRate = Number((shortNumber / totalTrades * 100).toFixed(2))
 
-    return (
-      <Card className="h-full">
-        <div className="flex items-center justify-center h-full gap-1.5">
-          <div className="flex items-center gap-1">
-            <ArrowUpFromLine className="h-3 w-3 text-green-500" />
-            <span className="font-medium text-sm tabular-nums">{longRate}%</span>
-          </div>
-          <span className="text-muted-foreground">/</span>
-          <div className="flex items-center gap-1">
-            <ArrowDownFromLine className="h-3 w-3 text-red-500" />
-            <span className="font-medium text-sm tabular-nums">{shortRate}%</span>
-          </div>
-          <InfoBubble
-            icon="help"
-            side="bottom"
-            sideOffset={5}
-            iconClassName="size-3"
-            contentClassName="max-w-[300px]"
-          >
-            {t('widgets.longShortPerformance.tooltip')}
-          </InfoBubble>
-        </div>
-      </Card>
-    )
-  }
+  return (
+    <KpiCard
+      title={t('widgets.types.longShortPerformance')}
+      value={`${longRate}% / ${shortRate}%`}
+      tooltip={t('widgets.longShortPerformance.tooltip')}
+    />
+  )
+}

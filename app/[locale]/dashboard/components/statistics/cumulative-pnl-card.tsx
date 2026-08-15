@@ -1,41 +1,36 @@
 import { useData } from "@/context/data-provider"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { PiggyBank } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '../../types/dashboard'
-import { useI18n } from '@/locales/client'
-import { InfoBubble } from "@/components/ui/info-bubble"
+import { useCurrentLocale, useI18n } from '@/locales/client'
+import { KpiCard } from './kpi-card'
 
 interface CumulativePnlCardProps {
   size?: WidgetSize
 }
 
-export default function CumulativePnlCard({ size = 'medium' }: CumulativePnlCardProps) {
+export default function CumulativePnlCard(_props: CumulativePnlCardProps) {
+  void _props
   const { statistics: { cumulativePnl, cumulativeFees } } = useData()
   const totalPnl = cumulativePnl - cumulativeFees
   const isPositive = totalPnl > 0
+  const isNegative = totalPnl < 0
   const t = useI18n()
+  const locale = useCurrentLocale()
+  const amount = new Intl.NumberFormat(locale === 'fr' ? 'fr-FR' : 'en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Math.abs(totalPnl))
+  const signedAmount = `${isPositive ? '+' : isNegative ? '-' : ''}$${amount}`
 
-    return (
-      <Card className="flex items-center justify-center h-full p-2">
-        <div className="flex items-center gap-1.5">
-          <PiggyBank className="h-4 w-4 text-muted-foreground" />
-          <span className={cn(
-            "font-semibold text-base tabular-nums",
-            isPositive ? "text-green-500" : "text-red-500"
-          )}>
-            ${Math.abs(totalPnl).toFixed(2)}
-          </span>
-          <InfoBubble
-            icon="help"
-            side="bottom"
-            sideOffset={5}
-            iconClassName="size-3"
-            contentClassName="max-w-[300px]"
-          >
-            {t('widgets.cumulativePnl.tooltip')}
-          </InfoBubble>
-        </div>
-      </Card>
-    )
-  }
+  return (
+    <KpiCard
+      title={t('widgets.types.cumulativePnl')}
+      value={signedAmount}
+      valueClassName={cn(
+        isPositive && 'text-[#3E7550]',
+        isNegative && 'text-[#B55742]'
+      )}
+      tooltip={t('widgets.cumulativePnl.tooltip')}
+    />
+  )
+}
