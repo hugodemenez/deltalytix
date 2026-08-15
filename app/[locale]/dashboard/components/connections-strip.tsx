@@ -17,9 +17,13 @@ import { ConnectServiceModal } from '@/app/[locale]/dashboard/connections/compon
 import type {
   ConnectionService,
   ConnectionsPageAccount,
-  ConnectionsPageConnection,
   ConnectionsPageData,
 } from '@/app/[locale]/dashboard/connections/types'
+import {
+  buildStripItems,
+  chipAccountCountLabel,
+  type StripItem,
+} from './connections-strip-items'
 
 const SERVICE_SECTIONS: {
   service: ConnectionService
@@ -34,24 +38,6 @@ const SERVICE_SECTIONS: {
   { service: 'ibkr', labelKey: 'connections.sections.ibkr' },
   { service: 'thor', labelKey: 'connections.sections.thor' },
 ]
-
-type StripItem =
-  | {
-      kind: 'connection'
-      id: string
-      displayName: string
-      status: 'connected' | 'error'
-      service: string
-      accounts: ConnectionsPageAccount[]
-    }
-  | {
-      kind: 'standalone'
-      id: string
-      displayName: string
-      status: 'connected'
-      service: string | null
-      accounts: ConnectionsPageAccount[]
-    }
 
 function reviveDate(value: unknown): Date | null {
   if (!value) return null
@@ -100,65 +86,9 @@ async function fetchConnectionsPageData(): Promise<ConnectionsPageData> {
   return reviveConnectionsPageData(json)
 }
 
-function accountMetaLabel(
-  account: ConnectionsPageAccount,
-  t: ReturnType<typeof useI18n>
-): string | null {
-  const parts: string[] = []
-  if (account.propfirm) {
-    parts.push(account.propfirm)
-  }
-  return parts.length > 0 ? parts.join(' · ') : null
-}
-
-function chipMeta(
-  item: StripItem,
-  t: ReturnType<typeof useI18n>
-): string {
-  if (item.accounts.length === 1) {
-    return item.accounts[0].number
-  }
-  return t('connections.accountCount.other', { count: item.accounts.length })
-}
-
-function buildStripItems(data: ConnectionsPageData | null): StripItem[] {
-  if (!data) return []
-
-  const connectionItems: StripItem[] = data.connections.map(
-    (connection: ConnectionsPageConnection) => ({
-      kind: 'connection' as const,
-      id: connection.id,
-      displayName: connection.displayName,
-      status: connection.status,
-      service: connection.service,
-      accounts: connection.accounts,
-    })
-  )
-
-  // Group standalone accounts by propfirm label when shared; otherwise one chip each.
-  const standaloneByLabel = new Map<string, ConnectionsPageAccount[]>()
-  for (const account of data.standaloneAccounts) {
-    const label =
-      account.propfirm?.trim() ||
-      account.number ||
-      'standalone'
-    const list = standaloneByLabel.get(label) ?? []
-    list.push(account)
-    standaloneByLabel.set(label, list)
-  }
-
-  const standaloneItems: StripItem[] = Array.from(
-    standaloneByLabel.entries()
-  ).map(([label, accounts]) => ({
-    kind: 'standalone' as const,
-    id: `standalone:${label}`,
-    displayName: label,
-    status: 'connected' as const,
-    service: null,
-    accounts,
-  }))
-
-  return [...connectionItems, ...standaloneItems]
+function accountMetaLabel(account: ConnectionsPageAccount): string | null {
+  const propfirm = account.propfirm?.trim()
+  return propfirm || null
 }
 
 function ConnectionChip({
@@ -172,7 +102,7 @@ function ConnectionChip({
 }) {
   const t = useI18n()
   const [open, setOpen] = useState(false)
-  const meta = chipMeta(item, t)
+  const meta = chipAccountCountLabel(item.accounts.length, t)
   const connected = item.status === 'connected'
 
   return (
@@ -218,9 +148,11 @@ function ConnectionChip({
                 : t('connections.status.error')
             }
           />
-          <span className="min-w-0 truncate text-xs text-[#686D67] dark:text-muted-foreground">
-            {meta}
-          </span>
+          {meta ? (
+            <span className="min-w-0 truncate text-xs text-[#686D67] dark:text-muted-foreground">
+              {meta}
+            </span>
+          ) : null}
           <ChevronDown
             className={cn(
               'h-3.5 w-3.5 shrink-0 text-[#686D67] transition-transform duration-150 dark:text-muted-foreground',
@@ -243,7 +175,7 @@ function ConnectionChip({
           ) : (
             item.accounts.map((account) => {
               const selected = selectedAccounts.includes(account.number)
-              const metaLabel = accountMetaLabel(account, t)
+              const metaLabel = accountMetaLabel(account)
               return (
                 <button
                   key={account.id}
@@ -380,10 +312,14 @@ export function ConnectionsStrip({ className }: { className?: string }) {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount
     void load()
   }, [load])
 
-  const items = useMemo(() => buildStripItems(data), [data])
+  const items = useMemo(
+    () => buildStripItems(data, t('connections.strip.standalone')),
+    [data, t]
+  )
 
   const onSelectAccount = useCallback(
     (accountNumber: string) => {
