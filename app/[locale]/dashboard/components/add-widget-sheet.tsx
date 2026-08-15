@@ -16,6 +16,7 @@ interface AddWidgetSheetProps {
   onAddWidget: (type: WidgetType, size?: WidgetSize) => void
   isCustomizing: boolean
   compact?: boolean
+  appearance?: 'default' | 'pill'
 }
 
 interface PreviewCardProps {
@@ -122,7 +123,7 @@ const PreviewCard = forwardRef<HTMLDivElement, PreviewCardProps>(
 PreviewCard.displayName = "PreviewCard"
 
 export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>(
-  ({ onAddWidget, compact = false }, ref) => {
+  ({ onAddWidget, compact = false, appearance = 'default' }, ref) => {
     const t = useI18n()
     const [isOpen, setIsOpen] = React.useState(false)
     const [loadedItems, setLoadedItems] = useState<Set<number>>(new Set())
@@ -210,8 +211,12 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
             variant="ghost"
             aria-label={t('widgets.addWidget')}
             className={cn(
-              'flex shrink-0 items-center justify-center rounded-full transition-transform active:scale-95',
-              compact ? 'h-10 w-10 p-0' : 'h-10 gap-2 px-3'
+              appearance === 'pill'
+                ? compact
+                  ? 'inline-flex size-8 items-center justify-center rounded-none text-[#171717] hover:bg-transparent'
+                  : 'inline-flex h-8 items-center justify-center gap-1.5 rounded-none px-2.5 text-sm font-medium text-[#171717] hover:bg-transparent'
+                : 'flex shrink-0 items-center justify-center rounded-full transition-transform active:scale-95',
+              appearance !== 'pill' && (compact ? 'h-10 w-10 p-0' : 'h-10 gap-2 px-3')
             )}
           >
             <Plus className="h-4 w-4 shrink-0" strokeWidth={1.75} />

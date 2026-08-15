@@ -63,8 +63,10 @@ export function buildStripItems(
 /** Chip meta is an account count, never an account number. */
 export function chipAccountCountLabel(
   count: number,
-  t: (key: 'connections.accountCount.one' | 'connections.accountCount.other', params: { count: number }) => string
+  t: (key: 'connections.accountCount.one' | 'connections.accountCount.other', params: { count: number }) => string,
+  options?: { numericOnly?: boolean }
 ): string | null {
   if (count <= 1) return null
+  if (options?.numericOnly) return String(count)
   return t('connections.accountCount.other', { count })
 }

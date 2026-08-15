@@ -24,7 +24,6 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Slider } from '@/components/ui/slider'
 import { Laptop, Moon, Sun } from 'lucide-react'
 import { signOut } from '@/server/auth'
 import { useMemo, useState, type ButtonHTMLAttributes } from 'react'
@@ -79,12 +78,12 @@ function AccountTrigger({
         <img
           src={photoUrl}
           alt=""
-          className="h-5 w-5 rounded-[2px] object-cover"
+          className="h-5 w-5 rounded-[4px] object-cover"
         />
       ) : (
         <span
           aria-hidden
-          className="inline-flex h-5 w-5 items-center justify-center rounded-[2px] bg-[#171717] text-[10px] font-semibold leading-none text-white dark:bg-foreground dark:text-background"
+          className="inline-flex h-5 w-5 items-center justify-center rounded-[4px] bg-[#171717] text-[10px] font-semibold leading-none text-white dark:bg-foreground dark:text-background"
         >
           {initial}
         </span>
@@ -151,49 +150,32 @@ function MenuLinks({
 
 function ThemeOptions() {
   const t = useI18n()
-  const { theme, setTheme, intensity, setIntensity } = useTheme()
+  const { theme, setTheme } = useTheme()
 
   return (
-    <>
-      <DropdownMenuRadioGroup
-        value={theme}
-        onValueChange={(value) => setTheme(value as 'light' | 'dark' | 'system')}
-      >
-        <DropdownMenuRadioItem value="light">
-          <Sun className="mr-2 h-4 w-4" />
-          <span>{t('landing.navbar.lightMode')}</span>
-        </DropdownMenuRadioItem>
-        <DropdownMenuRadioItem value="dark">
-          <Moon className="mr-2 h-4 w-4" />
-          <span>{t('landing.navbar.darkMode')}</span>
-        </DropdownMenuRadioItem>
-        <DropdownMenuRadioItem value="system">
-          <Laptop className="mr-2 h-4 w-4" />
-          <span>{t('landing.navbar.systemTheme')}</span>
-        </DropdownMenuRadioItem>
-      </DropdownMenuRadioGroup>
-      <DropdownMenuSeparator />
-      <div className="p-4">
-        <div className="mb-2 text-sm font-medium">
-          {t('dashboard.theme.intensity')}
-        </div>
-        <Slider
-          value={[intensity]}
-          onValueChange={([value]) => setIntensity(value)}
-          min={90}
-          max={100}
-          step={1}
-          className="w-full"
-        />
-        <div className="mt-2 text-sm text-muted-foreground">{intensity}%</div>
-      </div>
-    </>
+    <DropdownMenuRadioGroup
+      value={theme}
+      onValueChange={(value) => setTheme(value as 'light' | 'dark' | 'system')}
+    >
+      <DropdownMenuRadioItem value="light">
+        <Sun className="mr-2 h-4 w-4" />
+        <span>{t('landing.navbar.lightMode')}</span>
+      </DropdownMenuRadioItem>
+      <DropdownMenuRadioItem value="dark">
+        <Moon className="mr-2 h-4 w-4" />
+        <span>{t('landing.navbar.darkMode')}</span>
+      </DropdownMenuRadioItem>
+      <DropdownMenuRadioItem value="system">
+        <Laptop className="mr-2 h-4 w-4" />
+        <span>{t('landing.navbar.systemTheme')}</span>
+      </DropdownMenuRadioItem>
+    </DropdownMenuRadioGroup>
   )
 }
 
 function MobileThemeOptions() {
   const t = useI18n()
-  const { theme, setTheme, intensity, setIntensity } = useTheme()
+  const { theme, setTheme } = useTheme()
   const options = [
     { value: 'light' as const, label: t('landing.navbar.lightMode') },
     { value: 'dark' as const, label: t('landing.navbar.darkMode') },
@@ -217,22 +199,6 @@ function MobileThemeOptions() {
           {option.label}
         </button>
       ))}
-      <div className="px-2 pt-3">
-        <div className="mb-2 text-sm font-medium text-[#171717] dark:text-foreground">
-          {t('dashboard.theme.intensity')}
-        </div>
-        <Slider
-          value={[intensity]}
-          onValueChange={([value]) => setIntensity(value)}
-          min={90}
-          max={100}
-          step={1}
-          className="w-full"
-        />
-        <div className="mt-2 text-sm text-[#686D67] dark:text-muted-foreground">
-          {intensity}%
-        </div>
-      </div>
     </div>
   )
 }

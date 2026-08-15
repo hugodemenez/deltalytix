@@ -114,4 +114,9 @@ describe('chipAccountCountLabel', () => {
       'connections.accountCount.other:3'
     )
   })
+
+  it('returns the number only when numericOnly is set', () => {
+    expect(chipAccountCountLabel(20, t, { numericOnly: true })).toBe('20')
+    expect(chipAccountCountLabel(1, t, { numericOnly: true })).toBeNull()
+  })
 })

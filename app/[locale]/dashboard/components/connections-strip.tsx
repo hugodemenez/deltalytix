@@ -115,14 +115,20 @@ function accountMetaLabel(account: ConnectionsPageAccount): string | null {
 function ChipTrigger({
   item,
   open,
+  showChevron = true,
+  numericCount = false,
   className,
   ...props
 }: {
   item: StripItem
   open: boolean
+  showChevron?: boolean
+  numericCount?: boolean
 } & ButtonHTMLAttributes<HTMLButtonElement>) {
   const t = useI18n()
-  const meta = chipAccountCountLabel(item.accounts.length, t)
+  const meta = chipAccountCountLabel(item.accounts.length, t, {
+    numericOnly: numericCount,
+  })
   const statusLabel =
     item.status === 'connected'
       ? t('connections.status.connected')
@@ -161,13 +167,15 @@ function ChipTrigger({
           {meta}
         </span>
       ) : null}
-      <ChevronDown
-        className={cn(
-          'h-3.5 w-3.5 shrink-0 text-[#686D67] transition-transform duration-150 dark:text-muted-foreground',
-          open && 'rotate-180'
-        )}
-        aria-hidden
-      />
+      {showChevron ? (
+        <ChevronDown
+          className={cn(
+            'h-3.5 w-3.5 shrink-0 text-[#686D67] transition-transform duration-150 dark:text-muted-foreground',
+            open && 'rotate-180'
+          )}
+          aria-hidden
+        />
+      ) : null}
     </button>
   )
 }
@@ -295,7 +303,13 @@ function ConnectionChip({
   if (isMobile) {
     return (
       <>
-        <ChipTrigger item={item} open={open} onClick={() => setOpen(true)} />
+        <ChipTrigger
+          item={item}
+          open={open}
+          showChevron={false}
+          numericCount
+          onClick={() => setOpen(true)}
+        />
         <Drawer
           open={open}
           onOpenChange={handleOpenChange}
@@ -338,6 +352,7 @@ function AddConnectionChip({
   onSelectService: (service: ConnectionService) => void
 }) {
   const t = useI18n()
+  const isMobile = useIsMobile()
   const [open, setOpen] = useState(false)
 
   return (
@@ -348,10 +363,12 @@ function AddConnectionChip({
           aria-haspopup="menu"
           aria-expanded={open}
           aria-label={t('connections.addChip')}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[4px] border border-[#E5E5E5] bg-white px-3 text-sm font-medium text-[#686D67] transition-[background-color,border-color,transform,color] duration-150 hover:border-[#181A18]/40 hover:bg-[#F5F5F5] hover:text-[#171917] active:scale-[0.96] dark:border-border dark:bg-background dark:hover:bg-muted/50 dark:hover:text-foreground"
+          className={cn(
+            'inline-flex shrink-0 items-center justify-center rounded-[4px] border border-[#E5E5E5] bg-white text-[#686D67] transition-[background-color,border-color,transform,color] duration-150 hover:border-[#181A18]/40 hover:bg-[#F5F5F5] hover:text-[#171917] active:scale-[0.96] dark:border-border dark:bg-background dark:hover:bg-muted/50 dark:hover:text-foreground',
+            isMobile ? 'size-8' : 'size-9'
+          )}
         >
           <Plus className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-          {t('connections.addChip')}
         </button>
       </PopoverTrigger>
       <PopoverContent

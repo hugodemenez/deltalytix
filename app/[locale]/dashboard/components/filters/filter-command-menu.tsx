@@ -273,14 +273,16 @@ export function FilterCommandMenu({
   }, [searchValue, containsDateKeywords, parseDateQuery, open])
 
   const chromeButtonClass =
-    'inline-flex h-7 shrink-0 items-center rounded-[4px] border border-[#E5E5E5] bg-white text-sm font-medium text-[#171717] transition-colors hover:bg-[#FAFAFA] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40'
+    'inline-flex h-7 shrink-0 items-center rounded-[4px] border border-[#E5E5E5] bg-white transition-colors hover:bg-[#FAFAFA] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40'
+  const chromeTextClass = 'text-xs font-medium text-[#737373] dark:text-muted-foreground'
+  const chromeIconClass = 'text-sm font-medium text-[#171717] dark:text-foreground'
 
   const NavbarTriggers = compact ? (
     <button
       type="button"
       onClick={() => setOpen(true)}
       aria-label={t('filters.addFilterAria')}
-      className={cn(chromeButtonClass, 'relative h-7 w-7 justify-center p-0', className)}
+      className={cn(chromeButtonClass, chromeIconClass, 'relative h-7 w-7 justify-center p-0', className)}
     >
       <Search className="h-3.5 w-3.5" strokeWidth={1.75} />
       {activeFilterCount > 0 ? (
@@ -294,7 +296,7 @@ export function FilterCommandMenu({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={cn(chromeButtonClass, 'px-2.5')}
+        className={cn(chromeButtonClass, chromeTextClass, 'px-2.5')}
       >
         {dateChipLabel}
       </button>
@@ -302,7 +304,7 @@ export function FilterCommandMenu({
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t('filters.addFilterAria')}
-        className={cn(chromeButtonClass, 'px-2.5')}
+        className={cn(chromeButtonClass, chromeTextClass, 'px-2.5')}
       >
         {t('filters.addFilter')}
       </button>

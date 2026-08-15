@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback, forwardRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Share, Check, ChevronsUpDown, Copy, Layout, ExternalLink, Download } from "lucide-react"
+import { Share, Share2, Check, ChevronsUpDown, Copy, Layout, ExternalLink, Download } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -487,7 +487,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
               aria-label={t("share.button")}
               className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[#171717] transition-colors hover:bg-[#FAFAFA] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-foreground dark:hover:bg-muted/40"
             >
-              <Share className="h-4 w-4" strokeWidth={1.75} />
+              <Share2 className="h-4 w-4" strokeWidth={1.75} />
             </button>
           ) : (
             <Button
