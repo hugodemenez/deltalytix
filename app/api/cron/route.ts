@@ -7,6 +7,8 @@ import {
   buildWeeklyRecapEmail,
   type WeeklyRecapEmailData,
 } from "@/lib/weekly-recap-email"
+import { weeklyRecapBatchIdempotencyKey } from "@/lib/weekly-recap-idempotency"
+import { getLastCompleteWeekUtc } from "@/lib/weekly-newsletter-window"
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -14,6 +16,11 @@ const adapter = new PrismaPg({
 
 const prisma = new PrismaClient({ adapter })
 const resend = new Resend(process.env.RESEND_API_KEY)
+
+// Every subscriber's recap is now built in-process: DB read + one LLM call +
+// email render each. The whole run must fit in a single invocation, so the
+// default duration is not enough once the subscriber list grows.
+export const maxDuration = 300
 
 // Weekly performance recap. Vercel cron: path `/api/cron`, schedule `0 7 * * 0`.
 // Sunday 08:00 Lisbon. Summer WEST UTC+1 → 07:00 UTC (`0 7 * * 0`).
@@ -66,6 +73,11 @@ export async function GET(req: Request) {
 
     let successCount = 0
     let errorCount = 0
+    let skippedCount = 0
+    let duplicateCount = 0
+
+    // Identity of the recap being sent — anchors the per-batch idempotency key.
+    const week = getLastCompleteWeekUtc()
 
     // Process each batch
     for (const batch of batches) {
@@ -92,11 +104,37 @@ export async function GET(req: Request) {
         const validEmails = (await Promise.all(emailBatch)).filter(
           (email): email is WeeklyRecapEmailData => email != null,
         )
+        // Users the green-week gate dropped are skips, not failures.
+        skippedCount += batch.length - validEmails.length
+
         if (validEmails.length > 0) {
           try {
-            const result = await resend.batch.send(validEmails)
-            successCount += result.data?.data.length || 0
-            errorCount += batch.length - (result.data?.data.length || 0)
+            const result = await resend.batch.send(validEmails, {
+              idempotencyKey: weeklyRecapBatchIdempotencyKey(week.start, validEmails),
+            })
+
+            if (result.error) {
+              // The recap copy is LLM-generated, so a retry sends a different
+              // payload under the same key: Resend answers 409 rather than
+              // deduping silently. Nobody got a second email — not an outage.
+              if (
+                result.error.name === 'invalid_idempotent_request' ||
+                result.error.name === 'concurrent_idempotent_requests'
+              ) {
+                console.log(
+                  `Batch already sent for week ${week.start.toISOString().slice(0, 10)}, skipping ${validEmails.length} recipients:`,
+                  result.error.message,
+                )
+                duplicateCount += validEmails.length
+              } else {
+                console.error('Failed to send email batch:', result.error)
+                errorCount += validEmails.length
+              }
+            } else {
+              const sent = result.data?.data.length ?? 0
+              successCount += sent
+              errorCount += validEmails.length - sent
+            }
           } catch (error) {
             console.error('Failed to send email batch:', error)
             errorCount += validEmails.length
@@ -108,12 +146,18 @@ export async function GET(req: Request) {
       }
     }
 
-    console.log(`Weekly emails processed: ${successCount} successful, ${errorCount} failed`)
+    const summary = `Weekly emails processed: ${successCount} successful, ${errorCount} failed, ${skippedCount} skipped (green-week gate), ${duplicateCount} already sent`
+    console.log(summary)
 
     return NextResponse.json({
       success: true,
-      message: `Weekly emails processed: ${successCount} successful, ${errorCount} failed`,
-      stats: { success: successCount, failed: errorCount }
+      message: summary,
+      stats: {
+        success: successCount,
+        failed: errorCount,
+        skipped: skippedCount,
+        duplicate: duplicateCount,
+      }
     })
 
   } catch (error) {

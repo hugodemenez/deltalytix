@@ -65,14 +65,30 @@ export async function getUserData(userId: string): Promise<UserData> {
     throw new Error(`Newsletter subscription not found or inactive for email: ${user.email}`)
   }
 
+  // Last complete Monday–Sunday week (UTC v1) — not a rolling lookback
+  const week = getLastCompleteWeekUtc()
+
+  // Coarse pre-filter so the cron does not hold every trade a user has ever
+  // made in memory (it now builds up to 100 recaps in one invocation).
+  // `entryDate` is a String column written in several shapes across importers
+  // — trailing `Z`, `+00:00`, and non-UTC offsets — so a lexicographic range
+  // is not exactly a chronological one. Padding a day on each side absorbs any
+  // UTC offset (max ±14h); `isEntryInWeek` below is still the real cut.
+  const rangeStart = new Date(week.start)
+  rangeStart.setUTCDate(rangeStart.getUTCDate() - 1)
+  const rangeEnd = new Date(week.endExclusive)
+  rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 1)
+
   const trades = await prisma.trade.findMany({
     where: {
       userId: user.id,
+      entryDate: {
+        gte: rangeStart.toISOString(),
+        lt: rangeEnd.toISOString(),
+      },
     },
   })
 
-  // Last complete Monday–Sunday week (UTC v1) — not a rolling lookback
-  const week = getLastCompleteWeekUtc()
   const weekTrades = trades.filter((trade) => isEntryInWeek(trade.entryDate, week))
 
   return {
