@@ -2,12 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
+import { Drawer } from "vaul";
+import "./consent-record-drawer.css";
 
 import { Switch } from "@/components/ui/switch";
 import {
   persistConsentSettings,
   reconcileStoredConsent,
 } from "@/lib/consent-persist";
+import {
+  CONSENT_COMPACT_SNAP,
+  CONSENT_SHEET_SNAP,
+  CONSENT_SNAP_POINTS,
+  clampConsentSnapPoint,
+} from "@/lib/consent-record-snaps";
 import {
   CONSENT_RESET_EVENT,
   CONSENT_UPDATED_EVENT,
@@ -85,7 +93,7 @@ function ConsentSwitchRow({
   const descriptionId = `${id}-description`;
 
   return (
-    <div className="flex items-start justify-between gap-4 py-3">
+    <div className="flex items-start justify-between gap-4 py-3" data-vaul-no-drag>
       <div className="min-w-0">
         <label
           htmlFor={id}
@@ -180,7 +188,10 @@ function ConsentRecordBody({
       )}
 
       {showFooter && privacyHref && (
-        <p className="mt-4 text-xs leading-4 text-black/45 dark:text-white/45">
+        <p
+          className="mt-4 text-xs leading-4 text-black/45 dark:text-white/45"
+          data-vaul-no-drag
+        >
           <Link
             href={privacyHref}
             className="underline-offset-2 transition-colors hover:text-black hover:underline dark:hover:text-white"
@@ -246,7 +257,7 @@ function ConsentRecordActions({
   hugDesktop?: boolean;
 }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2" data-vaul-no-drag>
       <button
         type="button"
         onClick={onContinue}
@@ -271,45 +282,31 @@ function ConsentRecordActions({
   );
 }
 
-function ConsentRecordHandle() {
-  return (
-    <div
-      className="mx-auto mb-3 h-1 w-10 rounded-full bg-[#E5E5E5] dark:bg-white/20"
-      aria-hidden
-    />
-  );
-}
-
-export function ConsentRecordCompactBar({
+function ConsentRecordCompactContent({
   copy,
-  onDetails,
+  onOpen,
   onContinue,
   onAllowBoth,
 }: {
   copy: ConsentRecordCopy;
-  onDetails: () => void;
+  onOpen: () => void;
   onContinue: () => void;
   onAllowBoth: () => void;
 }) {
   return (
-    <aside
-      aria-labelledby="consent-record-compact-title"
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-50 rounded-t-sm px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2",
-        cardSurfaceClass,
-      )}
-    >
-      <ConsentRecordHandle />
+    <div className="px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
       <div className="flex items-baseline justify-between gap-4">
-        <h2
-          id="consent-record-compact-title"
-          className="text-base font-semibold leading-6 text-black dark:text-white"
-        >
-          {copy.title}
-        </h2>
         <button
           type="button"
-          onClick={onDetails}
+          onClick={onOpen}
+          aria-expanded={false}
+          className="text-left text-base font-semibold leading-6 text-black dark:text-white"
+        >
+          {copy.title}
+        </button>
+        <button
+          type="button"
+          onClick={onOpen}
           aria-expanded={false}
           className="shrink-0 text-sm leading-6 text-black/55 transition-colors hover:text-black dark:text-white/55 dark:hover:text-white"
         >
@@ -323,17 +320,18 @@ export function ConsentRecordCompactBar({
           onAllowBoth={onAllowBoth}
         />
       </div>
-    </aside>
+    </div>
   );
 }
 
-export function ConsentRecordSheet({
+function ConsentRecordMobileDrawer({
   copy,
   choices,
   onChoicesChange,
   onContinue,
   onAllowBoth,
   privacyHref,
+  open,
 }: {
   copy: ConsentRecordCopy;
   choices: ConsentRecordChoices;
@@ -341,28 +339,81 @@ export function ConsentRecordSheet({
   onContinue: () => void;
   onAllowBoth: () => void;
   privacyHref: string;
+  open: boolean;
 }) {
+  const [snap, setSnap] = useState<string | number | null>(CONSENT_COMPACT_SNAP);
+  const isSheet = snap === CONSENT_SHEET_SNAP;
+
+  useEffect(() => {
+    if (open) setSnap(CONSENT_COMPACT_SNAP);
+  }, [open]);
+
+  const openSheet = () => setSnap(CONSENT_SHEET_SNAP);
+
   return (
-    <aside
-      aria-labelledby="consent-record-sheet-title"
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-50 rounded-t-sm px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2",
-        cardSurfaceClass,
-      )}
+    <Drawer.Root
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) setSnap(CONSENT_COMPACT_SNAP);
+      }}
+      dismissible={false}
+      modal={false}
+      shouldScaleBackground={false}
+      setBackgroundColorOnScale={false}
+      noBodyStyles
+      disablePreventScroll
+      handleOnly={false}
+      snapToSequentialPoint
+      snapPoints={[...CONSENT_SNAP_POINTS]}
+      activeSnapPoint={snap}
+      setActiveSnapPoint={(next) => {
+        setSnap((current) => {
+          const currentSnap =
+            current === CONSENT_SHEET_SNAP
+              ? CONSENT_SHEET_SNAP
+              : CONSENT_COMPACT_SNAP;
+          return clampConsentSnapPoint(next, currentSnap);
+        });
+      }}
     >
-      <ConsentRecordHandle />
-      <ConsentRecordBody
-        copy={copy}
-        choices={choices}
-        onChoicesChange={onChoicesChange}
-        idPrefix="consent-record-sheet"
-        showActions
-        onContinue={onContinue}
-        onAllowBoth={onAllowBoth}
-        privacyHref={privacyHref}
-        showFooter
-      />
-    </aside>
+      <Drawer.Portal>
+        <Drawer.Content
+          data-consent-record-drawer=""
+          aria-labelledby="consent-record-drawer-title"
+          className={cn(
+            "fixed inset-x-0 bottom-0 top-0 z-50 flex flex-col overflow-hidden rounded-t-sm outline-none xl:hidden",
+            cardSurfaceClass,
+          )}
+        >
+          <Drawer.Handle className="mx-auto mb-3 mt-2 h-1 w-10 shrink-0 rounded-full bg-[#E5E5E5] opacity-100 dark:bg-white/20" />
+          <Drawer.Title id="consent-record-drawer-title" className="sr-only">
+            {copy.title}
+          </Drawer.Title>
+          {isSheet ? (
+            <div className="px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+              <ConsentRecordBody
+                copy={copy}
+                choices={choices}
+                onChoicesChange={onChoicesChange}
+                idPrefix="consent-record-sheet"
+                showActions
+                onContinue={onContinue}
+                onAllowBoth={onAllowBoth}
+                privacyHref={privacyHref}
+                showFooter
+              />
+            </div>
+          ) : (
+            <ConsentRecordCompactContent
+              copy={copy}
+              onOpen={openSheet}
+              onContinue={onContinue}
+              onAllowBoth={onAllowBoth}
+            />
+          )}
+        </Drawer.Content>
+      </Drawer.Portal>
+    </Drawer.Root>
   );
 }
 
@@ -374,7 +425,6 @@ export function ConsentRecordPrompt({
   privacyHref: string;
 }) {
   const [visible, setVisible] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [choices, setChoices] = useState<ConsentRecordChoices>({
     productUse: false,
     ads: false,
@@ -382,9 +432,7 @@ export function ConsentRecordPrompt({
 
   useEffect(() => {
     const syncVisibility = () => {
-      const unanswered = !hasClientConsentDecision();
-      setVisible(unanswered);
-      if (unanswered) setDetailsOpen(false);
+      setVisible(!hasClientConsentDecision());
       setChoices(readChoicesFromStores());
     };
 
@@ -427,25 +475,15 @@ export function ConsentRecordPrompt({
           privacyHref={privacyHref}
         />
       </div>
-      <div className="xl:hidden">
-        {detailsOpen ? (
-          <ConsentRecordSheet
-            copy={copy}
-            choices={choices}
-            onChoicesChange={setChoices}
-            onContinue={() => save(choices)}
-            onAllowBoth={() => save({ productUse: true, ads: true })}
-            privacyHref={privacyHref}
-          />
-        ) : (
-          <ConsentRecordCompactBar
-            copy={copy}
-            onDetails={() => setDetailsOpen(true)}
-            onContinue={() => save(choices)}
-            onAllowBoth={() => save({ productUse: true, ads: true })}
-          />
-        )}
-      </div>
+      <ConsentRecordMobileDrawer
+        copy={copy}
+        choices={choices}
+        onChoicesChange={setChoices}
+        onContinue={() => save(choices)}
+        onAllowBoth={() => save({ productUse: true, ads: true })}
+        privacyHref={privacyHref}
+        open={visible}
+      />
     </div>
   );
 }
