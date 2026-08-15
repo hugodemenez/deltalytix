@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it } from 'vitest'
 import type { Layouts, Widget, WidgetType } from '../types/dashboard'
 import {
   omitPlacedWidgets,
@@ -6,7 +6,7 @@ import {
   placedWidgetTypes,
 } from './add-widget-catalog'
 
-function widget(type: WidgetType, i = type): Widget {
+function widget(type: WidgetType, i: string = type): Widget {
   return { i, type, size: 'tiny', x: 0, y: 0, w: 3, h: 1 }
 }
 
