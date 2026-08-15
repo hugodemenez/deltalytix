@@ -30,6 +30,7 @@ import { useCurrentLocale } from "@/locales/client"
 import { tradeMatchesDateKey } from "@/lib/trades/trade-matches-date"
 import { htmlToPlainText } from "@/lib/journal/html-to-plain-text"
 import { FinancialEvent } from "@/prisma/generated/prisma/browser"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface MindsetWidgetProps {
   size: WidgetSize
@@ -52,6 +53,10 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const setTrades = useTradesStore(state => state.setTrades)
   const locale = useCurrentLocale()
   const t = useI18n()
+  const [hasMounted, setHasMounted] = useState(false)
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
 
   // Consolidated effect for carousel and mood data handling
   useEffect(() => {
@@ -368,6 +373,10 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       />
     }
   ]
+
+  if (!hasMounted) {
+    return <Skeleton className="h-full min-h-[12rem] w-full rounded-lg" />
+  }
 
   return (
     <Card className="flex flex-col p-0 h-full w-full">
