@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 
 import {
+  CONSENT_UPDATED_EVENT,
   type ConsentSettings,
   isGoogleTagAllowed,
   readStoredConsentSettings,
@@ -14,7 +15,6 @@ const GOOGLE_ANALYTICS_ID =
 /** Google Ads account tag. Override with NEXT_PUBLIC_GOOGLE_ADS_ID if needed. */
 const GOOGLE_ADS_ID =
   process.env.NEXT_PUBLIC_GOOGLE_ADS_ID?.trim() || "AW-16864609071";
-const CONSENT_UPDATED_EVENT = "deltalytix:consent-updated";
 
 function isProductionHost() {
   return (

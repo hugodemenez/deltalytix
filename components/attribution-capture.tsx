@@ -16,9 +16,11 @@ import {
   readClientAttribution,
   serializeAttribution,
 } from "@/lib/attribution";
-import { isGoogleTagAllowed, readStoredConsentSettings } from "@/lib/consent-settings";
-
-const CONSENT_UPDATED_EVENT = "deltalytix:consent-updated";
+import {
+  CONSENT_UPDATED_EVENT,
+  isGoogleTagAllowed,
+  readStoredConsentSettings,
+} from "@/lib/consent-settings";
 
 /**
  * Campaign params seen on the landing URL, held in memory only.

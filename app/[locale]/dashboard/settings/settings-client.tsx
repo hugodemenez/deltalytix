@@ -63,6 +63,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import { LinkedAccounts } from "@/components/linked-accounts"
 import { ThemeToggleIcon } from "@/components/theme-toggle-icon"
+import {
+  ConsentPrivacyControls,
+  getConsentRecordCopy,
+} from "@/components/consent-record"
 
 type Locale = 'en' | 'fr'
 
@@ -81,6 +85,7 @@ const timezones = [
 
 export default function SettingsPage() {
   const t = useI18n()
+  const consentCopy = getConsentRecordCopy(t)
   const changeLocale = useChangeLocale()
   const currentLocale = useCurrentLocale()
   const { theme, setTheme, intensity, setIntensity } = useTheme()
@@ -156,6 +161,21 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <Card id="privacy" className="scroll-mt-24 lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              {consentCopy.privacy}
+            </CardTitle>
+            <CardDescription>
+              {consentCopy.sub}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ConsentPrivacyControls copy={consentCopy} />
+          </CardContent>
+        </Card>
+
         {/* Profile Section */}
         <Card>
           <CardHeader>

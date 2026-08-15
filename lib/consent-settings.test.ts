@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   type ConsentSettings,
+  DEFAULT_CONSENT_SETTINGS,
+  fromRecordChoices,
   hasAnalyticsConsentFromStores,
+  hasConsentDecisionFromStores,
   isGoogleTagAllowed,
   parseSharedAnalyticsConsent,
   toGoogleConsent,
+  toRecordChoices,
 } from "./consent-settings";
 
 const denyAll: ConsentSettings = {
@@ -71,6 +75,78 @@ describe("parseSharedAnalyticsConsent", () => {
     expect(
       parseSharedAnalyticsConsent("deltalytix_analytics_consent=maybe"),
     ).toBeNull();
+  });
+});
+
+describe("fromRecordChoices", () => {
+  it("maps Product use to analytics and Ads to ad_storage", () => {
+    expect(
+      fromRecordChoices({ productUse: true, ads: true }),
+    ).toMatchObject({
+      analytics_storage: true,
+      ad_storage: true,
+    });
+  });
+
+  it("keeps both optional switches off as the real refuse", () => {
+    expect(fromRecordChoices({ productUse: false, ads: false })).toEqual(
+      DEFAULT_CONSENT_SETTINGS,
+    );
+  });
+
+  it("never enables an ad profile", () => {
+    expect(fromRecordChoices({ productUse: true, ads: true })).toMatchObject({
+      ad_user_data: false,
+      ad_personalization: false,
+    });
+  });
+
+  it("keeps necessary cookies on without listing them as a choice", () => {
+    expect(fromRecordChoices({ productUse: false, ads: false })).toMatchObject({
+      functionality_storage: true,
+      security_storage: true,
+    });
+  });
+});
+
+describe("toRecordChoices", () => {
+  it("prefers the shared analytics cookie for Product use", () => {
+    expect(
+      toRecordChoices({ analytics_storage: true, ad_storage: true }, false),
+    ).toEqual({ productUse: false, ads: true });
+  });
+
+  it("defaults both switches off when nothing is stored", () => {
+    expect(toRecordChoices(null)).toEqual({ productUse: false, ads: false });
+  });
+});
+
+describe("hasConsentDecisionFromStores", () => {
+  it("treats a saved both-off payload as a decision", () => {
+    expect(
+      hasConsentDecisionFromStores({
+        cookieHeader: "",
+        storedConsent: DEFAULT_CONSENT_SETTINGS,
+      }),
+    ).toBe(true);
+  });
+
+  it("treats a shared analytics cookie as a decision", () => {
+    expect(
+      hasConsentDecisionFromStores({
+        cookieHeader: "deltalytix_analytics_consent=denied",
+        storedConsent: null,
+      }),
+    ).toBe(true);
+  });
+
+  it("is unanswered when neither store has a decision", () => {
+    expect(
+      hasConsentDecisionFromStores({
+        cookieHeader: "",
+        storedConsent: null,
+      }),
+    ).toBe(false);
   });
 });
 

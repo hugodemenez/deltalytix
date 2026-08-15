@@ -1,0 +1,42 @@
+/* Scoped vaul snap rules. Do not import vaul/style.css globally — it would
+   restyle every existing drawer. Pixel snaps need the delayed transform. */
+[data-consent-record-drawer] {
+  touch-action: none;
+  will-change: transform;
+  transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+[data-consent-record-drawer][data-vaul-snap-points="true"][data-vaul-drawer-direction="bottom"] {
+  transform: translate3d(0, var(--initial-transform, 100%), 0);
+}
+
+[data-consent-record-drawer][data-vaul-delayed-snap-points="true"][data-vaul-drawer-direction="bottom"] {
+  transform: translate3d(0, var(--snap-point-height, 0), 0);
+}
+
+[data-consent-record-drawer]::after {
+  content: "";
+  position: absolute;
+  background: inherit;
+  background-color: inherit;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 200%;
+}
+
+[data-consent-record-drawer] [data-vaul-handle] {
+  display: block;
+  position: relative;
+  touch-action: pan-y;
+}
+
+[data-consent-record-drawer] [data-vaul-handle-hitarea] {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: max(100%, 2.75rem);
+  height: max(100%, 2.75rem);
+  touch-action: inherit;
+}

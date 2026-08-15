@@ -287,35 +287,25 @@ export default {
       timezone: "Timezone",
     },
     consent: {
-      banner: {
-        message: "We use cookies to enhance your experience.",
-        updatePreferences:
-          "You can update your preferences at any time by clicking",
-        managePreferences: "Manage preferences",
-        rejectNonEssential: "Reject non-essential",
-        acceptAll: "Accept all",
-      },
-      preferences: {
-        title: "Cookie Preferences Center",
-        description:
-          "Customize your consent for different types of cookies. Strictly Necessary cookies cannot be toggled off as they're essential for the site's functionality. Other cookies are optional and will only be used if you enable them. You can change your consent at any time.",
-        learnMore: "Learn more",
-        done: "Done",
-        strictlyNecessary: {
-          title: "Strictly Necessary Cookies (always active)",
+      record: {
+        title: "Two optional settings",
+        sub: "We don’t keep what you type in forms, or card details. These two are optional.",
+        productUse: {
+          title: "Product use",
           description:
-            "These cookies are essential for the site to function and cannot be toggled off. They assist with security, user authentication, customer support, etc.",
+            "How the site is used, including session replay. Helps us fix what’s broken.",
         },
-        analytics: {
-          title: "Analytics Cookies",
+        ads: {
+          title: "Ads",
           description:
-            "These cookies help us understand how visitors interact with our site. They measure traffic, improve performance, and record sessions so we can see how the product is used.",
+            "Whether we can tell if an ad brought you here. No ad profile.",
         },
-        marketing: {
-          title: "Marketing Performance Cookies",
-          description:
-            "These cookies help us measure the effectiveness of our marketing campaigns.",
-        },
+        continue: "Continue",
+        allowBoth: "Allow both",
+        details: "Details",
+        footer: "You can change this in Settings → Privacy.",
+        settings: "Settings",
+        privacy: "Privacy",
       },
     },
     propfirms: {

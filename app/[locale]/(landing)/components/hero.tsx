@@ -1,4 +1,5 @@
 "use client";
+import { ConsentRecordPrompt, getConsentRecordCopy } from "@/components/consent-record";
 import { useCurrentLocale, useI18n } from "@/locales/landing-client";
 import { localizeLandingHref, scrollToLandingHash } from "@/lib/landing-nav-paths";
 import Link, { useLinkStatus } from "next/link";
@@ -84,7 +85,8 @@ export default function Hero() {
   return (
     <div className="mx-auto w-full max-w-[1440px] px-5 pb-5 pt-16 sm:px-8 sm:pb-8 sm:pt-24 lg:px-12 lg:pt-32">
       <div className="flex flex-col gap-14 md:gap-20">
-        <div className="max-w-[900px]">
+        <div className="flex items-start justify-between gap-10">
+          <div className="min-w-0 max-w-[900px] flex-1">
           <Link
             href={localizeLandingHref(locale, "/updates")}
             className="mb-7 inline-flex text-sm text-black/55 transition-colors hover:text-black dark:text-white/55 dark:hover:text-white"
@@ -129,6 +131,11 @@ export default function Hero() {
               {t("landing.features.heading")} <span className="ml-3">↓</span>
             </Link>
           </div>
+          </div>
+          <ConsentRecordPrompt
+            copy={getConsentRecordCopy(t)}
+            privacyHref={localizeLandingHref(locale, "/settings#privacy")}
+          />
         </div>
         <div
           ref={videoContainerRef}
