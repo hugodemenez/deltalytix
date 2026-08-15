@@ -1,0 +1,28 @@
+---
+title: 'Weekly trading recap emails for green weeks only'
+description: 'Newsletter subscribers can receive a Sunday email that summarizes the last complete Mon–Sun UTC week — but only when that week had trades and finished green.'
+date: '2026-08-13'
+status: completed
+completedDate: '2026-08-13'
+image: '/updates/pr-452/en/weekly-recap-sample.png'
+---
+
+# Weekly trading recap emails for green weeks only
+
+If you are opted into weekly trading recaps, Deltalytix can now send a Sunday email that covers the last complete Monday–Sunday UTC trading week. The message arrives only when that week had at least one trade and finished green (net P&L ≥ 0). Red weeks and empty weeks send nothing — there is no missing-you or consolation mail from this flow.
+
+## What lands in your inbox
+
+![Sample weekly trading recap email for a green week (mock data)](/updates/pr-452/en/weekly-recap-sample.png)
+
+The recap uses the current campaign email look and leads with **Net P&L**, the **Week of …** range, **Wins and losses**, and **Win rate**. From there you can **Book a call\*** or **Visit [dashboard](/en/dashboard)**. Subjects follow your language: *Your trading statistics for the week 📈* in English, or *Vos statistiques de trading de la semaine 📈* in French.
+
+Messages come from Deltalytix at `newsletter@eu.updates.deltalytix.app`.
+
+## When it sends
+
+Delivery runs around Sunday 08:00 Lisbon time. The week window is the last finished Monday 00:00 UTC through the following Monday exclusive — a fixed Mon–Sun UTC week, not a rolling lookback. Only subscribers with an active weekly recap preference are considered.
+
+## Stay opted in or out
+
+Keep the weekly recap preference active, finish a Mon–Sun UTC week with trades and non-negative net P&L, then check your inbox after Sunday morning Lisbon time. Use **Unsubscribe** in the email footer (or the List-Unsubscribe header) whenever you want to stop receiving these recaps.
