@@ -54,3 +54,16 @@ export function shouldSendWeeklyRecap(params: {
 }): boolean {
   return params.tradeCount > 0 && params.netPnL >= 0
 }
+
+export type WeeklyRecapSkipReason = "no_trades" | "negative_net_pnl"
+
+/** Null means send. Does not change the green-week gate. */
+export function getWeeklyRecapSkipReason(params: {
+  tradeCount: number
+  netPnL: number
+}): WeeklyRecapSkipReason | null {
+  if (shouldSendWeeklyRecap(params)) {
+    return null
+  }
+  return params.tradeCount === 0 ? "no_trades" : "negative_net_pnl"
+}
