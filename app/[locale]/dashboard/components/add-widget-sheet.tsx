@@ -11,12 +11,12 @@ import { cn } from '@/lib/utils'
 import { WidgetType, WidgetSize } from '../types/dashboard'
 import { getWidgetsByCategory, WIDGET_REGISTRY, getWidgetPreview } from '../config/widget-registry'
 import { useData } from '@/context/data-provider'
-import { toast } from "sonner"
 
 interface AddWidgetSheetProps {
   onAddWidget: (type: WidgetType, size?: WidgetSize) => void
   isCustomizing: boolean
   compact?: boolean
+  appearance?: 'default' | 'pill'
 }
 
 interface PreviewCardProps {
@@ -123,13 +123,11 @@ const PreviewCard = forwardRef<HTMLDivElement, PreviewCardProps>(
 PreviewCard.displayName = "PreviewCard"
 
 export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>(
-  ({ onAddWidget, isCustomizing, compact = false }, ref) => {
+  ({ onAddWidget, compact = false, appearance = 'default' }, ref) => {
     const t = useI18n()
-    const { isMobile } = useData()
     const [isOpen, setIsOpen] = React.useState(false)
     const [loadedItems, setLoadedItems] = useState<Set<number>>(new Set())
     const [loadingStarted, setLoadingStarted] = useState(false)
-    const useCompactButton = compact || isMobile
 
     const handleAddWidget = (type: WidgetType) => {
       const config = WIDGET_REGISTRY[type]
@@ -211,17 +209,22 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
           <Button
             ref={ref}
             variant="ghost"
+            aria-label={t('widgets.addWidget')}
             className={cn(
-              "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
-              useCompactButton ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
+              appearance === 'pill'
+                ? compact
+                  ? 'inline-flex size-8 items-center justify-center rounded-none text-[#171717] hover:bg-transparent'
+                  : 'inline-flex h-8 items-center justify-center gap-1.5 rounded-none px-2.5 text-sm font-medium text-[#171717] hover:bg-transparent'
+                : 'flex shrink-0 items-center justify-center rounded-full transition-transform active:scale-95',
+              appearance !== 'pill' && (compact ? 'h-10 w-10 p-0' : 'h-10 gap-2 px-3')
             )}
           >
-            <Plus className="h-4 w-4 shrink-0" />
-            {!useCompactButton && (
+            <Plus className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+            {!compact ? (
               <span className="text-sm font-medium">
                 {t('widgets.addWidget')}
               </span>
-            )}
+            ) : null}
           </Button>
         </SheetTrigger>
         <SheetContent side="right" className="w-[90vw] sm:max-w-[640px] flex flex-col h-dvh overflow-hidden">

@@ -68,13 +68,15 @@ export default function RootLayout({
                 <TradovateSyncContextProvider>
                   <DxFeedSyncContextProvider>
                     <IbkrSyncContextProvider>
-                    <IgSyncContextProvider>
-                      <RithmicSyncNotifications />
-                      <Toaster />
-                      <Navbar />
-                      {children}
-                      <Modals />
-                    </IgSyncContextProvider>
+                      <IgSyncContextProvider>
+                        <div className="dashboard-v5 min-h-dvh bg-[#FAFAFA] dark:bg-background">
+                          <RithmicSyncNotifications />
+                          <Toaster />
+                          <Navbar />
+                          {children}
+                          <Modals />
+                        </div>
+                      </IgSyncContextProvider>
                     </IbkrSyncContextProvider>
                   </DxFeedSyncContextProvider>
                 </TradovateSyncContextProvider>

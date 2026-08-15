@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
+import { Tabs } from '@/components/ui/tabs'
 import { useI18n } from '@/locales/client'
 import { WidgetToolbarHostProvider } from './widget-toolbar-host'
+import { ConnectionsStrip } from './connections-strip'
+import { useDashboardHomeTabsStore } from '@/store/dashboard-home-tabs-store'
 
 /**
  * Instant shell chrome for Dashboard home: real tab labels + layout math.
@@ -17,8 +19,17 @@ import { WidgetToolbarHostProvider } from './widget-toolbar-host'
 export function DashboardHomeChrome({ children }: { children: ReactNode }) {
   const t = useI18n()
   const mainRef = useRef<HTMLElement>(null)
-  const tabsListRef = useRef<HTMLDivElement>(null)
-  const [tab, setTab] = useState('widgets')
+  const connectionsStripRef = useRef<HTMLDivElement>(null)
+  const tab = useDashboardHomeTabsStore((state) => state.activeTab)
+  const setTab = useDashboardHomeTabsStore((state) => state.setActiveTab)
+  const setHomeActive = useDashboardHomeTabsStore(
+    (state) => state.setHomeActive
+  )
+
+  useLayoutEffect(() => {
+    setHomeActive(true)
+    return () => setHomeActive(false)
+  }, [setHomeActive])
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout | undefined
@@ -27,17 +38,17 @@ export function DashboardHomeChrome({ children }: { children: ReactNode }) {
       const navbar = document.querySelector(
         'nav[class*="sticky"]'
       ) as HTMLElement | null
-      // Match navbar.tsx: h-16 (4rem). Avoid the old 96/5rem fallback that
+      // Match navbar.tsx: h-14 (3.5rem). Avoid the old 96/5rem fallback that
       // left a visible strip between sticky nav and fixed tabs.
-      const navbarHeight = navbar?.offsetHeight || 64
+      const navbarHeight = navbar?.offsetHeight || 56
 
-      const tabsList = tabsListRef.current
-      const tabsListHeight = tabsList?.offsetHeight || 48
-      const tabsWrapperBottom = navbarHeight + tabsListHeight
+      const connectionsStrip = connectionsStripRef.current
+      const connectionsStripHeight = connectionsStrip?.offsetHeight || 52
+      const shellBottom = navbarHeight + connectionsStripHeight
 
       const main = mainRef.current
       const mainTop = main?.getBoundingClientRect().top || 0
-      const calculatedPaddingTop = tabsWrapperBottom - mainTop
+      const calculatedPaddingTop = shellBottom - mainTop
 
       document.documentElement.style.setProperty(
         '--navbar-height',
@@ -45,7 +56,7 @@ export function DashboardHomeChrome({ children }: { children: ReactNode }) {
       )
       document.documentElement.style.setProperty(
         '--tabs-height',
-        `${tabsListHeight}px`
+        `${connectionsStripHeight}px`
       )
       document.documentElement.style.setProperty(
         '--calculated-padding-top',
@@ -70,6 +81,9 @@ export function DashboardHomeChrome({ children }: { children: ReactNode }) {
     const navbar = document.querySelector('nav[class*="sticky"]')
     if (navbar) {
       resizeObserver.observe(navbar)
+    }
+    if (connectionsStripRef.current) {
+      resizeObserver.observe(connectionsStripRef.current)
     }
 
     const mutationObserver = new MutationObserver((mutations) => {
@@ -116,7 +130,7 @@ export function DashboardHomeChrome({ children }: { children: ReactNode }) {
       ref={mainRef}
       id="dashboard-content"
       tabIndex={-1}
-      className="overflow-x-hidden"
+      className="min-h-[calc(100dvh-var(--navbar-height,4rem))] overflow-x-hidden bg-[#FAFAFA] dark:bg-background"
     >
       <a
         href="#dashboard-content"
@@ -126,22 +140,16 @@ export function DashboardHomeChrome({ children }: { children: ReactNode }) {
       </a>
       <Tabs
         value={tab}
-        onValueChange={setTab}
+        onValueChange={(value) =>
+          setTab(value as 'widgets' | 'table' | 'accounts')
+        }
         className="w-full h-full pt-(--tabs-height,3rem)"
       >
         <div
-          ref={tabsListRef}
-          className="fixed inset-x-0 top-(--navbar-height,4rem) z-30 w-full overflow-x-auto border-b bg-background shadow-xs"
+          ref={connectionsStripRef}
+          className="fixed inset-x-0 top-(--navbar-height,4rem) z-30 w-full border-b border-[#E5E5E5] bg-white dark:border-border dark:bg-background"
         >
-          <TabsList className="h-12 w-full min-w-max max-w-none rounded-none bg-muted/70 sm:min-w-0">
-            <TabsTrigger value="widgets">
-              {t('dashboard.tabs.widgets')}
-            </TabsTrigger>
-            <TabsTrigger value="table">{t('dashboard.tabs.table')}</TabsTrigger>
-            <TabsTrigger value="accounts">
-              {t('dashboard.tabs.accounts')}
-            </TabsTrigger>
-          </TabsList>
+          <ConnectionsStrip className="bg-white dark:bg-background" />
         </div>
 
         <WidgetToolbarHostProvider active={tab === 'widgets'}>

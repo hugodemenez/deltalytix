@@ -1,10 +1,8 @@
 "use client";
 
 import React, {
-  useCallback,
   useEffect,
   useState,
-  startTransition,
 } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -22,132 +20,25 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-// Currency detection hook
-// Handles special case for French overseas territories (DOM/TOM) that use EUR currency
-// but must be billed in USD due to Stripe pricing configuration limitations
-function useCurrency() {
-  const [currency, setCurrency] = useState<"USD" | "EUR">("USD");
-  const [symbol, setSymbol] = useState("$");
-  const locale = useCurrentLocale();
-
-  const detectCurrency = useCallback(() => {
-    // Eurozone countries as per official EU list
-    const eurozoneCountries = [
-      "AT",
-      "BE",
-      "CY",
-      "EE",
-      "FI",
-      "FR",
-      "DE",
-      "GR",
-      "IE",
-      "IT",
-      "LV",
-      "LT",
-      "LU",
-      "MT",
-      "NL",
-      "PT",
-      "SK",
-      "SI",
-      "ES",
-      "CH",
-      // French overseas territories
-      "GP",
-      "MQ",
-      "GF",
-      "RE",
-      "YT",
-      "PM",
-      "BL",
-      "MF",
-      "NC",
-      "PF",
-      "WF",
-      "TF",
-    ];
-
-    // Function to set currency based on country code
-    const setCurrencyFromCountry = (countryCode: string) => {
-      const upperCountryCode = countryCode.toUpperCase();
-      startTransition(() => {
-        if (eurozoneCountries.includes(upperCountryCode)) {
-          setCurrency("EUR");
-          setSymbol("€");
-        } else {
-          setCurrency("USD");
-          setSymbol("$");
-        }
-      });
-      return true;
-    };
-
-    // First, try to get country from cookie (set by middleware)
-    const getCookie = (name: string) => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop()?.split(";").shift();
-      return null;
-    };
-
-    const countryFromCookie = getCookie("user-country");
-    if (countryFromCookie) {
-      setCurrencyFromCountry(countryFromCookie);
-      return;
-    }
-
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-    // Check if timezone indicates European location
-    const isEuropeanTimezone =
-      timezone.startsWith("Europe/") ||
-      [
-        "Paris",
-        "Berlin",
-        "Madrid",
-        "Rome",
-        "Amsterdam",
-        "Brussels",
-        "Vienna",
-      ].some((city) => timezone.includes(city));
-
-    // Check if locale indicates European country
-    const isEuropeanLocale =
-      /^(fr|de|es|it|nl|pt|el|fi|et|lv|lt|sl|sk|mt|cy)-/.test(locale);
-
-    startTransition(() => {
-      if (isEuropeanTimezone || isEuropeanLocale) {
-        setCurrency("EUR");
-        setSymbol("€");
-      } else {
-        setCurrency("USD");
-        setSymbol("$");
-      }
-    });
-  }, [locale]);
-
-  useEffect(() => {
-    detectCurrency();
-  }, [detectCurrency]);
-
-  return { currency, symbol };
-}
-
-type BillingPeriod = "monthly" | "quarterly" | "yearly" | "lifetime";
-
-type PlanPrice = {
-  yearly: number;
-  quarterly: number;
-  monthly: number;
-  lifetime: number;
-};
+import { useBillingCurrency } from "@/hooks/use-billing-currency";
+import {
+  BILLING_PERIODS,
+  PLUS_PLAN_PRICES,
+  billingLookupKey,
+  billingPeriodAvailability,
+  formatBillingAmount,
+  isLifetimeSubscription,
+  type BillingPeriod,
+} from "@/lib/billing-plan-catalog";
+import {
+  changeBillingPlan,
+  submitBillingCheckout,
+} from "@/lib/billing-plan-change.client";
 
 type Plan = {
   name: string;
   description: string;
-  price: PlanPrice;
+  price: Record<BillingPeriod, number>;
   features: string[];
   isPopular?: boolean;
   isComingSoon?: boolean;
@@ -156,19 +47,6 @@ type Plan = {
 type Plans = {
   [key: string]: Plan;
 };
-
-function formatCurrencyTotal(
-  value: number,
-  currency: "USD" | "EUR",
-  locale: string,
-) {
-  return new Intl.NumberFormat(locale === "fr" ? "fr-FR" : "en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 interface PricingPlansProps {
   isModal?: boolean;
@@ -198,7 +76,7 @@ export default function PricingPlans({
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const t = useI18n();
   const locale = useCurrentLocale();
-  const { currency, symbol } = useCurrency();
+  const { currency, symbol } = useBillingCurrency();
 
   // Read referral code from URL params or localStorage on mount
   useEffect(() => {
@@ -212,36 +90,17 @@ export default function PricingPlans({
     }
   }, []);
 
-  // Function to check if current plan matches lookup key
+  // Compatibility wrappers keep full pricing behavior on the shared catalog.
   const isCurrentPlan = (lookupKey: string) => {
-    if (!currentSubscription) return false;
-
-    // Extract plan details from lookup key (e.g., "plus_yearly_eur")
-    const parts = lookupKey.split("_");
-    const planType = parts[0]; // "plus"
-    const interval = parts[1]; // "yearly", "monthly", etc.
-
-    // Lifetime plans are never "current" since they're one-time purchases
-    // and can't be compared to recurring subscriptions
-    if (interval === "lifetime") return false;
-
-    // Map intervals to match subscription data
-    const intervalMap: Record<string, string> = {
-      yearly: "year",
-      monthly: "month",
-      quarterly: "quarter",
-    };
-
+    const period = lookupKey.split("_")[1] as BillingPeriod;
     return (
-      planType.toLowerCase() === "plus" &&
-      currentSubscription.plan.name.toLowerCase().includes("plus") &&
-      intervalMap[interval] === currentSubscription.plan.interval
+      billingPeriodAvailability(period, currentSubscription ?? null) ===
+      "current"
     );
   };
 
-  // Function to check if user has lifetime subscription
   const hasLifetimeSubscription = () => {
-    return currentSubscription?.plan?.interval === "lifetime";
+    return isLifetimeSubscription(currentSubscription ?? null);
   };
 
   // Function to check if user should be blocked from subscribing to recurring plans
@@ -269,28 +128,7 @@ export default function PricingPlans({
   // Function to handle plan switching
   const handlePlanSwitch = async (lookupKey: string) => {
     if (!currentSubscription) {
-      // No subscription exists, use checkout session
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = "/api/stripe/create-checkout-session";
-
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = "lookup_key";
-      input.value = lookupKey;
-      form.appendChild(input);
-
-      // Add referral code if present
-      if (referralCode) {
-        const referralInput = document.createElement("input");
-        referralInput.type = "hidden";
-        referralInput.name = "referral";
-        referralInput.value = referralCode;
-        form.appendChild(referralInput);
-      }
-
-      document.body.appendChild(form);
-      form.submit();
+      submitBillingCheckout(lookupKey, referralCode);
       return;
     }
 
@@ -333,41 +171,20 @@ export default function PricingPlans({
     setIsLoading(true);
 
     try {
-      const { switchSubscriptionPlan } = await import("@/server/billing");
-      const result = await switchSubscriptionPlan(lookupKey);
+      const result = await changeBillingPlan({
+        lookupKey,
+        hasSubscription: Boolean(currentSubscription),
+        referralCode,
+      });
 
-      if (result.success) {
+      if (result.status === "switched") {
         toast.success(t("billing.planSwitched"), {
           description: t("billing.planSwitchedDescription"),
         });
 
         // Refresh the page to update subscription data
         window.location.reload();
-      } else if ("requiresCheckout" in result && result.requiresCheckout) {
-        // Lifetime plans need checkout session, redirect to checkout
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = "/api/stripe/create-checkout-session";
-
-        const finalLookupKey = result.lookupKey || lookupKey;
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = "lookup_key";
-        input.value = finalLookupKey;
-        form.appendChild(input);
-
-        // Add referral code if present
-        if (referralCode) {
-          const referralInput = document.createElement("input");
-          referralInput.type = "hidden";
-          referralInput.name = "referral";
-          referralInput.value = referralCode;
-          form.appendChild(referralInput);
-        }
-
-        document.body.appendChild(form);
-        form.submit();
-      } else {
+      } else if (result.status === "error") {
         toast.error(t("billing.error"), {
           description: result.error,
         });
@@ -385,14 +202,6 @@ export default function PricingPlans({
   const handleLifetimeConfirm = async () => {
     setShowLifetimeConfirm(false);
     await executePlanSwitch(pendingLookupKey);
-  };
-
-  // New pricing structure
-  const pricing = {
-    yearly: 120,
-    quarterly: 45,
-    monthly: 19.99,
-    lifetime: 300,
   };
 
   const plans: Plans = {
@@ -416,7 +225,7 @@ export default function PricingPlans({
     plus: {
       name: t("pricing.plus.name"),
       description: t("pricing.plus.description"),
-      price: pricing,
+      price: PLUS_PLAN_PRICES,
       isPopular: true,
       features: [
         t("pricing.plus.feature1"),
@@ -491,7 +300,7 @@ export default function PricingPlans({
   const billingDetail =
     billingPeriod === "yearly"
       ? t("pricing.billedYearly", {
-          total: formatCurrencyTotal(
+          total: formatBillingAmount(
             plans.plus.price.yearly,
             currency,
             locale,
@@ -499,7 +308,7 @@ export default function PricingPlans({
         })
       : billingPeriod === "quarterly"
         ? t("pricing.billedQuarterly", {
-            total: formatCurrencyTotal(
+          total: formatBillingAmount(
               plans.plus.price.quarterly,
               currency,
               locale,
@@ -512,12 +321,10 @@ export default function PricingPlans({
   const billingPeriodSelector = (
     <div className="grid w-full grid-cols-2 gap-1 rounded-sm bg-black/5 p-1 dark:bg-white/5 sm:grid-cols-4">
       {(
-        [
-          ["monthly", t("pricing.monthly")],
-          ["quarterly", t("pricing.quarterly")],
-          ["yearly", t("pricing.yearly")],
-          ["lifetime", t("pricing.lifetime")],
-        ] as const
+        BILLING_PERIODS.map((period) => [
+          period,
+          t(`pricing.${period}` as "pricing.monthly"),
+        ] as const)
       ).map(([period, label]) => (
         <button
           key={period}
@@ -610,7 +417,7 @@ export default function PricingPlans({
         </div>
         <div>
           {(() => {
-            const lookupKey = `plus_${billingPeriod}_${currency.toLowerCase()}`;
+            const lookupKey = billingLookupKey(billingPeriod, currency);
             const isCurrent = isCurrentPlan(lookupKey);
             const isBlockedRecurring = isBlockedFromRecurring(lookupKey);
             const isBlockedLifetime = isBlockedFromLifetime(lookupKey);
