@@ -292,7 +292,6 @@ export function MobileWidgetMinimapTrigger({ className }: { className?: string }
       className={cn(
         "flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform active:scale-95",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        isExpanded && "pointer-events-none opacity-0",
         className
       )}
       onClick={openMinimap}
