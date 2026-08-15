@@ -6,6 +6,9 @@ import {
   getWeeklyRecapSkipReason,
   type WeeklyRecapSkipReason,
 } from "@/lib/weekly-newsletter-window"
+import { assertWeeklyRecapRecipient } from "@/lib/weekly-recap-recipient"
+
+export { assertWeeklyRecapRecipient }
 
 export type { WeeklyRecapSkipReason }
 
@@ -38,12 +41,19 @@ export type WeeklyRecapBuildResult =
  * Shared by GET /api/cron and POST /api/email/weekly-summary/[userid]
  * so the Sunday cron never HTTP-self-fetches through a public URL.
  *
+ * Loads the same User.id the cron already resolved (trades.userId = User.id).
+ * When `expectedEmail` is set, refuses to build if the row does not match.
+ *
  * Green-week gate is unchanged: send only if trades exist AND net PnL ≥ 0.
  */
 export async function buildWeeklyRecapEmail(
   userId: string,
+  expectedEmail?: string,
 ): Promise<WeeklyRecapBuildResult> {
   const { user, newsletter, trades } = await getUserData(userId)
+  if (expectedEmail !== undefined) {
+    assertWeeklyRecapRecipient(user, { userId, email: expectedEmail })
+  }
   const stats = await computeTradingStats(trades, user.language)
 
   // CPO gate: no trades or red week (net PnL < 0) → cron drops null emailData.

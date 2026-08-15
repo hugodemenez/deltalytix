@@ -93,7 +93,12 @@ export async function GET(req: Request) {
             // In-process builder: avoid HTTP self-fetch via NEXT_PUBLIC_APP_URL.
             // Apex deltalytix.app 308s to www (cross-origin); fetch then strips
             // Authorization, so weekly-summary returned {"error":"Unauthorized"}.
-            const { emailData } = await buildWeeklyRecapEmail(user.id)
+            // Same User.id the cron just loaded (email unique). Builder
+            // re-loads by that id and checks the email still matches.
+            const { emailData } = await buildWeeklyRecapEmail(
+              user.id,
+              user.email,
+            )
             return emailData
           } catch (error) {
             console.warn(`Error processing user ${user.id}:`, error)
