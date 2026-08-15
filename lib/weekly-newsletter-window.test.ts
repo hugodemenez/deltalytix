@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   getLastCompleteWeekUtc,
+  getWeeklyRecapSkipReason,
   isEntryInWeek,
   shouldSendWeeklyRecap,
 } from "./weekly-newsletter-window"
@@ -74,5 +75,24 @@ describe("shouldSendWeeklyRecap", () => {
 
   it("does not send a red week (net PnL < 0)", () => {
     expect(shouldSendWeeklyRecap({ tradeCount: 5, netPnL: -0.01 })).toBe(false)
+  })
+})
+
+describe("getWeeklyRecapSkipReason", () => {
+  it("is null when the green-week gate allows a send", () => {
+    expect(getWeeklyRecapSkipReason({ tradeCount: 3, netPnL: 12.5 })).toBe(null)
+    expect(getWeeklyRecapSkipReason({ tradeCount: 1, netPnL: 0 })).toBe(null)
+  })
+
+  it("returns no_trades when there are no trades", () => {
+    expect(getWeeklyRecapSkipReason({ tradeCount: 0, netPnL: 0 })).toBe(
+      "no_trades",
+    )
+  })
+
+  it("returns negative_net_pnl for a red week", () => {
+    expect(getWeeklyRecapSkipReason({ tradeCount: 5, netPnL: -0.01 })).toBe(
+      "negative_net_pnl",
+    )
   })
 })

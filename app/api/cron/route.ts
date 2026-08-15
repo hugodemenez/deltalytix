@@ -3,6 +3,7 @@ import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { Resend } from 'resend'
 import { headers } from 'next/headers'
+import { buildWeeklyRecapEmail } from "@/lib/weekly-recap-email"
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -10,24 +11,6 @@ const adapter = new PrismaPg({
 
 const prisma = new PrismaClient({ adapter })
 const resend = new Resend(process.env.RESEND_API_KEY)
-
-// Retry configuration
-const MAX_RETRIES = 3
-const RETRY_DELAY = 1000 // 1 second
-
-async function fetchWithRetry(url: string, options: RequestInit, retries = MAX_RETRIES): Promise<Response> {
-  try {
-    const response = await fetch(url, options)
-    return response
-  } catch (error) {
-    if (retries > 0 && (error instanceof Error && error.message.includes('ECONNRESET'))) {
-      console.warn(`Retrying fetch (${MAX_RETRIES - retries + 1}/${MAX_RETRIES}) for ${url}`)
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
-      return fetchWithRetry(url, options, retries - 1)
-    }
-    throw error
-  }
-}
 
 // Weekly performance recap. Vercel cron: path `/api/cron`, schedule `0 7 * * 0`.
 // Sunday 08:00 Lisbon. Summer WEST UTC+1 → 07:00 UTC (`0 7 * * 0`).
@@ -91,24 +74,10 @@ export async function GET(req: Request) {
           }
 
           try {
-            // Get email data from the weekly summary endpoint with retry logic
-            const response = await fetchWithRetry(
-              `${process.env.NEXT_PUBLIC_APP_URL}/api/email/weekly-summary/${user.id}`,
-              {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${process.env.CRON_SECRET}`
-                }
-              }
-            )
-
-            if (!response.ok) {
-              const errorText = await response.text()
-              console.warn(`Failed to get email data for user ${user.id}:`, errorText)
-              return null
-            }
-
-            const { emailData } = await response.json()
+            // In-process builder: avoid HTTP self-fetch via NEXT_PUBLIC_APP_URL.
+            // Apex deltalytix.app 308s to www (cross-origin); fetch then strips
+            // Authorization, so weekly-summary returned {"error":"Unauthorized"}.
+            const { emailData } = await buildWeeklyRecapEmail(user.id)
             return emailData
           } catch (error) {
             console.warn(`Error processing user ${user.id}:`, error)
