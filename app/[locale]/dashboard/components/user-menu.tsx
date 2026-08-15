@@ -18,11 +18,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Slider } from '@/components/ui/slider'
 import { Laptop, Moon, Sun } from 'lucide-react'
@@ -265,27 +265,25 @@ export default function UserMenu() {
           aria-haspopup="dialog"
           aria-expanded={sheetOpen}
         />
-        <Sheet
+        <Drawer
           open={sheetOpen}
           onOpenChange={(open) => {
             setSheetOpen(open)
             if (!open) setMobilePref(null)
           }}
+          shouldScaleBackground={false}
         >
-          <SheetContent
-            side="bottom"
-            className="rounded-t-[4px] border-[#E5E5E5] p-0 dark:border-border"
-          >
-            <SheetHeader className="flex-row items-center justify-between gap-3 border-b border-[#E5E5E5] px-4 py-3 text-left dark:border-border">
+          <DrawerContent className="max-h-[85svh] rounded-t-[4px] border-[#E5E5E5] bg-white p-0 dark:border-border dark:bg-background">
+            <DrawerHeader className="flex flex-row items-center justify-between gap-3 border-b border-[#E5E5E5] px-4 py-3 text-left dark:border-border">
               <div className="min-w-0">
-                <SheetTitle className="sr-only">{accountLabel}</SheetTitle>
+                <DrawerTitle className="sr-only">{accountLabel}</DrawerTitle>
                 <p className="truncate text-sm text-[#686D67] dark:text-muted-foreground">
                   {user?.email}
                 </p>
               </div>
               <ReferralButton />
-            </SheetHeader>
-            <div className="px-2 py-2">
+            </DrawerHeader>
+            <div className="min-h-0 overflow-y-auto px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
               <MenuLinks
                 onNavigate={() => setSheetOpen(false)}
                 className="flex flex-col"
@@ -364,8 +362,8 @@ export default function UserMenu() {
                 {t('dashboard.settings.account.signOut')}
               </button>
             </div>
-          </SheetContent>
-        </Sheet>
+          </DrawerContent>
+        </Drawer>
       </div>
     )
   }
