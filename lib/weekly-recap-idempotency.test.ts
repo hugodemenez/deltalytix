@@ -1,66 +1,65 @@
 import { describe, expect, it } from "vitest"
-import { weeklyRecapBatchIdempotencyKey } from "./weekly-recap-idempotency"
+import {
+  isResendIdempotentReplay,
+  weeklyRecapIdempotencyKey,
+} from "./weekly-recap-idempotency"
 
-const week = new Date("2026-08-03T00:00:00.000Z")
+const week = new Date("2026-08-10T00:00:00.000Z")
 
-describe("weeklyRecapBatchIdempotencyKey", () => {
-  it("is stable across runs for the same week and input batch", () => {
-    const input = ["a@example.com", "b@example.com"]
-
-    expect(weeklyRecapBatchIdempotencyKey(week, input)).toBe(
-      weeklyRecapBatchIdempotencyKey(week, input),
+describe("weeklyRecapIdempotencyKey", () => {
+  it("is stable for the same week and recipient", () => {
+    expect(weeklyRecapIdempotencyKey(week, "trader@example.com")).toBe(
+      weeklyRecapIdempotencyKey(week, "trader@example.com"),
     )
   })
 
-  it("ignores recipient order and email casing, so a reshuffled batch still dedupes", () => {
-    const first = ["a@example.com", "b@example.com"]
-    const second = ["b@example.com", "A@Example.com "]
-
-    expect(weeklyRecapBatchIdempotencyKey(week, second)).toBe(
-      weeklyRecapBatchIdempotencyKey(week, first),
+  it("normalizes casing and whitespace so a retry still 409s", () => {
+    expect(weeklyRecapIdempotencyKey(week, " Trader@Example.com ")).toBe(
+      weeklyRecapIdempotencyKey(week, "trader@example.com"),
     )
   })
 
-  it("stays the same when more of the input batch pass the gate on retry", () => {
-    const inputBatch = [
-      "a@example.com",
-      "b@example.com",
-      "c@example.com",
-    ]
-    const passedFirstRun = ["a@example.com", "b@example.com"]
-
-    // Keying on who passed would change on a 70 → 100 recovery and re-mail
-    // the original 70. The input-batch key must not follow that set.
-    expect(
-      weeklyRecapBatchIdempotencyKey(week, passedFirstRun),
-    ).not.toBe(weeklyRecapBatchIdempotencyKey(week, inputBatch))
-
-    expect(weeklyRecapBatchIdempotencyKey(week, inputBatch)).toBe(
-      weeklyRecapBatchIdempotencyKey(week, [...inputBatch].reverse()),
-    )
+  it("does not change when another subscriber is added", () => {
+    const existing = weeklyRecapIdempotencyKey(week, "a@example.com")
+    weeklyRecapIdempotencyKey(week, "new@example.com")
+    expect(weeklyRecapIdempotencyKey(week, "a@example.com")).toBe(existing)
   })
 
-  it("changes when the input batch loses a subscriber", () => {
-    const full = ["a@example.com", "b@example.com"]
-    const afterUnsubscribe = ["a@example.com"]
-
-    expect(weeklyRecapBatchIdempotencyKey(week, afterUnsubscribe)).not.toBe(
-      weeklyRecapBatchIdempotencyKey(week, full),
+  it("differs per recipient in the same week", () => {
+    expect(weeklyRecapIdempotencyKey(week, "a@example.com")).not.toBe(
+      weeklyRecapIdempotencyKey(week, "b@example.com"),
     )
   })
 
   it("changes from one recap week to the next", () => {
-    const emails = ["a@example.com"]
-    const nextWeek = new Date("2026-08-10T00:00:00.000Z")
-
-    expect(weeklyRecapBatchIdempotencyKey(nextWeek, emails)).not.toBe(
-      weeklyRecapBatchIdempotencyKey(week, emails),
+    const nextWeek = new Date("2026-08-17T00:00:00.000Z")
+    expect(weeklyRecapIdempotencyKey(nextWeek, "a@example.com")).not.toBe(
+      weeklyRecapIdempotencyKey(week, "a@example.com"),
     )
   })
 
-  it("prefixes the key with the recap week", () => {
-    expect(weeklyRecapBatchIdempotencyKey(week, ["a@example.com"])).toMatch(
-      /^weekly-recap:2026-08-03:[0-9a-f]{32}$/,
+  it("is week + normalized email", () => {
+    expect(weeklyRecapIdempotencyKey(week, "trader@example.com")).toBe(
+      "weekly-recap:2026-08-10:trader@example.com",
     )
+  })
+})
+
+describe("isResendIdempotentReplay", () => {
+  it("treats a changed-payload retry as already sent", () => {
+    expect(
+      isResendIdempotentReplay({ name: "invalid_idempotent_request" }),
+    ).toBe(true)
+  })
+
+  it("treats an in-flight retry as already sent", () => {
+    expect(
+      isResendIdempotentReplay({ name: "concurrent_idempotent_requests" }),
+    ).toBe(true)
+  })
+
+  it("does not swallow a real send error", () => {
+    expect(isResendIdempotentReplay({ name: "application_error" })).toBe(false)
+    expect(isResendIdempotentReplay(null)).toBe(false)
   })
 })

@@ -1,34 +1,25 @@
-import { createHash } from "node:crypto"
-
 /**
- * Stable `Idempotency-Key` for one Resend weekly-recap batch send.
+ * Per-recipient `Idempotency-Key` for one weekly recap send.
  *
- * Keyed on the recap week plus the **input batch** (the subscribers this
- * slice set out to process) — not on who passed the green-week gate or
- * whose build succeeded.
+ * Resend's batch API takes a single key for the whole request. Any key derived
+ * from a set of people (who passed the gate, or the input slice) changes when
+ * that set changes — a new subscriber, an unsubscribe, or 30 recoveries on
+ * retry — and the original recipients can be mailed twice.
  *
- * If run 1 builds 70 and sends them, then a retry builds 100 (30 recoveries),
- * a key derived from the sent set would change and the original 70 would be
- * mailed twice. Keying on the input batch keeps the key stable, so Resend
- * 409s the retry as designed.
- *
- * Never key on the loop index. Batches are `users.slice(i, i + 100)`, so one
- * unsubscribe between a timed-out run and its retry shifts every boundary.
+ * One send per recipient, keyed on week + that email, is stable: a retry 409s
+ * for anyone already mailed and still delivers recoveries and new subscribers.
  */
-export function weeklyRecapBatchIdempotencyKey(
+export function weeklyRecapIdempotencyKey(
   weekStart: Date,
-  inputBatchEmails: string[],
+  email: string,
 ): string {
-  const recipients = inputBatchEmails
-    .map((address) => address.trim().toLowerCase())
-    .filter(Boolean)
-    .sort()
-    .join(",")
+  const recipient = email.trim().toLowerCase()
+  return `weekly-recap:${weekStart.toISOString().slice(0, 10)}:${recipient}`
+}
 
-  const digest = createHash("sha256")
-    .update(recipients)
-    .digest("hex")
-    .slice(0, 32)
-
-  return `weekly-recap:${weekStart.toISOString().slice(0, 10)}:${digest}`
+export function isResendIdempotentReplay(error: { name?: string } | null): boolean {
+  return (
+    error?.name === "invalid_idempotent_request" ||
+    error?.name === "concurrent_idempotent_requests"
+  )
 }
