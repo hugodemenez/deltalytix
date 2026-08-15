@@ -7,7 +7,10 @@ import {
   buildWeeklyRecapEmail,
   type WeeklyRecapEmailData,
 } from "@/lib/weekly-recap-email"
-import { weeklyRecapBatchIdempotencyKey } from "@/lib/weekly-recap-idempotency"
+import {
+  isResendIdempotentReplay,
+  weeklyRecapIdempotencyKey,
+} from "@/lib/weekly-recap-idempotency"
 import { getRecapWeekUtc } from "@/lib/weekly-newsletter-window"
 
 const adapter = new PrismaPg({
@@ -64,7 +67,8 @@ export async function GET(req: Request) {
       )
     }
 
-    // Process subscribers in batches of 100 (Resend's batch limit)
+    // Build subscribers in chunks of 100 (LLM/DB concurrency), then send
+    // one-by-one with a per-recipient idempotency key.
     const batchSize = 100
     const batches: typeof users[] = []
     for (let i = 0; i < users.length; i += batchSize) {
@@ -77,7 +81,7 @@ export async function GET(req: Request) {
     let skippedCount = 0
     let duplicateCount = 0
 
-    // Identity of the recap being sent — anchors the per-batch idempotency key.
+    // Identity of the recap being sent — anchors each per-recipient key.
     const week = getRecapWeekUtc()
 
     // Process each batch
@@ -106,54 +110,47 @@ export async function GET(req: Request) {
           }
         })
 
-        // Filter out null values and send batch
         const validEmails = (await Promise.all(emailBatch)).filter(
           (email): email is WeeklyRecapEmailData => email != null,
         )
         // Users the green-week gate dropped are skips, not failures.
         skippedCount += batch.length - validEmails.length
 
-        if (validEmails.length > 0) {
-          try {
-            // Key on the input batch, not who passed the gate / built
-            // successfully. A retry that recovers 30 more builds must 409
-            // instead of changing the key and re-mailing the original 70.
-            const inputBatchEmails = batch
-              .map((user) => user.email)
-              .filter((email): email is string => Boolean(email))
+        // One send per recipient. A set-level batch key changes when a new
+        // subscriber appears, someone unsubscribes, or a retry recovers more
+        // builds — and the original recipients get mailed twice. Per-email
+        // keys 409 those people and still deliver recoveries and newcomers.
+        for (const email of validEmails) {
+          const recipient = email.to[0]
+          if (!recipient) {
+            errorCount += 1
+            continue
+          }
 
-            const result = await resend.batch.send(validEmails, {
-              idempotencyKey: weeklyRecapBatchIdempotencyKey(
-                week.start,
-                inputBatchEmails,
-              ),
+          try {
+            const result = await resend.emails.send(email, {
+              idempotencyKey: weeklyRecapIdempotencyKey(week.start, recipient),
             })
 
             if (result.error) {
-              // The recap copy is LLM-generated, so a retry sends a different
-              // payload under the same key: Resend answers 409 rather than
-              // deduping silently. Nobody got a second email — not an outage.
-              if (
-                result.error.name === 'invalid_idempotent_request' ||
-                result.error.name === 'concurrent_idempotent_requests'
-              ) {
-                console.log(
-                  `Batch already sent for week ${week.start.toISOString().slice(0, 10)}, skipping ${validEmails.length} recipients:`,
-                  result.error.message,
-                )
-                duplicateCount += validEmails.length
+              // Recap copy is LLM-generated, so a retry has a different
+              // payload under the same key: Resend 409s instead of sending
+              // again. That person already got this week's mail.
+              if (isResendIdempotentReplay(result.error)) {
+                duplicateCount += 1
               } else {
-                console.error('Failed to send email batch:', result.error)
-                errorCount += validEmails.length
+                console.error(
+                  `Failed to send weekly recap to ${recipient}:`,
+                  result.error,
+                )
+                errorCount += 1
               }
             } else {
-              const sent = result.data?.data.length ?? 0
-              successCount += sent
-              errorCount += validEmails.length - sent
+              successCount += 1
             }
           } catch (error) {
-            console.error('Failed to send email batch:', error)
-            errorCount += validEmails.length
+            console.error(`Failed to send weekly recap to ${recipient}:`, error)
+            errorCount += 1
           }
         }
       } catch (error) {
