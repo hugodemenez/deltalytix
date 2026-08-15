@@ -29,6 +29,7 @@ export type ConsentRecordCopy = {
   adsDescription: string;
   continue: string;
   allowBoth: string;
+  details: string;
   footer: string;
   settings: string;
   privacy: string;
@@ -48,6 +49,7 @@ export function getConsentRecordCopy(
     adsDescription: t("landing.consent.record.ads.description"),
     continue: t("landing.consent.record.continue"),
     allowBoth: t("landing.consent.record.allowBoth"),
+    details: t("landing.consent.record.details"),
     footer: t("landing.consent.record.footer"),
     settings: t("landing.consent.record.settings"),
     privacy: t("landing.consent.record.privacy"),
@@ -166,22 +168,14 @@ function ConsentRecordBody({
         />
       </div>
 
-      {showActions && (
-        <div className="mt-4 flex gap-2">
-          <button
-            type="button"
-            onClick={onContinue}
-            className="inline-flex h-9 flex-1 items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-3 text-sm font-medium text-white transition-[opacity,transform] hover:opacity-85 active:scale-[0.96] dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)] xl:flex-none"
-          >
-            {copy.continue}
-          </button>
-          <button
-            type="button"
-            onClick={onAllowBoth}
-            className="inline-flex h-9 flex-1 items-center justify-center rounded-sm border border-[#E5E5E5] bg-white px-3 text-sm font-medium text-black transition-[colors,transform] hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:bg-transparent dark:text-white dark:hover:bg-white/5 xl:flex-none"
-          >
-            {copy.allowBoth}
-          </button>
+      {showActions && onContinue && onAllowBoth && (
+        <div className="mt-4">
+          <ConsentRecordActions
+            copy={copy}
+            onContinue={onContinue}
+            onAllowBoth={onAllowBoth}
+            hugDesktop
+          />
         </div>
       )}
 
@@ -240,6 +234,99 @@ export function ConsentRecordCard({
   );
 }
 
+function ConsentRecordActions({
+  copy,
+  onContinue,
+  onAllowBoth,
+  hugDesktop,
+}: {
+  copy: ConsentRecordCopy;
+  onContinue: () => void;
+  onAllowBoth: () => void;
+  hugDesktop?: boolean;
+}) {
+  return (
+    <div className="flex gap-2">
+      <button
+        type="button"
+        onClick={onContinue}
+        className={cn(
+          "inline-flex h-9 flex-1 items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-3 text-sm font-medium text-white transition-[opacity,transform] hover:opacity-85 active:scale-[0.96] dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]",
+          hugDesktop && "xl:flex-none",
+        )}
+      >
+        {copy.continue}
+      </button>
+      <button
+        type="button"
+        onClick={onAllowBoth}
+        className={cn(
+          "inline-flex h-9 flex-1 items-center justify-center rounded-sm border border-[#E5E5E5] bg-white px-3 text-sm font-medium text-black transition-[colors,transform] hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:bg-transparent dark:text-white dark:hover:bg-white/5",
+          hugDesktop && "xl:flex-none",
+        )}
+      >
+        {copy.allowBoth}
+      </button>
+    </div>
+  );
+}
+
+function ConsentRecordHandle() {
+  return (
+    <div
+      className="mx-auto mb-3 h-1 w-10 rounded-full bg-[#E5E5E5] dark:bg-white/20"
+      aria-hidden
+    />
+  );
+}
+
+export function ConsentRecordCompactBar({
+  copy,
+  onDetails,
+  onContinue,
+  onAllowBoth,
+}: {
+  copy: ConsentRecordCopy;
+  onDetails: () => void;
+  onContinue: () => void;
+  onAllowBoth: () => void;
+}) {
+  return (
+    <aside
+      aria-labelledby="consent-record-compact-title"
+      className={cn(
+        "fixed inset-x-0 bottom-0 z-50 rounded-t-sm px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2",
+        cardSurfaceClass,
+      )}
+    >
+      <ConsentRecordHandle />
+      <div className="flex items-baseline justify-between gap-4">
+        <h2
+          id="consent-record-compact-title"
+          className="text-base font-semibold leading-6 text-black dark:text-white"
+        >
+          {copy.title}
+        </h2>
+        <button
+          type="button"
+          onClick={onDetails}
+          aria-expanded={false}
+          className="shrink-0 text-sm leading-6 text-black/55 transition-colors hover:text-black dark:text-white/55 dark:hover:text-white"
+        >
+          {copy.details}
+        </button>
+      </div>
+      <div className="mt-3">
+        <ConsentRecordActions
+          copy={copy}
+          onContinue={onContinue}
+          onAllowBoth={onAllowBoth}
+        />
+      </div>
+    </aside>
+  );
+}
+
 export function ConsentRecordSheet({
   copy,
   choices,
@@ -263,10 +350,7 @@ export function ConsentRecordSheet({
         cardSurfaceClass,
       )}
     >
-      <div
-        className="mx-auto mb-3 h-1 w-10 rounded-full bg-[#E5E5E5] dark:bg-white/20"
-        aria-hidden
-      />
+      <ConsentRecordHandle />
       <ConsentRecordBody
         copy={copy}
         choices={choices}
@@ -290,6 +374,7 @@ export function ConsentRecordPrompt({
   privacyHref: string;
 }) {
   const [visible, setVisible] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [choices, setChoices] = useState<ConsentRecordChoices>({
     productUse: false,
     ads: false,
@@ -297,7 +382,9 @@ export function ConsentRecordPrompt({
 
   useEffect(() => {
     const syncVisibility = () => {
-      setVisible(!hasClientConsentDecision());
+      const unanswered = !hasClientConsentDecision();
+      setVisible(unanswered);
+      if (unanswered) setDetailsOpen(false);
       setChoices(readChoicesFromStores());
     };
 
@@ -341,14 +428,23 @@ export function ConsentRecordPrompt({
         />
       </div>
       <div className="xl:hidden">
-        <ConsentRecordSheet
-          copy={copy}
-          choices={choices}
-          onChoicesChange={setChoices}
-          onContinue={() => save(choices)}
-          onAllowBoth={() => save({ productUse: true, ads: true })}
-          privacyHref={privacyHref}
-        />
+        {detailsOpen ? (
+          <ConsentRecordSheet
+            copy={copy}
+            choices={choices}
+            onChoicesChange={setChoices}
+            onContinue={() => save(choices)}
+            onAllowBoth={() => save({ productUse: true, ads: true })}
+            privacyHref={privacyHref}
+          />
+        ) : (
+          <ConsentRecordCompactBar
+            copy={copy}
+            onDetails={() => setDetailsOpen(true)}
+            onContinue={() => save(choices)}
+            onAllowBoth={() => save({ productUse: true, ads: true })}
+          />
+        )}
       </div>
     </div>
   );

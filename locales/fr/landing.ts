@@ -309,6 +309,7 @@ export default {
         },
         continue: "Continuer",
         allowBoth: "Autoriser les deux",
+        details: "Détails",
         footer: "Vous pouvez modifier cela dans Paramètres → Confidentialité.",
         settings: "Paramètres",
         privacy: "Confidentialité",

@@ -302,6 +302,7 @@ export default {
         },
         continue: "Continue",
         allowBoth: "Allow both",
+        details: "Details",
         footer: "You can change this in Settings → Privacy.",
         settings: "Settings",
         privacy: "Privacy",
