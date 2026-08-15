@@ -316,7 +316,7 @@ export default {
         analytics: {
           title: "Cookies d'analyse",
           description:
-            "Ces cookies nous aident à comprendre comment les visiteurs interagissent avec notre site. Ils nous permettent de mesurer le trafic et d'améliorer les performances du site.",
+            "Ces cookies nous aident à comprendre comment les visiteurs interagissent avec notre site. Ils mesurent le trafic, améliorent les performances et enregistrent les sessions pour voir comment le produit est utilisé.",
         },
         marketing: {
           title: "Cookies de performance marketing",

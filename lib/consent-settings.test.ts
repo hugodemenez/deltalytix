@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   type ConsentSettings,
+  hasAnalyticsConsentFromStores,
   isGoogleTagAllowed,
+  parseSharedAnalyticsConsent,
   toGoogleConsent,
 } from "./consent-settings";
 
@@ -50,6 +52,53 @@ describe("isGoogleTagAllowed", () => {
   it("blocks the tag when both are refused", () => {
     expect(
       isGoogleTagAllowed({ ...denyAll, functionality_storage: true }),
+    ).toBe(false);
+  });
+});
+
+describe("parseSharedAnalyticsConsent", () => {
+  it("reads granted and denied from the shared cookie", () => {
+    expect(
+      parseSharedAnalyticsConsent("deltalytix_analytics_consent=granted"),
+    ).toBe(true);
+    expect(
+      parseSharedAnalyticsConsent("other=1; deltalytix_analytics_consent=denied"),
+    ).toBe(false);
+  });
+
+  it("returns null when the cookie is missing or unknown", () => {
+    expect(parseSharedAnalyticsConsent("")).toBeNull();
+    expect(
+      parseSharedAnalyticsConsent("deltalytix_analytics_consent=maybe"),
+    ).toBeNull();
+  });
+});
+
+describe("hasAnalyticsConsentFromStores", () => {
+  it("prefers the shared cookie over a stale localStorage choice", () => {
+    expect(
+      hasAnalyticsConsentFromStores({
+        cookieHeader: "deltalytix_analytics_consent=denied",
+        storedConsent: { analytics_storage: true },
+      }),
+    ).toBe(false);
+  });
+
+  it("falls back to localStorage when the cookie is absent", () => {
+    expect(
+      hasAnalyticsConsentFromStores({
+        cookieHeader: "",
+        storedConsent: { analytics_storage: true },
+      }),
+    ).toBe(true);
+  });
+
+  it("denies when neither store has granted analytics", () => {
+    expect(
+      hasAnalyticsConsentFromStores({
+        cookieHeader: "",
+        storedConsent: null,
+      }),
     ).toBe(false);
   });
 });

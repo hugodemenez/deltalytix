@@ -19,6 +19,57 @@ export interface ConsentSettings {
 /** Where the banner persists its decision; read by every consent-gated script. */
 export const CONSENT_STORAGE_KEY = "cookieConsent";
 
+/** Shared Domain cookie so beta/prod keep the same analytics (and replay) choice. */
+export const ANALYTICS_CONSENT_COOKIE = "deltalytix_analytics_consent";
+
+/**
+ * Reads the cross-origin analytics cookie. `granted` / `denied` are the only
+ * stored values; anything else is treated as "no decision yet".
+ */
+export function parseSharedAnalyticsConsent(
+  cookieHeader: string,
+): boolean | null {
+  try {
+    const cookie = cookieHeader
+      .split("; ")
+      .find((entry) => entry.startsWith(`${ANALYTICS_CONSENT_COOKIE}=`));
+
+    if (!cookie) return null;
+
+    const value = cookie.split("=")[1];
+    if (value === "granted") return true;
+    if (value === "denied") return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cookie is the cross-origin source of truth. localStorage is the fallback for
+ * an origin-local decision that has not been migrated onto the shared cookie.
+ */
+export function hasAnalyticsConsentFromStores({
+  cookieHeader,
+  storedConsent,
+}: {
+  cookieHeader: string;
+  storedConsent: Partial<ConsentSettings> | null;
+}): boolean {
+  const shared = parseSharedAnalyticsConsent(cookieHeader);
+  if (shared !== null) return shared;
+  return storedConsent?.analytics_storage === true;
+}
+
+/** Browser-only — used by PostHog init and the cookie banner. */
+export function hasClientAnalyticsConsent(): boolean {
+  if (typeof document === "undefined") return false;
+  return hasAnalyticsConsentFromStores({
+    cookieHeader: document.cookie,
+    storedConsent: readStoredConsentSettings(),
+  });
+}
+
 /**
  * The banner's stored decision, or null when it has not been answered yet.
  * Browser-only — callers are consent-gated client components.

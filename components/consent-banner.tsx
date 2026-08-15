@@ -21,29 +21,20 @@ import { Label } from "@/components/ui/label"
 import { motion, AnimatePresence } from "framer-motion"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { useI18n } from "@/locales/client"
-import type { ConsentSettings } from "@/lib/consent-settings"
+import {
+  ANALYTICS_CONSENT_COOKIE,
+  type ConsentSettings,
+  parseSharedAnalyticsConsent,
+} from "@/lib/consent-settings"
+import { syncPostHogSessionRecording } from "@/lib/posthog-session-recording"
 import posthog from "posthog-js"
 
-const ANALYTICS_CONSENT_COOKIE = "deltalytix_analytics_consent"
 const CONSENT_EVENT = "deltalytix:analytics-consent"
 const CONSENT_UPDATED_EVENT = "deltalytix:consent-updated"
 
 function isDeltalytixHost() {
   const host = window.location.hostname
   return host === "deltalytix.app" || host.endsWith(".deltalytix.app")
-}
-
-function getSharedAnalyticsConsent() {
-  const cookie = document.cookie
-    .split("; ")
-    .find((entry) => entry.startsWith(`${ANALYTICS_CONSENT_COOKIE}=`))
-
-  if (!cookie) return null
-
-  const value = cookie.split("=")[1]
-  if (value === "granted") return true
-  if (value === "denied") return false
-  return null
 }
 
 function syncPostHogConsent(analyticsEnabled: boolean) {
@@ -65,12 +56,14 @@ function syncPostHogConsent(analyticsEnabled: boolean) {
     if (!posthog.has_opted_in_capturing()) {
       posthog.opt_in_capturing()
     }
+    syncPostHogSessionRecording(posthog, true)
     window.dispatchEvent(new Event(CONSENT_EVENT))
 
     if (wasOptedOut) {
       posthog.capture("$pageview", { $current_url: window.location.href })
     }
   } else {
+    syncPostHogSessionRecording(posthog, false)
     if (!posthog.has_opted_out_capturing()) {
       posthog.opt_out_capturing()
     }
@@ -168,7 +161,7 @@ function ConsentBannerContent({ t }: { t: ConsentTranslator }) {
   const bannerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const sharedAnalyticsConsent = getSharedAnalyticsConsent()
+    const sharedAnalyticsConsent = parseSharedAnalyticsConsent(document.cookie)
     const hasConsent = localStorage.getItem("cookieConsent")
 
     // Parent-domain cookie is the cross-origin source of truth. Prefer it over
