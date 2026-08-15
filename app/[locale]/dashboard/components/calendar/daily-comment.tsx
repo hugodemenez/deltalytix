@@ -20,7 +20,7 @@ import { useUserStore } from "../../../../../store/user-store";
 import { useMoodStore } from "@/store/widgets/mood-store";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { TiptapEditor } from "@/components/tiptap-editor";
+import { TiptapEditor } from "@/components/tiptap-editor-lazy";
 
 interface DailyCommentProps {
   dayData: CalendarEntry | undefined;

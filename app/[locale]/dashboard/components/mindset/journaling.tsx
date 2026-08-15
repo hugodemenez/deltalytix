@@ -5,7 +5,7 @@ import { useI18n } from "@/locales/client"
 import { EmotionSelector } from "./emotion-selector"
 import { DayTagSelector } from "./day-tag-selector"
 import { FinancialEvent, Trade } from "@/prisma/generated/prisma/browser"
-import { TiptapEditor } from "@/components/tiptap-editor"
+import { TiptapEditor } from "@/components/tiptap-editor-lazy"
 
 interface JournalingProps {
   content: string

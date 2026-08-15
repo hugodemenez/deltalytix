@@ -30,20 +30,19 @@ import { TableHeader } from "@tiptap/extension-table-header";
 import { TableCell } from "@tiptap/extension-table-cell";
 import * as Y from "yjs";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { useCallback, useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useMemo, useRef } from "react";
 import { useUserStore } from "@/store/user-store";
 import { toast } from "sonner";
 import { useCurrentLocale, useI18n } from "@/locales/client";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase";
+import { isSameTiptapHtml } from "@/lib/journal/tiptap-html";
 import { useCompletion } from "@ai-sdk/react";
 import { FinancialEvent } from "@/prisma/generated/prisma/browser";
 import { z } from "zod";
 import { OptimizedBubbleMenu } from "@/components/tiptap/optimized-bubble-menu";
 import { ResponsiveMenuBar } from "@/components/tiptap/menu-bar";
 import { ActionSchema as EditorAction } from "@/app/api/ai/editor/schema";
-
-const supabase = createClient();
 
 // AI Completion Extension to manage streaming state
 const AICompletionExtension = Extension.create({
@@ -102,7 +101,7 @@ const ACCEPTED_IMAGE_TYPES = [
   "image/webp",
 ];
 
-interface TiptapEditorProps {
+export interface TiptapEditorProps {
   content?: string;
   onChange?: (content: string) => void;
   placeholder?: string;
@@ -141,9 +140,11 @@ export function TiptapEditor({
   const isInitializingRef = useRef<boolean>(true);
   // Cache of image hash -> public URL to avoid duplicate uploads
   const imageHashCacheRef = useRef<Map<string, string>>(new Map());
-
-  // Create Y.js document for collaboration
-  const [ydoc] = useState(() => new Y.Doc());
+  // Mindset never enables collaboration — do not allocate Y.Doc on every mount.
+  const ydocRef = useRef<Y.Doc | null>(null);
+  if (collaboration && !ydocRef.current) {
+    ydocRef.current = new Y.Doc();
+  }
 
   const { completion, complete, isLoading, setCompletion } = useCompletion({
     api: "/api/ai/editor",
@@ -207,6 +208,7 @@ export function TiptapEditor({
         // Store by stable hash-based path so duplicates across sessions reuse the same object
         const filePath = `${user?.id}/journal/${hashHex}.${ext}`;
 
+        const supabase = createClient();
         const { error } = await supabase.storage
           .from("trade-images")
           .upload(filePath, file, {
@@ -298,18 +300,8 @@ export function TiptapEditor({
     editorRef.current.commands.updateAICompletion(completion);
   }, [completion]);
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    onCreate: ({ editor }) => {
-      editorRef.current = editor;
-      // Set initial content only when collaboration is disabled
-      if (!collaboration && content && content !== "") {
-        isInitializingRef.current = true;
-        editor.commands.setContent(content);
-        isInitializingRef.current = false;
-      }
-    },
-    extensions: [
+  const extensions = useMemo(
+    () => [
       StarterKit.configure({
         // Disable default undo/redo for collaboration
         link: false,
@@ -344,75 +336,80 @@ export function TiptapEditor({
       TableRow,
       TableHeader,
       TableCell,
-      // AI Completion extension
       AICompletionExtension,
-      // Collaboration extension (optional)
-      ...(collaboration ? [Collaboration.configure({ document: ydoc })] : []),
+      ...(collaboration && ydocRef.current
+        ? [Collaboration.configure({ document: ydocRef.current })]
+        : []),
     ],
-    // With collaboration enabled, TipTap ignores initial content; keep empty
-    content: collaboration ? "" : content,
-    onUpdate: ({ editor }) => {
-      if (isInitializingRef.current) return;
-      onChange?.(editor.getHTML());
-    },
-    editorProps: {
+    [collaboration, placeholder],
+  );
+
+  const editorClassName = useMemo(
+    () =>
+      cn(
+        // text-lg on mobile prevents iOS Safari zoom-on-focus (same pattern as Input/chat)
+        "prose text-lg sm:text-sm sm:prose lg:prose-sm xl:prose mx-auto focus:outline-none",
+        "h-full p-2",
+        // Typography styles
+        "[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mt-3 [&_h1]:mb-2",
+        "[&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mt-5 [&_h2]:mb-2",
+        "[&_h3]:text-lg [&_h3]:font-semibold [&_h3]:leading-normal [&_h3]:mt-4 [&_h3]:mb-2",
+        "[&_p]:my-2 [&_p]:leading-relaxed",
+        "[&_ul]:pl-6 [&_ol]:pl-6 [&_ul]:my-2 [&_ol]:my-2",
+        "[&_li]:my-1",
+        "[&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:my-4 [&_blockquote]:italic [&_blockquote]:text-gray-600",
+        "[&_img]:rounded-lg [&_img]:my-4 [&_img]:shadow-md [&_img]:cursor-pointer",
+        "[&_img:hover]:shadow-lg [&_img:hover]:opacity-90",
+        "[&_a]:text-blue-500 [&_a]:underline [&_a]:cursor-pointer [&_a]:hover:text-blue-700 [&_a]:transition-colors",
+        "[&_table]:border-collapse [&_table]:my-4 [&_table]:w-full [&_table]:table-fixed",
+        "[&_td]:border [&_td]:border-gray-300 [&_td]:p-2 [&_td]:text-left [&_td]:break-words",
+        "[&_th]:border [&_th]:border-gray-300 [&_th]:p-2 [&_th]:text-left [&_th]:bg-gray-50 [&_th]:font-semibold",
+        "[&_.selectedCell]:bg-blue-100 [&_.selectedCell]:dark:bg-blue-900",
+        "[&_.column-resize-handle]:absolute [&_.column-resize-handle]:right-[-2px] [&_.column-resize-handle]:top-0 [&_.column-resize-handle]:bottom-0 [&_.column-resize-handle]:w-1 [&_.column-resize-handle]:bg-blue-500 [&_.column-resize-handle]:cursor-col-resize",
+        "[&_.task-list-item]:list-none [&_.task-list-item]:flex [&_.task-list-item]:items-start [&_.task-list-item]:my-1",
+        "[&_.task-list-item_input]:mr-2 [&_.task-list-item_input]:mt-0.5 [&_.task-list-item_input]:flex-shrink-0",
+        "[&_.task-list-item_>_div]:flex-1",
+        "[&_mark]:bg-yellow-200 [&_mark]:rounded [&_mark]:px-1 [&_mark]:py-0.5",
+        "[&_.text-left]:text-left [&_.text-center]:text-center [&_.text-right]:text-right [&_.text-justify]:text-justify",
+        "[&_.text-muted-foreground]:text-gray-500 [&_.text-muted-foreground]:italic [&_.text-muted-foreground]:opacity-40",
+        // News event styles
+        "[&_.news-event]:border-l-4 [&_.news-event]:border-blue-500 [&_.news-event]:pl-4 [&_.news-event]:py-2 [&_.news-event]:my-2 [&_.news-event]:bg-blue-50 [&_.news-event]:dark:bg-blue-950/20 [&_.news-event]:rounded-r-lg",
+        // Inline news event styles
+        "[&_.news-event-inline]:text-sm [&_.news-event-inline]:text-blue-600 [&_.news-event-inline]:dark:text-blue-400 [&_.news-event-inline]:bg-blue-50 [&_.news-event-inline]:dark:bg-blue-950/20 [&_.news-event-inline]:px-2 [&_.news-event-inline]:py-1 [&_.news-event-inline]:rounded [&_.news-event-inline]:border-l-2 [&_.news-event-inline]:border-blue-500 [&_.news-event-inline]:my-1",
+        // Placeholder styles - using CSS custom properties for complex selectors
+        "[&_p.is-editor-empty:first-child::before]:text-gray-400 [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:pointer-events-none [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]",
+        // AI-generated content styles
+        "[&_.ai-generated-content]:bg-purple-50 [&_.ai-generated-content]:dark:bg-purple-950/20 [&_.ai-generated-content]:rounded [&_.ai-generated-content]:px-0.5 [&_.ai-generated-content]:animate-in [&_.ai-generated-content]:fade-in-50",
+        "[&_h1.is-empty::before]:text-gray-400 [&_h1.is-empty::before]:float-left [&_h1.is-empty::before]:h-0 [&_h1.is-empty::before]:pointer-events-none [&_h1.is-empty::before]:content-[attr(data-placeholder)]",
+        "[&_h2.is-empty::before]:text-gray-400 [&_h2.is-empty::before]:float-left [&_h2.is-empty::before]:h-0 [&_h2.is-empty::before]:pointer-events-none [&_h2.is-empty::before]:content-[attr(data-placeholder)]",
+        "[&_h3.is-empty::before]:text-gray-400 [&_h3.is-empty::before]:float-left [&_h3.is-empty::before]:h-0 [&_h3.is-empty::before]:pointer-events-none [&_h3.is-empty::before]:content-[attr(data-placeholder)]",
+        // Selection styles
+        "[&_::selection]:bg-blue-500 [&_::selection]:text-white",
+        // Responsive adjustments
+        "sm:[&_h1]:text-3xl sm:[&_h2]:text-2xl sm:[&_h3]:text-lg",
+        className,
+      ),
+    [className],
+  );
+
+  const editorProps = useMemo(
+    () => ({
       attributes: {
-        class: cn(
-          // text-lg on mobile prevents iOS Safari zoom-on-focus (same pattern as Input/chat)
-          "prose text-lg sm:text-sm sm:prose lg:prose-sm xl:prose mx-auto focus:outline-none",
-          "h-full p-2",
-          // Typography styles
-          "[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mt-3 [&_h1]:mb-2",
-          "[&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mt-5 [&_h2]:mb-2",
-          "[&_h3]:text-lg [&_h3]:font-semibold [&_h3]:leading-normal [&_h3]:mt-4 [&_h3]:mb-2",
-          "[&_p]:my-2 [&_p]:leading-relaxed",
-          "[&_ul]:pl-6 [&_ol]:pl-6 [&_ul]:my-2 [&_ol]:my-2",
-          "[&_li]:my-1",
-          "[&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:my-4 [&_blockquote]:italic [&_blockquote]:text-gray-600",
-          "[&_img]:rounded-lg [&_img]:my-4 [&_img]:shadow-md [&_img]:cursor-pointer",
-          "[&_img:hover]:shadow-lg [&_img:hover]:opacity-90",
-          "[&_a]:text-blue-500 [&_a]:underline [&_a]:cursor-pointer [&_a]:hover:text-blue-700 [&_a]:transition-colors",
-          "[&_table]:border-collapse [&_table]:my-4 [&_table]:w-full [&_table]:table-fixed",
-          "[&_td]:border [&_td]:border-gray-300 [&_td]:p-2 [&_td]:text-left [&_td]:break-words",
-          "[&_th]:border [&_th]:border-gray-300 [&_th]:p-2 [&_th]:text-left [&_th]:bg-gray-50 [&_th]:font-semibold",
-          "[&_.selectedCell]:bg-blue-100 [&_.selectedCell]:dark:bg-blue-900",
-          "[&_.column-resize-handle]:absolute [&_.column-resize-handle]:right-[-2px] [&_.column-resize-handle]:top-0 [&_.column-resize-handle]:bottom-0 [&_.column-resize-handle]:w-1 [&_.column-resize-handle]:bg-blue-500 [&_.column-resize-handle]:cursor-col-resize",
-          "[&_.task-list-item]:list-none [&_.task-list-item]:flex [&_.task-list-item]:items-start [&_.task-list-item]:my-1",
-          "[&_.task-list-item_input]:mr-2 [&_.task-list-item_input]:mt-0.5 [&_.task-list-item_input]:flex-shrink-0",
-          "[&_.task-list-item_>_div]:flex-1",
-          "[&_mark]:bg-yellow-200 [&_mark]:rounded [&_mark]:px-1 [&_mark]:py-0.5",
-          "[&_.text-left]:text-left [&_.text-center]:text-center [&_.text-right]:text-right [&_.text-justify]:text-justify",
-          "[&_.text-muted-foreground]:text-gray-500 [&_.text-muted-foreground]:italic [&_.text-muted-foreground]:opacity-40",
-          // News event styles
-          "[&_.news-event]:border-l-4 [&_.news-event]:border-blue-500 [&_.news-event]:pl-4 [&_.news-event]:py-2 [&_.news-event]:my-2 [&_.news-event]:bg-blue-50 [&_.news-event]:dark:bg-blue-950/20 [&_.news-event]:rounded-r-lg",
-          // Inline news event styles
-          "[&_.news-event-inline]:text-sm [&_.news-event-inline]:text-blue-600 [&_.news-event-inline]:dark:text-blue-400 [&_.news-event-inline]:bg-blue-50 [&_.news-event-inline]:dark:bg-blue-950/20 [&_.news-event-inline]:px-2 [&_.news-event-inline]:py-1 [&_.news-event-inline]:rounded [&_.news-event-inline]:border-l-2 [&_.news-event-inline]:border-blue-500 [&_.news-event-inline]:my-1",
-          // Placeholder styles - using CSS custom properties for complex selectors
-          "[&_p.is-editor-empty:first-child::before]:text-gray-400 [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:pointer-events-none [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]",
-          // AI-generated content styles
-          "[&_.ai-generated-content]:bg-purple-50 [&_.ai-generated-content]:dark:bg-purple-950/20 [&_.ai-generated-content]:rounded [&_.ai-generated-content]:px-0.5 [&_.ai-generated-content]:animate-in [&_.ai-generated-content]:fade-in-50",
-          "[&_h1.is-empty::before]:text-gray-400 [&_h1.is-empty::before]:float-left [&_h1.is-empty::before]:h-0 [&_h1.is-empty::before]:pointer-events-none [&_h1.is-empty::before]:content-[attr(data-placeholder)]",
-          "[&_h2.is-empty::before]:text-gray-400 [&_h2.is-empty::before]:float-left [&_h2.is-empty::before]:h-0 [&_h2.is-empty::before]:pointer-events-none [&_h2.is-empty::before]:content-[attr(data-placeholder)]",
-          "[&_h3.is-empty::before]:text-gray-400 [&_h3.is-empty::before]:float-left [&_h3.is-empty::before]:h-0 [&_h3.is-empty::before]:pointer-events-none [&_h3.is-empty::before]:content-[attr(data-placeholder)]",
-          // Selection styles
-          "[&_::selection]:bg-blue-500 [&_::selection]:text-white",
-          // Responsive adjustments
-          "sm:[&_h1]:text-3xl sm:[&_h2]:text-2xl sm:[&_h3]:text-lg",
-          className,
-        ),
+        class: editorClassName,
         style: `height: ${height}; width: ${width};`,
       },
-      handlePaste: (_view, event) => {
+      handlePaste: (_view: unknown, event: ClipboardEvent) => {
         const items = Array.from(event.clipboardData?.items || []);
 
         for (const item of items) {
           if (item.type.startsWith("image/")) {
             event.preventDefault();
             const file = item.getAsFile();
-            if (file && editor) {
+            const currentEditor = editorRef.current;
+            if (file && currentEditor) {
               handleImageUpload(file)
                 .then((imageUrl) => {
-                  editor.chain().focus().setImage({ src: imageUrl }).run();
+                  currentEditor.chain().focus().setImage({ src: imageUrl }).run();
                 })
                 .catch((error) => {
                   console.error("Failed to upload pasted image:", error);
@@ -423,15 +420,16 @@ export function TiptapEditor({
         }
         return false;
       },
-      handleDrop: (_view, event) => {
+      handleDrop: (_view: unknown, event: DragEvent) => {
         const files = Array.from(event.dataTransfer?.files || []);
 
         for (const file of files) {
-          if (file.type.startsWith("image/") && editor) {
+          const currentEditor = editorRef.current;
+          if (file.type.startsWith("image/") && currentEditor) {
             event.preventDefault();
             handleImageUpload(file)
               .then((imageUrl) => {
-                editor.chain().focus().setImage({ src: imageUrl }).run();
+                currentEditor.chain().focus().setImage({ src: imageUrl }).run();
               })
               .catch((error) => {
                 console.error("Failed to upload dropped image:", error);
@@ -441,8 +439,34 @@ export function TiptapEditor({
         }
         return false;
       },
+    }),
+    [editorClassName, handleImageUpload, height, width],
+  );
+
+  const editor = useEditor(
+    {
+      immediatelyRender: false,
+      shouldRerenderOnTransaction: false,
+      onCreate: ({ editor: created }) => {
+        editorRef.current = created;
+        // Set initial content only when collaboration is disabled
+        if (!collaboration && content && content !== "") {
+          isInitializingRef.current = true;
+          created.commands.setContent(content);
+          isInitializingRef.current = false;
+        }
+      },
+      extensions,
+      // With collaboration enabled, TipTap ignores initial content; keep empty
+      content: collaboration ? "" : content,
+      onUpdate: ({ editor: updated }) => {
+        if (isInitializingRef.current) return;
+        onChange?.(updated.getHTML());
+      },
+      editorProps,
     },
-  });
+    [],
+  );
 
   // Handle embedding news into the editor
   const handleEmbedNews = useCallback(
@@ -510,17 +534,12 @@ export function TiptapEditor({
   useEffect(() => {
     if (!collaboration && editor && content !== undefined) {
       const currentContent = editor.getHTML();
-      // Update if content is different, or if we're setting content for the first time (empty editor)
-      if (
-        content !== currentContent &&
-        (content !== "" ||
-          currentContent === "<p></p>" ||
-          currentContent === "")
-      ) {
-        isInitializingRef.current = true;
-        editor.commands.setContent(content);
-        isInitializingRef.current = false;
+      if (isSameTiptapHtml(content, currentContent)) {
+        return;
       }
+      isInitializingRef.current = true;
+      editor.commands.setContent(content);
+      isInitializingRef.current = false;
     }
   }, [collaboration, editor, content]);
 
