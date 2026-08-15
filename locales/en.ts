@@ -144,6 +144,8 @@ export default {
   "connections.sections.thor": "Thor",
   "connections.sections.standalone": "Standalone accounts",
   "connections.strip.standalone": "Standalone",
+  "connections.strip.search": "Search accounts",
+  "connections.strip.noResults": "No accounts found",
   "connections.add.rithmic": "Add Rithmic connection",
   "connections.add.rithmicProtocol": "Add Rithmic Protocol connection",
   "connections.add.tradovate": "Add Tradovate connection",

@@ -145,6 +145,8 @@ export default {
   "connections.sections.thor": "Thor",
   "connections.sections.standalone": "Comptes autonomes",
   "connections.strip.standalone": "Autonome",
+  "connections.strip.search": "Rechercher des comptes",
+  "connections.strip.noResults": "Aucun compte trouvé",
   "connections.add.rithmic": "Ajouter une connexion Rithmic",
   "connections.add.rithmicProtocol": "Ajouter une connexion Rithmic Protocol",
   "connections.add.tradovate": "Ajouter une connexion Tradovate",

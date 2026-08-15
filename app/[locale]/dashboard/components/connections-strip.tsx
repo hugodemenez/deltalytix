@@ -1,11 +1,32 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ButtonHTMLAttributes,
+} from 'react'
 import Link from 'next/link'
 import { Check, ChevronDown, Plus } from 'lucide-react'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import { useData } from '@/context/data-provider'
+import { useIsMobile } from '@/hooks/use-mobile'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
 import {
   Popover,
   PopoverContent,
@@ -91,17 +112,16 @@ function accountMetaLabel(account: ConnectionsPageAccount): string | null {
   return propfirm || null
 }
 
-function ConnectionChip({
+function ChipTrigger({
   item,
-  selectedAccounts,
-  onSelectAccount,
+  open,
+  className,
+  ...props
 }: {
   item: StripItem
-  selectedAccounts: string[]
-  onSelectAccount: (accountNumber: string) => void
-}) {
+  open: boolean
+} & ButtonHTMLAttributes<HTMLButtonElement>) {
   const t = useI18n()
-  const [open, setOpen] = useState(false)
   const meta = chipAccountCountLabel(item.accounts.length, t)
   const statusLabel =
     item.status === 'connected'
@@ -111,102 +131,202 @@ function ConnectionChip({
         : t('connections.status.offline')
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-haspopup="menu"
-          aria-expanded={open}
-          className={cn(
-            'inline-flex h-9 max-w-[16rem] shrink-0 items-center gap-2 rounded-[4px] border bg-white px-3 text-left text-sm tracking-[-0.01em] transition-[background-color,border-color,transform] duration-150 hover:bg-[#F5F5F5] active:scale-[0.96] dark:bg-background dark:hover:bg-muted/50',
-            open
-              ? 'border-[#181A18] dark:border-white'
-              : 'border-[#E5E5E5] dark:border-border'
-          )}
+    <button
+      type="button"
+      aria-haspopup="listbox"
+      aria-expanded={open}
+      className={cn(
+        'inline-flex h-9 max-w-[16rem] shrink-0 items-center gap-2 rounded-[4px] border bg-white px-3 text-left text-sm tracking-[-0.01em] transition-[background-color,border-color,transform] duration-150 hover:bg-[#F5F5F5] active:scale-[0.96] dark:bg-background dark:hover:bg-muted/50',
+        open
+          ? 'border-[#181A18] dark:border-white'
+          : 'border-[#E5E5E5] dark:border-border',
+        className
+      )}
+      {...props}
+    >
+      <span className="min-w-0 truncate font-medium text-[#171917] dark:text-foreground">
+        {item.displayName}
+      </span>
+      <span
+        className={cn(
+          'h-1.5 w-1.5 shrink-0 rounded-full',
+          item.status === 'connected' && 'bg-[#3E7550]',
+          item.status === 'error' && 'bg-red-500',
+          item.status === 'offline' && 'bg-[#A3A3A3]'
+        )}
+        aria-label={statusLabel}
+      />
+      {meta ? (
+        <span className="min-w-0 truncate text-xs text-[#686D67] dark:text-muted-foreground">
+          {meta}
+        </span>
+      ) : null}
+      <ChevronDown
+        className={cn(
+          'h-3.5 w-3.5 shrink-0 text-[#686D67] transition-transform duration-150 dark:text-muted-foreground',
+          open && 'rotate-180'
+        )}
+        aria-hidden
+      />
+    </button>
+  )
+}
+
+function AccountPickerList({
+  item,
+  selectedAccounts,
+  searchTerm,
+  onSearchTermChange,
+  onSelectAccount,
+  onClose,
+  listClassName,
+}: {
+  item: StripItem
+  selectedAccounts: string[]
+  searchTerm: string
+  onSearchTermChange: (value: string) => void
+  onSelectAccount: (accountNumber: string) => void
+  onClose: () => void
+  listClassName: string
+}) {
+  const t = useI18n()
+  const query = searchTerm.trim().toLowerCase()
+  const filteredAccounts = useMemo(() => {
+    if (!query) return item.accounts
+    return item.accounts.filter((account) => {
+      const number = account.number.toLowerCase()
+      const propfirm = account.propfirm?.trim().toLowerCase() ?? ''
+      return number.includes(query) || propfirm.includes(query)
+    })
+  }, [item.accounts, query])
+
+  return (
+    <Command shouldFilter={false} className="bg-transparent">
+      <CommandInput
+        value={searchTerm}
+        onValueChange={onSearchTermChange}
+        placeholder={t('connections.strip.search')}
+      />
+      <CommandList className={cn('overflow-y-auto overflow-x-hidden', listClassName)}>
+        <CommandEmpty>
+          {item.accounts.length === 0
+            ? t('connections.emptySection')
+            : t('connections.strip.noResults')}
+        </CommandEmpty>
+        <CommandGroup>
+          {filteredAccounts.map((account) => {
+            const selected = selectedAccounts.includes(account.number)
+            const metaLabel = accountMetaLabel(account)
+            return (
+              <CommandItem
+                key={account.id}
+                value={account.number}
+                onSelect={() => {
+                  onSelectAccount(account.number)
+                  onClose()
+                }}
+                className="items-start gap-2 rounded-[3px] px-3 py-2.5"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block break-all font-medium text-[#171917] dark:text-foreground">
+                    {account.number}
+                  </span>
+                  {metaLabel ? (
+                    <span className="mt-0.5 block break-all text-xs text-[#686D67] dark:text-muted-foreground">
+                      {metaLabel}
+                    </span>
+                  ) : null}
+                </span>
+                {selected ? (
+                  <Check
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#3E7550]"
+                    strokeWidth={2}
+                    aria-hidden
+                  />
+                ) : null}
+              </CommandItem>
+            )
+          })}
+        </CommandGroup>
+      </CommandList>
+      <div className="border-t border-[#E5E5E5] dark:border-border">
+        <Link
+          href="/dashboard/connections"
+          className="block px-3 py-2.5 text-sm font-medium text-[#3E7550] transition-colors hover:bg-[#EFF5EC] dark:text-[#9BC4A8] dark:hover:bg-[#243028]"
+          onClick={onClose}
         >
-          <span className="min-w-0 truncate font-medium text-[#171917] dark:text-foreground">
-            {item.displayName}
-          </span>
-          <span
-            className={cn(
-              'h-1.5 w-1.5 shrink-0 rounded-full',
-              item.status === 'connected' && 'bg-[#3E7550]',
-              item.status === 'error' && 'bg-red-500',
-              item.status === 'offline' && 'bg-[#A3A3A3]'
+          {t('connections.manageConnection')}
+        </Link>
+      </div>
+    </Command>
+  )
+}
+
+function ConnectionChip({
+  item,
+  selectedAccounts,
+  onSelectAccount,
+}: {
+  item: StripItem
+  selectedAccounts: string[]
+  onSelectAccount: (accountNumber: string) => void
+}) {
+  const isMobile = useIsMobile()
+  const [open, setOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next)
+    if (!next) setSearchTerm('')
+  }
+
+  const picker = (listClassName: string) => (
+    <AccountPickerList
+      item={item}
+      selectedAccounts={selectedAccounts}
+      searchTerm={searchTerm}
+      onSearchTermChange={setSearchTerm}
+      onSelectAccount={onSelectAccount}
+      onClose={() => handleOpenChange(false)}
+      listClassName={listClassName}
+    />
+  )
+
+  if (isMobile) {
+    return (
+      <>
+        <ChipTrigger item={item} open={open} onClick={() => setOpen(true)} />
+        <Drawer
+          open={open}
+          onOpenChange={handleOpenChange}
+          shouldScaleBackground={false}
+        >
+          <DrawerContent className="max-h-[85svh] rounded-t-[4px] border-[#E5E5E5] bg-white dark:border-border dark:bg-background">
+            <DrawerHeader className="px-4 pb-2 pt-3 text-left">
+              <DrawerTitle className="text-base font-semibold text-[#171917] dark:text-foreground">
+                {item.displayName}
+              </DrawerTitle>
+            </DrawerHeader>
+            {picker(
+              'max-h-[min(320px,50svh)] pb-[max(0.5rem,env(safe-area-inset-bottom))]'
             )}
-            aria-label={statusLabel}
-          />
-          {meta ? (
-            <span className="min-w-0 truncate text-xs text-[#686D67] dark:text-muted-foreground">
-              {meta}
-            </span>
-          ) : null}
-          <ChevronDown
-            className={cn(
-              'h-3.5 w-3.5 shrink-0 text-[#686D67] transition-transform duration-150 dark:text-muted-foreground',
-              open && 'rotate-180'
-            )}
-            aria-hidden
-          />
-        </button>
+          </DrawerContent>
+        </Drawer>
+      </>
+    )
+  }
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        <ChipTrigger item={item} open={open} />
       </PopoverTrigger>
       <PopoverContent
         align="start"
         sideOffset={8}
-        className="w-72 rounded-[4px] border-[#E5E5E5] bg-white p-1 shadow-md dark:border-border dark:bg-background"
+        className="w-[min(24rem,calc(100vw-2rem))] rounded-[4px] border-[#E5E5E5] bg-white p-0 shadow-md dark:border-border dark:bg-background"
       >
-        <div role="menu" className="flex flex-col">
-          {item.accounts.length === 0 ? (
-            <p className="px-3 py-2.5 text-sm text-[#686D67] dark:text-muted-foreground">
-              {t('connections.emptySection')}
-            </p>
-          ) : (
-            item.accounts.map((account) => {
-              const selected = selectedAccounts.includes(account.number)
-              const metaLabel = accountMetaLabel(account)
-              return (
-                <button
-                  key={account.id}
-                  type="button"
-                  role="menuitemcheckbox"
-                  aria-checked={selected}
-                  className="flex w-full items-center gap-2 rounded-[3px] px-3 py-2.5 text-left text-sm transition-colors hover:bg-[#F5F5F5] dark:hover:bg-muted/50"
-                  onClick={() => {
-                    onSelectAccount(account.number)
-                    setOpen(false)
-                  }}
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium text-[#171917] dark:text-foreground">
-                      {account.number}
-                    </span>
-                    {metaLabel ? (
-                      <span className="block truncate text-xs text-[#686D67] dark:text-muted-foreground">
-                        {metaLabel}
-                      </span>
-                    ) : null}
-                  </span>
-                  {selected ? (
-                    <Check
-                      className="h-4 w-4 shrink-0 text-[#3E7550]"
-                      strokeWidth={2}
-                      aria-hidden
-                    />
-                  ) : null}
-                </button>
-              )
-            })
-          )}
-          <div className="my-1 border-t border-[#E5E5E5] dark:border-border" />
-          <Link
-            href="/dashboard/connections"
-            role="menuitem"
-            className="rounded-[3px] px-3 py-2.5 text-sm font-medium text-[#3E7550] transition-colors hover:bg-[#EFF5EC] dark:text-[#9BC4A8] dark:hover:bg-[#243028]"
-            onClick={() => setOpen(false)}
-          >
-            {t('connections.manageConnection')}
-          </Link>
-        </div>
+        {picker('max-h-[320px]')}
       </PopoverContent>
     </Popover>
   )
