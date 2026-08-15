@@ -103,7 +103,12 @@ function ConnectionChip({
   const t = useI18n()
   const [open, setOpen] = useState(false)
   const meta = chipAccountCountLabel(item.accounts.length, t)
-  const connected = item.status === 'connected'
+  const statusLabel =
+    item.status === 'connected'
+      ? t('connections.status.connected')
+      : item.status === 'error'
+        ? t('connections.status.error')
+        : t('connections.status.offline')
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -119,34 +124,17 @@ function ConnectionChip({
               : 'border-[#E5E5E5] dark:border-border'
           )}
         >
-          <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
-            {item.service ? (
-              <ServiceMonochromeLogo
-                service={item.service}
-                alt=""
-                size={16}
-                className="h-4 w-4"
-              />
-            ) : (
-              <span
-                className="h-2 w-2 rounded-full bg-[#181A18]/35 dark:bg-white/40"
-                aria-hidden
-              />
-            )}
-          </span>
           <span className="min-w-0 truncate font-medium text-[#171917] dark:text-foreground">
             {item.displayName}
           </span>
           <span
             className={cn(
               'h-1.5 w-1.5 shrink-0 rounded-full',
-              connected ? 'bg-[#3E7550]' : 'bg-red-500'
+              item.status === 'connected' && 'bg-[#3E7550]',
+              item.status === 'error' && 'bg-red-500',
+              item.status === 'offline' && 'bg-[#A3A3A3]'
             )}
-            aria-label={
-              connected
-                ? t('connections.status.connected')
-                : t('connections.status.error')
-            }
+            aria-label={statusLabel}
           />
           {meta ? (
             <span className="min-w-0 truncate text-xs text-[#686D67] dark:text-muted-foreground">

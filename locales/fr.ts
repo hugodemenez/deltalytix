@@ -175,6 +175,7 @@ export default {
   "connections.sync.manualOnly": "Synchronisez cette connexion depuis ses paramètres.",
   "connections.status.connected": "Connecté",
   "connections.status.error": "Déconnecté",
+  "connections.status.offline": "Hors ligne",
   "connections.status.syncFailed": "Échec de la dernière sync",
   "connections.reconnect": "Reconnecter",
   "connections.reconnectFailed": "Impossible de démarrer la reconnexion",

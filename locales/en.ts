@@ -174,6 +174,7 @@ export default {
   "connections.sync.manualOnly": "Sync this connection from its settings.",
   "connections.status.connected": "Connected",
   "connections.status.error": "Disconnected",
+  "connections.status.offline": "Offline",
   "connections.status.syncFailed": "Last sync failed",
   "connections.reconnect": "Reconnect",
   "connections.reconnectFailed": "Could not start reconnect",

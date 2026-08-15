@@ -9,7 +9,7 @@ export type StripItem =
       kind: 'connection'
       id: string
       displayName: string
-      status: 'connected' | 'error'
+      status: 'connected' | 'error' | 'offline'
       service: string
       accounts: ConnectionsPageAccount[]
     }
@@ -17,7 +17,7 @@ export type StripItem =
       kind: 'standalone'
       id: string
       displayName: string
-      status: 'connected'
+      status: 'offline'
       service: string | null
       accounts: ConnectionsPageAccount[]
     }
@@ -53,7 +53,7 @@ export function buildStripItems(
       kind: 'standalone',
       id: 'standalone',
       displayName: standaloneLabel,
-      status: 'connected',
+      status: 'offline',
       service: null,
       accounts: data.standaloneAccounts,
     },

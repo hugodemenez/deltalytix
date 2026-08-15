@@ -78,6 +78,7 @@ describe('buildStripItems', () => {
       kind: 'standalone',
       id: 'standalone',
       displayName: 'Standalone',
+      status: 'offline',
     })
     expect(items[0].accounts.map((a) => a.number)).toEqual([
       'DEMENEZ-1',
