@@ -288,7 +288,7 @@ export default {
     },
     consent: {
       record: {
-        title: "These are optional",
+        title: "Two optional settings",
         sub: "We don’t keep what you type in forms, or card details. These two are optional.",
         productUse: {
           title: "Product use",
