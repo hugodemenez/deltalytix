@@ -19,6 +19,7 @@ export default function Footer() {
     ],
     legal: [
       { name: t('footer.legal.privacy'), href: '/privacy' },
+      { name: t('landing.consent.record.settings'), href: '/settings#privacy' },
       { name: t('footer.legal.terms'), href: '/terms' },
       { name: t('footer.legal.disclaimers'), href: '/disclaimers' },
     ],

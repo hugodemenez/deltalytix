@@ -294,35 +294,24 @@ export default {
       timezone: "Fuseau horaire",
     },
     consent: {
-      banner: {
-        message: "Nous utilisons des cookies pour améliorer votre expérience.",
-        updatePreferences:
-          "Vous pouvez mettre à jour vos préférences à tout moment en cliquant sur",
-        managePreferences: "Gérer les préférences",
-        rejectNonEssential: "Rejeter les non-essentiels",
-        acceptAll: "Tout accepter",
-      },
-      preferences: {
-        title: "Centre de préférences des cookies",
-        description:
-          "Personnalisez votre consentement pour différents types de cookies. Les cookies strictement nécessaires ne peuvent pas être désactivés car ils sont essentiels au fonctionnement du site. Les autres cookies sont optionnels et ne seront utilisés que si vous les activez. Vous pouvez modifier votre consentement à tout moment.",
-        learnMore: "En savoir plus",
-        done: "Terminé",
-        strictlyNecessary: {
-          title: "Cookies strictement nécessaires (toujours actifs)",
+      record: {
+        title: "Ce que nous enregistrons",
+        sub: "Le site fonctionne dans tous les cas. Ces deux options sont facultatives.",
+        productUse: {
+          title: "Usage du produit",
           description:
-            "Ces cookies sont essentiels au fonctionnement du site et ne peuvent pas être désactivés. Ils aident à la sécurité, l'authentification des utilisateurs, le support client, etc.",
+            "Comment le site est utilisé, y compris le replay de session. Cela nous aide à réparer ce qui est cassé.",
         },
-        analytics: {
-          title: "Cookies d'analyse",
+        ads: {
+          title: "Publicités",
           description:
-            "Ces cookies nous aident à comprendre comment les visiteurs interagissent avec notre site. Ils mesurent le trafic, améliorent les performances et enregistrent les sessions pour voir comment le produit est utilisé.",
+            "Si nous pouvons savoir si une publicité vous a amené ici. Pas de profil publicitaire.",
         },
-        marketing: {
-          title: "Cookies de performance marketing",
-          description:
-            "Ces cookies nous aident à mesurer l'efficacité de nos campagnes marketing.",
-        },
+        continue: "Continuer",
+        allowBoth: "Autoriser les deux",
+        footer: "Vous pouvez modifier cela dans Paramètres → Confidentialité.",
+        settings: "Paramètres",
+        privacy: "Confidentialité",
       },
     },
     propfirms: {

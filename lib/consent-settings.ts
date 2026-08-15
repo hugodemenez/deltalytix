@@ -22,6 +22,82 @@ export const CONSENT_STORAGE_KEY = "cookieConsent";
 /** Shared Domain cookie so beta/prod keep the same analytics (and replay) choice. */
 export const ANALYTICS_CONSENT_COOKIE = "deltalytix_analytics_consent";
 
+/** PostHog opted in after analytics (Product use) was granted. */
+export const CONSENT_EVENT = "deltalytix:analytics-consent";
+
+/** Google tag and attribution listen for a saved decision. */
+export const CONSENT_UPDATED_EVENT = "deltalytix:consent-updated";
+
+/** Dev reset (and Settings) so the first-visit prompt can return. */
+export const CONSENT_RESET_EVENT = "deltalytix:consent-reset";
+
+/** The two first-visit switches. Necessary cookies are never a choice. */
+export interface ConsentRecordChoices {
+  productUse: boolean;
+  ads: boolean;
+}
+
+/**
+ * Necessary cookies stay on and are not listed. Optional switches default off.
+ * Ads is click measurement only — no ad profile (user data / personalization).
+ */
+export const DEFAULT_CONSENT_SETTINGS: ConsentSettings = {
+  analytics_storage: false,
+  ad_storage: false,
+  ad_user_data: false,
+  ad_personalization: false,
+  functionality_storage: true,
+  personalization_storage: false,
+  security_storage: true,
+};
+
+export function fromRecordChoices(
+  choices: ConsentRecordChoices,
+): ConsentSettings {
+  return {
+    ...DEFAULT_CONSENT_SETTINGS,
+    analytics_storage: choices.productUse,
+    ad_storage: choices.ads,
+  };
+}
+
+export function toRecordChoices(
+  settings: Partial<ConsentSettings> | null,
+  sharedAnalytics: boolean | null = null,
+): ConsentRecordChoices {
+  return {
+    productUse:
+      sharedAnalytics !== null
+        ? sharedAnalytics
+        : settings?.analytics_storage === true,
+    ads: settings?.ad_storage === true,
+  };
+}
+
+/**
+ * A first-visit prompt should hide once either store has a decision —
+ * including both-off saved via Continue.
+ */
+export function hasConsentDecisionFromStores({
+  cookieHeader,
+  storedConsent,
+}: {
+  cookieHeader: string;
+  storedConsent: Partial<ConsentSettings> | null;
+}): boolean {
+  if (parseSharedAnalyticsConsent(cookieHeader) !== null) return true;
+  return storedConsent !== null;
+}
+
+/** Browser-only — used by the first-visit prompt. */
+export function hasClientConsentDecision(): boolean {
+  if (typeof document === "undefined") return false;
+  return hasConsentDecisionFromStores({
+    cookieHeader: document.cookie,
+    storedConsent: readStoredConsentSettings(),
+  });
+}
+
 /**
  * Reads the cross-origin analytics cookie. `granted` / `denied` are the only
  * stored values; anything else is treated as "no decision yet".

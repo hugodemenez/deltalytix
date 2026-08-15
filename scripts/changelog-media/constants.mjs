@@ -32,7 +32,7 @@ export function viewport(preset) {
 
 export const LABELS = {
   en: {
-    acceptCookies: /accept all/i,
+    acceptCookies: /allow both|accept all/i,
     import: /import/i,
     tableTab: /^table$/i,
     accountsTab: /^accounts$/i,
@@ -55,7 +55,7 @@ export const LABELS = {
     next: /^next$/i,
   },
   fr: {
-    acceptCookies: /tout accepter/i,
+    acceptCookies: /autoriser les deux|tout accepter/i,
     import: /importer/i,
     tableTab: /^tableau$/i,
     accountsTab: /^comptes$/i,
