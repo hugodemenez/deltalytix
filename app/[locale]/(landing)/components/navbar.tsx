@@ -382,10 +382,10 @@ export default function Component() {
       />
 
       <span
-        className={`fixed top-0 left-0 right-0 z-50 bg-background pt-safe min-h-nav-safe transition-transform duration-300 ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
+        className={`fixed top-0 left-0 right-0 z-50 canvas-bg bg-[oklch(0.97_0_0)] pt-safe min-h-nav-safe transition-transform duration-300 dark:bg-[oklch(0.17_0_0)] ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
       ></span>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 pt-safe text-foreground transition-transform duration-300 ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
+        className={`fixed top-0 left-0 right-0 z-50 canvas-bg bg-[oklch(0.97_0_0)] pt-safe text-foreground transition-transform duration-300 dark:bg-[oklch(0.17_0_0)] ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
       >
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">
         <Link href={localize("/")} className="flex items-center space-x-2">
@@ -646,7 +646,7 @@ export default function Component() {
       {isOpen && (
         <motion.div
           key={`mobile-nav-menu-${effectiveTheme}`}
-          className="mobile-nav-overlay fixed inset-0 z-50 flex flex-col bg-background px-2 overscroll-none"
+          className="mobile-nav-overlay fixed inset-0 z-50 flex flex-col canvas-bg px-2 overscroll-none"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
@@ -1096,7 +1096,7 @@ export default function Component() {
       {isOpen && (
         <div
           key={`mobile-nav-backdrop-${effectiveTheme}`}
-          className="mobile-nav-overlay fixed inset-0 bg-background z-40 pointer-events-none"
+          className="mobile-nav-overlay fixed inset-0 canvas-bg z-40 pointer-events-none"
           aria-hidden="true"
         />
       )}
