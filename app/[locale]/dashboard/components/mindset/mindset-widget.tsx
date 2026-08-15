@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel"
 import { Journaling } from "./journaling"
 import { Timeline } from "./timeline"
 import { MindsetSummary } from "./mindset-summary"
 import { useI18n } from "@/locales/client"
-import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Download } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { InfoBubble } from "@/components/ui/info-bubble"
 import {
@@ -18,7 +17,6 @@ import {
 } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard"
-import type { EmblaCarouselType as CarouselApi } from "embla-carousel"
 import { toast } from "sonner"
 import { saveMindset, deleteMindset } from "@/server/journal"
 import { addTagsToTradesForDay } from "@/server/trades"
@@ -37,8 +35,7 @@ interface MindsetWidgetProps {
 }
 
 export function MindsetWidget({ size }: MindsetWidgetProps) {
-  const [api, setApi] = useState<CarouselApi>()
-  const [current, setCurrent] = useState(0)
+  const [pane, setPane] = useState<"journal" | "summary">("journal")
   const [emotionValue, setEmotionValue] = useState(0)
   const [selectedNews, setSelectedNews] = useState<string[]>([])
   const [journalContent, setJournalContent] = useState("")
@@ -58,59 +55,44 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     setHasMounted(true)
   }, [])
 
-  // Consolidated effect for carousel and mood data handling
   useEffect(() => {
-    if (!api) return
-
-    const onSelect = () => {
-      setCurrent(api.selectedScrollSnap())
-    }
-    api.on("select", onSelect)
-
-    // Handle initial load and mood data
-    if (moods) {
-      const today = new Date()
-      const hasTodayData = moods.some(mood => {
-        if (!mood?.day) return false
-        const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-        return format(moodDate, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
-      })
-
-      // Handle selected date mood data
-      const mood = moods.find(mood => {
-        if (!mood?.day) return false
-        const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-        return format(moodDate, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
-      })
-
-      // If it's today and we have data, show summary
-      if (isToday(selectedDate) && hasTodayData) {
-        // Set data to today's data
-        setEmotionValue(mood?.emotionValue ?? 50)
-        setSelectedNews(mood?.selectedNews ?? [])
-        setJournalContent(mood?.journalContent ?? "")
-        setIsEditing(true)
-        api.scrollTo(1) // Summary is now index 1
-        return
-      }
-
-      if (mood) {
-        setEmotionValue(mood.emotionValue ?? 50)
-        setSelectedNews(mood.selectedNews ?? [])
-        setJournalContent(mood.journalContent ?? "")
-        api.scrollTo(1) // Summary is now index 1
-      } else {
-        // Reset all values if no mood data exists for the selected date
-        setEmotionValue(0)
-        setSelectedNews([])
-        setJournalContent("")
-      }
+    if (!moods) {
+      return
     }
 
-    return () => {
-      api.off("select", onSelect)
+    const hasTodayData = moods.some(mood => {
+      if (!mood?.day) return false
+      const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
+      return format(moodDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+    })
+
+    const mood = moods.find(mood => {
+      if (!mood?.day) return false
+      const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
+      return format(moodDate, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
+    })
+
+    if (isToday(selectedDate) && hasTodayData) {
+      setEmotionValue(mood?.emotionValue ?? 50)
+      setSelectedNews(mood?.selectedNews ?? [])
+      setJournalContent(mood?.journalContent ?? "")
+      setIsEditing(true)
+      setPane("summary")
+      return
     }
-  }, [api, selectedDate, moods])
+
+    if (mood) {
+      setEmotionValue(mood.emotionValue ?? 50)
+      setSelectedNews(mood.selectedNews ?? [])
+      setJournalContent(mood.journalContent ?? "")
+      setPane("summary")
+      return
+    }
+
+    setEmotionValue(0)
+    setSelectedNews([])
+    setJournalContent("")
+  }, [selectedDate, moods])
 
   const handleEmotionChange = (value: number) => {
     setEmotionValue(value)
@@ -160,7 +142,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
 
   const handleSave = async () => {
     // Scroll to summary view after saving
-    api?.scrollTo(1)
+    setPane("summary")
     try {
       const dateKey = format(selectedDate, 'yyyy-MM-dd')
       const savedMood = await saveMindset({
@@ -209,7 +191,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         setSelectedNews([])
         setJournalContent("")
         setIsEditing(true)
-        api?.scrollTo(0)
+        setPane("journal")
       }
     } catch (error) {
       throw error // Let the Timeline component handle the error toast
@@ -233,14 +215,14 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       setSelectedNews(moodForDate.selectedNews ?? [])
       setJournalContent(moodForDate.journalContent ?? " ")
       setIsEditing(true)
-      api?.scrollTo(1) // Summary is now index 1
+      setPane("summary")
     } else {
       // If no data exists, reset the form
       setEmotionValue(50)
       setSelectedNews([])
       setJournalContent("")
       setIsEditing(true)
-      api?.scrollTo(0) // Journaling is index 0
+      setPane("journal")
     }
   }
 
@@ -263,23 +245,9 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     })
   }
 
-  const handleEdit = (section?: 'emotion' | 'journal' | 'news') => {
+  const handleEdit = (_section?: 'emotion' | 'journal' | 'news') => {
     setIsEditing(true)
-    
-    // Navigate to the appropriate section
-    switch (section) {
-      case 'news':
-        api?.scrollTo(0) // News is now part of journaling
-        break
-      case 'journal':
-        api?.scrollTo(0)
-        break
-      case 'emotion':
-        api?.scrollTo(0)
-        break
-      default:
-        api?.scrollTo(0)
-    }
+    setPane("journal")
   }
 
   const toggleTimeline = () => {
@@ -345,35 +313,6 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     }
   }
 
-  const steps = [
-    {
-      title: t('mindset.journaling.title'),
-      component: <Journaling 
-        content={journalContent}
-        onChange={handleJournalChange}
-        onSave={handleSave}
-        emotionValue={emotionValue}
-        onEmotionChange={handleEmotionChange}
-        date={selectedDate}
-        events={getEventsForDate(selectedDate)}
-        selectedNews={selectedNews}
-        onNewsSelection={handleNewsSelection}
-        trades={trades}
-        onApplyTagToAll={handleApplyTagToAll}
-      />
-    },
-    {
-      title: t('mindset.title'),
-      component: <MindsetSummary
-        date={selectedDate}
-        emotionValue={emotionValue}
-        selectedNews={selectedNews}
-        journalContent={journalContent}
-        onEdit={handleEdit}
-      />
-    }
-  ]
-
   if (!hasMounted) {
     return <Skeleton className="h-full min-h-[12rem] w-full rounded-lg" />
   }
@@ -427,14 +366,19 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
               </UITooltip>
             </TooltipProvider>
             <div className="flex items-center gap-1.5">
-              {steps.map((_, index) => (
-                <div
-                  key={index}
+              {(["journal", "summary"] as const).map((step) => (
+                <button
+                  key={step}
+                  type="button"
+                  onClick={() => setPane(step)}
+                  aria-label={
+                    step === "journal"
+                      ? t("mindset.journaling.title")
+                      : t("mindset.title")
+                  }
                   className={cn(
                     "h-1.5 w-1.5 rounded-full transition-colors",
-                    current === index
-                      ? "bg-primary"
-                      : "bg-muted"
+                    pane === step ? "bg-primary" : "bg-muted"
                   )}
                 />
               ))}
@@ -443,8 +387,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => api?.scrollPrev()}
-                disabled={current === 0}
+                onClick={() => setPane("journal")}
+                disabled={pane === "journal"}
                 className="h-6 w-6"
               >
                 <ChevronLeft className="h-3 w-3" />
@@ -452,8 +396,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => api?.scrollNext()}
-                disabled={current === steps.length - 1}
+                onClick={() => setPane("summary")}
+                disabled={pane === "summary"}
                 className="h-6 w-6"
               >
                 <ChevronRight className="h-3 w-3" />
@@ -527,29 +471,31 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
           </div>
         )}
 
-        {/* Carousel */}
-        <Carousel
-          opts={{
-            loop: false,
-            watchDrag: (api, event) => {
-              // Disable drag on desktop
-              if (window.innerWidth >= 768) {
-                return false
-              }
-              return true
-            }
-          }}
-          setApi={setApi}
-          className="flex-1 min-w-0 h-full flex flex-col"
-        >
-          <CarouselContent className="h-full flex-1 pl-4">
-            {steps.map((step, index) => (
-              <CarouselItem key={index} className="h-full p-4">
-                {step.component}
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
+        <div className="flex h-full min-w-0 flex-1 flex-col p-4">
+          {pane === "journal" ? (
+            <Journaling
+              content={journalContent}
+              onChange={handleJournalChange}
+              onSave={handleSave}
+              emotionValue={emotionValue}
+              onEmotionChange={handleEmotionChange}
+              date={selectedDate}
+              events={getEventsForDate(selectedDate)}
+              selectedNews={selectedNews}
+              onNewsSelection={handleNewsSelection}
+              trades={trades}
+              onApplyTagToAll={handleApplyTagToAll}
+            />
+          ) : (
+            <MindsetSummary
+              date={selectedDate}
+              emotionValue={emotionValue}
+              selectedNews={selectedNews}
+              journalContent={journalContent}
+              onEdit={handleEdit}
+            />
+          )}
+        </div>
       </CardContent>
     </Card>
   )

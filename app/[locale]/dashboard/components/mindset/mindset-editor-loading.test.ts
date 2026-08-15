@@ -29,6 +29,7 @@ describe("Mindset journal editor", () => {
     expect(dailyComment).toMatch(/from ["']@\/components\/journal-editor["']/)
     expect(dailyComment).not.toMatch(/tiptap/i)
     expect(mindset).not.toMatch(/tiptap/i)
+    expect(mindset).not.toMatch(/Carousel|embla|useEmblaCarousel/)
     expect(registry).toContain("mindsetWidget")
     expect(registry).toContain("chatWidget")
     expect(registry).not.toMatch(/unavailable on mobile|hide.*mindset|hide.*chat/i)
