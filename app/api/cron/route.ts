@@ -8,7 +8,7 @@ import {
   type WeeklyRecapEmailData,
 } from "@/lib/weekly-recap-email"
 import { weeklyRecapBatchIdempotencyKey } from "@/lib/weekly-recap-idempotency"
-import { getLastCompleteWeekUtc } from "@/lib/weekly-newsletter-window"
+import { getRecapWeekUtc } from "@/lib/weekly-newsletter-window"
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -25,6 +25,7 @@ export const maxDuration = 300
 // Weekly performance recap. Vercel cron: path `/api/cron`, schedule `0 7 * * 0`.
 // Sunday 08:00 Lisbon. Summer WEST UTC+1 → 07:00 UTC (`0 7 * * 0`).
 // Winter WET UTC+0 → would need 08:00 UTC. Vercel cron objects only allow path + schedule.
+// Covers the Mon–Sun week ending that same Sunday — see `getRecapWeekUtc`.
 export async function GET(req: Request) {
   try {
     // Verify that this is a legitimate Vercel cron job request
@@ -77,7 +78,7 @@ export async function GET(req: Request) {
     let duplicateCount = 0
 
     // Identity of the recap being sent — anchors the per-batch idempotency key.
-    const week = getLastCompleteWeekUtc()
+    const week = getRecapWeekUtc()
 
     // Process each batch
     for (const batch of batches) {
