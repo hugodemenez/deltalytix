@@ -32,6 +32,8 @@ describe("Mindset journal editor", () => {
     expect(mindset).not.toMatch(/Carousel|embla|useEmblaCarousel/)
     expect(registry).toContain("mindsetWidget")
     expect(registry).toContain("chatWidget")
+    expect(registry).toMatch(/<CreateMindsetPreview\s*\/>/)
+    expect(registry).not.toMatch(/createMindsetPreview\s*\(/)
     expect(registry).not.toMatch(/unavailable on mobile|hide.*mindset|hide.*chat/i)
     expect(packageJson).not.toMatch(/@tiptap|tiptap-extension|["']yjs["']/)
   })
