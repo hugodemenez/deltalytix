@@ -5,7 +5,7 @@ import { useI18n } from "@/locales/client"
 import { EmotionSelector } from "./emotion-selector"
 import { DayTagSelector } from "./day-tag-selector"
 import { FinancialEvent, Trade } from "@/prisma/generated/prisma/browser"
-import { TiptapEditor } from "@/components/tiptap-editor-lazy"
+import { JournalEditor } from "@/components/journal-editor"
 
 interface JournalingProps {
   content: string
@@ -48,7 +48,7 @@ export function Journaling({
       </div>
 
       <div className="flex-1 min-h-0 mt-6 flex flex-col">
-        <TiptapEditor
+        <JournalEditor
           content={content}
           onChange={onChange}
           placeholder={t("mindset.journaling.placeholder")}
