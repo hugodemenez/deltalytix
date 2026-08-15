@@ -49,6 +49,7 @@ export function Toolbar({
   onAddWidget,
   isCustomizing,
   onEditToggle,
+  currentLayout,
   onRemoveAll,
   onRestoreDefaults,
   mobileActiveWidget = null,
@@ -132,13 +133,14 @@ export function Toolbar({
         isConsentVisible ? "bottom-36 sm:bottom-20" : "bottom-4"
       )}
     >
-      <div className="relative flex max-w-full items-center rounded-full border border-[#E5E5E5] bg-white px-2 py-[6px]">
+      <div className="relative flex max-w-full items-center rounded-full border border-[#E5E5E5] bg-white px-2 py-[6px] shadow-none">
         {isCustomizing ? (
           <>
             <Button
               onClick={onEditToggle}
               aria-label={t('widgets.done')}
               className={cn(
+                "shadow-none",
                 iconOnly
                   ? "size-8 rounded-full bg-[#171717] p-0 text-white hover:bg-[#171717]/90"
                   : "h-8 rounded-full bg-[#171717] px-3.5 text-sm font-medium text-white hover:bg-[#171717]/90"
@@ -150,6 +152,7 @@ export function Toolbar({
             <AddWidgetSheet
               onAddWidget={onAddWidget}
               isCustomizing={isCustomizing}
+              currentLayout={currentLayout}
               compact={iconOnly}
               appearance="pill"
             />
@@ -222,6 +225,7 @@ export function Toolbar({
             <AddWidgetSheet
               onAddWidget={onAddWidget}
               isCustomizing={isCustomizing}
+              currentLayout={currentLayout}
               compact={iconOnly}
               appearance="pill"
             />
