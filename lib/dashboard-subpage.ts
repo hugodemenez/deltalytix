@@ -1,4 +1,9 @@
-export const DASHBOARD_SUBPAGES = ["connections", "data", "settings"] as const
+export const DASHBOARD_SUBPAGES = [
+  "connections",
+  "data",
+  "settings",
+  "billing",
+] as const
 
 export type DashboardSubpage = (typeof DASHBOARD_SUBPAGES)[number]
 
