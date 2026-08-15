@@ -122,7 +122,9 @@ export default function Navbar() {
         )}
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <ReferralButton />
+          <div className="hidden sm:block">
+            <ReferralButton />
+          </div>
           <PlanChip />
           <UserMenu />
         </div>

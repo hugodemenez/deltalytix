@@ -25,7 +25,7 @@ function resolvePlanLabel(
 }
 
 /**
- * Compact Free / paid plan chip beside the avatar.
+ * Compact Free / paid plan chip beside the Account trigger.
  * Opens the billing sheet (right on desktop, bottom on mobile).
  */
 export function PlanChip({ className }: { className?: string }) {
@@ -51,11 +51,11 @@ export function PlanChip({ className }: { className?: string }) {
       onClick={() => setBillingSheetOpen(true)}
       aria-label={t('dashboard.planChip.aria', { plan: label })}
       className={cn(
-        'inline-flex h-7 shrink-0 items-center rounded-full px-2.5 text-xs font-medium transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96]',
+        'inline-flex h-7 shrink-0 items-center rounded-[4px] border border-[#E5E5E5] px-2.5 text-xs font-medium text-[#171717] transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] dark:border-border dark:text-foreground',
         isLoading && 'opacity-60',
         isFree
-          ? 'bg-[#EFF5EC] text-[#3E7550] dark:bg-[#243028] dark:text-[#9BC4A8]'
-          : 'bg-[#181A18] text-white dark:bg-white dark:text-[#181A18]',
+          ? 'bg-[#F5F5F5] dark:bg-muted'
+          : 'bg-white dark:bg-background',
         className
       )}
     >

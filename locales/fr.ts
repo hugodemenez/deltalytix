@@ -334,6 +334,26 @@ export default {
   "dashboard.settings.account.data": "Gestion des données",
   "dashboard.settings.account.support": "Support et aide",
   "dashboard.settings.account.signOut": "Se déconnecter",
+  "dashboard.account": "Compte",
+  "dashboard.settings.linked.connected": "Connecté",
+  "dashboard.settings.linked.connect": "Connecter →",
+  "dashboard.settings.password.set": "Définir →",
+  "dashboard.settings.team.none": "Aucune →",
+  "dashboard.settings.weeklyRecap": "Récap hebdomadaire",
+  "dashboard.settings.weeklyRecap.description":
+    "Email le lundi quand la semaine était verte. Pas d'email sur une semaine rouge.",
+  "dashboard.settings.deleteAccount": "Supprimer le compte",
+  "dashboard.settings.deleteAccount.warning":
+    "Supprime définitivement vos trades, connexions et facturation. Irréversible.",
+  "dashboard.settings.deleteAccount.confirmTitle": "Supprimer le compte",
+  "dashboard.settings.deleteAccount.confirmBody":
+    "Cela supprime définitivement votre compte et tout ce qu'il contient : trades, connexions, facturation. Irréversible.",
+  "dashboard.settings.deleteAccount.confirmAction": "Supprimer le compte",
+  "dashboard.settings.deleteAccount.cancel": "Annuler",
+  "dashboard.settings.deleteAccount.error":
+    "Impossible de supprimer le compte. Réessayez.",
+  "dashboard.settings.weeklyRecap.error":
+    "Impossible de mettre à jour le récap hebdomadaire.",
   "dashboard.settings.tradingPreferences": "Préférences de trading",
   "dashboard.settings.tradingPreferences.description": "Configurez comment vos statistiques de trading sont calculées",
   "dashboard.settings.breakeven.title": "Plage de breakeven",

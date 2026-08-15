@@ -329,6 +329,25 @@ export default {
   "dashboard.settings.account.data": "Data management",
   "dashboard.settings.account.support": "Support & help",
   "dashboard.settings.account.signOut": "Sign out",
+  "dashboard.account": "Account",
+  "dashboard.settings.linked.connected": "Connected",
+  "dashboard.settings.linked.connect": "Connect →",
+  "dashboard.settings.password.set": "Set →",
+  "dashboard.settings.team.none": "None →",
+  "dashboard.settings.weeklyRecap": "Weekly recap",
+  "dashboard.settings.weeklyRecap.description":
+    "Monday email when last week was green. No mail on a red week.",
+  "dashboard.settings.deleteAccount": "Delete account",
+  "dashboard.settings.deleteAccount.warning":
+    "Permanently removes your trades, connections, and billing. This cannot be undone.",
+  "dashboard.settings.deleteAccount.confirmTitle": "Delete account",
+  "dashboard.settings.deleteAccount.confirmBody":
+    "This permanently deletes your account and everything in it: trades, connections, billing. This cannot be undone.",
+  "dashboard.settings.deleteAccount.confirmAction": "Delete account",
+  "dashboard.settings.deleteAccount.cancel": "Cancel",
+  "dashboard.settings.deleteAccount.error":
+    "Unable to delete account. Try again.",
+  "dashboard.settings.weeklyRecap.error": "Unable to update weekly recap.",
   "dashboard.settings.tradingPreferences": "Trading preferences",
   "dashboard.settings.tradingPreferences.description": "Configure how your trading statistics are calculated",
   "dashboard.settings.breakeven.title": "Breakeven range",
