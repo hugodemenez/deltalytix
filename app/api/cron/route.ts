@@ -115,8 +115,18 @@ export async function GET(req: Request) {
 
         if (validEmails.length > 0) {
           try {
+            // Key on the input batch, not who passed the gate / built
+            // successfully. A retry that recovers 30 more builds must 409
+            // instead of changing the key and re-mailing the original 70.
+            const inputBatchEmails = batch
+              .map((user) => user.email)
+              .filter((email): email is string => Boolean(email))
+
             const result = await resend.batch.send(validEmails, {
-              idempotencyKey: weeklyRecapBatchIdempotencyKey(week.start, validEmails),
+              idempotencyKey: weeklyRecapBatchIdempotencyKey(
+                week.start,
+                inputBatchEmails,
+              ),
             })
 
             if (result.error) {
