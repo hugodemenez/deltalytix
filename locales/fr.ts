@@ -900,6 +900,7 @@ export default {
   "import.error.noTradesAddedDescription":
     "Aucun trade n'a été ajouté. Veuillez vérifier vos données et réessayer.",
   "widgets.addWidget": "Ajouter",
+  "widgets.addSheet.empty": "Tous les types de widgets sont déjà sur ce tableau de bord.",
   "widgets.removeWidget": "Supprimer",
   "widgets.removeWidgetConfirm": "Êtes-vous sûr ?",
   "widgets.removeWidgetDescription":

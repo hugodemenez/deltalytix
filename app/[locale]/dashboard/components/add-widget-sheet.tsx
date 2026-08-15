@@ -1,6 +1,6 @@
 "use client"
 
-import React, { forwardRef, useState, useEffect, useRef, useCallback } from 'react'
+import React, { forwardRef, useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -8,13 +8,28 @@ import { Plus, Loader2 } from 'lucide-react'
 import { useI18n } from "@/locales/client"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from '@/lib/utils'
-import { WidgetType, WidgetSize } from '../types/dashboard'
+import { WidgetType, WidgetSize, Layouts } from '../types/dashboard'
 import { getWidgetsByCategory, WIDGET_REGISTRY, getWidgetPreview } from '../config/widget-registry'
 import { useData } from '@/context/data-provider'
+import { useIsMobileLayout } from '@/hooks/use-mobile'
+import {
+  ADD_WIDGET_CATEGORIES,
+  omitPlacedWidgets,
+  placedTypesForViewport,
+  type AddWidgetCategory,
+} from './add-widget-catalog'
+
+const CATEGORY_LABEL_KEY = {
+  other: 'widgets.categories.other',
+  charts: 'widgets.categories.charts',
+  tables: 'widgets.categories.tables',
+  statistics: 'widgets.categories.statistics',
+} as const satisfies Record<AddWidgetCategory, `widgets.categories.${AddWidgetCategory}`>
 
 interface AddWidgetSheetProps {
   onAddWidget: (type: WidgetType, size?: WidgetSize) => void
   isCustomizing: boolean
+  currentLayout: Layouts
   compact?: boolean
   appearance?: 'default' | 'pill'
 }
@@ -123,11 +138,26 @@ const PreviewCard = forwardRef<HTMLDivElement, PreviewCardProps>(
 PreviewCard.displayName = "PreviewCard"
 
 export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>(
-  ({ onAddWidget, compact = false, appearance = 'default' }, ref) => {
+  ({ onAddWidget, currentLayout, compact = false, appearance = 'default' }, ref) => {
     const t = useI18n()
+    const isMobileLayout = useIsMobileLayout()
     const [isOpen, setIsOpen] = React.useState(false)
     const [loadedItems, setLoadedItems] = useState<Set<number>>(new Set())
     const [loadingStarted, setLoadingStarted] = useState(false)
+    const placedTypes = useMemo(
+      () => placedTypesForViewport(currentLayout, isMobileLayout === true),
+      [currentLayout, isMobileLayout]
+    )
+    const visibleCategories = useMemo(
+      () =>
+        ADD_WIDGET_CATEGORIES.filter(
+          (category) =>
+            omitPlacedWidgets(getWidgetsByCategory(category), placedTypes)
+              .length > 0
+        ),
+      [placedTypes]
+    )
+    const defaultCategory = visibleCategories[0] ?? 'other'
 
     const handleAddWidget = (type: WidgetType) => {
       const config = WIDGET_REGISTRY[type]
@@ -166,8 +196,11 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
       }
     }, [isOpen])
 
-    const renderWidgetsByCategory = (category: 'charts' | 'statistics' | 'tables' | 'other') => {
-      const widgets = getWidgetsByCategory(category)
+    const renderWidgetsByCategory = (category: AddWidgetCategory) => {
+      const widgets = omitPlacedWidgets(
+        getWidgetsByCategory(category),
+        placedTypes
+      )
       return (
         <div className="grid gap-4">
           {widgets.map((config, index) => (
@@ -231,30 +264,38 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
           <SheetHeader>
             <SheetTitle>{t('widgets.addWidget')}</SheetTitle>
           </SheetHeader>
-          <Tabs defaultValue="other" className="flex-1 flex flex-col mt-6 min-h-0">
-            <TabsList className="w-full">
-              <TabsTrigger value="other" className="flex-1">{t('widgets.categories.other')}</TabsTrigger>
-              <TabsTrigger value="charts" className="flex-1">{t('widgets.categories.charts')}</TabsTrigger>
-              <TabsTrigger value="tables" className="flex-1">{t('widgets.categories.tables')}</TabsTrigger>
-              <TabsTrigger value="statistics" className="flex-1">{t('widgets.categories.statistics')}</TabsTrigger>
-            </TabsList>
-            <ScrollArea className="flex-1 mt-2">
-              <div className="pr-4 pb-8">
-                <TabsContent value="other" className="mt-0">
-                  {renderWidgetsByCategory('other')}
-                </TabsContent>
-                <TabsContent value="charts" className="mt-0">
-                  {renderWidgetsByCategory('charts')}
-                </TabsContent>
-                <TabsContent value="tables" className="mt-0">
-                  {renderWidgetsByCategory('tables')}
-                </TabsContent>
-                <TabsContent value="statistics" className="mt-0">
-                  {renderWidgetsByCategory('statistics')}
-                </TabsContent>
-              </div>
-            </ScrollArea>
-          </Tabs>
+          {visibleCategories.length === 0 ? (
+            <p className="mt-6 text-sm text-muted-foreground">
+              {t('widgets.addSheet.empty')}
+            </p>
+          ) : (
+            <Tabs
+              key={visibleCategories.join('|')}
+              defaultValue={defaultCategory}
+              className="flex-1 flex flex-col mt-6 min-h-0"
+            >
+              <TabsList className="w-full">
+                {visibleCategories.map((category) => (
+                  <TabsTrigger
+                    key={category}
+                    value={category}
+                    className="flex-1"
+                  >
+                    {t(CATEGORY_LABEL_KEY[category])}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              <ScrollArea className="flex-1 mt-2">
+                <div className="pr-4 pb-8">
+                  {visibleCategories.map((category) => (
+                    <TabsContent key={category} value={category} className="mt-0">
+                      {renderWidgetsByCategory(category)}
+                    </TabsContent>
+                  ))}
+                </div>
+              </ScrollArea>
+            </Tabs>
+          )}
         </SheetContent>
       </Sheet>
     )

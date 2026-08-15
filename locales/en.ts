@@ -890,6 +890,7 @@ export default {
   "import.error.noTradesAddedDescription":
     "No trades were added. Please check your data and try again.",
   "widgets.addWidget": "Add",
+  "widgets.addSheet.empty": "Every widget type is already on this dashboard.",
   "widgets.removeWidget": "Remove",
   "widgets.removeWidgetConfirm": "Are you sure?",
   "widgets.removeWidgetDescription":
