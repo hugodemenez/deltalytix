@@ -3,7 +3,7 @@
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import {
-  getLastCompleteWeekUtc,
+  getRecapWeekUtc,
   isEntryInWeek,
 } from "@/lib/weekly-newsletter-window"
 
@@ -65,8 +65,9 @@ export async function getUserData(userId: string): Promise<UserData> {
     throw new Error(`Newsletter subscription not found or inactive for email: ${user.email}`)
   }
 
-  // Last complete Monday–Sunday week (UTC v1) — not a rolling lookback
-  const week = getLastCompleteWeekUtc()
+  // Monday–Sunday week the subscriber has just traded (UTC v1) — not a
+  // rolling lookback, and not the week before it
+  const week = getRecapWeekUtc()
 
   // Coarse pre-filter so the cron does not hold every trade a user has ever
   // made in memory (it now builds up to 100 recaps in one invocation).
