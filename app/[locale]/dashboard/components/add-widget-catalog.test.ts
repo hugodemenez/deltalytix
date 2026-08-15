@@ -52,6 +52,24 @@ describe('placedTypesForViewport', () => {
   })
 })
 
+describe('Other catalog widgets', () => {
+  it('keeps Chat and Mindset in the add sheet unless they are already placed', () => {
+    const otherCatalog: { type: WidgetType }[] = [
+      { type: 'chatWidget' },
+      { type: 'mindsetWidget' },
+      { type: 'calendarWidget' },
+    ]
+
+    expect(
+      omitPlacedWidgets(otherCatalog, []).map((item) => item.type)
+    ).toEqual(['chatWidget', 'mindsetWidget', 'calendarWidget'])
+
+    expect(
+      omitPlacedWidgets(otherCatalog, ['calendarWidget']).map((item) => item.type)
+    ).toEqual(['chatWidget', 'mindsetWidget'])
+  })
+})
+
 describe('omitPlacedWidgets', () => {
   it('drops types already on the board and keeps the rest', () => {
     expect(
