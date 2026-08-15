@@ -309,7 +309,7 @@ export default {
         analytics: {
           title: "Analytics Cookies",
           description:
-            "These cookies help us understand how visitors interact with our site. They allow us to measure traffic and improve site performance.",
+            "These cookies help us understand how visitors interact with our site. They measure traffic, improve performance, and record sessions so we can see how the product is used.",
         },
         marketing: {
           title: "Marketing Performance Cookies",

@@ -2,7 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
-const ANALYTICS_CONSENT_COOKIE = "deltalytix_analytics_consent";
+import { ANALYTICS_CONSENT_COOKIE } from "@/lib/consent-settings";
 
 type PostHogPropertyValue =
   | boolean
