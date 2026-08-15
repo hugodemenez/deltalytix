@@ -11,6 +11,12 @@ import {
   isResendIdempotentReplay,
   weeklyRecapIdempotencyKey,
 } from "@/lib/weekly-recap-idempotency"
+import {
+  RESEND_RATE_LIMIT_RETRIES,
+  RESEND_RATE_LIMIT_RETRY_MS,
+  createResendRequestPacer,
+  isResendRateLimitError,
+} from "@/lib/resend-rate-limit"
 import { getRecapWeekUtc } from "@/lib/weekly-newsletter-window"
 
 const adapter = new PrismaPg({
@@ -83,6 +89,8 @@ export async function GET(req: Request) {
 
     // Identity of the recap being sent — anchors each per-recipient key.
     const week = getRecapWeekUtc()
+    // Resend default is 10 req/s per team; each emails.send is one request.
+    const paceResendSend = createResendRequestPacer()
 
     // Process each batch
     for (const batch of batches) {
@@ -128,11 +136,36 @@ export async function GET(req: Request) {
           }
 
           try {
-            const result = await resend.emails.send(email, {
-              idempotencyKey: weeklyRecapIdempotencyKey(week.start, recipient),
-            })
+            let result: Awaited<ReturnType<typeof resend.emails.send>> | null =
+              null
 
-            if (result.error) {
+            for (
+              let attempt = 0;
+              attempt <= RESEND_RATE_LIMIT_RETRIES;
+              attempt += 1
+            ) {
+              await paceResendSend()
+              result = await resend.emails.send(email, {
+                idempotencyKey: weeklyRecapIdempotencyKey(
+                  week.start,
+                  recipient,
+                ),
+              })
+
+              if (!isResendRateLimitError(result.error)) {
+                break
+              }
+
+              if (attempt === RESEND_RATE_LIMIT_RETRIES) {
+                break
+              }
+
+              await new Promise((resolve) =>
+                setTimeout(resolve, RESEND_RATE_LIMIT_RETRY_MS),
+              )
+            }
+
+            if (result?.error) {
               // Recap copy is LLM-generated, so a retry has a different
               // payload under the same key: Resend 409s instead of sending
               // again. That person already got this week's mail.
