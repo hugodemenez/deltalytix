@@ -296,7 +296,7 @@ export default {
     consent: {
       record: {
         title: "Deux réglages facultatifs",
-        sub: "Nous ne conservons pas ce que vous saisissez dans les formulaires, ni les détails de carte. Ces deux options sont facultatives.",
+        sub: "On ne garde ni ce que vous tapez dans les formulaires, ni les infos de carte. Ces deux choix sont facultatifs.",
         productUse: {
           title: "Usage du produit",
           description:
