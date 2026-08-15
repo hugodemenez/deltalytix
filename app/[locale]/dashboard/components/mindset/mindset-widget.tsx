@@ -57,10 +57,10 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   useEffect(() => {
     if (!api) return
 
-    // Handle carousel selection
-    api.on("select", () => {
+    const onSelect = () => {
       setCurrent(api.selectedScrollSnap())
-    })
+    }
+    api.on("select", onSelect)
 
     // Handle initial load and mood data
     if (moods) {
@@ -100,6 +100,10 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         setSelectedNews([])
         setJournalContent("")
       }
+    }
+
+    return () => {
+      api.off("select", onSelect)
     }
   }, [api, selectedDate, moods])
 

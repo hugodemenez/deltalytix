@@ -1,5 +1,15 @@
 /** Empty journal documents serialize as a bare paragraph, not `""`. */
-const EMPTY_JOURNAL_HTML = new Set(["", "<p></p>", "<p><br></p>", "<p><br/></p>"])
+const EMPTY_JOURNAL_HTML = new Set([
+  "",
+  "<br>",
+  "<br/>",
+  "<p></p>",
+  "<p><br></p>",
+  "<p><br/></p>",
+  "<div></div>",
+  "<div><br></div>",
+  "<div><br/></div>",
+])
 
 export function isJournalEmptyHtml(html: string | undefined | null): boolean {
   if (!html) {

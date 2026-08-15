@@ -1,5 +1,6 @@
 "use client"
 
+import { JournalAI } from "@/components/journal-editor/journal-ai"
 import { JournalToolbar, type JournalBlock } from "@/components/journal-editor/toolbar"
 import { useUserStore } from "@/store/user-store"
 import {
@@ -11,11 +12,10 @@ import {
 import { cn } from "@/lib/utils"
 import { useCurrentLocale, useI18n } from "@/locales/client"
 import { FinancialEvent } from "@/prisma/generated/prisma/browser"
-import { ActionSchema } from "@/app/api/ai/editor/schema"
-import { useCompletion } from "@ai-sdk/react"
+import { Button } from "@/components/ui/button"
+import { Sparkles } from "lucide-react"
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { toast } from "sonner"
-import type { z } from "zod"
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ACCEPTED_IMAGE_TYPES = [
@@ -78,12 +78,16 @@ export function JournalEditor({
   const editorRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageHashCacheRef = useRef<Map<string, string>>(new Map())
-  const lastCompletionRef = useRef("")
+  const skipEmitRef = useRef(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isEmpty, setIsEmpty] = useState(() => isJournalEmptyHtml(content))
   const [activeBlock, setActiveBlock] = useState<JournalBlock | "p" | null>(null)
+  const [aiReady, setAiReady] = useState(false)
 
   const emitChange = useCallback(() => {
+    if (skipEmitRef.current) {
+      return
+    }
     const html = editorRef.current?.innerHTML ?? ""
     setIsEmpty(isJournalEmptyHtml(html))
     onChange?.(html)
@@ -107,10 +111,14 @@ export function JournalEditor({
     if (!node) {
       return
     }
-    if (!isSameJournalHtml(node.innerHTML, content)) {
-      node.innerHTML = content
+    if (isSameJournalHtml(node.innerHTML, content)) {
       setIsEmpty(isJournalEmptyHtml(content))
+      return
     }
+    skipEmitRef.current = true
+    node.innerHTML = content
+    setIsEmpty(isJournalEmptyHtml(content))
+    skipEmitRef.current = false
   }, [content])
 
   useEffect(() => {
@@ -125,30 +133,6 @@ export function JournalEditor({
     document.addEventListener("selectionchange", onSelectionChange)
     return () => document.removeEventListener("selectionchange", onSelectionChange)
   }, [refreshActiveBlock])
-
-  const { completion, complete, isLoading, setCompletion } = useCompletion({
-    api: "/api/ai/editor",
-    onFinish: () => {
-      lastCompletionRef.current = ""
-    },
-    onError: (error) => {
-      console.error("Completion error:", error)
-      toast.error(t("editor.ai.minCharsError"))
-      lastCompletionRef.current = ""
-    },
-    experimental_throttle: 50,
-  })
-
-  useEffect(() => {
-    if (!completion) {
-      return
-    }
-    const delta = completion.slice(lastCompletionRef.current.length)
-    lastCompletionRef.current = completion
-    if (delta) {
-      insertHtml(escapeJournalText(delta))
-    }
-  }, [completion, insertHtml])
 
   const handleImageUpload = useCallback(
     async (file: File): Promise<string> => {
@@ -258,30 +242,6 @@ export function JournalEditor({
     [emitChange, events, insertHtml],
   )
 
-  const handleRunAIAction = useCallback(
-    (action: z.infer<typeof ActionSchema>) => {
-      const selection = window.getSelection()?.toString().trim() ?? ""
-      const fullText = editorRef.current?.innerText.trim() ?? ""
-      const targetText = selection || fullText
-
-      if (
-        (!targetText || targetText.length < 10) &&
-        action !== "suggest_question" &&
-        action !== "trades_summary"
-      ) {
-        toast.error(t("editor.ai.minCharsError"))
-        return
-      }
-
-      lastCompletionRef.current = ""
-      setCompletion("")
-      complete(targetText, {
-        body: { action, date, locale },
-      })
-    },
-    [complete, date, locale, setCompletion, t],
-  )
-
   const handleToggleBlock = useCallback(
     (block: JournalBlock) => {
       editorRef.current?.focus()
@@ -323,7 +283,6 @@ export function JournalEditor({
       />
       <JournalToolbar
         activeBlock={activeBlock}
-        isStreaming={isLoading}
         isFullscreen={isFullscreen}
         events={events}
         selectedNews={selectedNews}
@@ -332,7 +291,30 @@ export function JournalEditor({
         date={date}
         onToggleBlock={handleToggleBlock}
         onInsertImage={() => fileInputRef.current?.click()}
-        onRunAIAction={handleRunAIAction}
+        aiMenu={
+          aiReady ? (
+            <JournalAI
+              getTargetText={() => {
+                const selection = window.getSelection()?.toString().trim() ?? ""
+                return selection || editorRef.current?.innerText.trim() || ""
+              }}
+              onInsert={(text) => insertHtml(escapeJournalText(text))}
+              date={date}
+              locale={locale}
+            />
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              title="AI actions"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => setAiReady(true)}
+            >
+              <Sparkles />
+            </Button>
+          )
+        }
         onToggleFullscreen={() => setIsFullscreen((open) => !open)}
       />
       <div className="relative min-h-0 flex-1">

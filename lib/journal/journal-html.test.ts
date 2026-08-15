@@ -12,6 +12,8 @@ describe("isJournalEmptyHtml", () => {
     expect(isJournalEmptyHtml("<p></p>")).toBe(true)
     expect(isJournalEmptyHtml("<p><br></p>")).toBe(true)
     expect(isJournalEmptyHtml("<p><br/></p>")).toBe(true)
+    expect(isJournalEmptyHtml("<br>")).toBe(true)
+    expect(isJournalEmptyHtml("<div><br></div>")).toBe(true)
     expect(isJournalEmptyHtml(" <p></p> ")).toBe(true)
   })
 

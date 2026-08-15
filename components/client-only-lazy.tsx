@@ -19,9 +19,17 @@ export function ClientOnlyLazy<P extends object>({
   load: () => Promise<ComponentType<P>>
   fallback?: ReactNode
 } & P) {
+  const [mounted, setMounted] = useState(false)
   const [Comp, setComp] = useState<ComponentType<P> | null>(null)
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) {
+      return
+    }
     let cancelled = false
     load()
       .then((Loaded) => {
@@ -35,7 +43,7 @@ export function ClientOnlyLazy<P extends object>({
     return () => {
       cancelled = true
     }
-  }, [load])
+  }, [load, mounted])
 
   if (!Comp) {
     return (

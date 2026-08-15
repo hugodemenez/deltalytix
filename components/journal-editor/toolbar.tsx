@@ -2,16 +2,8 @@
 
 import { NewsSubMenu } from "@/components/ai-elements/news-sub-menu"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { useI18n } from "@/locales/client"
 import { FinancialEvent } from "@/prisma/generated/prisma/browser"
-import { ActionSchema } from "@/app/api/ai/editor/schema"
 import {
   Heading1,
   Heading2,
@@ -19,21 +11,16 @@ import {
   ImageIcon,
   List,
   ListOrdered,
-  Loader2,
   Maximize2,
   Minimize2,
   Quote,
-  Sparkles,
 } from "lucide-react"
-import type { z } from "zod"
-
-type EditorAction = z.infer<typeof ActionSchema>
+import type { ReactNode } from "react"
 
 export type JournalBlock = "h1" | "h2" | "h3" | "blockquote" | "ul" | "ol"
 
 interface JournalToolbarProps {
   activeBlock: JournalBlock | "p" | null
-  isStreaming: boolean
   isFullscreen: boolean
   events?: FinancialEvent[]
   selectedNews?: string[]
@@ -42,13 +29,12 @@ interface JournalToolbarProps {
   date?: Date
   onToggleBlock: (block: JournalBlock) => void
   onInsertImage: () => void
-  onRunAIAction: (action: EditorAction) => void
+  aiMenu?: ReactNode
   onToggleFullscreen: () => void
 }
 
 export function JournalToolbar({
   activeBlock,
-  isStreaming,
   isFullscreen,
   events,
   selectedNews,
@@ -57,10 +43,9 @@ export function JournalToolbar({
   date,
   onToggleBlock,
   onInsertImage,
-  onRunAIAction,
+  aiMenu,
   onToggleFullscreen,
 }: JournalToolbarProps) {
-  const t = useI18n()
 
   const formatButtons: Array<{
     id: JournalBlock
@@ -119,47 +104,7 @@ export function JournalToolbar({
         <ImageIcon />
       </Button>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            title={t("editor.ai.button")}
-            disabled={isStreaming}
-            className={cn(isStreaming && "animate-pulse")}
-            onMouseDown={(event) => event.preventDefault()}
-          >
-            {isStreaming ? <Loader2 className="animate-spin" /> : <Sparkles />}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuItem
-            disabled={isStreaming}
-            onClick={() => onRunAIAction("explain")}
-          >
-            {t("editor.ai.actions.explain")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={isStreaming}
-            onClick={() => onRunAIAction("improve")}
-          >
-            {t("editor.ai.actions.improvements")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={isStreaming}
-            onClick={() => onRunAIAction("suggest_question")}
-          >
-            {t("editor.ai.actions.suggestQuestion")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={isStreaming}
-            onClick={() => onRunAIAction("trades_summary")}
-          >
-            {t("editor.ai.actions.tradesSummary")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {aiMenu}
 
       <Button
         type="button"
