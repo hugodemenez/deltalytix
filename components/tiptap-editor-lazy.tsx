@@ -1,25 +1,23 @@
 "use client"
 
-import dynamic from "next/dynamic"
+import { ClientOnlyLazy } from "@/components/client-only-lazy"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { TiptapEditorProps } from "@/components/tiptap-editor"
 
-/**
- * TipTap / ProseMirror is browser-only. Keep it out of the dashboard SSR and
- * Cache Components resume tree — a production `next start` resume mismatch
- * (`Couldn't find all resumable slots…`) plus first mount of this editor is
- * what killed the page when Mindset was added.
- */
-const TiptapEditorClient = dynamic(
-  () => import("@/components/tiptap-editor").then((mod) => mod.TiptapEditor),
-  {
-    ssr: false,
-    loading: () => (
-      <Skeleton className="h-full min-h-[12rem] w-full rounded-lg" />
-    ),
-  },
-)
+function loadTiptapEditor() {
+  return import("@/components/tiptap-editor").then((mod) => mod.TiptapEditor)
+}
 
+/**
+ * TipTap / ProseMirror is browser-only. Load it after hydration so it is not
+ * part of the dashboard SSR or Cache Components resume tree.
+ */
 export function TiptapEditor(props: TiptapEditorProps) {
-  return <TiptapEditorClient {...props} />
+  return (
+    <ClientOnlyLazy
+      load={loadTiptapEditor}
+      fallback={<Skeleton className="h-full min-h-[12rem] w-full rounded-lg" />}
+      {...props}
+    />
+  )
 }

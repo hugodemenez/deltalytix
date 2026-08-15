@@ -24,6 +24,25 @@ describe("Mindset journal editor loading", () => {
     expect(mindset).not.toMatch(/tiptap-editor/)
     expect(registry).toContain("mindsetWidget")
     expect(registry).toContain("chatWidget")
+    expect(registry).toMatch(/mindset-widget-lazy/)
+    expect(registry).toMatch(/chat-widget-lazy/)
+    expect(registry).not.toMatch(/from ["']\.\.\/components\/mindset\/mindset-widget["']/)
+    expect(registry).not.toMatch(/from ["']\.\.\/components\/chat\/chat["']/)
     expect(registry).not.toMatch(/unavailable on mobile|hide.*mindset|hide.*chat/i)
+  })
+
+  it("loads TipTap after hydration instead of next/dynamic PPR slots", () => {
+    const lazy = readFileSync(
+      resolve(root, "components/tiptap-editor-lazy.tsx"),
+      "utf8",
+    )
+    const editor = readFileSync(
+      resolve(root, "components/tiptap-editor.tsx"),
+      "utf8",
+    )
+    expect(lazy).toMatch(/client-only-lazy/)
+    expect(lazy).not.toMatch(/next\/dynamic/)
+    expect(editor).not.toMatch(/from ["']yjs["']/)
+    expect(editor).not.toMatch(/@tiptap\/extension-collaboration/)
   })
 })

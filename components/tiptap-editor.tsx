@@ -23,19 +23,16 @@ import { Highlight } from "@tiptap/extension-highlight";
 import { TaskList } from "@tiptap/extension-task-list";
 import { TaskItem } from "@tiptap/extension-task-item";
 import { Placeholder } from "@tiptap/extension-placeholder";
-import Collaboration from "@tiptap/extension-collaboration";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { TableCell } from "@tiptap/extension-table-cell";
-import * as Y from "yjs";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCallback, useState, useEffect, useMemo, useRef } from "react";
 import { useUserStore } from "@/store/user-store";
 import { toast } from "sonner";
 import { useCurrentLocale, useI18n } from "@/locales/client";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase";
 import { isSameTiptapHtml } from "@/lib/journal/tiptap-html";
 import { useCompletion } from "@ai-sdk/react";
 import { FinancialEvent } from "@/prisma/generated/prisma/browser";
@@ -113,6 +110,7 @@ export interface TiptapEditorProps {
   onNewsSelection?: (newsIds: string[]) => void;
   onEmbedNews?: (newsIds: string[], action: "add" | "remove") => void;
   date?: Date;
+  /** Unused. Kept so existing call sites compile; Yjs/collaboration is not loaded. */
   collaboration?: boolean;
 }
 
@@ -128,7 +126,6 @@ export function TiptapEditor({
   onNewsSelection,
   onEmbedNews,
   date,
-  collaboration = false,
 }: TiptapEditorProps) {
   const t = useI18n();
   const user = useUserStore((state) => state.user);
@@ -140,11 +137,6 @@ export function TiptapEditor({
   const isInitializingRef = useRef<boolean>(true);
   // Cache of image hash -> public URL to avoid duplicate uploads
   const imageHashCacheRef = useRef<Map<string, string>>(new Map());
-  // Mindset never enables collaboration — do not allocate Y.Doc on every mount.
-  const ydocRef = useRef<Y.Doc | null>(null);
-  if (collaboration && !ydocRef.current) {
-    ydocRef.current = new Y.Doc();
-  }
 
   const { completion, complete, isLoading, setCompletion } = useCompletion({
     api: "/api/ai/editor",
@@ -208,6 +200,7 @@ export function TiptapEditor({
         // Store by stable hash-based path so duplicates across sessions reuse the same object
         const filePath = `${user?.id}/journal/${hashHex}.${ext}`;
 
+        const { createClient } = await import("@/lib/supabase");
         const supabase = createClient();
         const { error } = await supabase.storage
           .from("trade-images")
@@ -303,9 +296,7 @@ export function TiptapEditor({
   const extensions = useMemo(
     () => [
       StarterKit.configure({
-        // Disable default undo/redo for collaboration
         link: false,
-        undoRedo: false,
       }),
       BubbleMenuExtension,
       TextStyleKit,
@@ -337,11 +328,8 @@ export function TiptapEditor({
       TableHeader,
       TableCell,
       AICompletionExtension,
-      ...(collaboration && ydocRef.current
-        ? [Collaboration.configure({ document: ydocRef.current })]
-        : []),
     ],
-    [collaboration, placeholder],
+    [placeholder],
   );
 
   const editorClassName = useMemo(
@@ -449,16 +437,14 @@ export function TiptapEditor({
       shouldRerenderOnTransaction: false,
       onCreate: ({ editor: created }) => {
         editorRef.current = created;
-        // Set initial content only when collaboration is disabled
-        if (!collaboration && content && content !== "") {
+        if (content && content !== "") {
           isInitializingRef.current = true;
           created.commands.setContent(content);
           isInitializingRef.current = false;
         }
       },
       extensions,
-      // With collaboration enabled, TipTap ignores initial content; keep empty
-      content: collaboration ? "" : content,
+      content,
       onUpdate: ({ editor: updated }) => {
         if (isInitializingRef.current) return;
         onChange?.(updated.getHTML());
@@ -530,9 +516,9 @@ export function TiptapEditor({
     [editor, events],
   );
 
-  // Update editor content when content prop changes (only when not collaborating)
+  // Update editor content when content prop changes
   useEffect(() => {
-    if (!collaboration && editor && content !== undefined) {
+    if (editor && content !== undefined) {
       const currentContent = editor.getHTML();
       if (isSameTiptapHtml(content, currentContent)) {
         return;
@@ -541,7 +527,7 @@ export function TiptapEditor({
       editor.commands.setContent(content);
       isInitializingRef.current = false;
     }
-  }, [collaboration, editor, content]);
+  }, [editor, content]);
 
   // Handle file input for image upload
   const handleFileInput = useCallback(
