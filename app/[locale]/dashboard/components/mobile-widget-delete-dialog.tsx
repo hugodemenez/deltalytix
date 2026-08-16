@@ -24,7 +24,7 @@ interface MobileWidgetDeleteDialogProps {
   onRemoveWidget: (widgetId: string) => void
   onRemoveAll: () => void | Promise<void>
   compact?: boolean
-  appearance?: "default" | "pill"
+  appearance?: "default" | "pill" | "strip"
 }
 
 export function MobileWidgetDeleteDialog({
@@ -67,17 +67,19 @@ export function MobileWidgetDeleteDialog({
       <AlertDialog open={mainOpen} onOpenChange={setMainOpen}>
         <AlertDialogTrigger asChild>
           <Button
-            variant={appearance === "pill" ? "ghost" : "destructive"}
+            variant={appearance === "default" ? "destructive" : "ghost"}
             className={cn(
-              appearance === "pill"
-                ? "inline-flex size-8 items-center justify-center rounded-none text-[#DC2626] hover:bg-transparent hover:text-[#DC2626]"
-                : "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
-              appearance !== "pill" && (compact ? "w-10 shrink-0 p-0" : "min-w-[120px] gap-3 px-4")
+              appearance === "strip"
+                ? "inline-flex size-8 items-center justify-center rounded-full text-[#DC2626] hover:bg-black/5 hover:text-[#DC2626]"
+                : appearance === "pill"
+                  ? "inline-flex size-8 items-center justify-center rounded-none text-[#DC2626] hover:bg-transparent hover:text-[#DC2626]"
+                  : "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
+              appearance === "default" && (compact ? "w-10 shrink-0 p-0" : "min-w-[120px] gap-3 px-4")
             )}
             aria-label={t("widgets.mobile.deleteDialogTitle")}
           >
             <Trash2 className="h-4 w-4 shrink-0" />
-            {appearance !== "pill" && !compact && (
+            {appearance === "default" && !compact && (
               <span className="text-sm font-medium">{t("widgets.removeWidget")}</span>
             )}
           </Button>

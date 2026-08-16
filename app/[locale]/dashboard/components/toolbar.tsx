@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
 import { useData } from "@/context/data-provider"
-import { Check, Pencil, Trash2, RotateCcw } from "lucide-react"
+import { Pencil, Trash2, RotateCcw } from "lucide-react"
 import { AddWidgetSheet } from "./add-widget-sheet"
-import { DASHBOARD_COMPACT_BREAKPOINT, WidgetType, WidgetSize, Layouts, Widget } from "../types/dashboard"
+import { WidgetType, WidgetSize, Layouts, Widget } from "../types/dashboard"
 import { MobileWidgetDeleteDialog } from "./mobile-widget-delete-dialog"
 import {
   AlertDialog,
@@ -20,14 +20,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useState, useEffect, useRef, type ReactNode } from "react"
-import { useMediaQuery } from "@/hooks/use-media-query"
 
 const PILL_CELL =
   "inline-flex h-8 items-center justify-center gap-1.5 rounded-none px-2.5 text-sm font-medium text-[#171717] hover:bg-transparent"
-const PILL_ICON_CELL =
-  "inline-flex size-8 items-center justify-center rounded-none text-[#171717] hover:bg-transparent"
-const PILL_DELETE_CELL =
-  "inline-flex size-8 items-center justify-center rounded-none text-[#DC2626] hover:bg-transparent hover:text-[#DC2626]"
+const STRIP_CELL =
+  "inline-flex size-8 items-center justify-center rounded-full text-[#171717] hover:bg-black/5"
+const STRIP_DELETE_CELL =
+  "inline-flex size-8 items-center justify-center rounded-full text-[#DC2626] hover:bg-black/5 hover:text-[#DC2626]"
 
 function PillDivider() {
   return <span aria-hidden className="h-4 w-px shrink-0 bg-[#E5E5E5]" />
@@ -54,11 +53,10 @@ export function Toolbar({
   onRestoreDefaults,
   mobileActiveWidget = null,
   onRemoveWidget,
+  minimapTrigger,
 }: ToolbarProps) {
   const t = useI18n()
   const { isMobile } = useData()
-  const isCompactScreen = useMediaQuery(`(max-width: ${DASHBOARD_COMPACT_BREAKPOINT}px)`)
-  const isNarrowScreen = useMediaQuery("(max-width: 767px)")
   const [isConsentVisible, setIsConsentVisible] = useState(false)
   const toolbarRef = useRef<HTMLDivElement>(null)
 
@@ -76,8 +74,7 @@ export function Toolbar({
     return () => observer.disconnect()
   }, [])
 
-  const useCompactLayout = isMobile || isCompactScreen
-  const iconOnly = isMobile || isNarrowScreen
+  const hasMinimapTrigger = Boolean(minimapTrigger)
 
   useEffect(() => {
     const toolbar = toolbarRef.current
@@ -101,12 +98,12 @@ export function Toolbar({
       resizeObserver.disconnect()
       window.removeEventListener("resize", updateToolbarMetrics)
     }
-  }, [isConsentVisible])
+  }, [isConsentVisible, hasMinimapTrigger])
 
   const restoreButton = (
     <Button
       variant="ghost"
-      className={PILL_ICON_CELL}
+      className={STRIP_CELL}
       aria-label={t('widgets.restoreDefaults')}
       title={t('widgets.restoreDefaults')}
     >
@@ -117,7 +114,7 @@ export function Toolbar({
   const deleteIconButton = (
     <Button
       variant="ghost"
-      className={PILL_DELETE_CELL}
+      className={STRIP_DELETE_CELL}
       aria-label={t('widgets.deleteAll')}
       title={t('widgets.deleteAll')}
     >
@@ -125,38 +122,39 @@ export function Toolbar({
     </Button>
   )
 
+  const addAndMinimap = (
+    <>
+      <AddWidgetSheet
+        onAddWidget={onAddWidget}
+        isCustomizing={isCustomizing}
+        currentLayout={currentLayout}
+        appearance="pill"
+      />
+      {minimapTrigger ? (
+        <>
+          <PillDivider />
+          <div className="-my-1.5 flex shrink-0 items-center justify-center">
+            {minimapTrigger}
+          </div>
+        </>
+      ) : null}
+    </>
+  )
+
   return (
     <div
       ref={toolbarRef}
       className={cn(
-        "fixed inset-x-4 z-10 mx-auto w-auto md:inset-x-0 md:w-fit md:max-w-[calc(100vw-1rem)]",
+        "fixed inset-x-0 z-10 mx-auto w-fit max-w-[calc(100vw-2rem)]",
         isConsentVisible ? "bottom-36 sm:bottom-20" : "bottom-4"
       )}
     >
-      <div className="relative flex max-w-full items-center rounded-full border border-[#E5E5E5] bg-white px-2 py-[6px] shadow-none">
+      <div className="relative w-fit max-w-full">
         {isCustomizing ? (
-          <>
-            <Button
-              onClick={onEditToggle}
-              aria-label={t('widgets.done')}
-              className={cn(
-                "shadow-none",
-                iconOnly
-                  ? "size-8 rounded-full bg-[#171717] p-0 text-white hover:bg-[#171717]/90"
-                  : "h-8 rounded-full bg-[#171717] px-3.5 text-sm font-medium text-white hover:bg-[#171717]/90"
-              )}
-            >
-              {iconOnly ? <Check className="h-4 w-4" strokeWidth={2} /> : t('widgets.done')}
-            </Button>
-            <PillDivider />
-            <AddWidgetSheet
-              onAddWidget={onAddWidget}
-              isCustomizing={isCustomizing}
-              currentLayout={currentLayout}
-              compact={iconOnly}
-              appearance="pill"
-            />
-            <PillDivider />
+          <div
+            role="group"
+            className="absolute bottom-full left-2 mb-2 flex items-center rounded-full bg-[#F5F5F5] p-0.5"
+          >
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 {restoreButton}
@@ -176,14 +174,12 @@ export function Toolbar({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            <PillDivider />
             {isMobile && onRemoveWidget ? (
               <MobileWidgetDeleteDialog
                 activeWidget={mobileActiveWidget}
                 onRemoveWidget={onRemoveWidget}
                 onRemoveAll={onRemoveAll}
-                compact={useCompactLayout}
-                appearance="pill"
+                appearance="strip"
               />
             ) : (
               <AlertDialog>
@@ -209,28 +205,32 @@ export function Toolbar({
                 </AlertDialogContent>
               </AlertDialog>
             )}
-          </>
-        ) : (
-          <>
+          </div>
+        ) : null}
+
+        <div className="flex max-w-full items-center rounded-full border border-[#E5E5E5] bg-white px-2 py-[6px] shadow-none">
+          {isCustomizing ? (
+            <Button
+              onClick={onEditToggle}
+              aria-label={t('widgets.done')}
+              className="h-8 rounded-full bg-[#171717] px-3.5 text-sm font-medium text-white shadow-none hover:bg-[#171717]/90"
+            >
+              {t('widgets.done')}
+            </Button>
+          ) : (
             <Button
               variant="ghost"
               onClick={onEditToggle}
               aria-label={t('widgets.edit')}
-              className={iconOnly ? PILL_ICON_CELL : PILL_CELL}
+              className={PILL_CELL}
             >
               <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-              {!iconOnly ? t('widgets.edit') : null}
+              {t('widgets.edit')}
             </Button>
-            <PillDivider />
-            <AddWidgetSheet
-              onAddWidget={onAddWidget}
-              isCustomizing={isCustomizing}
-              currentLayout={currentLayout}
-              compact={iconOnly}
-              appearance="pill"
-            />
-          </>
-        )}
+          )}
+          <PillDivider />
+          {addAndMinimap}
+        </div>
       </div>
     </div>
   )
