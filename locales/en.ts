@@ -532,7 +532,13 @@ export default {
       "AI formatting is unavailable. Ask your administrator to configure an OpenAI API key, then try again.",
     noTradesFormatted:
       "No trades were formatted. Check that AI is configured on this server, then try again.",
+    parsedFromColumns: "Parsed from the file columns",
+    ordersPaired: "Order fills were paired into trades",
+    parseReady: "Ready to import",
+    emptyTable: "No trades to review yet",
   },
+  "import.parse.tradesFormatted": "{formatted} of {total} trades formatted",
+  "import.parse.missingColumns": "Map these columns to continue: {columns}",
 
   "import.table.instrument": "Instrument",
   "import.table.entryDate": "Entry Date",

@@ -578,7 +578,14 @@ export default {
       "Le formatage IA est indisponible. Demandez à votre administrateur de configurer une clé API OpenAI, puis réessayez.",
     noTradesFormatted:
       "Aucun trade n'a été formaté. Vérifiez que l'IA est configurée sur ce serveur, puis réessayez.",
+    parsedFromColumns: "Lu depuis les colonnes du fichier",
+    ordersPaired: "Les ordres ont été appariés en trades",
+    parseReady: "Prêt à importer",
+    emptyTable: "Aucun trade à revoir pour le moment",
   },
+  "import.parse.tradesFormatted": "{formatted} sur {total} trades formatés",
+  "import.parse.missingColumns":
+    "Associez ces colonnes pour continuer : {columns}",
   "import.table.instrument": "Instrument",
   "import.table.entryDate": "Date d'entrée",
   "import.table.closeDate": "Date de sortie",
