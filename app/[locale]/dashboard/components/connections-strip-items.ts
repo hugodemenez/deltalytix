@@ -60,6 +60,47 @@ export function buildStripItems(
   ]
 }
 
+export function isStandaloneAccount(account: {
+  connectionId: string | null
+}): boolean {
+  return account.connectionId == null
+}
+
+export function isMaskedAccount(
+  account: { groupId: string | null | undefined },
+  hiddenGroupId: string | null | undefined
+): boolean {
+  return Boolean(hiddenGroupId && account.groupId === hiddenGroupId)
+}
+
+export function mapConnectionsAccounts(
+  data: ConnectionsPageData,
+  mapper: (account: ConnectionsPageAccount) => ConnectionsPageAccount
+): ConnectionsPageData {
+  return {
+    connections: data.connections.map((connection) => ({
+      ...connection,
+      accounts: connection.accounts.map(mapper),
+    })),
+    standaloneAccounts: data.standaloneAccounts.map(mapper),
+  }
+}
+
+export function removeConnectionsAccount(
+  data: ConnectionsPageData,
+  accountId: string
+): ConnectionsPageData {
+  return {
+    connections: data.connections.map((connection) => ({
+      ...connection,
+      accounts: connection.accounts.filter((account) => account.id !== accountId),
+    })),
+    standaloneAccounts: data.standaloneAccounts.filter(
+      (account) => account.id !== accountId
+    ),
+  }
+}
+
 /** Chip meta is an account count, never an account number. */
 export function chipAccountCountLabel(
   count: number,

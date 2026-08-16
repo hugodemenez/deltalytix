@@ -722,11 +722,13 @@ function reviveConnectionsPageData(parsed: ConnectionsPageData): ConnectionsPage
       dailySyncTime: reviveDate(connection.dailySyncTime),
       accounts: (connection.accounts ?? []).map((account) => ({
         ...account,
+        groupId: account.groupId ?? null,
         createdAt: reviveDate(account.createdAt) ?? new Date(0),
       })),
     })),
     standaloneAccounts: (parsed.standaloneAccounts ?? []).map((account) => ({
       ...account,
+      groupId: account.groupId ?? null,
       createdAt: reviveDate(account.createdAt) ?? new Date(0),
     })),
   }

@@ -17,6 +17,8 @@ export type ConnectionsPageAccount = {
   number: string
   propfirm: string
   connectionId: string | null
+  /** Group membership; the Hidden Accounts group is the mask target. */
+  groupId: string | null
   createdAt: Date
   tradeCount: number
   /** ISO date of the account's most recent trade, or null when it has none. */
