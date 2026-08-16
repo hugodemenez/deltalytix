@@ -67,7 +67,7 @@ export function MobileWidgetDeleteDialog({
       <AlertDialog open={mainOpen} onOpenChange={setMainOpen}>
         <AlertDialogTrigger asChild>
           <Button
-            variant={appearance === "pill" ? "ghost" : "destructive"}
+            variant={appearance === "default" ? "destructive" : "ghost"}
             className={cn(
               appearance === "strip"
                 ? "inline-flex size-8 items-center justify-center rounded-full text-[#DC2626] hover:bg-black/5 hover:text-[#DC2626]"
