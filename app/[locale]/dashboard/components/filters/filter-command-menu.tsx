@@ -7,7 +7,14 @@ import { fr } from "date-fns/locale"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList, CommandSeparator } from "@/components/ui/command"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList } from "@/components/ui/command"
 import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
 import { useMediaQuery } from "@/hooks/use-media-query"
@@ -17,6 +24,7 @@ import { DateRangeSection } from "./filter-command-menu-date-section"
 import { PnlSection } from "./filter-command-menu-pnl-section"
 import { InstrumentSection } from "./filter-command-menu-instrument-section"
 import { TagSection } from "./filter-command-menu-tag-section"
+import { FilterFoldSection } from "./filter-fold-section"
 import { ActiveFilterTags } from "./active-filter-tags"
 import {
   countActiveFilters,
@@ -26,6 +34,13 @@ import { useUserStore } from "@/store/user-store"
 import { useParams } from "next/navigation"
 import { toast } from "sonner"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
+
+type FilterSectionKey =
+  | "dateRange"
+  | "accounts"
+  | "instruments"
+  | "tags"
+  | "pnl"
 
 interface FilterCommandMenuProps {
   className?: string
@@ -81,18 +96,20 @@ export function FilterCommandMenu({
     }) ?? t('filters.thisWeek')
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
+  const [openSection, setOpenSection] = useState<FilterSectionKey | null>(null)
   const [isParsingDate, setIsParsingDate] = useState(false)
   const isMobileDevice = useMediaQuery(`(max-width: ${compactBreakpoint}px)`)
-  const useMobileSheet = isMobileDevice || isMobile
+  const useMobileDrawer = isMobileDevice || isMobile
   const inputRef = useRef<HTMLInputElement>(null)
   const commandRef = useRef<HTMLDivElement>(null)
-  const dateRangeSectionRef = useRef<HTMLDivElement>(null)
-  const pnlSectionRef = useRef<HTMLDivElement>(null)
-  const instrumentSectionRef = useRef<HTMLDivElement>(null)
-  const tagSectionRef = useRef<HTMLDivElement>(null)
-  const accountSectionRef = useRef<HTMLDivElement>(null)
   const timezone = useUserStore(state => state.timezone)
   const dateParseTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isSearching = searchValue.trim().length > 0
+
+  const openFilters = (section: FilterSectionKey | null = null) => {
+    setOpenSection(section)
+    setOpen(true)
+  }
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -107,6 +124,7 @@ export function FilterCommandMenu({
     setOpen(newOpen)
     if (!newOpen) {
       setSearchValue("")
+      setOpenSection(null)
       if (dateParseTimeoutRef.current) {
         clearTimeout(dateParseTimeoutRef.current)
         dateParseTimeoutRef.current = null
@@ -280,7 +298,7 @@ export function FilterCommandMenu({
   const NavbarTriggers = compact ? (
     <button
       type="button"
-      onClick={() => setOpen(true)}
+      onClick={() => openFilters()}
       aria-label={t('filters.addFilterAria')}
       className={cn(chromeButtonClass, chromeIconClass, 'relative h-7 w-7 justify-center p-0', className)}
     >
@@ -295,14 +313,14 @@ export function FilterCommandMenu({
     <div className={cn('flex items-center gap-2', className)}>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => openFilters('dateRange')}
         className={cn(chromeButtonClass, chromeTextClass, 'px-2.5')}
       >
         {dateChipLabel}
       </button>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => openFilters()}
         aria-label={t('filters.addFilterAria')}
         className={cn(chromeButtonClass, chromeTextClass, 'px-2.5')}
       >
@@ -323,7 +341,7 @@ export function FilterCommandMenu({
         variant === "toolbar" && !compact && "h-10 rounded-full max-w-full",
         className
       )}
-      onClick={() => setOpen(true)}
+      onClick={() => openFilters()}
       aria-label={compact ? t('filters.commandMenu.searchPlaceholderMobile') : undefined}
     >
       <Search className={cn("h-4 w-4", !compact && "mr-2")} />
@@ -406,7 +424,7 @@ export function FilterCommandMenu({
         e.stopPropagation()
         
         // Focus back to the appropriate input
-        if (useMobileSheet) {
+        if (useMobileDrawer) {
           // For mobile, focus the CommandInput
           const commandInput = commandElement.querySelector('input[cmdk-input]') as HTMLInputElement
           if (commandInput) {
@@ -424,17 +442,17 @@ export function FilterCommandMenu({
         }
       }
     }
-  }, [useMobileSheet])
+  }, [useMobileDrawer])
 
   const CommandContent = (
-    <Command 
+      <Command 
       ref={commandRef} 
-      className="flex h-full flex-col rounded-none border-0"
+      className="flex h-auto min-h-0 flex-1 flex-col rounded-none border-0"
       shouldFilter={false}
       onKeyDown={handleCommandKeyDown}
     >
       {/* Hidden CommandInput for desktop to enable arrow key navigation */}
-      {!useMobileSheet && (
+      {!useMobileDrawer && (
         <div className="sr-only">
           <CommandInput
             value={searchValue}
@@ -443,7 +461,7 @@ export function FilterCommandMenu({
           />
         </div>
       )}
-      {useMobileSheet && (
+      {useMobileDrawer && (
         <div className="border-b relative">
           <CommandInput
             placeholder={t('filters.commandMenu.searchPlaceholder')}
@@ -482,59 +500,57 @@ export function FilterCommandMenu({
         showClearAll
         className="shrink-0 border-b border-[#E5E5E5] bg-white px-3 py-2 dark:border-border dark:bg-background"
       />
-      <CommandList className="min-h-0 flex-1 max-h-none overflow-y-auto">
-        <CommandEmpty>
-          {isParsingDate ? t('filters.commandMenu.parsingDate') : t('filters.noResults')}
-        </CommandEmpty>
-        
-        {/* Date Range Section */}
-        <CommandGroup
-          ref={dateRangeSectionRef}
-          heading={t('filters.commandMenu.sections.dateRange')}
-        >
-          <DateRangeSection searchValue={searchValue} />
-        </CommandGroup>
+      <CommandList className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        {isSearching || isParsingDate ? (
+          <CommandEmpty>
+            {isParsingDate ? t('filters.commandMenu.parsingDate') : t('filters.noResults')}
+          </CommandEmpty>
+        ) : null}
 
-        <CommandSeparator />
-
-        {/* Accounts Section */}
-        <CommandGroup
-          ref={accountSectionRef}
-          heading={t('filters.commandMenu.sections.accounts')}
-        >
-          <AccountSection searchValue={searchValue} />
-        </CommandGroup>
-
-        <CommandSeparator />
-
-        {/* Instruments Section */}
-        <CommandGroup
-          ref={instrumentSectionRef}
-          heading={t('filters.commandMenu.sections.instruments')}
-        >
-          <InstrumentSection searchValue={searchValue} />
-        </CommandGroup>
-
-        <CommandSeparator />
-
-        {/* Tags Section */}
-        <CommandGroup
-          ref={tagSectionRef}
-          heading={t('filters.commandMenu.sections.tags')}
-        >
-          <TagSection searchValue={searchValue} />
-        </CommandGroup>
-
-        <CommandSeparator />
-
-        {/* PnL Section */}
-        <CommandGroup
-          ref={pnlSectionRef}
-          heading={t('filters.commandMenu.sections.pnl')}
-        >
-          <PnlSection searchValue={searchValue} />
-        </CommandGroup>
-
+        {(
+          [
+            {
+              key: "dateRange" as const,
+              label: t("filters.commandMenu.sections.dateRange"),
+              content: <DateRangeSection searchValue={searchValue} />,
+            },
+            {
+              key: "accounts" as const,
+              label: t("filters.commandMenu.sections.accounts"),
+              content: <AccountSection searchValue={searchValue} />,
+            },
+            {
+              key: "instruments" as const,
+              label: t("filters.commandMenu.sections.instruments"),
+              content: <InstrumentSection searchValue={searchValue} />,
+            },
+            {
+              key: "tags" as const,
+              label: t("filters.commandMenu.sections.tags"),
+              content: <TagSection searchValue={searchValue} />,
+            },
+            {
+              key: "pnl" as const,
+              label: t("filters.commandMenu.sections.pnl"),
+              content: <PnlSection searchValue={searchValue} />,
+            },
+          ]
+        ).map(({ key, label, content }) => {
+          const expanded = isSearching || openSection === key
+          return (
+            <FilterFoldSection
+              key={key}
+              label={label}
+              expanded={expanded}
+              onToggle={() => {
+                if (isSearching) return
+                setOpenSection((current) => (current === key ? null : key))
+              }}
+            >
+              <CommandGroup>{content}</CommandGroup>
+            </FilterFoldSection>
+          )
+        })}
       </CommandList>
     </Command>
   )
@@ -543,36 +559,47 @@ export function FilterCommandMenu({
     <>
       {variant === 'navbar'
         ? NavbarTriggers
-        : useMobileSheet
+        : useMobileDrawer
           ? MobileTriggerButton
           : DesktopTriggerInput}
-      <Sheet open={open} onOpenChange={handleOpenChange}>
-        <SheetContent
-          side={useMobileSheet ? "bottom" : "right"}
-          overlayClassName="bg-black/15 dark:bg-black/70"
-          className={cn(
-            "flex flex-col overflow-hidden bg-white p-0 dark:bg-background",
-            useMobileSheet
-              ? "h-[min(90dvh,720px)] w-full rounded-t-[4px] border-t border-[#E5E5E5] dark:border-border"
-              : "h-dvh w-[90vw] border-l border-[#E5E5E5] dark:border-border sm:max-w-[420px]"
-          )}
+      {useMobileDrawer ? (
+        <Drawer
+          open={open}
+          onOpenChange={handleOpenChange}
+          shouldScaleBackground={false}
         >
-          {useMobileSheet ? (
-            <div
-              className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-black/15 dark:bg-white/20"
-              aria-hidden
-            />
-          ) : null}
-          <SheetHeader className="shrink-0 border-b border-[#E5E5E5] px-4 py-4 text-left dark:border-border">
-            <SheetTitle className="text-lg font-semibold tracking-[-0.025em]">
-              {t('filters.title')}
-            </SheetTitle>
-          </SheetHeader>
-          <div className="min-h-0 flex-1 overflow-hidden">
-            {CommandContent}
-          </div>
-        </SheetContent>
-      </Sheet>
+          <DrawerContent className="max-h-[85svh] gap-0 overflow-hidden rounded-t-[4px] border-[#E5E5E5] bg-white p-0 dark:border-border dark:bg-background">
+            <DrawerHeader className="shrink-0 border-b border-[#E5E5E5] px-4 py-3 text-left dark:border-border">
+              <DrawerTitle className="text-lg font-semibold tracking-[-0.025em]">
+                {t('filters.title')}
+              </DrawerTitle>
+              <DrawerDescription className="sr-only">
+                {t('filters.commandMenu.categories.title')}
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="min-h-0 flex-1 overflow-hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+              {CommandContent}
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Sheet open={open} onOpenChange={handleOpenChange}>
+          <SheetContent
+            side="right"
+            overlayClassName="bg-black/15 dark:bg-black/70"
+            className="flex h-dvh w-[90vw] flex-col overflow-hidden border-l border-[#E5E5E5] bg-white p-0 dark:border-border dark:bg-background sm:max-w-[420px]"
+          >
+            <SheetHeader className="shrink-0 border-b border-[#E5E5E5] px-4 py-4 text-left dark:border-border">
+              <SheetTitle className="text-lg font-semibold tracking-[-0.025em]">
+                {t('filters.title')}
+              </SheetTitle>
+            </SheetHeader>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {CommandContent}
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
     </>
   )
 }
