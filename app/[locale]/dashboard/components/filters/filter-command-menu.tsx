@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer"
@@ -572,6 +573,9 @@ export function FilterCommandMenu({
               <DrawerTitle className="text-lg font-semibold tracking-[-0.025em]">
                 {t('filters.title')}
               </DrawerTitle>
+              <DrawerDescription className="sr-only">
+                {t('filters.commandMenu.categories.title')}
+              </DrawerDescription>
             </DrawerHeader>
             <div className="min-h-0 flex-1 overflow-hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">
               {CommandContent}
