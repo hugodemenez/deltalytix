@@ -74,6 +74,8 @@ export function Toolbar({
     return () => observer.disconnect()
   }, [])
 
+  const hasMinimapTrigger = Boolean(minimapTrigger)
+
   useEffect(() => {
     const toolbar = toolbarRef.current
     if (!toolbar) return
@@ -96,7 +98,7 @@ export function Toolbar({
       resizeObserver.disconnect()
       window.removeEventListener("resize", updateToolbarMetrics)
     }
-  }, [isConsentVisible, isCustomizing, minimapTrigger])
+  }, [isConsentVisible, hasMinimapTrigger])
 
   const restoreButton = (
     <Button
@@ -151,7 +153,6 @@ export function Toolbar({
         {isCustomizing ? (
           <div
             role="group"
-            aria-label={t('widgets.edit')}
             className="absolute bottom-full left-2 mb-2 flex items-center rounded-full bg-[#F5F5F5] p-0.5"
           >
             <AlertDialog>

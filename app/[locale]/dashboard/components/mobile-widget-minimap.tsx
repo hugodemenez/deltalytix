@@ -21,6 +21,11 @@ const STACK_CARD_WIDTH = 36
 const STACK_CARD_HEIGHT = 26
 const STACK_CARD_OFFSET = 3
 const MAX_STACK_CARDS = 3
+const MAX_VISIBLE_STACK_COUNT = 99
+
+function formatWidgetStackCount(count: number): string {
+  return count > MAX_VISIBLE_STACK_COUNT ? `${MAX_VISIBLE_STACK_COUNT}+` : String(count)
+}
 
 /**
  * Loading placeholder for the toolbar minimap trigger — same stacked sheet
@@ -276,13 +281,16 @@ export function MobileWidgetMinimapTrigger({ className }: { className?: string }
   // Use a div with role="button" (not <button>) because ScaledWidgetPreview
   // mounts live widgets that may contain their own buttons — nested <button>
   // elements are invalid HTML and cause hydration errors.
-  const openMinimap = () => setIsExpanded(true)
+  const openMinimap = () => {
+    if (isExpanded) return
+    setIsExpanded(true)
+  }
 
   return (
     <div
       ref={triggerRef}
       role="button"
-      tabIndex={0}
+      tabIndex={isExpanded ? -1 : 0}
       aria-expanded={isExpanded}
       aria-haspopup="dialog"
       aria-label={t("widgets.mobile.minimapOpen", {
@@ -292,6 +300,7 @@ export function MobileWidgetMinimapTrigger({ className }: { className?: string }
       className={cn(
         "flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform active:scale-95",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        isExpanded && "pointer-events-none",
         className
       )}
       onClick={openMinimap}
@@ -306,6 +315,14 @@ export function MobileWidgetMinimapTrigger({ className }: { className?: string }
         className="relative block"
         style={{ width: STACK_CARD_WIDTH + 6, height: STACK_CARD_HEIGHT + 6 }}
       >
+        <span
+          aria-hidden
+          data-testid="widget-minimap-stack-count"
+          data-widget-count={widgets.length}
+          className="pointer-events-none absolute -right-1 -top-1 z-10 inline-flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-white bg-[#171717] px-1 text-[9px] font-semibold leading-none tabular-nums text-white"
+        >
+          {formatWidgetStackCount(widgets.length)}
+        </span>
         <AnimatePresence initial={false} custom={navigationDirection}>
           {stackWidgets.map(({ widget, stackOffset }) => {
             const deepestOffset = Math.max(0, stackWidgets.length - 1)
