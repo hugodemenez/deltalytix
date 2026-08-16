@@ -16,7 +16,7 @@ import { useData } from '@/context/data-provider'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
-import { renameAccountAction, removeAccountsFromTradesAction } from '@/server/accounts'
+import { removeAccountsFromTradesAction } from '@/server/accounts'
 import { moveAccountToGroupAction } from '@/server/groups'
 import {
   Command,
@@ -223,7 +223,7 @@ function AccountPickerList({
   onMask: (account: ConnectionsPageAccount, masked: boolean) => void
   onRename: (
     account: ConnectionsPageAccount,
-    nextNumber: string
+    nextName: string
   ) => Promise<boolean>
   onDelete: (account: ConnectionsPageAccount) => Promise<void>
   listClassName: string
@@ -342,7 +342,7 @@ function ConnectionChip({
   onMask: (account: ConnectionsPageAccount, masked: boolean) => void
   onRename: (
     account: ConnectionsPageAccount,
-    nextNumber: string
+    nextName: string
   ) => Promise<boolean>
   onDelete: (account: ConnectionsPageAccount) => Promise<void>
 }) {
@@ -498,6 +498,7 @@ export function ConnectionsStrip({ className }: { className?: string }) {
     accountNumbers = [],
     setAccountNumbers,
     saveGroup,
+    saveAccount,
     moveAccountsToGroup,
     refreshTradesOnly,
   } = useData()
@@ -595,43 +596,35 @@ export function ConnectionsStrip({ className }: { className?: string }) {
   )
 
   const onRename = useCallback(
-    async (account: ConnectionsPageAccount, nextNumber: string) => {
+    async (account: ConnectionsPageAccount, nextName: string) => {
+      const storeAccount = useUserStore
+        .getState()
+        .accounts.find(
+          (item) => item.id === account.id || item.number === account.number
+        )
+      if (!storeAccount) {
+        toast.error(t('connections.strip.renameFailed'))
+        return false
+      }
       try {
-        await renameAccountAction(account.number, nextNumber)
-        applyAccountPatch(account.id, { number: nextNumber })
-        updateAccount(account.id, { number: nextNumber })
+        await saveAccount({ ...storeAccount, propfirm: nextName })
+        applyAccountPatch(account.id, { propfirm: nextName })
+        updateAccount(account.id, { propfirm: nextName })
         setGroups(
           useUserStore.getState().groups.map((group) => ({
             ...group,
             accounts: group.accounts.map((item) =>
-              item.id === account.id ? { ...item, number: nextNumber } : item
+              item.id === account.id ? { ...item, propfirm: nextName } : item
             ),
           }))
         )
-        setTrades(
-          useTradesStore.getState().trades.map((trade) =>
-            trade.accountNumber === account.number
-              ? { ...trade, accountNumber: nextNumber }
-              : trade
-          )
-        )
-        setAccountNumbers((prev) =>
-          prev.map((number) => (number === account.number ? nextNumber : number))
-        )
         return true
-      } catch (error) {
-        const duplicate =
-          error instanceof Error &&
-          error.message === 'You already have an account with this number'
-        toast.error(
-          duplicate
-            ? t('connections.strip.duplicateNumber')
-            : t('connections.strip.renameFailed')
-        )
+      } catch {
+        toast.error(t('connections.strip.renameFailed'))
         return false
       }
     },
-    [applyAccountPatch, setAccountNumbers, setGroups, setTrades, t, updateAccount]
+    [applyAccountPatch, saveAccount, setGroups, t, updateAccount]
   )
 
   const onDelete = useCallback(

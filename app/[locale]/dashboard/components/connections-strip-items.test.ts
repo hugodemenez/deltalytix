@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildStripItems,
   chipAccountCountLabel,
+  accountDisplayName,
   isMaskedAccount,
   isStandaloneAccount,
   mapConnectionsAccounts,
@@ -127,6 +128,15 @@ describe('chipAccountCountLabel', () => {
 })
 
 describe('account action helpers', () => {
+  it('returns a trimmed account name only when one exists', () => {
+    expect(accountDisplayName({ propfirm: 'Local Simulation' })).toBe(
+      'Local Simulation'
+    )
+    expect(accountDisplayName({ propfirm: '  ' })).toBeNull()
+    expect(accountDisplayName({ propfirm: '' })).toBeNull()
+    expect(accountDisplayName({ propfirm: null })).toBeNull()
+  })
+
   it('treats a null connection as standalone and a linked one as synced', () => {
     expect(isStandaloneAccount({ connectionId: null })).toBe(true)
     expect(isStandaloneAccount({ connectionId: 'conn-1' })).toBe(false)

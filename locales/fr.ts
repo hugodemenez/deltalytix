@@ -148,6 +148,7 @@ export default {
   "connections.strip.search": "Rechercher des comptes",
   "connections.strip.noResults": "Aucun compte trouvé",
   "connections.strip.mask": "Masquer",
+  "connections.strip.unmask": "Afficher",
   "connections.strip.rename": "Renommer",
   "connections.strip.saveName": "Enregistrer le nom",
   "connections.strip.deleteAccount": "Supprimer {account}",

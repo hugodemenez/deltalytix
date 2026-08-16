@@ -147,6 +147,7 @@ export default {
   "connections.strip.search": "Search accounts",
   "connections.strip.noResults": "No accounts found",
   "connections.strip.mask": "Mask",
+  "connections.strip.unmask": "Unmask",
   "connections.strip.rename": "Rename",
   "connections.strip.saveName": "Save name",
   "connections.strip.deleteAccount": "Delete {account}",

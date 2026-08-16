@@ -66,6 +66,13 @@ export function isStandaloneAccount(account: {
   return account.connectionId == null
 }
 
+export function accountDisplayName(account: {
+  propfirm?: string | null
+}): string | null {
+  const name = account.propfirm?.trim()
+  return name || null
+}
+
 export function isMaskedAccount(
   account: { groupId: string | null | undefined },
   hiddenGroupId: string | null | undefined

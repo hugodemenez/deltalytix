@@ -1,17 +1,22 @@
 'use client'
 
 import { useEffect, useRef, useState, type SyntheticEvent } from 'react'
-import { Check, Loader2, Pencil, Trash2 } from 'lucide-react'
+import { Check, Eye, EyeOff, Loader2, Pencil, Trash2 } from 'lucide-react'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import { CommandItem } from '@/components/ui/command'
-import { Switch } from '@/components/ui/switch'
 import type { ConnectionsPageAccount } from '@/app/[locale]/dashboard/connections/types'
-import { isMaskedAccount } from './connections-strip-items'
+import { accountDisplayName, isMaskedAccount } from './connections-strip-items'
 
 function stopRowActivation(event: SyntheticEvent) {
   event.stopPropagation()
 }
+
+const iconButtonClass = cn(
+  'inline-flex size-8 items-center justify-center rounded-[3px] transition-[background-color,color,transform] duration-150',
+  'active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#181A18]',
+  'dark:focus-visible:ring-white'
+)
 
 export function ConnectionsStripAccountRow({
   account,
@@ -35,22 +40,23 @@ export function ConnectionsStripAccountRow({
   onMask: (account: ConnectionsPageAccount, masked: boolean) => void
   onRename: (
     account: ConnectionsPageAccount,
-    nextNumber: string
+    nextName: string
   ) => Promise<boolean>
   onRequestDelete: (account: ConnectionsPageAccount) => void
 }) {
   const t = useI18n()
   const inputRef = useRef<HTMLInputElement>(null)
   const submitLockRef = useRef(false)
+  const displayName = accountDisplayName(account)
   const [isRenaming, setIsRenaming] = useState(false)
-  const [renameValue, setRenameValue] = useState(account.number)
+  const [renameValue, setRenameValue] = useState(displayName ?? '')
   const [renaming, setRenaming] = useState(false)
   const masked = isMaskedAccount(account, hiddenGroupId)
-  const metaLabel = account.propfirm?.trim() || null
+  const title = displayName ?? account.number
 
   useEffect(() => {
-    if (!isRenaming) setRenameValue(account.number)
-  }, [account.number, isRenaming])
+    if (!isRenaming) setRenameValue(displayName ?? '')
+  }, [displayName, isRenaming])
 
   useEffect(() => {
     if (!isRenaming) return
@@ -63,19 +69,19 @@ export function ConnectionsStripAccountRow({
 
   const cancelRename = () => {
     setIsRenaming(false)
-    setRenameValue(account.number)
+    setRenameValue(displayName ?? '')
   }
 
   const submitRename = async () => {
     if (submitLockRef.current) return
-    const nextNumber = renameValue.trim()
-    if (!nextNumber || nextNumber === account.number) {
+    const nextName = renameValue.trim()
+    if (nextName === (displayName ?? '')) {
       cancelRename()
       return
     }
     submitLockRef.current = true
     setRenaming(true)
-    const ok = await onRename(account, nextNumber)
+    const ok = await onRename(account, nextName)
     setRenaming(false)
     submitLockRef.current = false
     if (ok) setIsRenaming(false)
@@ -84,20 +90,25 @@ export function ConnectionsStripAccountRow({
 
   return (
     <CommandItem
-      value={account.number}
+      value={`${displayName ?? ''} ${account.number}`}
       onSelect={() => {
         if (isRenaming) return
         onSelect(account.number)
       }}
       className="items-center gap-2 rounded-[3px] px-3 py-2"
     >
-      <span className="min-w-0 flex-1">
+      <span
+        className={cn(
+          'min-w-0 flex-1',
+          masked && 'text-[#686D67] opacity-60 dark:text-muted-foreground'
+        )}
+      >
         <input
           ref={inputRef}
           type="text"
           autoComplete="off"
           spellCheck={false}
-          value={isRenaming ? renameValue : account.number}
+          value={isRenaming ? renameValue : title}
           readOnly={!isRenaming}
           tabIndex={isRenaming ? 0 : -1}
           aria-label={t('connections.strip.rename')}
@@ -129,19 +140,25 @@ export function ConnectionsStripAccountRow({
           }}
           className={cn(
             'box-border h-7 w-full min-w-0 truncate rounded-[3px] border bg-transparent px-1.5 text-base font-medium leading-7 outline-none sm:text-sm',
-            'text-[#171917] dark:text-foreground',
             isRenaming
-              ? 'border-[#E5E5E5] bg-white focus-visible:ring-2 focus-visible:ring-[#181A18] dark:border-border dark:bg-background dark:focus-visible:ring-white'
-              : masked
-                ? 'border-transparent text-[#686D67] dark:text-muted-foreground'
-                : 'border-transparent'
+              ? 'border-[#E5E5E5] bg-white text-[#171917] focus-visible:ring-2 focus-visible:ring-[#181A18] dark:border-border dark:bg-background dark:text-foreground dark:focus-visible:ring-white'
+              : 'border-transparent',
+            !isRenaming &&
+              (masked
+                ? 'text-[#686D67] dark:text-muted-foreground'
+                : 'text-[#171917] dark:text-foreground')
           )}
         />
-        {metaLabel ? (
-          <span className="mt-0.5 block truncate px-1.5 text-xs text-[#686D67] dark:text-muted-foreground">
-            {metaLabel}
-          </span>
-        ) : null}
+        <span
+          className={cn(
+            'mt-0.5 block h-4 truncate px-1.5 text-xs leading-4',
+            masked
+              ? 'text-[#686D67] dark:text-muted-foreground'
+              : 'text-[#686D67] dark:text-muted-foreground'
+          )}
+        >
+          {displayName || isRenaming ? account.number : '\u00a0'}
+        </span>
       </span>
 
       <div
@@ -150,22 +167,53 @@ export function ConnectionsStripAccountRow({
         onMouseDown={stopRowActivation}
         onClick={stopRowActivation}
       >
-        <label className="flex h-8 cursor-pointer items-center gap-1.5 rounded-[3px] px-1.5 text-xs text-[#686D67] dark:text-muted-foreground">
-          <span>{t('connections.strip.mask')}</span>
-          <Switch
-            checked={masked}
-            disabled={masking}
-            onCheckedChange={(checked) => onMask(account, checked)}
-            className="data-[state=checked]:bg-[#3E7550]"
-          />
-        </label>
         <button
           type="button"
           className={cn(
-            'inline-flex size-8 items-center justify-center rounded-[3px] text-[#686D67] transition-[background-color,color,transform] duration-150',
-            'hover:bg-[#F5F5F5] hover:text-[#171917] active:scale-[0.96]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#181A18]',
-            'dark:text-muted-foreground dark:hover:bg-muted/50 dark:hover:text-foreground dark:focus-visible:ring-white'
+            iconButtonClass,
+            masked
+              ? 'text-[#3E7550] hover:bg-[#EFF5EC] hover:text-[#3E7550] dark:text-[#9BC4A8] dark:hover:bg-[#243028] dark:hover:text-[#9BC4A8]'
+              : 'text-[#686D67] hover:bg-[#F5F5F5] hover:text-[#171917] dark:text-muted-foreground dark:hover:bg-muted/50 dark:hover:text-foreground'
+          )}
+          aria-label={
+            masked ? t('connections.strip.unmask') : t('connections.strip.mask')
+          }
+          aria-pressed={masked}
+          disabled={masking}
+          onClick={() => onMask(account, !masked)}
+        >
+          <span className="relative inline-flex size-3.5">
+            <Eye
+              className={cn(
+                'absolute inset-0 size-3.5 motion-safe:transition-[opacity,transform,filter] motion-safe:duration-150 motion-safe:ease-[cubic-bezier(0.2,0,0,1)]',
+                masked
+                  ? 'scale-[0.25] opacity-0 blur-[4px]'
+                  : 'scale-100 opacity-100 blur-0'
+              )}
+              strokeWidth={2}
+              aria-hidden
+            />
+            <EyeOff
+              className={cn(
+                'absolute inset-0 size-3.5 motion-safe:transition-[opacity,transform,filter] motion-safe:duration-150 motion-safe:ease-[cubic-bezier(0.2,0,0,1)]',
+                masked
+                  ? 'scale-100 opacity-100 blur-0'
+                  : 'scale-[0.25] opacity-0 blur-[4px]'
+              )}
+              strokeWidth={2}
+              aria-hidden
+            />
+          </span>
+        </button>
+        <div className={cn('flex items-center gap-0.5', masked && 'opacity-60')}>
+        <button
+          type="button"
+          className={cn(
+            iconButtonClass,
+            'text-[#686D67] hover:bg-[#F5F5F5] dark:text-muted-foreground dark:hover:bg-muted/50',
+            masked
+              ? 'hover:text-[#686D67] dark:hover:text-muted-foreground'
+              : 'hover:text-[#171917] dark:hover:text-foreground'
           )}
           aria-label={
             isRenaming
@@ -182,7 +230,7 @@ export function ConnectionsStripAccountRow({
               return
             }
             setIsRenaming(true)
-            setRenameValue(account.number)
+            setRenameValue(displayName ?? '')
           }}
         >
           {renaming ? (
@@ -197,13 +245,14 @@ export function ConnectionsStripAccountRow({
           <button
             type="button"
             className={cn(
-              'inline-flex size-8 items-center justify-center rounded-[3px] text-[#686D67] transition-[background-color,color,transform] duration-150',
-              'hover:bg-[#F5F5F5] hover:text-red-600 active:scale-[0.96]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#181A18]',
-              'dark:text-muted-foreground dark:hover:bg-muted/50 dark:hover:text-red-400 dark:focus-visible:ring-white'
+              iconButtonClass,
+              'text-[#686D67] dark:text-muted-foreground',
+              masked
+                ? 'hover:bg-[#F5F5F5] hover:text-[#686D67] dark:hover:bg-muted/50 dark:hover:text-muted-foreground'
+                : 'hover:bg-[#F5F5F5] hover:text-red-600 dark:hover:bg-muted/50 dark:hover:text-red-400'
             )}
             aria-label={t('connections.strip.deleteAccount', {
-              account: account.number,
+              account: displayName ?? account.number,
             })}
             disabled={deleting}
             onClick={() => onRequestDelete(account)}
@@ -217,13 +266,19 @@ export function ConnectionsStripAccountRow({
         ) : null}
         {selected ? (
           <Check
-            className="h-4 w-4 shrink-0 text-[#3E7550]"
+            className={cn(
+              'h-4 w-4 shrink-0',
+              masked
+                ? 'text-[#686D67] dark:text-muted-foreground'
+                : 'text-[#171917] dark:text-foreground'
+            )}
             strokeWidth={2}
             aria-hidden
           />
         ) : (
           <span className="inline-block h-4 w-4 shrink-0" aria-hidden />
         )}
+        </div>
       </div>
     </CommandItem>
   )
