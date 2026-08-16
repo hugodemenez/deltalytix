@@ -36,6 +36,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { evaluateFormatTradesBatchResult } from "@/lib/ai/format-trades-batch";
+import {
+  AI_UNAVAILABLE_ERROR,
+  parseFormatTradesApiError,
+} from "@/lib/ai/openai-availability";
 
 interface FormatPreviewProps {
   trades: string[][];
@@ -136,6 +142,8 @@ export function FormatPreview({
   const currentBatchIndex2Ref = useRef<number>(currentBatchIndex2);
   const isAutoProcessingRef = useRef<boolean>(isAutoProcessing);
   const isStoppedRef = useRef<boolean>(isStopped);
+  const stop1Ref = useRef<() => void>(() => {});
+  const stop2Ref = useRef<() => void>(() => {});
   
   // Update refs when state changes
   useEffect(() => {
@@ -192,47 +200,87 @@ export function FormatPreview({
     console.log(`Split batches - Set 1: ${set1.join(', ')}, Set 2: ${set2.join(', ')}`);
   };
 
+  const failProcessing = (message: string) => {
+    isAutoProcessingRef.current = false;
+    isStoppedRef.current = true;
+    setIsAutoProcessing(false);
+    setIsStopped(true);
+    setError(message);
+    stop1Ref.current();
+    stop2Ref.current();
+  };
+
+  const messageForFormatError = (error?: Error) => {
+    if (error && parseFormatTradesApiError(error.message).code === AI_UNAVAILABLE_ERROR) {
+      return t('import.processing.aiUnavailable');
+    }
+    return t('import.processing.noTradesFormatted');
+  };
+
+  const handleStreamFinish = (
+    event: { object: unknown; error?: Error },
+    instance: 1 | 2,
+  ) => {
+    if (isStoppedRef.current) {
+      return;
+    }
+
+    const result = evaluateFormatTradesBatchResult(event);
+    if (result.status === 'failed') {
+      console.error(`Batch set ${instance} finished without formatted trades:`, event.error ?? result.reason);
+      failProcessing(messageForFormatError(event.error));
+      return;
+    }
+
+    const batchSet = instance === 1 ? batchSet1Ref.current : batchSet2Ref.current;
+    const currentIndex = instance === 1 ? currentBatchIndex1Ref.current : currentBatchIndex2Ref.current;
+    const currentBatch = batchSet[currentIndex];
+    if (currentBatch === undefined) {
+      return;
+    }
+
+    console.log(`Batch ${currentBatch} completed by instance ${instance}`);
+    setCompletedBatches(prev => {
+      const newSet = new Set([...prev, currentBatch]);
+      console.log(`Completed batches now: ${Array.from(newSet).join(', ')}`);
+      return newSet;
+    });
+
+    if (instance === 1) {
+      setCurrentBatchIndex1(prev => prev + 1);
+    } else {
+      setCurrentBatchIndex2(prev => prev + 1);
+    }
+
+    if (completedBatchesRef.current.size + 1 === totalBatches) {
+      console.log('All batches completed, stopping auto-processing');
+      setIsAutoProcessing(false);
+    } else if (isAutoProcessingRef.current && !isStoppedRef.current) {
+      setTimeout(() => {
+        if (instance === 1) {
+          processNextBatchInSet1();
+        } else {
+          processNextBatchInSet2();
+        }
+      }, 500);
+    }
+  };
+
   // First useObject instance - processes batchSet1
   const { 
     object: object1, 
     submit: submit1, 
-    isLoading: isProcessing1 
+    isLoading: isProcessing1,
+    stop: stop1,
   } = useObject({
     api: '/api/ai/format-trades',
     schema: z.array(tradeSchema),
     onError(error) {
       console.error('Error processing batch set 1:', error);
-      setError(`Failed to process batch set 1: ${error.message}`);
+      failProcessing(messageForFormatError(error));
     },
-    onFinish() {
-      console.log('useObject 1 streaming completed');
-      const currentBatch = batchSet1Ref.current[currentBatchIndex1Ref.current];
-      if (currentBatch !== undefined) {
-        console.log(`Batch ${currentBatch} completed by instance 1`);
-        setCompletedBatches(prev => {
-          const newSet = new Set([...prev, currentBatch]);
-          console.log(`Completed batches now: ${Array.from(newSet).join(', ')}`);
-          return newSet;
-        });
-        
-        // Move to next batch in set 1
-        setCurrentBatchIndex1(prev => {
-          const newIndex = prev + 1;
-          console.log(`Set 1 index moved from ${prev} to ${newIndex}`);
-          return newIndex;
-        });
-        
-        // Check if all batches are completed
-        if (completedBatchesRef.current.size + 1 === totalBatches) {
-          console.log('All batches completed, stopping auto-processing');
-          setIsAutoProcessing(false);
-        } else if (isAutoProcessingRef.current && !isStoppedRef.current) {
-          // Process next batch in set 1 if available and not stopped
-          setTimeout(() => {
-            processNextBatchInSet1();
-          }, 500);
-        }
-      }
+    onFinish(event) {
+      handleStreamFinish(event, 1);
     }
   });
 
@@ -240,50 +288,30 @@ export function FormatPreview({
   const { 
     object: object2, 
     submit: submit2, 
-    isLoading: isProcessing2 
+    isLoading: isProcessing2,
+    stop: stop2,
   } = useObject({
     api: '/api/ai/format-trades',
     schema: z.array(tradeSchema),
     onError(error) {
       console.error('Error processing batch set 2:', error);
-      setError(`Failed to process batch set 2: ${error.message}`);
+      failProcessing(messageForFormatError(error));
     },
-    onFinish() {
-      console.log('useObject 2 streaming completed');
-      const currentBatch = batchSet2Ref.current[currentBatchIndex2Ref.current];
-      if (currentBatch !== undefined) {
-        console.log(`Batch ${currentBatch} completed by instance 2`);
-        setCompletedBatches(prev => {
-          const newSet = new Set([...prev, currentBatch]);
-          console.log(`Completed batches now: ${Array.from(newSet).join(', ')}`);
-          return newSet;
-        });
-        
-        // Move to next batch in set 2
-        setCurrentBatchIndex2(prev => {
-          const newIndex = prev + 1;
-          console.log(`Set 2 index moved from ${prev} to ${newIndex}`);
-          return newIndex;
-        });
-        
-        // Check if all batches are completed
-        if (completedBatchesRef.current.size + 1 === totalBatches) {
-          console.log('All batches completed, stopping auto-processing');
-          setIsAutoProcessing(false);
-        } else if (isAutoProcessingRef.current && !isStoppedRef.current) {
-          // Process next batch in set 2 if available and not stopped
-          setTimeout(() => {
-            processNextBatchInSet2();
-          }, 500);
-        }
-      }
+    onFinish(event) {
+      handleStreamFinish(event, 2);
     }
   });
+
+  stop1Ref.current = stop1;
+  stop2Ref.current = stop2;
 
   const isProcessing = isProcessing1 || isProcessing2;
 
   // Process next batch in set 1
   const processNextBatchInSet1 = () => {
+    if (isStoppedRef.current) {
+      return;
+    }
     const currentIndex = currentBatchIndex1Ref.current;
     const batchSet = batchSet1Ref.current;
     
@@ -309,6 +337,9 @@ export function FormatPreview({
 
   // Process next batch in set 2
   const processNextBatchInSet2 = () => {
+    if (isStoppedRef.current) {
+      return;
+    }
     const currentIndex = currentBatchIndex2Ref.current;
     const batchSet = batchSet2Ref.current;
     
@@ -333,6 +364,7 @@ export function FormatPreview({
   };
 
   const startProcessing = () => {
+    setError(null);
     setIsAutoProcessing(true);
     setIsStopped(false);
     splitBatches();
@@ -354,6 +386,7 @@ export function FormatPreview({
   };
 
   const resetProcessing = () => {
+    setError(null);
     setIsAutoProcessing(false);
     setIsStopped(false);
     setCurrentBatch(0);
@@ -708,13 +741,13 @@ export function FormatPreview({
 
 
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-red-500">{error}</div>
-      </div>
-    );
-  }
+  const formattedTradeCount = processedTrades.filter(trade => trade.entryDate).length;
+  const allBatchesSucceeded =
+    !isAutoProcessing &&
+    !error &&
+    completedBatches.size === totalBatches &&
+    totalBatches > 0 &&
+    formattedTradeCount > 0;
 
   return (
     <div className="flex flex-col gap-4 h-full">
@@ -722,7 +755,7 @@ export function FormatPreview({
         <div className="flex items-center gap-4">
           <div className="flex flex-col gap-1">
         <p className="text-sm text-muted-foreground">
-          {processedTrades.filter(trade => trade.entryDate).length} of {validTrades.length} trades formatted
+          {formattedTradeCount} of {validTrades.length} trades formatted
         </p>
             <p className="text-xs text-muted-foreground">
               Batches: {completedBatches.size}/{totalBatches} completed
@@ -735,10 +768,16 @@ export function FormatPreview({
               <span className="text-xs text-green-600 font-medium">{t('import.processing.autoProcessing')}</span>
             </div>
           )}
-          {!isAutoProcessing && completedBatches.size === totalBatches && totalBatches > 0 && (
+          {allBatchesSucceeded && (
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               <span className="text-xs text-green-600 font-medium">{t('import.processing.allBatchesCompleted')}</span>
+            </div>
+          )}
+          {error && !isAutoProcessing && (
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <span className="text-xs text-red-600 font-medium">{t('import.processing.batchFailed')}</span>
             </div>
           )}
         </div>
@@ -782,6 +821,13 @@ export function FormatPreview({
           </Button>
         </div>
       </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>{t('import.processing.batchFailed')}</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       
       {/* Progress Bar */}
       {totalBatches > 0 && (

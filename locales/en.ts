@@ -527,6 +527,11 @@ export default {
     tradesFormatted: "{formatted} of {total} trades formatted",
     batchesCompleted: "Batches: {completed}/{total} completed",
     batchesProcessing: ", {processing} processing",
+    batchFailed: "Unable to format trades",
+    aiUnavailable:
+      "AI formatting is unavailable. Ask your administrator to configure an OpenAI API key, then try again.",
+    noTradesFormatted:
+      "No trades were formatted. Check that AI is configured on this server, then try again.",
   },
 
   "import.table.instrument": "Instrument",
