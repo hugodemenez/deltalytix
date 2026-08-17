@@ -38,4 +38,35 @@ describe('dxfeed prop firms', () => {
       expect.objectContaining({ id: 'myfundedfutures' }),
     )
   })
+
+  it('enables HyperTicks with Taurus-style dxFeed endpoints', () => {
+    const firm = getDxFeedPropFirm('hyperticks')
+
+    expect(firm).toMatchObject({
+      name: 'HyperTicks',
+      website: 'https://dxfeed.hyperticks.com',
+      enabled: true,
+    })
+    expect(buildHistoricalHostForPropFirm(firm!)).toBe(
+      'https://dxfeed.hyperticks.com',
+    )
+    expect(buildTradingHostForPropFirm(firm!)).toBe(
+      'https://trading-dxfeed.hyperticks.com',
+    )
+  })
+
+  it('resolves HyperTicks from ids, branding, and the ATAS misspelling', () => {
+    expect(getDxFeedPropFirm('HyperTicks')?.id).toBe('hyperticks')
+    expect(getDxFeedPropFirmByAuthName('Hyperticks')?.id).toBe('hyperticks')
+    expect(getDxFeedPropFirmByAuthName('Hypertricks')?.id).toBe('hyperticks')
+    expect(
+      authPropfirmMatchesSelection(
+        'Hypertricks',
+        getDxFeedPropFirm('hyperticks')!,
+      ),
+    ).toBe(true)
+    expect(getEnabledDxFeedPropFirms()).toContainEqual(
+      expect.objectContaining({ id: 'hyperticks' }),
+    )
+  })
 })

@@ -83,6 +83,16 @@ export const DXFEED_PROP_FIRMS: DxFeedPropFirmDefinition[] = [
     tradingSubdomain: 'trading-dxfeed',
     enabled: true,
   },
+  {
+    id: 'hyperticks',
+    name: 'HyperTicks',
+    aliases: ['Hyperticks', 'Hypertricks'],
+    website: 'https://dxfeed.hyperticks.com',
+    domain: 'hyperticks.com',
+    historicalSubdomain: 'dxfeed',
+    tradingSubdomain: 'trading-dxfeed',
+    enabled: true,
+  },
   // More Volumetrica-based firms can be added once their domain pattern is confirmed.
 ]
 
