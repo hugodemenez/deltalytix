@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
 import { platforms } from './config/platforms'
 import { Step } from './import-button'
+import { peekDelimitedFile } from '@/lib/import/peek-delimited-file'
 
 interface FileUploadProps {
   importType: ImportType
@@ -19,6 +20,9 @@ interface FileUploadProps {
   setHeaders: React.Dispatch<React.SetStateAction<string[]>>
   setStep: React.Dispatch<React.SetStateAction<Step>>
   setError: React.Dispatch<React.SetStateAction<string | null>>
+  setImportFile?: (file: File | null) => void
+  setDelimiter?: (delimiter: string) => void
+  setPeekText?: (text: string) => void
 }
 
 export default function FileUpload({
@@ -27,7 +31,10 @@ export default function FileUpload({
   setCsvData,
   setHeaders,
   setStep,
-  setError
+  setError,
+  setImportFile,
+  setDelimiter,
+  setPeekText,
 }: FileUploadProps) {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
@@ -35,39 +42,59 @@ export default function FileUpload({
   const t = useI18n()
 
   const processFile = useCallback((file: File, index: number) => {
+    const platform =
+      platforms.find((p) => p.type === importType) ||
+      platforms.find((p) => p.platformName === "csv-ai");
+
+    if (platform?.platformName === "csv-ai") {
+      return peekDelimitedFile(file).then((peeked) => {
+        if (!peeked.headers.length) {
+          throw new Error("The CSV file appears to be empty or invalid.");
+        }
+        setImportFile?.(file);
+        setDelimiter?.(peeked.delimiter);
+        setPeekText?.(peeked.peekText);
+        setParsedFiles((prevFiles) => {
+          const newFiles = [...prevFiles];
+          newFiles[index] = [peeked.headers, ...peeked.sampleRows];
+          return newFiles;
+        });
+        setError(null);
+      });
+    }
+
     return new Promise<void>((resolve, reject) => {
-      // First read the first line to detect delimiter
       const reader = new FileReader();
       reader.onload = (e) => {
-        const firstLine = e.target?.result?.toString().split('\n')[0] || '';
-        const delimiter = firstLine.includes(';') ? ';' : ',';
-        
+        const firstLine = e.target?.result?.toString().split("\n")[0] || "";
+        const delimiter = firstLine.includes(";") ? ";" : ",";
+
         Papa.parse(file, {
           delimiter,
           complete: (result) => {
             if (result.data && Array.isArray(result.data) && result.data.length > 0) {
-              setParsedFiles(prevFiles => {
-                const newFiles = [...prevFiles]
-                newFiles[index] = result.data as string[][]
-                return newFiles
-              })
-              setError(null)
-              resolve()
+              setParsedFiles((prevFiles) => {
+                const newFiles = [...prevFiles];
+                newFiles[index] = result.data as string[][];
+                return newFiles;
+              });
+              setError(null);
+              resolve();
             } else {
-              reject(new Error("The CSV file appears to be empty or invalid."))
+              reject(new Error("The CSV file appears to be empty or invalid."));
             }
           },
           error: (error) => {
-            reject(new Error(`Error parsing CSV: ${error.message}`))
-          }
-        })
+            reject(new Error(`Error parsing CSV: ${error.message}`));
+          },
+        });
       };
       reader.onerror = () => {
-        reject(new Error("Error reading file"))
+        reject(new Error("Error reading file"));
       };
       reader.readAsText(file);
-    })
-  }, [setError])
+    });
+  }, [importType, setError, setImportFile, setDelimiter, setPeekText]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setUploadedFiles(prevFiles => [...prevFiles, ...acceptedFiles])

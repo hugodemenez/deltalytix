@@ -33,18 +33,21 @@ import {
   createParsePlanSession,
   executeParsePlanChunk,
   isParsePlanComplete,
-  missingRequiredFields,
-  resolveParsePlan,
+  planFromHeaders,
   type ExecutedTrade,
   type ParsePlan,
 } from "@/lib/import/parse-plan";
-import { planFromAiResponse } from "@/lib/import/plan-from-ai";
+import { obtainAgentParseScript } from "@/lib/import/obtain-agent-script";
+import { streamDelimitedFile } from "@/lib/import/stream-delimited-file";
+import type { ParseScriptSession } from "@/lib/import/parse-script";
 
 function yieldToMain(): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, 0);
   });
 }
+
+type ParserPhase = "writing" | "checking" | "reading" | "ready" | "error";
 
 interface FormatPreviewProps {
   trades: string[][];
@@ -54,6 +57,9 @@ interface FormatPreviewProps {
   isLoading: boolean;
   headers: string[];
   mappings: { [key: string]: string };
+  importFile?: File | null;
+  delimiter?: string;
+  peekText?: string;
 }
 
 export function FormatPreview({
@@ -62,131 +68,210 @@ export function FormatPreview({
   setProcessedTrades,
   setIsLoading,
   headers,
-  mappings,
+  mappings: _mappings,
+  importFile = null,
+  delimiter = ",",
+  peekText,
 }: FormatPreviewProps) {
   const t = useI18n();
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const [parseKind, setParseKind] = useState<"closed-trades" | "orders" | null>(
+  const [parseKind, setParseKind] = useState<"closed-trades" | "orders" | "script" | null>(
     null,
   );
   const [previewTrades, setPreviewTrades] = useState<Partial<Trade>[]>([]);
   const [formattedCount, setFormattedCount] = useState(0);
   const [rowsProcessed, setRowsProcessed] = useState(0);
+  const [bytesRead, setBytesRead] = useState(0);
   const [isParsing, setIsParsing] = useState(false);
+  const [phase, setPhase] = useState<ParserPhase>("writing");
+  const [agentScript, setAgentScript] = useState<string | null>(null);
   const [totals, setTotals] = useState({
     totalPnl: 0,
     totalCommission: 0,
     netPnl: 0,
   });
-  const askedAiRef = useRef(false);
 
-  const totalRows = initialTrades.length;
+  const fileSize = importFile?.size ?? 0;
 
   useEffect(() => {
     let cancelled = false;
 
-    const runChunks = async (plan: ParsePlan) => {
+    const applyTrades = (
+      all: ExecutedTrade[],
+      incoming: ExecutedTrade[],
+      processedRows: number,
+      readBytes: number,
+    ) => {
+      for (const trade of incoming) {
+        all.push(trade);
+      }
+      const totalsFromAll = all.reduce(
+        (acc, trade) => {
+          acc.totalPnl += trade.pnl || 0;
+          acc.totalCommission += trade.commission || 0;
+          return acc;
+        },
+        { totalPnl: 0, totalCommission: 0 },
+      );
+      setRowsProcessed(processedRows);
+      setBytesRead(readBytes);
+      setFormattedCount(all.length);
+      setPreviewTrades(all.slice(0, PARSE_PREVIEW_LIMIT));
+      setTotals({
+        totalPnl: totalsFromAll.totalPnl,
+        totalCommission: totalsFromAll.totalCommission,
+        netPnl: totalsFromAll.totalPnl - totalsFromAll.totalCommission,
+      });
+    };
+
+    const finish = (all: ExecutedTrade[]) => {
+      if (cancelled) return;
+      setProcessedTrades(all);
+      setIsParsing(false);
+      setIsLoading(false);
+      setPhase(all.length === 0 ? "error" : "ready");
+      if (all.length === 0) {
+        setError(t("import.processing.noTradesFormatted"));
+      }
+    };
+
+    const runPlanChunks = async (plan: ParsePlan, rows: string[][]) => {
       setParseKind(plan.kind);
+      const session = createParsePlanSession();
+      const all: ExecutedTrade[] = [];
+      let processed = 0;
+      for (let offset = 0; offset < rows.length; offset += PARSE_PLAN_CHUNK_SIZE) {
+        if (cancelled) return;
+        const { trades } = executeParsePlanChunk(
+          rows.slice(offset, offset + PARSE_PLAN_CHUNK_SIZE),
+          plan,
+          session,
+        );
+        processed = Math.min(offset + PARSE_PLAN_CHUNK_SIZE, rows.length);
+        applyTrades(all, trades, processed, 0);
+        await yieldToMain();
+      }
+      finish(all);
+    };
+
+    const runFileWithPlan = async (plan: ParsePlan, file: File) => {
+      setParseKind(plan.kind);
+      const session = createParsePlanSession();
+      const all: ExecutedTrade[] = [];
+      let processed = 0;
+      await streamDelimitedFile(file, {
+        delimiter,
+        headers,
+        onChunk: async (rows, readBytes) => {
+          if (cancelled) return;
+          const { trades } = executeParsePlanChunk(rows, plan, session);
+          processed += rows.length;
+          applyTrades(all, trades, processed, readBytes);
+          await yieldToMain();
+        },
+      });
+      finish(all);
+    };
+
+    const runFileWithScript = async (script: string, file: File) => {
+      setParseKind("script");
+      setAgentScript(script);
+      const all: ExecutedTrade[] = [];
+      let session: ParseScriptSession = {};
+      let sandboxName: string | undefined;
+      let processed = 0;
+      await streamDelimitedFile(file, {
+        delimiter,
+        headers,
+        onChunk: async (rows, readBytes) => {
+          if (cancelled) return;
+          const response = await fetch("/api/import/parse-chunk", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ script, rows, session, sandboxName }),
+          });
+          const raw = await response.text();
+          if (!response.ok) throw new Error(raw);
+          const result = JSON.parse(raw) as {
+            trades: ExecutedTrade[];
+            session: ParseScriptSession;
+            sandboxName?: string;
+          };
+          session = result.session;
+          sandboxName = result.sandboxName;
+          processed += rows.length;
+          applyTrades(all, result.trades, processed, readBytes);
+          await yieldToMain();
+        },
+      });
+      finish(all);
+    };
+
+    const start = async () => {
       setError(null);
       setIsParsing(true);
       setIsLoading(true);
       setPreviewTrades([]);
       setFormattedCount(0);
       setRowsProcessed(0);
+      setBytesRead(0);
+      setAgentScript(null);
       setTotals({ totalPnl: 0, totalCommission: 0, netPnl: 0 });
       setProcessedTrades([]);
+      setPhase("writing");
 
-      const session = createParsePlanSession();
-      const all: ExecutedTrade[] = [];
-      let totalPnl = 0;
-      let totalCommission = 0;
-
-      for (let offset = 0; offset < initialTrades.length; offset += PARSE_PLAN_CHUNK_SIZE) {
-        if (cancelled) return;
-        const { trades } = executeParsePlanChunk(
-          initialTrades.slice(offset, offset + PARSE_PLAN_CHUNK_SIZE),
-          plan,
-          session,
-        );
-        for (const trade of trades) {
-          all.push(trade);
-          totalPnl += trade.pnl || 0;
-          totalCommission += trade.commission || 0;
-        }
-        const processed = Math.min(offset + PARSE_PLAN_CHUNK_SIZE, initialTrades.length);
-        setRowsProcessed(processed);
-        setFormattedCount(all.length);
-        setPreviewTrades(all.slice(0, PARSE_PREVIEW_LIMIT));
-        setTotals({
-          totalPnl,
-          totalCommission,
-          netPnl: totalPnl - totalCommission,
-        });
-        await yieldToMain();
-      }
-
-      if (cancelled) return;
-      setProcessedTrades(all);
-      setIsParsing(false);
-      setIsLoading(false);
-      if (all.length === 0) {
-        setError(t("import.processing.noTradesFormatted"));
-      }
-    };
-
-    const start = async () => {
-      const plan = resolveParsePlan(headers, mappings);
-      if (isParsePlanComplete(plan)) {
-        await runChunks(plan);
-        return;
-      }
-
-      if (askedAiRef.current) return;
-      askedAiRef.current = true;
-      setIsLoading(true);
-      setError(null);
-      const missing = missingRequiredFields(plan);
+      const plan = planFromHeaders(headers);
+      const sourceRows = initialTrades;
 
       try {
-        const response = await fetch("/api/ai/import-parse-plan", {
+        if (isParsePlanComplete(plan)) {
+          setPhase("reading");
+          if (importFile) {
+            await runFileWithPlan(plan, importFile);
+            return;
+          }
+          await runPlanChunks(plan, sourceRows);
+          return;
+        }
+
+        setPhase("checking");
+        const script = await obtainAgentParseScript({
+          headers,
+          rows: sourceRows.slice(0, 8),
+          peekText,
+        });
+        if (cancelled) return;
+        setPhase("reading");
+        if (importFile) {
+          await runFileWithScript(script, importFile);
+          return;
+        }
+        const response = await fetch("/api/import/parse-chunk", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            headers,
-            rows: initialTrades.slice(0, 8),
-          }),
+          body: JSON.stringify({ script, rows: sourceRows, session: {} }),
         });
         const raw = await response.text();
+        if (!response.ok) throw new Error(raw);
+        const result = JSON.parse(raw) as { trades: ExecutedTrade[] };
+        applyTrades([], result.trades, sourceRows.length, 0);
+        finish(result.trades);
+      } catch (caught) {
         if (cancelled) return;
-        if (!response.ok) {
-          const code = parseFormatTradesApiError(raw).code;
-          setError(
-            code === AI_UNAVAILABLE_ERROR
-              ? t("import.processing.aiUnavailable")
-              : t("import.processing.noTradesFormatted"),
-          );
-          setProcessedTrades([]);
-          setIsLoading(false);
-          return;
-        }
-        const aiPlan = planFromAiResponse(headers, JSON.parse(raw));
-        if (!isParsePlanComplete(aiPlan)) {
-          setError(
-            t("import.parse.missingColumns", {
-              columns: missing.join(", "),
-            }),
-          );
-          setProcessedTrades([]);
-          setIsLoading(false);
-          return;
-        }
-        await runChunks(aiPlan);
-      } catch {
-        if (cancelled) return;
-        setError(t("import.processing.noTradesFormatted"));
+        const code =
+          caught instanceof Error
+            ? parseFormatTradesApiError(caught.message).code || caught.message
+            : "";
+        setError(
+          code === AI_UNAVAILABLE_ERROR
+            ? t("import.processing.aiUnavailable")
+            : t("import.processing.noTradesFormatted"),
+        );
         setProcessedTrades([]);
+        setIsParsing(false);
         setIsLoading(false);
+        setPhase("error");
       }
     };
 
@@ -194,7 +279,16 @@ export function FormatPreview({
     return () => {
       cancelled = true;
     };
-  }, [headers, mappings, initialTrades, setProcessedTrades, setIsLoading, t]);
+  }, [
+    headers,
+    initialTrades,
+    importFile,
+    delimiter,
+    peekText,
+    setProcessedTrades,
+    setIsLoading,
+    t,
+  ]);
 
   const columns = useMemo<ColumnDef<Partial<Trade>>[]>(
     () => [
@@ -312,15 +406,30 @@ export function FormatPreview({
             })}
           </p>
           <p className="text-xs text-muted-foreground">
-            {isParsing
-              ? t("import.parse.rowsProcessed", {
-                  processed: rowsProcessed,
-                  total: totalRows,
-                })
-              : parseKind === "orders"
-                ? t("import.processing.ordersPaired")
-                : t("import.processing.parsedFromColumns")}
+            {phase === "writing"
+              ? t("import.processing.writingParser")
+              : phase === "checking"
+                ? t("import.processing.checkingSample")
+                : isParsing
+                  ? t("import.parse.rowsRead", {
+                      processed: rowsProcessed,
+                    })
+                  : parseKind === "script"
+                    ? t("import.processing.parserFromAgent")
+                    : parseKind === "orders"
+                      ? t("import.processing.ordersPaired")
+                      : t("import.processing.parsedFromColumns")}
           </p>
+          {agentScript && (
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer">
+                {t("import.parse.scriptLabel")}
+              </summary>
+              <pre className="mt-2 max-h-40 overflow-auto rounded-sm bg-muted/50 p-2 font-mono text-[11px] leading-relaxed">
+                {agentScript}
+              </pre>
+            </details>
+          )}
           {formattedCount > PARSE_PREVIEW_LIMIT && (
             <p className="text-xs text-muted-foreground">
               {t("import.table.showingFirst", {
@@ -334,7 +443,11 @@ export function FormatPreview({
           <div className="flex items-center gap-2">
             <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
             <span className="text-xs font-medium text-green-600">
-              {t("import.processing.parsing")}
+              {phase === "writing"
+                ? t("import.processing.writingParser")
+                : phase === "checking"
+                  ? t("import.processing.checkingSample")
+                  : t("import.processing.readingFile")}
             </span>
           </div>
         )}
@@ -363,19 +476,27 @@ export function FormatPreview({
         </Alert>
       )}
 
-      {totalRows > 0 && (
+      {(fileSize > 0 || rowsProcessed > 0 || isParsing) && (
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>{t("import.processing.processingProgress")}</span>
             <span>
-              {totalRows === 0
-                ? 0
-                : Math.round((rowsProcessed / totalRows) * 100)}
+              {fileSize > 0
+                ? Math.round((Math.min(bytesRead, fileSize) / fileSize) * 100)
+                : isParsing
+                  ? 0
+                  : 100}
               %
             </span>
           </div>
           <Progress
-            value={totalRows === 0 ? 0 : (rowsProcessed / totalRows) * 100}
+            value={
+              fileSize > 0
+                ? (Math.min(bytesRead, fileSize) / fileSize) * 100
+                : isParsing
+                  ? 0
+                  : 100
+            }
             className="h-2"
           />
         </div>

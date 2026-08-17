@@ -583,11 +583,17 @@ export default {
     parseReady: "Prêt à importer",
     emptyTable: "Aucun trade à revoir pour le moment",
     parsing: "Analyse",
+    writingParser: "Rédaction d'un parseur",
+    checkingSample: "Vérification des premières lignes",
+    readingFile: "Lecture du fichier",
+    parserFromAgent: "Un parseur a été écrit pour ce fichier",
   },
   "import.parse.tradesFormatted": "{formatted} trades formatés",
   "import.parse.missingColumns":
     "Associez ces colonnes pour continuer : {columns}",
   "import.parse.rowsProcessed": "{processed} lignes sur {total}",
+  "import.parse.rowsRead": "{processed} lignes lues",
+  "import.parse.scriptLabel": "Lecture de ce fichier",
   "import.table.instrument": "Instrument",
   "import.table.entryDate": "Date d'entrée",
   "import.table.closeDate": "Date de sortie",
@@ -619,7 +625,8 @@ export default {
   "import.type.rithmicProtocolSync.details":
     "Importez l'historique d'ordres via R | Protocol API depuis les serveurs Deltalytix (TypeScript), comme Tradovate et DxFeed.",
   "import.type.csvAi.name": "CSV avec IA",
-  "import.type.csvAi.description": "N'importe quel fichier CSV",
+  "import.type.csvAi.description":
+    "N'importe quel export — un parseur est écrit pour le fichier",
   "import.type.rithmicPerf.name": "Performance Rithmic",
   "import.type.rithmicPerf.description": "CSV Performance Rithmic",
   "import.type.rithmicPerf.details":

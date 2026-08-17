@@ -1,50 +1,42 @@
 ---
 name: import-file-parse
 description: >-
-  Parse any trading CSV (closed trades or order fills) through Deltalytix
-  Intelligent Import. Use when testing CSV with AI, reproducing import bugs,
-  adding header aliases, or deciding whether a file needs AI. Do not embed
-  Vercel Eve in this flow.
+  Parse any trading export through Deltalytix Intelligent Import. An agent
+  writes a parseChunk script when headers are not enough. Use when testing
+  CSV with AI, adding parse-script contracts, or running chunks in a Vercel
+  Sandbox. Column mapping is not part of this flow.
 ---
 
 # Import file parse
 
-Intelligent Import turns a spreadsheet into `Trade` rows with a **parse plan**, not a row-by-row LLM rewrite.
-
-Eve is the right *idea* (inspect the file, write a script, run it, repair the script). It is the wrong *runtime* here: this is an existing Next.js dialog that must work on self-host/VPS without Vercel Sandbox, Workflows, or AI Gateway. Keep the plan interpreter in-process.
+Intelligent Import is web-only. The user drops a file. We peek headers + a few rows, write a parser, prove it on the sample, then stream the file in chunks. There is no column-mapping step.
 
 ## Pipeline
 
-1. `planFromHeaders` / `planFromMappings` in [`lib/import/parse-plan.ts`](../../../lib/import/parse-plan.ts) build a JSON plan (column indexes + `closed-trades` vs `orders`).
-2. `executeParsePlanChunk` runs that plan in slices of `PARSE_PLAN_CHUNK_SIZE` (2500 rows). Closed-trade rows are independent. Order fills keep open lots on a `ParsePlanSession` so a buy in chunk 1 can close in a later chunk. An empty chunk is not success or failure.
-3. `/api/ai/import-parse-plan` is only for files the heuristic cannot map. It sees at most 8 sample rows. A dummy or missing `OPENAI_API_KEY` must 503 with `AI_UNAVAILABLE`.
-4. Review Trades (`FormatPreview`) walks chunks and yields to the main thread. The table shows the first `PARSE_PREVIEW_LIMIT` (200) trades. The full list is stored only after parsing finishes, for Save. Do not bring back batched `useObject` formatting, and do not call `executeParsePlan` on the whole file in the UI.
+1. `peekDelimitedFile` reads the first 32KB only. The `File` stays a blob. Do not `readAsText` the whole file.
+2. If `planFromHeaders` is complete, `executeParsePlanChunk` runs locally while Papa streams the `File`.
+3. Otherwise `/api/ai/import-parse-script` writes `function parseChunk(rows, session)`. `/api/import/parse-chunk` runs it in a Vercel Sandbox when OIDC/token creds exist, or a sealed Node `vm` in local/dev. Repair up to 3 times if the sample yields no trades.
+4. One sandbox per import (`sandboxName`), not one VM per chunk. Empty chunks are not success or failure.
+5. Review shows the first 200 trades. Save still holds the full trade list (batch save is a follow-up).
 
-## How to verify a file
+Do not bring back batched `useObject` row formatting or a mapping table on this path.
+
+## Script contract
+
+See `PARSE_SCRIPT_CONTRACT` in [`lib/import/parse-script.ts`](../../../lib/import/parse-script.ts). The function must be named `parseChunk`, take `(rows, session)`, and return `{ trades, session, skipped }`. No `import` / `require` / `fetch`.
+
+## How to verify
 
 ```ts
-import {
-  createParsePlanSession,
-  executeParsePlanChunk,
-  planFromHeaders,
-} from "@/lib/import/parse-plan";
+import { runInVm } from "@/lib/import/run-parse-script";
 
-const plan = planFromHeaders(headers);
-const session = createParsePlanSession();
-const { trades } = executeParsePlanChunk(rows.slice(0, 2500), plan, session);
+const { trades } = runInVm(script, sampleRows, {});
 ```
 
-Add a unit test in `lib/import/parse-plan.test.ts` for a new layout before changing UI.
-
-UI path: Connections → Upload a file → CSV with AI → map columns (pre-filled) → account → Review Trades. Expect trades in the table without Start Processing. Save stays disabled until at least one trade has `entryDate`.
-
-## When to extend what
+UI path: Connections → Upload a file → CSV with AI → account → Review Trades. Expect trades without Map Columns or Start Processing.
 
 | Change | Where |
 | --- | --- |
-| New column name | `HEADER_ALIASES` in `parse-plan.ts` |
-| New date/number quirk | `parseDateToIso` / `parseNumber` |
-| New fill-pairing rule | `pairOrderFills` |
-| Weird files that still need a model | `app/api/ai/import-parse-plan` prompt/schema |
-
-Do not add `eve`, `agent/`, or a sandbox eval of model-generated JavaScript to this import path.
+| New column name (common CSVs) | `HEADER_ALIASES` in `parse-plan.ts` |
+| Agent prompt / contract | `parse-script.ts`, `app/api/ai/import-parse-script` |
+| Sandbox vs vm | `run-parse-script.ts` |
