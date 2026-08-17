@@ -538,7 +538,7 @@ export default {
     emptyTable: "No trades to review yet",
     parsing: "Parsing",
   },
-  "import.parse.tradesFormatted": "{formatted} of {total} trades formatted",
+  "import.parse.tradesFormatted": "{formatted} trades formatted",
   "import.parse.missingColumns": "Map these columns to continue: {columns}",
   "import.parse.rowsProcessed": "{processed} of {total} rows",
 

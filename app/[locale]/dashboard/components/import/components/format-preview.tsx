@@ -309,7 +309,6 @@ export function FormatPreview({
           <p className="text-sm text-muted-foreground">
             {t("import.parse.tradesFormatted", {
               formatted: formattedCount,
-              total: totalRows,
             })}
           </p>
           <p className="text-xs text-muted-foreground">

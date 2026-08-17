@@ -584,7 +584,7 @@ export default {
     emptyTable: "Aucun trade à revoir pour le moment",
     parsing: "Analyse",
   },
-  "import.parse.tradesFormatted": "{formatted} sur {total} trades formatés",
+  "import.parse.tradesFormatted": "{formatted} trades formatés",
   "import.parse.missingColumns":
     "Associez ces colonnes pour continuer : {columns}",
   "import.parse.rowsProcessed": "{processed} lignes sur {total}",
