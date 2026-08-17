@@ -1,41 +1,45 @@
 import { describe, expect, it } from 'vitest'
-import {
-  authPropfirmMatchesSelection,
-  buildHistoricalHostForPropFirm,
-  buildTradingHostForPropFirm,
-  getDxFeedPropFirm,
-  getDxFeedPropFirmByAuthName,
-  getEnabledDxFeedPropFirms,
-} from './dxfeed-propfirms'
+import { detectDxFeedPropFirmFromHost } from './dxfeed-propfirms'
 
-describe('dxfeed prop firms', () => {
-  it('enables My Funded Futures with its dxFeed endpoints', () => {
-    const firm = getDxFeedPropFirm('myfundedfutures')
-
-    expect(firm).toMatchObject({
-      name: 'My Funded Futures',
-      website: 'https://dxfeed.myfundedfutures.com',
-      enabled: true,
+describe('detectDxFeedPropFirmFromHost', () => {
+  it('reads the firm from a public dxFeed subdomain', () => {
+    expect(detectDxFeedPropFirmFromHost('https://dxfeed.hyperticks.com')).toEqual({
+      id: 'hyperticks',
+      name: 'Hyperticks',
     })
-    expect(buildHistoricalHostForPropFirm(firm!)).toBe(
-      'https://dxfeed.myfundedfutures.com',
-    )
-    expect(buildTradingHostForPropFirm(firm!)).toBe(
-      'https://dxfeed.myfundedfutures.com',
-    )
+    expect(
+      detectDxFeedPropFirmFromHost('https://volumetrica.miltraders.com'),
+    ).toEqual({
+      id: 'miltraders',
+      name: 'Miltraders',
+    })
+    expect(
+      detectDxFeedPropFirmFromHost('https://dxfeed.myfundedfutures.com'),
+    ).toEqual({
+      id: 'myfundedfutures',
+      name: 'Myfundedfutures',
+    })
   })
 
-  it('resolves My Funded Futures from normalized ids and auth names', () => {
-    expect(getDxFeedPropFirm('My Funded Futures')?.id).toBe('myfundedfutures')
-    expect(getDxFeedPropFirmByAuthName('MyFundedFutures')?.id).toBe(
-      'myfundedfutures',
-    )
-    expect(getDxFeedPropFirmByAuthName('MFFU')?.id).toBe('myfundedfutures')
+  it('reads the firm from Volumetrica infrastructure hosts', () => {
     expect(
-      authPropfirmMatchesSelection('MFFU', getDxFeedPropFirm('myfundedfutures')!),
-    ).toBe(true)
-    expect(getEnabledDxFeedPropFirms()).toContainEqual(
-      expect.objectContaining({ id: 'myfundedfutures' }),
-    )
+      detectDxFeedPropFirmFromHost('https://hyperticks.volumetricaprop.com'),
+    ).toEqual({
+      id: 'hyperticks',
+      name: 'Hyperticks',
+    })
+    expect(
+      detectDxFeedPropFirmFromHost(
+        'https://hyperticks.trading.volumetricaprop.com',
+      ),
+    ).toEqual({
+      id: 'hyperticks',
+      name: 'Hyperticks',
+    })
+  })
+
+  it('returns null when the host is missing or not a firm site', () => {
+    expect(detectDxFeedPropFirmFromHost(null)).toBeNull()
+    expect(detectDxFeedPropFirmFromHost('https://volumetricaprop.com')).toBeNull()
   })
 })

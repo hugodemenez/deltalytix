@@ -105,7 +105,6 @@ export function ConnectServiceModal({
               <DxFeedSync
                 initialShowAccountsManager={false}
                 initialEmail={prefill?.accountId}
-                initialPropFirmName={prefill?.displayName}
                 onConnected={onClose}
               />
             </div>

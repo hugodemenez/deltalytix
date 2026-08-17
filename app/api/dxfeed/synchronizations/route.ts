@@ -6,9 +6,8 @@ import {
   removeDxFeedToken,
 } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/actions'
 import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
-import { coerceDxFeedHistoricalHostForSync } from '@/lib/dxfeed-historical-host'
-import { getDxFeedPropFirm } from '@/lib/dxfeed-propfirms'
 import { isDxFeedAccessTokenExpired } from '@/lib/dxfeed-token'
+import { detectDxFeedPropFirmFromHost } from '@/lib/dxfeed-propfirms'
 
 export async function GET() {
   try {
@@ -33,7 +32,6 @@ export async function GET() {
               accessToken?: string
               historicalHost?: string
               accountNumbers?: string[]
-              propFirmId?: string
               propfirmName?: string
               tokenExpirationSource?: 'provider' | 'jwt'
             }
@@ -47,8 +45,10 @@ export async function GET() {
               },
             )
 
-            const firm = getDxFeedPropFirm(parsed.propFirmId)
-            propFirmName = firm?.name ?? parsed.propfirmName ?? null
+            propFirmName =
+              parsed.propfirmName ??
+              detectDxFeedPropFirmFromHost(parsed.historicalHost)?.name ??
+              null
 
             if (Array.isArray(parsed.accountNumbers)) {
               accountNumbers = parsed.accountNumbers
@@ -58,16 +58,11 @@ export async function GET() {
               !tokenExpired &&
               accountNumbers.length === 0 &&
               typeof parsed.accessToken === 'string' &&
-              typeof parsed.historicalHost === 'string' &&
-              firm
+              typeof parsed.historicalHost === 'string'
             ) {
-              const historicalHost = coerceDxFeedHistoricalHostForSync(
-                parsed.historicalHost,
-                firm,
-              )
               const accountsResult = await getDxFeedAccounts(
                 parsed.accessToken,
-                historicalHost,
+                parsed.historicalHost,
               )
               if (!accountsResult.ok && accountsResult.unauthorized) {
                 apiUnauthorized = true

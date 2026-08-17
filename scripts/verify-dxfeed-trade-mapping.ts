@@ -4,7 +4,7 @@
  */
 
 import 'dotenv/config'
-import { resolveDxFeedHistoricalHost } from '../lib/dxfeed-historical-host'
+import { normalizeDxFeedHistoricalHost } from '../lib/dxfeed-historical-host'
 
 const DXFEED_AUTH_URL = process.env.DXFEED_AUTH_URL
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
@@ -44,15 +44,15 @@ async function main() {
     }),
   })
   const authData = await authRes.json()
-  const token = authData.tradingRestReportToken || authData.token
-  const host = resolveDxFeedHistoricalHost(authData, authRes.headers, {
-    propFirmId: process.env.DXFEED_PROP_FIRM_ID || 'miltraders',
-  })
+  const token = authData.tradingRestReportToken || authData.data?.tradingRestReportToken || authData.token
+  const host = normalizeDxFeedHistoricalHost(
+    authData.tradingRestReportHost || authData.data?.tradingRestReportHost,
+  )
   if (!host) {
-    console.error('Could not resolve historical host')
+    console.error('Could not resolve historical host from auth response')
     process.exit(1)
   }
-  console.log('propfirm:', authData.propfirmName, 'host:', host)
+  console.log('propfirm:', authData.propfirmName || authData.data?.propfirmName, 'host:', host)
 
   const accountsRes = await fetch(`${host}/api/historical/TradingAccount/List`, {
     headers: { Authorization: token, Accept: 'application/json' },

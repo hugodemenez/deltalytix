@@ -3,7 +3,7 @@ import { getUserId } from '@/server/auth'
 import { prisma } from '@/lib/prisma'
 import { toConnectionView } from '@/lib/connection-view'
 import { decryptConnectionToken } from '@/lib/connection-token-crypto'
-import { getDxFeedPropFirm } from '@/lib/dxfeed-propfirms'
+import { detectDxFeedPropFirmFromHost } from '@/lib/dxfeed-propfirms'
 import type { Connection } from '@/prisma/generated/prisma/client'
 import type {
   ConnectionsPageAccount,
@@ -67,11 +67,13 @@ function getDxFeedPropFirmName(token: string | null): string | null {
   if (!plaintext) return null
   try {
     const parsed = JSON.parse(plaintext) as {
-      propFirmId?: string
+      historicalHost?: string
       propfirmName?: string
     }
     return (
-      getDxFeedPropFirm(parsed.propFirmId)?.name ?? parsed.propfirmName ?? null
+      parsed.propfirmName ??
+      detectDxFeedPropFirmFromHost(parsed.historicalHost)?.name ??
+      null
     )
   } catch {
     return null
