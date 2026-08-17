@@ -16,17 +16,22 @@ Eve is the right *idea* (inspect the file, write a script, run it, repair the sc
 ## Pipeline
 
 1. `planFromHeaders` / `planFromMappings` in [`lib/import/parse-plan.ts`](../../../lib/import/parse-plan.ts) build a JSON plan (column indexes + `closed-trades` vs `orders`).
-2. `executeParsePlan` runs that plan on every row. Order files are FIFO-paired.
-3. `/api/ai/import-parse-plan` is only for files the heuristic cannot map. It returns a plan, never formatted rows. A dummy or missing `OPENAI_API_KEY` must 503 with `AI_UNAVAILABLE`.
-4. Review Trades (`FormatPreview`) executes the plan immediately. Do not bring back batched `useObject` formatting.
+2. `executeParsePlanChunk` runs that plan in slices of `PARSE_PLAN_CHUNK_SIZE` (2500 rows). Closed-trade rows are independent. Order fills keep open lots on a `ParsePlanSession` so a buy in chunk 1 can close in a later chunk. An empty chunk is not success or failure.
+3. `/api/ai/import-parse-plan` is only for files the heuristic cannot map. It sees at most 8 sample rows. A dummy or missing `OPENAI_API_KEY` must 503 with `AI_UNAVAILABLE`.
+4. Review Trades (`FormatPreview`) walks chunks and yields to the main thread. The table shows the first `PARSE_PREVIEW_LIMIT` (200) trades. The full list is stored only after parsing finishes, for Save. Do not bring back batched `useObject` formatting, and do not call `executeParsePlan` on the whole file in the UI.
 
 ## How to verify a file
 
 ```ts
-import { executeParsePlan, planFromHeaders } from "@/lib/import/parse-plan";
+import {
+  createParsePlanSession,
+  executeParsePlanChunk,
+  planFromHeaders,
+} from "@/lib/import/parse-plan";
 
 const plan = planFromHeaders(headers);
-const { trades } = executeParsePlan(rows, plan);
+const session = createParsePlanSession();
+const { trades } = executeParsePlanChunk(rows.slice(0, 2500), plan, session);
 ```
 
 Add a unit test in `lib/import/parse-plan.test.ts` for a new layout before changing UI.

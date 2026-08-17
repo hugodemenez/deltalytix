@@ -28,13 +28,23 @@ import {
   parseFormatTradesApiError,
 } from "@/lib/ai/openai-availability";
 import {
-  executeParsePlan,
+  PARSE_PLAN_CHUNK_SIZE,
+  PARSE_PREVIEW_LIMIT,
+  createParsePlanSession,
+  executeParsePlanChunk,
   isParsePlanComplete,
   missingRequiredFields,
   resolveParsePlan,
+  type ExecutedTrade,
   type ParsePlan,
 } from "@/lib/import/parse-plan";
 import { planFromAiResponse } from "@/lib/import/plan-from-ai";
+
+function yieldToMain(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
 
 interface FormatPreviewProps {
   trades: string[][];
@@ -48,7 +58,7 @@ interface FormatPreviewProps {
 
 export function FormatPreview({
   trades: initialTrades,
-  processedTrades,
+  processedTrades: _processedTrades,
   setProcessedTrades,
   setIsLoading,
   headers,
@@ -60,49 +70,95 @@ export function FormatPreview({
   const [parseKind, setParseKind] = useState<"closed-trades" | "orders" | null>(
     null,
   );
+  const [previewTrades, setPreviewTrades] = useState<Partial<Trade>[]>([]);
+  const [formattedCount, setFormattedCount] = useState(0);
+  const [rowsProcessed, setRowsProcessed] = useState(0);
+  const [isParsing, setIsParsing] = useState(false);
+  const [totals, setTotals] = useState({
+    totalPnl: 0,
+    totalCommission: 0,
+    netPnl: 0,
+  });
   const askedAiRef = useRef(false);
 
-  const validTrades = useMemo(
-    () => initialTrades.filter((row) => row.length > 0 && row[0] !== ""),
-    [initialTrades],
-  );
-
-  const applyPlan = (plan: ParsePlan) => {
-    const result = executeParsePlan(validTrades, plan);
-    setParseKind(result.kind);
-    setProcessedTrades(result.trades);
-    return result;
-  };
+  const totalRows = initialTrades.length;
 
   useEffect(() => {
-    const plan = resolveParsePlan(headers, mappings);
-    if (isParsePlanComplete(plan)) {
-      const result = applyPlan(plan);
+    let cancelled = false;
+
+    const runChunks = async (plan: ParsePlan) => {
+      setParseKind(plan.kind);
       setError(null);
+      setIsParsing(true);
+      setIsLoading(true);
+      setPreviewTrades([]);
+      setFormattedCount(0);
+      setRowsProcessed(0);
+      setTotals({ totalPnl: 0, totalCommission: 0, netPnl: 0 });
+      setProcessedTrades([]);
+
+      const session = createParsePlanSession();
+      const all: ExecutedTrade[] = [];
+      let totalPnl = 0;
+      let totalCommission = 0;
+
+      for (let offset = 0; offset < initialTrades.length; offset += PARSE_PLAN_CHUNK_SIZE) {
+        if (cancelled) return;
+        const { trades } = executeParsePlanChunk(
+          initialTrades.slice(offset, offset + PARSE_PLAN_CHUNK_SIZE),
+          plan,
+          session,
+        );
+        for (const trade of trades) {
+          all.push(trade);
+          totalPnl += trade.pnl || 0;
+          totalCommission += trade.commission || 0;
+        }
+        const processed = Math.min(offset + PARSE_PLAN_CHUNK_SIZE, initialTrades.length);
+        setRowsProcessed(processed);
+        setFormattedCount(all.length);
+        setPreviewTrades(all.slice(0, PARSE_PREVIEW_LIMIT));
+        setTotals({
+          totalPnl,
+          totalCommission,
+          netPnl: totalPnl - totalCommission,
+        });
+        await yieldToMain();
+      }
+
+      if (cancelled) return;
+      setProcessedTrades(all);
+      setIsParsing(false);
       setIsLoading(false);
-      if (result.trades.length === 0) {
+      if (all.length === 0) {
         setError(t("import.processing.noTradesFormatted"));
       }
-      return;
-    }
+    };
 
-    if (askedAiRef.current) return;
-    askedAiRef.current = true;
-    setIsLoading(true);
-    setError(null);
+    const start = async () => {
+      const plan = resolveParsePlan(headers, mappings);
+      if (isParsePlanComplete(plan)) {
+        await runChunks(plan);
+        return;
+      }
 
-    const missing = missingRequiredFields(plan);
-    void (async () => {
+      if (askedAiRef.current) return;
+      askedAiRef.current = true;
+      setIsLoading(true);
+      setError(null);
+      const missing = missingRequiredFields(plan);
+
       try {
         const response = await fetch("/api/ai/import-parse-plan", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             headers,
-            rows: validTrades.slice(0, 8),
+            rows: initialTrades.slice(0, 8),
           }),
         });
         const raw = await response.text();
+        if (cancelled) return;
         if (!response.ok) {
           const code = parseFormatTradesApiError(raw).code;
           setError(
@@ -111,6 +167,7 @@ export function FormatPreview({
               : t("import.processing.noTradesFormatted"),
           );
           setProcessedTrades([]);
+          setIsLoading(false);
           return;
         }
         const aiPlan = planFromAiResponse(headers, JSON.parse(raw));
@@ -121,24 +178,23 @@ export function FormatPreview({
             }),
           );
           setProcessedTrades([]);
+          setIsLoading(false);
           return;
         }
-        const result = applyPlan(aiPlan);
-        if (result.trades.length === 0) {
-          setError(t("import.processing.noTradesFormatted"));
-        }
+        await runChunks(aiPlan);
       } catch {
+        if (cancelled) return;
         setError(t("import.processing.noTradesFormatted"));
         setProcessedTrades([]);
-      } finally {
         setIsLoading(false);
       }
-    })();
-  }, [headers, mappings, validTrades, setProcessedTrades, setIsLoading, t]);
+    };
 
-  const formattedTradeCount = processedTrades.filter(
-    (trade) => trade.entryDate,
-  ).length;
+    void start();
+    return () => {
+      cancelled = true;
+    };
+  }, [headers, mappings, initialTrades, setProcessedTrades, setIsLoading, t]);
 
   const columns = useMemo<ColumnDef<Partial<Trade>>[]>(
     () => [
@@ -237,7 +293,7 @@ export function FormatPreview({
   );
 
   const table = useReactTable({
-    data: processedTrades,
+    data: previewTrades,
     columns,
     getCoreRowModel: getCoreRowModel(),
     defaultColumn: {
@@ -246,39 +302,44 @@ export function FormatPreview({
     },
   });
 
-  const totals = useMemo(() => {
-    const totalPnl = processedTrades.reduce(
-      (sum, trade) => sum + (trade.pnl || 0),
-      0,
-    );
-    const totalCommission = processedTrades.reduce(
-      (sum, trade) => sum + (trade.commission || 0),
-      0,
-    );
-    return {
-      totalPnl,
-      totalCommission,
-      netPnl: totalPnl - totalCommission,
-    };
-  }, [processedTrades]);
-
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
           <p className="text-sm text-muted-foreground">
             {t("import.parse.tradesFormatted", {
-              formatted: formattedTradeCount,
-              total: validTrades.length,
+              formatted: formattedCount,
+              total: totalRows,
             })}
           </p>
           <p className="text-xs text-muted-foreground">
-            {parseKind === "orders"
-              ? t("import.processing.ordersPaired")
-              : t("import.processing.parsedFromColumns")}
+            {isParsing
+              ? t("import.parse.rowsProcessed", {
+                  processed: rowsProcessed,
+                  total: totalRows,
+                })
+              : parseKind === "orders"
+                ? t("import.processing.ordersPaired")
+                : t("import.processing.parsedFromColumns")}
           </p>
+          {formattedCount > PARSE_PREVIEW_LIMIT && (
+            <p className="text-xs text-muted-foreground">
+              {t("import.table.showingFirst", {
+                count: previewTrades.length,
+                total: formattedCount,
+              })}
+            </p>
+          )}
         </div>
-        {formattedTradeCount > 0 && !error && (
+        {isParsing && (
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
+            <span className="text-xs font-medium text-green-600">
+              {t("import.processing.parsing")}
+            </span>
+          </div>
+        )}
+        {!isParsing && formattedCount > 0 && !error && (
           <div className="flex items-center gap-2">
             <div className="h-2 w-2 rounded-full bg-green-500"></div>
             <span className="text-xs font-medium text-green-600">
@@ -303,23 +364,19 @@ export function FormatPreview({
         </Alert>
       )}
 
-      {validTrades.length > 0 && (
+      {totalRows > 0 && (
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>{t("import.processing.processingProgress")}</span>
             <span>
-              {validTrades.length === 0
+              {totalRows === 0
                 ? 0
-                : Math.round((formattedTradeCount / validTrades.length) * 100)}
+                : Math.round((rowsProcessed / totalRows) * 100)}
               %
             </span>
           </div>
           <Progress
-            value={
-              validTrades.length === 0
-                ? 0
-                : (formattedTradeCount / validTrades.length) * 100
-            }
+            value={totalRows === 0 ? 0 : (rowsProcessed / totalRows) * 100}
             className="h-2"
           />
         </div>
@@ -386,7 +443,7 @@ export function FormatPreview({
             </Table>
           </ScrollArea>
 
-          {processedTrades.length > 0 && (
+          {formattedCount > 0 && (
             <div className="border-t bg-muted/30">
               <Table>
                 <TableBody>

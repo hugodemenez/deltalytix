@@ -1,7 +1,8 @@
 /**
  * Deterministic import "script": infer a parse plan from headers (or AI),
- * then run it on every row. This is the Eve idea — inspect, write a plan,
+ * then run it in chunks. This is the Eve idea — inspect, write a plan,
  * execute, repair — without embedding the Eve runtime or eval'ing model JS.
+ * Never parse a multi-million-row file in one synchronous call from the UI.
  */
 import type { Trade } from "@/prisma/generated/prisma/browser";
 
@@ -48,6 +49,34 @@ export type ExecuteParsePlanResult = {
   missingRequired: ParsePlanField[];
   skippedRows: number;
 };
+
+/** Rows per chunk. Large enough to stay fast, small enough to yield the UI. */
+export const PARSE_PLAN_CHUNK_SIZE = 2_500;
+
+/** Rows shown in Review Trades. The full set is kept for save. */
+export const PARSE_PREVIEW_LIMIT = 200;
+
+type OpenLot = {
+  quantity: number;
+  price: number;
+  date: string;
+  commission: number;
+  id: string;
+};
+
+type LotBook = {
+  longs: OpenLot[];
+  shorts: OpenLot[];
+};
+
+export type ParsePlanSession = {
+  skippedRows: number;
+  books: Map<string, LotBook>;
+};
+
+export function createParsePlanSession(): ParsePlanSession {
+  return { skippedRows: 0, books: new Map() };
+}
 
 const HEADER_ALIASES: Record<ParsePlanField, string[]> = {
   instrument: ["instrument", "symbol", "ticker", "sym", "contract", "product"],
@@ -303,46 +332,38 @@ function secondsBetween(startIso: string, endIso: string): number {
   return Math.max(0, Math.round((end - start) / 1000));
 }
 
-export function executeParsePlan(
-  rows: string[][],
-  plan: ParsePlan,
-): ExecuteParsePlanResult {
-  const missingRequired = missingRequiredFields(plan);
-  if (missingRequired.length > 0) {
-    return { trades: [], kind: plan.kind, missingRequired, skippedRows: rows.length };
+type ParsedRow =
+  | { type: "skip" }
+  | { type: "trade"; trade: ExecutedTrade }
+  | { type: "fill"; fill: OrderFill };
+
+function parseRow(row: string[], plan: ParsePlan): ParsedRow {
+  if (!row.length || row.every((value) => !value?.trim())) {
+    return { type: "skip" };
   }
 
-  const fills: OrderFill[] = [];
-  const trades: ExecutedTrade[] = [];
-  let skippedRows = 0;
+  const rawQuantity = parseNumber(cell(row, plan.columns.quantity));
+  const instrument = normalizeInstrument(cell(row, plan.columns.instrument));
+  const entryDate = parseDateToIso(cell(row, plan.columns.entryDate));
+  const entryPrice = cell(row, plan.columns.entryPrice).trim();
 
-  for (const row of rows) {
-    if (!row.length || row.every((value) => !value?.trim())) {
-      skippedRows += 1;
-      continue;
-    }
+  if (rawQuantity == null || !instrument || !entryDate || !entryPrice) {
+    return { type: "skip" };
+  }
 
-    const rawQuantity = parseNumber(cell(row, plan.columns.quantity));
-    const instrument = normalizeInstrument(cell(row, plan.columns.instrument));
-    const entryDate = parseDateToIso(cell(row, plan.columns.entryDate));
-    const entryPrice = cell(row, plan.columns.entryPrice).trim();
+  const side = normalizeSide(
+    cell(row, plan.columns.side),
+    rawQuantity,
+    plan.quantitySignIsSide,
+  );
+  const quantity = Math.abs(rawQuantity);
+  const accountNumber = cell(row, plan.columns.accountNumber).trim();
+  const commission = parseNumber(cell(row, plan.columns.commission)) ?? 0;
 
-    if (rawQuantity == null || !instrument || !entryDate || !entryPrice) {
-      skippedRows += 1;
-      continue;
-    }
-
-    const side = normalizeSide(
-      cell(row, plan.columns.side),
-      rawQuantity,
-      plan.quantitySignIsSide,
-    );
-    const quantity = Math.abs(rawQuantity);
-    const accountNumber = cell(row, plan.columns.accountNumber).trim();
-    const commission = parseNumber(cell(row, plan.columns.commission)) ?? 0;
-
-    if (plan.kind === "orders") {
-      fills.push({
+  if (plan.kind === "orders") {
+    return {
+      type: "fill",
+      fill: {
         instrument,
         quantity,
         side,
@@ -351,23 +372,24 @@ export function executeParsePlan(
         accountNumber,
         commission,
         id: cell(row, plan.columns.entryId).trim(),
-      });
-      continue;
-    }
+      },
+    };
+  }
 
-    const closeDate = parseDateToIso(cell(row, plan.columns.closeDate));
-    const closePrice = cell(row, plan.columns.closePrice).trim();
-    if (!closeDate || !closePrice) {
-      skippedRows += 1;
-      continue;
-    }
+  const closeDate = parseDateToIso(cell(row, plan.columns.closeDate));
+  const closePrice = cell(row, plan.columns.closePrice).trim();
+  if (!closeDate || !closePrice) {
+    return { type: "skip" };
+  }
 
-    const pnl = parseNumber(cell(row, plan.columns.pnl)) ?? 0;
-    const timeInPosition =
-      parseNumber(cell(row, plan.columns.timeInPosition)) ??
-      secondsBetween(entryDate, closeDate);
+  const pnl = parseNumber(cell(row, plan.columns.pnl)) ?? 0;
+  const timeInPosition =
+    parseNumber(cell(row, plan.columns.timeInPosition)) ??
+    secondsBetween(entryDate, closeDate);
 
-    trades.push({
+  return {
+    type: "trade",
+    trade: {
       instrument,
       quantity,
       side,
@@ -381,19 +403,81 @@ export function executeParsePlan(
       accountNumber,
       entryId: cell(row, plan.columns.entryId).trim() || undefined,
       closeId: cell(row, plan.columns.closeId).trim() || undefined,
-    });
+    },
+  };
+}
+
+function bookKey(fill: OrderFill): string {
+  return `${fill.accountNumber}::${fill.instrument}`;
+}
+
+function getBook(session: ParsePlanSession, fill: OrderFill): LotBook {
+  const key = bookKey(fill);
+  const existing = session.books.get(key);
+  if (existing) return existing;
+  const created: LotBook = { longs: [], shorts: [] };
+  session.books.set(key, created);
+  return created;
+}
+
+/**
+ * Apply one chunk. Closed-trade rows are independent. Order fills keep
+ * open lots on `session` so a buy in chunk 1 can close in chunk 4000.
+ * An empty chunk is not a failure — later rows may still produce trades.
+ */
+export function executeParsePlanChunk(
+  rows: string[][],
+  plan: ParsePlan,
+  session: ParsePlanSession,
+): { trades: ExecutedTrade[] } {
+  const trades: ExecutedTrade[] = [];
+  for (const row of rows) {
+    const parsed = parseRow(row, plan);
+    if (parsed.type === "skip") {
+      session.skippedRows += 1;
+      continue;
+    }
+    if (parsed.type === "trade") {
+      trades.push(parsed.trade);
+      continue;
+    }
+    trades.push(...applyFill(parsed.fill, getBook(session, parsed.fill)));
+  }
+  return { trades };
+}
+
+export function executeParsePlan(
+  rows: string[][],
+  plan: ParsePlan,
+): ExecuteParsePlanResult {
+  const missingRequired = missingRequiredFields(plan);
+  if (missingRequired.length > 0) {
+    return { trades: [], kind: plan.kind, missingRequired, skippedRows: rows.length };
   }
 
-  if (plan.kind === "orders") {
-    return {
-      trades: pairOrderFills(fills),
-      kind: plan.kind,
-      missingRequired,
-      skippedRows,
-    };
+  if (plan.kind === "closed-trades") {
+    const session = createParsePlanSession();
+    const { trades } = executeParsePlanChunk(rows, plan, session);
+    return { trades, kind: plan.kind, missingRequired, skippedRows: session.skippedRows };
   }
 
-  return { trades, kind: plan.kind, missingRequired, skippedRows };
+  const fills: OrderFill[] = [];
+  let skippedRows = 0;
+  for (const row of rows) {
+    const parsed = parseRow(row, plan);
+    if (parsed.type === "skip") {
+      skippedRows += 1;
+      continue;
+    }
+    if (parsed.type === "fill") fills.push(parsed.fill);
+  }
+
+  return {
+    trades: pairOrderFills(fills),
+    kind: plan.kind,
+    missingRequired,
+    skippedRows,
+  };
 }
 
 export type OrderFill = {
@@ -407,18 +491,10 @@ export type OrderFill = {
   id: string;
 };
 
-type OpenLot = {
-  quantity: number;
-  price: number;
-  date: string;
-  commission: number;
-  id: string;
-};
-
 export function pairOrderFills(fills: OrderFill[]): ExecutedTrade[] {
   const groups = new Map<string, OrderFill[]>();
   for (const fill of fills) {
-    const key = `${fill.accountNumber}::${fill.instrument}`;
+    const key = bookKey(fill);
     const list = groups.get(key) ?? [];
     list.push(fill);
     groups.set(key, list);
@@ -427,61 +503,59 @@ export function pairOrderFills(fills: OrderFill[]): ExecutedTrade[] {
   const trades: ExecutedTrade[] = [];
   for (const group of groups.values()) {
     group.sort((a, b) => a.date.localeCompare(b.date));
-    trades.push(...pairFillGroup(group));
+    const book: LotBook = { longs: [], shorts: [] };
+    for (const fill of group) {
+      trades.push(...applyFill(fill, book));
+    }
   }
   return trades;
 }
 
-function pairFillGroup(fills: OrderFill[]): ExecutedTrade[] {
-  const longs: OpenLot[] = [];
-  const shorts: OpenLot[] = [];
+function applyFill(fill: OrderFill, book: LotBook): ExecutedTrade[] {
+  const incoming: OpenLot = {
+    quantity: fill.quantity,
+    price: Number(fill.price),
+    date: fill.date,
+    commission: fill.commission,
+    id: fill.id,
+  };
+  const opposite = fill.side === "long" ? book.shorts : book.longs;
+  const same = fill.side === "long" ? book.longs : book.shorts;
   const trades: ExecutedTrade[] = [];
 
-  for (const fill of fills) {
-    const incoming: OpenLot = {
-      quantity: fill.quantity,
-      price: Number(fill.price),
-      date: fill.date,
-      commission: fill.commission,
-      id: fill.id,
-    };
-    const opposite = fill.side === "long" ? shorts : longs;
-    const same = fill.side === "long" ? longs : shorts;
+  while (incoming.quantity > 0 && opposite.length > 0) {
+    const open = opposite[0];
+    const matched = Math.min(incoming.quantity, open.quantity);
+    const entryPrice = open.price;
+    const closePrice = incoming.price;
+    const pnl =
+      fill.side === "long"
+        ? (entryPrice - closePrice) * matched
+        : (closePrice - entryPrice) * matched;
 
-    while (incoming.quantity > 0 && opposite.length > 0) {
-      const open = opposite[0];
-      const matched = Math.min(incoming.quantity, open.quantity);
-      const entryPrice = open.price;
-      const closePrice = incoming.price;
-      const pnl =
-        fill.side === "long"
-          ? (entryPrice - closePrice) * matched
-          : (closePrice - entryPrice) * matched;
+    trades.push({
+      instrument: fill.instrument,
+      accountNumber: fill.accountNumber,
+      quantity: matched,
+      side: fill.side === "long" ? "short" : "long",
+      entryDate: open.date,
+      closeDate: fill.date,
+      entryPrice: String(entryPrice),
+      closePrice: String(closePrice),
+      pnl,
+      commission: open.commission + incoming.commission,
+      timeInPosition: secondsBetween(open.date, fill.date),
+      entryId: open.id || undefined,
+      closeId: fill.id || undefined,
+    });
 
-      trades.push({
-        instrument: fill.instrument,
-        accountNumber: fill.accountNumber,
-        quantity: matched,
-        side: fill.side === "long" ? "short" : "long",
-        entryDate: open.date,
-        closeDate: fill.date,
-        entryPrice: String(entryPrice),
-        closePrice: String(closePrice),
-        pnl,
-        commission: open.commission + incoming.commission,
-        timeInPosition: secondsBetween(open.date, fill.date),
-        entryId: open.id || undefined,
-        closeId: fill.id || undefined,
-      });
+    incoming.quantity -= matched;
+    open.quantity -= matched;
+    if (open.quantity <= 0) opposite.shift();
+  }
 
-      incoming.quantity -= matched;
-      open.quantity -= matched;
-      if (open.quantity <= 0) opposite.shift();
-    }
-
-    if (incoming.quantity > 0) {
-      same.push(incoming);
-    }
+  if (incoming.quantity > 0) {
+    same.push(incoming);
   }
 
   return trades;

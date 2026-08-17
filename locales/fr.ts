@@ -582,10 +582,12 @@ export default {
     ordersPaired: "Les ordres ont été appariés en trades",
     parseReady: "Prêt à importer",
     emptyTable: "Aucun trade à revoir pour le moment",
+    parsing: "Analyse",
   },
   "import.parse.tradesFormatted": "{formatted} sur {total} trades formatés",
   "import.parse.missingColumns":
     "Associez ces colonnes pour continuer : {columns}",
+  "import.parse.rowsProcessed": "{processed} lignes sur {total}",
   "import.table.instrument": "Instrument",
   "import.table.entryDate": "Date d'entrée",
   "import.table.closeDate": "Date de sortie",

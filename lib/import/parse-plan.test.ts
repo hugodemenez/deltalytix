@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  createParsePlanSession,
   executeParsePlan,
+  executeParsePlanChunk,
   isParsePlanComplete,
   mappingsFromPlan,
   mergeParsePlans,
@@ -150,5 +152,81 @@ describe("pairOrderFills", () => {
     expect(result.kind).toBe("orders");
     expect(result.trades).toHaveLength(1);
     expect(result.trades[0]?.pnl).toBe(10);
+  });
+});
+
+describe("executeParsePlanChunk", () => {
+  it("matches one-shot results for closed trades", () => {
+    const { headers, rows } = parseSemicolonCsv(USER_CSV);
+    const plan = planFromHeaders(headers);
+    const session = createParsePlanSession();
+    const chunked: ReturnType<typeof executeParsePlan>["trades"] = [];
+    for (let i = 0; i < rows.length; i += 3) {
+      const { trades } = executeParsePlanChunk(rows.slice(i, i + 3), plan, session);
+      chunked.push(...trades);
+    }
+    expect(chunked).toEqual(executeParsePlan(rows, plan).trades);
+  });
+
+  it("does not treat an empty early chunk as failure", () => {
+    const { headers, rows } = parseSemicolonCsv(USER_CSV);
+    const plan = planFromHeaders(headers);
+    const session = createParsePlanSession();
+    const first = executeParsePlanChunk([], plan, session);
+    expect(first.trades).toEqual([]);
+    const rest = executeParsePlanChunk(rows, plan, session);
+    expect(rest.trades).toHaveLength(17);
+  });
+
+  it("walks many closed-trade chunks without a one-shot pass", () => {
+    const headers = [
+      "Symbol",
+      "Quantity",
+      "Entry DT",
+      "Entry Price",
+      "Exit DT",
+      "Exit Price",
+      "ProfitLoss",
+    ];
+    const rows = Array.from({ length: 10_000 }, () => [
+      "ES",
+      "1",
+      "2026-01-06 17:00:00",
+      "5000",
+      "2026-01-06 17:01:00",
+      "5001",
+      "1",
+    ]);
+    const plan = planFromHeaders(headers);
+    const session = createParsePlanSession();
+    let produced = 0;
+    for (let offset = 0; offset < rows.length; offset += 2_500) {
+      const { trades } = executeParsePlanChunk(
+        rows.slice(offset, offset + 2_500),
+        plan,
+        session,
+      );
+      produced += trades.length;
+    }
+    expect(produced).toBe(10_000);
+    expect(session.skippedRows).toBe(0);
+  });
+
+  it("pairs order fills that span chunks", () => {
+    const plan = planFromHeaders(["Symbol", "Qty", "Side", "Price", "Time"]);
+    const session = createParsePlanSession();
+    const buy = executeParsePlanChunk(
+      [["ES", "1", "buy", "5000", "2026-01-06 17:00:00"]],
+      plan,
+      session,
+    );
+    expect(buy.trades).toEqual([]);
+    const sell = executeParsePlanChunk(
+      [["ES", "1", "sell", "5010", "2026-01-06 17:05:00"]],
+      plan,
+      session,
+    );
+    expect(sell.trades).toHaveLength(1);
+    expect(sell.trades[0]?.pnl).toBe(10);
   });
 });
