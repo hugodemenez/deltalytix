@@ -28,6 +28,24 @@ describe("static Safari chrome", () => {
     expect(provider).not.toContain("colorScheme");
   });
 
+  it("does not paint the landing canvas sampler over the dashboard navbar", () => {
+    const layout = readFileSync("app/[locale]/dashboard/layout.tsx", "utf8");
+    const css = readFileSync("app/globals.css", "utf8");
+    const navbar = readFileSync(
+      "app/[locale]/dashboard/components/navbar.tsx",
+      "utf8",
+    );
+
+    expect(layout).toContain("safariThemeSampler={false}");
+    expect(navbar).toContain("h-14");
+    expect(css).toContain(
+      "--navbar-height: calc(3.5rem + env(safe-area-inset-top, 0px))",
+    );
+    expect(css).not.toContain(
+      "--navbar-height: calc(4rem + env(safe-area-inset-top, 0px))",
+    );
+  });
+
   it("paints the marketing header with the landing canvas, not bg-background", () => {
     const source = readFileSync(
       "app/[locale]/(landing)/components/navbar.tsx",

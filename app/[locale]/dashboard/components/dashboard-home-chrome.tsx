@@ -130,7 +130,7 @@ export function DashboardHomeChrome({ children }: { children: ReactNode }) {
       ref={mainRef}
       id="dashboard-content"
       tabIndex={-1}
-      className="min-h-[calc(100dvh-var(--navbar-height,4rem))] overflow-x-hidden bg-[#FAFAFA] dark:bg-background"
+      className="min-h-[calc(100dvh-var(--navbar-height,3.5rem))] overflow-x-hidden bg-[#FAFAFA] dark:bg-background"
     >
       <a
         href="#dashboard-content"
@@ -147,7 +147,7 @@ export function DashboardHomeChrome({ children }: { children: ReactNode }) {
       >
         <div
           ref={connectionsStripRef}
-          className="fixed inset-x-0 top-(--navbar-height,4rem) z-30 w-full border-b border-[#E5E5E5] bg-white dark:border-border dark:bg-background"
+          className="fixed inset-x-0 top-(--navbar-height,3.5rem) z-30 w-full border-b border-[#E5E5E5] bg-white dark:border-border dark:bg-background"
         >
           <ConnectionsStrip className="bg-white dark:bg-background" />
         </div>
