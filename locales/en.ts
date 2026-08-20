@@ -2330,9 +2330,8 @@ export default {
     connected: "DxFeed account connected successfully",
     disconnected: "DxFeed account disconnected",
     error: {
-      credentialsRequired: "Enter your email and password to continue",
-      emailRequired: "Enter your email",
-      emailInvalid: "Enter a valid email",
+      credentialsRequired: "Enter your username and password to continue",
+      usernameRequired: "Enter your username",
       passwordRequired: "Enter your password",
       authFailed: "Could not connect to DxFeed",
     },
@@ -2344,7 +2343,7 @@ export default {
       USER_NOT_AUTHENTICATED:
         "You must be signed in to connect DxFeed. Sign in and try again.",
       AUTH_HTTP_ERROR:
-        "DxFeed rejected the connection (HTTP {status}). Check your email and password, or try again later. Details: {detail}",
+        "DxFeed rejected the connection (HTTP {status}). Check your username and password, or try again later. Details: {detail}",
       AUTH_REJECTED: "DxFeed rejected your login: {reason}",
       HISTORICAL_HOST_UNRESOLVED:
         "DxFeed did not return a trade history server for this login.",
@@ -2372,7 +2371,7 @@ export default {
       hintReconnect:
         "Remove this connection, click Add New, and sign in again with your DxFeed credentials.",
       hintCheckCredentials:
-        "Use the same email and password as on your prop firm's trading platform (demo vs live must match your account type).",
+        "Use the same username and password as on your prop firm's trading platform (demo vs live must match your account type).",
       SYNC_FETCH_FAILED:
         "Could not load trades from DxFeed ({failures} of {total} accounts failed). Reconnect and try again.",
       SYNC_ACCOUNTS_UNAVAILABLE:
@@ -2385,9 +2384,9 @@ export default {
     addAccount: {
       title: "Connect DxFeed Account",
       description:
-        "Sign in with the same email and password you use on your prop firm's DxFeed platform. We detect the firm from that login.",
-      emailLabel: "Email",
-      emailPlaceholder: "Email from your prop firm login",
+        "Sign in with the same username and password you use on your prop firm's DxFeed platform. We detect the firm from that login.",
+      usernameLabel: "Username",
+      usernamePlaceholder: "Username from your prop firm login",
       passwordLabel: "Password",
       passwordPlaceholder: "Password from your prop firm login",
       connecting: "Connecting...",

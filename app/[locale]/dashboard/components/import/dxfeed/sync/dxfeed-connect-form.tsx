@@ -14,6 +14,7 @@ import {
   captureConnectionFailed,
 } from '@/lib/connection-analytics'
 import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
+import { getDxFeedConnectFieldErrors } from '@/lib/dxfeed-connect-fields'
 import { authenticateDxFeed } from './actions'
 
 const fieldClassName =
@@ -25,7 +26,7 @@ const primaryButtonClassName =
 const invalidFieldClassName =
   'border-destructive/60 focus-visible:border-destructive/70 dark:border-destructive/60 dark:focus-visible:border-destructive/70'
 
-type DxFeedFieldErrors = Partial<Record<'email' | 'password', string>>
+type DxFeedFieldErrors = Partial<Record<'username' | 'password', string>>
 
 function FieldBorderError({
   id,
@@ -53,21 +54,21 @@ function FieldBorderError({
 
 export function DxFeedConnectForm({
   onConnected,
-  initialEmail,
+  initialUsername,
   sourceUi = 'connect_view',
 }: {
   onConnected?: () => void
-  initialEmail?: string
+  initialUsername?: string
   /** Which surface rendered this form; reported with connection analytics. */
   sourceUi?: 'connect_view' | 'credentials_manager'
 }) {
   const t = useI18n()
   const { loadAccounts } = useDxFeedSyncContext()
-  const [loginEmail, setLoginEmail] = useState(initialEmail ?? '')
+  const [loginUsername, setLoginUsername] = useState(initialUsername ?? '')
   const [loginPassword, setLoginPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<DxFeedFieldErrors>({})
-  const emailInputRef = useRef<HTMLInputElement>(null)
+  const usernameInputRef = useRef<HTMLInputElement>(null)
   const passwordInputRef = useRef<HTMLInputElement>(null)
 
   const clearFieldError = useCallback((field: keyof DxFeedFieldErrors) => {
@@ -81,20 +82,22 @@ export function DxFeedConnectForm({
 
   const validateForm = useCallback(() => {
     const errors: DxFeedFieldErrors = {}
+    const missing = getDxFeedConnectFieldErrors({
+      username: loginUsername,
+      password: loginPassword,
+    })
 
-    if (!loginEmail.trim()) {
-      errors.email = t('dxfeedSync.error.emailRequired')
-    } else if (emailInputRef.current?.validity.typeMismatch) {
-      errors.email = t('dxfeedSync.error.emailInvalid')
+    if (missing.includes('username')) {
+      errors.username = t('dxfeedSync.error.usernameRequired')
     }
-    if (!loginPassword) {
+    if (missing.includes('password')) {
       errors.password = t('dxfeedSync.error.passwordRequired')
     }
 
     setFieldErrors(errors)
 
-    const firstInvalidControl = errors.email
-      ? emailInputRef.current
+    const firstInvalidControl = errors.username
+      ? usernameInputRef.current
       : errors.password
         ? passwordInputRef.current
         : null
@@ -103,12 +106,12 @@ export function DxFeedConnectForm({
     }
 
     return Object.keys(errors).length === 0
-  }, [loginEmail, loginPassword, t])
+  }, [loginUsername, loginPassword, t])
 
   const handleConnect = useCallback(async () => {
     try {
       setIsLoading(true)
-      const result = await authenticateDxFeed(loginEmail, loginPassword)
+      const result = await authenticateDxFeed(loginUsername, loginPassword)
 
       if (result.error) {
         captureConnectionFailed('dxfeed', {
@@ -141,7 +144,7 @@ export function DxFeedConnectForm({
         prop_firm_id: result.propFirmId,
         prop_firm_name: result.propfirmName,
       })
-      setLoginEmail('')
+      setLoginUsername('')
       setLoginPassword('')
       setFieldErrors({})
       await loadAccounts()
@@ -159,7 +162,7 @@ export function DxFeedConnectForm({
     } finally {
       setIsLoading(false)
     }
-  }, [loginEmail, loginPassword, sourceUi, t, loadAccounts, onConnected])
+  }, [loginUsername, loginPassword, sourceUi, t, loadAccounts, onConnected])
 
   return (
     <form
@@ -178,37 +181,39 @@ export function DxFeedConnectForm({
 
       <div className="min-w-0 space-y-2">
         <Label
-          htmlFor="dxfeed-email"
+          htmlFor="dxfeed-username"
           className="text-sm text-black/55 dark:text-white/55"
         >
-          {t('dxfeedSync.addAccount.emailLabel')}
+          {t('dxfeedSync.addAccount.usernameLabel')}
         </Label>
         <div className="relative min-w-0">
           <Input
-            ref={emailInputRef}
-            id="dxfeed-email"
-            name="email"
-            type="email"
+            ref={usernameInputRef}
+            id="dxfeed-username"
+            name="username"
             autoComplete="username"
-            value={loginEmail}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            value={loginUsername}
             onChange={(e) => {
-              setLoginEmail(e.target.value)
-              clearFieldError('email')
+              setLoginUsername(e.target.value)
+              clearFieldError('username')
             }}
-            placeholder={t('dxfeedSync.addAccount.emailPlaceholder')}
+            placeholder={t('dxfeedSync.addAccount.usernamePlaceholder')}
             className={cn(
               fieldClassName,
-              fieldErrors.email && invalidFieldClassName,
+              fieldErrors.username && invalidFieldClassName,
             )}
             required
-            aria-invalid={Boolean(fieldErrors.email)}
+            aria-invalid={Boolean(fieldErrors.username)}
             aria-describedby={
-              fieldErrors.email ? 'dxfeed-email-error' : undefined
+              fieldErrors.username ? 'dxfeed-username-error' : undefined
             }
           />
           <FieldBorderError
-            id="dxfeed-email-error"
-            message={fieldErrors.email}
+            id="dxfeed-username-error"
+            message={fieldErrors.username}
           />
         </div>
       </div>
