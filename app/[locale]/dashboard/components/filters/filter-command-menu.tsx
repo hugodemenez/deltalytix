@@ -93,7 +93,7 @@ export function FilterCommandMenu({
         return `${format(range.from, 'LLL dd', { locale: dateLocale })} – ${format(range.to, 'LLL dd, y', { locale: dateLocale })}`
       }
       return format(range.from, 'LLL dd, y', { locale: dateLocale })
-    }) ?? t('filters.thisWeek')
+    }) ?? t('filters.allDates')
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [openSection, setOpenSection] = useState<FilterSectionKey | null>(null)
