@@ -1143,7 +1143,11 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
             <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[#E5E5E5] pt-2 text-xs dark:border-border">
               <span className="flex min-w-0 items-center gap-2 truncate text-muted-foreground">
                 <span className="h-2 w-2 shrink-0 rounded-full bg-[#3E7550]" />
-                <span className="truncate">{availableAccountNumbers[0]}</span>
+                <span className="truncate">
+                  {availableAccountNumbers.length === 1
+                    ? availableAccountNumbers[0]
+                    : t("share.allAccounts")}
+                </span>
               </span>
               <span className="shrink-0 font-medium text-foreground tabular-nums">
                 {formatCurrency(totalEquity)}
