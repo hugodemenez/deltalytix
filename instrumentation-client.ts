@@ -1,52 +1,28 @@
 import posthog from "posthog-js";
 
+import { hasClientAnalyticsConsent } from "@/lib/consent-settings";
+import { syncPostHogSessionRecording } from "@/lib/posthog-session-recording";
+
 const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
 const apiHost = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com";
-const ANALYTICS_CONSENT_COOKIE = "deltalytix_analytics_consent";
-
-function getSharedAnalyticsConsent() {
-  try {
-    const cookie = document.cookie
-      .split("; ")
-      .find((entry) => entry.startsWith(`${ANALYTICS_CONSENT_COOKIE}=`));
-
-    if (!cookie) return null;
-
-    const value = cookie.split("=")[1];
-    if (value === "granted") return true;
-    if (value === "denied") return false;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function hasAnalyticsConsent() {
-  const sharedConsent = getSharedAnalyticsConsent();
-  if (sharedConsent !== null) return sharedConsent;
-
-  try {
-    const storedConsent = localStorage.getItem("cookieConsent");
-    if (!storedConsent) return false;
-
-    return JSON.parse(storedConsent).analytics_storage === true;
-  } catch {
-    return false;
-  }
-}
 
 if (projectToken) {
+  const analyticsConsent = hasClientAnalyticsConsent();
+
   posthog.init(projectToken, {
     api_host: apiHost,
     defaults: "2026-05-30",
     person_profiles: "identified_only",
-    opt_out_capturing_by_default: !hasAnalyticsConsent(),
+    opt_out_capturing_by_default: !analyticsConsent,
     opt_out_capturing_persistence_type: "localStorage",
     autocapture: false,
     capture_pageview: true,
     capture_pageleave: true,
-    disable_session_recording: true,
   });
+
+  // Replay is on in PostHog project 50101. Do not hard-disable it here —
+  // start only with analytics consent, and stop if that consent is missing.
+  syncPostHogSessionRecording(posthog, analyticsConsent);
 }
 
 export { posthog };

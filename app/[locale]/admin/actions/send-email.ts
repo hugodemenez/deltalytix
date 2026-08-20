@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import { createClient, type User } from "@supabase/supabase-js"
 import { render } from "@react-email/render"
 import { renderWelcomeEmailText } from "@/components/emails/welcome"
+import { WEEKLY_RECAP_REPLY_TO } from "@/lib/weekly-recap-reply-to"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -357,7 +358,8 @@ export async function sendEmailsToUsers(
             from: "Deltalytix <updates@eu.updates.deltalytix.app>",
             to: [user.email],
             subject: emailSubject,
-            reply_to: "hugo.demenez@deltalytix.app",
+            // Same live reply-to as cron weekly recap / August broadcasts.
+            reply_to: WEEKLY_RECAP_REPLY_TO,
             react: React.createElement(EmailComponent, mergedProps),
             ...(template === "welcome"
               ? {
