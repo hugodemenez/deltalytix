@@ -96,7 +96,7 @@ function getConnectionDisplay(
   if (connection.service === 'dxfeed') {
     const propFirmName = getDxFeedPropFirmName(connection.token)
     if (propFirmName) {
-      // Prop firm name only — do not surface the login email in the row.
+      // Prop firm name only — do not surface the login in the row.
       return { displayName: propFirmName, loginLabel: null }
     }
   }

@@ -2461,9 +2461,8 @@ export default {
     connected: "Compte DxFeed connecté avec succès",
     disconnected: "Compte DxFeed déconnecté",
     error: {
-      credentialsRequired: "Saisissez votre e-mail et votre mot de passe",
-      emailRequired: "Saisissez votre e-mail",
-      emailInvalid: "Saisissez un e-mail valide",
+      credentialsRequired: "Saisissez votre nom d'utilisateur et votre mot de passe",
+      usernameRequired: "Saisissez votre nom d'utilisateur",
       passwordRequired: "Saisissez votre mot de passe",
       authFailed: "Impossible de se connecter à DxFeed",
     },
@@ -2475,7 +2474,7 @@ export default {
       USER_NOT_AUTHENTICATED:
         "Vous devez être connecté pour lier DxFeed. Connectez-vous puis réessayez.",
       AUTH_HTTP_ERROR:
-        "DxFeed a refusé la connexion (HTTP {status}). Vérifiez l'e-mail et le mot de passe, ou réessayez plus tard. Détail : {detail}",
+        "DxFeed a refusé la connexion (HTTP {status}). Vérifiez le nom d'utilisateur et le mot de passe, ou réessayez plus tard. Détail : {detail}",
       AUTH_REJECTED: "DxFeed a refusé la connexion : {reason}",
       HISTORICAL_HOST_UNRESOLVED:
         "DxFeed n'a pas renvoyé de serveur d'historique des trades pour cette connexion.",
@@ -2505,7 +2504,7 @@ export default {
       hintReconnect:
         "Supprimez cette connexion, cliquez sur Ajouter, et reconnectez-vous avec vos identifiants DxFeed.",
       hintCheckCredentials:
-        "Utilisez le même e-mail et mot de passe que sur la plateforme de trading de votre propfirm (démo ou live selon votre compte).",
+        "Utilisez le même identifiant et mot de passe que sur la plateforme de trading de votre propfirm (démo ou live selon votre compte).",
       SYNC_FETCH_FAILED:
         "Impossible de charger les trades DxFeed ({failures} sur {total} comptes en échec). Reconnectez-vous et réessayez.",
       SYNC_ACCOUNTS_UNAVAILABLE:
@@ -2518,9 +2517,9 @@ export default {
     addAccount: {
       title: "Connecter un compte DxFeed",
       description:
-        "Connectez-vous avec le même e-mail et mot de passe que sur la plateforme DxFeed de votre propfirm. Nous détectons la firme à partir de cette connexion.",
-      emailLabel: "E-mail",
-      emailPlaceholder: "E-mail de connexion à votre propfirm",
+        "Connectez-vous avec le même identifiant et mot de passe que sur la plateforme DxFeed de votre propfirm. Nous détectons la firme à partir de cette connexion.",
+      usernameLabel: "Nom d'utilisateur",
+      usernamePlaceholder: "Identifiant de connexion à votre propfirm",
       passwordLabel: "Mot de passe",
       passwordPlaceholder: "Mot de passe de votre propfirm",
       connecting: "Connexion...",

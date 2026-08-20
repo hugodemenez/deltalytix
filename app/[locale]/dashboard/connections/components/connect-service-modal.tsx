@@ -104,7 +104,7 @@ export function ConnectServiceModal({
             <div className="min-h-0 flex-1 overflow-y-auto">
               <DxFeedSync
                 initialShowAccountsManager={false}
-                initialEmail={prefill?.accountId}
+                initialUsername={prefill?.accountId}
                 onConnected={onClose}
               />
             </div>
