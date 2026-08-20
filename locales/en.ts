@@ -527,7 +527,20 @@ export default {
     tradesFormatted: "{formatted} of {total} trades formatted",
     batchesCompleted: "Batches: {completed}/{total} completed",
     batchesProcessing: ", {processing} processing",
+    batchFailed: "Unable to format trades",
+    aiUnavailable:
+      "AI formatting is unavailable. Ask your administrator to configure an OpenAI API key, then try again.",
+    noTradesFormatted:
+      "No trades were formatted. Check that AI is configured on this server, then try again.",
+    parsedFromColumns: "Parsed from the file columns",
+    ordersPaired: "Order fills were paired into trades",
+    parseReady: "Ready to import",
+    emptyTable: "No trades to review yet",
+    parsing: "Parsing",
   },
+  "import.parse.tradesFormatted": "{formatted} trades formatted",
+  "import.parse.missingColumns": "Map these columns to continue: {columns}",
+  "import.parse.rowsProcessed": "{processed} of {total} rows",
 
   "import.table.instrument": "Instrument",
   "import.table.entryDate": "Entry Date",

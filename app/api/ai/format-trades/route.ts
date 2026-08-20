@@ -3,6 +3,7 @@ import { streamObject } from "ai";
 import { NextRequest } from "next/server";
 import { tradeSchema } from "./schema";
 import { z } from 'zod/v3';
+import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 
 export const maxDuration = 30;
 
@@ -13,6 +14,14 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const availabilityError = getOpenAiAvailabilityError();
+    if (availabilityError) {
+      return new Response(JSON.stringify(availabilityError), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json();
     const { headers, rows } = requestSchema.parse(body);
 console.log(headers, rows);

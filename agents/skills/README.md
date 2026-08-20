@@ -22,6 +22,10 @@ ln -s "../../agents/skills/<name>" ".cursor/skills/<name>"
 
 Windows contributors need `git config core.symlinks true` (and Developer Mode) for the links to check out as links rather than plain text files.
 
+## Import
+
+- [`import-file-parse`](./import-file-parse/SKILL.md): parse any trading CSV (closed trades or order fills) through Intelligent Import. Use a parse plan, not Vercel Eve.
+
 ## Deltalytix workflows
 
 - [`changelog-review`](./changelog-review/SKILL.md): review a release diff and prepare the editorial outline.

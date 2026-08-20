@@ -573,7 +573,21 @@ export default {
     tradesFormatted: "{formatted} sur {total} trades formatés",
     batchesCompleted: "Lots : {completed}/{total} terminés",
     batchesProcessing: ", {processing} en cours",
+    batchFailed: "Impossible de formater les trades",
+    aiUnavailable:
+      "Le formatage IA est indisponible. Demandez à votre administrateur de configurer une clé API OpenAI, puis réessayez.",
+    noTradesFormatted:
+      "Aucun trade n'a été formaté. Vérifiez que l'IA est configurée sur ce serveur, puis réessayez.",
+    parsedFromColumns: "Lu depuis les colonnes du fichier",
+    ordersPaired: "Les ordres ont été appariés en trades",
+    parseReady: "Prêt à importer",
+    emptyTable: "Aucun trade à revoir pour le moment",
+    parsing: "Analyse",
   },
+  "import.parse.tradesFormatted": "{formatted} trades formatés",
+  "import.parse.missingColumns":
+    "Associez ces colonnes pour continuer : {columns}",
+  "import.parse.rowsProcessed": "{processed} lignes sur {total}",
   "import.table.instrument": "Instrument",
   "import.table.entryDate": "Date d'entrée",
   "import.table.closeDate": "Date de sortie",

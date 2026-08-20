@@ -9,6 +9,7 @@ import { ImportType } from './import-type-selection'
 import { mappingSchema } from '@/app/api/ai/mappings/schema'
 import { cn } from '@/lib/utils'
 import { z } from 'zod/v3';
+import { mappingsFromPlan, planFromHeaders } from '@/lib/import/parse-plan'
 
 type MappingObject = z.infer<typeof mappingSchema>
 type MappingKey = keyof MappingObject
@@ -57,6 +58,13 @@ const getColumnDisplayName = (header: string, index: number, headers: string[]) 
 };
 
 export default function ColumnMapping({ headers, csvData, mappings, setMappings, error, importType }: ColumnMappingProps) {
+  useEffect(() => {
+    if (Object.keys(mappings).length > 0 || headers.length === 0) return;
+    const next = mappingsFromPlan(headers, planFromHeaders(headers));
+    if (Object.keys(next).length > 0) {
+      setMappings(next);
+    }
+  }, [headers, mappings, setMappings]);
 
   const { object, submit, isLoading } = useObject({
     api: '/api/ai/mappings',
