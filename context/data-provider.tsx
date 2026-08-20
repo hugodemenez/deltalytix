@@ -1295,53 +1295,55 @@ export const DataProvider: React.FC<{
 
   const moveAccountsToGroup = useCallback(
     async (accountIds: string[], targetGroupId: string | null) => {
-      try {
-        const { accounts: currentAccounts, groups: currentGroups } =
-          useUserStore.getState();
-        if (
-          !currentAccounts ||
-          currentAccounts.length === 0 ||
-          accountIds.length === 0
-        )
-          return;
+      const { accounts: currentAccounts, groups: currentGroups } =
+        useUserStore.getState();
+      if (
+        !currentAccounts ||
+        currentAccounts.length === 0 ||
+        accountIds.length === 0
+      )
+        return;
 
-        const idSet = new Set(accountIds);
-        const accountsToMove = currentAccounts.filter((acc) =>
-          idSet.has(acc.id)
-        );
+      const idSet = new Set(accountIds);
+      const accountsToMove = currentAccounts.filter((acc) =>
+        idSet.has(acc.id)
+      );
 
-        // Update accounts state using the freshest snapshot
-        const updatedAccounts = currentAccounts.map((account) =>
-          idSet.has(account.id)
-            ? { ...account, groupId: targetGroupId }
-            : account
-        );
-        setAccounts(updatedAccounts);
+      // Update accounts state using the freshest snapshot
+      const updatedAccounts = currentAccounts.map((account) =>
+        idSet.has(account.id)
+          ? { ...account, groupId: targetGroupId }
+          : account
+      );
+      setAccounts(updatedAccounts);
 
-        // Update groups state using the freshest snapshot
-        setGroups(
-          currentGroups.map((group) => {
-            const remainingAccounts = group.accounts.filter(
-              (acc) => !idSet.has(acc.id)
+      // Update groups state using the freshest snapshot
+      setGroups(
+        currentGroups.map((group) => {
+          const remainingAccounts = group.accounts.filter(
+            (acc) => !idSet.has(acc.id)
+          );
+          if (group.id === targetGroupId) {
+            const missingToAdd = accountsToMove.filter(
+              (acc) =>
+                !remainingAccounts.some((existing) => existing.id === acc.id)
             );
-            if (group.id === targetGroupId) {
-              const missingToAdd = accountsToMove.filter(
-                (acc) =>
-                  !remainingAccounts.some((existing) => existing.id === acc.id)
-              );
-              return {
-                ...group,
-                accounts: [...remainingAccounts, ...missingToAdd],
-              };
-            }
-            return { ...group, accounts: remainingAccounts };
-          })
-        );
+            return {
+              ...group,
+              accounts: [...remainingAccounts, ...missingToAdd],
+            };
+          }
+          return { ...group, accounts: remainingAccounts };
+        })
+      );
 
+      try {
         await Promise.all(
           accountIds.map((id) => moveAccountToGroupAction(id, targetGroupId))
         );
       } catch (error) {
+        setAccounts(currentAccounts);
+        setGroups(currentGroups);
         console.error("Error moving accounts to group:", error);
         throw error;
       }

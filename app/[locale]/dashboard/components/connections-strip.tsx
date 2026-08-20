@@ -61,6 +61,7 @@ import {
   isStandaloneAccount,
   mapConnectionsAccounts,
   removeConnectionsAccount,
+  restoreMovedAccountGroup,
   type StripItem,
 } from './connections-strip-items'
 import { ConnectionsStripAccountRow } from './connections-strip-account-row'
@@ -208,7 +209,7 @@ function AccountPickerList({
   onClose,
   onMask,
   onRename,
-  onDelete,
+  onRequestDelete,
   listClassName,
 }: {
   item: StripItem
@@ -225,12 +226,10 @@ function AccountPickerList({
     account: ConnectionsPageAccount,
     nextName: string
   ) => Promise<boolean>
-  onDelete: (account: ConnectionsPageAccount) => Promise<void>
+  onRequestDelete: (account: ConnectionsPageAccount) => void
   listClassName: string
 }) {
   const t = useI18n()
-  const [accountToDelete, setAccountToDelete] =
-    useState<ConnectionsPageAccount | null>(null)
   const query = searchTerm.trim().toLowerCase()
   const filteredAccounts = useMemo(() => {
     if (!query) return item.accounts
@@ -242,83 +241,49 @@ function AccountPickerList({
   }, [item.accounts, query])
 
   return (
-    <>
-      <Command shouldFilter={false} className="bg-transparent">
-        <CommandInput
-          value={searchTerm}
-          onValueChange={onSearchTermChange}
-          placeholder={t('connections.strip.search')}
-        />
-        <CommandList className={cn('overflow-y-auto overflow-x-hidden', listClassName)}>
-          <CommandEmpty>
-            {item.accounts.length === 0
-              ? t('connections.emptySection')
-              : t('connections.strip.noResults')}
-          </CommandEmpty>
-          <CommandGroup>
-            {filteredAccounts.map((account) => (
-              <ConnectionsStripAccountRow
-                key={account.id}
-                account={account}
-                selected={selectedAccounts.includes(account.number)}
-                hiddenGroupId={hiddenGroupId}
-                canDelete={isStandaloneAccount(account)}
-                masking={maskingAccountId === account.id}
-                deleting={deletingAccountId === account.id}
-                onSelect={(accountNumber) => {
-                  onSelectAccount(accountNumber)
-                  onClose()
-                }}
-                onMask={onMask}
-                onRename={onRename}
-                onRequestDelete={setAccountToDelete}
-              />
-            ))}
-          </CommandGroup>
-        </CommandList>
-        <div className="border-t border-[#E5E5E5] dark:border-border">
-          <Link
-            href="/dashboard/connections"
-            className="block px-3 py-2.5 text-sm font-medium text-[#3E7550] transition-colors hover:bg-[#EFF5EC] dark:text-[#9BC4A8] dark:hover:bg-[#243028]"
-            onClick={onClose}
-          >
-            {t('connections.manageConnection')}
-          </Link>
-        </div>
-      </Command>
-      <AlertDialog
-        open={accountToDelete != null}
-        onOpenChange={(open) => {
-          if (!open) setAccountToDelete(null)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t('connections.strip.deleteConfirmTitle')}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('connections.strip.deleteConfirmDescription', {
-                account: accountToDelete?.number ?? '',
-              })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (!accountToDelete) return
-                void onDelete(accountToDelete)
-                setAccountToDelete(null)
+    <Command shouldFilter={false} className="bg-transparent">
+      <CommandInput
+        value={searchTerm}
+        onValueChange={onSearchTermChange}
+        placeholder={t('connections.strip.search')}
+      />
+      <CommandList className={cn('overflow-y-auto overflow-x-hidden', listClassName)}>
+        <CommandEmpty>
+          {item.accounts.length === 0
+            ? t('connections.emptySection')
+            : t('connections.strip.noResults')}
+        </CommandEmpty>
+        <CommandGroup>
+          {filteredAccounts.map((account) => (
+            <ConnectionsStripAccountRow
+              key={account.id}
+              account={account}
+              selected={selectedAccounts.includes(account.number)}
+              hiddenGroupId={hiddenGroupId}
+              canDelete={isStandaloneAccount(account)}
+              masking={maskingAccountId === account.id}
+              deleting={deletingAccountId === account.id}
+              onSelect={(accountNumber) => {
+                onSelectAccount(accountNumber)
+                onClose()
               }}
-            >
-              {t('connections.strip.deleteConfirmAction')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+              onMask={onMask}
+              onRename={onRename}
+              onRequestDelete={onRequestDelete}
+            />
+          ))}
+        </CommandGroup>
+      </CommandList>
+      <div className="border-t border-[#E5E5E5] dark:border-border">
+        <Link
+          href="/dashboard/connections"
+          className="block px-3 py-2.5 text-sm font-medium text-[#3E7550] transition-colors hover:bg-[#EFF5EC] dark:text-[#9BC4A8] dark:hover:bg-[#243028]"
+          onClick={onClose}
+        >
+          {t('connections.manageConnection')}
+        </Link>
+      </div>
+    </Command>
   )
 }
 
@@ -331,7 +296,7 @@ function ConnectionChip({
   onSelectAccount,
   onMask,
   onRename,
-  onDelete,
+  onRequestDelete,
 }: {
   item: StripItem
   selectedAccounts: string[]
@@ -344,7 +309,7 @@ function ConnectionChip({
     account: ConnectionsPageAccount,
     nextName: string
   ) => Promise<boolean>
-  onDelete: (account: ConnectionsPageAccount) => Promise<void>
+  onRequestDelete: (account: ConnectionsPageAccount) => void
 }) {
   const isMobile = useIsMobile()
   const [open, setOpen] = useState(false)
@@ -353,6 +318,11 @@ function ConnectionChip({
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
     if (!next) setSearchTerm('')
+  }
+
+  const requestDelete = (account: ConnectionsPageAccount) => {
+    handleOpenChange(false)
+    onRequestDelete(account)
   }
 
   const picker = (listClassName: string) => (
@@ -368,7 +338,7 @@ function ConnectionChip({
       onClose={() => handleOpenChange(false)}
       onMask={onMask}
       onRename={onRename}
-      onDelete={onDelete}
+      onRequestDelete={requestDelete}
       listClassName={listClassName}
     />
   )
@@ -505,6 +475,7 @@ export function ConnectionsStrip({ className }: { className?: string }) {
   const groups = useUserStore((state) => state.groups)
   const updateAccount = useUserStore((state) => state.updateAccount)
   const removeAccount = useUserStore((state) => state.removeAccount)
+  const setAccounts = useUserStore((state) => state.setAccounts)
   const setGroups = useUserStore((state) => state.setGroups)
   const setTrades = useTradesStore((state) => state.setTrades)
   const [data, setData] = useState<ConnectionsPageData | null>(null)
@@ -513,6 +484,8 @@ export function ConnectionsStrip({ className }: { className?: string }) {
   )
   const [maskingAccountId, setMaskingAccountId] = useState<string | null>(null)
   const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null)
+  const [accountToDelete, setAccountToDelete] =
+    useState<ConnectionsPageAccount | null>(null)
 
   const hiddenGroupId = useMemo(
     () => groups.find((group) => group.name === HIDDEN_GROUP_NAME)?.id ?? null,
@@ -587,12 +560,23 @@ export function ConnectionsStrip({ className }: { className?: string }) {
         }
       } catch {
         applyAccountPatch(account.id, { groupId: previousGroupId })
+        const { accounts, groups: storeGroups } = useUserStore.getState()
+        if (accounts.some((item) => item.id === account.id)) {
+          const restored = restoreMovedAccountGroup(
+            accounts,
+            storeGroups,
+            account.id,
+            previousGroupId
+          )
+          setAccounts(restored.accounts)
+          setGroups(restored.groups)
+        }
         toast.error(t('connections.strip.maskFailed'))
       } finally {
         setMaskingAccountId(null)
       }
     },
-    [applyAccountPatch, ensureHiddenGroup, moveAccountsToGroup, t]
+    [applyAccountPatch, ensureHiddenGroup, moveAccountsToGroup, setAccounts, setGroups, t]
   )
 
   const onRename = useCallback(
@@ -692,7 +676,7 @@ export function ConnectionsStrip({ className }: { className?: string }) {
             onSelectAccount={onSelectAccount}
             onMask={onMask}
             onRename={onRename}
-            onDelete={onDelete}
+            onRequestDelete={setAccountToDelete}
           />
         ))}
         <AddConnectionChip onSelectService={setConnectService} />
@@ -705,6 +689,41 @@ export function ConnectionsStrip({ className }: { className?: string }) {
           void load()
         }}
       />
+
+      {/* Confirm lives on the strip, not inside the picker: opening a portaled
+          dialog dismisses the chip popover/drawer and would unmount the UI. */}
+      <AlertDialog
+        open={accountToDelete != null}
+        onOpenChange={(open) => {
+          if (!open) setAccountToDelete(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('connections.strip.deleteConfirmTitle')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('connections.strip.deleteConfirmDescription', {
+                account: accountToDelete?.number ?? '',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!accountToDelete) return
+                void onDelete(accountToDelete)
+                setAccountToDelete(null)
+              }}
+            >
+              {t('connections.strip.deleteConfirmAction')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

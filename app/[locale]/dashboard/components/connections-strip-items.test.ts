@@ -7,6 +7,7 @@ import {
   isStandaloneAccount,
   mapConnectionsAccounts,
   removeConnectionsAccount,
+  restoreMovedAccountGroup,
 } from './connections-strip-items'
 import type {
   ConnectionsPageAccount,
@@ -176,5 +177,67 @@ describe('account action helpers', () => {
       'a1',
       'a2',
     ])
+  })
+})
+
+describe('restoreMovedAccountGroup', () => {
+  const accountA = {
+    id: 'a1',
+    number: 'ONE',
+    groupId: 'hidden',
+  }
+  const accountB = {
+    id: 'a2',
+    number: 'TWO',
+    groupId: 'visible',
+  }
+
+  it('moves the account back to the previous group and restores groupId', () => {
+    const restored = restoreMovedAccountGroup(
+      [accountA, accountB],
+      [
+        { id: 'hidden', accounts: [accountA] },
+        { id: 'visible', accounts: [accountB] },
+      ],
+      'a1',
+      'visible'
+    )
+
+    expect(restored.accounts.find((item) => item.id === 'a1')?.groupId).toBe(
+      'visible'
+    )
+    expect(restored.groups.find((group) => group.id === 'hidden')?.accounts).toEqual(
+      []
+    )
+    expect(
+      restored.groups.find((group) => group.id === 'visible')?.accounts.map(
+        (item) => item.id
+      )
+    ).toEqual(['a2', 'a1'])
+  })
+
+  it('unmasks by clearing groupId and removing the account from every group', () => {
+    const restored = restoreMovedAccountGroup(
+      [accountA, accountB],
+      [
+        { id: 'hidden', accounts: [accountA] },
+        { id: 'visible', accounts: [accountB] },
+      ],
+      'a1',
+      null
+    )
+
+    expect(restored.accounts.find((item) => item.id === 'a1')?.groupId).toBeNull()
+    expect(
+      restored.groups.flatMap((group) => group.accounts.map((item) => item.id))
+    ).toEqual(['a2'])
+  })
+
+  it('leaves store snapshots unchanged when the account is not present', () => {
+    const accounts = [accountB]
+    const groups = [{ id: 'visible', accounts: [accountB] }]
+    const restored = restoreMovedAccountGroup(accounts, groups, 'a1', null)
+    expect(restored.accounts).toBe(accounts)
+    expect(restored.groups).toBe(groups)
   })
 })
