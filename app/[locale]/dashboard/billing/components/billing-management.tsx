@@ -20,12 +20,15 @@ import { useCurrentLocale, useI18n } from '@/locales/client'
 import { useStripeSubscriptionStore } from '@/store/stripe-subscription-store'
 import { toast } from 'sonner'
 import { BillingPlanList } from './billing-plan-list'
-import { useBillingCurrency } from '@/hooks/use-billing-currency'
+import {
+  formatStripeCents,
+  type BillingInvoiceInterval,
+  type BillingInvoiceRecord,
+} from '@/lib/billing-invoice'
 
 export default function BillingManagement() {
   const t = useI18n()
   const locale = useCurrentLocale()
-  const { currency } = useBillingCurrency()
   const subscription = useStripeSubscriptionStore(
     (state) => state.stripeSubscription
   )
@@ -43,11 +46,22 @@ export default function BillingManagement() {
       { year: 'numeric', month: 'short', day: 'numeric' }
     )
 
-  const formatAmount = (amount: number) =>
-    new Intl.NumberFormat(locale === 'fr' ? 'fr-FR' : 'en-US', {
-      style: 'currency',
-      currency,
-    }).format(amount / 100)
+  const invoicePlanLabel = (interval: BillingInvoiceInterval) => {
+    if (interval === 'lifetime') {
+      return t('dashboard.billingPage.lifetimeInvoiceLabel')
+    }
+    if (interval === 'year' || interval === 'quarter' || interval === 'month') {
+      return t('dashboard.billingPage.recurringInvoiceLabel', {
+        period:
+          interval === 'year'
+            ? t('pricing.yearly')
+            : interval === 'quarter'
+              ? t('pricing.quarterly')
+              : t('pricing.monthly'),
+      })
+    }
+    return t('dashboard.billingPage.genericInvoiceLabel')
+  }
 
   const handleSubscriptionAction = async (
     action: 'resume' | 'cancel'
@@ -66,10 +80,17 @@ export default function BillingManagement() {
         )
       }
       await refreshSubscription()
-      toast.success(t('billing.planSwitchedDescription'))
+      toast.success(
+        action === 'cancel'
+          ? t('billing.subscriptionCancelled')
+          : t('billing.subscriptionResumed')
+      )
     } catch {
       toast.error(t('billing.error'), {
-        description: t('billing.planSwitchError'),
+        description:
+          action === 'cancel'
+            ? t('billing.cancelError')
+            : t('billing.resumeError'),
       })
     }
   }
@@ -82,17 +103,6 @@ export default function BillingManagement() {
   const historyTitle = subscription
     ? t('dashboard.billingPage.billingHistory')
     : t('dashboard.billingPage.invoices')
-  const invoicePlanLabel =
-    subscription?.plan.interval === 'lifetime'
-      ? t('dashboard.billingPage.lifetimeInvoiceLabel')
-      : t('dashboard.billingPage.recurringInvoiceLabel', {
-          period:
-            subscription?.plan.interval === 'year'
-              ? t('pricing.yearly')
-              : subscription?.plan.interval === 'quarter'
-                ? t('pricing.quarterly')
-                : t('pricing.monthly'),
-        })
 
   return (
     <div className="space-y-8">
@@ -127,14 +137,14 @@ export default function BillingManagement() {
             </div>
           ) : subscription?.invoices?.length ? (
             <div className="divide-y divide-[#E5E5E5] dark:divide-border">
-              {subscription.invoices.map((invoice) => (
+              {subscription.invoices.map((invoice: BillingInvoiceRecord) => (
                 <div
                   key={invoice.id}
                   className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
                     <p className="text-sm font-medium">
-                      {invoicePlanLabel}
+                      {invoicePlanLabel(invoice.interval)}
                     </p>
                     <p className="mt-0.5 text-xs text-[#686D67] dark:text-muted-foreground">
                       {formatDate(invoice.created)}
@@ -142,7 +152,11 @@ export default function BillingManagement() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-semibold tabular-nums">
-                      {formatAmount(invoice.amount_paid)}
+                      {formatStripeCents(
+                        invoice.amount_paid,
+                        invoice.currency,
+                        locale
+                      )}
                     </span>
                     {invoice.hosted_invoice_url ? (
                       <Button
