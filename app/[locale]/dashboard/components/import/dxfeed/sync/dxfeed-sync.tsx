@@ -10,8 +10,6 @@ interface DxFeedSyncProps {
   initialShowAccountsManager?: boolean
   /** Prefill login email when reconnecting. */
   initialEmail?: string
-  /** Prefill prop firm (name or id) when reconnecting. */
-  initialPropFirmName?: string
   onConnected?: () => void
   /** Accepted for PlatformConfig customComponent compatibility; unused here. */
   setIsOpen?: Dispatch<SetStateAction<boolean>> | ((open: boolean) => void)
@@ -20,7 +18,6 @@ interface DxFeedSyncProps {
 export function DxFeedSync({
   initialShowAccountsManager = true,
   initialEmail,
-  initialPropFirmName,
   onConnected,
   setIsOpen: _setIsOpen,
 }: DxFeedSyncProps = {}) {
@@ -33,7 +30,6 @@ export function DxFeedSync({
           <DxFeedConnectForm
             onConnected={onConnected}
             initialEmail={initialEmail}
-            initialPropFirmName={initialPropFirmName}
           />
         </div>
       </div>

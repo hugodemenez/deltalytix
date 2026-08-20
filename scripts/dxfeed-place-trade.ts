@@ -6,7 +6,7 @@
  */
 
 import 'dotenv/config'
-import { resolveDxFeedHistoricalHost } from '../lib/dxfeed-historical-host'
+import { normalizeDxFeedHistoricalHost } from '../lib/dxfeed-historical-host'
 import WebSocket from 'ws'
 import path from 'path'
 import { createRequire } from 'module'
@@ -94,9 +94,9 @@ async function auth(): Promise<{
   const wssUrl = data.tradingWss || res.headers.get('wss')
   if (!wssUrl) throw new Error('No wss URL in auth response')
 
-  const historicalHost = resolveDxFeedHistoricalHost(data, res.headers, {
-    propFirmId: process.env.DXFEED_PROP_FIRM_ID || 'miltraders',
-  })
+  const historicalHost = normalizeDxFeedHistoricalHost(
+    data.tradingRestReportHost || data.data?.tradingRestReportHost,
+  )
 
   return {
     tradingToken: data.token,

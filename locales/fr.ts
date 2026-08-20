@@ -2462,7 +2462,6 @@ export default {
     disconnected: "Compte DxFeed déconnecté",
     error: {
       credentialsRequired: "Saisissez votre e-mail et votre mot de passe",
-      propFirmRequired: "Sélectionnez votre propfirm avant de vous connecter",
       emailRequired: "Saisissez votre e-mail",
       emailInvalid: "Saisissez un e-mail valide",
       passwordRequired: "Saisissez votre mot de passe",
@@ -2473,26 +2472,17 @@ export default {
         "Une erreur s'est produite. Réessayez ou contactez le Support si le problème persiste.",
       CONFIG_NOT_SET:
         "DxFeed n'est pas encore configuré sur cette application. Contactez le Support pour l'activer.",
-      PROP_FIRM_REQUIRED: "Sélectionnez votre propfirm dans la liste, puis réessayez.",
-      PROP_FIRM_UNSUPPORTED:
-        "Cette propfirm n'est pas encore disponible dans la liste.",
-      PROP_FIRMS_UNAVAILABLE:
-        "Aucune propfirm n'est disponible pour le moment.",
       USER_NOT_AUTHENTICATED:
         "Vous devez être connecté pour lier DxFeed. Connectez-vous puis réessayez.",
       AUTH_HTTP_ERROR:
         "DxFeed a refusé la connexion (HTTP {status}). Vérifiez l'e-mail et le mot de passe, ou réessayez plus tard. Détail : {detail}",
       AUTH_REJECTED: "DxFeed a refusé la connexion : {reason}",
-      AUTH_PROP_FIRM_MISMATCH:
-        "Ces identifiants correspondent à {authPropfirm}, pas à {selectedPropfirm}. Choisissez la bonne firme dans la liste ou utilisez le bon compte.",
       HISTORICAL_HOST_UNRESOLVED:
-        "Impossible d'atteindre le serveur d'historique des trades pour {propfirm}.",
+        "DxFeed n'a pas renvoyé de serveur d'historique des trades pour cette connexion.",
       AUTH_UNEXPECTED:
         "Échec de connexion inattendu. Vérifiez vos identifiants et réessayez.",
       INVALID_STORED_CREDENTIALS:
         "Les données de connexion enregistrées sont invalides.",
-      MISSING_PROP_FIRM_RECONNECT:
-        "Cette connexion est obsolète.",
       NO_TOKEN_RECONNECT:
         "Cette connexion a expiré.",
       TOKEN_EXPIRED:
@@ -2511,17 +2501,15 @@ export default {
       UPDATE_SYNC_TIME_FAILED:
         "Impossible de mettre à jour l'heure de sync quotidienne. Réessayez.",
       hintContactSupport:
-        "Ouvrez le Support (menu → Support) et indiquez le nom de votre propfirm si elle n'apparaît pas dans la liste. Nous pouvons ajouter des propfirms sur demande.",
+        "Ouvrez le Support (menu → Support) si le problème continue.",
       hintReconnect:
-        "Supprimez cette connexion, cliquez sur Ajouter, sélectionnez votre propfirm et reconnectez-vous avec vos identifiants DxFeed.",
-      hintPropFirmMismatch:
-        "La propfirm sélectionnée doit correspondre au compte que vous utilisez sur la plateforme de votre propfirm.",
+        "Supprimez cette connexion, cliquez sur Ajouter, et reconnectez-vous avec vos identifiants DxFeed.",
       hintCheckCredentials:
         "Utilisez le même e-mail et mot de passe que sur la plateforme de trading de votre propfirm (démo ou live selon votre compte).",
       SYNC_FETCH_FAILED:
         "Impossible de charger les trades DxFeed ({failures} sur {total} comptes en échec). Reconnectez-vous et réessayez.",
       SYNC_ACCOUNTS_UNAVAILABLE:
-        "Impossible de lister vos comptes de trading ({count} enregistrés auparavant). Reconnectez-vous avec la même propfirm.",
+        "Impossible de lister vos comptes de trading ({count} enregistrés auparavant). Reconnectez-vous avec le même identifiant.",
       SYNC_OPEN_ONLY:
         "DxFeed a renvoyé {raw} position(s) mais aucun trade clôturé pour {accountId}.",
       SYNC_NO_TRADES_IN_RANGE:
@@ -2530,24 +2518,11 @@ export default {
     addAccount: {
       title: "Connecter un compte DxFeed",
       description:
-        "Choisissez d'abord votre propfirm, puis connectez-vous avec les mêmes identifiants que sur sa plateforme.",
-      propFirmStepDescription:
-        "Sélectionnez la propfirm où vous tradez avant de saisir vos identifiants.",
-      credentialsStepDescription:
-        "Connectez-vous avec les mêmes identifiants que sur la plateforme de cette propfirm.",
-      propFirmLabel: "Propfirm",
-      propFirmPlaceholder: "Sélectionnez votre propfirm",
-      propFirmHint:
-        "Choisissez la propfirm où vous tradez (ex. Miltraders, Phoenix Trader Funding). Les trades sont importés depuis son serveur d'historique—notamment depuis le site DxFeed générique.",
-      noPropFirmsTitle: "Votre propfirm n'est pas encore listée",
-      noPropFirmsDescription:
-        "Seules les propfirms que nous avons configurées apparaissent ici. Contactez le Support avec le nom et le site de votre propfirm pour que nous l'ajoutions.",
-      noPropFirmsAction: "Contacter le Support",
+        "Connectez-vous avec le même e-mail et mot de passe que sur la plateforme DxFeed de votre propfirm. Nous détectons la firme à partir de cette connexion.",
       emailLabel: "E-mail",
       emailPlaceholder: "E-mail de connexion à votre propfirm",
       passwordLabel: "Mot de passe",
       passwordPlaceholder: "Mot de passe de votre propfirm",
-      continueToCredentials: "Continuer",
       connecting: "Connexion...",
       connect: "Connecter",
     },
@@ -3047,7 +3022,7 @@ export default {
   "import.type.dxfeedSync.description":
     "Synchronisation directe de compte avec DxFeed",
   "import.type.dxfeedSync.details":
-    "Importez vos trades clôturés depuis votre propfirm (DxFeed / Volumetrica). Sélectionnez la propfirm, puis connectez-vous avec vos identifiants plateforme.",
+    "Importez vos trades clôturés depuis votre propfirm (DxFeed / Volumetrica). Connectez-vous avec vos identifiants plateforme ; nous détectons la firme à partir de cette connexion.",
   "import.type.ibkrSync.name": "Interactive Brokers",
   "import.type.ibkrSync.description":
     "Synchronisation directe de compte avec Interactive Brokers",
