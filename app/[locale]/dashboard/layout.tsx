@@ -61,7 +61,7 @@ export default function RootLayout({
         <DashboardPostHogIdentity params={params} />
       </Suspense>
       <TooltipProvider>
-        <ThemeProvider>
+        <ThemeProvider safariThemeSampler={false}>
           <DataProvider>
             <RithmicSyncContextProvider>
               <RithmicProtocolSyncContextProvider>
