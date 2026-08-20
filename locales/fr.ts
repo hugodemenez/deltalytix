@@ -282,6 +282,7 @@ export default {
   "dashboard.billingPage.invoices": "Factures",
   "dashboard.billingPage.billingHistory": "Historique de facturation",
   "dashboard.billingPage.recurringInvoiceLabel": "Plus · {period}",
+  "dashboard.billingPage.genericInvoiceLabel": "Plus",
   "dashboard.billingPage.lifetimeInvoiceLabel":
     "Plus · Lifetime — paiement unique",
   "dashboard.billingPage.noInvoicesTitle": "Aucune facture pour le moment",
