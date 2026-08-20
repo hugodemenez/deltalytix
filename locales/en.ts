@@ -527,7 +527,26 @@ export default {
     tradesFormatted: "{formatted} of {total} trades formatted",
     batchesCompleted: "Batches: {completed}/{total} completed",
     batchesProcessing: ", {processing} processing",
+    batchFailed: "Unable to format trades",
+    aiUnavailable:
+      "AI formatting is unavailable. Ask your administrator to configure an OpenAI API key, then try again.",
+    noTradesFormatted:
+      "No trades were formatted. Check that AI is configured on this server, then try again.",
+    parsedFromColumns: "Parsed from the file columns",
+    ordersPaired: "Order fills were paired into trades",
+    parseReady: "Ready to import",
+    emptyTable: "No trades to review yet",
+    parsing: "Parsing",
+    writingParser: "Writing a parser",
+    checkingSample: "Checking the first rows",
+    readingFile: "Reading the file",
+    parserFromAgent: "Wrote a parser for this file",
   },
+  "import.parse.tradesFormatted": "{formatted} trades formatted",
+  "import.parse.missingColumns": "Map these columns to continue: {columns}",
+  "import.parse.rowsProcessed": "{processed} of {total} rows",
+  "import.parse.rowsRead": "{processed} rows read",
+  "import.parse.scriptLabel": "How this file is read",
 
   "import.table.instrument": "Instrument",
   "import.table.entryDate": "Entry Date",
@@ -559,7 +578,7 @@ export default {
   "import.type.rithmicProtocolSync.details":
     "Sync order history through Rithmic R | Protocol API from Deltalytix servers (TypeScript), similar to Tradovate and DxFeed.",
   "import.type.csvAi.name": "CSV with AI",
-  "import.type.csvAi.description": "Any CSV file",
+  "import.type.csvAi.description": "Any trade export — we write a parser for it",
   "import.type.rithmicPerf.name": "Rithmic Performance",
   "import.type.rithmicPerf.description": "Rithmic Performance CSV",
   "import.type.rithmicPerf.details":

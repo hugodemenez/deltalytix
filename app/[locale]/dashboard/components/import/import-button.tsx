@@ -79,6 +79,9 @@ export default function ImportButton({
   const [step, setStep] = useState<Step>("select-import-type");
   const [importType, setImportType] = useState<ImportType>("");
   const [files, setFiles] = useState<File[]>([]);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [delimiter, setDelimiter] = useState<string>(",");
+  const [peekText, setPeekText] = useState<string>("");
   const [rawCsvData, setRawCsvData] = useState<string[][]>([]);
   const [csvData, setCsvData] = useState<string[][]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -237,6 +240,9 @@ export default function ImportButton({
     setRawCsvData([]);
     setCsvData([]);
     setHeaders([]);
+    setImportFile(null);
+    setDelimiter(",");
+    setPeekText("");
     setMappings({});
     setAccountNumbers([]);
     setNewAccountNumber("");
@@ -328,6 +334,9 @@ export default function ImportButton({
           setHeaders={setHeaders}
           setStep={setStep}
           setError={setError}
+          setImportFile={setImportFile}
+          setDelimiter={setDelimiter}
+          setPeekText={setPeekText}
         />
       );
     }
@@ -394,6 +403,9 @@ export default function ImportButton({
           isLoading={isLoading}
           headers={headers}
           mappings={mappings}
+          importFile={importFile}
+          delimiter={delimiter}
+          peekText={peekText}
         />
       );
     }
@@ -449,7 +461,11 @@ export default function ImportButton({
     if (!currentStep) return true;
 
     // File upload step
-    if (currentStep.component === FileUpload && csvData.length === 0)
+    if (
+      currentStep.component === FileUpload &&
+      csvData.length === 0 &&
+      !importFile
+    )
       return true;
 
     // PDF upload step
@@ -477,6 +493,12 @@ export default function ImportButton({
       importType === "atas" &&
       currentStep.component === platform.processorComponent &&
       selectedAccountNumbers.length === 0
+    )
+      return true;
+
+    if (
+      currentStep.component === FormatPreview &&
+      processedTrades.filter((trade) => trade.entryDate).length === 0
     )
       return true;
 

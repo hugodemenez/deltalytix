@@ -296,12 +296,6 @@ export const platforms: PlatformConfig[] = [
         component: FileUpload
       },
       {
-        id: 'map-columns',
-        title: 'import.steps.mapColumns',
-        description: 'import.steps.mapColumnsDescription',
-        component: ColumnMapping
-      },
-      {
         id: 'select-account',
         title: 'import.steps.selectAccount',
         description: 'import.steps.selectAccountDescription',
