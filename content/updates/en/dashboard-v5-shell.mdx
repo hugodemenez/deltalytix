@@ -4,11 +4,14 @@ description: 'The signed-in dashboard chrome is rebuilt around a connections str
 date: '2026-08-12'
 status: completed
 completedDate: '2026-08-16'
+image: '/updates/pr-475/en/dashboard-shell-home.png'
 ---
 
 # A rebuilt dashboard shell: connections, view menu, and filters
 
 The chrome around [the dashboard](/en/dashboard) is rebuilt. The full-width **Widgets / Table / Accounts** tab strip that used to sit under the navbar is gone — the same three views now live in a compact view menu in the top bar, on a shorter navbar and a lighter canvas.
+
+![Dashboard home with the compact view menu, connections strip, This week filter chip, and Edit Add toolbar pill](/updates/pr-475/en/dashboard-shell-home.png)
 
 ## What's in the top bar now
 
@@ -19,6 +22,8 @@ Share and **Account** (which opens Billing, Connections, Data, and Settings) now
 ## Filters move to the top bar
 
 A **This week** date chip and a **+ Filter** control replace the old filter placement. On desktop, filters open in a right-hand sheet; on mobile, a filter icon opens a bottom drawer, and the mobile home view can show a second navbar row of active chips. Either way, active filters pin at the top with a **Clear all** action, and sections — **Date Range**, **Accounts**, **Instruments**, **Tags**, **PnL** — fold open one at a time, the same pattern as the account drawer. The date chip opens **Date Range** directly; **+ Filter** opens the full, collapsed list.
+
+![Filter sheet with pinned active account chip, Clear all, and the Accounts section expanded](/updates/pr-475/en/dashboard-shell-filters.png)
 
 ## A layout-only toolbar pill
 

@@ -56,6 +56,7 @@ const CAPTURE_LABELS = {
     clearAll: /^Clear all$/i,
     weeklyRecap: /^Weekly recap$/i,
     deleteAccount: /^Delete account$/i,
+    addChip: /^Add$/i,
   },
   fr: {
     dxfeed: /^DxFeed$/i,
@@ -74,6 +75,7 @@ const CAPTURE_LABELS = {
     clearAll: /^Tout effacer$/i,
     weeklyRecap: /^Récap hebdomadaire$/i,
     deleteAccount: /^Supprimer le compte$/i,
+    addChip: /^Ajouter$/i,
   },
 }
 
@@ -1577,24 +1579,27 @@ export async function captureScene(browser, options) {
     }
 
     case 'dxfeed-single-step-form': {
-      // pr-475: current single-step DxFeed connect dialog — Username +
-      // Password only, no firm picker. IDs verified live in
-      // dxfeed-connect-form.tsx (#dxfeed-username / #dxfeed-password); the
-      // old #dxfeed-prop-firm / #dxfeed-email anchors used by
-      // dxfeed-firm-search / dxfeed-credentials-step belong to the retired
-      // catalog flow and must not be reused here. Empty fields only — never
-      // capture real credentials.
+      // pr-475: current single-step DxFeed connect sheet — Username +
+      // Password only, no firm picker. Opened from the dashboard connections
+      // strip + chip (v5 chrome); the old Connections-page #import-data
+      // nav link is gone. IDs verified in dxfeed-connect-form.tsx
+      // (#dxfeed-username / #dxfeed-password). Empty fields only.
       const page = await newCapturePage(browser, {
         locale: playwrightLocale,
         ...viewport('desktop'),
       })
-      const dialog = await openConnectionService(
-        page,
-        locale,
-        siteUrl,
-        CAPTURE_LABELS[locale].dxfeed,
-        '#dxfeed-username',
-      )
+      await waitForDashboard(page, locale, siteUrl)
+      const strip = page.getByRole('navigation', {
+        name: CAPTURE_LABELS[locale].connectionsStrip,
+      })
+      await strip.waitFor({ timeout: 30_000 })
+      await strip.getByRole('button', { name: CAPTURE_LABELS[locale].addChip }).click()
+      const menu = page.getByRole('menu').last()
+      await menu.waitFor({ timeout: 15_000 })
+      await menu.getByRole('menuitem').filter({ hasText: CAPTURE_LABELS[locale].dxfeed }).click()
+      const dialog = page.getByRole('dialog').last()
+      await dialog.waitFor({ timeout: 20_000 })
+      await dialog.locator('#dxfeed-username').waitFor({ timeout: 20_000 })
       const heading = dialog.getByRole('heading').first()
       const form = dialog.locator('form').first()
       const description = form.locator(':scope > p').first()

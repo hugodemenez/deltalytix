@@ -4,11 +4,14 @@ description: 'Connecting DxFeed is now a single username and password step — D
 date: '2026-08-20'
 status: completed
 completedDate: '2026-08-20'
+image: '/updates/pr-475/en/dxfeed-single-step-form.png'
 ---
 
 # DxFeed connect detects your prop firm from your login
 
-Connecting through DxFeed is a single-step form now. From [Connections](/en/dashboard/connections), add **DxFeed** and the **Connect DxFeed Account** dialog asks for one thing: **Sign in with the same username and password you use on your prop firm's DxFeed platform. We detect the firm from that login.**
+Connecting through DxFeed is a single-step form now. From [the dashboard](/en/dashboard) connections strip or [Connections](/en/dashboard/connections), add **DxFeed**. The **Add DxFeed connection** sheet asks for one thing: **Sign in with the same username and password you use on your prop firm's DxFeed platform. We detect the firm from that login.**
+
+![Add DxFeed connection sheet with empty Username and Password fields and no prop-firm picker](/updates/pr-475/en/dxfeed-single-step-form.png)
 
 The separate prop-firm picker step is gone — there's no list to search and no **Continue** step before credentials. The username field also accepts non-email logins (for example `trader_ht50`), which some firms issue instead of an email address; validation just checks that a username and a password were entered.
 

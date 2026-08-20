@@ -28,7 +28,7 @@
 
 - Decision: 1 visual
 - Rationale: The entire story is "one step now, not two" — a single screenshot of the current form with only Username + Password (no firm picker) proves the change completely. A "connected" success card would need a mocked provider response; the outline explicitly makes that conditional on doing so honestly, and it adds a second claim (detection works) beyond what this capture set needs to prove (the step count dropped).
-- Primary/card asset: `dxfeed-single-step-form.png` — new scene `dxfeed-single-step-form` (desktop). Opens **DxFeed** from the Connections "Add connection" menu and captures the dialog heading, description, empty **Username**/**Password** fields, and **Connect** button. Verified against `dxfeed-connect-form.tsx`: current field IDs are `#dxfeed-username` / `#dxfeed-password`, no `#dxfeed-prop-firm` anywhere in this form.
+- Primary/card asset: `dxfeed-single-step-form.png` — new scene `dxfeed-single-step-form` (desktop). Opens **DxFeed** from the dashboard connections-strip **Add** chip (the v5 chrome path; the old Connections-page `#import-data` nav is gone) and captures the sheet heading, description, empty **Username**/**Password** fields, and **Connect** button. Verified against `dxfeed-connect-form.tsx`: current field IDs are `#dxfeed-username` / `#dxfeed-password`, no `#dxfeed-prop-firm` anywhere in this form.
 - Additional assets: none.
 - Omitted candidates:
   - Detected-firm success card — would require a capture-only mock of a successful connection outcome; skipped for this batch to avoid overstating what a static mock proves. Reconsider only if a real (non-credential) mock of the post-connect account card is added under `scripts/changelog-media/`.
