@@ -1,0 +1,33 @@
+---
+title: 'Une interface de tableau de bord repensée : connexions, menu de vue et filtres'
+description: 'L''habillage du tableau de bord connecté est reconstruit autour d''une bande de connexions, d''un menu de vue compact et de filtres accessibles depuis la barre supérieure.'
+date: '2026-08-12'
+status: completed
+completedDate: '2026-08-16'
+---
+
+# Une interface de tableau de bord repensée : connexions, menu de vue et filtres
+
+L'habillage autour [du tableau de bord](/fr/dashboard) est reconstruit. La bande d'onglets pleine largeur **Widgets / Tableau / Comptes** qui se trouvait sous la barre de navigation a disparu — ces trois vues vivent désormais dans un menu de vue compact intégré à la barre supérieure, plus courte, sur un fond plus clair.
+
+## Ce qu'il y a dans la barre supérieure
+
+Le menu de vue bascule entre **Widgets**, **Tableau** et **Comptes**. Une bande **Connexions** apparaît juste en dessous, affichant vos connexions sous forme de puces portant leur nom d'affichage plutôt qu'un numéro de compte brut — sélectionnez un compte dans le sélecteur d'une puce pour filtrer le tableau de bord sur ce compte, et re-basculez la puce pour retirer le filtre. Les comptes autonomes se regroupent sous une puce **Autonome** avec son propre sélecteur de recherche, et chaque puce ouvre **Gérer la connexion** pour ce fournisseur. Les puces d'état indiquent **Connecté**, **Déconnecté** ou **Hors ligne**.
+
+Le partage et **Compte** (qui ouvre Facturation, Connexions, Données et Paramètres) vivent maintenant directement dans la barre de navigation.
+
+## Les filtres passent dans la barre supérieure
+
+Une puce de date **Cette semaine** et un contrôle **+ Filtrer** remplacent l'ancien emplacement des filtres. Sur ordinateur, les filtres s'ouvrent dans un panneau latéral droit ; sur mobile, une icône de filtre ouvre un tiroir en bas d'écran, et la vue d'accueil mobile peut afficher une deuxième ligne de puces actives sous la barre de navigation. Dans les deux cas, les filtres actifs restent épinglés en haut avec une action **Tout effacer**, et les sections — **Période**, **Comptes**, **Instruments**, **Tags**, **PnL** — se déplient une à la fois, comme dans le tiroir de comptes. La puce de date ouvre directement **Période** ; **+ Filtrer** ouvre la liste complète repliée.
+
+## Une barre d'outils flottante uniquement dédiée à la mise en page
+
+La barre flottante en bas conserve **Modifier** et **Ajouter**, mais elle ne sert plus qu'à la mise en page : elle ne duplique plus le sélecteur de vue. Ouvrir **Ajouter** filtre le catalogue de widgets selon la mise en page actuelle : les types de widgets déjà placés sur votre mise en page ordinateur ou mobile sont masqués de la liste correspondante — si tous les types sont déjà placés, le panneau l'indique au lieu d'afficher une grille vide.
+
+## Les sous-pages et la facturation partagent la même interface
+
+**Connexions**, **Données**, **Paramètres** et **Facturation** partagent désormais le même en-tête `← Tableau de bord | {Titre}` sur le fond clair, si bien que revenir en arrière ne quitte jamais l'univers visuel du tableau de bord. La page Facturation reçoit le même habillage, avec des sections **Offre actuelle**, **Offres disponibles** et **Historique de facturation** sur des cartes blanches (un historique de factures vide affiche désormais **Aucune facture pour le moment**).
+
+Une précision honnête : l'action **Envoyer un retour** a disparu de la barre de navigation dans cette nouvelle interface.
+
+[Ouvrir le tableau de bord](/fr/dashboard) pour essayer le nouveau menu de vue, une puce de connexion et **+ Filtrer**, puis utiliser **Compte** pour accéder à la Facturation ou aux Connexions.

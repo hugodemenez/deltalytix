@@ -1,0 +1,13 @@
+---
+title: 'L''habillage iOS Safari correspond désormais au fond de la page d''accueil'
+description: 'La barre d''état et l''en-tête iOS Safari reprennent maintenant la couleur de fond de la page d''accueil en mode clair et sombre, au lieu de laisser apparaître une bande blanche ou noire.'
+date: '2026-08-14'
+status: completed
+completedDate: '2026-08-15'
+---
+
+# L'habillage iOS Safari correspond désormais au fond de la page d'accueil
+
+Sur iOS Safari, la barre d'état et l'en-tête au-dessus de [la page d'accueil](/fr) reprennent maintenant la couleur de fond de la page — gris clair en mode clair, presque noir en mode sombre — au lieu de laisser apparaître une bande blanche ou noire au premier affichage ou après un changement de thème. Le correctif s'appuie sur des balises `theme-color` statiques, claire et sombre, plutôt que sur une synchronisation JavaScript, ce qui s'applique dès le chargement de la page.
+
+Ce correctif concerne spécifiquement la prise en charge de `theme-color` par iOS Safari ; il ne change pas l'apparence de la page d'accueil sur ordinateur ou sur Android Chrome.

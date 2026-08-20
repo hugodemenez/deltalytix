@@ -1,0 +1,13 @@
+---
+title: 'iOS Safari chrome now matches the landing canvas'
+description: 'The iOS Safari status bar and header now match the homepage canvas color in both light and dark mode, instead of showing a white or black seam.'
+date: '2026-08-14'
+status: completed
+completedDate: '2026-08-15'
+---
+
+# iOS Safari chrome now matches the landing canvas
+
+On iOS Safari, the status bar and header above [the homepage](/en) now match the page's canvas color — light gray in light mode, near-black in dark mode — instead of showing a white or black seam at first paint or after switching themes. The fix uses static light/dark `theme-color` metas rather than a JavaScript sync, so it applies as soon as the page loads.
+
+This is specific to iOS Safari's `theme-color` support; it doesn't change how the homepage looks on desktop or Android Chrome.
