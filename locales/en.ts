@@ -642,6 +642,7 @@ export default {
     singleDay: "Single Day",
     dateRange: "Date Range",
     thisWeek: "This week",
+    allDates: "All dates",
     addFilter: "+ Filter",
     addFilterAria: "Filters",
     thisMonth: "This Month",
