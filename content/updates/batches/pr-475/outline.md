@@ -1,6 +1,6 @@
-# Changelog outline: pr-release
+# Changelog outline: pr-475
 
-Batch id will be renamed to `pr-<promotion-pr-number>` once the `main` ← beta promotion PR exists. Do not publish MDX against this folder name.
+Promotion PR: #475 (`main` ← `cursor/release-beta-to-main-changelog-9dc9`).
 
 ## Release window and evidence
 
