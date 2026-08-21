@@ -1,56 +1,24 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
-import type { Ref } from 'react'
-import { Check, ChevronDown, Loader2 } from 'lucide-react'
-import Link from 'next/link'
+import { useCallback, useRef, useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from '@/components/ui/drawer'
-import { useIsMobile } from '@/hooks/use-mobile'
 import { getDxFeedErrorToastContent } from '@/lib/dxfeed-client-messages'
 import { showToastWithCopy } from '@/lib/toast-copy'
-import {
-  getDxFeedPropFirm,
-  getDxFeedPropFirmByAuthName,
-  getEnabledDxFeedPropFirms,
-} from '@/lib/dxfeed-propfirms'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
 import {
   captureConnectionCreated,
   captureConnectionFailed,
 } from '@/lib/connection-analytics'
 import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
+import { getDxFeedConnectFieldErrors } from '@/lib/dxfeed-connect-fields'
 import { authenticateDxFeed } from './actions'
-
-const DXFEED_PROP_FIRM_OPTIONS = getEnabledDxFeedPropFirms()
 
 const fieldClassName =
   'h-11 w-full min-w-0 max-w-full rounded-sm border-black/10 bg-transparent text-base sm:text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 focus-visible:ring-offset-0 dark:border-white/10 dark:focus-visible:border-white/30'
-
-const pickerTriggerClassName =
-  'inline-flex h-11 w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-sm border border-black/10 bg-transparent px-3 text-left text-base shadow-none transition-colors duration-150 hover:bg-black/5 disabled:pointer-events-none disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5 sm:text-sm'
 
 const primaryButtonClassName =
   'inline-flex h-11 w-full items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]'
@@ -58,9 +26,7 @@ const primaryButtonClassName =
 const invalidFieldClassName =
   'border-destructive/60 focus-visible:border-destructive/70 dark:border-destructive/60 dark:focus-visible:border-destructive/70'
 
-type DxFeedFieldErrors = Partial<
-  Record<'propFirm' | 'email' | 'password', string>
->
+type DxFeedFieldErrors = Partial<Record<'username' | 'password', string>>
 
 function FieldBorderError({
   id,
@@ -86,191 +52,23 @@ function FieldBorderError({
   )
 }
 
-function resolvePrefillPropFirmId(propFirmName?: string) {
-  if (!propFirmName) return ''
-  return (
-    getDxFeedPropFirm(propFirmName)?.id ??
-    getDxFeedPropFirmByAuthName(propFirmName)?.id ??
-    ''
-  )
-}
-
-function PropFirmPicker({
-  selectedPropFirmId,
-  onSelect,
-  triggerRef,
-  invalid,
-  describedBy,
-}: {
-  selectedPropFirmId: string
-  onSelect: (id: string) => void
-  triggerRef: Ref<HTMLButtonElement>
-  invalid: boolean
-  describedBy: string
-}) {
-  const t = useI18n()
-  const isMobile = useIsMobile()
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
-
-  const selectedPropFirm = DXFEED_PROP_FIRM_OPTIONS.find(
-    (firm) => firm.id === selectedPropFirmId,
-  )
-
-  const filteredPropFirms = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    if (!query) return DXFEED_PROP_FIRM_OPTIONS
-    return DXFEED_PROP_FIRM_OPTIONS.filter((firm) =>
-      firm.name.toLowerCase().includes(query),
-    )
-  }, [search])
-
-  const handleOpenChange = useCallback((next: boolean) => {
-    setOpen(next)
-    if (!next) setSearch('')
-  }, [])
-
-  const handleSelect = useCallback(
-    (id: string) => {
-      onSelect(id)
-      handleOpenChange(false)
-    },
-    [onSelect, handleOpenChange],
-  )
-
-  const commandList = (
-    <Command shouldFilter={false} className="min-w-0">
-      <CommandInput
-        placeholder={t('filters.searchPropfirm')}
-        value={search}
-        onValueChange={setSearch}
-        className="text-base sm:text-sm"
-      />
-      <CommandList className="max-h-[min(320px,50vh)] overflow-y-auto overflow-x-hidden">
-        <CommandEmpty>{t('filters.noPropfirmFound')}</CommandEmpty>
-        <CommandGroup>
-          {filteredPropFirms.map((firm) => (
-            <CommandItem
-              key={firm.id}
-              value={firm.id}
-              className="rounded-sm"
-              onSelect={() => handleSelect(firm.id)}
-            >
-              <Check
-                className={cn(
-                  'mr-2 h-4 w-4 shrink-0',
-                  selectedPropFirmId === firm.id ? 'opacity-100' : 'opacity-0',
-                )}
-              />
-              <span className="min-w-0 truncate">{firm.name}</span>
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      </CommandList>
-    </Command>
-  )
-
-  if (isMobile) {
-    return (
-      <>
-        <button
-          ref={triggerRef}
-          id="dxfeed-prop-firm"
-          type="button"
-          role="combobox"
-          aria-expanded={open}
-          aria-invalid={invalid}
-          aria-describedby={describedBy}
-          className={cn(
-            pickerTriggerClassName,
-            invalid && invalidFieldClassName,
-          )}
-          onClick={() => handleOpenChange(true)}
-        >
-          <span className="min-w-0 truncate">
-            {selectedPropFirm?.name ??
-              t('dxfeedSync.addAccount.propFirmPlaceholder')}
-          </span>
-          <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-        </button>
-        <Drawer open={open} onOpenChange={handleOpenChange}>
-          <DrawerContent className="rounded-t-sm border-black/10 dark:border-white/10">
-            <DrawerHeader className="text-left">
-              <DrawerTitle className="font-normal tracking-tight">
-                {t('dxfeedSync.addAccount.propFirmLabel')}
-              </DrawerTitle>
-              <DrawerDescription className="text-black/55 dark:text-white/55">
-                {t('dxfeedSync.addAccount.propFirmHint')}
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className="min-w-0 overflow-x-hidden px-2 pb-4">
-              {commandList}
-            </div>
-          </DrawerContent>
-        </Drawer>
-      </>
-    )
-  }
-
-  return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <button
-          ref={triggerRef}
-          id="dxfeed-prop-firm"
-          type="button"
-          role="combobox"
-          aria-expanded={open}
-          aria-invalid={invalid}
-          aria-describedby={describedBy}
-          className={cn(
-            pickerTriggerClassName,
-            invalid && invalidFieldClassName,
-          )}
-        >
-          <span className="min-w-0 truncate">
-            {selectedPropFirm?.name ??
-              t('dxfeedSync.addAccount.propFirmPlaceholder')}
-          </span>
-          <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] rounded-sm border-black/10 bg-white p-0 shadow-none dark:border-white/10 dark:bg-black"
-        align="start"
-      >
-        {commandList}
-      </PopoverContent>
-    </Popover>
-  )
-}
-
 export function DxFeedConnectForm({
   onConnected,
-  initialEmail,
-  initialPropFirmName,
+  initialUsername,
   sourceUi = 'connect_view',
 }: {
   onConnected?: () => void
-  initialEmail?: string
-  initialPropFirmName?: string
+  initialUsername?: string
   /** Which surface rendered this form; reported with connection analytics. */
   sourceUi?: 'connect_view' | 'credentials_manager'
 }) {
   const t = useI18n()
   const { loadAccounts } = useDxFeedSyncContext()
-  const [loginEmail, setLoginEmail] = useState(initialEmail ?? '')
+  const [loginUsername, setLoginUsername] = useState(initialUsername ?? '')
   const [loginPassword, setLoginPassword] = useState('')
-  const [selectedPropFirmId, setSelectedPropFirmId] = useState(() =>
-    resolvePrefillPropFirmId(initialPropFirmName),
-  )
-  const selectedPropFirmName =
-    DXFEED_PROP_FIRM_OPTIONS.find((firm) => firm.id === selectedPropFirmId)
-      ?.name ?? selectedPropFirmId
   const [isLoading, setIsLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<DxFeedFieldErrors>({})
-  const propFirmTriggerRef = useRef<HTMLButtonElement>(null)
-  const emailInputRef = useRef<HTMLInputElement>(null)
+  const usernameInputRef = useRef<HTMLInputElement>(null)
   const passwordInputRef = useRef<HTMLInputElement>(null)
 
   const clearFieldError = useCallback((field: keyof DxFeedFieldErrors) => {
@@ -284,49 +82,42 @@ export function DxFeedConnectForm({
 
   const validateForm = useCallback(() => {
     const errors: DxFeedFieldErrors = {}
+    const missing = getDxFeedConnectFieldErrors({
+      username: loginUsername,
+      password: loginPassword,
+    })
 
-    if (!selectedPropFirmId) {
-      errors.propFirm = t('dxfeedSync.error.propFirmRequired')
+    if (missing.includes('username')) {
+      errors.username = t('dxfeedSync.error.usernameRequired')
     }
-    if (!loginEmail.trim()) {
-      errors.email = t('dxfeedSync.error.emailRequired')
-    } else if (emailInputRef.current?.validity.typeMismatch) {
-      errors.email = t('dxfeedSync.error.emailInvalid')
-    }
-    if (!loginPassword) {
+    if (missing.includes('password')) {
       errors.password = t('dxfeedSync.error.passwordRequired')
     }
 
     setFieldErrors(errors)
 
-    const firstInvalidControl = errors.propFirm
-      ? propFirmTriggerRef.current
-      : errors.email
-        ? emailInputRef.current
-        : errors.password
-          ? passwordInputRef.current
-          : null
+    const firstInvalidControl = errors.username
+      ? usernameInputRef.current
+      : errors.password
+        ? passwordInputRef.current
+        : null
     if (firstInvalidControl) {
       requestAnimationFrame(() => firstInvalidControl.focus())
     }
 
     return Object.keys(errors).length === 0
-  }, [loginEmail, loginPassword, selectedPropFirmId, t])
+  }, [loginUsername, loginPassword, t])
 
   const handleConnect = useCallback(async () => {
     try {
       setIsLoading(true)
-      const result = await authenticateDxFeed(
-        loginEmail,
-        loginPassword,
-        selectedPropFirmId,
-      )
+      const result = await authenticateDxFeed(loginUsername, loginPassword)
 
       if (result.error) {
         captureConnectionFailed('dxfeed', {
           source_ui: sourceUi,
-          prop_firm_id: selectedPropFirmId,
-          prop_firm_name: selectedPropFirmName,
+          prop_firm_id: result.propFirmId,
+          prop_firm_name: result.propfirmName,
           error_code: result.error,
           http_status:
             typeof result.errorParams?.status === 'number'
@@ -350,12 +141,11 @@ export function DxFeedConnectForm({
       })
       captureConnectionCreated('dxfeed', {
         source_ui: sourceUi,
-        prop_firm_id: selectedPropFirmId,
-        prop_firm_name: selectedPropFirmName,
+        prop_firm_id: result.propFirmId,
+        prop_firm_name: result.propfirmName,
       })
-      setLoginEmail('')
+      setLoginUsername('')
       setLoginPassword('')
-      setSelectedPropFirmId('')
       setFieldErrors({})
       await loadAccounts()
       onConnected?.()
@@ -363,8 +153,6 @@ export function DxFeedConnectForm({
       console.error('DxFeed connect error:', error)
       captureConnectionFailed('dxfeed', {
         source_ui: sourceUi,
-        prop_firm_id: selectedPropFirmId,
-        prop_firm_name: selectedPropFirmName,
         error_code: DxFeedErrorCode.AUTH_UNEXPECTED,
       })
       showToastWithCopy('error', t('dxfeedSync.error.authFailed'), {
@@ -374,33 +162,7 @@ export function DxFeedConnectForm({
     } finally {
       setIsLoading(false)
     }
-  }, [
-    loginEmail,
-    loginPassword,
-    selectedPropFirmId,
-    selectedPropFirmName,
-    sourceUi,
-    t,
-    loadAccounts,
-    onConnected,
-  ])
-
-  if (DXFEED_PROP_FIRM_OPTIONS.length === 0) {
-    return (
-      <div className="space-y-3 border-y border-black/10 py-4 text-sm leading-relaxed text-black/55 dark:border-white/10 dark:text-white/55">
-        <p className="font-medium text-[oklch(0.17_0_0)] dark:text-[oklch(0.93_0_0)]">
-          {t('dxfeedSync.addAccount.noPropFirmsTitle')}
-        </p>
-        <p>{t('dxfeedSync.addAccount.noPropFirmsDescription')}</p>
-        <Link
-          href="/support"
-          className="inline-flex h-9 items-center rounded-sm border border-black/20 px-3 text-sm font-medium transition-[background-color,transform] duration-150 hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:hover:bg-white/5"
-        >
-          {t('dxfeedSync.addAccount.noPropFirmsAction')}
-        </Link>
-      </div>
-    )
-  }
+  }, [loginUsername, loginPassword, sourceUi, t, loadAccounts, onConnected])
 
   return (
     <form
@@ -419,72 +181,39 @@ export function DxFeedConnectForm({
 
       <div className="min-w-0 space-y-2">
         <Label
-          htmlFor="dxfeed-prop-firm"
+          htmlFor="dxfeed-username"
           className="text-sm text-black/55 dark:text-white/55"
         >
-          {t('dxfeedSync.addAccount.propFirmLabel')}
-        </Label>
-        <div className="relative min-w-0">
-          <PropFirmPicker
-            selectedPropFirmId={selectedPropFirmId}
-            onSelect={(id) => {
-              setSelectedPropFirmId(id)
-              clearFieldError('propFirm')
-            }}
-            triggerRef={propFirmTriggerRef}
-            invalid={Boolean(fieldErrors.propFirm)}
-            describedBy={
-              fieldErrors.propFirm
-                ? 'dxfeed-prop-firm-hint dxfeed-prop-firm-error'
-                : 'dxfeed-prop-firm-hint'
-            }
-          />
-          <FieldBorderError
-            id="dxfeed-prop-firm-error"
-            message={fieldErrors.propFirm}
-          />
-        </div>
-        <p
-          id="dxfeed-prop-firm-hint"
-          className="text-xs leading-relaxed text-black/45 dark:text-white/45"
-        >
-          {t('dxfeedSync.addAccount.propFirmHint')}
-        </p>
-      </div>
-
-      <div className="min-w-0 space-y-2">
-        <Label
-          htmlFor="dxfeed-email"
-          className="text-sm text-black/55 dark:text-white/55"
-        >
-          {t('dxfeedSync.addAccount.emailLabel')}
+          {t('dxfeedSync.addAccount.usernameLabel')}
         </Label>
         <div className="relative min-w-0">
           <Input
-            ref={emailInputRef}
-            id="dxfeed-email"
-            name="email"
-            type="email"
+            ref={usernameInputRef}
+            id="dxfeed-username"
+            name="username"
             autoComplete="username"
-            value={loginEmail}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            value={loginUsername}
             onChange={(e) => {
-              setLoginEmail(e.target.value)
-              clearFieldError('email')
+              setLoginUsername(e.target.value)
+              clearFieldError('username')
             }}
-            placeholder={t('dxfeedSync.addAccount.emailPlaceholder')}
+            placeholder={t('dxfeedSync.addAccount.usernamePlaceholder')}
             className={cn(
               fieldClassName,
-              fieldErrors.email && invalidFieldClassName,
+              fieldErrors.username && invalidFieldClassName,
             )}
             required
-            aria-invalid={Boolean(fieldErrors.email)}
+            aria-invalid={Boolean(fieldErrors.username)}
             aria-describedby={
-              fieldErrors.email ? 'dxfeed-email-error' : undefined
+              fieldErrors.username ? 'dxfeed-username-error' : undefined
             }
           />
           <FieldBorderError
-            id="dxfeed-email-error"
-            message={fieldErrors.email}
+            id="dxfeed-username-error"
+            message={fieldErrors.username}
           />
         </div>
       </div>

@@ -144,7 +144,7 @@ function createPropfirmPreview() {
   )
 }
 
-function createMindsetPreview() {
+function CreateMindsetPreview() {
   const t = useI18n()
   return (
     <Card className="h-[300px] flex flex-col">
@@ -569,7 +569,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     category: 'other',
     previewHeight: 300,
     getComponent: ({ size }) => <MindsetWidget size={size} />,
-    getPreview: () => createMindsetPreview()
+    getPreview: () => <CreateMindsetPreview />
   },
   tagWidget: {
     type: 'tagWidget',

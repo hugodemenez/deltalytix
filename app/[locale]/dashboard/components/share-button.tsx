@@ -2,8 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback, forwardRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Share, Check, ChevronsUpDown, Copy, Layout, ExternalLink, Download } from "lucide-react"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { Share, Share2, Check, ChevronsUpDown, Copy, Layout, ExternalLink, Download } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -36,7 +35,6 @@ import { DateRange } from "react-day-picker"
 import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
 import { SharedLayoutsManager } from "./shared-layouts-manager"
-import { cn } from "@/lib/utils"
 import confetti from 'canvas-confetti'
 import { fr } from 'date-fns/locale'
 import { Switch } from "@/components/ui/switch"
@@ -53,6 +51,7 @@ interface ShareButtonProps {
     mobile: any[]
   }
   compact?: boolean
+  appearance?: "toolbar" | "navbar"
 }
 
 function triggerConfetti() {
@@ -99,11 +98,10 @@ function triggerConfetti() {
 }
 
 export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
-  ({ variant = "ghost", size = "icon", currentLayout, compact = false }, ref) => {
+  ({ variant = "ghost", size = "icon", currentLayout, appearance = "toolbar" }, ref) => {
     const t = useI18n()
     const locale = useCurrentLocale()
     const dateLocale = locale === 'fr' ? fr : undefined
-    const isMobile = useIsMobile()
     const user = useUserStore(state => state.user)
     const timezone = useUserStore(state => state.timezone)
     const trades = useTradesStore(state => state.trades)
@@ -122,7 +120,6 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const [shareAllAccounts, setShareAllAccounts] = useState(true)
     const [isExporting, setIsExporting] = useState(false)
     const [isSharing, setIsSharing] = useState(false)
-    const useCompactButton = compact || isMobile
 
     // Get the earliest and latest trade dates
     const defaultDateRange = useMemo(() => {
@@ -483,23 +480,29 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         }
       }}>
         <DialogTrigger asChild>
-          <Button 
-            ref={ref}
-            variant={variant}
-            size={size}
-            aria-label={useCompactButton ? t("share.button") : undefined}
-            className={cn(
-              "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
-              useCompactButton ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
-            )}
-          >
-            <Share className="h-4 w-4 shrink-0" />
-            {!useCompactButton && (
-              <span className="text-sm font-medium">
+          {appearance === "navbar" ? (
+            <button
+              ref={ref}
+              type="button"
+              aria-label={t("share.button")}
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[#171717] transition-colors hover:bg-[#FAFAFA] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-foreground dark:hover:bg-muted/40"
+            >
+              <Share2 className="h-4 w-4" strokeWidth={1.75} />
+            </button>
+          ) : (
+            <Button
+              ref={ref}
+              variant={variant}
+              size={size}
+              aria-label={t("share.button")}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full p-0 transition-transform active:scale-95 md:h-10 md:w-auto md:min-w-[120px] md:gap-3 md:px-4"
+            >
+              <Share className="h-4 w-4 shrink-0" />
+              <span className="hidden text-sm font-medium md:inline">
                 {t("share.button")}
               </span>
-            )}
-          </Button>
+            </Button>
+          )}
         </DialogTrigger>
         <DialogContent className="sm:max-w-4xl h-[90vh] sm:h-[85vh] w-[95vw]">
           <div className="h-full flex flex-col overflow-y-hidden">

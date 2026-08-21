@@ -9,20 +9,14 @@ import { formatTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
 import { upsertAccountsForNumbers } from '@/server/connections'
-import {
-  coerceDxFeedHistoricalHostForSync,
-  normalizeDxFeedHistoricalHost,
-} from '@/lib/dxfeed-historical-host'
+import { normalizeDxFeedHistoricalHost } from '@/lib/dxfeed-historical-host'
 import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
 import {
   getDxFeedTokenExpiryFromProvider,
   isDxFeedAccessTokenExpired,
 } from '@/lib/dxfeed-token'
 import { resolveDxFeedV2AuthUrl } from '@/lib/dxfeed-auth'
-import {
-  buildHistoricalHostForPropFirm,
-  getDxFeedPropFirm,
-} from '@/lib/dxfeed-propfirms'
+import { detectDxFeedPropFirmFromHost, normalizeDxFeedPropfirmKey } from '@/lib/dxfeed-propfirms'
 import type {
   DxFeedLoginRequest,
   DxFeedLoginResponse,
@@ -179,20 +173,10 @@ function extractApiErrorMessage(payload: unknown): string | null {
 export async function authenticateDxFeed(
   login: string,
   password: string,
-  propFirmId: string,
 ): Promise<DxFeedActionResult> {
   try {
     if (!DXFEED_AUTH_URL || !DXFEED_PLATFORM_KEY) {
       return { error: DxFeedErrorCode.CONFIG_NOT_SET }
-    }
-
-    if (!propFirmId?.trim()) {
-      return { error: DxFeedErrorCode.PROP_FIRM_REQUIRED }
-    }
-
-    const propFirm = getDxFeedPropFirm(propFirmId)
-    if (!propFirm?.enabled) {
-      return { error: DxFeedErrorCode.PROP_FIRM_UNSUPPORTED }
     }
 
     const supabase = await createClient()
@@ -202,9 +186,7 @@ export async function authenticateDxFeed(
     }
 
     const environment = DXFEED_ENVIRONMENT === 0 ? 'production' : 'demo'
-    const authLogContext =
-      `userId=${user.id} propFirmId=${propFirm.id} ` +
-      `propFirmName=${JSON.stringify(propFirm.name)} environment=${environment}`
+    const authLogContext = `userId=${user.id} environment=${environment}`
 
     const body: DxFeedLoginRequest = {
       login,
@@ -265,32 +247,22 @@ export async function authenticateDxFeed(
 
     if (!historicalHost) {
       logger.warn('DxFeed v2 auth response did not include the historical report host')
-      return {
-        error: DxFeedErrorCode.HISTORICAL_HOST_UNRESOLVED,
-        errorParams: { propfirm: propFirm.name },
-      }
+      return { error: DxFeedErrorCode.HISTORICAL_HOST_UNRESOLVED }
     }
 
-    const expectedHistoricalHost = normalizeDxFeedHistoricalHost(
-      buildHistoricalHostForPropFirm(propFirm),
+    const detectedFirm = detectDxFeedPropFirmFromHost(historicalHost)
+    const authName = data.propfirmName?.trim()
+    const propfirmName = authName || detectedFirm?.name || 'DxFeed'
+    const propFirmId =
+      detectedFirm?.id || normalizeDxFeedPropfirmKey(authName) || 'dxfeed'
+
+    logger.info(
+      `Auth successful for ${propfirmName} (${authLogContext} historicalHost=${historicalHost})`,
     )
-    if (historicalHost !== expectedHistoricalHost) {
-      return {
-        error: DxFeedErrorCode.AUTH_PROP_FIRM_MISMATCH,
-        errorParams: {
-          authPropfirm: historicalHost,
-          selectedPropfirm: propFirm.name,
-        },
-      }
-    }
-
-    logger.info(`Auth successful for ${propFirm.name} (${authLogContext})`)
 
     const reportAccessToken = data.tradingRestReportToken
 
-    const accountsResult = historicalHost
-      ? await getDxFeedAccounts(reportAccessToken, historicalHost)
-      : { ok: false as const, status: 0, unauthorized: false }
+    const accountsResult = await getDxFeedAccounts(reportAccessToken, historicalHost)
 
     if (!accountsResult.ok && accountsResult.unauthorized) {
       return { error: DxFeedErrorCode.TOKEN_EXPIRED }
@@ -305,15 +277,15 @@ export async function authenticateDxFeed(
       accessToken: reportAccessToken,
       historicalHost,
       accountNumbers,
-      propFirmId: propFirm.id,
-      propfirmName: propFirm.name,
+      propFirmId,
+      propfirmName,
       tokenExpirationSource: 'provider',
     }
 
     const storeResult = await storeDxFeedToken(JSON.stringify(credentials), login, {
       tokenExpiresAt,
-      propFirmId: propFirm.id,
-      propFirmName: propFirm.name,
+      propFirmId,
+      propFirmName: propfirmName,
     })
     if (storeResult.error) {
       logger.warn('Failed to store token')
@@ -332,20 +304,18 @@ export async function authenticateDxFeed(
       })
       if (connection) {
         await upsertAccountsForNumbers(user.id, accountNumbers, connection.id)
-        if (propFirm.name) {
-          await prisma.account.updateMany({
-            where: {
-              userId: user.id,
-              number: { in: accountNumbers },
-              connectionId: connection.id,
-            },
-            data: { propfirm: propFirm.name },
-          })
-        }
+        await prisma.account.updateMany({
+          where: {
+            userId: user.id,
+            number: { in: accountNumbers },
+            connectionId: connection.id,
+          },
+          data: { propfirm: propfirmName },
+        })
       }
     }
 
-    return { success: true }
+    return { success: true, propFirmId, propfirmName }
   } catch (error) {
     logger.error('Authentication error:', error)
     return { error: DxFeedErrorCode.AUTH_UNEXPECTED }
@@ -526,18 +496,11 @@ export async function getDxFeedTrades(
 ): Promise<DxFeedTradesResult> {
   try {
     const credentials = parseStoredCredentials(initialTokenJson)
-    if (!credentials) {
+    if (!credentials?.accessToken || !credentials.historicalHost) {
       return { error: DxFeedErrorCode.INVALID_STORED_CREDENTIALS }
     }
 
-    const propFirm = getDxFeedPropFirm(credentials.propFirmId)
-    if (!propFirm) {
-      return { error: DxFeedErrorCode.MISSING_PROP_FIRM_RECONNECT }
-    }
-
-    const { accessToken } = credentials
-    // Prefer host from connect; remap mistaken trading WSS hosts; fall back to catalog.
-    const historicalHost = coerceDxFeedHistoricalHostForSync(credentials.historicalHost, propFirm)
+    const { accessToken, historicalHost } = credentials
 
     let userId = options?.userId ?? null
     let syncAccountId: string | null = options?.accountId ?? null

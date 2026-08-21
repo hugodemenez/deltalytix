@@ -8,10 +8,8 @@ import { DxFeedConnectForm } from './dxfeed-connect-form'
 interface DxFeedSyncProps {
   /** When false, open on the connect form instead of the saved-accounts list. */
   initialShowAccountsManager?: boolean
-  /** Prefill login email when reconnecting. */
-  initialEmail?: string
-  /** Prefill prop firm (name or id) when reconnecting. */
-  initialPropFirmName?: string
+  /** Prefill login username when reconnecting. */
+  initialUsername?: string
   onConnected?: () => void
   /** Accepted for PlatformConfig customComponent compatibility; unused here. */
   setIsOpen?: Dispatch<SetStateAction<boolean>> | ((open: boolean) => void)
@@ -19,8 +17,7 @@ interface DxFeedSyncProps {
 
 export function DxFeedSync({
   initialShowAccountsManager = true,
-  initialEmail,
-  initialPropFirmName,
+  initialUsername,
   onConnected,
   setIsOpen: _setIsOpen,
 }: DxFeedSyncProps = {}) {
@@ -32,8 +29,7 @@ export function DxFeedSync({
         <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
           <DxFeedConnectForm
             onConnected={onConnected}
-            initialEmail={initialEmail}
-            initialPropFirmName={initialPropFirmName}
+            initialUsername={initialUsername}
           />
         </div>
       </div>

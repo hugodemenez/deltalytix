@@ -1,746 +1,539 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useI18n } from "@/locales/client"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Separator } from "@/components/ui/separator"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { useUserStore } from '../../../../store/user-store'
-import { useTheme } from '@/context/theme-provider'
-import { 
-  User, 
-  Settings, 
-  Bell, 
-  Shield, 
-  Globe, 
-  Moon, 
-  Sun, 
-  Laptop,
-  Clock,
-  CreditCard,
-  Database,
-  LifeBuoy,
-  LogOut,
-  Building2,
-  Eye,
-  EyeOff,
-  BarChart3,
-  RotateCcw
-} from "lucide-react"
-import { signOut, setPasswordAction } from "@/server/auth"
-import { useBreakevenStore } from "@/store/widgets/breakeven-store"
+import { useEffect, useState, type ComponentProps, type ReactNode } from 'react'
 import Link from 'next/link'
-import { useChangeLocale, useCurrentLocale } from "@/locales/client"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Slider } from "@/components/ui/slider"
-import { createTeam, joinTeam, leaveTeam, getUserTeams } from './actions'
-import { toast } from "sonner"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { LinkedAccounts } from "@/components/linked-accounts"
-import { ThemeToggleIcon } from "@/components/theme-toggle-icon"
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { useUserStore } from '../../../../store/user-store'
+import { useI18n } from '@/locales/client'
+import { useIsMobile } from '@/hooks/use-mobile'
 import {
-  ConsentPrivacyControls,
-  getConsentRecordCopy,
-} from "@/components/consent-record"
+  getUserIdentities,
+  linkDiscordAccount,
+  linkGoogleAccount,
+  setPasswordAction,
+  signOut,
+} from '@/server/auth'
+import {
+  getWeeklyRecapPreference,
+  setWeeklyRecapPreference,
+} from '@/server/weekly-recap-preference'
+import { deleteCurrentUserAccount } from '@/server/delete-account'
+import { getUserTeams } from './actions'
+import { cn } from '@/lib/utils'
 
-type Locale = 'en' | 'fr'
+interface UserIdentity {
+  id: string
+  identity_id: string
+  user_id: string
+  identity_data?: { [key: string]: unknown }
+  provider: string
+  created_at?: string
+  last_sign_in_at?: string
+}
 
-// Add timezone list
-const timezones = [
-  'UTC',
-  'Europe/Paris',
-  'America/New_York',
-  'America/Chicago',
-  'America/Los_Angeles',
-  'Asia/Tokyo',
-  'Asia/Shanghai',
-  'Australia/Sydney',
-  // Add more common timezones as needed
-];
+function SettingsSection({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <section>
+      <h2 className="mb-3 text-xs font-medium text-[#686D67] dark:text-muted-foreground">
+        {label}
+      </h2>
+      <div className="overflow-hidden rounded-[4px] border border-[#E5E5E5] bg-white dark:border-border dark:bg-card">
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function PrefRow({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-between gap-4 px-4 py-3.5',
+        className
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+function RowAction({
+  children,
+  className,
+  ...props
+}: ComponentProps<'button'>) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'shrink-0 text-sm text-[#686D67] transition-colors hover:text-[#171717] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-muted-foreground dark:hover:text-foreground',
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </button>
+  )
+}
 
 export default function SettingsPage() {
   const t = useI18n()
-  const consentCopy = getConsentRecordCopy(t)
-  const changeLocale = useChangeLocale()
-  const currentLocale = useCurrentLocale()
-  const { theme, setTheme, intensity, setIntensity } = useTheme()
-  const user = useUserStore(state => state.supabaseUser)
-  const timezone = useUserStore(state => state.timezone)
-  const setTimezone = useUserStore(state => state.setTimezone)
-  
-  const breakevenRange = useBreakevenStore(state => state.range)
-  const setBreakevenRange = useBreakevenStore(state => state.setRange)
-  const resetBreakeven = useBreakevenStore(state => state.reset)
-  const [emailNotifications, setEmailNotifications] = useState(true)
-  const [pushNotifications, setPushNotifications] = useState(false)
-  const [tradingAlerts, setTradingAlerts] = useState(true)
-  const [weeklyReports, setWeeklyReports] = useState(true)
+  const isMobile = useIsMobile()
+  const user = useUserStore((state) => state.supabaseUser)
+
+  const [identities, setIdentities] = useState<UserIdentity[]>([])
+  const [linking, setLinking] = useState(false)
+  const [weeklyRecap, setWeeklyRecap] = useState(true)
+  const [weeklyRecapReady, setWeeklyRecapReady] = useState(false)
+  const [weeklyRecapSaving, setWeeklyRecapSaving] = useState(false)
+  const [passwordOpen, setPasswordOpen] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [showNewPassword, setShowNewPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  
-  // Team state
-  const [userTeams, setUserTeams] = useState<{
-    ownedTeams: any[]
-    joinedTeams: any[]
-  }>({ ownedTeams: [], joinedTeams: [] })
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [teamLabel, setTeamLabel] = useState<string | null>(null)
 
-  const languages: { value: Locale; label: string }[] = [
-    { value: 'en', label: 'English' },
-    { value: 'fr', label: 'Français' },
-  ]
+  const isGoogleLinked = identities.some((id) => id.provider === 'google')
+  const isDiscordLinked = identities.some((id) => id.provider === 'discord')
 
-  const handleThemeChange = (value: string) => {
-    setTheme(value as "light" | "dark" | "system")
-  }
-
-  // Load user teams on component mount
   useEffect(() => {
     const loadTeams = async () => {
       const result = await getUserTeams()
       if (result.success && result.ownedTeams && result.joinedTeams) {
-        setUserTeams({
-          ownedTeams: result.ownedTeams,
-          joinedTeams: result.joinedTeams,
-        })
+        const first = result.ownedTeams[0] ?? result.joinedTeams[0]
+        setTeamLabel(first?.name ?? null)
       }
     }
-    loadTeams()
+    void loadTeams()
   }, [])
 
-
-
-  const handleLeaveTeam = async (teamId: string) => {
-    const result = await leaveTeam(teamId)
-    if (result.success) {
-      toast.success(t('dashboard.teams.leaveSuccess'))
-      // Reload teams
-      const updatedTeams = await getUserTeams()
-      if (updatedTeams.success && updatedTeams.ownedTeams && updatedTeams.joinedTeams) {
-        setUserTeams({
-          ownedTeams: updatedTeams.ownedTeams,
-          joinedTeams: updatedTeams.joinedTeams,
-        })
+  useEffect(() => {
+    const loadIdentities = async () => {
+      try {
+        const userIdentities = await getUserIdentities()
+        setIdentities(
+          ((userIdentities?.identities || []) as UserIdentity[]).filter(
+            (identity) =>
+              identity.provider === 'google' || identity.provider === 'discord'
+          )
+        )
+      } catch {
+        setIdentities([])
       }
-    } else {
-      toast.error(result.error || t('dashboard.teams.error'))
+    }
+    void loadIdentities()
+
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('linked')) {
+      toast.success(t('auth.accountLinked'))
+      const nextUrl = new URL(window.location.href)
+      nextUrl.searchParams.delete('linked')
+      window.history.replaceState({}, '', nextUrl.toString())
+    }
+  }, [t])
+
+  useEffect(() => {
+    const loadRecap = async () => {
+      try {
+        const isActive = await getWeeklyRecapPreference()
+        setWeeklyRecap(isActive)
+      } catch {
+        setWeeklyRecap(true)
+      } finally {
+        setWeeklyRecapReady(true)
+      }
+    }
+    void loadRecap()
+  }, [])
+
+  const handleLinkGoogle = async () => {
+    try {
+      setLinking(true)
+      await linkGoogleAccount()
+    } catch {
+      toast.error(t('auth.linkingFailed'))
+      setLinking(false)
     }
   }
 
+  const handleLinkDiscord = async () => {
+    try {
+      setLinking(true)
+      await linkDiscordAccount()
+    } catch {
+      toast.error(t('auth.linkingFailed'))
+      setLinking(false)
+    }
+  }
+
+  const handleWeeklyRecap = async (next: boolean) => {
+    const previous = weeklyRecap
+    setWeeklyRecap(next)
+    setWeeklyRecapSaving(true)
+    try {
+      const result = await setWeeklyRecapPreference(next)
+      setWeeklyRecap(result.isActive)
+    } catch {
+      setWeeklyRecap(previous)
+      toast.error(t('dashboard.settings.weeklyRecap.error'))
+    } finally {
+      setWeeklyRecapSaving(false)
+    }
+  }
+
+  const handleSetPassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error(t('error'), { description: t('auth.passwordMinLength') })
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error(t('error'), { description: t('auth.passwordsDoNotMatch') })
+      return
+    }
+    setPasswordSaving(true)
+    try {
+      await setPasswordAction(newPassword)
+      toast.success(t('success'), { description: t('auth.passwordUpdated') })
+      setNewPassword('')
+      setConfirmPassword('')
+      setPasswordOpen(false)
+    } catch (error: unknown) {
+      toast.error(t('error'), {
+        description:
+          error instanceof Error ? error.message : 'Failed to update password',
+      })
+    } finally {
+      setPasswordSaving(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true)
+    try {
+      localStorage.removeItem('deltalytix_user_data')
+      await deleteCurrentUserAccount()
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message === 'NEXT_REDIRECT' ||
+          ('digest' in error &&
+            typeof error.digest === 'string' &&
+            error.digest.startsWith('NEXT_REDIRECT')))
+      ) {
+        throw error
+      }
+      setDeleting(false)
+      toast.error(t('dashboard.settings.deleteAccount.error'), {
+        description: error instanceof Error ? error.message : undefined,
+      })
+    }
+  }
+
+  const handleSignOut = () => {
+    localStorage.removeItem('deltalytix_user_data')
+    void signOut()
+  }
+
+  const fieldClassName =
+    'h-10 rounded-[4px] border-[#E5E5E5] bg-white text-sm shadow-none focus-visible:ring-[#171717]/20 dark:border-border dark:bg-background'
+
+  const passwordFields = (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <Label
+          htmlFor="newPassword"
+          className="text-sm font-medium text-[#171717] dark:text-foreground"
+        >
+          {t('dashboard.settings.newPassword')}
+        </Label>
+        <Input
+          id="newPassword"
+          type="password"
+          autoComplete="new-password"
+          placeholder="••••••••"
+          value={newPassword}
+          onChange={(event) => setNewPassword(event.target.value)}
+          className={fieldClassName}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label
+          htmlFor="confirmPassword"
+          className="text-sm font-medium text-[#171717] dark:text-foreground"
+        >
+          {t('dashboard.settings.confirmPassword')}
+        </Label>
+        <Input
+          id="confirmPassword"
+          type="password"
+          autoComplete="new-password"
+          placeholder="••••••••"
+          value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)}
+          className={fieldClassName}
+        />
+      </div>
+    </div>
+  )
+
+  const deleteBody = t('dashboard.settings.deleteAccount.confirmBody')
+
+  const deleteActions = (
+    <div className="flex justify-end gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        className="h-9 rounded-[4px] border-[#E5E5E5] bg-white text-sm font-medium text-[#171717] shadow-none hover:bg-[#F5F5F5] dark:border-border dark:bg-background dark:text-foreground"
+        onClick={() => setDeleteOpen(false)}
+        disabled={deleting}
+      >
+        {t('dashboard.settings.deleteAccount.cancel')}
+      </Button>
+      <Button
+        type="button"
+        className="h-9 rounded-[4px] bg-[#DC2626] text-sm font-medium text-white shadow-none hover:bg-[#DC2626]/90"
+        onClick={() => void handleDeleteAccount()}
+        disabled={deleting}
+      >
+        {t('dashboard.settings.deleteAccount.confirmAction')}
+      </Button>
+    </div>
+  )
+
+  // Header chrome (`← Dashboard | Settings`) comes from Navbar →
+  // DashboardSubpageHeader for /dashboard/settings. Do not duplicate it here.
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">{t('dashboard.settings')}</h1>
-        <p className="text-muted-foreground mt-2">{t('dashboard.settings.description')}</p>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card id="privacy" className="scroll-mt-24 lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              {consentCopy.privacy}
-            </CardTitle>
-            <CardDescription>
-              {consentCopy.sub}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ConsentPrivacyControls copy={consentCopy} />
-          </CardContent>
-        </Card>
-
-        {/* Profile Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              {t('dashboard.profile')}
-            </CardTitle>
-            <CardDescription>
-              Manage your personal information and account details
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={user?.user_metadata.avatar_url} />
-                <AvatarFallback className="text-lg">
-                  {user?.email![0].toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-semibold">{user?.email}</h3>
-                  <Badge variant="secondary">Active</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Member since {new Date(user?.created_at || '').toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-            <Separator />
-            <div className="grid gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" placeholder="Enter your first name" />
-                </div>
-                <div>
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" placeholder="Enter your last name" />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={user?.email || ''} disabled />
-              </div>
-              <Button>Update Profile</Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Preferences Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Preferences
-            </CardTitle>
-            <CardDescription>
-              Customize your dashboard appearance and behavior
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Theme Settings */}
-            <div>
-              <Label className="text-base font-medium">Theme</Label>
-              <div className="mt-2 flex items-center gap-4">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-[200px] justify-start">
-                      <ThemeToggleIcon />
-                      <span className="ml-2">
-                        {theme === 'light' ? 'Light' : theme === 'dark' ? 'Dark' : 'System'}
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => handleThemeChange("light")}>
-                      <Sun className="mr-2 h-4 w-4" />
-                      <span>Light</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleThemeChange("dark")}>
-                      <Moon className="mr-2 h-4 w-4" />
-                      <span>Dark</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleThemeChange("system")}>
-                      <Laptop className="mr-2 h-4 w-4" />
-                      <span>System</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <div className="flex-1">
-                  <Label className="text-sm">Theme Intensity</Label>
-                  <div className="mt-2 flex items-center gap-4">
-                    <Slider
-                      value={[intensity]}
-                      onValueChange={([value]) => setIntensity(value)}
-                      min={90}
-                      max={100}
-                      step={1}
-                      className="flex-1"
-                    />
-                    <span className="text-sm text-muted-foreground w-12">{intensity}%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Language Settings */}
-            <div>
-              <Label className="text-base font-medium flex items-center gap-2">
-                <Globe className="h-4 w-4" />
-                Language
-              </Label>
-              <div className="mt-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-[200px] justify-start">
-                      <Globe className="mr-2 h-4 w-4" />
-                      {languages.find(lang => lang.value === currentLocale)?.label}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuRadioGroup value={currentLocale}>
-                      {languages.map((lang) => (
-                        <DropdownMenuRadioItem 
-                          key={lang.value} 
-                          value={lang.value}
-                          onClick={() => changeLocale(lang.value)}
-                        >
-                          {lang.label}
-                        </DropdownMenuRadioItem>
-                      ))}
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Timezone Settings */}
-            <div>
-              <Label className="text-base font-medium flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Timezone
-              </Label>
-              <div className="mt-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-[200px] justify-start">
-                      <Clock className="mr-2 h-4 w-4" />
-                      {timezone}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <ScrollArea className="h-[200px]">
-                      <DropdownMenuRadioGroup value={timezone} onValueChange={setTimezone}>
-                        {timezones.map((tz) => (
-                          <DropdownMenuRadioItem key={tz} value={tz}>
-                            {tz.replace('_', ' ')}
-                          </DropdownMenuRadioItem>
-                        ))}
-                      </DropdownMenuRadioGroup>
-                    </ScrollArea>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Trading Preferences Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              {t('dashboard.settings.tradingPreferences')}
-            </CardTitle>
-            <CardDescription>
-              {t('dashboard.settings.tradingPreferences.description')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label className="text-base font-medium">{t('dashboard.settings.breakeven.title')}</Label>
-              <p className="text-sm text-muted-foreground mt-1">
-                {t('dashboard.settings.breakeven.description')}
+    <div className="min-h-[calc(100dvh-var(--navbar-height,4rem))] bg-[#FAFAFA] dark:bg-background">
+      <main className="mx-auto w-full max-w-[640px] space-y-8 px-4 py-8">
+        <SettingsSection label={t('dashboard.settings.account')}>
+          <div className="divide-y divide-[#E5E5E5] dark:divide-border">
+            <PrefRow>
+              <p className="text-sm font-medium text-[#171717] dark:text-foreground">
+                {t('dashboard.settings.email')}
               </p>
-            </div>
-            <div
-              className="grid grid-cols-2 gap-4"
-              key={`breakeven-${breakevenRange.min}-${breakevenRange.max}`}
-            >
-              <div>
-                <Label htmlFor="be-min">{t('dashboard.settings.breakeven.min')}</Label>
-                <Input
-                  id="be-min"
-                  type="number"
-                  step="any"
-                  defaultValue={breakevenRange.min.toString()}
-                   onBlur={(e) => {
-                     const val = parseFloat(e.target.value)
-                     if (!isNaN(val) && val <= breakevenRange.max) {
-                       setBreakevenRange({ ...breakevenRange, min: val })
-                     } else {
-                       toast.error(t('dashboard.settings.breakeven.invalidMin'))
-                       e.target.value = breakevenRange.min.toString()
-                     }
-                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                  }}
-                  placeholder="-10"
-                />
-              </div>
-              <div>
-                <Label htmlFor="be-max">{t('dashboard.settings.breakeven.max')}</Label>
-                <Input
-                  id="be-max"
-                  type="number"
-                  step="any"
-                  defaultValue={breakevenRange.max.toString()}
-                   onBlur={(e) => {
-                     const val = parseFloat(e.target.value)
-                     if (!isNaN(val) && val >= breakevenRange.min) {
-                       setBreakevenRange({ ...breakevenRange, max: val })
-                     } else {
-                       toast.error(t('dashboard.settings.breakeven.invalidMax'))
-                       e.target.value = breakevenRange.max.toString()
-                     }
-                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                  }}
-                  placeholder="10"
-                />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t('dashboard.settings.breakeven.example')}
+              <p className="truncate text-sm text-[#686D67] dark:text-muted-foreground">
+                {user?.email}
+              </p>
+            </PrefRow>
+            <PrefRow>
+              <p className="text-sm font-medium text-[#171717] dark:text-foreground">
+                {t('dashboard.settings.password')}
+              </p>
+              <RowAction onClick={() => setPasswordOpen(true)}>
+                {t('dashboard.settings.password.set')}
+              </RowAction>
+            </PrefRow>
+          </div>
+        </SettingsSection>
+
+        <SettingsSection label={t('dashboard.settings.linkedAccounts')}>
+          <div className="divide-y divide-[#E5E5E5] dark:divide-border">
+            <PrefRow>
+              <p className="text-sm font-medium text-[#171717] dark:text-foreground">
+                Google
+              </p>
+              {isGoogleLinked ? (
+                <p className="text-sm text-[#686D67] dark:text-muted-foreground">
+                  {t('dashboard.settings.linked.connected')}
+                </p>
+              ) : (
+                <RowAction
+                  disabled={linking}
+                  onClick={() => void handleLinkGoogle()}
+                >
+                  {t('dashboard.settings.linked.connect')}
+                </RowAction>
+              )}
+            </PrefRow>
+            <PrefRow>
+              <p className="text-sm font-medium text-[#171717] dark:text-foreground">
+                Discord
+              </p>
+              {isDiscordLinked ? (
+                <p className="text-sm text-[#686D67] dark:text-muted-foreground">
+                  {t('dashboard.settings.linked.connected')}
+                </p>
+              ) : (
+                <RowAction
+                  disabled={linking}
+                  onClick={() => void handleLinkDiscord()}
+                >
+                  {t('dashboard.settings.linked.connect')}
+                </RowAction>
+              )}
+            </PrefRow>
+          </div>
+        </SettingsSection>
+
+        <SettingsSection label={t('dashboard.settings.weeklyRecap')}>
+          <div className="divide-y divide-[#E5E5E5] dark:divide-border">
+            <PrefRow>
+              <p className="text-sm font-medium text-[#171717] dark:text-foreground">
+                {t('dashboard.settings.weeklyRecap')}
+              </p>
+              <Switch
+                checked={weeklyRecap}
+                disabled={!weeklyRecapReady || weeklyRecapSaving}
+                onCheckedChange={(checked) => void handleWeeklyRecap(checked)}
+                aria-label={t('dashboard.settings.weeklyRecap')}
+                className="border border-[#E5E5E5] [&>span]:!bg-[#171717] data-[state=checked]:border-[#171717] data-[state=checked]:bg-[#171717] data-[state=checked]:[&>span]:!bg-white data-[state=unchecked]:bg-white dark:border-border dark:data-[state=checked]:bg-foreground"
+              />
+            </PrefRow>
+            <p className="px-4 py-3 text-xs text-[#686D67] dark:text-muted-foreground">
+              {t('dashboard.settings.weeklyRecap.description')}
             </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                resetBreakeven()
-              }}
+          </div>
+        </SettingsSection>
+
+        <SettingsSection label={t('dashboard.settings.team')}>
+          <Link
+            href="/teams/dashboard"
+            className="flex items-center justify-between gap-4 px-4 py-3.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <p className="text-sm font-medium text-[#171717] dark:text-foreground">
+              {t('dashboard.settings.team')}
+            </p>
+            <p className="text-sm text-[#686D67] dark:text-muted-foreground">
+              {teamLabel
+                ? `${teamLabel} →`
+                : t('dashboard.settings.team.none')}
+            </p>
+          </Link>
+        </SettingsSection>
+
+        <div className="space-y-4">
+          <button
+            type="button"
+            className="text-sm font-medium text-[#686D67] transition-colors hover:text-[#171717] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-muted-foreground dark:hover:text-foreground"
+            onClick={handleSignOut}
+          >
+            {t('dashboard.settings.account.signOut')}
+          </button>
+          <div>
+            <button
+              type="button"
+              className="text-sm font-medium text-[#DC2626] transition-colors hover:text-[#B91C1C] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={() => setDeleteOpen(true)}
             >
-              <RotateCcw className="mr-2 h-3.5 w-3.5" />
-              {t('dashboard.settings.breakeven.reset')}
+              {t('dashboard.settings.deleteAccount')}
+            </button>
+            <p className="mt-1 max-w-md text-xs text-[#686D67] dark:text-muted-foreground">
+              {t('dashboard.settings.deleteAccount.warning')}
+            </p>
+          </div>
+        </div>
+      </main>
+
+      <Dialog open={passwordOpen && !isMobile} onOpenChange={setPasswordOpen}>
+        <DialogContent className="rounded-[4px] border-[#E5E5E5] sm:max-w-md dark:border-border">
+          <DialogHeader>
+            <DialogTitle>{t('dashboard.settings.password')}</DialogTitle>
+            <DialogDescription className="sr-only">
+              {t('dashboard.settings.setPassword')}
+            </DialogDescription>
+          </DialogHeader>
+          {passwordFields}
+          <DialogFooter>
+            <Button
+              type="button"
+              className="h-9 rounded-[4px] bg-[#171717] text-sm font-medium text-white shadow-none hover:bg-[#171717]/90"
+              onClick={() => void handleSetPassword()}
+              disabled={passwordSaving}
+            >
+              {t('dashboard.settings.setPassword')}
             </Button>
-          </CardContent>
-        </Card>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        {/* Notifications Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notifications
-            </CardTitle>
-            <CardDescription>
-              Configure how you receive notifications and alerts
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="email-notifications">Email Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receive important updates via email
-                </p>
-              </div>
-              <Switch
-                id="email-notifications"
-                checked={emailNotifications}
-                onCheckedChange={setEmailNotifications}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="push-notifications">Push Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Get real-time alerts in your browser
-                </p>
-              </div>
-              <Switch
-                id="push-notifications"
-                checked={pushNotifications}
-                onCheckedChange={setPushNotifications}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="trading-alerts">Trading Alerts</Label>
-                <p className="text-sm text-muted-foreground">
-                  Notifications about your trading performance
-                </p>
-              </div>
-              <Switch
-                id="trading-alerts"
-                checked={tradingAlerts}
-                onCheckedChange={setTradingAlerts}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="weekly-reports">Weekly Reports</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receive weekly performance summaries
-                </p>
-              </div>
-              <Switch
-                id="weekly-reports"
-                checked={weeklyReports}
-                onCheckedChange={setWeeklyReports}
-              />
-            </div>
-          </CardContent>
-        </Card>
+      <Sheet open={passwordOpen && isMobile} onOpenChange={setPasswordOpen}>
+        <SheetContent
+          side="bottom"
+          className="rounded-t-[4px] border-[#E5E5E5] dark:border-border"
+        >
+          <SheetHeader className="text-left">
+            <SheetTitle>{t('dashboard.settings.password')}</SheetTitle>
+            <SheetDescription className="sr-only">
+              {t('dashboard.settings.setPassword')}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-4">{passwordFields}</div>
+          <SheetFooter className="mt-6">
+            <Button
+              type="button"
+              className="h-9 rounded-[4px] bg-[#171717] text-sm font-medium text-white shadow-none hover:bg-[#171717]/90"
+              onClick={() => void handleSetPassword()}
+              disabled={passwordSaving}
+            >
+              {t('dashboard.settings.setPassword')}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
-        {/* Team Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Team
-            </CardTitle>
-            <CardDescription>
-              Manage your team connections
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+      <Dialog open={deleteOpen && !isMobile} onOpenChange={setDeleteOpen}>
+        <DialogContent className="rounded-[4px] border-[#E5E5E5] sm:max-w-md dark:border-border">
+          <DialogHeader>
+            <DialogTitle>
+              {t('dashboard.settings.deleteAccount.confirmTitle')}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-[#686D67] dark:text-muted-foreground">
+              {deleteBody}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>{deleteActions}</DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-            {/* Current Teams */}
-            {(userTeams.ownedTeams.length > 0 || userTeams.joinedTeams.length > 0) && (
-              <div>
-                <Label className="text-base font-medium">Current Teams</Label>
-                <div className="mt-2 space-y-2">
-                  {/* Owned Teams */}
-                  {userTeams.ownedTeams.map((team) => (
-                    <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{team.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {team.traderIds.length} traders
-                        </p>
-                      </div>
-                      <Badge variant="secondary">Owner</Badge>
-                    </div>
-                  ))}
-                  
-                  {/* Joined Teams */}
-                  {userTeams.joinedTeams.map((team) => (
-                    <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{team.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {team.traderIds.length} traders
-                        </p>
-                      </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            Leave Team
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Leave Team</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to leave this team?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleLeaveTeam(team.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Leave Team
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* No Teams */}
-            {userTeams.ownedTeams.length === 0 && userTeams.joinedTeams.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No team linked</p>
-                <p className="text-sm mt-2">Contact your team administrator to get an invitation to join a team.</p>
-                <div className="mt-4">
-                  <Link href="/teams/dashboard">
-                    <Button>
-                      <Building2 className="mr-2 h-4 w-4" />
-                      Manage Teams
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            )}
-
-            {/* Team Management Link */}
-            {(userTeams.ownedTeams.length > 0 || userTeams.joinedTeams.length > 0) && (
-              <div className="mt-4">
-                <Link href="/teams/dashboard">
-                  <Button variant="outline" className="w-full">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Manage Teams
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Linked Accounts Section */}
-        <LinkedAccounts />
-
-        {/* Password (Migration) Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              {t('auth.setPassword')}
-            </CardTitle>
-            <CardDescription>
-              {t('auth.setPasswordDescription')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4">
-              <div>
-                <Label htmlFor="newPassword">{t('auth.newPassword')}</Label>
-                <div className="relative">
-                  <Input
-                    id="newPassword"
-                    type={showNewPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
-                    onClick={() => setShowNewPassword((v) => !v)}
-                  >
-                    {showNewPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="confirmPassword">{t('auth.confirmPassword')}</Label>
-                <div className="relative">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
-                    onClick={() => setShowConfirmPassword((v) => !v)}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-              <Button onClick={async () => {
-                const newPwd = newPassword || ''
-                const confirmPwd = confirmPassword || ''
-                if (!newPwd || newPwd.length < 6) {
-                  toast.error(t('error'), { description: t('auth.passwordMinLength') })
-                  return
-                }
-                if (newPwd !== confirmPwd) {
-                  toast.error(t('error'), { description: t('auth.passwordsDoNotMatch') })
-                  return
-                }
-                try {
-                  await setPasswordAction(newPwd)
-                  toast.success(t('success'), { description: t('auth.passwordUpdated') })
-                  setNewPassword('')
-                  setConfirmPassword('')
-                } catch (e: any) {
-                  toast.error(t('error'), { description: e?.message || 'Failed to update password' })
-                }
-              }}>{t('auth.setPassword')}</Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Account Management Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Account Management
-            </CardTitle>
-            <CardDescription>
-              Manage your account settings and data
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4">
-              <Link href="/dashboard/billing">
-                <Button variant="outline" className="w-full justify-start">
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Billing & Subscription
-                </Button>
-              </Link>
-              <Link href="/dashboard/data">
-                <Button variant="outline" className="w-full justify-start">
-                  <Database className="mr-2 h-4 w-4" />
-                  Data Management
-                </Button>
-              </Link>
-              <Link href="/support">
-                <Button variant="outline" className="w-full justify-start">
-                  <LifeBuoy className="mr-2 h-4 w-4" />
-                  Support & Help
-                </Button>
-              </Link>
-              <Separator />
-              <Button 
-                variant="destructive" 
-                className="w-full justify-start"
-                onClick={() => {
-                  localStorage.removeItem('deltalytix_user_data')
-                  signOut()
-                }}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Sheet open={deleteOpen && isMobile} onOpenChange={setDeleteOpen}>
+        <SheetContent
+          side="bottom"
+          className="rounded-t-[4px] border-[#E5E5E5] dark:border-border"
+        >
+          <SheetHeader className="text-left">
+            <SheetTitle>
+              {t('dashboard.settings.deleteAccount.confirmTitle')}
+            </SheetTitle>
+            <SheetDescription className="text-sm text-[#686D67] dark:text-muted-foreground">
+              {deleteBody}
+            </SheetDescription>
+          </SheetHeader>
+          <SheetFooter className="mt-6">{deleteActions}</SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

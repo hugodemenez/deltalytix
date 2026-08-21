@@ -480,6 +480,12 @@ export default function ImportButton({
     )
       return true;
 
+    if (
+      currentStep.component === FormatPreview &&
+      processedTrades.filter((trade) => trade.entryDate).length === 0
+    )
+      return true;
+
     return false;
   };
 

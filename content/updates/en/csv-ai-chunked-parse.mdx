@@ -1,0 +1,23 @@
+---
+title: 'CSV with AI now parses in chunks and fails honestly'
+description: 'CSV with AI infers a parse plan once, then formats large files locally in row chunks with progress, and fails closed when AI configuration is missing.'
+date: '2026-08-20'
+status: completed
+completedDate: '2026-08-20'
+---
+
+# CSV with AI now parses in chunks and fails honestly
+
+**CSV with AI** now infers how to read your file once, then runs that plan locally in chunks of 2,500 rows, with a running **rows processed** count as it goes. Large files no longer sit on a batch state that reports success while zero trades actually loaded.
+
+## What Review Trades tells you
+
+On the **Review Trades** step, a status line explains what actually happened: **Parsed from the file columns** when your headers were enough, or **Order fills were paired into trades** when the file needed order pairing. Once formatting finishes, the state changes to **Ready to import**. Very large previews show only the first trades, while the full formatted set is still queued for import.
+
+## Missing AI configuration now fails closed
+
+If your server has no OpenAI API key configured and the file's headers alone aren't enough to build a plan, import stops with **AI formatting is unavailable. Ask your administrator to configure an OpenAI API key, then try again.** — rather than the previous silent "0 of N trades formatted" success. If a plan still comes back incomplete, the review step names the missing columns so you can map them to continue.
+
+This is a reliability follow-up to [AI CSV field mapping](/en/updates/ai-csv-field-mapping); it doesn't change how columns get mapped in the first place.
+
+Import a broker CSV with **CSV with AI** to see the row-by-row progress on a larger file.

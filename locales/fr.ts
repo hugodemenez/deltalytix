@@ -144,6 +144,9 @@ export default {
   "connections.sections.ig": "IG",
   "connections.sections.thor": "Thor",
   "connections.sections.standalone": "Comptes autonomes",
+  "connections.strip.standalone": "Autonome",
+  "connections.strip.search": "Rechercher des comptes",
+  "connections.strip.noResults": "Aucun compte trouvé",
   "connections.add.rithmic": "Ajouter une connexion Rithmic",
   "connections.add.rithmicProtocol": "Ajouter une connexion Rithmic Protocol",
   "connections.add.tradovate": "Ajouter une connexion Tradovate",
@@ -174,6 +177,7 @@ export default {
   "connections.sync.manualOnly": "Synchronisez cette connexion depuis ses paramètres.",
   "connections.status.connected": "Connecté",
   "connections.status.error": "Déconnecté",
+  "connections.status.offline": "Hors ligne",
   "connections.status.syncFailed": "Échec de la dernière sync",
   "connections.reconnect": "Reconnecter",
   "connections.reconnectFailed": "Impossible de démarrer la reconnexion",
@@ -215,7 +219,66 @@ export default {
   "connections.oauth.tradovate.connectingHint":
     "Finalisation de l'authentification et chargement des comptes",
   "connections.modal.close": "Fermer",
+  "connections.addChip": "Ajouter",
+  "connections.manageConnection": "Gérer la connexion",
+  "connections.stripLabel": "Connexions",
+  "dashboard.planChip.aria": "Offre : {plan}. Ouvrir la facturation",
+  "dashboard.billingSheet.title": "Facturation",
+  "dashboard.billingSheet.description": "Gérez votre offre et vos renouvellements",
+  "dashboard.billingSheet.mobileDescription": "Vous êtes sur {plan} · Améliorez à tout moment",
+  "dashboard.billingSheet.currentPlan": "Offre actuelle",
+  "dashboard.billingSheet.limitedWidgets": "Widgets limités",
+  "dashboard.billingSheet.fullAccess": "Accès complet",
+  "dashboard.billingSheet.lifetimePaid": "Payé une fois · aucun renouvellement",
+  "dashboard.billingSheet.availablePlans": "Offres disponibles",
+  "dashboard.billingSheet.availableChanges": "Changements d’offre disponibles",
+  "dashboard.billingSheet.monthlyDetail": "Tous les widgets, renouvelé chaque mois",
+  "dashboard.billingSheet.quarterlyDetail": "Facturé tous les 3 mois",
+  "dashboard.billingSheet.yearlyDetail": "Meilleur tarif annuel",
+  "dashboard.billingSheet.lifetimeDetail": "Payez une fois, conservez à vie",
+  "dashboard.billingSheet.save": "Économisez",
+  "dashboard.billingSheet.bestValue": "Meilleure offre",
+  "dashboard.billingSheet.upgradeToPeriod": "Passer à Plus · {period}",
+  "dashboard.billingSheet.changeToPeriod": "Changer pour Plus · {period}",
+  "dashboard.billingSheet.allSet": "Tout est en ordre",
+  "dashboard.billingSheet.lifetimeIncludesFuture":
+    "L’accès à vie inclut toutes les futures fonctionnalités Plus",
+  "dashboard.billingSheet.noLifetimeChangesTitle": "L’offre à vie est votre offre maximale",
+  "dashboard.billingSheet.noLifetimeChangesDescription":
+    "Vous possédez déjà l’accès à vie. Il ne peut pas être rétrogradé et il n’y a rien d’autre à acheter.",
+  "dashboard.billingSheet.manageFull": "Ouvrir les paramètres de facturation",
+  "dashboard.billing.manage": "Gérer la facturation",
+  "dashboard.billingPage.upgradeWithPlus": "Passer à Plus",
+  "dashboard.billingPage.changePlan": "Changer d’offre",
+  "dashboard.billingPage.switchToPeriod": "Passer à Plus · {period}",
+  "dashboard.billingPage.freeIncluded": "{price} · inclus",
+  "dashboard.billingPage.recurringRenews": "{price} · renouvelé le {date}",
+  "dashboard.billingPage.lifetimeLocked": "Payé une fois · verrouillé",
+  "dashboard.billingPage.monthlyDetail": "Facturé chaque mois",
+  "dashboard.billingPage.quarterlyDetail":
+    "{price} / mois facturé trimestriellement",
+  "dashboard.billingPage.yearlyDetail": "{price} / mois facturé annuellement",
+  "dashboard.billingPage.lifetimeDetail": "Payez une fois · aucun renouvellement",
+  "dashboard.billingPage.currentPlanNote":
+    "{periods} · {current} est votre offre actuelle",
+  "dashboard.billingPage.freeCadenceNote":
+    "Mensuel · Trimestriel · Annuel · À vie · Annulable à tout moment",
+  "dashboard.billingPage.lifetimeLockedDescription":
+    "Lifetime inclut toutes les fonctionnalités Plus, pour toujours. Aucun changement d’offre et aucun renouvellement sur ce compte.",
+  "dashboard.billingPage.invoices": "Factures",
+  "dashboard.billingPage.billingHistory": "Historique de facturation",
+  "dashboard.billingPage.recurringInvoiceLabel": "Plus · {period}",
+  "dashboard.billingPage.genericInvoiceLabel": "Plus",
+  "dashboard.billingPage.lifetimeInvoiceLabel":
+    "Plus · Lifetime — paiement unique",
+  "dashboard.billingPage.noInvoicesTitle": "Aucune facture pour le moment",
+  "dashboard.billingPage.noInvoicesDescription":
+    "Elles apparaîtront ici après votre premier paiement.",
+  "dashboard.billingPage.freeManagementUnavailable":
+    "La pause et l’annulation ne sont pas disponibles avec Free.",
   "dashboard.refreshData": "Actualiser les données",
+  "filters.active.title": "Actifs",
+  "filters.active.clearAll": "Tout effacer",
   "dashboard.inviteUsers": "Inviter des utilisateurs",
   "dashboard.email": "Email",
   "dashboard.message": "Message",
@@ -238,12 +301,72 @@ export default {
   "dashboard.settings": "Paramètres",
   "dashboard.settings.description":
     "Gérez vos paramètres de compte et préférences",
-  "dashboard.settings.tradingPreferences": "Préférences de Trading",
+  "dashboard.settings.preferences": "Préférences",
+  "dashboard.settings.themeDescription": "Clair, sombre ou système",
+  "dashboard.settings.themeIntensity": "Intensité du thème",
+  "dashboard.settings.firstName": "Prénom",
+  "dashboard.settings.lastName": "Nom",
+  "dashboard.settings.email": "Email",
+  "dashboard.settings.emailLocked": "Impossible de modifier ici.",
+  "dashboard.settings.updateProfile": "Mettre à jour le profil",
+  "dashboard.settings.active": "Actif",
+  "dashboard.settings.notifications": "Notifications",
+  "dashboard.settings.notifications.email": "Notifications email",
+  "dashboard.settings.notifications.emailDescription": "Mises à jour importantes par email",
+  "dashboard.settings.notifications.push": "Notifications push",
+  "dashboard.settings.notifications.pushDescription": "Alertes dans le navigateur",
+  "dashboard.settings.notifications.trading": "Alertes de trading",
+  "dashboard.settings.notifications.tradingDescription": "Performance de trading",
+  "dashboard.settings.notifications.weekly": "Rapports hebdomadaires",
+  "dashboard.settings.notifications.weeklyDescription": "Résumés de performance hebdomadaires",
+  "dashboard.settings.team": "Équipe",
+  "dashboard.settings.team.manage": "Gérer les équipes",
+  "dashboard.settings.team.contactAdminDesktop":
+    "Contactez votre administrateur d'équipe pour une invitation.",
+  "dashboard.settings.team.contactAdminMobile":
+    "Demandez une invitation à votre admin.",
+  "dashboard.settings.linkedAccounts": "Comptes liés",
+  "dashboard.settings.linked.signIn": "Connexion",
+  "dashboard.settings.linked.notLinked": "Non lié",
+  "dashboard.settings.linked.linked": "Lié",
+  "dashboard.settings.linked.link": "Lier",
+  "dashboard.settings.password": "Mot de passe",
+  "dashboard.settings.setPassword": "Définir le mot de passe",
+  "dashboard.settings.newPassword": "Nouveau mot de passe",
+  "dashboard.settings.confirmPassword": "Confirmer le mot de passe",
+  "dashboard.settings.account": "Compte",
+  "dashboard.settings.account.billing": "Facturation et abonnement",
+  "dashboard.settings.account.data": "Gestion des données",
+  "dashboard.settings.account.support": "Support et aide",
+  "dashboard.settings.account.signOut": "Se déconnecter",
+  "dashboard.account": "Compte",
+  "dashboard.settings.linked.connected": "Connecté",
+  "dashboard.settings.linked.connect": "Connecter →",
+  "dashboard.settings.password.set": "Définir →",
+  "dashboard.settings.team.none": "Aucune →",
+  "dashboard.settings.weeklyRecap": "Récap hebdomadaire",
+  "dashboard.settings.weeklyRecap.description":
+    "Email le lundi quand la semaine était verte. Pas d'email sur une semaine rouge.",
+  "dashboard.settings.deleteAccount": "Supprimer le compte",
+  "dashboard.settings.deleteAccount.warning":
+    "Supprime définitivement vos trades, connexions et facturation. Irréversible.",
+  "dashboard.settings.deleteAccount.confirmTitle": "Supprimer le compte",
+  "dashboard.settings.deleteAccount.confirmBody":
+    "Cela supprime définitivement votre compte et tout ce qu'il contient : trades, connexions, facturation. Irréversible.",
+  "dashboard.settings.deleteAccount.confirmAction": "Supprimer le compte",
+  "dashboard.settings.deleteAccount.cancel": "Annuler",
+  "dashboard.settings.deleteAccount.error":
+    "Impossible de supprimer le compte. Réessayez.",
+  "dashboard.settings.weeklyRecap.error":
+    "Impossible de mettre à jour le récap hebdomadaire.",
+  "dashboard.settings.tradingPreferences": "Préférences de trading",
   "dashboard.settings.tradingPreferences.description": "Configurez comment vos statistiques de trading sont calculées",
-  "dashboard.settings.breakeven.title": "Plage de Breakeven",
-  "dashboard.settings.breakeven.description": "Définissez la plage de P&L net (après commissions) considérée comme un trade à l'équilibre. Les trades dont le P&L net se situe dans cette plage seront classés comme breakeven au lieu de gain ou perte.",
-  "dashboard.settings.breakeven.min": "Minimum",
-  "dashboard.settings.breakeven.max": "Maximum",
+  "dashboard.settings.breakeven.title": "Plage de breakeven",
+  "dashboard.settings.breakeven.description":
+    "Les trades dans cette fenêtre de P&L comptent comme breakeven.",
+  "dashboard.settings.breakeven.descriptionMobile": "Fenêtre P&L min / max.",
+  "dashboard.settings.breakeven.min": "Min",
+  "dashboard.settings.breakeven.max": "Max",
   "dashboard.settings.breakeven.reset": "Réinitialiser",
   "dashboard.settings.breakeven.invalidMin": "Le minimum doit être un nombre inférieur ou égal au maximum.",
   "dashboard.settings.breakeven.invalidMax": "Le maximum doit être un nombre supérieur ou égal au minimum.",
@@ -260,7 +383,7 @@ export default {
   "dashboard.teams.leaveConfirm":
     "Êtes-vous sûr de vouloir quitter cette équipe ?",
   "dashboard.teams.contactAdmin":
-    "Contactez votre administrateur d'équipe pour obtenir une invitation à rejoindre une équipe.",
+    "Contactez votre administrateur d'équipe pour une invitation.",
   "dashboard.teams.manager": "Gestionnaire",
   "dashboard.teams.admin": "Administrateur",
   "dashboard.teams.viewer": "Visualiseur",
@@ -279,6 +402,7 @@ export default {
   "dashboard.tabs.table": "Tableau",
   "dashboard.tabs.accounts": "Comptes",
   "dashboard.tabs.widgets": "Widgets",
+  "dashboard.tabs.ariaLabel": "Vues du tableau de bord",
   "dashboard.tabs.analysis": "Analyse",
   "analysis.title": "Analyse IA du Trading",
   "analysis.description":
@@ -350,6 +474,7 @@ export default {
   "filters.selectAllInstruments": "Sélectionner tous les instruments",
   "filters.clearDate": "Effacer la date",
   "filters.thisWeek": "Cette semaine",
+  "filters.allDates": "Toutes les dates",
   "filters.thisMonth": "Ce mois",
   "filters.lastThreeMonths": "Derniers 3 mois",
   "filters.lastSixMonths": "Les 6 derniers mois",
@@ -450,7 +575,21 @@ export default {
     tradesFormatted: "{formatted} sur {total} trades formatés",
     batchesCompleted: "Lots : {completed}/{total} terminés",
     batchesProcessing: ", {processing} en cours",
+    batchFailed: "Impossible de formater les trades",
+    aiUnavailable:
+      "Le formatage IA est indisponible. Demandez à votre administrateur de configurer une clé API OpenAI, puis réessayez.",
+    noTradesFormatted:
+      "Aucun trade n'a été formaté. Vérifiez que l'IA est configurée sur ce serveur, puis réessayez.",
+    parsedFromColumns: "Lu depuis les colonnes du fichier",
+    ordersPaired: "Les ordres ont été appariés en trades",
+    parseReady: "Prêt à importer",
+    emptyTable: "Aucun trade à revoir pour le moment",
+    parsing: "Analyse",
   },
+  "import.parse.tradesFormatted": "{formatted} trades formatés",
+  "import.parse.missingColumns":
+    "Associez ces colonnes pour continuer : {columns}",
+  "import.parse.rowsProcessed": "{processed} lignes sur {total}",
   "import.table.instrument": "Instrument",
   "import.table.entryDate": "Date d'entrée",
   "import.table.closeDate": "Date de sortie",
@@ -548,6 +687,9 @@ export default {
     singleDay: "Jour unique",
     dateRange: "Période",
     thisWeek: "Cette semaine",
+    allDates: "Toutes les dates",
+    addFilter: "+ Filtrer",
+    addFilterAria: "Filtres",
     thisMonth: "Ce mois",
     lastThreeMonths: "Derniers 3 mois",
     lastSixMonths: "Les 6 derniers mois",
@@ -775,6 +917,7 @@ export default {
   "import.error.noTradesAddedDescription":
     "Aucun trade n'a été ajouté. Veuillez vérifier vos données et réessayer.",
   "widgets.addWidget": "Ajouter",
+  "widgets.addSheet.empty": "Tous les types de widgets sont déjà sur ce tableau de bord.",
   "widgets.removeWidget": "Supprimer",
   "widgets.removeWidgetConfirm": "Êtes-vous sûr ?",
   "widgets.removeWidgetDescription":
@@ -2335,10 +2478,8 @@ export default {
     connected: "Compte DxFeed connecté avec succès",
     disconnected: "Compte DxFeed déconnecté",
     error: {
-      credentialsRequired: "Saisissez votre e-mail et votre mot de passe",
-      propFirmRequired: "Sélectionnez votre propfirm avant de vous connecter",
-      emailRequired: "Saisissez votre e-mail",
-      emailInvalid: "Saisissez un e-mail valide",
+      credentialsRequired: "Saisissez votre nom d'utilisateur et votre mot de passe",
+      usernameRequired: "Saisissez votre nom d'utilisateur",
       passwordRequired: "Saisissez votre mot de passe",
       authFailed: "Impossible de se connecter à DxFeed",
     },
@@ -2347,26 +2488,17 @@ export default {
         "Une erreur s'est produite. Réessayez ou contactez le Support si le problème persiste.",
       CONFIG_NOT_SET:
         "DxFeed n'est pas encore configuré sur cette application. Contactez le Support pour l'activer.",
-      PROP_FIRM_REQUIRED: "Sélectionnez votre propfirm dans la liste, puis réessayez.",
-      PROP_FIRM_UNSUPPORTED:
-        "Cette propfirm n'est pas encore disponible dans la liste.",
-      PROP_FIRMS_UNAVAILABLE:
-        "Aucune propfirm n'est disponible pour le moment.",
       USER_NOT_AUTHENTICATED:
         "Vous devez être connecté pour lier DxFeed. Connectez-vous puis réessayez.",
       AUTH_HTTP_ERROR:
-        "DxFeed a refusé la connexion (HTTP {status}). Vérifiez l'e-mail et le mot de passe, ou réessayez plus tard. Détail : {detail}",
+        "DxFeed a refusé la connexion (HTTP {status}). Vérifiez le nom d'utilisateur et le mot de passe, ou réessayez plus tard. Détail : {detail}",
       AUTH_REJECTED: "DxFeed a refusé la connexion : {reason}",
-      AUTH_PROP_FIRM_MISMATCH:
-        "Ces identifiants correspondent à {authPropfirm}, pas à {selectedPropfirm}. Choisissez la bonne firme dans la liste ou utilisez le bon compte.",
       HISTORICAL_HOST_UNRESOLVED:
-        "Impossible d'atteindre le serveur d'historique des trades pour {propfirm}.",
+        "DxFeed n'a pas renvoyé de serveur d'historique des trades pour cette connexion.",
       AUTH_UNEXPECTED:
         "Échec de connexion inattendu. Vérifiez vos identifiants et réessayez.",
       INVALID_STORED_CREDENTIALS:
         "Les données de connexion enregistrées sont invalides.",
-      MISSING_PROP_FIRM_RECONNECT:
-        "Cette connexion est obsolète.",
       NO_TOKEN_RECONNECT:
         "Cette connexion a expiré.",
       TOKEN_EXPIRED:
@@ -2385,17 +2517,15 @@ export default {
       UPDATE_SYNC_TIME_FAILED:
         "Impossible de mettre à jour l'heure de sync quotidienne. Réessayez.",
       hintContactSupport:
-        "Ouvrez le Support (menu → Support) et indiquez le nom de votre propfirm si elle n'apparaît pas dans la liste. Nous pouvons ajouter des propfirms sur demande.",
+        "Ouvrez le Support (menu → Support) si le problème continue.",
       hintReconnect:
-        "Supprimez cette connexion, cliquez sur Ajouter, sélectionnez votre propfirm et reconnectez-vous avec vos identifiants DxFeed.",
-      hintPropFirmMismatch:
-        "La propfirm sélectionnée doit correspondre au compte que vous utilisez sur la plateforme de votre propfirm.",
+        "Supprimez cette connexion, cliquez sur Ajouter, et reconnectez-vous avec vos identifiants DxFeed.",
       hintCheckCredentials:
-        "Utilisez le même e-mail et mot de passe que sur la plateforme de trading de votre propfirm (démo ou live selon votre compte).",
+        "Utilisez le même identifiant et mot de passe que sur la plateforme de trading de votre propfirm (démo ou live selon votre compte).",
       SYNC_FETCH_FAILED:
         "Impossible de charger les trades DxFeed ({failures} sur {total} comptes en échec). Reconnectez-vous et réessayez.",
       SYNC_ACCOUNTS_UNAVAILABLE:
-        "Impossible de lister vos comptes de trading ({count} enregistrés auparavant). Reconnectez-vous avec la même propfirm.",
+        "Impossible de lister vos comptes de trading ({count} enregistrés auparavant). Reconnectez-vous avec le même identifiant.",
       SYNC_OPEN_ONLY:
         "DxFeed a renvoyé {raw} position(s) mais aucun trade clôturé pour {accountId}.",
       SYNC_NO_TRADES_IN_RANGE:
@@ -2404,24 +2534,11 @@ export default {
     addAccount: {
       title: "Connecter un compte DxFeed",
       description:
-        "Choisissez d'abord votre propfirm, puis connectez-vous avec les mêmes identifiants que sur sa plateforme.",
-      propFirmStepDescription:
-        "Sélectionnez la propfirm où vous tradez avant de saisir vos identifiants.",
-      credentialsStepDescription:
-        "Connectez-vous avec les mêmes identifiants que sur la plateforme de cette propfirm.",
-      propFirmLabel: "Propfirm",
-      propFirmPlaceholder: "Sélectionnez votre propfirm",
-      propFirmHint:
-        "Choisissez la propfirm où vous tradez (ex. Miltraders, Phoenix Trader Funding). Les trades sont importés depuis son serveur d'historique—notamment depuis le site DxFeed générique.",
-      noPropFirmsTitle: "Votre propfirm n'est pas encore listée",
-      noPropFirmsDescription:
-        "Seules les propfirms que nous avons configurées apparaissent ici. Contactez le Support avec le nom et le site de votre propfirm pour que nous l'ajoutions.",
-      noPropFirmsAction: "Contacter le Support",
-      emailLabel: "E-mail",
-      emailPlaceholder: "E-mail de connexion à votre propfirm",
+        "Connectez-vous avec le même identifiant et mot de passe que sur la plateforme DxFeed de votre propfirm. Nous détectons la firme à partir de cette connexion.",
+      usernameLabel: "Nom d'utilisateur",
+      usernamePlaceholder: "Identifiant de connexion à votre propfirm",
       passwordLabel: "Mot de passe",
       passwordPlaceholder: "Mot de passe de votre propfirm",
-      continueToCredentials: "Continuer",
       connecting: "Connexion...",
       connect: "Connecter",
     },
@@ -2921,7 +3038,7 @@ export default {
   "import.type.dxfeedSync.description":
     "Synchronisation directe de compte avec DxFeed",
   "import.type.dxfeedSync.details":
-    "Importez vos trades clôturés depuis votre propfirm (DxFeed / Volumetrica). Sélectionnez la propfirm, puis connectez-vous avec vos identifiants plateforme.",
+    "Importez vos trades clôturés depuis votre propfirm (DxFeed / Volumetrica). Connectez-vous avec vos identifiants plateforme ; nous détectons la firme à partir de cette connexion.",
   "import.type.ibkrSync.name": "Interactive Brokers",
   "import.type.ibkrSync.description":
     "Synchronisation directe de compte avec Interactive Brokers",

@@ -179,7 +179,7 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
   return (
     <div 
       ref={widgetRef}
-      className="relative h-full w-full rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group isolate animate-[fadeIn_1.5s_ease-in-out] overflow-clip"
+      className="group relative isolate h-full w-full overflow-clip rounded-[4px] animate-[fadeIn_1.5s_ease-in-out]"
     >
       <div className={cn("h-full w-full", showDesktopCustomizeUi && "group-hover:blur-[2px]")}>
         {children}

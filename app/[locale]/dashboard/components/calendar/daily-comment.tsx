@@ -20,7 +20,7 @@ import { useUserStore } from "../../../../../store/user-store";
 import { useMoodStore } from "@/store/widgets/mood-store";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { TiptapEditor } from "@/components/tiptap-editor";
+import { JournalEditor } from "@/components/journal-editor";
 
 interface DailyCommentProps {
   dayData: CalendarEntry | undefined;
@@ -148,13 +148,12 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
             <Skeleton className="h-[400px] w-full" />
           </div>
         ) : (
-          <TiptapEditor
+          <JournalEditor
             key={`${(selectedDate instanceof Date ? selectedDate : new Date(selectedDate)).toISOString()}-${comment ? "has-content" : "no-content"}`}
             content={comment}
             onChange={setComment}
             height="100%"
             width="100%"
-            collaboration={false}
             placeholder={t("mindset.journaling.placeholder")}
           />
         )}

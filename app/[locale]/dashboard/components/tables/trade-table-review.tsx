@@ -750,9 +750,12 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
               <div className="flex items-center gap-1">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <div className="flex items-center justify-center w-fit min-w-5 px-1.5 h-5 rounded-full bg-muted text-[10px] font-medium cursor-pointer hover:bg-muted/80 transition-colors sm:min-w-6 sm:px-2 sm:h-6 sm:text-xs">
+                    <div
+                      className="flex h-6 w-fit max-w-48 cursor-pointer items-center justify-center truncate rounded-[4px] bg-muted px-2 text-xs font-medium transition-colors hover:bg-muted/80"
+                      title={accounts.length === 1 ? accounts[0] : undefined}
+                    >
                       {accounts.length === 1
-                        ? `${accounts[0].slice(0, 2)}${accounts[0].slice(-2)}`
+                        ? accounts[0]
                         : `+${accounts.length}`}
                     </div>
                   </PopoverTrigger>
@@ -774,11 +777,6 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                   </PopoverContent>
                 </Popover>
               </div>
-              {trade.trades.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  ({trade.trades.length})
-                </span>
-              )}
             </div>
           );
         },

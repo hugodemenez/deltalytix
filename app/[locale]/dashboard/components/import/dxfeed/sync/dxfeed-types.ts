@@ -17,6 +17,7 @@ export interface DxFeedLoginData {
   tradingRestReportToken?: string
   tradingRestTokenExpiration?: number
   tradingApiVersion?: number
+  propfirmName?: string
 }
 
 export interface DxFeedLoginResponse {
@@ -35,9 +36,9 @@ export interface DxFeedStoredCredentials {
   accessToken: string
   historicalHost: string
   accountNumbers?: string[]
-  /** User-selected prop firm id (see lib/dxfeed-propfirms.ts) */
+  /** Detected from the auth-returned historical host. */
   propFirmId?: string
-  /** Display name captured from the user-selected prop firm. */
+  /** Display name from auth or detected from the historical host. */
   propfirmName?: string
   /** Marks a stored expiration as provider-supplied rather than a legacy guessed TTL. */
   tokenExpirationSource?: 'provider' | 'jwt'
@@ -106,6 +107,8 @@ export interface DxFeedActionResult {
   success?: boolean
   error?: string
   errorParams?: Record<string, string | number>
+  propFirmId?: string
+  propfirmName?: string
 }
 
 export interface DxFeedSyncStats {

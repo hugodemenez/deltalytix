@@ -2,9 +2,11 @@ import { useEffect } from 'react';
 import hotkeys from 'hotkeys-js';
 import { useRouter } from 'next/navigation';
 import { signOut } from '@/server/auth';
+import { useCurrentLocale } from '@/locales/client';
 
 export function useKeyboardShortcuts() {
   const router = useRouter();
+  const locale = useCurrentLocale();
 
   useEffect(() => {
     // Navigation shortcuts
@@ -15,7 +17,7 @@ export function useKeyboardShortcuts() {
 
     hotkeys('⌘+b, ctrl+b', (event) => {
       event.preventDefault();
-      window.location.href = process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL || '';
+      router.push(`/${locale}/dashboard/billing`);
     });
 
     hotkeys('⌘+s, ctrl+s', (event) => {
@@ -50,5 +52,5 @@ export function useKeyboardShortcuts() {
       hotkeys.unbind('⌘+k, ctrl+k');
       hotkeys.unbind('⇧+⌘+q, shift+ctrl+q');
     };
-  }, [router]);
+  }, [locale, router]);
 } 

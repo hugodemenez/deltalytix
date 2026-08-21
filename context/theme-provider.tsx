@@ -24,7 +24,14 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const useTheme = () => useContext(ThemeContext)
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+export function ThemeProvider({
+  children,
+  safariThemeSampler = true,
+}: {
+  children: React.ReactNode
+  /** Landing-only: 8px canvas strip for Safari chrome. Off on app shells with a white navbar. */
+  safariThemeSampler?: boolean
+}) {
   const [theme, setThemeState] = useState<Theme>('system')
   const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light')
   const [intensity, setIntensityState] = useState<number>(100)
@@ -115,12 +122,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         Safari samples a fixed top-edge element for browser-chrome tinting.
         Remount on theme change so the status-bar region stays in sync and
         does not leave a light strip after toggling light/dark.
+        Keep this off on dashboard / app shells: the strip is canvas gray
+        and reads as a 2–8px gap on the white navbar.
       */}
-      <span
-        key={`safari-theme-top-${effectiveTheme}`}
-        className="safari-theme-sampler"
-        aria-hidden="true"
-      />
+      {safariThemeSampler ? (
+        <span
+          key={`safari-theme-top-${effectiveTheme}`}
+          className="safari-theme-sampler"
+          aria-hidden="true"
+        />
+      ) : null}
       {children}
     </ThemeContext.Provider>
   )

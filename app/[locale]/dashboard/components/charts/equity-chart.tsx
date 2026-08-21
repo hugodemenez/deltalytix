@@ -745,6 +745,20 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
         .slice(0, MAX_ACCOUNTS_DISPLAYED),
     [availableAccountNumbers, selectedAccounts]
   );
+  const equityForPoint = (point: ChartDataPoint | undefined) => {
+    if (!point) return 0;
+    if (!showIndividual) return point.equity ?? 0;
+    return displayedAccounts.reduce((total, account) => {
+      const value = point[`equity_${account}`];
+      return total + (typeof value === "number" ? value : 0);
+    }, 0);
+  };
+  const firstEquity = equityForPoint(chartData[0]);
+  const totalEquity = equityForPoint(chartData.at(-1));
+  const equityChangePercentage =
+    firstEquity !== 0
+      ? ((totalEquity - firstEquity) / Math.abs(firstEquity)) * 100
+      : null;
 
   // Client-side computation for shared view
   const computeClientSideData = React.useCallback(() => {
@@ -971,16 +985,15 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     <Card className="h-full flex flex-col">
       <CardHeader
         className={cn(
-          "flex flex-col items-stretch space-y-0 border-b shrink-0 h-14",
-          size === "small" ? "p-2" : "p-3 sm:p-4"
+          "flex h-11 shrink-0 flex-col items-stretch space-y-0 border-b",
+          size === "small" ? "p-2" : "px-3 py-2.5"
         )}
       >
         <div className="flex items-center justify-between h-full">
           <div className="flex items-center gap-1.5">
             <CardTitle
               className={cn(
-                "line-clamp-1",
-                size === "small" ? "text-sm" : "text-base"
+                "line-clamp-1 text-xs font-semibold tracking-[-0.02em]"
               )}
             >
               {t("equity.title")}
@@ -1014,6 +1027,26 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
         )}
       >
         <div className="w-full h-full flex flex-col">
+          <div className="flex shrink-0 items-baseline gap-2 pb-2">
+            <span className="text-left text-xl font-semibold tracking-[-0.025em] tabular-nums">
+              {formatCurrency(totalEquity)}
+            </span>
+            {equityChangePercentage !== null && (
+              <span
+                className={cn(
+                  "text-xs font-medium tabular-nums",
+                  equityChangePercentage > 0
+                    ? "text-[#3E7550]"
+                    : equityChangePercentage < 0
+                      ? "text-[#B55742]"
+                      : "text-muted-foreground"
+                )}
+              >
+                {equityChangePercentage > 0 ? "+" : ""}
+                {equityChangePercentage.toFixed(1)}%
+              </span>
+            )}
+          </div>
           <div className="flex-1 min-h-0">
             {isLoading ? (
               <LineChartLoadingSkeleton
@@ -1105,6 +1138,22 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
               </ChartContainer>
             )}
           </div>
+
+          {!showIndividual && availableAccountNumbers.length > 0 && (
+            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[#E5E5E5] pt-2 text-xs dark:border-border">
+              <span className="flex min-w-0 items-center gap-2 truncate text-muted-foreground">
+                <span className="h-2 w-2 shrink-0 rounded-full bg-[#3E7550]" />
+                <span className="truncate">
+                  {availableAccountNumbers.length === 1
+                    ? availableAccountNumbers[0]
+                    : t("share.allAccounts")}
+                </span>
+              </span>
+              <span className="shrink-0 font-medium text-foreground tabular-nums">
+                {formatCurrency(totalEquity)}
+              </span>
+            </div>
+          )}
 
           {showIndividual &&
             !isSharedView &&
