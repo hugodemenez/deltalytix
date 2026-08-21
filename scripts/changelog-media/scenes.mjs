@@ -49,6 +49,14 @@ const CAPTURE_LABELS = {
     equity: /^Equity$/i,
     individual: /^Individual$/i,
     supportRequest: /Fill out a support request through the form/i,
+    connectionsStrip: /^Connections$/i,
+    filtersAria: /^Filters$/i,
+    accountsSection: /^Accounts$/i,
+    selectAllAccounts: /^Select all accounts$/i,
+    clearAll: /^Clear all$/i,
+    weeklyRecap: /^Weekly recap$/i,
+    deleteAccount: /^Delete account$/i,
+    addChip: /^Add$/i,
   },
   fr: {
     dxfeed: /^DxFeed$/i,
@@ -60,6 +68,14 @@ const CAPTURE_LABELS = {
     equity: /^Profits$/i,
     individual: /^Individuel$/i,
     supportRequest: /Remplir une demande de support via le formulaire/i,
+    connectionsStrip: /^Connexions$/i,
+    filtersAria: /^Filtres$/i,
+    accountsSection: /^Comptes$/i,
+    selectAllAccounts: /^Sélectionner tous les comptes$/i,
+    clearAll: /^Tout effacer$/i,
+    weeklyRecap: /^Récap hebdomadaire$/i,
+    deleteAccount: /^Supprimer le compte$/i,
+    addChip: /^Ajouter$/i,
   },
 }
 
@@ -270,7 +286,7 @@ async function revealPickerOption(page, name) {
   await page.waitForTimeout(600)
 }
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form'} ChangelogScene */
 
 /**
  * @param {import('playwright-core').Browser} browser
@@ -1451,6 +1467,159 @@ export async function captureScene(browser, options) {
       const connect = form.getByRole('button', { name: /^Connect$|^Connecter$/i })
       await screenshot(page, batch, locale, file, {
         clip: await clipAround(page, [heading, start, connect], 16),
+      })
+      await page.close()
+      return
+    }
+
+    case 'dashboard-shell-home': {
+      // pr-475: v5 dashboard shell in one frame — logo + compact view menu +
+      // This week / + Filter in the h-14 navbar, the Connections strip below
+      // it, and the floating Edit | Add toolbar pill at the bottom. Viewport
+      // 1440x900 desktop; no clip, the whole chrome together is the story.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      await page
+        .getByRole('navigation', { name: CAPTURE_LABELS[locale].connectionsStrip })
+        .waitFor({ timeout: 30_000 })
+      await waitForNoVisibleToasts(page)
+      await page.waitForTimeout(1200)
+      await assertNoDevIssues(page, `${locale} dashboard shell home`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'dashboard-shell-filters': {
+      // pr-475: desktop filters sheet opened from the top bar's + Filter
+      // control. Expands the Accounts fold section (one section open at a
+      // time, same pattern as the account drawer) and selects every seeded
+      // account so the pinned active-filter chip + Clear all action render
+      // above the collapsed sections.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      const addFilter = page
+        .getByRole('button', { name: CAPTURE_LABELS[locale].filtersAria })
+        .first()
+      await addFilter.waitFor({ timeout: 15_000 })
+      await addFilter.click()
+      const sheet = page.getByRole('dialog').last()
+      await sheet.waitFor({ timeout: 15_000 })
+      const accountsToggle = sheet.getByRole('button', {
+        name: CAPTURE_LABELS[locale].accountsSection,
+        exact: true,
+      })
+      await accountsToggle.click()
+      const selectAll = sheet.getByText(CAPTURE_LABELS[locale].selectAllAccounts, {
+        exact: true,
+      })
+      await selectAll.waitFor({ timeout: 15_000 })
+      await selectAll.click()
+      await sheet
+        .getByRole('button', { name: CAPTURE_LABELS[locale].clearAll })
+        .waitFor({ timeout: 15_000 })
+      await page.waitForTimeout(700)
+      await assertNoDevIssues(page, `${locale} dashboard shell filters`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [sheet], 12),
+      })
+      await page.close()
+      return
+    }
+
+    case 'settings-account-list': {
+      // pr-475: Settings v2 stacked list — Account, Linked accounts, Weekly
+      // recap (switch on), Team, Sign out, Delete account — reached through
+      // the hydrated dashboard so the subpage header and card borders render
+      // cleanly (same reasoning as openConnectionsForImport).
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      await page.goto(`${siteUrl}/${locale}/dashboard/settings`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 120_000,
+      })
+      await dismissCookies(page, locale)
+      const weeklyRecapSwitch = page.getByRole('switch', {
+        name: CAPTURE_LABELS[locale].weeklyRecap,
+      })
+      await weeklyRecapSwitch.waitFor({ timeout: 30_000 })
+      await page
+        .waitForFunction(
+          () => {
+            const el = document.querySelector('button[role="switch"]')
+            return Boolean(el) && el.getAttribute('disabled') === null
+          },
+          undefined,
+          { timeout: 30_000 },
+        )
+        .catch(() => {})
+      if (!(await weeklyRecapSwitch.isChecked())) {
+        await weeklyRecapSwitch.click()
+        await page.waitForTimeout(600)
+      }
+      await page
+        .getByRole('button', { name: CAPTURE_LABELS[locale].deleteAccount })
+        .first()
+        .waitFor({ timeout: 15_000 })
+      await waitForNoVisibleToasts(page)
+      await page.waitForTimeout(500)
+      await assertNoDevIssues(page, `${locale} settings account list`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'dxfeed-single-step-form': {
+      // pr-475: current single-step DxFeed connect sheet — Username +
+      // Password only, no firm picker. Opened from the dashboard connections
+      // strip + chip (v5 chrome); the old Connections-page #import-data
+      // nav link is gone. IDs verified in dxfeed-connect-form.tsx
+      // (#dxfeed-username / #dxfeed-password). Empty fields only.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      const strip = page.getByRole('navigation', {
+        name: CAPTURE_LABELS[locale].connectionsStrip,
+      })
+      await strip.waitFor({ timeout: 30_000 })
+      await strip.getByRole('button', { name: CAPTURE_LABELS[locale].addChip }).click()
+      const menu = page.getByRole('menu').last()
+      await menu.waitFor({ timeout: 15_000 })
+      await menu.getByRole('menuitem').filter({ hasText: CAPTURE_LABELS[locale].dxfeed }).click()
+      const dialog = page.getByRole('dialog').last()
+      await dialog.waitFor({ timeout: 20_000 })
+      await dialog.locator('#dxfeed-username').waitFor({ timeout: 20_000 })
+      const heading = dialog.getByRole('heading').first()
+      const form = dialog.locator('form').first()
+      const description = form.locator(':scope > p').first()
+      const usernameField = dialog
+        .locator('#dxfeed-username')
+        .locator('xpath=ancestor::div[contains(@class,"space-y-2")][1]')
+      const passwordField = dialog
+        .locator('#dxfeed-password')
+        .locator('xpath=ancestor::div[contains(@class,"space-y-2")][1]')
+      const connect = form.locator('button[type="submit"]')
+      await passwordField.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(700)
+      await waitForNoVisibleToasts(page)
+      await assertNoDevIssues(page, `${locale} DxFeed single-step form`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(
+          page,
+          [heading, description, usernameField, passwordField, connect],
+          20,
+        ),
       })
       await page.close()
       return

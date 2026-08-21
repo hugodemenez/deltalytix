@@ -1,0 +1,23 @@
+---
+title: 'CSV avec IA analyse désormais par lots et échoue honnêtement'
+description: 'CSV avec IA déduit un plan d''analyse une seule fois, puis formate les gros fichiers localement par lots de lignes avec une progression, et échoue proprement si l''IA n''est pas configurée.'
+date: '2026-08-20'
+status: completed
+completedDate: '2026-08-20'
+---
+
+# CSV avec IA analyse désormais par lots et échoue honnêtement
+
+**CSV avec IA** déduit désormais une seule fois la façon de lire votre fichier, puis exécute ce plan localement par lots de 2 500 lignes, avec un compteur de **lignes traitées** au fil de l'avancement. Les gros fichiers ne restent plus bloqués sur un état de lot qui affiche un succès alors qu'aucun trade n'a réellement été chargé.
+
+## Ce que la vérification des trades indique
+
+À l'étape **Aperçu des trades**, une ligne de statut explique ce qui s'est réellement passé : **Lu depuis les colonnes du fichier** quand vos en-têtes suffisaient, ou **Les ordres ont été appariés en trades** quand le fichier nécessitait un appariement d'ordres. Une fois le formatage terminé, l'état passe à **Prêt à importer**. Les aperçus très volumineux n'affichent que les premiers trades, tandis que l'ensemble formaté complet reste bien prévu pour l'import.
+
+## Une configuration IA manquante échoue désormais proprement
+
+Si votre serveur n'a pas de clé API OpenAI configurée et que les en-têtes du fichier seuls ne suffisent pas à construire un plan, l'import s'arrête avec **Le formatage IA est indisponible. Demandez à votre administrateur de configurer une clé API OpenAI, puis réessayez.** — au lieu de l'ancien succès silencieux « 0 trade formaté sur N ». Si un plan revient toujours incomplet, l'étape de vérification nomme les colonnes manquantes.
+
+Il s'agit d'un correctif de fiabilité qui fait suite au [mappage des colonnes CSV par IA](/fr/updates/ai-csv-field-mapping) ; il ne change pas la façon dont les colonnes sont mappées au départ.
+
+Importez un CSV de broker avec **CSV avec IA** pour voir la progression ligne par ligne sur un fichier volumineux.

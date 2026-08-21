@@ -1,0 +1,20 @@
+---
+title: 'La connexion DxFeed détecte votre prop firm depuis vos identifiants'
+description: 'Se connecter à DxFeed ne demande plus qu''une étape avec identifiant et mot de passe — Deltalytix détecte la société depuis cette connexion au lieu de vous la faire choisir dans une liste.'
+date: '2026-08-20'
+status: completed
+completedDate: '2026-08-20'
+image: '/updates/pr-475/fr/dxfeed-single-step-form.png'
+---
+
+# La connexion DxFeed détecte votre prop firm depuis vos identifiants
+
+Se connecter via DxFeed ne prend désormais qu'une seule étape. Depuis la bande de connexions du [tableau de bord](/fr/dashboard) ou depuis [Connexions](/fr/dashboard/connections), ajoutez **DxFeed**. Le panneau **Ajouter une connexion DxFeed** ne demande plus qu'une chose : se connecter avec le même identifiant et le même mot de passe que sur la plateforme DxFeed de votre prop firm — la société est détectée depuis cette connexion.
+
+![Panneau Ajouter une connexion DxFeed avec les champs identifiant et mot de passe vides, sans sélecteur de prop firm](/updates/pr-475/fr/dxfeed-single-step-form.png)
+
+L'étape distincte de sélection de la prop firm a disparu — plus de liste à parcourir, ni d'étape **Continuer** avant les identifiants. Le champ identifiant accepte aussi les connexions sans e-mail (par exemple `trader_ht50`), que certaines sociétés fournissent à la place d'une adresse e-mail ; la validation vérifie simplement qu'un identifiant et un mot de passe ont été saisis.
+
+En coulisses, la société est détectée à partir de l'hôte d'authentification DxFeed/Volumetrica et du nom de société qu'il renvoie, avec un repli sur un libellé générique « DxFeed » quand aucune correspondance n'est trouvée. Il n'y a toujours pas de liste blanche : utiliser DxFeed ne garantit pas que les données de chaque prop firm sont disponibles, et la connexion nécessite toujours un point d'accès fournisseur réel pour aboutir.
+
+[Ajoutez une connexion DxFeed](/fr/dashboard/connections) pour voir le formulaire en une seule étape.

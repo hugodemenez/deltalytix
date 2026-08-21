@@ -7,8 +7,10 @@ import {
   type WeeklyRecapSkipReason,
 } from "@/lib/weekly-newsletter-window"
 import { assertWeeklyRecapRecipient } from "@/lib/weekly-recap-recipient"
+import { WEEKLY_RECAP_REPLY_TO } from "@/lib/weekly-recap-reply-to"
 
 export { assertWeeklyRecapRecipient }
+export { WEEKLY_RECAP_REPLY_TO }
 
 export type { WeeklyRecapSkipReason }
 
@@ -107,7 +109,7 @@ export async function buildWeeklyRecapEmail(
         "List-Unsubscribe": `<${unsubscribeUrl}>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
-      replyTo: '[REDACTED]',
+      replyTo: WEEKLY_RECAP_REPLY_TO,
     },
   }
 }

@@ -13,7 +13,11 @@ import {
   SIGNUP_SUCCESS_PARAM,
   SIGNUP_SUCCESS_VALUE,
 } from "@/lib/signup-redirect";
-import { isGoogleTagAllowed, readStoredConsentSettings } from "@/lib/consent-settings";
+import {
+  CONSENT_UPDATED_EVENT,
+  isGoogleTagAllowed,
+  readStoredConsentSettings,
+} from "@/lib/consent-settings";
 
 /**
  * Conversion `send_to` values from Google Ads (Tools → Conversions → Tag setup).
@@ -24,7 +28,6 @@ const SIGNUP_SEND_TO =
 const PURCHASE_SEND_TO =
   process.env.NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_SEND_TO?.trim() || "";
 
-const CONSENT_UPDATED_EVENT = "deltalytix:consent-updated";
 
 /**
  * Id of the signup conversion already reported, if any.
