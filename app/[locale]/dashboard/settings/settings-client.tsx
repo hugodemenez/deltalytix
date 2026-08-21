@@ -38,6 +38,10 @@ import {
   setWeeklyRecapPreference,
 } from '@/server/weekly-recap-preference'
 import { deleteCurrentUserAccount } from '@/server/delete-account'
+import {
+  ConsentPrivacyControls,
+  getConsentRecordCopy,
+} from '@/components/consent-record'
 import { getUserTeams } from './actions'
 import { cn } from '@/lib/utils'
 
@@ -52,14 +56,16 @@ interface UserIdentity {
 }
 
 function SettingsSection({
+  id,
   label,
   children,
 }: {
+  id?: string
   label: string
   children: ReactNode
 }) {
   return (
-    <section>
+    <section id={id} className={id ? 'scroll-mt-24' : undefined}>
       <h2 className="mb-3 text-xs font-medium text-[#686D67] dark:text-muted-foreground">
         {label}
       </h2>
@@ -110,6 +116,7 @@ function RowAction({
 
 export default function SettingsPage() {
   const t = useI18n()
+  const consentCopy = getConsentRecordCopy(t)
   const isMobile = useIsMobile()
   const user = useUserStore((state) => state.supabaseUser)
 
@@ -432,6 +439,12 @@ export default function SettingsPage() {
                 : t('dashboard.settings.team.none')}
             </p>
           </Link>
+        </SettingsSection>
+
+        <SettingsSection id="privacy" label={consentCopy.privacy}>
+          <div className="px-4 py-3.5">
+            <ConsentPrivacyControls copy={consentCopy} />
+          </div>
         </SettingsSection>
 
         <div className="space-y-4">
