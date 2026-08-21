@@ -265,6 +265,7 @@ export default {
   "dashboard.billingPage.invoices": "Invoices",
   "dashboard.billingPage.billingHistory": "Billing history",
   "dashboard.billingPage.recurringInvoiceLabel": "Plus · {period}",
+  "dashboard.billingPage.genericInvoiceLabel": "Plus",
   "dashboard.billingPage.lifetimeInvoiceLabel":
     "Plus · Lifetime — one-time",
   "dashboard.billingPage.noInvoicesTitle": "No invoices yet",
@@ -642,6 +643,7 @@ export default {
     singleDay: "Single Day",
     dateRange: "Date Range",
     thisWeek: "This week",
+    allDates: "All dates",
     addFilter: "+ Filter",
     addFilterAria: "Filters",
     thisMonth: "This Month",

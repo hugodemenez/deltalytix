@@ -7,6 +7,10 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { stripe } from '@/server/stripe'
 import Stripe from 'stripe'
 import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
+import {
+  mapStripePaymentRecord,
+  type BillingInvoiceRecord,
+} from '@/lib/billing-invoice'
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -52,14 +56,7 @@ export type SubscriptionWithPrice = {
       duration: 'forever' | 'once' | 'repeating' | null
     }
   }
-  invoices?: Array<{
-    id: string
-    amount_paid: number
-    status: string
-    created: number
-    invoice_pdf: string | null
-    hosted_invoice_url: string | null
-  }>
+  invoices?: BillingInvoiceRecord[]
 }
 
 export async function getSubscriptionData() {
@@ -130,6 +127,7 @@ export async function getSubscriptionData() {
               amount_paid: pi.amount,
               status: 'paid',
               created: pi.created,
+              currency: pi.currency,
               invoice_pdf: null,
               hosted_invoice_url: receiptUrl, // Use receipt URL as the viewable link
               description: pi.description || 'One-time Payment',
@@ -145,6 +143,7 @@ export async function getSubscriptionData() {
             amount_paid: charge.amount,
             status: 'paid',
             created: charge.created,
+            currency: charge.currency,
             invoice_pdf: null,
             hosted_invoice_url: charge.receipt_url, // Use receipt URL as the viewable link
             description: charge.description || 'One-time Payment',
@@ -329,14 +328,7 @@ export async function getSubscriptionData() {
             }
           };
         })() : undefined,
-        invoices: invoices.data.map(invoice => ({
-          id: invoice.id,
-          amount_paid: invoice.amount_paid,
-          status: invoice.status,
-          created: invoice.created,
-          invoice_pdf: invoice.invoice_pdf,
-          hosted_invoice_url: invoice.hosted_invoice_url
-        }))
+        invoices: invoices.data.map(mapStripePaymentRecord)
       } as SubscriptionWithPrice
     }
 
@@ -371,14 +363,7 @@ function createLifetimeSubscriptionData(localSubscription: any, invoices: any[])
       interval: 'lifetime' as const,
     },
     promotion: undefined,
-    invoices: invoices.map(invoice => ({
-      id: invoice.id,
-      amount_paid: invoice.amount_paid,
-      status: invoice.status,
-      created: invoice.created,
-      invoice_pdf: invoice.invoice_pdf,
-      hosted_invoice_url: invoice.hosted_invoice_url
-    }))
+    invoices: invoices.map(mapStripePaymentRecord)
   } as SubscriptionWithPrice
 }
 

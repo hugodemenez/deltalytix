@@ -268,6 +268,7 @@ export default {
   "dashboard.billingPage.invoices": "Factures",
   "dashboard.billingPage.billingHistory": "Historique de facturation",
   "dashboard.billingPage.recurringInvoiceLabel": "Plus · {period}",
+  "dashboard.billingPage.genericInvoiceLabel": "Plus",
   "dashboard.billingPage.lifetimeInvoiceLabel":
     "Plus · Lifetime — paiement unique",
   "dashboard.billingPage.noInvoicesTitle": "Aucune facture pour le moment",
@@ -473,6 +474,7 @@ export default {
   "filters.selectAllInstruments": "Sélectionner tous les instruments",
   "filters.clearDate": "Effacer la date",
   "filters.thisWeek": "Cette semaine",
+  "filters.allDates": "Toutes les dates",
   "filters.thisMonth": "Ce mois",
   "filters.lastThreeMonths": "Derniers 3 mois",
   "filters.lastSixMonths": "Les 6 derniers mois",
@@ -685,6 +687,7 @@ export default {
     singleDay: "Jour unique",
     dateRange: "Période",
     thisWeek: "Cette semaine",
+    allDates: "Toutes les dates",
     addFilter: "+ Filtrer",
     addFilterAria: "Filtres",
     thisMonth: "Ce mois",

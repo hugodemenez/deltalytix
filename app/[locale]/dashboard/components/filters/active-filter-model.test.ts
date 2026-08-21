@@ -58,4 +58,9 @@ describe('labelDateRange', () => {
       )
     ).toBe('This month')
   })
+
+  it('returns null when no date range is set', () => {
+    expect(labelDateRange(undefined, labels, () => 'custom')).toBeNull()
+    expect(labelDateRange({}, labels, () => 'custom')).toBeNull()
+  })
 })
