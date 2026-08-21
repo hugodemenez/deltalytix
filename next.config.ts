@@ -42,10 +42,25 @@ const nextConfig: NextConfig = {
     "localhost",
     "127.0.0.1",
   ],
-  // NOTE: Do not add hardcoded /en redirects for localized routes (e.g. /updates
-  // -> /en/updates). next.config redirects run before middleware, so they force a
-  // single locale and prevent the i18n middleware from routing by the user's
-  // selected language. Locale routing is handled entirely by the i18n middleware.
+  // Do not add hardcoded /en redirects for locale-less routes (e.g. /updates
+  // -> /en/updates). next.config redirects run before proxy, so they force a
+  // single locale and prevent the i18n middleware from routing by language.
+  // English-only aliases that already include /en (paid-search display paths)
+  // may redirect to /en — they do not steal locale-less marketing URLs.
+  async redirects() {
+    return [
+      {
+        source: "/en/trading-journal",
+        destination: "/en",
+        permanent: true,
+      },
+      {
+        source: "/en/trading-journal/futures",
+        destination: "/en",
+        permanent: true,
+      },
+    ];
+  },
   // Instant Navigations: Cache Components + Partial Prefetching (Next.js 16.3+).
   // Opt routes in with `export const instant = true` (and optionally
   // `export const prefetch = 'allow-runtime'` for session-aware prefetch).
