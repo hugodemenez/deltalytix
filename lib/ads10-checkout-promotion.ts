@@ -1,4 +1,4 @@
-import { billingLookupKey } from "@/lib/billing-plan-catalog";
+import { billingLookupKey } from "./billing-plan-catalog";
 
 // Verified live Stripe promotion code for coupon DLX_ADS10_USD_20260822.
 export const ADS10_PROMOTION_CODE_ID = "promo_1U7JkyCgu8zCkThC3eVlGJni";
