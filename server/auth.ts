@@ -14,6 +14,7 @@ import {
 import { createLocalDashboardBypassAuthStub } from '@/lib/local-dashboard-bypass-client'
 import { ensureLocalDashboardUserInDatabase } from '@/server/local-dashboard-bootstrap'
 import { capturePostHogEvent } from '@/lib/posthog-server'
+import { buildUserSignedUpCapture } from '@/lib/signup-analytics'
 import {
   attributionToPersonSetOnce,
   attributionToPostHogProperties,
@@ -428,6 +429,8 @@ export async function setPasswordAction(newPassword: string) {
  * Side effects:
  * - May sign the user out on integrity or identification errors.
  * - May create a default dashboard layout for new users.
+ * - On create only, captures a single PostHog `user_signed_up` event
+ *   (first-party; later logins that find the existing row do not recapture).
  *
  * Errors:
  * - Throws on missing user or id, account conflicts, Prisma integrity/validation issues, or
@@ -521,9 +524,11 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
       // inflate the email share of the signup-method breakdown.
       const method = authProvider;
 
-      await capturePostHogEvent({
+      // First-party conversion: fire once when the public row is created.
+      // Consent is granted in buildUserSignedUpCapture — the analytics cookie
+      // is almost never set yet on the OAuth / magic-link callback.
+      await capturePostHogEvent(buildUserSignedUpCapture({
         distinctId: user.id,
-        event: 'user_signed_up',
         properties: {
           auth_provider: authProvider,
           method,
@@ -532,7 +537,7 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
           ...attributionProps,
           ...(setOnce ? { $set_once: setOnce } : {}),
         },
-      });
+      }));
       
       // Create default dashboard layout for new user
       try {
