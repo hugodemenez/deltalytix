@@ -49,8 +49,10 @@ describe("ensureUserInDatabase signup capture hook", () => {
   const source = readFileSync(new URL("../server/auth.ts", import.meta.url), "utf8");
 
   it("fires user_signed_up only after the public User row is created", () => {
-    const createIdx = source.indexOf("prisma.user.create");
-    const captureIdx = source.indexOf("buildUserSignedUpCapture");
+    const createIdx = source.indexOf("const newUser = await prisma.user.create");
+    const captureIdx = source.indexOf(
+      "await capturePostHogEvent(buildUserSignedUpCapture",
+    );
     const existingReturnIdx = source.indexOf(
       "return { user: existingUserByAuthId, isNewUser: false }",
     );

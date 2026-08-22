@@ -40,9 +40,14 @@ export function buildUserSignedUpCapture({
 }: {
   distinctId: string;
   properties?: UserSignedUpProperties;
-}) {
+}): {
+  consentGranted: true;
+  distinctId: string;
+  event: typeof USER_SIGNED_UP_EVENT;
+  properties: UserSignedUpProperties;
+} {
   return {
-    consentGranted: true as const,
+    consentGranted: true,
     distinctId,
     event: USER_SIGNED_UP_EVENT,
     properties: {
