@@ -57,6 +57,7 @@ Then open <http://localhost:3000/dashboard>. The quickstart starts Postgres, wri
 |---|---|
 | [`SELF_HOSTING.md`](./SELF_HOSTING.md) | Deployment, configuration, and health checks |
 | [`AGENTS.md`](./AGENTS.md) | Build commands, conventions, and PR checklist — for contributors and AI agents alike |
+| [`docs/marketing-email-chrome.md`](./docs/marketing-email-chrome.md) | Resend / Zeno marketing email chrome lock (August 2026) |
 | [`SECURITY.md`](./SECURITY.md) | Reporting a vulnerability |
 | [`agents/skills/`](./agents/skills/) | Shared skill library for AI coding agents |
 | [deltalytix.app/updates](https://deltalytix.app/updates) | Release notes |
