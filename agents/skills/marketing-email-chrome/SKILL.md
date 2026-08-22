@@ -1,3 +1,8 @@
+---
+name: marketing-email-chrome
+description: Reuse the August 2026 Deltalytix marketing and product-news email chrome lock when sending via Resend or Zeno. Use for latest-release broadcasts, fluid 100% width, hosted images, full-width CTAs, and send/copy rules. Do not originate campaign copy.
+---
+
 # Marketing / product-news email chrome
 
 Lock for **Zeno** and anyone sending marketing or product-news mail through **Resend**.

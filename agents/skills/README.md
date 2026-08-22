@@ -31,6 +31,7 @@ Windows contributors need `git config core.symlinks true` (and Developer Mode) f
 - [`changelog-review`](./changelog-review/SKILL.md): review a release diff and prepare the editorial outline.
 - [`changelog-entries`](./changelog-entries/SKILL.md): write paired English and French changelog entries.
 - [`changelog-media`](./changelog-media/SKILL.md): plan, capture, and wire localized release media.
+- [`marketing-email-chrome`](./marketing-email-chrome/SKILL.md): reuse the August 2026 Resend / Zeno marketing email chrome lock.
 
 ## Interface skills
 
