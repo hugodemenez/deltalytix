@@ -1,6 +1,7 @@
 'use server'
 
 import { NextResponse } from "next/server";
+import type { User } from "@supabase/supabase-js";
 import type Stripe from "stripe";
 import { createClient, getWebsiteURL } from "@/server/auth";
 import { stripe } from "@/server/stripe";
@@ -75,7 +76,7 @@ async function customerHasPriorBillingHistory(customerId: string): Promise<boole
     }
 }
 
-async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: string, referral?: string | null, promo_code?: string | null, signupSuccess = false) {
+async function handleCheckoutSession(lookup_key: string, user: User, websiteURL: string, referral?: string | null, promo_code?: string | null, signupSuccess = false) {
     const subscriptionDetails = await getSubscriptionDetails();
     
     // If referral code is provided, validate it (but don't block checkout if invalid)
