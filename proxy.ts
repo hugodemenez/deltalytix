@@ -4,8 +4,11 @@ import { createServerClient } from "@supabase/ssr"
 import { geolocation } from "@vercel/functions"
 import { User } from "@supabase/supabase-js"
 import {
+  acceptsMarkdown as acceptHeaderRequestsMarkdown,
+  CONTENT_NEGOTIATION_VARY,
   homepageMarkdown,
   linkHeaderValue,
+  mergeVary,
 } from "@/lib/agent-discovery/metadata"
 import {
   getLocalDashboardUserEmail,
@@ -124,10 +127,7 @@ function createUnauthenticatedSession(request: NextRequest) {
 }
 
 function acceptsMarkdown(request: NextRequest) {
-  return request.headers
-    .get("accept")
-    ?.split(",")
-    .some((value) => value.trim().toLowerCase().startsWith("text/markdown"))
+  return acceptHeaderRequestsMarkdown(request.headers.get("accept"))
 }
 
 function errorMessage(error: unknown) {
@@ -151,6 +151,13 @@ function normalizeSameSite(
 function addAgentDiscoveryHeaders(response: NextResponse, request: NextRequest) {
   if (isHomepage(request.nextUrl.pathname)) {
     response.headers.set("link", linkHeaderValue())
+    // The homepage is served as HTML or as text/markdown depending on Accept
+    // (https://acceptmarkdown.com). Without Accept in Vary a CDN can hand the
+    // cached HTML variant to an agent that asked for markdown, or vice versa.
+    response.headers.set(
+      "vary",
+      mergeVary(response.headers.get("vary"), CONTENT_NEGOTIATION_VARY),
+    )
   }
 
   return response
@@ -290,6 +297,7 @@ export default async function proxy(req: NextRequest) {
         "content-type": "text/markdown; charset=utf-8",
         "x-markdown-tokens": String(markdown.split(/\s+/).filter(Boolean).length),
         link: linkHeaderValue(),
+        vary: CONTENT_NEGOTIATION_VARY,
       },
     })
   }

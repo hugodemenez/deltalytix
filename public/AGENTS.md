@@ -45,3 +45,33 @@ turn raw trade history into clear insights, better habits, and consistent result
 ## Sharing and collaboration
 - Team dashboards for shared analytics.
 - Public and embed-friendly views for sharing results.
+
+## Agent entry points
+- `/llms.txt`: plain-text index of the site, written for language models.
+- `/sitemap.xml`: every public page with last-modified dates.
+- `/robots.txt`: crawl policy, with an explicit group for each welcomed AI agent.
+- `/openapi.json`: OpenAPI 3.1 description, including security schemes and scopes.
+- `/docs/api`: human-readable API documentation.
+- `/.well-known/api-catalog`: RFC 9727 linkset.
+- `/.well-known/mcp/server-card.json`: Model Context Protocol server card.
+- `/.well-known/oauth-protected-resource`: RFC 9728 metadata with the supported scopes.
+- `/.well-known/openid-configuration`: OpenID Connect discovery metadata.
+- `/.well-known/agent-skills/index.json`: published agent skills with content digests.
+
+Request `/` with `Accept: text/markdown` for a markdown summary of the homepage.
+Responses that are content-negotiated send `Vary: Accept, Accept-Encoding`.
+
+## Authentication scopes
+Authorize with OAuth 2.0 and request only what the task needs:
+`openid`, `profile`, `email`, `trades:read`, `trades:write`, `journal:read`,
+`journal:write`, `analytics:read`. Read-only agents should request
+`trades:read`, `journal:read`, `analytics:read`.
+
+## Errors
+Every `/api/*` failure returns JSON, never HTML:
+
+```json
+{ "error": { "code": "not_found", "message": "…", "hint": "…", "status": 404, "documentation_url": "https://deltalytix.app/docs/api" } }
+```
+
+Unknown paths return HTTP 404 — the site never answers a missing page with 200.

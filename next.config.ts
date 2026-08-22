@@ -28,6 +28,25 @@ const RITHMIC_PROTOCOL_TRACE_INCLUDES = [
   './lib/rithmic-protocol/etc/**/*',
 ] as const;
 
+/**
+ * Locale prefixes served by the i18n proxy. The homepage is available at each
+ * of them, and every one of those URLs is content-negotiated between HTML and
+ * text/markdown (see `proxy.ts` and https://acceptmarkdown.com).
+ */
+const LOCALE_PREFIXES = [
+  "en",
+  "fr",
+  "de",
+  "es",
+  "it",
+  "pt",
+  "vi",
+  "hi",
+  "ja",
+  "zh",
+  "yo",
+] as const;
+
 const nextConfig: NextConfig = {
   // Standalone is for Docker/self-host (`Dockerfile.bun` copies `.next/standalone`).
   // On Vercel + Turbopack (Next 16.3+), the adapter skips `next-server.js.nft.json`,
@@ -58,6 +77,23 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async headers() {
+    // The homepage answers with HTML or with text/markdown depending on Accept.
+    // `Vary` has to say so or a CDN can hand a cached HTML response to an agent
+    // that asked for markdown, and vice versa. It is set here rather than in
+    // the proxy because Next.js replaces the `Vary` it sets on App Router pages
+    // with its own RSC value; headers from the config are appended afterwards.
+    return [
+      {
+        source: "/",
+        headers: [{ key: "Vary", value: "Accept" }],
+      },
+      {
+        source: `/:locale(${LOCALE_PREFIXES.join("|")})`,
+        headers: [{ key: "Vary", value: "Accept" }],
+      },
+    ];
+  },
   pageExtensions: ['mdx', 'ts', 'tsx'],
   typescript: {
     // Keep full checking in `bun run typecheck`; do not duplicate it inside `next build`.
@@ -66,6 +102,11 @@ const nextConfig: NextConfig = {
   experimental: {
     cpus: buildWorkers,
     mdxRs: true,
+    // Unmatched URLs must answer with a real 404 status. The app's root layout
+    // sits under the dynamic `[locale]` segment, so there is no single layout a
+    // route-level not-found could compose from; `app/global-not-found.tsx` is
+    // resolved by the router instead, before any shell is flushed.
+    globalNotFound: true,
     // Quiet Route Handler prerender bail-outs that are caught by try/catch.
     hideLogsAfterAbort: true,
     // Validate Instant Navigations only on routes that export `instant`.
