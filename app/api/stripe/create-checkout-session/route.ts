@@ -1,6 +1,7 @@
 'use server'
 
 import { NextResponse } from "next/server";
+import type Stripe from "stripe";
 import { createClient, getWebsiteURL } from "@/server/auth";
 import { stripe } from "@/server/stripe";
 import { getSubscriptionDetails } from "@/server/subscription";
@@ -16,7 +17,9 @@ import {
 import {
   pendingPurchaseSetCookieHeader,
   readAttributionFromCookies,
+  readUserCountryFromCookies,
 } from "@/lib/attribution-server";
+import { ads10PromotionCodeForCheckout } from "@/lib/ads10-checkout-promotion";
 
 // This endpoint renders no page of ours — it redirects straight to Stripe — so
 // a signup marker arriving here would never reach the Google tag. Forward it to
@@ -45,6 +48,31 @@ function billingIntervalFromPrice(price: {
     }
     if (price.recurring?.interval_count === 3) return 'quarter';
     return price.recurring?.interval || 'month';
+}
+
+async function customerHasPriorBillingHistory(customerId: string): Promise<boolean> {
+    try {
+        const [subscriptions, charges] = await Promise.all([
+            stripe.subscriptions.list({
+                customer: customerId,
+                status: 'all',
+                limit: 1,
+            }),
+            stripe.charges.list({
+                customer: customerId,
+                limit: 100,
+            }),
+        ]);
+
+        return (
+            subscriptions.data.length > 0 ||
+            charges.data.some((charge) => charge.paid) ||
+            charges.has_more
+        );
+    } catch (error) {
+        console.error('[checkout] Unable to verify prior Stripe billing history:', error);
+        return true;
+    }
 }
 
 async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: string, referral?: string | null, promo_code?: string | null, signupSuccess = false) {
@@ -78,31 +106,28 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
     // First, try to find existing customer
     const existingCustomers = await stripe.customers.list({
         email: user.email,
-        limit: 1,
+        limit: 100,
     });
 
     let customerId: string;
-    let isFirstOrder = false;
+    let hasPriorBillingHistory =
+        Boolean(subscriptionDetails) ||
+        existingCustomers.has_more ||
+        existingCustomers.data.length > 1;
 
     if (existingCustomers.data.length > 0) {
         // Use existing customer
         customerId = existingCustomers.data[0].id;
-        
-        // Check if customer has any previous subscriptions
-        const subscriptions = await stripe.subscriptions.list({
-            customer: customerId,
-            status: 'all', // Include all subscription statuses
-            limit: 1
-        });
-        
-        isFirstOrder = subscriptions.data.length === 0;
+
+        if (!hasPriorBillingHistory) {
+            hasPriorBillingHistory = await customerHasPriorBillingHistory(customerId);
+        }
     } else {
         // Create new customer if none exists
         const newCustomer = await stripe.customers.create({
             email: user.email,
         });
         customerId = newCustomer.id;
-        isFirstOrder = true;
     }
 
     const prices = await stripe.prices.list({
@@ -143,8 +168,16 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
     // Create session with appropriate mode based on price type
     const analyticsConsent = await hasAnalyticsConsent();
     const attribution = await readAttributionFromCookies();
+    const country = await readUserCountryFromCookies();
     const attributionMeta = attributionToStripeMetadata(attribution);
-    const sessionConfig: any = {
+    const ads10PromotionCode = ads10PromotionCodeForCheckout({
+        lookupKey: lookup_key,
+        price,
+        country,
+        gclid: attribution?.gclid,
+        hasPriorBillingHistory,
+    });
+    const sessionConfig: Stripe.Checkout.SessionCreateParams = {
         customer: customerId,
         metadata: {
             plan: lookup_key,
@@ -171,7 +204,9 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         // Abandoning checkout does not undo the registration, so the marker
         // rides the cancel path too.
         cancel_url: buildReturnUrl(websiteURL, 'pricing', { canceled: 'true' }, signupSuccess),
-        allow_promotion_codes: true,
+        ...(ads10PromotionCode
+            ? { discounts: [{ promotion_code: ads10PromotionCode }] }
+            : { allow_promotion_codes: true }),
     };
 
     if (isLifetimePlan) {

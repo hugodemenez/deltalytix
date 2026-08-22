@@ -43,6 +43,15 @@ export async function readAttributionFromCookies(): Promise<Attribution | null> 
   }
 }
 
+export async function readUserCountryFromCookies(): Promise<string | null> {
+  try {
+    const country = (await cookies()).get("user-country")?.value.trim();
+    return country ? country.toUpperCase() : null;
+  } catch {
+    return null;
+  }
+}
+
 export function pendingPurchaseSetCookieHeader(purchase: PendingPurchase): string {
   const value = encodeURIComponent(serializePendingPurchase(purchase));
   return `${PENDING_PURCHASE_COOKIE}=${value}; Max-Age=${PENDING_PURCHASE_MAX_AGE_SECONDS}; Path=/; SameSite=Lax${cookieSecureSuffix()}${cookieDomainSuffix()}`;
