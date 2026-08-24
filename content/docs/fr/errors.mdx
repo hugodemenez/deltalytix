@@ -7,6 +7,8 @@ order: 8
 
 Les erreurs de l’API v1 utilisent un corps JSON cohérent :
 
+<DocsResponse tone="error" label="Erreur">
+
 ```json
 {
   "error": "machine_code",
@@ -14,6 +16,8 @@ Les erreurs de l’API v1 utilisent un corps JSON cohérent :
   "details": {}
 }
 ```
+
+</DocsResponse>
 
 | Champ | Description |
 | --- | --- |
@@ -34,12 +38,16 @@ Les erreurs de l’API v1 utilisent un corps JSON cohérent :
 
 ### Non autorisé (`401`)
 
+<DocsResponse tone="error" label="Erreur">
+
 ```json
 {
   "error": "unauthorized",
   "message": "Missing or invalid access token"
 }
 ```
+
+</DocsResponse>
 
 Les réponses incluent :
 
@@ -49,6 +57,8 @@ WWW-Authenticate: Bearer resource_metadata="https://www.deltalytix.app/.well-kno
 
 ### Scope insuffisant (`403`)
 
+<DocsResponse tone="error" label="Erreur">
+
 ```json
 {
   "error": "insufficient_scope",
@@ -56,21 +66,29 @@ WWW-Authenticate: Bearer resource_metadata="https://www.deltalytix.app/.well-kno
 }
 ```
 
+</DocsResponse>
+
 ### Service non supporté (`422`)
+
+<DocsResponse tone="error" label="Erreur">
 
 ```json
 {
   "error": "unsupported_service",
-  "message": "Only server-syncable connection services are supported in v1",
+  "message": "Only credential-based connection services can be created in v1",
   "details": {
-    "supported": ["ibkr", "tradovate", "dxfeed", "rithmic-protocol"]
+    "supported": ["ibkr", "dxfeed", "rithmic-protocol"]
   }
 }
 ```
 
+</DocsResponse>
+
 ## Erreurs OAuth
 
 Les échecs du token endpoint utilisent la forme RFC 6749 (pas l’enveloppe REST) :
+
+<DocsResponse tone="error" label="Erreur">
 
 ```json
 {
@@ -78,6 +96,8 @@ Les échecs du token endpoint utilisent la forme RFC 6749 (pas l’enveloppe RES
   "error_description": "Authorization code is invalid or expired"
 }
 ```
+
+</DocsResponse>
 
 Les valeurs OAuth `error` courantes incluent `invalid_request`, `invalid_client`, `invalid_grant`, `unauthorized_client`, `unsupported_grant_type` et `invalid_scope`.
 

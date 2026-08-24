@@ -40,6 +40,8 @@ const payload = await res.json();
 
 ### Réponse `200`
 
+<DocsResponse tone="success" label="Succès">
+
 ```json
 {
   "data": [
@@ -66,6 +68,8 @@ const payload = await res.json();
   "nextCursor": null
 }
 ```
+
+</DocsResponse>
 
 `metrics` n’est présent que lorsque `includeMetrics=true`. Les champs incluent balance, drawdown, consistency et progress vers les objectifs du compte.
 

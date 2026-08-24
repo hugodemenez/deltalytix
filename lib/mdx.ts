@@ -5,6 +5,8 @@ import { compileMDX } from 'next-mdx-remote/rsc'
 import { cache } from 'react'
 import { mdxTableComponents } from '@/components/mdx/table'
 import { DocsNarrativeRouteTry } from '@/components/docs/narrative-route-try'
+import { DocsGetTokenButton } from '@/components/docs/playground-token'
+import { DocsResponse } from '@/components/docs/docs-response'
 
 const postsDirectory = path.join(process.cwd(), 'content/updates')
 
@@ -86,6 +88,8 @@ export async function compileMdxSource(rawContent: string) {
     components: {
       ...mdxTableComponents,
       DocsEndpointTry: DocsNarrativeRouteTry,
+      DocsGetTokenButton,
+      DocsResponse,
     },
     options: {
       mdxOptions: {

@@ -1,11 +1,26 @@
 ---
 title: Authentification
 description: OAuth 2.0 authorization code avec PKCE, personal access tokens, scopes et formats de jetons.
-order: 2
+order: 1
 ---
+
+## Obtenir un jeton
+
+Vous pouvez générer ou coller un jeton depuis n’importe quel panneau d’essai, au moment où vous en avez besoin.
+
+<DocsGetTokenButton />
+
 Deltalytix est son propre serveur d’autorisation OAuth 2.0. Les humains se connectent toujours via Supabase ; les jetons API sont émis et validés par Deltalytix.
 
-## Formats de jetons
+Chaque requête `/api/v1/*` exige un jeton Bearer :
+
+```http
+Authorization: Bearer dltx_at_…
+```
+
+Les endpoints REST sont servis depuis `https://www.deltalytix.app` sous **API v1** (`/api/v1/*`). Les listes acceptent `limit` (défaut `100`, max `500`) et `cursor`. Les timestamps sont en ISO 8601. Découverte machine-readable : [`/openapi.json`](/openapi.json), [`/.well-known/openid-configuration`](/.well-known/openid-configuration), [`/.well-known/oauth-protected-resource`](/.well-known/oauth-protected-resource).
+
+### Formats de jetons
 
 Les jetons sont des chaînes opaques. Deltalytix ne stocke que des empreintes SHA-256.
 
@@ -17,22 +32,11 @@ Les jetons sont des chaînes opaques. Deltalytix ne stocke que des empreintes SH
 | Client ID | `dltx_app_<24 hex chars>` | — |
 | Client secret | `dltx_secret_<48 hex chars>` | Affiché une seule fois à la création |
 
-## Scopes
+### Scopes
 
-Demandez uniquement les scopes dont votre intégration a besoin. Séparez-les par des espaces dans le paramètre OAuth `scope`.
+Demandez uniquement les scopes dont votre intégration a besoin. Séparez-les par des espaces dans le paramètre OAuth `scope`. La liste complète est dans [ce que vous pouvez faire](#ce-que-vous-pouvez-faire).
 
-| Scope | Accès |
-| --- | --- |
-| `profile:read` | Lire le profil de l’utilisateur authentifié |
-| `trades:read` | Lister les trades |
-| `trades:write` | Créer des trades |
-| `accounts:read` | Lister les comptes et métriques associées |
-| `connections:read` | Lister les connexions broker |
-| `connections:write` | Créer des connexions et déclencher une sync |
-| `imports:write` | Envoyer des fichiers d’import |
-| `metrics:read` | Lire les métriques summary, equity et comptes |
-
-## Personal access tokens
+### Personal access tokens
 
 Les PAT conviennent aux scripts et outils privés. Créez-les et révoquez-les depuis les paramètres développeur du tableau de bord, en choisissant les scopes nécessaires. La valeur du jeton n’est affichée qu’une fois.
 
@@ -41,7 +45,11 @@ curl https://www.deltalytix.app/api/v1/me \
   -H "Authorization: Bearer dltx_pat_YOUR_TOKEN"
 ```
 
-## OAuth 2.0 authorization code + PKCE
+### Token démo
+
+Le playground de la documentation peut émettre un token démo de courte durée, en lecture seule, sans connexion. Il authentifie un compte d’exemple partagé (`DEMO-001`) pour essayer les routes `GET`. Les scopes d’écriture exigent votre propre token docs ou PAT.
+
+## OAuth 2.0
 
 ### 1. Autoriser
 
@@ -100,7 +108,7 @@ curl -X POST https://www.deltalytix.app/api/oauth/token \
 
 Les clients confidentiels peuvent envoyer `client_secret` à la place (ou en plus) de PKCE, selon l’enregistrement de l’application.
 
-Réponse réussie :
+<DocsResponse tone="success" label="Succès">
 
 ```json
 {
@@ -112,7 +120,11 @@ Réponse réussie :
 }
 ```
 
+</DocsResponse>
+
 Les erreurs OAuth suivent la RFC 6749 :
+
+<DocsResponse tone="error" label="Erreur">
 
 ```json
 {
@@ -120,6 +132,8 @@ Les erreurs OAuth suivent la RFC 6749 :
   "error_description": "Authorization code is invalid or expired"
 }
 ```
+
+</DocsResponse>
 
 ### 3. Appeler l’API
 
@@ -169,9 +183,11 @@ curl -X POST https://www.deltalytix.app/api/oauth/revoke \
 
 La révocation renvoie toujours `200`, que le jeton ait été trouvé ou non.
 
-## Échecs côté resource server
+### Échecs côté resource server
 
 Un Bearer manquant ou invalide renvoie `401` :
+
+<DocsResponse tone="error" label="Erreur">
 
 ```json
 {
@@ -180,9 +196,13 @@ Un Bearer manquant ou invalide renvoie `401` :
 }
 ```
 
+</DocsResponse>
+
 avec un en-tête `WWW-Authenticate` pointant vers les métadonnées de ressource protégée.
 
 Un jeton valide sans le scope requis renvoie `403` :
+
+<DocsResponse tone="error" label="Erreur">
 
 ```json
 {
@@ -191,7 +211,9 @@ Un jeton valide sans le scope requis renvoie `403` :
 }
 ```
 
-## Gérer les applications et les jetons
+</DocsResponse>
+
+### Gérer les applications et les jetons
 
 Dans les paramètres développeur du tableau de bord, vous pouvez :
 

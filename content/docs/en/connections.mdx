@@ -5,14 +5,14 @@ order: 5
 ---
 Broker connections sync trades into Deltalytix. Raw broker tokens are never returned by the API.
 
-Server-syncable services for **create** and **sync**:
+Server-syncable services in v1:
 
-| `service` | Create fields | Notes |
-| --- | --- | --- |
-| `ibkr` | `token`, `queryId` | IBKR Flex Web Service |
-| `tradovate` | `accessToken`, `expiresAt`, optional `environment`, `externalId` | Pass a Tradovate API access token |
-| `dxfeed` | `login`, `password`, `propFirmId` | Volumetrica / DxFeed prop firms |
-| `rithmic-protocol` | `username`, `password`, `systemName`, `historyStartDate`, optional `gatewayId` | Rithmic Protocol gateway |
+| `service` | Create | Sync | Notes |
+| --- | --- | --- | --- |
+| `ibkr` | `token`, `queryId` | yes | IBKR Flex Web Service |
+| `dxfeed` | `login`, `password`, `propFirmId` | yes | Volumetrica / DxFeed prop firms |
+| `rithmic-protocol` | `username`, `password`, `systemName`, `historyStartDate`, optional `gatewayId` | yes | Rithmic Protocol gateway |
+| `tradovate` | dashboard OAuth only | yes | Connect in the Deltalytix dashboard, then list and sync via the API |
 
 Classic `rithmic`, `thor`, and `etp` may appear in `GET` listings but are not creatable or syncable through this API.
 
@@ -35,6 +35,8 @@ curl https://www.deltalytix.app/api/v1/connections \
 
 ### Response `200`
 
+<DocsResponse tone="success" label="Success">
+
 ```json
 {
   "data": [
@@ -50,6 +52,8 @@ curl https://www.deltalytix.app/api/v1/connections \
   "nextCursor": null
 }
 ```
+
+</DocsResponse>
 
 | Field | Description |
 | --- | --- |
@@ -93,20 +97,6 @@ curl -X POST https://www.deltalytix.app/api/v1/connections \
   }'
 ```
 
-### Tradovate
-
-```json
-{
-  "service": "tradovate",
-  "accessToken": "<tradovate access token>",
-  "expiresAt": "2026-03-16T12:00:00.000Z",
-  "environment": "demo",
-  "externalId": "default"
-}
-```
-
-`environment` is `demo` or `live` (default `demo`). `externalId` defaults to `default`.
-
 ### DxFeed
 
 ```json
@@ -137,6 +127,8 @@ curl -X POST https://www.deltalytix.app/api/v1/connections \
 
 ### Response `201`
 
+<DocsResponse tone="success" label="Success">
+
 ```json
 {
   "id": "conn_01HZX…",
@@ -148,19 +140,25 @@ curl -X POST https://www.deltalytix.app/api/v1/connections \
 }
 ```
 
+</DocsResponse>
+
 If the connection is stored but the initial sync fails, the response still returns `201` with `imported: 0` and a `warning` message.
 
 ### Unsupported service → `422`
 
+<DocsResponse tone="error" label="Error">
+
 ```json
 {
   "error": "unsupported_service",
-  "message": "Only server-syncable connection services are supported in v1",
+  "message": "Only credential-based connection services can be created in v1",
   "details": {
-    "supported": ["ibkr", "tradovate", "dxfeed", "rithmic-protocol"]
+    "supported": ["ibkr", "dxfeed", "rithmic-protocol"]
   }
 }
 ```
+
+</DocsResponse>
 
 ## Trigger a sync
 
@@ -172,7 +170,7 @@ POST /api/v1/connections/{id}/sync
 
 <DocsEndpointTry method="POST" path="/api/v1/connections/{id}/sync" />
 
-Works for `ibkr`, `tradovate`, `dxfeed`, and `rithmic-protocol`.
+Works for `ibkr`, `dxfeed`, `rithmic-protocol`, and `tradovate` connections that were already linked in the dashboard.
 
 ### Example
 
@@ -183,6 +181,8 @@ curl -X POST https://www.deltalytix.app/api/v1/connections/conn_01HZX…/sync \
 
 ### Response `200`
 
+<DocsResponse tone="success" label="Success">
+
 ```json
 {
   "status": "completed",
@@ -190,3 +190,5 @@ curl -X POST https://www.deltalytix.app/api/v1/connections/conn_01HZX…/sync \
   "duplicates": 3
 }
 ```
+
+</DocsResponse>

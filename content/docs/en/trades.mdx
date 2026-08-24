@@ -49,6 +49,8 @@ const page = await res.json();
 
 ### Response `200`
 
+<DocsResponse tone="success" label="Success">
+
 ```json
 {
   "data": [
@@ -73,6 +75,8 @@ const page = await res.json();
   "nextCursor": null
 }
 ```
+
+</DocsResponse>
 
 ## Create trades
 
@@ -156,6 +160,8 @@ curl -X POST https://www.deltalytix.app/api/v1/trades \
 
 ### Response `201`
 
+<DocsResponse tone="success" label="Success">
+
 ```json
 {
   "imported": 1,
@@ -163,5 +169,7 @@ curl -X POST https://www.deltalytix.app/api/v1/trades \
   "total": 1
 }
 ```
+
+</DocsResponse>
 
 If every row is a duplicate, the response still returns success with counts (for example `"imported": 0, "duplicates": 3, "total": 3`), not an error status.

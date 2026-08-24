@@ -14,6 +14,7 @@ import {
 import Link from "next/link"
 import { useCurrentLocale } from "@/locales/landing-client"
 import {
+  createDocsDemoTokenAction,
   createDocsPlaygroundTokenAction,
   getDocsPlaygroundAuthAction,
   revokeDocsPlaygroundTokenAction,
@@ -22,9 +23,27 @@ import type {
   DocsOpenApiDocument,
   OpenApiParameter,
 } from "@/components/docs/openapi-schema"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 const TOKEN_STORAGE_KEY = "deltalytix.docs.playground.token"
 const TOKEN_ID_STORAGE_KEY = "deltalytix.docs.playground.tokenId"
+const TOKEN_SOURCE_STORAGE_KEY = "deltalytix.docs.playground.tokenSource"
+
+type TokenSource = "demo" | "docs" | "paste"
 
 const READ_SCOPES = [
   "profile:read",
@@ -42,12 +61,18 @@ const WRITE_SCOPES = [
 
 const COPY = {
   en: {
+    sheetTitle: "Get a token",
+    getToken: "Get a token",
+    changeToken: "Change token",
     description:
-      "Use one bearer token across every route try below. Logged-in visitors can generate a docs token; everyone can paste a PAT.",
+      "Generate a docs token when signed in, use a demo token to try read routes, or paste a PAT.",
     signedInAs: "Signed in as {email}",
     signedIn: "Signed in",
     generateToken: "Generate docs token",
     generating: "Generating…",
+    useDemoToken: "Use demo token",
+    demoHint:
+      "Read-only sample trades. Sign in to use your own data or to write.",
     revoke: "Revoke",
     clear: "Clear",
     copy: "Copy",
@@ -89,15 +114,22 @@ const COPY = {
       "This authorization endpoint requires a browser redirect and user consent, so it can’t be sent as an API request here.",
     authError: "Could not check authentication status.",
     tokenError: "Could not create a docs token.",
+    demoError: "Could not create a demo token.",
     authOptional: "No bearer token required for this route.",
   },
   fr: {
+    sheetTitle: "Obtenir un jeton",
+    getToken: "Obtenir un jeton",
+    changeToken: "Changer le jeton",
     description:
-      "Un seul jeton bearer pour tous les essais ci-dessous. Les visiteurs connectés peuvent générer un token docs ; tout le monde peut coller un PAT.",
+      "Générez un token docs une fois connecté, utilisez un token démo pour les routes en lecture, ou collez un PAT.",
     signedInAs: "Connecté en tant que {email}",
     signedIn: "Connecté",
     generateToken: "Générer un token docs",
     generating: "Génération…",
+    useDemoToken: "Utiliser un token démo",
+    demoHint:
+      "Trades d’exemple en lecture seule. Connectez-vous pour vos propres données ou pour écrire.",
     revoke: "Révoquer",
     clear: "Effacer",
     copy: "Copier",
@@ -139,6 +171,7 @@ const COPY = {
       "Cet endpoint d’autorisation exige une redirection navigateur et le consentement de l’utilisateur ; il ne peut donc pas être envoyé ici comme une requête API.",
     authError: "Impossible de vérifier l’authentification.",
     tokenError: "Impossible de créer un token docs.",
+    demoError: "Impossible de créer un token démo.",
     authOptional: "Aucun jeton bearer requis pour cette route.",
   },
 } as const
@@ -148,13 +181,27 @@ type PlaygroundCopy = (typeof COPY)[keyof typeof COPY]
 type PlaygroundTokenContextValue = {
   token: string
   tokenId: string | null
+  tokenSource: TokenSource | null
   labels: PlaygroundCopy
-  persistToken: (token: string, tokenId: string | null) => void
+  persistToken: (
+    token: string,
+    tokenId: string | null,
+    source?: TokenSource | null,
+  ) => void
+  tokenSheetOpen: boolean
+  openTokenSheet: () => void
+  setTokenSheetOpen: (open: boolean) => void
   openApiDocument: DocsOpenApiDocument | null
   openApiLoading: boolean
   openApiError: boolean
   reloadOpenApi: () => void
 }
+
+const DOCS_BUTTON_CLASS =
+  "border border-black/15 px-3 py-2 text-sm transition-colors hover:bg-black/[0.03] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:border-white/15 dark:hover:bg-white/[0.04] dark:focus-visible:ring-white/10"
+
+const DOCS_TEXT_BUTTON_CLASS =
+  "px-3 py-2 text-sm text-black/55 underline-offset-4 hover:underline disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:text-white/55 dark:focus-visible:ring-white/10"
 
 const PlaygroundTokenContext =
   createContext<PlaygroundTokenContextValue | null>(null)
@@ -172,21 +219,37 @@ function safePrettyJson(value: unknown): string {
   }
 }
 
-function readSessionToken(): { token: string; tokenId: string | null } {
+function parseTokenSource(value: string | null): TokenSource | null {
+  if (value === "demo" || value === "docs" || value === "paste") return value
+  return null
+}
+
+function readSessionToken(): {
+  token: string
+  tokenId: string | null
+  tokenSource: TokenSource | null
+} {
   if (typeof window === "undefined") {
-    return { token: "", tokenId: null }
+    return { token: "", tokenId: null, tokenSource: null }
   }
   try {
     return {
       token: sessionStorage.getItem(TOKEN_STORAGE_KEY) ?? "",
       tokenId: sessionStorage.getItem(TOKEN_ID_STORAGE_KEY),
+      tokenSource: parseTokenSource(
+        sessionStorage.getItem(TOKEN_SOURCE_STORAGE_KEY),
+      ),
     }
   } catch {
-    return { token: "", tokenId: null }
+    return { token: "", tokenId: null, tokenSource: null }
   }
 }
 
-function writeSessionToken(token: string, tokenId: string | null) {
+function writeSessionToken(
+  token: string,
+  tokenId: string | null,
+  tokenSource: TokenSource | null,
+) {
   try {
     if (token) {
       sessionStorage.setItem(TOKEN_STORAGE_KEY, token)
@@ -197,6 +260,11 @@ function writeSessionToken(token: string, tokenId: string | null) {
       sessionStorage.setItem(TOKEN_ID_STORAGE_KEY, tokenId)
     } else {
       sessionStorage.removeItem(TOKEN_ID_STORAGE_KEY)
+    }
+    if (token && tokenSource) {
+      sessionStorage.setItem(TOKEN_SOURCE_STORAGE_KEY, tokenSource)
+    } else {
+      sessionStorage.removeItem(TOKEN_SOURCE_STORAGE_KEY)
     }
   } catch {
     // Ignore storage failures (private mode, etc.)
@@ -220,15 +288,18 @@ export function DocsPlaygroundTokenProvider({
   const labels = usePlaygroundCopy()
   const [token, setToken] = useState("")
   const [tokenId, setTokenId] = useState<string | null>(null)
+  const [tokenSource, setTokenSource] = useState<TokenSource | null>(null)
   const [openApiDocument, setOpenApiDocument] =
     useState<DocsOpenApiDocument | null>(null)
   const [openApiLoading, setOpenApiLoading] = useState(true)
   const [openApiError, setOpenApiError] = useState(false)
+  const [tokenSheetOpen, setTokenSheetOpen] = useState(false)
 
   useEffect(() => {
     const stored = readSessionToken()
     setToken(stored.token)
     setTokenId(stored.tokenId)
+    setTokenSource(stored.tokenSource)
   }, [])
 
   const reloadOpenApi = useCallback(() => {
@@ -275,18 +346,35 @@ export function DocsPlaygroundTokenProvider({
     }
   }, [])
 
-  const persistToken = useCallback((nextToken: string, nextId: string | null) => {
-    setToken(nextToken)
-    setTokenId(nextId)
-    writeSessionToken(nextToken, nextId)
+  const persistToken = useCallback(
+    (
+      nextToken: string,
+      nextId: string | null,
+      nextSource?: TokenSource | null,
+    ) => {
+      const source = nextToken ? (nextSource ?? "paste") : null
+      setToken(nextToken)
+      setTokenId(nextId)
+      setTokenSource(source)
+      writeSessionToken(nextToken, nextId, source)
+    },
+    [],
+  )
+
+  const openTokenSheet = useCallback(() => {
+    setTokenSheetOpen(true)
   }, [])
 
   const value = useMemo(
     () => ({
       token,
       tokenId,
+      tokenSource,
       labels,
       persistToken,
+      tokenSheetOpen,
+      openTokenSheet,
+      setTokenSheetOpen,
       openApiDocument,
       openApiLoading,
       openApiError,
@@ -295,8 +383,11 @@ export function DocsPlaygroundTokenProvider({
     [
       token,
       tokenId,
+      tokenSource,
       labels,
       persistToken,
+      tokenSheetOpen,
+      openTokenSheet,
       openApiDocument,
       openApiLoading,
       openApiError,
@@ -307,6 +398,7 @@ export function DocsPlaygroundTokenProvider({
   return (
     <PlaygroundTokenContext.Provider value={value}>
       {children}
+      <DocsTokenSheet />
     </PlaygroundTokenContext.Provider>
   )
 }
@@ -326,12 +418,18 @@ export function useDocsPlayground() {
 }
 
 /**
- * Shared bearer token controls — generate when signed in, or paste a PAT.
- * Input is `type="password"` so the secret stays redacted after paste.
+ * Shared bearer token controls — demo when signed out, generate when signed in,
+ * or paste a PAT. Input is `type="password"` so the secret stays redacted after paste.
  */
-export function DocsBearerTokenPanel() {
+export function DocsBearerTokenPanel({
+  embedded = false,
+}: {
+  embedded?: boolean
+}) {
   const locale = useCurrentLocale()
-  const { token, tokenId, labels, persistToken } = usePlaygroundToken()
+  const { token, tokenId, tokenSource, labels, persistToken, setTokenSheetOpen } =
+    usePlaygroundToken()
+  const tokenFieldId = useId()
   const [pending, startTransition] = useTransition()
   const [authChecked, setAuthChecked] = useState(false)
   const [authenticated, setAuthenticated] = useState(false)
@@ -383,9 +481,28 @@ export function DocsBearerTokenPanel() {
           setTokenActionError(result.error || labels.tokenError)
           return
         }
-        persistToken(result.token, result.id)
+        persistToken(result.token, result.id, "docs")
+        setTokenSheetOpen(false)
       } catch {
         setTokenActionError(labels.tokenError)
+      }
+    })
+  }
+
+  const handleUseDemoToken = () => {
+    setTokenActionError(null)
+    setRevealed(false)
+    startTransition(async () => {
+      try {
+        const result = await createDocsDemoTokenAction()
+        if ("error" in result) {
+          setTokenActionError(result.error || labels.demoError)
+          return
+        }
+        persistToken(result.token, result.id, "demo")
+        setTokenSheetOpen(false)
+      } catch {
+        setTokenActionError(labels.demoError)
       }
     })
   }
@@ -436,10 +553,18 @@ export function DocsBearerTokenPanel() {
   }
 
   return (
-    <div className="space-y-4 border border-black/10 p-4 dark:border-white/10 sm:p-5">
-      <p className="text-sm text-black/60 dark:text-white/60">
-        {labels.description}
-      </p>
+    <div
+      className={
+        embedded
+          ? "space-y-4"
+          : "not-prose space-y-4 border border-black/10 p-4 dark:border-white/10 sm:p-5"
+      }
+    >
+      {embedded ? null : (
+        <p className="text-sm text-black/60 dark:text-white/60">
+          {labels.description}
+        </p>
+      )}
 
       {!authChecked ? (
         <p className="text-sm text-black/45 dark:text-white/45">…</p>
@@ -457,7 +582,7 @@ export function DocsBearerTokenPanel() {
               {WRITE_SCOPES.map((scope) => (
                 <label
                   key={scope}
-                  className="flex items-center gap-2 font-mono text-xs text-black/70 dark:text-white/70"
+                  className="flex min-h-10 items-center gap-2 font-mono text-xs text-black/70 dark:text-white/70"
                 >
                   <input
                     type="checkbox"
@@ -476,16 +601,16 @@ export function DocsBearerTokenPanel() {
               type="button"
               onClick={handleGenerateToken}
               disabled={pending}
-              className="border border-black/15 px-3 py-2 text-sm transition-colors hover:bg-black/[0.03] disabled:opacity-50 dark:border-white/15 dark:hover:bg-white/[0.04]"
+              className={DOCS_BUTTON_CLASS}
             >
               {pending ? labels.generating : labels.generateToken}
             </button>
-            {tokenId ? (
+            {tokenId && tokenSource !== "demo" ? (
               <button
                 type="button"
                 onClick={handleRevokeToken}
                 disabled={pending}
-                className="px-3 py-2 text-sm text-black/55 underline-offset-4 hover:underline disabled:opacity-50 dark:text-white/55"
+                className={DOCS_TEXT_BUTTON_CLASS}
               >
                 {labels.revoke}
               </button>
@@ -493,31 +618,43 @@ export function DocsBearerTokenPanel() {
           </div>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={handleUseDemoToken}
+              disabled={pending}
+              className={DOCS_BUTTON_CLASS}
+            >
+              {pending ? labels.generating : labels.useDemoToken}
+            </button>
+            <p className="text-sm text-black/55 dark:text-white/55">
+              {labels.demoHint}
+            </p>
+          </div>
           <Link
             href={signInHref}
-            className="inline-block text-sm underline-offset-4 hover:underline"
+            className="inline-block min-h-10 py-2 text-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:focus-visible:ring-white/10"
           >
             {labels.signIn}
           </Link>
-          <p className="text-sm text-black/55 dark:text-white/55">
-            {labels.signInHint}
-          </p>
         </div>
       )}
 
       {authError ? (
-        <p className="text-sm text-rose-700 dark:text-rose-400">{authError}</p>
+        <p role="alert" className="text-sm text-rose-700 dark:text-rose-400">
+          {authError}
+        </p>
       ) : null}
       {tokenActionError ? (
-        <p className="text-sm text-rose-700 dark:text-rose-400">
+        <p role="alert" className="text-sm text-rose-700 dark:text-rose-400">
           {sanitizeErrorMessage(tokenActionError)}
         </p>
       ) : null}
 
       <div className="space-y-2">
         <label
-          htmlFor="docs-playground-token"
+          htmlFor={tokenFieldId}
           className="text-xs font-medium uppercase tracking-wide text-black/45 dark:text-white/45"
         >
           {labels.pasteToken}
@@ -530,28 +667,28 @@ export function DocsBearerTokenPanel() {
             <button
               type="button"
               onClick={() => void handleCopy()}
-              className="text-sm text-black/55 underline-offset-4 hover:underline dark:text-white/55"
+              className={DOCS_TEXT_BUTTON_CLASS}
             >
               {copied ? labels.copied : labels.copy}
             </button>
             <button
               type="button"
               onClick={() => setRevealed((value) => !value)}
-              className="text-sm text-black/55 underline-offset-4 hover:underline dark:text-white/55"
+              className={DOCS_TEXT_BUTTON_CLASS}
             >
               {revealed ? labels.hide : labels.show}
             </button>
             <button
               type="button"
               onClick={handleClearToken}
-              className="text-sm text-black/55 underline-offset-4 hover:underline dark:text-white/55"
+              className={DOCS_TEXT_BUTTON_CLASS}
             >
               {labels.clear}
             </button>
           </div>
         ) : null}
         <input
-          id="docs-playground-token"
+          id={tokenFieldId}
           type={revealed ? "text" : "password"}
           value={token}
           onChange={(event) => {
@@ -564,9 +701,74 @@ export function DocsBearerTokenPanel() {
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
-          className="w-full border border-black/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-black/30 dark:border-white/10 dark:focus:border-white/30"
+          className="w-full border border-black/10 bg-transparent px-3 py-2 font-mono text-sm outline-none focus-visible:border-black/30 focus-visible:ring-2 focus-visible:ring-black/10 dark:border-white/10 dark:focus-visible:border-white/30 dark:focus-visible:ring-white/10"
         />
       </div>
+    </div>
+  )
+}
+
+function DocsTokenSheet() {
+  const { tokenSheetOpen, setTokenSheetOpen, labels } = usePlaygroundToken()
+  const isDesktop = useMediaQuery("(min-width: 768px)")
+
+  if (isDesktop) {
+    return (
+      <Sheet open={tokenSheetOpen} onOpenChange={setTokenSheetOpen}>
+        <SheetContent
+          side="right"
+          className="flex w-full flex-col overflow-y-auto overscroll-contain sm:max-w-lg"
+        >
+          <SheetHeader className="pr-8 text-left">
+            <SheetTitle className="font-normal tracking-tight">
+              {labels.sheetTitle}
+            </SheetTitle>
+            <SheetDescription>{labels.description}</SheetDescription>
+          </SheetHeader>
+          <div className="mt-6">
+            <DocsBearerTokenPanel embedded />
+          </div>
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
+  return (
+    <Drawer
+      shouldScaleBackground={false}
+      open={tokenSheetOpen}
+      onOpenChange={setTokenSheetOpen}
+    >
+      <DrawerContent className="max-h-[85vh]">
+        <DrawerHeader className="text-left">
+          <DrawerTitle className="font-normal tracking-tight">
+            {labels.sheetTitle}
+          </DrawerTitle>
+          <DrawerDescription>{labels.description}</DrawerDescription>
+        </DrawerHeader>
+        <div className="overflow-y-auto overscroll-contain px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <DocsBearerTokenPanel embedded />
+        </div>
+      </DrawerContent>
+    </Drawer>
+  )
+}
+
+/** Opens the shared token sheet from Authentication and other MDX sections. */
+export function DocsGetTokenButton() {
+  const { token, labels, openTokenSheet, tokenSheetOpen } = usePlaygroundToken()
+
+  return (
+    <div className="not-prose my-6">
+      <button
+        type="button"
+        onClick={openTokenSheet}
+        aria-haspopup="dialog"
+        aria-expanded={tokenSheetOpen}
+        className={DOCS_BUTTON_CLASS}
+      >
+        {token ? labels.changeToken : labels.getToken}
+      </button>
     </div>
   )
 }
@@ -582,8 +784,8 @@ type DocsRouteTryProps = {
 }
 
 /**
- * Compact try panel for a single API route. Shares bearer token state with
- * `DocsBearerTokenPanel` via `DocsPlaygroundTokenProvider`.
+ * Compact try panel for a single API route. Opens the shared token sheet when
+ * a bearer token is missing.
  */
 export function DocsRouteTry({
   method: initialMethod,
@@ -593,7 +795,7 @@ export function DocsRouteTry({
   parameters = [],
   hasBody,
 }: DocsRouteTryProps) {
-  const { token, labels } = usePlaygroundToken()
+  const { token, labels, openTokenSheet, tokenSheetOpen } = usePlaygroundToken()
   const fieldId = useId()
   const method = initialMethod.toUpperCase()
   const [path, setPath] = useState(initialPath)
@@ -659,7 +861,7 @@ export function DocsRouteTry({
   const handleSend = async () => {
     const bearer = token.trim()
     if (requiresAuth && !bearer) {
-      setRequestError(labels.noToken)
+      openTokenSheet()
       return
     }
 
@@ -839,14 +1041,34 @@ export function DocsRouteTry({
         </div>
       ) : null}
 
-      <button
-        type="button"
-        onClick={() => void handleSend()}
-        disabled={sending}
-        className="border border-black/15 px-4 py-2 text-sm transition-colors hover:bg-black/[0.03] disabled:opacity-50 dark:border-white/15 dark:hover:bg-white/[0.04]"
-      >
-        {sending ? labels.sending : labels.send}
-      </button>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <button
+          type="button"
+          onClick={() => void handleSend()}
+          disabled={sending}
+          className={DOCS_BUTTON_CLASS}
+        >
+          {sending ? labels.sending : labels.send}
+        </button>
+        {requiresAuth ? (
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            {token ? (
+              <code className="font-mono text-xs text-black/70 dark:text-white/70">
+                {maskToken(token)}
+              </code>
+            ) : null}
+            <button
+              type="button"
+              onClick={openTokenSheet}
+              aria-haspopup="dialog"
+              aria-expanded={tokenSheetOpen}
+              className={token ? DOCS_TEXT_BUTTON_CLASS : DOCS_BUTTON_CLASS}
+            >
+              {token ? labels.changeToken : labels.getToken}
+            </button>
+          </div>
+        ) : null}
+      </div>
 
       {requestError ? (
         <p role="alert" className="text-sm text-rose-700 dark:text-rose-400">

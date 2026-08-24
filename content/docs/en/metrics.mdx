@@ -36,6 +36,8 @@ curl "https://www.deltalytix.app/api/v1/metrics/summary?from=2026-01-01T00:00:00
 
 ### Response `200`
 
+<DocsResponse tone="success" label="Success">
+
 ```json
 {
   "totalPnl": 12450.5,
@@ -53,6 +55,8 @@ curl "https://www.deltalytix.app/api/v1/metrics/summary?from=2026-01-01T00:00:00
   "tradingDays": 48
 }
 ```
+
+</DocsResponse>
 
 ## Equity curve
 
@@ -94,6 +98,8 @@ const equity = await res.json();
 
 ### Response `200`
 
+<DocsResponse tone="success" label="Success">
+
 ```json
 {
   "points": [
@@ -119,6 +125,8 @@ const equity = await res.json();
 }
 ```
 
+</DocsResponse>
+
 The `accounts` object is included when `accountNumbers` is requested.
 
 ## Account metrics
@@ -140,6 +148,8 @@ curl https://www.deltalytix.app/api/v1/metrics/accounts \
 
 ### Response `200`
 
+<DocsResponse tone="success" label="Success">
+
 ```json
 {
   "data": [
@@ -153,3 +163,5 @@ curl https://www.deltalytix.app/api/v1/metrics/accounts \
   ]
 }
 ```
+
+</DocsResponse>

@@ -78,6 +78,23 @@ export default {
   "docs.sectionLabel": "Section {number}",
   "docs.onThisPage": "Sur cette page",
   "docs.jumpToSection": "Aller à la section",
+  "docs.getTokenTitle": "Obtenir un jeton",
+  "docs.getTokenLead":
+    "Ouvrez la feuille de jeton depuis n’importe quel panneau d’essai. Générez un token docs une fois connecté, utilisez un token démo pour les routes en lecture, ou collez un personal access token.",
+  "docs.oauthTitle": "OAuth 2.0",
+  "docs.toc.title": "Ce que vous pouvez faire",
+  "docs.toc.lead":
+    "Chaque ligne ouvre le guide correspondant. Incluez ce scope sur votre jeton.",
+  "docs.toc.youCan": "Vous pouvez",
+  "docs.toc.scope": "Scope",
+  "docs.toc.profileRead": "Lire le profil de l’utilisateur authentifié",
+  "docs.toc.tradesRead": "Lister les trades",
+  "docs.toc.tradesWrite": "Créer des trades",
+  "docs.toc.accountsRead": "Lister les comptes et métriques associées",
+  "docs.toc.connectionsRead": "Lister les connexions broker",
+  "docs.toc.connectionsWrite": "Créer des connexions et déclencher une sync",
+  "docs.toc.importsWrite": "Envoyer des fichiers d’import",
+  "docs.toc.metricsRead": "Lire les métriques summary, equity et comptes",
   "docs.tryIt": "Essayer",
   "docs.openApi": "Référence OpenAPI",
   "docs.openApiJson": "OpenAPI JSON",
@@ -97,7 +114,7 @@ export default {
   "docs.openapi.schemaOutline": "Aperçu du schéma",
   "docs.playground.title": "Bac à sable API",
   "docs.playground.description":
-    "Appelez les vrais endpoints /api/v1 avec un personal access token. Les visiteurs connectés peuvent générer un token docs ; tout le monde peut coller un PAT existant.",
+    "Appelez les vrais endpoints /api/v1 avec un jeton bearer. Utilisez un token démo pour les routes en lecture, générez un token docs une fois connecté, ou collez un personal access token.",
   "docs.playground.signedInAs": "Connecté en tant que {email}",
   "docs.playground.signedIn": "Connecté",
   "docs.playground.generateToken": "Générer un token docs",
@@ -123,6 +140,30 @@ export default {
   "docs.playground.authError": "Impossible de vérifier l’authentification.",
   "docs.playground.tokenError": "Impossible de créer un token docs.",
   "docs.playground.customLabel": "Requête personnalisée",
+  "help.title": "Documentation.",
+  "help.description":
+    "Apprenez à importer vos trades, lire vos performances et tenir un journal avec Deltalytix.",
+  "help.intro":
+    "Ces guides s’adressent aux traders qui utilisent le produit. Pour une intégration, consultez la documentation API.",
+  "help.apiCta": "Documentation API",
+  "help.topics.import.title": "Importer vos trades",
+  "help.topics.import.description":
+    "Connectez un broker ou envoyez un CSV pour centraliser votre track record.",
+  "help.topics.calendar.title": "Performance quotidienne",
+  "help.topics.calendar.description":
+    "Utilisez le calendrier pour voir d’un coup d’œil les jours gagnants et perdants.",
+  "help.topics.charts.title": "Graphiques de performance",
+  "help.topics.charts.description":
+    "Visualisez l’équité, la distribution et votre progression vers vos objectifs.",
+  "help.topics.journal.title": "Journal assisté par IA",
+  "help.topics.journal.description":
+    "Écrivez vos sessions et laissez le coach faire ressortir les schémas émotionnels.",
+  "help.topics.dashboard.title": "Ouvrir le tableau de bord",
+  "help.topics.dashboard.description":
+    "Connectez-vous pour travailler avec vos comptes, trades et connexions.",
+  "help.topics.support.title": "Besoin d’aide ?",
+  "help.topics.support.description":
+    "Contactez le support ou rejoignez la communauté si quelque chose ne fonctionne pas.",
   "notification.title": "Progrès de synchronisation Rithmic",
   "notification.noAccount": "Aucun compte en cours de traitement",
   "notification.processingAccount": "Traitement du compte : {account}",

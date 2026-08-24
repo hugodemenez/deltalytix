@@ -2,12 +2,20 @@
 
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { ListTree, X } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 
 export type DocsNavItem = {
   id: string
   title: string
+  children?: DocsNavItem[]
+}
+
+function flattenNavItems(items: DocsNavItem[]): DocsNavItem[] {
+  return items.flatMap((item) => [
+    { id: item.id, title: item.title },
+    ...(item.children ? flattenNavItems(item.children) : []),
+  ])
 }
 
 /** Matches sticky `top-20` (~80px) plus a little breathing room under the navbar. */
@@ -26,7 +34,8 @@ export function DocsSectionNav({
   jumpLabel,
   closeLabel,
 }: DocsSectionNavProps) {
-  const [activeId, setActiveId] = useState(items[0]?.id ?? "")
+  const flatItems = useMemo(() => flattenNavItems(items), [items])
+  const [activeId, setActiveId] = useState(flatItems[0]?.id ?? "")
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
   const visibleSectionIds = useRef(new Set<string>())
 
@@ -34,12 +43,12 @@ export function DocsSectionNav({
     const hash = window.location.hash.replace(/^#/, "")
     const visibleIds = visibleSectionIds.current
     const initialHashFrame = window.requestAnimationFrame(() => {
-      if (hash && items.some((item) => item.id === hash)) {
+      if (hash && flatItems.some((item) => item.id === hash)) {
         setActiveId(hash)
       }
     })
 
-    const elements = items
+    const elements = flatItems
       .map((item) => document.getElementById(item.id))
       .filter((el): el is HTMLElement => Boolean(el))
 
@@ -57,7 +66,7 @@ export function DocsSectionNav({
           }
         }
 
-        const firstVisibleItem = items.find((item) =>
+        const firstVisibleItem = flatItems.find((item) =>
           visibleIds.has(item.id),
         )
         if (firstVisibleItem) {
@@ -79,7 +88,7 @@ export function DocsSectionNav({
       observer.disconnect()
       visibleIds.clear()
     }
-  }, [items])
+  }, [flatItems])
 
   const scrollToSection = useCallback((id: string) => {
     const el = document.getElementById(id)
@@ -93,9 +102,79 @@ export function DocsSectionNav({
 
   const activeIndex = Math.max(
     0,
-    items.findIndex((item) => item.id === activeId),
+    flatItems.findIndex((item) => item.id === activeId),
   )
-  const activeItem = items[activeIndex]
+  const activeItem = flatItems[activeIndex]
+
+  const renderDesktopItems = (navItems: DocsNavItem[], depth = 0) =>
+    navItems.map((item) => {
+      const isActive = activeId === item.id
+      return (
+        <li key={item.id}>
+          <a
+            href={`#${item.id}`}
+            onClick={(event) => {
+              event.preventDefault()
+              scrollToSection(item.id)
+            }}
+            className={cn(
+              "-ml-px block border-l-2 py-1.5 text-sm leading-snug tracking-tight transition-colors",
+              depth > 0 ? "pl-7" : "pl-4",
+              isActive
+                ? "border-black text-black dark:border-white dark:text-white"
+                : "border-transparent text-black/55 hover:text-black dark:text-white/55 dark:hover:text-white",
+            )}
+            aria-current={isActive ? "location" : undefined}
+          >
+            {item.title}
+          </a>
+          {item.children && item.children.length > 0 ? (
+            <ul className="space-y-1">
+              {renderDesktopItems(item.children, depth + 1)}
+            </ul>
+          ) : null}
+        </li>
+      )
+    })
+
+  let mobileIndex = 0
+  const renderMobileItems = (navItems: DocsNavItem[], depth = 0) =>
+    navItems.map((item) => {
+      const index = mobileIndex
+      mobileIndex += 1
+      const isActive = activeId === item.id
+      return (
+        <li key={item.id}>
+          <a
+            href={`#${item.id}`}
+            onClick={(event) => {
+              event.preventDefault()
+              setIsMobileNavOpen(false)
+              scrollToSection(item.id)
+            }}
+            className={cn(
+              "flex min-h-11 items-center gap-3 rounded-xl py-2 text-sm leading-snug tracking-tight transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black dark:focus-visible:outline-white",
+              depth > 0 ? "pl-8 pr-3" : "px-3",
+              isActive
+                ? "bg-black/5 font-semibold text-black dark:bg-white/10 dark:text-white"
+                : "text-black/60 hover:bg-black/5 hover:text-black dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white",
+            )}
+            aria-current={isActive ? "location" : undefined}
+          >
+            <span
+              className="w-5 shrink-0 text-right text-xs tabular-nums text-black/40 dark:text-white/40"
+              aria-hidden="true"
+            >
+              {index + 1}
+            </span>
+            <span>{item.title}</span>
+          </a>
+          {item.children && item.children.length > 0 ? (
+            <ol className="space-y-0.5">{renderMobileItems(item.children, depth + 1)}</ol>
+          ) : null}
+        </li>
+      )
+    })
 
   return (
     <>
@@ -110,7 +189,7 @@ export function DocsSectionNav({
             className="fixed right-[calc(env(safe-area-inset-right)+1rem)] bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-40 flex h-12 min-w-16 items-center justify-center gap-2 rounded-full border border-black/10 bg-background/95 px-4 text-sm font-medium shadow-lg shadow-black/10 backdrop-blur-md transition-[color,background-color,transform] hover:bg-neutral-100 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black dark:border-white/15 dark:shadow-black/30 dark:hover:bg-neutral-900 dark:focus-visible:outline-white lg:hidden"
           >
             <span className="tabular-nums" aria-hidden="true">
-              {activeIndex + 1} / {items.length}
+              {activeIndex + 1} / {flatItems.length}
             </span>
             <ListTree className="size-4" strokeWidth={2} aria-hidden="true" />
           </button>
@@ -136,36 +215,7 @@ export function DocsSectionNav({
 
             <nav aria-label={label} className="overflow-y-auto overscroll-contain">
               <ol className="space-y-0.5 pb-1">
-                {items.map((item, index) => {
-                  const isActive = activeId === item.id
-                  return (
-                    <li key={item.id}>
-                      <a
-                        href={`#${item.id}`}
-                        onClick={(event) => {
-                          event.preventDefault()
-                          setIsMobileNavOpen(false)
-                          scrollToSection(item.id)
-                        }}
-                        className={cn(
-                          "flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm leading-snug tracking-tight transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black dark:focus-visible:outline-white",
-                          isActive
-                            ? "bg-black/5 font-semibold text-black dark:bg-white/10 dark:text-white"
-                            : "text-black/60 hover:bg-black/5 hover:text-black dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white",
-                        )}
-                        aria-current={isActive ? "location" : undefined}
-                      >
-                        <span
-                          className="w-5 shrink-0 text-right text-xs tabular-nums text-black/40 dark:text-white/40"
-                          aria-hidden="true"
-                        >
-                          {index + 1}
-                        </span>
-                        <span>{item.title}</span>
-                      </a>
-                    </li>
-                  )
-                })}
+                {renderMobileItems(items)}
               </ol>
             </nav>
           </DialogPrimitive.Content>
@@ -181,29 +231,7 @@ export function DocsSectionNav({
             {label}
           </p>
           <ul className="space-y-1 border-l border-black/10 dark:border-white/10">
-            {items.map((item) => {
-              const isActive = activeId === item.id
-              return (
-                <li key={item.id}>
-                  <a
-                    href={`#${item.id}`}
-                    onClick={(event) => {
-                      event.preventDefault()
-                      scrollToSection(item.id)
-                    }}
-                    className={cn(
-                      "-ml-px block border-l-2 py-1.5 pl-4 text-sm leading-snug tracking-tight transition-colors",
-                      isActive
-                        ? "border-black text-black dark:border-white dark:text-white"
-                        : "border-transparent text-black/55 hover:text-black dark:text-white/55 dark:hover:text-white",
-                    )}
-                    aria-current={isActive ? "location" : undefined}
-                  >
-                    {item.title}
-                  </a>
-                </li>
-              )
-            })}
+            {renderDesktopItems(items)}
           </ul>
         </nav>
       </aside>

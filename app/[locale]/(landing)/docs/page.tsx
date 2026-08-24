@@ -10,10 +10,11 @@ import { DocsPageShell } from "@/components/docs/docs-page-shell"
 import type { DocsNavItem } from "@/components/docs/docs-section-nav"
 import { MdxCodeCopy } from "@/components/mdx/code-copy"
 import { DocsOpenApiReference } from "@/components/docs/openapi-reference"
+import { DocsPlaygroundTokenProvider } from "@/components/docs/playground-token"
 import {
-  DocsBearerTokenPanel,
-  DocsPlaygroundTokenProvider,
-} from "@/components/docs/playground-token"
+  DocsCapabilityToc,
+  docsTocHeadingId,
+} from "@/components/docs/docs-capability-toc"
 import { siteUrl } from "@/lib/site-url"
 import { truncateForSocialDescription } from "@/lib/og/site-metadata"
 
@@ -24,7 +25,7 @@ interface PageProps {
 }
 
 const DOCS_PROSE_CLASSNAME = `prose prose-neutral dark:prose-invert max-w-none
-  prose-headings:tracking-tight prose-headings:font-normal
+  prose-headings:tracking-tight prose-headings:font-normal prose-headings:scroll-mt-24
   prose-pre:p-0 prose-pre:bg-transparent
   prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-neutral-100 prose-code:text-neutral-800
   dark:prose-code:bg-neutral-800 dark:prose-code:text-neutral-200
@@ -92,47 +93,52 @@ async function CachedDocsPage({ locale }: { locale: string }) {
   const t = await getI18n()
   const docs = await getAllDocs(locale)
 
+  const getTokenHeadingId =
+    locale === "fr" ? "obtenir-un-jeton" : "get-a-token"
+
   const navItems: DocsNavItem[] = [
-    ...docs.map((doc) => ({
-      id: doc.slug,
-      title: doc.meta.title,
-    })),
+    { id: docsTocHeadingId(locale), title: t("docs.toc.title") },
+    ...docs.map((doc) =>
+      doc.slug === "authentication"
+        ? {
+            id: doc.slug,
+            title: doc.meta.title,
+            children: [
+              { id: getTokenHeadingId, title: t("docs.getTokenTitle") },
+              { id: "oauth-20", title: t("docs.oauthTitle") },
+            ],
+          }
+        : {
+            id: doc.slug,
+            title: doc.meta.title,
+          },
+    ),
     { id: "openapi", title: t("docs.openApi") },
   ]
 
   return (
-    <main className="min-h-screen">
-      <header className="border-b border-black/10 dark:border-white/10">
-        <div
-          className={`${LANDING_SECTION_CONTAINER_CLASSNAME} w-full py-10 sm:py-14 lg:py-16`}
-        >
-          <p className="mb-4 text-sm text-black/55 dark:text-white/55">
-            Deltalytix
-          </p>
-          <h1 className="max-w-[960px] text-balance text-[clamp(2.25rem,5vw,4.5rem)] font-normal leading-[0.95] tracking-[-0.06em]">
-            {t("docs.title")}
-          </h1>
-          <p className="mt-5 max-w-[680px] text-pretty text-base leading-relaxed text-black/60 dark:text-white/60 sm:text-lg">
-            {t("docs.description")}
-          </p>
-          <p className="mt-6">
-            <Link
-              href="/openapi.json"
-              className="text-sm text-black/55 underline-offset-4 transition-colors hover:text-black hover:underline dark:text-white/55 dark:hover:text-white"
-            >
-              {t("docs.openApiJson")}
-            </Link>
-          </p>
-        </div>
-      </header>
+    <DocsPlaygroundTokenProvider>
+      <main className="min-h-screen">
+        <header className="border-b border-black/10 dark:border-white/10">
+          <div
+            className={`${LANDING_SECTION_CONTAINER_CLASSNAME} w-full py-10 sm:py-14 lg:py-16`}
+          >
+            <h1 className="max-w-[960px] text-balance text-[clamp(2.25rem,5vw,4.5rem)] font-normal leading-[0.95] tracking-[-0.06em]">
+              {t("docs.title")}
+            </h1>
+            <p className="mt-5 max-w-[680px] text-pretty text-base leading-relaxed text-black/60 dark:text-white/60 sm:text-lg">
+              {t("docs.description")}
+            </p>
+          </div>
+        </header>
 
-      <DocsPlaygroundTokenProvider>
         <DocsPageShell
           navItems={navItems}
           navLabel={t("docs.onThisPage")}
           jumpLabel={t("docs.jumpToSection")}
           closeLabel={t("common.close")}
         >
+          <DocsCapabilityToc locale={locale} />
           {docs.map((doc) => (
             <section
               key={doc.slug}
@@ -142,17 +148,12 @@ async function CachedDocsPage({ locale }: { locale: string }) {
               <h2 className="text-balance text-2xl font-normal tracking-[-0.03em] sm:text-3xl">
                 {doc.meta.title}
               </h2>
-              {doc.meta.description ? (
+              {doc.slug !== "authentication" && doc.meta.description ? (
                 <p className="mt-3 max-w-2xl text-pretty leading-relaxed text-black/60 dark:text-white/60">
                   {doc.meta.description}
                 </p>
               ) : null}
               <div className={`mt-8 ${DOCS_PROSE_CLASSNAME}`}>
-                {doc.slug === "authentication" ? (
-                  <div className="not-prose mb-8">
-                    <DocsBearerTokenPanel />
-                  </div>
-                ) : null}
                 <MdxCodeCopy>{doc.content}</MdxCodeCopy>
               </div>
             </section>
@@ -175,8 +176,8 @@ async function CachedDocsPage({ locale }: { locale: string }) {
             </div>
           </section>
         </DocsPageShell>
-      </DocsPlaygroundTokenProvider>
-    </main>
+      </main>
+    </DocsPlaygroundTokenProvider>
   )
 }
 

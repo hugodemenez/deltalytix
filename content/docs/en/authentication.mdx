@@ -1,11 +1,26 @@
 ---
 title: Authentication
 description: OAuth 2.0 authorization code with PKCE, personal access tokens, scopes, and token formats.
-order: 2
+order: 1
 ---
+
+## Get a token
+
+You can generate or paste a token from any try panel when you need one.
+
+<DocsGetTokenButton />
+
 Deltalytix is its own OAuth 2.0 authorization server. Humans still sign in with Supabase; API tokens are minted and validated by Deltalytix.
 
-## Token formats
+Every `/api/v1/*` request requires a Bearer token:
+
+```http
+Authorization: Bearer dltx_at_…
+```
+
+REST endpoints are served from `https://www.deltalytix.app` under **API v1** (`/api/v1/*`). List endpoints accept `limit` (default `100`, max `500`) and `cursor`. Timestamps are ISO 8601. Machine-readable discovery: [`/openapi.json`](/openapi.json), [`/.well-known/openid-configuration`](/.well-known/openid-configuration), [`/.well-known/oauth-protected-resource`](/.well-known/oauth-protected-resource).
+
+### Token formats
 
 Tokens are opaque strings. Deltalytix stores only SHA-256 hashes.
 
@@ -17,22 +32,11 @@ Tokens are opaque strings. Deltalytix stores only SHA-256 hashes.
 | Client ID | `dltx_app_<24 hex chars>` | — |
 | Client secret | `dltx_secret_<48 hex chars>` | Shown once at creation |
 
-## Scopes
+### Scopes
 
-Request only the scopes your integration needs. Space-separate them in OAuth `scope` parameters.
+Request only the scopes your integration needs. Space-separate them in OAuth `scope` parameters. The full list is in [what you can do](#what-you-can-do).
 
-| Scope | Access |
-| --- | --- |
-| `profile:read` | Read the authenticated user profile |
-| `trades:read` | List trades |
-| `trades:write` | Create trades |
-| `accounts:read` | List accounts and related metrics |
-| `connections:read` | List broker connections |
-| `connections:write` | Create connections and trigger sync |
-| `imports:write` | Upload import files |
-| `metrics:read` | Read summary, equity, and account metrics |
-
-## Personal access tokens
+### Personal access tokens
 
 PATs are ideal for scripts and private tools. Create and revoke them from the dashboard developer settings, choosing the scopes you need. The token value is shown once.
 
@@ -41,7 +45,11 @@ curl https://www.deltalytix.app/api/v1/me \
   -H "Authorization: Bearer dltx_pat_YOUR_TOKEN"
 ```
 
-## OAuth 2.0 authorization code + PKCE
+### Demo token
+
+The documentation playground can issue a short-lived, read-only demo token without signing in. It authenticates as a shared sample account (`DEMO-001`) so you can try `GET` routes. Write scopes require your own docs token or PAT.
+
+## OAuth 2.0
 
 ### 1. Authorize
 
@@ -100,7 +108,7 @@ curl -X POST https://www.deltalytix.app/api/oauth/token \
 
 Confidential clients may send `client_secret` instead of (or in addition to) PKCE, depending on how the app was registered.
 
-Successful response:
+<DocsResponse tone="success" label="Success">
 
 ```json
 {
@@ -112,7 +120,11 @@ Successful response:
 }
 ```
 
+</DocsResponse>
+
 OAuth errors follow RFC 6749:
+
+<DocsResponse tone="error" label="Error">
 
 ```json
 {
@@ -120,6 +132,8 @@ OAuth errors follow RFC 6749:
   "error_description": "Authorization code is invalid or expired"
 }
 ```
+
+</DocsResponse>
 
 ### 3. Call the API
 
@@ -169,9 +183,11 @@ curl -X POST https://www.deltalytix.app/api/oauth/revoke \
 
 Revocation always returns `200`, whether or not the token was found.
 
-## Resource-server failures
+### Resource-server failures
 
 Missing or invalid Bearer tokens return `401`:
+
+<DocsResponse tone="error" label="Error">
 
 ```json
 {
@@ -180,9 +196,13 @@ Missing or invalid Bearer tokens return `401`:
 }
 ```
 
+</DocsResponse>
+
 with a `WWW-Authenticate` header pointing at protected-resource metadata.
 
 Valid tokens without the required scope return `403`:
+
+<DocsResponse tone="error" label="Error">
 
 ```json
 {
@@ -191,7 +211,9 @@ Valid tokens without the required scope return `403`:
 }
 ```
 
-## Managing apps and tokens
+</DocsResponse>
+
+### Managing apps and tokens
 
 In the dashboard developer settings you can:
 

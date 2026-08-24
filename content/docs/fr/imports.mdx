@@ -65,6 +65,8 @@ curl -X POST https://www.deltalytix.app/api/v1/imports \
 
 ### Réponse de succès
 
+<DocsResponse tone="success" label="Succès">
+
 ```json
 {
   "imported": 128,
@@ -74,7 +76,11 @@ curl -X POST https://www.deltalytix.app/api/v1/imports \
 }
 ```
 
+</DocsResponse>
+
 ### Plateforme non supportée → `422`
+
+<DocsResponse tone="error" label="Erreur">
 
 ```json
 {
@@ -85,5 +91,7 @@ curl -X POST https://www.deltalytix.app/api/v1/imports \
   }
 }
 ```
+
+</DocsResponse>
 
 La liste exacte `details.supported` reflète le registre de parseurs en production.

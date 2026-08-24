@@ -77,6 +77,23 @@ export default {
   "docs.sectionLabel": "Section {number}",
   "docs.onThisPage": "On this page",
   "docs.jumpToSection": "Jump to section",
+  "docs.getTokenTitle": "Get a token",
+  "docs.getTokenLead":
+    "Open the token sheet from any try panel. Generate a docs token when signed in, use a demo token to try read routes, or paste a personal access token.",
+  "docs.oauthTitle": "OAuth 2.0",
+  "docs.toc.title": "What you can do",
+  "docs.toc.lead":
+    "Each row opens the matching guide. Include that scope on your token.",
+  "docs.toc.youCan": "You can",
+  "docs.toc.scope": "Scope",
+  "docs.toc.profileRead": "Read the authenticated user profile",
+  "docs.toc.tradesRead": "List trades",
+  "docs.toc.tradesWrite": "Create trades",
+  "docs.toc.accountsRead": "List accounts and related metrics",
+  "docs.toc.connectionsRead": "List broker connections",
+  "docs.toc.connectionsWrite": "Create connections and trigger sync",
+  "docs.toc.importsWrite": "Upload import files",
+  "docs.toc.metricsRead": "Read summary, equity, and account metrics",
   "docs.tryIt": "Try it",
   "docs.openApi": "OpenAPI reference",
   "docs.openApiJson": "OpenAPI JSON",
@@ -96,7 +113,7 @@ export default {
   "docs.openapi.schemaOutline": "Schema outline",
   "docs.playground.title": "API playground",
   "docs.playground.description":
-    "Call real /api/v1 endpoints with a personal access token. Logged-in visitors can generate a short-lived docs token; everyone can paste an existing PAT.",
+    "Call real /api/v1 endpoints with a bearer token. Use a demo token to try read routes, generate a docs token when signed in, or paste a personal access token.",
   "docs.playground.signedInAs": "Signed in as {email}",
   "docs.playground.signedIn": "Signed in",
   "docs.playground.generateToken": "Generate docs token",
@@ -122,6 +139,30 @@ export default {
   "docs.playground.authError": "Could not check authentication status.",
   "docs.playground.tokenError": "Could not create a docs token.",
   "docs.playground.customLabel": "Custom request",
+  "help.title": "Documentation.",
+  "help.description":
+    "Learn how to import trades, read your performance, and journal with Deltalytix.",
+  "help.intro":
+    "These guides are for traders using the product. If you are building an integration, use the API documentation.",
+  "help.apiCta": "API documentation",
+  "help.topics.import.title": "Import your trades",
+  "help.topics.import.description":
+    "Connect a broker or upload a CSV so your track record lives in one place.",
+  "help.topics.calendar.title": "Daily performance",
+  "help.topics.calendar.description":
+    "Use the calendar to see winning and losing days at a glance.",
+  "help.topics.charts.title": "Performance charts",
+  "help.topics.charts.description":
+    "Visualize equity, distribution, and progress toward your targets.",
+  "help.topics.journal.title": "AI journaling",
+  "help.topics.journal.description":
+    "Write about your sessions and let the coach surface emotional patterns.",
+  "help.topics.dashboard.title": "Open the dashboard",
+  "help.topics.dashboard.description":
+    "Sign in to work with your accounts, trades, and connections.",
+  "help.topics.support.title": "Need help?",
+  "help.topics.support.description":
+    "Contact support or join the community if something is not working.",
   "notification.title": "Rithmic Sync Progress",
   "notification.noAccount": "No account being processed",
   "notification.processingAccount": "Processing account: {account}",

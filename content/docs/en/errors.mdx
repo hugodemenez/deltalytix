@@ -7,6 +7,8 @@ order: 8
 
 API v1 errors use a consistent JSON body:
 
+<DocsResponse tone="error" label="Error">
+
 ```json
 {
   "error": "machine_code",
@@ -14,6 +16,8 @@ API v1 errors use a consistent JSON body:
   "details": {}
 }
 ```
+
+</DocsResponse>
 
 | Field | Description |
 | --- | --- |
@@ -34,12 +38,16 @@ API v1 errors use a consistent JSON body:
 
 ### Unauthorized (`401`)
 
+<DocsResponse tone="error" label="Error">
+
 ```json
 {
   "error": "unauthorized",
   "message": "Missing or invalid access token"
 }
 ```
+
+</DocsResponse>
 
 Responses include:
 
@@ -49,6 +57,8 @@ WWW-Authenticate: Bearer resource_metadata="https://www.deltalytix.app/.well-kno
 
 ### Insufficient scope (`403`)
 
+<DocsResponse tone="error" label="Error">
+
 ```json
 {
   "error": "insufficient_scope",
@@ -56,21 +66,29 @@ WWW-Authenticate: Bearer resource_metadata="https://www.deltalytix.app/.well-kno
 }
 ```
 
+</DocsResponse>
+
 ### Unsupported service (`422`)
+
+<DocsResponse tone="error" label="Error">
 
 ```json
 {
   "error": "unsupported_service",
-  "message": "Only server-syncable connection services are supported in v1",
+  "message": "Only credential-based connection services can be created in v1",
   "details": {
-    "supported": ["ibkr", "tradovate", "dxfeed", "rithmic-protocol"]
+    "supported": ["ibkr", "dxfeed", "rithmic-protocol"]
   }
 }
 ```
 
+</DocsResponse>
+
 ## OAuth errors
 
 Token endpoint failures use the RFC 6749 shape (not the REST envelope):
+
+<DocsResponse tone="error" label="Error">
 
 ```json
 {
@@ -78,6 +96,8 @@ Token endpoint failures use the RFC 6749 shape (not the REST envelope):
   "error_description": "Authorization code is invalid or expired"
 }
 ```
+
+</DocsResponse>
 
 Common OAuth `error` values include `invalid_request`, `invalid_client`, `invalid_grant`, `unauthorized_client`, `unsupported_grant_type`, and `invalid_scope`.
 

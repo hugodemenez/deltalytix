@@ -79,6 +79,7 @@ const PUBLIC_MARKETING_PATHS = new Set([
   "/referral",
   "/newsletter",
   "/maintenance",
+  "/help",
 ])
 
 function isPublicRoute(pathname: string) {

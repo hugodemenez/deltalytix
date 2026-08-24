@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { createClient } from "@/server/auth"
+import { issueDocsDemoToken } from "@/lib/api/docs-demo"
 import { isValidScope } from "@/lib/api/scopes"
 import {
   generatePersonalAccessToken,
@@ -81,6 +82,20 @@ export async function getDocsPlaygroundAuthAction(): Promise<{
     return { authenticated: false, email: null }
   }
   return { authenticated: true, email: user.email }
+}
+
+export async function createDocsDemoTokenAction(): Promise<
+  { token: string; id: string } | { error: string }
+> {
+  try {
+    return await issueDocsDemoToken()
+  } catch (error) {
+    console.error("[docs/playground] createDocsDemoTokenAction failed", error)
+    if (isMissingOAuthTableError(error)) {
+      return { error: SCHEMA_MISSING_MESSAGE }
+    }
+    return { error: "Could not create a demo token. Please try again." }
+  }
 }
 
 export async function createDocsPlaygroundTokenAction(

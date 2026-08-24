@@ -326,9 +326,9 @@ export function buildOpenApiDocument(request?: NextRequest) {
           responses: { "200": { description: "Connections" } },
         },
         post: {
-          summary: "Create a server-syncable connection",
+          summary: "Create a connection",
           description:
-            "Create an IBKR Flex, Tradovate, DxFeed, or Rithmic Protocol connection. Request body is discriminated by `service`.",
+            "Create an IBKR Flex, DxFeed, or Rithmic Protocol connection. Tradovate requires dashboard OAuth and cannot be created here; list and sync it after connecting in the dashboard.",
           security: [{ oauth2: ["connections:write"] }, { bearerPat: [] }],
           requestBody: {
             required: true,
@@ -348,29 +348,6 @@ export function buildOpenApiDocument(request?: NextRequest) {
                         queryId: {
                           type: "string",
                           description: "IBKR Flex Query ID",
-                        },
-                      },
-                    },
-                    {
-                      type: "object",
-                      required: ["service", "accessToken", "expiresAt"],
-                      properties: {
-                        service: { type: "string", enum: ["tradovate"] },
-                        accessToken: { type: "string" },
-                        expiresAt: {
-                          type: "string",
-                          format: "date-time",
-                          description: "Token expiration (ISO 8601)",
-                        },
-                        environment: {
-                          type: "string",
-                          enum: ["demo", "live"],
-                          default: "demo",
-                        },
-                        externalId: {
-                          type: "string",
-                          description:
-                            "Connection external id (defaults to `default`)",
                         },
                       },
                     },
@@ -430,7 +407,7 @@ export function buildOpenApiDocument(request?: NextRequest) {
         post: {
           summary: "Trigger a connection sync",
           description:
-            "Supported services: ibkr, tradovate, dxfeed, rithmic-protocol.",
+            "Supported services: ibkr, dxfeed, rithmic-protocol, and tradovate (dashboard-connected).",
           security: [{ oauth2: ["connections:write"] }, { bearerPat: [] }],
           parameters: [
             { name: "id", in: "path", required: true, schema: { type: "string" } },

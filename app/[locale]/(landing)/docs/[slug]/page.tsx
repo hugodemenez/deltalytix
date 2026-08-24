@@ -88,6 +88,10 @@ export default async function Page({ params }: PageProps) {
   }
 
   const { slug, locale } = resolved
+  if (slug === "overview") {
+    permanentRedirect(`/${locale}/docs#authentication`)
+  }
+
   const doc = await getDocMetadata(slug, locale)
   if (!doc) {
     notFound()

@@ -11,7 +11,6 @@ import {
   getDxFeedTrades,
 } from "@/app/[locale]/dashboard/components/import/dxfeed/sync/actions"
 import {
-  setCustomTradovateToken,
   getTradovateTrades,
   type TradovateEnvironment,
 } from "@/app/[locale]/dashboard/components/import/tradovate/sync/actions"
@@ -20,7 +19,10 @@ import {
   getRithmicProtocolTrades,
 } from "@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions"
 
-/** Broker services that can be created and synced via API v1. */
+/** Broker services that can be created via API v1 (credential POST, no browser OAuth). */
+export const CREATABLE_SERVICES = ["ibkr", "dxfeed", "rithmic-protocol"] as const
+
+/** Services that can be synced via API v1. Tradovate is dashboard-OAuth only. */
 export const SERVER_SYNCABLE_SERVICES = [
   "ibkr",
   "tradovate",
@@ -28,7 +30,17 @@ export const SERVER_SYNCABLE_SERVICES = [
   "rithmic-protocol",
 ] as const
 
+export type CreatableService = (typeof CREATABLE_SERVICES)[number]
 export type ServerSyncableService = (typeof SERVER_SYNCABLE_SERVICES)[number]
+
+export function isCreatableService(
+  service: string | undefined | null,
+): service is CreatableService {
+  return (
+    typeof service === "string" &&
+    (CREATABLE_SERVICES as readonly string[]).includes(service)
+  )
+}
 
 export function isServerSyncableService(
   service: string | undefined | null,
@@ -110,11 +122,6 @@ export type CreateConnectionBody = {
   systemName?: string
   historyStartDate?: string
   gatewayId?: string
-  // tradovate
-  accessToken?: string
-  expiresAt?: string
-  environment?: string
-  externalId?: string
 }
 
 type SyncOk = {
@@ -325,12 +332,12 @@ export async function createServerSyncableConnection(
   body: CreateConnectionBody,
 ): Promise<NextResponse> {
   const service = body.service?.toLowerCase()
-  if (!isServerSyncableService(service)) {
+  if (!isCreatableService(service)) {
     return apiError(
       422,
       "unsupported_service",
-      "Only server-syncable connection services are supported in v1",
-      { supported: [...SERVER_SYNCABLE_SERVICES] },
+      "Only credential-based connection services can be created in v1",
+      { supported: [...CREATABLE_SERVICES] },
     )
   }
 
@@ -438,34 +445,11 @@ export async function createServerSyncableConnection(
     )
   }
 
-  // tradovate
-  if (!body.accessToken || !body.expiresAt) {
-    return apiError(
-      400,
-      "validation_error",
-      "accessToken and expiresAt are required for Tradovate connections",
-    )
-  }
-
-  const environment: TradovateEnvironment =
-    body.environment === "live" ? "live" : "demo"
-  const externalId = (body.externalId?.trim() || "default").slice(0, 128)
-
-  const storeResult = await setCustomTradovateToken(
-    body.accessToken,
-    body.expiresAt,
-    externalId,
-    environment,
-    { userId },
-  )
-  if ("error" in storeResult && storeResult.error) {
-    return apiError(400, "connection_failed", storeResult.error)
-  }
-
-  const { connection, sync } = await syncAfterCreate(userId, "tradovate", externalId)
-  return NextResponse.json(
-    connectionCreateResponse(connection, "tradovate", externalId, sync),
-    { status: 201 },
+  return apiError(
+    422,
+    "unsupported_service",
+    "Only credential-based connection services can be created in v1",
+    { supported: [...CREATABLE_SERVICES] },
   )
 }
 

@@ -49,6 +49,8 @@ const page = await res.json();
 
 ### Réponse `200`
 
+<DocsResponse tone="success" label="Succès">
+
 ```json
 {
   "data": [
@@ -73,6 +75,8 @@ const page = await res.json();
   "nextCursor": null
 }
 ```
+
+</DocsResponse>
 
 ## Créer des trades
 
@@ -156,6 +160,8 @@ curl -X POST https://www.deltalytix.app/api/v1/trades \
 
 ### Réponse `201`
 
+<DocsResponse tone="success" label="Succès">
+
 ```json
 {
   "imported": 1,
@@ -163,5 +169,7 @@ curl -X POST https://www.deltalytix.app/api/v1/trades \
   "total": 1
 }
 ```
+
+</DocsResponse>
 
 Si chaque ligne est un doublon, la réponse reste un succès avec des compteurs (par exemple `"imported": 0, "duplicates": 3, "total": 3`), pas un statut d’erreur.
