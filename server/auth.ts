@@ -14,7 +14,6 @@ import {
 import { createLocalDashboardBypassAuthStub } from '@/lib/local-dashboard-bypass-client'
 import { ensureLocalDashboardUserInDatabase } from '@/server/local-dashboard-bootstrap'
 import { capturePostHogEvent } from '@/lib/posthog-server'
-import { buildUserSignedUpCapture } from '@/lib/signup-analytics'
 import {
   attributionToPersonSetOnce,
   attributionToPostHogProperties,
@@ -524,12 +523,19 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
       // inflate the email share of the signup-method breakdown.
       const method = authProvider;
 
-      // First-party conversion: fire once when the public row is created.
-      // Consent is granted in buildUserSignedUpCapture — the analytics cookie
-      // is almost never set yet on the OAuth / magic-link callback.
-      await capturePostHogEvent(buildUserSignedUpCapture({
+      // First-party conversion, once per created row. consentGranted: the
+      // analytics cookie is almost never set yet on the OAuth / magic-link
+      // callback, so gating on it dropped most real signups while $identify
+      // still fired later. Attribution is unaffected — that cookie is only
+      // written once consent allows it, so an unconsented signup ships the
+      // bare conversion event. The unique auth_user_id is what guarantees a
+      // single fire; $insert_id is belt-and-braces on top of it.
+      await capturePostHogEvent({
+        consentGranted: true,
         distinctId: user.id,
+        event: 'user_signed_up',
         properties: {
+          $insert_id: `user_signed_up:${user.id}`,
           auth_provider: authProvider,
           method,
           language: locale || 'en',
@@ -537,7 +543,7 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
           ...attributionProps,
           ...(setOnce ? { $set_once: setOnce } : {}),
         },
-      }));
+      });
       
       // Create default dashboard layout for new user
       try {
