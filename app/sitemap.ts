@@ -56,6 +56,37 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.5,
+    },
+    {
+      url: siteUrl('/disclaimers'),
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: siteUrl('/propfirms'),
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: siteUrl('/teams'),
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    // Agent entry points: the docs index and the llms.txt site index.
+    {
+      url: siteUrl('/docs/api'),
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: siteUrl('/llms.txt'),
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.5,
     }
   ]
 }

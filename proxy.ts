@@ -4,9 +4,13 @@ import { createServerClient } from "@supabase/ssr"
 import { geolocation } from "@vercel/functions"
 import { User } from "@supabase/supabase-js"
 import {
+  acceptsMarkdown as acceptHeaderRequestsMarkdown,
+  CONTENT_NEGOTIATION_VARY,
   homepageMarkdown,
   linkHeaderValue,
+  mergeVary,
 } from "@/lib/agent-discovery/metadata"
+import { HOMEPAGE_PATHS as HOMEPAGE_PATH_LIST, LOCALES } from "@/lib/locales"
 import {
   getLocalDashboardUserEmail,
   getLocalDashboardUserId,
@@ -15,28 +19,14 @@ import {
 
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
-const LOCALES = ["en", "fr", "de", "es", "it", "pt", "vi", "hi", "ja", "zh", "yo"]
 
 const I18nMiddleware = createI18nMiddleware({
-  locales: LOCALES,
+  locales: [...LOCALES],
   defaultLocale: "en",
   urlMappingStrategy: "redirect",
 })
 
-const HOMEPAGE_PATHS = new Set([
-  "/",
-  "/en",
-  "/fr",
-  "/de",
-  "/es",
-  "/it",
-  "/pt",
-  "/vi",
-  "/hi",
-  "/ja",
-  "/zh",
-  "/yo",
-])
+const HOMEPAGE_PATHS = new Set(HOMEPAGE_PATH_LIST)
 
 function isHomepage(pathname: string) {
   return HOMEPAGE_PATHS.has(pathname.replace(/\/$/, "") || "/")
@@ -46,7 +36,7 @@ function withoutLocale(pathname: string) {
   const segments = pathname.split("/")
   const locale = segments[1]
 
-  if (LOCALES.includes(locale)) {
+  if ((LOCALES as readonly string[]).includes(locale)) {
     return `/${segments.slice(2).join("/")}`.replace(/\/$/, "") || "/"
   }
 
@@ -124,10 +114,7 @@ function createUnauthenticatedSession(request: NextRequest) {
 }
 
 function acceptsMarkdown(request: NextRequest) {
-  return request.headers
-    .get("accept")
-    ?.split(",")
-    .some((value) => value.trim().toLowerCase().startsWith("text/markdown"))
+  return acceptHeaderRequestsMarkdown(request.headers.get("accept"))
 }
 
 function errorMessage(error: unknown) {
@@ -151,6 +138,13 @@ function normalizeSameSite(
 function addAgentDiscoveryHeaders(response: NextResponse, request: NextRequest) {
   if (isHomepage(request.nextUrl.pathname)) {
     response.headers.set("link", linkHeaderValue())
+    // The homepage is served as HTML or as text/markdown depending on Accept
+    // (https://acceptmarkdown.com). Without Accept in Vary a CDN can hand the
+    // cached HTML variant to an agent that asked for markdown, or vice versa.
+    response.headers.set(
+      "vary",
+      mergeVary(response.headers.get("vary"), CONTENT_NEGOTIATION_VARY),
+    )
   }
 
   return response
@@ -290,6 +284,7 @@ export default async function proxy(req: NextRequest) {
         "content-type": "text/markdown; charset=utf-8",
         "x-markdown-tokens": String(markdown.split(/\s+/).filter(Boolean).length),
         link: linkHeaderValue(),
+        vary: CONTENT_NEGOTIATION_VARY,
       },
     })
   }
@@ -438,7 +433,7 @@ export default async function proxy(req: NextRequest) {
     if (isProtectedDashboardPath(pathname)) {
       const encodedSearchParams = `${pathname.substring(1)}${req.nextUrl.search}`
       const pathLocale = pathname.split("/").find((segment) =>
-        LOCALES.includes(segment),
+        (LOCALES as readonly string[]).includes(segment),
       )
       const authPath = pathLocale
         ? `/${pathLocale}/authentication`
