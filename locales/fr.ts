@@ -1418,6 +1418,7 @@ export default {
     balances: {
       refresh: "Actualiser les soldes",
       refreshTitle: "Actualiser les soldes des comptes Rithmic",
+      fetchError: "Impossible d'actualiser les soldes. Réessayez.",
       debug: {
         button: "Debug",
         title: "Debug solde Rithmic",

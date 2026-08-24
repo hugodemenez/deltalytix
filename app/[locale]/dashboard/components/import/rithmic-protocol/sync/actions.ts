@@ -302,6 +302,31 @@ async function persistRithmicProtocolCredentials(
   return connection
 }
 
+/**
+ * Cache listed trading-account IDs on an existing Connection without treating
+ * the write as a sync. Balance reads must not bump `lastSyncedAt` or invalidate
+ * the connections page — that would report the connection as just-synced in
+ * the Connections UI. Updates by `connection.id` so a username/externalId
+ * mismatch cannot create a second row.
+ */
+async function persistListedProtocolAccountIds(
+  userId: string,
+  connectionId: string,
+  tokenJson: string,
+) {
+  const encryptedToken = encryptConnectionToken(tokenJson)
+  await prisma.connection.updateMany({
+    where: {
+      id: connectionId,
+      userId,
+      service: SERVICE,
+    },
+    data: {
+      token: encryptedToken,
+    },
+  })
+}
+
 export async function storeRithmicProtocolToken(
   tokenJson: string,
   accountId: string,
@@ -487,10 +512,10 @@ async function fetchRithmicProtocolBalances(
           credentials.accountIds = accountIds
           credentials.fcmId = listed.fcmId ?? credentials.fcmId
           credentials.ibId = listed.ibId ?? credentials.ibId
-          await persistRithmicProtocolCredentials(
+          await persistListedProtocolAccountIds(
             userId,
+            connection.id,
             JSON.stringify(credentials),
-            credentials.username,
           )
         }
 

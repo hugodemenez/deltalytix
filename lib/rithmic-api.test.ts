@@ -2,9 +2,15 @@ import { describe, expect, it } from 'vitest'
 import {
   findRithmicBalanceForAccount,
   getPrimaryRithmicBalance,
+  isRithmicConnectionService,
+  isRithmicLinkedAccount,
   normalizeRithmicAccountBalance,
+  putRithmicBalance,
+  type RithmicAccountBalance,
+  type RithmicAccountBalanceInput,
 } from './rithmic-api'
 import {
+  getLinkedAccountsForCredentialSet,
   getLinkedRithmicAccountNumbers,
   hasAnyRithmicAllAccountsMode,
   type RithmicCredentialSet,
@@ -34,6 +40,20 @@ describe('normalizeRithmicAccountBalance', () => {
     expect(normalized?.account_balance).toBe(20000)
     expect(normalized?.cash_on_hand).toBe(50)
     expect(normalized?.margin_balance).toBe(19950)
+  })
+
+  it('maps day_pnl and keeps extra classic /balances fields', () => {
+    const normalized = normalizeRithmicAccountBalance({
+      account_id: 'APEX-789',
+      account_balance: 100,
+      day_pnl: '12.5',
+      net_liquidity: 99,
+    } as RithmicAccountBalanceInput & { net_liquidity: number })
+    expect(normalized?.day_pnl).toBe(12.5)
+    expect(
+      (normalized as RithmicAccountBalance & { net_liquidity?: number })
+        ?.net_liquidity
+    ).toBe(99)
   })
 
   it('drops balances without an account id', () => {
@@ -127,5 +147,41 @@ describe('rithmic linked account helpers', () => {
     ]
     expect(getLinkedRithmicAccountNumbers(sets)).toEqual([])
     expect(hasAnyRithmicAllAccountsMode(sets)).toBe(true)
+  })
+
+  it('prefers linkedAccounts over selectedAccounts', () => {
+    expect(
+      getLinkedAccountsForCredentialSet({
+        selectedAccounts: ['A1'],
+        linkedAccounts: ['B1', 'B2'],
+      })
+    ).toEqual(['B1', 'B2'])
+  })
+})
+
+describe('putRithmicBalance', () => {
+  it('keys by lowercase id so mixed-case duplicates collapse', () => {
+    const merged: Record<string, RithmicAccountBalance> = {}
+    putRithmicBalance(merged, { account_id: 'APEX-123', account_balance: 1 })
+    putRithmicBalance(merged, { account_id: 'apex-123', account_balance: 2 })
+    expect(Object.keys(merged)).toEqual(['apex-123'])
+    expect(merged['apex-123'].account_balance).toBe(1)
+    expect(findRithmicBalanceForAccount('APEX-123', merged)?.account_balance).toBe(
+      1
+    )
+  })
+})
+
+describe('isRithmicLinkedAccount', () => {
+  it('matches linked ids case-insensitively', () => {
+    expect(
+      isRithmicLinkedAccount('apex-123', {}, ['APEX-123'])
+    ).toBe(true)
+  })
+
+  it('treats rithmic and rithmic-protocol as Rithmic services', () => {
+    expect(isRithmicConnectionService('rithmic')).toBe(true)
+    expect(isRithmicConnectionService('rithmic-protocol')).toBe(true)
+    expect(isRithmicConnectionService('dxfeed')).toBe(false)
   })
 })

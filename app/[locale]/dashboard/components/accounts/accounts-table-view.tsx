@@ -23,6 +23,8 @@ import { CheckCircle, ChevronDown, ChevronRight, Loader2, XCircle } from "lucide
 import {
   findRithmicBalanceForAccount,
   getPrimaryRithmicBalance,
+  isRithmicConnectionService,
+  isRithmicLinkedAccount,
   RithmicAccountBalance,
 } from "@/lib/rithmic-api"
 
@@ -822,15 +824,12 @@ export function AccountsTableView({
                 )
 
                 const accountNumber = row.original.number ?? ""
-                const connectionService = (
-                  row.original as Account & {
-                    connection?: { service?: string | null } | null
-                  }
-                ).connection?.service
                 const isLinkedAccount =
-                  rithmicLinkedAccountNumbers.has(accountNumber) ||
-                  connectionService === "rithmic" ||
-                  connectionService === "rithmic-protocol"
+                  isRithmicLinkedAccount(
+                    accountNumber,
+                    rithmicBalancesByAccountId,
+                    rithmicLinkedAccountNumbers
+                  ) || isRithmicConnectionService(row.original.connection?.service)
                 if (
                   rithmicBalancesLoading &&
                   rithmicBalance == null &&

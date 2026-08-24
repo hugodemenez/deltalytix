@@ -14,6 +14,7 @@ import {
   getPrimaryRithmicBalance,
   getRithmicApiBaseUrl,
   normalizeRithmicAccountBalance,
+  putRithmicBalance,
   RithmicAccountBalance,
 } from "@/lib/rithmic-api"
 
@@ -269,7 +270,7 @@ export function useRithmicBalances(
             for (const balance of protocolResult.balances) {
               const normalized = normalizeRithmicAccountBalance(balance)
               if (!normalized) continue
-              merged[normalized.account_id] = normalized
+              putRithmicBalance(merged, normalized, { overwrite: true })
             }
           } else if (protocolResult.errors.length > 0) {
             latestError = protocolResult.errors.join("; ")
@@ -345,9 +346,7 @@ export function useRithmicBalances(
             const normalized = normalizeRithmicAccountBalance(balance)
             if (!normalized) continue
             // Protocol values win when both paths return the same account.
-            if (!(normalized.account_id in merged)) {
-              merged[normalized.account_id] = normalized
-            }
+            putRithmicBalance(merged, normalized)
           }
         }
       } else if (credentialSets.length > 0 && !apiBaseUrl) {
@@ -369,17 +368,20 @@ export function useRithmicBalances(
 
       const balancesToShow = anySucceeded ? merged : balancesRef.current
       const fetchedAt = anySucceeded ? new Date() : lastFetchedAtRef.current
+      // Protocol errors must not stick as the hook error when the classic path
+      // then succeeded — the accounts UI consumes `error`.
+      const visibleError = anySucceeded ? null : latestError
       setBalancesByAccountId(balancesToShow)
       if (anySucceeded) {
         setLastFetchedAt(fetchedAt)
       }
-      setError(latestError)
+      setError(visibleError)
       setRateLimited(latestRateLimited)
       setDebug(
         buildDebugSnapshot({
           balancesByAccountId: balancesToShow,
           isLoading: false,
-          error: latestError,
+          error: visibleError,
           rateLimited: latestRateLimited,
           lastFetchedAt: fetchedAt,
           fetchAttempts,
@@ -460,21 +462,7 @@ export function useRithmicBalances(
   }
 }
 
-export function isRithmicLinkedAccount(
-  accountNumber: string,
-  balancesByAccountId: Record<string, RithmicAccountBalance>,
-  linkedAccountNumbers?: Set<string> | string[]
-): boolean {
-  if (findRithmicBalanceForAccount(accountNumber, balancesByAccountId)) {
-    return true
-  }
-  if (!linkedAccountNumbers) return false
-  const linkedSet =
-    linkedAccountNumbers instanceof Set
-      ? linkedAccountNumbers
-      : new Set(linkedAccountNumbers)
-  return linkedSet.has(accountNumber)
-}
+export { isRithmicLinkedAccount } from "@/lib/rithmic-api"
 
 export function buildRithmicBalancesDebugReport(
   debug: RithmicBalancesDebugInfo,

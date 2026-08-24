@@ -38,6 +38,11 @@ action is throttled per user via `fetch-throttle.ts`:
 - the accounts table passes `protocolEnabled` so users with no Protocol-linked
   account never reach the gateway at all.
 
+If a connection has no cached `accountIds`, the action lists them once and
+writes them back onto **that** Connection row (`id`), without touching
+`lastSyncedAt` or the connections-page cache — viewing Solde Rithmic is not a
+sync.
+
 The cache is module scope, so on serverless it is per-instance and best-effort —
 enough to collapse one browsing session's mounts, not a global rate limiter.
 

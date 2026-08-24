@@ -15,6 +15,7 @@ export interface RithmicAccountBalance {
   available_buying_power?: number
   open_pnl?: number
   closed_pnl?: number
+  day_pnl?: number
 }
 
 /** Raw balance payloads may use snake_case or camelCase field names. */
@@ -35,6 +36,8 @@ export type RithmicAccountBalanceInput = {
   openPnl?: number | string
   closed_pnl?: number | string
   closedPnl?: number | string
+  day_pnl?: number | string
+  dayPnl?: number | string
 }
 
 export interface RithmicRateLimitInfo {
@@ -199,33 +202,80 @@ export function normalizeRithmicAccountId(value: unknown): string {
   return String(value ?? "").trim()
 }
 
+/** Canonical map key so `APEX-123` and `apex-123` collapse to one row. */
+export function rithmicBalanceMapKey(accountId: string): string {
+  return normalizeRithmicAccountId(accountId).toLowerCase()
+}
+
+export function putRithmicBalance(
+  merged: Record<string, RithmicAccountBalance>,
+  balance: RithmicAccountBalance,
+  options?: { overwrite?: boolean }
+): void {
+  const key = rithmicBalanceMapKey(balance.account_id)
+  if (!key) return
+  if (!options?.overwrite && key in merged) return
+  merged[key] = balance
+}
+
+export function isRithmicConnectionService(
+  service: string | null | undefined
+): boolean {
+  return service === "rithmic" || service === "rithmic-protocol"
+}
+
+export function isRithmicProtocolConnectionService(
+  service: string | null | undefined
+): boolean {
+  return service === "rithmic-protocol"
+}
+
 export function normalizeRithmicAccountBalance(
   balance: RithmicAccountBalanceInput
 ): RithmicAccountBalance | null {
-  const accountId =
-    normalizeRithmicAccountId(balance.account_id) ||
-    normalizeRithmicAccountId(balance.accountId)
-  if (!accountId) return null
+  const {
+    account_id,
+    accountId,
+    fcm_id,
+    ib_id,
+    account_balance,
+    accountBalance,
+    cash_on_hand,
+    cashOnHand,
+    margin_balance,
+    marginBalance,
+    available_buying_power,
+    availableBuyingPower,
+    open_pnl,
+    openPnl,
+    closed_pnl,
+    closedPnl,
+    day_pnl,
+    dayPnl,
+    ...rest
+  } = balance
+
+  const normalizedAccountId =
+    normalizeRithmicAccountId(account_id) ||
+    normalizeRithmicAccountId(accountId)
+  if (!normalizedAccountId) return null
 
   return {
-    account_id: accountId,
-    fcm_id: balance.fcm_id,
-    ib_id: balance.ib_id,
+    ...rest,
+    account_id: normalizedAccountId,
+    fcm_id,
+    ib_id,
     account_balance:
-      toNumericBalance(balance.account_balance ?? balance.accountBalance) ??
-      undefined,
-    cash_on_hand:
-      toNumericBalance(balance.cash_on_hand ?? balance.cashOnHand) ?? undefined,
+      toNumericBalance(account_balance ?? accountBalance) ?? undefined,
+    cash_on_hand: toNumericBalance(cash_on_hand ?? cashOnHand) ?? undefined,
     margin_balance:
-      toNumericBalance(balance.margin_balance ?? balance.marginBalance) ??
-      undefined,
+      toNumericBalance(margin_balance ?? marginBalance) ?? undefined,
     available_buying_power:
-      toNumericBalance(
-        balance.available_buying_power ?? balance.availableBuyingPower
-      ) ?? undefined,
-    open_pnl: toNumericBalance(balance.open_pnl ?? balance.openPnl) ?? undefined,
-    closed_pnl:
-      toNumericBalance(balance.closed_pnl ?? balance.closedPnl) ?? undefined,
+      toNumericBalance(available_buying_power ?? availableBuyingPower) ??
+      undefined,
+    open_pnl: toNumericBalance(open_pnl ?? openPnl) ?? undefined,
+    closed_pnl: toNumericBalance(closed_pnl ?? closedPnl) ?? undefined,
+    day_pnl: toNumericBalance(day_pnl ?? dayPnl) ?? undefined,
   }
 }
 
@@ -243,6 +293,9 @@ export function findRithmicBalanceForAccount(
   const exact = balancesByAccountId[needle]
   if (exact) return exact
 
+  const byKey = balancesByAccountId[rithmicBalanceMapKey(needle)]
+  if (byKey) return byKey
+
   const needleLower = needle.toLowerCase()
   for (const [accountId, balance] of Object.entries(balancesByAccountId)) {
     if (normalizeRithmicAccountId(accountId).toLowerCase() === needleLower) {
@@ -250,4 +303,23 @@ export function findRithmicBalanceForAccount(
     }
   }
   return null
+}
+
+function accountIdsMatch(left: string, right: string): boolean {
+  return rithmicBalanceMapKey(left) === rithmicBalanceMapKey(right)
+}
+
+export function isRithmicLinkedAccount(
+  accountNumber: string,
+  balancesByAccountId: Record<string, RithmicAccountBalance>,
+  linkedAccountNumbers?: Set<string> | string[]
+): boolean {
+  if (findRithmicBalanceForAccount(accountNumber, balancesByAccountId)) {
+    return true
+  }
+  if (!linkedAccountNumbers) return false
+  for (const id of linkedAccountNumbers) {
+    if (accountIdsMatch(accountNumber, id)) return true
+  }
+  return false
 }

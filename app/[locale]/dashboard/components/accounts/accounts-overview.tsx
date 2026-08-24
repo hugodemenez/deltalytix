@@ -63,6 +63,9 @@ import { useRithmicBalances } from "@/hooks/use-rithmic-balances"
 import {
   findRithmicBalanceForAccount,
   getPrimaryRithmicBalance,
+  isRithmicConnectionService,
+  isRithmicLinkedAccount,
+  isRithmicProtocolConnectionService,
 } from "@/lib/rithmic-api"
 import {
   DndContext,
@@ -750,30 +753,20 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const { sorting, setSorting } = useAccountsSortingStore()
   const shouldUpdateSelectedAccount = useRef(false)
   const hasRithmicConnectedAccounts = useMemo(
-    () =>
-      accounts.some((account) => {
-        const service = (
-          account as Account & { connection?: { service?: string | null } | null }
-        ).connection?.service
-        return service === "rithmic" || service === "rithmic-protocol"
-      }),
+    () => accounts.some((account) => isRithmicConnectionService(account.connection?.service)),
     [accounts]
   )
   const hasRithmicProtocolAccounts = useMemo(
     () =>
-      accounts.some(
-        (account) =>
-          (
-            account as Account & {
-              connection?: { service?: string | null } | null
-            }
-          ).connection?.service === "rithmic-protocol"
+      accounts.some((account) =>
+        isRithmicProtocolConnectionService(account.connection?.service)
       ),
     [accounts]
   )
   const {
     balancesByAccountId,
     isLoading: rithmicBalancesLoading,
+    error: rithmicBalanceError,
     hasCredentials: hasRithmicCredentials,
     debug: rithmicBalancesDebug,
     refresh: refreshRithmicBalances,
@@ -794,14 +787,11 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         accountNumber,
         balancesByAccountId
       )
-      const connectionService = (
-        account as Account & { connection?: { service?: string | null } | null }
-      ).connection?.service
-      const isLinked =
-        rithmicLinkedAccountNumbers.has(accountNumber) ||
-        balanceEntry != null ||
-        connectionService === "rithmic" ||
-        connectionService === "rithmic-protocol"
+      const isLinked = isRithmicLinkedAccount(
+        accountNumber,
+        balancesByAccountId,
+        rithmicLinkedAccountNumbers
+      ) || isRithmicConnectionService(account.connection?.service)
       const showRithmicBalance = showRithmicBalances && isLinked
 
       return {
@@ -1322,7 +1312,11 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       className="h-8"
       onClick={() => void refreshRithmicBalances({ force: true })}
       disabled={rithmicBalancesLoading}
-      title={t("rithmic.balances.refreshTitle")}
+      title={
+        rithmicBalanceError
+          ? rithmicBalanceError
+          : t("rithmic.balances.refreshTitle")
+      }
     >
       {rithmicBalancesLoading ? (
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1334,6 +1328,21 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       </span>
     </Button>
   )
+
+  const rithmicBalanceControls = showRithmicBalances ? (
+    <div className="flex min-w-0 items-center gap-2">
+      {rithmicRefreshButton}
+      {rithmicBalanceError ? (
+        <p
+          className="max-w-[16rem] truncate text-xs text-muted-foreground"
+          title={rithmicBalanceError}
+          role="status"
+        >
+          {t("rithmic.balances.fetchError")}
+        </p>
+      ) : null}
+    </div>
+  ) : null
 
   const unconfiguredAccountsBanner = (unconfiguredAccounts.length > 0 && !isLoading) && (
     <div className="border-b border-orange-200/30 bg-orange-50/40 dark:border-orange-700/30 dark:bg-orange-950/30">
@@ -1548,11 +1557,11 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   if (isMobileTab) {
     return (
       <div className="flex h-full min-h-0 w-full flex-col">
-        {hasRithmicCredentials && (
+        {rithmicBalanceControls ? (
           <div className="flex shrink-0 items-center justify-end gap-2 px-2 pb-1">
-            {rithmicRefreshButton}
+            {rithmicBalanceControls}
           </div>
-        )}
+        ) : null}
 
         {unconfiguredAccountsBanner}
 
@@ -1637,25 +1646,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
               </span>
             </Button>
             <AccountsSortMenu variant="header" size={size} />
-            {hasRithmicCredentials && (
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(size === "small" ? "h-7 px-2" : "h-8")}
-                onClick={() => void refreshRithmicBalances({ force: true })}
-                disabled={rithmicBalancesLoading}
-                title={t("rithmic.balances.refreshTitle")}
-              >
-                {rithmicBalancesLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
-                )}
-                <span className={cn("ml-1.5", size === "small" && "sr-only")}>
-                  {t("rithmic.balances.refresh")}
-                </span>
-              </Button>
-            )}
+            {rithmicBalanceControls}
             {chartsTableToggle}
           </div>
         </div>
