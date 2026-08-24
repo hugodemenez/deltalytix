@@ -26,7 +26,7 @@ describe("404 handling", () => {
     const config = read("next.config.ts");
 
     expect(config).toContain('source: "/"');
-    expect(config).toMatch(/source: `\/:locale\(\$\{LOCALE_PREFIXES\.join\("\|"\)\}\)`/);
+    expect(config).toMatch(/source: `\/:locale\(\$\{LOCALES\.join\("\|"\)\}\)`/);
     expect(config).toMatch(/key: "Vary", value: "Accept"/);
   });
 

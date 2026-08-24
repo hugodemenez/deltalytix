@@ -10,6 +10,7 @@ import {
   linkHeaderValue,
   mergeVary,
 } from "@/lib/agent-discovery/metadata"
+import { HOMEPAGE_PATHS as HOMEPAGE_PATH_LIST, LOCALES } from "@/lib/locales"
 import {
   getLocalDashboardUserEmail,
   getLocalDashboardUserId,
@@ -18,28 +19,14 @@ import {
 
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
-const LOCALES = ["en", "fr", "de", "es", "it", "pt", "vi", "hi", "ja", "zh", "yo"]
 
 const I18nMiddleware = createI18nMiddleware({
-  locales: LOCALES,
+  locales: [...LOCALES],
   defaultLocale: "en",
   urlMappingStrategy: "redirect",
 })
 
-const HOMEPAGE_PATHS = new Set([
-  "/",
-  "/en",
-  "/fr",
-  "/de",
-  "/es",
-  "/it",
-  "/pt",
-  "/vi",
-  "/hi",
-  "/ja",
-  "/zh",
-  "/yo",
-])
+const HOMEPAGE_PATHS = new Set(HOMEPAGE_PATH_LIST)
 
 function isHomepage(pathname: string) {
   return HOMEPAGE_PATHS.has(pathname.replace(/\/$/, "") || "/")
@@ -49,7 +36,7 @@ function withoutLocale(pathname: string) {
   const segments = pathname.split("/")
   const locale = segments[1]
 
-  if (LOCALES.includes(locale)) {
+  if ((LOCALES as readonly string[]).includes(locale)) {
     return `/${segments.slice(2).join("/")}`.replace(/\/$/, "") || "/"
   }
 
@@ -446,7 +433,7 @@ export default async function proxy(req: NextRequest) {
     if (isProtectedDashboardPath(pathname)) {
       const encodedSearchParams = `${pathname.substring(1)}${req.nextUrl.search}`
       const pathLocale = pathname.split("/").find((segment) =>
-        LOCALES.includes(segment),
+        (LOCALES as readonly string[]).includes(segment),
       )
       const authPath = pathLocale
         ? `/${pathLocale}/authentication`

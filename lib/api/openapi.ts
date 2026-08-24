@@ -172,7 +172,16 @@ export function buildOpenApiDocument(request?: NextRequest | Request) {
           properties: {
             error: {
               type: "object",
-              required: ["code", "message", "hint", "status"],
+              // `apiErrorBody` always fills these in; the optional members
+              // below (`required_scopes`, `details`) are the only ones a caller
+              // can find missing.
+              required: [
+                "code",
+                "message",
+                "hint",
+                "status",
+                "documentation_url",
+              ],
               properties: {
                 code: {
                   type: "string",

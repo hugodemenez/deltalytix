@@ -3,6 +3,7 @@ import createMDX from '@next/mdx';
 import os from 'os';
 import { SUPPORT_SEARCH_TRACE_INCLUDES } from './lib/ai/search-codebase';
 import { AGENT_SKILLS_TRACE_INCLUDES } from './lib/agent-skills/load-skill';
+import { LOCALES } from './lib/locales';
 
 const detectedBuildWorkers =
   typeof os.availableParallelism === 'function'
@@ -26,25 +27,6 @@ const buildWorkers =
 const RITHMIC_PROTOCOL_TRACE_INCLUDES = [
   './lib/rithmic-protocol/proto/**/*',
   './lib/rithmic-protocol/etc/**/*',
-] as const;
-
-/**
- * Locale prefixes served by the i18n proxy. The homepage is available at each
- * of them, and every one of those URLs is content-negotiated between HTML and
- * text/markdown (see `proxy.ts` and https://acceptmarkdown.com).
- */
-const LOCALE_PREFIXES = [
-  "en",
-  "fr",
-  "de",
-  "es",
-  "it",
-  "pt",
-  "vi",
-  "hi",
-  "ja",
-  "zh",
-  "yo",
 ] as const;
 
 const nextConfig: NextConfig = {
@@ -89,7 +71,7 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Vary", value: "Accept" }],
       },
       {
-        source: `/:locale(${LOCALE_PREFIXES.join("|")})`,
+        source: `/:locale(${LOCALES.join("|")})`,
         headers: [{ key: "Vary", value: "Accept" }],
       },
     ];

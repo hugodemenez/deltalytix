@@ -72,6 +72,16 @@ describe("robots.txt", () => {
     }
   });
 
+  it("repeats the content signal in every group, for the same reason", () => {
+    // A named group makes the crawler ignore `*`, so a signal declared only
+    // there would never reach GPTBot, ClaudeBot, Google-Extended, and friends.
+    for (const [userAgent, rules] of groups(robots)) {
+      expect(rules, `${userAgent} is missing the content signal`).toContain(
+        `Content-Signal: ${CONTENT_SIGNAL}`,
+      );
+    }
+  });
+
   it("does not welcome training-only crawlers while ai-train=no", () => {
     expect(CONTENT_SIGNAL).toContain("ai-train=no");
     expect(ALLOWED_AGENT_USER_AGENTS).not.toContain("CCBot");

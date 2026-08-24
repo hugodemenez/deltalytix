@@ -50,3 +50,26 @@ describe("homepage markdown negotiation", () => {
     );
   });
 });
+
+describe("locale coverage", () => {
+  it("negotiates every locale homepage, in the proxy and in next.config", async () => {
+    const { LOCALES, HOMEPAGE_PATHS } = await import("./lib/locales");
+    const config = await import("./next.config");
+    const headerRules = await config.default.headers!();
+    const sources = headerRules
+      .filter((rule) =>
+        rule.headers.some((header) => header.key.toLowerCase() === "vary"),
+      )
+      .map((rule) => rule.source);
+
+    for (const locale of LOCALES) {
+      expect(HOMEPAGE_PATHS, `/${locale} is not a homepage path`).toContain(
+        `/${locale}`,
+      );
+      expect(
+        sources.some((source) => source.includes(locale)),
+        `/${locale} has no Vary: Accept rule`,
+      ).toBe(true);
+    }
+  });
+});

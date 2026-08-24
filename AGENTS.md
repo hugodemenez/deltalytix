@@ -127,6 +127,9 @@ Public agent-facing surfaces and the constraints that keep them working:
   `next/dynamic` with `ssr: false` *inside* the section, so a dependency that
   bails out to client-side rendering cannot take the page's HTML with it.
   `app/[locale]/(landing)/landing-ssr-content.test.ts` guards this.
+- **Locales**: `lib/locales.ts` is the single list. `proxy.ts` routes on it and
+  `next.config.ts` derives the `Vary: Accept` rules from it, so a locale added
+  in one place cannot lose content negotiation in the other.
 
 ## Docker notes
 

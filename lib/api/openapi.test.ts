@@ -55,6 +55,7 @@ describe("the published OpenAPI description", () => {
       "message",
       "hint",
       "status",
+      "documentation_url",
     ]);
     expect(schema.properties.error.properties.code.enum).toEqual(
       Object.keys(API_ERROR_STATUS),

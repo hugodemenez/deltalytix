@@ -68,20 +68,23 @@ export const ALLOWED_AGENT_USER_AGENTS = [
 ] as const;
 
 /**
- * Content signals (https://contentsignals.org) apply to the `*` group.
- * The declared policy is unchanged from the previous robots.txt: the site opts
- * out of training corpora and stays available to search. Training-corpus-only
- * crawlers (for example CCBot) are therefore deliberately absent from
- * `ALLOWED_AGENT_USER_AGENTS`.
+ * Content signals (https://contentsignals.org). The declared policy is
+ * unchanged from the previous robots.txt: the site opts out of training corpora
+ * and stays available to search. Training-corpus-only crawlers (for example
+ * CCBot) are therefore deliberately absent from `ALLOWED_AGENT_USER_AGENTS`.
+ *
+ * Emitted in every group, not only `*`: a crawler that matches a named group
+ * ignores `*` entirely, so a signal declared only there would not reach the
+ * agents it is aimed at.
  */
 export const CONTENT_SIGNAL = "ai-train=no, search=yes, ai-input=no";
 
-function group(userAgent: string, extraLines: readonly string[] = []) {
+function group(userAgent: string) {
   return [
     `User-agent: ${userAgent}`,
+    `Content-Signal: ${CONTENT_SIGNAL}`,
     "Allow: /",
     ...DISALLOWED_PATHS.map((path) => `Disallow: ${path}`),
-    ...extraLines,
   ];
 }
 
@@ -89,10 +92,10 @@ export function buildRobotsTxt(origin: string) {
   const url = (path: string) => new URL(path, origin).toString();
 
   return [
-    ...group("*", [`Content-Signal: ${CONTENT_SIGNAL}`]),
+    ...group("*"),
     "",
     "# AI crawlers and retrieval agents are explicitly welcome on public pages.",
-    "# robots.txt groups do not inherit, so each group repeats the disallows above.",
+    "# robots.txt groups do not inherit, so each group repeats the rules above.",
     ...ALLOWED_AGENT_USER_AGENTS.flatMap((userAgent) => ["", ...group(userAgent)]),
     "",
     `# Machine-readable site index: ${url("/llms.txt")}`,
