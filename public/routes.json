@@ -1,6 +1,5 @@
 [
   "/[locale]",
-  "/[locale]/[...not-found]",
   "/[locale]/about",
   "/[locale]/authentication",
   "/[locale]/dashboard",
@@ -18,6 +17,7 @@
   "/[locale]/propfirms",
   "/[locale]/ref/[ref]",
   "/[locale]/referral",
+  "/[locale]/settings",
   "/[locale]/shared/[slug]",
   "/[locale]/support",
   "/[locale]/teams",

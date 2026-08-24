@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getOAuthEndpoint,
   getOAuthIssuer,
+  scopeNames,
 } from "@/lib/agent-discovery/metadata";
 
 export async function GET(request: NextRequest) {
@@ -19,14 +20,7 @@ export async function GET(request: NextRequest) {
     response_types_supported: ["code"],
     subject_types_supported: ["public"],
     id_token_signing_alg_values_supported: ["RS256"],
-    scopes_supported: [
-      "openid",
-      "profile",
-      "email",
-      "trades:read",
-      "journal:read",
-      "analytics:read",
-    ],
+    scopes_supported: scopeNames(),
     token_endpoint_auth_methods_supported: [
       "client_secret_basic",
       "client_secret_post",
