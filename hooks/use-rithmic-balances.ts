@@ -15,6 +15,7 @@ import {
   getRithmicApiBaseUrl,
   normalizeRithmicAccountBalance,
   putRithmicBalance,
+  resolveDisplayedRithmicBalances,
   RithmicAccountBalance,
 } from "@/lib/rithmic-api"
 
@@ -363,10 +364,18 @@ export function useRithmicBalances(
 
       if (fetchId !== fetchIdRef.current) return
 
-      const hasAnySource = hasClassicCredentials || protocolHasConnections
+      const hasAnySource =
+        hasClassicCredentials ||
+        protocolHasConnections ||
+        protocolEnabledRef.current
       setHasCredentials(hasAnySource)
 
-      const balancesToShow = anySucceeded ? merged : balancesRef.current
+      const balancesToShow = resolveDisplayedRithmicBalances({
+        hasAnySource,
+        anySucceeded,
+        merged,
+        previous: balancesRef.current,
+      })
       const fetchedAt = anySucceeded ? new Date() : lastFetchedAtRef.current
       // Protocol errors must not stick as the hook error when the classic path
       // then succeeded — the accounts UI consumes `error`.
@@ -399,7 +408,16 @@ export function useRithmicBalances(
       if (fetchId === fetchIdRef.current) {
         const message =
           err instanceof Error ? err.message : "Failed to fetch balances"
-        const balancesToShow = anySucceeded ? merged : balancesRef.current
+        const hasAnySource =
+          hasClassicCredentials ||
+          protocolHasConnections ||
+          protocolEnabledRef.current
+        const balancesToShow = resolveDisplayedRithmicBalances({
+          hasAnySource,
+          anySucceeded,
+          merged,
+          previous: balancesRef.current,
+        })
         const fetchedAt = anySucceeded ? new Date() : lastFetchedAtRef.current
         setBalancesByAccountId(balancesToShow)
         if (anySucceeded) {

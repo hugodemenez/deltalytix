@@ -36,7 +36,12 @@ action is throttled per user via `fetch-throttle.ts`:
 - the sweep has a 30s wall-clock budget (15s per message), so one silent
   account cannot burn the budget of the accounts behind it;
 - the accounts table passes `protocolEnabled` so users with no Protocol-linked
-  account never reach the gateway at all.
+  account never reach the gateway at all;
+- disconnecting a Protocol connection invalidates that user's throttle bucket
+  so Solde values for the removed accounts are not served for the rest of the
+  TTL;
+- a timeout or reject on one account skips that account and still returns
+  balances already collected for the others.
 
 If a connection has no cached `accountIds`, the action lists them once and
 writes them back onto **that** Connection row (`id`), without touching

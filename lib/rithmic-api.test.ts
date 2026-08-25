@@ -6,6 +6,7 @@ import {
   isRithmicLinkedAccount,
   normalizeRithmicAccountBalance,
   putRithmicBalance,
+  resolveDisplayedRithmicBalances,
   type RithmicAccountBalance,
   type RithmicAccountBalanceInput,
 } from './rithmic-api'
@@ -183,5 +184,43 @@ describe('isRithmicLinkedAccount', () => {
     expect(isRithmicConnectionService('rithmic')).toBe(true)
     expect(isRithmicConnectionService('rithmic-protocol')).toBe(true)
     expect(isRithmicConnectionService('dxfeed')).toBe(false)
+  })
+})
+
+describe('resolveDisplayedRithmicBalances', () => {
+  const previous = { 'APEX-1': { account_id: 'APEX-1', account_balance: 10 } }
+  const merged = { 'APEX-2': { account_id: 'APEX-2', account_balance: 20 } }
+
+  it('clears stale balances when no source remains', () => {
+    expect(
+      resolveDisplayedRithmicBalances({
+        hasAnySource: false,
+        anySucceeded: false,
+        merged,
+        previous,
+      })
+    ).toEqual({})
+  })
+
+  it('keeps the previous map when a source still exists and the fetch failed', () => {
+    expect(
+      resolveDisplayedRithmicBalances({
+        hasAnySource: true,
+        anySucceeded: false,
+        merged,
+        previous,
+      })
+    ).toBe(previous)
+  })
+
+  it('uses the merged map after a successful fetch', () => {
+    expect(
+      resolveDisplayedRithmicBalances({
+        hasAnySource: true,
+        anySucceeded: true,
+        merged,
+        previous,
+      })
+    ).toBe(merged)
   })
 })

@@ -802,13 +802,11 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         rithmicBalanceLoading:
           rithmicBalancesLoading &&
           showRithmicBalance &&
-          balanceEntry == null &&
-          hasRithmicCredentials,
+          balanceEntry == null,
       }
     },
     [
       balancesByAccountId,
-      hasRithmicCredentials,
       rithmicBalancesLoading,
       rithmicLinkedAccountNumbers,
       showRithmicBalances,

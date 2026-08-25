@@ -309,6 +309,21 @@ function accountIdsMatch(left: string, right: string): boolean {
   return rithmicBalanceMapKey(left) === rithmicBalanceMapKey(right)
 }
 
+/**
+ * After a refresh, keep the last good map only while a source still exists.
+ * Once classic credentials and Protocol connections are both gone, drop the
+ * stale Solde values so the column does not linger until remount.
+ */
+export function resolveDisplayedRithmicBalances(options: {
+  hasAnySource: boolean
+  anySucceeded: boolean
+  merged: Record<string, RithmicAccountBalance>
+  previous: Record<string, RithmicAccountBalance>
+}): Record<string, RithmicAccountBalance> {
+  if (!options.hasAnySource) return {}
+  return options.anySucceeded ? options.merged : options.previous
+}
+
 export function isRithmicLinkedAccount(
   accountNumber: string,
   balancesByAccountId: Record<string, RithmicAccountBalance>,

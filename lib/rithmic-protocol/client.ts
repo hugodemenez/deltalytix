@@ -441,75 +441,98 @@ export class RithmicProtocolClient {
         break
       }
 
-      await this.send('rti.RequestPnLPositionSnapshot', {
-        templateId: RithmicTemplateId.PNL_POSITION_SNAPSHOT_REQUEST,
-        userMsg: [`deltalytix-pnl-${accountId}`],
-        fcmId: params.fcmId,
-        ibId: params.ibId,
-        accountId,
-      })
+      try {
+        await this.send('rti.RequestPnLPositionSnapshot', {
+          templateId: RithmicTemplateId.PNL_POSITION_SNAPSHOT_REQUEST,
+          userMsg: [`deltalytix-pnl-${accountId}`],
+          fcmId: params.fcmId,
+          ibId: params.ibId,
+          accountId,
+        })
+      } catch (error) {
+        console.warn(
+          `[RITHMIC-PROTOCOL] PnL snapshot send failed for ${accountId}, returning balances collected so far`,
+          error,
+        )
+        break
+      }
 
       let outOfTime = false
-      for (;;) {
-        const remaining = deadline - Date.now()
-        if (remaining <= 0) {
-          outOfTime = true
-          break
-        }
-
-        const msg = await this.nextMessage(
-          Math.min(PNL_SNAPSHOT_MESSAGE_TIMEOUT_MS, remaining),
-        )
-
-        if (msg.templateId === RithmicTemplateId.ACCOUNT_PNL_POSITION_UPDATE) {
-          const decoded = decodeMessage<{
-            accountId?: string
-            fcmId?: string
-            ibId?: string
-            accountBalance?: string | number
-            cashOnHand?: string | number
-            marginBalance?: string | number
-            availableBuyingPower?: string | number
-            openPositionPnl?: string | number
-            closedPositionPnl?: string | number
-            dayPnl?: string | number
-          }>(this.root!, 'rti.AccountPnLPositionUpdate', msg.raw)
-          const balance = mapAccountPnLUpdateToBalance(decoded)
-          if (balance) {
-            balancesByAccountId.set(balance.account_id, balance)
+      let socketClosed = false
+      try {
+        for (;;) {
+          const remaining = deadline - Date.now()
+          if (remaining <= 0) {
+            outOfTime = true
+            break
           }
-          continue
-        }
 
-        if (msg.templateId === RithmicTemplateId.INSTRUMENT_PNL_POSITION_UPDATE) {
-          // Instrument rows arrive interleaved with account snapshots — ignore.
-          continue
-        }
-
-        if (msg.templateId === RithmicTemplateId.PNL_POSITION_SNAPSHOT_RESPONSE) {
-          const decoded = decodeMessage<{ rpCode?: string[] }>(
-            this.root!,
-            'rti.ResponsePnLPositionSnapshot',
-            msg.raw,
+          const msg = await this.nextMessage(
+            Math.min(PNL_SNAPSHOT_MESSAGE_TIMEOUT_MS, remaining),
           )
-          if (
-            Array.isArray(decoded.rpCode) &&
-            decoded.rpCode.length > 0 &&
-            !rpOk(decoded.rpCode) &&
-            !rpIsNoData(decoded.rpCode)
-          ) {
-            throw new Error(
-              `PnL snapshot failed for ${accountId}: ${rpMessage(decoded.rpCode)}`,
-            )
+
+          if (msg.templateId === RithmicTemplateId.ACCOUNT_PNL_POSITION_UPDATE) {
+            const decoded = decodeMessage<{
+              accountId?: string
+              fcmId?: string
+              ibId?: string
+              accountBalance?: string | number
+              cashOnHand?: string | number
+              marginBalance?: string | number
+              availableBuyingPower?: string | number
+              openPositionPnl?: string | number
+              closedPositionPnl?: string | number
+              dayPnl?: string | number
+            }>(this.root!, 'rti.AccountPnLPositionUpdate', msg.raw)
+            const balance = mapAccountPnLUpdateToBalance(decoded)
+            if (balance) {
+              balancesByAccountId.set(balance.account_id, balance)
+            }
+            continue
           }
-          break
-        }
 
-        if (msg.templateId === RithmicTemplateId.REJECT) {
-          throw new Error(`PnL snapshot rejected for account ${accountId}`)
-        }
+          if (msg.templateId === RithmicTemplateId.INSTRUMENT_PNL_POSITION_UPDATE) {
+            // Instrument rows arrive interleaved with account snapshots — ignore.
+            continue
+          }
 
-        // Ignore heartbeats / unrelated pushes during the snapshot.
+          if (msg.templateId === RithmicTemplateId.PNL_POSITION_SNAPSHOT_RESPONSE) {
+            const decoded = decodeMessage<{ rpCode?: string[] }>(
+              this.root!,
+              'rti.ResponsePnLPositionSnapshot',
+              msg.raw,
+            )
+            if (
+              Array.isArray(decoded.rpCode) &&
+              decoded.rpCode.length > 0 &&
+              !rpOk(decoded.rpCode) &&
+              !rpIsNoData(decoded.rpCode)
+            ) {
+              console.warn(
+                `[RITHMIC-PROTOCOL] PnL snapshot failed for ${accountId}: ${rpMessage(decoded.rpCode)}`,
+              )
+            }
+            break
+          }
+
+          if (msg.templateId === RithmicTemplateId.REJECT) {
+            console.warn(
+              `[RITHMIC-PROTOCOL] PnL snapshot rejected for account ${accountId}`,
+            )
+            break
+          }
+
+          // Ignore heartbeats / unrelated pushes during the snapshot.
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        socketClosed = message.includes('WebSocket closed')
+        console.warn(
+          `[RITHMIC-PROTOCOL] PnL snapshot interrupted for ${accountId}, keeping earlier balances`,
+          error,
+        )
+        if (socketClosed) break
+        continue
       }
 
       if (outOfTime) {

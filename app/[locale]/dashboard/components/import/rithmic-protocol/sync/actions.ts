@@ -379,6 +379,11 @@ export async function removeRithmicProtocolToken(accountId: string) {
     },
   })
 
+  await invalidateConnectionsPageCache(userId)
+  // Drop cached Solde values so the next accounts-widget fetch cannot keep
+  // serving balances for the connection that was just removed.
+  invalidateThrottledFetch(userId)
+
   return { success: true as const }
 }
 
