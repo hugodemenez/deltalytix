@@ -16,7 +16,7 @@ export default {
   ...landingPreview,
   ...support,
   "footer.heading": "Footer",
-  "footer.description": "Advanced analytics for modern traders.",
+  "footer.description": "A trading journal for every futures account.",
   "footer.product.title": "Product",
   "footer.product.features": "Features",
   "footer.product.pricing": "Pricing",
