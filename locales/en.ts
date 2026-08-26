@@ -720,6 +720,7 @@ export default {
       searchPlaceholderMobile: "Filters",
       sections: {
         accounts: "Accounts",
+        date: "Date",
         dateRange: "Date Range",
         pnl: "PnL",
         instruments: "Instruments",

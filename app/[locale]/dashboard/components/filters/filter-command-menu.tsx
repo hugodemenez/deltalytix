@@ -6,6 +6,7 @@ import { format } from "date-fns"
 import { fr } from "date-fns/locale"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
   Drawer,
@@ -19,6 +20,7 @@ import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
+import { useModalStateStore } from "@/store/modal-state-store"
 import { AccountSection } from "./filter-command-menu-account-section"
 import { DateRangeSection } from "./filter-command-menu-date-section"
 import { PnlSection } from "./filter-command-menu-pnl-section"
@@ -35,11 +37,21 @@ import { useParams } from "next/navigation"
 import { toast } from "sonner"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 
+function isPortaledOverlayTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false
+  return Boolean(
+    target.closest("[data-radix-popper-content-wrapper]") ||
+      target.closest("[data-radix-select-viewport]") ||
+      target.closest('[role="listbox"]') ||
+      target.closest("[data-sonner-toast]")
+  )
+}
+
 type FilterSectionKey =
   | "dateRange"
-  | "accounts"
-  | "instruments"
   | "tags"
+  | "instruments"
+  | "accounts"
   | "pnl"
 
 interface FilterCommandMenuProps {
@@ -100,6 +112,9 @@ export function FilterCommandMenu({
   const [isParsingDate, setIsParsingDate] = useState(false)
   const isMobileDevice = useMediaQuery(`(max-width: ${compactBreakpoint}px)`)
   const useMobileDrawer = isMobileDevice || isMobile
+  const useDesktopDropdown = variant === "navbar" && !useMobileDrawer
+  const showInlineSearch = useMobileDrawer || useDesktopDropdown
+  const accountGroupBoardOpen = useModalStateStore((state) => state.accountGroupBoardOpen)
   const inputRef = useRef<HTMLInputElement>(null)
   const commandRef = useRef<HTMLDivElement>(null)
   const timezone = useUserStore(state => state.timezone)
@@ -111,7 +126,6 @@ export function FilterCommandMenu({
     setOpen(true)
   }
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (dateParseTimeoutRef.current) {
@@ -119,6 +133,12 @@ export function FilterCommandMenu({
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (accountGroupBoardOpen && open) {
+      setOpen(false)
+    }
+  }, [accountGroupBoardOpen, open])
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen)
@@ -132,7 +152,6 @@ export function FilterCommandMenu({
     }
   }
 
-  // Detect if search input contains date-related keywords
   const containsDateKeywords = useCallback((query: string): boolean => {
     const lowerQuery = query.toLowerCase().trim()
     const dateKeywords = [
@@ -151,26 +170,22 @@ export function FilterCommandMenu({
       'last', 'next', 'this', 'dernier', 'prochain', 'ce', 'cette',
       'ago', 'depuis', 'from', 'to', 'à', 'jusqu\'à'
     ]
-    
-    // Check for date patterns (YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY, etc.)
+
     const datePatterns = [
-      /\d{4}-\d{2}-\d{2}/, // YYYY-MM-DD
-      /\d{2}\/\d{2}\/\d{4}/, // MM/DD/YYYY or DD/MM/YYYY
-      /\d{1,2}\/\d{1,2}\/\d{4}/, // M/D/YYYY or D/M/YYYY
-      /\d{1,2}-\d{1,2}-\d{4}/, // M-D-YYYY or D-M-YYYY
+      /\d{4}-\d{2}-\d{2}/,
+      /\d{2}\/\d{2}\/\d{4}/,
+      /\d{1,2}\/\d{1,2}\/\d{4}/,
+      /\d{1,2}-\d{1,2}-\d{4}/,
     ]
 
-    // Check for keywords
     if (dateKeywords.some(keyword => lowerQuery.includes(keyword))) {
       return true
     }
 
-    // Check for date patterns
     if (datePatterns.some(pattern => pattern.test(query))) {
       return true
     }
 
-    // Check for numbers that might be dates (e.g., "15" could be a day)
     if (/\d+/.test(query) && query.length <= 20) {
       return true
     }
@@ -178,7 +193,6 @@ export function FilterCommandMenu({
     return false
   }, [])
 
-  // Parse date using LLM
   const parseDateQuery = useCallback(async (query: string) => {
     if (!query.trim() || !containsDateKeywords(query)) {
       return
@@ -203,21 +217,16 @@ export function FilterCommandMenu({
       }
 
       const data = await response.json()
-      
-      // Handle weekday filter
+
       if (data.weekdays && Array.isArray(data.weekdays) && data.weekdays.length > 0) {
         setWeekdayFilter({ days: data.weekdays })
-        // Clear search value after successful parse
         setSearchValue("")
         toast.success(t('filters.commandMenu.weekdayFilterApplied'))
-      } 
-      // Handle date range filter
-      else if (data.from && data.to) {
+      } else if (data.from && data.to) {
         setDateRange({
           from: new Date(data.from),
           to: new Date(data.to),
         })
-        // Clear search value after successful parse
         setSearchValue("")
         toast.success(t('filters.commandMenu.dateRangeApplied'))
       }
@@ -229,48 +238,34 @@ export function FilterCommandMenu({
     }
   }, [containsDateKeywords, locale, timezone, setDateRange, setWeekdayFilter, t])
 
-  // Handle search input changes with debouncing for date parsing
   const handleSearchChange = useCallback((value: string) => {
     setSearchValue(value)
     if (!open) setOpen(true)
+    if (value.trim()) setOpenSection(null)
 
-    // Clear existing timeout
     if (dateParseTimeoutRef.current) {
       clearTimeout(dateParseTimeoutRef.current)
     }
+  }, [open])
 
-    // Only attempt date parsing if query contains date keywords and is not too short
-    if (value.trim().length >= 3 && containsDateKeywords(value)) {
-      // Debounce date parsing - wait for user to finish typing or press Enter
-      // We'll trigger on Enter key press instead of auto-parsing
-    }
-  }, [open, containsDateKeywords])
-
-  // Handle Enter key to trigger date parsing
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Only handle Enter key for date parsing, let arrow keys pass through to Command
     if (e.key === 'Enter' && searchValue.trim() && containsDateKeywords(searchValue)) {
       e.preventDefault()
       e.stopPropagation()
       parseDateQuery(searchValue)
       return
     } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && searchValue.trim() && containsDateKeywords(searchValue)) {
-      // Also support Cmd/Ctrl+Enter
       e.preventDefault()
       e.stopPropagation()
       parseDateQuery(searchValue)
       return
     }
-    // For arrow keys, forward them to the Command component
     if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && commandRef.current && open) {
       e.preventDefault()
-      // Find the hidden CommandInput inside the Command component
       const commandElement = commandRef.current
       const commandInput = commandElement.querySelector('input[cmdk-input]') as HTMLInputElement
       if (commandInput) {
-        // Focus the command input and dispatch the arrow key event
         commandInput.focus()
-        // Use requestAnimationFrame to ensure focus is set before dispatching
         requestAnimationFrame(() => {
           const keyboardEvent = new KeyboardEvent('keydown', {
             key: e.key,
@@ -295,20 +290,43 @@ export function FilterCommandMenu({
   const chromeTextClass = 'text-xs font-medium text-[#737373] dark:text-muted-foreground'
   const chromeIconClass = 'text-sm font-medium text-[#171717] dark:text-foreground'
 
-  const NavbarTriggers = compact ? (
+  const filterTriggerButton = (
     <button
       type="button"
-      onClick={() => openFilters()}
+      onClick={useDesktopDropdown ? undefined : () => openFilters()}
       aria-label={t('filters.addFilterAria')}
-      className={cn(chromeButtonClass, chromeIconClass, 'relative h-7 w-7 justify-center p-0', className)}
+      aria-haspopup={useDesktopDropdown ? 'dialog' : undefined}
+      aria-expanded={useDesktopDropdown ? open : undefined}
+      className={cn(
+        chromeButtonClass,
+        compact
+          ? cn(chromeIconClass, 'relative h-7 w-7 justify-center p-0')
+          : cn(chromeTextClass, 'px-2.5'),
+        useDesktopDropdown && 'data-[state=open]:bg-[#FAFAFA] dark:data-[state=open]:bg-muted/40',
+        compact && className
+      )}
     >
-      <Search className="h-3.5 w-3.5" strokeWidth={1.75} />
-      {activeFilterCount > 0 ? (
-        <span className="absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#171717] px-1 text-[10px] font-semibold leading-none text-white">
-          {activeFilterCount}
-        </span>
-      ) : null}
+      {compact ? (
+        <>
+          <Search className="h-3.5 w-3.5" strokeWidth={1.75} />
+          {activeFilterCount > 0 ? (
+            <span className="absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#171717] px-1 text-[10px] font-semibold leading-none text-white">
+              {activeFilterCount}
+            </span>
+          ) : null}
+        </>
+      ) : (
+        t('filters.addFilter')
+      )}
     </button>
+  )
+
+  const NavbarTriggers = compact ? (
+    useDesktopDropdown ? (
+      <PopoverTrigger asChild>{filterTriggerButton}</PopoverTrigger>
+    ) : (
+      filterTriggerButton
+    )
   ) : (
     <div className={cn('flex items-center gap-2', className)}>
       <button
@@ -318,18 +336,14 @@ export function FilterCommandMenu({
       >
         {dateChipLabel}
       </button>
-      <button
-        type="button"
-        onClick={() => openFilters()}
-        aria-label={t('filters.addFilterAria')}
-        className={cn(chromeButtonClass, chromeTextClass, 'px-2.5')}
-      >
-        {t('filters.addFilter')}
-      </button>
+      {useDesktopDropdown ? (
+        <PopoverTrigger asChild>{filterTriggerButton}</PopoverTrigger>
+      ) : (
+        filterTriggerButton
+      )}
     </div>
   )
 
-  // Trigger on mobile: button that opens drawer
   const MobileTriggerButton = (
     <Button
       variant={compact ? "ghost" : "outline"}
@@ -351,10 +365,8 @@ export function FilterCommandMenu({
     </Button>
   )
 
-  // Check if search value contains date keywords to show hint
   const showDateHint = searchValue.trim().length >= 3 && containsDateKeywords(searchValue) && !isParsingDate
 
-  // Trigger on desktop: real input that opens popover and controls search
   const DesktopTriggerInput = (
     <div className={cn("relative w-full max-w-[400px]", className)}>
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
@@ -378,7 +390,6 @@ export function FilterCommandMenu({
         )}
         disabled={isParsingDate}
       />
-        {/* Animated outline when parsing */}
         {isParsingDate && (
           <>
             <div className="absolute inset-0 rounded-md border-2 border-primary pointer-events-none animate-pulse" />
@@ -387,7 +398,6 @@ export function FilterCommandMenu({
             </div>
           </>
         )}
-        {/* Date hint with Enter key */}
       {showDateHint && (
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-muted-foreground pointer-events-none">
           <span className="hidden sm:inline">Press</span>
@@ -399,60 +409,76 @@ export function FilterCommandMenu({
     </div>
   )
 
-  // Handle Command component keyboard events to detect when at top
   const handleCommandKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    // If ArrowUp is pressed and we're at the top, focus back to input
     if (e.key === 'ArrowUp' && commandRef.current) {
       const commandElement = commandRef.current
-      // Get all selectable items (not disabled)
       const allItems = Array.from(
         commandElement.querySelectorAll('[cmdk-item]:not([data-disabled="true"])')
       ) as HTMLElement[]
-      
+
       if (allItems.length === 0) return
-      
+
       const firstItem = allItems[0]
       const selectedItem = commandElement.querySelector('[cmdk-item][data-selected="true"]') as HTMLElement
-      
-      // Check if we're at the top:
-      // 1. First item is selected, OR
-      // 2. No item is selected (meaning we're about to select the first one)
       const isAtTop = selectedItem === firstItem || (!selectedItem && firstItem)
-      
+
       if (isAtTop) {
         e.preventDefault()
         e.stopPropagation()
-        
-        // Focus back to the appropriate input
-        if (useMobileDrawer) {
-          // For mobile, focus the CommandInput
+
+        if (showInlineSearch) {
           const commandInput = commandElement.querySelector('input[cmdk-input]') as HTMLInputElement
           if (commandInput) {
             commandInput.focus()
-            // Move cursor to end of input
             commandInput.setSelectionRange(commandInput.value.length, commandInput.value.length)
           }
-        } else {
-          // For desktop, focus the external Input
-          if (inputRef.current) {
-            inputRef.current.focus()
-            // Move cursor to end of input
-            inputRef.current.setSelectionRange(inputRef.current.value.length, inputRef.current.value.length)
-          }
+        } else if (inputRef.current) {
+          inputRef.current.focus()
+          inputRef.current.setSelectionRange(inputRef.current.value.length, inputRef.current.value.length)
         }
       }
     }
-  }, [useMobileDrawer])
+  }, [showInlineSearch])
+
+  const filterSections = [
+    {
+      key: "dateRange" as const,
+      label: t("filters.commandMenu.sections.date"),
+      content: <DateRangeSection searchValue={searchValue} />,
+    },
+    {
+      key: "tags" as const,
+      label: t("filters.commandMenu.sections.tags"),
+      content: <TagSection searchValue={searchValue} />,
+    },
+    {
+      key: "instruments" as const,
+      label: t("filters.commandMenu.sections.instruments"),
+      content: <InstrumentSection searchValue={searchValue} />,
+    },
+    {
+      key: "accounts" as const,
+      label: t("filters.commandMenu.sections.accounts"),
+      content: <AccountSection searchValue={searchValue} />,
+    },
+    {
+      key: "pnl" as const,
+      label: t("filters.commandMenu.sections.pnl"),
+      content: <PnlSection searchValue={searchValue} />,
+    },
+  ]
 
   const CommandContent = (
-      <Command 
-      ref={commandRef} 
-      className="flex h-auto min-h-0 flex-1 flex-col rounded-none border-0"
+    <Command
+      ref={commandRef}
+      className={cn(
+        "flex min-h-0 flex-1 flex-col rounded-none border-0",
+        useDesktopDropdown ? "max-h-full overflow-hidden" : "h-auto"
+      )}
       shouldFilter={false}
       onKeyDown={handleCommandKeyDown}
     >
-      {/* Hidden CommandInput for desktop to enable arrow key navigation */}
-      {!useMobileDrawer && (
+      {!showInlineSearch && (
         <div className="sr-only">
           <CommandInput
             value={searchValue}
@@ -461,7 +487,7 @@ export function FilterCommandMenu({
           />
         </div>
       )}
-      {useMobileDrawer && (
+      {showInlineSearch && (
         <div className="border-b relative">
           <CommandInput
             placeholder={t('filters.commandMenu.searchPlaceholder')}
@@ -474,7 +500,6 @@ export function FilterCommandMenu({
             )}
             disabled={isParsingDate}
           />
-          {/* Animated outline when parsing */}
           {isParsingDate && (
             <>
               <div className="absolute inset-0 rounded-md border-2 border-primary pointer-events-none animate-pulse" />
@@ -483,7 +508,6 @@ export function FilterCommandMenu({
               </div>
             </>
           )}
-          {/* Date hint with Enter key */}
           {showDateHint && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-muted-foreground pointer-events-none">
               <span>Press</span>
@@ -507,41 +531,14 @@ export function FilterCommandMenu({
           </CommandEmpty>
         ) : null}
 
-        {(
-          [
-            {
-              key: "dateRange" as const,
-              label: t("filters.commandMenu.sections.dateRange"),
-              content: <DateRangeSection searchValue={searchValue} />,
-            },
-            {
-              key: "accounts" as const,
-              label: t("filters.commandMenu.sections.accounts"),
-              content: <AccountSection searchValue={searchValue} />,
-            },
-            {
-              key: "instruments" as const,
-              label: t("filters.commandMenu.sections.instruments"),
-              content: <InstrumentSection searchValue={searchValue} />,
-            },
-            {
-              key: "tags" as const,
-              label: t("filters.commandMenu.sections.tags"),
-              content: <TagSection searchValue={searchValue} />,
-            },
-            {
-              key: "pnl" as const,
-              label: t("filters.commandMenu.sections.pnl"),
-              content: <PnlSection searchValue={searchValue} />,
-            },
-          ]
-        ).map(({ key, label, content }) => {
+        {filterSections.map(({ key, label, content }) => {
           const expanded = isSearching || openSection === key
           return (
             <FilterFoldSection
               key={key}
               label={label}
               expanded={expanded}
+              placement={useDesktopDropdown && !isSearching ? "submenu" : "inline"}
               onToggle={() => {
                 if (isSearching) return
                 setOpenSection((current) => (current === key ? null : key))
@@ -554,6 +551,41 @@ export function FilterCommandMenu({
       </CommandList>
     </Command>
   )
+
+  if (useDesktopDropdown) {
+    return (
+      <Popover open={open} onOpenChange={handleOpenChange} modal={false}>
+        {NavbarTriggers}
+        <PopoverContent
+          align="start"
+          side="bottom"
+          sideOffset={6}
+          collisionPadding={8}
+          aria-label={t('filters.title')}
+          className={cn(
+            'flex flex-col overflow-hidden p-0',
+            isSearching
+              ? 'w-[min(25rem,calc(100vw-1.5rem))] max-h-[min(32rem,var(--radix-popover-content-available-height))]'
+              : 'w-56 max-h-[min(24rem,var(--radix-popover-content-available-height))]',
+            'rounded-md border border-[#E5E5E5] bg-white shadow-md dark:border-border dark:bg-background'
+          )}
+          onInteractOutside={(event) => {
+            if (isPortaledOverlayTarget(event.target)) {
+              event.preventDefault()
+            }
+          }}
+          onFocusOutside={(event) => {
+            if (isPortaledOverlayTarget(event.target)) {
+              event.preventDefault()
+            }
+          }}
+        >
+          <h2 className="sr-only">{t('filters.title')}</h2>
+          {CommandContent}
+        </PopoverContent>
+      </Popover>
+    )
+  }
 
   return (
     <>

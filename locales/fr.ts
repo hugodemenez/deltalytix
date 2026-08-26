@@ -763,6 +763,7 @@ export default {
       searchPlaceholderMobile: "Filtres",
       sections: {
         accounts: "Comptes",
+        date: "Date",
         dateRange: "Période",
         pnl: "PnL",
         instruments: "Instruments",
