@@ -183,7 +183,7 @@ export function homepageMarkdown(request?: NextRequest | Request) {
 
   return `# ${SITE_NAME}
 
-${SITE_NAME} is a trading analytics platform for futures and prop-firm traders.
+${SITE_NAME} is a trading journal for futures and prop-firm traders.
 
 ## Core capabilities
 
