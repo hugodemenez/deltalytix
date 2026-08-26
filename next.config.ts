@@ -76,6 +76,17 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Locale-scoped so i18n middleware still owns unprefixed /trading-journal.
+  // Do not 308 the hub itself to /en.
+  async redirects() {
+    return [
+      {
+        source: '/:locale(en|fr)/trading-journal',
+        destination: '/:locale/trading-journal/futures',
+        permanent: true,
+      },
+    ];
+  },
   pageExtensions: ['mdx', 'ts', 'tsx'],
   typescript: {
     // Keep full checking in `bun run typecheck`; do not duplicate it inside `next build`.

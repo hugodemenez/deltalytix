@@ -27,6 +27,9 @@
   "/[locale]/teams/join",
   "/[locale]/teams/manage",
   "/[locale]/terms",
+  "/[locale]/trading-journal",
+  "/[locale]/trading-journal/futures",
+  "/[locale]/trading-journal/futures/[slug]",
   "/[locale]/updates",
   "/[locale]/updates/[slug]"
 ]
