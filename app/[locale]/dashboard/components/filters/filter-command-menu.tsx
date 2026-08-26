@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { Search } from "lucide-react"
-import { format } from "date-fns"
-import { fr } from "date-fns/locale"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -28,10 +26,7 @@ import { InstrumentSection } from "./filter-command-menu-instrument-section"
 import { TagSection } from "./filter-command-menu-tag-section"
 import { FilterFoldSection } from "./filter-fold-section"
 import { ActiveFilterTags } from "./active-filter-tags"
-import {
-  countActiveFilters,
-  labelDateRange,
-} from "./active-filter-model"
+import { countActiveFilters } from "./active-filter-model"
 import { useUserStore } from "@/store/user-store"
 import { useParams } from "next/navigation"
 import { toast } from "sonner"
@@ -89,23 +84,6 @@ export function FilterCommandMenu({
     instruments,
     tagFilter,
   })
-  const dateLocale = locale === 'fr' ? fr : undefined
-  const dateChipLabel =
-    labelDateRange(
-      dateRange,
-      {
-        thisWeek: t('filters.thisWeek'),
-        thisMonth: t('filters.thisMonth'),
-        lastThreeMonths: t('filters.lastThreeMonths'),
-        lastSixMonths: t('filters.lastSixMonths'),
-      },
-      (range) => {
-      if (!range.from) return null
-      if (range.to && range.from.getTime() !== range.to.getTime()) {
-        return `${format(range.from, 'LLL dd', { locale: dateLocale })} – ${format(range.to, 'LLL dd, y', { locale: dateLocale })}`
-      }
-      return format(range.from, 'LLL dd, y', { locale: dateLocale })
-    }) ?? t('filters.allDates')
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [openSection, setOpenSection] = useState<FilterSectionKey | null>(null)
@@ -303,7 +281,7 @@ export function FilterCommandMenu({
           ? cn(chromeIconClass, 'relative h-7 w-7 justify-center p-0')
           : cn(chromeTextClass, 'px-2.5'),
         useDesktopDropdown && 'data-[state=open]:bg-[#FAFAFA] dark:data-[state=open]:bg-muted/40',
-        compact && className
+        className
       )}
     >
       {compact ? (
@@ -321,27 +299,10 @@ export function FilterCommandMenu({
     </button>
   )
 
-  const NavbarTriggers = compact ? (
-    useDesktopDropdown ? (
-      <PopoverTrigger asChild>{filterTriggerButton}</PopoverTrigger>
-    ) : (
-      filterTriggerButton
-    )
+  const NavbarTriggers = useDesktopDropdown ? (
+    <PopoverTrigger asChild>{filterTriggerButton}</PopoverTrigger>
   ) : (
-    <div className={cn('flex items-center gap-2', className)}>
-      <button
-        type="button"
-        onClick={() => openFilters('dateRange')}
-        className={cn(chromeButtonClass, chromeTextClass, 'px-2.5')}
-      >
-        {dateChipLabel}
-      </button>
-      {useDesktopDropdown ? (
-        <PopoverTrigger asChild>{filterTriggerButton}</PopoverTrigger>
-      ) : (
-        filterTriggerButton
-      )}
-    </div>
+    filterTriggerButton
   )
 
   const MobileTriggerButton = (
