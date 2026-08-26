@@ -91,7 +91,7 @@ export function FilterCommandMenu({
   const isMobileDevice = useMediaQuery(`(max-width: ${compactBreakpoint}px)`)
   const useMobileDrawer = isMobileDevice || isMobile
   const useDesktopDropdown = variant === "navbar" && !useMobileDrawer
-  const showInlineSearch = useMobileDrawer || useDesktopDropdown
+  const showInlineSearch = useMobileDrawer
   const accountGroupBoardOpen = useModalStateStore((state) => state.accountGroupBoardOpen)
   const inputRef = useRef<HTMLInputElement>(null)
   const commandRef = useRef<HTMLDivElement>(null)
@@ -439,7 +439,7 @@ export function FilterCommandMenu({
       shouldFilter={false}
       onKeyDown={handleCommandKeyDown}
     >
-      {!showInlineSearch && (
+      {!showInlineSearch && !useDesktopDropdown && (
         <div className="sr-only">
           <CommandInput
             value={searchValue}
@@ -529,9 +529,7 @@ export function FilterCommandMenu({
           aria-label={t('filters.title')}
           className={cn(
             'flex flex-col overflow-hidden p-0',
-            isSearching
-              ? 'w-[min(25rem,calc(100vw-1.5rem))] max-h-[min(32rem,var(--radix-popover-content-available-height))]'
-              : 'w-56 max-h-[min(24rem,var(--radix-popover-content-available-height))]',
+            'w-56 max-h-[min(24rem,var(--radix-popover-content-available-height))]',
             'rounded-md border border-[#E5E5E5] bg-white shadow-md dark:border-border dark:bg-background'
           )}
           onInteractOutside={(event) => {
