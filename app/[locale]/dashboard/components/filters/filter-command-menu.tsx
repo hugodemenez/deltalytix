@@ -509,7 +509,7 @@ export function FilterCommandMenu({
                 setOpenSection(key)
               }}
             >
-              <CommandGroup>{content}</CommandGroup>
+              <CommandGroup className="min-h-0 overflow-visible">{content}</CommandGroup>
             </FilterFoldSection>
           )
         })}

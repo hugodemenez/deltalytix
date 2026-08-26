@@ -1,12 +1,18 @@
 "use client"
 
-import { useEffect, useRef, type ReactNode } from "react"
-import { Command, CommandList } from "@/components/ui/command"
+import { useEffect, useRef, useState, type ReactNode } from "react"
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandList,
+} from "@/components/ui/command"
 import {
   Popover,
   PopoverAnchor,
   PopoverContent,
 } from "@/components/ui/popover"
+import { useI18n } from "@/locales/client"
 import { cn } from "@/lib/utils"
 
 const HOVER_OPEN_DELAY_MS = 80
@@ -36,6 +42,8 @@ export function FilterFoldSection({
   children: ReactNode
   placement?: "inline" | "submenu"
 }) {
+  const t = useI18n()
+  const [query, setQuery] = useState("")
   const hoverOpenTimeoutRef = useRef<number | null>(null)
 
   const clearHoverOpen = () => {
@@ -55,6 +63,10 @@ export function FilterFoldSection({
   }
 
   useEffect(() => () => clearHoverOpen(), [])
+
+  useEffect(() => {
+    if (!expanded) setQuery("")
+  }, [expanded])
 
   const trigger = (
     <button
@@ -94,7 +106,7 @@ export function FilterFoldSection({
           collisionPadding={8}
           aria-label={label}
           className={cn(
-            "w-[min(20rem,calc(100vw-2rem))] overflow-hidden p-0",
+            "flex w-[min(20rem,calc(100vw-2rem))] flex-col overflow-hidden p-0",
             "max-h-[min(24rem,var(--radix-popover-content-available-height))]",
             "rounded-md border border-[#E5E5E5] bg-white shadow-md dark:border-border dark:bg-background"
           )}
@@ -111,11 +123,18 @@ export function FilterFoldSection({
             }
           }}
         >
-          <Command
-            shouldFilter={false}
-            className="max-h-[min(24rem,var(--radix-popover-content-available-height))]"
-          >
-            <CommandList className="max-h-[min(24rem,var(--radix-popover-content-available-height))] overflow-y-auto">
+          <Command className="flex max-h-full min-h-0 flex-1 flex-col overflow-hidden rounded-none border-0 bg-transparent">
+            <div className="shrink-0 border-b">
+              <CommandInput
+                value={query}
+                onValueChange={setQuery}
+                placeholder={t("filters.search")}
+                aria-label={t("filters.search")}
+                className="h-9"
+              />
+            </div>
+            <CommandList className="min-h-0 flex-1 overflow-y-auto overscroll-contain max-h-[min(20.5rem,calc(var(--radix-popover-content-available-height)-3.25rem))]">
+              <CommandEmpty>{t("filters.noResults")}</CommandEmpty>
               {children}
             </CommandList>
           </Command>
