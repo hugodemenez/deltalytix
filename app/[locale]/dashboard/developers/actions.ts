@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
-import { getUserId } from "@/server/auth"
+import { resolveDbUserId } from "@/lib/api/db-user"
 import { API_SCOPES, isValidScope, parseScopes } from "@/lib/api/scopes"
 import {
   generateClientId,
@@ -16,7 +16,7 @@ function revalidateDevelopers() {
 }
 
 export async function listOAuthAppsAction() {
-  const userId = await getUserId()
+  const userId = await resolveDbUserId()
   return prisma.oAuthApp.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
@@ -39,7 +39,7 @@ export async function createOAuthAppAction(input: {
   redirectUris: string[]
   scopes: string[]
 }) {
-  const userId = await getUserId()
+  const userId = await resolveDbUserId()
   const name = input.name.trim()
   if (!name) throw new Error("Name is required")
 
@@ -75,13 +75,13 @@ export async function createOAuthAppAction(input: {
 }
 
 export async function deleteOAuthAppAction(appId: string) {
-  const userId = await getUserId()
+  const userId = await resolveDbUserId()
   await prisma.oAuthApp.deleteMany({ where: { id: appId, userId } })
   revalidateDevelopers()
 }
 
 export async function listPersonalAccessTokensAction() {
-  const userId = await getUserId()
+  const userId = await resolveDbUserId()
   return prisma.oAuthAccessToken.findMany({
     where: { userId, appId: null },
     orderBy: { createdAt: "desc" },
@@ -100,7 +100,7 @@ export async function createPersonalAccessTokenAction(input: {
   name: string
   scopes: string[]
 }) {
-  const userId = await getUserId()
+  const userId = await resolveDbUserId()
   const name = input.name.trim()
   if (!name) throw new Error("Name is required")
 
@@ -124,7 +124,7 @@ export async function createPersonalAccessTokenAction(input: {
 }
 
 export async function revokePersonalAccessTokenAction(tokenId: string) {
-  const userId = await getUserId()
+  const userId = await resolveDbUserId()
   await prisma.oAuthAccessToken.updateMany({
     where: { id: tokenId, userId, appId: null, revokedAt: null },
     data: { revokedAt: new Date() },

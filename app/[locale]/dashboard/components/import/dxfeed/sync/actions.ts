@@ -33,6 +33,7 @@ import {
   decryptConnectionToken,
   encryptConnectionToken,
 } from '@/lib/connection-token-crypto'
+import { trustedUserId, type TrustedActor } from "@/lib/api/server-actor"
 
 const DXFEED_AUTH_URL = resolveDxFeedV2AuthUrl(process.env.DXFEED_AUTH_URL)
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
@@ -174,14 +175,14 @@ export async function authenticateDxFeed(
   login: string,
   password: string,
   _requestedPropFirmId?: string,
-  options?: { userId?: string },
+  options?: TrustedActor,
 ): Promise<DxFeedActionResult> {
   try {
     if (!DXFEED_AUTH_URL || !DXFEED_PLATFORM_KEY) {
       return { error: DxFeedErrorCode.CONFIG_NOT_SET }
     }
 
-    let userId = options?.userId ?? null
+    let userId = trustedUserId(options)
     if (!userId) {
       const supabase = await createClient()
       const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -503,7 +504,7 @@ function buildTradesFromDxFeedReport(
 
 export async function getDxFeedTrades(
   initialTokenJson: string,
-  options?: { userId?: string; accountId?: string },
+  options?: TrustedActor & { accountId?: string },
 ): Promise<DxFeedTradesResult> {
   try {
     const credentials = parseStoredCredentials(initialTokenJson)
@@ -513,7 +514,7 @@ export async function getDxFeedTrades(
 
     const { accessToken, historicalHost } = credentials
 
-    let userId = options?.userId ?? null
+    let userId = trustedUserId(options)
     let syncAccountId: string | null = options?.accountId ?? null
     if (!userId) {
       const supabase = await createClient()
@@ -801,7 +802,7 @@ export async function storeDxFeedToken(
   },
 ) {
   try {
-    let userId = options?.userId ?? null
+    let userId = trustedUserId(options)
     if (!userId) {
       const supabase = await createClient()
       const { data: { user }, error: authError } = await supabase.auth.getUser()

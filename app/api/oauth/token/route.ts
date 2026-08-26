@@ -11,6 +11,9 @@ import {
   sha256,
 } from "@/lib/api/tokens"
 
+/** Thrown inside the token transaction when another exchange won the race. */
+class AuthorizationCodeAlreadyUsed extends Error {}
+
 async function readTokenBody(
   request: NextRequest,
 ): Promise<Record<string, string>> {
@@ -98,26 +101,47 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      await prisma.oAuthAuthorizationCode.update({
-        where: { id: authCode.id },
-        data: { consumedAt: new Date() },
-      })
-
       const accessToken = generateAccessToken()
       const refreshToken = generateRefreshToken()
       const scopes = authCode.scopes
 
-      await prisma.oAuthAccessToken.create({
-        data: {
-          tokenHash: sha256(accessToken),
-          refreshTokenHash: sha256(refreshToken),
-          appId: app.id,
-          userId: authCode.userId,
-          scopes,
-          expiresAt: accessTokenExpiresAt(),
-          refreshTokenExpiresAt: refreshTokenExpiresAt(),
-        },
-      })
+      // Burn the code and mint the tokens together. `updateMany` filtered on
+      // `consumedAt: null` makes the burn a single conditional write, so two
+      // concurrent exchanges of one code cannot both pass; the transaction then
+      // makes sure a code is never left consumed with no tokens issued.
+      try {
+        await prisma.$transaction(async (tx) => {
+          const consumed = await tx.oAuthAuthorizationCode.updateMany({
+            where: { id: authCode.id, consumedAt: null },
+            data: { consumedAt: new Date() },
+          })
+
+          if (consumed.count === 0) {
+            throw new AuthorizationCodeAlreadyUsed()
+          }
+
+          await tx.oAuthAccessToken.create({
+            data: {
+              tokenHash: sha256(accessToken),
+              refreshTokenHash: sha256(refreshToken),
+              appId: app.id,
+              userId: authCode.userId,
+              scopes,
+              expiresAt: accessTokenExpiresAt(),
+              refreshTokenExpiresAt: refreshTokenExpiresAt(),
+            },
+          })
+        })
+      } catch (error) {
+        if (error instanceof AuthorizationCodeAlreadyUsed) {
+          return oauthError(
+            400,
+            "invalid_grant",
+            "Invalid or expired authorization code",
+          )
+        }
+        throw error
+      }
 
       return NextResponse.json({
         access_token: accessToken,

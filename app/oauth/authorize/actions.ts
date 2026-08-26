@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import { createClient, getUserId } from "@/server/auth"
+import { createClient } from "@/server/auth"
+import { resolveDbUserId } from "@/lib/api/db-user"
 import {
   authorizationCodeExpiresAt,
   generateAuthorizationCode,
@@ -106,7 +107,7 @@ export async function loadAuthorizeContext(params: AuthorizeParams) {
 }
 
 export async function approveAuthorizationAction(formData: FormData) {
-  const userId = await getUserId()
+  const userId = await resolveDbUserId()
   const clientId = String(formData.get("client_id") || "")
   const redirectUri = String(formData.get("redirect_uri") || "")
   const scope = String(formData.get("scope") || "")
@@ -120,7 +121,22 @@ export async function approveAuthorizationAction(formData: FormData) {
     throw new Error("Invalid authorization request")
   }
 
-  const scopes = parseScopes(scope).filter(isValidScope)
+  if (codeChallengeMethod && codeChallengeMethod !== "S256") {
+    throw new Error("Invalid authorization request")
+  }
+
+  // The consent screen renders hidden inputs, so re-check everything
+  // `loadAuthorizeContext` checked: a tampered form must not be able to mint a
+  // code for scopes the app was never registered to request.
+  const allowed = new Set(app.scopes)
+  const scopes = parseScopes(scope)
+    .filter(isValidScope)
+    .filter((granted) => allowed.has(granted))
+
+  if (scopes.length === 0) {
+    throw new Error("Invalid authorization request")
+  }
+
   const code = generateAuthorizationCode()
 
   await prisma.oAuthAuthorizationCode.create({
@@ -143,9 +159,18 @@ export async function approveAuthorizationAction(formData: FormData) {
 }
 
 export async function denyAuthorizationAction(formData: FormData) {
+  const clientId = String(formData.get("client_id") || "")
   const redirectUri = String(formData.get("redirect_uri") || "")
   const state = String(formData.get("state") || "")
-  if (!redirectUri) throw new Error("Missing redirect_uri")
+  if (!clientId || !redirectUri) throw new Error("Invalid authorization request")
+
+  // Deny redirects to an attacker-chosen URL are still an open redirect off a
+  // Deltalytix origin, so the URI has to be a registered one for this client
+  // exactly as it does on approve.
+  const app = await prisma.oAuthApp.findUnique({ where: { clientId } })
+  if (!app || !app.redirectUris.includes(redirectUri)) {
+    throw new Error("Invalid authorization request")
+  }
 
   const url = new URL(redirectUri)
   url.searchParams.set("error", "access_denied")

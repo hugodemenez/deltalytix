@@ -34,6 +34,8 @@ const CAPABILITIES = [
   { scope: "metrics:read", href: "#metrics", copyKey: "docs.toc.metricsRead" },
 ] as const
 
+type CapabilityCopyKey = (typeof CAPABILITIES)[number]["copyKey"]
+
 export function docsTocHeadingId(locale: string) {
   return locale === "fr" ? TOC_HEADING_ID.fr : TOC_HEADING_ID.en
 }
@@ -41,6 +43,20 @@ export function docsTocHeadingId(locale: string) {
 export async function DocsCapabilityToc({ locale }: { locale: string }) {
   const t = await getI18n()
   const headingId = docsTocHeadingId(locale)
+
+  // Resolved eagerly with literal keys: calling `t(row.copyKey)` inside the map
+  // makes TypeScript widen over every translation key at once, which overflows
+  // the union size limit (TS2590).
+  const labels: Record<CapabilityCopyKey, string> = {
+    "docs.toc.profileRead": t("docs.toc.profileRead"),
+    "docs.toc.tradesRead": t("docs.toc.tradesRead"),
+    "docs.toc.tradesWrite": t("docs.toc.tradesWrite"),
+    "docs.toc.accountsRead": t("docs.toc.accountsRead"),
+    "docs.toc.connectionsRead": t("docs.toc.connectionsRead"),
+    "docs.toc.connectionsWrite": t("docs.toc.connectionsWrite"),
+    "docs.toc.importsWrite": t("docs.toc.importsWrite"),
+    "docs.toc.metricsRead": t("docs.toc.metricsRead"),
+  }
 
   return (
     <section
@@ -69,7 +85,7 @@ export async function DocsCapabilityToc({ locale }: { locale: string }) {
                     href={row.href}
                     className="underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:focus-visible:ring-white/10"
                   >
-                    {t(row.copyKey)}
+                    {labels[row.copyKey]}
                   </Link>
                 </MdxTd>
                 <MdxTd>

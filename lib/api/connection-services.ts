@@ -18,6 +18,7 @@ import {
   authenticateRithmicProtocol,
   getRithmicProtocolTrades,
 } from "@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions"
+import { serverActor } from "@/lib/api/server-actor"
 
 /** Broker services that can be created via API v1 (credential POST, no browser OAuth). */
 export const CREATABLE_SERVICES = ["ibkr", "dxfeed", "rithmic-protocol"] as const
@@ -143,7 +144,7 @@ async function syncStoredConnection(
   connection: ConnectionRow,
 ): Promise<SyncOk | SyncFail> {
   if (connection.service === "ibkr") {
-    const result = await syncIbkrAccount(connection.externalId, { userId })
+    const result = await syncIbkrAccount(connection.externalId, serverActor(userId))
     if (result.error && result.savedCount == null && !result.stats) {
       return {
         ok: false,
@@ -352,7 +353,7 @@ export async function createServerSyncableConnection(
 
     const result = await connectIbkrFlexAccount(
       `token=${body.token}\nqueryId=${body.queryId}`,
-      { userId },
+      serverActor(userId),
     )
 
     if (!result.success) {
@@ -390,7 +391,7 @@ export async function createServerSyncableConnection(
       body.login,
       body.password,
       body.propFirmId,
-      { userId },
+      serverActor(userId),
     )
     if ("error" in result && result.error) {
       return apiError(400, "connection_failed", result.error, result.errorParams)
@@ -423,7 +424,7 @@ export async function createServerSyncableConnection(
       body.systemName,
       body.historyStartDate,
       body.gatewayId,
-      { userId },
+      serverActor(userId),
     )
     if ("error" in result && result.error) {
       return apiError(

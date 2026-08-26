@@ -77,6 +77,7 @@ export function AuthorizeConsent({
         </CardContent>
         <CardFooter className="flex gap-3">
           <form action={denyAuthorizationAction} className="flex-1">
+            <input type="hidden" name="client_id" value={app.clientId} />
             <input type="hidden" name="redirect_uri" value={redirectUri} />
             {state ? <input type="hidden" name="state" value={state} /> : null}
             <Button type="submit" variant="outline" className="w-full">

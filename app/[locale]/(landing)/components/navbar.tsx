@@ -173,6 +173,22 @@ const itemVariant = {
   },
 };
 
+type NavChild = {
+  path: string
+  title: string
+  icon?: React.ReactNode
+  /** Renders as a plain anchor with target="_blank". */
+  external?: boolean
+  /** Marks the "learn more" style entry rendered below the icon list. */
+  meta?: boolean
+}
+
+type NavLink = {
+  title: string
+  path?: string
+  children?: NavChild[]
+}
+
 export default function Component() {
   const { theme, effectiveTheme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
@@ -289,7 +305,7 @@ export default function Component() {
     closeMenu();
   };
 
-  const links = [
+  const links: NavLink[] = [
     {
       title: t("landing.navbar.features"),
       children: [

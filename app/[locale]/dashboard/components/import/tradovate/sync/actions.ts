@@ -18,6 +18,7 @@ import {
   decryptConnectionToken,
   encryptConnectionToken,
 } from '@/lib/connection-token-crypto'
+import { serverActor, trustedUserId, type TrustedActor } from "@/lib/api/server-actor"
 
 // Helper function to format dates in the required format: 2025-06-05T08:38:40+00:00
 function formatDateForAPI(date: Date): string {
@@ -1473,10 +1474,10 @@ export async function storeTradovateToken(
   expiresAt: string,
   environment: TradovateEnvironment = 'demo',
   accountId: string = 'default',
-  options?: { userId?: string },
+  options?: TrustedActor,
 ) {
   try {
-    let userId = options?.userId ?? null
+    let userId = trustedUserId(options)
     if (!userId) {
       const supabase = await createClient()
       const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -1702,10 +1703,11 @@ export async function setCustomTradovateToken(
   expiresAt: string,
   accountId: string = 'custom',
   environment: TradovateEnvironment = 'demo',
-  options?: { userId?: string },
+  options?: TrustedActor,
 ) {
   try {
-    if (!options?.userId) {
+    const actorUserId = trustedUserId(options)
+    if (!actorUserId) {
       const supabase = await createClient()
       const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -1731,7 +1733,7 @@ export async function setCustomTradovateToken(
       expiresAt,
       environment,
       accountId,
-      { userId: options?.userId },
+      actorUserId ? serverActor(actorUserId) : undefined,
     )
     
     if (result.error) {
@@ -1845,7 +1847,7 @@ export async function getTradovateTrades(
       options?.includedFeeTypes ?? (options?.includeAllFees ? true : DEFAULT_INCLUDED_FEE_TYPES)
 
     // Resolve userId either from caller (e.g. cron) or current session
-    let userId = options?.userId ?? null
+    let userId = trustedUserId(options)
     if (!userId) {
       const supabase = await createClient()
       const { data: { user }, error: authError } = await supabase.auth.getUser()

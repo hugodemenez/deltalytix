@@ -28,6 +28,7 @@ import type {
   IbkrSyncStats,
   IbkrTradesResult,
 } from './ibkr-types'
+import { trustedUserId, type TrustedActor } from "@/lib/api/server-actor"
 
 const SERVICE = 'ibkr'
 
@@ -185,9 +186,9 @@ async function persistTrades(
  */
 export async function connectIbkrFlexAccount(
   rawInput: string,
-  options?: { userId?: string },
+  options?: TrustedActor,
 ): Promise<IbkrConnectResult> {
-  let userId = options?.userId
+  let userId = trustedUserId(options) ?? undefined
   if (!userId) {
     try {
       userId = await getUserId()
@@ -284,9 +285,9 @@ export async function connectIbkrFlexAccount(
 
 export async function syncIbkrAccount(
   accountId: string,
-  options?: { userId?: string },
+  options?: TrustedActor,
 ): Promise<IbkrTradesResult> {
-  let userId = options?.userId
+  let userId = trustedUserId(options) ?? undefined
   if (!userId) {
     try {
       userId = await getUserId()
