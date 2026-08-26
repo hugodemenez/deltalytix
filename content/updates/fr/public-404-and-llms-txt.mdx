@@ -1,0 +1,15 @@
+---
+title: 'Les URLs publiques inconnues renvoient un vrai HTTP 404'
+description: 'Les URLs publiques sans correspondance envoient un HTTP 404 avec des pointeurs pour agents ; /llms.txt indexe le site, et le texte d''accueil est dans le HTML pré-rendu.'
+date: '2026-08-24'
+status: completed
+completedDate: '2026-08-24'
+---
+
+# Les URLs publiques inconnues renvoient un vrai HTTP 404
+
+Les URLs publiques inconnues renvoient désormais un vrai HTTP 404, au lieu d'un HTTP 200. L'illustration de page introuvable existante ne change pas. L'ajout est une section **For AI agents and crawlers**, avec des liens vers le sitemap, [l'index llms.txt](/llms.txt) et la documentation API, plus un volet **Markdown version**.
+
+[L'index llms.txt](/llms.txt) liste les pages publiques pour les modèles de langage. Sur la page d'accueil, les textes des fonctionnalités, des tarifs et de la FAQ sont présents dans le HTML pré-rendu, sans attendre JavaScript ; les aperçus interactifs se chargent toujours dans le navigateur.
+
+Ouvrez [un chemin qui n'existe pas](/fr/this-page-does-not-exist) et lisez **For AI agents and crawlers**, ou récupérez [llms.txt](/llms.txt).

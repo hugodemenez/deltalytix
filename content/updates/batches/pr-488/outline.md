@@ -1,7 +1,6 @@
-# Changelog outline: pr-pending
+# Changelog outline: pr-488
 
-Promotion: `origin/main` ← `origin/beta` (branch `cursor/release-beta-to-main-changelog-879a`).
-Batch folder will be renamed to `pr-<promotion-pr-number>` once the promotion PR exists.
+Promotion PR: #488 (`main` ← `cursor/release-beta-to-main-changelog-879a`).
 
 ## Release window and evidence
 

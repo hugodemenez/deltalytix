@@ -1,0 +1,15 @@
+---
+title: 'Unknown public URLs now return a real HTTP 404'
+description: 'Unmatched public URLs send HTTP 404 with pointers for agents; /llms.txt indexes the site, and homepage copy is in the prerendered HTML.'
+date: '2026-08-24'
+status: completed
+completedDate: '2026-08-24'
+---
+
+# Unknown public URLs now return a real HTTP 404
+
+Unknown public URLs now return a real HTTP 404 instead of HTTP 200. The existing not-found illustration is unchanged. The addition is a **For AI agents and crawlers** section with links to the sitemap, [the llms.txt site index](/llms.txt), and the API docs, plus a **Markdown version** disclosure.
+
+[The llms.txt site index](/llms.txt) lists public pages for language models. On the homepage, features, pricing, and FAQ copy are present in the prerendered HTML without waiting on JavaScript; interactive previews still load in the browser.
+
+Open [a path that does not exist](/en/this-page-does-not-exist) and read **For AI agents and crawlers**, or fetch [llms.txt](/llms.txt).
