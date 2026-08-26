@@ -660,6 +660,7 @@ export default {
     allDates: "All dates",
     addFilter: "+ Filter",
     addFilterAria: "Filters",
+    addFilterAriaCount: "Filters, {count} active",
     thisMonth: "This Month",
     lastThreeMonths: "Last 3 Months",
     lastSixMonths: "Last 6 Months",

@@ -704,6 +704,7 @@ export default {
     allDates: "Toutes les dates",
     addFilter: "+ Filtrer",
     addFilterAria: "Filtres",
+    addFilterAriaCount: "Filtres, {count} actifs",
     thisMonth: "Ce mois",
     lastThreeMonths: "Derniers 3 mois",
     lastSixMonths: "Les 6 derniers mois",

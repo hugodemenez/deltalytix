@@ -293,7 +293,11 @@ export function FilterCommandMenu({
     <button
       type="button"
       onClick={useDesktopDropdown ? undefined : () => openFilters()}
-      aria-label={t('filters.addFilterAria')}
+      aria-label={
+        activeFilterCount > 0
+          ? t("filters.addFilterAriaCount", { count: activeFilterCount })
+          : t("filters.addFilterAria")
+      }
       aria-haspopup={useDesktopDropdown ? 'dialog' : undefined}
       aria-expanded={useDesktopDropdown ? open : undefined}
       className={cn(
@@ -315,7 +319,14 @@ export function FilterCommandMenu({
           ) : null}
         </>
       ) : (
-        t('filters.addFilter')
+        <span className="inline-flex items-center gap-1.5">
+          {t("filters.addFilter")}
+          {activeFilterCount > 0 ? (
+            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#171717] px-1 text-[10px] font-semibold tabular-nums leading-none text-white dark:bg-foreground dark:text-background">
+              {activeFilterCount}
+            </span>
+          ) : null}
+        </span>
       )}
     </button>
   )
