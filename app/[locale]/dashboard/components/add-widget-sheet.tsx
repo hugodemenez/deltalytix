@@ -19,12 +19,22 @@ import {
   type AddWidgetCategory,
 } from './add-widget-catalog'
 
-const CATEGORY_LABEL_KEY = {
-  other: 'widgets.categories.other',
-  charts: 'widgets.categories.charts',
-  tables: 'widgets.categories.tables',
-  statistics: 'widgets.categories.statistics',
-} as const satisfies Record<AddWidgetCategory, `widgets.categories.${AddWidgetCategory}`>
+/**
+ * Resolved with literal keys. Calling `t(CATEGORY_LABEL_KEY[category])` asks
+ * TypeScript to widen the argument over every translation key at once, which
+ * overflows the union size limit (TS2590) at the size the key set has reached.
+ * The Record return type still forces a label for every category.
+ */
+function categoryLabels(
+  t: ReturnType<typeof useI18n>,
+): Record<AddWidgetCategory, string> {
+  return {
+    other: t('widgets.categories.other'),
+    charts: t('widgets.categories.charts'),
+    tables: t('widgets.categories.tables'),
+    statistics: t('widgets.categories.statistics'),
+  }
+}
 
 interface AddWidgetSheetProps {
   onAddWidget: (type: WidgetType, size?: WidgetSize) => void
@@ -140,6 +150,7 @@ PreviewCard.displayName = "PreviewCard"
 export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>(
   ({ onAddWidget, currentLayout, compact = false, appearance = 'default' }, ref) => {
     const t = useI18n()
+    const categoryLabel = categoryLabels(t)
     const isMobileLayout = useIsMobileLayout()
     const [isOpen, setIsOpen] = React.useState(false)
     const [loadedItems, setLoadedItems] = useState<Set<number>>(new Set())
@@ -281,7 +292,7 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
                     value={category}
                     className="flex-1"
                   >
-                    {t(CATEGORY_LABEL_KEY[category])}
+                    {categoryLabel[category]}
                   </TabsTrigger>
                 ))}
               </TabsList>
