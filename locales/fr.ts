@@ -35,7 +35,7 @@ export default {
   ...support,
   ...feedback,
   "footer.heading": "Pied de page",
-  "footer.description": "Analyses avancées pour les traders modernes.",
+  "footer.description": "Un journal de trading pour tous vos comptes futures.",
   "footer.product.title": "Produit",
   "footer.product.features": "Fonctionnalités",
   "footer.product.pricing": "Tarification",
