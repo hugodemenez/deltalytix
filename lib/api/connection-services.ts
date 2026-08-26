@@ -174,7 +174,7 @@ async function syncStoredConnection(
     }
 
     const result = await getDxFeedTrades(plaintext, {
-      userId,
+      ...serverActor(userId),
       accountId: connection.externalId,
     })
     if (result.error) {
@@ -209,7 +209,7 @@ async function syncStoredConnection(
     }
 
     const result = await getRithmicProtocolTrades(plaintext, {
-      userId,
+      ...serverActor(userId),
       connectionId: connection.id,
     })
     if (result.error) {
@@ -268,7 +268,7 @@ async function syncStoredConnection(
       connection.environment === "live" ? "live" : "demo"
 
     const result = await getTradovateTrades(plaintext, {
-      userId,
+      ...serverActor(userId),
       includedFeeTypes: includedFeeTypes ?? undefined,
       environment,
       connectionExternalId: connection.externalId,

@@ -33,7 +33,7 @@ import {
   decryptConnectionToken,
   encryptConnectionToken,
 } from '@/lib/connection-token-crypto'
-import { trustedUserId, type TrustedActor } from "@/lib/api/server-actor"
+import { serverActor, trustedUserId, type TrustedActor } from "@/lib/api/server-actor"
 
 const DXFEED_AUTH_URL = resolveDxFeedV2AuthUrl(process.env.DXFEED_AUTH_URL)
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
@@ -297,7 +297,7 @@ export async function authenticateDxFeed(
       tokenExpiresAt,
       propFirmId,
       propFirmName: propfirmName,
-      userId: resolvedUserId,
+      ...serverActor(resolvedUserId),
     })
     if (storeResult.error) {
       logger.warn('Failed to store token')
@@ -794,9 +794,8 @@ async function updateStoredCredentials(
 export async function storeDxFeedToken(
   tokenJson: string,
   accountId: string = 'default',
-  options?: {
+  options?: TrustedActor & {
     tokenExpiresAt?: Date | null
-    userId?: string
     propFirmId?: string
     propFirmName?: string
   },

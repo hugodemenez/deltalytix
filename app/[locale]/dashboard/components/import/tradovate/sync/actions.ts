@@ -1830,8 +1830,7 @@ async function updateLastSyncedAt(userId: string, connectionExternalId: string) 
   
 export async function getTradovateTrades(
   accessToken: string,
-  options?: {
-    userId?: string
+  options?: TrustedActor & {
     includeAllFees?: boolean
     includedFeeTypes?: TradovateIncludedFeeTypes
     environment?: TradovateEnvironment
