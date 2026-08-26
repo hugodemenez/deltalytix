@@ -4,11 +4,14 @@ description: 'Les URLs publiques sans correspondance envoient un HTTP 404 avec d
 date: '2026-08-24'
 status: completed
 completedDate: '2026-08-24'
+image: '/updates/pr-488/fr/public-404-agent-resources.png'
 ---
 
 # Les URLs publiques inconnues renvoient un vrai HTTP 404
 
 Les URLs publiques inconnues renvoient désormais un vrai HTTP 404, au lieu d'un HTTP 200. L'illustration de page introuvable existante ne change pas. L'ajout est une section **For AI agents and crawlers**, avec des liens vers le sitemap, [l'index llms.txt](/llms.txt) et la documentation API, plus un volet **Markdown version**.
+
+![Section For AI agents and crawlers sur une 404 publique, avec sitemap, llms.txt et points d'entrée API](/updates/pr-488/fr/public-404-agent-resources.png)
 
 [L'index llms.txt](/llms.txt) liste les pages publiques pour les modèles de langage. Sur la page d'accueil, les textes des fonctionnalités, des tarifs et de la FAQ sont présents dans le HTML pré-rendu, sans attendre JavaScript ; les aperçus interactifs se chargent toujours dans le navigateur.
 

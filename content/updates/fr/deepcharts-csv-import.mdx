@@ -4,11 +4,14 @@ description: 'DeepCharts rejoint Import CSV Plateforme : un Trade List à points
 date: '2026-08-26'
 status: completed
 completedDate: '2026-08-26'
+image: '/updates/pr-488/fr/deepcharts-import-picker.png'
 ---
 
 # Importez les trades DeepCharts clôturés depuis un CSV Trade List
 
 Les traders qui exportent depuis DeepCharts peuvent maintenant importer les trades clôturés d'un CSV Strategy Report → Trade List. Depuis [Connexions](/fr/dashboard/connections), choisissez **Ajouter avec un fichier** et sélectionnez **DeepCharts** dans **Import CSV Plateforme** (**CSV Trade List DeepCharts**). Le mappage des colonnes est sauté : les en-têtes sont fixes ; il reste à indiquer le compte Deltalytix qui reçoit les trades. Il s'agit d'un import de fichier, pas d'une connexion DeepCharts en direct.
+
+![Sélecteur d'import Connexions filtré sur DeepCharts sous Ajouter avec un fichier](/updates/pr-488/fr/deepcharts-import-picker.png)
 
 L'export doit être un CSV délimité par des points-virgules. Les en-têtes obligatoires — l'ordre peut varier — sont `Symbol`, `Quantity`, `Entry DT`, `Entry Price`, `Exit DT` et `Exit Price`. Le signe de la quantité donne le sens : positif pour un achat, négatif pour une vente ; la quantité enregistrée est la valeur absolue. Les horodatages naïfs du type `2026-01-06 17:35:22` sont stockés tels quels (heure murale en UTC, sans fuseau de la bourse). Quand une colonne `ProfitLoss` est présente, ce P&L cash est repris tel quel ; Deltalytix ne le calcule pas à partir des ticks. La commission vaut `0` si le fichier n'a pas de colonne de frais. Les lignes vides sont ignorées.
 

@@ -1712,12 +1712,13 @@ export async function captureScene(browser, options) {
       })
       await dismissCookies(page, locale)
       const heading = page.getByRole('heading', {
+        level: 2,
         name: CAPTURE_LABELS[locale].compareJournalsHeading,
       })
       await heading.waitFor({ timeout: 30_000 })
       const journals = heading.locator('xpath=ancestor::section[1]')
       await journals.scrollIntoViewIfNeeded()
-      await journals.getByText(CAPTURE_LABELS[locale].youAreHere).waitFor({
+      await journals.getByText(CAPTURE_LABELS[locale].youAreHere).first().waitFor({
         timeout: 15_000,
       })
       const viewMore = journals.getByText(CAPTURE_LABELS[locale].viewMore)
@@ -1797,9 +1798,7 @@ export async function captureScene(browser, options) {
         name: CAPTURE_LABELS[locale].deepcharts,
       }).first()
       await option.waitFor({ state: 'visible', timeout: 15_000 })
-      await picker.getByText(CAPTURE_LABELS[locale].platformCsv).first().waitFor({
-        timeout: 10_000,
-      })
+      await option.scrollIntoViewIfNeeded()
       await page.waitForTimeout(700)
       await assertNoDevIssues(page, `${locale} DeepCharts import picker`)
       await screenshot(page, batch, locale, file, {
