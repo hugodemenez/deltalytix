@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { CalendarIcon, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CommandItem } from "@/components/ui/command"
@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils"
 
 interface DateRangeSectionProps {
   searchValue: string
+  pickerPlacement?: "popover" | "inline"
 }
 
 const PICKER_START_MONTH = new Date(2000, 0)
@@ -71,6 +72,7 @@ function DateFilterRow({
   onSelect,
   onClear,
   locale,
+  placement,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -82,49 +84,99 @@ function DateFilterRow({
   onSelect: (date: Date | undefined) => void
   onClear: () => void
   locale?: typeof fr
+  placement: "popover" | "inline"
 }) {
   const t = useI18n()
+  const calendarId = useId()
+  const calendarRef = useRef<HTMLDivElement>(null)
+  const lastToggleAtRef = useRef(0)
+
+  const togglePicker = () => {
+    const now = Date.now()
+    if (now - lastToggleAtRef.current < 300) return
+    lastToggleAtRef.current = now
+    onMonthChange(selected ?? new Date())
+    onOpenChange(!open)
+  }
+
+  useEffect(() => {
+    if (!open || placement !== "inline") return
+    calendarRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+  }, [open, placement])
+
+  const trigger = (
+    <CommandItem
+      value={label}
+      onSelect={togglePicker}
+      aria-expanded={open}
+      aria-controls={open ? calendarId : undefined}
+      className="group flex items-center gap-2 px-2"
+    >
+      <CalendarIcon className="h-4 w-4" aria-hidden="true" />
+      <span className="text-sm">{label}</span>
+      <span className="ml-auto flex items-center gap-1.5">
+        <span
+          className={cn(
+            "min-w-[100px] text-right text-xs tabular-nums text-muted-foreground",
+            !formattedValue && "invisible"
+          )}
+        >
+          {formattedValue || "\u00A0"}
+        </span>
+        {formattedValue ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100"
+            aria-label={t("filters.clearDate")}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation()
+              event.preventDefault()
+              onClear()
+            }}
+          >
+            <X className="h-3 w-3 text-destructive" aria-hidden="true" />
+          </Button>
+        ) : null}
+      </span>
+    </CommandItem>
+  )
+
+  const calendar = (
+    <DatePickerCalendar
+      selected={selected}
+      month={month}
+      onMonthChange={onMonthChange}
+      locale={locale}
+      onSelect={(date) => {
+        onSelect(date)
+        onOpenChange(false)
+      }}
+    />
+  )
+
+  if (placement === "inline") {
+    return (
+      <div>
+        {trigger}
+        {open ? (
+          <div
+            ref={calendarRef}
+            id={calendarId}
+            data-date-filter-picker=""
+            className="flex justify-center border-t border-border/60 bg-popover px-1 py-2"
+          >
+            {calendar}
+          </div>
+        ) : null}
+      </div>
+    )
+  }
 
   return (
     <Popover open={open} onOpenChange={onOpenChange} modal={false}>
-      <PopoverAnchor asChild>
-        <CommandItem
-          onSelect={() => {
-            onMonthChange(selected ?? new Date())
-            onOpenChange(!open)
-          }}
-          className="group flex items-center gap-2 px-2"
-        >
-          <CalendarIcon className="h-4 w-4" aria-hidden="true" />
-          <span className="text-sm">{label}</span>
-          <span className="ml-auto flex items-center gap-1.5">
-            <span
-              className={cn(
-                "min-w-[100px] text-right text-xs tabular-nums text-muted-foreground",
-                !formattedValue && "invisible"
-              )}
-            >
-              {formattedValue || "\u00A0"}
-            </span>
-            {formattedValue ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100"
-                aria-label={t("filters.clearDate")}
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  event.preventDefault()
-                  onClear()
-                }}
-              >
-                <X className="h-3 w-3 text-destructive" aria-hidden="true" />
-              </Button>
-            ) : null}
-          </span>
-        </CommandItem>
-      </PopoverAnchor>
+      <PopoverAnchor asChild>{trigger}</PopoverAnchor>
       <PopoverContent
         className="w-auto overflow-hidden p-0"
         align="start"
@@ -133,25 +185,20 @@ function DateFilterRow({
         collisionPadding={8}
         aria-label={label}
         data-slot="popover-content"
+        data-date-filter-picker=""
         onOpenAutoFocus={(event) => event.preventDefault()}
         onCloseAutoFocus={(event) => event.preventDefault()}
       >
-        <DatePickerCalendar
-          selected={selected}
-          month={month}
-          onMonthChange={onMonthChange}
-          locale={locale}
-          onSelect={(date) => {
-            onSelect(date)
-            onOpenChange(false)
-          }}
-        />
+        {calendar}
       </PopoverContent>
     </Popover>
   )
 }
 
-export function DateRangeSection({ searchValue }: DateRangeSectionProps) {
+export function DateRangeSection({
+  searchValue,
+  pickerPlacement = "inline",
+}: DateRangeSectionProps) {
   const { dateRange, setDateRange, weekdayFilter, setWeekdayFilter } = useData()
   const [fromCalendarOpen, setFromCalendarOpen] = useState(false)
   const [toCalendarOpen, setToCalendarOpen] = useState(false)
@@ -281,7 +328,14 @@ export function DateRangeSection({ searchValue }: DateRangeSectionProps) {
       {showFrom ? (
         <DateFilterRow
           open={fromCalendarOpen}
-          onOpenChange={setFromCalendarOpen}
+          onOpenChange={(next) => {
+            setFromCalendarOpen(next)
+            if (next) {
+              setToCalendarOpen(false)
+              setUniqueDayCalendarOpen(false)
+            }
+          }}
+          placement={pickerPlacement}
           label={fromLabel}
           formattedValue={dateRange?.from ? formatDate(dateRange.from) : undefined}
           selected={dateRange?.from}
@@ -298,7 +352,14 @@ export function DateRangeSection({ searchValue }: DateRangeSectionProps) {
       {showTo ? (
         <DateFilterRow
           open={toCalendarOpen}
-          onOpenChange={setToCalendarOpen}
+          onOpenChange={(next) => {
+            setToCalendarOpen(next)
+            if (next) {
+              setFromCalendarOpen(false)
+              setUniqueDayCalendarOpen(false)
+            }
+          }}
+          placement={pickerPlacement}
           label={toLabel}
           formattedValue={dateRange?.to ? formatDate(dateRange.to) : undefined}
           selected={dateRange?.to}
@@ -315,7 +376,14 @@ export function DateRangeSection({ searchValue }: DateRangeSectionProps) {
       {showUniqueDay ? (
         <DateFilterRow
           open={uniqueDayCalendarOpen}
-          onOpenChange={setUniqueDayCalendarOpen}
+          onOpenChange={(next) => {
+            setUniqueDayCalendarOpen(next)
+            if (next) {
+              setFromCalendarOpen(false)
+              setToCalendarOpen(false)
+            }
+          }}
+          placement={pickerPlacement}
           label={uniqueDayLabel}
           formattedValue={
             uniqueDaySelected ? formatDate(uniqueDaySelected) : undefined

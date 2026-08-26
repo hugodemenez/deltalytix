@@ -40,6 +40,7 @@ function isPortaledOverlayTarget(target: EventTarget | null) {
   return Boolean(
     target.closest("[data-radix-popper-content-wrapper]") ||
       target.closest("[data-radix-select-viewport]") ||
+      target.closest("[data-date-filter-picker]") ||
       target.closest('[role="listbox"]') ||
       target.closest("[data-sonner-toast]")
   )
@@ -437,7 +438,12 @@ export function FilterCommandMenu({
     {
       key: "dateRange" as const,
       label: t("filters.commandMenu.sections.date"),
-      content: <DateRangeSection searchValue={searchValue} />,
+      content: (
+        <DateRangeSection
+          searchValue={searchValue}
+          pickerPlacement={useDesktopDropdown ? "popover" : "inline"}
+        />
+      ),
     },
     {
       key: "tags" as const,
@@ -600,7 +606,10 @@ export function FilterCommandMenu({
                 {t('filters.commandMenu.categories.title')}
               </DrawerDescription>
             </DrawerHeader>
-            <div className="min-h-0 flex-1 overflow-hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+            <div
+              className="min-h-0 flex-1 overflow-hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+              data-vaul-no-drag=""
+            >
               {CommandContent}
             </div>
           </DrawerContent>

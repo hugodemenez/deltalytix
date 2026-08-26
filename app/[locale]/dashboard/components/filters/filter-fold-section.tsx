@@ -22,6 +22,7 @@ function isPortaledOverlayTarget(target: EventTarget | null) {
   return Boolean(
     target.closest("[data-radix-popper-content-wrapper]") ||
       target.closest("[data-radix-select-viewport]") ||
+      target.closest("[data-date-filter-picker]") ||
       target.closest('[role="listbox"]') ||
       target.closest("[data-sonner-toast]")
   )
