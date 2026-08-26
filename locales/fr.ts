@@ -3068,6 +3068,16 @@ export default {
   "import.type.atas.description": "Fichier Excel ATAS",
   "import.type.atas.details":
     'Importez les trades depuis les fichiers Excel ATAS. Assurez-vous que votre fichier contient une feuille "Journal" avec les colonnes requises.',
+  "import.type.deepcharts.name": "DeepCharts",
+  "import.type.deepcharts.description": "CSV Trade List DeepCharts",
+  "import.type.deepcharts.details":
+    "Exportez les trades clôturés depuis DeepCharts Strategy Report → Trade List au format CSV délimité par des points-virgules.",
+  "import.deepcharts.error.title": "Impossible de lire cet export DeepCharts",
+  "import.deepcharts.error.invalidFile":
+    "Importez un CSV Trade List DeepCharts contenant les colonnes Symbol, Quantity, Entry DT, Entry Price, Exit DT et Exit Price.",
+  "import.deepcharts.noTrades": "Aucun trade DeepCharts clôturé trouvé",
+  "import.deepcharts.noTradesDescription":
+    "Assurez-vous que le fichier contient des trades clôturés et utilise un délimiteur point-virgule.",
   "import.type.ftmo.name": "FTMO",
   "import.type.ftmo.description": "CSV journal FTMO",
   "import.type.ftmo.details":
