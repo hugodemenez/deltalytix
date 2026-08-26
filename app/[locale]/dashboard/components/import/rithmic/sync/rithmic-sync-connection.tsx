@@ -299,6 +299,14 @@ export function RithmicSyncConnection({
   const saveCredentialsAndAccounts = useCallback(() => {
     if (shouldSaveCredentials) {
       const allData = getAllRithmicData()
+      // Keep selectedAccounts as the user's explicit sync selection. In "all
+      // accounts" mode it stays empty so reopening the modal with a live
+      // connection does not auto-advance to processing. Concrete IDs for
+      // Solde Rithmic go on linkedAccounts.
+      const linkedAccountsToPersist = allAccounts
+        ? availableAccounts.map((acc) => acc.account_id)
+        : selectedAccounts
+      const selectedAccountsToPersist = allAccounts ? [] : selectedAccounts
       
       // Find all credentials with the same username
       const existingCredentials = Object.values(allData).filter(
@@ -307,11 +315,22 @@ export function RithmicSyncConnection({
 
       // If we found existing credentials, merge them
       if (existingCredentials.length > 0) {
-        // Merge all selected accounts and remove duplicates
-        const mergedSelectedAccounts = Array.from(new Set([
-          ...selectedAccounts,
-          ...existingCredentials.flatMap(cred => cred.selectedAccounts)
+        const mergedLinkedAccounts = Array.from(new Set([
+          ...linkedAccountsToPersist,
+          ...existingCredentials.flatMap(cred =>
+            cred.linkedAccounts?.length
+              ? cred.linkedAccounts
+              : cred.selectedAccounts
+          )
         ]))
+        const mergedSelectedAccounts = allAccounts
+          ? []
+          : Array.from(new Set([
+              ...selectedAccountsToPersist,
+              ...existingCredentials.flatMap(cred =>
+                cred.allAccounts ? [] : cred.selectedAccounts
+              )
+            ]))
 
         // Use the most recent sync time
         const mostRecentSync = Math.max(
@@ -330,7 +349,8 @@ export function RithmicSyncConnection({
             server_type: credentials.server_type,
             location: credentials.location
           },
-          selectedAccounts: mergedSelectedAccounts,
+          selectedAccounts: mergedAllAccounts ? [] : mergedSelectedAccounts,
+          linkedAccounts: mergedLinkedAccounts,
           lastSyncTime: new Date(mostRecentSync).toISOString(),
           allAccounts: mergedAllAccounts
         }
@@ -361,7 +381,8 @@ export function RithmicSyncConnection({
             server_type: credentials.server_type,
             location: credentials.location
           },
-          selectedAccounts,
+          selectedAccounts: selectedAccountsToPersist,
+          linkedAccounts: linkedAccountsToPersist,
           lastSyncTime: new Date().toISOString(),
           allAccounts
         }
@@ -370,7 +391,7 @@ export function RithmicSyncConnection({
         setCurrentCredentialId(dataToSave.id)
       }
     }
-  }, [credentials, selectedAccounts, shouldSaveCredentials, currentCredentialId, allAccounts, t])
+  }, [credentials, selectedAccounts, shouldSaveCredentials, currentCredentialId, allAccounts, availableAccounts, t])
 
   // Reset state when component mounts (modal opens)
   useEffect(() => {
@@ -423,11 +444,14 @@ export function RithmicSyncConnection({
 
   // Update effect to use context step
   useEffect(() => {
-    if (isConnected && selectedAccounts.length > 0) {
+    // selectedAccounts is the explicit sync selection. "All accounts" mode
+    // keeps it empty so a reopen with a live connection does not skip the
+    // account-picker and jump to processing.
+    if (isConnected && !allAccounts && selectedAccounts.length > 0) {
       console.log('Active connection detected, resuming processing view')
       setStep('processing')
     }
-  }, [isConnected, selectedAccounts, setStep])
+  }, [isConnected, selectedAccounts, allAccounts, setStep])
 
   const handleStartProcessing = useCallback(async () => {
     setIsLoading(true)

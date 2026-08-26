@@ -1,7 +1,6 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { headers } from 'next/headers';
 import { createClient } from './auth';
 
 interface SubscriptionInfo {
@@ -20,18 +19,15 @@ function isValidEmail(email: string): boolean {
 }
 
 export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null> {
-    // Get user email using headers from our middleware
-    const headersList = await headers()
-    let email = headersList.get("x-user-email")
-    if (!email) {
-        // USE supabase to get user email
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-            return null
-        }
-        email = user.email || null
+    // Entitlements are keyed on the email, so it must come from the verified
+    // session — never from a request header, which the caller controls.
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+        return null
     }
+    const email = user.email || null
+
     // Input validation
     if (!email || !isValidEmail(email)) {
         console.error('[getSubscriptionDetails] Invalid email format:', email)

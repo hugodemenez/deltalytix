@@ -48,7 +48,7 @@ export async function authenticateApiRequest(
       ok: false,
       response: insufficientScope(
         "Token is missing required scopes",
-        { required: requiredScopes, granted: record.scopes },
+        requiredScopes,
       ),
     }
   }

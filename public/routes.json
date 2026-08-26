@@ -1,6 +1,5 @@
 [
   "/[locale]",
-  "/[locale]/[...not-found]",
   "/[locale]/about",
   "/[locale]/authentication",
   "/[locale]/dashboard",
@@ -21,6 +20,7 @@
   "/[locale]/propfirms",
   "/[locale]/ref/[ref]",
   "/[locale]/referral",
+  "/[locale]/settings",
   "/[locale]/shared/[slug]",
   "/[locale]/support",
   "/[locale]/teams",
@@ -30,6 +30,9 @@
   "/[locale]/teams/join",
   "/[locale]/teams/manage",
   "/[locale]/terms",
+  "/[locale]/trading-journal",
+  "/[locale]/trading-journal/futures",
+  "/[locale]/trading-journal/futures/[slug]",
   "/[locale]/updates",
   "/[locale]/updates/[slug]",
   "/oauth/authorize"

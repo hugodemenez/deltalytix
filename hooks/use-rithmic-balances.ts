@@ -1,12 +1,21 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { getAllRithmicData, RITHMIC_STORAGE_UPDATED_EVENT } from "@/lib/rithmic-storage"
+import { getRithmicProtocolBalancesAction } from "@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions"
+import {
+  getAllRithmicData,
+  getLinkedRithmicAccountNumbers,
+  hasAnyRithmicAllAccountsMode,
+  RITHMIC_STORAGE_UPDATED_EVENT,
+} from "@/lib/rithmic-storage"
 import {
   fetchRithmicBalances,
+  findRithmicBalanceForAccount,
   getPrimaryRithmicBalance,
   getRithmicApiBaseUrl,
   normalizeRithmicAccountBalance,
+  putRithmicBalance,
+  resolveDisplayedRithmicBalances,
   RithmicAccountBalance,
 } from "@/lib/rithmic-api"
 
@@ -25,6 +34,7 @@ export interface RithmicBalanceFetchAttempt {
     remaining_attempts: number
     minutes_until_reset: number
   }
+  source?: "classic" | "protocol"
 }
 
 export interface RithmicBalancesDebugInfo {
@@ -49,6 +59,8 @@ export interface RithmicBalancesDebugInfo {
   rateLimited: boolean
   lastFetchedAt: string | null
   skippedReason?: string
+  protocolHasConnections?: boolean
+  protocolErrors?: string[]
 }
 
 export interface RithmicBalancesState {
@@ -58,8 +70,45 @@ export interface RithmicBalancesState {
   rateLimited: boolean
   lastFetchedAt: Date | null
   hasCredentials: boolean
+  /** True when any credential set uses "sync all accounts" (legacy empty selectedAccounts). */
+  syncsAllAccounts: boolean
   debug: RithmicBalancesDebugInfo
-  refresh: () => Promise<void>
+  refresh: (options?: { force?: boolean }) => Promise<void>
+}
+
+export interface UseRithmicBalancesOptions {
+  /**
+   * Whether to ask the server for Protocol balances. Each server fetch opens a
+   * WebSocket to the Rithmic gateway, so callers pass false until they know the
+   * user actually has a Protocol-linked account.
+   */
+  protocolEnabled?: boolean
+}
+
+function readCredentialSnapshot() {
+  const credentialSets = Object.values(getAllRithmicData())
+  return {
+    credentialSets,
+    hasCredentials: credentialSets.length > 0,
+    syncsAllAccounts: hasAnyRithmicAllAccountsMode(credentialSets),
+    linkedAccountNumbers: getLinkedRithmicAccountNumbers(credentialSets),
+  }
+}
+
+function resolveLinkedAccountNumbers(
+  selectedLinked: string[],
+  balancesByAccountId: Record<string, RithmicAccountBalance>,
+  syncsAllAccounts: boolean
+): string[] {
+  const linked = new Set(selectedLinked)
+  // Legacy "all accounts" saves left selectedAccounts empty — treat fetched
+  // balance account IDs as linked so Solde Rithmic still renders on those rows.
+  if (syncsAllAccounts || selectedLinked.length === 0) {
+    for (const accountId of Object.keys(balancesByAccountId)) {
+      linked.add(accountId)
+    }
+  }
+  return [...linked]
 }
 
 function buildDebugSnapshot(
@@ -69,11 +118,17 @@ function buildDebugSnapshot(
     error: string | null
     rateLimited: boolean
     lastFetchedAt: Date | null
+    extraLinkedAccountNumbers?: string[]
   }
 ): RithmicBalancesDebugInfo {
-  const credentialSets = Object.values(getAllRithmicData())
-  const linkedAccountNumbers = credentialSets.flatMap((set) => set.selectedAccounts)
-  const { lastFetchedAt, ...rest } = overrides
+  const { credentialSets, linkedAccountNumbers, syncsAllAccounts } =
+    readCredentialSnapshot()
+  const { lastFetchedAt, extraLinkedAccountNumbers = [], ...rest } = overrides
+  const resolvedLinked = resolveLinkedAccountNumbers(
+    [...linkedAccountNumbers, ...extraLinkedAccountNumbers],
+    overrides.balancesByAccountId,
+    syncsAllAccounts
+  )
 
   return {
     generatedAt: new Date().toISOString(),
@@ -88,15 +143,19 @@ function buildDebugSnapshot(
       selectedAccounts: set.selectedAccounts,
       allAccounts: set.allAccounts,
     })),
-    linkedAccountNumbers,
     fetchAttempts: [],
     balanceCount: Object.keys(overrides.balancesByAccountId).length,
     ...rest,
+    linkedAccountNumbers: resolvedLinked,
     lastFetchedAt: lastFetchedAt?.toISOString() ?? null,
   }
 }
 
-export function useRithmicBalances(): RithmicBalancesState {
+export function useRithmicBalances(
+  options: UseRithmicBalancesOptions = {}
+): RithmicBalancesState {
+  const { protocolEnabled = true } = options
+  const [initialSnapshot] = useState(readCredentialSnapshot)
   const [balancesByAccountId, setBalancesByAccountId] = useState<
     Record<string, RithmicAccountBalance>
   >({})
@@ -104,7 +163,12 @@ export function useRithmicBalances(): RithmicBalancesState {
   const [error, setError] = useState<string | null>(null)
   const [rateLimited, setRateLimited] = useState(false)
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null)
-  const [hasCredentials, setHasCredentials] = useState(false)
+  const [hasCredentials, setHasCredentials] = useState(
+    initialSnapshot.hasCredentials
+  )
+  const [syncsAllAccounts, setSyncsAllAccounts] = useState(
+    initialSnapshot.syncsAllAccounts
+  )
   const [debug, setDebug] = useState<RithmicBalancesDebugInfo>(() =>
     buildDebugSnapshot({
       balancesByAccountId: {},
@@ -118,56 +182,29 @@ export function useRithmicBalances(): RithmicBalancesState {
   const abortControllerRef = useRef<AbortController | null>(null)
   const balancesRef = useRef(balancesByAccountId)
   const lastFetchedAtRef = useRef(lastFetchedAt)
+  const protocolEnabledRef = useRef(protocolEnabled)
 
   useEffect(() => {
     balancesRef.current = balancesByAccountId
     lastFetchedAtRef.current = lastFetchedAt
   }, [balancesByAccountId, lastFetchedAt])
 
-  const refresh = useCallback(async () => {
+  useEffect(() => {
+    protocolEnabledRef.current = protocolEnabled
+  }, [protocolEnabled])
+
+  const refresh = useCallback(async (refreshOptions: { force?: boolean } = {}) => {
     abortControllerRef.current?.abort()
     const abortController = new AbortController()
     abortControllerRef.current = abortController
 
     const apiBaseUrl = getRithmicApiBaseUrl()
-    const credentialSets = Object.values(getAllRithmicData())
-    setHasCredentials(credentialSets.length > 0)
-
-    if (!apiBaseUrl) {
-      setBalancesByAccountId({})
-      setError("Rithmic API URL is not configured")
-      setRateLimited(false)
-      setDebug(
-        buildDebugSnapshot({
-          balancesByAccountId: {},
-          isLoading: false,
-          error: "Rithmic API URL is not configured",
-          rateLimited: false,
-          lastFetchedAt: null,
-          skippedReason: "NEXT_PUBLIC_RITHMIC_API_URL is missing",
-          fetchAttempts: [],
-        })
-      )
-      return
-    }
-
-    if (credentialSets.length === 0) {
-      setBalancesByAccountId({})
-      setError(null)
-      setRateLimited(false)
-      setDebug(
-        buildDebugSnapshot({
-          balancesByAccountId: {},
-          isLoading: false,
-          error: null,
-          rateLimited: false,
-          lastFetchedAt: null,
-          skippedReason: "No Rithmic credentials in localStorage",
-          fetchAttempts: [],
-        })
-      )
-      return
-    }
+    const {
+      credentialSets,
+      hasCredentials: hasClassicCredentials,
+      syncsAllAccounts: nextSyncsAll,
+    } = readCredentialSnapshot()
+    setSyncsAllAccounts(nextSyncsAll)
 
     const fetchId = ++fetchIdRef.current
     setIsLoading(true)
@@ -176,81 +213,211 @@ export function useRithmicBalances(): RithmicBalancesState {
 
     const merged: Record<string, RithmicAccountBalance> = {}
     const fetchAttempts: RithmicBalanceFetchAttempt[] = []
+    const protocolLinked: string[] = []
     let latestError: string | null = null
     let latestRateLimited = false
+    let protocolHasConnections = false
+    let protocolErrors: string[] = []
+    let anySucceeded = false
 
     try {
-      for (const credentialSet of credentialSets) {
-        if (abortController.signal.aborted) return
-
-        const result = await fetchRithmicBalances(credentialSet.credentials, {
-          signal: abortController.signal,
-        })
-
-        if (fetchId !== fetchIdRef.current) return
-
-        const attempt: RithmicBalanceFetchAttempt = {
-          credentialId: credentialSet.id,
-          username: credentialSet.credentials.username,
-          server_type: credentialSet.credentials.server_type,
-          location: credentialSet.credentials.location,
-          success: result.success,
-          httpStatus: result.httpStatus,
-          message: result.success ? result.message : result.message,
+      // 1) Protocol PnL plant (preferred — stored server-side credentials).
+      // Skipped entirely unless the caller knows the user has a Protocol
+      // account: each server fetch can open a gateway WebSocket.
+      try {
+        const protocolResult = protocolEnabledRef.current
+          ? await getRithmicProtocolBalancesAction({
+              force: refreshOptions.force === true,
+            })
+          : null
+        if (abortController.signal.aborted || fetchId !== fetchIdRef.current) {
+          return
         }
 
-        if (!result.success) {
-          attempt.rateLimited = result.rateLimited
-          latestError = result.message
-          if (result.rateLimited) {
-            latestRateLimited = true
-            fetchAttempts.push(attempt)
-            break
-          }
-          fetchAttempts.push(attempt)
-          continue
-        }
-
-        attempt.balanceCount = result.balances.length
-        attempt.accountIds = result.balances.map((balance) => balance.account_id)
-        attempt.rateLimitInfo = result.rateLimitInfo
-        fetchAttempts.push(attempt)
-
-        for (const balance of result.balances) {
-          const normalized = normalizeRithmicAccountBalance(balance)
-          if (!normalized) continue
-          merged[normalized.account_id] = normalized
-        }
-      }
-
-      if (fetchId === fetchIdRef.current) {
-        const anySucceeded = fetchAttempts.some((attempt) => attempt.success)
-        const balancesToShow = anySucceeded ? merged : balancesRef.current
-        const fetchedAt = anySucceeded ? new Date() : lastFetchedAtRef.current
-        setBalancesByAccountId(balancesToShow)
-        if (anySucceeded) {
-          setLastFetchedAt(fetchedAt)
-        }
-        setError(latestError)
-        setRateLimited(latestRateLimited)
-        setDebug(
-          buildDebugSnapshot({
-            balancesByAccountId: balancesToShow,
-            isLoading: false,
-            error: latestError,
-            rateLimited: latestRateLimited,
-            lastFetchedAt: fetchedAt,
-            fetchAttempts,
+        if (protocolResult === null) {
+          fetchAttempts.push({
+            credentialId: "rithmic-protocol",
+            username: "protocol",
+            server_type: "rithmic-protocol",
+            location: "server",
+            success: true,
+            message: "Skipped — no Protocol-linked account",
+            source: "protocol",
           })
-        )
+        } else if (protocolResult.success) {
+          protocolHasConnections = protocolResult.hasConnections
+          protocolErrors = protocolResult.errors
+          protocolLinked.push(...protocolResult.linkedAccountNumbers)
+
+          fetchAttempts.push({
+            credentialId: "rithmic-protocol",
+            username: "protocol",
+            server_type: "rithmic-protocol",
+            location: "server",
+            success: protocolResult.errors.length === 0 || protocolResult.balances.length > 0,
+            balanceCount: protocolResult.balances.length,
+            accountIds: protocolResult.linkedAccountNumbers,
+            message:
+              protocolResult.errors.length > 0
+                ? protocolResult.errors.join("; ")
+                : protocolResult.hasConnections
+                  ? undefined
+                  : "No Protocol connections",
+            source: "protocol",
+          })
+
+          if (protocolResult.balances.length > 0) {
+            anySucceeded = true
+            for (const balance of protocolResult.balances) {
+              const normalized = normalizeRithmicAccountBalance(balance)
+              if (!normalized) continue
+              putRithmicBalance(merged, normalized, { overwrite: true })
+            }
+          } else if (protocolResult.errors.length > 0) {
+            latestError = protocolResult.errors.join("; ")
+          }
+        } else {
+          latestError = protocolResult.error
+          fetchAttempts.push({
+            credentialId: "rithmic-protocol",
+            username: "protocol",
+            server_type: "rithmic-protocol",
+            location: "server",
+            success: false,
+            message: protocolResult.error,
+            source: "protocol",
+          })
+        }
+      } catch (err) {
+        if (abortController.signal.aborted) return
+        latestError =
+          err instanceof Error ? err.message : "Protocol balance fetch failed"
+        fetchAttempts.push({
+          credentialId: "rithmic-protocol",
+          username: "protocol",
+          server_type: "rithmic-protocol",
+          location: "server",
+          success: false,
+          message: latestError,
+          source: "protocol",
+        })
       }
+
+      // 2) Classic R | API+ /balances (browser localStorage credentials)
+      if (credentialSets.length > 0 && apiBaseUrl) {
+        for (const credentialSet of credentialSets) {
+          if (abortController.signal.aborted) return
+
+          const result = await fetchRithmicBalances(credentialSet.credentials, {
+            signal: abortController.signal,
+          })
+
+          if (fetchId !== fetchIdRef.current) return
+
+          const attempt: RithmicBalanceFetchAttempt = {
+            credentialId: credentialSet.id,
+            username: credentialSet.credentials.username,
+            server_type: credentialSet.credentials.server_type,
+            location: credentialSet.credentials.location,
+            success: result.success,
+            httpStatus: result.httpStatus,
+            message: result.success ? result.message : result.message,
+            source: "classic",
+          }
+
+          if (!result.success) {
+            attempt.rateLimited = result.rateLimited
+            latestError = result.message
+            if (result.rateLimited) {
+              latestRateLimited = true
+              fetchAttempts.push(attempt)
+              break
+            }
+            fetchAttempts.push(attempt)
+            continue
+          }
+
+          attempt.balanceCount = result.balances.length
+          attempt.accountIds = result.balances.map((balance) => balance.account_id)
+          attempt.rateLimitInfo = result.rateLimitInfo
+          fetchAttempts.push(attempt)
+          anySucceeded = true
+
+          for (const balance of result.balances) {
+            const normalized = normalizeRithmicAccountBalance(balance)
+            if (!normalized) continue
+            // Protocol values win when both paths return the same account.
+            putRithmicBalance(merged, normalized)
+          }
+        }
+      } else if (credentialSets.length > 0 && !apiBaseUrl) {
+        fetchAttempts.push({
+          credentialId: "classic",
+          username: "classic",
+          server_type: "classic",
+          location: "local",
+          success: false,
+          message: "NEXT_PUBLIC_RITHMIC_API_URL is missing",
+          source: "classic",
+        })
+      }
+
+      if (fetchId !== fetchIdRef.current) return
+
+      const hasAnySource =
+        hasClassicCredentials ||
+        protocolHasConnections ||
+        protocolEnabledRef.current
+      setHasCredentials(hasAnySource)
+
+      const balancesToShow = resolveDisplayedRithmicBalances({
+        hasAnySource,
+        anySucceeded,
+        merged,
+        previous: balancesRef.current,
+      })
+      const fetchedAt = anySucceeded ? new Date() : lastFetchedAtRef.current
+      // Protocol errors must not stick as the hook error when the classic path
+      // then succeeded — the accounts UI consumes `error`.
+      const visibleError = anySucceeded ? null : latestError
+      setBalancesByAccountId(balancesToShow)
+      if (anySucceeded) {
+        setLastFetchedAt(fetchedAt)
+      }
+      setError(visibleError)
+      setRateLimited(latestRateLimited)
+      setDebug(
+        buildDebugSnapshot({
+          balancesByAccountId: balancesToShow,
+          isLoading: false,
+          error: visibleError,
+          rateLimited: latestRateLimited,
+          lastFetchedAt: fetchedAt,
+          fetchAttempts,
+          extraLinkedAccountNumbers: protocolLinked,
+          protocolHasConnections,
+          protocolErrors,
+          skippedReason:
+            !hasAnySource
+              ? "No Rithmic Protocol connections or classic credentials"
+              : undefined,
+        })
+      )
     } catch (err) {
       if (abortController.signal.aborted) return
       if (fetchId === fetchIdRef.current) {
         const message =
           err instanceof Error ? err.message : "Failed to fetch balances"
-        const anySucceeded = fetchAttempts.some((attempt) => attempt.success)
-        const balancesToShow = anySucceeded ? merged : balancesRef.current
+        const hasAnySource =
+          hasClassicCredentials ||
+          protocolHasConnections ||
+          protocolEnabledRef.current
+        const balancesToShow = resolveDisplayedRithmicBalances({
+          hasAnySource,
+          anySucceeded,
+          merged,
+          previous: balancesRef.current,
+        })
         const fetchedAt = anySucceeded ? new Date() : lastFetchedAtRef.current
         setBalancesByAccountId(balancesToShow)
         if (anySucceeded) {
@@ -265,6 +432,9 @@ export function useRithmicBalances(): RithmicBalancesState {
             rateLimited: latestRateLimited,
             lastFetchedAt: fetchedAt,
             fetchAttempts,
+            extraLinkedAccountNumbers: protocolLinked,
+            protocolHasConnections,
+            protocolErrors,
             skippedReason: "Unexpected error during fetch",
           })
         )
@@ -279,9 +449,11 @@ export function useRithmicBalances(): RithmicBalancesState {
     }
   }, [])
 
+  // Re-runs when protocolEnabled flips: callers start false while accounts are
+  // still loading, so the Protocol pass has to happen once they are known.
   useEffect(() => {
     void refresh()
-  }, [refresh])
+  }, [refresh, protocolEnabled])
 
   useEffect(() => {
     const handleStorageUpdate = () => {
@@ -302,17 +474,13 @@ export function useRithmicBalances(): RithmicBalancesState {
     rateLimited,
     lastFetchedAt,
     hasCredentials,
+    syncsAllAccounts,
     debug,
     refresh,
   }
 }
 
-export function isRithmicLinkedAccount(
-  accountNumber: string,
-  balancesByAccountId: Record<string, RithmicAccountBalance>
-): boolean {
-  return accountNumber in balancesByAccountId
-}
+export { isRithmicLinkedAccount } from "@/lib/rithmic-api"
 
 export function buildRithmicBalancesDebugReport(
   debug: RithmicBalancesDebugInfo,
@@ -320,13 +488,18 @@ export function buildRithmicBalancesDebugReport(
 ): string {
   try {
     const linkedSet = new Set(debug.linkedAccountNumbers ?? [])
-    const balanceIds = new Set(Object.keys(debug.balancesByAccountId ?? {}))
     const dashboardSet = new Set(dashboardAccountNumbers)
+    const syncsAllAccounts = (debug.credentialSets ?? []).some(
+      (set) => set.allAccounts
+    )
 
     const accountDiagnostics = dashboardAccountNumbers.map((accountNumber) => {
       const inLinked = linkedSet.has(accountNumber)
-      const inBalances = balanceIds.has(accountNumber)
-      const balanceEntry = debug.balancesByAccountId?.[accountNumber]
+      const balanceEntry = findRithmicBalanceForAccount(
+        accountNumber,
+        debug.balancesByAccountId ?? {}
+      )
+      const inBalances = balanceEntry != null
       const primaryBalance = balanceEntry
         ? getPrimaryRithmicBalance(balanceEntry)
         : null
@@ -335,7 +508,7 @@ export function buildRithmicBalancesDebugReport(
         accountNumber,
         inLinkedAccounts: inLinked,
         inFetchedBalances: inBalances,
-        showRithmicBalance: inLinked || inBalances,
+        showRithmicBalance: inLinked || inBalances || syncsAllAccounts,
         primaryBalance,
         rawBalance: balanceEntry ?? null,
       }

@@ -1,15 +1,39 @@
 "use client";
 
 import { ReactNode } from "react";
+import nextDynamic from "next/dynamic";
 import { BarChart3, Calendar, Database, Brain } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
-import { ImportFeature } from "./import-feature";
 import { useI18n } from "@/locales/landing-client";
-import TradingChatAssistant from "./chat-feature";
-import { CalendarFeaturePreview } from "./calendar-preview";
 import { cn } from "@/lib/utils";
-import { PerformanceVisualizationChart } from "./performance-visualization-chart";
+
+// The four card previews are interactive mock-ups with no copy of their own.
+// Loading them client-side keeps the card titles and descriptions in the
+// server-rendered HTML, where crawlers and agents can read them.
+const previewFallback = () => (
+  <div className="h-full w-full" aria-hidden />
+);
+
+const ImportFeature = nextDynamic(
+  () => import("./import-feature").then((m) => m.ImportFeature),
+  { ssr: false, loading: previewFallback },
+);
+const TradingChatAssistant = nextDynamic(() => import("./chat-feature"), {
+  ssr: false,
+  loading: previewFallback,
+});
+const CalendarFeaturePreview = nextDynamic(
+  () => import("./calendar-preview").then((m) => m.CalendarFeaturePreview),
+  { ssr: false, loading: previewFallback },
+);
+const PerformanceVisualizationChart = nextDynamic(
+  () =>
+    import("./performance-visualization-chart").then(
+      (m) => m.PerformanceVisualizationChart,
+    ),
+  { ssr: false, loading: previewFallback },
+);
 
 type FeatureCard = {
   id: string;

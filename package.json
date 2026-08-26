@@ -12,6 +12,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "screenshot:dashboard": "node scripts/screenshot-dashboard.js",
     "capture:changelog-media": "node scripts/capture-changelog-media.mjs",

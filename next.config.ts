@@ -3,6 +3,7 @@ import createMDX from '@next/mdx';
 import os from 'os';
 import { SUPPORT_SEARCH_TRACE_INCLUDES } from './lib/ai/search-codebase';
 import { AGENT_SKILLS_TRACE_INCLUDES } from './lib/agent-skills/load-skill';
+import { LOCALES } from './lib/locales';
 
 const detectedBuildWorkers =
   typeof os.availableParallelism === 'function'
@@ -58,6 +59,34 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async headers() {
+    // The homepage answers with HTML or with text/markdown depending on Accept.
+    // `Vary` has to say so or a CDN can hand a cached HTML response to an agent
+    // that asked for markdown, and vice versa. It is set here rather than in
+    // the proxy because Next.js replaces the `Vary` it sets on App Router pages
+    // with its own RSC value; headers from the config are appended afterwards.
+    return [
+      {
+        source: "/",
+        headers: [{ key: "Vary", value: "Accept" }],
+      },
+      {
+        source: `/:locale(${LOCALES.join("|")})`,
+        headers: [{ key: "Vary", value: "Accept" }],
+      },
+    ];
+  },
+  // Locale-scoped so i18n middleware still owns unprefixed /trading-journal.
+  // Do not 308 the hub itself to /en.
+  async redirects() {
+    return [
+      {
+        source: '/:locale(en|fr)/trading-journal',
+        destination: '/:locale/trading-journal/futures',
+        permanent: true,
+      },
+    ];
+  },
   pageExtensions: ['mdx', 'ts', 'tsx'],
   // `read-excel-file/node` pulls in `unzipper`, whose optional S3 support
   // requires '@aws-sdk/client-s3' at runtime; keep it external so Turbopack
@@ -70,6 +99,11 @@ const nextConfig: NextConfig = {
   experimental: {
     cpus: buildWorkers,
     mdxRs: true,
+    // Unmatched URLs must answer with a real 404 status. The app's root layout
+    // sits under the dynamic `[locale]` segment, so there is no single layout a
+    // route-level not-found could compose from; `app/global-not-found.tsx` is
+    // resolved by the router instead, before any shell is flushed.
+    globalNotFound: true,
     // Quiet Route Handler prerender bail-outs that are caught by try/catch.
     hideLogsAfterAbort: true,
     // Validate Instant Navigations only on routes that export `instant`.
