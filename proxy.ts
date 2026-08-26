@@ -90,6 +90,13 @@ function isPublicRoute(pathname: string) {
     return true
   }
 
+  if (
+    normalizedPathname === "/trading-journal" ||
+    normalizedPathname.startsWith("/trading-journal/")
+  ) {
+    return true
+  }
+
   return false
 }
 
