@@ -504,6 +504,10 @@ export function FilterCommandMenu({
                 if (isSearching) return
                 setOpenSection((current) => (current === key ? null : key))
               }}
+              onHoverOpen={() => {
+                if (isSearching) return
+                setOpenSection(key)
+              }}
             >
               <CommandGroup>{content}</CommandGroup>
             </FilterFoldSection>

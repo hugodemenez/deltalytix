@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { useEffect, useRef, type ReactNode } from "react"
 import { Command, CommandList } from "@/components/ui/command"
 import {
   Popover,
@@ -8,6 +8,8 @@ import {
   PopoverContent,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+
+const HOVER_OPEN_DELAY_MS = 80
 
 function isPortaledOverlayTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) return false
@@ -23,22 +25,48 @@ export function FilterFoldSection({
   label,
   expanded,
   onToggle,
+  onHoverOpen,
   children,
   placement = "inline",
 }: {
   label: string
   expanded: boolean
   onToggle: () => void
+  onHoverOpen?: () => void
   children: ReactNode
   placement?: "inline" | "submenu"
 }) {
+  const hoverOpenTimeoutRef = useRef<number | null>(null)
+
+  const clearHoverOpen = () => {
+    if (hoverOpenTimeoutRef.current !== null) {
+      window.clearTimeout(hoverOpenTimeoutRef.current)
+      hoverOpenTimeoutRef.current = null
+    }
+  }
+
+  const scheduleHoverOpen = () => {
+    if (placement !== "submenu" || !onHoverOpen || expanded) return
+    clearHoverOpen()
+    hoverOpenTimeoutRef.current = window.setTimeout(() => {
+      hoverOpenTimeoutRef.current = null
+      onHoverOpen()
+    }, HOVER_OPEN_DELAY_MS)
+  }
+
+  useEffect(() => () => clearHoverOpen(), [])
+
   const trigger = (
     <button
       type="button"
       className={cn(
-        "flex w-full items-center justify-between rounded-[4px] px-2 py-1.5 text-sm text-[#171717] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-foreground"
+        "flex w-full items-center justify-between rounded-[4px] px-2 py-1.5 text-sm text-[#171717] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-foreground",
+        "hover:bg-accent",
+        expanded && "bg-accent"
       )}
       onClick={onToggle}
+      onPointerEnter={scheduleHoverOpen}
+      onPointerLeave={clearHoverOpen}
       aria-expanded={expanded}
       aria-haspopup={placement === "submenu" ? "dialog" : undefined}
     >
