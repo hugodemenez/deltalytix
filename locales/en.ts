@@ -2916,6 +2916,16 @@ export default {
   "import.type.atas.description": "ATAS Excel file",
   "import.type.atas.details":
     'Import trades from ATAS Excel files. Make sure your file has a "Journal" sheet with the required columns.',
+  "import.type.deepcharts.name": "DeepCharts",
+  "import.type.deepcharts.description": "DeepCharts Trade List CSV",
+  "import.type.deepcharts.details":
+    "Export closed trades from DeepCharts Strategy Report → Trade List as a semicolon-delimited CSV.",
+  "import.deepcharts.error.title": "Unable to read this DeepCharts export",
+  "import.deepcharts.error.invalidFile":
+    "Upload a DeepCharts Trade List CSV with Symbol, Quantity, Entry DT, Entry Price, Exit DT, and Exit Price columns.",
+  "import.deepcharts.noTrades": "No completed DeepCharts trades found",
+  "import.deepcharts.noTradesDescription":
+    "Make sure the file contains closed trades and uses a semicolon delimiter.",
   "import.type.ftmo.name": "FTMO",
   "import.type.ftmo.description": "FTMO journal CSV",
   "import.type.ftmo.details":
