@@ -32,6 +32,8 @@ export function FilterFoldSection({
   expanded,
   onToggle,
   onHoverOpen,
+  onClear,
+  activeCount = 0,
   children,
   placement = "inline",
 }: {
@@ -39,6 +41,8 @@ export function FilterFoldSection({
   expanded: boolean
   onToggle: () => void
   onHoverOpen?: () => void
+  onClear?: () => void
+  activeCount?: number
   children: ReactNode
   placement?: "inline" | "submenu"
 }) {
@@ -69,24 +73,50 @@ export function FilterFoldSection({
   }, [expanded])
 
   const trigger = (
-    <button
-      type="button"
+    <div
       className={cn(
-        "flex w-full items-center justify-between rounded-[4px] px-2 py-1.5 text-sm text-[#171717] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-foreground",
+        "flex w-full items-center rounded-[4px]",
         "hover:bg-accent",
         expanded && "bg-accent"
       )}
-      onClick={onToggle}
-      onPointerEnter={scheduleHoverOpen}
-      onPointerLeave={clearHoverOpen}
-      aria-expanded={expanded}
-      aria-haspopup={placement === "submenu" ? "dialog" : undefined}
     >
-      <span>{label}</span>
-      <span aria-hidden className="text-[#A3A3A3]">
+      <button
+        type="button"
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-sm text-[#171717] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-foreground"
+        )}
+        onClick={onToggle}
+        onPointerEnter={scheduleHoverOpen}
+        onPointerLeave={clearHoverOpen}
+        aria-expanded={expanded}
+        aria-haspopup={placement === "submenu" ? "dialog" : undefined}
+      >
+        <span className="truncate">{label}</span>
+        {activeCount > 0 ? (
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#171717] px-1.5 text-[10px] font-semibold tabular-nums text-white dark:bg-foreground dark:text-background">
+            {activeCount}
+          </span>
+        ) : null}
+      </button>
+      {activeCount > 0 && onClear ? (
+        <button
+          type="button"
+          className="shrink-0 rounded-[4px] px-1.5 py-1 text-xs text-[#737373] hover:bg-white hover:text-[#171717] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-muted-foreground dark:hover:bg-background dark:hover:text-foreground"
+          aria-label={t("filters.commandMenu.clearSection", { section: label })}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation()
+            event.preventDefault()
+            onClear()
+          }}
+        >
+          {t("common.clear")}
+        </button>
+      ) : null}
+      <span aria-hidden className="pr-2 text-[#A3A3A3]">
         ›
       </span>
-    </button>
+    </div>
   )
 
   if (placement === "submenu") {

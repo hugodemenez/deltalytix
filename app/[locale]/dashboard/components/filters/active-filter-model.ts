@@ -38,6 +38,37 @@ export function hasActiveFilters(state: ActiveFilterState): boolean {
   return countActiveFilters(state) > 0
 }
 
+export type FilterSectionKey =
+  | "dateRange"
+  | "tags"
+  | "instruments"
+  | "accounts"
+  | "pnl"
+
+export function countSectionFilters(
+  section: FilterSectionKey,
+  state: ActiveFilterState
+): number {
+  switch (section) {
+    case "dateRange":
+      return (
+        (state.dateRange?.from ? 1 : 0) +
+        (state.weekdayFilter?.days?.length ? 1 : 0)
+      )
+    case "tags":
+      return state.tagFilter?.tags?.length ?? 0
+    case "instruments":
+      return state.instruments?.length ?? 0
+    case "accounts":
+      return state.accountNumbers?.length ?? 0
+    case "pnl":
+      return state.pnlRange?.min !== undefined ||
+        state.pnlRange?.max !== undefined
+        ? 1
+        : 0
+  }
+}
+
 function sameRange(
   range: DateRangeLike | undefined,
   from: Date,

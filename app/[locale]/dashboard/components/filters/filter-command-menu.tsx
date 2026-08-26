@@ -25,8 +25,11 @@ import { PnlSection } from "./filter-command-menu-pnl-section"
 import { InstrumentSection } from "./filter-command-menu-instrument-section"
 import { TagSection } from "./filter-command-menu-tag-section"
 import { FilterFoldSection } from "./filter-fold-section"
-import { ActiveFilterTags } from "./active-filter-tags"
-import { countActiveFilters } from "./active-filter-model"
+import {
+  countActiveFilters,
+  countSectionFilters,
+  type FilterSectionKey,
+} from "./active-filter-model"
 import { useUserStore } from "@/store/user-store"
 import { useParams } from "next/navigation"
 import { toast } from "sonner"
@@ -41,13 +44,6 @@ function isPortaledOverlayTarget(target: EventTarget | null) {
       target.closest("[data-sonner-toast]")
   )
 }
-
-type FilterSectionKey =
-  | "dateRange"
-  | "tags"
-  | "instruments"
-  | "accounts"
-  | "pnl"
 
 interface FilterCommandMenuProps {
   className?: string
@@ -67,6 +63,10 @@ export function FilterCommandMenu({
     isMobile,
     setDateRange,
     setWeekdayFilter,
+    setAccountNumbers,
+    setInstruments,
+    setPnlRange,
+    setTagFilter,
     dateRange,
     pnlRange,
     weekdayFilter,
@@ -76,14 +76,35 @@ export function FilterCommandMenu({
   } = useData()
   const params = useParams()
   const locale = params.locale as string
-  const activeFilterCount = countActiveFilters({
+  const filterState = {
     dateRange,
     pnlRange,
     weekdayFilter,
     accountNumbers,
     instruments,
     tagFilter,
-  })
+  }
+  const activeFilterCount = countActiveFilters(filterState)
+
+  const clearSection = (section: FilterSectionKey) => {
+    switch (section) {
+      case "dateRange":
+        setDateRange(undefined)
+        setWeekdayFilter({ days: [] })
+        return
+      case "tags":
+        setTagFilter({ tags: [] })
+        return
+      case "instruments":
+        setInstruments([])
+        return
+      case "accounts":
+        setAccountNumbers([])
+        return
+      case "pnl":
+        setPnlRange({ min: undefined, max: undefined })
+    }
+  }
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [openSection, setOpenSection] = useState<FilterSectionKey | null>(null)
@@ -479,12 +500,6 @@ export function FilterCommandMenu({
           )}
         </div>
       )}
-      <ActiveFilterTags
-        showAccountNumbers
-        inline
-        showClearAll
-        className="shrink-0 border-b border-[#E5E5E5] bg-white px-3 py-2 dark:border-border dark:bg-background"
-      />
       <CommandList className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {isSearching || isParsingDate ? (
           <CommandEmpty>
@@ -499,6 +514,7 @@ export function FilterCommandMenu({
               key={key}
               label={label}
               expanded={expanded}
+              activeCount={countSectionFilters(key, filterState)}
               placement={useDesktopDropdown && !isSearching ? "submenu" : "inline"}
               onToggle={() => {
                 if (isSearching) return
@@ -508,6 +524,7 @@ export function FilterCommandMenu({
                 if (isSearching) return
                 setOpenSection(key)
               }}
+              onClear={() => clearSection(key)}
             >
               <CommandGroup className="min-h-0 overflow-visible">{content}</CommandGroup>
             </FilterFoldSection>

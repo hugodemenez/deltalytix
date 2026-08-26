@@ -718,6 +718,7 @@ export default {
       placeholder: "Search filters...",
       searchPlaceholder: "Search filters...",
       searchPlaceholderMobile: "Filters",
+      clearSection: "Clear {section}",
       sections: {
         accounts: "Accounts",
         date: "Date",

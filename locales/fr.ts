@@ -761,6 +761,7 @@ export default {
       placeholder: "Rechercher des filtres...",
       searchPlaceholder: "Rechercher des filtres...",
       searchPlaceholderMobile: "Filtres",
+      clearSection: "Effacer {section}",
       sections: {
         accounts: "Comptes",
         date: "Date",
