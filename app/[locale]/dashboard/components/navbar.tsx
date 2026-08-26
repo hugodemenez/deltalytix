@@ -16,12 +16,9 @@ import UserMenu from './user-menu'
 import ReferralButton from './referral-button'
 import { DashboardViewTabs } from './dashboard-view-tabs'
 import { FilterCommandMenu } from './filters/filter-command-menu'
-import { ActiveFilterTags } from './filters/active-filter-tags'
 import { ShareButton } from './share-button'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useMediaQuery } from '@/hooks/use-media-query'
-import { useData } from '@/context/data-provider'
-import { hasActiveFilters } from './filters/active-filter-model'
 import { useUserStore } from '@/store/user-store'
 
 function subpageTitle(
@@ -50,25 +47,6 @@ export default function Navbar() {
   const subpage = resolveDashboardSubpage(pathname)
   const showHomeChrome = isDashboardHomePath(pathname)
   const dashboardLayout = useUserStore((state) => state.dashboardLayout)
-  const {
-    dateRange,
-    pnlRange,
-    weekdayFilter,
-    accountNumbers,
-    instruments,
-    tagFilter,
-  } = useData()
-  const showMobileFilterRow =
-    isMobile &&
-    showHomeChrome &&
-    hasActiveFilters({
-      dateRange,
-      pnlRange,
-      weekdayFilter,
-      accountNumbers,
-      instruments,
-      tagFilter,
-    })
 
   useKeyboardShortcuts()
 
@@ -91,7 +69,7 @@ export default function Navbar() {
     const observer = new ResizeObserver(applyHeight)
     observer.observe(nav)
     return () => observer.disconnect()
-  }, [subpage, showMobileFilterRow])
+  }, [subpage])
 
   return (
     <nav
@@ -140,13 +118,6 @@ export default function Navbar() {
           </div>
         ) : null}
       </div>
-      {showMobileFilterRow ? (
-        <ActiveFilterTags
-          showAccountNumbers
-          inline
-          className="border-0 bg-white px-3 pb-2 dark:bg-background"
-        />
-      ) : null}
       {subpage ? (
         <DashboardSubpageHeader
           title={subpageTitle(subpage, t)}
