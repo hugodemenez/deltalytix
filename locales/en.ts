@@ -1801,6 +1801,7 @@ export default {
     balances: {
       refresh: "Refresh balances",
       refreshTitle: "Refresh Rithmic account balances",
+      fetchError: "Unable to refresh balances. Try again.",
       debug: {
         button: "Debug",
         title: "Rithmic balance debug",

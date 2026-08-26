@@ -153,6 +153,10 @@ export interface Account extends Omit<PrismaAccount, "payouts" | "group"> {
   aboveBuffer?: number;
   // Filtered trades used for metrics/charts (not to be sent to server actions)
   trades?: PrismaTrade[];
+  connection?: {
+    id: string;
+    service: string | null;
+  } | null;
 
   // Computed metrics
   metrics?: {
@@ -197,6 +201,14 @@ export interface Account extends Omit<PrismaAccount, "payouts" | "group"> {
       propfirmSharingPercentage?: number | null;
     };
   }>;
+}
+
+function preserveAccountConnection(
+  next: Account,
+  previous?: Account | null
+): Account {
+  if (next.connection || !previous?.connection) return next
+  return { ...next, connection: previous.connection }
 }
 
 // Combined Context Type
@@ -1052,7 +1064,10 @@ export const DataProvider: React.FC<{
             ],
             trades
           );
-          const accountWithMetrics = accountsWithMetrics[0];
+          const accountWithMetrics = preserveAccountConnection(
+            accountsWithMetrics[0],
+            currentAccount
+          );
 
           setAccounts([...accounts, accountWithMetrics]);
 
@@ -1091,7 +1106,10 @@ export const DataProvider: React.FC<{
           ],
           trades
         );
-        const accountWithMetrics = accountsWithMetrics[0];
+        const accountWithMetrics = preserveAccountConnection(
+          accountsWithMetrics[0],
+          currentAccount
+        );
 
         // Check if groupId changed
         const oldGroupId = currentAccount.groupId;

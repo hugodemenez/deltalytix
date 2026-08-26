@@ -13,9 +13,15 @@ import { upsertAccountsForNumbers } from '@/server/connections'
 import { getTickDetails } from '@/server/tick-details'
 import {
   connectAndListAccounts,
+  fetchAccountBalances,
   fetchAvailableSystems,
   fetchFillsForAccounts,
 } from '@/lib/rithmic-protocol/client'
+import type { RithmicProtocolAccountBalance } from '@/lib/rithmic-protocol/types'
+import {
+  invalidateThrottledFetch,
+  withThrottledFetch,
+} from '@/lib/rithmic-protocol/fetch-throttle'
 import { buildTradesFromRithmicFills } from '@/lib/rithmic-protocol/fills-to-trades'
 import {
   gatewayUri as gatewayUriFor,
@@ -290,7 +296,35 @@ async function persistRithmicProtocolCredentials(
   })
 
   await invalidateConnectionsPageCache(userId)
+  // Credentials or account lists just changed — the throttled balances must not
+  // keep serving the pre-change snapshot for the rest of its TTL.
+  invalidateThrottledFetch(userId)
   return connection
+}
+
+/**
+ * Cache listed trading-account IDs on an existing Connection without treating
+ * the write as a sync. Balance reads must not bump `lastSyncedAt` or invalidate
+ * the connections page — that would report the connection as just-synced in
+ * the Connections UI. Updates by `connection.id` so a username/externalId
+ * mismatch cannot create a second row.
+ */
+async function persistListedProtocolAccountIds(
+  userId: string,
+  connectionId: string,
+  tokenJson: string,
+) {
+  const encryptedToken = encryptConnectionToken(tokenJson)
+  await prisma.connection.updateMany({
+    where: {
+      id: connectionId,
+      userId,
+      service: SERVICE,
+    },
+    data: {
+      token: encryptedToken,
+    },
+  })
 }
 
 export async function storeRithmicProtocolToken(
@@ -345,6 +379,11 @@ export async function removeRithmicProtocolToken(accountId: string) {
     },
   })
 
+  await invalidateConnectionsPageCache(userId)
+  // Drop cached Solde values so the next accounts-widget fetch cannot keep
+  // serving balances for the connection that was just removed.
+  invalidateThrottledFetch(userId)
+
   return { success: true as const }
 }
 
@@ -364,6 +403,220 @@ export async function getRithmicProtocolSynchronizations() {
   } catch (error) {
     logger.error('getRithmicProtocolSynchronizations failed', error)
     return { error: 'LOAD_SYNCHRONIZATIONS_FAILED' as const }
+  }
+}
+
+export type RithmicProtocolBalancesResult =
+  | {
+      success: true
+      hasConnections: boolean
+      balances: RithmicProtocolAccountBalance[]
+      linkedAccountNumbers: string[]
+      errors: string[]
+      /** ISO timestamp of the gateway session these balances came from. */
+      fetchedAt?: string
+      /** True when served from the throttle cache instead of a new session. */
+      fromCache?: boolean
+    }
+  | {
+      success: false
+      error: string
+      hasConnections?: boolean
+      balances?: RithmicProtocolAccountBalance[]
+      linkedAccountNumbers?: string[]
+    }
+
+/** Automatic fetches (accounts widget mount) reuse a value younger than this. */
+const BALANCES_CACHE_TTL_MS = 60_000
+/** Floor between gateway sessions, including user-initiated refreshes. */
+const BALANCES_MIN_REFRESH_MS = 15_000
+/** Wall-clock budget across every connection, so N connections stay bounded. */
+const BALANCES_TOTAL_BUDGET_MS = 45_000
+/** Below this, a connection has no useful time left to log in and snapshot. */
+const BALANCES_MIN_CONNECTION_BUDGET_MS = 5_000
+
+async function fetchRithmicProtocolBalances(
+  userId: string,
+): Promise<RithmicProtocolBalancesResult> {
+  try {
+    const connections = await prisma.connection.findMany({
+      where: { userId, service: SERVICE },
+      select: {
+        id: true,
+        externalId: true,
+        token: true,
+        accounts: { select: { number: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    })
+
+    if (connections.length === 0) {
+      return {
+        success: true,
+        hasConnections: false,
+        balances: [],
+        linkedAccountNumbers: [],
+        errors: [],
+      }
+    }
+
+    const balancesByAccountId = new Map<string, RithmicProtocolAccountBalance>()
+    const linkedAccountNumbers = new Set<string>()
+    const errors: string[] = []
+    const deadline = Date.now() + BALANCES_TOTAL_BUDGET_MS
+
+    for (const connection of connections) {
+      const remainingMs = deadline - Date.now()
+      if (remainingMs < BALANCES_MIN_CONNECTION_BUDGET_MS) {
+        errors.push(`${connection.externalId}: skipped (balance budget spent)`)
+        continue
+      }
+
+      if (!connection.token) {
+        errors.push(`${connection.externalId}: missing credentials`)
+        continue
+      }
+
+      let tokenJson: string | null
+      try {
+        tokenJson = decryptConnectionToken(connection.token)
+      } catch (error) {
+        errors.push(
+          `${connection.externalId}: decrypt failed (${
+            error instanceof Error ? error.message : String(error)
+          })`,
+        )
+        continue
+      }
+
+      if (!tokenJson) {
+        errors.push(`${connection.externalId}: empty credentials`)
+        continue
+      }
+
+      const credentials = parseStoredCredentials(tokenJson)
+      if (!credentials) {
+        errors.push(`${connection.externalId}: invalid stored credentials`)
+        continue
+      }
+
+      let accountIds =
+        credentials.accountIds && credentials.accountIds.length > 0
+          ? [...credentials.accountIds]
+          : connection.accounts.map((account) => account.number).filter(Boolean)
+
+      try {
+        if (accountIds.length === 0) {
+          const listed = await connectAndListAccounts({
+            gatewayUri: credentials.gatewayUri,
+            systemName: credentials.systemName,
+            username: credentials.username,
+            password: credentials.password,
+          })
+          accountIds = listed.accounts.map((account) => account.accountId)
+          credentials.accountIds = accountIds
+          credentials.fcmId = listed.fcmId ?? credentials.fcmId
+          credentials.ibId = listed.ibId ?? credentials.ibId
+          await persistListedProtocolAccountIds(
+            userId,
+            connection.id,
+            JSON.stringify(credentials),
+          )
+        }
+
+        for (const accountId of accountIds) {
+          linkedAccountNumbers.add(accountId)
+        }
+
+        if (accountIds.length === 0) {
+          errors.push(`${connection.externalId}: no trading accounts`)
+          continue
+        }
+
+        const { balances } = await fetchAccountBalances({
+          gatewayUri: credentials.gatewayUri,
+          systemName: credentials.systemName,
+          username: credentials.username,
+          password: credentials.password,
+          fcmId: credentials.fcmId,
+          ibId: credentials.ibId,
+          accountIds,
+          deadlineMs: Math.max(0, deadline - Date.now()),
+        })
+
+        for (const balance of balances) {
+          balancesByAccountId.set(balance.account_id, balance)
+          linkedAccountNumbers.add(balance.account_id)
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        logger.error(
+          `getRithmicProtocolBalancesAction failed for ${connection.externalId}`,
+          error,
+        )
+        errors.push(`${connection.externalId}: ${message}`)
+      }
+    }
+
+    return {
+      success: true,
+      hasConnections: true,
+      balances: [...balancesByAccountId.values()],
+      linkedAccountNumbers: [...linkedAccountNumbers],
+      errors,
+    }
+  } catch (error) {
+    logger.error('getRithmicProtocolBalancesAction failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'BALANCES_FETCH_FAILED',
+    }
+  }
+}
+
+/**
+ * Live Solde Rithmic via Protocol PnL plant, using stored connection credentials.
+ *
+ * Every real fetch opens a WebSocket and performs a PNL_PLANT login, so results
+ * are throttled per user: the accounts widget can mount as often as it likes,
+ * and `force` (the refresh button) still cannot reopen the socket faster than
+ * BALANCES_MIN_REFRESH_MS.
+ */
+export async function getRithmicProtocolBalancesAction(
+  options: { force?: boolean } = {},
+): Promise<RithmicProtocolBalancesResult> {
+  try {
+    const userId = await getUserId()
+    if (!userId) {
+      return { success: false, error: 'USER_NOT_AUTHENTICATED' }
+    }
+
+    const { value, fromCache, fetchedAt } = await withThrottledFetch({
+      key: userId,
+      force: options.force === true,
+      ttlMs: BALANCES_CACHE_TTL_MS,
+      minRefreshMs: BALANCES_MIN_REFRESH_MS,
+      // Hard failures (auth, unexpected throw) stay uncached so the next mount
+      // can retry. A success carrying per-connection `errors` is still cached:
+      // the TTL bounds the staleness, and retrying a down gateway on every
+      // mount is the storm this throttle exists to prevent.
+      shouldCache: (result) => result.success,
+      fetch: () => fetchRithmicProtocolBalances(userId),
+    })
+
+    if (!value.success) return value
+
+    return {
+      ...value,
+      fromCache,
+      fetchedAt: new Date(fetchedAt).toISOString(),
+    }
+  } catch (error) {
+    logger.error('getRithmicProtocolBalancesAction failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'BALANCES_FETCH_FAILED',
+    }
   }
 }
 

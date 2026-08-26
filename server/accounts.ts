@@ -216,7 +216,7 @@ export async function setupAccountAction(account: Account): Promise<Account> {
     connectionId,
     connection,
     ...baseAccountData
-  } = account as Account & { connection?: unknown }
+  } = account
 
   // Only include considerBuffer when explicitly provided to avoid overriding unintentionally
   const considerBufferUpdate = considerBuffer === undefined ? {} : { considerBuffer }
@@ -288,6 +288,12 @@ export async function setupAccountAction(account: Account): Promise<Account> {
           }
         },
         group: true,
+        connection: {
+          select: {
+            id: true,
+            service: true,
+          },
+        },
       }
     })
   } else {
@@ -310,6 +316,12 @@ export async function setupAccountAction(account: Account): Promise<Account> {
           }
         },
         group: true,
+        connection: {
+          select: {
+            id: true,
+            service: true,
+          },
+        },
       }
     })
   }
@@ -353,7 +365,13 @@ export async function getAccountsAction() {
             date: true,
             status: true,
           }
-        }
+        },
+        connection: {
+          select: {
+            id: true,
+            service: true,
+          },
+        },
       }
     })
 
