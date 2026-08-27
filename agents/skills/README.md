@@ -44,3 +44,20 @@ Windows contributors need `git config core.symlinks true` (and Developer Mode) f
 - [`better-writing`](./better-writing/SKILL.md): review interface copy, terminology, labels, errors, and empty states.
 
 The `better-*` collection is vendored without content changes from [`jakubkrehel/skills`](https://github.com/jakubkrehel/skills) at commit [`79a09456be60419e652e63fc9e057b5587d051ea`](https://github.com/jakubkrehel/skills/commit/79a09456be60419e652e63fc9e057b5587d051ea). Its MIT license is preserved in [`LICENSE.jakubkrehel-skills`](./LICENSE.jakubkrehel-skills).
+
+## Remotion
+
+- [`remotion-best-practices`](./remotion-best-practices/SKILL.md): router for all Remotion skills.
+- [`remotion-create`](./remotion-create/SKILL.md): scaffold a Remotion project or composition.
+- [`remotion-markup`](./remotion-markup/SKILL.md): React markup, animation, layout, timing, media, and effects.
+- [`remotion-studio`](./remotion-studio/SKILL.md): preview a composition in Remotion Studio.
+- [`remotion-render`](./remotion-render/SKILL.md): export a video or still.
+- [`remotion-captions`](./remotion-captions/SKILL.md): captions and subtitles.
+- [`remotion-interactivity`](./remotion-interactivity/SKILL.md): Studio-editable markup.
+- [`remotion-maps`](./remotion-maps/SKILL.md): map animations.
+- [`remotion-multimedia`](./remotion-multimedia/SKILL.md): Mediabunny browser multimedia.
+- [`remotion-saas`](./remotion-saas/SKILL.md): Remotion-powered apps and product integrations.
+- [`remotion-docs`](./remotion-docs/SKILL.md): search Remotion documentation.
+- [`remotion-upgrade`](./remotion-upgrade/SKILL.md): upgrade Remotion packages and skills.
+
+The `remotion-*` collection is vendored without content changes from [`remotion-dev/skills`](https://github.com/remotion-dev/skills) at commit [`7a3d0ca45d2f6a00bf35cb3c525734a36d55a834`](https://github.com/remotion-dev/skills/commit/7a3d0ca45d2f6a00bf35cb3c525734a36d55a834). Remotion is MIT-licensed.
