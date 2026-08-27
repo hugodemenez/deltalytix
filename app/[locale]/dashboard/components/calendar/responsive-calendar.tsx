@@ -23,7 +23,7 @@ import { translateWeekday, translateWeekdayShort } from "@/lib/translation-utils
 import { WeeklyModal } from "./weekly-modal"
 import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
 import { CalendarResponsiveOverlay } from "./calendar-responsive-overlay"
-import { ImportanceFilter } from "@/app/[locale]/dashboard/components/importance-filter"
+import { CalendarNewsFilter } from "./calendar-news-filter"
 import { CountryFilter } from "@/components/country-filter"
 import { useNewsFilterStore } from "@/store/filters/news-filter-store"
 import { useCalendarViewStore } from "@/store/widgets/calendar-view"
@@ -142,7 +142,6 @@ const truncateAccountNumber = (accountNumber: string, maxLength: number = 15): s
 interface CalendarPnlProps {
   calendarData: CalendarData;
   financialEvents?: FinancialEvent[];
-  hideFiltersOnMobile?: boolean;
 }
 
 
@@ -343,7 +342,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
   )
 }
 
-export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobile = false }: CalendarPnlProps) {
+export default function ResponsiveCalendarPnl({ calendarData }: CalendarPnlProps) {
   const accounts = useUserStore(state => state.accounts)
   const groups = useUserStore(state => state.groups)
   const t = useI18n()
@@ -554,9 +553,9 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
   return (
     <Card className="h-full flex flex-col">
       <CardHeader
-        className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between space-y-0 border-b shrink-0 p-2 sm:p-4 min-h-[56px]"
+        className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 border-b shrink-0 p-2 sm:p-4 min-h-[56px]"
       >
-        <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <CardTitle className="sr-only">
             {viewMode === 'daily'
               ? format(currentDate, 'MMMM yyyy', { locale: dateLocale })
@@ -601,26 +600,16 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
             <ResponsiveCurrency value={viewMode === 'daily' ? monthlyTotal : yearTotal} />
           </div>
         </div>
-        <div className={cn(
-          "flex items-center justify-between sm:justify-end gap-2 sm:gap-4",
-          hideFiltersOnMobile && "max-sm:hidden"
-        )}>
-          {/* Impact Level Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-              {t('calendar.importanceFilter.title')}
-            </span>
-            <ImportanceFilter
-              value={impactLevels}
-              onValueChange={setImpactLevels}
-              className="h-8"
-            />
-          </div>
+        <div className="flex items-center justify-end gap-1.5">
+          <CalendarNewsFilter
+            value={impactLevels}
+            onValueChange={setImpactLevels}
+          />
           <CountryFilter
+            appearance="navbar"
             countries={countries}
             value={selectedCountries}
             onValueChange={setSelectedCountries}
-            className="h-8"
           />
         </div>
       </CardHeader>

@@ -3114,6 +3114,7 @@ export default {
     medium: "Moyen",
     high: "Élevé",
     title: "Filtrer les news par importance",
+    label: "News",
   },
   "calendar.viewMode": {
     daily: "Vue Journalière",

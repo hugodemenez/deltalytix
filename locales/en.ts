@@ -2957,6 +2957,7 @@ export default {
     medium: "Medium",
     high: "High",
     title: "Filter news by importance",
+    label: "News",
   },
   "calendar.viewMode": {
     daily: "Daily View",
