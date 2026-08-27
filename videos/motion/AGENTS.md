@@ -6,6 +6,7 @@ Read it before changing timing, widgets, or sound.
 | Doc | Use it for |
 | --- | --- |
 | [composition.md](./composition.md) | Scene graph, frame table, in/out recipes |
+| [intro.md](./intro.md) | Logo/headline motion craft (mesh, stagger, highlight) |
 | [widgets.md](./widgets.md) | Landing mock data, chart axis rules, calendar pin |
 | [sound.md](./sound.md) | SFX libraries, cue map, sync rules |
 | [handoff.md](./handoff.md) | Commands, done vs next, PR notes |

@@ -7,6 +7,9 @@ import {
 } from "remotion";
 import { fontFamily } from "../../fonts";
 import { LogoMark } from "../LogoMark";
+import { FilmGrain } from "../layers/FilmGrain";
+import { PaperMesh } from "../layers/PaperMesh";
+import { tokens } from "../tokens";
 
 export const CallToAction: React.FC = () => {
   const frame = useCurrentFrame();
@@ -15,10 +18,11 @@ export const CallToAction: React.FC = () => {
     <AbsoluteFill
       name="Call to action"
       style={{
-        backgroundColor: "#F7F7F4",
+        backgroundColor: tokens.canvas,
         fontFamily,
       }}
     >
+      <PaperMesh />
       <Interactive.Div
         name="CTA stack"
         style={{
@@ -38,13 +42,23 @@ export const CallToAction: React.FC = () => {
             easing: Easing.bezier(0.16, 1, 0.3, 1),
             output: "perceptual-scale",
           }),
+          opacity: interpolate(frame, [0, 8], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+            easing: Easing.bezier(0.16, 1, 0.3, 1),
+          }),
+          translate: interpolate(frame, [0, 10], ["0px 22px", "0px 0px"], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+            easing: Easing.bezier(0.16, 1, 0.3, 1),
+          }),
         }}
       >
-        <LogoMark size={96} color="#171917" />
+        <LogoMark size={96} color={tokens.ink} />
         <Interactive.Div
           name="CTA title"
           style={{
-            color: "#171917",
+            color: tokens.ink,
             fontSize: 88,
             fontWeight: 300,
             letterSpacing: "-0.06em",
@@ -57,8 +71,8 @@ export const CallToAction: React.FC = () => {
           name="CTA button"
           style={{
             marginTop: 8,
-            backgroundColor: "#181A18",
-            color: "#FFFFFF",
+            backgroundColor: tokens.action,
+            color: tokens.card,
             fontSize: 28,
             fontWeight: 500,
             letterSpacing: "-0.02em",
@@ -75,7 +89,7 @@ export const CallToAction: React.FC = () => {
         <Interactive.Div
           name="CTA footnote"
           style={{
-            color: "#686D67",
+            color: tokens.muted,
             fontSize: 24,
             fontWeight: 400,
             opacity: interpolate(frame, [8, 18], [0, 1], {
@@ -88,6 +102,7 @@ export const CallToAction: React.FC = () => {
           Open source. Hosted or self-hosted.
         </Interactive.Div>
       </Interactive.Div>
+      <FilmGrain />
     </AbsoluteFill>
   );
 };

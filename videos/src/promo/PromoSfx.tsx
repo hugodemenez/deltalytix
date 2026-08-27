@@ -11,6 +11,9 @@ import { CTA_START, HEADLINE_START, PRODUCT_START } from "./timing";
 export const PromoSfx: React.FC = () => {
   return (
     <>
+      <Sequence durationInFrames={30} name="SFX logo">
+        <Audio src={remotionSfx.ding} volume={0.55} />
+      </Sequence>
       <Sequence from={HEADLINE_START} durationInFrames={30} name="SFX headline whoosh">
         <Audio src={remotionSfx.pageTurn} volume={0.9} />
       </Sequence>

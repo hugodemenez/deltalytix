@@ -14,7 +14,7 @@ PRs still target **`beta`**, not `main`.
 - Product scene stats strip (Net P&L, win rate, trades) counting from the same mock data.
 - Static memoized chart axes; series-only animation.
 - Local Remotion Media + Kenney SFX libraries; **playback** uses Remotion WAV whoosh/click only.
-- Motion spec in this directory.
+- Motion spec in this directory, including intro craft in `intro.md`.
 
 ## Commands
 

@@ -62,4 +62,6 @@ The `better-*` collection is vendored without content changes from [`jakubkrehel
 
 The `remotion-*` collection is vendored without content changes from [`remotion-dev/skills`](https://github.com/remotion-dev/skills) at commit [`7a3d0ca45d2f6a00bf35cb3c525734a36d55a834`](https://github.com/remotion-dev/skills/commit/7a3d0ca45d2f6a00bf35cb3c525734a36d55a834). Remotion is MIT-licensed.
 
+Promo intro craft (word stagger, mesh, highlight, grain) is adapted in [`videos/motion/intro.md`](../../videos/motion/intro.md) from those official skills plus [`haidrrrry/claude-remotion-skill`](https://github.com/haidrrrry/claude-remotion-skill). Do not vendor that skill as a default — its spring / dark-grade / grain-over-everything rules fight Paper tokens and chart-axis stability.
+
 Deltalytix promo motion (timing, widgets, SFX, handoff) is **not** a Remotion skill. It lives in [`videos/motion/`](../../videos/motion/AGENTS.md).

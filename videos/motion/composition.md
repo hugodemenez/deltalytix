@@ -25,16 +25,17 @@ Total `PROMO_DURATION_FRAMES` = 312 (10.4s).
 
 ### Logo (short)
 
-- Bezier scale `0.86 → 1` over 12 frames (`output: "perceptual-scale"`).
-- Wordmark opacity 4→12.
-- **No spring.** Springs overshoot and fight the 8-frame cut.
+- Bezier 3-property entrance: opacity 0→8, translate 28px→0 over 12, scale 0.88→1 over 12 (`output: "perceptual-scale"`), then a slow push to 1.05.
+- Wordmark opacity + translate 6→16.
+- Sage `PaperMesh` + light `FilmGrain`. **No spring.**
+- Ding SFX at frame 0.
 
 ### Headline (short)
 
-- Line 1: opacity 0→8, translate 36px→0 over 10 frames, bezier.
-- Line 2: starts at frame 4, same recipe.
-- Subhead: opacity 12→22.
-- Keep Inter 300 / `-0.06em` / Paper canvas `#F7F7F4`.
+- Word-by-word reveal, 4-frame stagger, opacity + translate.
+- Highlight **every** with a Paper-positive block that scales in from the left.
+- Subhead: opacity + translate 28→40.
+- Slow push on the type stack (`transformOrigin: left top`). Mesh + grain continue.
 
 ### Product (long)
 

@@ -17,6 +17,7 @@ One cue per visual cut, local WAV, **near full mix** (0.85–0.95). A 0.15s whoo
 
 | Absolute frame | Constant | File | Volume | Why |
 | ---: | --- | --- | ---: | --- |
+| `0` | ding | `sfx/remotion/ding.wav` | 0.55 | Logo sting |
 | `HEADLINE_START` (22) | page-turn | `sfx/remotion/page-turn.wav` | 0.90 | Slide into headline (~0.4s) |
 | `PRODUCT_START` (68) | whip | `sfx/remotion/whip.wav` | 0.85 | Slide into widgets |
 | `CTA_START` (270) | mouse click | `sfx/remotion/mouse-click.wav` | 0.95 | Button beat |
