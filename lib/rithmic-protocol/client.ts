@@ -17,6 +17,11 @@ import type {
 } from './types'
 import { mapAccountPnLUpdateToBalance } from './balances'
 import {
+  indexProductRmsCommissionRates,
+  mapProductRmsCommissionRow,
+  type ProductRmsCommissionRow,
+} from './commission-rates'
+import {
   getRithmicProtocolAppName,
   getRithmicProtocolAppVersion,
   normalizeGatewayUri,
@@ -46,6 +51,8 @@ const PROTO_FILES = [
   'response_login_info.proto',
   'request_account_list.proto',
   'response_account_list.proto',
+  'request_product_rms_info.proto',
+  'response_product_rms_info.proto',
   'request_pnl_position_snapshot.proto',
   'response_pnl_position_snapshot.proto',
   'account_pnl_position_update.proto',
@@ -412,6 +419,70 @@ export class RithmicProtocolClient {
 
 
     return accounts
+  }
+
+  /**
+   * Product RMS rows (template 306/307), including per-product commission_fill_rate.
+   * Same source as R | API+ ProductRmsListInfo / the Orders CSV Commission Fill Rate.
+   */
+  async getProductRmsInfo(params: {
+    fcmId?: string
+    ibId?: string
+    accountId: string
+  }): Promise<ProductRmsCommissionRow[]> {
+    await this.send('rti.RequestProductRmsInfo', {
+      templateId: RithmicTemplateId.PRODUCT_RMS_INFO_REQUEST,
+      userMsg: [`deltalytix-product-rms-${params.accountId}`],
+      fcmId: params.fcmId,
+      ibId: params.ibId,
+      accountId: params.accountId,
+    })
+
+    const rows: ProductRmsCommissionRow[] = []
+    for (;;) {
+      const msg = await this.nextMessage()
+      if (msg.templateId === RithmicTemplateId.PRODUCT_RMS_INFO_RESPONSE) {
+        const decoded = decodeMessage<{
+          rpCode?: string[]
+          accountId?: string
+          productCode?: string
+          commissionFillRate?: number
+          presenceBits?: number
+        }>(this.root!, 'rti.ResponseProductRmsInfo', msg.raw)
+
+        const mapped = mapProductRmsCommissionRow({
+          accountId: decoded.accountId || params.accountId,
+          productCode: decoded.productCode,
+          commissionFillRate: decoded.commissionFillRate,
+          presenceBits: decoded.presenceBits,
+        })
+        if (mapped) rows.push(mapped)
+
+        if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
+          if (rpIsNoData(decoded.rpCode)) break
+          if (!rpOk(decoded.rpCode)) {
+            throw new Error(
+              `Product RMS info failed: ${rpMessage(decoded.rpCode)}`,
+            )
+          }
+          break
+        }
+        continue
+      }
+
+      if (msg.templateId === RithmicTemplateId.REJECT) {
+        throw new Error('Product RMS info rejected by Rithmic')
+      }
+
+      if (
+        msg.templateId === RithmicTemplateId.HEARTBEAT_RESPONSE ||
+        msg.templateId === RithmicTemplateId.RITHMIC_ORDER_NOTIFICATION
+      ) {
+        continue
+      }
+    }
+
+    return rows
   }
 
   /**
@@ -969,6 +1040,74 @@ export async function connectAndListAccounts(params: {
 }
 
 /**
+ * Product RMS commission_fill_rate per account, without pulling fill history.
+ * Used by Protocol e2e and as the same Order-plant call sync uses.
+ */
+export async function fetchProductCommissionRates(params: {
+  gatewayUri: string
+  systemName: string
+  username: string
+  password: string
+  fcmId?: string
+  ibId?: string
+  accountIds: string[]
+  accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
+}): Promise<{
+  rates: Map<string, number>
+  rows: ProductRmsCommissionRow[]
+  uniqueUserId?: string
+  accounts: RithmicProtocolAccount[]
+}> {
+  const client = new RithmicProtocolClient()
+  try {
+    await client.connect(params.gatewayUri)
+    const login = await client.login({
+      systemName: params.systemName,
+      username: params.username,
+      password: params.password,
+    })
+    const info = await client.loginInfo()
+    const loginFcmId = params.fcmId || info.fcmId || login.fcmId
+    const loginIbId = params.ibId || info.ibId || login.ibId
+    const listed = await client.listAccounts({
+      fcmId: loginFcmId,
+      ibId: loginIbId,
+      userType: info.userType,
+    })
+    const accountMeta = new Map(
+      [...(params.accounts ?? []), ...listed].map((account) => [
+        account.accountId,
+        account,
+      ]),
+    )
+    const accountIds =
+      params.accountIds.length > 0
+        ? params.accountIds
+        : listed.map((account) => account.accountId)
+
+    const rows: ProductRmsCommissionRow[] = []
+    for (const accountId of accountIds) {
+      const meta = accountMeta.get(accountId)
+      const productRms = await client.getProductRmsInfo({
+        fcmId: meta?.fcmId || loginFcmId,
+        ibId: meta?.ibId || loginIbId,
+        accountId,
+      })
+      rows.push(...productRms)
+    }
+
+    return {
+      rates: indexProductRmsCommissionRates(rows),
+      rows,
+      uniqueUserId: login.uniqueUserId,
+      accounts: listed,
+    }
+  } finally {
+    await client.close()
+  }
+}
+
+/**
  * Live account balances via the Protocol PnL plant (AccountPnLPositionUpdate).
  * Uses a dedicated PNL_PLANT login — separate from ORDER_PLANT fill sync.
  */
@@ -1032,11 +1171,16 @@ export async function fetchFillsForAccounts(params: {
   historyStartDate?: string
   /** Fallback when `historyStartDate` is missing (legacy connections). */
   lookbackDays?: number
-}): Promise<{ fills: RithmicProtocolFill[]; uniqueUserId?: string }> {
+}): Promise<{
+  fills: RithmicProtocolFill[]
+  uniqueUserId?: string
+  commissionRates: Map<string, number>
+}> {
   /** Rithmic guidance: ≤30 days of fill history per ShowFillHistory request. */
   const MAX_FILL_WINDOW_DAYS = 30
   const client = new RithmicProtocolClient()
   const fills: RithmicProtocolFill[] = []
+  const rmsRows: ProductRmsCommissionRow[] = []
   try {
     await client.connect(params.gatewayUri)
     const login = await client.login({
@@ -1079,6 +1223,11 @@ export async function fetchFillsForAccounts(params: {
       )
     }
 
+    const accountIds =
+      params.accountIds.length > 0
+        ? params.accountIds
+        : [...accountMeta.keys()]
+
     const end = utcCalendarDay(new Date())
     const start = resolveHistoryStartUtc(params.historyStartDate, params.lookbackDays, end)
     const windows = buildUtcFillHistoryWindowsFromRange(start, end, MAX_FILL_WINDOW_DAYS)
@@ -1093,13 +1242,30 @@ export async function fetchFillsForAccounts(params: {
     )
 
     // Accounts and ≤30-day windows are requested serially (await each response fully).
-    for (const accountId of params.accountIds) {
+    for (const accountId of accountIds) {
       const meta = accountMeta.get(accountId)
       const fcmId = meta?.fcmId || loginFcmId
       const ibId = meta?.ibId || loginIbId
       console.log(
         `[RITHMIC-PROTOCOL] Account ${accountId} using fcm=${fcmId ?? '(none)'} ib=${ibId ?? '(none)'}`,
       )
+
+      try {
+        const productRms = await client.getProductRmsInfo({
+          fcmId,
+          ibId,
+          accountId,
+        })
+        rmsRows.push(...productRms)
+        console.log(
+          `[RITHMIC-PROTOCOL] Product RMS for ${accountId}: ${productRms.length} commission rate(s)`,
+        )
+      } catch (error) {
+        console.warn(
+          `[RITHMIC-PROTOCOL] Product RMS info failed for ${accountId}`,
+          error instanceof Error ? error.message : error,
+        )
+      }
 
       let historyFills = 0
       let usedOrderHistoryFallback = false
@@ -1188,7 +1354,11 @@ export async function fetchFillsForAccounts(params: {
       }
     }
 
-    return { fills: dedupeFills(fills), uniqueUserId }
+    return {
+      fills: dedupeFills(fills),
+      uniqueUserId,
+      commissionRates: indexProductRmsCommissionRates(rmsRows),
+    }
   } finally {
     await client.close()
   }

@@ -754,7 +754,7 @@ export async function getRithmicProtocolTrades(
       `Fetching fills for ${resolvedAccountIds.length} accounts (from ${credentials.historyStartDate ?? `${DEFAULT_LOOKBACK_DAYS}d lookback`}, ≤30d windows)`,
     )
 
-    const { fills, uniqueUserId } = await fetchFillsForAccounts({
+    const { fills, uniqueUserId, commissionRates } = await fetchFillsForAccounts({
       gatewayUri: credentials.gatewayUri,
       systemName: credentials.systemName,
       username: credentials.username,
@@ -785,9 +785,15 @@ export async function getRithmicProtocolTrades(
       fills,
       userId,
       tickBySymbol,
+      commissionRates,
     )
     syncStats.closedTrades = trades.length
     syncStats.openTradesSkipped = openSkipped
+    const commissionZeroCount = trades.filter((trade) => !trade.commission).length
+    logger.info(
+      `Matched ${trades.length} closed trade(s), openSkipped=${openSkipped}, ` +
+        `commissionRates=${commissionRates.size}, commissionZero=${commissionZeroCount}`,
+    )
 
     // Stamped before saving: the fills were fetched, so the connection has synced
     // even when every trade turns out to be a duplicate. Leaving it unstamped made

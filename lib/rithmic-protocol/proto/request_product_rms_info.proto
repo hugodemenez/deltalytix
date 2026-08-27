@@ -1,0 +1,14 @@
+
+package rti;
+
+message RequestProductRmsInfo
+	{
+	// PB_OFFSET = 100000, is the offset added for each MNM field id
+
+	required int32   template_id   = 154467;
+	repeated string  user_msg      = 132760;
+
+	optional string  fcm_id        = 154013;
+	optional string  ib_id         = 154014;
+	optional string  account_id    = 154008;
+	}
