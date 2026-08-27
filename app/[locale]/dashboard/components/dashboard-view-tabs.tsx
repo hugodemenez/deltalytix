@@ -1,8 +1,16 @@
 'use client'
 
 import { useCallback, useRef } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   useDashboardHomeTabsStore,
   type DashboardHomeTab,
@@ -33,6 +41,62 @@ function viewLabel(
 
 function isRtl(element: HTMLElement) {
   return getComputedStyle(element).direction === 'rtl'
+}
+
+export function DashboardViewSelect({ className }: { className?: string }) {
+  const t = useI18n()
+  const activeTab = useDashboardHomeTabsStore((state) => state.activeTab)
+  const setActiveTab = useDashboardHomeTabsStore((state) => state.setActiveTab)
+
+  return (
+    <div className={className}>
+      <div className="sr-only">
+        {VIEWS.map((view) => (
+          <span key={view} id={DASHBOARD_VIEW_TAB_IDS[view]}>
+            {viewLabel(view, t)}
+          </span>
+        ))}
+      </div>
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              'group inline-flex h-7 shrink-0 items-center gap-1 rounded-[4px] border border-[#E5E5E5] bg-white px-2 text-[13px] font-medium text-[#171717] transition-colors hover:bg-[#FAFAFA] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40',
+              'data-[state=open]:bg-[#FAFAFA] dark:data-[state=open]:bg-muted/40'
+            )}
+          >
+            <span className="sr-only">{t('dashboard.tabs.ariaLabel')}: </span>
+            <span>{viewLabel(activeTab, t)}</span>
+            <ChevronDown
+              className="h-3.5 w-3.5 text-[#686D67] transition-transform duration-150 group-data-[state=open]:rotate-180 motion-reduce:transition-none dark:text-muted-foreground"
+              strokeWidth={1.75}
+              aria-hidden
+            />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          className="min-w-[8.5rem] rounded-[4px] border-[#E5E5E5] p-1 dark:border-border"
+        >
+          <DropdownMenuRadioGroup
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as DashboardHomeTab)}
+          >
+            {VIEWS.map((view) => (
+              <DropdownMenuRadioItem
+                key={view}
+                value={view}
+                className="text-[13px] text-[#171717] dark:text-foreground"
+              >
+                {viewLabel(view, t)}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  )
 }
 
 export function DashboardViewTabs({ className }: { className?: string }) {

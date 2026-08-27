@@ -14,7 +14,7 @@ import { useKeyboardShortcuts } from '../../../../hooks/use-keyboard-shortcuts'
 import { DashboardSubpageHeader } from './dashboard-subpage-header'
 import UserMenu from './user-menu'
 import ReferralButton from './referral-button'
-import { DashboardViewTabs } from './dashboard-view-tabs'
+import { DashboardViewSelect, DashboardViewTabs } from './dashboard-view-tabs'
 import { FilterCommandMenu } from './filters/filter-command-menu'
 import { ShareButton } from './share-button'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -76,7 +76,7 @@ export default function Navbar() {
       ref={navRef}
       className="sticky top-0 left-0 right-0 z-40 flex w-full flex-col border-b border-[#E5E5E5] bg-white pt-safe text-primary dark:border-border dark:bg-background"
     >
-      <div className="relative flex flex-col sm:h-14">
+      <div className="relative h-14">
         <div className="flex h-14 items-center justify-between gap-2 px-3 py-2 sm:gap-3 sm:px-6 lg:px-10">
           <div className="z-10 flex min-w-0 items-center gap-2">
             <Link
@@ -92,6 +92,9 @@ export default function Navbar() {
                 variant="navbar"
                 compact={compactHomeFilters}
               />
+            ) : null}
+            {showHomeChrome ? (
+              <DashboardViewSelect className="md:hidden" />
             ) : null}
           </div>
 
@@ -113,8 +116,8 @@ export default function Navbar() {
         </div>
 
         {showHomeChrome ? (
-          <div className="flex justify-center px-3 pb-2 sm:pointer-events-none sm:absolute sm:inset-0 sm:px-0 sm:pb-0 sm:items-center">
-            <DashboardViewTabs className="sm:pointer-events-auto" />
+          <div className="hidden md:pointer-events-none md:absolute md:inset-0 md:flex md:items-center md:justify-center">
+            <DashboardViewTabs className="md:pointer-events-auto" />
           </div>
         ) : null}
       </div>
