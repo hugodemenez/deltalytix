@@ -540,11 +540,31 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
               ? format(currentDate, 'MMMM yyyy', { locale: dateLocale })
               : format(currentDate, 'yyyy', { locale: dateLocale })}
           </CardTitle>
-          <CalendarMonthYearPicker
-            date={currentDate}
-            viewMode={viewMode}
-            onDateChange={setCurrentDate}
-          />
+          <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => viewMode === 'daily' ? handlePrevMonth() : setCurrentDate(new Date(getYear(currentDate) - 1, 0, 1))}
+              className="h-7 w-7 sm:h-8 sm:w-8 shrink-0"
+              aria-label={viewMode === 'daily' ? "Previous month" : "Previous year"}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <CalendarMonthYearPicker
+              date={currentDate}
+              viewMode={viewMode}
+              onDateChange={setCurrentDate}
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => viewMode === 'daily' ? handleNextMonth() : setCurrentDate(new Date(getYear(currentDate) + 1, 0, 1))}
+              className="h-7 w-7 sm:h-8 sm:w-8 shrink-0"
+              aria-label={viewMode === 'daily' ? "Next month" : "Next year"}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
           <div className={cn(
             "text-xs sm:text-base font-semibold shrink-0",
             (viewMode === 'daily' ? monthlyTotal : yearTotal) >= 0
@@ -554,9 +574,12 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
             <ResponsiveCurrency value={viewMode === 'daily' ? monthlyTotal : yearTotal} />
           </div>
         </div>
-        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
+        <div className={cn(
+          "flex items-center justify-between sm:justify-end gap-2 sm:gap-4",
+          hideFiltersOnMobile && "max-sm:hidden"
+        )}>
           {/* Impact Level Filter */}
-          <div className={cn("flex items-center gap-2", hideFiltersOnMobile && "max-sm:hidden")}>
+          <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
               {t('calendar.importanceFilter.title')}
             </span>
@@ -570,28 +593,8 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
             countries={countries}
             value={selectedCountries}
             onValueChange={setSelectedCountries}
-            className={cn("h-8", hideFiltersOnMobile && "max-sm:hidden")}
+            className="h-8"
           />
-          <div className="flex items-center gap-1 sm:gap-1.5">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => viewMode === 'daily' ? handlePrevMonth() : setCurrentDate(new Date(getYear(currentDate) - 1, 0, 1))}
-              className="h-7 w-7 sm:h-8 sm:w-8"
-              aria-label={viewMode === 'daily' ? "Previous month" : "Previous year"}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => viewMode === 'daily' ? handleNextMonth() : setCurrentDate(new Date(getYear(currentDate) + 1, 0, 1))}
-              className="h-7 w-7 sm:h-8 sm:w-8"
-              aria-label={viewMode === 'daily' ? "Next month" : "Next year"}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
       </CardHeader>
       <CardContent className="flex-1 min-h-0 p-1 sm:p-4">
