@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Newspaper } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
@@ -8,6 +9,10 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 import { ImportanceFilter } from "@/app/[locale]/dashboard/components/importance-filter"
 
 type ImpactLevel = "low" | "medium" | "high"
@@ -24,27 +29,62 @@ const navbarTriggerClassName = cn(
 )
 
 export function CalendarNewsFilter({
-  value,
-  onValueChange,
+  impactLevels,
+  onImpactLevelsChange,
+  countries,
+  selectedCountries,
+  onSelectedCountriesChange,
   className,
 }: {
-  value: ImpactLevel[]
-  onValueChange: (levels: ImpactLevel[]) => void
+  impactLevels: ImpactLevel[]
+  onImpactLevelsChange: (levels: ImpactLevel[]) => void
+  countries: string[]
+  selectedCountries: string[]
+  onSelectedCountriesChange: (countries: string[]) => void
   className?: string
 }) {
   const t = useI18n()
+  const [searchTerm, setSearchTerm] = useState("")
   const label = t("calendar.importanceFilter.label")
-  const accessibleName = t("calendar.importanceFilter.title")
+  const accessibleName = t("calendar.newsFilter.ariaLabel")
+
+  const filteredCountries = searchTerm
+    ? countries.filter((country) =>
+        country.toLowerCase().includes(searchTerm.toLowerCase()),
+      )
+    : countries
+
+  const isCountrySelected = (country: string) => selectedCountries.includes(country)
+
+  const handleCountryToggle = (country: string) => {
+    onSelectedCountriesChange(
+      isCountrySelected(country)
+        ? selectedCountries.filter((item) => item !== country)
+        : [...selectedCountries, country],
+    )
+  }
+
+  const handleSelectAll = () => {
+    onSelectedCountriesChange(
+      selectedCountries.length === countries.length ? [] : countries,
+    )
+  }
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu
+      modal={false}
+      onOpenChange={(open) => {
+        if (!open) setSearchTerm("")
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           data-slot="calendar-news-filter"
           className={cn(
             navbarTriggerClassName,
-            "w-7 px-0 sm:w-auto sm:px-2",
+            selectedCountries.length > 0 ? "w-auto px-1.5 sm:px-2" : "w-7 px-0 sm:w-auto sm:px-2",
+            selectedCountries.length > 0 && "bg-[#FAFAFA] dark:bg-muted/40",
             className,
           )}
           aria-label={accessibleName}
@@ -55,23 +95,66 @@ export function CalendarNewsFilter({
             aria-hidden="true"
           />
           <span className="hidden sm:inline">{label}</span>
+          {selectedCountries.length > 0 && (
+            <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px] leading-none">
+              {selectedCountries.length}
+            </Badge>
+          )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
         sideOffset={6}
-        className="rounded-[4px] border-[#E5E5E5] bg-white p-1 shadow-md dark:border-border dark:bg-background"
+        className="w-[min(20rem,calc(100vw-1.5rem))] rounded-[4px] border-[#E5E5E5] bg-white p-0 shadow-md dark:border-border dark:bg-background"
         onCloseAutoFocus={(event) => event.preventDefault()}
       >
         <div
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
         >
-          <ImportanceFilter
-            value={value}
-            onValueChange={onValueChange}
-            className="p-1"
-          />
+          <Command shouldFilter={false} className="rounded-none bg-transparent">
+            <CommandInput
+              placeholder={t("mindset.newsImpact.searchCountry")}
+              value={searchTerm}
+              onValueChange={setSearchTerm}
+            />
+            <CommandList>
+              <CommandGroup heading={t("mindset.newsImpact.filterByCountry")}>
+                <CommandItem
+                  onSelect={handleSelectAll}
+                  className="flex items-center gap-2"
+                >
+                  <Checkbox
+                    checked={countries.length > 0 && selectedCountries.length === countries.length}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm">{t("mindset.newsImpact.allCountries")}</span>
+                </CommandItem>
+                <ScrollArea className="h-[200px]">
+                  {filteredCountries.map((country) => (
+                    <CommandItem
+                      key={country}
+                      onSelect={() => handleCountryToggle(country)}
+                      className="flex items-center gap-2"
+                    >
+                      <Checkbox
+                        checked={isCountrySelected(country)}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-sm">{country}</span>
+                    </CommandItem>
+                  ))}
+                </ScrollArea>
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          <div className="flex justify-end border-t border-[#E5E5E5] px-1 dark:border-border">
+            <ImportanceFilter
+              value={impactLevels}
+              onValueChange={onImpactLevelsChange}
+              className="p-1"
+            />
+          </div>
         </div>
       </DropdownMenuContent>
     </DropdownMenu>

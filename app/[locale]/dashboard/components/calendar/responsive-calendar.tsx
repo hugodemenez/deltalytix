@@ -24,7 +24,6 @@ import { WeeklyModal } from "./weekly-modal"
 import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
 import { CalendarResponsiveOverlay } from "./calendar-responsive-overlay"
 import { CalendarNewsFilter } from "./calendar-news-filter"
-import { CountryFilter } from "@/components/country-filter"
 import { useNewsFilterStore } from "@/store/filters/news-filter-store"
 import { useCalendarViewStore } from "@/store/widgets/calendar-view"
 import WeeklyCalendarPnl from "./weekly-calendar"
@@ -600,18 +599,13 @@ export default function ResponsiveCalendarPnl({ calendarData }: CalendarPnlProps
             <ResponsiveCurrency value={viewMode === 'daily' ? monthlyTotal : yearTotal} />
           </div>
         </div>
-        <div className="flex items-center justify-end gap-1.5">
-          <CalendarNewsFilter
-            value={impactLevels}
-            onValueChange={setImpactLevels}
-          />
-          <CountryFilter
-            appearance="navbar"
-            countries={countries}
-            value={selectedCountries}
-            onValueChange={setSelectedCountries}
-          />
-        </div>
+        <CalendarNewsFilter
+          impactLevels={impactLevels}
+          onImpactLevelsChange={setImpactLevels}
+          countries={countries}
+          selectedCountries={selectedCountries}
+          onSelectedCountriesChange={setSelectedCountries}
+        />
       </CardHeader>
       <CardContent className="flex-1 min-h-0 p-1 sm:p-4">
         {viewMode === 'daily' ? (

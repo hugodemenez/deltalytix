@@ -3116,6 +3116,9 @@ export default {
     title: "Filtrer les news par importance",
     label: "News",
   },
+  "calendar.newsFilter": {
+    ariaLabel: "Filtrer les news par pays et importance",
+  },
   "calendar.viewMode": {
     daily: "Vue Journalière",
     weekly: "Vue Hebdomadaire",
