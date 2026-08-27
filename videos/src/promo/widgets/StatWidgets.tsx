@@ -38,7 +38,7 @@ export const StatWidgets: React.FC<StatWidgetsProps> = ({
         extrapolateRight: "clamp",
         easing: BEZIER,
       });
-  const enter = immediate ? -30 : 0;
+  const enter = 0;
 
   return (
     <Interactive.Div
@@ -60,6 +60,7 @@ export const StatWidgets: React.FC<StatWidgetsProps> = ({
           delay={enter}
           sparkline
           size={size}
+          immediate={immediate}
           valueColor={tokens.positive}
         >
           {`+$${Math.round(pnl).toLocaleString("en-US")}`}
@@ -74,6 +75,7 @@ export const StatWidgets: React.FC<StatWidgetsProps> = ({
           label="Win rate"
           delay={enter + (feature ? 10 : 6)}
           size={size}
+          immediate={immediate}
           note="Across every funded account"
         >
           {`${Math.round(winRate)}%`}
@@ -88,6 +90,7 @@ export const StatWidgets: React.FC<StatWidgetsProps> = ({
           label="Trades"
           delay={enter + (feature ? 20 : 12)}
           size={size}
+          immediate={immediate}
           note="Tagged and reviewed"
         >
           {Math.round(trades)}

@@ -33,6 +33,7 @@ type StatWidgetProps = {
   readonly sparkline?: boolean;
   readonly valueColor?: string;
   readonly size?: "strip" | "feature";
+  readonly immediate?: boolean;
 };
 
 export const StatWidget: React.FC<StatWidgetProps> = ({
@@ -44,9 +45,22 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
   sparkline = false,
   valueColor = tokens.ink,
   size = "strip",
+  immediate = false,
 }) => {
   const frame = useCurrentFrame();
   const feature = size === "feature";
+  const sparkDrawn = immediate
+    ? 0
+    : interpolate(
+        frame,
+        [delay + 8, delay + (feature ? 64 : 36)],
+        [800, 0],
+        {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+          easing: BEZIER,
+        },
+      );
 
   return (
     <Interactive.Div
@@ -63,21 +77,25 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
         paddingLeft: feature ? 40 : 28,
         paddingRight: feature ? 40 : 28,
         fontFamily,
-        opacity: interpolate(frame, [delay, delay + 10], [0, 1], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-          easing: BEZIER,
-        }),
-        translate: interpolate(
-          frame,
-          [delay, delay + 12],
-          ["0px 16px", "0px 0px"],
-          {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-            easing: BEZIER,
-          },
-        ),
+        opacity: immediate
+          ? 1
+          : interpolate(frame, [delay, delay + 10], [0, 1], {
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+              easing: BEZIER,
+            }),
+        translate: immediate
+          ? "0px 0px"
+          : interpolate(
+              frame,
+              [delay, delay + 12],
+              ["0px 16px", "0px 0px"],
+              {
+                extrapolateLeft: "clamp",
+                extrapolateRight: "clamp",
+                easing: BEZIER,
+              },
+            ),
       }}
     >
       <Interactive.Div
@@ -127,16 +145,7 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
             strokeLinejoin="round"
             style={{
               strokeDasharray: 800,
-              strokeDashoffset: interpolate(
-                frame,
-                [delay + 8, delay + (feature ? 64 : 36)],
-                [800, 0],
-                {
-                  extrapolateLeft: "clamp",
-                  extrapolateRight: "clamp",
-                  easing: BEZIER,
-                },
-              ),
+              strokeDashoffset: sparkDrawn,
             }}
           />
         </Interactive.Svg>
