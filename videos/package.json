@@ -9,6 +9,7 @@
     "@remotion/cli": "4.0.518",
     "@remotion/google-fonts": "4.0.518",
     "@remotion/media": "4.0.518",
+    "@remotion/sfx": "4.0.518",
     "@remotion/tailwind-v4": "4.0.518",
     "@remotion/transitions": "4.0.518",
     "react": "19.2.3",

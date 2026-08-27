@@ -5,6 +5,13 @@ import { CallToAction } from "./promo/scenes/CallToAction";
 import { Headline } from "./promo/scenes/Headline";
 import { LogoReveal } from "./promo/scenes/LogoReveal";
 import { ProductWell } from "./promo/scenes/ProductWell";
+import {
+  CTA_FRAMES,
+  HEADLINE_FRAMES,
+  LOGO_FRAMES,
+  PRODUCT_FRAMES,
+  PROMO_DURATION_FRAMES,
+} from "./promo/timing";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -13,7 +20,7 @@ export const RemotionRoot: React.FC = () => {
         <Composition
           id="LogoReveal"
           component={LogoReveal}
-          durationInFrames={48}
+          durationInFrames={LOGO_FRAMES}
           fps={30}
           width={1920}
           height={1080}
@@ -21,7 +28,7 @@ export const RemotionRoot: React.FC = () => {
         <Composition
           id="Headline"
           component={Headline}
-          durationInFrames={102}
+          durationInFrames={HEADLINE_FRAMES}
           fps={30}
           width={1920}
           height={1080}
@@ -29,7 +36,7 @@ export const RemotionRoot: React.FC = () => {
         <Composition
           id="ProductWell"
           component={ProductWell}
-          durationInFrames={96}
+          durationInFrames={PRODUCT_FRAMES}
           fps={30}
           width={1920}
           height={1080}
@@ -37,7 +44,7 @@ export const RemotionRoot: React.FC = () => {
         <Composition
           id="CallToAction"
           component={CallToAction}
-          durationInFrames={66}
+          durationInFrames={CTA_FRAMES}
           fps={30}
           width={1920}
           height={1080}
@@ -46,7 +53,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="Promo"
         component={Promo}
-        durationInFrames={288}
+        durationInFrames={PROMO_DURATION_FRAMES}
         fps={30}
         width={1920}
         height={1080}
