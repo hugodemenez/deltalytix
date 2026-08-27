@@ -1060,6 +1060,9 @@ export async function fetchProductCommissionRates(params: {
 }> {
   const client = new RithmicProtocolClient()
   try {
+    console.log(
+      `[RITHMIC-PROTOCOL] Product RMS connect gateway=${params.gatewayUri} system=${params.systemName}`,
+    )
     await client.connect(params.gatewayUri)
     const login = await client.login({
       systemName: params.systemName,
@@ -1069,11 +1072,17 @@ export async function fetchProductCommissionRates(params: {
     const info = await client.loginInfo()
     const loginFcmId = params.fcmId || info.fcmId || login.fcmId
     const loginIbId = params.ibId || info.ibId || login.ibId
+    console.log(
+      `[RITHMIC-PROTOCOL] Product RMS login ok unique_user_id=${login.uniqueUserId ?? '(none)'} fcm=${loginFcmId ?? '(none)'} ib=${loginIbId ?? '(none)'}`,
+    )
     const listed = await client.listAccounts({
       fcmId: loginFcmId,
       ibId: loginIbId,
       userType: info.userType,
     })
+    console.log(
+      `[RITHMIC-PROTOCOL] Product RMS listed ${listed.length} account(s): ${listed.map((account) => account.accountId).join(', ') || '(none)'}`,
+    )
     const accountMeta = new Map(
       [...(params.accounts ?? []), ...listed].map((account) => [
         account.accountId,
@@ -1094,6 +1103,12 @@ export async function fetchProductCommissionRates(params: {
         accountId,
       })
       rows.push(...productRms)
+      console.log(
+        `[RITHMIC-PROTOCOL] Product RMS for ${accountId}: ${productRms.length} commission rate(s)` +
+          (productRms.length > 0
+            ? ` (${productRms.map((row) => `${row.productCode}=${row.commissionFillRate}`).join(', ')})`
+            : ''),
+      )
     }
 
     return {

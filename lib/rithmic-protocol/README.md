@@ -94,12 +94,12 @@ RITHMIC_PROTOCOL_APP_NAME=DeltalytixRithmicProtocolAPI
 RITHMIC_PROTOCOL_APP_VERSION=0.1.0
 RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS=30
 
-# Live e2e only (`bun run test:e2e:rithmic`). Prefer Rithmic Test, never commit.
+# Live e2e only (`bun run test:e2e:rithmic`). Username/password via secrets; never commit.
 RITHMIC_PROTOCOL_E2E_USERNAME=
 RITHMIC_PROTOCOL_E2E_PASSWORD=
-RITHMIC_PROTOCOL_E2E_SYSTEM_NAME=Rithmic Test   # optional
-RITHMIC_PROTOCOL_E2E_GATEWAY=test               # optional id or wss:// URI
-RITHMIC_PROTOCOL_E2E_ACCOUNT_ID=                # optional pin
+RITHMIC_PROTOCOL_E2E_SYSTEM_NAME=Rithmic Paper Trading   # optional
+RITHMIC_PROTOCOL_E2E_GATEWAY=core                        # optional id or wss:// URI
+RITHMIC_PROTOCOL_E2E_ACCOUNT_ID=                         # optional pin
 ```
 
 ## Product RMS commissions
@@ -130,13 +130,14 @@ GitHub Actions (`.github/workflows/rithmic-protocol-e2e.yml`):
 | --- | --- | --- |
 | `RITHMIC_PROTOCOL_E2E_USERNAME` | Actions **secret** | yes |
 | `RITHMIC_PROTOCOL_E2E_PASSWORD` | Actions **secret** | yes |
-| `RITHMIC_PROTOCOL_E2E_SYSTEM_NAME` | Actions **variable** | no (default `Rithmic Test`) |
-| `RITHMIC_PROTOCOL_E2E_GATEWAY` | Actions **variable** | no (default `test`) |
+| `RITHMIC_PROTOCOL_E2E_SYSTEM_NAME` | Actions **variable** | no (default `Rithmic Paper Trading`) |
+| `RITHMIC_PROTOCOL_E2E_GATEWAY` | Actions **variable** | no (default `core`) |
 
 Without the two secrets the workflow still runs the proto/unit checks and
 **skips** the live socket (green). Rithmic may IP-allowlist logins; GitHub-hosted
-runners use dynamic IPs, so a UAT account that only allows office IPs will need
-a self-hosted runner or an allowlist update.
+runners use dynamic IPs, so an account that only allows office IPs will need
+a self-hosted runner or an allowlist update. The live step prints gateway,
+system, account ids, and `commission_fill_rate` rows — never username/password.
 
 On connect, the user must choose an **account start date**. Sync walks from that
 date to today with `ShowFillHistory` in **serial ≤30-day windows** (Rithmic guidance).

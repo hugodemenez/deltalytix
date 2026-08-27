@@ -18,5 +18,7 @@ export default defineConfig({
     testTimeout: 90_000,
     hookTimeout: 90_000,
     fileParallelism: false,
+    // Print console.log as it happens so GitHub Actions captures live login/RMS lines.
+    disableConsoleIntercept: true,
   },
 });

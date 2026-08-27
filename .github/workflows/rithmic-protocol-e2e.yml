@@ -47,12 +47,28 @@ jobs:
         env:
           RITHMIC_PROTOCOL_E2E_USERNAME: ${{ secrets.RITHMIC_PROTOCOL_E2E_USERNAME }}
           RITHMIC_PROTOCOL_E2E_PASSWORD: ${{ secrets.RITHMIC_PROTOCOL_E2E_PASSWORD }}
-          RITHMIC_PROTOCOL_E2E_SYSTEM_NAME: ${{ vars.RITHMIC_PROTOCOL_E2E_SYSTEM_NAME || 'Rithmic Test' }}
-          RITHMIC_PROTOCOL_E2E_GATEWAY: ${{ vars.RITHMIC_PROTOCOL_E2E_GATEWAY || 'test' }}
+          # Defaults match the reconnect UI: Core (Chicago) + Rithmic Paper Trading.
+          # Only username/password are required as repository secrets.
+          RITHMIC_PROTOCOL_E2E_SYSTEM_NAME: ${{ vars.RITHMIC_PROTOCOL_E2E_SYSTEM_NAME || 'Rithmic Paper Trading' }}
+          RITHMIC_PROTOCOL_E2E_GATEWAY: ${{ vars.RITHMIC_PROTOCOL_E2E_GATEWAY || 'core' }}
         run: |
-          if [ -z "$RITHMIC_PROTOCOL_E2E_USERNAME" ] || [ -z "$RITHMIC_PROTOCOL_E2E_PASSWORD" ]; then
-            echo "Skipping live gateway: set Actions secrets RITHMIC_PROTOCOL_E2E_USERNAME and RITHMIC_PROTOCOL_E2E_PASSWORD."
-            echo "Optional repository variables: RITHMIC_PROTOCOL_E2E_SYSTEM_NAME (default Rithmic Test), RITHMIC_PROTOCOL_E2E_GATEWAY (default test)."
+          username_set=no
+          password_set=no
+          [ -n "$RITHMIC_PROTOCOL_E2E_USERNAME" ] && username_set=yes
+          [ -n "$RITHMIC_PROTOCOL_E2E_PASSWORD" ] && password_set=yes
+
+          echo "::group::Rithmic e2e config (credentials never printed)"
+          echo "username_set=$username_set"
+          echo "password_set=$password_set"
+          echo "gateway=$RITHMIC_PROTOCOL_E2E_GATEWAY"
+          echo "system=$RITHMIC_PROTOCOL_E2E_SYSTEM_NAME"
+          echo "account_pin=${RITHMIC_PROTOCOL_E2E_ACCOUNT_ID:+set}"
+          echo "::endgroup::"
+
+          if [ "$username_set" != yes ] || [ "$password_set" != yes ]; then
+            echo "::warning::Skipping live gateway — repository secrets RITHMIC_PROTOCOL_E2E_USERNAME and/or RITHMIC_PROTOCOL_E2E_PASSWORD are empty."
             exit 0
           fi
+
+          echo "::notice::Live Protocol login → $RITHMIC_PROTOCOL_E2E_GATEWAY / $RITHMIC_PROTOCOL_E2E_SYSTEM_NAME"
           bun run test:e2e:rithmic
