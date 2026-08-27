@@ -1,7 +1,7 @@
 {
   "name": "Deltalytix",
   "install": "curl -fsSL https://bun.sh/install | bash\nexport PATH=\"$HOME/.bun/bin:$PATH\"\nbun install\nbunx prisma generate\nsudo apt-get update\nsudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 ffmpeg postgresql postgresql-client\ncurl -fsSL https://tailscale.com/install.sh | sh",
-  "start": "bash scripts/docker-bootstrap.sh || sudo docker info >/dev/null 2>&1\nif command -v tailscaled >/dev/null 2>&1; then\n  if ! pgrep -x tailscaled >/dev/null 2>&1; then\n    sudo mkdir -p /var/run/tailscale /var/lib/tailscale\n    sudo tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/var/run/tailscale/tailscaled.sock --port=41641 >/tmp/tailscaled.log 2>&1 &\n    for _ in $(seq 1 20); do\n      if [ -S /var/run/tailscale/tailscaled.sock ]; then break; fi\n      sleep 0.5\n    done\n  fi\n  if [ -n \"${TS_AUTHKEY:-}\" ]; then\n    sudo tailscale up --auth-key=\"$TS_AUTHKEY\" --hostname=\"deltalytix-${HOSTNAME}\" --accept-dns=false --operator=ubuntu --timeout=30s\n  fi\nfi",
+  "start": "bash scripts/docker-bootstrap.sh\nbash scripts/tailscale-bootstrap.sh",
   "ports": [
     {
       "name": "next",
