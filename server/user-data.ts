@@ -103,7 +103,13 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
         where: { userId: userId },
         include: {
           payouts: true,
-          group: true
+          group: true,
+          connection: {
+            select: {
+              id: true,
+              service: true,
+            },
+          },
         }
       }),
       prisma.group.findMany({
@@ -170,7 +176,13 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
       where: { userId: userId },
       include: {
         payouts: true,
-        group: true
+        group: true,
+        connection: {
+          select: {
+            id: true,
+            service: true,
+          },
+        },
       }
     }),
     prisma.group.findMany({

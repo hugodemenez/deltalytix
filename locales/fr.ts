@@ -35,7 +35,7 @@ export default {
   ...support,
   ...feedback,
   "footer.heading": "Pied de page",
-  "footer.description": "Analyses avancées pour les traders modernes.",
+  "footer.description": "Un journal de trading pour tous vos comptes futures.",
   "footer.product.title": "Produit",
   "footer.product.features": "Fonctionnalités",
   "footer.product.pricing": "Tarification",
@@ -44,6 +44,11 @@ export default {
   "footer.product.support": "Support",
   "footer.company.title": "Équipe",
   "footer.company.about": "À propos",
+  "footer.comparisons.title": "Comparaison des journaux",
+  "footer.comparisons.hub": "Tous les journaux",
+  "footer.comparisons.trademetria": "vs Trademetria",
+  "footer.comparisons.tradezella": "vs TradeZella",
+  "footer.comparisons.tradervue": "vs Tradervue",
   "footer.legal.title": "Mentions légales",
   "footer.legal.privacy": "Politique de confidentialité",
   "footer.legal.terms": "Conditions d'utilisation",
@@ -147,6 +152,20 @@ export default {
   "connections.strip.standalone": "Autonome",
   "connections.strip.search": "Rechercher des comptes",
   "connections.strip.noResults": "Aucun compte trouvé",
+  "connections.strip.mask": "Masquer",
+  "connections.strip.unmask": "Afficher",
+  "connections.strip.rename": "Renommer",
+  "connections.strip.saveName": "Enregistrer le nom",
+  "connections.strip.deleteAccount": "Supprimer {account}",
+  "connections.strip.deleteConfirmTitle": "Supprimer ce compte ?",
+  "connections.strip.deleteConfirmDescription":
+    "Cela supprime définitivement {account} et ses trades.",
+  "connections.strip.deleteConfirmAction": "Supprimer le compte",
+  "connections.strip.renameFailed": "Impossible de renommer le compte",
+  "connections.strip.maskFailed": "Impossible de mettre à jour le masquage",
+  "connections.strip.deleteFailed": "Impossible de supprimer le compte",
+  "connections.strip.duplicateNumber": "Ce numéro de compte est déjà utilisé",
+  "connections.strip.accountDeleted": "Compte {account} supprimé",
   "connections.add.rithmic": "Ajouter une connexion Rithmic",
   "connections.add.rithmicProtocol": "Ajouter une connexion Rithmic Protocol",
   "connections.add.tradovate": "Ajouter une connexion Tradovate",
@@ -1404,6 +1423,7 @@ export default {
     balances: {
       refresh: "Actualiser les soldes",
       refreshTitle: "Actualiser les soldes des comptes Rithmic",
+      fetchError: "Impossible d'actualiser les soldes. Réessayez.",
       debug: {
         button: "Debug",
         title: "Debug solde Rithmic",
@@ -3053,6 +3073,16 @@ export default {
   "import.type.atas.description": "Fichier Excel ATAS",
   "import.type.atas.details":
     'Importez les trades depuis les fichiers Excel ATAS. Assurez-vous que votre fichier contient une feuille "Journal" avec les colonnes requises.',
+  "import.type.deepcharts.name": "DeepCharts",
+  "import.type.deepcharts.description": "CSV Trade List DeepCharts",
+  "import.type.deepcharts.details":
+    "Exportez les trades clôturés depuis DeepCharts Strategy Report → Trade List au format CSV délimité par des points-virgules.",
+  "import.deepcharts.error.title": "Impossible de lire cet export DeepCharts",
+  "import.deepcharts.error.invalidFile":
+    "Importez un CSV Trade List DeepCharts contenant les colonnes Symbol, Quantity, Entry DT, Entry Price, Exit DT et Exit Price.",
+  "import.deepcharts.noTrades": "Aucun trade DeepCharts clôturé trouvé",
+  "import.deepcharts.noTradesDescription":
+    "Assurez-vous que le fichier contient des trades clôturés et utilise un délimiteur point-virgule.",
   "import.type.ftmo.name": "FTMO",
   "import.type.ftmo.description": "CSV journal FTMO",
   "import.type.ftmo.details":

@@ -128,6 +128,7 @@ export async function loadConnectionsPageDataForUser(
         number: true,
         propfirm: true,
         connectionId: true,
+        groupId: true,
         createdAt: true,
       },
       orderBy: { number: 'asc' },

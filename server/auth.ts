@@ -4,7 +4,6 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { headers } from "next/headers"
-import { User } from '@supabase/supabase-js'
 import {
   buildLocalDashboardBypassUser,
   getLocalDashboardUserEmail,
@@ -14,6 +13,7 @@ import {
 import { createLocalDashboardBypassAuthStub } from '@/lib/local-dashboard-bypass-client'
 import { ensureLocalDashboardUserInDatabase } from '@/server/local-dashboard-bootstrap'
 import { capturePostHogEvent } from '@/lib/posthog-server'
+import { buildUserSignedUpCapture } from '@/lib/signup-analytics'
 import {
   attributionToPersonSetOnce,
   attributionToPostHogProperties,
@@ -279,7 +279,7 @@ export async function signInWithPasswordAction(
           // User is automatically signed in (email confirmation disabled)
           let isNewUser = false
           try {
-            const ensureResult = await ensureUserInDatabase(signUpData.user, locale)
+            const ensureResult = await ensureUserRecord(signUpData.user, locale)
             isNewUser = ensureResult.isNewUser
           } catch (e) {
             // Non-fatal; still proceed
@@ -299,12 +299,13 @@ export async function signInWithPasswordAction(
           throw new Error(signInError.message)
         }
         
-        // Continue with normal flow after successful sign-in
+        // Continue with normal flow after successful sign-in. signInWithPassword
+        // just returned this user from the Auth server, so it is already verified —
+        // no need to re-fetch it.
         let isNewUser = false
         try {
-          const { data: { user } } = await supabase.auth.getUser()
-          if (user) {
-            const ensureResult = await ensureUserInDatabase(user, locale)
+          if (signInData.user) {
+            const ensureResult = await ensureUserRecord(signInData.user, locale)
             isNewUser = ensureResult.isNewUser
           }
         } catch (e) {
@@ -319,12 +320,12 @@ export async function signInWithPasswordAction(
       throw new Error(error.message)
     }
 
-    // Sign-in succeeded normally
+    // Sign-in succeeded normally. `data.user` comes straight from the
+    // signInWithPassword response, so it is already Auth-server verified.
     let isNewUser = false
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const ensureResult = await ensureUserInDatabase(user, locale)
+      if (data.user) {
+        const ensureResult = await ensureUserRecord(data.user, locale)
         isNewUser = ensureResult.isNewUser
       }
     } catch (e) {
@@ -369,7 +370,7 @@ export async function signUpWithPasswordAction(
     let isNewUser = false
     if (data.user && data.session) {
       try {
-        const ensureResult = await ensureUserInDatabase(data.user, locale)
+        const ensureResult = await ensureUserRecord(data.user, locale)
         isNewUser = ensureResult.isNewUser
       } catch (e) {
         // Non-fatal; still proceed
@@ -416,8 +417,10 @@ export async function setPasswordAction(newPassword: string) {
  *   email set from the Supabase profile, and language set to `locale` (default 'en'). Also
  *   attempts to create a default dashboard layout for first-time users.
  *
+ * Identity is resolved from the verified Supabase session inside this function and is
+ * never accepted as an argument — see `ensureUserRecord` for why.
+ *
  * Parameters:
- * - user: Supabase `User` object (required). Must contain a valid `id`.
  * - locale: Optional locale string from the client (e.g. 'en', 'fr'). When provided, it is
  *   persisted to the `language` field for the user record.
  *
@@ -428,12 +431,31 @@ export async function setPasswordAction(newPassword: string) {
  * Side effects:
  * - May sign the user out on integrity or identification errors.
  * - May create a default dashboard layout for new users.
+ * - On create only, captures a single PostHog `user_signed_up` event
+ *   (first-party; later logins that find the existing row do not recapture).
  *
  * Errors:
- * - Throws on missing user or id, account conflicts, Prisma integrity/validation issues, or
- *   unexpected errors. NEXT_REDIRECT errors are re-thrown to allow Next.js redirects.
+ * - Throws when there is no authenticated session, and on account conflicts, Prisma
+ *   integrity/validation issues, or unexpected errors. NEXT_REDIRECT errors are re-thrown
+ *   to allow Next.js redirects.
  */
-export async function ensureUserInDatabase(user: User, locale?: string) {
+export async function ensureUserInDatabase(locale?: string) {
+  const user = await getAuthenticatedUser();
+
+  return ensureUserRecord(user, locale);
+}
+
+/**
+ * Internal counterpart of `ensureUserInDatabase`.
+ *
+ * Deliberately NOT exported: this module is `'use server'`, so every export is a
+ * callable Server Action whose arguments are supplied by the client. Keeping this
+ * unexported is what makes the `user` argument trustworthy — it can only be reached
+ * from a caller inside this module that already holds an identity verified by the
+ * Auth server (a sign-in/sign-up/verify-OTP response, or `getAuthenticatedUser()`).
+ * Exporting it would let a forged `User` object create or rewrite arbitrary rows.
+ */
+async function ensureUserRecord(user: AuthenticatedIdentity, locale?: string) {
   console.log('[ensureUserInDatabase] Starting with user:', { id: user?.id, email: user?.email });
   
   if (!user) {
@@ -521,9 +543,11 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
       // inflate the email share of the signup-method breakdown.
       const method = authProvider;
 
-      await capturePostHogEvent({
+      // First-party conversion: fire once when the public row is created.
+      // Consent is granted in buildUserSignedUpCapture — the analytics cookie
+      // is almost never set yet on the OAuth / magic-link callback.
+      await capturePostHogEvent(buildUserSignedUpCapture({
         distinctId: user.id,
-        event: 'user_signed_up',
         properties: {
           auth_provider: authProvider,
           method,
@@ -532,7 +556,7 @@ export async function ensureUserInDatabase(user: User, locale?: string) {
           ...attributionProps,
           ...(setOnce ? { $set_once: setOnce } : {}),
         },
-      });
+      }));
       
       // Create default dashboard layout for new user
       try {
@@ -607,7 +631,7 @@ export async function verifyOtp(email: string, token: string, type: 'email' | 's
     let isNewUser = false
     if (data.user && data.session) {
       const locale = email.includes('.fr') ? 'fr' : 'en';
-      const ensureResult = await ensureUserInDatabase(data.user, locale)
+      const ensureResult = await ensureUserRecord(data.user, locale)
       isNewUser = ensureResult.isNewUser
     }
 
@@ -621,26 +645,50 @@ export async function verifyOtp(email: string, token: string, type: 'email' | 's
   }
 }
 
-// Optimized function that uses middleware data when available
-export async function getUserId(): Promise<string> {
-  if (isLocalDashboardAuthBypassEnabled()) {
-    await ensureLocalDashboardUserInDatabase()
-    return getLocalDashboardUserId()
-  }
+/**
+ * The subset of the Supabase user the database sync actually reads. A full
+ * `User` is assignable to it, so callers holding one can pass it straight
+ * through, while a verified JWT claim set satisfies it without being faked
+ * into a `User` shape.
+ */
+type AuthenticatedIdentity = {
+  id: string
+  email?: string | null
+  app_metadata?: { provider?: string; [key: string]: any }
+}
 
-  // First try to get user ID from middleware headers
-  const headersList = await headers()
-  const userIdFromMiddleware = headersList.get("x-user-id")
-
-  if (userIdFromMiddleware) {
-    console.log("[Auth] Using user ID from middleware")
-    return userIdFromMiddleware
-  }
-
-  // Fallback to Supabase call (for API routes or edge cases)
+// The proxy publishes the resolved identity as *response* headers (x-user-id,
+// x-user-email) for observability. It never rewrites the inbound request —
+// NextResponse.next({ request: { headers } }) forwards the caller's own headers
+// untouched — and it does not run for /api/* at all. Reading those names back
+// off the incoming request therefore only ever returns a value the caller
+// supplied, so identity is always resolved from the verified Supabase session.
+async function getAuthenticatedUser(): Promise<AuthenticatedIdentity> {
   try {
-    console.log("[Auth] Fallback to Supabase call")
     const supabase = await createClient()
+
+    // getClaims() *verifies* the access token rather than merely decoding it:
+    // with asymmetric signing keys it checks the signature locally via WebCrypto
+    // against the cached JWKS, and with a symmetric secret it falls back to
+    // asking the Auth server exactly like getUser(). Either way the identity is
+    // authenticated, so this is not the unverified getSession() shortcut — it
+    // just skips a network round trip on the common path. Same approach the
+    // proxy already takes in updateSession().
+    if (typeof supabase.auth.getClaims === "function") {
+      const { data, error } = await supabase.auth.getClaims()
+      const claims = data?.claims
+
+      if (!error && claims?.sub) {
+        return {
+          id: claims.sub,
+          email: claims.email ?? null,
+          app_metadata: claims.app_metadata,
+        }
+      }
+    }
+
+    // No getClaims (the local-dashboard bypass stub) or it could not verify —
+    // fall back to the Auth server.
     const {
       data: { user },
       error,
@@ -650,10 +698,21 @@ export async function getUserId(): Promise<string> {
       throw new Error("User not authenticated")
     }
 
-    return user.id
+    return user
   } catch (error: any) {
     handleAuthError(error)
   }
+}
+
+export async function getUserId(): Promise<string> {
+  if (isLocalDashboardAuthBypassEnabled()) {
+    await ensureLocalDashboardUserInDatabase()
+    return getLocalDashboardUserId()
+  }
+
+  const user = await getAuthenticatedUser()
+
+  return user.id
 }
 
 export async function getUserEmail(): Promise<string> {
@@ -661,10 +720,9 @@ export async function getUserEmail(): Promise<string> {
     return getLocalDashboardUserEmail()
   }
 
-  const headersList = await headers()
-  const userEmail = headersList.get("x-user-email")
-  console.log("[Auth] getUserEmail FROM HEADERS", userEmail)
-  return userEmail || ""
+  const user = await getAuthenticatedUser()
+
+  return user.email || ""
 }
 
 // Lightweight updater for user language without full ensure logic

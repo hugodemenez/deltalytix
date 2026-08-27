@@ -34,7 +34,7 @@ export default {
   ...support,
   ...feedback,
   "footer.heading": "Footer",
-  "footer.description": "Advanced analytics for modern traders.",
+  "footer.description": "A trading journal for every futures account.",
   "footer.product.title": "Product",
   "footer.product.features": "Features",
   "footer.product.pricing": "Pricing",
@@ -43,6 +43,11 @@ export default {
   "footer.product.support": "Support",
   "footer.company.title": "Company",
   "footer.company.about": "About",
+  "footer.comparisons.title": "Journals comparison",
+  "footer.comparisons.hub": "All journals",
+  "footer.comparisons.trademetria": "vs Trademetria",
+  "footer.comparisons.tradezella": "vs TradeZella",
+  "footer.comparisons.tradervue": "vs Tradervue",
   "footer.legal.title": "Legal",
   "footer.legal.privacy": "Privacy Policy",
   "footer.legal.terms": "Terms of Service",
@@ -146,6 +151,20 @@ export default {
   "connections.strip.standalone": "Standalone",
   "connections.strip.search": "Search accounts",
   "connections.strip.noResults": "No accounts found",
+  "connections.strip.mask": "Mask",
+  "connections.strip.unmask": "Unmask",
+  "connections.strip.rename": "Rename",
+  "connections.strip.saveName": "Save name",
+  "connections.strip.deleteAccount": "Delete {account}",
+  "connections.strip.deleteConfirmTitle": "Delete this account?",
+  "connections.strip.deleteConfirmDescription":
+    "This permanently deletes {account} and its trades.",
+  "connections.strip.deleteConfirmAction": "Delete account",
+  "connections.strip.renameFailed": "Unable to rename account",
+  "connections.strip.maskFailed": "Unable to update mask",
+  "connections.strip.deleteFailed": "Unable to delete account",
+  "connections.strip.duplicateNumber": "That account number is already in use",
+  "connections.strip.accountDeleted": "Account {account} deleted",
   "connections.add.rithmic": "Add Rithmic connection",
   "connections.add.rithmicProtocol": "Add Rithmic Protocol connection",
   "connections.add.tradovate": "Add Tradovate connection",
@@ -1787,6 +1806,7 @@ export default {
     balances: {
       refresh: "Refresh balances",
       refreshTitle: "Refresh Rithmic account balances",
+      fetchError: "Unable to refresh balances. Try again.",
       debug: {
         button: "Debug",
         title: "Rithmic balance debug",
@@ -2896,6 +2916,16 @@ export default {
   "import.type.atas.description": "ATAS Excel file",
   "import.type.atas.details":
     'Import trades from ATAS Excel files. Make sure your file has a "Journal" sheet with the required columns.',
+  "import.type.deepcharts.name": "DeepCharts",
+  "import.type.deepcharts.description": "DeepCharts Trade List CSV",
+  "import.type.deepcharts.details":
+    "Export closed trades from DeepCharts Strategy Report → Trade List as a semicolon-delimited CSV.",
+  "import.deepcharts.error.title": "Unable to read this DeepCharts export",
+  "import.deepcharts.error.invalidFile":
+    "Upload a DeepCharts Trade List CSV with Symbol, Quantity, Entry DT, Entry Price, Exit DT, and Exit Price columns.",
+  "import.deepcharts.noTrades": "No completed DeepCharts trades found",
+  "import.deepcharts.noTradesDescription":
+    "Make sure the file contains closed trades and uses a semicolon delimiter.",
   "import.type.ftmo.name": "FTMO",
   "import.type.ftmo.description": "FTMO journal CSV",
   "import.type.ftmo.details":

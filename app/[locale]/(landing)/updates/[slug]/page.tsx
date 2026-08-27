@@ -32,6 +32,10 @@ interface PageProps {
 // are resolved from the build-time site origin (siteUrl/getSiteOrigin, which
 // reads NEXT_PUBLIC_BASE_URL / VERCEL_URL), avoiding any request-time
 // dependency that would force dynamic rendering.
+// NOTE: an unknown slug still answers 200 with the App Shell before the
+// `notFound()` below runs. `export const dynamicParams = false` would fix that,
+// but Next.js rejects the option while `cacheComponents` is enabled. Unmatched
+// paths outside this route return a real 404 via `app/global-not-found.tsx`.
 // Generate static paths for all posts in all locales
 export async function generateStaticParams() {
   const locales = getLocaleStaticParams().map((entry) => entry.locale);

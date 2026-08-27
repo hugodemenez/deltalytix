@@ -8,19 +8,33 @@ import {
   type ButtonHTMLAttributes,
 } from 'react'
 import Link from 'next/link'
-import { Check, ChevronDown, Plus } from 'lucide-react'
+import { ChevronDown, Plus } from 'lucide-react'
+import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import { useData } from '@/context/data-provider'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { useUserStore } from '@/store/user-store'
+import { useTradesStore } from '@/store/trades-store'
+import { removeAccountsFromTradesAction } from '@/server/accounts'
+import { moveAccountToGroupAction } from '@/server/groups'
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
-  CommandItem,
   CommandList,
 } from '@/components/ui/command'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   Drawer,
   DrawerContent,
@@ -40,11 +54,17 @@ import type {
   ConnectionsPageAccount,
   ConnectionsPageData,
 } from '@/app/[locale]/dashboard/connections/types'
+import { HIDDEN_GROUP_NAME } from '@/app/[locale]/dashboard/components/filters/account-group-board'
 import {
   buildStripItems,
   chipAccountCountLabel,
+  isStandaloneAccount,
+  mapConnectionsAccounts,
+  removeConnectionsAccount,
+  restoreMovedAccountGroup,
   type StripItem,
 } from './connections-strip-items'
+import { ConnectionsStripAccountRow } from './connections-strip-account-row'
 
 const SERVICE_SECTIONS: {
   service: ConnectionService
@@ -79,11 +99,13 @@ function reviveConnectionsPageData(
       dailySyncTime: reviveDate(connection.dailySyncTime),
       accounts: (connection.accounts ?? []).map((account) => ({
         ...account,
+        groupId: account.groupId ?? null,
         createdAt: reviveDate(account.createdAt) ?? new Date(0),
       })),
     })),
     standaloneAccounts: (parsed.standaloneAccounts ?? []).map((account) => ({
       ...account,
+      groupId: account.groupId ?? null,
       createdAt: reviveDate(account.createdAt) ?? new Date(0),
     })),
   }
@@ -105,11 +127,6 @@ async function fetchConnectionsPageData(): Promise<ConnectionsPageData> {
     throw new Error('CONNECTIONS_LOAD_FAILED:invalid_payload')
   }
   return reviveConnectionsPageData(json)
-}
-
-function accountMetaLabel(account: ConnectionsPageAccount): string | null {
-  const propfirm = account.propfirm?.trim()
-  return propfirm || null
 }
 
 function ChipTrigger({
@@ -184,17 +201,32 @@ function AccountPickerList({
   item,
   selectedAccounts,
   searchTerm,
+  hiddenGroupId,
+  maskingAccountId,
+  deletingAccountId,
   onSearchTermChange,
   onSelectAccount,
   onClose,
+  onMask,
+  onRename,
+  onRequestDelete,
   listClassName,
 }: {
   item: StripItem
   selectedAccounts: string[]
   searchTerm: string
+  hiddenGroupId: string | null
+  maskingAccountId: string | null
+  deletingAccountId: string | null
   onSearchTermChange: (value: string) => void
   onSelectAccount: (accountNumber: string) => void
   onClose: () => void
+  onMask: (account: ConnectionsPageAccount, masked: boolean) => void
+  onRename: (
+    account: ConnectionsPageAccount,
+    nextName: string
+  ) => Promise<boolean>
+  onRequestDelete: (account: ConnectionsPageAccount) => void
   listClassName: string
 }) {
   const t = useI18n()
@@ -222,39 +254,24 @@ function AccountPickerList({
             : t('connections.strip.noResults')}
         </CommandEmpty>
         <CommandGroup>
-          {filteredAccounts.map((account) => {
-            const selected = selectedAccounts.includes(account.number)
-            const metaLabel = accountMetaLabel(account)
-            return (
-              <CommandItem
-                key={account.id}
-                value={account.number}
-                onSelect={() => {
-                  onSelectAccount(account.number)
-                  onClose()
-                }}
-                className="items-start gap-2 rounded-[3px] px-3 py-2.5"
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="block break-all font-medium text-[#171917] dark:text-foreground">
-                    {account.number}
-                  </span>
-                  {metaLabel ? (
-                    <span className="mt-0.5 block break-all text-xs text-[#686D67] dark:text-muted-foreground">
-                      {metaLabel}
-                    </span>
-                  ) : null}
-                </span>
-                {selected ? (
-                  <Check
-                    className="mt-0.5 h-4 w-4 shrink-0 text-[#3E7550]"
-                    strokeWidth={2}
-                    aria-hidden
-                  />
-                ) : null}
-              </CommandItem>
-            )
-          })}
+          {filteredAccounts.map((account) => (
+            <ConnectionsStripAccountRow
+              key={account.id}
+              account={account}
+              selected={selectedAccounts.includes(account.number)}
+              hiddenGroupId={hiddenGroupId}
+              canDelete={isStandaloneAccount(account)}
+              masking={maskingAccountId === account.id}
+              deleting={deletingAccountId === account.id}
+              onSelect={(accountNumber) => {
+                onSelectAccount(accountNumber)
+                onClose()
+              }}
+              onMask={onMask}
+              onRename={onRename}
+              onRequestDelete={onRequestDelete}
+            />
+          ))}
         </CommandGroup>
       </CommandList>
       <div className="border-t border-[#E5E5E5] dark:border-border">
@@ -273,11 +290,26 @@ function AccountPickerList({
 function ConnectionChip({
   item,
   selectedAccounts,
+  hiddenGroupId,
+  maskingAccountId,
+  deletingAccountId,
   onSelectAccount,
+  onMask,
+  onRename,
+  onRequestDelete,
 }: {
   item: StripItem
   selectedAccounts: string[]
+  hiddenGroupId: string | null
+  maskingAccountId: string | null
+  deletingAccountId: string | null
   onSelectAccount: (accountNumber: string) => void
+  onMask: (account: ConnectionsPageAccount, masked: boolean) => void
+  onRename: (
+    account: ConnectionsPageAccount,
+    nextName: string
+  ) => Promise<boolean>
+  onRequestDelete: (account: ConnectionsPageAccount) => void
 }) {
   const isMobile = useIsMobile()
   const [open, setOpen] = useState(false)
@@ -288,14 +320,25 @@ function ConnectionChip({
     if (!next) setSearchTerm('')
   }
 
+  const requestDelete = (account: ConnectionsPageAccount) => {
+    handleOpenChange(false)
+    onRequestDelete(account)
+  }
+
   const picker = (listClassName: string) => (
     <AccountPickerList
       item={item}
       selectedAccounts={selectedAccounts}
       searchTerm={searchTerm}
+      hiddenGroupId={hiddenGroupId}
+      maskingAccountId={maskingAccountId}
+      deletingAccountId={deletingAccountId}
       onSearchTermChange={setSearchTerm}
       onSelectAccount={onSelectAccount}
       onClose={() => handleOpenChange(false)}
+      onMask={onMask}
+      onRename={onRename}
+      onRequestDelete={requestDelete}
       listClassName={listClassName}
     />
   )
@@ -338,7 +381,7 @@ function ConnectionChip({
       <PopoverContent
         align="start"
         sideOffset={8}
-        className="w-[min(24rem,calc(100vw-2rem))] rounded-[4px] border-[#E5E5E5] bg-white p-0 shadow-md dark:border-border dark:bg-background"
+        className="w-[min(28rem,calc(100vw-2rem))] rounded-[4px] border-[#E5E5E5] bg-white p-0 shadow-md dark:border-border dark:bg-background"
       >
         {picker('max-h-[320px]')}
       </PopoverContent>
@@ -421,10 +464,32 @@ function AddConnectionChip({
  */
 export function ConnectionsStrip({ className }: { className?: string }) {
   const t = useI18n()
-  const { accountNumbers = [], setAccountNumbers } = useData()
+  const {
+    accountNumbers = [],
+    setAccountNumbers,
+    saveGroup,
+    saveAccount,
+    moveAccountsToGroup,
+    refreshTradesOnly,
+  } = useData()
+  const groups = useUserStore((state) => state.groups)
+  const updateAccount = useUserStore((state) => state.updateAccount)
+  const removeAccount = useUserStore((state) => state.removeAccount)
+  const setAccounts = useUserStore((state) => state.setAccounts)
+  const setGroups = useUserStore((state) => state.setGroups)
+  const setTrades = useTradesStore((state) => state.setTrades)
   const [data, setData] = useState<ConnectionsPageData | null>(null)
   const [connectService, setConnectService] = useState<ConnectionService | null>(
     null
+  )
+  const [maskingAccountId, setMaskingAccountId] = useState<string | null>(null)
+  const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null)
+  const [accountToDelete, setAccountToDelete] =
+    useState<ConnectionsPageAccount | null>(null)
+
+  const hiddenGroupId = useMemo(
+    () => groups.find((group) => group.name === HIDDEN_GROUP_NAME)?.id ?? null,
+    [groups]
   )
 
   const load = useCallback(async () => {
@@ -446,6 +511,19 @@ export function ConnectionsStrip({ className }: { className?: string }) {
     [data, t]
   )
 
+  const applyAccountPatch = useCallback(
+    (accountId: string, patch: Partial<ConnectionsPageAccount>) => {
+      setData((prev) =>
+        prev
+          ? mapConnectionsAccounts(prev, (account) =>
+              account.id === accountId ? { ...account, ...patch } : account
+            )
+          : prev
+      )
+    },
+    []
+  )
+
   const onSelectAccount = useCallback(
     (accountNumber: string) => {
       setAccountNumbers((prev) => {
@@ -456,6 +534,125 @@ export function ConnectionsStrip({ className }: { className?: string }) {
       })
     },
     [setAccountNumbers]
+  )
+
+  const ensureHiddenGroup = useCallback(async () => {
+    if (hiddenGroupId) return hiddenGroupId
+    const created = await saveGroup(HIDDEN_GROUP_NAME)
+    return created?.id ?? null
+  }, [hiddenGroupId, saveGroup])
+
+  const onMask = useCallback(
+    async (account: ConnectionsPageAccount, masked: boolean) => {
+      const previousGroupId = account.groupId
+      setMaskingAccountId(account.id)
+      try {
+        const nextGroupId = masked ? await ensureHiddenGroup() : null
+        if (masked && !nextGroupId) {
+          throw new Error('HIDDEN_GROUP_MISSING')
+        }
+        applyAccountPatch(account.id, { groupId: nextGroupId })
+        const storeAccounts = useUserStore.getState().accounts
+        if (storeAccounts.some((item) => item.id === account.id)) {
+          await moveAccountsToGroup([account.id], nextGroupId)
+        } else {
+          await moveAccountToGroupAction(account.id, nextGroupId)
+        }
+      } catch {
+        applyAccountPatch(account.id, { groupId: previousGroupId })
+        const { accounts, groups: storeGroups } = useUserStore.getState()
+        if (accounts.some((item) => item.id === account.id)) {
+          const restored = restoreMovedAccountGroup(
+            accounts,
+            storeGroups,
+            account.id,
+            previousGroupId
+          )
+          setAccounts(restored.accounts)
+          setGroups(restored.groups)
+        }
+        toast.error(t('connections.strip.maskFailed'))
+      } finally {
+        setMaskingAccountId(null)
+      }
+    },
+    [applyAccountPatch, ensureHiddenGroup, moveAccountsToGroup, setAccounts, setGroups, t]
+  )
+
+  const onRename = useCallback(
+    async (account: ConnectionsPageAccount, nextName: string) => {
+      const storeAccount = useUserStore
+        .getState()
+        .accounts.find(
+          (item) => item.id === account.id || item.number === account.number
+        )
+      if (!storeAccount) {
+        toast.error(t('connections.strip.renameFailed'))
+        return false
+      }
+      try {
+        await saveAccount({ ...storeAccount, propfirm: nextName })
+        applyAccountPatch(account.id, { propfirm: nextName })
+        updateAccount(account.id, { propfirm: nextName })
+        setGroups(
+          useUserStore.getState().groups.map((group) => ({
+            ...group,
+            accounts: group.accounts.map((item) =>
+              item.id === account.id ? { ...item, propfirm: nextName } : item
+            ),
+          }))
+        )
+        return true
+      } catch {
+        toast.error(t('connections.strip.renameFailed'))
+        return false
+      }
+    },
+    [applyAccountPatch, saveAccount, setGroups, t, updateAccount]
+  )
+
+  const onDelete = useCallback(
+    async (account: ConnectionsPageAccount) => {
+      if (!isStandaloneAccount(account)) return
+      setDeletingAccountId(account.id)
+      try {
+        await removeAccountsFromTradesAction([account.number])
+        setData((prev) =>
+          prev ? removeConnectionsAccount(prev, account.id) : prev
+        )
+        removeAccount(account.id)
+        setGroups(
+          useUserStore.getState().groups.map((group) => ({
+            ...group,
+            accounts: group.accounts.filter((item) => item.id !== account.id),
+          }))
+        )
+        setTrades(
+          useTradesStore
+            .getState()
+            .trades.filter((trade) => trade.accountNumber !== account.number)
+        )
+        setAccountNumbers((prev) =>
+          prev.filter((number) => number !== account.number)
+        )
+        await refreshTradesOnly({ force: false })
+        toast.success(
+          t('connections.strip.accountDeleted', { account: account.number })
+        )
+      } catch {
+        toast.error(t('connections.strip.deleteFailed'))
+      } finally {
+        setDeletingAccountId(null)
+      }
+    },
+    [
+      refreshTradesOnly,
+      removeAccount,
+      setAccountNumbers,
+      setGroups,
+      setTrades,
+      t,
+    ]
   )
 
   return (
@@ -473,7 +670,13 @@ export function ConnectionsStrip({ className }: { className?: string }) {
             key={item.id}
             item={item}
             selectedAccounts={accountNumbers}
+            hiddenGroupId={hiddenGroupId}
+            maskingAccountId={maskingAccountId}
+            deletingAccountId={deletingAccountId}
             onSelectAccount={onSelectAccount}
+            onMask={onMask}
+            onRename={onRename}
+            onRequestDelete={setAccountToDelete}
           />
         ))}
         <AddConnectionChip onSelectService={setConnectService} />
@@ -486,6 +689,41 @@ export function ConnectionsStrip({ className }: { className?: string }) {
           void load()
         }}
       />
+
+      {/* Confirm lives on the strip, not inside the picker: opening a portaled
+          dialog dismisses the chip popover/drawer and would unmount the UI. */}
+      <AlertDialog
+        open={accountToDelete != null}
+        onOpenChange={(open) => {
+          if (!open) setAccountToDelete(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('connections.strip.deleteConfirmTitle')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('connections.strip.deleteConfirmDescription', {
+                account: accountToDelete?.number ?? '',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!accountToDelete) return
+                void onDelete(accountToDelete)
+                setAccountToDelete(null)
+              }}
+            >
+              {t('connections.strip.deleteConfirmAction')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

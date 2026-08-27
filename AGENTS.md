@@ -106,6 +106,31 @@ bun run capture:changelog-media -- pr-XXX
 
 Assets land in `public/updates/<batch>/{en,fr}/`. If every entry is text-only, skip the recipe and capture step.
 
+## Agent readiness
+
+Public agent-facing surfaces and the constraints that keep them working:
+
+- **Discovery files**: `app/robots.txt`, `app/llms.txt`, `app/sitemap.ts`,
+  `app/openapi.json`, and `app/.well-known/*`. Scopes, resource links, and the
+  markdown representations all come from `lib/agent-discovery/`; add a scope or
+  an entry point there, never inline in a route.
+- **API errors**: every `/api/*` failure must use `jsonError()` from
+  `lib/api/json-error.ts`. Unmatched `/api/*` paths are answered by
+  `app/api/[...not-found]/route.ts`.
+- **404s**: unmatched URLs are handled by `app/global-not-found.tsx`
+  (`experimental.globalNotFound`), which returns a real 404 status. Do not add a
+  catch-all page under `app/[locale]/` — with Cache Components its shell is
+  flushed with HTTP 200 before `notFound()` runs, which is a soft 404.
+- **Landing copy must server-render**: a `next/dynamic` boundary is a Suspense
+  boundary, and with Cache Components only its fallback lands in the prerendered
+  shell. Import landing sections statically; keep client-only widgets behind
+  `next/dynamic` with `ssr: false` *inside* the section, so a dependency that
+  bails out to client-side rendering cannot take the page's HTML with it.
+  `app/[locale]/(landing)/landing-ssr-content.test.ts` guards this.
+- **Locales**: `lib/locales.ts` is the single list. `proxy.ts` routes on it and
+  `next.config.ts` derives the `Vary: Accept` rules from it, so a locale added
+  in one place cannot lose content negotiation in the other.
+
 ## Docker notes
 
 - Start Postgres: `sudo docker compose up -d db` (use `sudo` when the daemon requires it)

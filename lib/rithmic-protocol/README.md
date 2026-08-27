@@ -7,12 +7,49 @@ TypeScript client for Rithmic's WebSocket + protobuf **R | Protocol API**, used 
 
 - `proto/` — message definitions from RProtocolAPI kit (licensed from Rithmic)
 - `etc/rithmic_ssl_cert_auth_params` — SSL auth params from the kit
-- `client.ts` — system-info probe, ORDER_PLANT login, account list, fill / order-history fetch
+- `client.ts` — system-info probe, ORDER_PLANT login, account list, fill / order-history fetch, **PNL_PLANT live balances**
 - `fills-to-trades.ts` — FIFO round-trip matching into Deltalytix `Trade` rows
+- `balances.ts` — map `AccountPnLPositionUpdate` → Solde Rithmic balance rows
 
 Proto files are loaded from disk at runtime. On Vercel they must be listed in
 `next.config.ts` → `outputFileTracingIncludes` (including Connections server
 actions, not only `/api/rithmic-protocol/*`).
+
+## Live balances (Solde Rithmic)
+
+Account balances for the accounts table come from the **PnL plant**:
+
+1. Open `wss://…`, `RequestLogin` with `infra_type = PNL_PLANT` (4).
+2. For each trading account, `RequestPnLPositionSnapshot` (template 402).
+3. Collect `AccountPnLPositionUpdate` (451) rows (`account_balance`, `cash_on_hand`, …) until `ResponsePnLPositionSnapshot` (403).
+
+Server action: `getRithmicProtocolBalancesAction` (uses encrypted Connection credentials).
+This is separate from the classic R | API+ HTTP `/balances` path.
+
+Every real fetch opens a WebSocket and performs a full `PNL_PLANT` login, so the
+action is throttled per user via `fetch-throttle.ts`:
+
+- automatic fetches (accounts widget mount) reuse a cached value for 60s;
+- the refresh button bypasses the TTL but still cannot fetch more than once
+  every 15s;
+- concurrent callers share one in-flight session;
+- the sweep has a 30s wall-clock budget (15s per message), so one silent
+  account cannot burn the budget of the accounts behind it;
+- the accounts table passes `protocolEnabled` so users with no Protocol-linked
+  account never reach the gateway at all;
+- disconnecting a Protocol connection invalidates that user's throttle bucket
+  so Solde values for the removed accounts are not served for the rest of the
+  TTL;
+- a timeout or reject on one account skips that account and still returns
+  balances already collected for the others.
+
+If a connection has no cached `accountIds`, the action lists them once and
+writes them back onto **that** Connection row (`id`), without touching
+`lastSyncedAt` or the connections-page cache — viewing Solde Rithmic is not a
+sync.
+
+The cache is module scope, so on serverless it is per-instance and best-effort —
+enough to collapse one browsing session's mounts, not a global rate limiter.
 
 ## Connection sequence (Rithmic)
 
