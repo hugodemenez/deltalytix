@@ -223,8 +223,9 @@ export class RithmicProtocolClient {
   private lastInboundTemplateId: number | undefined
   private gatewayUri = ''
   private sessionOpen = false
+  peerAddress: string | undefined
 
-  async connect(gatewayUri: string): Promise<void> {
+  async connect(gatewayUri: string, options?: { pinAddress?: string }): Promise<void> {
     this.root = await loadRoot()
     const uri = normalizeGatewayUri(gatewayUri)
     this.gatewayUri = uri
@@ -232,26 +233,37 @@ export class RithmicProtocolClient {
     this.lastInboundTemplateId = undefined
     this.closed = false
     this.sessionOpen = false
+    this.peerAddress = undefined
 
-    const host = new URL(uri).hostname
+    const parsed = new URL(uri)
+    const servername = parsed.hostname
+    const pin = options?.pinAddress?.trim()
+    const connectUrl = pin
+      ? `wss://${pin.includes(':') ? `[${pin}]` : pin}:${parsed.port || '443'}`
+      : uri
+
     try {
-      const records = await dnsLookup(host, { all: true })
+      const records = await dnsLookup(servername, { all: true })
       console.log(
-        `[RITHMIC-PROTOCOL] dns ${host} ${records.map((record) => `${record.family === 6 ? 'AAAA' : 'A'}:${record.address}`).join(' ') || '(none)'}`,
+        `[RITHMIC-PROTOCOL] dns ${servername} ${records.map((record) => `${record.family === 6 ? 'AAAA' : 'A'}:${record.address}`).join(' ') || '(none)'}`,
       )
     } catch (error) {
       console.warn(
-        `[RITHMIC-PROTOCOL] dns ${host} failed: ${error instanceof Error ? error.message : error}`,
+        `[RITHMIC-PROTOCOL] dns ${servername} failed: ${error instanceof Error ? error.message : error}`,
       )
+    }
+    if (pin) {
+      console.log(`[RITHMIC-PROTOCOL] pinning websocket to ${connectUrl} SNI=${servername}`)
     }
 
     await new Promise<void>((resolve, reject) => {
-      const ws = new WebSocket(uri, {
+      const ws = new WebSocket(connectUrl, {
         // Rithmic samples disable cert verification for Protocol endpoints.
         rejectUnauthorized: false,
         // Compressed binary frames have been observed to stall some plants.
         perMessageDeflate: false,
         family: forceIpv4() ? 4 : undefined,
+        servername,
       })
       this.ws = ws
 
@@ -263,6 +275,8 @@ export class RithmicProtocolClient {
         reject(err)
       }
       const onOpen = () => {
+        const socket = (ws as unknown as { _socket?: Socket })._socket
+        this.peerAddress = socket?.remoteAddress
         console.log(`[RITHMIC-PROTOCOL] websocket open ${uri} ${describeWebSocket(ws)}`)
         cleanup()
         resolve()
@@ -1108,11 +1122,12 @@ export class RithmicProtocolClient {
  */
 export async function fetchAvailableSystems(
   gatewayUri: string,
-): Promise<string[]> {
+): Promise<{ systems: string[]; peerAddress?: string }> {
   const client = new RithmicProtocolClient()
   try {
     await client.connect(gatewayUri)
-    return await client.requestSystemInfo()
+    const systems = await client.requestSystemInfo()
+    return { systems, peerAddress: client.peerAddress }
   } finally {
     await client.disconnect()
   }
@@ -1123,10 +1138,11 @@ export async function connectAndListAccounts(params: {
   systemName: string
   username: string
   password: string
+  pinAddress?: string
 }): Promise<RithmicProtocolConnectResult> {
   const client = new RithmicProtocolClient()
   try {
-    await client.connect(params.gatewayUri)
+    await client.connect(params.gatewayUri, { pinAddress: params.pinAddress })
     const login = await client.login(params)
     const info = await client.loginInfo()
     const accounts = await client.listAccounts({
@@ -1158,6 +1174,7 @@ export async function fetchProductCommissionRates(params: {
   ibId?: string
   accountIds: string[]
   accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
+  pinAddress?: string
 }): Promise<{
   rates: Map<string, number>
   rows: ProductRmsCommissionRow[]
@@ -1167,9 +1184,9 @@ export async function fetchProductCommissionRates(params: {
   const client = new RithmicProtocolClient()
   try {
     console.log(
-      `[RITHMIC-PROTOCOL] Product RMS connect gateway=${params.gatewayUri} system=${params.systemName}`,
+      `[RITHMIC-PROTOCOL] Product RMS connect gateway=${params.gatewayUri} system=${params.systemName} pin=${params.pinAddress ?? '(dns)'}`,
     )
-    await client.connect(params.gatewayUri)
+    await client.connect(params.gatewayUri, { pinAddress: params.pinAddress })
     const login = await client.login({
       systemName: params.systemName,
       username: params.username,

@@ -149,8 +149,8 @@ export async function listRithmicProtocolSystems(gatewayId?: string): Promise<{
   const gatewayUri = gatewayUriFor(gateway)
   try {
     const systems = await fetchAvailableSystems(gatewayUri)
-    if (systems.length > 0) {
-      return { systems, gatewayId: gateway.id, gatewayUri }
+    if (systems.systems.length > 0) {
+      return { systems: systems.systems, gatewayId: gateway.id, gatewayUri }
     }
   } catch (error) {
     logger.warn(
@@ -197,11 +197,21 @@ export async function authenticateRithmicProtocol(
 
     logger.info(`Authenticating (${authLogContext})`)
 
+    const probe = await fetchAvailableSystems(resolvedUri).catch((error) => {
+      logger.warn(
+        `System-info probe failed before login (${authLogContext}): ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      )
+      return { systems: [] as string[], peerAddress: undefined }
+    })
+
     const result = await connectAndListAccounts({
       gatewayUri: resolvedUri,
       systemName,
       username,
       password,
+      pinAddress: probe.peerAddress,
     })
 
     if (result.accounts.length === 0) {

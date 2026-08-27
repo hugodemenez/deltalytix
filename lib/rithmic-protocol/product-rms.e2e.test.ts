@@ -66,9 +66,11 @@ describe.skipIf(!hasLiveCredentials)(
       )
 
       e2eLog('probe RequestRithmicSystemInfo on a short-lived socket (Rithmic sequence)')
-      const systems = await fetchAvailableSystems(gateway)
-      e2eLog(`available systems: ${systems.join(', ') || '(none)'}`)
-      if (!systems.includes(systemName)) {
+      const probe = await fetchAvailableSystems(gateway)
+      e2eLog(
+        `available systems: ${probe.systems.join(', ') || '(none)'} peer=${probe.peerAddress ?? '(unknown)'}`,
+      )
+      if (!probe.systems.includes(systemName)) {
         e2eLog(`warn: ${systemName} is not in the system-info list`)
       }
 
@@ -78,6 +80,7 @@ describe.skipIf(!hasLiveCredentials)(
         username,
         password,
         accountIds: pinnedAccount ? [pinnedAccount] : [],
+        pinAddress: probe.peerAddress,
       })
 
       e2eLog(
