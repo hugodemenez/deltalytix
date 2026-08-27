@@ -4,6 +4,12 @@ import { useState, useMemo, useEffect, useCallback, forwardRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Share, Share2, Check, ChevronsUpDown, Copy, Layout, ExternalLink, Download } from "lucide-react"
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -52,6 +58,41 @@ interface ShareButtonProps {
   }
   compact?: boolean
   appearance?: "toolbar" | "navbar"
+}
+
+const PICKER_START_MONTH = new Date(2000, 0)
+const PICKER_END_MONTH = new Date(new Date().getFullYear() + 2, 11)
+
+function ShareDatePickerCalendar({
+  selected,
+  onSelect,
+  month,
+  onMonthChange,
+  locale,
+  disabled,
+}: {
+  selected?: Date
+  onSelect: (date: Date | undefined) => void
+  month?: Date
+  onMonthChange: (month: Date) => void
+  locale?: typeof fr
+  disabled?: (date: Date) => boolean
+}) {
+  return (
+    <Calendar
+      mode="single"
+      captionLayout="dropdown"
+      startMonth={PICKER_START_MONTH}
+      endMonth={PICKER_END_MONTH}
+      month={month}
+      onMonthChange={onMonthChange}
+      selected={selected}
+      onSelect={onSelect}
+      locale={locale}
+      disabled={disabled}
+      autoFocus
+    />
+  )
 }
 
 function triggerConfetti() {
@@ -141,6 +182,16 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       from: defaultDateRange.from,
       to: undefined
     } as DateRange)
+    const [dateAccordion, setDateAccordion] = useState<string>("")
+    const [fromCalendarMonth, setFromCalendarMonth] = useState<Date>(
+      defaultDateRange.from ?? new Date()
+    )
+    const [toCalendarMonth, setToCalendarMonth] = useState<Date>(
+      defaultDateRange.from ?? new Date()
+    )
+
+    const formatShareDate = (date: Date) =>
+      format(date, "LLL dd, y", { locale: dateLocale })
 
     // Update date range when trades change
     useEffect(() => {
@@ -148,6 +199,8 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         from: defaultDateRange.from,
         to: undefined
       })
+      setFromCalendarMonth(defaultDateRange.from ?? new Date())
+      setToCalendarMonth(defaultDateRange.from ?? new Date())
     }, [defaultDateRange])
 
     // Get unique account numbers from trades
@@ -477,6 +530,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           setShareUrl("")
           setShareTitle("")
           setShareAllAccounts(false)
+          setDateAccordion("")
         }
       }}>
         <DialogTrigger asChild>
@@ -650,58 +704,97 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                         </Popover>
                       </div>
                     )}
-                    <div className="grid gap-4">
-                      <div className="flex flex-col md:flex-row gap-4">
-                        <div className="flex-1">
-                          <div className="space-y-2">
-                            <Label>{t("share.startDateLabel")}</Label>
-                            <div className="border rounded-lg bg-card p-2">
-                              <Calendar
-                                mode="single"
-                                selected={selectedDateRange.from}
-                                onSelect={(date) =>
-                                  setSelectedDateRange((prev) => ({
-                                    ...prev,
-                                    from: date || prev.from
-                                  }))
+                    <Accordion
+                      type="single"
+                      collapsible
+                      value={dateAccordion || undefined}
+                      onValueChange={(value) => {
+                        setDateAccordion(value)
+                        if (value === "start") {
+                          setFromCalendarMonth(selectedDateRange.from ?? new Date())
+                        }
+                        if (value === "end") {
+                          setToCalendarMonth(
+                            selectedDateRange.to ?? selectedDateRange.from ?? new Date()
+                          )
+                        }
+                      }}
+                      className="rounded-lg border bg-card"
+                    >
+                      <AccordionItem value="start" className="px-3">
+                        <AccordionTrigger className="gap-2 py-3 hover:no-underline">
+                          <span className="flex min-w-0 flex-1 items-center justify-between gap-3 text-start">
+                            <span className="min-w-0 truncate font-medium">
+                              {t("share.startDateLabel")}
+                            </span>
+                            <span className="shrink-0 text-sm font-normal tabular-nums text-muted-foreground">
+                              {selectedDateRange.from
+                                ? formatShareDate(selectedDateRange.from)
+                                : t("share.startDatePlaceholder")}
+                            </span>
+                          </span>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-0">
+                          <div className="flex justify-center border-t border-border/60 bg-popover px-1 py-2">
+                            <ShareDatePickerCalendar
+                              selected={selectedDateRange.from}
+                              month={fromCalendarMonth}
+                              onMonthChange={setFromCalendarMonth}
+                              locale={dateLocale}
+                              onSelect={(date) => {
+                                setSelectedDateRange((prev) => ({
+                                  ...prev,
+                                  from: date || prev.from,
+                                }))
+                                if (date) {
+                                  setFromCalendarMonth(date)
+                                  setDateAccordion("")
                                 }
-                                defaultMonth={selectedDateRange.from}
-                                className="w-full [&_.rdp-nav]:p-0 [&_.rdp-caption]:p-2 [&_.rdp-months]:p-2 pt-0"
-                                showOutsideDays
-                                fixedWeeks
-                                locale={dateLocale}
-                              />
-                            </div>
+                              }}
+                            />
                           </div>
-                        </div>
-                        <div className="flex-1">
-                          <div className="space-y-2">
-                            <Label>{t("share.endDateLabel")}</Label>
-                            <div className="border rounded-lg bg-card p-2">
-                              <Calendar
-                                mode="single"
-                                selected={selectedDateRange.to}
-                                onSelect={(date) =>
-                                  setSelectedDateRange((prev) => ({
-                                    ...prev,
-                                    to: date
-                                  }))
+                        </AccordionContent>
+                      </AccordionItem>
+                      <AccordionItem value="end" className="border-b-0 px-3">
+                        <AccordionTrigger className="gap-2 py-3 hover:no-underline">
+                          <span className="flex min-w-0 flex-1 items-center justify-between gap-3 text-start">
+                            <span className="min-w-0 truncate font-medium">
+                              {t("share.endDateLabel")}
+                            </span>
+                            <span className="shrink-0 text-sm font-normal tabular-nums text-muted-foreground">
+                              {selectedDateRange.to
+                                ? formatShareDate(selectedDateRange.to)
+                                : t("share.endDatePlaceholder")}
+                            </span>
+                          </span>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-0">
+                          <div className="flex justify-center border-t border-border/60 bg-popover px-1 py-2">
+                            <ShareDatePickerCalendar
+                              selected={selectedDateRange.to}
+                              month={toCalendarMonth}
+                              onMonthChange={setToCalendarMonth}
+                              locale={dateLocale}
+                              disabled={(date) =>
+                                selectedDateRange.from
+                                  ? date < startOfDay(selectedDateRange.from)
+                                  : false
+                              }
+                              onSelect={(date) => {
+                                setSelectedDateRange((prev) => ({
+                                  ...prev,
+                                  to: date,
+                                }))
+                                if (date) {
+                                  setToCalendarMonth(date)
+                                  setDateAccordion("")
                                 }
-                                defaultMonth={selectedDateRange.to || selectedDateRange.from}
-                                fromDate={selectedDateRange.from}
-                                disabled={(date) =>
-                                  selectedDateRange.from ? date < selectedDateRange.from : false
-                                }
-                                className="w-full [&_.rdp-nav]:p-0 [&_.rdp-caption]:p-2 [&_.rdp-months]:p-2 pt-0"
-                                showOutsideDays
-                                fixedWeeks
-                                locale={dateLocale}
-                              />
-                            </div>
+                              }}
+                            />
                           </div>
-                        </div>
-                      </div>
-                    </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
                   </div>
                 )}
               </div>
