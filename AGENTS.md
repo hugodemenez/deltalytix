@@ -160,6 +160,7 @@ Open PRs against **`beta`** (not `main`). `main` is production; feature work lan
 - **Docker-in-Docker**: Cloud Agent VMs require `fuse-overlayfs` storage driver and `iptables-legacy` for Docker to work. Run `bash scripts/docker-bootstrap.sh` first; if it fails with overlay errors, install `fuse-overlayfs` (`sudo apt-get install -y fuse-overlayfs`) and set `/etc/docker/daemon.json` to `{"storage-driver": "fuse-overlayfs"}` before starting `dockerd`.
 - **Full local setup**: Run `bash scripts/self-host-quickstart.sh` then `bash scripts/dev.sh`. This handles Docker Postgres, `.env.local`, Bun install, Prisma, seeding, and dev server startup.
 - **Auth**: Uses `LOCAL_DASHBOARD_AUTH_BYPASS=true` — no external Supabase keys needed. The dashboard is accessible at `http://localhost:3000/dashboard` as `local-dashboard-user`.
+- **Tailscale (phone / tailnet access)**: `install` runs `scripts/cloud-tailscale-install.sh`; `start` runs `scripts/cloud-tailscale-up.sh` after Docker bootstrap. Add environment secret `TS_AUTHKEY` — a **reusable + ephemeral** Tailscale auth key (admin console → Settings → Keys). Do **not** commit the key. Do **not** enable Funnel. Hostname is `deltalytix-cloud` (override with `TS_HOSTNAME`). After join, open `http://deltalytix-cloud:3000/fr/dashboard` or `http://<node>.<tailnet>.ts.net:3000/fr/dashboard` from any device on the tailnet. Port 3000 is bound on `0.0.0.0` so MagicDNS works without Serve. Anyone on the tailnet is the local dashboard user.
 - **PRs target `beta`**, not `main`.
 
 <!-- BEGIN:nextjs-agent-rules -->
