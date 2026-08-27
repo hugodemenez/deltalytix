@@ -529,7 +529,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           setShowManager(false)
           setShareUrl("")
           setShareTitle("")
-          setShareAllAccounts(false)
+          setShareAllAccounts(true)
           setDateAccordion("")
         }
       }}>
