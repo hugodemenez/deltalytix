@@ -10,113 +10,95 @@ import { fontFamily } from "../../fonts";
 
 export const Headline: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps } = useVideoConfig();
 
   return (
     <AbsoluteFill
       name="Headline"
       style={{
-        backgroundColor: "#171917",
+        backgroundColor: "#F7F7F4",
         fontFamily,
       }}
     >
       <Interactive.Div
-        name="Accent bar"
+        name="Line one"
         style={{
           position: "absolute",
-          left: 160,
+          left: 120,
           top: 268,
-          height: 4,
-          width: interpolate(frame, [0.15 * fps, 1.1 * fps], [0, 120], {
+          width: 1680,
+          color: "#171917",
+          fontSize: 118,
+          fontWeight: 300,
+          letterSpacing: "-0.06em",
+          lineHeight: 0.96,
+          opacity: interpolate(frame, [0, 0.35 * fps], [0, 1], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
             easing: Easing.bezier(0.16, 1, 0.3, 1),
           }),
-          opacity: interpolate(
-            frame,
-            [0.15 * fps, 1.1 * fps, durationInFrames - 28, durationInFrames - 12],
-            [0, 1, 1, 0],
-            {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-              easing: [
-                Easing.bezier(0.16, 1, 0.3, 1),
-                Easing.linear,
-                Easing.bezier(0.16, 1, 0.3, 1),
-              ],
-            },
-          ),
-          backgroundColor: "#2A9B8F",
-        }}
-      />
-      <Interactive.Div
-        name="Headline copy"
-        style={{
-          position: "absolute",
-          left: 160,
-          top: 300,
-          width: 1600,
-          color: "#FFFFFF",
-          fontSize: 108,
-          fontWeight: 400,
-          letterSpacing: "-0.06em",
-          lineHeight: 1.02,
-          opacity: interpolate(
-            frame,
-            [0.1 * fps, 0.9 * fps, durationInFrames - 28, durationInFrames - 12],
-            [0, 1, 1, 0],
-            {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-              easing: [
-                Easing.bezier(0.16, 1, 0.3, 1),
-                Easing.linear,
-                Easing.bezier(0.16, 1, 0.3, 1),
-              ],
-            },
-          ),
           translate: interpolate(
             frame,
-            [0.1 * fps, 0.9 * fps],
-            ["0px 28px", "0px 0px"],
+            [0, 0.45 * fps],
+            ["0px 64px", "0px 0px"],
             {
               extrapolateLeft: "clamp",
               extrapolateRight: "clamp",
-              easing: Easing.spring({ damping: 200 }),
+              easing: Easing.spring({ damping: 14 }),
             },
           ),
         }}
       >
         One trading journal
-        <br />
+      </Interactive.Div>
+      <Interactive.Div
+        name="Line two"
+        style={{
+          position: "absolute",
+          left: 120,
+          top: 392,
+          width: 1680,
+          color: "#171917",
+          fontSize: 118,
+          fontWeight: 300,
+          letterSpacing: "-0.06em",
+          lineHeight: 0.96,
+          opacity: interpolate(frame, [0.18 * fps, 0.52 * fps], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+            easing: Easing.bezier(0.16, 1, 0.3, 1),
+          }),
+          translate: interpolate(
+            frame,
+            [0.18 * fps, 0.62 * fps],
+            ["0px 64px", "0px 0px"],
+            {
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+              easing: Easing.spring({ damping: 14 }),
+            },
+          ),
+        }}
+      >
         for every futures account.
       </Interactive.Div>
       <Interactive.Div
         name="Subhead"
         style={{
           position: "absolute",
-          left: 160,
-          top: 760,
-          width: 1100,
-          color: "rgba(255, 255, 255, 0.58)",
-          fontSize: 40,
+          left: 120,
+          top: 620,
+          width: 980,
+          color: "#686D67",
+          fontSize: 36,
           fontWeight: 400,
           letterSpacing: "-0.02em",
           lineHeight: 1.35,
-          opacity: interpolate(
-            frame,
-            [0.8 * fps, 1.7 * fps, durationInFrames - 28, durationInFrames - 12],
-            [0, 1, 1, 0],
-            {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-              easing: [
-                Easing.bezier(0.16, 1, 0.3, 1),
-                Easing.linear,
-                Easing.bezier(0.16, 1, 0.3, 1),
-              ],
-            },
-          ),
+          opacity: interpolate(frame, [0.7 * fps, 1.1 * fps], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+            easing: Easing.bezier(0.16, 1, 0.3, 1),
+          }),
         }}
       >
         Import brokers and funded accounts, then read P&L in one place.

@@ -11,13 +11,13 @@ import { LogoMark } from "../LogoMark";
 
 export const CallToAction: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps } = useVideoConfig();
 
   return (
     <AbsoluteFill
       name="Call to action"
       style={{
-        backgroundColor: "#171917",
+        backgroundColor: "#F7F7F4",
         fontFamily,
       }}
     >
@@ -34,63 +34,53 @@ export const CallToAction: React.FC = () => {
           alignItems: "center",
           justifyContent: "center",
           gap: 28,
-          opacity: interpolate(
-            frame,
-            [0.05 * fps, 0.8 * fps, durationInFrames - 18, durationInFrames],
-            [0, 1, 1, 0],
-            {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-              easing: [
-                Easing.bezier(0.16, 1, 0.3, 1),
-                Easing.linear,
-                Easing.bezier(0.16, 1, 0.3, 1),
-              ],
-            },
-          ),
-          scale: interpolate(frame, [0.05 * fps, 1.1 * fps], [0.94, 1], {
+          scale: interpolate(frame, [0, 0.55 * fps], [0.86, 1], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
-            easing: Easing.spring({ damping: 200 }),
+            easing: Easing.spring({ damping: 14 }),
             output: "perceptual-scale",
           }),
         }}
       >
-        <LogoMark size={120} />
+        <LogoMark size={96} color="#171917" />
         <Interactive.Div
           name="CTA title"
           style={{
-            color: "#FFFFFF",
-            fontSize: 72,
-            fontWeight: 400,
+            color: "#171917",
+            fontSize: 88,
+            fontWeight: 300,
             letterSpacing: "-0.06em",
             lineHeight: 1,
           }}
         >
-          Get started
+          Get Started
         </Interactive.Div>
         <Interactive.Div
           name="CTA button"
           style={{
-            marginTop: 12,
-            backgroundColor: "#F3F1EA",
-            color: "#171917",
-            fontSize: 32,
+            marginTop: 8,
+            backgroundColor: "#181A18",
+            color: "#FFFFFF",
+            fontSize: 28,
             fontWeight: 500,
             letterSpacing: "-0.02em",
-            padding: "22px 40px",
+            padding: "20px 36px",
             borderRadius: 4,
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
           }}
         >
           deltalytix.app
+          <Interactive.Span name="CTA arrow">→</Interactive.Span>
         </Interactive.Div>
         <Interactive.Div
           name="CTA footnote"
           style={{
-            color: "rgba(255, 255, 255, 0.5)",
-            fontSize: 26,
-            marginTop: 8,
-            opacity: interpolate(frame, [1.1 * fps, 1.9 * fps], [0, 1], {
+            color: "#686D67",
+            fontSize: 24,
+            fontWeight: 400,
+            opacity: interpolate(frame, [0.55 * fps, 0.95 * fps], [0, 1], {
               extrapolateLeft: "clamp",
               extrapolateRight: "clamp",
               easing: Easing.bezier(0.16, 1, 0.3, 1),

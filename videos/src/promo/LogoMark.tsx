@@ -2,9 +2,13 @@ import { Interactive } from "remotion";
 
 type LogoMarkProps = {
   readonly size?: number;
+  readonly color?: string;
 };
 
-export const LogoMark: React.FC<LogoMarkProps> = ({ size = 168 }) => {
+export const LogoMark: React.FC<LogoMarkProps> = ({
+  size = 168,
+  color = "#171917",
+}) => {
   return (
     <Interactive.Svg
       name="Logo mark"
@@ -17,14 +21,14 @@ export const LogoMark: React.FC<LogoMarkProps> = ({ size = 168 }) => {
     >
       <Interactive.Path
         name="Logo right"
-        fill="#FFFFFF"
+        fill={color}
         fillRule="evenodd"
         clipRule="evenodd"
         d="M159 63L127.5 0V255H255L236.5 218H159V63Z"
       />
       <Interactive.Path
         name="Logo left"
-        fill="#FFFFFF"
+        fill={color}
         fillRule="evenodd"
         clipRule="evenodd"
         d="M0 255L127.5 0V255H0ZM64 217L121 104V217H64Z"
