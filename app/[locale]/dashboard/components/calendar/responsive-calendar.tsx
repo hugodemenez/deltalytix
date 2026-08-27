@@ -28,6 +28,7 @@ import { CountryFilter } from "@/components/country-filter"
 import { useNewsFilterStore } from "@/store/filters/news-filter-store"
 import { useCalendarViewStore } from "@/store/widgets/calendar-view"
 import WeeklyCalendarPnl from "./weekly-calendar"
+import { CalendarMonthYearPicker } from "./calendar-month-year-picker"
 import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
 import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
 import { useUserStore } from "@/store/user-store"
@@ -534,11 +535,16 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
         className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between space-y-0 border-b shrink-0 p-2 sm:p-4 min-h-[56px]"
       >
         <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 min-w-0">
-          <CardTitle className="text-sm sm:text-lg font-semibold truncate capitalize">
+          <CardTitle className="sr-only">
             {viewMode === 'daily'
               ? format(currentDate, 'MMMM yyyy', { locale: dateLocale })
               : format(currentDate, 'yyyy', { locale: dateLocale })}
           </CardTitle>
+          <CalendarMonthYearPicker
+            date={currentDate}
+            viewMode={viewMode}
+            onDateChange={setCurrentDate}
+          />
           <div className={cn(
             "text-xs sm:text-base font-semibold shrink-0",
             (viewMode === 'daily' ? monthlyTotal : yearTotal) >= 0

@@ -1092,6 +1092,8 @@ export default {
   "calendar.months.october": "October",
   "calendar.months.november": "November",
   "calendar.months.december": "December",
+  "calendar.monthYearPicker.month": "Month",
+  "calendar.monthYearPicker.year": "Year",
   "calendar.modal.tradeDetails":
     "Trade details and performance analysis for this day.",
   "calendar.modal.table": "Table",

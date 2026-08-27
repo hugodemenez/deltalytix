@@ -1073,6 +1073,8 @@ export default {
   "calendar.months.october": "Octobre",
   "calendar.months.november": "Novembre",
   "calendar.months.december": "Décembre",
+  "calendar.monthYearPicker.month": "Mois",
+  "calendar.monthYearPicker.year": "Année",
   "calendar.modal.tradeDetails":
     "Détails des trades et analyse de performance pour cette journée.",
   "calendar.modal.table": "Tableau",
