@@ -133,29 +133,26 @@ export function CalendarMonthYearPicker({
       data-slot="calendar-month-year-picker"
       className={cn("inline-flex items-center gap-1.5 sm:gap-2", className)}
     >
+      {monthNav?.prev}
       {viewMode === "daily" && (
-        <>
-          {monthNav?.prev}
-          <NativeTitleSelect
-            id={monthId}
-            name="calendar-month"
-            label={t("calendar.monthYearPicker.month")}
-            value={String(monthIndex)}
-            displayValue={monthLabel}
-            sizerValues={monthLabels}
-            slot="calendar-month-select"
-            onChange={(value) => {
-              onDateChange(dateFromMonthYear(year, Number(value)))
-            }}
-          >
-            {CALENDAR_MONTH_KEYS.map((key, index) => (
-              <option key={key} value={index}>
-                {translateCalendarMonth(t, index)}
-              </option>
-            ))}
-          </NativeTitleSelect>
-          {monthNav?.next}
-        </>
+        <NativeTitleSelect
+          id={monthId}
+          name="calendar-month"
+          label={t("calendar.monthYearPicker.month")}
+          value={String(monthIndex)}
+          displayValue={monthLabel}
+          sizerValues={monthLabels}
+          slot="calendar-month-select"
+          onChange={(value) => {
+            onDateChange(dateFromMonthYear(year, Number(value)))
+          }}
+        >
+          {CALENDAR_MONTH_KEYS.map((key, index) => (
+            <option key={key} value={index}>
+              {translateCalendarMonth(t, index)}
+            </option>
+          ))}
+        </NativeTitleSelect>
       )}
       <NativeTitleSelect
         id={yearId}
@@ -180,6 +177,7 @@ export function CalendarMonthYearPicker({
           </option>
         ))}
       </NativeTitleSelect>
+      {monthNav?.next}
     </div>
   )
 }

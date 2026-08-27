@@ -562,48 +562,36 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
               ? format(currentDate, 'MMMM yyyy', { locale: dateLocale })
               : format(currentDate, 'yyyy', { locale: dateLocale })}
           </CardTitle>
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {viewMode === "weekly" && (
-              <CalendarStepButton
-                label="Previous year"
-                onClick={() => setCurrentDate(new Date(getYear(currentDate) - 1, 0, 1))}
-                icon={ChevronLeft}
-              />
-            )}
-            <CalendarMonthYearPicker
-              date={currentDate}
-              viewMode={viewMode}
-              onDateChange={setCurrentDate}
-              className="mx-0"
-              monthNav={
-                viewMode === "daily"
-                  ? {
-                      prev: (
-                        <CalendarStepButton
-                          label="Previous month"
-                          onClick={handlePrevMonth}
-                          icon={ChevronLeft}
-                        />
-                      ),
-                      next: (
-                        <CalendarStepButton
-                          label="Next month"
-                          onClick={handleNextMonth}
-                          icon={ChevronRight}
-                        />
-                      ),
-                    }
-                  : undefined
-              }
-            />
-            {viewMode === "weekly" && (
-              <CalendarStepButton
-                label="Next year"
-                onClick={() => setCurrentDate(new Date(getYear(currentDate) + 1, 0, 1))}
-                icon={ChevronRight}
-              />
-            )}
-          </div>
+          <CalendarMonthYearPicker
+            date={currentDate}
+            viewMode={viewMode}
+            onDateChange={setCurrentDate}
+            className="mx-0"
+            monthNav={{
+              prev: (
+                <CalendarStepButton
+                  label={viewMode === "daily" ? "Previous month" : "Previous year"}
+                  onClick={() =>
+                    viewMode === "daily"
+                      ? handlePrevMonth()
+                      : setCurrentDate(new Date(getYear(currentDate) - 1, 0, 1))
+                  }
+                  icon={ChevronLeft}
+                />
+              ),
+              next: (
+                <CalendarStepButton
+                  label={viewMode === "daily" ? "Next month" : "Next year"}
+                  onClick={() =>
+                    viewMode === "daily"
+                      ? handleNextMonth()
+                      : setCurrentDate(new Date(getYear(currentDate) + 1, 0, 1))
+                  }
+                  icon={ChevronRight}
+                />
+              ),
+            }}
+          />
           <div className={cn(
             "text-xs sm:text-base font-semibold shrink-0",
             (viewMode === 'daily' ? monthlyTotal : yearTotal) >= 0
