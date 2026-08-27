@@ -44,7 +44,7 @@ function translateCalendarMonth(
 }
 
 /** Same chrome as navbar view / filter / account controls. */
-const navbarSelectButtonClassName = cn(
+const navbarButtonClassName = cn(
   "relative isolate inline-flex h-7 shrink-0 items-center gap-1 overflow-hidden rounded-[4px]",
   "border border-[#E5E5E5] bg-white px-2",
   "text-[13px] font-medium text-[#171717]",
@@ -53,7 +53,7 @@ const navbarSelectButtonClassName = cn(
   "dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40",
 )
 
-function NativeTitleSelect({
+function OverlaySelect({
   id,
   label,
   name,
@@ -71,30 +71,23 @@ function NativeTitleSelect({
   children: ReactNode
 }) {
   return (
-    <div className="relative">
+    <div className="relative flex h-full items-center">
       <label htmlFor={id} className="sr-only">
         {label}
       </label>
-      <div className={navbarSelectButtonClassName}>
-        <span aria-hidden="true" className="capitalize whitespace-nowrap">
-          {displayValue}
-        </span>
-        <ChevronDown
-          aria-hidden="true"
-          className="h-3.5 w-3.5 text-[#686D67] dark:text-muted-foreground"
-          strokeWidth={1.75}
-        />
-        <select
-          id={id}
-          name={name}
-          value={value}
-          autoComplete="off"
-          onChange={(event) => onChange(event.target.value)}
-          className="absolute inset-0 z-10 cursor-pointer opacity-0 text-base"
-        >
-          {children}
-        </select>
-      </div>
+      <span aria-hidden="true" className="capitalize whitespace-nowrap">
+        {displayValue}
+      </span>
+      <select
+        id={id}
+        name={name}
+        value={value}
+        autoComplete="off"
+        onChange={(event) => onChange(event.target.value)}
+        className="absolute inset-0 z-10 cursor-pointer opacity-0 text-base"
+      >
+        {children}
+      </select>
     </div>
   )
 }
@@ -127,10 +120,10 @@ export function CalendarMonthYearPicker({
       role="group"
       aria-label={groupLabel}
       data-slot="calendar-month-year-picker"
-      className={cn("inline-flex min-w-0 items-center gap-1", className)}
+      className={cn(navbarButtonClassName, className)}
     >
       {viewMode === "daily" && (
-        <NativeTitleSelect
+        <OverlaySelect
           id={monthId}
           name="calendar-month"
           label={t("calendar.monthYearPicker.month")}
@@ -145,9 +138,9 @@ export function CalendarMonthYearPicker({
               {translateCalendarMonth(t, index)}
             </option>
           ))}
-        </NativeTitleSelect>
+        </OverlaySelect>
       )}
-      <NativeTitleSelect
+      <OverlaySelect
         id={yearId}
         name="calendar-year"
         label={t("calendar.monthYearPicker.year")}
@@ -167,7 +160,12 @@ export function CalendarMonthYearPicker({
             {optionYear}
           </option>
         ))}
-      </NativeTitleSelect>
+      </OverlaySelect>
+      <ChevronDown
+        aria-hidden="true"
+        className="h-3.5 w-3.5 text-[#686D67] dark:text-muted-foreground"
+        strokeWidth={1.75}
+      />
     </div>
   )
 }
