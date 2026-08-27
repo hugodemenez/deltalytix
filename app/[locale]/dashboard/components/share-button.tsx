@@ -43,7 +43,7 @@ import { Input } from "@/components/ui/input"
 import { SharedLayoutsManager } from "./shared-layouts-manager"
 import confetti from 'canvas-confetti'
 import { fr } from 'date-fns/locale'
-import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useTradesStore } from "../../../../store/trades-store"
 import { useUserStore } from "../../../../store/user-store"
 import { useData } from "@/context/data-provider"
@@ -625,13 +625,15 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                         autoFocus={false}
                       />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
+                    <div className="flex items-center gap-2">
+                      <Checkbox
                         id="share-all-accounts"
                         checked={shareAllAccounts}
-                        onCheckedChange={setShareAllAccounts}
+                        onCheckedChange={(checked) => setShareAllAccounts(checked === true)}
                       />
-                      <Label htmlFor="share-all-accounts">{t("share.shareAllAccounts")}</Label>
+                      <Label htmlFor="share-all-accounts" className="cursor-pointer">
+                        {t("share.shareAllAccounts")}
+                      </Label>
                     </div>
                     {!shareAllAccounts && (
                       <div className="space-y-2 relative">
