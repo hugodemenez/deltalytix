@@ -729,11 +729,11 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                     >
                       <AccordionItem value="start" className="px-3">
                         <AccordionTrigger className="gap-2 py-3 hover:no-underline">
-                          <span className="flex min-w-0 flex-1 items-center justify-between gap-3 text-start">
-                            <span className="min-w-0 truncate font-medium">
+                          <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-start">
+                            <span className="font-medium text-wrap">
                               {t("share.startDateLabel")}
                             </span>
-                            <span className="shrink-0 text-sm font-normal tabular-nums text-muted-foreground">
+                            <span className="text-sm font-normal text-wrap tabular-nums text-muted-foreground">
                               {selectedDateRange.from
                                 ? formatShareDate(selectedDateRange.from)
                                 : t("share.startDatePlaceholder")}
@@ -763,11 +763,11 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                       </AccordionItem>
                       <AccordionItem value="end" className="border-b-0 px-3">
                         <AccordionTrigger className="gap-2 py-3 hover:no-underline">
-                          <span className="flex min-w-0 flex-1 items-center justify-between gap-3 text-start">
-                            <span className="min-w-0 truncate font-medium">
+                          <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-start">
+                            <span className="font-medium text-wrap">
                               {t("share.endDateLabel")}
                             </span>
-                            <span className="shrink-0 text-sm font-normal tabular-nums text-muted-foreground">
+                            <span className="text-sm font-normal text-wrap tabular-nums text-muted-foreground">
                               {selectedDateRange.to
                                 ? formatShareDate(selectedDateRange.to)
                                 : t("share.endDatePlaceholder")}
