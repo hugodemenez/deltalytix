@@ -77,7 +77,8 @@ export function DashboardViewSelect({ className }: { className?: string }) {
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="start"
-          className="min-w-[8.5rem] rounded-[4px] border-[#E5E5E5] p-1 dark:border-border"
+          sideOffset={6}
+          className="min-w-[8.5rem] rounded-[4px] border-[#E5E5E5] bg-white p-1 shadow-md dark:border-border dark:bg-background"
         >
           <DropdownMenuRadioGroup
             value={activeTab}
