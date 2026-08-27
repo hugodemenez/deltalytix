@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if docker info >/dev/null 2>&1; then
+docker_ready() {
+  docker info >/dev/null 2>&1 || sudo docker info >/dev/null 2>&1
+}
+
+if docker_ready; then
   echo "[docker-bootstrap] Docker daemon already running"
   exit 0
 fi
@@ -14,7 +18,7 @@ sudo dockerd \
   >/tmp/dockerd.log 2>&1 &
 
 for _ in $(seq 1 30); do
-  if docker info >/dev/null 2>&1; then
+  if docker_ready; then
     echo "[docker-bootstrap] Docker is ready"
     exit 0
   fi
