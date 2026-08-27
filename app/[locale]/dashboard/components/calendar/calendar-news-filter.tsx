@@ -41,6 +41,7 @@ export function CalendarNewsFilter({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
+          data-slot="calendar-news-filter"
           className={cn(
             navbarTriggerClassName,
             "w-7 px-0 sm:w-auto sm:px-2",
