@@ -6,6 +6,7 @@ The product scene is a Remotion port of landing preview widgets. Do not import N
 
 | Widget | Landing file | Promo files | Data |
 | --- | --- | --- | --- |
+| Statistics strip | First-test `Metrics` cards (count-up + sparkline) | `widgets/StatWidget.tsx`, `StatWidgets.tsx` | Net P&L `$3,860` (`MONTHLY_PNL`), win rate `64%`, `42` trades |
 | Daily calendar | `app/[locale]/(landing)/components/calendar-preview.tsx` `buildDemoCalendarData()` | `widgets/mock-data.ts`, `calendar-grid.ts`, `CalendarWidget.tsx` | Day/pnl/trades for the pinned month |
 | Equity | `performance-visualization-chart.tsx` `equityData` | `mock-data.ts` `equityData`, `EquityChart.tsx` | 24820 → 28140 |
 | Daily P&L | same file `dailyPnlData` | `mock-data.ts` `dailyPnlData`, `DailyPnlChart.tsx` | 10 bars, win/loss colors |
@@ -35,7 +36,7 @@ Rules:
 - Bar heights `Math.round(...)`. Grid lines `shapeRendering="crispEdges"`.
 - SVG `width`/`height` attributes equal the viewBox (`680×360`) with `preserveAspectRatio="xMidYMid meet"`.
 
-If axes crawl again, search for `scale`, `spring`, or interpolate on a parent of `EquityAxes` / `DailyPnlAxes`.
+If axes crawl again, search for `scale`, `spring`, or interpolate on a parent of `EquityAxes` / `DailyPnlAxes`. Stat cards may fade/translate; the feature well and chart columns must not.
 
 ## Titles
 

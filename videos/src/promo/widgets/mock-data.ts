@@ -98,6 +98,19 @@ export const weekdayPnlData: ChartPoint[] = [
 
 export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
+/** Landing `distributionData` wins slice. */
+export const WIN_RATE_PERCENT = 64;
+
+export const MONTHLY_PNL = DEMO_CALENDAR_ENTRIES.reduce(
+  (total, entry) => total + entry.pnl,
+  0,
+);
+
+export const TRADE_COUNT = DEMO_CALENDAR_ENTRIES.reduce(
+  (total, entry) => total + entry.trades,
+  0,
+);
+
 export const formatUsd = (value: number) => {
   const sign = value > 0 ? "" : value < 0 ? "-" : "";
   return `${sign}$${Math.abs(Math.round(value)).toLocaleString("en-US")}`;

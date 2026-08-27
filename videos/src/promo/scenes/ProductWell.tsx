@@ -4,6 +4,7 @@ import { tokens } from "../tokens";
 import { CalendarWidget } from "../widgets/CalendarWidget";
 import { DailyPnlChart } from "../widgets/DailyPnlChart";
 import { EquityChart } from "../widgets/EquityChart";
+import { StatWidgets } from "../widgets/StatWidgets";
 
 export const ProductWell: React.FC = () => {
   return (
@@ -27,25 +28,37 @@ export const ProductWell: React.FC = () => {
         }}
       >
         <Interactive.Div
-          name="Calendar column"
+          name="Statistics row"
           style={{
             position: "absolute",
             left: 24,
             top: 24,
-            width: 1048,
-            height: 952,
+            width: 1792,
+            height: 208,
           }}
         >
-          <CalendarWidget delay={0} />
+          <StatWidgets />
+        </Interactive.Div>
+        <Interactive.Div
+          name="Calendar column"
+          style={{
+            position: "absolute",
+            left: 24,
+            top: 248,
+            width: 1020,
+            height: 728,
+          }}
+        >
+          <CalendarWidget delay={4} />
         </Interactive.Div>
         <Interactive.Div
           name="Equity column"
           style={{
             position: "absolute",
-            left: 1096,
-            top: 24,
-            width: 720,
-            height: 460,
+            left: 1060,
+            top: 248,
+            width: 756,
+            height: 356,
           }}
         >
           <EquityChart />
@@ -54,10 +67,10 @@ export const ProductWell: React.FC = () => {
           name="Daily P&L column"
           style={{
             position: "absolute",
-            left: 1096,
-            top: 508,
-            width: 720,
-            height: 468,
+            left: 1060,
+            top: 620,
+            width: 756,
+            height: 356,
           }}
         >
           <DailyPnlChart />

@@ -38,7 +38,9 @@ Total `PROMO_DURATION_FRAMES` = 312 (10.4s).
 
 ### Product (long)
 
-- **No scale, translate, or opacity on the sage well.** Those transforms jitter SVG ticks.
+- **No scale, translate, or opacity on the sage well or chart columns.** Those transforms jitter SVG ticks.
+- Stats strip (208px) counts Net P&L / win rate / trades with bezier, not spring. Sparkline is CSS `strokeDashoffset` on the P&L card only.
+- Calendar is 1020×728 under the stats; equity and daily P&L stack at 756×356.
 - Calendar fades 0→0.2s. Cells stagger by week/day but do not spring.
 - Equity series clips left-to-right over `EQUITY_DRAW_FRAMES` (72) after `EQUITY_DELAY_FRAMES` (12).
 - Daily bars grow over `PNL_BAR_DRAW_FRAMES` (36) with `PNL_BAR_STAGGER_FRAMES` (5), after `PNL_DELAY_FRAMES` (24).

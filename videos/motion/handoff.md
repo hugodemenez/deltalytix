@@ -2,7 +2,7 @@
 
 ## What this promo is
 
-A 1920×1080, 30fps landing-style spot: logo → headline → landing widgets (calendar + equity + daily P&L) → Get Started. Paper / landing tokens. Isolated app in `videos/` (Bun, Remotion 4.0.518). Studio: `cd videos && bun run dev` → http://localhost:3333
+A 1920×1080, 30fps landing-style spot: logo → headline → stats strip + landing widgets (calendar + equity + daily P&L) → Get Started. Paper / landing tokens. Isolated app in `videos/` (Bun, Remotion 4.0.518). Studio: `cd videos && bun run dev` → http://localhost:3333
 
 PRs still target **`beta`**, not `main`.
 
@@ -11,6 +11,7 @@ PRs still target **`beta`**, not `main`.
 - Official Remotion skills vendored under `agents/skills/remotion-*` (symlinked into `.cursor/skills` and `.claude/skills`).
 - Promo composition with `TransitionSeries` slides.
 - Widgets driven by landing mock data, August 2026 pinned.
+- Product scene stats strip (Net P&L, win rate, trades) counting from the same mock data.
 - Static memoized chart axes; series-only animation.
 - Local Remotion Media + Kenney SFX libraries; **playback** uses Remotion WAV whoosh/click only.
 - Motion spec in this directory.
@@ -45,6 +46,7 @@ Output is gitignored (`videos/out/`).
 | Scene lengths | `videos/src/promo/timing.ts` |
 | Copy | `scenes/Headline.tsx`, `scenes/CallToAction.tsx` |
 | Widget data | `widgets/mock-data.ts` (keep in sync with landing) |
+| Stat cards | `widgets/StatWidget.tsx`, `StatWidgets.tsx` |
 | Axis math | `widgets/chart-geometry.tsx` |
 | SFX | `PromoSfx.tsx` + `sfx.ts` |
 | Tokens | `tokens.ts` |
