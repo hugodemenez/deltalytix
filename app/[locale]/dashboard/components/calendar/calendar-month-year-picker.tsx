@@ -4,6 +4,7 @@ import { useId, type ReactNode } from "react"
 import { getMonth, getYear } from "date-fns"
 import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { safeTranslate } from "@/lib/translation-utils"
 import { useI18n } from "@/locales/client"
 import {
   CALENDAR_MONTH_KEYS,
@@ -16,7 +17,8 @@ function translateCalendarMonth(
   monthIndex: number,
 ): string {
   const key = CALENDAR_MONTH_KEYS[monthIndex] ?? CALENDAR_MONTH_KEYS[0]
-  return t(key)
+  // Dynamic month keys widen to a union next-international can't represent.
+  return safeTranslate(t, key)
 }
 
 /** Same chrome as navbar view / filter / account controls. */
