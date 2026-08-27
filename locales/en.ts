@@ -1523,7 +1523,7 @@ export default {
   "share.endDateLabel": "End Date (Optional)",
   "share.startDatePlaceholder": "Select start date",
   "share.endDatePlaceholder": "Select end date",
-  "share.accountsLabel": "Select Account",
+  "share.accountsLabel": "Accounts",
   "share.accountsPlaceholder": "Select accounts to share",
   "share.dateRangeLabel": "Select Date Range",
   "share.expirationLabel": "Set Expiration Date",
