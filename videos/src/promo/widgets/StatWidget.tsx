@@ -32,6 +32,7 @@ type StatWidgetProps = {
   readonly children: React.ReactNode;
   readonly sparkline?: boolean;
   readonly valueColor?: string;
+  readonly size?: "strip" | "feature";
 };
 
 export const StatWidget: React.FC<StatWidgetProps> = ({
@@ -42,8 +43,10 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
   children,
   sparkline = false,
   valueColor = tokens.ink,
+  size = "strip",
 }) => {
   const frame = useCurrentFrame();
+  const feature = size === "feature";
 
   return (
     <Interactive.Div
@@ -57,8 +60,8 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
         backgroundColor: tokens.card,
         borderRadius: 8,
         border: `1px solid ${tokens.border}`,
-        paddingLeft: 28,
-        paddingRight: 28,
+        paddingLeft: feature ? 40 : 28,
+        paddingRight: feature ? 40 : 28,
         fontFamily,
         opacity: interpolate(frame, [delay, delay + 10], [0, 1], {
           extrapolateLeft: "clamp",
@@ -81,7 +84,7 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
         name={`${name} label`}
         style={{
           color: tokens.muted,
-          fontSize: 16,
+          fontSize: feature ? 18 : 16,
           fontWeight: 500,
           letterSpacing: "0.06em",
           textTransform: "uppercase",
@@ -92,9 +95,9 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
       <Interactive.Div
         name={`${name} value`}
         style={{
-          marginTop: 10,
+          marginTop: feature ? 16 : 10,
           color: valueColor,
-          fontSize: 56,
+          fontSize: feature ? 84 : 56,
           fontWeight: 300,
           letterSpacing: "-0.06em",
           lineHeight: 1,
@@ -109,8 +112,8 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
           viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
           style={{
             width: "100%",
-            height: 40,
-            marginTop: 14,
+            height: feature ? 56 : 40,
+            marginTop: feature ? 20 : 14,
             display: "block",
           }}
         >
@@ -126,7 +129,7 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
               strokeDasharray: 800,
               strokeDashoffset: interpolate(
                 frame,
-                [delay + 8, delay + 36],
+                [delay + 8, delay + (feature ? 64 : 36)],
                 [800, 0],
                 {
                   extrapolateLeft: "clamp",
@@ -142,9 +145,9 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
         <Interactive.Div
           name={`${name} note`}
           style={{
-            marginTop: 12,
+            marginTop: feature ? 18 : 12,
             color: tokens.muted,
-            fontSize: 16,
+            fontSize: feature ? 20 : 16,
             fontWeight: 400,
           }}
         >

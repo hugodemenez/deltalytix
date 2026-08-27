@@ -26,10 +26,14 @@ import { dailyPnlData } from "./mock-data";
 
 type DailyPnlChartProps = {
   readonly delay?: number;
+  readonly barDrawFrames?: number;
+  readonly staggerFrames?: number;
 };
 
 export const DailyPnlChart: React.FC<DailyPnlChartProps> = ({
   delay = PNL_DELAY_FRAMES,
+  barDrawFrames = PNL_BAR_DRAW_FRAMES,
+  staggerFrames = PNL_BAR_STAGGER_FRAMES,
 }) => {
   const frame = useCurrentFrame();
 
@@ -76,10 +80,8 @@ export const DailyPnlChart: React.FC<DailyPnlChartProps> = ({
               const grow = interpolate(
                 frame,
                 [
-                  delay + index * PNL_BAR_STAGGER_FRAMES,
-                  delay +
-                    index * PNL_BAR_STAGGER_FRAMES +
-                    PNL_BAR_DRAW_FRAMES,
+                  delay + index * staggerFrames,
+                  delay + index * staggerFrames + barDrawFrames,
                 ],
                 [0, 1],
                 {

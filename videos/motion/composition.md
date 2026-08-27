@@ -12,49 +12,53 @@ start(n+1) = start(n) + duration(n) - SLIDE_FRAMES
 
 ## Frame table (current)
 
-| Scene | Duration | Absolute start | Absolute end (exclusive) | On-screen hold after in-anim |
+| Scene | Duration | Absolute start | Absolute end (exclusive) | Notes |
 | --- | ---: | ---: | ---: | --- |
-| LogoReveal | 30 | 0 | 30 | ~0.5s after the 12-frame scale |
-| Headline | 54 | 22 | 76 | Copy in by frame 22 of the scene |
-| ProductWell | 210 | 68 | 278 | Equity draw 12→84 of the scene; bars 24→~105 |
-| CallToAction | 42 | 270 | 312 | Footnote in by frame 18 of the scene |
+| LogoReveal | 30 | 0 | 30 | Short sting |
+| Headline | 54 | 22 | 76 | Word stagger + highlight |
+| StatsFeature | 150 | 68 | 218 | Count-up through ~frame 78, then hold |
+| CalendarFeature | 180 | 210 | 390 | Cells cascade, then readable hold |
+| EquityFeature | 180 | 382 | 562 | Series clip 8→116 |
+| PnlFeature | 150 | 554 | 704 | Bars stagger, last bar ~frame 106 |
+| ProductWell | 96 | 696 | 792 | All widgets together, fast fill |
+| CallToAction | 42 | 784 | 826 | Button beat |
 
-Total `PROMO_DURATION_FRAMES` = 312 (10.4s).
+Total `PROMO_DURATION_FRAMES` = 826 (27.5s).
 
 ## In/out recipes
 
 ### Logo (short)
 
 - Bezier 3-property entrance: opacity 0→8, translate 28px→0 over 12, scale 0.88→1 over 12 (`output: "perceptual-scale"`), then a slow push to 1.05.
-- Wordmark opacity + translate 6→16.
 - Sage `PaperMesh` + light `FilmGrain`. **No spring.**
-- Ding SFX at frame 0.
 
 ### Headline (short)
 
 - Word-by-word reveal, 4-frame stagger, opacity + translate.
-- Highlight **every** with a Paper-positive block that scales in from the left.
-- Subhead: opacity + translate 28→40.
-- Slow push on the type stack (`transformOrigin: left top`). Mesh + grain continue.
+- Highlight **every** with a Paper-positive block.
+- Slow push on the type stack. Mesh + grain continue.
 
-### Product (long)
+### Feature scenes (long, one widget each)
 
-- **No scale, translate, or opacity on the sage well or chart columns.** Those transforms jitter SVG ticks.
-- Stats strip (208px) counts Net P&L / win rate / trades with bezier, not spring. Sparkline is CSS `strokeDashoffset` on the P&L card only.
-- Calendar is 1020×728 under the stats; equity and daily P&L stack at 756×356.
-- Calendar fades 0→0.2s. Cells stagger by week/day but do not spring.
-- Equity series clips left-to-right over `EQUITY_DRAW_FRAMES` (72) after `EQUITY_DELAY_FRAMES` (12).
-- Daily bars grow over `PNL_BAR_DRAW_FRAMES` (36) with `PNL_BAR_STAGGER_FRAMES` (5), after `PNL_DELAY_FRAMES` (24).
+Shared chrome: sage page, `#ddddd8` well, eyebrow + title, **no scale/translate on the well**.
+
+- **Stats** — three large cards. Count bezier through ~2.5s, then hold.
+- **Calendar** — full stage. Week stagger 5, day stagger 1.5.
+- **Equity** — `EQUITY_DELAY_FRAMES` (8) then `EQUITY_DRAW_FRAMES` (108). Axes static.
+- **Daily P&L** — bars grow with `PNL_BAR_STAGGER_FRAMES` (6). Axes static.
+
+### Together (short)
+
+Same layout as the old single product scene. Charts use a fast fill (`drawFrames={20}`, bar stagger 2) so the assembled dashboard is readable for the hold.
 
 ### CTA (short)
 
 - Bezier scale `0.94 → 1` over 10 frames.
-- Footnote opacity 8→18.
-- Button is Paper action `#181A18`, `borderRadius: 4`.
+- Mesh + grain. Button is Paper action `#181A18`.
 
 ## If you change length
 
 1. Edit `timing.ts` only.
 2. Recompute `PROMO_DURATION_FRAMES` (already derived).
-3. Confirm SFX `Sequence from={}` values still use `HEADLINE_START` / `PRODUCT_START` / `CTA_START`.
-4. Re-render `Promo` and check stills at the first product frame (~start+16) **and** mid-draw (~start+50).
+3. Confirm SFX `Sequence from={}` values still use the `*_START` constants.
+4. Re-render `Promo` and still each feature near mid-draw **and** after the hold.

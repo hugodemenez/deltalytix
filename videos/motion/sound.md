@@ -18,9 +18,13 @@ One cue per visual cut, local WAV, **near full mix** (0.85–0.95). A 0.15s whoo
 | Absolute frame | Constant | File | Volume | Why |
 | ---: | --- | --- | ---: | --- |
 | `0` | ding | `sfx/remotion/ding.wav` | 0.55 | Logo sting |
-| `HEADLINE_START` (22) | page-turn | `sfx/remotion/page-turn.wav` | 0.90 | Slide into headline (~0.4s) |
-| `PRODUCT_START` (68) | whip | `sfx/remotion/whip.wav` | 0.85 | Slide into widgets |
-| `CTA_START` (270) | mouse click | `sfx/remotion/mouse-click.wav` | 0.95 | Button beat |
+| `HEADLINE_START` (22) | page-turn | `sfx/remotion/page-turn.wav` | 0.90 | Slide into headline |
+| `STATS_START` (68) | whip | `sfx/remotion/whip.wav` | 0.85 | Stats feature |
+| `CALENDAR_START` (210) | whoosh | `sfx/remotion/whoosh.wav` | 0.85 | Calendar feature |
+| `EQUITY_START` (382) | switch | `sfx/remotion/switch.wav` | 0.85 | Equity feature |
+| `PNL_START` (554) | shutter | `sfx/remotion/shutter-modern.wav` | 0.80 | Daily P&L feature |
+| `TOGETHER_START` (696) | page-turn | `sfx/remotion/page-turn.wav` | 0.75 | Assembled dashboard |
+| `CTA_START` (784) | mouse click | `sfx/remotion/mouse-click.wav` | 0.95 | Button beat |
 
 `PromoSfx` wraps each `Audio` in `Sequence from={...} durationInFrames={30}`. Keep that window ≥ 1s — `@remotion/media` needs decode time; 16–18 frame windows made cues inaudible.
 

@@ -14,10 +14,14 @@ const calendar = buildPromoCalendar();
 
 type CalendarWidgetProps = {
   readonly delay?: number;
+  readonly weekStagger?: number;
+  readonly dayStagger?: number;
 };
 
 export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
   delay = 0,
+  weekStagger = 1,
+  dayStagger = 0.35,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -126,7 +130,8 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
               }}
             >
               {week.days.map((cell, dayIndex) => {
-                const cellDelay = delay + weekIndex + dayIndex * 0.35;
+                const cellDelay =
+                  delay + weekIndex * weekStagger + dayIndex * dayStagger;
                 const win = (cell.entry?.pnl ?? 0) >= 0;
                 return (
                   <Interactive.Div

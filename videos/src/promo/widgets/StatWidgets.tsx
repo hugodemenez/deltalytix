@@ -5,19 +5,30 @@ import { MONTHLY_PNL, TRADE_COUNT, WIN_RATE_PERCENT } from "./mock-data";
 
 const BEZIER = Easing.bezier(0.16, 1, 0.3, 1);
 
-export const StatWidgets: React.FC = () => {
+type StatWidgetsProps = {
+  readonly size?: "strip" | "feature";
+};
+
+export const StatWidgets: React.FC<StatWidgetsProps> = ({ size = "strip" }) => {
   const frame = useCurrentFrame();
-  const pnl = interpolate(frame, [4, 44], [0, MONTHLY_PNL], {
+  const feature = size === "feature";
+  const countEnd = feature ? 78 : 44;
+  const pnl = interpolate(frame, [4, countEnd], [0, MONTHLY_PNL], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: BEZIER,
   });
-  const winRate = interpolate(frame, [10, 48], [0, WIN_RATE_PERCENT], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: BEZIER,
-  });
-  const trades = interpolate(frame, [16, 52], [0, TRADE_COUNT], {
+  const winRate = interpolate(
+    frame,
+    [10, countEnd + 4],
+    [0, WIN_RATE_PERCENT],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: BEZIER,
+    },
+  );
+  const trades = interpolate(frame, [16, countEnd + 8], [0, TRADE_COUNT], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: BEZIER,
@@ -28,7 +39,7 @@ export const StatWidgets: React.FC = () => {
       name="Stat widgets"
       style={{
         display: "flex",
-        gap: 16,
+        gap: feature ? 20 : 16,
         width: "100%",
         height: "100%",
       }}
@@ -42,6 +53,7 @@ export const StatWidgets: React.FC = () => {
           label="Net P&L"
           delay={0}
           sparkline
+          size={size}
           valueColor={tokens.positive}
         >
           {`+$${Math.round(pnl).toLocaleString("en-US")}`}
@@ -54,7 +66,8 @@ export const StatWidgets: React.FC = () => {
         <StatWidget
           name="Win rate card"
           label="Win rate"
-          delay={6}
+          delay={feature ? 10 : 6}
+          size={size}
           note="Across every funded account"
         >
           {`${Math.round(winRate)}%`}
@@ -67,7 +80,8 @@ export const StatWidgets: React.FC = () => {
         <StatWidget
           name="Trades card"
           label="Trades"
-          delay={12}
+          delay={feature ? 20 : 12}
+          size={size}
           note="Tagged and reviewed"
         >
           {Math.round(trades)}

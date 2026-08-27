@@ -1,6 +1,6 @@
 # Widgets and mock data
 
-The product scene is a Remotion port of landing preview widgets. Do not import Next.js, `useI18n`, Recharts, or Tailwind into `videos/`.
+The product tour is **feature-scoped**: stats, calendar, equity, and daily P&L each get a full well, then a short assembled dashboard. Do not import Next.js, `useI18n`, Recharts, or Tailwind into `videos/`.
 
 ## Sources of truth
 

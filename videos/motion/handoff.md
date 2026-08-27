@@ -2,7 +2,7 @@
 
 ## What this promo is
 
-A 1920×1080, 30fps landing-style spot: logo → headline → stats strip + landing widgets (calendar + equity + daily P&L) → Get Started. Paper / landing tokens. Isolated app in `videos/` (Bun, Remotion 4.0.518). Studio: `cd videos && bun run dev` → http://localhost:3333
+A 1920×1080, 30fps landing-style spot: logo → headline → **one scene per widget** (stats, calendar, equity, daily P&L) → assembled dashboard → Get Started. ~27.5s. Paper / landing tokens. Isolated app in `videos/` (Bun, Remotion 4.0.518). Studio: `cd videos && bun run dev` → http://localhost:3333
 
 PRs still target **`beta`**, not `main`.
 
@@ -12,6 +12,7 @@ PRs still target **`beta`**, not `main`.
 - Promo composition with `TransitionSeries` slides.
 - Widgets driven by landing mock data, August 2026 pinned.
 - Product scene stats strip (Net P&L, win rate, trades) counting from the same mock data.
+- Feature-scoped product beats so each widget draws and holds before the assembled dashboard.
 - Static memoized chart axes; series-only animation.
 - Local Remotion Media + Kenney SFX libraries; **playback** uses Remotion WAV whoosh/click only.
 - Motion spec in this directory, including intro craft in `intro.md`.
@@ -53,4 +54,4 @@ Output is gitignored (`videos/out/`).
 
 ## Review the picture, not just Studio
 
-Stills at product-start +16 can look empty while bars are still growing — that is intended now. Check a still near product-start +90 for the filled charts, and the last 1s for the CTA.
+Stills at a feature mid-draw can look empty while bars are still growing — that is intended. Check a still after each widget’s draw window, the assembled dashboard (~together start + 40), and the last 1s for the CTA.

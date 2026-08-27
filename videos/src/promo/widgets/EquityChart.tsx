@@ -20,15 +20,17 @@ import {
 
 type EquityChartProps = {
   readonly delay?: number;
+  readonly drawFrames?: number;
 };
 
 export const EquityChart: React.FC<EquityChartProps> = ({
   delay = EQUITY_DELAY_FRAMES,
+  drawFrames = EQUITY_DRAW_FRAMES,
 }) => {
   const frame = useCurrentFrame();
   const progress = interpolate(
     frame,
-    [delay, delay + EQUITY_DRAW_FRAMES],
+    [delay, delay + drawFrames],
     [0, 1],
     {
       extrapolateLeft: "clamp",
