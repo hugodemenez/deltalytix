@@ -532,9 +532,9 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
   return (
     <Card className="h-full flex flex-col">
       <CardHeader
-        className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between space-y-0 border-b shrink-0 p-2 sm:p-4 min-h-[56px]"
+        className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between space-y-0 border-b shrink-0 p-2 sm:p-4 min-h-[56px]"
       >
-        <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 min-w-0">
+        <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 shrink-0">
           <CardTitle className="sr-only">
             {viewMode === 'daily'
               ? format(currentDate, 'MMMM yyyy', { locale: dateLocale })
