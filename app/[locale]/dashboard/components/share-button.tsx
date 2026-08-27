@@ -646,6 +646,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                         value={shareTitle}
                         onChange={(e) => setShareTitle(e.target.value)}
                         autoFocus={false}
+                        className="text-base sm:text-sm"
                       />
                     </div>
                     <div className="space-y-2 relative">
