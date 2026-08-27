@@ -56,6 +56,28 @@ const WEEKDAYS_MONDAY_START = [
   'calendar.weekdays.sun'
 ] as const
 
+function CalendarStepButton({
+  label,
+  onClick,
+  icon: Icon,
+}: {
+  label: string
+  onClick: () => void
+  icon: typeof ChevronLeft
+}) {
+  return (
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={onClick}
+      className="relative z-10 h-7 w-7 shrink-0 rounded-[4px] border-[#E5E5E5] bg-white text-[#171717] shadow-none hover:bg-[#FAFAFA] dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40"
+      aria-label={label}
+    >
+      <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
+    </Button>
+  )
+}
+
 
 const formatCurrency = (value: number, options?: { minimumFractionDigits?: number; maximumFractionDigits?: number; signed?: boolean }) => {
   const formatted = value.toLocaleString('en-US', {
@@ -541,30 +563,46 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
               : format(currentDate, 'yyyy', { locale: dateLocale })}
           </CardTitle>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => viewMode === 'daily' ? handlePrevMonth() : setCurrentDate(new Date(getYear(currentDate) - 1, 0, 1))}
-              className="relative z-10 h-7 w-7 shrink-0 rounded-[4px] border-[#E5E5E5] bg-white text-[#171717] shadow-none hover:bg-[#FAFAFA] dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40"
-              aria-label={viewMode === 'daily' ? "Previous month" : "Previous year"}
-            >
-              <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.75} />
-            </Button>
+            {viewMode === "weekly" && (
+              <CalendarStepButton
+                label="Previous year"
+                onClick={() => setCurrentDate(new Date(getYear(currentDate) - 1, 0, 1))}
+                icon={ChevronLeft}
+              />
+            )}
             <CalendarMonthYearPicker
               date={currentDate}
               viewMode={viewMode}
               onDateChange={setCurrentDate}
-              className="mx-0 min-w-max"
+              className="mx-0"
+              monthNav={
+                viewMode === "daily"
+                  ? {
+                      prev: (
+                        <CalendarStepButton
+                          label="Previous month"
+                          onClick={handlePrevMonth}
+                          icon={ChevronLeft}
+                        />
+                      ),
+                      next: (
+                        <CalendarStepButton
+                          label="Next month"
+                          onClick={handleNextMonth}
+                          icon={ChevronRight}
+                        />
+                      ),
+                    }
+                  : undefined
+              }
             />
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => viewMode === 'daily' ? handleNextMonth() : setCurrentDate(new Date(getYear(currentDate) + 1, 0, 1))}
-              className="relative z-10 h-7 w-7 shrink-0 rounded-[4px] border-[#E5E5E5] bg-white text-[#171717] shadow-none hover:bg-[#FAFAFA] dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40"
-              aria-label={viewMode === 'daily' ? "Next month" : "Next year"}
-            >
-              <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.75} />
-            </Button>
+            {viewMode === "weekly" && (
+              <CalendarStepButton
+                label="Next year"
+                onClick={() => setCurrentDate(new Date(getYear(currentDate) + 1, 0, 1))}
+                icon={ChevronRight}
+              />
+            )}
           </div>
           <div className={cn(
             "text-xs sm:text-base font-semibold shrink-0",

@@ -15,32 +15,8 @@ function translateCalendarMonth(
   t: ReturnType<typeof useI18n>,
   monthIndex: number,
 ): string {
-  switch (monthIndex) {
-    case 1:
-      return t("calendar.months.february")
-    case 2:
-      return t("calendar.months.march")
-    case 3:
-      return t("calendar.months.april")
-    case 4:
-      return t("calendar.months.may")
-    case 5:
-      return t("calendar.months.june")
-    case 6:
-      return t("calendar.months.july")
-    case 7:
-      return t("calendar.months.august")
-    case 8:
-      return t("calendar.months.september")
-    case 9:
-      return t("calendar.months.october")
-    case 10:
-      return t("calendar.months.november")
-    case 11:
-      return t("calendar.months.december")
-    default:
-      return t("calendar.months.january")
-  }
+  const key = CALENDAR_MONTH_KEYS[monthIndex] ?? CALENDAR_MONTH_KEYS[0]
+  return t(key)
 }
 
 /** Same chrome as navbar view / filter / account controls. */
@@ -53,7 +29,7 @@ const navbarButtonClassName = cn(
   "dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40",
 )
 
-function OverlaySelect({
+function NativeTitleSelect({
   id,
   label,
   name,
@@ -61,6 +37,9 @@ function OverlaySelect({
   displayValue,
   onChange,
   children,
+  sizerValues,
+  slot,
+  className,
 }: {
   id: string
   label: string
@@ -69,15 +48,39 @@ function OverlaySelect({
   displayValue: string
   onChange: (value: string) => void
   children: ReactNode
+  sizerValues?: readonly string[]
+  slot?: string
+  className?: string
 }) {
+  const widthSources = sizerValues?.length ? sizerValues : [displayValue]
+
   return (
-    <div className="relative flex h-full items-center">
+    <div
+      data-slot={slot}
+      className={cn(navbarButtonClassName, className)}
+    >
       <label htmlFor={id} className="sr-only">
         {label}
       </label>
-      <span aria-hidden="true" className="capitalize whitespace-nowrap">
-        {displayValue}
-      </span>
+      <div className="inline-grid items-center justify-items-center">
+        {widthSources.map((source, index) => (
+          <span
+            key={`${index}-${source}`}
+            aria-hidden="true"
+            className="col-start-1 row-start-1 invisible capitalize whitespace-nowrap"
+          >
+            {source}
+          </span>
+        ))}
+        <span aria-hidden="true" className="col-start-1 row-start-1 capitalize whitespace-nowrap">
+          {displayValue}
+        </span>
+      </div>
+      <ChevronDown
+        aria-hidden="true"
+        className="h-3.5 w-3.5 text-[#686D67] dark:text-muted-foreground"
+        strokeWidth={1.75}
+      />
       <select
         id={id}
         name={name}
@@ -97,11 +100,16 @@ export function CalendarMonthYearPicker({
   viewMode,
   onDateChange,
   className,
+  monthNav,
 }: {
   date: Date
   viewMode: "daily" | "weekly"
   onDateChange: (date: Date) => void
   className?: string
+  monthNav?: {
+    prev: ReactNode
+    next: ReactNode
+  }
 }) {
   const t = useI18n()
   const baseId = useId()
@@ -112,6 +120,9 @@ export function CalendarMonthYearPicker({
   const year = getYear(date)
   const years = getCalendarPickerYears(new Date(), year)
   const monthLabel = translateCalendarMonth(t, monthIndex)
+  const monthLabels = CALENDAR_MONTH_KEYS.map((_, index) =>
+    translateCalendarMonth(t, index),
+  )
   const groupLabel =
     viewMode === "daily" ? `${monthLabel} ${year}` : String(year)
 
@@ -120,32 +131,40 @@ export function CalendarMonthYearPicker({
       role="group"
       aria-label={groupLabel}
       data-slot="calendar-month-year-picker"
-      className={cn(navbarButtonClassName, className)}
+      className={cn("inline-flex items-center gap-1.5 sm:gap-2", className)}
     >
       {viewMode === "daily" && (
-        <OverlaySelect
-          id={monthId}
-          name="calendar-month"
-          label={t("calendar.monthYearPicker.month")}
-          value={String(monthIndex)}
-          displayValue={monthLabel}
-          onChange={(value) => {
-            onDateChange(dateFromMonthYear(year, Number(value)))
-          }}
-        >
-          {CALENDAR_MONTH_KEYS.map((key, index) => (
-            <option key={key} value={index}>
-              {translateCalendarMonth(t, index)}
-            </option>
-          ))}
-        </OverlaySelect>
+        <>
+          {monthNav?.prev}
+          <NativeTitleSelect
+            id={monthId}
+            name="calendar-month"
+            label={t("calendar.monthYearPicker.month")}
+            value={String(monthIndex)}
+            displayValue={monthLabel}
+            sizerValues={monthLabels}
+            slot="calendar-month-select"
+            onChange={(value) => {
+              onDateChange(dateFromMonthYear(year, Number(value)))
+            }}
+          >
+            {CALENDAR_MONTH_KEYS.map((key, index) => (
+              <option key={key} value={index}>
+                {translateCalendarMonth(t, index)}
+              </option>
+            ))}
+          </NativeTitleSelect>
+          {monthNav?.next}
+        </>
       )}
-      <OverlaySelect
+      <NativeTitleSelect
         id={yearId}
         name="calendar-year"
         label={t("calendar.monthYearPicker.year")}
         value={String(year)}
         displayValue={String(year)}
+        slot="calendar-year-select"
+        className="tabular-nums"
         onChange={(value) => {
           onDateChange(
             dateFromMonthYear(
@@ -160,12 +179,7 @@ export function CalendarMonthYearPicker({
             {optionYear}
           </option>
         ))}
-      </OverlaySelect>
-      <ChevronDown
-        aria-hidden="true"
-        className="h-3.5 w-3.5 text-[#686D67] dark:text-muted-foreground"
-        strokeWidth={1.75}
-      />
+      </NativeTitleSelect>
     </div>
   )
 }
