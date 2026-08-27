@@ -74,7 +74,7 @@ export const DailyPnlChart: React.FC<DailyPnlChartProps> = ({ delay = 0 }) => {
           {dailyPnlData.map((point, index) => {
             const grow = interpolate(
               frame,
-              [delay + 0.2 * fps + index * 2, delay + 0.55 * fps + index * 2],
+              [delay + index, delay + 0.35 * fps + index],
               [0, 1],
               {
                 extrapolateLeft: "clamp",

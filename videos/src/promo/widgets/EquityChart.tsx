@@ -34,7 +34,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({ delay = 0 }) => {
     .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
     .join(" ");
   const area = `${line} L ${points[points.length - 1].x} ${PAD.top + chartH} L ${points[0].x} ${PAD.top + chartH} Z`;
-  const progress = interpolate(frame, [delay + 0.15 * fps, delay + 0.95 * fps], [0, 1], {
+  const progress = interpolate(frame, [delay, delay + 0.45 * fps], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.bezier(0.16, 1, 0.3, 1),

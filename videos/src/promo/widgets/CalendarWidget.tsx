@@ -136,7 +136,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
               }}
             >
               {week.days.map((cell, dayIndex) => {
-                const cellDelay = delay + 0.12 * fps + weekIndex * 2 + dayIndex;
+                    const cellDelay = delay + weekIndex + dayIndex * 0.35;
                 const win = (cell.entry?.pnl ?? 0) >= 0;
                 return (
                   <Interactive.Div

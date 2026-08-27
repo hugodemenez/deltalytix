@@ -52,7 +52,7 @@ export const ProductWell: React.FC = () => {
             height: 952,
           }}
         >
-          <CalendarWidget delay={4} />
+          <CalendarWidget delay={0} />
         </Interactive.Div>
         <Interactive.Div
           name="Equity column"
@@ -64,7 +64,7 @@ export const ProductWell: React.FC = () => {
             height: 460,
           }}
         >
-          <EquityChart delay={10} />
+          <EquityChart delay={2} />
         </Interactive.Div>
         <Interactive.Div
           name="Daily P&L column"
@@ -76,7 +76,7 @@ export const ProductWell: React.FC = () => {
             height: 468,
           }}
         >
-          <DailyPnlChart delay={18} />
+          <DailyPnlChart delay={4} />
         </Interactive.Div>
       </Interactive.Div>
     </AbsoluteFill>
