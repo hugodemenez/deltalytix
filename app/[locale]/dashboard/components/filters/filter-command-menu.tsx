@@ -16,7 +16,7 @@ import {
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList } from "@/components/ui/command"
 import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
-import { useMediaQuery } from "@/hooks/use-media-query"
+import { useLayoutMediaQuery } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
 import { useModalStateStore } from "@/store/modal-state-store"
 import { AccountSection } from "./filter-command-menu-account-section"
@@ -110,9 +110,12 @@ export function FilterCommandMenu({
   const [searchValue, setSearchValue] = useState("")
   const [openSection, setOpenSection] = useState<FilterSectionKey | null>(null)
   const [isParsingDate, setIsParsingDate] = useState(false)
-  const isMobileDevice = useMediaQuery(`(max-width: ${compactBreakpoint}px)`)
-  const useMobileDrawer = isMobileDevice || isMobile
+  const isMobileDevice = useLayoutMediaQuery(`(max-width: ${compactBreakpoint}px)`)
+  const viewportKnown = isMobileDevice !== undefined
+  // Until measured, assume compact/drawer so SSR never paints the labeled "+ Filter"
+  const useMobileDrawer = !viewportKnown || isMobileDevice || isMobile
   const useDesktopDropdown = variant === "navbar" && !useMobileDrawer
+  const isCompact = !viewportKnown || compact
   const showInlineSearch = useMobileDrawer
   const accountGroupBoardOpen = useModalStateStore((state) => state.accountGroupBoardOpen)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -303,14 +306,14 @@ export function FilterCommandMenu({
       aria-expanded={useDesktopDropdown ? open : undefined}
       className={cn(
         chromeButtonClass,
-        compact
+        isCompact
           ? cn(chromeIconClass, 'relative h-7 w-7 justify-center p-0')
           : cn(chromeTextClass, 'px-2.5'),
         useDesktopDropdown && 'data-[state=open]:bg-[#FAFAFA] dark:data-[state=open]:bg-muted/40',
         className
       )}
     >
-      {compact ? (
+      {isCompact ? (
         <>
           <Search className="h-3.5 w-3.5" strokeWidth={1.75} />
           {activeFilterCount > 0 ? (
@@ -340,20 +343,20 @@ export function FilterCommandMenu({
 
   const MobileTriggerButton = (
     <Button
-      variant={compact ? "ghost" : "outline"}
+      variant={isCompact ? "ghost" : "outline"}
       className={cn(
         "font-normal overflow-hidden",
-        compact
+        isCompact
           ? "h-11 w-11 shrink-0 rounded-full p-0"
           : "justify-start text-left",
-        variant === "toolbar" && !compact && "h-10 rounded-full max-w-full",
+        variant === "toolbar" && !isCompact && "h-10 rounded-full max-w-full",
         className
       )}
       onClick={() => openFilters()}
-      aria-label={compact ? t('filters.commandMenu.searchPlaceholderMobile') : undefined}
+      aria-label={isCompact ? t('filters.commandMenu.searchPlaceholderMobile') : undefined}
     >
-      <Search className={cn("h-4 w-4", !compact && "mr-2")} />
-      {!compact && (
+      <Search className={cn("h-4 w-4", !isCompact && "mr-2")} />
+      {!isCompact && (
         <span className="text-muted-foreground truncate">{t('filters.commandMenu.searchPlaceholderMobile')}</span>
       )}
     </Button>

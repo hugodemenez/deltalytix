@@ -18,8 +18,10 @@ import { DashboardViewSelect, DashboardViewTabs } from './dashboard-view-tabs'
 import { FilterCommandMenu } from './filters/filter-command-menu'
 import { ShareButton } from './share-button'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { useMediaQuery } from '@/hooks/use-media-query'
+import { useLayoutMediaQuery } from '@/hooks/use-media-query'
 import { useUserStore } from '@/store/user-store'
+
+const HOME_FILTER_COMPACT_QUERY = '(max-width: 1023px)'
 
 function subpageTitle(
   subpage: DashboardSubpage,
@@ -42,7 +44,8 @@ export default function Navbar() {
   const pathname = usePathname()
   const t = useI18n()
   const isMobile = useIsMobile()
-  const compactHomeFilters = useMediaQuery('(max-width: 1023px)')
+  // undefined until measured — default compact so phones never paint "+ Filter"
+  const compactHomeFilters = useLayoutMediaQuery(HOME_FILTER_COMPACT_QUERY) !== false
   const navRef = useRef<HTMLElement>(null)
   const subpage = resolveDashboardSubpage(pathname)
   const showHomeChrome = isDashboardHomePath(pathname)
