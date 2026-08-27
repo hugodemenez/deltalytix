@@ -1486,7 +1486,7 @@ export default {
   "share.startDatePlaceholder": "Sélectionner une date de début",
   "share.endDatePlaceholder": "Sélectionner une date de fin",
   "share.accountsLabel": "Sélectionner un compte",
-  "share.accountsPlaceholder": "Sélectionnez un compte à partager",
+  "share.accountsPlaceholder": "Sélectionnez des comptes à partager",
   "share.dateRangeLabel": "Sélectionner la Période",
   "share.expirationLabel": "Définir la Date d'Expiration",
   "share.publicLabel": "Rendre Public",
