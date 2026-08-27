@@ -6,18 +6,26 @@ import WebSocket from 'ws'
 import {
   EXCHANGE_NOTIFY_FILL,
   ORDER_PLANT,
+  PNL_PLANT,
   RithmicTemplateId,
 } from './templates'
 import type {
   RithmicProtocolAccount,
+  RithmicProtocolAccountBalance,
   RithmicProtocolConnectResult,
   RithmicProtocolFill,
 } from './types'
+import { mapAccountPnLUpdateToBalance } from './balances'
 import {
   getRithmicProtocolAppName,
   getRithmicProtocolAppVersion,
   normalizeGatewayUri,
 } from './systems'
+
+/** Wall-clock budget for a full PnL snapshot sweep across a user's accounts. */
+const PNL_SNAPSHOT_TOTAL_BUDGET_MS = 30_000
+/** Per-message wait inside that sweep. */
+const PNL_SNAPSHOT_MESSAGE_TIMEOUT_MS = 15_000
 
 /** Proto dir next to this module — traced into Vercel/serverless via next.config. */
 const PROTO_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'proto')
@@ -38,6 +46,10 @@ const PROTO_FILES = [
   'response_login_info.proto',
   'request_account_list.proto',
   'response_account_list.proto',
+  'request_pnl_position_snapshot.proto',
+  'response_pnl_position_snapshot.proto',
+  'account_pnl_position_update.proto',
+  'instrument_pnl_position_update.proto',
   'request_show_order_history_dates.proto',
   'response_show_order_history_dates.proto',
   'request_show_order_history_summary.proto',
@@ -274,6 +286,8 @@ export class RithmicProtocolClient {
     systemName: string
     username: string
     password: string
+    /** Defaults to ORDER_PLANT. Use PNL_PLANT for live account balances. */
+    infraType?: number
   }): Promise<{ fcmId?: string; ibId?: string; uniqueUserId?: string }> {
     await this.send('rti.RequestLogin', {
       templateId: RithmicTemplateId.LOGIN_REQUEST,
@@ -284,7 +298,7 @@ export class RithmicProtocolClient {
       appName: getRithmicProtocolAppName(),
       appVersion: getRithmicProtocolAppVersion(),
       systemName: params.systemName,
-      infraType: ORDER_PLANT,
+      infraType: params.infraType ?? ORDER_PLANT,
     })
 
     const msg = await this.nextMessage()
@@ -398,6 +412,138 @@ export class RithmicProtocolClient {
 
 
     return accounts
+  }
+
+  /**
+   * PnL plant: request an account balance / PnL snapshot (template 402).
+   * Collects AccountPnLPositionUpdate (451) until ResponsePnLPositionSnapshot (403).
+   */
+  async getAccountPnLSnapshots(params: {
+    fcmId?: string
+    ibId?: string
+    accountIds: string[]
+    /** Wall-clock budget for the whole sweep, not per account. */
+    deadlineMs?: number
+  }): Promise<RithmicProtocolAccountBalance[]> {
+    const balancesByAccountId = new Map<string, RithmicProtocolAccountBalance>()
+    const deadline =
+      Date.now() + (params.deadlineMs ?? PNL_SNAPSHOT_TOTAL_BUDGET_MS)
+
+    for (const accountId of params.accountIds) {
+      if (!accountId?.trim()) continue
+
+      // Accounts are swept sequentially, so one silent account must not be
+      // allowed to burn the budget of every account behind it.
+      if (Date.now() >= deadline) {
+        console.warn(
+          '[RITHMIC-PROTOCOL] PnL snapshot budget exhausted, skipping remaining accounts',
+        )
+        break
+      }
+
+      try {
+        await this.send('rti.RequestPnLPositionSnapshot', {
+          templateId: RithmicTemplateId.PNL_POSITION_SNAPSHOT_REQUEST,
+          userMsg: [`deltalytix-pnl-${accountId}`],
+          fcmId: params.fcmId,
+          ibId: params.ibId,
+          accountId,
+        })
+      } catch (error) {
+        console.warn(
+          `[RITHMIC-PROTOCOL] PnL snapshot send failed for ${accountId}, returning balances collected so far`,
+          error,
+        )
+        break
+      }
+
+      let outOfTime = false
+      let socketClosed = false
+      try {
+        for (;;) {
+          const remaining = deadline - Date.now()
+          if (remaining <= 0) {
+            outOfTime = true
+            break
+          }
+
+          const msg = await this.nextMessage(
+            Math.min(PNL_SNAPSHOT_MESSAGE_TIMEOUT_MS, remaining),
+          )
+
+          if (msg.templateId === RithmicTemplateId.ACCOUNT_PNL_POSITION_UPDATE) {
+            const decoded = decodeMessage<{
+              accountId?: string
+              fcmId?: string
+              ibId?: string
+              accountBalance?: string | number
+              cashOnHand?: string | number
+              marginBalance?: string | number
+              availableBuyingPower?: string | number
+              openPositionPnl?: string | number
+              closedPositionPnl?: string | number
+              dayPnl?: string | number
+            }>(this.root!, 'rti.AccountPnLPositionUpdate', msg.raw)
+            const balance = mapAccountPnLUpdateToBalance(decoded)
+            if (balance) {
+              balancesByAccountId.set(balance.account_id, balance)
+            }
+            continue
+          }
+
+          if (msg.templateId === RithmicTemplateId.INSTRUMENT_PNL_POSITION_UPDATE) {
+            // Instrument rows arrive interleaved with account snapshots — ignore.
+            continue
+          }
+
+          if (msg.templateId === RithmicTemplateId.PNL_POSITION_SNAPSHOT_RESPONSE) {
+            const decoded = decodeMessage<{ rpCode?: string[] }>(
+              this.root!,
+              'rti.ResponsePnLPositionSnapshot',
+              msg.raw,
+            )
+            if (
+              Array.isArray(decoded.rpCode) &&
+              decoded.rpCode.length > 0 &&
+              !rpOk(decoded.rpCode) &&
+              !rpIsNoData(decoded.rpCode)
+            ) {
+              console.warn(
+                `[RITHMIC-PROTOCOL] PnL snapshot failed for ${accountId}: ${rpMessage(decoded.rpCode)}`,
+              )
+            }
+            break
+          }
+
+          if (msg.templateId === RithmicTemplateId.REJECT) {
+            console.warn(
+              `[RITHMIC-PROTOCOL] PnL snapshot rejected for account ${accountId}`,
+            )
+            break
+          }
+
+          // Ignore heartbeats / unrelated pushes during the snapshot.
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        socketClosed = message.includes('WebSocket closed')
+        console.warn(
+          `[RITHMIC-PROTOCOL] PnL snapshot interrupted for ${accountId}, keeping earlier balances`,
+          error,
+        )
+        if (socketClosed) break
+        continue
+      }
+
+      if (outOfTime) {
+        console.warn(
+          `[RITHMIC-PROTOCOL] PnL snapshot budget exhausted while waiting on ${accountId}`,
+        )
+        break
+      }
+    }
+
+    return [...balancesByAccountId.values()]
   }
 
   /**
@@ -817,6 +963,53 @@ export async function connectAndListAccounts(params: {
       ibId: info.ibId || login.ibId,
       uniqueUserId: login.uniqueUserId,
     }
+  } finally {
+    await client.close()
+  }
+}
+
+/**
+ * Live account balances via the Protocol PnL plant (AccountPnLPositionUpdate).
+ * Uses a dedicated PNL_PLANT login — separate from ORDER_PLANT fill sync.
+ */
+export async function fetchAccountBalances(params: {
+  gatewayUri: string
+  systemName: string
+  username: string
+  password: string
+  fcmId?: string
+  ibId?: string
+  accountIds: string[]
+  /** Wall-clock budget for the snapshot sweep once logged in. */
+  deadlineMs?: number
+}): Promise<{
+  balances: RithmicProtocolAccountBalance[]
+  fcmId?: string
+  ibId?: string
+}> {
+  const accountIds = [...new Set(params.accountIds.map((id) => id.trim()).filter(Boolean))]
+  if (accountIds.length === 0) {
+    return { balances: [], fcmId: params.fcmId, ibId: params.ibId }
+  }
+
+  const client = new RithmicProtocolClient()
+  try {
+    await client.connect(params.gatewayUri)
+    const login = await client.login({
+      systemName: params.systemName,
+      username: params.username,
+      password: params.password,
+      infraType: PNL_PLANT,
+    })
+    const fcmId = params.fcmId || login.fcmId
+    const ibId = params.ibId || login.ibId
+    const balances = await client.getAccountPnLSnapshots({
+      fcmId,
+      ibId,
+      accountIds,
+      deadlineMs: params.deadlineMs,
+    })
+    return { balances, fcmId, ibId }
   } finally {
     await client.close()
   }

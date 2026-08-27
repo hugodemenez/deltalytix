@@ -51,13 +51,12 @@ export async function GET(request: Request) {
           return NextResponse.redirect(redirectUrl)
         }
 
-        // Ensure DB user exists and persist locale before redirecting
+        // Ensure DB user exists and persist locale before redirecting.
+        // ensureUserInDatabase resolves the identity from the verified session
+        // itself, so there is no user to fetch or pass in here.
         try {
-          const { data: { user } } = await supabase.auth.getUser()
-          if (user) {
-            const ensureResult = await ensureUserInDatabase(user, locale)
-            isNewUser = ensureResult.isNewUser
-          }
+          const ensureResult = await ensureUserInDatabase(locale)
+          isNewUser = ensureResult.isNewUser
         } catch (e) {
           console.error('Auth callback ensureUserInDatabase error:', e)
           // Non-fatal: continue redirect

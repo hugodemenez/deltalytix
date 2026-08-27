@@ -7,6 +7,13 @@ export interface RithmicCredentialSet {
     location: string
   }
   selectedAccounts: string[]
+  /**
+   * Concrete account IDs for live Solde Rithmic display.
+   * Distinct from `selectedAccounts`, which is the user's explicit sync
+   * selection and stays empty in "all accounts" mode so the classic sync
+   * modal does not auto-advance to processing on reopen.
+   */
+  linkedAccounts?: string[]
   lastSyncTime: string
   name?: string // optional display name for the credential set
   allAccounts?: boolean // flag to indicate if all accounts should be synced
@@ -58,12 +65,16 @@ export function isValidCredentialSet(data: any): data is RithmicCredentialSet {
     typeof data.credentials.server_type === 'string' &&
     typeof data.credentials.location === 'string' &&
     Array.isArray(data.selectedAccounts) &&
-    typeof data.lastSyncTime === 'string'
+    typeof data.lastSyncTime === 'string' &&
+    (data.linkedAccounts === undefined || Array.isArray(data.linkedAccounts))
   )
 }
 
 export function getAllRithmicData(): Record<string, RithmicCredentialSet> {
   try {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return {}
+    }
     const data = localStorage.getItem(STORAGE_KEY)
     if (!data) return {}
     
@@ -84,6 +95,54 @@ export function getAllRithmicData(): Record<string, RithmicCredentialSet> {
     localStorage.removeItem(STORAGE_KEY)
     return {}
   }
+}
+
+function trimAccountIds(ids: Iterable<unknown> | undefined): string[] {
+  const result: string[] = []
+  for (const accountId of ids ?? []) {
+    const trimmed = String(accountId ?? '').trim()
+    if (trimmed) result.push(trimmed)
+  }
+  return result
+}
+
+/**
+ * Concrete account IDs used for Solde Rithmic, independent of the sync
+ * selection. Prefers `linkedAccounts`, then falls back to `selectedAccounts`
+ * for credential sets saved before the fields were split.
+ */
+export function getLinkedAccountsForCredentialSet(
+  set: Pick<RithmicCredentialSet, 'linkedAccounts' | 'selectedAccounts'>
+): string[] {
+  const fromLinked = trimAccountIds(set.linkedAccounts)
+  if (fromLinked.length > 0) return fromLinked
+  return trimAccountIds(set.selectedAccounts)
+}
+
+/**
+ * Account numbers currently linked for live balance display.
+ * When "sync all accounts" was used, older saves left selectedAccounts empty —
+ * callers should also treat fetched balance IDs as linked in that case.
+ */
+export function getLinkedRithmicAccountNumbers(
+  credentialSets: Iterable<RithmicCredentialSet> = Object.values(getAllRithmicData())
+): string[] {
+  const linked = new Set<string>()
+  for (const set of credentialSets) {
+    for (const accountId of getLinkedAccountsForCredentialSet(set)) {
+      linked.add(accountId)
+    }
+  }
+  return [...linked]
+}
+
+export function hasAnyRithmicAllAccountsMode(
+  credentialSets: Iterable<RithmicCredentialSet> = Object.values(getAllRithmicData())
+): boolean {
+  for (const set of credentialSets) {
+    if (set.allAccounts) return true
+  }
+  return false
 }
 
 export function clearRithmicData(id?: string): void {

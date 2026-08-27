@@ -26,6 +26,7 @@ import PdfProcessing from '../ibkr-pdf/pdf-processing'
 import AtasFileUpload from '../atas/atas-file-upload'
 import AtasProcessor from '../atas/atas-processor'
 import FtmoProcessor from '../ftmo/ftmo-processor'
+import DeepchartsProcessor from '../deepcharts/deepcharts-processor'
 import IgProcessor from '../ig/ig-processor'
 import ManualProcessor from '../manual/manual-processor'
 import { Step } from '../import-button'
@@ -135,6 +136,7 @@ type StepComponent =
   | typeof AtasFileUpload
   | typeof AtasProcessor
   | typeof FtmoProcessor
+  | typeof DeepchartsProcessor
   | typeof IgProcessor
   | typeof ManualProcessor
   | typeof RithmicProtocolSync
@@ -907,6 +909,53 @@ export const platforms: PlatformConfig[] = [
         title: 'import.steps.processTrades',
         description: 'import.steps.processTradesDescription',
         component: FtmoProcessor,
+        isLastStep: true
+      }
+    ]
+  },
+
+  {
+    platformName: 'deepcharts',
+    type: 'deepcharts',
+    name: 'import.type.deepcharts.name',
+    description: 'import.type.deepcharts.description',
+    category: 'Platform CSV Import',
+    videoUrl: '',
+    details: 'import.type.deepcharts.details',
+    sampleFile: '/samples/import/deepcharts-sample.csv',
+    logo: {
+      path: '/logos/monochrome/deepcharts-black.png',
+      darkPath: '/logos/monochrome/deepcharts-white.png',
+      alt: 'DeepCharts Logo'
+    },
+    requiresAccountSelection: true,
+    skipHeaderSelection: true,
+    processFile: processStandardCsv,
+    processorComponent: DeepchartsProcessor,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'upload-file',
+        title: 'import.steps.uploadFile',
+        description: 'import.steps.uploadFileDescription',
+        component: FileUpload
+      },
+      {
+        id: 'select-account',
+        title: 'import.steps.selectAccount',
+        description: 'import.steps.selectAccountDescription',
+        component: AccountSelection
+      },
+      {
+        id: 'preview-trades',
+        title: 'import.steps.processTrades',
+        description: 'import.steps.processTradesDescription',
+        component: DeepchartsProcessor,
         isLastStep: true
       }
     ]

@@ -40,7 +40,7 @@ export default function FileUpload({
       const reader = new FileReader();
       reader.onload = (e) => {
         const firstLine = e.target?.result?.toString().split('\n')[0] || '';
-        const delimiter = firstLine.includes(';') ? ';' : ',';
+        const delimiter = importType === 'deepcharts' || firstLine.includes(';') ? ';' : ',';
         
         Papa.parse(file, {
           delimiter,
@@ -67,7 +67,7 @@ export default function FileUpload({
       };
       reader.readAsText(file);
     })
-  }, [setError])
+  }, [importType, setError])
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setUploadedFiles(prevFiles => [...prevFiles, ...acceptedFiles])

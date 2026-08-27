@@ -1,0 +1,20 @@
+
+package rti;
+
+// Instrument-level PnL update from the PnL plant (template 450).
+// Vendored so inbound snapshots can be decoded/ignored cleanly.
+message InstrumentPnLPositionUpdate
+	{
+	required int32    template_id                   = 154467;
+	optional bool     is_snapshot                   = 110121;
+
+	optional string   fcm_id                        = 154013;
+	optional string   ib_id                         = 154014;
+	optional string   account_id                    = 154008;
+	optional string   symbol                        = 110100;
+	optional string   exchange                      = 110101;
+
+	optional string   open_position_pnl             = 156961;
+	optional string   closed_position_pnl           = 156963;
+	optional int32    net_quantity                  = 156967;
+	}

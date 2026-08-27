@@ -17,6 +17,12 @@ export default function Footer() {
     company: [
       { name: t('footer.company.about'), href: '/about' },
     ],
+    comparisons: [
+      { name: t('footer.comparisons.hub'), href: '/trading-journal/futures' },
+      { name: t('footer.comparisons.trademetria'), href: '/trading-journal/futures/trademetria' },
+      { name: t('footer.comparisons.tradezella'), href: '/trading-journal/futures/tradezella' },
+      { name: t('footer.comparisons.tradervue'), href: '/trading-journal/futures/tradervue' },
+    ],
     legal: [
       { name: t('footer.legal.privacy'), href: '/privacy' },
       { name: t('landing.consent.record.settings'), href: '/settings#privacy' },
@@ -93,17 +99,31 @@ export default function Footer() {
                 </ul>
               </div>
             </div>
-            <div>
-              <h4 className="text-sm font-semibold leading-6 text-foreground">{t('footer.legal.title')}</h4>
-              <ul role="list" className="mt-6 space-y-4">
-                {navigation.legal.map((item) => (
-                  <li key={item.name}>
-                    <Link href={item.href} className="text-sm leading-6 text-black/55 transition-colors hover:text-foreground dark:text-white/55">
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+            <div className="md:grid md:grid-cols-2 md:gap-8">
+              <div>
+                <h4 className="text-sm font-semibold leading-6 text-foreground">{t('footer.comparisons.title')}</h4>
+                <ul role="list" className="mt-6 space-y-4">
+                  {navigation.comparisons.map((item) => (
+                    <li key={item.name}>
+                      <Link href={item.href} className="text-sm leading-6 text-black/55 transition-colors hover:text-foreground dark:text-white/55">
+                        {item.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="mt-10 md:mt-0">
+                <h4 className="text-sm font-semibold leading-6 text-foreground">{t('footer.legal.title')}</h4>
+                <ul role="list" className="mt-6 space-y-4">
+                  {navigation.legal.map((item) => (
+                    <li key={item.name}>
+                      <Link href={item.href} className="text-sm leading-6 text-black/55 transition-colors hover:text-foreground dark:text-white/55">
+                        {item.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         </div>
