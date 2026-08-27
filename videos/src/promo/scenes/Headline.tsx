@@ -10,7 +10,7 @@ import { fontFamily } from "../../fonts";
 
 export const Headline: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
 
   return (
     <AbsoluteFill
@@ -32,6 +32,20 @@ export const Headline: React.FC = () => {
             extrapolateRight: "clamp",
             easing: Easing.bezier(0.16, 1, 0.3, 1),
           }),
+          opacity: interpolate(
+            frame,
+            [0.15 * fps, 1.1 * fps, durationInFrames - 28, durationInFrames - 12],
+            [0, 1, 1, 0],
+            {
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+              easing: [
+                Easing.bezier(0.16, 1, 0.3, 1),
+                Easing.linear,
+                Easing.bezier(0.16, 1, 0.3, 1),
+              ],
+            },
+          ),
           backgroundColor: "#2A9B8F",
         }}
       />
@@ -47,11 +61,20 @@ export const Headline: React.FC = () => {
           fontWeight: 400,
           letterSpacing: "-0.06em",
           lineHeight: 1.02,
-          opacity: interpolate(frame, [0.1 * fps, 0.9 * fps], [0, 1], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-            easing: Easing.bezier(0.16, 1, 0.3, 1),
-          }),
+          opacity: interpolate(
+            frame,
+            [0.1 * fps, 0.9 * fps, durationInFrames - 28, durationInFrames - 12],
+            [0, 1, 1, 0],
+            {
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+              easing: [
+                Easing.bezier(0.16, 1, 0.3, 1),
+                Easing.linear,
+                Easing.bezier(0.16, 1, 0.3, 1),
+              ],
+            },
+          ),
           translate: interpolate(
             frame,
             [0.1 * fps, 0.9 * fps],
@@ -80,11 +103,20 @@ export const Headline: React.FC = () => {
           fontWeight: 400,
           letterSpacing: "-0.02em",
           lineHeight: 1.35,
-          opacity: interpolate(frame, [0.8 * fps, 1.7 * fps], [0, 1], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-            easing: Easing.bezier(0.16, 1, 0.3, 1),
-          }),
+          opacity: interpolate(
+            frame,
+            [0.8 * fps, 1.7 * fps, durationInFrames - 28, durationInFrames - 12],
+            [0, 1, 1, 0],
+            {
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+              easing: [
+                Easing.bezier(0.16, 1, 0.3, 1),
+                Easing.linear,
+                Easing.bezier(0.16, 1, 0.3, 1),
+              ],
+            },
+          ),
         }}
       >
         Import brokers and funded accounts, then read P&L in one place.

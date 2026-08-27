@@ -11,7 +11,7 @@ import { LogoMark } from "../LogoMark";
 
 export const CallToAction: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
 
   return (
     <AbsoluteFill
@@ -34,11 +34,20 @@ export const CallToAction: React.FC = () => {
           alignItems: "center",
           justifyContent: "center",
           gap: 28,
-          opacity: interpolate(frame, [0.05 * fps, 0.8 * fps], [0, 1], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-            easing: Easing.bezier(0.16, 1, 0.3, 1),
-          }),
+          opacity: interpolate(
+            frame,
+            [0.05 * fps, 0.8 * fps, durationInFrames - 18, durationInFrames],
+            [0, 1, 1, 0],
+            {
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+              easing: [
+                Easing.bezier(0.16, 1, 0.3, 1),
+                Easing.linear,
+                Easing.bezier(0.16, 1, 0.3, 1),
+              ],
+            },
+          ),
           scale: interpolate(frame, [0.05 * fps, 1.1 * fps], [0.94, 1], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",

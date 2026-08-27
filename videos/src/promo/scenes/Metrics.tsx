@@ -14,7 +14,7 @@ const formatPnl = (value: number) => {
 
 export const Metrics: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
 
   const pnl = interpolate(frame, [0.5 * fps, 2.1 * fps], [0, 12480], {
     extrapolateLeft: "clamp",
@@ -40,6 +40,30 @@ export const Metrics: React.FC = () => {
         fontFamily,
       }}
     >
+      <Interactive.Div
+        name="Metrics content"
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: "100%",
+          height: "100%",
+          opacity: interpolate(
+            frame,
+            [0, 1, durationInFrames - 28, durationInFrames - 12],
+            [1, 1, 1, 0],
+            {
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+              easing: [
+                Easing.linear,
+                Easing.linear,
+                Easing.bezier(0.16, 1, 0.3, 1),
+              ],
+            },
+          ),
+        }}
+      >
       <Interactive.Div
         name="Section label"
         style={{
@@ -352,6 +376,7 @@ export const Metrics: React.FC = () => {
         >
           AI coach
         </Interactive.Div>
+      </Interactive.Div>
       </Interactive.Div>
     </AbsoluteFill>
   );
