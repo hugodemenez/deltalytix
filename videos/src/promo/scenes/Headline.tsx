@@ -68,7 +68,7 @@ export const Headline: React.FC = () => {
           name="Subhead"
           style={{
             marginTop: 64,
-            width: 980,
+            width: 1480,
             color: tokens.muted,
             fontSize: 36,
             fontWeight: 400,
