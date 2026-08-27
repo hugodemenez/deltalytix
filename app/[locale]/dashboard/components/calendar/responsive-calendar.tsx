@@ -540,12 +540,12 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
               ? format(currentDate, 'MMMM yyyy', { locale: dateLocale })
               : format(currentDate, 'yyyy', { locale: dateLocale })}
           </CardTitle>
-          <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             <Button
               variant="outline"
               size="icon"
               onClick={() => viewMode === 'daily' ? handlePrevMonth() : setCurrentDate(new Date(getYear(currentDate) - 1, 0, 1))}
-              className="h-7 w-7 sm:h-8 sm:w-8 shrink-0"
+              className="relative z-10 h-7 w-7 sm:h-8 sm:w-8 shrink-0"
               aria-label={viewMode === 'daily' ? "Previous month" : "Previous year"}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -554,12 +554,13 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
               date={currentDate}
               viewMode={viewMode}
               onDateChange={setCurrentDate}
+              className="mx-0"
             />
             <Button
               variant="outline"
               size="icon"
               onClick={() => viewMode === 'daily' ? handleNextMonth() : setCurrentDate(new Date(getYear(currentDate) + 1, 0, 1))}
-              className="h-7 w-7 sm:h-8 sm:w-8 shrink-0"
+              className="relative z-10 h-7 w-7 sm:h-8 sm:w-8 shrink-0"
               aria-label={viewMode === 'daily' ? "Next month" : "Next year"}
             >
               <ChevronRight className="h-4 w-4" />
