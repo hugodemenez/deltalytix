@@ -43,6 +43,7 @@ import { Input } from "@/components/ui/input"
 import { SharedLayoutsManager } from "./shared-layouts-manager"
 import confetti from 'canvas-confetti'
 import { fr } from 'date-fns/locale'
+import { Checkbox } from "@/components/ui/checkbox"
 import { useTradesStore } from "../../../../store/trades-store"
 import { useUserStore } from "../../../../store/user-store"
 import { useData } from "@/context/data-provider"
@@ -157,6 +158,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const [shareUrl, setShareUrl] = useState<string>("")
     const [showManager, setShowManager] = useState(false)
     const [shareTitle, setShareTitle] = useState("")
+    const [shareAllAccounts, setShareAllAccounts] = useState(true)
     const [isExporting, setIsExporting] = useState(false)
     const [isSharing, setIsSharing] = useState(false)
 
