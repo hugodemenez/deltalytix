@@ -562,7 +562,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           <div className="h-full flex flex-col overflow-y-hidden">
               <DialogHeader>
                 <DialogTitle>{t("share.title")}</DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="sr-only">
                   {t("share.description")}
                 </DialogDescription>
               </DialogHeader>
