@@ -807,31 +807,40 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
             <div className="shrink-0 px-3 sm:px-6 py-3 sm:py-4 border-t bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60">
               <DialogFooter>
                 {showManager ? null : !shareUrl ? (
-                  <div className="w-full flex flex-col sm:flex-row gap-2 sm:justify-end">
-                    <Button
-                      variant="ghost"
-                      onClick={handleExportPdf}
-                      disabled={isExporting}
-                      className="h-8 gap-1.5 rounded-full border border-[#E5E5E5] bg-white px-2.5 text-sm font-medium text-[#171717] shadow-none hover:bg-[#FAFAFA] dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40"
+                  <div className="flex w-full sm:justify-end">
+                    <div
+                      role="group"
+                      className="flex w-full max-w-full flex-col items-stretch rounded-2xl border border-[#E5E5E5] bg-white px-2 py-[6px] shadow-none sm:w-auto sm:flex-row sm:items-center sm:rounded-full dark:border-border dark:bg-background"
                     >
-                      <Download className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-                      {isExporting ? t("share.exportPdfInProgress") : t("share.exportPdfButton")}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => setShowManager(true)}
-                      className="h-8 gap-1.5 rounded-full border border-[#E5E5E5] bg-white px-2.5 text-sm font-medium text-[#171717] shadow-none hover:bg-[#FAFAFA] dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40"
-                    >
-                      <Layout className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-                      {t("share.manageLayouts")}
-                    </Button>
-                    <Button
-                      onClick={handleShare}
-                      disabled={isSharing}
-                      className="h-8 rounded-full bg-[#171717] px-3.5 text-sm font-medium text-white shadow-none hover:bg-[#171717]/90 dark:bg-foreground dark:text-background dark:hover:bg-foreground/90"
-                    >
-                      {isSharing ? t("share.shareInProgress") : t("share.shareButton")}
-                    </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={handleExportPdf}
+                        disabled={isExporting}
+                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-none px-2.5 text-sm font-medium text-[#171717] shadow-none hover:bg-transparent dark:text-foreground"
+                      >
+                        <Download className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                        {isExporting ? t("share.exportPdfInProgress") : t("share.exportPdfButton")}
+                      </Button>
+                      <span aria-hidden className="hidden h-4 w-px shrink-0 bg-[#E5E5E5] sm:block dark:bg-border" />
+                      <span aria-hidden className="mx-2 h-px bg-[#E5E5E5] sm:hidden dark:bg-border" />
+                      <Button
+                        variant="ghost"
+                        onClick={() => setShowManager(true)}
+                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-none px-2.5 text-sm font-medium text-[#171717] shadow-none hover:bg-transparent dark:text-foreground"
+                      >
+                        <Layout className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                        {t("share.manageLayouts")}
+                      </Button>
+                      <span aria-hidden className="hidden h-4 w-px shrink-0 bg-[#E5E5E5] sm:block dark:bg-border" />
+                      <span aria-hidden className="mx-2 h-px bg-[#E5E5E5] sm:hidden dark:bg-border" />
+                      <Button
+                        onClick={handleShare}
+                        disabled={isSharing}
+                        className="h-8 rounded-full bg-[#171717] px-3.5 text-sm font-medium text-white shadow-none hover:bg-[#171717]/90 dark:bg-foreground dark:text-background dark:hover:bg-foreground/90"
+                      >
+                        {isSharing ? t("share.shareInProgress") : t("share.shareButton")}
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <Button
