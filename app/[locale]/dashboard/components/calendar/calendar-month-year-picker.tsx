@@ -154,6 +154,7 @@ export function CalendarMonthYearPicker({
           ))}
         </NativeTitleSelect>
       )}
+      {viewMode === "daily" && monthNav?.next}
       <NativeTitleSelect
         id={yearId}
         name="calendar-year"
@@ -177,7 +178,7 @@ export function CalendarMonthYearPicker({
           </option>
         ))}
       </NativeTitleSelect>
-      {monthNav?.next}
+      {viewMode === "weekly" && monthNav?.next}
     </div>
   )
 }
