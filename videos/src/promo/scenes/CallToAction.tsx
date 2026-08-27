@@ -4,14 +4,12 @@ import {
   Interactive,
   interpolate,
   useCurrentFrame,
-  useVideoConfig,
 } from "remotion";
 import { fontFamily } from "../../fonts";
 import { LogoMark } from "../LogoMark";
 
 export const CallToAction: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
 
   return (
     <AbsoluteFill
@@ -34,10 +32,10 @@ export const CallToAction: React.FC = () => {
           alignItems: "center",
           justifyContent: "center",
           gap: 28,
-          scale: interpolate(frame, [0, 0.55 * fps], [0.86, 1], {
+          scale: interpolate(frame, [0, 10], [0.94, 1], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
-            easing: Easing.spring({ damping: 14 }),
+            easing: Easing.bezier(0.16, 1, 0.3, 1),
             output: "perceptual-scale",
           }),
         }}
@@ -80,7 +78,7 @@ export const CallToAction: React.FC = () => {
             color: "#686D67",
             fontSize: 24,
             fontWeight: 400,
-            opacity: interpolate(frame, [0.55 * fps, 0.95 * fps], [0, 1], {
+            opacity: interpolate(frame, [8, 18], [0, 1], {
               extrapolateLeft: "clamp",
               extrapolateRight: "clamp",
               easing: Easing.bezier(0.16, 1, 0.3, 1),

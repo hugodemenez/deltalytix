@@ -1,11 +1,4 @@
-import {
-  AbsoluteFill,
-  Easing,
-  Interactive,
-  interpolate,
-  useCurrentFrame,
-  useVideoConfig,
-} from "remotion";
+import { AbsoluteFill, Interactive } from "remotion";
 import { fontFamily } from "../../fonts";
 import { tokens } from "../tokens";
 import { CalendarWidget } from "../widgets/CalendarWidget";
@@ -13,9 +6,6 @@ import { DailyPnlChart } from "../widgets/DailyPnlChart";
 import { EquityChart } from "../widgets/EquityChart";
 
 export const ProductWell: React.FC = () => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-
   return (
     <AbsoluteFill
       name="Product well"
@@ -34,12 +24,6 @@ export const ProductWell: React.FC = () => {
           height: 1000,
           backgroundColor: tokens.featureWell,
           borderRadius: 4,
-          scale: interpolate(frame, [0, 0.45 * fps], [0.94, 1], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-            easing: Easing.spring({ damping: 16 }),
-            output: "perceptual-scale",
-          }),
         }}
       >
         <Interactive.Div
@@ -64,7 +48,7 @@ export const ProductWell: React.FC = () => {
             height: 460,
           }}
         >
-          <EquityChart delay={2} />
+          <EquityChart />
         </Interactive.Div>
         <Interactive.Div
           name="Daily P&L column"
@@ -76,7 +60,7 @@ export const ProductWell: React.FC = () => {
             height: 468,
           }}
         >
-          <DailyPnlChart delay={4} />
+          <DailyPnlChart />
         </Interactive.Div>
       </Interactive.Div>
     </AbsoluteFill>

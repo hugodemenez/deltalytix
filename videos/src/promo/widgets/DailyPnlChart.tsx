@@ -3,111 +3,112 @@ import {
   Interactive,
   interpolate,
   useCurrentFrame,
-  useVideoConfig,
 } from "remotion";
 import { tokens } from "../tokens";
+import {
+  PNL_BAR_DRAW_FRAMES,
+  PNL_BAR_STAGGER_FRAMES,
+  PNL_DELAY_FRAMES,
+} from "../timing";
 import { ChartFrame } from "./ChartFrame";
-import { dailyPnlData, formatUsd } from "./mock-data";
-
-const WIDTH = 680;
-const HEIGHT = 360;
-const PAD = { top: 16, right: 12, bottom: 32, left: 58 };
+import {
+  CHART_HEIGHT,
+  CHART_PAD,
+  CHART_WIDTH,
+  DailyPnlAxes,
+  PNL_BAR_W,
+  PNL_CHART_H,
+  PNL_MAX_ABS,
+  PNL_SLOT,
+  PNL_ZERO_Y,
+} from "./chart-geometry";
+import { dailyPnlData } from "./mock-data";
 
 type DailyPnlChartProps = {
   readonly delay?: number;
 };
 
-export const DailyPnlChart: React.FC<DailyPnlChartProps> = ({ delay = 0 }) => {
+export const DailyPnlChart: React.FC<DailyPnlChartProps> = ({
+  delay = PNL_DELAY_FRAMES,
+}) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const maxAbs = Math.max(...dailyPnlData.map((point) => Math.abs(point.value)));
-  const chartW = WIDTH - PAD.left - PAD.right;
-  const chartH = HEIGHT - PAD.top - PAD.bottom;
-  const zeroY = PAD.top + chartH / 2;
-  const slot = chartW / dailyPnlData.length;
-  const barW = Math.min(34, slot * 0.55);
 
   return (
     <ChartFrame name="Daily P&L chart" title="P&L Chart">
       <Interactive.Div
         name="Daily P&L plot"
         style={{
+          position: "relative",
           width: "100%",
           height: "100%",
-          opacity: interpolate(frame, [delay, delay + 0.28 * fps], [0, 1], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-            easing: Easing.bezier(0.16, 1, 0.3, 1),
-          }),
         }}
       >
-        <Interactive.Svg
-          name="Daily P&L svg"
-          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-          style={{ width: "100%", height: "100%", display: "block" }}
+        <Interactive.Div
+          name="Daily P&L axes"
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: "100%",
+            height: "100%",
+          }}
         >
-          <line
-            x1={PAD.left}
-            x2={WIDTH - PAD.right}
-            y1={zeroY}
-            y2={zeroY}
-            stroke={tokens.border}
-          />
-          <text
-            x={PAD.left - 10}
-            y={PAD.top + 4}
-            textAnchor="end"
-            fill={tokens.muted}
-            fontSize={12}
+          <DailyPnlAxes />
+        </Interactive.Div>
+        <Interactive.Div
+          name="Daily P&L series"
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: "100%",
+            height: "100%",
+          }}
+        >
+          <svg
+            width={CHART_WIDTH}
+            height={CHART_HEIGHT}
+            viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+            preserveAspectRatio="xMidYMid meet"
+            style={{ width: "100%", height: "100%", display: "block" }}
           >
-            {formatUsd(maxAbs)}
-          </text>
-          <text
-            x={PAD.left - 10}
-            y={PAD.top + chartH}
-            textAnchor="end"
-            fill={tokens.muted}
-            fontSize={12}
-          >
-            {formatUsd(-maxAbs)}
-          </text>
-          {dailyPnlData.map((point, index) => {
-            const grow = interpolate(
-              frame,
-              [delay + index, delay + 0.35 * fps + index],
-              [0, 1],
-              {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-                easing: Easing.bezier(0.16, 1, 0.3, 1),
-              },
-            );
-            const x = PAD.left + slot * index + (slot - barW) / 2;
-            const barH = (Math.abs(point.value) / maxAbs) * (chartH / 2 - 8) * grow;
-            const y = point.value >= 0 ? zeroY - barH : zeroY;
-            return (
-              <g key={point.label}>
+            {dailyPnlData.map((point, index) => {
+              const grow = interpolate(
+                frame,
+                [
+                  delay + index * PNL_BAR_STAGGER_FRAMES,
+                  delay +
+                    index * PNL_BAR_STAGGER_FRAMES +
+                    PNL_BAR_DRAW_FRAMES,
+                ],
+                [0, 1],
+                {
+                  extrapolateLeft: "clamp",
+                  extrapolateRight: "clamp",
+                  easing: Easing.bezier(0.22, 1, 0.36, 1),
+                },
+              );
+              const x = Math.round(
+                CHART_PAD.left + PNL_SLOT * index + (PNL_SLOT - PNL_BAR_W) / 2,
+              );
+              const barH = Math.round(
+                (Math.abs(point.value) / PNL_MAX_ABS) * (PNL_CHART_H / 2 - 8) * grow,
+              );
+              const y = point.value >= 0 ? PNL_ZERO_Y - barH : PNL_ZERO_Y;
+              return (
                 <rect
+                  key={point.label}
                   x={x}
                   y={y}
-                  width={barW}
+                  width={PNL_BAR_W}
                   height={Math.max(barH, 0)}
                   rx={3}
                   fill={point.value >= 0 ? tokens.chartWin : tokens.chartLoss}
                 />
-                <text
-                  x={x + barW / 2}
-                  y={HEIGHT - 8}
-                  textAnchor="middle"
-                  fill={tokens.muted}
-                  fontSize={12}
-                >
-                  {point.label}
-                </text>
-              </g>
-            );
-          })}
-        </Interactive.Svg>
+              );
+            })}
+          </svg>
+        </Interactive.Div>
       </Interactive.Div>
     </ChartFrame>
   );

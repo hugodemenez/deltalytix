@@ -4,14 +4,12 @@ import {
   Interactive,
   interpolate,
   useCurrentFrame,
-  useVideoConfig,
 } from "remotion";
 import { fontFamily } from "../../fonts";
 import { LogoMark } from "../LogoMark";
 
 export const LogoReveal: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
 
   return (
     <AbsoluteFill
@@ -34,10 +32,10 @@ export const LogoReveal: React.FC = () => {
           alignItems: "center",
           justifyContent: "center",
           gap: 20,
-          scale: interpolate(frame, [0, 0.7 * fps], [0.72, 1], {
+          scale: interpolate(frame, [0, 12], [0.86, 1], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
-            easing: Easing.spring({ damping: 14 }),
+            easing: Easing.bezier(0.16, 1, 0.3, 1),
             output: "perceptual-scale",
           }),
         }}
@@ -51,21 +49,11 @@ export const LogoReveal: React.FC = () => {
             fontWeight: 300,
             letterSpacing: "-0.06em",
             lineHeight: 1,
-            opacity: interpolate(frame, [0.18 * fps, 0.55 * fps], [0, 1], {
+            opacity: interpolate(frame, [4, 12], [0, 1], {
               extrapolateLeft: "clamp",
               extrapolateRight: "clamp",
               easing: Easing.bezier(0.16, 1, 0.3, 1),
             }),
-            translate: interpolate(
-              frame,
-              [0.18 * fps, 0.55 * fps],
-              ["0px 24px", "0px 0px"],
-              {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp",
-                easing: Easing.spring({ damping: 16 }),
-              },
-            ),
           }}
         >
           Deltalytix

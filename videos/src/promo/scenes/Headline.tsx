@@ -4,13 +4,11 @@ import {
   Interactive,
   interpolate,
   useCurrentFrame,
-  useVideoConfig,
 } from "remotion";
 import { fontFamily } from "../../fonts";
 
 export const Headline: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
 
   return (
     <AbsoluteFill
@@ -32,21 +30,16 @@ export const Headline: React.FC = () => {
           fontWeight: 300,
           letterSpacing: "-0.06em",
           lineHeight: 0.96,
-          opacity: interpolate(frame, [0, 0.35 * fps], [0, 1], {
+          opacity: interpolate(frame, [0, 8], [0, 1], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
             easing: Easing.bezier(0.16, 1, 0.3, 1),
           }),
-          translate: interpolate(
-            frame,
-            [0, 0.45 * fps],
-            ["0px 64px", "0px 0px"],
-            {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-              easing: Easing.spring({ damping: 14 }),
-            },
-          ),
+          translate: interpolate(frame, [0, 10], ["0px 36px", "0px 0px"], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+            easing: Easing.bezier(0.16, 1, 0.3, 1),
+          }),
         }}
       >
         One trading journal
@@ -63,21 +56,16 @@ export const Headline: React.FC = () => {
           fontWeight: 300,
           letterSpacing: "-0.06em",
           lineHeight: 0.96,
-          opacity: interpolate(frame, [0.18 * fps, 0.52 * fps], [0, 1], {
+          opacity: interpolate(frame, [4, 12], [0, 1], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
             easing: Easing.bezier(0.16, 1, 0.3, 1),
           }),
-          translate: interpolate(
-            frame,
-            [0.18 * fps, 0.62 * fps],
-            ["0px 64px", "0px 0px"],
-            {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-              easing: Easing.spring({ damping: 14 }),
-            },
-          ),
+          translate: interpolate(frame, [4, 14], ["0px 36px", "0px 0px"], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+            easing: Easing.bezier(0.16, 1, 0.3, 1),
+          }),
         }}
       >
         for every futures account.
@@ -94,7 +82,7 @@ export const Headline: React.FC = () => {
           fontWeight: 400,
           letterSpacing: "-0.02em",
           lineHeight: 1.35,
-          opacity: interpolate(frame, [0.7 * fps, 1.1 * fps], [0, 1], {
+          opacity: interpolate(frame, [12, 22], [0, 1], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
             easing: Easing.bezier(0.16, 1, 0.3, 1),

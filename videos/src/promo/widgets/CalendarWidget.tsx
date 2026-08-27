@@ -34,21 +34,11 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
         borderRadius: 8,
         overflow: "hidden",
         fontFamily,
-        opacity: interpolate(frame, [delay, delay + 0.28 * fps], [0, 1], {
+        opacity: interpolate(frame, [delay, delay + 0.2 * fps], [0, 1], {
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
           easing: Easing.bezier(0.16, 1, 0.3, 1),
         }),
-        translate: interpolate(
-          frame,
-          [delay, delay + 0.4 * fps],
-          ["0px 28px", "0px 0px"],
-          {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-            easing: Easing.spring({ damping: 16 }),
-          },
-        ),
       }}
     >
       <Interactive.Div
@@ -136,7 +126,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
               }}
             >
               {week.days.map((cell, dayIndex) => {
-                    const cellDelay = delay + weekIndex + dayIndex * 0.35;
+                const cellDelay = delay + weekIndex + dayIndex * 0.35;
                 const win = (cell.entry?.pnl ?? 0) >= 0;
                 return (
                   <Interactive.Div
