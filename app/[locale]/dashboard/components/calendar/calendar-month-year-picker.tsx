@@ -43,13 +43,14 @@ function translateCalendarMonth(
   }
 }
 
-const nativeSelectClassName = cn(
-  "col-start-1 row-start-1 w-full min-w-0 appearance-none bg-transparent",
-  "cursor-pointer border-0 p-0 m-0 capitalize",
-  "text-base leading-none font-semibold tracking-tight sm:text-lg",
-  "min-h-11 sm:min-h-10",
-  "rounded-sm text-foreground",
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+/** Same chrome as navbar view / filter / account controls. */
+const navbarSelectButtonClassName = cn(
+  "relative isolate inline-flex h-7 shrink-0 items-center gap-1 overflow-hidden rounded-[4px]",
+  "border border-[#E5E5E5] bg-white px-2",
+  "text-[13px] font-medium text-[#171717]",
+  "transition-colors hover:bg-[#FAFAFA]",
+  "focus-within:outline-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+  "dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40",
 )
 
 function NativeTitleSelect({
@@ -74,20 +75,22 @@ function NativeTitleSelect({
       <label htmlFor={id} className="sr-only">
         {label}
       </label>
-      <div className="inline-grid items-center">
-        <span
-          aria-hidden="true"
-          className="col-start-1 row-start-1 invisible whitespace-pre px-0.5 text-base leading-none font-semibold capitalize sm:text-lg"
-        >
+      <div className={navbarSelectButtonClassName}>
+        <span aria-hidden="true" className="capitalize whitespace-nowrap">
           {displayValue}
         </span>
+        <ChevronDown
+          aria-hidden="true"
+          className="h-3.5 w-3.5 text-[#686D67] dark:text-muted-foreground"
+          strokeWidth={1.75}
+        />
         <select
           id={id}
           name={name}
           value={value}
           autoComplete="off"
           onChange={(event) => onChange(event.target.value)}
-          className={nativeSelectClassName}
+          className="absolute inset-0 z-10 cursor-pointer opacity-0 text-base"
         >
           {children}
         </select>
@@ -124,12 +127,7 @@ export function CalendarMonthYearPicker({
       role="group"
       aria-label={groupLabel}
       data-slot="calendar-month-year-picker"
-      className={cn(
-        "inline-flex min-w-0 items-center gap-1 rounded-sm px-1 -mx-1",
-        "text-base font-semibold sm:text-lg",
-        "transition-colors hover:bg-muted/50 motion-reduce:transition-none",
-        className,
-      )}
+      className={cn("inline-flex min-w-0 items-center gap-1", className)}
     >
       {viewMode === "daily" && (
         <NativeTitleSelect
@@ -170,10 +168,6 @@ export function CalendarMonthYearPicker({
           </option>
         ))}
       </NativeTitleSelect>
-      <ChevronDown
-        aria-hidden="true"
-        className="size-3.5 shrink-0 text-muted-foreground sm:size-4"
-      />
     </div>
   )
 }

@@ -545,10 +545,10 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
               variant="outline"
               size="icon"
               onClick={() => viewMode === 'daily' ? handlePrevMonth() : setCurrentDate(new Date(getYear(currentDate) - 1, 0, 1))}
-              className="relative z-10 h-7 w-7 sm:h-8 sm:w-8 shrink-0"
+              className="relative z-10 h-7 w-7 shrink-0 rounded-[4px] border-[#E5E5E5] bg-white text-[#171717] shadow-none hover:bg-[#FAFAFA] dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40"
               aria-label={viewMode === 'daily' ? "Previous month" : "Previous year"}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.75} />
             </Button>
             <CalendarMonthYearPicker
               date={currentDate}
@@ -560,10 +560,10 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
               variant="outline"
               size="icon"
               onClick={() => viewMode === 'daily' ? handleNextMonth() : setCurrentDate(new Date(getYear(currentDate) + 1, 0, 1))}
-              className="relative z-10 h-7 w-7 sm:h-8 sm:w-8 shrink-0"
+              className="relative z-10 h-7 w-7 shrink-0 rounded-[4px] border-[#E5E5E5] bg-white text-[#171717] shadow-none hover:bg-[#FAFAFA] dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40"
               aria-label={viewMode === 'daily' ? "Next month" : "Next year"}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.75} />
             </Button>
           </div>
           <div className={cn(
