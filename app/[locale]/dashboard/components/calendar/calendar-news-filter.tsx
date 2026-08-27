@@ -130,21 +130,27 @@ export function CalendarNewsFilter({
                   />
                   <span className="text-sm">{t("mindset.newsImpact.allCountries")}</span>
                 </CommandItem>
-                <ScrollArea className="h-[200px]">
-                  {filteredCountries.map((country) => (
-                    <CommandItem
-                      key={country}
-                      onSelect={() => handleCountryToggle(country)}
-                      className="flex items-center gap-2"
-                    >
-                      <Checkbox
-                        checked={isCountrySelected(country)}
-                        className="h-4 w-4"
-                      />
-                      <span className="text-sm">{country}</span>
-                    </CommandItem>
-                  ))}
-                </ScrollArea>
+                {filteredCountries.length > 0 ? (
+                  <ScrollArea className="h-[200px]">
+                    {filteredCountries.map((country) => (
+                      <CommandItem
+                        key={country}
+                        onSelect={() => handleCountryToggle(country)}
+                        className="flex items-center gap-2"
+                      >
+                        <Checkbox
+                          checked={isCountrySelected(country)}
+                          className="h-4 w-4"
+                        />
+                        <span className="text-sm">{country}</span>
+                      </CommandItem>
+                    ))}
+                  </ScrollArea>
+                ) : (
+                  <p className="px-2 py-3 text-sm text-muted-foreground">
+                    {t("mindset.newsImpact.noCountries")}
+                  </p>
+                )}
               </CommandGroup>
             </CommandList>
           </Command>
