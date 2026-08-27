@@ -160,6 +160,7 @@ Open PRs against **`beta`** (not `main`). `main` is production; feature work lan
 - **Docker-in-Docker**: Cloud Agent VMs require `fuse-overlayfs` storage driver and `iptables-legacy` for Docker to work. Run `bash scripts/docker-bootstrap.sh` first; if it fails with overlay errors, install `fuse-overlayfs` (`sudo apt-get install -y fuse-overlayfs`) and set `/etc/docker/daemon.json` to `{"storage-driver": "fuse-overlayfs"}` before starting `dockerd`.
 - **Full local setup**: Run `bash scripts/self-host-quickstart.sh` then `bash scripts/dev.sh`. This handles Docker Postgres, `.env.local`, Bun install, Prisma, seeding, and dev server startup.
 - **Auth**: Uses `LOCAL_DASHBOARD_AUTH_BYPASS=true` — no external Supabase keys needed. The dashboard is accessible at `http://localhost:3000/dashboard` as `local-dashboard-user`.
+- **Tailscale**: Cloud Agent `install` runs `curl -fsSL https://tailscale.com/install.sh | sh`. These VMs have no systemd, so `start` launches `tailscaled` if it is not already running. Join a tailnet with `sudo tailscale up`.
 - **PRs target `beta`**, not `main`.
 
 <!-- BEGIN:nextjs-agent-rules -->
