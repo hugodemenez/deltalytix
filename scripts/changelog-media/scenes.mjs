@@ -57,6 +57,20 @@ const CAPTURE_LABELS = {
     weeklyRecap: /^Weekly recap$/i,
     deleteAccount: /^Delete account$/i,
     addChip: /^Add$/i,
+    accountTrigger: /^Account$/,
+    connectionsNav: /^Connections$/,
+    standaloneChip: /Standalone/,
+    mask: /^Mask$/,
+    deleteStandalone: /^(Delete Local Simulation|Delete LOCAL-SIM-001)$/,
+    deleteConfirmTitle: /^Delete this account\?$/,
+    cancel: /^Cancel$/,
+    compareJournalsHeading: /^Journals comparison$/,
+    youAreHere: /You.?re here/,
+    viewMore: /View more/,
+    compareWhatYouGet: /WHAT YOU GET/,
+    agentResources: /^For AI agents and crawlers$/,
+    deepcharts: /DeepCharts/,
+    platformCsv: /Platform CSV Import/,
   },
   fr: {
     dxfeed: /^DxFeed$/i,
@@ -76,6 +90,20 @@ const CAPTURE_LABELS = {
     weeklyRecap: /^Récap hebdomadaire$/i,
     deleteAccount: /^Supprimer le compte$/i,
     addChip: /^Ajouter$/i,
+    accountTrigger: /^Compte$/,
+    connectionsNav: /^Connexions$/,
+    standaloneChip: /Autonome/,
+    mask: /^Masquer$/,
+    deleteStandalone: /^(Supprimer Local Simulation|Supprimer LOCAL-SIM-001)$/,
+    deleteConfirmTitle: /^Supprimer ce compte \?$/,
+    cancel: /^Annuler$/,
+    compareJournalsHeading: /^Comparaison des journaux$/,
+    youAreHere: /Vous êtes ici/,
+    viewMore: /Voir plus/,
+    compareWhatYouGet: /Ce que vous avez/,
+    agentResources: /^For AI agents and crawlers$/,
+    deepcharts: /DeepCharts/,
+    platformCsv: /Import CSV Plateforme/,
   },
 }
 
@@ -239,7 +267,15 @@ async function blockLandingDataRefresh(page, locale, siteUrl) {
  */
 async function openConnectionsForImport(page, locale, siteUrl) {
   await waitForDashboard(page, locale, siteUrl)
-  await page.locator('nav a#import-data').first().click()
+  // v5 chrome: Connections is in the Account menu, not a navbar #import-data link.
+  await page
+    .getByRole('button', { name: CAPTURE_LABELS[locale].accountTrigger })
+    .click()
+  await page
+    .getByRole('menuitem', { name: CAPTURE_LABELS[locale].connectionsNav })
+    .or(page.getByRole('link', { name: CAPTURE_LABELS[locale].connectionsNav }))
+    .first()
+    .click()
   await page.waitForURL(/\/dashboard\/connections/, { timeout: 60_000 })
   await dismissCookies(page, locale)
   await page.getByText(CAPTURE_ACCOUNT).first().waitFor({ timeout: 90_000 })
@@ -269,6 +305,40 @@ async function openImportPicker(page, locale) {
   return { heading, trigger, picker }
 }
 
+/**
+ * Open the dashboard connections-strip Standalone / Autonome chip picker.
+ * Viewport/route: desktop /{locale}/dashboard (not the Connections page).
+ * Seeded row is propfirm "Local Simulation" above number LOCAL-SIM-001.
+ * Expected: Mask/Masquer eye and standalone Delete trash. Does not click
+ * mask (persists Hidden Accounts) and does not confirm delete.
+ */
+async function openStandaloneStripPicker(page, locale, siteUrl) {
+  await waitForDashboard(page, locale, siteUrl)
+  const strip = page.getByRole('navigation', {
+    name: CAPTURE_LABELS[locale].connectionsStrip,
+  })
+  await strip.waitFor({ timeout: 30_000 })
+  await waitForNoVisibleToasts(page)
+  const chip = strip.getByRole('button', {
+    name: CAPTURE_LABELS[locale].standaloneChip,
+  }).first()
+  await chip.waitFor({ timeout: 15_000 })
+  await chip.click()
+  const picker = page.locator('[cmdk-root]').last()
+  await picker.waitFor({ timeout: 15_000 })
+  await page.getByText(CAPTURE_ACCOUNT, { exact: true }).first().waitFor({
+    timeout: 15_000,
+  })
+  await page.getByRole('button', { name: CAPTURE_LABELS[locale].mask }).waitFor({
+    timeout: 10_000,
+  })
+  await page
+    .getByRole('button', { name: CAPTURE_LABELS[locale].deleteStandalone })
+    .waitFor({ timeout: 10_000 })
+  await page.waitForTimeout(600)
+  return { strip, chip, picker }
+}
+
 /** Scroll the picker's own list so a named option is visible in the capture. */
 async function revealPickerOption(page, name) {
   await page.evaluate((optionName) => {
@@ -286,7 +356,7 @@ async function revealPickerOption(page, name) {
   await page.waitForTimeout(600)
 }
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form' | 'compare-hub-journals-table' | 'compare-tradezella-what-you-get' | 'connections-import-picker-deepcharts' | 'dashboard-strip-standalone-actions' | 'dashboard-strip-standalone-delete-confirm' | 'public-404-agent-resources'} ChangelogScene */
 
 /**
  * @param {import('playwright-core').Browser} browser
@@ -1620,6 +1690,218 @@ export async function captureScene(browser, options) {
           [heading, description, usernameField, passwordField, connect],
           20,
         ),
+      })
+      await page.close()
+      return
+    }
+
+    case 'compare-hub-journals-table': {
+      // Desktop public hub /{locale}/trading-journal/futures.
+      // Viewport 1440x900. Interaction: dismiss cookies, scroll to the
+      // journals section (the hero H1 is the already-published journal line).
+      // Locator: h2 Journals comparison / Comparaison des journaux, then the
+      // wrapping <section>. Expected: Deltalytix Us/Nous + You're here /
+      // Vous êtes ici, three View more → / Voir plus → rows, no Soon/Later.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await page.goto(`${siteUrl}/${locale}/trading-journal/futures`, {
+        waitUntil: 'networkidle',
+        timeout: 120_000,
+      })
+      await dismissCookies(page, locale)
+      const heading = page.getByRole('heading', {
+        level: 2,
+        name: CAPTURE_LABELS[locale].compareJournalsHeading,
+      })
+      await heading.waitFor({ timeout: 30_000 })
+      const journals = heading.locator('xpath=ancestor::section[1]')
+      await journals.scrollIntoViewIfNeeded()
+      await journals.getByText(CAPTURE_LABELS[locale].youAreHere).first().waitFor({
+        timeout: 15_000,
+      })
+      const viewMore = journals.getByText(CAPTURE_LABELS[locale].viewMore)
+      await viewMore.first().waitFor({ timeout: 15_000 })
+      if ((await viewMore.count()) < 3) {
+        throw new Error(`Hub table is missing competitor View more rows for ${locale}`)
+      }
+      const leftover = await journals.getByText(/Soon|Later|Bientôt/i).count()
+      if (leftover > 0) {
+        throw new Error(`Hub table still shows Soon/Later chips for ${locale}`)
+      }
+      await page.waitForTimeout(800)
+      await ensureCookiesDismissed(page, locale)
+      await assertNoDevIssues(page, `${locale} compare hub journals table`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [journals], 24),
+      })
+      await page.close()
+      return
+    }
+
+    case 'compare-tradezella-what-you-get': {
+      // Desktop 1:1 /{locale}/trading-journal/futures/tradezella.
+      // Viewport 1440x1400 so the large H1 and first Us vs Them section share
+      // a frame. Locator: breadcrumb nav, h1 Deltalytix vs TradeZella.,
+      // heading 01 WHAT YOU GET / 01 Ce que vous avez. Expected: Deltalytix
+      // and TradeZella columns under that section. No interaction beyond load.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+        viewport: { width: 1440, height: 1400 },
+      })
+      await page.goto(
+        `${siteUrl}/${locale}/trading-journal/futures/tradezella`,
+        { waitUntil: 'networkidle', timeout: 120_000 },
+      )
+      await dismissCookies(page, locale)
+      const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' })
+      const title = page.getByRole('heading', {
+        level: 1,
+        name: /Deltalytix vs TradeZella/i,
+      })
+      await title.waitFor({ timeout: 30_000 })
+      const whatYouGet = page.getByRole('heading', {
+        name: CAPTURE_LABELS[locale].compareWhatYouGet,
+      })
+      await whatYouGet.waitFor({ timeout: 15_000 })
+      const section = whatYouGet.locator('xpath=ancestor::section[1]')
+      await title.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(600)
+      await ensureCookiesDismissed(page, locale)
+      await assertNoDevIssues(page, `${locale} compare TradeZella 1:1`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [breadcrumb, title, section], 24),
+      })
+      await page.close()
+      return
+    }
+
+    case 'connections-import-picker-deepcharts': {
+      // Desktop Connections, file-import picker filtered to DeepCharts.
+      // Viewport 1440x900. Route: /{locale}/dashboard then navbar to
+      // /dashboard/connections (openConnectionsForImport). Interaction: open
+      // Upload a file / Ajouter avec un fichier, type "deepcharts".
+      // Locator: [cmdk-root] option DeepCharts under Platform CSV Import /
+      // Import CSV Plateforme. Expected: monochrome mark + DeepCharts Trade
+      // List CSV / CSV Trade List DeepCharts. Does not select CSV with AI.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await openConnectionsForImport(page, locale, siteUrl)
+      await sanitizeConnectionIdentifiers(page)
+      const { heading, trigger, picker } = await openImportPicker(page, locale)
+      await picker.locator('[cmdk-input]').fill('deepcharts')
+      const option = page.getByRole('option', {
+        name: CAPTURE_LABELS[locale].deepcharts,
+      }).first()
+      await option.waitFor({ state: 'visible', timeout: 15_000 })
+      await option.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(700)
+      await assertNoDevIssues(page, `${locale} DeepCharts import picker`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [heading, trigger, picker], 24),
+      })
+      await page.close()
+      return
+    }
+
+    case 'dashboard-strip-standalone-actions': {
+      // Desktop dashboard connections strip — not the Connections page.
+      // Viewport 1440x900. Route: /{locale}/dashboard. Interaction: click the
+      // Standalone / Autonome chip. Locator: strip nav + chip + [cmdk-root]
+      // popover. Expected: LOCAL-SIM-001 with name-above-number, Mask/Masquer
+      // eye, rename pencil, and Delete trash. Do not click mask (persists
+      // Hidden Accounts) and do not click trash in this scene.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      const { chip, picker } = await openStandaloneStripPicker(
+        page,
+        locale,
+        siteUrl,
+      )
+      await waitForNoVisibleToasts(page)
+      await assertNoDevIssues(page, `${locale} strip standalone actions`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [chip, picker], 24),
+      })
+      await page.close()
+      return
+    }
+
+    case 'dashboard-strip-standalone-delete-confirm': {
+      // Same dashboard strip path. After the picker is open, click trash on
+      // LOCAL-SIM-001 only. The confirm dialog lives on the strip (picker
+      // closes). Expected: Delete this account? / Supprimer ce compte ? with
+      // Cancel / Annuler and Delete account / Supprimer le compte.
+      // MUST click Cancel only — never the destructive action.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await openStandaloneStripPicker(page, locale, siteUrl)
+      await page
+        .getByRole('button', { name: CAPTURE_LABELS[locale].deleteStandalone })
+        .click()
+      const dialog = page
+        .getByRole('alertdialog')
+        .or(page.getByRole('dialog'))
+        .last()
+      await dialog.waitFor({ timeout: 15_000 })
+      await dialog
+        .getByRole('heading', { name: CAPTURE_LABELS[locale].deleteConfirmTitle })
+        .waitFor({ timeout: 10_000 })
+      await dialog.getByText(CAPTURE_ACCOUNT).first().waitFor({ timeout: 10_000 })
+      const cancel = dialog.getByRole('button', {
+        name: CAPTURE_LABELS[locale].cancel,
+      })
+      await cancel.waitFor({ timeout: 10_000 })
+      await page.waitForTimeout(500)
+      await waitForNoVisibleToasts(page)
+      await assertNoDevIssues(page, `${locale} strip standalone delete confirm`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [dialog], 20),
+      })
+      await cancel.click()
+      await dialog.waitFor({ state: 'hidden', timeout: 10_000 })
+      await page.close()
+      return
+    }
+
+    case 'public-404-agent-resources': {
+      // Desktop public unmatched URL /{locale}/this-page-does-not-exist.
+      // Must hit app/global-not-found.tsx (agent block), not in-route
+      // app/not-found.tsx. Viewport 1440x900. Locator: section labelled
+      // "For AI agents and crawlers" (hardcoded English in both locales).
+      // Interaction: wait, scroll into view. Expected: sitemap /llms.txt /
+      // API pointers and collapsed Markdown version. Does not expand details
+      // and does not include the unchanged 404 illustration.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await page.goto(`${siteUrl}/${locale}/this-page-does-not-exist`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 120_000,
+      })
+      const heading = page.getByRole('heading', {
+        name: CAPTURE_LABELS[locale].agentResources,
+      })
+      await heading.waitFor({ timeout: 30_000 })
+      const section = page.locator(
+        'section[aria-labelledby="agent-resources-heading"]',
+      )
+      await section.scrollIntoViewIfNeeded()
+      await section.getByText('llms.txt').first().waitFor({ timeout: 10_000 })
+      await section.getByText('Markdown version').waitFor({ timeout: 10_000 })
+      await page.waitForTimeout(600)
+      await assertNoDevIssues(page, `${locale} public 404 agent resources`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [section], 20),
       })
       await page.close()
       return
