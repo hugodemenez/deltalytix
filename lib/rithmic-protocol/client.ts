@@ -201,10 +201,17 @@ export class RithmicProtocolClient {
     timeout: NodeJS.Timeout
   }> = []
   private closed = false
+  private inboundCount = 0
+  private lastInboundTemplateId: number | undefined
+  private gatewayUri = ''
 
   async connect(gatewayUri: string): Promise<void> {
     this.root = await loadRoot()
     const uri = normalizeGatewayUri(gatewayUri)
+    this.gatewayUri = uri
+    this.inboundCount = 0
+    this.lastInboundTemplateId = undefined
+    this.closed = false
 
     await new Promise<void>((resolve, reject) => {
       const ws = new WebSocket(uri, {
@@ -214,10 +221,14 @@ export class RithmicProtocolClient {
       this.ws = ws
 
       const onError = (err: Error) => {
+        console.warn(
+          `[RITHMIC-PROTOCOL] websocket error ${uri}: ${err.message}`,
+        )
         cleanup()
         reject(err)
       }
       const onOpen = () => {
+        console.log(`[RITHMIC-PROTOCOL] websocket open ${uri}`)
         cleanup()
         resolve()
       }
@@ -239,6 +250,11 @@ export class RithmicProtocolClient {
             'rti.Base',
             raw,
           )
+          this.inboundCount += 1
+          this.lastInboundTemplateId = base.templateId
+          console.log(
+            `[RITHMIC-PROTOCOL] inbound template=${base.templateId} bytes=${raw.length} n=${this.inboundCount}`,
+          )
           const msg: InboundMessage = {
             templateId: base.templateId,
             raw,
@@ -255,13 +271,16 @@ export class RithmicProtocolClient {
         }
       })
 
-      ws.on('close', () => {
+      ws.on('close', (code, reason) => {
         this.closed = true
+        console.log(
+          `[RITHMIC-PROTOCOL] websocket close ${uri} code=${code} reason=${reason?.toString() || '(none)'} inbound=${this.inboundCount}`,
+        )
         while (this.waiters.length > 0) {
           const waiter = this.waiters.shift()
           if (!waiter) break
           clearTimeout(waiter.timeout)
-          waiter.reject(new Error('Rithmic WebSocket closed'))
+          waiter.reject(new Error(`Rithmic WebSocket closed (${code})`))
         }
       })
     })
@@ -275,7 +294,14 @@ export class RithmicProtocolClient {
       const timeout = setTimeout(() => {
         const idx = this.waiters.findIndex((w) => w.timeout === timeout)
         if (idx >= 0) this.waiters.splice(idx, 1)
-        reject(new Error(`Timed out waiting for Rithmic message after ${timeoutMs}ms`))
+        reject(
+          new Error(
+            `Timed out waiting for Rithmic message after ${timeoutMs}ms ` +
+              `(inbound=${this.inboundCount}, queued=${this.queue.length}, ` +
+              `lastTemplate=${this.lastInboundTemplateId ?? 'none'}, ` +
+              `ws=${this.ws?.readyState ?? 'none'}, closed=${this.closed}, uri=${this.gatewayUri})`,
+          ),
+        )
       }, timeoutMs)
       this.waiters.push({ resolve, reject, timeout })
     })
@@ -286,7 +312,10 @@ export class RithmicProtocolClient {
       throw new Error('Rithmic Protocol client is not connected')
     }
     const buf = encodeMessage(this.root, typeName, payload)
-    this.ws.send(buf)
+    console.log(
+      `[RITHMIC-PROTOCOL] send ${typeName} template=${payload.templateId} bytes=${buf.length}`,
+    )
+    this.ws.send(buf, { binary: true })
   }
 
   async login(params: {
@@ -307,6 +336,9 @@ export class RithmicProtocolClient {
       systemName: params.systemName,
       infraType: params.infraType ?? ORDER_PLANT,
     })
+    console.log(
+      `[RITHMIC-PROTOCOL] login sent system=${params.systemName} infra=${params.infraType ?? ORDER_PLANT} app=${getRithmicProtocolAppName()}@${getRithmicProtocolAppVersion()}`,
+    )
 
     const msg = await this.nextMessage()
     if (msg.templateId !== RithmicTemplateId.LOGIN_RESPONSE) {

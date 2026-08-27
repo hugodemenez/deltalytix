@@ -9,6 +9,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import {
+  fetchAvailableSystems,
   fetchFillsForAccounts,
   fetchProductCommissionRates,
 } from './client'
@@ -57,7 +58,16 @@ describe.skipIf(!hasLiveCredentials)(
       const gateway = e2eGatewayUri()
       const systemName = e2eSystemName()
       const pinnedAccount = process.env.RITHMIC_PROTOCOL_E2E_ACCOUNT_ID?.trim()
+      e2eLog(
+        `runtime node=${process.version} bun=${(process as NodeJS.Process & { versions: { bun?: string } }).versions.bun ?? 'no'}`,
+      )
       e2eLog(`login gateway=${gateway} system=${systemName} pin=${pinnedAccount || '(all accounts)'}`)
+      e2eLog('probe RequestRithmicSystemInfo (pre-login, short-lived socket)')
+      const systems = await fetchAvailableSystems(gateway)
+      e2eLog(`available systems: ${systems.join(', ') || '(none)'}`)
+      if (!systems.includes(systemName)) {
+        e2eLog(`warn: ${systemName} is not in the system-info list`)
+      }
 
       const result = await fetchProductCommissionRates({
         gatewayUri: gateway,

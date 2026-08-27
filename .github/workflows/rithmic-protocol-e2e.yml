@@ -62,7 +62,8 @@ jobs:
           echo "password_set=$password_set"
           echo "gateway=$RITHMIC_PROTOCOL_E2E_GATEWAY"
           echo "system=$RITHMIC_PROTOCOL_E2E_SYSTEM_NAME"
-          echo "account_pin=${RITHMIC_PROTOCOL_E2E_ACCOUNT_ID:+set}"
+          echo "node=$(node -v)"
+          echo "bun=$(bun -v)"
           echo "::endgroup::"
 
           if [ "$username_set" != yes ] || [ "$password_set" != yes ]; then
