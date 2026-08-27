@@ -61,3 +61,5 @@ The `better-*` collection is vendored without content changes from [`jakubkrehel
 - [`remotion-upgrade`](./remotion-upgrade/SKILL.md): upgrade Remotion packages and skills.
 
 The `remotion-*` collection is vendored without content changes from [`remotion-dev/skills`](https://github.com/remotion-dev/skills) at commit [`7a3d0ca45d2f6a00bf35cb3c525734a36d55a834`](https://github.com/remotion-dev/skills/commit/7a3d0ca45d2f6a00bf35cb3c525734a36d55a834). Remotion is MIT-licensed.
+
+Deltalytix promo motion (timing, widgets, SFX, handoff) is **not** a Remotion skill. It lives in [`videos/motion/`](../../videos/motion/AGENTS.md).

@@ -155,6 +155,11 @@ Open PRs against **`beta`** (not `main`). `main` is production; feature work lan
 5. `OPENAI_API_KEY=dummy bun run build`
 6. Run dashboard health checks above
 
+## Promo motion
+
+Remotion lives in `videos/`. Motion spec and agent handoff: [`videos/motion/AGENTS.md`](./videos/motion/AGENTS.md).
+Do not spring-scale parents of chart axes; SFX must use local `staticFile()` cues.
+
 ## Cursor Cloud specific instructions
 
 - **Docker-in-Docker**: Cloud Agent VMs require `fuse-overlayfs` storage driver and `iptables-legacy` for Docker to work. Run `bash scripts/docker-bootstrap.sh` first; if it fails with overlay errors, install `fuse-overlayfs` (`sudo apt-get install -y fuse-overlayfs`) and set `/etc/docker/daemon.json` to `{"storage-driver": "fuse-overlayfs"}` before starting `dockerd`.

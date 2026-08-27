@@ -1,6 +1,8 @@
 # Deltalytix promo videos
 
-Remotion project for product promo compositions. Tokens follow the landing page and the **Deltalytix — Email Design System** Paper file (`#F7F7F4` canvas, `#171917` / `#686D67` type, `#3E7550` positive, `#181A18` action, sage product well, `#ddddd8` feature chrome).
+Remotion project for product promo compositions. Tokens follow the landing page and the **Deltalytix — Email Design System** Paper file.
+
+**Agent motion spec:** [`motion/AGENTS.md`](./motion/AGENTS.md)
 
 ## Commands
 
@@ -14,16 +16,13 @@ bun run render       # 1920×1080 H.264 of the Promo composition
 
 ## Composition
 
-`Promo` is a 10.8s (324 frames @ 30fps) landing-style spot:
+`Promo` is a 10.4s (312 frames @ 30fps) landing-style spot:
 
-1. Logo snap
-2. Headline (landing copy, 300 weight, -0.06em tracking)
-3. Product well with the landing calendar + equity / daily P&L widgets (same mock data as `calendar-preview.tsx` and `performance-visualization-chart.tsx`)
-4. Get Started CTA
+1. Short logo snap
+2. Short headline (landing copy, 300 weight, -0.06em tracking)
+3. Long product well — landing calendar + equity / daily P&L (slow series draw, static axes)
+4. Short Get Started CTA
 
 ## Sound
 
-Cues live in `public/sfx/`:
-
-- `remotion/` — `@remotion/sfx` / remotion.media professional cuts (whoosh, page-turn, click, ding, …)
-- `kenney/` — Kenney Interface Sounds (CC0), via [soundcn](https://github.com/kapishdima/soundcn/tree/main/assets/kenney_interface-sounds)
+Local cues only (`public/sfx/remotion/`). See [`motion/sound.md`](./motion/sound.md).
