@@ -255,6 +255,16 @@ export class RithmicProtocolClient {
           console.log(
             `[RITHMIC-PROTOCOL] inbound template=${base.templateId} bytes=${raw.length} n=${this.inboundCount}`,
           )
+          if (base.templateId === RithmicTemplateId.REJECT) {
+            const rejected = decodeMessage<{ rpCode?: string[] }>(
+              this.root!,
+              'rti.Reject',
+              raw,
+            )
+            console.warn(
+              `[RITHMIC-PROTOCOL] reject rp_code=${rpMessage(rejected.rpCode)}`,
+            )
+          }
           const msg: InboundMessage = {
             templateId: base.templateId,
             raw,
@@ -280,7 +290,11 @@ export class RithmicProtocolClient {
           const waiter = this.waiters.shift()
           if (!waiter) break
           clearTimeout(waiter.timeout)
-          waiter.reject(new Error(`Rithmic WebSocket closed (${code})`))
+          waiter.reject(
+            new Error(
+              `Rithmic WebSocket closed (${code} ${reason?.toString() || 'no reason'}) inbound=${this.inboundCount}`,
+            ),
+          )
         }
       })
     })
@@ -340,7 +354,24 @@ export class RithmicProtocolClient {
       `[RITHMIC-PROTOCOL] login sent system=${params.systemName} infra=${params.infraType ?? ORDER_PLANT} app=${getRithmicProtocolAppName()}@${getRithmicProtocolAppVersion()}`,
     )
 
-    const msg = await this.nextMessage()
+    let msg: InboundMessage
+    try {
+      msg = await this.nextMessage()
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      const hint = process.env.GITHUB_ACTIONS
+        ? ' GitHub-hosted runner IPs are usually not on the Rithmic Protocol allowlist (system-info works; login stays silent, then close 1011 permission denied). The in-app reconnect uses Vercel. Use a self-hosted runner on an allowlisted IP.'
+        : ' Check system name, app name/version, password, and that this IP is allowed for Protocol.'
+      throw new Error(`Rithmic login got no ResponseLogin. ${detail}.${hint}`)
+    }
+    if (msg.templateId === RithmicTemplateId.REJECT) {
+      const rejected = decodeMessage<{ rpCode?: string[] }>(
+        this.root!,
+        'rti.Reject',
+        msg.raw,
+      )
+      throw new Error(`Rithmic login rejected: ${rpMessage(rejected.rpCode)}`)
+    }
     if (msg.templateId !== RithmicTemplateId.LOGIN_RESPONSE) {
       throw new Error(`Unexpected login response template ${msg.templateId}`)
     }
