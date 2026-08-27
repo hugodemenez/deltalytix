@@ -1,0 +1,43 @@
+export default {
+  "apiAccess.title": "Accès API",
+  "apiAccess.description":
+    "Créez des applications OAuth et des jetons d'accès personnels pour l'API publique Deltalytix.",
+  "apiAccess.docsLink": "Consulter la documentation de l'API",
+  "apiAccess.apps.title": "Applications OAuth",
+  "apiAccess.apps.description":
+    "Enregistrez des clients tiers ou internes qui utilisent le flux authorization code.",
+  "apiAccess.apps.name": "Nom",
+  "apiAccess.apps.namePlaceholder": "Mon bot de trading",
+  "apiAccess.apps.descriptionLabel": "Description",
+  "apiAccess.apps.descriptionPlaceholder": "Optionnel",
+  "apiAccess.apps.redirectUris": "URI de redirection (une par ligne)",
+  "apiAccess.apps.allowedScopes": "Portées autorisées",
+  "apiAccess.apps.create": "Créer une application OAuth",
+  "apiAccess.apps.created": "Application OAuth créée",
+  "apiAccess.apps.createFailed": "Échec de la création de l'application",
+  "apiAccess.apps.deleted": "Application supprimée",
+  "apiAccess.apps.empty": "Aucune application OAuth pour le moment.",
+  "apiAccess.apps.delete": "Supprimer",
+  "apiAccess.apps.secretTitle": "Secret client (affiché une seule fois)",
+  "apiAccess.apps.secretDescription":
+    "Copiez ces identifiants maintenant. Le secret ne pourra pas être récupéré à nouveau.",
+  "apiAccess.tokens.title": "Jetons d'accès personnels",
+  "apiAccess.tokens.description":
+    "Jetons de longue durée pour vos scripts et intégrations personnelles. Préférez les applications OAuth pour les tiers.",
+  "apiAccess.tokens.nameLabel": "Nom du jeton",
+  "apiAccess.tokens.namePlaceholder": "Scripts locaux",
+  "apiAccess.tokens.create": "Créer un jeton",
+  "apiAccess.tokens.created": "Jeton d'accès personnel créé",
+  "apiAccess.tokens.createFailed": "Échec de la création du jeton",
+  "apiAccess.tokens.empty": "Aucun jeton d'accès personnel pour le moment.",
+  "apiAccess.tokens.untitled": "Jeton sans nom",
+  "apiAccess.tokens.createdAt": "Créé le {date}",
+  "apiAccess.tokens.revoke": "Révoquer",
+  "apiAccess.tokens.revoked": "Révoqué",
+  "apiAccess.tokens.revokedToast": "Jeton révoqué",
+  "apiAccess.tokens.secretTitle": "Jeton d'accès personnel (affiché une seule fois)",
+  "apiAccess.tokens.secretDescription":
+    "Conservez ce jeton en lieu sûr. Il ne sera plus affiché.",
+  "apiAccess.scopes": "Portées",
+  "apiAccess.dismiss": "Fermer",
+} as const

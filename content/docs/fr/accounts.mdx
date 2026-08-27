@@ -1,0 +1,76 @@
+---
+title: Comptes
+description: Lister les comptes de trading, les payouts et les métriques de performance optionnelles.
+order: 4
+---
+Lisez les comptes de l’utilisateur authentifié et les informations de payout associées.
+
+## Lister les comptes
+
+```http
+GET /api/v1/accounts
+```
+
+**Scope :** `accounts:read`
+
+<DocsEndpointTry method="GET" path="/api/v1/accounts" />
+
+### Paramètres de requête
+
+| Paramètre | Description |
+| --- | --- |
+| `includeMetrics` | Lorsque `true`, attache les métriques par compte issues de `computeMetricsForAccounts` |
+
+### Exemple
+
+```bash
+curl "https://www.deltalytix.app/api/v1/accounts?includeMetrics=true" \
+  -H "Authorization: Bearer dltx_at_…"
+```
+
+```js
+const res = await fetch(
+  "https://www.deltalytix.app/api/v1/accounts?includeMetrics=true",
+  {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  },
+);
+const payload = await res.json();
+```
+
+### Réponse `200`
+
+<DocsResponse tone="success" label="Succès">
+
+```json
+{
+  "data": [
+    {
+      "id": "acc_01HZX…",
+      "accountNumber": "SIM-001",
+      "name": "Evaluation A",
+      "payouts": [
+        {
+          "id": "pay_01HZX…",
+          "amount": 2500,
+          "date": "2026-02-01T00:00:00.000Z",
+          "status": "paid"
+        }
+      ],
+      "metrics": {
+        "balance": 52480.12,
+        "drawdown": 3.4,
+        "consistency": 0.82,
+        "progress": 0.61
+      }
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+</DocsResponse>
+
+`metrics` n’est présent que lorsque `includeMetrics=true`. Les champs incluent balance, drawdown, consistency et progress vers les objectifs du compte.
+
+Pour des analyses au niveau portefeuille sur tous les comptes, préférez les endpoints [Métriques](/docs/metrics).

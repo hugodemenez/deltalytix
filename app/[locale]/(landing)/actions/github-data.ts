@@ -309,8 +309,9 @@ async function loadGithubData(): Promise<GithubData> {
 
 /**
  * Cached landing GitHub card payload (Cache Components).
- * Only called from `fetchGithubStatsPayload` after client paint — never from
- * the homepage RSC/Suspense path (that kept the HTML stream open).
+ * Only called from `fetchGithubStatsPayload` / GET `/api/github-stats` after
+ * client paint — never from the homepage RSC/Suspense path (that kept the HTML
+ * stream open).
  */
 async function getCachedGithubStatsPayload(
   locale: string,

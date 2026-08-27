@@ -1,0 +1,221 @@
+---
+title: Authentication
+description: OAuth 2.0 authorization code with PKCE, personal access tokens, scopes, and token formats.
+order: 1
+---
+
+## Get a token
+
+You can generate or paste a token from any try panel when you need one.
+
+<DocsGetTokenButton />
+
+Deltalytix is its own OAuth 2.0 authorization server. Humans still sign in with Supabase; API tokens are minted and validated by Deltalytix.
+
+Every `/api/v1/*` request requires a Bearer token:
+
+```http
+Authorization: Bearer dltx_at_…
+```
+
+REST endpoints are served from `https://www.deltalytix.app` under **API v1** (`/api/v1/*`). List endpoints accept `limit` (default `100`, max `500`) and `cursor`. Timestamps are ISO 8601. Machine-readable discovery: [`/openapi.json`](/openapi.json), [`/.well-known/openid-configuration`](/.well-known/openid-configuration), [`/.well-known/oauth-protected-resource`](/.well-known/oauth-protected-resource).
+
+### Token formats
+
+Tokens are opaque strings. Deltalytix stores only SHA-256 hashes.
+
+| Kind | Prefix | Lifetime |
+| --- | --- | --- |
+| Access token | `dltx_at_<48 hex chars>` | 3600 seconds |
+| Refresh token | `dltx_rt_<48 hex chars>` | 30 days (rotated on use) |
+| Personal access token (PAT) | `dltx_pat_<48 hex chars>` | No expiry until revoked |
+| Client ID | `dltx_app_<24 hex chars>` | — |
+| Client secret | `dltx_secret_<48 hex chars>` | Shown once at creation |
+
+### Scopes
+
+Request only the scopes your integration needs. Space-separate them in OAuth `scope` parameters. The full list is in [what you can do](#what-you-can-do).
+
+### Personal access tokens
+
+PATs are ideal for scripts and private tools. Create and revoke them from the dashboard developer settings, choosing the scopes you need. The token value is shown once.
+
+```bash
+curl https://www.deltalytix.app/api/v1/me \
+  -H "Authorization: Bearer dltx_pat_YOUR_TOKEN"
+```
+
+### Demo token
+
+The documentation playground can issue a short-lived, read-only demo token without signing in. It authenticates as a shared sample account (`DEMO-001`) so you can try `GET` routes. Write scopes require your own docs token or PAT.
+
+## OAuth 2.0
+
+### 1. Authorize
+
+Send the user to the consent page (HTML). Unauthenticated users are redirected to `/authentication?next=…`.
+
+```http
+GET /oauth/authorize
+  ?client_id=dltx_app_…
+  &redirect_uri=https%3A%2F%2Fyour-app.example%2Fcallback
+  &response_type=code
+  &scope=profile%3Aread%20trades%3Aread
+  &state=csrf-token
+  &code_challenge=BASE64URL_SHA256_OF_VERIFIER
+  &code_challenge_method=S256
+```
+
+<DocsEndpointTry method="GET" path="/oauth/authorize" />
+
+| Query | Required | Notes |
+| --- | --- | --- |
+| `client_id` | Yes | Registered OAuth app |
+| `redirect_uri` | Yes | Must exactly match a registered URI |
+| `response_type` | Yes | Must be `code` |
+| `scope` | Yes | Space-separated scopes |
+| `state` | Recommended | CSRF protection; echoed on redirect |
+| `code_challenge` | Recommended | PKCE S256 challenge |
+| `code_challenge_method` | With challenge | Must be `S256` |
+
+On approve, Deltalytix issues a single-use authorization code (10 minute TTL) and redirects:
+
+```text
+https://your-app.example/callback?code=…&state=…
+```
+
+On deny:
+
+```text
+https://your-app.example/callback?error=access_denied&state=…
+```
+
+### 2. Exchange the code for tokens
+
+`POST /api/oauth/token` accepts form-urlencoded or JSON.
+
+<DocsEndpointTry method="POST" path="/api/oauth/token" />
+
+```bash
+curl -X POST https://www.deltalytix.app/api/oauth/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=authorization_code" \
+  -d "code=AUTHORIZATION_CODE" \
+  -d "redirect_uri=https://your-app.example/callback" \
+  -d "client_id=dltx_app_…" \
+  -d "code_verifier=PKCE_VERIFIER"
+```
+
+Confidential clients may send `client_secret` instead of (or in addition to) PKCE, depending on how the app was registered.
+
+<DocsResponse tone="success" label="Success">
+
+```json
+{
+  "access_token": "dltx_at_…",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "refresh_token": "dltx_rt_…",
+  "scope": "profile:read trades:read"
+}
+```
+
+</DocsResponse>
+
+OAuth errors follow RFC 6749:
+
+<DocsResponse tone="error" label="Error">
+
+```json
+{
+  "error": "invalid_grant",
+  "error_description": "Authorization code is invalid or expired"
+}
+```
+
+</DocsResponse>
+
+### 3. Call the API
+
+```bash
+curl https://www.deltalytix.app/api/v1/trades?limit=10 \
+  -H "Authorization: Bearer dltx_at_…"
+```
+
+```js
+const res = await fetch("https://www.deltalytix.app/api/v1/trades?limit=10", {
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+  },
+});
+```
+
+### 4. Refresh the access token
+
+```bash
+curl -X POST https://www.deltalytix.app/api/oauth/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "grant_type": "refresh_token",
+    "refresh_token": "dltx_rt_…",
+    "client_id": "dltx_app_…",
+    "client_secret": "dltx_secret_…"
+  }'
+```
+
+Refresh tokens rotate on use. Store the new `refresh_token` from each successful response.
+
+Public clients that obtained tokens via PKCE may refresh without a client secret when that was how the original token was issued.
+
+### 5. Revoke a token
+
+```bash
+curl -X POST https://www.deltalytix.app/api/oauth/revoke \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "dltx_at_…",
+    "client_id": "dltx_app_…",
+    "client_secret": "dltx_secret_…"
+  }'
+```
+
+<DocsEndpointTry method="POST" path="/api/oauth/revoke" />
+
+Revocation always returns `200`, whether or not the token was found.
+
+### Resource-server failures
+
+Missing or invalid Bearer tokens return `401`:
+
+<DocsResponse tone="error" label="Error">
+
+```json
+{
+  "error": "unauthorized",
+  "message": "…"
+}
+```
+
+</DocsResponse>
+
+with a `WWW-Authenticate` header pointing at protected-resource metadata.
+
+Valid tokens without the required scope return `403`:
+
+<DocsResponse tone="error" label="Error">
+
+```json
+{
+  "error": "insufficient_scope",
+  "message": "…"
+}
+```
+
+</DocsResponse>
+
+### Managing apps and tokens
+
+In the dashboard developer settings you can:
+
+- Create OAuth apps (name, redirect URIs, allowed scopes) — `client_id` is always visible; `client_secret` is shown once
+- Create and revoke personal access tokens with chosen scopes — the PAT value is shown once

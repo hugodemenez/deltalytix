@@ -16,6 +16,7 @@ import {
   scopeMap,
   scopeNames,
 } from "./metadata";
+import { API_SCOPES } from "@/lib/api/scopes";
 
 const request = new Request("https://deltalytix.app/");
 
@@ -23,7 +24,7 @@ describe("agent scopes", () => {
   it("exposes every scope with a description", () => {
     expect(AGENT_SCOPES.length).toBeGreaterThan(0);
     for (const scope of AGENT_SCOPES) {
-      expect(scope.name).toMatch(/^[a-z]+(:[a-z]+)?$/);
+      expect(scope.name).toMatch(/^[a-z]+:[a-z]+$/);
       expect(scope.description.length).toBeGreaterThan(20);
     }
   });
@@ -40,16 +41,8 @@ describe("agent scopes", () => {
     }
   });
 
-  it("covers read and write access to trades and journal", () => {
-    expect(scopeNames()).toEqual(
-      expect.arrayContaining([
-        "trades:read",
-        "trades:write",
-        "journal:read",
-        "journal:write",
-        "analytics:read",
-      ]),
-    );
+  it("advertises exactly the scopes the authorization server issues", () => {
+    expect(scopeNames()).toEqual([...API_SCOPES]);
   });
 });
 

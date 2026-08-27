@@ -36,6 +36,7 @@ import type {
   RithmicProtocolStoredCredentials,
   RithmicProtocolTradesResult,
 } from './rithmic-protocol-types'
+import { serverActor, trustedUserId, type TrustedActor } from "@/lib/api/server-actor"
 
 const SERVICE = 'rithmic-protocol'
 /** Fallback lookback when a legacy connection has no `historyStartDate`. */
@@ -172,11 +173,12 @@ export async function authenticateRithmicProtocol(
   systemName: string,
   historyStartDate: string,
   gatewayId?: string,
+  options?: TrustedActor,
 ): Promise<RithmicProtocolActionResult> {
   let authLogContext: string | null = null
 
   try {
-    const userId = await getUserId()
+    const userId = trustedUserId(options) ?? (await getUserId())
     if (!userId) {
       return { error: 'USER_NOT_AUTHENTICATED' }
     }
@@ -238,6 +240,7 @@ export async function authenticateRithmicProtocol(
     const connection = await storeRithmicProtocolToken(
       JSON.stringify(stored),
       username,
+      serverActor(userId),
     )
 
     await upsertAccountsForNumbers(userId, accountIds, connection.id)
@@ -330,8 +333,9 @@ async function persistListedProtocolAccountIds(
 export async function storeRithmicProtocolToken(
   tokenJson: string,
   accountId: string,
+  options?: TrustedActor,
 ) {
-  const userId = await getUserId()
+  const userId = trustedUserId(options) ?? (await getUserId())
   if (!userId) throw new Error('Not authenticated')
 
   return persistRithmicProtocolCredentials(userId, tokenJson, accountId)
@@ -654,7 +658,7 @@ export async function updateRithmicProtocolDailySyncTimeAction(
 
 export async function getRithmicProtocolTrades(
   initialTokenJson: string,
-  options?: { userId?: string; connectionId?: string },
+  options?: TrustedActor & { connectionId?: string },
 ): Promise<RithmicProtocolTradesResult> {
   const syncStats = {
     tradingAccounts: 0,
@@ -670,7 +674,7 @@ export async function getRithmicProtocolTrades(
       return { error: 'INVALID_STORED_CREDENTIALS', syncStats }
     }
 
-    let userId = options?.userId ?? null
+    let userId = trustedUserId(options)
     if (!userId) {
       const supabase = await createClient()
       const {

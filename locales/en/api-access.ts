@@ -1,0 +1,43 @@
+export default {
+  "apiAccess.title": "API access",
+  "apiAccess.description":
+    "Create OAuth apps and personal access tokens for the Deltalytix public API.",
+  "apiAccess.docsLink": "Read the API documentation",
+  "apiAccess.apps.title": "OAuth applications",
+  "apiAccess.apps.description":
+    "Register third-party or first-party clients that use the authorization code flow.",
+  "apiAccess.apps.name": "Name",
+  "apiAccess.apps.namePlaceholder": "My trading bot",
+  "apiAccess.apps.descriptionLabel": "Description",
+  "apiAccess.apps.descriptionPlaceholder": "Optional",
+  "apiAccess.apps.redirectUris": "Redirect URIs (one per line)",
+  "apiAccess.apps.allowedScopes": "Allowed scopes",
+  "apiAccess.apps.create": "Create OAuth app",
+  "apiAccess.apps.created": "OAuth app created",
+  "apiAccess.apps.createFailed": "Failed to create app",
+  "apiAccess.apps.deleted": "App deleted",
+  "apiAccess.apps.empty": "No OAuth apps yet.",
+  "apiAccess.apps.delete": "Delete",
+  "apiAccess.apps.secretTitle": "Client secret (shown once)",
+  "apiAccess.apps.secretDescription":
+    "Copy these credentials now. The secret cannot be retrieved again.",
+  "apiAccess.tokens.title": "Personal access tokens",
+  "apiAccess.tokens.description":
+    "Long-lived tokens for scripts and personal integrations. Prefer OAuth apps for third parties.",
+  "apiAccess.tokens.nameLabel": "Token name",
+  "apiAccess.tokens.namePlaceholder": "Local scripts",
+  "apiAccess.tokens.create": "Create token",
+  "apiAccess.tokens.created": "Personal access token created",
+  "apiAccess.tokens.createFailed": "Failed to create token",
+  "apiAccess.tokens.empty": "No personal access tokens yet.",
+  "apiAccess.tokens.untitled": "Untitled token",
+  "apiAccess.tokens.createdAt": "Created {date}",
+  "apiAccess.tokens.revoke": "Revoke",
+  "apiAccess.tokens.revoked": "Revoked",
+  "apiAccess.tokens.revokedToast": "Token revoked",
+  "apiAccess.tokens.secretTitle": "Personal access token (shown once)",
+  "apiAccess.tokens.secretDescription":
+    "Store this token securely. It will not be shown again.",
+  "apiAccess.scopes": "Scopes",
+  "apiAccess.dismiss": "Dismiss",
+} as const

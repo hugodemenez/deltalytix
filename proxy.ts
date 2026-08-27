@@ -69,6 +69,7 @@ const PUBLIC_MARKETING_PATHS = new Set([
   "/referral",
   "/newsletter",
   "/maintenance",
+  "/help",
 ])
 
 function isPublicRoute(pathname: string) {
@@ -87,6 +88,10 @@ function isPublicRoute(pathname: string) {
   }
 
   if (normalizedPathname.startsWith("/ref/")) {
+    return true
+  }
+
+  if (normalizedPathname === "/docs" || normalizedPathname.startsWith("/docs/")) {
     return true
   }
 
@@ -300,6 +305,7 @@ export default async function proxy(req: NextRequest) {
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/") ||
+    pathname.startsWith("/oauth/") ||
     pathname === "/docs/api" ||
     pathname.includes(".") ||
     pathname.includes("/videos/") ||
@@ -460,7 +466,7 @@ export default async function proxy(req: NextRequest) {
     }
   } else {
     // Authenticated - redirect from auth to dashboard
-    if (pathname.includes("/authentication")) {
+    if (withoutLocale(pathname) === "/authentication") {
       const nextParam = req.nextUrl.searchParams.get("next")
       const redirectUrl = nextParam ? `/${nextParam}` : "/dashboard"
       return NextResponse.redirect(new URL(redirectUrl, req.url))

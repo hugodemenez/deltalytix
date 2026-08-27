@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { getRequestOrigin, getSiteOrigin } from "@/lib/site-url";
+import type { ApiScope } from "@/lib/api/scopes";
 
 export const SITE_NAME = "Deltalytix";
 
@@ -15,41 +16,69 @@ export function absoluteUrl(path: string, request?: NextRequest | Request) {
   return new URL(path, getOrigin(request)).toString();
 }
 
+/**
+ * Deltalytix is its own authorization server: the issuer is the site origin and
+ * the endpoints below are the routes under `app/oauth` and `app/api/oauth`.
+ */
 export function getOAuthIssuer(request?: NextRequest | Request) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-  if (supabaseUrl) {
-    return new URL("/auth/v1", supabaseUrl).toString().replace(/\/$/, "");
-  }
-
-  return absoluteUrl("/auth/v1", request);
+  return absoluteUrl("/", request).replace(/\/$/, "");
 }
 
+const OAUTH_ENDPOINTS: Record<string, string> = {
+  authorize: "/oauth/authorize",
+  token: "/api/oauth/token",
+  revoke: "/api/oauth/revoke",
+};
+
 export function getOAuthEndpoint(path: string, request?: NextRequest | Request) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const normalized = path.replace(/^\//, "");
 
-  if (supabaseUrl) {
-    return new URL(`/auth/v1/${path.replace(/^\//, "")}`, supabaseUrl).toString();
-  }
-
-  return absoluteUrl(`/auth/v1/${path.replace(/^\//, "")}`, request);
+  return absoluteUrl(
+    OAUTH_ENDPOINTS[normalized] ?? `/api/oauth/${normalized}`,
+    request,
+  );
 }
 
 /**
- * Scopes an agent can request. Kept in one place so the OpenAPI security
- * schemes, the OAuth protected-resource metadata and the OpenID Connect
- * discovery document can never drift apart.
+ * Scopes an agent can request. These are exactly the scopes `lib/api/scopes.ts`
+ * validates and the `/api/v1` routes enforce, so the OpenAPI security schemes,
+ * the OAuth protected-resource metadata and the OpenID Connect discovery
+ * document can never advertise access the authorization server will not grant.
  */
 export const AGENT_SCOPES = [
-  { name: "openid", description: "Authenticate the end user and issue an ID token." },
-  { name: "profile", description: "Read the signed-in user's display name and locale." },
-  { name: "email", description: "Read the signed-in user's email address." },
-  { name: "trades:read", description: "Read imported trades, fills, and account history." },
-  { name: "trades:write", description: "Import, update, or delete trades on the user's accounts." },
-  { name: "journal:read", description: "Read journal entries, notes, tags, and mindset records." },
-  { name: "journal:write", description: "Create or update journal entries, notes, tags, and mindset records." },
-  { name: "analytics:read", description: "Read computed dashboards, statistics, and performance analytics." },
-] as const;
+  {
+    name: "profile:read",
+    description: "Read the signed-in user's profile: id, email, and locale.",
+  },
+  {
+    name: "trades:read",
+    description: "Read imported trades, fills, tags, and comments.",
+  },
+  {
+    name: "trades:write",
+    description: "Create or import trades on the user's accounts.",
+  },
+  {
+    name: "accounts:read",
+    description: "Read the user's trading accounts and their configuration.",
+  },
+  {
+    name: "connections:read",
+    description: "Read the user's broker connections and their sync history.",
+  },
+  {
+    name: "connections:write",
+    description: "Create broker connections and trigger synchronizations.",
+  },
+  {
+    name: "imports:write",
+    description: "Upload trade files and run them through the import pipeline.",
+  },
+  {
+    name: "metrics:read",
+    description: "Read computed performance metrics, equity curves, and summaries.",
+  },
+] as const satisfies readonly { name: ApiScope; description: string }[];
 
 export type AgentScope = (typeof AGENT_SCOPES)[number]["name"];
 
@@ -67,9 +96,11 @@ export function scopeMap(): Record<AgentScope, string> {
 
 /** Read-only subset advertised as the default for unattended agents. */
 export const READ_ONLY_SCOPES: AgentScope[] = [
+  "profile:read",
   "trades:read",
-  "journal:read",
-  "analytics:read",
+  "accounts:read",
+  "connections:read",
+  "metrics:read",
 ];
 
 /**

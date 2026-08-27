@@ -17,8 +17,10 @@ export function GET(request: NextRequest) {
     <main>
       <h1>Deltalytix API Documentation</h1>
       <p>Deltalytix exposes trading analytics, import, journal, and team collaboration APIs for authenticated users.</p>
+      <p>The full reference, guides, and an authenticated playground live at <a href="${absoluteUrl("/en/docs", request)}">/docs</a>.</p>
       <h2>Discovery resources</h2>
       <ul>
+        <li><a href="${absoluteUrl("/en/docs", request)}">Human-readable API documentation</a></li>
         <li><a href="${apiCatalogUrl}">API catalog</a></li>
         <li><a href="${openApiUrl}">OpenAPI description</a></li>
         <li><a href="${absoluteUrl("/api", request)}">Health endpoint</a></li>

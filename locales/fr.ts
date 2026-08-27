@@ -15,6 +15,7 @@ import faq from "./fr/faq";
 import support from "./fr/support";
 import feedback from "./fr/feedback";
 import landingPreview from "./fr/landing-preview";
+import apiAccess from "./fr/api-access";
 
 export default {
   ...shared,
@@ -34,6 +35,7 @@ export default {
   ...faq,
   ...support,
   ...feedback,
+  ...apiAccess,
   "footer.heading": "Pied de page",
   "footer.description": "Un journal de trading pour tous vos comptes futures.",
   "footer.product.title": "Produit",
@@ -74,6 +76,99 @@ export default {
   "updates.completed": "Dernières mises à jour",
   "updates.shipped": "{count} améliorations publiées",
   "updates.weeklyVideo": "📺 Dernière vidéo de la semaine",
+  "docs.title": "Documentation API.",
+  "docs.description":
+    "Authentifiez-vous avec OAuth ou des personal access tokens, puis lisez et écrivez trades, comptes, connexions, imports et métriques via l’API publique Deltalytix v1.",
+  "docs.sections": "Guides",
+  "docs.sectionLabel": "Section {number}",
+  "docs.onThisPage": "Sur cette page",
+  "docs.jumpToSection": "Aller à la section",
+  "docs.getTokenTitle": "Obtenir un jeton",
+  "docs.getTokenLead":
+    "Ouvrez la feuille de jeton depuis n’importe quel panneau d’essai. Générez un token docs une fois connecté, utilisez un token démo pour les routes en lecture, ou collez un personal access token.",
+  "docs.oauthTitle": "OAuth 2.0",
+  "docs.toc.title": "Ce que vous pouvez faire",
+  "docs.toc.lead":
+    "Chaque ligne ouvre le guide correspondant. Incluez ce scope sur votre jeton.",
+  "docs.toc.youCan": "Vous pouvez",
+  "docs.toc.scope": "Scope",
+  "docs.toc.profileRead": "Lire le profil de l’utilisateur authentifié",
+  "docs.toc.tradesRead": "Lister les trades",
+  "docs.toc.tradesWrite": "Créer des trades",
+  "docs.toc.accountsRead": "Lister les comptes et métriques associées",
+  "docs.toc.connectionsRead": "Lister les connexions broker",
+  "docs.toc.connectionsWrite": "Créer des connexions et déclencher une sync",
+  "docs.toc.importsWrite": "Envoyer des fichiers d’import",
+  "docs.toc.metricsRead": "Lire les métriques summary, equity et comptes",
+  "docs.tryIt": "Essayer",
+  "docs.openApi": "Référence OpenAPI",
+  "docs.openApiJson": "OpenAPI JSON",
+  "docs.openapi.title": "Référence OpenAPI",
+  "docs.openapi.description":
+    "Chemins, méthodes, paramètres et codes de réponse issus du document OpenAPI live.",
+  "docs.openapi.download": "Télécharger openapi.json",
+  "docs.openapi.loading": "Chargement du document OpenAPI…",
+  "docs.openapi.error": "Impossible de charger le document OpenAPI.",
+  "docs.openapi.retry": "Réessayer",
+  "docs.openapi.empty": "Aucun chemin trouvé dans le document OpenAPI.",
+  "docs.openapi.parameters": "Paramètres",
+  "docs.openapi.requestBody": "Corps de la requête",
+  "docs.openapi.responses": "Réponses",
+  "docs.openapi.required": "requis",
+  "docs.openapi.noSummary": "Aucun résumé",
+  "docs.openapi.schemaOutline": "Aperçu du schéma",
+  "docs.playground.title": "Bac à sable API",
+  "docs.playground.description":
+    "Appelez les vrais endpoints /api/v1 avec un jeton bearer. Utilisez un token démo pour les routes en lecture, générez un token docs une fois connecté, ou collez un personal access token.",
+  "docs.playground.signedInAs": "Connecté en tant que {email}",
+  "docs.playground.signedIn": "Connecté",
+  "docs.playground.generateToken": "Générer un token docs",
+  "docs.playground.generating": "Génération…",
+  "docs.playground.revoke": "Révoquer",
+  "docs.playground.clear": "Effacer",
+  "docs.playground.copy": "Copier",
+  "docs.playground.copied": "Copié",
+  "docs.playground.signIn": "Se connecter pour générer un token",
+  "docs.playground.signInHint":
+    "Ou collez un personal access token depuis Dashboard → Développeurs.",
+  "docs.playground.pasteToken": "Jeton Bearer",
+  "docs.playground.pastePlaceholder": "dltx_pat_…",
+  "docs.playground.writeScopes": "Scopes d’écriture optionnels",
+  "docs.playground.endpoint": "Endpoint",
+  "docs.playground.method": "Méthode",
+  "docs.playground.path": "Chemin",
+  "docs.playground.body": "Corps JSON",
+  "docs.playground.send": "Envoyer",
+  "docs.playground.sending": "Envoi…",
+  "docs.playground.response": "Réponse",
+  "docs.playground.noToken": "Ajoutez un jeton bearer avant d’envoyer une requête.",
+  "docs.playground.authError": "Impossible de vérifier l’authentification.",
+  "docs.playground.tokenError": "Impossible de créer un token docs.",
+  "docs.playground.customLabel": "Requête personnalisée",
+  "help.title": "Documentation.",
+  "help.description":
+    "Apprenez à importer vos trades, lire vos performances et tenir un journal avec Deltalytix.",
+  "help.intro":
+    "Ces guides s’adressent aux traders qui utilisent le produit. Pour une intégration, consultez la documentation API.",
+  "help.apiCta": "Documentation API",
+  "help.topics.import.title": "Importer vos trades",
+  "help.topics.import.description":
+    "Connectez un broker ou envoyez un CSV pour centraliser votre track record.",
+  "help.topics.calendar.title": "Performance quotidienne",
+  "help.topics.calendar.description":
+    "Utilisez le calendrier pour voir d’un coup d’œil les jours gagnants et perdants.",
+  "help.topics.charts.title": "Graphiques de performance",
+  "help.topics.charts.description":
+    "Visualisez l’équité, la distribution et votre progression vers vos objectifs.",
+  "help.topics.journal.title": "Journal assisté par IA",
+  "help.topics.journal.description":
+    "Écrivez vos sessions et laissez le coach faire ressortir les schémas émotionnels.",
+  "help.topics.dashboard.title": "Ouvrir le tableau de bord",
+  "help.topics.dashboard.description":
+    "Connectez-vous pour travailler avec vos comptes, trades et connexions.",
+  "help.topics.support.title": "Besoin d’aide ?",
+  "help.topics.support.description":
+    "Contactez le support ou rejoignez la communauté si quelque chose ne fonctionne pas.",
   "notification.title": "Progrès de synchronisation Rithmic",
   "notification.noAccount": "Aucun compte en cours de traitement",
   "notification.processingAccount": "Traitement du compte : {account}",

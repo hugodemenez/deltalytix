@@ -1,0 +1,97 @@
+---
+title: Imports
+description: Envoyer des fichiers de trades CSV ou XLSX avec mapping IA ou parseurs spécifiques à une plateforme.
+order: 6
+---
+Importez des trades depuis des fichiers sans passer par l’interface du tableau de bord.
+
+## Envoyer un fichier
+
+```http
+POST /api/v1/imports
+```
+
+**Scope :** `imports:write`
+
+**Content-Type :** `multipart/form-data`
+
+<DocsEndpointTry method="POST" path="/api/v1/imports" />
+
+### Champs du formulaire
+
+| Champ | Requis | Description |
+| --- | --- | --- |
+| `file` | Oui | Fichier `.csv` ou `.xlsx` |
+| `type` | Oui | `"ai"` ou un nom de plateforme |
+| `accountNumber` | Oui | Numéro de compte de destination |
+
+### Import IA (`type=ai`)
+
+Le serveur parse le fichier (Papa Parse pour CSV, `read-excel-file` pour XLSX), exécute le même pipeline de mapping et de formatage IA que le tableau de bord, puis enregistre les trades via le cœur partagé de sauvegarde.
+
+```bash
+curl -X POST https://www.deltalytix.app/api/v1/imports \
+  -H "Authorization: Bearer dltx_at_…" \
+  -F "file=@./trades.csv" \
+  -F "type=ai" \
+  -F "accountNumber=SIM-001"
+```
+
+```js
+const form = new FormData();
+form.append("file", fileInput.files[0]);
+form.append("type", "ai");
+form.append("accountNumber", "SIM-001");
+
+const res = await fetch("https://www.deltalytix.app/api/v1/imports", {
+  method: "POST",
+  headers: { Authorization: `Bearer ${accessToken}` },
+  body: form,
+});
+const result = await res.json();
+```
+
+### Import plateforme (`type=<platform>`)
+
+Lorsque `type` est une clé de plateforme, le serveur utilise un parseur enregistré extrait du flux d’import du tableau de bord. Les plateformes supportées dépendent des parseurs disponibles en fonctions pures (candidats : `tradezella`, `tradovate`, `quantower`, `topstep`, `ftmo`, `atas`, et d’autres).
+
+```bash
+curl -X POST https://www.deltalytix.app/api/v1/imports \
+  -H "Authorization: Bearer dltx_at_…" \
+  -F "file=@./export.xlsx" \
+  -F "type=tradovate" \
+  -F "accountNumber=SIM-001"
+```
+
+### Réponse de succès
+
+<DocsResponse tone="success" label="Succès">
+
+```json
+{
+  "imported": 128,
+  "duplicates": 4,
+  "total": 132,
+  "accountNumber": "SIM-001"
+}
+```
+
+</DocsResponse>
+
+### Plateforme non supportée → `422`
+
+<DocsResponse tone="error" label="Erreur">
+
+```json
+{
+  "error": "unsupported_service",
+  "message": "Unknown import type",
+  "details": {
+    "supported": ["ai", "tradovate", "tradezella", "quantower"]
+  }
+}
+```
+
+</DocsResponse>
+
+La liste exacte `details.supported` reflète le registre de parseurs en production.

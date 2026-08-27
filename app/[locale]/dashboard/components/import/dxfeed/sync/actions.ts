@@ -33,6 +33,7 @@ import {
   decryptConnectionToken,
   encryptConnectionToken,
 } from '@/lib/connection-token-crypto'
+import { serverActor, trustedUserId, type TrustedActor } from "@/lib/api/server-actor"
 
 const DXFEED_AUTH_URL = resolveDxFeedV2AuthUrl(process.env.DXFEED_AUTH_URL)
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
@@ -173,20 +174,30 @@ function extractApiErrorMessage(payload: unknown): string | null {
 export async function authenticateDxFeed(
   login: string,
   password: string,
+  _requestedPropFirmId?: string,
+  options?: TrustedActor,
 ): Promise<DxFeedActionResult> {
   try {
     if (!DXFEED_AUTH_URL || !DXFEED_PLATFORM_KEY) {
       return { error: DxFeedErrorCode.CONFIG_NOT_SET }
     }
 
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    let userId = trustedUserId(options)
+    if (!userId) {
+      const supabase = await createClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return { error: DxFeedErrorCode.USER_NOT_AUTHENTICATED }
+      }
+      userId = user.id
+    }
+    if (!userId) {
       return { error: DxFeedErrorCode.USER_NOT_AUTHENTICATED }
     }
+    const resolvedUserId = userId
 
     const environment = DXFEED_ENVIRONMENT === 0 ? 'production' : 'demo'
-    const authLogContext = `userId=${user.id} environment=${environment}`
+    const authLogContext = `userId=${resolvedUserId} environment=${environment}`
 
     const body: DxFeedLoginRequest = {
       login,
@@ -286,6 +297,7 @@ export async function authenticateDxFeed(
       tokenExpiresAt,
       propFirmId,
       propFirmName: propfirmName,
+      ...serverActor(resolvedUserId),
     })
     if (storeResult.error) {
       logger.warn('Failed to store token')
@@ -295,7 +307,7 @@ export async function authenticateDxFeed(
       const connection = await prisma.connection.findUnique({
         where: {
           userId_service_externalId: {
-            userId: user.id,
+            userId: resolvedUserId,
             service: 'dxfeed',
             externalId: login,
           },
@@ -303,10 +315,10 @@ export async function authenticateDxFeed(
         select: { id: true },
       })
       if (connection) {
-        await upsertAccountsForNumbers(user.id, accountNumbers, connection.id)
+        await upsertAccountsForNumbers(resolvedUserId, accountNumbers, connection.id)
         await prisma.account.updateMany({
           where: {
-            userId: user.id,
+            userId: resolvedUserId,
             number: { in: accountNumbers },
             connectionId: connection.id,
           },
@@ -492,7 +504,7 @@ function buildTradesFromDxFeedReport(
 
 export async function getDxFeedTrades(
   initialTokenJson: string,
-  options?: { userId?: string; accountId?: string },
+  options?: TrustedActor & { accountId?: string },
 ): Promise<DxFeedTradesResult> {
   try {
     const credentials = parseStoredCredentials(initialTokenJson)
@@ -502,7 +514,7 @@ export async function getDxFeedTrades(
 
     const { accessToken, historicalHost } = credentials
 
-    let userId = options?.userId ?? null
+    let userId = trustedUserId(options)
     let syncAccountId: string | null = options?.accountId ?? null
     if (!userId) {
       const supabase = await createClient()
@@ -782,23 +794,31 @@ async function updateStoredCredentials(
 export async function storeDxFeedToken(
   tokenJson: string,
   accountId: string = 'default',
-  options?: {
+  options?: TrustedActor & {
     tokenExpiresAt?: Date | null
     propFirmId?: string
     propFirmName?: string
   },
 ) {
   try {
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    let userId = trustedUserId(options)
+    if (!userId) {
+      const supabase = await createClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return { error: 'User not authenticated' }
+      }
+      userId = user.id
+    }
+    if (!userId) {
       return { error: 'User not authenticated' }
     }
+    const resolvedUserId = userId
 
     const existingConnection = await prisma.connection.findUnique({
       where: {
         userId_service_externalId: {
-          userId: user.id,
+          userId: resolvedUserId,
           service: 'dxfeed',
           externalId: accountId,
         },
@@ -809,7 +829,7 @@ export async function storeDxFeedToken(
     await prisma.connection.upsert({
       where: {
         userId_service_externalId: {
-          userId: user.id,
+          userId: resolvedUserId,
           service: 'dxfeed',
           externalId: accountId,
         },
@@ -822,7 +842,7 @@ export async function storeDxFeedToken(
         includedFeeTypes: undefined, // DxFeed has no fee differentiator
       },
       create: {
-        userId: user.id,
+        userId: resolvedUserId,
         service: 'dxfeed',
         externalId: accountId,
         token: encryptConnectionToken(tokenJson),
@@ -834,7 +854,7 @@ export async function storeDxFeedToken(
 
     if (!existingConnection) {
       await capturePostHogEvent({
-        distinctId: user.id,
+        distinctId: resolvedUserId,
         event: 'integration_connected',
         properties: {
           integration: 'dxfeed',

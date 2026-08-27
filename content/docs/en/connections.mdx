@@ -1,0 +1,194 @@
+---
+title: Connections
+description: List broker connections, create server-syncable connections, and trigger sync.
+order: 5
+---
+Broker connections sync trades into Deltalytix. Raw broker tokens are never returned by the API.
+
+Server-syncable services in v1:
+
+| `service` | Create | Sync | Notes |
+| --- | --- | --- | --- |
+| `ibkr` | `token`, `queryId` | yes | IBKR Flex Web Service |
+| `dxfeed` | `login`, `password`, `propFirmId` | yes | Volumetrica / DxFeed prop firms |
+| `rithmic-protocol` | `username`, `password`, `systemName`, `historyStartDate`, optional `gatewayId` | yes | Rithmic Protocol gateway |
+| `tradovate` | dashboard OAuth only | yes | Connect in the Deltalytix dashboard, then list and sync via the API |
+
+Classic `rithmic`, `thor`, and `etp` may appear in `GET` listings but are not creatable or syncable through this API.
+
+## List connections
+
+```http
+GET /api/v1/connections
+```
+
+**Scope:** `connections:read`
+
+<DocsEndpointTry method="GET" path="/api/v1/connections" />
+
+### Example
+
+```bash
+curl https://www.deltalytix.app/api/v1/connections \
+  -H "Authorization: Bearer dltx_at_…"
+```
+
+### Response `200`
+
+<DocsResponse tone="success" label="Success">
+
+```json
+{
+  "data": [
+    {
+      "id": "conn_01HZX…",
+      "service": "ibkr",
+      "externalId": "flex-query-123",
+      "lastSyncedAt": "2026-03-15T16:00:00.000Z",
+      "environment": "live",
+      "accountNumbers": ["U1234567"]
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+</DocsResponse>
+
+| Field | Description |
+| --- | --- |
+| `id` | Connection identifier |
+| `service` | Provider key (`ibkr`, `tradovate`, `dxfeed`, `rithmic-protocol`, …) |
+| `externalId` | Provider-side identifier (never a secret token) |
+| `lastSyncedAt` | Last successful sync timestamp, or `null` |
+| `environment` | e.g. live / demo when applicable |
+| `accountNumbers` | Linked Deltalytix account numbers |
+
+## Create a connection
+
+```http
+POST /api/v1/connections
+```
+
+**Scope:** `connections:write`
+
+<DocsEndpointTry method="POST" path="/api/v1/connections" />
+
+Body is discriminated by `service`. On success the API stores credentials (encrypted), links accounts when available, attempts an initial sync, and returns the connection **without** secrets.
+
+### IBKR Flex
+
+```json
+{
+  "service": "ibkr",
+  "token": "<flex token>",
+  "queryId": "<flex query id>"
+}
+```
+
+```bash
+curl -X POST https://www.deltalytix.app/api/v1/connections \
+  -H "Authorization: Bearer dltx_at_…" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "service": "ibkr",
+    "token": "YOUR_FLEX_TOKEN",
+    "queryId": "YOUR_FLEX_QUERY_ID"
+  }'
+```
+
+### DxFeed
+
+```json
+{
+  "service": "dxfeed",
+  "login": "trader@example.com",
+  "password": "…",
+  "propFirmId": "miltraders"
+}
+```
+
+`propFirmId` must be an enabled firm id (for example `miltraders`, `myfundedfutures`, `phoenixtraderfunding`).
+
+### Rithmic Protocol
+
+```json
+{
+  "service": "rithmic-protocol",
+  "username": "your-username",
+  "password": "…",
+  "systemName": "Rithmic Paper Trading",
+  "historyStartDate": "2026-01-01",
+  "gatewayId": "core"
+}
+```
+
+`historyStartDate` is `YYYY-MM-DD`. `gatewayId` is optional (e.g. `core`, `nyc`, `test`).
+
+### Response `201`
+
+<DocsResponse tone="success" label="Success">
+
+```json
+{
+  "id": "conn_01HZX…",
+  "service": "ibkr",
+  "externalId": "flex-query-123",
+  "accountNumbers": ["U1234567"],
+  "imported": 42,
+  "duplicates": 3
+}
+```
+
+</DocsResponse>
+
+If the connection is stored but the initial sync fails, the response still returns `201` with `imported: 0` and a `warning` message.
+
+### Unsupported service → `422`
+
+<DocsResponse tone="error" label="Error">
+
+```json
+{
+  "error": "unsupported_service",
+  "message": "Only credential-based connection services can be created in v1",
+  "details": {
+    "supported": ["ibkr", "dxfeed", "rithmic-protocol"]
+  }
+}
+```
+
+</DocsResponse>
+
+## Trigger a sync
+
+```http
+POST /api/v1/connections/{id}/sync
+```
+
+**Scope:** `connections:write`
+
+<DocsEndpointTry method="POST" path="/api/v1/connections/{id}/sync" />
+
+Works for `ibkr`, `dxfeed`, `rithmic-protocol`, and `tradovate` connections that were already linked in the dashboard.
+
+### Example
+
+```bash
+curl -X POST https://www.deltalytix.app/api/v1/connections/conn_01HZX…/sync \
+  -H "Authorization: Bearer dltx_at_…"
+```
+
+### Response `200`
+
+<DocsResponse tone="success" label="Success">
+
+```json
+{
+  "status": "completed",
+  "imported": 42,
+  "duplicates": 3
+}
+```
+
+</DocsResponse>
