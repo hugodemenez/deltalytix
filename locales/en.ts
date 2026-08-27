@@ -1518,6 +1518,7 @@ export default {
   "share.cancel": "Cancel",
   "share.titleLabel": "Title",
   "share.titlePlaceholder": "Enter a title for your shared dashboard",
+  "share.defaultTitle": "Shared dashboard",
   "share.startDateLabel": "Start Date",
   "share.endDateLabel": "End Date (Optional)",
   "share.startDatePlaceholder": "Select start date",

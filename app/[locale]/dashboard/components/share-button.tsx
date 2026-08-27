@@ -285,7 +285,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
 
         const slug = await createShared({
           userId: user.id,
-          title: shareTitle || `Shared trades${shareAllAccounts ? ' for all accounts' : ` for ${selectedAccounts.length} accounts`}`,
+          title: shareTitle.trim() || t("share.defaultTitle"),
           description: `Trades from ${selectedDateRange.from.toLocaleDateString()}${selectedDateRange.to ? ` to ${selectedDateRange.to.toLocaleDateString()}` : ''}`,
           isPublic: true,
           accountNumbers: shareAllAccounts ? [] : selectedAccounts,
@@ -444,7 +444,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         const payload = {
           locale,
           timezone,
-          title: shareTitle.trim(),
+          title: shareTitle.trim() || t("share.defaultTitle"),
           dateRange: globalDateRange?.from
             ? {
                 from: globalDateRange.from.toISOString(),
@@ -525,7 +525,9 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     return (
       <Dialog open={open} onOpenChange={(isOpen) => {
         setOpen(isOpen)
-        if (!isOpen) {
+        if (isOpen) {
+          setShareTitle(t("share.defaultTitle"))
+        } else {
           setShowManager(false)
           setShareUrl("")
           setShareTitle("")
@@ -558,7 +560,10 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
             </Button>
           )}
         </DialogTrigger>
-        <DialogContent className="sm:max-w-4xl h-[90vh] sm:h-[85vh] w-[95vw]">
+        <DialogContent
+          className="sm:max-w-4xl h-[90vh] sm:h-[85vh] w-[95vw]"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
           <div className="h-full flex flex-col overflow-y-hidden">
               <DialogHeader>
                 <DialogTitle>{t("share.title")}</DialogTitle>
@@ -617,6 +622,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                         placeholder={t("share.titlePlaceholder")}
                         value={shareTitle}
                         onChange={(e) => setShareTitle(e.target.value)}
+                        autoFocus={false}
                       />
                     </div>
                     <div className="flex items-center space-x-2">

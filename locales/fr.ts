@@ -1476,6 +1476,7 @@ export default {
   "share.titleLabel": "Titre",
   "share.titlePlaceholder":
     "Entrez un titre pour votre tableau de bord partagé",
+  "share.defaultTitle": "Tableau de bord partagé",
   "share.error.refresh":
     "Une erreur est survenue lors de l'actualisation des trades",
   "share.refresh": "Actualiser les trades",
