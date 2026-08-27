@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback, forwardRef } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef, forwardRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Share, Share2, Check, ChevronsUpDown, Copy, Layout, ExternalLink, Download } from "lucide-react"
 import {
@@ -159,6 +159,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const [shareTitle, setShareTitle] = useState("")
     const [isExporting, setIsExporting] = useState(false)
     const [isSharing, setIsSharing] = useState(false)
+    const hasInitializedAccounts = useRef(false)
 
     // Get the earliest and latest trade dates
     const defaultDateRange = useMemo(() => {
@@ -220,6 +221,14 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         accountNumbers.every((account) => selectedAccounts.includes(account)),
       [accountNumbers, selectedAccounts]
     )
+
+    useEffect(() => {
+      if (!open || hasInitializedAccounts.current || accountNumbers.length === 0) {
+        return
+      }
+      setSelectedAccounts(accountNumbers)
+      hasInitializedAccounts.current = true
+    }, [open, accountNumbers])
 
     const accountPickerLabel = isSharingAllAccounts
       ? t("share.allAccounts")
@@ -539,12 +548,14 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         if (isOpen) {
           setShareTitle(t("share.defaultTitle"))
           setSelectedAccounts(accountNumbers)
+          hasInitializedAccounts.current = accountNumbers.length > 0
         } else {
           setShowManager(false)
           setShareUrl("")
           setShareTitle("")
           setSelectedAccounts([])
           setDateAccordion("")
+          hasInitializedAccounts.current = false
         }
       }}>
         <DialogTrigger asChild>
