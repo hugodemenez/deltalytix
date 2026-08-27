@@ -138,7 +138,8 @@ Without the two secrets the workflow still runs the proto/unit checks and
 to Core (`RequestRithmicSystemInfo` works) but `RequestLogin` has been silent
 from that peer — that is a runner/path issue, not a customer IP allowlist.
 The live step prints DNS, egress IP, socket remote/local, and template traffic
-— never username/password.
+— never username/password. Login uses a second socket after the system-info
+probe (the plant closes the probe with code 1000).
 
 On connect, the user must choose an **account start date**. Sync walks from that
 date to today with `ShowFillHistory` in **serial ≤30-day windows** (Rithmic guidance).

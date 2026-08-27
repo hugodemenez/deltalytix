@@ -9,7 +9,8 @@
  */
 import { describe, expect, it } from 'vitest'
 import {
-  RithmicProtocolClient,
+  fetchAvailableSystems,
+  fetchProductCommissionRates,
   sanitizeRithmicSecret,
 } from './client'
 import { lookupCommissionFillRate } from './commission-rates'
@@ -52,7 +53,7 @@ it.skipIf(hasLiveCredentials)(
 describe.skipIf(!hasLiveCredentials)(
   'Rithmic Protocol Product RMS (live gateway)',
   () => {
-    it('logs in on one socket and fetches commission_fill_rate rows', async () => {
+    it('logs in and fetches commission_fill_rate rows', async () => {
       const gateway = e2eGatewayUri()
       const systemName = e2eSystemName()
       const pinnedAccount = process.env.RITHMIC_PROTOCOL_E2E_ACCOUNT_ID?.trim()
@@ -64,72 +65,51 @@ describe.skipIf(!hasLiveCredentials)(
           `user_len=${username.length} password_len=${password.length}`,
       )
 
-      const client = new RithmicProtocolClient()
-      try {
-        await client.connect(gateway)
-        e2eLog('probe RequestRithmicSystemInfo on the same socket as login')
-        const systems = await client.requestSystemInfo()
-        e2eLog(`available systems: ${systems.join(', ') || '(none)'}`)
-        if (!systems.includes(systemName)) {
-          e2eLog(`warn: ${systemName} is not in the system-info list`)
-        }
+      e2eLog('probe RequestRithmicSystemInfo on a short-lived socket (Rithmic sequence)')
+      const systems = await fetchAvailableSystems(gateway)
+      e2eLog(`available systems: ${systems.join(', ') || '(none)'}`)
+      if (!systems.includes(systemName)) {
+        e2eLog(`warn: ${systemName} is not in the system-info list`)
+      }
 
-        const login = await client.login({ systemName, username, password })
-        const info = await client.loginInfo()
-        const listed = await client.listAccounts({
-          fcmId: info.fcmId || login.fcmId,
-          ibId: info.ibId || login.ibId,
-          userType: info.userType,
-        })
-        const accountIds = pinnedAccount
-          ? [pinnedAccount]
-          : listed.map((account) => account.accountId)
+      const result = await fetchProductCommissionRates({
+        gatewayUri: gateway,
+        systemName,
+        username,
+        password,
+        accountIds: pinnedAccount ? [pinnedAccount] : [],
+      })
 
+      e2eLog(
+        `login ok unique_user_id=${result.uniqueUserId ?? '(none)'} accounts=${result.accounts.length} rms_rows=${result.rows.length} rates=${result.rates.size}`,
+      )
+      for (const account of result.accounts) {
         e2eLog(
-          `login ok unique_user_id=${login.uniqueUserId ?? '(none)'} accounts=${listed.length}`,
+          `account id=${account.accountId} name=${account.accountName ?? '(none)'} fcm=${account.fcmId ?? '(none)'} ib=${account.ibId ?? '(none)'}`,
         )
-        for (const account of listed) {
-          e2eLog(
-            `account id=${account.accountId} name=${account.accountName ?? '(none)'} fcm=${account.fcmId ?? '(none)'} ib=${account.ibId ?? '(none)'}`,
-          )
-        }
+      }
+      for (const row of result.rows) {
+        e2eLog(
+          `rms account=${row.accountId} product=${row.productCode} commission_fill_rate=${row.commissionFillRate}`,
+        )
+      }
 
-        const rows = []
-        for (const accountId of accountIds) {
-          const meta = listed.find((account) => account.accountId === accountId)
-          const productRms = await client.getProductRmsInfo({
-            fcmId: meta?.fcmId || info.fcmId || login.fcmId,
-            ibId: meta?.ibId || info.ibId || login.ibId,
-            accountId,
-          })
-          rows.push(...productRms)
-          e2eLog(
-            `rms ${accountId}: ${productRms.length} rate(s)` +
-              (productRms.length > 0
-                ? ` (${productRms.map((row) => `${row.productCode}=${row.commissionFillRate}`).join(', ')})`
-                : ''),
-          )
-        }
-
-        expect(listed.length).toBeGreaterThan(0)
-        for (const row of rows) {
-          expect(row.productCode).toBe(row.productCode.toUpperCase())
-          expect(Number.isFinite(row.commissionFillRate)).toBe(true)
-          expect(
-            lookupCommissionFillRate(
-              new Map([[`${row.accountId}|${row.productCode}`, row.commissionFillRate]]),
-              row.accountId,
-              row.productCode,
-            ),
-          ).toBe(row.commissionFillRate)
-        }
-        if (rows.length === 0) {
-          e2eLog(
-            'warn: Product RMS returned no commission_fill_rate rows (plant may omit bit 64, or this account has no product RMS)',
-          )
-        }
-      } finally {
-        await client.close()
+      expect(result.accounts.length).toBeGreaterThan(0)
+      for (const row of result.rows) {
+        expect(row.productCode).toBe(row.productCode.toUpperCase())
+        expect(Number.isFinite(row.commissionFillRate)).toBe(true)
+        expect(
+          lookupCommissionFillRate(
+            result.rates,
+            row.accountId,
+            row.productCode,
+          ),
+        ).toBe(row.commissionFillRate)
+      }
+      if (result.rates.size === 0) {
+        e2eLog(
+          'warn: Product RMS returned no commission_fill_rate rows (plant may omit bit 64, or this account has no product RMS)',
+        )
       }
     })
   },
