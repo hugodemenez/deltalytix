@@ -7,32 +7,38 @@ const BEZIER = Easing.bezier(0.16, 1, 0.3, 1);
 
 type StatWidgetsProps = {
   readonly size?: "strip" | "feature";
+  readonly immediate?: boolean;
 };
 
-export const StatWidgets: React.FC<StatWidgetsProps> = ({ size = "strip" }) => {
+export const StatWidgets: React.FC<StatWidgetsProps> = ({
+  size = "strip",
+  immediate = false,
+}) => {
   const frame = useCurrentFrame();
   const feature = size === "feature";
   const countEnd = feature ? 78 : 44;
-  const pnl = interpolate(frame, [4, countEnd], [0, MONTHLY_PNL], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: BEZIER,
-  });
-  const winRate = interpolate(
-    frame,
-    [10, countEnd + 4],
-    [0, WIN_RATE_PERCENT],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: BEZIER,
-    },
-  );
-  const trades = interpolate(frame, [16, countEnd + 8], [0, TRADE_COUNT], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: BEZIER,
-  });
+  const pnl = immediate
+    ? MONTHLY_PNL
+    : interpolate(frame, [4, countEnd], [0, MONTHLY_PNL], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: BEZIER,
+      });
+  const winRate = immediate
+    ? WIN_RATE_PERCENT
+    : interpolate(frame, [10, countEnd + 4], [0, WIN_RATE_PERCENT], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: BEZIER,
+      });
+  const trades = immediate
+    ? TRADE_COUNT
+    : interpolate(frame, [16, countEnd + 8], [0, TRADE_COUNT], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: BEZIER,
+      });
+  const enter = immediate ? -30 : 0;
 
   return (
     <Interactive.Div
@@ -51,7 +57,7 @@ export const StatWidgets: React.FC<StatWidgetsProps> = ({ size = "strip" }) => {
         <StatWidget
           name="Net P&L card"
           label="Net P&L"
-          delay={0}
+          delay={enter}
           sparkline
           size={size}
           valueColor={tokens.positive}
@@ -66,7 +72,7 @@ export const StatWidgets: React.FC<StatWidgetsProps> = ({ size = "strip" }) => {
         <StatWidget
           name="Win rate card"
           label="Win rate"
-          delay={feature ? 10 : 6}
+          delay={enter + (feature ? 10 : 6)}
           size={size}
           note="Across every funded account"
         >
@@ -80,7 +86,7 @@ export const StatWidgets: React.FC<StatWidgetsProps> = ({ size = "strip" }) => {
         <StatWidget
           name="Trades card"
           label="Trades"
-          delay={feature ? 20 : 12}
+          delay={enter + (feature ? 20 : 12)}
           size={size}
           note="Tagged and reviewed"
         >

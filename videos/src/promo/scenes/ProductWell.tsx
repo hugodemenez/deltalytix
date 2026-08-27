@@ -1,81 +1,68 @@
-import { AbsoluteFill, Interactive } from "remotion";
-import { fontFamily } from "../../fonts";
-import { tokens } from "../tokens";
 import { CalendarWidget } from "../widgets/CalendarWidget";
 import { DailyPnlChart } from "../widgets/DailyPnlChart";
 import { EquityChart } from "../widgets/EquityChart";
 import { StatWidgets } from "../widgets/StatWidgets";
+import { FeatureChrome } from "./FeatureChrome";
 
 export const ProductWell: React.FC = () => {
   return (
-    <AbsoluteFill
-      name="Product well"
-      style={{
-        backgroundColor: tokens.sageWell,
-        fontFamily,
-      }}
+    <FeatureChrome
+      name="One dashboard"
+      eyebrow="One dashboard"
+      title="Calendar, equity, and P&L together."
     >
-      <Interactive.Div
-        name="Feature well"
+      <div
         style={{
-          position: "absolute",
-          left: 40,
-          top: 40,
-          width: 1840,
-          height: 1000,
-          backgroundColor: tokens.featureWell,
-          borderRadius: 4,
+          position: "relative",
+          width: "100%",
+          height: "100%",
         }}
       >
-        <Interactive.Div
-          name="Statistics row"
+        <div
           style={{
             position: "absolute",
-            left: 24,
-            top: 24,
+            left: 0,
+            top: 0,
             width: 1792,
-            height: 208,
+            height: 168,
           }}
         >
-          <StatWidgets />
-        </Interactive.Div>
-        <Interactive.Div
-          name="Calendar column"
+          <StatWidgets immediate />
+        </div>
+        <div
           style={{
             position: "absolute",
-            left: 24,
-            top: 248,
+            left: 0,
+            top: 184,
             width: 1020,
-            height: 728,
+            height: 644,
           }}
         >
-          <CalendarWidget delay={0} />
-        </Interactive.Div>
-        <Interactive.Div
-          name="Equity column"
+          <CalendarWidget delay={-40} />
+        </div>
+        <div
           style={{
             position: "absolute",
-            left: 1060,
-            top: 248,
+            left: 1036,
+            top: 184,
             width: 756,
-            height: 356,
+            height: 314,
           }}
         >
-          <EquityChart delay={0} drawFrames={20} />
-        </Interactive.Div>
-        <Interactive.Div
-          name="Daily P&L column"
+          <EquityChart delay={-20} drawFrames={1} />
+        </div>
+        <div
           style={{
             position: "absolute",
-            left: 1060,
-            top: 620,
+            left: 1036,
+            top: 514,
             width: 756,
-            height: 356,
+            height: 314,
           }}
         >
-          <DailyPnlChart delay={0} barDrawFrames={16} staggerFrames={2} />
-        </Interactive.Div>
-      </Interactive.Div>
-    </AbsoluteFill>
+          <DailyPnlChart delay={-40} barDrawFrames={1} staggerFrames={0} />
+        </div>
+      </div>
+    </FeatureChrome>
   );
 };
