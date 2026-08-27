@@ -36,7 +36,7 @@ Output is gitignored (`videos/out/`).
 ## Next ideas (not started)
 
 - Music bed under the whooshes (keep SFX quiet).
-- Second product beat (weekday P&L or trade distribution from the same landing file).
+- Extra feature beats for weekday P&L or trade distribution from the same landing file.
 - EN/FR caption pass (`remotion-captions` skill).
 - Dark-theme variant — only if Paper/landing has a locked dark set; do not invent one.
 
