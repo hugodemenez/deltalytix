@@ -413,7 +413,7 @@ export class RithmicProtocolClient {
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error)
       const hint = process.env.GITHUB_ACTIONS
-        ? ' System-info already proved WSS/443 works from this runner; RequestLogin got no reply. The 1011 permission denied on close was after RequestLogout on a session that never logged in — not a customer IP allowlist. Likely the plant ignoring login from this peer (IPv6, datacenter ASN, or framing).'
+        ? ' Same IPv4 peer answered system-info; RequestLogin got zero bytes back. GitHub-hosted runners egress from Azure; in-app reconnect goes through Vercel. Rithmic does not offer a customer IP allowlist — this is a network path difference.'
         : ' Check system name, app name/version, password, and that this peer can complete Protocol login.'
       throw new Error(`Rithmic login got no ResponseLogin. ${detail}.${hint}`)
     }

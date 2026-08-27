@@ -41,7 +41,7 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Product RMS proto (no credentials)
-        run: bunx vitest run lib/rithmic-protocol/product-rms-proto.test.ts lib/rithmic-protocol/commission-rates.test.ts lib/rithmic-protocol/fills-to-trades.test.ts
+        run: bunx vitest run lib/rithmic-protocol/product-rms-proto.test.ts lib/rithmic-protocol/commission-rates.test.ts lib/rithmic-protocol/fills-to-trades.test.ts lib/rithmic-protocol/silent-login-timeout.test.ts
 
       - name: Live Product RMS e2e
         env:
@@ -84,5 +84,8 @@ jobs:
             exit 0
           fi
 
-          echo "::notice::Live Protocol login → $RITHMIC_PROTOCOL_E2E_GATEWAY / $RITHMIC_PROTOCOL_E2E_SYSTEM_NAME"
+          echo "::notice::Live Protocol system-info + login → $RITHMIC_PROTOCOL_E2E_GATEWAY / $RITHMIC_PROTOCOL_E2E_SYSTEM_NAME"
+          # ubuntu-latest egress is Azure. Unauthenticated system-info works;
+          # RequestLogin has been silent on that path (Vercel login still works).
+          # The e2e suite skips a silent login timeout unless REQUIRE_LOGIN=1.
           bun run test:e2e:rithmic
