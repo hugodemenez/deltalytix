@@ -540,7 +540,7 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
               ? format(currentDate, 'MMMM yyyy', { locale: dateLocale })
               : format(currentDate, 'yyyy', { locale: dateLocale })}
           </CardTitle>
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <Button
               variant="outline"
               size="icon"
@@ -554,7 +554,7 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
               date={currentDate}
               viewMode={viewMode}
               onDateChange={setCurrentDate}
-              className="mx-0"
+              className="mx-0 min-w-max"
             />
             <Button
               variant="outline"
