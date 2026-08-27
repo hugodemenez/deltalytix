@@ -1,6 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { lookup as dnsLookup } from 'node:dns/promises'
+import type { Socket } from 'node:net'
 import protobuf from 'protobufjs'
 import WebSocket from 'ws'
 import {
@@ -131,6 +133,22 @@ function rpMessage(rpCode: unknown): string {
   return rpCode.map(String).join(' ')
 }
 
+/** Strip BOM / CR so GitHub secrets and pasted env values match the UI. */
+export function sanitizeRithmicSecret(value: string): string {
+  return value.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '').trim()
+}
+
+function forceIpv4(): boolean {
+  const flag = process.env.RITHMIC_PROTOCOL_FORCE_IPV4?.trim().toLowerCase()
+  return flag === '1' || flag === 'true'
+}
+
+function describeWebSocket(ws: WebSocket): string {
+  const socket = (ws as unknown as { _socket?: Socket })._socket
+  if (!socket) return 'socket=pending'
+  return `remote=${socket.remoteAddress}:${socket.remotePort} local=${socket.localAddress}:${socket.localPort} family=${socket.remoteFamily}`
+}
+
 /**
  * Map a ResponseShowFillHistory row. Some plants populate `price` /
  * `avg_fill_price` without `fill_price` — accept any of the three.
@@ -204,6 +222,7 @@ export class RithmicProtocolClient {
   private inboundCount = 0
   private lastInboundTemplateId: number | undefined
   private gatewayUri = ''
+  private sessionOpen = false
 
   async connect(gatewayUri: string): Promise<void> {
     this.root = await loadRoot()
@@ -212,11 +231,27 @@ export class RithmicProtocolClient {
     this.inboundCount = 0
     this.lastInboundTemplateId = undefined
     this.closed = false
+    this.sessionOpen = false
+
+    const host = new URL(uri).hostname
+    try {
+      const records = await dnsLookup(host, { all: true })
+      console.log(
+        `[RITHMIC-PROTOCOL] dns ${host} ${records.map((record) => `${record.family === 6 ? 'AAAA' : 'A'}:${record.address}`).join(' ') || '(none)'}`,
+      )
+    } catch (error) {
+      console.warn(
+        `[RITHMIC-PROTOCOL] dns ${host} failed: ${error instanceof Error ? error.message : error}`,
+      )
+    }
 
     await new Promise<void>((resolve, reject) => {
       const ws = new WebSocket(uri, {
         // Rithmic samples disable cert verification for Protocol endpoints.
         rejectUnauthorized: false,
+        // Compressed binary frames have been observed to stall some plants.
+        perMessageDeflate: false,
+        family: forceIpv4() ? 4 : undefined,
       })
       this.ws = ws
 
@@ -228,7 +263,7 @@ export class RithmicProtocolClient {
         reject(err)
       }
       const onOpen = () => {
-        console.log(`[RITHMIC-PROTOCOL] websocket open ${uri}`)
+        console.log(`[RITHMIC-PROTOCOL] websocket open ${uri} ${describeWebSocket(ws)}`)
         cleanup()
         resolve()
       }
@@ -339,19 +374,23 @@ export class RithmicProtocolClient {
     /** Defaults to ORDER_PLANT. Use PNL_PLANT for live account balances. */
     infraType?: number
   }): Promise<{ fcmId?: string; ibId?: string; uniqueUserId?: string }> {
+    const user = sanitizeRithmicSecret(params.username)
+    const password = sanitizeRithmicSecret(params.password)
     await this.send('rti.RequestLogin', {
       templateId: RithmicTemplateId.LOGIN_REQUEST,
       templateVersion: '3.9',
       userMsg: ['deltalytix-login'],
-      user: params.username,
-      password: params.password,
+      user,
+      password,
       appName: getRithmicProtocolAppName(),
       appVersion: getRithmicProtocolAppVersion(),
       systemName: params.systemName,
       infraType: params.infraType ?? ORDER_PLANT,
     })
     console.log(
-      `[RITHMIC-PROTOCOL] login sent system=${params.systemName} infra=${params.infraType ?? ORDER_PLANT} app=${getRithmicProtocolAppName()}@${getRithmicProtocolAppVersion()}`,
+      `[RITHMIC-PROTOCOL] login sent system=${params.systemName} infra=${params.infraType ?? ORDER_PLANT} ` +
+        `app=${getRithmicProtocolAppName()}@${getRithmicProtocolAppVersion()} ` +
+        `user_len=${user.length} password_len=${password.length}`,
     )
 
     let msg: InboundMessage
@@ -360,8 +399,8 @@ export class RithmicProtocolClient {
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error)
       const hint = process.env.GITHUB_ACTIONS
-        ? ' GitHub-hosted runner IPs are usually not on the Rithmic Protocol allowlist (system-info works; login stays silent, then close 1011 permission denied). The in-app reconnect uses Vercel. Use a self-hosted runner on an allowlisted IP.'
-        : ' Check system name, app name/version, password, and that this IP is allowed for Protocol.'
+        ? ' System-info already proved WSS/443 works from this runner; RequestLogin got no reply. The 1011 permission denied on close was after RequestLogout on a session that never logged in — not a customer IP allowlist. Likely the plant ignoring login from this peer (IPv6, datacenter ASN, or framing).'
+        : ' Check system name, app name/version, password, and that this peer can complete Protocol login.'
       throw new Error(`Rithmic login got no ResponseLogin. ${detail}.${hint}`)
     }
     if (msg.templateId === RithmicTemplateId.REJECT) {
@@ -386,6 +425,7 @@ export class RithmicProtocolClient {
       throw new Error(`Rithmic login failed: ${rpMessage(decoded.rpCode)}`)
     }
 
+    this.sessionOpen = true
     return {
       fcmId: decoded.fcmId,
       ibId: decoded.ibId,
@@ -1054,7 +1094,10 @@ export class RithmicProtocolClient {
   }
 
   async close(): Promise<void> {
-    await this.logout()
+    if (this.sessionOpen) {
+      await this.logout()
+      this.sessionOpen = false
+    }
     await this.disconnect()
   }
 }

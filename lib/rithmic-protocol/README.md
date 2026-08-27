@@ -134,10 +134,11 @@ GitHub Actions (`.github/workflows/rithmic-protocol-e2e.yml`):
 | `RITHMIC_PROTOCOL_E2E_GATEWAY` | Actions **variable** | no (default `core`) |
 
 Without the two secrets the workflow still runs the proto/unit checks and
-**skips** the live socket (green). Rithmic may IP-allowlist logins; GitHub-hosted
-runners use dynamic IPs, so an account that only allows office IPs will need
-a self-hosted runner or an allowlist update. The live step prints gateway,
-system, account ids, and `commission_fill_rate` rows — never username/password.
+**skips** the live socket (green). GitHub-hosted `ubuntu-latest` can open WSS
+to Core (`RequestRithmicSystemInfo` works) but `RequestLogin` has been silent
+from that peer — that is a runner/path issue, not a customer IP allowlist.
+The live step prints DNS, egress IP, socket remote/local, and template traffic
+— never username/password.
 
 On connect, the user must choose an **account start date**. Sync walks from that
 date to today with `ShowFillHistory` in **serial ≤30-day windows** (Rithmic guidance).

@@ -51,6 +51,7 @@ jobs:
           # Only username/password are required as repository secrets.
           RITHMIC_PROTOCOL_E2E_SYSTEM_NAME: ${{ vars.RITHMIC_PROTOCOL_E2E_SYSTEM_NAME || 'Rithmic Paper Trading' }}
           RITHMIC_PROTOCOL_E2E_GATEWAY: ${{ vars.RITHMIC_PROTOCOL_E2E_GATEWAY || 'core' }}
+          RITHMIC_PROTOCOL_FORCE_IPV4: "1"
         run: |
           username_set=no
           password_set=no
@@ -64,6 +65,18 @@ jobs:
           echo "system=$RITHMIC_PROTOCOL_E2E_SYSTEM_NAME"
           echo "node=$(node -v)"
           echo "bun=$(bun -v)"
+          echo "force_ipv4=$RITHMIC_PROTOCOL_FORCE_IPV4"
+          echo "::endgroup::"
+
+          echo "::group::Runner network"
+          echo -n "egress_ipv4="
+          curl -4 -fsS --max-time 8 https://api.ipify.org || echo "(unavailable)"
+          echo
+          echo -n "egress_ipv6="
+          curl -6 -fsS --max-time 8 https://api6.ipify.org || echo "(unavailable)"
+          echo
+          echo "dns rprotocol.rithmic.com:"
+          getent ahosts rprotocol.rithmic.com || true
           echo "::endgroup::"
 
           if [ "$username_set" != yes ] || [ "$password_set" != yes ]; then
