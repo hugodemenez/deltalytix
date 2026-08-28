@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Interactive } from "remotion";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 
 type ChartFrameProps = {
   readonly name: string;
@@ -15,6 +15,8 @@ export const ChartFrame: React.FC<ChartFrameProps> = ({
   children,
   framed = true,
 }) => {
+  const tokens = usePromoTokens();
+
   return (
     <Interactive.Div
       name={name}

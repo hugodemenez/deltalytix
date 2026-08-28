@@ -4,7 +4,7 @@ import {
   interpolate,
   useCurrentFrame,
 } from "remotion";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 import {
   EQUITY_DELAY_FRAMES,
   EQUITY_DRAW_FRAMES,
@@ -29,6 +29,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
   drawFrames = EQUITY_DRAW_FRAMES,
   framed = true,
 }) => {
+  const tokens = usePromoTokens();
   const frame = useCurrentFrame();
   const progress = interpolate(
     frame,

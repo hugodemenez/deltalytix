@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { AbsoluteFill, Easing, Interactive, interpolate, useCurrentFrame } from "remotion";
 import { fontFamily } from "../../fonts";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 
 const BEZIER = Easing.bezier(0.16, 1, 0.3, 1);
 
@@ -18,6 +18,7 @@ export const FeatureChrome: React.FC<FeatureChromeProps> = ({
   title,
   children,
 }) => {
+  const tokens = usePromoTokens();
   const frame = useCurrentFrame();
 
   return (

@@ -8,7 +8,12 @@ import { DashboardScroll } from "./scenes/DashboardScroll";
 import { Headline } from "./scenes/Headline";
 import { LogoReveal } from "./scenes/LogoReveal";
 import { StatsFeature } from "./scenes/StatsFeature";
-import { tokens } from "./tokens";
+import {
+  PromoThemeProvider,
+  type PromoTheme,
+  type PromoVariant,
+  usePromoTokens,
+} from "./tokens";
 import {
   CTA_FRAMES,
   CUT_FRAMES,
@@ -23,37 +28,85 @@ const fadeCut = {
   timing: linearTiming({ durationInFrames: CUT_FRAMES }),
 };
 
-export const Promo: React.FC = () => {
+export type PromoProps = {
+  readonly theme?: PromoTheme;
+  readonly variant?: PromoVariant;
+};
+
+const PromoStage: React.FC<{ readonly variant: PromoVariant }> = ({
+  variant,
+}) => {
+  const tokens = usePromoTokens();
+
   return (
     <AbsoluteFill
-      name="Promo"
+      name={variant === "landing" ? "Promo landing" : "Promo"}
       style={{
         backgroundColor: tokens.canvas,
         fontFamily,
       }}
     >
-      <PromoSfx />
-      <TransitionSeries>
-        <TransitionSeries.Sequence durationInFrames={LOGO_FRAMES} name="LogoReveal">
-          <LogoReveal />
-        </TransitionSeries.Sequence>
-        <TransitionSeries.Transition {...fadeCut} />
-        <TransitionSeries.Sequence durationInFrames={HEADLINE_FRAMES} name="Headline">
-          <Headline />
-        </TransitionSeries.Sequence>
-        <TransitionSeries.Transition {...fadeCut} />
-        <TransitionSeries.Sequence durationInFrames={STATS_FRAMES} name="StatsFeature">
-          <StatsFeature />
-        </TransitionSeries.Sequence>
-        <TransitionSeries.Transition {...fadeCut} />
-        <TransitionSeries.Sequence durationInFrames={DASHBOARD_FRAMES} name="DashboardScroll">
-          <DashboardScroll />
-        </TransitionSeries.Sequence>
-        <TransitionSeries.Transition {...fadeCut} />
-        <TransitionSeries.Sequence durationInFrames={CTA_FRAMES} name="CallToAction">
-          <CallToAction />
-        </TransitionSeries.Sequence>
-      </TransitionSeries>
+      <PromoSfx variant={variant} />
+      {variant === "ads" ? (
+        <TransitionSeries>
+          <TransitionSeries.Sequence durationInFrames={LOGO_FRAMES} name="LogoReveal">
+            <LogoReveal />
+          </TransitionSeries.Sequence>
+          <TransitionSeries.Transition {...fadeCut} />
+          <TransitionSeries.Sequence durationInFrames={HEADLINE_FRAMES} name="Headline">
+            <Headline />
+          </TransitionSeries.Sequence>
+          <TransitionSeries.Transition {...fadeCut} />
+          <TransitionSeries.Sequence durationInFrames={STATS_FRAMES} name="StatsFeature">
+            <StatsFeature />
+          </TransitionSeries.Sequence>
+          <TransitionSeries.Transition {...fadeCut} />
+          <TransitionSeries.Sequence durationInFrames={DASHBOARD_FRAMES} name="DashboardScroll">
+            <DashboardScroll />
+          </TransitionSeries.Sequence>
+          <TransitionSeries.Transition {...fadeCut} />
+          <TransitionSeries.Sequence durationInFrames={CTA_FRAMES} name="CallToAction">
+            <CallToAction />
+          </TransitionSeries.Sequence>
+        </TransitionSeries>
+      ) : (
+        <TransitionSeries>
+          <TransitionSeries.Sequence durationInFrames={STATS_FRAMES} name="StatsFeature">
+            <StatsFeature />
+          </TransitionSeries.Sequence>
+          <TransitionSeries.Transition {...fadeCut} />
+          <TransitionSeries.Sequence durationInFrames={DASHBOARD_FRAMES} name="DashboardScroll">
+            <DashboardScroll />
+          </TransitionSeries.Sequence>
+          <TransitionSeries.Transition {...fadeCut} />
+          <TransitionSeries.Sequence durationInFrames={CTA_FRAMES} name="CallToAction">
+            <CallToAction />
+          </TransitionSeries.Sequence>
+        </TransitionSeries>
+      )}
     </AbsoluteFill>
   );
+};
+
+export const Promo: React.FC<PromoProps> = ({
+  theme = "dark",
+  variant = "ads",
+}) => {
+  return (
+    <PromoThemeProvider theme={theme}>
+      <PromoStage variant={variant} />
+    </PromoThemeProvider>
+  );
+};
+
+export const PromoAds: React.FC = () => {
+  return <Promo theme="dark" variant="ads" />;
+};
+
+export const PromoLandingLight: React.FC = () => {
+  return <Promo theme="light" variant="landing" />;
+};
+
+export const PromoLandingDark: React.FC = () => {
+  return <Promo theme="dark" variant="landing" />;
 };

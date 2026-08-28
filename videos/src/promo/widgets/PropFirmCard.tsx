@@ -1,6 +1,6 @@
 import { Easing, Interactive, interpolate, useCurrentFrame } from "remotion";
 import { fontFamily } from "../../fonts";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 import {
   propFirmCardCopy,
   type PromoPropAccount,
@@ -50,6 +50,7 @@ export const PropFirmCard: React.FC<PropFirmCardProps> = ({
   account,
   delay,
 }) => {
+  const tokens = usePromoTokens();
   const frame = useCurrentFrame();
   const chart = chartPoints(account);
   const progressWidth = interpolate(frame, [delay + 10, delay + 36], [0, account.progress], {

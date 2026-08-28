@@ -1,5 +1,5 @@
 import { Img, Interactive, staticFile } from "remotion";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 import { FtmoMark } from "./Icons";
 
 type WhiteLogoProps = {
@@ -15,6 +15,8 @@ export const WhiteLogo: React.FC<WhiteLogoProps> = ({
   size,
   name,
 }) => {
+  const tokens = usePromoTokens();
+
   if (slug === "ftmo") {
     return <FtmoMark name={name} size={size} color={tokens.ink} />;
   }
@@ -29,7 +31,7 @@ export const WhiteLogo: React.FC<WhiteLogoProps> = ({
       }}
     >
       <Img
-        src={staticFile(`logos/monochrome/${slug}-white.${ext}`)}
+        src={staticFile(`logos/monochrome/${slug}-${tokens.logoTone}.${ext}`)}
         style={{
           width: size,
           height: size,

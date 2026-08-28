@@ -1,10 +1,11 @@
 import { AbsoluteFill, useCurrentFrame } from "remotion";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 
 /**
  * Soft ambient glow for type-only scenes. Keep this off any parent of chart axes.
  */
 export const PaperMesh: React.FC = () => {
+  const tokens = usePromoTokens();
   const frame = useCurrentFrame();
   const driftA = Math.sin(frame / 48) * 28;
   const driftB = Math.cos(frame / 62) * 22;

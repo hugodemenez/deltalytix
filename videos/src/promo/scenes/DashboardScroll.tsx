@@ -1,6 +1,6 @@
 import { AbsoluteFill, Easing, Interactive, interpolate, useCurrentFrame } from "remotion";
 import { fontFamily } from "../../fonts";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 import {
   DASH_CHAT_AT,
   DASH_CONN_AT,
@@ -34,6 +34,8 @@ const SectionCaption: React.FC<SectionCaptionProps> = ({
   eyebrow,
   title,
 }) => {
+  const tokens = usePromoTokens();
+
   return (
     <Interactive.Div
       name={`${name} caption`}
@@ -107,6 +109,7 @@ const pageStyle = (top: number): React.CSSProperties => ({
  * they enter.
  */
 export const DashboardScroll: React.FC = () => {
+  const tokens = usePromoTokens();
   const frame = useCurrentFrame();
   const scrollY = Math.round(
     interpolate(

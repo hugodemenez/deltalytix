@@ -6,7 +6,7 @@ import {
   useVideoConfig,
 } from "remotion";
 import { fontFamily } from "../../fonts";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 import { buildPromoCalendar } from "./calendar-grid";
 import { WEEKDAYS, formatUsd } from "./mock-data";
 
@@ -25,6 +25,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
   dayStagger = 0.35,
   framed = true,
 }) => {
+  const tokens = usePromoTokens();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 

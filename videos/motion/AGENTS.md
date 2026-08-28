@@ -15,14 +15,15 @@ Read it before changing timing, widgets, or sound.
 
 1. **Axes never interpolate.** Grid lines and tick labels are a memoized static SVG. Only the series (equity clip, bar heights) may move.
 2. **Do not scale a parent of charts.** No Ken Burns, no spring-scale, no CSS `scale` on the stage.
-3. **One dark surface.** Canvas and cards share `#0F0F0F`. Do not nest sage / gray / white wells. Feature scenes are unframed; the together beat uses hairline tiles.
-4. **Text scenes are short; the dashboard is one scrolling page.** Stats is a glance. Calendar / equity / P&L are not solo scenes — they draw together on the first dashboard viewport, then chat, accounts, and connections animate as the camera translates down.
+3. **One surface per theme.** Dark canvas and cards share `#0F0F0F`. Light canvas and cards share `#F5F5F5`. Do not nest sage / gray / white wells. Feature scenes are unframed; the together beat uses hairline tiles.
+4. **Text scenes are short; the dashboard is one scrolling page.** Stats is a glance. Calendar / equity / P&L are not solo scenes — they draw together on the first dashboard viewport, then chat, accounts, and connections animate as the camera translates down. The **ads** cut (`Promo`) keeps logo + headline. The **landing** cut (`PromoLandingLight` / `PromoLandingDark`) starts at stats.
 5. **One local SFX per cut or page turn.** Use `staticFile()` copies in `videos/public/sfx/remotion/` (and Kenney OGGs for chat / accounts / connections).
 6. **Widgets copy landing and dashboard UI**, not invented chrome or numbers. Chat, prop-firm cards, and connections must match product copy, logos, and account-size rules.
 
 ## Stack
 
 - Remotion 4.0.518, Bun, Studio on port **3333**
-- Composition `Promo` in `videos/src/promo/Promo.tsx`
-- Tokens in `videos/src/promo/tokens.ts` (dashboard `.dark` + `CANVAS_THEME_COLOR.dark`)
+- Ads composition `Promo` in `videos/src/promo/Promo.tsx` (dark, logo → headline → stats → dashboard → CTA)
+- Landing compositions `PromoLandingLight` / `PromoLandingDark` (stats → dashboard → CTA)
+- Tokens in `videos/src/promo/tokens.ts` (`darkTokens` / `lightTokens` from dashboard `.dark` / `.light` + `CANVAS_THEME_COLOR`)
 - Timing constants in `videos/src/promo/timing.ts` — Root, Promo, and SFX all import from here

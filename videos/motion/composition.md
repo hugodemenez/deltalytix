@@ -10,7 +10,7 @@ FPS is **30**. Transitions are `fade()` with `linearTiming({ durationInFrames: C
 start(n+1) = start(n) + duration(n) - CUT_FRAMES
 ```
 
-## Frame table (current)
+## Frame table (ads `Promo`)
 
 | Scene | Duration | Absolute start | Notes |
 | --- | ---: | ---: | --- |
@@ -18,9 +18,21 @@ start(n+1) = start(n) + duration(n) - CUT_FRAMES
 | Headline | 42 | 16 | Word stagger, no Ken Burns |
 | StatsFeature | 66 | 50 | Count-up, unframed on canvas |
 | DashboardScroll | 483 | 108 | Overview draw, then page scrolls |
-| CallToAction | 36 | 583 | White button on dark |
+| CallToAction | 36 | 583 | Action button on canvas |
 
 Total `PROMO_DURATION_FRAMES` = 619 (~20.6s).
+
+## Frame table (landing `PromoLandingLight` / `PromoLandingDark`)
+
+Logo and headline are omitted — that copy is already on the landing page.
+
+| Scene | Duration | Absolute start | Notes |
+| --- | ---: | ---: | --- |
+| StatsFeature | 66 | 0 | Same stats slam |
+| DashboardScroll | 483 | 58 | Same camera |
+| CallToAction | 36 | 533 | Action button |
+
+Total `LANDING_DURATION_FRAMES` = 569 (~19.0s).
 
 ### Dashboard camera (relative to DashboardScroll)
 
@@ -41,7 +53,7 @@ Pixel-rounded `translateY` with `Easing.inOut(Easing.cubic)`. No scale. Each pag
 ### Logo / headline / CTA
 
 - Opacity + translate only. **No scale.**
-- Dark canvas `#0F0F0F`. No mesh, no grain.
+- Dark canvas `#0F0F0F`. Light canvas `#F5F5F5`. No mesh, no grain.
 
 ### Stats
 
@@ -61,5 +73,5 @@ Round `scrollY` to whole pixels so chart axes stay crisp while the page translat
 ## If you change length
 
 1. Edit `timing.ts` only (`DASH_*` holds and `DASH_SCROLL_FRAMES`).
-2. Recompute `PROMO_DURATION_FRAMES` (already derived).
+2. Recompute `PROMO_DURATION_FRAMES` and `LANDING_DURATION_FRAMES` (already derived).
 3. Confirm SFX `Sequence from={}` values still use the `*_START` / `DASH_SCROLL_TO_*` constants.

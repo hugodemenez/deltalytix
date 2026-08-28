@@ -57,6 +57,18 @@ export const PROMO_DURATION_FRAMES =
   CTA_FRAMES -
   CUT_FRAMES * 4;
 
+/** Landing intro skips logo + headline — that copy is already on the page. */
+export const LANDING_STATS_START = 0;
+export const LANDING_DASHBOARD_START = after(0, STATS_FRAMES);
+export const LANDING_CHAT_START = LANDING_DASHBOARD_START + DASH_CHAT_AT;
+export const LANDING_PROP_START = LANDING_DASHBOARD_START + DASH_PROP_AT;
+export const LANDING_CONNECTIONS_START =
+  LANDING_DASHBOARD_START + DASH_CONN_AT;
+export const LANDING_CTA_START = after(LANDING_DASHBOARD_START, DASHBOARD_FRAMES);
+
+export const LANDING_DURATION_FRAMES =
+  STATS_FRAMES + DASHBOARD_FRAMES + CTA_FRAMES - CUT_FRAMES * 2;
+
 /** Chart series only — axes never interpolate. */
 export const EQUITY_DELAY_FRAMES = 4;
 export const EQUITY_DRAW_FRAMES = 42;

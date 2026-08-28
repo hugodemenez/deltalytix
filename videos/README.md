@@ -16,12 +16,7 @@ bun run render       # 1920×1080 H.264 of the Promo composition
 
 ## Composition
 
-`Promo` is a 10.4s (312 frames @ 30fps) landing-style spot:
-
-1. Short logo snap
-2. Short headline (landing copy, 300 weight, -0.06em tracking)
-3. Long product well — landing calendar + equity / daily P&L (slow series draw, static axes)
-4. Short Get Started CTA
+`Promo` is the ads cut (logo → headline → stats → dashboard → CTA). `PromoLandingLight` / `PromoLandingDark` skip logo and headline for the site hero.
 
 ## Sound
 

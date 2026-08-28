@@ -7,11 +7,12 @@ import {
 } from "remotion";
 import { fontFamily } from "../../fonts";
 import { WordReveal } from "../layers/WordReveal";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 
 const BEZIER = Easing.bezier(0.16, 1, 0.3, 1);
 
 export const Headline: React.FC = () => {
+  const tokens = usePromoTokens();
   const frame = useCurrentFrame();
 
   return (

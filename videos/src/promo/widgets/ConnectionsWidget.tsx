@@ -1,6 +1,6 @@
 import { Easing, Interactive, interpolate, useCurrentFrame } from "remotion";
 import { fontFamily } from "../../fonts";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 import { PlusIcon, RefreshIcon } from "./Icons";
 import { WhiteLogo } from "./WhiteLogo";
 import {
@@ -11,7 +11,7 @@ import {
 
 const BEZIER = Easing.bezier(0.16, 1, 0.3, 1);
 
-const outlineButton: React.CSSProperties = {
+const outlineButton = (color: string, border: string): React.CSSProperties => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -20,11 +20,11 @@ const outlineButton: React.CSSProperties = {
   paddingLeft: 24,
   paddingRight: 24,
   borderRadius: 4,
-  border: "1px solid rgba(255,255,255,0.2)",
-  color: tokens.ink,
+  border: `1px solid ${border}`,
+  color,
   fontSize: 16,
   fontWeight: 500,
-};
+});
 
 type ConnectionsWidgetProps = {
   readonly startFrame?: number;
@@ -33,7 +33,9 @@ type ConnectionsWidgetProps = {
 export const ConnectionsWidget: React.FC<ConnectionsWidgetProps> = ({
   startFrame = 0,
 }) => {
+  const tokens = usePromoTokens();
   const frame = Math.max(0, useCurrentFrame() - startFrame);
+  const outline = outlineButton(tokens.ink, tokens.line);
 
   return (
     <Interactive.Div
@@ -89,7 +91,7 @@ export const ConnectionsWidget: React.FC<ConnectionsWidgetProps> = ({
           <Interactive.Div
             name="Add connection"
             style={{
-              ...outlineButton,
+              ...outline,
               backgroundColor: tokens.action,
               color: tokens.actionInk,
               border: "none",
@@ -98,10 +100,10 @@ export const ConnectionsWidget: React.FC<ConnectionsWidgetProps> = ({
             <PlusIcon name="Add icon" size={16} color={tokens.actionInk} />
             {connectionsCopy.addConnection}
           </Interactive.Div>
-          <Interactive.Div name="Upload a file" style={outlineButton}>
+          <Interactive.Div name="Upload a file" style={outline}>
             {connectionsCopy.uploadFile}
           </Interactive.Div>
-          <Interactive.Div name="Sync all" style={outlineButton}>
+          <Interactive.Div name="Sync all" style={outline}>
             <RefreshIcon name="Sync icon" size={16} color={tokens.ink} />
             {connectionsCopy.syncAll}
           </Interactive.Div>

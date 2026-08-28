@@ -1,6 +1,6 @@
 import { Easing, Interactive, interpolate, useCurrentFrame } from "remotion";
 import { fontFamily } from "../../fonts";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 import { DatabaseIcon, PlusIcon, RotateCcwIcon, SendIcon } from "./Icons";
 import { chatCopy } from "./product-copy";
 
@@ -26,6 +26,7 @@ type ChatWidgetProps = {
 };
 
 export const ChatWidget: React.FC<ChatWidgetProps> = ({ startFrame = 0 }) => {
+  const tokens = usePromoTokens();
   const frame = Math.max(0, useCurrentFrame() - startFrame);
   const stage = stageAt(frame);
   const typedChars = Math.round(

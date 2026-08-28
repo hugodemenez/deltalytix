@@ -1,5 +1,5 @@
 import { Easing, Interactive, interpolate, useCurrentFrame } from "remotion";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 
 const BEZIER = Easing.bezier(0.16, 1, 0.3, 1);
 
@@ -24,6 +24,7 @@ export const WordReveal: React.FC<WordRevealProps> = ({
   color,
   highlight,
 }) => {
+  const tokens = usePromoTokens();
   const frame = useCurrentFrame();
   const words = text.split(" ");
 

@@ -29,7 +29,7 @@ One cue per visual cut or dashboard page turn, local files, **near full mix** (0
 | `CONNECTIONS_START` | select | `sfx/kenney/select_004.ogg` | 0.85 | Connections list |
 | `CTA_START` | mouse click | `sfx/remotion/mouse-click.wav` | 0.95 | Button beat |
 
-`PromoSfx` wraps each `Audio` in `Sequence from={...} durationInFrames={30}`. Keep that window ≥ 1s — `@remotion/media` needs decode time; 16–18 frame windows made cues inaudible.
+The landing cut uses the same files with `LANDING_*_START` constants (no logo ding or headline whoosh).
 
 Rendered peaks should land around −3 to −8 dB (`ffmpeg -af volumedetect`), not −15 dB.
 

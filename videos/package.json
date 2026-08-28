@@ -29,6 +29,8 @@
     "dev": "remotion studio --no-open --port=3333",
     "build": "remotion bundle",
     "render": "remotion render Promo out/promo.mp4",
+    "render:landing": "remotion render PromoLandingLight out/promo-landing-light.mp4",
+    "render:landing:dark": "remotion render PromoLandingDark out/promo-landing-dark.mp4",
     "still": "remotion still Promo out/promo-preview.png --frame=90",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc"

@@ -5,7 +5,7 @@ import {
   useCurrentFrame,
 } from "remotion";
 import { fontFamily } from "../../fonts";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 import { equityData } from "./mock-data";
 
 const SPARK_W = 520;
@@ -43,11 +43,13 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
   delay,
   children,
   sparkline = false,
-  valueColor = tokens.ink,
+  valueColor,
   size = "strip",
   immediate = false,
 }) => {
+  const tokens = usePromoTokens();
   const frame = useCurrentFrame();
+  const ink = valueColor ?? tokens.ink;
   const feature = size === "feature";
   const sparkDrawn = immediate
     ? 0
@@ -114,7 +116,7 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
         name={`${name} value`}
         style={{
           marginTop: feature ? 16 : 10,
-          color: valueColor,
+          color: ink,
           fontSize: feature ? 84 : 56,
           fontWeight: 300,
           letterSpacing: "-0.06em",

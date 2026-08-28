@@ -1,6 +1,6 @@
 import { memo, type ReactNode } from "react";
 import { fontFamily } from "../../fonts";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 import { dailyPnlData, equityData, formatUsd } from "./mock-data";
 
 export const CHART_WIDTH = 680;
@@ -82,6 +82,8 @@ const SvgRoot: React.FC<SvgRootProps> = ({ children }) => {
 };
 
 export const EquityAxes = memo(function EquityAxes() {
+  const tokens = usePromoTokens();
+
   return (
     <SvgRoot>
       {equityYTicks.map((tick) => (
@@ -124,6 +126,8 @@ export const EquityAxes = memo(function EquityAxes() {
 });
 
 export const DailyPnlAxes = memo(function DailyPnlAxes() {
+  const tokens = usePromoTokens();
+
   return (
     <SvgRoot>
       <line

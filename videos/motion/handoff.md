@@ -2,14 +2,20 @@
 
 ## What this promo is
 
-A 1920×1080, 30fps dark dashboard spot: logo → headline → stats slam → scrolling dashboard (calendar/equity/P&L together, then chat, accounts, connections) → Get Started. ~20.6s. Tokens from `.dark` + `CANVAS_THEME_COLOR.dark` (`#0F0F0F`). Isolated app in `videos/` (Bun, Remotion 4.0.518). Studio: `cd videos && bun run dev` → http://localhost:3333
+A 1920×1080, 30fps dashboard spot.
+
+- **Ads** (`Promo`): dark, logo → headline → stats slam → scrolling dashboard → Get Started. ~20.6s.
+- **Landing** (`PromoLandingLight` / `PromoLandingDark`): skips logo + headline (already on the page). Light is the default hero; dark follows the theme toggle. ~19.0s.
+
+Tokens from `.dark` / `.light` + `CANVAS_THEME_COLOR`. Isolated app in `videos/` (Bun, Remotion 4.0.518). Studio: `cd videos && bun run dev` → http://localhost:3333
 
 PRs still target **`beta`**, not `main`.
 
 ## Done
 
 - Official Remotion skills vendored under `agents/skills/remotion-*`.
-- Promo composition with `TransitionSeries` **fades** (no slide, no zoom).
+- Ads composition with `TransitionSeries` **fades** (no slide, no zoom). Landing cut starts at stats.
+- Light and dark token sets; landing hero uses `public/videos/demo_white.mp4` / `demo_dark.mp4`.
 - Widgets driven by landing / dashboard copy and mock data, August 2026 pinned.
 - Feature scenes unframed on one canvas; the dashboard is one scrolling page (pixel-rounded `translateY`, no zoom).
 - Static memoized chart axes; series-only animation. Overview charts draw as the dashboard lands.
@@ -24,9 +30,11 @@ cd videos
 bun install
 bun run lint
 bun run dev          # Studio :3333
-bunx remotion still Promo out/promo-preview.png --frame=80 \
+bunx remotion still PromoLandingLight out/landing-light-preview.png --frame=120 \
   --browser-executable=/usr/bin/google-chrome-stable --gl=angle
-bunx remotion render Promo out/promo.mp4 \
+bunx remotion render PromoLandingLight out/promo-landing-light.mp4 \
+  --browser-executable=/usr/bin/google-chrome-stable --gl=angle
+bunx remotion render PromoLandingDark out/promo-landing-dark.mp4 \
   --browser-executable=/usr/bin/google-chrome-stable --gl=angle
 ```
 

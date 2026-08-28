@@ -4,7 +4,7 @@ import {
   interpolate,
   useCurrentFrame,
 } from "remotion";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 import {
   PNL_BAR_DRAW_FRAMES,
   PNL_BAR_STAGGER_FRAMES,
@@ -37,6 +37,7 @@ export const DailyPnlChart: React.FC<DailyPnlChartProps> = ({
   staggerFrames = PNL_BAR_STAGGER_FRAMES,
   framed = true,
 }) => {
+  const tokens = usePromoTokens();
   const frame = useCurrentFrame();
 
   return (

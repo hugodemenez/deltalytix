@@ -1,6 +1,6 @@
 import "./index.css";
 import { Composition, Folder } from "remotion";
-import { Promo } from "./promo/Promo";
+import { PromoAds, PromoLandingDark, PromoLandingLight } from "./promo/Promo";
 import { CalendarFeature } from "./promo/scenes/CalendarFeature";
 import { CallToAction } from "./promo/scenes/CallToAction";
 import { ChatFeature } from "./promo/scenes/ChatFeature";
@@ -22,6 +22,7 @@ import {
   DASH_OVERVIEW_HOLD,
   EQUITY_FRAMES,
   HEADLINE_FRAMES,
+  LANDING_DURATION_FRAMES,
   LOGO_FRAMES,
   PNL_FRAMES,
   PROP_FRAMES,
@@ -132,8 +133,24 @@ export const RemotionRoot: React.FC = () => {
       </Folder>
       <Composition
         id="Promo"
-        component={Promo}
+        component={PromoAds}
         durationInFrames={PROMO_DURATION_FRAMES}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="PromoLandingLight"
+        component={PromoLandingLight}
+        durationInFrames={LANDING_DURATION_FRAMES}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="PromoLandingDark"
+        component={PromoLandingDark}
+        durationInFrames={LANDING_DURATION_FRAMES}
         fps={30}
         width={1920}
         height={1080}

@@ -13,21 +13,20 @@ The product tour is **feature-scoped but short**: a stats slam, then one scrolli
 | AI chat | `app/[locale]/(landing)/components/chat-feature.tsx` + `locales/en/landing.ts` `chat-feature` | `widgets/ChatWidget.tsx`, `product-copy.ts` | Header **Chat**, 127 trades / 18 journal entries, patterns Q&A |
 | Prop firm | `accounts/account-card.tsx`, `trade-progress-chart.tsx`, `accounts/config.ts`, `locales/en/propfirm.ts` | `widgets/PropFirmCard.tsx`, `product-copy.ts` | Apex 50K / TopStep 50K / Earn2Trade TCP50; balances under each target |
 | Connections | `connections-page-chrome.tsx` `SERVICE_SECTIONS` + `platforms.tsx` file import | `widgets/ConnectionsWidget.tsx`, `WhiteLogo.tsx`, `product-copy.ts` | Rithmic Protocol, Tradovate, DxFeed, IBKR, IG, Thor + CSV chips |
-| Chrome | Dashboard `.dark` canvas `#0F0F0F` | `tokens.ts`, `FeatureChrome.tsx`, `ChartFrame.tsx`, `DashboardScroll.tsx` | No nested wells. Stats is unframed; dashboard pages use hairline `#3A3A3A`. Camera `translateY` only — never `scale`. |
+| Chrome | Dashboard canvas (`#0F0F0F` dark / `#F5F5F5` light) | `tokens.ts`, `FeatureChrome.tsx`, `ChartFrame.tsx`, `DashboardScroll.tsx` | No nested wells. Stats is unframed; dashboard pages use hairline borders. Camera `translateY` only — never `scale`. |
 
 Month is **pinned to August 2026** (`PROMO_YEAR` / `PROMO_MONTH` / `PROMO_TODAY_DAY = 27`) so renders stay deterministic. Do not use `new Date()` for the grid.
 
-Chart colors match dashboard **dark** CSS variables:
+Chart colors match dashboard CSS variables via `darkTokens` / `lightTokens`:
 
-- canvas `oklch(0.17 0 0)` → `#0F0F0F`
-- win `hsl(173 60% 55%)` → `#47D1C1`
-- loss `hsl(12 75% 65%)` → `#E87862`
+- dark canvas `oklch(0.17 0 0)` → `#0F0F0F`; win `hsl(173 60% 55%)` → `#47D1C1`; loss `hsl(12 75% 65%)` → `#E87862`
+- light canvas `oklch(0.97 0 0)` → `#F5F5F5`; win `hsl(173 58% 39%)` → `#2A9D90`; loss `hsl(12 76% 61%)` → `#E76E50`
 
-Calendar cells use dark green/red washes (`rgba(..., 0.12)`), matching `dark:bg-green-900/20` / red-900/20.
+Calendar cells use theme washes (`dark:bg-green-900/20` vs `bg-green-50`).
 
 Prop-firm chart strokes copy `trade-progress-chart.tsx`: balance `#2563EB`, drawdown `#DC2626`, target `#16A34A`.
 
-Connection logos are the product monochrome white assets under `videos/public/logos/monochrome/` (same files as `public/logos/monochrome/*-white.*`). FTMO uses the diamond paths from `platforms.tsx` `FtmoLogo`.
+Connection logos are the product monochrome assets under `videos/public/logos/monochrome/` (`*-white.*` on dark, `*-black.*` on light). FTMO uses the diamond paths from `platforms.tsx` `FtmoLogo`.
 
 ## Axis stability (required)
 

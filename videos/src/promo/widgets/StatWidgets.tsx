@@ -1,5 +1,5 @@
 import { Easing, Interactive, interpolate, useCurrentFrame } from "remotion";
-import { tokens } from "../tokens";
+import { usePromoTokens } from "../tokens";
 import { StatWidget } from "./StatWidget";
 import { MONTHLY_PNL, TRADE_COUNT, WIN_RATE_PERCENT } from "./mock-data";
 
@@ -14,6 +14,7 @@ export const StatWidgets: React.FC<StatWidgetsProps> = ({
   size = "strip",
   immediate = false,
 }) => {
+  const tokens = usePromoTokens();
   const frame = useCurrentFrame();
   const feature = size === "feature";
   const countEnd = feature ? 36 : 32;
