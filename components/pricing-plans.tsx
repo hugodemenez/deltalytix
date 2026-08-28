@@ -32,6 +32,7 @@ import {
 } from "@/lib/billing-plan-catalog";
 import {
   backToWorkPeriodDisplay,
+  isBackToWorkOfferActive,
   type BackToWorkPricingDisplay,
 } from "@/lib/back-to-work-promo";
 import { getBackToWorkPricingDisplay } from "@/server/back-to-work-pricing";
@@ -304,6 +305,8 @@ export default function PricingPlans({
     </article>
   );
 
+  const campaignActive =
+    !currentSubscription && isBackToWorkOfferActive(promo);
   const periodOffer = currentSubscription
     ? undefined
     : backToWorkPeriodDisplay(promo, billingPeriod);
@@ -384,54 +387,69 @@ export default function PricingPlans({
         {billingPeriodSelector}
       </div>
       <div>
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h3 className="text-2xl font-normal tracking-tight">
               {plans.plus.name}
             </h3>
-            {periodOffer?.offerActive ? (
-              <p className="mt-1 text-xs text-black/55 dark:text-white/55">
+            {campaignActive ? (
+              <p
+                className={cn(
+                  "mt-1 text-xs text-black/55 dark:text-white/55",
+                  !periodOffer?.offerActive && "invisible",
+                )}
+                aria-hidden={!periodOffer?.offerActive}
+              >
                 {t("pricing.backToWork.badge")}
               </p>
             ) : null}
           </div>
-          <div className="flex min-w-[11rem] shrink-0 flex-wrap items-baseline justify-end gap-x-2 gap-y-0.5 sm:min-w-[12rem]">
-            {showSale ? (
+          <div className="flex min-w-[11rem] shrink-0 flex-col items-end sm:min-w-[12rem]">
+            {campaignActive ? (
               <>
-                <span className="sr-only">
-                  {t("pricing.backToWork.regularPrice", {
-                    price: listMonthlyFormatted,
-                  })}
-                </span>
+                {showSale ? (
+                  <span className="sr-only">
+                    {t("pricing.backToWork.regularPrice", {
+                      price: listMonthlyFormatted,
+                    })}
+                  </span>
+                ) : null}
                 <s
                   aria-hidden
-                  className="text-sm tabular-nums text-black/40 dark:text-white/40"
+                  className={cn(
+                    "h-5 text-sm tabular-nums text-black/40 dark:text-white/40",
+                    !showSale && "invisible",
+                  )}
                 >
                   {listMonthlyFormatted}
                 </s>
-                <span className="sr-only">
-                  {t("pricing.backToWork.offerPrice", {
-                    price: saleMonthlyFormatted,
-                  })}
-                </span>
+                {showSale ? (
+                  <span className="sr-only">
+                    {t("pricing.backToWork.offerPrice", {
+                      price: saleMonthlyFormatted,
+                    })}
+                  </span>
+                ) : null}
               </>
             ) : null}
-            <span className="text-2xl font-normal tabular-nums">
-              <NumberFlow
-                prefix={currency === "EUR" ? undefined : symbol}
-                suffix={currency === "EUR" ? symbol : undefined}
-                value={currentPricing}
-                digits={{ 1: { max: 2 } }}
-              />
-            </span>
-            <span
-              className={cn(
-                "ml-1 text-sm text-black/55 dark:text-white/55",
-                billingPeriod === "lifetime" && "invisible",
-              )}
-            >
-              / {t("pricing.month")}
-            </span>
+            <div className="flex items-baseline">
+              <span className="text-2xl font-normal tabular-nums">
+                <NumberFlow
+                  prefix={currency === "EUR" ? undefined : symbol}
+                  suffix={currency === "EUR" ? symbol : undefined}
+                  value={currentPricing}
+                  digits={{ 1: { max: 2 } }}
+                />
+              </span>
+              <span
+                className={cn(
+                  "ml-1 text-sm text-black/55 dark:text-white/55",
+                  billingPeriod === "lifetime" && "invisible",
+                )}
+              >
+                / {t("pricing.month")}
+              </span>
+            </div>
           </div>
         </div>
         <p
