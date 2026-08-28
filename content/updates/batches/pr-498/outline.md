@@ -1,6 +1,6 @@
-# Changelog outline: pr-release
+# Changelog outline: pr-498
 
-Promotion PR: pending (`main` ← `cursor/release-beta-to-main-changelog-7614`). Rename this batch to `pr-<number>` after the promotion PR exists.
+Promotion PR: #498 (`main` ← `cursor/release-beta-to-main-changelog-7614`).
 
 ## Release window and evidence
 
