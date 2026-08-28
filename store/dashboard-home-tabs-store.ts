@@ -11,7 +11,7 @@ interface DashboardHomeTabsState {
 
 /**
  * Navbar and dashboard content are mounted in separate layout layers.
- * This small, non-persisted store keeps the view menu and the
+ * This small, non-persisted store keeps the centered view tabs and the
  * home tab panels synchronized without putting route data in the app shell.
  */
 export const useDashboardHomeTabsStore = create<DashboardHomeTabsState>()(
