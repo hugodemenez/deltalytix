@@ -24,11 +24,13 @@ function translateCalendarMonth(
 /** Overlay that keeps the native <select> clickable without painting over the label. */
 export const nativeCalendarSelectOverlayClassName = cn(
   "absolute inset-0 z-10 size-full cursor-pointer text-base",
-  // Edge (and Chromium dark color-scheme) still paints a system <select>
-  // when only opacity-0 is set, covering the custom label until hover.
+  // Edge still paints a system <select> over the custom label (blank until
+  // hover in dark mode). Strip native chrome at rest, hover, and focus.
   "appearance-none border-0 bg-transparent p-0 shadow-none outline-hidden",
   "text-transparent [-webkit-text-fill-color:transparent]",
-  "[color-scheme:only_light] [forced-color-adjust:none] opacity-0",
+  "opacity-0! hover:opacity-0! focus:opacity-0!",
+  "hover:bg-transparent! focus:bg-transparent! hover:text-transparent! focus:text-transparent!",
+  "[forced-color-adjust:none]",
 )
 
 /** Same chrome as navbar view / filter / account controls. */
