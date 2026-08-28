@@ -21,6 +21,16 @@ function translateCalendarMonth(
   return safeTranslate(t, key)
 }
 
+/** Overlay that keeps the native <select> clickable without painting over the label. */
+export const nativeCalendarSelectOverlayClassName = cn(
+  "absolute inset-0 z-10 size-full cursor-pointer text-base",
+  // Edge (and Chromium dark color-scheme) still paints a system <select>
+  // when only opacity-0 is set, covering the custom label until hover.
+  "appearance-none border-0 bg-transparent p-0 shadow-none outline-hidden",
+  "text-transparent [-webkit-text-fill-color:transparent]",
+  "[color-scheme:only_light] [forced-color-adjust:none] opacity-0",
+)
+
 /** Same chrome as navbar view / filter / account controls. */
 const navbarButtonClassName = cn(
   "relative isolate inline-flex h-7 shrink-0 items-center gap-1 overflow-hidden rounded-[4px]",
@@ -89,7 +99,7 @@ function NativeTitleSelect({
         value={value}
         autoComplete="off"
         onChange={(event) => onChange(event.target.value)}
-        className="absolute inset-0 z-10 cursor-pointer opacity-0 text-base"
+        className={nativeCalendarSelectOverlayClassName}
       >
         {children}
       </select>
