@@ -1,7 +1,10 @@
 import PricingPlans from "@/components/pricing-plans";
 import { getCurrentLocale, getI18n } from "@/locales/server";
 import { getBackToWorkPricingDisplay } from "@/server/back-to-work-pricing";
-import { isBackToWorkOfferActive } from "@/lib/back-to-work-promo";
+import {
+  formatBackToWorkOfferUntil,
+  isBackToWorkOfferActive,
+} from "@/lib/back-to-work-promo";
 import { setStaticParamsLocale } from "next-international/server";
 
 /**
@@ -25,14 +28,7 @@ export default async function PricingPage({
   const locale = await getCurrentLocale();
   const promo = await getBackToWorkPricingDisplay();
   const offerActive = isBackToWorkOfferActive(promo);
-  const offerUntil =
-    promo.validUntilMs && promo.validUntilMs > Date.now()
-      ? new Intl.DateTimeFormat(locale === "fr" ? "fr-FR" : "en-GB", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        }).format(new Date(promo.validUntilMs))
-      : null;
+  const offerUntil = formatBackToWorkOfferUntil(promo.validUntilMs, locale);
 
   const Container = embedded ? "div" : "main";
   const Heading = embedded ? "h2" : "h1";

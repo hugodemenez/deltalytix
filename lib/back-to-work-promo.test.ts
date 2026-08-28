@@ -5,6 +5,7 @@ import {
   applyBackToWorkCoupon,
   backToWorkPeriodDisplay,
   buildBackToWorkPricingDisplay,
+  formatBackToWorkOfferUntil,
   isBackToWorkOfferActive,
   resolveBackToWorkPromoCode,
   stripeCheckoutPromoParams,
@@ -310,5 +311,34 @@ describe("back-to-work pricing display", () => {
         "lifetime",
       ),
     ).toBeUndefined();
+  });
+
+  it("treats offer activity as period presence, not a wall-clock expiry check", () => {
+    const pastUntilMs = Date.UTC(2020, 0, 1);
+    const display = buildBackToWorkPricingDisplay(
+      { STRIPE_BTW_MONTHLY_PROMO: "test-monthly-promo" },
+      { monthly: { percentOff: 20 } },
+      pastUntilMs,
+    );
+
+    expect(isBackToWorkOfferActive(display)).toBe(true);
+    expect(isBackToWorkOfferActive({})).toBe(false);
+    expect(isBackToWorkOfferActive(undefined)).toBe(false);
+    expect(display.validUntilMs).toBe(pastUntilMs);
+  });
+});
+
+describe("formatBackToWorkOfferUntil", () => {
+  // Midday UTC so en-GB / fr-FR calendar days stay stable across host TZ.
+  const untilMs = Date.UTC(2026, 8, 30, 12, 0, 0);
+
+  it("formats a known timestamp for en and fr without reading the clock", () => {
+    expect(formatBackToWorkOfferUntil(untilMs, "en")).toBe("30 Sept 2026");
+    expect(formatBackToWorkOfferUntil(untilMs, "fr")).toBe("30 sept. 2026");
+  });
+
+  it("returns null when no expiry is present", () => {
+    expect(formatBackToWorkOfferUntil(undefined, "en")).toBeNull();
+    expect(formatBackToWorkOfferUntil(0, "fr")).toBeNull();
   });
 });

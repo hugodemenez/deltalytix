@@ -260,3 +260,23 @@ export function isBackToWorkOfferActive(
 ): boolean {
   return Boolean(display?.monthly || display?.quarterly || display?.yearly);
 }
+
+/**
+ * Formats `validUntilMs` for the landing/pricing note. Do not compare against
+ * `Date.now()` here — this helper is called from a prerendered server
+ * component, and Next.js rejects wall-clock reads during static generation.
+ * Offer visibility is `isBackToWorkOfferActive`; this only formats a date
+ * when the display already includes one.
+ */
+export function formatBackToWorkOfferUntil(
+  validUntilMs: number | undefined,
+  locale: string,
+): string | null {
+  if (!validUntilMs) return null;
+
+  return new Intl.DateTimeFormat(locale === "fr" ? "fr-FR" : "en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(validUntilMs));
+}
