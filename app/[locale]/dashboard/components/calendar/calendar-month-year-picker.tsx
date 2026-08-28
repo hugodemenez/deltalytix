@@ -21,6 +21,22 @@ function translateCalendarMonth(
   return safeTranslate(t, key)
 }
 
+/** Overlay that keeps the native <select> clickable without painting over the label. */
+export const nativeCalendarSelectOverlayClassName = cn(
+  "absolute inset-0 z-10 size-full cursor-pointer text-base",
+  // Closed overlay: hide native chrome so the custom label shows (Edge dark
+  // mode otherwise paints a blank system control). Open list: keep option
+  // text opaque — transparent select color blanks the dropdown in Chromium.
+  "appearance-none border-0 bg-transparent p-0 shadow-none outline-hidden",
+  "opacity-0! hover:opacity-0! focus:opacity-0!",
+  "hover:bg-transparent! focus:bg-transparent!",
+  "[&_option]:bg-white [&_option]:text-[#171717] [&_option]:[-webkit-text-fill-color:#171717]",
+  "[forced-color-adjust:none]",
+)
+
+const nativeCalendarOptionClassName =
+  "bg-white text-[#171717] [-webkit-text-fill-color:#171717]"
+
 /** Same chrome as navbar view / filter / account controls. */
 const navbarButtonClassName = cn(
   "relative isolate inline-flex h-7 shrink-0 items-center gap-1 overflow-hidden rounded-[4px]",
@@ -89,7 +105,7 @@ function NativeTitleSelect({
         value={value}
         autoComplete="off"
         onChange={(event) => onChange(event.target.value)}
-        className="absolute inset-0 z-10 cursor-pointer opacity-0 text-base"
+        className={nativeCalendarSelectOverlayClassName}
       >
         {children}
       </select>
@@ -150,7 +166,7 @@ export function CalendarMonthYearPicker({
           }}
         >
           {CALENDAR_MONTH_KEYS.map((key, index) => (
-            <option key={key} value={index}>
+            <option key={key} value={index} className={nativeCalendarOptionClassName}>
               {translateCalendarMonth(t, index)}
             </option>
           ))}
@@ -175,7 +191,11 @@ export function CalendarMonthYearPicker({
         }}
       >
         {years.map((optionYear) => (
-          <option key={optionYear} value={optionYear}>
+          <option
+            key={optionYear}
+            value={optionYear}
+            className={nativeCalendarOptionClassName}
+          >
             {optionYear}
           </option>
         ))}
