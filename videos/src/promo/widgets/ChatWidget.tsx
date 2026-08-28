@@ -21,8 +21,12 @@ const stageAt = (frame: number): ChatStage => {
   return "insight";
 };
 
-export const ChatWidget: React.FC = () => {
-  const frame = useCurrentFrame();
+type ChatWidgetProps = {
+  readonly startFrame?: number;
+};
+
+export const ChatWidget: React.FC<ChatWidgetProps> = ({ startFrame = 0 }) => {
+  const frame = Math.max(0, useCurrentFrame() - startFrame);
   const stage = stageAt(frame);
   const typedChars = Math.round(
     interpolate(frame, [0, COMPOSE_END - 4], [0, chatCopy.question.length], {

@@ -1,6 +1,6 @@
 # Widgets and mock data
 
-The product tour is **feature-scoped but short**: stats, calendar, equity, daily P&L, AI chat, prop-firm accounts, and connections each glance on the dark canvas, then a hairline dashboard. Do not import Next.js, `useI18n`, Recharts, or Tailwind into `videos/`.
+The product tour is **feature-scoped but short**: a stats slam, then one scrolling dashboard (calendar + equity + P&L together, then chat, accounts, connections). Do not import Next.js, `useI18n`, Recharts, or Tailwind into `videos/`.
 
 ## Sources of truth
 
@@ -13,7 +13,7 @@ The product tour is **feature-scoped but short**: stats, calendar, equity, daily
 | AI chat | `app/[locale]/(landing)/components/chat-feature.tsx` + `locales/en/landing.ts` `chat-feature` | `widgets/ChatWidget.tsx`, `product-copy.ts` | Header **Chat**, 127 trades / 18 journal entries, patterns Q&A |
 | Prop firm | `accounts/account-card.tsx`, `trade-progress-chart.tsx`, `accounts/config.ts`, `locales/en/propfirm.ts` | `widgets/PropFirmCard.tsx`, `product-copy.ts` | Apex 50K / TopStep 50K / Earn2Trade TCP50; balances under each target |
 | Connections | `connections-page-chrome.tsx` `SERVICE_SECTIONS` + `platforms.tsx` file import | `widgets/ConnectionsWidget.tsx`, `WhiteLogo.tsx`, `product-copy.ts` | Rithmic Protocol, Tradovate, DxFeed, IBKR, IG, Thor + CSV chips |
-| Chrome | Dashboard `.dark` canvas `#0F0F0F` | `tokens.ts`, `FeatureChrome.tsx`, `ChartFrame.tsx` | No nested wells. Feature scenes `framed={false}`; together uses hairline `#3A3A3A` |
+| Chrome | Dashboard `.dark` canvas `#0F0F0F` | `tokens.ts`, `FeatureChrome.tsx`, `ChartFrame.tsx`, `DashboardScroll.tsx` | No nested wells. Stats is unframed; dashboard pages use hairline `#3A3A3A`. Camera `translateY` only — never `scale`. |
 
 Month is **pinned to August 2026** (`PROMO_YEAR` / `PROMO_MONTH` / `PROMO_TODAY_DAY = 27`) so renders stay deterministic. Do not use `new Date()` for the grid.
 

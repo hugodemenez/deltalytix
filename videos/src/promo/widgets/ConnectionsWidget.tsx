@@ -26,8 +26,14 @@ const outlineButton: React.CSSProperties = {
   fontWeight: 500,
 };
 
-export const ConnectionsWidget: React.FC = () => {
-  const frame = useCurrentFrame();
+type ConnectionsWidgetProps = {
+  readonly startFrame?: number;
+};
+
+export const ConnectionsWidget: React.FC<ConnectionsWidgetProps> = ({
+  startFrame = 0,
+}) => {
+  const frame = Math.max(0, useCurrentFrame() - startFrame);
 
   return (
     <Interactive.Div

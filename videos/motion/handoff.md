@@ -2,7 +2,7 @@
 
 ## What this promo is
 
-A 1920×1080, 30fps dark dashboard spot: logo → headline → short feature glances (stats, calendar, equity, daily P&L, AI chat, prop-firm accounts, connections) → assembled dashboard → Get Started. ~21.7s. Tokens from `.dark` + `CANVAS_THEME_COLOR.dark` (`#0F0F0F`). Isolated app in `videos/` (Bun, Remotion 4.0.518). Studio: `cd videos && bun run dev` → http://localhost:3333
+A 1920×1080, 30fps dark dashboard spot: logo → headline → stats slam → scrolling dashboard (calendar/equity/P&L together, then chat, accounts, connections) → Get Started. ~19.1s. Tokens from `.dark` + `CANVAS_THEME_COLOR.dark` (`#0F0F0F`). Isolated app in `videos/` (Bun, Remotion 4.0.518). Studio: `cd videos && bun run dev` → http://localhost:3333
 
 PRs still target **`beta`**, not `main`.
 
@@ -11,9 +11,9 @@ PRs still target **`beta`**, not `main`.
 - Official Remotion skills vendored under `agents/skills/remotion-*`.
 - Promo composition with `TransitionSeries` **fades** (no slide, no zoom).
 - Widgets driven by landing / dashboard copy and mock data, August 2026 pinned.
-- Feature scenes unframed on one canvas; together beat uses hairline tiles.
-- Static memoized chart axes; series-only animation.
-- AI chat, prop-firm `AccountCard`, and Connections page rebuilt from product UI (not invented chrome).
+- Feature scenes unframed on one canvas; the dashboard is one scrolling page (pixel-rounded `translateY`, no zoom).
+- Static memoized chart axes; series-only animation. Overview charts draw as the dashboard lands.
+- AI chat, prop-firm `AccountCard`, and Connections play as later dashboard pages enter.
 - Local Remotion WAV + Kenney OGG SFX.
 
 ## Commands
@@ -53,4 +53,4 @@ Output is gitignored (`videos/out/`).
 
 ## Review the picture, not just Studio
 
-Stills at a feature mid-draw can look empty while bars are still growing — that is intended. Check a still after each widget’s draw window, chat after the stream (~frame 380), the three prop cards (~410), all six connection rows (~500), the assembled dashboard (~together start + 20), and the last 1s for the CTA.
+Stills at a feature mid-draw can look empty while bars are still growing — that is intended. Check dashboard overview after ~50 local frames, chat after `DASH_CHAT_AT + 80`, accounts after `DASH_PROP_AT + 40`, connections after `DASH_CONN_AT + 50`, and the last 1s for the CTA.

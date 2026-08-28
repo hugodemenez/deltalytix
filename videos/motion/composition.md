@@ -17,16 +17,24 @@ start(n+1) = start(n) + duration(n) - CUT_FRAMES
 | LogoReveal | 24 | 0 | Opacity + rise, no scale |
 | Headline | 42 | 16 | Word stagger, no Ken Burns |
 | StatsFeature | 66 | 50 | Count-up, unframed on canvas |
-| CalendarFeature | 72 | 108 | Cells cascade, unframed |
-| EquityFeature | 72 | 172 | Series clip 4→46 |
-| PnlFeature | 66 | 236 | Bars stagger 3 |
-| ChatFeature | 108 | 294 | Landing chat-feature stages |
-| PropFirmFeature | 72 | 394 | Three AccountCard layouts |
-| ConnectionsFeature | 90 | 458 | Page chrome + all six syncs |
-| ProductWell | 84 | 540 | Hairline tiles, already filled |
-| CallToAction | 36 | 616 | White button on dark |
+| DashboardScroll | 438 | 108 | Overview draw, then page scrolls |
+| CallToAction | 36 | 538 | White button on dark |
 
-Total `PROMO_DURATION_FRAMES` = 652 (~21.7s).
+Total `PROMO_DURATION_FRAMES` = 574 (~19.1s).
+
+### Dashboard camera (relative to DashboardScroll)
+
+Pixel-rounded `translateY`. No scale. Each page is `DASH_PAGE_PX` (1080).
+
+| Beat | Local frame | Scroll Y | What plays |
+| --- | ---: | ---: | --- |
+| Overview hold | 0–78 | 0 | Calendar cascade, equity clip, P&L bars |
+| Scroll to chat | 78–108 | 0→1080 | Whoosh |
+| Chat hold | 108–216 | 1080 | Compose → stream (startFrame `DASH_CHAT_AT`) |
+| Scroll to accounts | 216–246 | 1080→2160 | Whoosh |
+| Accounts hold | 246–318 | 2160 | Three AccountCards |
+| Scroll to connections | 318–348 | 2160→3240 | Switch |
+| Connections hold | 348–438 | 3240 | Six services + file chips |
 
 ## In/out recipes
 
@@ -35,24 +43,23 @@ Total `PROMO_DURATION_FRAMES` = 652 (~21.7s).
 - Opacity + translate only. **No scale.**
 - Dark canvas `#0F0F0F`. No mesh, no grain.
 
-### Feature scenes (short)
+### Stats
 
-Shared chrome: caption on the canvas, widget in the remaining stage. **No outer well.**
+Shared chrome: caption on the canvas, numbers in the remaining stage. **No outer well.** Count through ~1.2s.
 
-- **Stats** — three numbers, no cards. Count through ~1.2s.
-- **Calendar** — `framed={false}`, week stagger 2, day stagger 0.6.
-- **Equity** — `framed={false}`, `EQUITY_DRAW_FRAMES` 42.
-- **Daily P&L** — `framed={false}`, bar stagger 3.
-- **Chat** — landing `chat-feature.tsx` chrome (header, thread, composer). Stages: compose 0–24, question 24–32, think 32–52, stream 52–84, insight hold through the cut.
-- **Prop firm** — dashboard `account-card.tsx` × three templates from `config.ts` (Apex 50K, TopStep 50K, Earn2Trade TCP50). Series clip only; target/drawdown dashes stay static.
-- **Connections** — `connections-page-chrome.tsx` header + every `SERVICE_SECTIONS` row + file-import chips.
+### Dashboard
 
-### Together
+One long page, camera pans down. Widgets **animate as their page enters** (`startFrame` / `delay` = that page's land frame). Overview charts draw on arrival; they are not a prior solo scene.
 
-Same layout, widgets use a 1px `#3A3A3A` hairline (dashboard card). Charts already filled.
+- **Overview** — hairline tiles. Calendar delay 4, equity delay 8 / draw 42, P&L delay 12.
+- **Chat** — landing `chat-feature.tsx` chrome. Stages relative to `DASH_CHAT_AT`.
+- **Prop firm** — `account-card.tsx` × Apex 50K / TopStep 50K / Earn2Trade TCP50.
+- **Connections** — page chrome + every `SERVICE_SECTIONS` row + file-import chips.
+
+Round `scrollY` to whole pixels so chart axes stay crisp while the page translates.
 
 ## If you change length
 
-1. Edit `timing.ts` only.
+1. Edit `timing.ts` only (`DASH_*` holds and `DASH_SCROLL_FRAMES`).
 2. Recompute `PROMO_DURATION_FRAMES` (already derived).
-3. Confirm SFX `Sequence from={}` values still use the `*_START` constants.
+3. Confirm SFX `Sequence from={}` values still use the `*_START` / `DASH_SCROLL_TO_*` constants.

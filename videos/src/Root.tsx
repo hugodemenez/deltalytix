@@ -5,6 +5,7 @@ import { CalendarFeature } from "./promo/scenes/CalendarFeature";
 import { CallToAction } from "./promo/scenes/CallToAction";
 import { ChatFeature } from "./promo/scenes/ChatFeature";
 import { ConnectionsFeature } from "./promo/scenes/ConnectionsFeature";
+import { DashboardScroll } from "./promo/scenes/DashboardScroll";
 import { EquityFeature } from "./promo/scenes/EquityFeature";
 import { Headline } from "./promo/scenes/Headline";
 import { LogoReveal } from "./promo/scenes/LogoReveal";
@@ -17,6 +18,8 @@ import {
   CHAT_FRAMES,
   CONNECTIONS_FRAMES,
   CTA_FRAMES,
+  DASHBOARD_FRAMES,
+  DASH_OVERVIEW_HOLD,
   EQUITY_FRAMES,
   HEADLINE_FRAMES,
   LOGO_FRAMES,
@@ -24,7 +27,6 @@ import {
   PROP_FRAMES,
   PROMO_DURATION_FRAMES,
   STATS_FRAMES,
-  TOGETHER_FRAMES,
 } from "./promo/timing";
 
 export const RemotionRoot: React.FC = () => {
@@ -106,7 +108,15 @@ export const RemotionRoot: React.FC = () => {
         <Composition
           id="ProductWell"
           component={ProductWell}
-          durationInFrames={TOGETHER_FRAMES}
+          durationInFrames={DASH_OVERVIEW_HOLD}
+          fps={30}
+          width={1920}
+          height={1080}
+        />
+        <Composition
+          id="DashboardScroll"
+          component={DashboardScroll}
+          durationInFrames={DASHBOARD_FRAMES}
           fps={30}
           width={1920}
           height={1080}
