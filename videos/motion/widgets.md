@@ -10,7 +10,7 @@ The product tour is **feature-scoped but short**: stats, calendar, equity, and d
 | Daily calendar | `app/[locale]/(landing)/components/calendar-preview.tsx` `buildDemoCalendarData()` | `widgets/mock-data.ts`, `calendar-grid.ts`, `CalendarWidget.tsx` | Day/pnl/trades for the pinned month |
 | Equity | `performance-visualization-chart.tsx` `equityData` | `mock-data.ts` `equityData`, `EquityChart.tsx` | 24820 → 28140 |
 | Daily P&L | same file `dailyPnlData` | `mock-data.ts` `dailyPnlData`, `DailyPnlChart.tsx` | 10 bars, win/loss colors |
-| Chrome | Dashboard `.dark` canvas `#0F0F0F` | `tokens.ts`, `FeatureChrome.tsx`, `ChartFrame.tsx` | No nested wells. Feature scenes `framed={false}`; together uses hairline `#262626` |
+| Chrome | Dashboard `.dark` canvas `#0F0F0F` | `tokens.ts`, `FeatureChrome.tsx`, `ChartFrame.tsx` | No nested wells. Feature scenes `framed={false}`; together uses hairline `#3A3A3A` |
 
 Month is **pinned to August 2026** (`PROMO_YEAR` / `PROMO_MONTH` / `PROMO_TODAY_DAY = 27`) so renders stay deterministic. Do not use `new Date()` for the grid.
 

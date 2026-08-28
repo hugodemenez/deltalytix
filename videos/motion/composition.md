@@ -43,7 +43,7 @@ Shared chrome: caption on the canvas, widget in the remaining stage. **No outer 
 
 ### Together
 
-Same layout, widgets use a 1px `#262626` hairline (dashboard card). Charts already filled.
+Same layout, widgets use a 1px `#3A3A3A` hairline (dashboard card). Charts already filled.
 
 ## If you change length
 

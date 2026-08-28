@@ -10,7 +10,7 @@ export const tokens = {
   action: "#FAFAFA",
   actionInk: "#171717",
   card: "#0F0F0F",
-  border: "#262626",
+  border: "#3A3A3A",
   today: "#5BA3F8",
   calendarWinBg: "rgba(74, 222, 128, 0.12)",
   calendarWin: "#4ADE80",
