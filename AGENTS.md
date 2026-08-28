@@ -27,6 +27,9 @@ bunx prisma generate
 OPENAI_API_KEY=dummy bun run build
 bun run typecheck
 bun run lint
+bun run test
+# Live Rithmic Protocol Product RMS (skipped unless e2e secrets are set)
+# bun run test:e2e:rithmic
 ```
 
 ## Local env (dashboard bypass)

@@ -1,8 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { lookup as dnsLookup } from 'node:dns/promises'
+import type { Socket } from 'node:net'
 import protobuf from 'protobufjs'
-import WebSocket from 'ws'
+import WebSocket, { type ClientOptions } from 'ws'
 import {
   EXCHANGE_NOTIFY_FILL,
   ORDER_PLANT,
@@ -16,6 +18,11 @@ import type {
   RithmicProtocolFill,
 } from './types'
 import { mapAccountPnLUpdateToBalance } from './balances'
+import {
+  indexProductRmsCommissionRates,
+  mapProductRmsCommissionRow,
+  type ProductRmsCommissionRow,
+} from './commission-rates'
 import {
   getRithmicProtocolAppName,
   getRithmicProtocolAppVersion,
@@ -46,6 +53,8 @@ const PROTO_FILES = [
   'response_login_info.proto',
   'request_account_list.proto',
   'response_account_list.proto',
+  'request_product_rms_info.proto',
+  'response_product_rms_info.proto',
   'request_pnl_position_snapshot.proto',
   'response_pnl_position_snapshot.proto',
   'account_pnl_position_update.proto',
@@ -124,6 +133,22 @@ function rpMessage(rpCode: unknown): string {
   return rpCode.map(String).join(' ')
 }
 
+/** Strip BOM / CR so GitHub secrets and pasted env values match the UI. */
+export function sanitizeRithmicSecret(value: string): string {
+  return value.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '').trim()
+}
+
+function forceIpv4(): boolean {
+  const flag = process.env.RITHMIC_PROTOCOL_FORCE_IPV4?.trim().toLowerCase()
+  return flag === '1' || flag === 'true'
+}
+
+function describeWebSocket(ws: WebSocket): string {
+  const socket = (ws as unknown as { _socket?: Socket })._socket
+  if (!socket) return 'socket=pending'
+  return `remote=${socket.remoteAddress}:${socket.remotePort} local=${socket.localAddress}:${socket.localPort} family=${socket.remoteFamily}`
+}
+
 /**
  * Map a ResponseShowFillHistory row. Some plants populate `price` /
  * `avg_fill_price` without `fill_price` — accept any of the three.
@@ -184,6 +209,9 @@ type InboundMessage = {
   raw: Buffer
 }
 
+/** `servername` is a TLS SNI option; @types/ws ClientOptions omits it. */
+type RithmicWebSocketOptions = ClientOptions & { servername?: string }
+
 export class RithmicProtocolClient {
   private ws: WebSocket | null = null
   private root: protobuf.Root | null = null
@@ -194,23 +222,66 @@ export class RithmicProtocolClient {
     timeout: NodeJS.Timeout
   }> = []
   private closed = false
+  private inboundCount = 0
+  private lastInboundTemplateId: number | undefined
+  private gatewayUri = ''
+  private sessionOpen = false
+  peerAddress: string | undefined
 
-  async connect(gatewayUri: string): Promise<void> {
+  async connect(gatewayUri: string, options?: { pinAddress?: string }): Promise<void> {
     this.root = await loadRoot()
     const uri = normalizeGatewayUri(gatewayUri)
+    this.gatewayUri = uri
+    this.inboundCount = 0
+    this.lastInboundTemplateId = undefined
+    this.closed = false
+    this.sessionOpen = false
+    this.peerAddress = undefined
+
+    const parsed = new URL(uri)
+    const servername = parsed.hostname
+    const pin = options?.pinAddress?.trim()
+    const connectUrl = pin
+      ? `wss://${pin.includes(':') ? `[${pin}]` : pin}:${parsed.port || '443'}`
+      : uri
+
+    try {
+      const records = await dnsLookup(servername, { all: true })
+      console.log(
+        `[RITHMIC-PROTOCOL] dns ${servername} ${records.map((record) => `${record.family === 6 ? 'AAAA' : 'A'}:${record.address}`).join(' ') || '(none)'}`,
+      )
+    } catch (error) {
+      console.warn(
+        `[RITHMIC-PROTOCOL] dns ${servername} failed: ${error instanceof Error ? error.message : error}`,
+      )
+    }
+    if (pin) {
+      console.log(`[RITHMIC-PROTOCOL] pinning websocket to ${connectUrl} SNI=${servername}`)
+    }
 
     await new Promise<void>((resolve, reject) => {
-      const ws = new WebSocket(uri, {
+      const socketOptions: RithmicWebSocketOptions = {
         // Rithmic samples disable cert verification for Protocol endpoints.
         rejectUnauthorized: false,
-      })
+        // Compressed binary frames have been observed to stall some plants.
+        perMessageDeflate: false,
+        family: forceIpv4() ? 4 : undefined,
+        servername,
+      }
+      const ws = new WebSocket(connectUrl, socketOptions)
       this.ws = ws
 
       const onError = (err: Error) => {
+        console.warn(
+          `[RITHMIC-PROTOCOL] websocket error ${uri}: ${err.message}`,
+        )
         cleanup()
         reject(err)
       }
       const onOpen = () => {
+        const socket = (ws as unknown as { _socket?: Socket })._socket
+        this.peerAddress = socket?.remoteAddress
+        console.log(`[RITHMIC-PROTOCOL] websocket open ${uri} ${describeWebSocket(ws)}`)
         cleanup()
         resolve()
       }
@@ -232,6 +303,21 @@ export class RithmicProtocolClient {
             'rti.Base',
             raw,
           )
+          this.inboundCount += 1
+          this.lastInboundTemplateId = base.templateId
+          console.log(
+            `[RITHMIC-PROTOCOL] inbound template=${base.templateId} bytes=${raw.length} n=${this.inboundCount}`,
+          )
+          if (base.templateId === RithmicTemplateId.REJECT) {
+            const rejected = decodeMessage<{ rpCode?: string[] }>(
+              this.root!,
+              'rti.Reject',
+              raw,
+            )
+            console.warn(
+              `[RITHMIC-PROTOCOL] reject rp_code=${rpMessage(rejected.rpCode)}`,
+            )
+          }
           const msg: InboundMessage = {
             templateId: base.templateId,
             raw,
@@ -248,13 +334,20 @@ export class RithmicProtocolClient {
         }
       })
 
-      ws.on('close', () => {
+      ws.on('close', (code, reason) => {
         this.closed = true
+        console.log(
+          `[RITHMIC-PROTOCOL] websocket close ${uri} code=${code} reason=${reason?.toString() || '(none)'} inbound=${this.inboundCount}`,
+        )
         while (this.waiters.length > 0) {
           const waiter = this.waiters.shift()
           if (!waiter) break
           clearTimeout(waiter.timeout)
-          waiter.reject(new Error('Rithmic WebSocket closed'))
+          waiter.reject(
+            new Error(
+              `Rithmic WebSocket closed (${code} ${reason?.toString() || 'no reason'}) inbound=${this.inboundCount}`,
+            ),
+          )
         }
       })
     })
@@ -268,7 +361,14 @@ export class RithmicProtocolClient {
       const timeout = setTimeout(() => {
         const idx = this.waiters.findIndex((w) => w.timeout === timeout)
         if (idx >= 0) this.waiters.splice(idx, 1)
-        reject(new Error(`Timed out waiting for Rithmic message after ${timeoutMs}ms`))
+        reject(
+          new Error(
+            `Timed out waiting for Rithmic message after ${timeoutMs}ms ` +
+              `(inbound=${this.inboundCount}, queued=${this.queue.length}, ` +
+              `lastTemplate=${this.lastInboundTemplateId ?? 'none'}, ` +
+              `ws=${this.ws?.readyState ?? 'none'}, closed=${this.closed}, uri=${this.gatewayUri})`,
+          ),
+        )
       }, timeoutMs)
       this.waiters.push({ resolve, reject, timeout })
     })
@@ -279,7 +379,10 @@ export class RithmicProtocolClient {
       throw new Error('Rithmic Protocol client is not connected')
     }
     const buf = encodeMessage(this.root, typeName, payload)
-    this.ws.send(buf)
+    console.log(
+      `[RITHMIC-PROTOCOL] send ${typeName} template=${payload.templateId} bytes=${buf.length}`,
+    )
+    this.ws.send(buf, { binary: true })
   }
 
   async login(params: {
@@ -289,19 +392,43 @@ export class RithmicProtocolClient {
     /** Defaults to ORDER_PLANT. Use PNL_PLANT for live account balances. */
     infraType?: number
   }): Promise<{ fcmId?: string; ibId?: string; uniqueUserId?: string }> {
+    const user = sanitizeRithmicSecret(params.username)
+    const password = sanitizeRithmicSecret(params.password)
     await this.send('rti.RequestLogin', {
       templateId: RithmicTemplateId.LOGIN_REQUEST,
       templateVersion: '3.9',
       userMsg: ['deltalytix-login'],
-      user: params.username,
-      password: params.password,
+      user,
+      password,
       appName: getRithmicProtocolAppName(),
       appVersion: getRithmicProtocolAppVersion(),
       systemName: params.systemName,
       infraType: params.infraType ?? ORDER_PLANT,
     })
+    console.log(
+      `[RITHMIC-PROTOCOL] login sent system=${params.systemName} infra=${params.infraType ?? ORDER_PLANT} ` +
+        `app=${getRithmicProtocolAppName()}@${getRithmicProtocolAppVersion()} ` +
+        `user_len=${user.length} password_len=${password.length}`,
+    )
 
-    const msg = await this.nextMessage()
+    let msg: InboundMessage
+    try {
+      msg = await this.nextMessage()
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      const hint = process.env.GITHUB_ACTIONS
+        ? ' Same IPv4 peer answered system-info; RequestLogin got zero bytes back. GitHub-hosted runners egress from Azure; in-app reconnect goes through Vercel. Rithmic does not offer a customer IP allowlist — this is a network path difference.'
+        : ' Check system name, app name/version, password, and that this peer can complete Protocol login.'
+      throw new Error(`Rithmic login got no ResponseLogin. ${detail}.${hint}`)
+    }
+    if (msg.templateId === RithmicTemplateId.REJECT) {
+      const rejected = decodeMessage<{ rpCode?: string[] }>(
+        this.root!,
+        'rti.Reject',
+        msg.raw,
+      )
+      throw new Error(`Rithmic login rejected: ${rpMessage(rejected.rpCode)}`)
+    }
     if (msg.templateId !== RithmicTemplateId.LOGIN_RESPONSE) {
       throw new Error(`Unexpected login response template ${msg.templateId}`)
     }
@@ -316,6 +443,7 @@ export class RithmicProtocolClient {
       throw new Error(`Rithmic login failed: ${rpMessage(decoded.rpCode)}`)
     }
 
+    this.sessionOpen = true
     return {
       fcmId: decoded.fcmId,
       ibId: decoded.ibId,
@@ -412,6 +540,70 @@ export class RithmicProtocolClient {
 
 
     return accounts
+  }
+
+  /**
+   * Product RMS rows (template 306/307), including per-product commission_fill_rate.
+   * Same source as R | API+ ProductRmsListInfo / the Orders CSV Commission Fill Rate.
+   */
+  async getProductRmsInfo(params: {
+    fcmId?: string
+    ibId?: string
+    accountId: string
+  }): Promise<ProductRmsCommissionRow[]> {
+    await this.send('rti.RequestProductRmsInfo', {
+      templateId: RithmicTemplateId.PRODUCT_RMS_INFO_REQUEST,
+      userMsg: [`deltalytix-product-rms-${params.accountId}`],
+      fcmId: params.fcmId,
+      ibId: params.ibId,
+      accountId: params.accountId,
+    })
+
+    const rows: ProductRmsCommissionRow[] = []
+    for (;;) {
+      const msg = await this.nextMessage()
+      if (msg.templateId === RithmicTemplateId.PRODUCT_RMS_INFO_RESPONSE) {
+        const decoded = decodeMessage<{
+          rpCode?: string[]
+          accountId?: string
+          productCode?: string
+          commissionFillRate?: number
+          presenceBits?: number
+        }>(this.root!, 'rti.ResponseProductRmsInfo', msg.raw)
+
+        const mapped = mapProductRmsCommissionRow({
+          accountId: decoded.accountId || params.accountId,
+          productCode: decoded.productCode,
+          commissionFillRate: decoded.commissionFillRate,
+          presenceBits: decoded.presenceBits,
+        })
+        if (mapped) rows.push(mapped)
+
+        if (Array.isArray(decoded.rpCode) && decoded.rpCode.length > 0) {
+          if (rpIsNoData(decoded.rpCode)) break
+          if (!rpOk(decoded.rpCode)) {
+            throw new Error(
+              `Product RMS info failed: ${rpMessage(decoded.rpCode)}`,
+            )
+          }
+          break
+        }
+        continue
+      }
+
+      if (msg.templateId === RithmicTemplateId.REJECT) {
+        throw new Error('Product RMS info rejected by Rithmic')
+      }
+
+      if (
+        msg.templateId === RithmicTemplateId.HEARTBEAT_RESPONSE ||
+        msg.templateId === RithmicTemplateId.RITHMIC_ORDER_NOTIFICATION
+      ) {
+        continue
+      }
+    }
+
+    return rows
   }
 
   /**
@@ -920,7 +1112,10 @@ export class RithmicProtocolClient {
   }
 
   async close(): Promise<void> {
-    await this.logout()
+    if (this.sessionOpen) {
+      await this.logout()
+      this.sessionOpen = false
+    }
     await this.disconnect()
   }
 }
@@ -931,11 +1126,12 @@ export class RithmicProtocolClient {
  */
 export async function fetchAvailableSystems(
   gatewayUri: string,
-): Promise<string[]> {
+): Promise<{ systems: string[]; peerAddress?: string }> {
   const client = new RithmicProtocolClient()
   try {
     await client.connect(gatewayUri)
-    return await client.requestSystemInfo()
+    const systems = await client.requestSystemInfo()
+    return { systems, peerAddress: client.peerAddress }
   } finally {
     await client.disconnect()
   }
@@ -946,10 +1142,11 @@ export async function connectAndListAccounts(params: {
   systemName: string
   username: string
   password: string
+  pinAddress?: string
 }): Promise<RithmicProtocolConnectResult> {
   const client = new RithmicProtocolClient()
   try {
-    await client.connect(params.gatewayUri)
+    await client.connect(params.gatewayUri, { pinAddress: params.pinAddress })
     const login = await client.login(params)
     const info = await client.loginInfo()
     const accounts = await client.listAccounts({
@@ -962,6 +1159,90 @@ export async function connectAndListAccounts(params: {
       fcmId: info.fcmId || login.fcmId,
       ibId: info.ibId || login.ibId,
       uniqueUserId: login.uniqueUserId,
+    }
+  } finally {
+    await client.close()
+  }
+}
+
+/**
+ * Product RMS commission_fill_rate per account, without pulling fill history.
+ * Used by Protocol e2e and as the same Order-plant call sync uses.
+ */
+export async function fetchProductCommissionRates(params: {
+  gatewayUri: string
+  systemName: string
+  username: string
+  password: string
+  fcmId?: string
+  ibId?: string
+  accountIds: string[]
+  accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
+  pinAddress?: string
+}): Promise<{
+  rates: Map<string, number>
+  rows: ProductRmsCommissionRow[]
+  uniqueUserId?: string
+  accounts: RithmicProtocolAccount[]
+}> {
+  const client = new RithmicProtocolClient()
+  try {
+    console.log(
+      `[RITHMIC-PROTOCOL] Product RMS connect gateway=${params.gatewayUri} system=${params.systemName} pin=${params.pinAddress ?? '(dns)'}`,
+    )
+    await client.connect(params.gatewayUri, { pinAddress: params.pinAddress })
+    const login = await client.login({
+      systemName: params.systemName,
+      username: params.username,
+      password: params.password,
+    })
+    const info = await client.loginInfo()
+    const loginFcmId = params.fcmId || info.fcmId || login.fcmId
+    const loginIbId = params.ibId || info.ibId || login.ibId
+    console.log(
+      `[RITHMIC-PROTOCOL] Product RMS login ok unique_user_id=${login.uniqueUserId ?? '(none)'} fcm=${loginFcmId ?? '(none)'} ib=${loginIbId ?? '(none)'}`,
+    )
+    const listed = await client.listAccounts({
+      fcmId: loginFcmId,
+      ibId: loginIbId,
+      userType: info.userType,
+    })
+    console.log(
+      `[RITHMIC-PROTOCOL] Product RMS listed ${listed.length} account(s): ${listed.map((account) => account.accountId).join(', ') || '(none)'}`,
+    )
+    const accountMeta = new Map(
+      [...(params.accounts ?? []), ...listed].map((account) => [
+        account.accountId,
+        account,
+      ]),
+    )
+    const accountIds =
+      params.accountIds.length > 0
+        ? params.accountIds
+        : listed.map((account) => account.accountId)
+
+    const rows: ProductRmsCommissionRow[] = []
+    for (const accountId of accountIds) {
+      const meta = accountMeta.get(accountId)
+      const productRms = await client.getProductRmsInfo({
+        fcmId: meta?.fcmId || loginFcmId,
+        ibId: meta?.ibId || loginIbId,
+        accountId,
+      })
+      rows.push(...productRms)
+      console.log(
+        `[RITHMIC-PROTOCOL] Product RMS for ${accountId}: ${productRms.length} commission rate(s)` +
+          (productRms.length > 0
+            ? ` (${productRms.map((row) => `${row.productCode}=${row.commissionFillRate}`).join(', ')})`
+            : ''),
+      )
+    }
+
+    return {
+      rates: indexProductRmsCommissionRates(rows),
+      rows,
+      uniqueUserId: login.uniqueUserId,
+      accounts: listed,
     }
   } finally {
     await client.close()
@@ -1032,11 +1313,16 @@ export async function fetchFillsForAccounts(params: {
   historyStartDate?: string
   /** Fallback when `historyStartDate` is missing (legacy connections). */
   lookbackDays?: number
-}): Promise<{ fills: RithmicProtocolFill[]; uniqueUserId?: string }> {
+}): Promise<{
+  fills: RithmicProtocolFill[]
+  uniqueUserId?: string
+  commissionRates: Map<string, number>
+}> {
   /** Rithmic guidance: ≤30 days of fill history per ShowFillHistory request. */
   const MAX_FILL_WINDOW_DAYS = 30
   const client = new RithmicProtocolClient()
   const fills: RithmicProtocolFill[] = []
+  const rmsRows: ProductRmsCommissionRow[] = []
   try {
     await client.connect(params.gatewayUri)
     const login = await client.login({
@@ -1079,6 +1365,11 @@ export async function fetchFillsForAccounts(params: {
       )
     }
 
+    const accountIds =
+      params.accountIds.length > 0
+        ? params.accountIds
+        : [...accountMeta.keys()]
+
     const end = utcCalendarDay(new Date())
     const start = resolveHistoryStartUtc(params.historyStartDate, params.lookbackDays, end)
     const windows = buildUtcFillHistoryWindowsFromRange(start, end, MAX_FILL_WINDOW_DAYS)
@@ -1093,13 +1384,30 @@ export async function fetchFillsForAccounts(params: {
     )
 
     // Accounts and ≤30-day windows are requested serially (await each response fully).
-    for (const accountId of params.accountIds) {
+    for (const accountId of accountIds) {
       const meta = accountMeta.get(accountId)
       const fcmId = meta?.fcmId || loginFcmId
       const ibId = meta?.ibId || loginIbId
       console.log(
         `[RITHMIC-PROTOCOL] Account ${accountId} using fcm=${fcmId ?? '(none)'} ib=${ibId ?? '(none)'}`,
       )
+
+      try {
+        const productRms = await client.getProductRmsInfo({
+          fcmId,
+          ibId,
+          accountId,
+        })
+        rmsRows.push(...productRms)
+        console.log(
+          `[RITHMIC-PROTOCOL] Product RMS for ${accountId}: ${productRms.length} commission rate(s)`,
+        )
+      } catch (error) {
+        console.warn(
+          `[RITHMIC-PROTOCOL] Product RMS info failed for ${accountId}`,
+          error instanceof Error ? error.message : error,
+        )
+      }
 
       let historyFills = 0
       let usedOrderHistoryFallback = false
@@ -1188,7 +1496,11 @@ export async function fetchFillsForAccounts(params: {
       }
     }
 
-    return { fills: dedupeFills(fills), uniqueUserId }
+    return {
+      fills: dedupeFills(fills),
+      uniqueUserId,
+      commissionRates: indexProductRmsCommissionRates(rmsRows),
+    }
   } finally {
     await client.close()
   }

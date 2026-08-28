@@ -1,0 +1,91 @@
+name: Rithmic Protocol e2e
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "lib/rithmic-protocol/**"
+      - ".github/workflows/rithmic-protocol-e2e.yml"
+      - "vitest.e2e.config.ts"
+      - "package.json"
+  push:
+    branches:
+      - beta
+    paths:
+      - "lib/rithmic-protocol/**"
+      - ".github/workflows/rithmic-protocol-e2e.yml"
+      - "vitest.e2e.config.ts"
+      - "package.json"
+
+# One live login at a time. Do not cancel in-flight jobs — a killed WebSocket
+# can leave the test user session dangling on the plant.
+concurrency:
+  group: rithmic-protocol-e2e
+  cancel-in-progress: false
+
+jobs:
+  product-rms:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Product RMS proto (no credentials)
+        run: bunx vitest run lib/rithmic-protocol/product-rms-proto.test.ts lib/rithmic-protocol/commission-rates.test.ts lib/rithmic-protocol/fills-to-trades.test.ts lib/rithmic-protocol/silent-login-timeout.test.ts lib/trade-id-utils.test.ts
+
+      - name: Live Product RMS e2e
+        env:
+          RITHMIC_PROTOCOL_E2E_USERNAME: ${{ secrets.RITHMIC_PROTOCOL_E2E_USERNAME }}
+          RITHMIC_PROTOCOL_E2E_PASSWORD: ${{ secrets.RITHMIC_PROTOCOL_E2E_PASSWORD }}
+          # Defaults match the reconnect UI: Core (Chicago) + Rithmic Paper Trading.
+          # Only username/password are required as repository secrets.
+          RITHMIC_PROTOCOL_E2E_SYSTEM_NAME: ${{ vars.RITHMIC_PROTOCOL_E2E_SYSTEM_NAME || 'Rithmic Paper Trading' }}
+          RITHMIC_PROTOCOL_E2E_GATEWAY: ${{ vars.RITHMIC_PROTOCOL_E2E_GATEWAY || 'core' }}
+          RITHMIC_PROTOCOL_FORCE_IPV4: "1"
+        run: |
+          username_set=no
+          password_set=no
+          [ -n "$RITHMIC_PROTOCOL_E2E_USERNAME" ] && username_set=yes
+          [ -n "$RITHMIC_PROTOCOL_E2E_PASSWORD" ] && password_set=yes
+
+          echo "::group::Rithmic e2e config (credentials never printed)"
+          echo "username_set=$username_set"
+          echo "password_set=$password_set"
+          echo "gateway=$RITHMIC_PROTOCOL_E2E_GATEWAY"
+          echo "system=$RITHMIC_PROTOCOL_E2E_SYSTEM_NAME"
+          echo "node=$(node -v)"
+          echo "bun=$(bun -v)"
+          echo "force_ipv4=$RITHMIC_PROTOCOL_FORCE_IPV4"
+          echo "::endgroup::"
+
+          echo "::group::Runner network"
+          echo -n "egress_ipv4="
+          curl -4 -fsS --max-time 8 https://api.ipify.org || echo "(unavailable)"
+          echo
+          echo -n "egress_ipv6="
+          curl -6 -fsS --max-time 8 https://api6.ipify.org || echo "(unavailable)"
+          echo
+          echo "dns rprotocol.rithmic.com:"
+          getent ahosts rprotocol.rithmic.com || true
+          echo "::endgroup::"
+
+          if [ "$username_set" != yes ] || [ "$password_set" != yes ]; then
+            echo "::warning::Skipping live gateway — repository secrets RITHMIC_PROTOCOL_E2E_USERNAME and/or RITHMIC_PROTOCOL_E2E_PASSWORD are empty."
+            exit 0
+          fi
+
+          echo "::notice::Live Protocol system-info + login → $RITHMIC_PROTOCOL_E2E_GATEWAY / $RITHMIC_PROTOCOL_E2E_SYSTEM_NAME"
+          # ubuntu-latest egress is Azure. Unauthenticated system-info works;
+          # RequestLogin has been silent on that path (Vercel login still works).
+          # The e2e suite skips a silent login timeout unless REQUIRE_LOGIN=1.
+          bun run test:e2e:rithmic
