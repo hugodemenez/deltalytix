@@ -2,6 +2,13 @@ export default {
     pricing: {
         heading: 'Pricing',
         subheading: 'Store, explore and improve your trading data with the right plan for your needs.',
+        backToWork: {
+            badge: 'Back to Work',
+            sectionNote: 'Back to Work prices on Plus. The discount is applied automatically at checkout.',
+            sectionNoteUntil: 'Back to Work prices on Plus until {date}. The discount is applied automatically at checkout.',
+            regularPrice: 'Regular price {price}',
+            offerPrice: 'Offer price {price}',
+        },
         includes: 'Includes',
         loading: 'Loading...',
         yearly: 'Yearly',

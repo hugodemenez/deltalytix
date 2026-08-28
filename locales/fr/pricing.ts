@@ -2,6 +2,13 @@ export default {
     pricing: {
         heading: 'Tarification',
         subheading: 'Stockez, explorez et améliorez vos données de trading avec le plan adapté à vos besoins.',
+        backToWork: {
+            badge: 'Rentrée',
+            sectionNote: 'Tarifs rentrée sur Plus. La réduction s\'applique automatiquement au paiement.',
+            sectionNoteUntil: 'Tarifs rentrée sur Plus jusqu\'au {date}. La réduction s\'applique automatiquement au paiement.',
+            regularPrice: 'Prix habituel {price}',
+            offerPrice: 'Prix de l\'offre {price}',
+        },
         includes: 'Inclus',
         loading: 'Chargement...',
         yearly: 'annuel',

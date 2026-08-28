@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { billingLookupKey } from "./billing-plan-catalog";
 import {
+  activeBackToWorkIntervals,
+  applyBackToWorkCoupon,
+  backToWorkPeriodDisplay,
+  buildBackToWorkPricingDisplay,
+  isBackToWorkOfferActive,
   resolveBackToWorkPromoCode,
   stripeCheckoutPromoParams,
   type BackToWorkPromoEnv,
@@ -230,5 +235,80 @@ describe("stripeCheckoutPromoParams", () => {
     const params = stripeCheckoutPromoParams(undefined);
     expect(params).toEqual({ allow_promotion_codes: true });
     expect(params).not.toHaveProperty("discounts");
+  });
+});
+
+describe("back-to-work pricing display", () => {
+  it("lists only intervals with a non-empty env value", () => {
+    expect(
+      activeBackToWorkIntervals({
+        STRIPE_BTW_MONTHLY_PROMO: "test-monthly-promo",
+        STRIPE_BTW_QUARTERLY_PROMO: "  ",
+      }),
+    ).toEqual(["monthly"]);
+  });
+
+  it("applies percent and amount coupons to list charges", () => {
+    expect(applyBackToWorkCoupon(19.99, { percentOff: 20 })).toBe(15.99);
+    expect(applyBackToWorkCoupon(45, { percentOff: 20 })).toBe(36);
+    expect(applyBackToWorkCoupon(120, { amountOffMinor: 2400 })).toBe(96);
+    expect(applyBackToWorkCoupon(19.99, {})).toBeUndefined();
+  });
+
+  it("builds client-safe sale prices for usd/eur catalog amounts", () => {
+    const display = buildBackToWorkPricingDisplay(env, {
+      monthly: { percentOff: 20 },
+      quarterly: { percentOff: 20 },
+      yearly: { percentOff: 20 },
+    });
+
+    expect(display.monthly).toMatchObject({
+      offerActive: true,
+      listCharge: 19.99,
+      saleCharge: 15.99,
+      saleMonthlyEquivalent: 15.99,
+    });
+    expect(display.quarterly).toMatchObject({
+      listCharge: 45,
+      saleCharge: 36,
+      saleMonthlyEquivalent: 12,
+    });
+    expect(display.yearly).toMatchObject({
+      listCharge: 120,
+      saleCharge: 96,
+      saleMonthlyEquivalent: 8,
+    });
+    expect(JSON.stringify(display)).not.toMatch(/test-monthly-promo|promo_/);
+    expect(isBackToWorkOfferActive(display)).toBe(true);
+    expect(backToWorkPeriodDisplay(display, "lifetime")).toBeUndefined();
+  });
+
+  it("marks an interval active from env even when the coupon cannot be resolved", () => {
+    const display = buildBackToWorkPricingDisplay(
+      { STRIPE_BTW_MONTHLY_PROMO: "test-monthly-promo" },
+      {},
+    );
+
+    expect(display.monthly).toEqual({
+      offerActive: true,
+      listCharge: 19.99,
+      saleCharge: undefined,
+      listMonthlyEquivalent: 19.99,
+      saleMonthlyEquivalent: undefined,
+      percentOff: undefined,
+    });
+    expect(display.quarterly).toBeUndefined();
+  });
+
+  it("skips lifetime and empty env in the display map", () => {
+    expect(buildBackToWorkPricingDisplay({}, { monthly: { percentOff: 20 } })).toEqual(
+      {},
+    );
+    expect(
+      backToWorkPeriodDisplay(
+        buildBackToWorkPricingDisplay(env, { monthly: { percentOff: 20 } }),
+        "lifetime",
+      ),
+    ).toBeUndefined();
   });
 });

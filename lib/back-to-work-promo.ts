@@ -1,3 +1,9 @@
+import {
+  PLUS_PLAN_PRICES,
+  billingPeriodMonthlyEquivalent,
+  type BillingPeriod,
+} from "./billing-plan-catalog";
+
 export const BACK_TO_WORK_PROMO_ENV_KEYS = [
   "STRIPE_BTW_MONTHLY_PROMO",
   "STRIPE_BTW_QUARTERLY_PROMO",
@@ -137,4 +143,120 @@ export function stripeCheckoutPromoParams(
     return { discounts: [{ promotion_code: promotionCode }] };
   }
   return { allow_promotion_codes: true };
+}
+
+export function activeBackToWorkIntervals(
+  env: BackToWorkPromoEnv = process.env,
+): BackToWorkPromoInterval[] {
+  return (["monthly", "quarterly", "yearly"] as const).filter((interval) =>
+    Boolean(trimmedEnvValue(env, ENV_BY_INTERVAL[interval])),
+  );
+}
+
+export type BackToWorkCouponLike = {
+  percentOff?: number | null;
+  amountOffMinor?: number | null;
+  redeemByMs?: number | null;
+};
+
+export type BackToWorkPeriodDisplay = {
+  offerActive: boolean;
+  listCharge: number;
+  saleCharge?: number;
+  listMonthlyEquivalent: number;
+  saleMonthlyEquivalent?: number;
+  percentOff?: number;
+};
+
+export type BackToWorkPricingDisplay = {
+  monthly?: BackToWorkPeriodDisplay;
+  quarterly?: BackToWorkPeriodDisplay;
+  yearly?: BackToWorkPeriodDisplay;
+  validUntilMs?: number;
+};
+
+export function roundBillingMoney(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
+export function applyBackToWorkCoupon(
+  listCharge: number,
+  coupon: BackToWorkCouponLike | undefined,
+): number | undefined {
+  if (!coupon) return undefined;
+
+  if (typeof coupon.percentOff === "number" && coupon.percentOff > 0) {
+    return roundBillingMoney(listCharge * (1 - coupon.percentOff / 100));
+  }
+
+  if (typeof coupon.amountOffMinor === "number" && coupon.amountOffMinor > 0) {
+    return roundBillingMoney(Math.max(0, listCharge - coupon.amountOffMinor / 100));
+  }
+
+  return undefined;
+}
+
+function saleMonthlyEquivalent(
+  interval: BackToWorkPromoInterval,
+  saleCharge: number,
+): number {
+  if (interval === "quarterly") return roundBillingMoney(saleCharge / 3);
+  if (interval === "yearly") return roundBillingMoney(saleCharge / 12);
+  return saleCharge;
+}
+
+/**
+ * Builds client-safe pricing display. Never include promotion ids in the result.
+ */
+export function buildBackToWorkPricingDisplay(
+  env: BackToWorkPromoEnv,
+  coupons: Partial<
+    Record<BackToWorkPromoInterval, BackToWorkCouponLike | undefined>
+  >,
+  validUntilMs?: number,
+): BackToWorkPricingDisplay {
+  const display: BackToWorkPricingDisplay = {};
+
+  for (const interval of ["monthly", "quarterly", "yearly"] as const) {
+    if (!trimmedEnvValue(env, ENV_BY_INTERVAL[interval])) continue;
+
+    const listCharge = PLUS_PLAN_PRICES[interval];
+    const rawSale = applyBackToWorkCoupon(listCharge, coupons[interval]);
+    const saleCharge =
+      rawSale !== undefined && rawSale < listCharge ? rawSale : undefined;
+    const percentOff = coupons[interval]?.percentOff;
+
+    display[interval] = {
+      offerActive: true,
+      listCharge,
+      saleCharge,
+      listMonthlyEquivalent: billingPeriodMonthlyEquivalent(interval),
+      saleMonthlyEquivalent:
+        saleCharge === undefined
+          ? undefined
+          : saleMonthlyEquivalent(interval, saleCharge),
+      percentOff:
+        typeof percentOff === "number" && percentOff > 0 ? percentOff : undefined,
+    };
+  }
+
+  if (validUntilMs) {
+    display.validUntilMs = validUntilMs;
+  }
+
+  return display;
+}
+
+export function backToWorkPeriodDisplay(
+  display: BackToWorkPricingDisplay | null | undefined,
+  period: BillingPeriod,
+): BackToWorkPeriodDisplay | undefined {
+  if (period === "lifetime") return undefined;
+  return display?.[period];
+}
+
+export function isBackToWorkOfferActive(
+  display: BackToWorkPricingDisplay | null | undefined,
+): boolean {
+  return Boolean(display?.monthly || display?.quarterly || display?.yearly);
 }
