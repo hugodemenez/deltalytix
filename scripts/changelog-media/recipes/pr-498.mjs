@@ -11,6 +11,8 @@ export default {
     { file: 'calendar-header-month-year-news', scene: 'calendar-header-month-year-news' },
     // dashboard-centered-view-tabs
     { file: 'dashboard-centered-view-tabs', scene: 'dashboard-centered-view-tabs' },
+    // Email still for Back to Work mail (not a changelog-entry visual)
+    { file: 'dashboard-home-email', scene: 'dashboard-home-email' },
     // rithmic-protocol-rms-commissions — 0 visuals
     // plus-back-to-work-checkout-promo — 0 visuals
   ],

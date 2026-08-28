@@ -356,7 +356,7 @@ async function revealPickerOption(page, name) {
   await page.waitForTimeout(600)
 }
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form' | 'compare-hub-journals-table' | 'compare-tradezella-what-you-get' | 'connections-import-picker-deepcharts' | 'dashboard-strip-standalone-actions' | 'dashboard-strip-standalone-delete-confirm' | 'public-404-agent-resources' | 'calendar-header-month-year-news' | 'dashboard-centered-view-tabs'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form' | 'compare-hub-journals-table' | 'compare-tradezella-what-you-get' | 'connections-import-picker-deepcharts' | 'dashboard-strip-standalone-actions' | 'dashboard-strip-standalone-delete-confirm' | 'public-404-agent-resources' | 'calendar-header-month-year-news' | 'dashboard-centered-view-tabs' | 'dashboard-home-email'} ChangelogScene */
 
 /**
  * @param {import('playwright-core').Browser} browser
@@ -1951,6 +1951,55 @@ export async function captureScene(browser, options) {
       await assertNoDevIssues(page, `${locale} dashboard centered view tabs`)
       await screenshot(page, batch, locale, file, {
         clip: await clipAround(page, [nav], 12),
+      })
+      await page.close()
+      return
+    }
+
+    case 'dashboard-home-email': {
+      // Email still (16:9): current beta dashboard HOME from the top of the
+      // window through the first widget row. Not a changelog card crop and
+      // not the landing Import Trades shot. Viewport 1440×900 desktop so md
+      // tabs paint; clip is 1440×810 (16:9) from y=0. Light theme. Widgets
+      // selected. Centered tablist in the top bar (not the phone dropdown).
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        colorScheme: 'light',
+        ...viewport('desktop'),
+      })
+      await page.addInitScript(() => {
+        window.localStorage.setItem('theme', 'light')
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      const tablist = page.getByRole('tablist').first()
+      await tablist.waitFor({ timeout: 15_000 })
+      const widgets = tablist.getByRole('tab', {
+        name: LABELS[locale].widgetsTab,
+      })
+      await widgets.waitFor({ timeout: 10_000 })
+      if ((await widgets.getAttribute('aria-selected')) !== 'true') {
+        await widgets.click()
+        await page.waitForTimeout(400)
+      }
+      await tablist
+        .getByRole('tab', { name: LABELS[locale].tableTab })
+        .waitFor({ timeout: 10_000 })
+      await tablist
+        .getByRole('tab', { name: LABELS[locale].accountsTab })
+        .waitFor({ timeout: 10_000 })
+      await page
+        .getByRole('navigation', { name: CAPTURE_LABELS[locale].connectionsStrip })
+        .waitFor({ timeout: 30_000 })
+      await page.locator('.react-grid-item').first().waitFor({ timeout: 30_000 })
+      await waitForNavbarBadgeSettled(page)
+      await waitForNoVisibleToasts(page)
+      const size = page.viewportSize()
+      const clipWidth = size?.width ?? 1440
+      const clipHeight = Math.round((clipWidth * 9) / 16)
+      await page.waitForTimeout(600)
+      await assertNoDevIssues(page, `${locale} dashboard home email`)
+      await screenshot(page, batch, locale, file, {
+        clip: { x: 0, y: 0, width: clipWidth, height: clipHeight },
       })
       await page.close()
       return

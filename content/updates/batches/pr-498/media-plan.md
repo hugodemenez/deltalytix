@@ -53,3 +53,17 @@
   - Inventing a percent-off overlay or a fake struck price — forbidden.
   - Injecting promotion ids into product code for screenshots — forbidden.
 
+## Email still (not a changelog entry)
+
+- Decision: 1 visual, not wired into MDX
+- Rationale: Zeno/Drop need a 16:9 dashboard HOME still of current beta chrome (centered **Widgets / Table / Accounts** tabs) for the Back to Work mail. This is not evidence for a changelog claim and is not campaign copy. Public path after merge: `/updates/pr-498/en/dashboard-home-email.png` (FR twin alongside).
+- Primary/card asset: none for changelog cards.
+- Additional assets:
+  - `dashboard-home-email.png` — scene `dashboard-home-email` (desktop 1440×900, clip 1440×810 / 16:9 from y=0, light theme, Widgets selected). Navbar + connections strip + first widget row. EN and FR.
+- Omitted candidates:
+  - Full-page 4:3 dashboard — too tall for a 100% fluid email image.
+  - Navbar-only `dashboard-centered-view-tabs` crop — does not show HOME widgets.
+  - Landing Import Trades shot — wrong surface.
+  - Stripe promo / sale prices — do not mock promotion ids.
+
+
