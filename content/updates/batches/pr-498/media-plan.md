@@ -39,3 +39,17 @@
   - Connections page with no Protocol row — an empty or standalone-only hub would look like a missing feature.
   - Reusing Solde Rithmic / classic Rithmic / Protocol-primary screenshots — those shipped other claims (live balances, connection setup). They must not stand in for RMS commissions.
   - Injecting fake Protocol rates in product code — forbidden.
+
+## plus-back-to-work-checkout-promo
+
+- Decision: 0 visuals
+- Rationale: The claim is an **auto-applied Stripe promotion** on new Plus Checkout, plus a **Back to Work** / **Rentrée** badge when the campaign env vars are set. Local `.env.local` has empty `STRIPE_BTW_MONTHLY_PROMO` / `QUARTERLY` / `YEARLY`, so Pricing and Billing correctly render regular Plus prices with no badge. A screenshot of that default would not prove the campaign and could be read as “nothing changed.” Capture-only promo mocks do not exist under `scripts/changelog-media/`. Product code must not be mocked. Copy already names the badge, the auto-apply behavior, and the Lifetime exclusion. Zero visuals is the honest choice.
+- Primary/card asset: none.
+- Additional assets: none.
+- Omitted candidates:
+  - Public `/pricing` Plus card at list price — the campaign is off locally; that frame is the non-promo default.
+  - `landing-pricing-stability` video — it was captured for card-layout stability, not this campaign, and must not be reused as Back to Work evidence.
+  - Billing plan list without the **Rentrée** pill — same empty-env default.
+  - Inventing a percent-off overlay or a fake struck price — forbidden.
+  - Injecting promotion ids into product code for screenshots — forbidden.
+

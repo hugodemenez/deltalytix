@@ -12,5 +12,6 @@ export default {
     // dashboard-centered-view-tabs
     { file: 'dashboard-centered-view-tabs', scene: 'dashboard-centered-view-tabs' },
     // rithmic-protocol-rms-commissions — 0 visuals
+    // plus-back-to-work-checkout-promo — 0 visuals
   ],
 }

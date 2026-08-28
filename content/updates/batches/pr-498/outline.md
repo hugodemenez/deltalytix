@@ -13,6 +13,7 @@ Promotion PR: #498 (`main` ← `cursor/release-beta-to-main-changelog-7614`).
   - `0c1151ac` 2026-08-28 Wait for an existing dockerd in Cloud Agent start (#495)
   - `c869a6d6` 2026-08-28 fix(dashboard): widget toolbar hover and dark-mode contrast (#497)
   - `1ac1829e` 2026-08-28 Apply Product RMS commissions on Rithmic Protocol sync (#492)
+  - `38203d08` 2026-08-28 Auto-apply Back to Work promo on new Plus Checkout sessions (#494)
 - Last production promotion on main: #488 compare hub / DeepCharts / account actions / Protocol live balances / public 404 (`futures-journal-compare-hub`, `deepcharts-csv-import`, `connection-account-mask-rename-delete`, `rithmic-protocol-live-balances`, `public-404-and-llms-txt` — all immutable). Main also has #476 Privacy controls on Settings v2.
 
 Published entries checked and left untouched include: `futures-journal-compare-hub`, `deepcharts-csv-import`, `connection-account-mask-rename-delete`, `rithmic-protocol-live-balances`, `public-404-and-llms-txt`, `dashboard-v5-shell`, `settings-v2-account-page`, `dxfeed-login-detects-prop-firm`, `csv-ai-chunked-parse`, `en-trading-journal-positioning`, `landing-ios-safari-canvas-chrome`, `mindset-journal-editor-stability`, `calendar-events-and-mobile-details`, `rithmic-protocol-primary-connection`, `rithmic-protocol-server-sync`, `rithmic-live-balance-display`, `dashboard-tabs-and-toolbar-small-screens`, `dashboard-active-filters-in-navbar`, `customizable-dashboard-widgets`, `shared-layouts-edit-account-numbers`.
@@ -24,6 +25,7 @@ Every proposed slug below is new under `content/updates/`.
 - Included: Calendar month/year chips + News country/importance filter (`e431b6a8` #493 calendar files) and Edge dark-mode picker labels (`b1081a99` #496) → `calendar-month-year-and-news-filter`
 - Included: Desktop centered **Widgets / Table / Accounts** tabs; phone keeps a compact view dropdown (`e431b6a8` #493 navbar + `dashboard-view-tabs.tsx`) → `dashboard-centered-view-tabs`
 - Included: Product RMS commissions on Rithmic Protocol sync (`1ac1829e` #492) → `rithmic-protocol-rms-commissions`
+- Included: Back to Work promo auto-applied on new Plus Checkout (`38203d08` #494) → `plus-back-to-work-checkout-promo`
 - Covered: Dashboard v5/v6 shell, Settings v2, compare hub, DeepCharts import, connection-account actions, Protocol live balances, public 404 / llms.txt, and the rest of the pre-#488 beta history → published `pr-475` and `pr-488` slugs
 - Skipped: Widget toolbar hover and dark-mode contrast (`c869a6d6` #497) — restores hover tint and readable **Edit** / **Add** labels on the existing layout pill; too small for a follow-up to `dashboard-v5-shell`
 - Skipped: Filter sheet date calendars, **Clear {section}**, `addFilterAriaCount`, and removal of the mobile `ActiveFilterTags` second navbar row (`e431b6a8` filter files) — polish of the v5 filter control, not a new filter capability
@@ -136,3 +138,38 @@ Every proposed slug below is new under `content/updates/`.
 
 - Local seed (`LOCAL-SIM-001`) has no Protocol connection. Do not mock rates in product code. Prefer zero visuals over an empty Connections page.
 - Do not reuse the classic Rithmic or Solde Rithmic screenshots as if they showed RMS commissions.
+
+## Entry: plus-back-to-work-checkout-promo
+
+- User outcome: New **Plus** Checkout sessions for monthly, quarterly, and yearly (USD or EUR) automatically apply the **Back to Work** / **Rentrée** promotion when the matching Stripe promotion-code env var is set. Pricing and Billing show the campaign badge and, when Stripe returns coupon amounts, a struck regular price plus the offer price. Lifetime Plus is excluded. Manual promo codes remain available when no campaign code applies.
+- Audience: Visitors choosing Plus on public pricing, and signed-in users upgrading from Billing. Not Basic, not Lifetime.
+- Surfaces:
+  - Public [pricing](/en/pricing) and the landing pricing section: section note **Back to Work prices on monthly, quarterly, and yearly Plus. The discount is applied automatically at checkout.** / **Tarifs rentrée sur Plus en mensuel, trimestriel et annuel. La réduction s'applique automatiquement au paiement.** Optional until-date variant when Stripe gives an expiry.
+  - Plus card badge **Back to Work** / **Rentrée**; **Regular price** / **Prix habituel** and **Offer price** / **Prix de l'offre** (screen-reader) with a struck list monthly equivalent when a sale amount is known
+  - Dashboard Billing plan list: the same **Back to Work** / **Rentrée** pill on eligible Plus periods
+  - Stripe Checkout: `discounts: [{ promotion_code }]` on new Plus sessions; otherwise `allow_promotion_codes: true`
+- Dates: 2026-08-28 → 2026-08-28
+- Grouping rationale: One campaign — display on Pricing/Billing plus auto-apply at Checkout. Do not split public vs dashboard. Do not fold into `landing-page-faq-and-pricing-polish`.
+- Important details:
+  - Eligibility: Plus lookup keys only; monthly / quarterly / yearly; USD or EUR. Lifetime and one-time prices never get the code.
+  - Campaign is env-gated (`STRIPE_BTW_MONTHLY_PROMO`, `STRIPE_BTW_QUARTERLY_PROMO`, `STRIPE_BTW_YEARLY_PROMO`). If those are unset or the Stripe promotion is inactive, the badge and auto-apply do not appear.
+  - Sale numbers come from the live Stripe coupon (percent off or amount off). Do not invent a percentage or an end date in copy.
+  - Stripe forbids combining `discounts` with `allow_promotion_codes`; auto-apply replaces the typed-code field on eligible sessions.
+  - Local capture usually has no promotion ids, so list prices alone would not prove the campaign.
+- Try it: Open [pricing](/en/pricing) or [Billing](/en/dashboard/billing) while the campaign env vars are set, pick monthly/quarterly/yearly Plus, and start checkout — the promotion applies without typing a code.
+
+### Story options
+
+- Back to Work prices on Plus, applied automatically at checkout.
+- Concise: **Back to Work** / **Rentrée** on monthly, quarterly, and yearly Plus; Lifetime unchanged.
+
+### Visual moments
+
+- Pricing Plus card with **Back to Work** / **Rentrée** and a struck regular price — **only if** capture can load a real or capture-only promo display.
+- None is valid and preferred when local env has empty `STRIPE_BTW_*` keys.
+
+### Visual caveats
+
+- Do not photograph regular Plus prices as if they were the campaign.
+- Do not mock promotion ids in product code. A capture-only mock under `scripts/changelog-media/` is allowed; without it, zero visuals.
+- Do not invent a discount percent in a screenshot overlay.
