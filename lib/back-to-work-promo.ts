@@ -6,9 +6,9 @@ export const BACK_TO_WORK_PROMO_ENV_KEYS = [
 
 export type BackToWorkPromoEnvKey = (typeof BACK_TO_WORK_PROMO_ENV_KEYS)[number];
 
-export type BackToWorkPromoEnv = Partial<
-  Record<BackToWorkPromoEnvKey, string | undefined>
->;
+export type BackToWorkPromoEnv = {
+  [key: string]: string | undefined;
+};
 
 export type BackToWorkPromoInterval = "monthly" | "quarterly" | "yearly";
 
@@ -81,7 +81,8 @@ function trimmedEnvValue(
   env: BackToWorkPromoEnv,
   key: BackToWorkPromoEnvKey,
 ): string | undefined {
-  const trimmed = env[key]?.trim();
+  const raw = env[key];
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
   return trimmed ? trimmed : undefined;
 }
 
