@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { lookup as dnsLookup } from 'node:dns/promises'
 import type { Socket } from 'node:net'
 import protobuf from 'protobufjs'
-import WebSocket from 'ws'
+import WebSocket, { type ClientOptions } from 'ws'
 import {
   EXCHANGE_NOTIFY_FILL,
   ORDER_PLANT,
@@ -209,6 +209,9 @@ type InboundMessage = {
   raw: Buffer
 }
 
+/** `servername` is a TLS SNI option; @types/ws ClientOptions omits it. */
+type RithmicWebSocketOptions = ClientOptions & { servername?: string }
+
 export class RithmicProtocolClient {
   private ws: WebSocket | null = null
   private root: protobuf.Root | null = null
@@ -257,14 +260,15 @@ export class RithmicProtocolClient {
     }
 
     await new Promise<void>((resolve, reject) => {
-      const ws = new WebSocket(connectUrl, {
+      const socketOptions: RithmicWebSocketOptions = {
         // Rithmic samples disable cert verification for Protocol endpoints.
         rejectUnauthorized: false,
         // Compressed binary frames have been observed to stall some plants.
         perMessageDeflate: false,
         family: forceIpv4() ? 4 : undefined,
         servername,
-      })
+      }
+      const ws = new WebSocket(connectUrl, socketOptions)
       this.ws = ws
 
       const onError = (err: Error) => {
