@@ -15,9 +15,9 @@ export const PropFirmFeature: React.FC = () => {
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr 1fr",
+          alignItems: "start",
           gap: 20,
           width: "100%",
-          height: "100%",
         }}
       >
         {promoPropAccounts.map((account, index) => (

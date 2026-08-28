@@ -193,11 +193,13 @@ export const ConnectionsWidget: React.FC = () => {
                     fontSize: 13,
                   }}
                 >
-                  {connection.loginLabel}
-                  {" · "}
-                  {connectionsCopy.lastSynced}
-                  {" · "}
-                  {connection.accountCount}
+                  {[
+                    connection.loginLabel,
+                    connectionsCopy.lastSynced,
+                    connection.accountCount,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </Interactive.Div>
                 <Interactive.Div
                   name={`${connection.label} account`}

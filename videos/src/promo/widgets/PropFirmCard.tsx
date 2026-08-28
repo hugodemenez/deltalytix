@@ -81,7 +81,7 @@ export const PropFirmCard: React.FC<PropFirmCardProps> = ({
         display: "flex",
         flexDirection: "column",
         width: "100%",
-        height: "100%",
+        height: "auto",
         padding: 20,
         backgroundColor: tokens.canvas,
         border: `1px solid ${tokens.border}`,
