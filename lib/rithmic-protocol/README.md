@@ -111,7 +111,9 @@ on each fill — the same source as R | API+ `ProductRmsListInfo` and the Orders
 CSV Commission Fill Rate. Round-trip commission is entry + exit.
 
 Current RMS config is used, not historical rates. A Product RMS failure logs a
-warning and still saves fills with commission `0`.
+warning and still saves fills with commission `0`. Trade identity ignores the
+rate so a resync matches rows first stored with `commission: 0` and updates
+that existing row instead of inserting a duplicate.
 
 ## Live e2e / CI
 

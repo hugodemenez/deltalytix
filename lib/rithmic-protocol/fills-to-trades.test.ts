@@ -82,5 +82,8 @@ describe('buildTradesFromRithmicFills', () => {
     expect(trades).toHaveLength(1)
     // Entry 2×1.20 + exit 2×1.20
     expect(trades[0].commission).toBe(4.8)
+    expect(trades[0].id).toBe(
+      buildTradesFromRithmicFills(fills, 'user-1', tickBySymbol).trades[0].id,
+    )
   })
 })

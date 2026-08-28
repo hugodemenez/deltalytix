@@ -1,6 +1,9 @@
 import type { Trade } from '@/prisma/generated/prisma/client'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
-import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
+import {
+  generateDeterministicTradeId,
+  RITHMIC_PROTOCOL_TRADE_TAG,
+} from '@/lib/trade-id-utils'
 import { formatTimestamp } from '@/lib/date-utils'
 import type { RithmicProtocolFill } from './types'
 import { commissionForFillQuantity } from './commission-rates'
@@ -192,7 +195,7 @@ export function buildTradesFromRithmicFills(
                   Math.round((closeDate.getTime() - entryDate.getTime()) / 1000),
                 ),
                 commission: Math.abs(open.totalCommission),
-                tags: ['rithmic-protocol'],
+                tags: [RITHMIC_PROTOCOL_TRADE_TAG],
               }),
             )
 
