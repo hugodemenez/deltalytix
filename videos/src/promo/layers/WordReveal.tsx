@@ -59,7 +59,7 @@ export const WordReveal: React.FC<WordRevealProps> = ({
               translate: interpolate(
                 frame,
                 [start, start + 12],
-                ["0px 28px", "0px 0px"],
+                ["0px 18px", "0px 0px"],
                 {
                   extrapolateLeft: "clamp",
                   extrapolateRight: "clamp",
@@ -79,13 +79,10 @@ export const WordReveal: React.FC<WordRevealProps> = ({
                   bottom: "8%",
                   borderRadius: 6,
                   backgroundColor: tokens.positive,
-                  opacity: 0.18,
-                  transformOrigin: "left center",
-                  scale: interpolate(frame, [start + 8, start + 18], [0.08, 1], {
+                  opacity: interpolate(frame, [start + 6, start + 14], [0, 0.22], {
                     extrapolateLeft: "clamp",
                     extrapolateRight: "clamp",
                     easing: BEZIER,
-                    output: "perceptual-scale",
                   }),
                 }}
               />

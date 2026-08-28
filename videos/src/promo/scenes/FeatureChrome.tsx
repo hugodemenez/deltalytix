@@ -24,74 +24,61 @@ export const FeatureChrome: React.FC<FeatureChromeProps> = ({
     <AbsoluteFill
       name={name}
       style={{
-        backgroundColor: tokens.sageWell,
+        backgroundColor: tokens.canvas,
         fontFamily,
       }}
     >
       <Interactive.Div
-        name={`${name} well`}
+        name={`${name} caption`}
         style={{
           position: "absolute",
-          left: 40,
-          top: 40,
-          width: 1840,
-          height: 1000,
-          backgroundColor: tokens.featureWell,
-          borderRadius: 4,
+          left: 80,
+          top: 56,
+          width: 1760,
+          opacity: interpolate(frame, [0, 8], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+            easing: BEZIER,
+          }),
         }}
       >
         <Interactive.Div
-          name={`${name} caption`}
+          name={`${name} eyebrow`}
           style={{
-            position: "absolute",
-            left: 40,
-            top: 28,
-            width: 1760,
-            opacity: interpolate(frame, [0, 12], [0, 1], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-              easing: BEZIER,
-            }),
+            color: tokens.muted,
+            fontSize: 16,
+            fontWeight: 500,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
           }}
         >
-          <Interactive.Div
-            name={`${name} eyebrow`}
-            style={{
-              color: tokens.positive,
-              fontSize: 18,
-              fontWeight: 500,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            {eyebrow}
-          </Interactive.Div>
-          <Interactive.Div
-            name={`${name} title`}
-            style={{
-              marginTop: 10,
-              color: tokens.ink,
-              fontSize: 44,
-              fontWeight: 300,
-              letterSpacing: "-0.05em",
-              lineHeight: 1.1,
-            }}
-          >
-            {title}
-          </Interactive.Div>
+          {eyebrow}
         </Interactive.Div>
         <Interactive.Div
-          name={`${name} stage`}
+          name={`${name} title`}
           style={{
-            position: "absolute",
-            left: 24,
-            top: 148,
-            width: 1792,
-            height: 828,
+            marginTop: 8,
+            color: tokens.ink,
+            fontSize: 40,
+            fontWeight: 300,
+            letterSpacing: "-0.05em",
+            lineHeight: 1.1,
           }}
         >
-          {children}
+          {title}
         </Interactive.Div>
+      </Interactive.Div>
+      <Interactive.Div
+        name={`${name} stage`}
+        style={{
+          position: "absolute",
+          left: 80,
+          top: 160,
+          width: 1760,
+          height: 860,
+        }}
+      >
+        {children}
       </Interactive.Div>
     </AbsoluteFill>
   );

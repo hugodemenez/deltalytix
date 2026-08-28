@@ -8,7 +8,7 @@ export const PnlFeature: React.FC = () => {
       eyebrow="Track your performance"
       title="Daily P&L, win and loss."
     >
-      <DailyPnlChart />
+      <DailyPnlChart framed={false} />
     </FeatureChrome>
   );
 };

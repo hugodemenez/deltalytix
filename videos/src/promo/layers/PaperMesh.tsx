@@ -2,12 +2,12 @@ import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { tokens } from "../tokens";
 
 /**
- * Drifting sage blobs. Keep this off any parent of chart axes.
+ * Soft ambient glow for type-only scenes. Keep this off any parent of chart axes.
  */
 export const PaperMesh: React.FC = () => {
   const frame = useCurrentFrame();
-  const driftA = Math.sin(frame / 48) * 36;
-  const driftB = Math.cos(frame / 62) * 28;
+  const driftA = Math.sin(frame / 48) * 28;
+  const driftB = Math.cos(frame / 62) * 22;
 
   return (
     <AbsoluteFill name="Paper mesh" style={{ overflow: "hidden" }}>
@@ -19,9 +19,9 @@ export const PaperMesh: React.FC = () => {
           borderRadius: "50%",
           top: -420,
           right: -280 + driftA,
-          background: `radial-gradient(circle, ${tokens.sageWell} 0%, transparent 68%)`,
+          background: `radial-gradient(circle, ${tokens.chartWin} 0%, transparent 68%)`,
           filter: "blur(8px)",
-          opacity: 0.9,
+          opacity: 0.08,
         }}
       />
       <div
@@ -32,9 +32,9 @@ export const PaperMesh: React.FC = () => {
           borderRadius: "50%",
           bottom: -360,
           left: -240 + driftB,
-          background: `radial-gradient(circle, ${tokens.positive}22 0%, transparent 70%)`,
+          background: `radial-gradient(circle, ${tokens.ink} 0%, transparent 70%)`,
           filter: "blur(12px)",
-          opacity: 0.85,
+          opacity: 0.04,
         }}
       />
     </AbsoluteFill>

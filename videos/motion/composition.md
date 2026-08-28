@@ -2,63 +2,51 @@
 
 All durations live in `videos/src/promo/timing.ts`. `videos/src/Root.tsx` and `Promo.tsx` must import those constants — do not hardcode frame counts in two places.
 
-FPS is **30**. Transitions are `slide({ direction: "from-bottom" })` with `linearTiming({ durationInFrames: SLIDE_FRAMES })` where `SLIDE_FRAMES = 8`.
+FPS is **30**. Transitions are `fade()` with `linearTiming({ durationInFrames: CUT_FRAMES })` where `CUT_FRAMES = 8`. No slide, no zoom.
 
-`TransitionSeries` overlaps the next scene by `SLIDE_FRAMES`, so:
+`TransitionSeries` overlaps the next scene by `CUT_FRAMES`, so:
 
 ```
-start(n+1) = start(n) + duration(n) - SLIDE_FRAMES
+start(n+1) = start(n) + duration(n) - CUT_FRAMES
 ```
 
 ## Frame table (current)
 
-| Scene | Duration | Absolute start | Absolute end (exclusive) | Notes |
-| --- | ---: | ---: | ---: | --- |
-| LogoReveal | 30 | 0 | 30 | Short sting |
-| Headline | 54 | 22 | 76 | Word stagger + highlight |
-| StatsFeature | 150 | 68 | 218 | Count-up through ~frame 78, then hold |
-| CalendarFeature | 180 | 210 | 390 | Cells cascade, then readable hold |
-| EquityFeature | 180 | 382 | 562 | Series clip 8→116 |
-| PnlFeature | 150 | 554 | 704 | Bars stagger, last bar ~frame 106 |
-| ProductWell | 96 | 696 | 792 | All widgets together, fast fill |
-| CallToAction | 42 | 784 | 826 | Button beat |
+| Scene | Duration | Absolute start | Notes |
+| --- | ---: | ---: | --- |
+| LogoReveal | 24 | 0 | Opacity + rise, no scale |
+| Headline | 42 | 16 | Word stagger, no Ken Burns |
+| StatsFeature | 66 | 50 | Count-up, unframed on canvas |
+| CalendarFeature | 72 | 108 | Cells cascade, unframed |
+| EquityFeature | 72 | 172 | Series clip 4→46 |
+| PnlFeature | 66 | 236 | Bars stagger 3 |
+| ProductWell | 84 | 294 | Hairline tiles, already filled |
+| CallToAction | 36 | 370 | White button on dark |
 
-Total `PROMO_DURATION_FRAMES` = 826 (27.5s).
+Total `PROMO_DURATION_FRAMES` = 406 (~13.5s).
 
 ## In/out recipes
 
-### Logo (short)
+### Logo / headline / CTA
 
-- Bezier 3-property entrance: opacity 0→8, translate 28px→0 over 12, scale 0.88→1 over 12 (`output: "perceptual-scale"`), then a slow push to 1.05.
-- Sage `PaperMesh` + light `FilmGrain`. **No spring.**
+- Opacity + translate only. **No scale.**
+- Dark canvas `#0F0F0F`. No mesh, no grain.
 
-### Headline (short)
+### Feature scenes (short)
 
-- Word-by-word reveal, 4-frame stagger, opacity + translate.
-- Highlight **every** with a Paper-positive block.
-- Slow push on the type stack. Mesh + grain continue.
+Shared chrome: caption on the canvas, widget in the remaining stage. **No outer well.**
 
-### Feature scenes (long, one widget each)
+- **Stats** — three numbers, no cards. Count through ~1.2s.
+- **Calendar** — `framed={false}`, week stagger 2, day stagger 0.6.
+- **Equity** — `framed={false}`, `EQUITY_DRAW_FRAMES` 42.
+- **Daily P&L** — `framed={false}`, bar stagger 3.
 
-Shared chrome: sage page, `#ddddd8` well, eyebrow + title, **no scale/translate on the well**.
+### Together
 
-- **Stats** — three large cards. Count bezier through ~2.5s, then hold.
-- **Calendar** — full stage. Week stagger 5, day stagger 1.5.
-- **Equity** — `EQUITY_DELAY_FRAMES` (8) then `EQUITY_DRAW_FRAMES` (108). Axes static.
-- **Daily P&L** — bars grow with `PNL_BAR_STAGGER_FRAMES` (6). Axes static.
-
-### Together (short)
-
-Same layout as the old single product scene. Charts use a fast fill (`drawFrames={20}`, bar stagger 2) so the assembled dashboard is readable for the hold.
-
-### CTA (short)
-
-- Bezier scale `0.94 → 1` over 10 frames.
-- Mesh + grain. Button is Paper action `#181A18`.
+Same layout, widgets use a 1px `#262626` hairline (dashboard card). Charts already filled.
 
 ## If you change length
 
 1. Edit `timing.ts` only.
 2. Recompute `PROMO_DURATION_FRAMES` (already derived).
 3. Confirm SFX `Sequence from={}` values still use the `*_START` constants.
-4. Re-render `Promo` and still each feature near mid-draw **and** after the hold.

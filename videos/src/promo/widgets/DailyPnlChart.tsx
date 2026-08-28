@@ -28,17 +28,19 @@ type DailyPnlChartProps = {
   readonly delay?: number;
   readonly barDrawFrames?: number;
   readonly staggerFrames?: number;
+  readonly framed?: boolean;
 };
 
 export const DailyPnlChart: React.FC<DailyPnlChartProps> = ({
   delay = PNL_DELAY_FRAMES,
   barDrawFrames = PNL_BAR_DRAW_FRAMES,
   staggerFrames = PNL_BAR_STAGGER_FRAMES,
+  framed = true,
 }) => {
   const frame = useCurrentFrame();
 
   return (
-    <ChartFrame name="Daily P&L chart" title="P&L Chart">
+    <ChartFrame name="Daily P&L chart" title="P&L Chart" framed={framed}>
       <Interactive.Div
         name="Daily P&L plot"
         style={{

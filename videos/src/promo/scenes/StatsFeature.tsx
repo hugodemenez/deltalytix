@@ -22,7 +22,7 @@ export const StatsFeature: React.FC = () => {
           name="Stats row"
           style={{
             width: "100%",
-            height: 480,
+            height: 420,
           }}
         >
           <StatWidgets size="feature" />

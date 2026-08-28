@@ -1,22 +1,22 @@
 export const FPS = 30;
-export const SLIDE_FRAMES = 8;
+export const CUT_FRAMES = 8;
 
 const after = (start: number, duration: number) =>
-  start + duration - SLIDE_FRAMES;
+  start + duration - CUT_FRAMES;
 
-/** Short brand beat — in by ~0.4s, then cut. */
-export const LOGO_FRAMES = 30;
+/** Short brand beat. */
+export const LOGO_FRAMES = 24;
 /** Copy slam + brief hold. */
-export const HEADLINE_FRAMES = 54;
-/** One widget per scene so each can draw and be read. */
-export const STATS_FRAMES = 150;
-export const CALENDAR_FRAMES = 180;
-export const EQUITY_FRAMES = 180;
-export const PNL_FRAMES = 150;
-/** Assembled dashboard after the feature beats. */
-export const TOGETHER_FRAMES = 96;
+export const HEADLINE_FRAMES = 42;
+/** Glance, draw, cut — not a long hold on one widget. */
+export const STATS_FRAMES = 66;
+export const CALENDAR_FRAMES = 72;
+export const EQUITY_FRAMES = 72;
+export const PNL_FRAMES = 66;
+/** Assembled dashboard is the payoff. */
+export const TOGETHER_FRAMES = 84;
 /** Short close. */
-export const CTA_FRAMES = 42;
+export const CTA_FRAMES = 36;
 
 export const HEADLINE_START = after(0, LOGO_FRAMES);
 export const STATS_START = after(HEADLINE_START, HEADLINE_FRAMES);
@@ -37,11 +37,11 @@ export const PROMO_DURATION_FRAMES =
   PNL_FRAMES +
   TOGETHER_FRAMES +
   CTA_FRAMES -
-  SLIDE_FRAMES * 7;
+  CUT_FRAMES * 7;
 
 /** Chart series only — axes never interpolate. */
-export const EQUITY_DELAY_FRAMES = 8;
-export const EQUITY_DRAW_FRAMES = 108;
-export const PNL_DELAY_FRAMES = 10;
-export const PNL_BAR_DRAW_FRAMES = 42;
-export const PNL_BAR_STAGGER_FRAMES = 6;
+export const EQUITY_DELAY_FRAMES = 4;
+export const EQUITY_DRAW_FRAMES = 42;
+export const PNL_DELAY_FRAMES = 4;
+export const PNL_BAR_DRAW_FRAMES = 18;
+export const PNL_BAR_STAGGER_FRAMES = 3;

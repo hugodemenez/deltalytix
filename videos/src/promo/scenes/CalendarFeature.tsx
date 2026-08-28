@@ -8,7 +8,7 @@ export const CalendarFeature: React.FC = () => {
       eyebrow="Daily performance"
       title="August, day by day."
     >
-      <CalendarWidget delay={6} weekStagger={5} dayStagger={1.5} />
+      <CalendarWidget delay={4} weekStagger={2} dayStagger={0.6} framed={false} />
     </FeatureChrome>
   );
 };

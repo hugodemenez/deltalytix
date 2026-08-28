@@ -6,12 +6,14 @@ type ChartFrameProps = {
   readonly name: string;
   readonly title: string;
   readonly children: ReactNode;
+  readonly framed?: boolean;
 };
 
 export const ChartFrame: React.FC<ChartFrameProps> = ({
   name,
   title,
   children,
+  framed = true,
 }) => {
   return (
     <Interactive.Div
@@ -22,33 +24,35 @@ export const ChartFrame: React.FC<ChartFrameProps> = ({
         width: "100%",
         height: "100%",
         overflow: "hidden",
-        backgroundColor: tokens.card,
-        borderRadius: 8,
-        border: `1px solid ${tokens.border}`,
+        backgroundColor: tokens.canvas,
+        borderRadius: framed ? 4 : 0,
+        border: framed ? `1px solid ${tokens.border}` : "none",
       }}
     >
-      <Interactive.Div
-        name={`${name} header`}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          height: 56,
-          paddingLeft: 20,
-          paddingRight: 20,
-          borderBottom: `1px solid ${tokens.border}`,
-          color: tokens.ink,
-          fontSize: 18,
-          fontWeight: 500,
-        }}
-      >
-        {title}
-      </Interactive.Div>
+      {framed ? (
+        <Interactive.Div
+          name={`${name} header`}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            height: 48,
+            paddingLeft: 20,
+            paddingRight: 20,
+            borderBottom: `1px solid ${tokens.border}`,
+            color: tokens.ink,
+            fontSize: 16,
+            fontWeight: 500,
+          }}
+        >
+          {title}
+        </Interactive.Div>
+      ) : null}
       <Interactive.Div
         name={`${name} body`}
         style={{
           flex: 1,
           minHeight: 0,
-          padding: 16,
+          padding: framed ? 16 : 0,
         }}
       >
         {children}

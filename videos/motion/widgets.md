@@ -1,6 +1,6 @@
 # Widgets and mock data
 
-The product tour is **feature-scoped**: stats, calendar, equity, and daily P&L each get a full well, then a short assembled dashboard. Do not import Next.js, `useI18n`, Recharts, or Tailwind into `videos/`.
+The product tour is **feature-scoped but short**: stats, calendar, equity, and daily P&L each glance on the dark canvas, then a hairline dashboard. Do not import Next.js, `useI18n`, Recharts, or Tailwind into `videos/`.
 
 ## Sources of truth
 
@@ -10,16 +10,17 @@ The product tour is **feature-scoped**: stats, calendar, equity, and daily P&L e
 | Daily calendar | `app/[locale]/(landing)/components/calendar-preview.tsx` `buildDemoCalendarData()` | `widgets/mock-data.ts`, `calendar-grid.ts`, `CalendarWidget.tsx` | Day/pnl/trades for the pinned month |
 | Equity | `performance-visualization-chart.tsx` `equityData` | `mock-data.ts` `equityData`, `EquityChart.tsx` | 24820 → 28140 |
 | Daily P&L | same file `dailyPnlData` | `mock-data.ts` `dailyPnlData`, `DailyPnlChart.tsx` | 10 bars, win/loss colors |
-| Chrome | `features.tsx` well `#ddddd8`, `ChartFrame` `rounded-md border bg-card` | `tokens.featureWell`, `ChartFrame.tsx` | Sage page `oklch(0.88 0.04 165)` |
+| Chrome | Dashboard `.dark` canvas `#0F0F0F` | `tokens.ts`, `FeatureChrome.tsx`, `ChartFrame.tsx` | No nested wells. Feature scenes `framed={false}`; together uses hairline `#262626` |
 
 Month is **pinned to August 2026** (`PROMO_YEAR` / `PROMO_MONTH` / `PROMO_TODAY_DAY = 27`) so renders stay deterministic. Do not use `new Date()` for the grid.
 
-Chart colors match CSS variables:
+Chart colors match dashboard **dark** CSS variables:
 
-- win `hsl(173 58% 39%)` → `#2A9D90`
-- loss `hsl(12 76% 61%)` → `#E76E50`
+- canvas `oklch(0.17 0 0)` → `#0F0F0F`
+- win `hsl(173 60% 55%)` → `#47D1C1`
+- loss `hsl(12 75% 65%)` → `#E87862`
 
-Calendar cells use Tailwind green-50/600 and red-50/600, matching the landing preview.
+Calendar cells use dark green/red washes (`rgba(..., 0.12)`), matching `dark:bg-green-900/20` / red-900/20.
 
 ## Axis stability (required)
 
@@ -36,7 +37,7 @@ Rules:
 - Bar heights `Math.round(...)`. Grid lines `shapeRendering="crispEdges"`.
 - SVG `width`/`height` attributes equal the viewBox (`680×360`) with `preserveAspectRatio="xMidYMid meet"`.
 
-If axes crawl again, search for `scale`, `spring`, or interpolate on a parent of `EquityAxes` / `DailyPnlAxes`. Stat cards may fade/translate; the feature well and chart columns must not.
+If axes crawl again, search for `scale`, `spring`, or interpolate on a parent of `EquityAxes` / `DailyPnlAxes`. Feature chrome must not scale.
 
 ## Titles
 

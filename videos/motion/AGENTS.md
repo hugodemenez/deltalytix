@@ -6,7 +6,7 @@ Read it before changing timing, widgets, or sound.
 | Doc | Use it for |
 | --- | --- |
 | [composition.md](./composition.md) | Scene graph, frame table, in/out recipes |
-| [intro.md](./intro.md) | Logo/headline motion craft (mesh, stagger, highlight) |
+| [intro.md](./intro.md) | Logo/headline motion (no zoom, dark canvas) |
 | [widgets.md](./widgets.md) | Landing mock data, chart axis rules, calendar pin |
 | [sound.md](./sound.md) | SFX libraries, cue map, sync rules |
 | [handoff.md](./handoff.md) | Commands, done vs next, PR notes |
@@ -14,14 +14,15 @@ Read it before changing timing, widgets, or sound.
 ## Non-negotiables
 
 1. **Axes never interpolate.** Grid lines and tick labels are a memoized static SVG. Only the series (equity clip, bar heights) may move.
-2. **Do not spring-scale a parent of charts.** CSS `scale` on the sage well is what made the axes crawl.
-3. **Text scenes are short; each widget is its own long scene.** Copy slams in under 0.5s. Stats, calendar, equity, and daily P&L each get several seconds to draw and hold, then a short assembled dashboard.
-4. **One local SFX per cut.** Use `staticFile()` copies in `videos/public/sfx/remotion/`. Do not fetch `https://remotion.media/...` at render time — those cues land late.
-5. **Widgets copy landing mock data**, not invented dashboard numbers. Sources: `app/[locale]/(landing)/components/calendar-preview.tsx` and `performance-visualization-chart.tsx`.
+2. **Do not scale a parent of charts.** No Ken Burns, no spring-scale, no CSS `scale` on the stage.
+3. **One dark surface.** Canvas and cards share `#0F0F0F`. Do not nest sage / gray / white wells. Feature scenes are unframed; the together beat uses hairline tiles.
+4. **Text scenes are short; widget scenes are glances, not holds.** Stats/calendar/equity/P&L draw in ~2s then cut. The assembled dashboard is the longest product beat.
+5. **One local SFX per cut.** Use `staticFile()` copies in `videos/public/sfx/remotion/`.
+6. **Widgets copy landing mock data**, not invented dashboard numbers.
 
 ## Stack
 
 - Remotion 4.0.518, Bun, Studio on port **3333**
 - Composition `Promo` in `videos/src/promo/Promo.tsx`
-- Tokens in `videos/src/promo/tokens.ts` (landing + Paper)
+- Tokens in `videos/src/promo/tokens.ts` (dashboard `.dark` + `CANVAS_THEME_COLOR.dark`)
 - Timing constants in `videos/src/promo/timing.ts` — Root, Promo, and SFX all import from here

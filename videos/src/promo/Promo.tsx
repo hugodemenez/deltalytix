@@ -1,5 +1,5 @@
 import { TransitionSeries, linearTiming } from "@remotion/transitions";
-import { slide } from "@remotion/transitions/slide";
+import { fade } from "@remotion/transitions/fade";
 import { AbsoluteFill } from "remotion";
 import { fontFamily } from "../fonts";
 import { PromoSfx } from "./PromoSfx";
@@ -11,21 +11,22 @@ import { LogoReveal } from "./scenes/LogoReveal";
 import { PnlFeature } from "./scenes/PnlFeature";
 import { ProductWell } from "./scenes/ProductWell";
 import { StatsFeature } from "./scenes/StatsFeature";
+import { tokens } from "./tokens";
 import {
   CALENDAR_FRAMES,
   CTA_FRAMES,
+  CUT_FRAMES,
   EQUITY_FRAMES,
   HEADLINE_FRAMES,
   LOGO_FRAMES,
   PNL_FRAMES,
-  SLIDE_FRAMES,
   STATS_FRAMES,
   TOGETHER_FRAMES,
 } from "./timing";
 
-const slideUp = {
-  presentation: slide({ direction: "from-bottom" as const }),
-  timing: linearTiming({ durationInFrames: SLIDE_FRAMES }),
+const fadeCut = {
+  presentation: fade(),
+  timing: linearTiming({ durationInFrames: CUT_FRAMES }),
 };
 
 export const Promo: React.FC = () => {
@@ -33,7 +34,7 @@ export const Promo: React.FC = () => {
     <AbsoluteFill
       name="Promo"
       style={{
-        backgroundColor: "#F7F7F4",
+        backgroundColor: tokens.canvas,
         fontFamily,
       }}
     >
@@ -42,31 +43,31 @@ export const Promo: React.FC = () => {
         <TransitionSeries.Sequence durationInFrames={LOGO_FRAMES} name="LogoReveal">
           <LogoReveal />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition {...slideUp} />
+        <TransitionSeries.Transition {...fadeCut} />
         <TransitionSeries.Sequence durationInFrames={HEADLINE_FRAMES} name="Headline">
           <Headline />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition {...slideUp} />
+        <TransitionSeries.Transition {...fadeCut} />
         <TransitionSeries.Sequence durationInFrames={STATS_FRAMES} name="StatsFeature">
           <StatsFeature />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition {...slideUp} />
+        <TransitionSeries.Transition {...fadeCut} />
         <TransitionSeries.Sequence durationInFrames={CALENDAR_FRAMES} name="CalendarFeature">
           <CalendarFeature />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition {...slideUp} />
+        <TransitionSeries.Transition {...fadeCut} />
         <TransitionSeries.Sequence durationInFrames={EQUITY_FRAMES} name="EquityFeature">
           <EquityFeature />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition {...slideUp} />
+        <TransitionSeries.Transition {...fadeCut} />
         <TransitionSeries.Sequence durationInFrames={PNL_FRAMES} name="PnlFeature">
           <PnlFeature />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition {...slideUp} />
+        <TransitionSeries.Transition {...fadeCut} />
         <TransitionSeries.Sequence durationInFrames={TOGETHER_FRAMES} name="ProductWell">
           <ProductWell />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition {...slideUp} />
+        <TransitionSeries.Transition {...fadeCut} />
         <TransitionSeries.Sequence durationInFrames={CTA_FRAMES} name="CallToAction">
           <CallToAction />
         </TransitionSeries.Sequence>

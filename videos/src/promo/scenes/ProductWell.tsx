@@ -23,8 +23,8 @@ export const ProductWell: React.FC = () => {
             position: "absolute",
             left: 0,
             top: 0,
-            width: 1792,
-            height: 168,
+            width: 1760,
+            height: 140,
           }}
         >
           <StatWidgets immediate />
@@ -33,9 +33,9 @@ export const ProductWell: React.FC = () => {
           style={{
             position: "absolute",
             left: 0,
-            top: 184,
-            width: 1020,
-            height: 644,
+            top: 156,
+            width: 1024,
+            height: 704,
           }}
         >
           <CalendarWidget delay={-40} />
@@ -43,10 +43,10 @@ export const ProductWell: React.FC = () => {
         <div
           style={{
             position: "absolute",
-            left: 1036,
-            top: 184,
-            width: 756,
-            height: 314,
+            left: 1040,
+            top: 156,
+            width: 720,
+            height: 344,
           }}
         >
           <EquityChart delay={-20} drawFrames={1} />
@@ -54,10 +54,10 @@ export const ProductWell: React.FC = () => {
         <div
           style={{
             position: "absolute",
-            left: 1036,
-            top: 514,
-            width: 756,
-            height: 314,
+            left: 1040,
+            top: 516,
+            width: 720,
+            height: 344,
           }}
         >
           <DailyPnlChart delay={-40} barDrawFrames={1} staggerFrames={0} />

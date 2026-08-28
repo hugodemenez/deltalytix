@@ -1,19 +1,21 @@
-/** Landing / Paper tokens used by the promo widgets. */
+/**
+ * Dashboard dark tokens (`app/globals.css` `.dark` + `CANVAS_THEME_COLOR.dark`).
+ * Canvas and card are the same surface so widgets are not nested wells.
+ */
 export const tokens = {
-  canvas: "#F7F7F4",
-  ink: "#171917",
-  muted: "#686D67",
-  positive: "#3E7550",
-  action: "#181A18",
-  sageWell: "oklch(0.88 0.04 165)",
-  featureWell: "#ddddd8",
-  card: "#FFFFFF",
-  border: "#E2E5DF",
-  today: "#3B82F6",
-  calendarWinBg: "#F0FDF4",
-  calendarWin: "#16A34A",
-  calendarLossBg: "#FEF2F2",
-  calendarLoss: "#DC2626",
-  chartWin: "#2A9D90",
-  chartLoss: "#E76E50",
+  canvas: "#0F0F0F",
+  ink: "#FAFAFA",
+  muted: "#A3A3A3",
+  positive: "#47D1C1",
+  action: "#FAFAFA",
+  actionInk: "#171717",
+  card: "#0F0F0F",
+  border: "#262626",
+  today: "#5BA3F8",
+  calendarWinBg: "rgba(74, 222, 128, 0.12)",
+  calendarWin: "#4ADE80",
+  calendarLossBg: "rgba(248, 113, 113, 0.12)",
+  calendarLoss: "#F87171",
+  chartWin: "#47D1C1",
+  chartLoss: "#E87862",
 } as const;

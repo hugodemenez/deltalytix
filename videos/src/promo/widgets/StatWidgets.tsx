@@ -16,7 +16,7 @@ export const StatWidgets: React.FC<StatWidgetsProps> = ({
 }) => {
   const frame = useCurrentFrame();
   const feature = size === "feature";
-  const countEnd = feature ? 78 : 44;
+  const countEnd = feature ? 36 : 32;
   const pnl = immediate
     ? MONTHLY_PNL
     : interpolate(frame, [4, countEnd], [0, MONTHLY_PNL], {

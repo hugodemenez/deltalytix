@@ -7,9 +7,9 @@ import {
 } from "remotion";
 import { fontFamily } from "../../fonts";
 import { LogoMark } from "../LogoMark";
-import { FilmGrain } from "../layers/FilmGrain";
-import { PaperMesh } from "../layers/PaperMesh";
 import { tokens } from "../tokens";
+
+const BEZIER = Easing.bezier(0.16, 1, 0.3, 1);
 
 export const CallToAction: React.FC = () => {
   const frame = useCurrentFrame();
@@ -22,7 +22,6 @@ export const CallToAction: React.FC = () => {
         fontFamily,
       }}
     >
-      <PaperMesh />
       <Interactive.Div
         name="CTA stack"
         style={{
@@ -35,31 +34,25 @@ export const CallToAction: React.FC = () => {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: 28,
-          scale: interpolate(frame, [0, 10], [0.94, 1], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-            easing: Easing.bezier(0.16, 1, 0.3, 1),
-            output: "perceptual-scale",
-          }),
+          gap: 24,
           opacity: interpolate(frame, [0, 8], [0, 1], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
-            easing: Easing.bezier(0.16, 1, 0.3, 1),
+            easing: BEZIER,
           }),
-          translate: interpolate(frame, [0, 10], ["0px 22px", "0px 0px"], {
+          translate: interpolate(frame, [0, 10], ["0px 16px", "0px 0px"], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
-            easing: Easing.bezier(0.16, 1, 0.3, 1),
+            easing: BEZIER,
           }),
         }}
       >
-        <LogoMark size={96} color={tokens.ink} />
+        <LogoMark size={88} color={tokens.ink} />
         <Interactive.Div
           name="CTA title"
           style={{
             color: tokens.ink,
-            fontSize: 88,
+            fontSize: 80,
             fontWeight: 300,
             letterSpacing: "-0.06em",
             lineHeight: 1,
@@ -72,11 +65,11 @@ export const CallToAction: React.FC = () => {
           style={{
             marginTop: 8,
             backgroundColor: tokens.action,
-            color: tokens.card,
-            fontSize: 28,
+            color: tokens.actionInk,
+            fontSize: 26,
             fontWeight: 500,
             letterSpacing: "-0.02em",
-            padding: "20px 36px",
+            padding: "18px 32px",
             borderRadius: 4,
             display: "flex",
             alignItems: "center",
@@ -90,19 +83,18 @@ export const CallToAction: React.FC = () => {
           name="CTA footnote"
           style={{
             color: tokens.muted,
-            fontSize: 24,
+            fontSize: 22,
             fontWeight: 400,
-            opacity: interpolate(frame, [8, 18], [0, 1], {
+            opacity: interpolate(frame, [8, 16], [0, 1], {
               extrapolateLeft: "clamp",
               extrapolateRight: "clamp",
-              easing: Easing.bezier(0.16, 1, 0.3, 1),
+              easing: BEZIER,
             }),
           }}
         >
           Open source. Hosted or self-hosted.
         </Interactive.Div>
       </Interactive.Div>
-      <FilmGrain />
     </AbsoluteFill>
   );
 };

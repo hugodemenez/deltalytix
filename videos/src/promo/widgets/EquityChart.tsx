@@ -21,11 +21,13 @@ import {
 type EquityChartProps = {
   readonly delay?: number;
   readonly drawFrames?: number;
+  readonly framed?: boolean;
 };
 
 export const EquityChart: React.FC<EquityChartProps> = ({
   delay = EQUITY_DELAY_FRAMES,
   drawFrames = EQUITY_DRAW_FRAMES,
+  framed = true,
 }) => {
   const frame = useCurrentFrame();
   const progress = interpolate(
@@ -41,7 +43,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
   const hiddenRight = Math.round((1 - progress) * 10000) / 100;
 
   return (
-    <ChartFrame name="Equity chart" title="Equity Chart">
+    <ChartFrame name="Equity chart" title="Equity Chart" framed={framed}>
       <Interactive.Div
         name="Equity plot"
         style={{
@@ -82,7 +84,7 @@ export const EquityChart: React.FC<EquityChartProps> = ({
           >
             <defs>
               <linearGradient id="promo-equity-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={tokens.chartWin} stopOpacity="0.35" />
+                <stop offset="0%" stopColor={tokens.chartWin} stopOpacity="0.28" />
                 <stop
                   offset="100%"
                   stopColor={tokens.chartWin}

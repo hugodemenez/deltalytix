@@ -8,7 +8,7 @@ export const EquityFeature: React.FC = () => {
       eyebrow="Track your performance"
       title="Equity across the month."
     >
-      <EquityChart />
+      <EquityChart framed={false} />
     </FeatureChrome>
   );
 };

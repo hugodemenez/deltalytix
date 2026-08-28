@@ -53,7 +53,7 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
     ? 0
     : interpolate(
         frame,
-        [delay + 8, delay + (feature ? 64 : 36)],
+        [delay + 6, delay + (feature ? 36 : 28)],
         [800, 0],
         {
           extrapolateLeft: "clamp",
@@ -71,11 +71,11 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
         justifyContent: "center",
         width: "100%",
         height: "100%",
-        backgroundColor: tokens.card,
-        borderRadius: 8,
-        border: `1px solid ${tokens.border}`,
-        paddingLeft: feature ? 40 : 28,
-        paddingRight: feature ? 40 : 28,
+        backgroundColor: feature ? "transparent" : tokens.canvas,
+        borderRadius: feature ? 0 : 4,
+        border: feature ? "none" : `1px solid ${tokens.border}`,
+        paddingLeft: feature ? 8 : 24,
+        paddingRight: feature ? 8 : 24,
         fontFamily,
         opacity: immediate
           ? 1
@@ -89,7 +89,7 @@ export const StatWidget: React.FC<StatWidgetProps> = ({
           : interpolate(
               frame,
               [delay, delay + 12],
-              ["0px 16px", "0px 0px"],
+              ["0px 10px", "0px 0px"],
               {
                 extrapolateLeft: "clamp",
                 extrapolateRight: "clamp",

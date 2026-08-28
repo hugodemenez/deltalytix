@@ -16,12 +16,14 @@ type CalendarWidgetProps = {
   readonly delay?: number;
   readonly weekStagger?: number;
   readonly dayStagger?: number;
+  readonly framed?: boolean;
 };
 
 export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
   delay = 0,
   weekStagger = 1,
   dayStagger = 0.35,
+  framed = true,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -34,8 +36,9 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
         flexDirection: "column",
         width: "100%",
         height: "100%",
-        backgroundColor: tokens.card,
-        borderRadius: 8,
+        backgroundColor: framed ? tokens.canvas : "transparent",
+        borderRadius: framed ? 4 : 0,
+        border: framed ? `1px solid ${tokens.border}` : "none",
         overflow: "hidden",
         fontFamily,
         opacity: interpolate(frame, [delay, delay + 0.2 * fps], [0, 1], {
@@ -54,7 +57,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
           height: 56,
           paddingLeft: 20,
           paddingRight: 20,
-          borderBottom: `1px solid ${tokens.border}`,
+          borderBottom: framed ? `1px solid ${tokens.border}` : "none",
         }}
       >
         <Interactive.Div
