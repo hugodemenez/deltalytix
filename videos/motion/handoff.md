@@ -2,7 +2,7 @@
 
 ## What this promo is
 
-A 1920×1080, 30fps dark dashboard spot: logo → headline → short feature glances (stats, calendar, equity, daily P&L, AI chat, prop-firm accounts, connections) → assembled dashboard → Get Started. ~21.3s. Tokens from `.dark` + `CANVAS_THEME_COLOR.dark` (`#0F0F0F`). Isolated app in `videos/` (Bun, Remotion 4.0.518). Studio: `cd videos && bun run dev` → http://localhost:3333
+A 1920×1080, 30fps dark dashboard spot: logo → headline → short feature glances (stats, calendar, equity, daily P&L, AI chat, prop-firm accounts, connections) → assembled dashboard → Get Started. ~21.7s. Tokens from `.dark` + `CANVAS_THEME_COLOR.dark` (`#0F0F0F`). Isolated app in `videos/` (Bun, Remotion 4.0.518). Studio: `cd videos && bun run dev` → http://localhost:3333
 
 PRs still target **`beta`**, not `main`.
 

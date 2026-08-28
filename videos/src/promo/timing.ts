@@ -13,8 +13,8 @@ export const STATS_FRAMES = 66;
 export const CALENDAR_FRAMES = 72;
 export const EQUITY_FRAMES = 72;
 export const PNL_FRAMES = 66;
-/** Compose → send → think → stream (matches chat-feature stages). */
-export const CHAT_FRAMES = 96;
+/** Compose → send → think → stream, then a short hold on the full reply. */
+export const CHAT_FRAMES = 108;
 /** Three account cards from the dashboard Accounts widget. */
 export const PROP_FRAMES = 72;
 /** Connections page chrome + every direct-sync service. */
