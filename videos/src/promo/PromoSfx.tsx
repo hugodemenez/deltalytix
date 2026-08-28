@@ -1,12 +1,15 @@
 import { Audio } from "@remotion/media";
 import { Sequence } from "remotion";
-import { remotionSfx } from "./sfx";
+import { kenneySfx, remotionSfx } from "./sfx";
 import {
   CALENDAR_START,
+  CHAT_START,
+  CONNECTIONS_START,
   CTA_START,
   EQUITY_START,
   HEADLINE_START,
   PNL_START,
+  PROP_START,
   STATS_START,
   TOGETHER_START,
 } from "./timing";
@@ -36,6 +39,15 @@ export const PromoSfx: React.FC = () => {
       </Sequence>
       <Sequence from={PNL_START} durationInFrames={30} name="SFX pnl">
         <Audio src={remotionSfx.shutterModern} volume={0.8} />
+      </Sequence>
+      <Sequence from={CHAT_START} durationInFrames={30} name="SFX chat">
+        <Audio src={kenneySfx.confirmation} volume={0.85} />
+      </Sequence>
+      <Sequence from={PROP_START} durationInFrames={30} name="SFX prop firm">
+        <Audio src={kenneySfx.open} volume={0.85} />
+      </Sequence>
+      <Sequence from={CONNECTIONS_START} durationInFrames={30} name="SFX connections">
+        <Audio src={kenneySfx.select} volume={0.85} />
       </Sequence>
       <Sequence from={TOGETHER_START} durationInFrames={30} name="SFX together">
         <Audio src={remotionSfx.pageTurn} volume={0.75} />

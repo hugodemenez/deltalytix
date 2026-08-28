@@ -18,4 +18,12 @@ export const tokens = {
   calendarLoss: "#F87171",
   chartWin: "#47D1C1",
   chartLoss: "#E87862",
+  mutedFill: "#262626",
+  line: "rgba(255, 255, 255, 0.1)",
+  subtle: "rgba(255, 255, 255, 0.45)",
+  destructive: "#F87171",
+  progress: "#47A4EB",
+  balance: "#2563EB",
+  drawdownLine: "#DC2626",
+  targetLine: "#16A34A",
 } as const;

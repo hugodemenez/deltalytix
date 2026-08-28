@@ -2,7 +2,7 @@
 
 ## What this promo is
 
-A 1920×1080, 30fps dark dashboard spot: logo → headline → short feature glances (stats, calendar, equity, daily P&L) → assembled dashboard → Get Started. ~13.5s. Tokens from `.dark` + `CANVAS_THEME_COLOR.dark` (`#0F0F0F`). Isolated app in `videos/` (Bun, Remotion 4.0.518). Studio: `cd videos && bun run dev` → http://localhost:3333
+A 1920×1080, 30fps dark dashboard spot: logo → headline → short feature glances (stats, calendar, equity, daily P&L, AI chat, prop-firm accounts, connections) → assembled dashboard → Get Started. ~21.3s. Tokens from `.dark` + `CANVAS_THEME_COLOR.dark` (`#0F0F0F`). Isolated app in `videos/` (Bun, Remotion 4.0.518). Studio: `cd videos && bun run dev` → http://localhost:3333
 
 PRs still target **`beta`**, not `main`.
 
@@ -10,10 +10,11 @@ PRs still target **`beta`**, not `main`.
 
 - Official Remotion skills vendored under `agents/skills/remotion-*`.
 - Promo composition with `TransitionSeries` **fades** (no slide, no zoom).
-- Widgets driven by landing mock data, August 2026 pinned.
+- Widgets driven by landing / dashboard copy and mock data, August 2026 pinned.
 - Feature scenes unframed on one canvas; together beat uses hairline tiles.
 - Static memoized chart axes; series-only animation.
-- Local Remotion WAV SFX.
+- AI chat, prop-firm `AccountCard`, and Connections page rebuilt from product UI (not invented chrome).
+- Local Remotion WAV + Kenney OGG SFX.
 
 ## Commands
 
@@ -42,8 +43,9 @@ Output is gitignored (`videos/out/`).
 | Change | File |
 | --- | --- |
 | Scene lengths | `videos/src/promo/timing.ts` |
-| Copy | `scenes/Headline.tsx`, `scenes/CallToAction.tsx` |
+| Copy | `scenes/Headline.tsx`, `scenes/CallToAction.tsx`, `widgets/product-copy.ts` |
 | Widget data | `widgets/mock-data.ts` (keep in sync with landing) |
+| Chat / accounts / connections | `widgets/ChatWidget.tsx`, `PropFirmCard.tsx`, `ConnectionsWidget.tsx` |
 | Stat cards | `widgets/StatWidget.tsx`, `StatWidgets.tsx` |
 | Axis math | `widgets/chart-geometry.tsx` |
 | SFX | `PromoSfx.tsx` + `sfx.ts` |
@@ -51,4 +53,4 @@ Output is gitignored (`videos/out/`).
 
 ## Review the picture, not just Studio
 
-Stills at a feature mid-draw can look empty while bars are still growing — that is intended. Check a still after each widget’s draw window, the assembled dashboard (~together start + 20), and the last 1s for the CTA.
+Stills at a feature mid-draw can look empty while bars are still growing — that is intended. Check a still after each widget’s draw window, chat after the stream (~frame 380), the three prop cards (~410), all six connection rows (~500), the assembled dashboard (~together start + 20), and the last 1s for the CTA.

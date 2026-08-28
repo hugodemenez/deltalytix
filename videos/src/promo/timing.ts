@@ -13,6 +13,12 @@ export const STATS_FRAMES = 66;
 export const CALENDAR_FRAMES = 72;
 export const EQUITY_FRAMES = 72;
 export const PNL_FRAMES = 66;
+/** Compose → send → think → stream (matches chat-feature stages). */
+export const CHAT_FRAMES = 96;
+/** Three account cards from the dashboard Accounts widget. */
+export const PROP_FRAMES = 72;
+/** Connections page chrome + every direct-sync service. */
+export const CONNECTIONS_FRAMES = 90;
 /** Assembled dashboard is the payoff. */
 export const TOGETHER_FRAMES = 84;
 /** Short close. */
@@ -23,7 +29,10 @@ export const STATS_START = after(HEADLINE_START, HEADLINE_FRAMES);
 export const CALENDAR_START = after(STATS_START, STATS_FRAMES);
 export const EQUITY_START = after(CALENDAR_START, CALENDAR_FRAMES);
 export const PNL_START = after(EQUITY_START, EQUITY_FRAMES);
-export const TOGETHER_START = after(PNL_START, PNL_FRAMES);
+export const CHAT_START = after(PNL_START, PNL_FRAMES);
+export const PROP_START = after(CHAT_START, CHAT_FRAMES);
+export const CONNECTIONS_START = after(PROP_START, PROP_FRAMES);
+export const TOGETHER_START = after(CONNECTIONS_START, CONNECTIONS_FRAMES);
 export const CTA_START = after(TOGETHER_START, TOGETHER_FRAMES);
 
 export const PRODUCT_START = STATS_START;
@@ -35,9 +44,12 @@ export const PROMO_DURATION_FRAMES =
   CALENDAR_FRAMES +
   EQUITY_FRAMES +
   PNL_FRAMES +
+  CHAT_FRAMES +
+  PROP_FRAMES +
+  CONNECTIONS_FRAMES +
   TOGETHER_FRAMES +
   CTA_FRAMES -
-  CUT_FRAMES * 7;
+  CUT_FRAMES * 10;
 
 /** Chart series only — axes never interpolate. */
 export const EQUITY_DELAY_FRAMES = 4;

@@ -20,10 +20,13 @@ start(n+1) = start(n) + duration(n) - CUT_FRAMES
 | CalendarFeature | 72 | 108 | Cells cascade, unframed |
 | EquityFeature | 72 | 172 | Series clip 4→46 |
 | PnlFeature | 66 | 236 | Bars stagger 3 |
-| ProductWell | 84 | 294 | Hairline tiles, already filled |
-| CallToAction | 36 | 370 | White button on dark |
+| ChatFeature | 96 | 294 | Landing chat-feature stages |
+| PropFirmFeature | 72 | 382 | Three AccountCard layouts |
+| ConnectionsFeature | 90 | 446 | Page chrome + all six syncs |
+| ProductWell | 84 | 528 | Hairline tiles, already filled |
+| CallToAction | 36 | 604 | White button on dark |
 
-Total `PROMO_DURATION_FRAMES` = 406 (~13.5s).
+Total `PROMO_DURATION_FRAMES` = 640 (~21.3s).
 
 ## In/out recipes
 
@@ -40,6 +43,9 @@ Shared chrome: caption on the canvas, widget in the remaining stage. **No outer 
 - **Calendar** — `framed={false}`, week stagger 2, day stagger 0.6.
 - **Equity** — `framed={false}`, `EQUITY_DRAW_FRAMES` 42.
 - **Daily P&L** — `framed={false}`, bar stagger 3.
+- **Chat** — landing `chat-feature.tsx` chrome (header, thread, composer). Stages: compose 0–24, question 24–32, think 32–52, stream 52–84, insight hold.
+- **Prop firm** — dashboard `account-card.tsx` × three templates from `config.ts` (Apex 50K, TopStep 50K, Earn2Trade TCP50). Series clip only; target/drawdown dashes stay static.
+- **Connections** — `connections-page-chrome.tsx` header + every `SERVICE_SECTIONS` row + file-import chips.
 
 ### Together
 
