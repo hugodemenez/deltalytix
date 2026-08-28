@@ -24,14 +24,18 @@ function translateCalendarMonth(
 /** Overlay that keeps the native <select> clickable without painting over the label. */
 export const nativeCalendarSelectOverlayClassName = cn(
   "absolute inset-0 z-10 size-full cursor-pointer text-base",
-  // Edge still paints a system <select> over the custom label (blank until
-  // hover in dark mode). Strip native chrome at rest, hover, and focus.
+  // Closed overlay: hide native chrome so the custom label shows (Edge dark
+  // mode otherwise paints a blank system control). Open list: keep option
+  // text opaque — transparent select color blanks the dropdown in Chromium.
   "appearance-none border-0 bg-transparent p-0 shadow-none outline-hidden",
-  "text-transparent [-webkit-text-fill-color:transparent]",
   "opacity-0! hover:opacity-0! focus:opacity-0!",
-  "hover:bg-transparent! focus:bg-transparent! hover:text-transparent! focus:text-transparent!",
+  "hover:bg-transparent! focus:bg-transparent!",
+  "[&_option]:bg-white [&_option]:text-[#171717] [&_option]:[-webkit-text-fill-color:#171717]",
   "[forced-color-adjust:none]",
 )
+
+const nativeCalendarOptionClassName =
+  "bg-white text-[#171717] [-webkit-text-fill-color:#171717]"
 
 /** Same chrome as navbar view / filter / account controls. */
 const navbarButtonClassName = cn(
@@ -162,7 +166,7 @@ export function CalendarMonthYearPicker({
           }}
         >
           {CALENDAR_MONTH_KEYS.map((key, index) => (
-            <option key={key} value={index}>
+            <option key={key} value={index} className={nativeCalendarOptionClassName}>
               {translateCalendarMonth(t, index)}
             </option>
           ))}
@@ -187,7 +191,11 @@ export function CalendarMonthYearPicker({
         }}
       >
         {years.map((optionYear) => (
-          <option key={optionYear} value={optionYear}>
+          <option
+            key={optionYear}
+            value={optionYear}
+            className={nativeCalendarOptionClassName}
+          >
             {optionYear}
           </option>
         ))}
