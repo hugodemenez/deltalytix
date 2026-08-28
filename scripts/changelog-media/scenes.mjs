@@ -356,7 +356,7 @@ async function revealPickerOption(page, name) {
   await page.waitForTimeout(600)
 }
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form' | 'compare-hub-journals-table' | 'compare-tradezella-what-you-get' | 'connections-import-picker-deepcharts' | 'dashboard-strip-standalone-actions' | 'dashboard-strip-standalone-delete-confirm' | 'public-404-agent-resources'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form' | 'compare-hub-journals-table' | 'compare-tradezella-what-you-get' | 'connections-import-picker-deepcharts' | 'dashboard-strip-standalone-actions' | 'dashboard-strip-standalone-delete-confirm' | 'public-404-agent-resources' | 'calendar-header-month-year-news' | 'dashboard-centered-view-tabs'} ChangelogScene */
 
 /**
  * @param {import('playwright-core').Browser} browser
@@ -1868,6 +1868,90 @@ export async function captureScene(browser, options) {
       })
       await cancel.click()
       await dialog.waitFor({ state: 'hidden', timeout: 10_000 })
+      await page.close()
+      return
+    }
+
+    case 'calendar-header-month-year-news': {
+      // Desktop Widgets view, daily calendar header only — not the day grid.
+      // Viewport 1440x900. Route: /{locale}/dashboard.
+      // Interaction: wait for dashboard, ensure Widgets, scroll the picker
+      // into view. Does not open Month, Year, or News (closed chips are the
+      // claim; native <select> lists are OS chrome).
+      // Locator: [data-slot="calendar-month-year-picker"] with month + year
+      // selects visible, plus [data-slot="calendar-news-filter"], clipped
+      // via the wrapping [data-slot="card-header"].
+      // Expected: prev / month chip / next / year chip / monthly total /
+      // News (newspaper icon + News label). EN month name + News; FR month
+      // name + News.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      await clickTab(page, LABELS[locale].widgetsTab)
+      const picker = page.locator('[data-slot="calendar-month-year-picker"]')
+      await picker.waitFor({ timeout: 30_000 })
+      await page.locator('[data-slot="calendar-month-select"]').waitFor({
+        timeout: 15_000,
+      })
+      await page.locator('[data-slot="calendar-year-select"]').waitFor({
+        timeout: 15_000,
+      })
+      const news = page.locator('[data-slot="calendar-news-filter"]')
+      await news.waitFor({ timeout: 15_000 })
+      const header = picker.locator(
+        'xpath=ancestor::*[@data-slot="card-header"][1]',
+      )
+      await header.scrollIntoViewIfNeeded()
+      await waitForNoVisibleToasts(page)
+      await page.waitForTimeout(600)
+      await assertNoDevIssues(page, `${locale} calendar header month year news`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [header], 8),
+      })
+      await page.close()
+      return
+    }
+
+    case 'dashboard-centered-view-tabs': {
+      // Desktop home navbar at 1440 so md tabs paint (hidden below md).
+      // Viewport 1440x900. Route: /{locale}/dashboard (home chrome only).
+      // Interaction: wait for dashboard, confirm Widgets selected, settle
+      // the navbar subscription badge. Does not open the phone dropdown.
+      // Locator: sticky <nav> (h-14). Expected: logo + filters on the left,
+      // centered tablist Widgets | Table | Accounts (FR: Widgets | Tableau |
+      // Comptes) with Widgets as the raised white pill, share + account on
+      // the right.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      const tablist = page.getByRole('tablist').first()
+      await tablist.waitFor({ timeout: 15_000 })
+      const widgets = tablist.getByRole('tab', {
+        name: LABELS[locale].widgetsTab,
+      })
+      await widgets.waitFor({ timeout: 10_000 })
+      if ((await widgets.getAttribute('aria-selected')) !== 'true') {
+        await widgets.click()
+        await page.waitForTimeout(400)
+      }
+      await tablist
+        .getByRole('tab', { name: LABELS[locale].tableTab })
+        .waitFor({ timeout: 10_000 })
+      await tablist
+        .getByRole('tab', { name: LABELS[locale].accountsTab })
+        .waitFor({ timeout: 10_000 })
+      await waitForNavbarBadgeSettled(page)
+      await waitForNoVisibleToasts(page)
+      const nav = page.locator('nav').first()
+      await page.waitForTimeout(400)
+      await assertNoDevIssues(page, `${locale} dashboard centered view tabs`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [nav], 12),
+      })
       await page.close()
       return
     }
