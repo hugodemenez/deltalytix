@@ -20,16 +20,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useState, useEffect, useRef, type ReactNode } from "react"
+import { WIDGET_TOOLBAR_PILL_CELL } from "./widget-toolbar-classes"
 
-const PILL_CELL =
-  "inline-flex h-8 items-center justify-center gap-1.5 rounded-none px-2.5 text-sm font-medium text-[#171717] hover:bg-transparent"
 const STRIP_CELL =
-  "inline-flex size-8 items-center justify-center rounded-full text-[#171717] hover:bg-black/5"
+  "inline-flex size-8 items-center justify-center rounded-full text-[#171717] transition-colors hover:bg-black/5 hover:text-[#171717] dark:text-foreground dark:hover:bg-white/10 dark:hover:text-foreground"
 const STRIP_DELETE_CELL =
-  "inline-flex size-8 items-center justify-center rounded-full text-[#DC2626] hover:bg-black/5 hover:text-[#DC2626]"
+  "inline-flex size-8 items-center justify-center rounded-full text-[#DC2626] transition-colors hover:bg-black/5 hover:text-[#DC2626] dark:hover:bg-white/10"
 
 function PillDivider() {
-  return <span aria-hidden className="h-4 w-px shrink-0 bg-[#E5E5E5]" />
+  return <span aria-hidden className="h-4 w-px shrink-0 bg-[#E5E5E5] dark:bg-border" />
 }
 
 interface ToolbarProps {
@@ -153,7 +152,7 @@ export function Toolbar({
         {isCustomizing ? (
           <div
             role="group"
-            className="absolute bottom-full left-2 mb-2 flex items-center rounded-full bg-[#F5F5F5] p-0.5"
+            className="absolute bottom-full left-2 mb-2 flex items-center rounded-full bg-[#F5F5F5] p-0.5 dark:bg-muted"
           >
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -208,12 +207,12 @@ export function Toolbar({
           </div>
         ) : null}
 
-        <div className="flex max-w-full items-center rounded-full border border-[#E5E5E5] bg-white px-2 py-[6px] shadow-none">
+        <div className="flex max-w-full items-center rounded-full border border-[#E5E5E5] bg-white px-2 py-[6px] shadow-none dark:border-border dark:bg-background">
           {isCustomizing ? (
             <Button
               onClick={onEditToggle}
               aria-label={t('widgets.done')}
-              className="h-8 rounded-full bg-[#171717] px-3.5 text-sm font-medium text-white shadow-none hover:bg-[#171717]/90"
+              className="h-8 rounded-full bg-[#171717] px-3.5 text-sm font-medium text-white shadow-none hover:bg-[#171717]/90 dark:bg-foreground dark:text-background dark:hover:bg-foreground/90"
             >
               {t('widgets.done')}
             </Button>
@@ -222,7 +221,7 @@ export function Toolbar({
               variant="ghost"
               onClick={onEditToggle}
               aria-label={t('widgets.edit')}
-              className={PILL_CELL}
+              className={WIDGET_TOOLBAR_PILL_CELL}
             >
               <Pencil className="h-4 w-4 shrink-0" strokeWidth={1.75} />
               {t('widgets.edit')}
