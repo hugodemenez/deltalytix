@@ -18,6 +18,10 @@ import {
   placedTypesForViewport,
   type AddWidgetCategory,
 } from './add-widget-catalog'
+import {
+  WIDGET_TOOLBAR_PILL_CELL,
+  WIDGET_TOOLBAR_PILL_ICON_CELL,
+} from './widget-toolbar-classes'
 
 const CATEGORY_LABEL_KEY = {
   other: 'widgets.categories.other',
@@ -246,8 +250,8 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
             className={cn(
               appearance === 'pill'
                 ? compact
-                  ? 'inline-flex size-8 items-center justify-center rounded-none text-[#171717] hover:bg-transparent'
-                  : 'inline-flex h-8 items-center justify-center gap-1.5 rounded-none px-2.5 text-sm font-medium text-[#171717] hover:bg-transparent'
+                  ? WIDGET_TOOLBAR_PILL_ICON_CELL
+                  : WIDGET_TOOLBAR_PILL_CELL
                 : 'flex shrink-0 items-center justify-center rounded-full transition-transform active:scale-95',
               appearance !== 'pill' && (compact ? 'h-10 w-10 p-0' : 'h-10 gap-2 px-3')
             )}
