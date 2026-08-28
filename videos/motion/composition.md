@@ -17,24 +17,24 @@ start(n+1) = start(n) + duration(n) - CUT_FRAMES
 | LogoReveal | 24 | 0 | Opacity + rise, no scale |
 | Headline | 42 | 16 | Word stagger, no Ken Burns |
 | StatsFeature | 66 | 50 | Count-up, unframed on canvas |
-| DashboardScroll | 438 | 108 | Overview draw, then page scrolls |
-| CallToAction | 36 | 538 | White button on dark |
+| DashboardScroll | 483 | 108 | Overview draw, then page scrolls |
+| CallToAction | 36 | 583 | White button on dark |
 
-Total `PROMO_DURATION_FRAMES` = 574 (~19.1s).
+Total `PROMO_DURATION_FRAMES` = 619 (~20.6s).
 
 ### Dashboard camera (relative to DashboardScroll)
 
-Pixel-rounded `translateY`. No scale. Each page is `DASH_PAGE_PX` (1080).
+Pixel-rounded `translateY` with `Easing.inOut(Easing.cubic)`. No scale. Each page is `DASH_PAGE_PX` (1080). Scrolls last **45 frames** so the pan reads on camera.
 
 | Beat | Local frame | Scroll Y | What plays |
 | --- | ---: | ---: | --- |
 | Overview hold | 0–78 | 0 | Calendar cascade, equity clip, P&L bars |
-| Scroll to chat | 78–108 | 0→1080 | Whoosh |
-| Chat hold | 108–216 | 1080 | Compose → stream (startFrame `DASH_CHAT_AT`) |
-| Scroll to accounts | 216–246 | 1080→2160 | Whoosh |
-| Accounts hold | 246–318 | 2160 | Three AccountCards |
-| Scroll to connections | 318–348 | 2160→3240 | Switch |
-| Connections hold | 348–438 | 3240 | Six services + file chips |
+| Scroll to chat | 78–123 | 0→1080 | Cubic in-out pan |
+| Chat hold | 123–231 | 1080 | Compose → stream (starts as the pan begins) |
+| Scroll to accounts | 231–276 | 1080→2160 | Cubic in-out pan |
+| Accounts hold | 276–348 | 2160 | Three AccountCards |
+| Scroll to connections | 348–393 | 2160→3240 | Cubic in-out pan |
+| Connections hold | 393–483 | 3240 | Six services + file chips |
 
 ## In/out recipes
 

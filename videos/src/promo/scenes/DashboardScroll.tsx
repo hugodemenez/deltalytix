@@ -21,7 +21,7 @@ import {
   propFirmCaption,
 } from "../widgets/product-copy";
 
-const BEZIER = Easing.bezier(0.16, 1, 0.3, 1);
+const SCROLL_EASE = Easing.inOut(Easing.cubic);
 
 type SectionCaptionProps = {
   readonly name: string;
@@ -124,7 +124,7 @@ export const DashboardScroll: React.FC = () => {
       {
         extrapolateLeft: "clamp",
         extrapolateRight: "clamp",
-        easing: BEZIER,
+        easing: SCROLL_EASE,
       },
     ),
   );

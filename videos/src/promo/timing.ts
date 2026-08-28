@@ -23,7 +23,7 @@ export const CTA_FRAMES = 36;
 /** One viewport of the scrolling dashboard (matches composition height). */
 export const DASH_PAGE_PX = 1080;
 /** Duration of each page-to-page camera move. */
-export const DASH_SCROLL_FRAMES = 30;
+export const DASH_SCROLL_FRAMES = 45;
 /** Hold the assembled calendar + charts while they draw. */
 export const DASH_OVERVIEW_HOLD = 78;
 /** Chat needs the full compose → stream window. */
