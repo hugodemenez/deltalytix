@@ -73,6 +73,16 @@ describe("landing page server-rendered content", () => {
     expect(pricing).toContain('const Container = embedded ? "div" : "main";');
   });
 
+  it("does not read the wall clock while prerendering landing pricing", () => {
+    const pricing = read("pricing/page.tsx");
+
+    // Next.js rejects Date.now() / new Date() during static generation of
+    // /[locale]. Format promo.validUntilMs via the clock-free helper instead.
+    expect(pricing).not.toMatch(/Date\.now\s*\(/);
+    expect(pricing).not.toMatch(/new Date\s*\(\s*\)/);
+    expect(pricing).toContain("formatBackToWorkOfferUntil");
+  });
+
   it("keeps enough English landing copy for an agent to understand the product", async () => {
     const [{ default: landing }, { default: faq }] = await Promise.all([
       import("@/locales/en/landing"),
