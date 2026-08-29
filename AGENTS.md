@@ -68,7 +68,9 @@ curl -s -o /dev/null -D - "http://localhost:3000/authentication?next=dashboard" 
 
 ## Shared agent skills
 
-The canonical, cross-agent skill library lives in [`agents/skills/`](./agents/skills/). It holds the only copy of each skill; `.claude/skills/` and `.cursor/skills/` contain symlinks into it so Claude Code and Cursor auto-discover the same files. Never copy a skill into an agent-specific tree.
+First-party skills live in [`agents/skills/`](./agents/skills/). `.claude/skills/` and `.cursor/skills/` contain symlinks into that directory so Claude Code and Cursor auto-discover the same files. Never copy a first-party skill into an agent-specific tree.
+
+Third-party skills (`remotion-*`, `better-*`) are installed with [`npx skills`](https://skills.sh/) into `.agents/skills/` and gitignored. Restore them after clone with `bun run skills:install` (wraps `npx skills experimental_install` and links the copies into Cursor and Claude Code). The lockfile is [`skills-lock.json`](./skills-lock.json).
 
 When a task names a skill or matches a skill's frontmatter description:
 
@@ -76,7 +78,7 @@ When a task names a skill or matches a skill's frontmatter description:
 2. Resolve linked resources relative to the skill directory.
 3. Use `better-interface` for a holistic interface review; it coordinates the focused `better-accessibility`, `better-colors`, `better-layout`, `better-typography`, `better-ui`, and `better-writing` skills.
 
-See [`agents/skills/README.md`](./agents/skills/README.md) for the catalog and upstream provenance.
+See [`agents/skills/README.md`](./agents/skills/README.md) for the catalog and how to add first-party vs third-party skills.
 
 ## Changelog entries
 
@@ -165,6 +167,7 @@ Do not spring-scale parents of chart axes; SFX must use local `staticFile()` cue
 - **Docker-in-Docker**: Cloud Agent VMs require `fuse-overlayfs` storage driver and `iptables-legacy` for Docker to work. Run `bash scripts/docker-bootstrap.sh` first; if it fails with overlay errors, install `fuse-overlayfs` (`sudo apt-get install -y fuse-overlayfs`) and set `/etc/docker/daemon.json` to `{"storage-driver": "fuse-overlayfs"}` before starting `dockerd`.
 - **Full local setup**: Run `bash scripts/self-host-quickstart.sh` then `bash scripts/dev.sh`. This handles Docker Postgres, `.env.local`, Bun install, Prisma, seeding, and dev server startup.
 - **Auth**: Uses `LOCAL_DASHBOARD_AUTH_BYPASS=true` — no external Supabase keys needed. The dashboard is accessible at `http://localhost:3000/dashboard` as `local-dashboard-user`.
+- **Third-party skills**: `bash scripts/install-skills.sh` (also in this environment's `install` script) restores `remotion-*` and `better-*` from `skills-lock.json`.
 - **PRs target `beta`**, not `main`.
 
 <!-- BEGIN:nextjs-agent-rules -->

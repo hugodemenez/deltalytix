@@ -1,6 +1,6 @@
 {
   "name": "Deltalytix",
-  "install": "curl -fsSL https://bun.sh/install | bash && export PATH=\"$HOME/.bun/bin:$PATH\" && bun install && bunx prisma generate && sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 ffmpeg postgresql postgresql-client",
+  "install": "curl -fsSL https://bun.sh/install | bash && export PATH=\"$HOME/.bun/bin:$PATH\" && bun install && bunx prisma generate && sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 ffmpeg postgresql postgresql-client && bash scripts/install-skills.sh",
   "start": "bash scripts/docker-bootstrap.sh",
   "ports": [
     {

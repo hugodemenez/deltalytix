@@ -13,7 +13,7 @@ PRs still target **`beta`**, not `main`.
 
 ## Done
 
-- Official Remotion skills vendored under `agents/skills/remotion-*`.
+- Official Remotion skills restored with `bun run skills:install` (from `skills-lock.json` into `.agents/skills/remotion-*`).
 - Ads composition with `TransitionSeries` **fades** (no slide, no zoom). Landing cut starts at stats.
 - Light and dark token sets; landing hero uses `public/videos/demo_white.mp4` / `demo_dark.mp4`.
 - Widgets driven by landing / dashboard copy and mock data, August 2026 pinned.

@@ -18,6 +18,7 @@
     "capture:changelog-media": "node scripts/capture-changelog-media.mjs",
     "capture:calendar-responsive": "node scripts/capture-calendar-responsive.mjs",
     "capture:changelog-pr-249": "node scripts/capture-changelog-pr-249.mjs",
+    "skills:install": "bash scripts/install-skills.sh",
     "seed:self-host": "bun scripts/seed-self-host.ts",
     "migrate:encrypt-connection-tokens": "bun scripts/migrate-encrypt-connection-tokens.ts"
   },
