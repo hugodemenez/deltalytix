@@ -9,7 +9,11 @@ import { prisma } from '@/lib/prisma'
 import { unstable_cache } from 'next/cache'
 import { defaultLayouts } from '@/lib/default-layouts'
 import { formatTimestamp } from '@/lib/date-utils'
-import { v5 as uuidv5 } from 'uuid'
+import {
+  generatePersistedTradeUUID,
+  RITHMIC_PROTOCOL_TRADE_TAG,
+} from '@/lib/trade-id-utils'
+import { isDuplicateTradesOnlySave } from '@/lib/trades/save-trades-outcome'
 import { capturePostHogEvent } from '@/lib/posthog-server'
 
 type TradeError =
@@ -42,34 +46,42 @@ export async function revalidateCache(tags: string[]) {
   console.log(`[revalidateCache] Completed cache invalidation for ${tags.length} tags`)
 }
 
-// Namespace UUID for deterministic trade ID generation
-const TRADE_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
+async function backfillRithmicProtocolCommissions(
+  userId: string,
+  trades: Trade[],
+): Promise<number> {
+  const protocolTrades = trades.filter(
+    (trade) => trade.tags?.includes(RITHMIC_PROTOCOL_TRADE_TAG) && trade.id,
+  )
+  if (protocolTrades.length === 0) return 0
 
-/**
- * Generates a deterministic UUID v5 from all trade fields
- * This ensures the same trade always gets the same UUID
- */
-function generateTradeUUID(trade: Partial<Trade>): string {
-  // Create a deterministic string from all trade fields
-  const tradeSignature = [
-    trade.userId || '',
-    trade.accountNumber || '',
-    trade.instrument || '',
-    trade.entryDate || '',
-    trade.closeDate || '',
-    trade.entryPrice || '',
-    trade.closePrice || '',
-    (trade.quantity || 0).toString(),
-    trade.entryId || '',
-    trade.closeId || '',
-    (trade.timeInPosition || 0).toString(),
-    trade.side || '',
-    (trade.pnl || 0).toString(),
-    (trade.commission || 0).toString(),
-  ].join('|')
-  
-  // Generate UUID v5 from the signature
-  return uuidv5(tradeSignature, TRADE_NAMESPACE)
+  const existing = await prisma.trade.findMany({
+    where: { userId, id: { in: protocolTrades.map((trade) => trade.id) } },
+    select: { id: true, commission: true },
+  })
+  const currentById = new Map(existing.map((row) => [row.id, row.commission]))
+  const updates = protocolTrades.filter((trade) => {
+    const current = currentById.get(trade.id)
+    return current != null && current !== trade.commission
+  })
+  if (updates.length === 0) return 0
+
+  const chunkSize = 100
+  for (let offset = 0; offset < updates.length; offset += chunkSize) {
+    const chunk = updates.slice(offset, offset + chunkSize)
+    await prisma.$transaction(
+      chunk.map((trade) =>
+        prisma.trade.updateMany({
+          where: { id: trade.id, userId },
+          data: { commission: trade.commission },
+        }),
+      ),
+    )
+  }
+  console.log(
+    `[saveTrades] Updated commission on ${updates.length} existing ${RITHMIC_PROTOCOL_TRADE_TAG} trade(s)`,
+  )
+  return updates.length
 }
 
 export async function saveTradesAction(
@@ -116,7 +128,7 @@ export async function saveTradesAction(
         ...trade,
         userId: userId,
         accountId,
-        id: generateTradeUUID({...trade, userId: userId}), // Generate a unique ID for the trade using UUID v5 based on all trade properties
+        id: generatePersistedTradeUUID({ ...trade, userId }),
       } as Trade
     })
 
@@ -125,8 +137,15 @@ export async function saveTradesAction(
       skipDuplicates: true
     })
 
-    // Log potential duplicates if no trades were added
-    if (result.count === 0) {
+    const commissionsUpdated = await backfillRithmicProtocolCommissions(
+      userId,
+      userAssignedTrades,
+    )
+
+    // createMany can insert 0 rows on a Protocol resync while the backfill
+    // still writes commissions. Only skip cache invalidation when nothing
+    // changed — callers (dashboard widgets) must read their own writes.
+    if (isDuplicateTradesOnlySave(result.count, commissionsUpdated)) {
       console.log('[saveTrades] No trades added. Checking for duplicates:', { attempted: data.length })
       const tradeIds = userAssignedTrades.map(trade => trade.id)
       const existingTrades = await prisma.trade.findMany({

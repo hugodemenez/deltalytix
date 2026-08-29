@@ -149,8 +149,8 @@ export async function listRithmicProtocolSystems(gatewayId?: string): Promise<{
   const gatewayUri = gatewayUriFor(gateway)
   try {
     const systems = await fetchAvailableSystems(gatewayUri)
-    if (systems.length > 0) {
-      return { systems, gatewayId: gateway.id, gatewayUri }
+    if (systems.systems.length > 0) {
+      return { systems: systems.systems, gatewayId: gateway.id, gatewayUri }
     }
   } catch (error) {
     logger.warn(
@@ -197,11 +197,21 @@ export async function authenticateRithmicProtocol(
 
     logger.info(`Authenticating (${authLogContext})`)
 
+    const probe = await fetchAvailableSystems(resolvedUri).catch((error) => {
+      logger.warn(
+        `System-info probe failed before login (${authLogContext}): ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      )
+      return { systems: [] as string[], peerAddress: undefined }
+    })
+
     const result = await connectAndListAccounts({
       gatewayUri: resolvedUri,
       systemName,
       username,
       password,
+      pinAddress: probe.peerAddress,
     })
 
     if (result.accounts.length === 0) {
@@ -754,7 +764,7 @@ export async function getRithmicProtocolTrades(
       `Fetching fills for ${resolvedAccountIds.length} accounts (from ${credentials.historyStartDate ?? `${DEFAULT_LOOKBACK_DAYS}d lookback`}, ≤30d windows)`,
     )
 
-    const { fills, uniqueUserId } = await fetchFillsForAccounts({
+    const { fills, uniqueUserId, commissionRates } = await fetchFillsForAccounts({
       gatewayUri: credentials.gatewayUri,
       systemName: credentials.systemName,
       username: credentials.username,
@@ -785,9 +795,15 @@ export async function getRithmicProtocolTrades(
       fills,
       userId,
       tickBySymbol,
+      commissionRates,
     )
     syncStats.closedTrades = trades.length
     syncStats.openTradesSkipped = openSkipped
+    const commissionZeroCount = trades.filter((trade) => !trade.commission).length
+    logger.info(
+      `Matched ${trades.length} closed trade(s), openSkipped=${openSkipped}, ` +
+        `commissionRates=${commissionRates.size}, commissionZero=${commissionZeroCount}`,
+    )
 
     // Stamped before saving: the fills were fetched, so the connection has synced
     // even when every trade turns out to be a duplicate. Leaving it unstamped made
@@ -814,10 +830,13 @@ export async function getRithmicProtocolTrades(
 
     let savedCount = 0
     if (saveResult) {
-      if (saveResult.error === 'DUPLICATE_TRADES') {
-        return { error: 'DUPLICATE_TRADES', syncStats, tradesCount: trades.length }
-      }
-      if (saveResult.error && saveResult.error !== 'NO_TRADES_ADDED') {
+      // Re-syncs overlap on purpose. DUPLICATE_TRADES and NO_TRADES_ADDED
+      // (commission-only backfill) are successful no-ops, not failed imports.
+      if (
+        saveResult.error &&
+        saveResult.error !== 'NO_TRADES_ADDED' &&
+        saveResult.error !== 'DUPLICATE_TRADES'
+      ) {
         return {
           error: 'SAVE_TRADES_FAILED',
           errorParams: { detail: String(saveResult.error) },
