@@ -830,10 +830,13 @@ export async function getRithmicProtocolTrades(
 
     let savedCount = 0
     if (saveResult) {
-      if (saveResult.error === 'DUPLICATE_TRADES') {
-        return { error: 'DUPLICATE_TRADES', syncStats, tradesCount: trades.length }
-      }
-      if (saveResult.error && saveResult.error !== 'NO_TRADES_ADDED') {
+      // Re-syncs overlap on purpose. DUPLICATE_TRADES and NO_TRADES_ADDED
+      // (commission-only backfill) are successful no-ops, not failed imports.
+      if (
+        saveResult.error &&
+        saveResult.error !== 'NO_TRADES_ADDED' &&
+        saveResult.error !== 'DUPLICATE_TRADES'
+      ) {
         return {
           error: 'SAVE_TRADES_FAILED',
           errorParams: { detail: String(saveResult.error) },
