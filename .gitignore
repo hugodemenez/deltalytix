@@ -6,9 +6,24 @@
 !.cursor/environment.json
 !.cursor/rules/
 !.cursor/rules/**
-# Symlinks into agents/skills/ so Cursor auto-discovers the shared skills.
+# Symlinks into agents/skills/ so Cursor auto-discovers first-party skills.
 !.cursor/skills/
 !.cursor/skills/**
+# Third-party skills restored by `npx skills experimental_install` / `bun run skills:install`.
+# Commit skills-lock.json; do not commit the installed trees.
+.agents/
+.cursor/skills/better-*
+.cursor/skills/better-*/**
+.cursor/skills/remotion-*
+.cursor/skills/remotion-*/**
+.claude/skills/better-*
+.claude/skills/better-*/**
+.claude/skills/remotion-*
+.claude/skills/remotion-*/**
+agents/skills/better-*
+agents/skills/better-*/**
+agents/skills/remotion-*
+agents/skills/remotion-*/**
 !.cursor/worktrees.json
 !.cursor/setup-worktree-unix.sh
 WARP.md

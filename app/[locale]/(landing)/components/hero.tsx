@@ -141,7 +141,7 @@ export default function Hero() {
           ref={videoContainerRef}
           className="relative overflow-hidden rounded-md bg-[oklch(0.88_0.04_165)] p-2 sm:rounded-lg sm:p-5 lg:rounded-xl lg:p-8"
         >
-          <div className="relative aspect-[2108/1080] w-full overflow-hidden rounded-sm bg-white shadow-2xl shadow-black/15 outline outline-1 outline-black/10 dark:aspect-[2120/1080] dark:bg-black dark:outline-white/10">
+          <div className="relative aspect-video w-full overflow-hidden rounded-sm bg-white shadow-2xl shadow-black/15 outline outline-1 outline-black/10 dark:bg-black dark:outline-white/10">
             {!videoError && (
               <>
                 <img
