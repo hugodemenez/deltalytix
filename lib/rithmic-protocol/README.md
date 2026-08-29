@@ -7,7 +7,8 @@ TypeScript client for Rithmic's WebSocket + protobuf **R | Protocol API**, used 
 
 - `proto/` — message definitions from RProtocolAPI kit (licensed from Rithmic)
 - `etc/rithmic_ssl_cert_auth_params` — SSL auth params from the kit
-- `client.ts` — system-info probe, ORDER_PLANT login, account list, fill / order-history fetch, **PNL_PLANT live balances**
+- `client.ts` — system-info probe, ORDER_PLANT login, account list, **Product RMS commission rates**, fill / order-history fetch, **PNL_PLANT live balances**
+- `commission-rates.ts` — `commission_fill_rate` presence bit 64, index, `rate × fill qty`
 - `fills-to-trades.ts` — FIFO round-trip matching into Deltalytix `Trade` rows
 - `balances.ts` — map `AccountPnLPositionUpdate` → Solde Rithmic balance rows
 
@@ -92,7 +93,60 @@ RITHMIC_PROTOCOL_ALLOW_TEST_GATEWAY=   # show UAT in the picker; defaults to tru
 RITHMIC_PROTOCOL_APP_NAME=DeltalytixRithmicProtocolAPI
 RITHMIC_PROTOCOL_APP_VERSION=0.1.0
 RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS=30
+
+# Live e2e only (`bun run test:e2e:rithmic`). Username/password via secrets; never commit.
+RITHMIC_PROTOCOL_E2E_USERNAME=
+RITHMIC_PROTOCOL_E2E_PASSWORD=
+RITHMIC_PROTOCOL_E2E_SYSTEM_NAME=Rithmic Paper Trading   # optional
+RITHMIC_PROTOCOL_E2E_GATEWAY=core                        # optional id or wss:// URI
+RITHMIC_PROTOCOL_E2E_ACCOUNT_ID=                         # optional pin
 ```
+
+## Product RMS commissions
+
+Protocol fill messages have no fee fields. Sync loads **Product RMS**
+(`RequestProductRmsInfo` template 306 / `ResponseProductRmsInfo` 307,
+`commission_fill_rate`, presence bit 64) and charges **rate × fill quantity**
+on each fill — the same source as R | API+ `ProductRmsListInfo` and the Orders
+CSV Commission Fill Rate. Round-trip commission is entry + exit.
+
+Current RMS config is used, not historical rates. A Product RMS failure logs a
+warning and still saves fills with commission `0`. Trade identity ignores the
+rate so a resync matches rows first stored with `commission: 0` and updates
+that existing row instead of inserting a duplicate.
+
+## Live e2e / CI
+
+Default `bun run test` excludes `*.e2e.test.ts`. The live suite skips unless
+username + password are set:
+
+```bash
+# local: put creds in `.env.e2e.local` (gitignored via `.env*.local`)
+set -a && source .env.e2e.local && set +a
+bun run test:e2e:rithmic
+```
+
+GitHub Actions (`.github/workflows/rithmic-protocol-e2e.yml`):
+
+| Name | Kind | Required |
+| --- | --- | --- |
+| `RITHMIC_PROTOCOL_E2E_USERNAME` | Actions **secret** | yes |
+| `RITHMIC_PROTOCOL_E2E_PASSWORD` | Actions **secret** | yes |
+| `RITHMIC_PROTOCOL_E2E_SYSTEM_NAME` | Actions **variable** | no (default `Rithmic Paper Trading`) |
+| `RITHMIC_PROTOCOL_E2E_GATEWAY` | Actions **variable** | no (default `core`) |
+
+Without the two secrets the workflow still runs the proto/unit checks and
+**skips** the live socket (green). GitHub-hosted `ubuntu-latest` can open WSS
+to Core (`RequestRithmicSystemInfo` works) but `RequestLogin` has been silent
+from the same IPv4 peer. Rithmic does not offer a customer IP allowlist;
+runners egress from Azure, while in-app reconnect goes through Vercel. On
+Actions a silent login timeout is **skipped** (system-info still required);
+a login reject or credential error still fails. Set
+`RITHMIC_PROTOCOL_E2E_REQUIRE_LOGIN=1` to fail on timeout (self-hosted runner
+or a Vercel-path job). The live step prints DNS, egress IP, socket
+remote/local, and template traffic — never username/password. Login uses a
+second socket after the system-info probe (the plant closes the probe with
+code 1000).
 
 On connect, the user must choose an **account start date**. Sync walks from that
 date to today with `ShowFillHistory` in **serial ≤30-day windows** (Rithmic guidance).

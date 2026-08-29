@@ -1,8 +1,12 @@
 import type { Trade } from '@/prisma/generated/prisma/client'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
-import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
+import {
+  generateDeterministicTradeId,
+  RITHMIC_PROTOCOL_TRADE_TAG,
+} from '@/lib/trade-id-utils'
 import { formatTimestamp } from '@/lib/date-utils'
 import type { RithmicProtocolFill } from './types'
+import { commissionForFillQuantity } from './commission-rates'
 
 interface TickSpec {
   tickSize: number
@@ -29,7 +33,7 @@ interface OpenPosition {
   originalQuantity: number
 }
 
-function normalizeInstrument(symbol: string): string {
+export function normalizeInstrument(symbol: string): string {
   const clean = symbol.trim().toUpperCase()
   // Strip month/year code when present (e.g. ESH5 -> ES, MNQH5 -> MNQ)
   if (clean.length > 2 && /[FGHJKMNQUVXZ]\d{1,2}$/.test(clean)) {
@@ -91,6 +95,7 @@ export function buildTradesFromRithmicFills(
   fills: RithmicProtocolFill[],
   userId: string,
   tickBySymbol: Map<string, TickSpec>,
+  commissionRates?: Map<string, number>,
 ): { trades: Trade[]; openSkipped: number } {
   const trades: Trade[] = []
   let openSkipped = 0
@@ -129,7 +134,12 @@ export function buildTradesFromRithmicFills(
       const newOrder: FillOrder = {
         quantity,
         price,
-        commission: 0,
+        commission: commissionForFillQuantity(
+          commissionRates,
+          accountId,
+          instrument,
+          quantity,
+        ),
         timestampMs,
         orderId,
       }
@@ -185,7 +195,7 @@ export function buildTradesFromRithmicFills(
                   Math.round((closeDate.getTime() - entryDate.getTime()) / 1000),
                 ),
                 commission: Math.abs(open.totalCommission),
-                tags: ['rithmic-protocol'],
+                tags: [RITHMIC_PROTOCOL_TRADE_TAG],
               }),
             )
 

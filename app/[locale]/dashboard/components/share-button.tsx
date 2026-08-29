@@ -1,8 +1,14 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback, forwardRef } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef, forwardRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Share, Share2, Check, ChevronsUpDown, Copy, Layout, ExternalLink, Download } from "lucide-react"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import {
   Dialog,
   DialogContent,
@@ -37,7 +43,6 @@ import { Input } from "@/components/ui/input"
 import { SharedLayoutsManager } from "./shared-layouts-manager"
 import confetti from 'canvas-confetti'
 import { fr } from 'date-fns/locale'
-import { Switch } from "@/components/ui/switch"
 import { useTradesStore } from "../../../../store/trades-store"
 import { useUserStore } from "../../../../store/user-store"
 import { useData } from "@/context/data-provider"
@@ -52,6 +57,41 @@ interface ShareButtonProps {
   }
   compact?: boolean
   appearance?: "toolbar" | "navbar"
+}
+
+const PICKER_START_MONTH = new Date(2000, 0)
+const PICKER_END_MONTH = new Date(new Date().getFullYear() + 2, 11)
+
+function ShareDatePickerCalendar({
+  selected,
+  onSelect,
+  month,
+  onMonthChange,
+  locale,
+  disabled,
+}: {
+  selected?: Date
+  onSelect: (date: Date | undefined) => void
+  month?: Date
+  onMonthChange: (month: Date) => void
+  locale?: typeof fr
+  disabled?: (date: Date) => boolean
+}) {
+  return (
+    <Calendar
+      mode="single"
+      captionLayout="dropdown"
+      startMonth={PICKER_START_MONTH}
+      endMonth={PICKER_END_MONTH}
+      month={month}
+      onMonthChange={onMonthChange}
+      selected={selected}
+      onSelect={onSelect}
+      locale={locale}
+      disabled={disabled}
+      autoFocus
+    />
+  )
 }
 
 function triggerConfetti() {
@@ -117,9 +157,9 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const [shareUrl, setShareUrl] = useState<string>("")
     const [showManager, setShowManager] = useState(false)
     const [shareTitle, setShareTitle] = useState("")
-    const [shareAllAccounts, setShareAllAccounts] = useState(true)
     const [isExporting, setIsExporting] = useState(false)
     const [isSharing, setIsSharing] = useState(false)
+    const hasInitializedAccounts = useRef(false)
 
     // Get the earliest and latest trade dates
     const defaultDateRange = useMemo(() => {
@@ -141,6 +181,16 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       from: defaultDateRange.from,
       to: undefined
     } as DateRange)
+    const [dateAccordion, setDateAccordion] = useState<string>("")
+    const [fromCalendarMonth, setFromCalendarMonth] = useState<Date>(
+      defaultDateRange.from ?? new Date()
+    )
+    const [toCalendarMonth, setToCalendarMonth] = useState<Date>(
+      defaultDateRange.from ?? new Date()
+    )
+
+    const formatShareDate = (date: Date) =>
+      format(date, "LLL dd, y", { locale: dateLocale })
 
     // Update date range when trades change
     useEffect(() => {
@@ -148,6 +198,8 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         from: defaultDateRange.from,
         to: undefined
       })
+      setFromCalendarMonth(defaultDateRange.from ?? new Date())
+      setToCalendarMonth(defaultDateRange.from ?? new Date())
     }, [defaultDateRange])
 
     // Get unique account numbers from trades
@@ -162,6 +214,27 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         account.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }, [accountNumbers, searchQuery])
+
+    const isSharingAllAccounts = useMemo(
+      () =>
+        accountNumbers.length > 0 &&
+        accountNumbers.every((account) => selectedAccounts.includes(account)),
+      [accountNumbers, selectedAccounts]
+    )
+
+    useEffect(() => {
+      if (!open || hasInitializedAccounts.current || accountNumbers.length === 0) {
+        return
+      }
+      setSelectedAccounts(accountNumbers)
+      hasInitializedAccounts.current = true
+    }, [open, accountNumbers])
+
+    const accountPickerLabel = isSharingAllAccounts
+      ? t("share.allAccounts")
+      : selectedAccounts.length === 0
+        ? t("share.accountsPlaceholder")
+        : `${selectedAccounts.length} / ${accountNumbers.length} ${t("share.accounts")}`
 
     const getFilteredTrades = useCallback(() => {
       if (!selectedDateRange.from) {
@@ -178,11 +251,11 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           return false
         }
 
-        return (shareAllAccounts || selectedAccounts.includes(trade.accountNumber)) &&
+        return (isSharingAllAccounts || selectedAccounts.includes(trade.accountNumber)) &&
           tradeDate >= fromDate &&
           (!toDate || tradeDate <= toDate)
       })
-    }, [selectedDateRange.from, selectedDateRange.to, shareAllAccounts, selectedAccounts, trades])
+    }, [selectedDateRange.from, selectedDateRange.to, isSharingAllAccounts, selectedAccounts, trades])
 
     const showExportError = useCallback((description: string) => {
       toast.error(t("share.exportPdfErrorTitle"), {
@@ -202,7 +275,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           return
         }
 
-        if (!shareAllAccounts && selectedAccounts.length === 0) {
+        if (selectedAccounts.length === 0) {
           toast.error(t('share.error'), {
             description: t('share.error.noAccount'),
           })
@@ -232,10 +305,10 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
 
         const slug = await createShared({
           userId: user.id,
-          title: shareTitle || `Shared trades${shareAllAccounts ? ' for all accounts' : ` for ${selectedAccounts.length} accounts`}`,
+          title: shareTitle.trim() || t("share.defaultTitle"),
           description: `Trades from ${selectedDateRange.from.toLocaleDateString()}${selectedDateRange.to ? ` to ${selectedDateRange.to.toLocaleDateString()}` : ''}`,
           isPublic: true,
-          accountNumbers: shareAllAccounts ? [] : selectedAccounts,
+          accountNumbers: isSharingAllAccounts ? [] : selectedAccounts,
           dateRange: {
             from: fromDate,
             ...(toDate && { to: toDate })
@@ -391,7 +464,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         const payload = {
           locale,
           timezone,
-          title: shareTitle.trim(),
+          title: shareTitle.trim() || t("share.defaultTitle"),
           dateRange: globalDateRange?.from
             ? {
                 from: globalDateRange.from.toISOString(),
@@ -472,11 +545,17 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     return (
       <Dialog open={open} onOpenChange={(isOpen) => {
         setOpen(isOpen)
-        if (!isOpen) {
+        if (isOpen) {
+          setShareTitle(t("share.defaultTitle"))
+          setSelectedAccounts(accountNumbers)
+          hasInitializedAccounts.current = accountNumbers.length > 0
+        } else {
           setShowManager(false)
           setShareUrl("")
           setShareTitle("")
-          setShareAllAccounts(false)
+          setSelectedAccounts([])
+          setDateAccordion("")
+          hasInitializedAccounts.current = false
         }
       }}>
         <DialogTrigger asChild>
@@ -504,11 +583,14 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
             </Button>
           )}
         </DialogTrigger>
-        <DialogContent className="sm:max-w-4xl h-[90vh] sm:h-[85vh] w-[95vw]">
+        <DialogContent
+          className="sm:max-w-4xl h-[90vh] sm:h-[85vh] w-[95vw]"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
           <div className="h-full flex flex-col overflow-y-hidden">
               <DialogHeader>
                 <DialogTitle>{t("share.title")}</DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="sr-only">
                   {t("share.description")}
                 </DialogDescription>
               </DialogHeader>
@@ -563,145 +645,173 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                         placeholder={t("share.titlePlaceholder")}
                         value={shareTitle}
                         onChange={(e) => setShareTitle(e.target.value)}
+                        autoFocus={false}
+                        className="text-base sm:text-sm"
                       />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="share-all-accounts"
-                        checked={shareAllAccounts}
-                        onCheckedChange={setShareAllAccounts}
-                      />
-                      <Label htmlFor="share-all-accounts">{t("share.shareAllAccounts")}</Label>
-                    </div>
-                    {!shareAllAccounts && (
-                      <div className="space-y-2 relative">
-                        <Popover open={comboboxOpen} onOpenChange={setComboboxOpen} modal>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              aria-expanded={comboboxOpen}
-                              className="w-full justify-between"
-                            >
-                              <span className="flex items-center gap-2">
-                                {selectedAccounts.length === 0 && t("share.accountsPlaceholder")}
-                                {selectedAccounts.length > 0 && (
-                                  <span>
-                                    {selectedAccounts.length} / {accountNumbers.length} {t("share.accounts")}
-                                  </span>
-                                )}
-                              </span>
-                              <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent 
-                            className="w-(--radix-popover-trigger-width) p-0" 
-                            align="start" 
-                            side="bottom" 
-                            sideOffset={4}
-                            style={{ zIndex: 99999 }}
+                    <div className="space-y-2 relative">
+                      <Label htmlFor="share-accounts-picker">{t("share.accountsLabel")}</Label>
+                      <Popover open={comboboxOpen} onOpenChange={setComboboxOpen} modal>
+                        <PopoverTrigger asChild>
+                          <Button
+                            id="share-accounts-picker"
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={comboboxOpen}
+                            className="w-full justify-between"
                           >
-                            <Command shouldFilter={false}>
-                              <CommandInput 
-                                placeholder={t("share.searchAccounts")} 
-                                value={searchQuery}
-                                onValueChange={setSearchQuery}
-                              />
-                              <CommandEmpty>{t("share.noAccountFound")}</CommandEmpty>
-                              <CommandList>
-                                <CommandGroup>
-                                  <CommandItem
-                                    value="select-all"
-                                    onSelect={() => {
-                                      if (selectedAccounts.length === accountNumbers.length) {
-                                        deselectAll()
-                                      } else {
-                                        selectAll()
-                                      }
-                                    }}
-                                    className="flex items-center gap-2"
-                                  >
-                                    <Check
-                                      className="h-4 w-4 opacity-0 data-[selected=true]:opacity-100"
-                                      data-selected={selectedAccounts.length === accountNumbers.length}
-                                    />
-                                    <span className="flex-1">{t("filters.selectAllAccounts")}</span>
-                                  </CommandItem>
-                                  <ScrollArea className="h-48">
-                                    {filteredAccounts.map((account) => (
-                                      <CommandItem
-                                        key={account}
-                                        value={account}
-                                        onSelect={() => toggleAccount(account)}
-                                        className="flex items-center gap-2 cursor-pointer"
-                                      >
-                                        <Check
-                                          className="h-4 w-4 opacity-0 data-[selected=true]:opacity-100"
-                                          data-selected={selectedAccounts.includes(account)}
-                                        />
-                                        <span className="flex-1">{account}</span>
-                                      </CommandItem>
-                                    ))}
-                                  </ScrollArea>
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    )}
-                    <div className="grid gap-4">
-                      <div className="flex flex-col md:flex-row gap-4">
-                        <div className="flex-1">
-                          <div className="space-y-2">
-                            <Label>{t("share.startDateLabel")}</Label>
-                            <div className="border rounded-lg bg-card p-2">
-                              <Calendar
-                                mode="single"
-                                selected={selectedDateRange.from}
-                                onSelect={(date) =>
-                                  setSelectedDateRange((prev) => ({
-                                    ...prev,
-                                    from: date || prev.from
-                                  }))
-                                }
-                                defaultMonth={selectedDateRange.from}
-                                className="w-full [&_.rdp-nav]:p-0 [&_.rdp-caption]:p-2 [&_.rdp-months]:p-2 pt-0"
-                                showOutsideDays
-                                fixedWeeks
-                                locale={dateLocale}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex-1">
-                          <div className="space-y-2">
-                            <Label>{t("share.endDateLabel")}</Label>
-                            <div className="border rounded-lg bg-card p-2">
-                              <Calendar
-                                mode="single"
-                                selected={selectedDateRange.to}
-                                onSelect={(date) =>
-                                  setSelectedDateRange((prev) => ({
-                                    ...prev,
-                                    to: date
-                                  }))
-                                }
-                                defaultMonth={selectedDateRange.to || selectedDateRange.from}
-                                fromDate={selectedDateRange.from}
-                                disabled={(date) =>
-                                  selectedDateRange.from ? date < selectedDateRange.from : false
-                                }
-                                className="w-full [&_.rdp-nav]:p-0 [&_.rdp-caption]:p-2 [&_.rdp-months]:p-2 pt-0"
-                                showOutsideDays
-                                fixedWeeks
-                                locale={dateLocale}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                            <span className={selectedAccounts.length === 0 ? "text-muted-foreground" : undefined}>
+                              {accountPickerLabel}
+                            </span>
+                            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent 
+                          className="w-(--radix-popover-trigger-width) p-0" 
+                          align="start" 
+                          side="bottom" 
+                          sideOffset={4}
+                          style={{ zIndex: 99999 }}
+                        >
+                          <Command shouldFilter={false}>
+                            <CommandInput 
+                              placeholder={t("share.searchAccounts")} 
+                              value={searchQuery}
+                              onValueChange={setSearchQuery}
+                            />
+                            <CommandEmpty>{t("share.noAccountFound")}</CommandEmpty>
+                            <CommandList>
+                              <CommandGroup>
+                                <CommandItem
+                                  value="select-all"
+                                  onSelect={() => {
+                                    if (isSharingAllAccounts) {
+                                      deselectAll()
+                                    } else {
+                                      selectAll()
+                                    }
+                                  }}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Check
+                                    className="h-4 w-4 opacity-0 data-[selected=true]:opacity-100"
+                                    data-selected={isSharingAllAccounts}
+                                  />
+                                  <span className="flex-1">{t("filters.selectAllAccounts")}</span>
+                                </CommandItem>
+                                <ScrollArea className="h-48">
+                                  {filteredAccounts.map((account) => (
+                                    <CommandItem
+                                      key={account}
+                                      value={account}
+                                      onSelect={() => toggleAccount(account)}
+                                      className="flex items-center gap-2 cursor-pointer"
+                                    >
+                                      <Check
+                                        className="h-4 w-4 opacity-0 data-[selected=true]:opacity-100"
+                                        data-selected={selectedAccounts.includes(account)}
+                                      />
+                                      <span className="flex-1">{account}</span>
+                                    </CommandItem>
+                                  ))}
+                                </ScrollArea>
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
+                    <Accordion
+                      type="single"
+                      collapsible
+                      value={dateAccordion || undefined}
+                      onValueChange={(value) => {
+                        setDateAccordion(value)
+                        if (value === "start") {
+                          setFromCalendarMonth(selectedDateRange.from ?? new Date())
+                        }
+                        if (value === "end") {
+                          setToCalendarMonth(
+                            selectedDateRange.to ?? selectedDateRange.from ?? new Date()
+                          )
+                        }
+                      }}
+                      className="rounded-lg border bg-card"
+                    >
+                      <AccordionItem value="start" className="px-3">
+                        <AccordionTrigger className="gap-2 py-3 hover:no-underline">
+                          <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-start">
+                            <span className="font-medium text-wrap">
+                              {t("share.startDateLabel")}
+                            </span>
+                            <span className="text-sm font-normal text-wrap tabular-nums text-muted-foreground">
+                              {selectedDateRange.from
+                                ? formatShareDate(selectedDateRange.from)
+                                : t("share.startDatePlaceholder")}
+                            </span>
+                          </span>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-0">
+                          <div className="flex justify-center border-t border-border/60 bg-popover px-1 py-2">
+                            <ShareDatePickerCalendar
+                              selected={selectedDateRange.from}
+                              month={fromCalendarMonth}
+                              onMonthChange={setFromCalendarMonth}
+                              locale={dateLocale}
+                              onSelect={(date) => {
+                                setSelectedDateRange((prev) => ({
+                                  ...prev,
+                                  from: date || prev.from,
+                                }))
+                                if (date) {
+                                  setFromCalendarMonth(date)
+                                  setDateAccordion("")
+                                }
+                              }}
+                            />
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                      <AccordionItem value="end" className="border-b-0 px-3">
+                        <AccordionTrigger className="gap-2 py-3 hover:no-underline">
+                          <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-start">
+                            <span className="font-medium text-wrap">
+                              {t("share.endDateLabel")}
+                            </span>
+                            <span className="text-sm font-normal text-wrap tabular-nums text-muted-foreground">
+                              {selectedDateRange.to
+                                ? formatShareDate(selectedDateRange.to)
+                                : t("share.endDatePlaceholder")}
+                            </span>
+                          </span>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-0">
+                          <div className="flex justify-center border-t border-border/60 bg-popover px-1 py-2">
+                            <ShareDatePickerCalendar
+                              selected={selectedDateRange.to}
+                              month={toCalendarMonth}
+                              onMonthChange={setToCalendarMonth}
+                              locale={dateLocale}
+                              disabled={(date) =>
+                                selectedDateRange.from
+                                  ? date < startOfDay(selectedDateRange.from)
+                                  : false
+                              }
+                              onSelect={(date) => {
+                                setSelectedDateRange((prev) => ({
+                                  ...prev,
+                                  to: date,
+                                }))
+                                if (date) {
+                                  setToCalendarMonth(date)
+                                  setDateAccordion("")
+                                }
+                              }}
+                            />
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
                   </div>
                 )}
               </div>
@@ -709,32 +819,50 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
             <div className="shrink-0 px-3 sm:px-6 py-3 sm:py-4 border-t bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60">
               <DialogFooter>
                 {showManager ? null : !shareUrl ? (
-                  <div className="w-full flex flex-col sm:flex-row gap-2 sm:gap-4 sm:justify-end">
-                    <Button
-                      variant="outline"
-                      onClick={handleExportPdf}
-                      disabled={isExporting}
+                  <div className="flex w-full sm:justify-end">
+                    <div
+                      role="group"
+                      className="flex w-full max-w-full flex-col items-stretch rounded-2xl border border-[#E5E5E5] bg-white px-2 py-[6px] shadow-none sm:w-auto sm:flex-row sm:items-center sm:rounded-full dark:border-border dark:bg-background"
                     >
-                      <Download className="h-4 w-4 mr-2" />
-                      {isExporting ? t("share.exportPdfInProgress") : t("share.exportPdfButton")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowManager(true)}
-                    >
-                      <Layout className="h-4 w-4 mr-2" />
-                      {t("share.manageLayouts")}
-                    </Button>
-                    <Button onClick={handleShare} disabled={isSharing}>
-                      {isSharing ? t("share.shareInProgress") : t("share.shareButton")}
-                    </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={handleExportPdf}
+                        disabled={isExporting}
+                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-none px-2.5 text-sm font-medium text-[#171717] shadow-none hover:bg-transparent dark:text-foreground"
+                      >
+                        <Download className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                        {isExporting ? t("share.exportPdfInProgress") : t("share.exportPdfButton")}
+                      </Button>
+                      <span aria-hidden className="hidden h-4 w-px shrink-0 bg-[#E5E5E5] sm:block dark:bg-border" />
+                      <span aria-hidden className="mx-2 h-px bg-[#E5E5E5] sm:hidden dark:bg-border" />
+                      <Button
+                        variant="ghost"
+                        onClick={() => setShowManager(true)}
+                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-none px-2.5 text-sm font-medium text-[#171717] shadow-none hover:bg-transparent dark:text-foreground"
+                      >
+                        <Layout className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                        {t("share.manageLayouts")}
+                      </Button>
+                      <span aria-hidden className="hidden h-4 w-px shrink-0 bg-[#E5E5E5] sm:block dark:bg-border" />
+                      <span aria-hidden className="mx-2 h-px bg-[#E5E5E5] sm:hidden dark:bg-border" />
+                      <Button
+                        onClick={handleShare}
+                        disabled={isSharing}
+                        className="h-8 rounded-full bg-[#171717] px-3.5 text-sm font-medium text-white shadow-none hover:bg-[#171717]/90 dark:bg-foreground dark:text-background dark:hover:bg-foreground/90"
+                      >
+                        {isSharing ? t("share.shareInProgress") : t("share.shareButton")}
+                      </Button>
+                    </div>
                   </div>
                 ) : (
-                  <Button onClick={() => {
-                    setShareUrl("")
-                    setShareTitle("")
-                    setOpen(false)
-                  }} className="w-full sm:w-auto">
+                  <Button
+                    onClick={() => {
+                      setShareUrl("")
+                      setShareTitle("")
+                      setOpen(false)
+                    }}
+                    className="h-8 rounded-full bg-[#171717] px-3.5 text-sm font-medium text-white shadow-none hover:bg-[#171717]/90 dark:bg-foreground dark:text-background dark:hover:bg-foreground/90"
+                  >
                     {t("share.quit")}
                   </Button>
                 )}

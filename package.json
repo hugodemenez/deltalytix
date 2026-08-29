@@ -13,6 +13,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:e2e:rithmic": "node ./node_modules/vitest/vitest.mjs run --config vitest.e2e.config.ts --reporter=verbose",
     "typecheck": "tsc --noEmit",
     "screenshot:dashboard": "node scripts/screenshot-dashboard.js",
     "capture:changelog-media": "node scripts/capture-changelog-media.mjs",

@@ -26,6 +26,11 @@ import {
   isLifetimeSubscription,
   type BillingPeriod,
 } from '@/lib/billing-plan-catalog'
+import {
+  backToWorkPeriodDisplay,
+  type BackToWorkPricingDisplay,
+} from '@/lib/back-to-work-promo'
+import { getBackToWorkPricingDisplay } from '@/server/back-to-work-pricing'
 import { changeBillingPlan } from '@/lib/billing-plan-change.client'
 
 function planIsPaid(planName: string | undefined): boolean {
@@ -62,6 +67,7 @@ export function BillingPlanList({
   const [changeLoading, setChangeLoading] = useState(false)
   const [pendingLifetime, setPendingLifetime] = useState(false)
   const [referralCode, setReferralCode] = useState<string | null>(null)
+  const [promo, setPromo] = useState<BackToWorkPricingDisplay | null>(null)
 
   const isLifetime = isLifetimeSubscription(subscription)
   const currentPeriod: BillingPeriod | null = !subscription
@@ -125,6 +131,11 @@ export function BillingPlanList({
     })
   }, [])
 
+  useEffect(() => {
+    if (subscription) return
+    void getBackToWorkPricingDisplay().then(setPromo)
+  }, [subscription])
+
   const periodLabel = (period: BillingPeriod) => {
     switch (period) {
       case 'monthly':
@@ -139,25 +150,22 @@ export function BillingPlanList({
   }
 
   const periodDetail = (period: BillingPeriod) => {
+    const offer = subscription
+      ? undefined
+      : backToWorkPeriodDisplay(promo, period)
+    const monthlyEquivalent =
+      offer?.saleMonthlyEquivalent ?? billingPeriodMonthlyEquivalent(period)
     if (isPage) {
       switch (period) {
         case 'monthly':
           return t('dashboard.billingPage.monthlyDetail')
         case 'quarterly':
           return t('dashboard.billingPage.quarterlyDetail', {
-            price: formatBillingAmount(
-              billingPeriodMonthlyEquivalent('quarterly'),
-              currency,
-              locale
-            ),
+            price: formatBillingAmount(monthlyEquivalent, currency, locale),
           })
         case 'yearly':
           return t('dashboard.billingPage.yearlyDetail', {
-            price: formatBillingAmount(
-              billingPeriodMonthlyEquivalent('yearly'),
-              currency,
-              locale
-            ),
+            price: formatBillingAmount(monthlyEquivalent, currency, locale),
           })
         case 'lifetime':
           return t('dashboard.billingPage.lifetimeDetail')
@@ -302,8 +310,16 @@ export function BillingPlanList({
               </p>
               {periods.map((period) => {
                 const isSelected = effectiveSelected === period
-                const price = formatBillingAmount(
+                const offer = subscription
+                  ? undefined
+                  : backToWorkPeriodDisplay(promo, period)
+                const listPrice = formatBillingAmount(
                   billingPeriodCharge(period),
+                  currency,
+                  locale
+                )
+                const price = formatBillingAmount(
+                  offer?.saleCharge ?? billingPeriodCharge(period),
                   currency,
                   locale
                 )
@@ -337,6 +353,11 @@ export function BillingPlanList({
                         <span className="text-sm font-semibold text-[#171917] dark:text-foreground">
                           {t('pricing.plus.name')} · {periodLabel(period)}
                         </span>
+                        {offer?.offerActive ? (
+                          <span className="rounded-full bg-[#EFF5EC] px-2 py-0.5 text-[10px] font-medium text-[#3E7550] dark:bg-[#243028] dark:text-[#9BC4A8]">
+                            {t('pricing.backToWork.badge')}
+                          </span>
+                        ) : null}
                         {(isPage && period === 'yearly') ||
                         (!isPage &&
                           (period === 'yearly' ||
@@ -355,6 +376,11 @@ export function BillingPlanList({
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
+                      {offer?.saleCharge !== undefined ? (
+                        <s className="text-xs tabular-nums text-[#686D67] dark:text-muted-foreground">
+                          {listPrice}
+                        </s>
+                      ) : null}
                       <span className="text-base font-semibold tabular-nums text-[#171917] dark:text-foreground">
                         {price}
                       </span>

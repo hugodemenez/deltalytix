@@ -20,6 +20,8 @@ export default defineConfig({
       "**/node_modules/**",
       "**/.next/**",
       "**/prisma/generated/**",
+      // Live gateway suites — run with `bun run test:e2e:rithmic`.
+      "**/*.e2e.test.ts",
       // Written against `bun:test`; run it with `bun test <path>`.
       "app/[locale]/dashboard/components/filters/active-filter-model.test.ts",
     ],
