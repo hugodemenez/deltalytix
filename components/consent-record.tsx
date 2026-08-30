@@ -6,6 +6,7 @@ import { Drawer } from "vaul";
 import "./consent-record-drawer.css";
 
 import { Switch } from "@/components/ui/switch";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import {
   persistConsentSettings,
   reconcileStoredConsent,
@@ -225,7 +226,7 @@ export function ConsentRecordCard({
     <aside
       aria-labelledby="consent-record-card-title"
       className={cn(
-        "w-full max-w-[22rem] rounded-sm p-5",
+        "w-[22rem] max-w-[22rem] shrink-0 rounded-sm p-5",
         cardSurfaceClass,
         className,
       )}
@@ -381,7 +382,7 @@ function ConsentRecordMobileDrawer({
           data-consent-record-drawer=""
           aria-labelledby="consent-record-drawer-title"
           className={cn(
-            "fixed inset-x-0 bottom-0 top-0 z-50 flex flex-col overflow-hidden rounded-t-sm outline-none xl:hidden",
+            "fixed inset-x-0 bottom-0 top-0 z-50 flex flex-col overflow-hidden rounded-t-sm outline-none",
             cardSurfaceClass,
           )}
         >
@@ -424,6 +425,7 @@ export function ConsentRecordPrompt({
   copy: ConsentRecordCopy;
   privacyHref: string;
 }) {
+  const isXl = useMediaQuery("(min-width: 1280px)");
   const [visible, setVisible] = useState(false);
   const [choices, setChoices] = useState<ConsentRecordChoices>({
     productUse: false,
@@ -463,28 +465,29 @@ export function ConsentRecordPrompt({
     setVisible(false);
   };
 
-  return (
-    <div className="contents">
-      <div className="hidden shrink-0 xl:block">
-        <ConsentRecordCard
-          copy={copy}
-          choices={choices}
-          onChoicesChange={setChoices}
-          onContinue={() => save(choices)}
-          onAllowBoth={() => save({ productUse: true, ads: true })}
-          privacyHref={privacyHref}
-        />
-      </div>
-      <ConsentRecordMobileDrawer
+  if (isXl) {
+    return (
+      <ConsentRecordCard
         copy={copy}
         choices={choices}
         onChoicesChange={setChoices}
         onContinue={() => save(choices)}
         onAllowBoth={() => save({ productUse: true, ads: true })}
         privacyHref={privacyHref}
-        open={visible}
       />
-    </div>
+    );
+  }
+
+  return (
+    <ConsentRecordMobileDrawer
+      copy={copy}
+      choices={choices}
+      onChoicesChange={setChoices}
+      onContinue={() => save(choices)}
+      onAllowBoth={() => save({ productUse: true, ads: true })}
+      privacyHref={privacyHref}
+      open={visible}
+    />
   );
 }
 
