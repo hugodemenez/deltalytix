@@ -1,220 +1,829 @@
-import * as React from 'react';
+import * as React from "react";
+import { Head, Html, Preview } from "@react-email/components";
 import {
-  Body,
-  Button,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Link,
-  Preview,
-  Section,
-  Tailwind,
-  Text,
-} from '@react-email/components';
+  buildRenewalCalendar,
+  buildRenewalNoticeCopy,
+  resolveRenewalCalendarDates,
+  type RenewalCalendarDay,
+} from "@/lib/renewal-notice-copy";
 
-interface RenewalNoticeEmailProps {
+export interface RenewalNoticeEmailProps {
   userFirstName: string;
   userEmail: string;
   accountName: string;
   propFirmName: string;
-  nextPaymentDate: string;
+  nextPaymentDate: string | Date;
   daysUntilRenewal: number;
   paymentFrequency: string;
   language?: string;
   unsubscribeUrl?: string;
+  changeReminderUrl?: string;
+  turnOffNoticeUrl?: string;
+  now?: string | Date;
 }
 
-const translations = {
-  en: {
-    preview: 'Upcoming renewal for your account',
-    greeting: 'Hello',
-    title: 'Account Renewal Notice',
-    intro: 'This is a friendly reminder that your prop firm account renewal is coming up.',
-    accountDetails: 'Account Details',
-    account: 'Account',
-    propFirm: 'Prop Firm',
-    nextPayment: 'Next Payment Date',
-    frequency: 'Payment Frequency',
-    daysRemaining: 'Days Until Renewal',
-    actionTitle: 'What you need to do',
-    actionDescription: 'Please ensure your payment method is up to date and sufficient funds are available.',
-    manageAccountButton: 'Manage Account',
-    contactSupport: 'If you have any questions or need to make changes to your account, please contact our support team.',
-    supportButton: 'Contact Support',
-    autoRenewalNote: 'This account is set to auto-renew. If you want to make changes or cancel, please do so before the renewal date.',
-    bestRegards: 'Best regards',
-    team: 'The Deltalytix Team',
-    unsubscribe: 'Unsubscribe from renewal notifications',
-    frequencies: {
-      monthly: 'Monthly',
-      quarterly: 'Quarterly', 
-      biannual: 'Bi-annual',
-      annual: 'Annual',
-      custom: 'Custom'
-    }
-  },
-  fr: {
-    preview: 'Renouvellement prochain pour votre compte',
-    greeting: 'Bonjour',
-    title: 'Avis de Renouvellement de Compte',
-    intro: 'Ceci est un rappel amical que le renouvellement de votre compte prop firm approche.',
-    accountDetails: 'Détails du Compte',
-    account: 'Compte',
-    propFirm: 'Prop Firm',
-    nextPayment: 'Prochaine Date de Paiement',
-    frequency: 'Fréquence de Paiement',
-    daysRemaining: 'Jours Avant Renouvellement',
-    actionTitle: 'Ce que vous devez faire',
-    actionDescription: 'Veuillez vous assurer que votre méthode de paiement est à jour et que des fonds suffisants sont disponibles.',
-    manageAccountButton: 'Gérer le Compte',
-    contactSupport: 'Si vous avez des questions ou devez apporter des modifications à votre compte, veuillez contacter notre équipe de support.',
-    supportButton: 'Contacter le Support',
-    autoRenewalNote: 'Ce compte est configuré pour se renouveler automatiquement. Si vous souhaitez apporter des modifications ou annuler, veuillez le faire avant la date de renouvellement.',
-    bestRegards: 'Cordialement',
-    team: 'L\'équipe Deltalytix',
-    unsubscribe: 'Se désabonner des notifications de renouvellement',
-    frequencies: {
-      monthly: 'Mensuel',
-      quarterly: 'Trimestriel',
-      biannual: 'Semestriel', 
-      annual: 'Annuel',
-      custom: 'Personnalisé'
-    }
+const FONT = "Geist,Arial,Helvetica,sans-serif";
+const PAGE = "#F7F7F4";
+const INK = "#222722";
+const MUTED = "#5f665f";
+const KICKER = "#8a908a";
+const MINT = "#EFF5EC";
+const WASH = "#E3EDE4";
+const HAIRLINE = "#e6e8e4";
+
+const chromeCss = `
+:root { color-scheme: light dark; supported-color-schemes: light dark; }
+@media only screen and (max-width: 620px) {
+  .email-shell, .email-pad {
+    width: 100% !important;
+    max-width: 100% !important;
   }
-};
+  .renewal-h1 {
+    font-size: 28px !important;
+    line-height: 34px !important;
+  }
+  .meta-label, .meta-value {
+    display: block !important;
+    width: 100% !important;
+    text-align: left !important;
+  }
+  .meta-value {
+    padding-top: 2px !important;
+    padding-bottom: 14px !important;
+  }
+  .cta-primary, .cta-quiet {
+    display: block !important;
+    width: 100% !important;
+  }
+  .cta-primary {
+    padding-bottom: 12px !important;
+  }
+  .cta-quiet {
+    padding-left: 0 !important;
+    padding-top: 4px !important;
+  }
+  .cta-button, .cta-button-link {
+    width: 100% !important;
+    display: block !important;
+    text-align: center !important;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  .dm-bg { background-color:#111411 !important; }
+  .dm-heading { color:#f3f6f2 !important; }
+  .dm-text { color:#b8c1b8 !important; }
+  .dm-kicker { color:#8ab89a !important; }
+  .dm-surface-green { background-color:#19231b !important; }
+  .dm-wash { background-color:#243328 !important; }
+  .dm-border { border-color:#343b34 !important; }
+  .dm-button { background-color:#edf2ec !important; }
+  .dm-button-link { color:#151915 !important; }
+  .dm-today { background-color:#edf2ec !important; color:#151915 !important; }
+  .dm-payment { border-color:#edf2ec !important; color:#f3f6f2 !important; }
+}
+[data-ogsc] .dm-bg { background-color:#111411 !important; }
+[data-ogsc] .dm-heading { color:#f3f6f2 !important; }
+[data-ogsc] .dm-text { color:#b8c1b8 !important; }
+[data-ogsc] .dm-kicker { color:#8ab89a !important; }
+[data-ogsc] .dm-surface-green { background-color:#19231b !important; }
+[data-ogsc] .dm-wash { background-color:#243328 !important; }
+[data-ogsc] .dm-border { border-color:#343b34 !important; }
+[data-ogsc] .dm-button { background-color:#edf2ec !important; }
+[data-ogsc] .dm-button-link { color:#151915 !important; }
+[data-ogsc] .dm-today { background-color:#edf2ec !important; color:#151915 !important; }
+[data-ogsc] .dm-payment { border-color:#edf2ec !important; color:#f3f6f2 !important; }
+img.brand-mark-dark { display: none !important; max-height: 0 !important; overflow: hidden !important; }
+@media (prefers-color-scheme: dark) {
+  img.brand-mark-light { display: none !important; max-height: 0 !important; overflow: hidden !important; }
+  img.brand-mark-dark { display: inline-block !important; max-height: none !important; overflow: visible !important; width: 22px !important; height: 22px !important; }
+}
+[data-ogsc] img.brand-mark-light { display: none !important; max-height: 0 !important; overflow: hidden !important; }
+[data-ogsc] img.brand-mark-dark { display: inline-block !important; max-height: none !important; overflow: visible !important; width: 22px !important; height: 22px !important; }
+`;
+
+function appOrigin(): string {
+  return (process.env.NEXT_PUBLIC_APP_URL || "https://www.deltalytix.app").replace(
+    /\/$/,
+    "",
+  );
+}
+
+function Spacer({ height }: { height: number }) {
+  return (
+    <table width="100%" cellPadding={0} cellSpacing={0} border={0} role="presentation">
+      <tbody>
+        <tr>
+          <td
+            height={height}
+            style={{
+              height: `${height}px`,
+              fontSize: "1px",
+              lineHeight: "1px",
+            }}
+          >
+            &nbsp;
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+function BrandMark() {
+  return (
+    <>
+      <img
+        className="brand-mark-light dm-image"
+        src="https://www.deltalytix.app/brand/deltalytix-mark.png"
+        width={22}
+        height={22}
+        border={0}
+        alt="Deltalytix"
+        style={{
+          display: "inline-block",
+          width: "22px",
+          height: "22px",
+          border: 0,
+          outline: "none",
+          textDecoration: "none",
+        }}
+      />
+      <img
+        className="brand-mark-dark dm-image"
+        src="https://www.deltalytix.app/brand/deltalytix-mark-light.png"
+        width={22}
+        height={22}
+        border={0}
+        alt="Deltalytix"
+        style={{
+          display: "none",
+          width: "22px",
+          height: "22px",
+          border: 0,
+          outline: "none",
+          textDecoration: "none",
+        }}
+      />
+    </>
+  );
+}
+
+function DayCell({ cell }: { cell: RenewalCalendarDay }) {
+  const isToday = cell.kind === "today";
+  const isPayment = cell.kind === "payment";
+  const isRange = cell.kind === "range";
+  const className = [
+    "day-cell",
+    isToday ? "day-today" : "",
+    isPayment ? "day-payment" : "",
+    isRange ? "day-range" : "",
+    cell.kind === "empty" ? "day-empty" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const number = cell.day == null ? "" : String(cell.day);
+
+  return (
+    <td
+      className={`${className}${isRange ? " dm-wash" : ""}`}
+      align="center"
+      valign="middle"
+      width="14%"
+      bgcolor={isRange ? WASH : undefined}
+      style={{
+        width: "14.28%",
+        height: "36px",
+        paddingTop: "4px",
+        paddingRight: "2px",
+        paddingBottom: "4px",
+        paddingLeft: "2px",
+        backgroundColor: isRange ? WASH : "transparent",
+        fontFamily: FONT,
+        fontSize: "13px",
+        lineHeight: "20px",
+        color: INK,
+        textAlign: "center",
+      }}
+    >
+      {isToday ? (
+        <span
+          className="dm-today"
+          style={{
+            display: "inline-block",
+            width: "28px",
+            height: "28px",
+            lineHeight: "28px",
+            backgroundColor: INK,
+            color: "#ffffff",
+            borderRadius: "50%",
+            fontWeight: 600,
+            fontFamily: FONT,
+            fontSize: "13px",
+          }}
+        >
+          {number}
+        </span>
+      ) : isPayment ? (
+        <span
+          className="dm-payment"
+          style={{
+            display: "inline-block",
+            width: "26px",
+            height: "26px",
+            lineHeight: "24px",
+            border: `1.5px solid ${INK}`,
+            borderRadius: "50%",
+            color: INK,
+            fontWeight: 500,
+            fontFamily: FONT,
+            fontSize: "13px",
+          }}
+        >
+          {number}
+        </span>
+      ) : (
+        <span
+          className="dm-heading"
+          style={{
+            display: "inline-block",
+            minWidth: "28px",
+            fontFamily: FONT,
+            fontSize: "13px",
+            lineHeight: "28px",
+            color: INK,
+          }}
+        >
+          {number || "\u00a0"}
+        </span>
+      )}
+    </td>
+  );
+}
 
 export default function RenewalNoticeEmail({
   userFirstName,
-  userEmail,
   accountName,
   propFirmName,
   nextPaymentDate,
   daysUntilRenewal,
-  paymentFrequency,
-  language = 'en',
-  unsubscribeUrl
+  language = "en",
+  unsubscribeUrl,
+  changeReminderUrl,
+  turnOffNoticeUrl,
+  now,
 }: RenewalNoticeEmailProps) {
-  const t = translations[language as keyof typeof translations] || translations.en;
-  const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`;
-  const supportUrl = `${process.env.NEXT_PUBLIC_APP_URL}/support`;
+  const t = buildRenewalNoticeCopy({
+    language,
+    firstName: userFirstName,
+    propFirmName,
+    daysUntilRenewal,
+  });
+  const { today, payment } = resolveRenewalCalendarDates({
+    now,
+    nextPaymentDate,
+    daysUntilRenewal,
+  });
+  const calendar = buildRenewalCalendar({
+    language: t.locale,
+    today,
+    payment,
+  });
+  const origin = appOrigin();
+  const reminderUrl = changeReminderUrl || `${origin}/dashboard`;
+  const disableUrl = turnOffNoticeUrl || `${origin}/dashboard`;
+  const unsubUrl = unsubscribeUrl || `${origin}/settings/notifications`;
 
   return (
-    <Html>
-      <Tailwind>
-        <Head />
-        <Preview>{t.preview}</Preview>
-        <Body className="bg-gray-50 font-sans">
-          <Section className="bg-white max-w-[600px] mx-auto rounded-lg shadow-xs">
-            <Section className="px-6 py-8">
-              <Heading className="text-2xl font-bold text-gray-900 mb-6">
-                {t.greeting} {userFirstName},
-              </Heading>
-
-              <Heading className="text-xl font-semibold text-gray-900 mb-4">
-                {t.title}
-              </Heading>
-
-              <Text className="text-gray-800 mb-6 leading-6">
-                {t.intro}
-              </Text>
-
-              {/* Account Details Card */}
-              <Section className="bg-gray-50 rounded-lg p-6 mb-6">
-                <Heading className="text-lg font-semibold text-gray-900 mb-4">
-                  {t.accountDetails}
-                </Heading>
-                
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <Text className="text-gray-600 margin-0">{t.account}:</Text>
-                    <Text className="text-gray-900 font-medium margin-0">{accountName}</Text>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <Text className="text-gray-600 margin-0">{t.propFirm}:</Text>
-                    <Text className="text-gray-900 font-medium margin-0">{propFirmName}</Text>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <Text className="text-gray-600 margin-0">{t.nextPayment}:</Text>
-                    <Text className="text-gray-900 font-medium margin-0">{nextPaymentDate}</Text>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <Text className="text-gray-600 margin-0">{t.frequency}:</Text>
-                    <Text className="text-gray-900 font-medium margin-0">
-                      {t.frequencies[paymentFrequency as keyof typeof t.frequencies] || paymentFrequency}
-                    </Text>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <Text className="text-gray-600 margin-0">{t.daysRemaining}:</Text>
-                    <Text className={`font-medium margin-0 ${daysUntilRenewal <= 3 ? 'text-red-600' : 'text-orange-600'}`}>
-                      {daysUntilRenewal} {daysUntilRenewal === 1 ? 'day' : 'days'}
-                    </Text>
-                  </div>
-                </div>
-              </Section>
-
-              {/* Action Section */}
-              <Section className="mb-6">
-                <Heading className="text-lg font-semibold text-gray-900 mb-3">
-                  {t.actionTitle}
-                </Heading>
-                <Text className="text-gray-800 mb-4 leading-6">
-                  {t.actionDescription}
-                </Text>
-                
-                <Button
-                  href={dashboardUrl}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium text-center block w-fit"
+    <Html lang={t.locale}>
+      <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="x-apple-disable-message-reformatting" />
+        <meta name="color-scheme" content="light dark" />
+        <meta name="supported-color-schemes" content="light dark" />
+        <style dangerouslySetInnerHTML={{ __html: chromeCss }} />
+      </Head>
+      <Preview>{t.preview}</Preview>
+      <body
+        className="dm-bg"
+        style={{
+          marginTop: 0,
+          marginRight: 0,
+          marginBottom: 0,
+          marginLeft: 0,
+          backgroundColor: PAGE,
+          fontFamily: FONT,
+        }}
+      >
+        <table
+          className="dm-bg email-shell"
+          width="100%"
+          cellPadding={0}
+          cellSpacing={0}
+          border={0}
+          role="presentation"
+          bgcolor={PAGE}
+          style={{ width: "100%", maxWidth: "100%", backgroundColor: PAGE }}
+        >
+          <tbody>
+            <tr>
+              <td className="dm-bg" align="center" style={{ padding: 0 }} bgcolor={PAGE}>
+                <table
+                  className="dm-bg"
+                  width="100%"
+                  cellPadding={0}
+                  cellSpacing={0}
+                  border={0}
+                  role="presentation"
+                  style={{ width: "100%", maxWidth: "100%" }}
                 >
-                  {t.manageAccountButton}
-                </Button>
-              </Section>
+                  <tbody>
+                    <tr>
+                      <td
+                        className="email-pad"
+                        style={{
+                          paddingTop: "36px",
+                          paddingRight: "12px",
+                          paddingBottom: "40px",
+                          paddingLeft: "12px",
+                        }}
+                      >
+                        <table
+                          width="100%"
+                          cellPadding={0}
+                          cellSpacing={0}
+                          border={0}
+                          role="presentation"
+                        >
+                          <tbody>
+                            <tr>
+                              <td valign="middle" align="left" style={{ paddingBottom: "28px" }}>
+                                <table
+                                  cellPadding={0}
+                                  cellSpacing={0}
+                                  border={0}
+                                  role="presentation"
+                                >
+                                  <tbody>
+                                    <tr>
+                                      <td valign="middle" style={{ paddingRight: "8px" }}>
+                                        <BrandMark />
+                                      </td>
+                                      <td valign="middle">
+                                        <p
+                                          className="dm-heading"
+                                          style={{
+                                            fontFamily: FONT,
+                                            fontSize: "15px",
+                                            lineHeight: "20px",
+                                            color: INK,
+                                            fontWeight: 700,
+                                            margin: 0,
+                                          }}
+                                        >
+                                          Deltalytix
+                                        </p>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </td>
+                              <td valign="middle" align="right" style={{ paddingBottom: "28px" }}>
+                                <p
+                                  className="dm-kicker dm-text"
+                                  style={{
+                                    fontFamily: FONT,
+                                    fontSize: "13px",
+                                    lineHeight: "20px",
+                                    color: KICKER,
+                                    fontWeight: 400,
+                                    margin: 0,
+                                  }}
+                                >
+                                  {t.kicker}
+                                </p>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
 
-              {/* Auto-renewal Notice */}
-              <Section className="bg-blue-50 rounded-lg p-4 mb-6">
-                <Text className="text-blue-800 margin-0 text-sm leading-5">
-                  ℹ️ {t.autoRenewalNote}
-                </Text>
-              </Section>
+                        <p
+                          className="dm-text"
+                          style={{
+                            fontFamily: FONT,
+                            fontSize: "15px",
+                            lineHeight: "24px",
+                            color: MUTED,
+                            marginTop: 0,
+                            marginBottom: "10px",
+                          }}
+                        >
+                          {t.greeting}
+                        </p>
+                        <h1
+                          className="dm-heading renewal-h1"
+                          style={{
+                            fontFamily: FONT,
+                            fontSize: "32px",
+                            lineHeight: "40px",
+                            fontWeight: 500,
+                            letterSpacing: "-0.03em",
+                            color: INK,
+                            marginTop: 0,
+                            marginBottom: "10px",
+                          }}
+                        >
+                          {t.h1}
+                        </h1>
+                        <p
+                          className="dm-text"
+                          style={{
+                            fontFamily: FONT,
+                            fontSize: "15px",
+                            lineHeight: "24px",
+                            color: MUTED,
+                            marginTop: 0,
+                            marginBottom: 0,
+                          }}
+                        >
+                          {t.lede}
+                        </p>
 
-              {/* Support Section */}
-              <Section className="mb-6">
-                <Text className="text-gray-800 mb-4 leading-6">
-                  {t.contactSupport}
-                </Text>
-                
-                <Button
-                  href={supportUrl}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium text-center block w-fit"
-                >
-                  {t.supportButton}
-                </Button>
-              </Section>
+                        <Spacer height={24} />
 
-              <Text className="text-gray-800 mt-8 mb-2">
-                {t.bestRegards},
-              </Text>
-              <Text className="text-gray-800 mb-6">
-                {t.team}
-              </Text>
+                        <table
+                          className="dm-surface-green"
+                          width="100%"
+                          cellPadding={0}
+                          cellSpacing={0}
+                          border={0}
+                          role="presentation"
+                          bgcolor={MINT}
+                          style={{
+                            width: "100%",
+                            backgroundColor: MINT,
+                            borderRadius: "12px",
+                          }}
+                        >
+                          <tbody>
+                            <tr>
+                              <td
+                                className="dm-surface-green"
+                                bgcolor={MINT}
+                                style={{
+                                  backgroundColor: MINT,
+                                  borderRadius: "12px",
+                                  paddingTop: "22px",
+                                  paddingRight: "22px",
+                                  paddingBottom: "22px",
+                                  paddingLeft: "22px",
+                                }}
+                              >
+                                <table
+                                  width="100%"
+                                  cellPadding={0}
+                                  cellSpacing={0}
+                                  border={0}
+                                  role="presentation"
+                                >
+                                  <tbody>
+                                    <tr>
+                                      <td
+                                        className="meta-label dm-text"
+                                        valign="top"
+                                        style={{
+                                          fontFamily: FONT,
+                                          fontSize: "13px",
+                                          lineHeight: "20px",
+                                          color: MUTED,
+                                          paddingBottom: "10px",
+                                        }}
+                                      >
+                                        {t.firmLabel}
+                                      </td>
+                                      <td
+                                        className="meta-value dm-heading"
+                                        valign="top"
+                                        align="right"
+                                        style={{
+                                          fontFamily: FONT,
+                                          fontSize: "15px",
+                                          lineHeight: "20px",
+                                          color: INK,
+                                          fontWeight: 700,
+                                          textAlign: "right",
+                                          paddingBottom: "10px",
+                                        }}
+                                      >
+                                        {propFirmName}
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td
+                                        className="meta-label dm-text"
+                                        valign="top"
+                                        style={{
+                                          fontFamily: FONT,
+                                          fontSize: "13px",
+                                          lineHeight: "20px",
+                                          color: MUTED,
+                                          paddingBottom: "18px",
+                                        }}
+                                      >
+                                        {t.accountLabel}
+                                      </td>
+                                      <td
+                                        className="meta-value dm-heading"
+                                        valign="top"
+                                        align="right"
+                                        style={{
+                                          fontFamily: FONT,
+                                          fontSize: "15px",
+                                          lineHeight: "20px",
+                                          color: INK,
+                                          fontWeight: 700,
+                                          textAlign: "right",
+                                          paddingBottom: "18px",
+                                        }}
+                                      >
+                                        {accountName}
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
 
-              <Hr className="border-gray-200 my-6" />
+                                <p
+                                  className="dm-heading"
+                                  style={{
+                                    fontFamily: FONT,
+                                    fontSize: "13px",
+                                    lineHeight: "20px",
+                                    color: INK,
+                                    fontWeight: 600,
+                                    marginTop: 0,
+                                    marginBottom: "10px",
+                                  }}
+                                >
+                                  {calendar.monthName}
+                                </p>
 
-              {unsubscribeUrl && (
-                <Text className="text-gray-400 text-xs text-center margin-0">
-                  <Link href={unsubscribeUrl} className="text-gray-400 underline">
-                    {t.unsubscribe}
-                  </Link>
-                </Text>
-              )}
-            </Section>
-          </Section>
-        </Body>
-      </Tailwind>
+                                <table
+                                  width="100%"
+                                  cellPadding={0}
+                                  cellSpacing={0}
+                                  border={0}
+                                  role="presentation"
+                                >
+                                  <tbody>
+                                    <tr>
+                                      {calendar.weekdays.map((weekday, index) => (
+                                        <td
+                                          key={`${weekday}-${index}`}
+                                          align="center"
+                                          width="14%"
+                                          style={{
+                                            width: "14.28%",
+                                            fontFamily: FONT,
+                                            fontSize: "12px",
+                                            lineHeight: "18px",
+                                            color: KICKER,
+                                            paddingBottom: "6px",
+                                          }}
+                                        >
+                                          {weekday}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                    {calendar.weeks.map((week, weekIndex) => (
+                                      <tr key={`week-${weekIndex}`}>
+                                        {week.map((cell, dayIndex) => (
+                                          <DayCell
+                                            key={`d-${weekIndex}-${dayIndex}`}
+                                            cell={cell}
+                                          />
+                                        ))}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+
+                                <p
+                                  className="dm-text"
+                                  style={{
+                                    fontFamily: FONT,
+                                    fontSize: "13px",
+                                    lineHeight: "20px",
+                                    color: MUTED,
+                                    marginTop: "14px",
+                                    marginBottom: 0,
+                                  }}
+                                >
+                                  {t.caption}
+                                </p>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        <Spacer height={24} />
+
+                        <p
+                          className="dm-text"
+                          style={{
+                            fontFamily: FONT,
+                            fontSize: "15px",
+                            lineHeight: "24px",
+                            color: MUTED,
+                            marginTop: 0,
+                            marginBottom: 0,
+                          }}
+                        >
+                          {t.quiet}
+                        </p>
+
+                        <Spacer height={22} />
+
+                        <table
+                          className="cta-row"
+                          width="100%"
+                          cellPadding={0}
+                          cellSpacing={0}
+                          border={0}
+                          role="presentation"
+                        >
+                          <tbody>
+                            <tr>
+                              <td
+                                className="cta-primary"
+                                valign="middle"
+                                width="1%"
+                                style={{ width: "1%", whiteSpace: "nowrap" }}
+                              >
+                                <table
+                                  className="cta-button dm-button"
+                                  cellPadding={0}
+                                  cellSpacing={0}
+                                  border={0}
+                                  role="presentation"
+                                  style={{ borderRadius: "6px" }}
+                                >
+                                  <tbody>
+                                    <tr>
+                                      <td
+                                        className="dm-button"
+                                        align="center"
+                                        bgcolor={INK}
+                                        style={{
+                                          backgroundColor: INK,
+                                          borderRadius: "6px",
+                                        }}
+                                      >
+                                        <a
+                                          className="cta-button-link dm-button-link"
+                                          href={reminderUrl}
+                                          style={{
+                                            display: "inline-block",
+                                            fontFamily: FONT,
+                                            fontSize: "14px",
+                                            lineHeight: "20px",
+                                            fontWeight: 700,
+                                            color: "#ffffff",
+                                            textDecoration: "none",
+                                            paddingTop: "12px",
+                                            paddingRight: "18px",
+                                            paddingBottom: "12px",
+                                            paddingLeft: "18px",
+                                            borderRadius: "6px",
+                                          }}
+                                        >
+                                          {t.ctaPrimary}
+                                        </a>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </td>
+                              <td
+                                className="cta-quiet"
+                                valign="middle"
+                                style={{ paddingLeft: "16px" }}
+                              >
+                                <a
+                                  className="dm-text"
+                                  href={disableUrl}
+                                  style={{
+                                    fontFamily: FONT,
+                                    fontSize: "14px",
+                                    lineHeight: "20px",
+                                    color: MUTED,
+                                    textDecoration: "none",
+                                  }}
+                                >
+                                  {t.ctaQuiet}
+                                </a>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        <Spacer height={48} />
+
+                        <p
+                          className="dm-heading"
+                          style={{
+                            fontFamily: FONT,
+                            fontSize: "15px",
+                            lineHeight: "24px",
+                            color: INK,
+                            marginTop: 0,
+                            marginBottom: 0,
+                          }}
+                        >
+                          {t.signoffName}
+                        </p>
+                        <p
+                          className="dm-text"
+                          style={{
+                            fontFamily: FONT,
+                            fontSize: "13px",
+                            lineHeight: "20px",
+                            color: MUTED,
+                            marginTop: 0,
+                            marginBottom: "16px",
+                          }}
+                        >
+                          {t.signoffBrand}
+                        </p>
+                        <table
+                          width="100%"
+                          cellPadding={0}
+                          cellSpacing={0}
+                          border={0}
+                          role="presentation"
+                        >
+                          <tbody>
+                            <tr>
+                              <td
+                                className="dm-border"
+                                height={1}
+                                style={{
+                                  borderTop: `1px solid ${HAIRLINE}`,
+                                  fontSize: "1px",
+                                  lineHeight: "1px",
+                                }}
+                              >
+                                &nbsp;
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <p
+                          className="dm-text"
+                          style={{
+                            fontFamily: FONT,
+                            fontSize: "13px",
+                            lineHeight: "20px",
+                            color: KICKER,
+                            marginTop: "16px",
+                            marginBottom: 0,
+                          }}
+                        >
+                          <a
+                            className="dm-text"
+                            href={unsubUrl}
+                            style={{
+                              fontFamily: FONT,
+                              fontSize: "13px",
+                              lineHeight: "20px",
+                              color: KICKER,
+                              textDecoration: "none",
+                            }}
+                          >
+                            {t.unsubscribe}
+                          </a>
+                        </p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </body>
     </Html>
   );
-} 
+}
+
+RenewalNoticeEmail.PreviewProps = {
+  userFirstName: "Hugo",
+  userEmail: "hugo@example.com",
+  accountName: "LOCAL-SIM-001",
+  propFirmName: "Apex",
+  nextPaymentDate: "2026-09-12",
+  daysUntilRenewal: 7,
+  paymentFrequency: "monthly",
+  language: "en",
+  unsubscribeUrl: "https://www.deltalytix.app/settings/notifications",
+  now: "2026-09-05",
+} satisfies RenewalNoticeEmailProps;
