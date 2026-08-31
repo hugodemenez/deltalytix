@@ -57,15 +57,23 @@ const chromeCss = `
   }
   .cta-primary {
     padding-bottom: 12px !important;
+    white-space: normal !important;
   }
   .cta-quiet {
     padding-left: 0 !important;
     padding-top: 4px !important;
   }
-  .cta-button, .cta-button-link {
+  .cta-button {
+    width: 100% !important;
+  }
+  .cta-button td {
+    width: 100% !important;
+  }
+  .cta-button-link {
     width: 100% !important;
     display: block !important;
     text-align: center !important;
+    box-sizing: border-box !important;
   }
 }
 @media (prefers-color-scheme: dark) {

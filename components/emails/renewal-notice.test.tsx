@@ -53,6 +53,8 @@ describe("RenewalNoticeEmail Paper lock", () => {
     expect(html).toContain('width="22"');
     expect(html).toContain("deltalytix-mark.png");
     expect(html).toContain("max-width:100%");
+    expect(html).toContain(".cta-button-link");
+    expect(html).toContain("white-space: normal !important");
     expect(html).not.toContain('width="680"');
     expect(html).not.toContain("max-width:680px");
     expect(html).not.toContain("max-width:600px");
