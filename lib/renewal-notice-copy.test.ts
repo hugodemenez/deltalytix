@@ -115,6 +115,17 @@ describe("renewal notice calendar", () => {
     ]);
   });
 
+  test("FR calendar month is Septembre, not English September", () => {
+    const calendar = buildRenewalCalendar({
+      language: "fr",
+      today: { year: 2026, month: 8, day: 5 },
+      payment: { year: 2026, month: 8, day: 12 },
+    });
+
+    expect(calendar.monthName).toBe("Septembre");
+    expect(calendar.monthName).not.toBe("September");
+  });
+
   test("ISO payment dates parse as civil dates", () => {
     const dates = resolveRenewalCalendarDates({
       now: "2026-09-05T00:00:00.000Z",

@@ -32,6 +32,8 @@ describe("RenewalNoticeEmail Paper lock", () => {
     expect(html).toContain("LOCAL-SIM-001");
     expect(html).toContain("Apex");
     expect(html).toContain("September");
+    expect(html).toMatch(/calendar-month[^>]*font-weight:400/);
+    expect(html).not.toMatch(/calendar-month[^>]*font-weight:600/);
     expect(html).toContain("7 days left");
     expect(html).toContain(
       "You can change when we remind you, or turn this notice off for this account.",
@@ -97,6 +99,8 @@ describe("RenewalNoticeEmail Paper lock", () => {
     expect(html).toContain("Désactiver cet avis");
     expect(html).toContain("Se désabonner des avis de paiement de compte");
     expect(html).toContain("Septembre");
+    expect(html).not.toContain("September");
+    expect(html).toMatch(/calendar-month[^>]*font-weight:400/);
 
     expect(html).not.toContain("chez la firm");
     expect(html).not.toContain("Avis de Renouvellement");

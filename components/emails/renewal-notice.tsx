@@ -561,13 +561,13 @@ export default function RenewalNoticeEmail({
                                 </table>
 
                                 <p
-                                  className="dm-heading"
+                                  className="dm-text calendar-month"
                                   style={{
                                     fontFamily: FONT,
                                     fontSize: "13px",
                                     lineHeight: "20px",
                                     color: INK,
-                                    fontWeight: 600,
+                                    fontWeight: 400,
                                     marginTop: 0,
                                     marginBottom: "10px",
                                   }}
