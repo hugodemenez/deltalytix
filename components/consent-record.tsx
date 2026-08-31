@@ -6,6 +6,7 @@ import { Drawer } from "vaul";
 import "./consent-record-drawer.css";
 
 import { Switch } from "@/components/ui/switch";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import {
   persistConsentSettings,
   reconcileStoredConsent,
@@ -225,7 +226,7 @@ export function ConsentRecordCard({
     <aside
       aria-labelledby="consent-record-card-title"
       className={cn(
-        "w-full max-w-[22rem] rounded-sm p-5",
+        "fixed right-5 bottom-[max(1.25rem,env(safe-area-inset-bottom,0px))] z-50 w-[22rem] max-w-[22rem] rounded-sm p-5 sm:right-8 sm:bottom-[max(2rem,env(safe-area-inset-bottom,0px))] lg:right-12 lg:bottom-[max(3rem,env(safe-area-inset-bottom,0px))]",
         cardSurfaceClass,
         className,
       )}
@@ -262,7 +263,7 @@ function ConsentRecordActions({
         type="button"
         onClick={onContinue}
         className={cn(
-          "inline-flex h-9 flex-1 items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-3 text-sm font-medium text-white transition-[opacity,transform] hover:opacity-85 active:scale-[0.96] dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]",
+          "inline-flex h-9 flex-1 items-center justify-center rounded-sm border border-[#E5E5E5] bg-white px-3 text-sm font-medium text-black transition-[colors,transform] hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:bg-transparent dark:text-white dark:hover:bg-white/5",
           hugDesktop && "xl:flex-none",
         )}
       >
@@ -272,7 +273,7 @@ function ConsentRecordActions({
         type="button"
         onClick={onAllowBoth}
         className={cn(
-          "inline-flex h-9 flex-1 items-center justify-center rounded-sm border border-[#E5E5E5] bg-white px-3 text-sm font-medium text-black transition-[colors,transform] hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:bg-transparent dark:text-white dark:hover:bg-white/5",
+          "inline-flex h-9 flex-1 items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-3 text-sm font-medium text-white transition-[opacity,transform] hover:opacity-85 active:scale-[0.96] dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]",
           hugDesktop && "xl:flex-none",
         )}
       >
@@ -381,7 +382,7 @@ function ConsentRecordMobileDrawer({
           data-consent-record-drawer=""
           aria-labelledby="consent-record-drawer-title"
           className={cn(
-            "fixed inset-x-0 bottom-0 top-0 z-50 flex flex-col overflow-hidden rounded-t-sm outline-none xl:hidden",
+            "fixed inset-x-0 bottom-0 top-0 z-50 flex flex-col overflow-hidden rounded-t-sm outline-none",
             cardSurfaceClass,
           )}
         >
@@ -424,6 +425,7 @@ export function ConsentRecordPrompt({
   copy: ConsentRecordCopy;
   privacyHref: string;
 }) {
+  const isXl = useMediaQuery("(min-width: 1280px)");
   const [visible, setVisible] = useState(false);
   const [choices, setChoices] = useState<ConsentRecordChoices>({
     productUse: false,
@@ -463,28 +465,29 @@ export function ConsentRecordPrompt({
     setVisible(false);
   };
 
-  return (
-    <div className="contents">
-      <div className="hidden shrink-0 xl:block">
-        <ConsentRecordCard
-          copy={copy}
-          choices={choices}
-          onChoicesChange={setChoices}
-          onContinue={() => save(choices)}
-          onAllowBoth={() => save({ productUse: true, ads: true })}
-          privacyHref={privacyHref}
-        />
-      </div>
-      <ConsentRecordMobileDrawer
+  if (isXl) {
+    return (
+      <ConsentRecordCard
         copy={copy}
         choices={choices}
         onChoicesChange={setChoices}
         onContinue={() => save(choices)}
         onAllowBoth={() => save({ productUse: true, ads: true })}
         privacyHref={privacyHref}
-        open={visible}
       />
-    </div>
+    );
+  }
+
+  return (
+    <ConsentRecordMobileDrawer
+      copy={copy}
+      choices={choices}
+      onChoicesChange={setChoices}
+      onContinue={() => save(choices)}
+      onAllowBoth={() => save({ productUse: true, ads: true })}
+      privacyHref={privacyHref}
+      open={visible}
+    />
   );
 }
 
