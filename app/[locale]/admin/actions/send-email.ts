@@ -110,15 +110,16 @@ export async function getDefaultTemplateProps(template: EmailTemplate): Promise<
       }
     case "renewal-notice":
       return {
-        userFirstName: "Trader",
+        userFirstName: "Hugo",
         userEmail: "user@example.com",
-        accountName: "Sample Account",
-        propFirmName: "Sample Prop Firm",
-        nextPaymentDate: new Date().toISOString(),
+        accountName: "LOCAL-SIM-001",
+        propFirmName: "Apex",
+        nextPaymentDate: "2026-09-12",
         daysUntilRenewal: 7,
         paymentFrequency: "monthly",
         language: "en",
         unsubscribeUrl: "https://deltalytix.app/api/email/unsubscribe?email=user%40example.com",
+        now: "2026-09-05",
       }
     case "team-invitation":
       return {
@@ -417,8 +418,8 @@ function getDefaultSubject(template: EmailTemplate, language: string): string {
       fr: "Découvrez Deltalytix plus simplement",
     },
     "renewal-notice": {
-      en: "Account Renewal Notice",
-      fr: "Avis de renouvellement de compte",
+      en: "Account payment",
+      fr: "Paiement du compte",
     },
     "team-invitation": {
       en: "You've been invited to join a team on Deltalytix",
