@@ -1,0 +1,17 @@
+---
+title: 'Les imports Protocol incluent désormais les commissions Product RMS'
+description: 'Les trades Protocol clôturés enregistrent la commission au taux Product RMS actuel, donc le P&L net n''ignore plus ces frais ; une resynchronisation met à jour la ligne existante.'
+date: '2026-08-28'
+status: completed
+completedDate: '2026-08-28'
+---
+
+# Les imports Protocol incluent désormais les commissions Product RMS
+
+La synchronisation **Rithmic Protocol** écrit maintenant une commission sur chaque trade clôturé à partir du Product RMS : taux de commission à l'exécution × quantité, à l'entrée et à la sortie. Le net du tableau de bord (`pnl − commission`) — totaux du jour dans le calendrier, colonne **Commission** du tableau des trades, widgets de P&L net — ne paraît plus trop élevé face au P&L du compte Rithmic pour les trades importés via Protocol qui stockaient auparavant une commission à `0`.
+
+Le taux vient de la même source Product RMS que **ProductRmsListInfo** de R | API+ et que la colonne **Commission Fill Rate** du CSV Orders. La synchronisation utilise la configuration RMS actuelle, pas les taux historiques des anciennes dates d'exécution. Si le Product RMS échoue, la synchronisation enregistre quand même les exécutions avec une commission à `0` et consigne un avertissement. Une synchronisation suivante met à jour la ligne existante au lieu d'insérer un aller-retour en double — les trades d'abord stockés sans RMS gardent la même identité, donc le net du calendrier n'est pas compté deux fois.
+
+Les parcours Rithmic CSV et API+ classiques ne changent pas. Il n'y a ni nouvelle colonne ni option dans les réglages. Pour voir des taux réels, il faut un point d'accès Protocol configuré et des identifiants en direct.
+
+Avec une connexion Rithmic Protocol, relancez la synchronisation depuis [Connexions](/fr/dashboard/connections), puis vérifiez la commission et le net du calendrier sur [le tableau de bord](/fr/dashboard).
