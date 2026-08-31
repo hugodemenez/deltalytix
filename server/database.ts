@@ -13,6 +13,7 @@ import {
   generatePersistedTradeUUID,
   RITHMIC_PROTOCOL_TRADE_TAG,
 } from '@/lib/trade-id-utils'
+import { isDuplicateTradesOnlySave } from '@/lib/trades/save-trades-outcome'
 import { capturePostHogEvent } from '@/lib/posthog-server'
 
 type TradeError =
@@ -136,10 +137,15 @@ export async function saveTradesAction(
       skipDuplicates: true
     })
 
-    await backfillRithmicProtocolCommissions(userId, userAssignedTrades)
+    const commissionsUpdated = await backfillRithmicProtocolCommissions(
+      userId,
+      userAssignedTrades,
+    )
 
-    // Log potential duplicates if no trades were added
-    if (result.count === 0) {
+    // createMany can insert 0 rows on a Protocol resync while the backfill
+    // still writes commissions. Only skip cache invalidation when nothing
+    // changed — callers (dashboard widgets) must read their own writes.
+    if (isDuplicateTradesOnlySave(result.count, commissionsUpdated)) {
       console.log('[saveTrades] No trades added. Checking for duplicates:', { attempted: data.length })
       const tradeIds = userAssignedTrades.map(trade => trade.id)
       const existingTrades = await prisma.trade.findMany({
