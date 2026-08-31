@@ -263,7 +263,7 @@ function ConsentRecordActions({
         type="button"
         onClick={onContinue}
         className={cn(
-          "inline-flex h-9 flex-1 items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-3 text-sm font-medium text-white transition-[opacity,transform] hover:opacity-85 active:scale-[0.96] dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]",
+          "inline-flex h-9 flex-1 items-center justify-center rounded-sm border border-[#E5E5E5] bg-white px-3 text-sm font-medium text-black transition-[colors,transform] hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:bg-transparent dark:text-white dark:hover:bg-white/5",
           hugDesktop && "xl:flex-none",
         )}
       >
@@ -273,7 +273,7 @@ function ConsentRecordActions({
         type="button"
         onClick={onAllowBoth}
         className={cn(
-          "inline-flex h-9 flex-1 items-center justify-center rounded-sm border border-[#E5E5E5] bg-white px-3 text-sm font-medium text-black transition-[colors,transform] hover:bg-black/5 active:scale-[0.96] dark:border-white/20 dark:bg-transparent dark:text-white dark:hover:bg-white/5",
+          "inline-flex h-9 flex-1 items-center justify-center rounded-sm bg-[oklch(0.22_0.01_95)] px-3 text-sm font-medium text-white transition-[opacity,transform] hover:opacity-85 active:scale-[0.96] dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]",
           hugDesktop && "xl:flex-none",
         )}
       >
