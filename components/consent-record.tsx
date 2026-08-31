@@ -226,7 +226,7 @@ export function ConsentRecordCard({
     <aside
       aria-labelledby="consent-record-card-title"
       className={cn(
-        "fixed right-5 top-[calc(var(--navbar-height,3.5rem)+1rem)] z-50 w-[22rem] max-w-[22rem] rounded-sm p-5 sm:right-8 lg:right-12",
+        "fixed right-5 bottom-[max(1.25rem,env(safe-area-inset-bottom,0px))] z-50 w-[22rem] max-w-[22rem] rounded-sm p-5 sm:right-8 sm:bottom-[max(2rem,env(safe-area-inset-bottom,0px))] lg:right-12 lg:bottom-[max(3rem,env(safe-area-inset-bottom,0px))]",
         cardSurfaceClass,
         className,
       )}
