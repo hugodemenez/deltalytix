@@ -6,9 +6,10 @@ import {
   useMemo,
   useState,
   type ButtonHTMLAttributes,
+  type ReactNode,
 } from 'react'
 import Link from 'next/link'
-import { ChevronDown, Plus } from 'lucide-react'
+import { ChevronDown, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
@@ -65,6 +66,7 @@ import {
   type StripItem,
 } from './connections-strip-items'
 import { ConnectionsStripAccountRow } from './connections-strip-account-row'
+import { useStripConnectionSync } from './use-strip-connection-sync'
 
 const SERVICE_SECTIONS: {
   service: ConnectionService
@@ -129,7 +131,31 @@ async function fetchConnectionsPageData(): Promise<ConnectionsPageData> {
   return reviveConnectionsPageData(json)
 }
 
-function ChipTrigger({
+function ChipFrame({
+  open,
+  className,
+  children,
+}: {
+  open: boolean
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        'inline-flex h-9 max-w-[22rem] shrink-0 items-center rounded-[4px] border bg-white text-sm tracking-[-0.01em] dark:bg-background',
+        open
+          ? 'border-[#181A18] dark:border-white'
+          : 'border-[#E5E5E5] dark:border-border',
+        className
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+function ChipPickerButton({
   item,
   open,
   showChevron = true,
@@ -159,10 +185,7 @@ function ChipTrigger({
       aria-haspopup="listbox"
       aria-expanded={open}
       className={cn(
-        'inline-flex h-9 max-w-[16rem] shrink-0 items-center gap-2 rounded-[4px] border bg-white px-3 text-left text-sm tracking-[-0.01em] transition-[background-color,border-color,transform] duration-150 hover:bg-[#F5F5F5] active:scale-[0.96] dark:bg-background dark:hover:bg-muted/50',
-        open
-          ? 'border-[#181A18] dark:border-white'
-          : 'border-[#E5E5E5] dark:border-border',
+        'inline-flex h-full min-w-0 items-center gap-2 px-3 text-left transition-[background-color,transform] duration-150 hover:bg-[#F5F5F5] active:scale-[0.98] dark:hover:bg-muted/50',
         className
       )}
       {...props}
@@ -208,7 +231,6 @@ function AccountPickerList({
   onSelectAccount,
   onClose,
   onMask,
-  onRename,
   onRequestDelete,
   listClassName,
 }: {
@@ -222,10 +244,6 @@ function AccountPickerList({
   onSelectAccount: (accountNumber: string) => void
   onClose: () => void
   onMask: (account: ConnectionsPageAccount, masked: boolean) => void
-  onRename: (
-    account: ConnectionsPageAccount,
-    nextName: string
-  ) => Promise<boolean>
   onRequestDelete: (account: ConnectionsPageAccount) => void
   listClassName: string
 }) {
@@ -268,7 +286,6 @@ function AccountPickerList({
                 onClose()
               }}
               onMask={onMask}
-              onRename={onRename}
               onRequestDelete={onRequestDelete}
             />
           ))}
@@ -287,6 +304,38 @@ function AccountPickerList({
   )
 }
 
+function StripSyncButton({
+  syncing,
+  onSync,
+}: {
+  syncing: boolean
+  onSync: () => void
+}) {
+  const t = useI18n()
+  return (
+    <button
+      type="button"
+      disabled={syncing}
+      onClick={(event) => {
+        event.stopPropagation()
+        onSync()
+      }}
+      className={cn(
+        'inline-flex h-full shrink-0 items-center justify-center gap-1.5 border-l border-[#E5E5E5] px-2.5 text-sm font-medium text-[#171917]',
+        'rounded-r-[3px] transition-[background-color,transform] duration-150',
+        'hover:bg-[#F5F5F5] active:scale-[0.98]',
+        'disabled:pointer-events-none disabled:opacity-40',
+        'dark:border-border dark:text-foreground dark:hover:bg-muted/50'
+      )}
+    >
+      {syncing ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+      ) : null}
+      {t('connections.strip.sync')}
+    </button>
+  )
+}
+
 function ConnectionChip({
   item,
   selectedAccounts,
@@ -295,8 +344,8 @@ function ConnectionChip({
   deletingAccountId,
   onSelectAccount,
   onMask,
-  onRename,
   onRequestDelete,
+  onSynced,
 }: {
   item: StripItem
   selectedAccounts: string[]
@@ -305,15 +354,13 @@ function ConnectionChip({
   deletingAccountId: string | null
   onSelectAccount: (accountNumber: string) => void
   onMask: (account: ConnectionsPageAccount, masked: boolean) => void
-  onRename: (
-    account: ConnectionsPageAccount,
-    nextName: string
-  ) => Promise<boolean>
   onRequestDelete: (account: ConnectionsPageAccount) => void
+  onSynced: () => void
 }) {
   const isMobile = useIsMobile()
   const [open, setOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const { canSync, sync, syncing } = useStripConnectionSync(item, onSynced)
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
@@ -337,22 +384,29 @@ function ConnectionChip({
       onSelectAccount={onSelectAccount}
       onClose={() => handleOpenChange(false)}
       onMask={onMask}
-      onRename={onRename}
       onRequestDelete={requestDelete}
       listClassName={listClassName}
     />
   )
 
+  const syncControl = canSync ? (
+    <StripSyncButton syncing={syncing} onSync={() => void sync()} />
+  ) : null
+
   if (isMobile) {
     return (
       <>
-        <ChipTrigger
-          item={item}
-          open={open}
-          showChevron={false}
-          numericCount
-          onClick={() => setOpen(true)}
-        />
+        <ChipFrame open={open}>
+          <ChipPickerButton
+            item={item}
+            open={open}
+            showChevron={false}
+            numericCount
+            className={syncControl ? 'rounded-l-[3px]' : 'rounded-[3px]'}
+            onClick={() => setOpen(true)}
+          />
+          {syncControl}
+        </ChipFrame>
         <Drawer
           open={open}
           onOpenChange={handleOpenChange}
@@ -374,18 +428,25 @@ function ConnectionChip({
   }
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <ChipTrigger item={item} open={open} />
-      </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        sideOffset={8}
-        className="w-[min(28rem,calc(100vw-2rem))] rounded-[4px] border-[#E5E5E5] bg-white p-0 shadow-md dark:border-border dark:bg-background"
-      >
-        {picker('max-h-[320px]')}
-      </PopoverContent>
-    </Popover>
+    <ChipFrame open={open}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
+          <ChipPickerButton
+            item={item}
+            open={open}
+            className={syncControl ? 'rounded-l-[3px]' : 'rounded-[3px]'}
+          />
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          sideOffset={8}
+          className="w-[min(28rem,calc(100vw-2rem))] rounded-[4px] border-[#E5E5E5] bg-white p-0 shadow-md dark:border-border dark:bg-background"
+        >
+          {picker('max-h-[320px]')}
+        </PopoverContent>
+      </Popover>
+      {syncControl}
+    </ChipFrame>
   )
 }
 
@@ -468,12 +529,10 @@ export function ConnectionsStrip({ className }: { className?: string }) {
     accountNumbers = [],
     setAccountNumbers,
     saveGroup,
-    saveAccount,
     moveAccountsToGroup,
     refreshTradesOnly,
   } = useData()
   const groups = useUserStore((state) => state.groups)
-  const updateAccount = useUserStore((state) => state.updateAccount)
   const removeAccount = useUserStore((state) => state.removeAccount)
   const setAccounts = useUserStore((state) => state.setAccounts)
   const setGroups = useUserStore((state) => state.setGroups)
@@ -579,38 +638,6 @@ export function ConnectionsStrip({ className }: { className?: string }) {
     [applyAccountPatch, ensureHiddenGroup, moveAccountsToGroup, setAccounts, setGroups, t]
   )
 
-  const onRename = useCallback(
-    async (account: ConnectionsPageAccount, nextName: string) => {
-      const storeAccount = useUserStore
-        .getState()
-        .accounts.find(
-          (item) => item.id === account.id || item.number === account.number
-        )
-      if (!storeAccount) {
-        toast.error(t('connections.strip.renameFailed'))
-        return false
-      }
-      try {
-        await saveAccount({ ...storeAccount, propfirm: nextName })
-        applyAccountPatch(account.id, { propfirm: nextName })
-        updateAccount(account.id, { propfirm: nextName })
-        setGroups(
-          useUserStore.getState().groups.map((group) => ({
-            ...group,
-            accounts: group.accounts.map((item) =>
-              item.id === account.id ? { ...item, propfirm: nextName } : item
-            ),
-          }))
-        )
-        return true
-      } catch {
-        toast.error(t('connections.strip.renameFailed'))
-        return false
-      }
-    },
-    [applyAccountPatch, saveAccount, setGroups, t, updateAccount]
-  )
-
   const onDelete = useCallback(
     async (account: ConnectionsPageAccount) => {
       if (!isStandaloneAccount(account)) return
@@ -675,8 +702,8 @@ export function ConnectionsStrip({ className }: { className?: string }) {
             deletingAccountId={deletingAccountId}
             onSelectAccount={onSelectAccount}
             onMask={onMask}
-            onRename={onRename}
             onRequestDelete={setAccountToDelete}
+            onSynced={() => void load()}
           />
         ))}
         <AddConnectionChip onSelectService={setConnectService} />

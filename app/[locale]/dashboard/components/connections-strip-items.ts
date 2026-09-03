@@ -11,6 +11,8 @@ export type StripItem =
       displayName: string
       status: 'connected' | 'error' | 'offline'
       service: string
+      /** Broker login / OAuth key used by existing broker sync routes. */
+      accountId: string
       accounts: ConnectionsPageAccount[]
     }
   | {
@@ -19,8 +21,47 @@ export type StripItem =
       displayName: string
       status: 'offline'
       service: string | null
+      accountId: null
       accounts: ConnectionsPageAccount[]
     }
+
+/** Hosted brokers that already expose on-demand sync. CSV / Thor / unknown: no. */
+export const STRIP_SYNCABLE_SERVICES = new Set<string>([
+  'rithmic',
+  'rithmic-protocol',
+  'tradovate',
+  'dxfeed',
+  'ibkr',
+  'ig',
+])
+
+export function isStripSyncableService(
+  service: string | null | undefined
+): boolean {
+  return service != null && STRIP_SYNCABLE_SERVICES.has(service)
+}
+
+export function canSyncStripItem(item: Pick<StripItem, 'kind' | 'service'>): boolean {
+  return item.kind === 'connection' && isStripSyncableService(item.service)
+}
+
+/** Journaled/computed balance already attached to dashboard accounts. */
+export function journaledAccountBalance(account: {
+  metrics?: { currentBalance?: number } | null
+  balanceToDate?: number | null
+  startingBalance?: number | null
+} | null | undefined): number | null {
+  if (!account) return null
+  const value =
+    account.metrics?.currentBalance ??
+    account.balanceToDate ??
+    account.startingBalance
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+export function formatStripBalance(value: number): string {
+  return `$${value.toFixed(2)}`
+}
 
 /**
  * Strip chips are connections only. Every account without a broker link
@@ -39,6 +80,7 @@ export function buildStripItems(
       displayName: connection.displayName,
       status: connection.status,
       service: connection.service,
+      accountId: connection.accountId || connection.externalId,
       accounts: connection.accounts,
     })
   )
@@ -55,6 +97,7 @@ export function buildStripItems(
       displayName: standaloneLabel,
       status: 'offline',
       service: null,
+      accountId: null,
       accounts: data.standaloneAccounts,
     },
   ]
