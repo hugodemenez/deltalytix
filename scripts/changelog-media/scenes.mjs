@@ -15,7 +15,8 @@ import {
   waitForDashboard,
   waitForNavbarBadgeSettled,
 } from './helpers.mjs'
-import { LABELS, viewport } from './constants.mjs'
+import { execFileSync } from 'child_process'
+import { LABELS, resolveDeviceScaleFactor, viewport } from './constants.mjs'
 
 /** Seeded standalone account the IG import capture targets. */
 const CAPTURE_ACCOUNT = 'LOCAL-SIM-001'
@@ -356,7 +357,7 @@ async function revealPickerOption(page, name) {
   await page.waitForTimeout(600)
 }
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form' | 'compare-hub-journals-table' | 'compare-tradezella-what-you-get' | 'connections-import-picker-deepcharts' | 'dashboard-strip-standalone-actions' | 'dashboard-strip-standalone-delete-confirm' | 'public-404-agent-resources' | 'calendar-header-month-year-news' | 'dashboard-centered-view-tabs' | 'dashboard-home-email'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form' | 'compare-hub-journals-table' | 'compare-tradezella-what-you-get' | 'connections-import-picker-deepcharts' | 'dashboard-strip-standalone-actions' | 'dashboard-strip-standalone-delete-confirm' | 'public-404-agent-resources' | 'calendar-header-month-year-news' | 'dashboard-centered-view-tabs' | 'dashboard-home-email' | 'renewal-notice-email'} ChangelogScene */
 
 
 /**
@@ -2001,6 +2002,53 @@ export async function captureScene(browser, options) {
       await assertNoDevIssues(page, `${locale} dashboard home email`)
       await screenshot(page, batch, locale, file, {
         clip: { x: 0, y: 0, width: clipWidth, height: clipHeight },
+      })
+      await page.close()
+      return
+    }
+
+    case 'renewal-notice-email': {
+      // Inbox letter, not an in-app route. Renders RenewalNoticeEmail with
+      // the locked Paper sample (Hugo / Apex / LOCAL-SIM-001 / 5→12 Sep).
+      // Viewport 720×1600 so the fluid 100% table stays letter-width.
+      // Expected EN: Account payment, Hi Hugo,, Apex payment in 7 days.,
+      // September, Change reminder. FR: Paiement du compte, Bonjour Hugo,,
+      // Paiement Apex dans 7 jours., Septembre, Modifier le rappel.
+      const html = execFileSync(
+        'bun',
+        [path.join(process.cwd(), 'scripts/changelog-media/render-renewal-notice.mjs'), locale],
+        { encoding: 'utf8', cwd: process.cwd() },
+      )
+      const expected = locale === 'fr'
+        ? ['Paiement du compte', 'Bonjour Hugo,', 'Paiement Apex dans 7 jours.', 'Septembre', 'Modifier le rappel']
+        : ['Account payment', 'Hi Hugo,', 'Apex payment in 7 days.', 'September', 'Change reminder']
+      for (const needle of expected) {
+        if (!html.includes(needle)) {
+          throw new Error(`renewal-notice-email ${locale} HTML missing “${needle}”`)
+        }
+      }
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        colorScheme: 'light',
+        viewport: { width: 720, height: 1600 },
+        deviceScaleFactor: resolveDeviceScaleFactor(),
+      })
+      await page.setContent(html, { waitUntil: 'networkidle' })
+      await page.locator('img.brand-mark-light').first().waitFor({ state: 'visible', timeout: 15_000 })
+      await page.getByText(expected[2], { exact: true }).waitFor({ timeout: 10_000 })
+      const body = page.locator('body')
+      const box = await body.boundingBox()
+      if (!box || box.height < 400) {
+        throw new Error(`renewal-notice-email ${locale} body is too short to be the letter`)
+      }
+      await page.waitForTimeout(400)
+      await screenshot(page, batch, locale, file, {
+        clip: {
+          x: Math.max(0, box.x),
+          y: Math.max(0, box.y),
+          width: Math.min(720, box.width),
+          height: Math.min(1600, box.height),
+        },
       })
       await page.close()
       return
