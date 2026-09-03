@@ -45,6 +45,19 @@ export function canSyncStripItem(item: Pick<StripItem, 'kind' | 'service'>): boo
   return item.kind === 'connection' && isStripSyncableService(item.service)
 }
 
+/**
+ * Desktop-only: Sync replaces the account-count meta on the chip.
+ * Mobile never shows Sync on the chip (or in the drawer).
+ * `isMobile` is `undefined` until the viewport is measured — treat that as
+ * "not desktop" so a phone never flashes a nested Sync button.
+ */
+export function chipShowsDesktopSync(
+  item: Pick<StripItem, 'kind' | 'service'>,
+  isMobile: boolean | undefined
+): boolean {
+  return isMobile === false && canSyncStripItem(item)
+}
+
 /** Journaled/computed balance already attached to dashboard accounts. */
 export function journaledAccountBalance(account: {
   metrics?: { currentBalance?: number } | null

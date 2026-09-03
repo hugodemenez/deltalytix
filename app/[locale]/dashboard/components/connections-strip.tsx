@@ -6,7 +6,6 @@ import {
   useMemo,
   useState,
   type ButtonHTMLAttributes,
-  type ReactNode,
 } from 'react'
 import Link from 'next/link'
 import { ChevronDown, Loader2, Plus } from 'lucide-react'
@@ -14,7 +13,7 @@ import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import { useData } from '@/context/data-provider'
-import { useIsMobile } from '@/hooks/use-mobile'
+import { useIsMobile, useIsMobileLayout } from '@/hooks/use-mobile'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
 import { removeAccountsFromTradesAction } from '@/server/accounts'
@@ -59,6 +58,7 @@ import { HIDDEN_GROUP_NAME } from '@/app/[locale]/dashboard/components/filters/a
 import {
   buildStripItems,
   chipAccountCountLabel,
+  chipShowsDesktopSync,
   isStandaloneAccount,
   mapConnectionsAccounts,
   removeConnectionsAccount,
@@ -131,31 +131,18 @@ async function fetchConnectionsPageData(): Promise<ConnectionsPageData> {
   return reviveConnectionsPageData(json)
 }
 
-function ChipFrame({
-  open,
-  className,
-  children,
-}: {
-  open: boolean
-  className?: string
-  children: ReactNode
-}) {
-  return (
-    <div
-      className={cn(
-        'inline-flex h-9 max-w-[22rem] shrink-0 items-center rounded-[4px] border bg-white text-sm tracking-[-0.01em] dark:bg-background',
-        open
-          ? 'border-[#181A18] dark:border-white'
-          : 'border-[#E5E5E5] dark:border-border',
-        className
-      )}
-    >
-      {children}
-    </div>
-  )
+function chipStatusLabel(
+  status: StripItem['status'],
+  t: ReturnType<typeof useI18n>
+) {
+  return status === 'connected'
+    ? t('connections.status.connected')
+    : status === 'error'
+      ? t('connections.status.error')
+      : t('connections.status.offline')
 }
 
-function ChipPickerButton({
+function ChipTrigger({
   item,
   open,
   showChevron = true,
@@ -172,12 +159,7 @@ function ChipPickerButton({
   const meta = chipAccountCountLabel(item.accounts.length, t, {
     numericOnly: numericCount,
   })
-  const statusLabel =
-    item.status === 'connected'
-      ? t('connections.status.connected')
-      : item.status === 'error'
-        ? t('connections.status.error')
-        : t('connections.status.offline')
+  const statusLabel = chipStatusLabel(item.status, t)
 
   return (
     <button
@@ -185,7 +167,10 @@ function ChipPickerButton({
       aria-haspopup="listbox"
       aria-expanded={open}
       className={cn(
-        'inline-flex h-full min-w-0 items-center gap-2 px-3 text-left transition-[background-color,transform] duration-150 hover:bg-[#F5F5F5] active:scale-[0.98] dark:hover:bg-muted/50',
+        'inline-flex h-9 max-w-[16rem] shrink-0 items-center gap-2 rounded-[4px] border bg-white px-3 text-left text-sm tracking-[-0.01em] transition-[background-color,border-color,transform] duration-150 hover:bg-[#F5F5F5] active:scale-[0.96] dark:bg-background dark:hover:bg-muted/50',
+        open
+          ? 'border-[#181A18] dark:border-white'
+          : 'border-[#E5E5E5] dark:border-border',
         className
       )}
       {...props}
@@ -321,15 +306,14 @@ function StripSyncButton({
         onSync()
       }}
       className={cn(
-        'inline-flex h-full shrink-0 items-center justify-center gap-1.5 border-l border-[#E5E5E5] px-2.5 text-sm font-medium text-[#171917]',
-        'rounded-r-[3px] transition-[background-color,transform] duration-150',
-        'hover:bg-[#F5F5F5] active:scale-[0.98]',
+        'inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-[3px] px-1.5 text-xs font-medium text-[#171917]',
+        'transition-[background-color,transform] duration-150 hover:bg-[#F5F5F5] active:scale-[0.96]',
         'disabled:pointer-events-none disabled:opacity-40',
-        'dark:border-border dark:text-foreground dark:hover:bg-muted/50'
+        'dark:text-foreground dark:hover:bg-muted/50'
       )}
     >
       {syncing ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+        <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
       ) : null}
       {t('connections.strip.sync')}
     </button>
@@ -357,10 +341,13 @@ function ConnectionChip({
   onRequestDelete: (account: ConnectionsPageAccount) => void
   onSynced: () => void
 }) {
-  const isMobile = useIsMobile()
+  const t = useI18n()
+  const isMobile = useIsMobileLayout()
   const [open, setOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const { canSync, sync, syncing } = useStripConnectionSync(item, onSynced)
+  const showDesktopSync = chipShowsDesktopSync(item, isMobile) && canSync
+  const statusLabel = chipStatusLabel(item.status, t)
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
@@ -389,24 +376,16 @@ function ConnectionChip({
     />
   )
 
-  const syncControl = canSync ? (
-    <StripSyncButton syncing={syncing} onSync={() => void sync()} />
-  ) : null
-
-  if (isMobile) {
+  if (isMobile === true) {
     return (
       <>
-        <ChipFrame open={open}>
-          <ChipPickerButton
-            item={item}
-            open={open}
-            showChevron={false}
-            numericCount
-            className={syncControl ? 'rounded-l-[3px]' : 'rounded-[3px]'}
-            onClick={() => setOpen(true)}
-          />
-          {syncControl}
-        </ChipFrame>
+        <ChipTrigger
+          item={item}
+          open={open}
+          showChevron={false}
+          numericCount
+          onClick={() => setOpen(true)}
+        />
         <Drawer
           open={open}
           onOpenChange={handleOpenChange}
@@ -427,15 +406,11 @@ function ConnectionChip({
     )
   }
 
-  return (
-    <ChipFrame open={open}>
+  if (!showDesktopSync) {
+    return (
       <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
-          <ChipPickerButton
-            item={item}
-            open={open}
-            className={syncControl ? 'rounded-l-[3px]' : 'rounded-[3px]'}
-          />
+          <ChipTrigger item={item} open={open} />
         </PopoverTrigger>
         <PopoverContent
           align="start"
@@ -445,8 +420,66 @@ function ConnectionChip({
           {picker('max-h-[320px]')}
         </PopoverContent>
       </Popover>
-      {syncControl}
-    </ChipFrame>
+    )
+  }
+
+  return (
+    <div
+      className={cn(
+        'inline-flex h-9 max-w-[18rem] shrink-0 items-center rounded-[4px] border bg-white text-sm tracking-[-0.01em] dark:bg-background',
+        open
+          ? 'border-[#181A18] dark:border-white'
+          : 'border-[#E5E5E5] dark:border-border'
+      )}
+    >
+      <Popover open={open} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded={open}
+            className="inline-flex h-full min-w-0 items-center gap-2 rounded-l-[3px] pl-3 pr-1 text-left transition-[background-color,transform] duration-150 hover:bg-[#F5F5F5] active:scale-[0.98] dark:hover:bg-muted/50"
+          >
+            <span className="min-w-0 truncate font-medium text-[#171917] dark:text-foreground">
+              {item.displayName}
+            </span>
+            <span
+              className={cn(
+                'h-1.5 w-1.5 shrink-0 rounded-full',
+                item.status === 'connected' && 'bg-[#3E7550]',
+                item.status === 'error' && 'bg-red-500',
+                item.status === 'offline' && 'bg-[#A3A3A3]'
+              )}
+              aria-label={statusLabel}
+            />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          sideOffset={8}
+          className="w-[min(28rem,calc(100vw-2rem))] rounded-[4px] border-[#E5E5E5] bg-white p-0 shadow-md dark:border-border dark:bg-background"
+        >
+          {picker('max-h-[320px]')}
+        </PopoverContent>
+      </Popover>
+      <StripSyncButton syncing={syncing} onSync={() => void sync()} />
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={item.displayName}
+        className="inline-flex h-full items-center rounded-r-[3px] pr-3 pl-1 text-[#686D67] transition-[background-color,transform] duration-150 hover:bg-[#F5F5F5] active:scale-[0.98] dark:text-muted-foreground dark:hover:bg-muted/50"
+        onClick={() => handleOpenChange(true)}
+      >
+        <ChevronDown
+          className={cn(
+            'h-3.5 w-3.5 shrink-0 transition-transform duration-150',
+            open && 'rotate-180'
+          )}
+          aria-hidden
+        />
+      </button>
+    </div>
   )
 }
 
