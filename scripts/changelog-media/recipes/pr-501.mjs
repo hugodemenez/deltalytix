@@ -8,6 +8,6 @@ export default {
   batch: 'pr-501',
   assets: [
     { file: 'account-payment-renewal-notice', scene: 'renewal-notice-email' },
-    { file: 'landing-hero-16-9-demo', scene: 'landing-hero' },
+    { file: 'landing-hero-16-9-demo', scene: 'landing-hero-16-9-frame' },
   ],
 }
