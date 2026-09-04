@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildStripItems,
+  canSyncStripItem,
   chipAccountCountLabel,
+  footerShowsDesktopSync,
   accountDisplayName,
+  formatStripBalance,
   isMaskedAccount,
   isStandaloneAccount,
+  isStripSyncableService,
+  journaledAccountBalance,
   mapConnectionsAccounts,
   removeConnectionsAccount,
   restoreMovedAccountGroup,
@@ -35,6 +40,7 @@ function connection(
   return {
     service: 'tradovate',
     status: 'connected',
+    accountId: 'ext',
     loginLabel: null,
     authError: null,
     accounts: [],
@@ -66,6 +72,11 @@ describe('buildStripItems', () => {
     expect(items).toHaveLength(1)
     expect(items[0].displayName).toBe('Tradovate')
     expect(items[0].displayName).not.toContain('DEMENEZ')
+    expect(items[0]).toMatchObject({
+      kind: 'connection',
+      accountId: 'ext',
+      service: 'tradovate',
+    })
   })
 
   it('groups every standalone account onto one Standalone chip', () => {
@@ -241,3 +252,58 @@ describe('restoreMovedAccountGroup', () => {
     expect(restored.groups).toBe(groups)
   })
 })
+
+describe('strip sync eligibility', () => {
+  it('allows hosted broker services and hides CSV / Thor / unknown', () => {
+    expect(isStripSyncableService('rithmic')).toBe(true)
+    expect(isStripSyncableService('rithmic-protocol')).toBe(true)
+    expect(isStripSyncableService('tradovate')).toBe(true)
+    expect(isStripSyncableService('dxfeed')).toBe(true)
+    expect(isStripSyncableService('ibkr')).toBe(true)
+    expect(isStripSyncableService('ig')).toBe(true)
+    expect(isStripSyncableService('thor')).toBe(false)
+    expect(isStripSyncableService(null)).toBe(false)
+    expect(isStripSyncableService('csv')).toBe(false)
+    expect(
+      canSyncStripItem({ kind: 'standalone', service: null })
+    ).toBe(false)
+    expect(
+      canSyncStripItem({ kind: 'connection', service: 'tradovate' })
+    ).toBe(true)
+    expect(
+      canSyncStripItem({ kind: 'connection', service: 'thor' })
+    ).toBe(false)
+  })
+
+  it('shows footer Sync only after desktop is confirmed', () => {
+    const tradovate = { kind: 'connection' as const, service: 'tradovate' }
+    const standalone = { kind: 'standalone' as const, service: null }
+    expect(footerShowsDesktopSync(tradovate, false)).toBe(true)
+    expect(footerShowsDesktopSync(tradovate, true)).toBe(false)
+    expect(footerShowsDesktopSync(tradovate, undefined)).toBe(false)
+    expect(footerShowsDesktopSync(standalone, false)).toBe(false)
+  })
+})
+
+describe('journaledAccountBalance', () => {
+  it('prefers computed metrics, then balanceToDate, then startingBalance', () => {
+    expect(
+      journaledAccountBalance({
+        metrics: { currentBalance: 51234.5 },
+        balanceToDate: 100,
+        startingBalance: 50,
+      })
+    ).toBe(51234.5)
+    expect(
+      journaledAccountBalance({
+        balanceToDate: 1200,
+        startingBalance: 1000,
+      })
+    ).toBe(1200)
+    expect(journaledAccountBalance({ startingBalance: 50000 })).toBe(50000)
+    expect(journaledAccountBalance({ startingBalance: null })).toBeNull()
+    expect(journaledAccountBalance(null)).toBeNull()
+    expect(formatStripBalance(51234.5)).toBe('$51234.50')
+  })
+})
+

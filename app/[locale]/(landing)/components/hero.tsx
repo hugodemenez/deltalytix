@@ -85,8 +85,7 @@ export default function Hero() {
   return (
     <div className="mx-auto w-full max-w-[1440px] px-5 pb-5 pt-16 sm:px-8 sm:pb-8 sm:pt-24 lg:px-12 lg:pt-32">
       <div className="flex flex-col gap-14 md:gap-20">
-        <div className="flex items-start justify-between gap-10">
-          <div className="min-w-0 max-w-[900px] flex-1">
+        <div className="max-w-[900px]">
           <Link
             href={localizeLandingHref(locale, "/updates")}
             className="mb-7 inline-flex text-sm text-black/55 transition-colors hover:text-black dark:text-white/55 dark:hover:text-white"
@@ -131,17 +130,12 @@ export default function Hero() {
               {t("landing.features.heading")} <span className="ml-3">↓</span>
             </Link>
           </div>
-          </div>
-          <ConsentRecordPrompt
-            copy={getConsentRecordCopy(t)}
-            privacyHref={localizeLandingHref(locale, "/settings#privacy")}
-          />
         </div>
         <div
           ref={videoContainerRef}
           className="relative overflow-hidden rounded-md bg-[oklch(0.88_0.04_165)] p-2 sm:rounded-lg sm:p-5 lg:rounded-xl lg:p-8"
         >
-          <div className="relative aspect-[2108/1080] w-full overflow-hidden rounded-sm bg-white shadow-2xl shadow-black/15 outline outline-1 outline-black/10 dark:aspect-[2120/1080] dark:bg-black dark:outline-white/10">
+          <div className="relative aspect-video w-full overflow-hidden rounded-sm bg-white shadow-2xl shadow-black/15 outline outline-1 outline-black/10 dark:bg-black dark:outline-white/10">
             {!videoError && (
               <>
                 <img
@@ -180,6 +174,10 @@ export default function Hero() {
           </div>
         </div>
       </div>
+      <ConsentRecordPrompt
+        copy={getConsentRecordCopy(t)}
+        privacyHref={localizeLandingHref(locale, "/settings#privacy")}
+      />
     </div>
   );
 }

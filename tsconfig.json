@@ -30,5 +30,12 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "videos",
+    "agents/skills",
+    ".agents",
+    ".claude/skills",
+    ".cursor/skills"
+  ]
 }
