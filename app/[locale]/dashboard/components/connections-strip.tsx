@@ -8,12 +8,12 @@ import {
   type ButtonHTMLAttributes,
 } from 'react'
 import Link from 'next/link'
-import { ChevronDown, Plus } from 'lucide-react'
+import { ChevronDown, Loader2, Plus, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import { useData } from '@/context/data-provider'
-import { useIsMobile } from '@/hooks/use-mobile'
+import { useIsMobile, useIsMobileLayout } from '@/hooks/use-mobile'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
 import { removeAccountsFromTradesAction } from '@/server/accounts'
@@ -58,6 +58,7 @@ import { HIDDEN_GROUP_NAME } from '@/app/[locale]/dashboard/components/filters/a
 import {
   buildStripItems,
   chipAccountCountLabel,
+  footerShowsDesktopSync,
   isStandaloneAccount,
   mapConnectionsAccounts,
   removeConnectionsAccount,
@@ -65,6 +66,7 @@ import {
   type StripItem,
 } from './connections-strip-items'
 import { ConnectionsStripAccountRow } from './connections-strip-account-row'
+import { useStripConnectionSync } from './use-strip-connection-sync'
 
 const SERVICE_SECTIONS: {
   service: ConnectionService
@@ -129,6 +131,17 @@ async function fetchConnectionsPageData(): Promise<ConnectionsPageData> {
   return reviveConnectionsPageData(json)
 }
 
+function chipStatusLabel(
+  status: StripItem['status'],
+  t: ReturnType<typeof useI18n>
+) {
+  return status === 'connected'
+    ? t('connections.status.connected')
+    : status === 'error'
+      ? t('connections.status.error')
+      : t('connections.status.offline')
+}
+
 function ChipTrigger({
   item,
   open,
@@ -146,12 +159,7 @@ function ChipTrigger({
   const meta = chipAccountCountLabel(item.accounts.length, t, {
     numericOnly: numericCount,
   })
-  const statusLabel =
-    item.status === 'connected'
-      ? t('connections.status.connected')
-      : item.status === 'error'
-        ? t('connections.status.error')
-        : t('connections.status.offline')
+  const statusLabel = chipStatusLabel(item.status, t)
 
   return (
     <button
@@ -208,9 +216,9 @@ function AccountPickerList({
   onSelectAccount,
   onClose,
   onMask,
-  onRename,
   onRequestDelete,
   listClassName,
+  footerSync,
 }: {
   item: StripItem
   selectedAccounts: string[]
@@ -222,12 +230,9 @@ function AccountPickerList({
   onSelectAccount: (accountNumber: string) => void
   onClose: () => void
   onMask: (account: ConnectionsPageAccount, masked: boolean) => void
-  onRename: (
-    account: ConnectionsPageAccount,
-    nextName: string
-  ) => Promise<boolean>
   onRequestDelete: (account: ConnectionsPageAccount) => void
   listClassName: string
+  footerSync?: { syncing: boolean; onSync: () => void } | null
 }) {
   const t = useI18n()
   const query = searchTerm.trim().toLowerCase()
@@ -268,22 +273,61 @@ function AccountPickerList({
                 onClose()
               }}
               onMask={onMask}
-              onRename={onRename}
               onRequestDelete={onRequestDelete}
             />
           ))}
         </CommandGroup>
       </CommandList>
-      <div className="border-t border-[#E5E5E5] dark:border-border">
+      <div className="flex items-center justify-between gap-3 border-t border-[#E5E5E5] px-3 py-2 dark:border-border">
         <Link
           href="/dashboard/connections"
-          className="block px-3 py-2.5 text-sm font-medium text-[#3E7550] transition-colors hover:bg-[#EFF5EC] dark:text-[#9BC4A8] dark:hover:bg-[#243028]"
+          className="min-w-0 truncate text-sm font-medium text-[#3E7550] transition-colors hover:text-[#2F5C3E] dark:text-[#9BC4A8] dark:hover:text-[#B7D4C2]"
           onClick={onClose}
         >
           {t('connections.manageConnection')}
         </Link>
+        {footerSync ? (
+          <StripSyncButton
+            syncing={footerSync.syncing}
+            onSync={footerSync.onSync}
+          />
+        ) : null}
       </div>
     </Command>
+  )
+}
+
+function StripSyncButton({
+  syncing,
+  onSync,
+}: {
+  syncing: boolean
+  onSync: () => void
+}) {
+  const t = useI18n()
+  return (
+    <button
+      type="button"
+      disabled={syncing}
+      onClick={(event) => {
+        event.stopPropagation()
+        onSync()
+      }}
+      className={cn(
+        'inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-[4px] border border-[#E5E5E5] bg-white px-2.5 text-sm font-medium text-[#171917]',
+        'transition-[background-color,border-color,transform] duration-150',
+        'hover:bg-[#F5F5F5] active:scale-[0.96]',
+        'disabled:pointer-events-none disabled:opacity-40',
+        'dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/50'
+      )}
+    >
+      {syncing ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+      ) : (
+        <RefreshCw className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+      )}
+      {t('connections.strip.sync')}
+    </button>
   )
 }
 
@@ -295,8 +339,8 @@ function ConnectionChip({
   deletingAccountId,
   onSelectAccount,
   onMask,
-  onRename,
   onRequestDelete,
+  onSynced,
 }: {
   item: StripItem
   selectedAccounts: string[]
@@ -305,15 +349,14 @@ function ConnectionChip({
   deletingAccountId: string | null
   onSelectAccount: (accountNumber: string) => void
   onMask: (account: ConnectionsPageAccount, masked: boolean) => void
-  onRename: (
-    account: ConnectionsPageAccount,
-    nextName: string
-  ) => Promise<boolean>
   onRequestDelete: (account: ConnectionsPageAccount) => void
+  onSynced: () => void
 }) {
-  const isMobile = useIsMobile()
+  const isMobile = useIsMobileLayout()
   const [open, setOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const { canSync, sync, syncing } = useStripConnectionSync(item, onSynced)
+  const showFooterSync = footerShowsDesktopSync(item, isMobile) && canSync
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
@@ -325,7 +368,7 @@ function ConnectionChip({
     onRequestDelete(account)
   }
 
-  const picker = (listClassName: string) => (
+  const picker = (listClassName: string, withFooterSync: boolean) => (
     <AccountPickerList
       item={item}
       selectedAccounts={selectedAccounts}
@@ -337,13 +380,17 @@ function ConnectionChip({
       onSelectAccount={onSelectAccount}
       onClose={() => handleOpenChange(false)}
       onMask={onMask}
-      onRename={onRename}
       onRequestDelete={requestDelete}
       listClassName={listClassName}
+      footerSync={
+        withFooterSync
+          ? { syncing, onSync: () => void sync() }
+          : null
+      }
     />
   )
 
-  if (isMobile) {
+  if (isMobile === true) {
     return (
       <>
         <ChipTrigger
@@ -365,7 +412,8 @@ function ConnectionChip({
               </DrawerTitle>
             </DrawerHeader>
             {picker(
-              'max-h-[min(320px,50svh)] pb-[max(0.5rem,env(safe-area-inset-bottom))]'
+              'max-h-[min(320px,50svh)] pb-[max(0.5rem,env(safe-area-inset-bottom))]',
+              false
             )}
           </DrawerContent>
         </Drawer>
@@ -383,7 +431,7 @@ function ConnectionChip({
         sideOffset={8}
         className="w-[min(28rem,calc(100vw-2rem))] rounded-[4px] border-[#E5E5E5] bg-white p-0 shadow-md dark:border-border dark:bg-background"
       >
-        {picker('max-h-[320px]')}
+        {picker('max-h-[320px]', showFooterSync)}
       </PopoverContent>
     </Popover>
   )
@@ -468,12 +516,10 @@ export function ConnectionsStrip({ className }: { className?: string }) {
     accountNumbers = [],
     setAccountNumbers,
     saveGroup,
-    saveAccount,
     moveAccountsToGroup,
     refreshTradesOnly,
   } = useData()
   const groups = useUserStore((state) => state.groups)
-  const updateAccount = useUserStore((state) => state.updateAccount)
   const removeAccount = useUserStore((state) => state.removeAccount)
   const setAccounts = useUserStore((state) => state.setAccounts)
   const setGroups = useUserStore((state) => state.setGroups)
@@ -579,38 +625,6 @@ export function ConnectionsStrip({ className }: { className?: string }) {
     [applyAccountPatch, ensureHiddenGroup, moveAccountsToGroup, setAccounts, setGroups, t]
   )
 
-  const onRename = useCallback(
-    async (account: ConnectionsPageAccount, nextName: string) => {
-      const storeAccount = useUserStore
-        .getState()
-        .accounts.find(
-          (item) => item.id === account.id || item.number === account.number
-        )
-      if (!storeAccount) {
-        toast.error(t('connections.strip.renameFailed'))
-        return false
-      }
-      try {
-        await saveAccount({ ...storeAccount, propfirm: nextName })
-        applyAccountPatch(account.id, { propfirm: nextName })
-        updateAccount(account.id, { propfirm: nextName })
-        setGroups(
-          useUserStore.getState().groups.map((group) => ({
-            ...group,
-            accounts: group.accounts.map((item) =>
-              item.id === account.id ? { ...item, propfirm: nextName } : item
-            ),
-          }))
-        )
-        return true
-      } catch {
-        toast.error(t('connections.strip.renameFailed'))
-        return false
-      }
-    },
-    [applyAccountPatch, saveAccount, setGroups, t, updateAccount]
-  )
-
   const onDelete = useCallback(
     async (account: ConnectionsPageAccount) => {
       if (!isStandaloneAccount(account)) return
@@ -675,8 +689,8 @@ export function ConnectionsStrip({ className }: { className?: string }) {
             deletingAccountId={deletingAccountId}
             onSelectAccount={onSelectAccount}
             onMask={onMask}
-            onRename={onRename}
             onRequestDelete={setAccountToDelete}
+            onSynced={() => void load()}
           />
         ))}
         <AddConnectionChip onSelectService={setConnectService} />
