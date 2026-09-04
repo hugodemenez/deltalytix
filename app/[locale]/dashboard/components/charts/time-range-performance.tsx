@@ -1,21 +1,33 @@
 "use client"
 
 import * as React from "react"
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts"
 import { useData } from "@/context/data-provider"
-import { cn } from "@/lib/utils"
-import { InfoBubble } from "@/components/ui/info-bubble"
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import { useI18n } from "@/locales/client"
 import { Trade } from "@/prisma/generated/prisma/browser"
 import { Button } from "@/components/ui/button"
-import { ChartConfig } from "@/components/ui/chart"
 import { getTimeRangeKey } from "@/lib/time-range"
 import {
   BarChartLoadingSkeleton,
+  getChartMargins,
   LOADING_MOCK_TIME_RANGE,
 } from "./chart-loading-skeleton"
+import { namedSignedConclusion } from "./chart-conclusions"
+import {
+  CHART_GRID_PROPS,
+  CHART_TOOLTIP_CLASS,
+  CHART_TOOLTIP_WRAPPER,
+  CHART_ZERO_LINE_PROPS,
+  chartMaxBarSize,
+  chartTickStyle,
+  chartTooltipFontSize,
+  filterBarOpacity,
+  honestSignedDomain,
+  signedFill,
+} from "./chart-glance"
+import { GlanceBar } from "./chart-glance-bar"
+import { ChartWidgetFrame } from "./chart-widget-frame"
 
 interface TimeRangePerformanceChartProps {
   size?: WidgetSize
@@ -40,13 +52,6 @@ function getColorByWinRate(winRate: number): string {
   if (winRate === 0) return "hsl(var(--muted-foreground))"
   return winRate >= 50 ? "hsl(var(--chart-win))" : "hsl(var(--chart-loss))"
 }
-
-const chartConfig = {
-  avgPnl: {
-    label: "Average PnL",
-    color: "hsl(var(--chart-1))",
-  },
-} satisfies ChartConfig
 
 export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRangePerformanceChartProps) {
   const { formattedTrades: trades, timeRange, setTimeRange, isLoading } = useData()
@@ -89,10 +94,22 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
         avgPnl: data.totalTrades > 0 ? data.totalPnl / data.totalTrades : 0,
         winRate,
         trades: data.totalTrades,
-        color: getColorByWinRate(winRate)
       }
     })
   }, [trades])
+
+  const conclusion = namedSignedConclusion(
+    chartData.map((entry) => ({
+      label: getTimeRangeLabel(entry.range),
+      value: entry.avgPnl,
+    })),
+  )
+  const subtitle =
+    conclusion.kind === "empty"
+      ? t("timeRangePerformance.subtitle.empty")
+      : t(`timeRangePerformance.subtitle.${conclusion.kind}`, {
+          label: conclusion.label,
+        })
 
   const handleClick = React.useCallback(() => {
     if (!activeRange) return
@@ -115,16 +132,15 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="rounded-lg border bg-background p-2 shadow-xs">
+        <div className={CHART_TOOLTIP_CLASS}>
           <div className="grid gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
                 {t('timeRangePerformance.tooltip.timeRange')}
               </span>
-              <span className={cn(
-                "font-bold",
-                timeRange.range === data.range ? "text-primary" : "text-muted-foreground"
-              )}>
+              <span className={
+                timeRange.range === data.range ? "font-bold text-primary" : "font-bold text-muted-foreground"
+              }>
                 {getTimeRangeLabel(label)}
               </span>
             </div>
@@ -140,7 +156,7 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
               <span className="text-[0.70rem] uppercase text-muted-foreground">
                 {t('timeRangePerformance.tooltip.winRate')}
               </span>
-              <span className="font-bold" style={{ color: data.color }}>
+              <span className="font-bold" style={{ color: getColorByWinRate(data.winRate) }}>
                 {data.winRate.toFixed(1)}%
               </span>
             </div>
@@ -162,141 +178,109 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
     return null
   }
 
+  const hasFilter = Boolean(timeRange.range)
+
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader 
-        className={cn(
-          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === 'small' ? "p-2 h-10" : "p-3 sm:p-4 h-14"
-        )}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-1.5">
-            <CardTitle 
-              className={cn(
-                "line-clamp-1",
-                size === 'small' ? "text-sm" : "text-base"
-              )}
-            >
-              {t('timeRangePerformance.title')}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === 'small' ? "size-3.5" : "size-4")}
-            >
-              <p>{t('timeRangePerformance.description')}</p>
-            </InfoBubble>
-          </div>
-          {timeRange.range && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 lg:px-3"
-              onClick={() => setTimeRange({ range: null })}
-            >
-              {t('timeRangePerformance.clearFilter')}
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent 
-        className={cn(
-          "flex-1 min-h-0",
-          size === 'small' ? "p-1" : "p-2 sm:p-4"
-        )}
-      >
-        <div 
-          className="w-full h-full cursor-pointer" 
-          onClick={handleClick}
-        >
-          {isLoading ? (
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_TIME_RANGE}
-              xDataKey="range"
-              yDataKey="avgPnl"
-              yAxisWidth={45}
-              showReferenceLine
+    <ChartWidgetFrame
+      size={size}
+      title={t('timeRangePerformance.title')}
+      subtitle={subtitle}
+      description={t('timeRangePerformance.description')}
+      contentInteractive
+      onContentClick={handleClick}
+      actions={
+        hasFilter ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 lg:px-3"
+            onClick={() => setTimeRange({ range: null })}
+          >
+            {t('timeRangePerformance.clearFilter')}
+          </Button>
+        ) : null
+      }
+    >
+      {isLoading ? (
+        <BarChartLoadingSkeleton
+          size={size}
+          data={LOADING_MOCK_TIME_RANGE}
+          xDataKey="range"
+          yDataKey="avgPnl"
+          yAxisWidth={45}
+          showReferenceLine
+        />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            margin={getChartMargins(size, "hourly")}
+          >
+            <CartesianGrid {...CHART_GRID_PROPS} />
+            <XAxis
+              dataKey="range"
+              tickLine={false}
+              axisLine={false}
+              height={size === "small" ? 20 : 24}
+              tickMargin={size === "small" ? 4 : 8}
+              tick={(props) => {
+                const { x, y, payload } = props;
+                return (
+                  <g transform={`translate(${x},${y})`}>
+                    <text
+                      x={0}
+                      y={0}
+                      dy={size === 'small' ? 8 : 4}
+                      textAnchor={size === 'small' ? 'end' : 'middle'}
+                      fill="currentColor"
+                      fontSize={size === 'small' ? 9 : 11}
+                      fontWeight={600}
+                      transform={size === 'small' ? 'rotate(-45)' : 'rotate(0)'}
+                    >
+                      {getTimeRangeLabel(payload.value)}
+                    </text>
+                  </g>
+                );
+              }}
+              interval="preserveStartEnd"
+              allowDataOverflow={true}
             />
-          ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={
-                size === 'small'
-                  ? { left: 0, right: 4, top: 4, bottom: 20 }
-                  : { left: 0, right: 8, top: 8, bottom: 24 }
-              }
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              width={45}
+              tickMargin={4}
+              tick={chartTickStyle(size)}
+              domain={honestSignedDomain(chartData.map((entry) => entry.avgPnl))}
+            />
+            <ReferenceLine y={0} {...CHART_ZERO_LINE_PROPS} />
+            <Tooltip 
+              content={<CustomTooltip />}
+              wrapperStyle={{
+                fontSize: chartTooltipFontSize(size),
+                ...CHART_TOOLTIP_WRAPPER,
+              }}
+            />
+            <Bar
+              dataKey="avgPnl"
+              maxBarSize={chartMaxBarSize(size)}
+              shape={<GlanceBar />}
+              className="motion-reduce:transition-none transition-opacity duration-300 ease-out"
             >
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                className="text-border dark:opacity-[0.12] opacity-[0.2]"
-              />
-              <XAxis
-                dataKey="range"
-                tickLine={false}
-                axisLine={false}
-                height={size === 'small' ? 20 : 24}
-                tickMargin={size === 'small' ? 4 : 8}
-                tick={(props) => {
-                  const { x, y, payload } = props;
-                  return (
-                    <g transform={`translate(${x},${y})`}>
-                      <text
-                        x={0}
-                        y={0}
-                        dy={size === 'small' ? 8 : 4}
-                        textAnchor={size === 'small' ? 'end' : 'middle'}
-                        fill="currentColor"
-                        fontSize={size === 'small' ? 9 : 11}
-                        transform={size === 'small' ? 'rotate(-45)' : 'rotate(0)'}
-                      >
-                        {getTimeRangeLabel(payload.value)}
-                      </text>
-                    </g>
-                  );
-                }}
-                interval="preserveStartEnd"
-                allowDataOverflow={true}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={45}
-                tickMargin={4}
-                tick={{ 
-                  fontSize: size === 'small' ? 9 : 11,
-                  fill: 'currentColor'
-                }}
-              />
-              <Tooltip 
-                content={<CustomTooltip />}
-                wrapperStyle={{ 
-                  fontSize: size === 'small' ? '10px' : '12px',
-                  zIndex: 1000
-                }} 
-              />
-              <Bar
-                dataKey="avgPnl"
-                fill={chartConfig.avgPnl.color}
-                radius={[3, 3, 0, 0]}
-                maxBarSize={size === 'small' ? 25 : 40}
-                className="transition-opacity duration-300 ease-out"
-                opacity={timeRange.range ? 0.3 : 1}
-              >
-                {chartData.map((entry) => (
-                  <Cell
-                    key={`cell-${entry.range}`}
-                    fill={entry.color}
-                    opacity={timeRange.range === entry.range ? 1 : (timeRange.range ? 0.3 : 1)}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              {chartData.map((entry) => (
+                <Cell
+                  key={`cell-${entry.range}`}
+                  fill={signedFill(entry.avgPnl)}
+                  opacity={filterBarOpacity(
+                    timeRange.range === entry.range,
+                    hasFilter,
+                  )}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </ChartWidgetFrame>
   )
 }

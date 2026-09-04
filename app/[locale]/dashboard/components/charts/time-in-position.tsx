@@ -11,30 +11,33 @@ import {
   Cell,
   ResponsiveContainer,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartConfig } from "@/components/ui/chart";
 import { useData } from "@/context/data-provider";
 import { Trade } from "@/prisma/generated/prisma/browser";
-import { cn } from "@/lib/utils";
-import { InfoBubble } from "@/components/ui/info-bubble";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
 import { formatInTimeZone } from "date-fns-tz";
 import {
   BarChartLoadingSkeleton,
+  getChartMargins,
   LOADING_MOCK_HOURLY_TIME,
 } from "./chart-loading-skeleton";
+import { countPeakConclusion } from "./chart-conclusions";
+import {
+  CHART_GRID_PROPS,
+  CHART_TOOLTIP_CLASS,
+  CHART_TOOLTIP_WRAPPER,
+  chartMaxBarSize,
+  chartTickStyle,
+  chartTooltipFontSize,
+  honestPositiveDomain,
+  unsignedFill,
+} from "./chart-glance";
+import { GlanceBar } from "./chart-glance-bar";
+import { ChartWidgetFrame } from "./chart-widget-frame";
 
 interface TimeInPositionChartProps {
   size?: WidgetSize;
 }
-
-const chartConfig = {
-  avgTimeInPosition: {
-    label: "Average Time in Position",
-    color: "hsl(var(--chart-7))",
-  },
-} satisfies ChartConfig;
 
 const formatTime = (minutes: number) => {
   const hours = Math.floor(minutes / 60);
@@ -77,18 +80,22 @@ export default function TimeInPositionChart({
       .sort((a, b) => a.hour - b.hour);
   }, [trades]);
 
-  const maxTradeCount = Math.max(...chartData.map((data) => data.tradeCount));
-
-  const getColor = (count: number) => {
-    const intensity = Math.max(0.2, count / maxTradeCount);
-    return `hsl(var(--chart-8) / ${intensity})`;
-  };
+  const conclusion = countPeakConclusion(
+    chartData.map((entry) => ({
+      label: String(entry.hour),
+      count: entry.avgTimeInPosition,
+    })),
+  );
+  const subtitle =
+    conclusion.kind === "empty"
+      ? t("timeInPosition.subtitle.empty")
+      : t("timeInPosition.subtitle.peak", { label: conclusion.label });
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="rounded-lg border bg-background p-2 shadow-xs">
+        <div className={CHART_TOOLTIP_CLASS}>
           <div className="grid gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -125,116 +132,75 @@ export default function TimeInPositionChart({
   };
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader
-        className={cn(
-          "flex flex-col items-stretch space-y-0 border-b shrink-0",
-          size === "small" ? "p-2" : "p-3 sm:p-4",
-        )}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1",
-                size === "small" ? "text-sm" : "text-base",
-              )}
-            >
-              {t("timeInPosition.title")}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
-            >
-              <p>{t("timeInPosition.description")}</p>
-            </InfoBubble>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "flex-1 min-h-0",
-          size === "small" ? "p-1" : "p-2 sm:p-4",
-        )}
-      >
-        <div className={cn("w-full h-full")}>
-          {isLoading ? (
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_HOURLY_TIME}
-              xDataKey="hour"
-              yDataKey="avgTimeInPosition"
-              marginVariant="hourly"
-              yAxisWidth={45}
-              xTickCount={8}
-            />
-          ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={
+    <ChartWidgetFrame
+      size={size}
+      title={t("timeInPosition.title")}
+      subtitle={subtitle}
+      description={t("timeInPosition.description")}
+    >
+      {isLoading ? (
+        <BarChartLoadingSkeleton
+          size={size}
+          data={LOADING_MOCK_HOURLY_TIME}
+          xDataKey="hour"
+          yDataKey="avgTimeInPosition"
+          marginVariant="hourly"
+          yAxisWidth={45}
+          xTickCount={8}
+        />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            margin={getChartMargins(size, "hourly")}
+          >
+            <CartesianGrid {...CHART_GRID_PROPS} />
+            <XAxis
+              dataKey="hour"
+              tickLine={false}
+              axisLine={false}
+              height={size === "small" ? 20 : 24}
+              tickMargin={size === "small" ? 4 : 8}
+              tick={chartTickStyle(size)}
+              tickFormatter={(value) => `${value}h`}
+              ticks={
                 size === "small"
-                  ? { left: 0, right: 4, top: 4, bottom: 20 }
-                  : { left: 0, right: 8, top: 8, bottom: 24 }
+                  ? [0, 6, 12, 18]
+                  : [0, 3, 6, 9, 12, 15, 18, 21]
               }
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              width={45}
+              tickMargin={4}
+              tick={chartTickStyle(size)}
+              tickFormatter={formatTime}
+              domain={honestPositiveDomain(
+                chartData.map((entry) => entry.avgTimeInPosition),
+              )}
+            />
+            <Tooltip
+              content={<CustomTooltip />}
+              wrapperStyle={{
+                fontSize: chartTooltipFontSize(size),
+                ...CHART_TOOLTIP_WRAPPER,
+              }}
+            />
+            <Bar
+              dataKey="avgTimeInPosition"
+              fill={unsignedFill()}
+              maxBarSize={chartMaxBarSize(size)}
+              shape={<GlanceBar />}
+              className="motion-reduce:transition-none transition-opacity duration-300 ease-out"
             >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                className="text-border dark:opacity-[0.12] opacity-[0.2]"
-              />
-              <XAxis
-                dataKey="hour"
-                tickLine={false}
-                axisLine={false}
-                height={size === "small" ? 20 : 24}
-                tickMargin={size === "small" ? 4 : 8}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-                tickFormatter={(value) => `${value}h`}
-                ticks={
-                  size === "small"
-                    ? [0, 6, 12, 18]
-                    : [0, 3, 6, 9, 12, 15, 18, 21]
-                }
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={45}
-                tickMargin={4}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-                tickFormatter={formatTime}
-              />
-              <Tooltip
-                content={<CustomTooltip />}
-                wrapperStyle={{
-                  fontSize: size === "small" ? "10px" : "12px",
-                  zIndex: 1000,
-                }}
-              />
-              <Bar
-                dataKey="avgTimeInPosition"
-                radius={[3, 3, 0, 0]}
-                maxBarSize={size === "small" ? 25 : 40}
-                className="transition-opacity duration-300 ease-out"
-              >
-                {chartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={getColor(entry.tradeCount)}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={unsignedFill()} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </ChartWidgetFrame>
   );
 }

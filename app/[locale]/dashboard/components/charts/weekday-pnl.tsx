@@ -10,22 +10,35 @@ import {
   Tooltip,
   Cell,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartConfig } from "@/components/ui/chart";
 import { useData } from "@/context/data-provider";
-import { cn } from "@/lib/utils";
-import { InfoBubble } from "@/components/ui/info-bubble";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
 import { translateWeekdayPnL } from "@/lib/translation-utils";
 import { Button } from "@/components/ui/button";
 import {
   BarChartLoadingSkeleton,
+  getChartMargins,
   LOADING_MOCK_WEEKDAY,
 } from "./chart-loading-skeleton";
+import { namedSignedConclusion } from "./chart-conclusions";
+import {
+  CHART_GRID_PROPS_HORIZONTAL,
+  CHART_TOOLTIP_CLASS,
+  CHART_TOOLTIP_WRAPPER,
+  CHART_ZERO_LINE_PROPS,
+  chartMaxBarSize,
+  chartTickStyle,
+  chartTooltipFontSize,
+  filterBarOpacity,
+  honestSignedDomain,
+  signedFill,
+} from "./chart-glance";
+import { GlanceBar } from "./chart-glance-bar";
+import { ChartWidgetFrame } from "./chart-widget-frame";
 
-const daysOfWeek = [0, 1, 2, 3, 4, 5, 6]; // Sunday = 0, Saturday = 6
+const daysOfWeek = [0, 1, 2, 3, 4, 5, 6];
 
 interface WeekdayPNLChartProps {
   size?: WidgetSize;
@@ -34,37 +47,13 @@ interface WeekdayPNLChartProps {
 const formatCurrency = (value: number) =>
   value.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
-const chartConfig = {
-  pnl: {
-    label: "PnL",
-    color: "hsl(var(--chart-1))",
-  },
-} satisfies ChartConfig;
-
 export default function WeekdayPNLChart({
   size = "medium",
 }: WeekdayPNLChartProps) {
   const { calendarData, weekdayFilter, setWeekdayFilter, isLoading } =
     useData();
-  const [darkMode, setDarkMode] = React.useState(false);
   const [activeDay, setActiveDay] = React.useState<number | null>(null);
   const t = useI18n();
-
-  React.useEffect(() => {
-    const isDarkMode = document.documentElement.classList.contains("dark");
-    setDarkMode(isDarkMode);
-
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === "class") {
-          setDarkMode(document.documentElement.classList.contains("dark"));
-        }
-      });
-    });
-
-    observer.observe(document.documentElement, { attributes: true });
-    return () => observer.disconnect();
-  }, []);
 
   const weekdayData = React.useMemo(() => {
     const weekdayTotals = daysOfWeek.reduce(
@@ -91,31 +80,28 @@ export default function WeekdayPNLChart({
     }));
   }, [calendarData]);
 
-  const maxPnL = Math.max(...weekdayData.map((d) => d.pnl));
-  const minPnL = Math.min(...weekdayData.map((d) => d.pnl));
-
-  const getColor = (value: number) => {
-    const ratio = Math.abs((value - minPnL) / (maxPnL - minPnL));
-    const baseColorVar = value >= 0 ? "--chart-win" : "--chart-loss";
-    const intensity = darkMode
-      ? Math.max(0.3, ratio) // Higher minimum intensity in dark mode
-      : Math.max(0.2, ratio); // Lower minimum intensity in light mode
-    return `hsl(var(${baseColorVar}) / ${intensity})`;
-  };
+  const conclusion = namedSignedConclusion(
+    weekdayData.map((entry) => ({
+      label: translateWeekdayPnL(t, entry.day),
+      value: entry.pnl,
+    })),
+  );
+  const subtitle =
+    conclusion.kind === "empty"
+      ? t("weekdayPnl.subtitle.empty")
+      : t(`weekdayPnl.subtitle.${conclusion.kind}`, { label: conclusion.label });
 
   const handleClick = React.useCallback(() => {
     if (activeDay === null) return;
     const currentDays = weekdayFilter.days || [];
     if (currentDays.includes(activeDay)) {
-      // Remove day from filter
-      setWeekdayFilter({ days: currentDays.filter(d => d !== activeDay) });
+      setWeekdayFilter({ days: currentDays.filter((d) => d !== activeDay) });
     } else {
-      // Add day to filter
       setWeekdayFilter({ days: [...currentDays, activeDay] });
     }
   }, [activeDay, weekdayFilter.days, setWeekdayFilter]);
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: (typeof weekdayData)[number] }> }) => {
     React.useEffect(() => {
       if (active && payload && payload.length) {
         setActiveDay(payload[0].payload.day);
@@ -127,7 +113,7 @@ export default function WeekdayPNLChart({
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="rounded-lg border bg-background p-2 shadow-xs">
+        <div className={CHART_TOOLTIP_CLASS}>
           <div className="grid gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -161,129 +147,99 @@ export default function WeekdayPNLChart({
     return null;
   };
 
+  const hasFilter = Boolean(weekdayFilter.days && weekdayFilter.days.length > 0);
+
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader
-        className={cn(
-          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === "small" ? "p-2 h-10" : "p-3 sm:p-4 h-14",
-        )}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1",
-                size === "small" ? "text-sm" : "text-base",
-              )}
-            >
-              {t("weekdayPnl.title")}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
-            >
-              <p>{t("weekdayPnl.description")}</p>
-            </InfoBubble>
-          </div>
-          {weekdayFilter.days && weekdayFilter.days.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 lg:px-3"
-              onClick={() => setWeekdayFilter({ days: [] })}
-            >
-              {t("weekdayPnl.clearFilter")}
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "flex-1 min-h-0",
-          size === "small" ? "p-1" : "p-2 sm:p-4",
-        )}
-      >
-        <div className="w-full h-full cursor-pointer" onClick={handleClick}>
-          {isLoading ? (
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_WEEKDAY}
-              xDataKey="day"
-              yDataKey="pnl"
-              yAxisWidth={45}
-              xTickCount={7}
+    <ChartWidgetFrame
+      size={size}
+      title={t("weekdayPnl.title")}
+      subtitle={subtitle}
+      description={t("weekdayPnl.description")}
+      contentInteractive
+      onContentClick={handleClick}
+      actions={
+        hasFilter ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 lg:px-3"
+            onClick={() => setWeekdayFilter({ days: [] })}
+          >
+            {t("weekdayPnl.clearFilter")}
+          </Button>
+        ) : null
+      }
+    >
+      {isLoading ? (
+        <BarChartLoadingSkeleton
+          size={size}
+          data={LOADING_MOCK_WEEKDAY}
+          xDataKey="day"
+          yDataKey="pnl"
+          yAxisWidth={size === "small" ? 36 : 72}
+          xTickCount={7}
+          layout="horizontal"
+          showReferenceLine
+        />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={weekdayData}
+            layout="vertical"
+            margin={getChartMargins(size, "horizontal")}
+          >
+            <CartesianGrid {...CHART_GRID_PROPS_HORIZONTAL} />
+            <XAxis
+              type="number"
+              tickLine={false}
+              axisLine={false}
+              height={size === "small" ? 20 : 24}
+              tickMargin={size === "small" ? 4 : 8}
+              tick={chartTickStyle(size)}
+              tickFormatter={formatCurrency}
+              domain={honestSignedDomain(weekdayData.map((entry) => entry.pnl))}
             />
-          ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={weekdayData}
-              margin={
-                size === "small"
-                  ? { left: 0, right: 4, top: 4, bottom: 20 }
-                  : { left: 0, right: 8, top: 8, bottom: 24 }
-              }
+            <YAxis
+              type="category"
+              dataKey="day"
+              tickLine={false}
+              axisLine={false}
+              width={size === "small" ? 36 : 72}
+              tickMargin={4}
+              tick={chartTickStyle(size)}
+              tickFormatter={(value) => {
+                const dayName = translateWeekdayPnL(t, value);
+                return size === "small" ? dayName.slice(0, 3) : dayName;
+              }}
+            />
+            <ReferenceLine x={0} {...CHART_ZERO_LINE_PROPS} />
+            <Tooltip
+              content={<CustomTooltip />}
+              wrapperStyle={{
+                fontSize: chartTooltipFontSize(size),
+                ...CHART_TOOLTIP_WRAPPER,
+              }}
+            />
+            <Bar
+              dataKey="pnl"
+              maxBarSize={chartMaxBarSize(size)}
+              shape={<GlanceBar layout="horizontal" />}
+              className="motion-reduce:transition-none transition-opacity duration-300 ease-out"
             >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                className="text-border dark:opacity-[0.12] opacity-[0.2]"
-              />
-              <XAxis
-                dataKey="day"
-                tickLine={false}
-                axisLine={false}
-                height={size === "small" ? 20 : 24}
-                tickMargin={size === "small" ? 4 : 8}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-                tickFormatter={(value) => {
-                  const dayName = translateWeekdayPnL(t, value);
-                  return size === "small" ? dayName.slice(0, 3) : dayName;
-                }}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={45}
-                tickMargin={4}
-                tick={{
-                  fontSize: 8,
-                  fill: "currentColor",
-                }}
-                tickFormatter={formatCurrency}
-              />
-              <Tooltip
-                content={<CustomTooltip />}
-                wrapperStyle={{
-                  fontSize: size === "small" ? "10px" : "12px",
-                  zIndex: 1000,
-                }}
-              />
-              <Bar
-                dataKey="pnl"
-                radius={[3, 3, 0, 0]}
-                maxBarSize={size === "small" ? 25 : 40}
-                className="transition-opacity duration-300 ease-out"
-                opacity={weekdayFilter.days && weekdayFilter.days.length > 0 ? 0.3 : 1}
-              >
-                {weekdayData.map((entry) => (
-                  <Cell
-                    key={`cell-${entry.day}`}
-                    fill={getColor(entry.pnl)}
-                    className={cn(
-                      "transition-[opacity,filter,box-shadow] duration-300 ease-out",
-                      weekdayFilter.days && weekdayFilter.days.includes(entry.day) && "ring-2 ring-primary ring-offset-2"
-                    )}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              {weekdayData.map((entry) => (
+                <Cell
+                  key={`cell-${entry.day}`}
+                  fill={signedFill(entry.pnl)}
+                  opacity={filterBarOpacity(
+                    Boolean(weekdayFilter.days?.includes(entry.day)),
+                    hasFilter,
+                  )}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </ChartWidgetFrame>
   );
 }

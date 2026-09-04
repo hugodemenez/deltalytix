@@ -12,29 +12,33 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartConfig } from "@/components/ui/chart";
 import { useData } from "@/context/data-provider";
-import { cn } from "@/lib/utils";
-import { InfoBubble } from "@/components/ui/info-bubble";
 import { Switch } from "@/components/ui/switch";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
 import {
   BarChartLoadingSkeleton,
+  getChartMargins,
   LOADING_MOCK_SIDE_PNL,
 } from "./chart-loading-skeleton";
+import {
+  CHART_GRID_PROPS_HORIZONTAL,
+  CHART_TOOLTIP_CLASS,
+  CHART_TOOLTIP_WRAPPER,
+  CHART_ZERO_LINE_PROPS,
+  chartMaxBarSize,
+  chartTickStyle,
+  chartTooltipFontSize,
+  honestSignedDomain,
+  peakIndex,
+  signedFill,
+} from "./chart-glance";
+import { GlanceBar } from "./chart-glance-bar";
+import { ChartWidgetFrame } from "./chart-widget-frame";
 
 interface PnLBySideChartProps {
   size?: WidgetSize;
 }
-
-const chartConfig = {
-  pnl: {
-    label: "P/L",
-    color: "hsl(var(--chart-loss))",
-  },
-} satisfies ChartConfig;
 
 const formatCurrency = (value: number) =>
   value.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -44,7 +48,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="rounded-lg border bg-background p-2 shadow-xs">
+      <div className={CHART_TOOLTIP_CLASS}>
         <div className="grid gap-2">
           <div className="flex flex-col">
             <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -133,138 +137,101 @@ export default function PnLBySideChart({
     ];
   }, [trades, showAverage]);
 
-  const maxPnL = Math.max(...chartData.map((d) => d.pnl));
-  const minPnL = Math.min(...chartData.map((d) => d.pnl));
-  const absMax = Math.max(Math.abs(maxPnL), Math.abs(minPnL));
-
-  const getColor = (value: number) => {
-    const ratio = Math.abs(value / absMax);
-    const baseColorVar = value >= 0 ? "--chart-win" : "--chart-4";
-    const intensity = Math.max(0.2, ratio);
-    return `hsl(var(${baseColorVar}) / ${intensity})`;
-  };
+  const hasTrades = chartData.some((entry) => entry.tradeCount > 0);
+  const leaderIndex = peakIndex(chartData, (entry) => entry.pnl);
+  const subtitle = !hasTrades
+    ? t("pnlBySide.subtitle.empty")
+    : t("pnlBySide.subtitle.best", {
+        label: chartData[leaderIndex]?.side ?? "Long",
+        mode: showAverage
+          ? t("pnlBySide.mode.average")
+          : t("pnlBySide.mode.total"),
+      });
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader
-        className={cn(
-          "flex flex-col items-stretch space-y-0 border-b shrink-0",
-          size === "small" ? "p-2" : "p-3 sm:p-4",
-        )}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1",
-                size === "small" ? "text-sm" : "text-base",
-              )}
-            >
-              {t("pnlBySide.title")}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
-            >
-              <p>{t("pnlBySide.description")}</p>
-            </InfoBubble>
-          </div>
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "text-muted-foreground",
-                size === "small" ? "text-xs" : "text-sm",
-              )}
-            >
-              {t("pnlBySide.toggle.showAverage")}
-            </span>
-            <Switch
-              checked={showAverage}
-              onCheckedChange={setShowAverage}
-              className="data-[state=checked]:bg-primary"
-            />
-          </div>
+    <ChartWidgetFrame
+      size={size}
+      title={t("pnlBySide.title")}
+      subtitle={subtitle}
+      description={t("pnlBySide.description")}
+      actions={
+        <div className="flex items-center gap-2">
+          <span
+            className={
+              size === "small"
+                ? "text-xs text-muted-foreground"
+                : "text-sm text-muted-foreground"
+            }
+          >
+            {t("pnlBySide.toggle.showAverage")}
+          </span>
+          <Switch
+            checked={showAverage}
+            onCheckedChange={setShowAverage}
+            className="data-[state=checked]:bg-primary"
+          />
         </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "flex-1 min-h-0",
-          size === "small" ? "p-1" : "p-2 sm:p-4",
-        )}
-      >
-        <div className={cn("w-full h-full")}>
-          {isLoading ? (
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_SIDE_PNL}
-              xDataKey="side"
-              yDataKey="pnl"
-              showReferenceLine
-              xTickCount={2}
+      }
+    >
+      {isLoading ? (
+        <BarChartLoadingSkeleton
+          size={size}
+          data={LOADING_MOCK_SIDE_PNL}
+          xDataKey="side"
+          yDataKey="pnl"
+          showReferenceLine
+          xTickCount={2}
+          yAxisWidth={size === "small" ? 40 : 56}
+          layout="horizontal"
+        />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={getChartMargins(size, "horizontal")}
+          >
+            <CartesianGrid {...CHART_GRID_PROPS_HORIZONTAL} />
+            <XAxis
+              type="number"
+              tickLine={false}
+              axisLine={false}
+              height={size === "small" ? 20 : 24}
+              tickMargin={size === "small" ? 4 : 8}
+              tick={chartTickStyle(size)}
+              tickFormatter={formatCurrency}
+              domain={honestSignedDomain(chartData.map((entry) => entry.pnl))}
             />
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={
-                  size === "small"
-                    ? { left: 10, right: 4, top: 4, bottom: 20 }
-                    : { left: 10, right: 8, top: 8, bottom: 24 }
-                }
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  className="text-border dark:opacity-[0.12] opacity-[0.2]"
-                />
-                <XAxis
-                  dataKey="side"
-                  tickLine={false}
-                  axisLine={false}
-                  height={size === "small" ? 20 : 24}
-                  tickMargin={size === "small" ? 4 : 8}
-                  tick={{
-                    fontSize: size === "small" ? 9 : 11,
-                    fill: "currentColor",
-                  }}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  width={60}
-                  tickMargin={4}
-                  tick={{
-                    fontSize: size === "small" ? 9 : 11,
-                    fill: "currentColor",
-                  }}
-                  tickFormatter={formatCurrency}
-                  domain={[
-                    Math.min(minPnL * 1.1, 0),
-                    Math.max(maxPnL * 1.1, 0),
-                  ]}
-                />
-                <ReferenceLine y={0} stroke="hsl(var(--border))" />
-                <Tooltip
-                  content={<CustomTooltip />}
-                  wrapperStyle={{
-                    fontSize: size === "small" ? "10px" : "12px",
-                    zIndex: 1000,
-                  }}
-                />
-                <Bar
-                  dataKey="pnl"
-                  radius={[3, 3, 0, 0]}
-                  maxBarSize={size === "small" ? 25 : 40}
-                  className="transition-opacity duration-300 ease-out"
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={getColor(entry.pnl)} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            <YAxis
+              type="category"
+              dataKey="side"
+              tickLine={false}
+              axisLine={false}
+              width={size === "small" ? 40 : 56}
+              tickMargin={4}
+              tick={chartTickStyle(size)}
+            />
+            <ReferenceLine x={0} {...CHART_ZERO_LINE_PROPS} />
+            <Tooltip
+              content={<CustomTooltip />}
+              wrapperStyle={{
+                fontSize: chartTooltipFontSize(size),
+                ...CHART_TOOLTIP_WRAPPER,
+              }}
+            />
+            <Bar
+              dataKey="pnl"
+              maxBarSize={chartMaxBarSize(size)}
+              shape={<GlanceBar layout="horizontal" />}
+              className="motion-reduce:transition-none transition-opacity duration-300 ease-out"
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={signedFill(entry.pnl)} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </ChartWidgetFrame>
   );
 }

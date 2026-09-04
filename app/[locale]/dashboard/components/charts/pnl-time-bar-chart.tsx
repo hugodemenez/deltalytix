@@ -10,13 +10,10 @@ import {
   Tooltip,
   Cell,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartConfig } from "@/components/ui/chart";
 import { useData } from "@/context/data-provider";
 import { Trade } from "@/prisma/generated/prisma/browser";
-import { cn } from "@/lib/utils";
-import { InfoBubble } from "@/components/ui/info-bubble";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
 import { formatInTimeZone } from "date-fns-tz";
@@ -24,19 +21,28 @@ import { Button } from "@/components/ui/button";
 import { useUserStore } from "../../../../../store/user-store";
 import {
   BarChartLoadingSkeleton,
+  getChartMargins,
   LOADING_MOCK_HOURLY,
 } from "./chart-loading-skeleton";
+import { namedSignedConclusion } from "./chart-conclusions";
+import {
+  CHART_GRID_PROPS,
+  CHART_TOOLTIP_CLASS,
+  CHART_TOOLTIP_WRAPPER,
+  CHART_ZERO_LINE_PROPS,
+  chartMaxBarSize,
+  chartTickStyle,
+  chartTooltipFontSize,
+  filterBarOpacity,
+  honestSignedDomain,
+  signedFill,
+} from "./chart-glance";
+import { GlanceBar } from "./chart-glance-bar";
+import { ChartWidgetFrame } from "./chart-widget-frame";
 
 interface TimeOfDayTradeChartProps {
   size?: WidgetSize;
 }
-
-const chartConfig = {
-  avgPnl: {
-    label: "Average P/L",
-    color: "hsl(var(--chart-loss))",
-  },
-} satisfies ChartConfig;
 
 const formatCurrency = (value: number) =>
   value.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -67,19 +73,16 @@ export default function TimeOfDayTradeChart({
     const hourlyData: { [hour: string]: { totalPnl: number; count: number } } =
       {};
 
-    // Initialize hourly data for all 24 hours
     for (let i = 0; i < 24; i++) {
       hourlyData[i.toString()] = { totalPnl: 0, count: 0 };
     }
 
-    // Sum up PNL and count trades for each hour in user's timezone
     trades.forEach((trade: Trade) => {
       const hour = formatInTimeZone(new Date(trade.entryDate), timezone, "H");
       hourlyData[hour].totalPnl += trade.pnl;
       hourlyData[hour].count++;
     });
 
-    // Convert to array format for Recharts and calculate average PNL
     return Object.entries(hourlyData)
       .map(([hour, data]) => ({
         hour: parseInt(hour),
@@ -89,14 +92,16 @@ export default function TimeOfDayTradeChart({
       .sort((a, b) => a.hour - b.hour);
   }, [trades, timezone]);
 
-  const maxTradeCount = Math.max(...chartData.map((data) => data.tradeCount));
-  const maxPnL = Math.max(...chartData.map((data) => data.avgPnl));
-  const minPnL = Math.min(...chartData.map((data) => data.avgPnl));
-
-  const getColor = (count: number) => {
-    const intensity = Math.max(0.2, count / maxTradeCount);
-    return `hsl(var(--chart-4) / ${intensity})`;
-  };
+  const conclusion = namedSignedConclusion(
+    chartData.map((entry) => ({
+      label: String(entry.hour),
+      value: entry.avgPnl,
+    })),
+  );
+  const subtitle =
+    conclusion.kind === "empty"
+      ? t("pnlTime.subtitle.empty")
+      : t(`pnlTime.subtitle.${conclusion.kind}`, { label: conclusion.label });
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     React.useEffect(() => {
@@ -110,7 +115,7 @@ export default function TimeOfDayTradeChart({
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="rounded-lg border bg-background p-2 shadow-xs">
+        <div className={CHART_TOOLTIP_CLASS}>
           <div className="grid gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -144,136 +149,94 @@ export default function TimeOfDayTradeChart({
     return null;
   };
 
+  const hasFilter = hourFilter.hour !== null;
+
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader
-        className={cn(
-          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === "small" ? "p-2 h-10" : "p-3 sm:p-4 h-14",
-        )}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1",
-                size === "small" ? "text-sm" : "text-base",
-              )}
-            >
-              {t("pnlTime.title")}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
-            >
-              <p>{t("pnlTime.description")}</p>
-            </InfoBubble>
-          </div>
-          {hourFilter.hour !== null && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 lg:px-3"
-              onClick={() => setHourFilter({ hour: null })}
-            >
-              {t("pnlTime.clearFilter")}
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "flex-1 min-h-0",
-          size === "small" ? "p-1" : "p-2 sm:p-4",
-        )}
-      >
-        <div className="w-full h-full cursor-pointer" onClick={handleClick}>
-          {isLoading ? (
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_HOURLY}
-              xDataKey="hour"
-              yDataKey="avgPnl"
-              marginVariant="hourly"
-              yAxisWidth={45}
-              xTickCount={8}
-            />
-          ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={
+    <ChartWidgetFrame
+      size={size}
+      title={t("pnlTime.title")}
+      subtitle={subtitle}
+      description={t("pnlTime.description")}
+      contentInteractive
+      onContentClick={handleClick}
+      actions={
+        hasFilter ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 lg:px-3"
+            onClick={() => setHourFilter({ hour: null })}
+          >
+            {t("pnlTime.clearFilter")}
+          </Button>
+        ) : null
+      }
+    >
+      {isLoading ? (
+        <BarChartLoadingSkeleton
+          size={size}
+          data={LOADING_MOCK_HOURLY}
+          xDataKey="hour"
+          yDataKey="avgPnl"
+          marginVariant="hourly"
+          yAxisWidth={45}
+          xTickCount={8}
+        />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={getChartMargins(size, "hourly")}>
+            <CartesianGrid {...CHART_GRID_PROPS} />
+            <XAxis
+              dataKey="hour"
+              tickLine={false}
+              axisLine={false}
+              height={size === "small" ? 20 : 24}
+              tickMargin={size === "small" ? 4 : 8}
+              tick={chartTickStyle(size)}
+              tickFormatter={(value) => `${value}h`}
+              ticks={
                 size === "small"
-                  ? { left: 0, right: 4, top: 4, bottom: 20 }
-                  : { left: 0, right: 8, top: 8, bottom: 24 }
+                  ? [0, 6, 12, 18]
+                  : [0, 3, 6, 9, 12, 15, 18, 21]
               }
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              width={45}
+              tickMargin={4}
+              tick={chartTickStyle(size)}
+              tickFormatter={formatCurrency}
+              domain={honestSignedDomain(chartData.map((entry) => entry.avgPnl))}
+            />
+            <ReferenceLine y={0} {...CHART_ZERO_LINE_PROPS} />
+            <Tooltip
+              content={<CustomTooltip />}
+              wrapperStyle={{
+                fontSize: chartTooltipFontSize(size),
+                ...CHART_TOOLTIP_WRAPPER,
+              }}
+            />
+            <Bar
+              dataKey="avgPnl"
+              maxBarSize={chartMaxBarSize(size)}
+              shape={<GlanceBar />}
+              className="motion-reduce:transition-none transition-opacity duration-300 ease-out"
             >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                className="text-border dark:opacity-[0.12] opacity-[0.2]"
-              />
-              <XAxis
-                dataKey="hour"
-                tickLine={false}
-                axisLine={false}
-                height={size === "small" ? 20 : 24}
-                tickMargin={size === "small" ? 4 : 8}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-                tickFormatter={(value) => `${value}h`}
-                ticks={
-                  size === "small"
-                    ? [0, 6, 12, 18]
-                    : [0, 3, 6, 9, 12, 15, 18, 21]
-                }
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={45}
-                tickMargin={4}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-                tickFormatter={formatCurrency}
-              />
-              <Tooltip
-                content={<CustomTooltip />}
-                wrapperStyle={{
-                  fontSize: size === "small" ? "10px" : "12px",
-                  zIndex: 1000,
-                }}
-              />
-              <Bar
-                dataKey="avgPnl"
-                fill={chartConfig.avgPnl.color}
-                radius={[3, 3, 0, 0]}
-                maxBarSize={size === "small" ? 25 : 40}
-                className="transition-opacity duration-300 ease-out"
-                opacity={hourFilter.hour !== null ? 0.3 : 1}
-              >
-                {chartData.map((entry) => (
-                  <Cell
-                    key={`cell-${entry.hour}`}
-                    fill={getColor(entry.tradeCount)}
-                    opacity={
-                      hourFilter.hour === entry.hour
-                        ? 1
-                        : hourFilter.hour !== null
-                          ? 0.3
-                          : 1
-                    }
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              {chartData.map((entry) => (
+                <Cell
+                  key={`cell-${entry.hour}`}
+                  fill={signedFill(entry.avgPnl)}
+                  opacity={filterBarOpacity(
+                    hourFilter.hour === entry.hour,
+                    hasFilter,
+                  )}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </ChartWidgetFrame>
   );
 }

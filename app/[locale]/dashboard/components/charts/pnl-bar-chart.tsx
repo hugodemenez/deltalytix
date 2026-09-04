@@ -10,21 +10,33 @@ import {
   Cell,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { useData } from "@/context/data-provider";
-import { cn } from "@/lib/utils";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
-import { InfoBubble } from "@/components/ui/info-bubble";
 import { useI18n, useCurrentLocale } from "@/locales/client";
 import { formatInTimeZone } from "date-fns-tz";
 import { fr, enUS } from "date-fns/locale";
 import { useUserStore } from "@/store/user-store";
 import {
   BarChartLoadingSkeleton,
+  getChartMargins,
   LOADING_MOCK_DATE_PNL,
 } from "./chart-loading-skeleton";
+import { dailyPnlConclusion } from "./chart-conclusions";
+import {
+  CHART_GRID_PROPS,
+  CHART_TOOLTIP_CLASS,
+  CHART_TOOLTIP_WRAPPER,
+  CHART_ZERO_LINE_PROPS,
+  chartMaxBarSize,
+  chartTickStyle,
+  chartTooltipFontSize,
+  honestSignedDomain,
+  signedFill,
+} from "./chart-glance";
+import { LollipopBar } from "./chart-lollipop-bar";
+import { ChartWidgetFrame } from "./chart-widget-frame";
 
 interface PNLChartProps {
   size?: WidgetSize;
@@ -45,13 +57,6 @@ interface TooltipProps {
   label?: string;
 }
 
-const chartConfig = {
-  pnl: {
-    label: "Daily P/L",
-    color: "hsl(var(--chart-loss))",
-  },
-} satisfies ChartConfig;
-
 const formatCurrency = (value: number) => {
   const absValue = Math.abs(value);
   if (absValue >= 1000000) {
@@ -63,10 +68,7 @@ const formatCurrency = (value: number) => {
   return `${value < 0 ? "-" : ""}$${absValue.toFixed(0)}`;
 };
 
-const positiveColor = "hsl(var(--chart-2))"; // Green color
-const negativeColor = "hsl(var(--chart-loss))"; // Orangish color
-
-const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
+const CustomTooltip = ({ active, payload }: TooltipProps) => {
   const t = useI18n();
   const locale = useCurrentLocale();
   const { timezone } = useUserStore();
@@ -76,7 +78,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     const data = payload[0].payload;
     const date = new Date(data.date + "T00:00:00Z");
     return (
-      <div className="bg-background p-2 border rounded shadow-xs">
+      <div className={CHART_TOOLTIP_CLASS}>
         <p className="font-semibold">
           {formatInTimeZone(date, timezone, "MMM d, yyyy", {
             locale: dateLocale,
@@ -121,138 +123,78 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
     [calendarData],
   );
 
-  const maxPnL = Math.max(...chartData.map((d) => d.pnl));
-  const minPnL = Math.min(...chartData.map((d) => d.pnl));
-
-  const getChartHeight = () => {
-    switch (size) {
-      case "small":
-        return "h-[140px]";
-      case "medium":
-        return "h-[200px]";
-      case "large":
-        return "h-[240px]";
-      default:
-        return "h-[200px]";
-    }
-  };
-
-  const getChartMargins = () => {
-    switch (size) {
-      case "small":
-        return { left: 10, right: 4, top: 4, bottom: 20 };
-      case "medium":
-        return { left: 10, right: 8, top: 8, bottom: 24 };
-      case "large":
-        return { left: 10, right: 12, top: 12, bottom: 28 };
-      default:
-        return { left: 10, right: 8, top: 8, bottom: 24 };
-    }
-  };
+  const conclusion = dailyPnlConclusion(chartData.map((point) => point.pnl));
+  const subtitle =
+    conclusion.kind === "empty"
+      ? t("pnl.subtitle.empty")
+      : conclusion.kind === "greenDays"
+        ? t("pnl.subtitle.greenDays", conclusion)
+        : t("pnl.subtitle.redDays", conclusion);
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader
-        className={cn(
-          "flex flex-col items-stretch space-y-0 border-b shrink-0",
-          size === "small" ? "p-2" : "p-3 sm:p-4",
-        )}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1",
-                size === "small" ? "text-sm" : "text-base",
-              )}
-            >
-              {t("pnl.title")}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
-            >
-              <p>{t("pnl.description")}</p>
-            </InfoBubble>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "flex-1 min-h-0",
-          size === "small" ? "p-1" : "p-2 sm:p-4",
-        )}
-      >
-        <div className={cn("w-full h-full")}>
-          {isLoading ? (
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_DATE_PNL}
-              xDataKey="date"
-              yDataKey="pnl"
-              marginVariant="default"
+    <ChartWidgetFrame
+      size={size}
+      title={t("pnl.title")}
+      subtitle={subtitle}
+      description={t("pnl.description")}
+    >
+      {isLoading ? (
+        <BarChartLoadingSkeleton
+          size={size}
+          data={LOADING_MOCK_DATE_PNL}
+          xDataKey="date"
+          yDataKey="pnl"
+          marginVariant="default"
+        />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={getChartMargins(size)}>
+            <CartesianGrid {...CHART_GRID_PROPS} />
+            <XAxis
+              dataKey="date"
+              tickLine={false}
+              axisLine={false}
+              height={size === "small" ? 20 : 24}
+              tickMargin={size === "small" ? 4 : 8}
+              tick={chartTickStyle(size)}
+              minTickGap={size === "small" ? 30 : 50}
+              tickFormatter={(value) => {
+                const date = new Date(value + "T00:00:00Z");
+                return formatInTimeZone(date, timezone, "MMM d", {
+                  locale: dateLocale,
+                });
+              }}
             />
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={getChartMargins()}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  className="text-border dark:opacity-[0.12] opacity-[0.2]"
-                />
-                <XAxis
-                  dataKey="date"
-                  tickLine={false}
-                  axisLine={false}
-                  height={size === "small" ? 20 : 24}
-                  tickMargin={size === "small" ? 4 : 8}
-                  tick={{
-                    fontSize: size === "small" ? 9 : 11,
-                    fill: "currentColor",
-                  }}
-                  minTickGap={size === "small" ? 30 : 50}
-                  tickFormatter={(value) => {
-                    const date = new Date(value + "T00:00:00Z");
-                    return formatInTimeZone(date, timezone, "MMM d", {
-                      locale: dateLocale,
-                    });
-                  }}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  width={60}
-                  tickMargin={4}
-                  tick={{
-                    fontSize: size === "small" ? 9 : 11,
-                    fill: "currentColor",
-                  }}
-                  tickFormatter={formatCurrency}
-                />
-                <Tooltip
-                  content={<CustomTooltip />}
-                  wrapperStyle={{
-                    fontSize: size === "small" ? "10px" : "12px",
-                    zIndex: 1000,
-                  }}
-                />
-                <Bar
-                  dataKey="pnl"
-                  radius={[3, 3, 0, 0]}
-                  maxBarSize={size === "small" ? 25 : 40}
-                  className="transition-opacity duration-300 ease-out"
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.pnl >= 0 ? positiveColor : negativeColor}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              width={60}
+              tickMargin={4}
+              tick={chartTickStyle(size)}
+              tickFormatter={formatCurrency}
+              domain={honestSignedDomain(chartData.map((point) => point.pnl))}
+            />
+            <ReferenceLine y={0} {...CHART_ZERO_LINE_PROPS} />
+            <Tooltip
+              content={<CustomTooltip />}
+              wrapperStyle={{
+                fontSize: chartTooltipFontSize(size),
+                ...CHART_TOOLTIP_WRAPPER,
+              }}
+            />
+            <Bar
+              dataKey="pnl"
+              maxBarSize={chartMaxBarSize(size)}
+              shape={<LollipopBar />}
+              className="motion-reduce:transition-none transition-opacity duration-300 ease-out"
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={signedFill(entry.pnl)} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </ChartWidgetFrame>
   );
 }

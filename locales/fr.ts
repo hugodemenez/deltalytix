@@ -1120,6 +1120,8 @@ export default {
   "commissions.title": "P&L vs Commissions",
   "commissions.tooltip.description":
     "Distribution des profits/pertes nets par rapport aux commissions payées",
+  "commissions.subtitle.empty": "Aucune répartition de commissions sur cette période",
+  "commissions.subtitle.share": "Les commissions prennent {percent}% de la répartition absolue · un point = un pour cent",
   "commissions.tooltip.type": "Type",
   "commissions.tooltip.amount": "Montant",
   "commissions.tooltip.percentage": "Pourcentage",
@@ -1135,6 +1137,7 @@ export default {
   equity: {
     title: "Profits",
     description: "Suivez l'évolution de vos profits dans le temps",
+    subtitle: "Ligne = profits cumulés · comptes sélectionnés",
     loading: "Chargement des données du graphique...",
     toggle: {
       individual: "Individuel",
@@ -1222,6 +1225,11 @@ export default {
   tradeDistribution: {
     title: "Distribution des trades",
     description: "Répartition des trades gagnants, perdants et à l'équilibre",
+    subtitle: {
+      empty: "Aucun trade clôturé sur cette période",
+      share: "{percent}% des trades sont gagnants · un point = un trade",
+      sharePacked: "{percent}% des trades sont gagnants · un point = un pour cent",
+    },
     win: "Trades gagnants",
     loss: "Trades perdants",
     breakeven: "Trades à l'équilibre",
@@ -1658,6 +1666,9 @@ export default {
   },
   "pnl.title": "Profits et Pertes Quotidiens",
   "pnl.description": "Affichage des P&L quotidiens dans le temps",
+  "pnl.subtitle.empty": "Aucun jour clôturé sur cette période",
+  "pnl.subtitle.greenDays": "{green} jours sur {total} se terminent dans le vert · tige = jour · tête = net quotidien",
+  "pnl.subtitle.redDays": "{red} jours sur {total} se terminent dans le rouge · tige = jour · tête = net quotidien",
   "pnl.tooltip.date": "Date",
   "pnl.tooltip.pnl": "P&L",
   "pnl.tooltip.longTrades": "Trades Long",
@@ -1665,6 +1676,10 @@ export default {
   "pnlBySide.title": "P&L par Direction",
   "pnlBySide.description":
     "Comparaison des profits et pertes entre les trades long et short",
+  "pnlBySide.subtitle.empty": "Aucun trade long ou short sur cette période",
+  "pnlBySide.subtitle.best": "Les {label}s sont devant · barre = {mode}, divergente depuis zéro",
+  "pnlBySide.mode.average": "P&L moyen",
+  "pnlBySide.mode.total": "P&L total",
   "pnlBySide.tooltip.side": "Direction",
   "pnlBySide.tooltip.averageTotal": "P&L Moyen",
   "pnlBySide.tooltip.winRate": "Taux de Réussite",
@@ -1675,6 +1690,9 @@ export default {
   "pnlPerContract.title": "P&L Net Moyen par Contrat",
   "pnlPerContract.description":
     "Profit/perte net moyen par contrat par instrument de trading (après commissions)",
+  "pnlPerContract.subtitle.empty": "Aucune moyenne par instrument pour l'instant",
+  "pnlPerContract.subtitle.best": "{label} mène par contrat · barre = net moyen",
+  "pnlPerContract.subtitle.worst": "{label} est à la traîne par contrat · barre = net moyen",
   "pnlPerContract.tooltip.instrument": "Instrument",
   "pnlPerContract.tooltip.averagePnl": "P&L Net Moyen par Contrat",
   "pnlPerContract.tooltip.totalPnl": "P&L Net Total",
@@ -1687,6 +1705,9 @@ export default {
   "pnlPerContractDaily.title": "P&L Net moyen par contrat par jour",
   "pnlPerContractDaily.description":
     "Profit/perte net moyen par contrat par jour pour l'instrument sélectionné (après commissions)",
+  "pnlPerContractDaily.subtitle.empty": "Aucune moyenne quotidienne pour cet instrument",
+  "pnlPerContractDaily.subtitle.greenDays": "{green} jours sur {total} se terminent dans le vert · tige = jour · tête = net moyen quotidien",
+  "pnlPerContractDaily.subtitle.redDays": "{red} jours sur {total} se terminent dans le rouge · tige = jour · tête = net moyen quotidien",
   "pnlPerContractDaily.selectInstrument": "Sélectionner l'instrument",
   "pnlPerContractDaily.noData":
     "Aucune donnée disponible pour l'instrument sélectionné",
@@ -1700,6 +1721,9 @@ export default {
   "pnlTime.title": "P&L moyen par heure",
   "pnlTime.description":
     "Profits et pertes moyens pour chaque heure de la journée",
+  "pnlTime.subtitle.empty": "Aucune moyenne horaire pour l'instant",
+  "pnlTime.subtitle.best": "L'avantage se concentre à {label} h · barre = P&L moyen",
+  "pnlTime.subtitle.worst": "{label} h est l'heure la plus faible · barre = P&L moyen",
   "pnlTime.tooltip.time": "Heure",
   "pnlTime.tooltip.averagePnl": "P&L Moyen",
   "pnlTime.tooltip.trades": "Trades",
@@ -1881,9 +1905,14 @@ export default {
   "tickDistribution.tooltip.trade": "trade",
   "tickDistribution.tooltip.trades_plural": "trades",
   "tickDistribution.clearFilter": "Effacer le filtre",
+  "tickDistribution.subtitle.empty": "Aucun décompte de ticks sur cette période",
+  "tickDistribution.subtitle.peak": "La plupart des trades se referment à {label} ticks · barre = nombre de trades",
+  "tickDistribution.subtitle.peakStacks": "La plupart des trades se referment à {label} ticks · une pile = un tick · un point = un trade",
   "timeInPosition.title": "Temps Moyen en Position",
   "timeInPosition.description":
     "Temps moyen en position pour chaque heure de la journée",
+  "timeInPosition.subtitle.empty": "Aucune moyenne de durée pour l'instant",
+  "timeInPosition.subtitle.peak": "Les plus longues positions commencent à {label} h · barre = durée moyenne",
   "timeInPosition.tooltip.time": "Heure",
   "timeInPosition.tooltip.averageDuration": "Durée Moyenne",
   "timeInPosition.tooltip.trades": "Trades",
@@ -1892,6 +1921,9 @@ export default {
   "weekdayPnl.title": "P&L Moyen par Jour",
   "weekdayPnl.description":
     "Profits et pertes moyens pour chaque jour de la semaine",
+  "weekdayPnl.subtitle.empty": "Aucune moyenne par jour pour l'instant",
+  "weekdayPnl.subtitle.best": "{label} est le jour le plus fort · barre = P&L moyen, divergente depuis zéro",
+  "weekdayPnl.subtitle.worst": "{label} est le jour le plus faible · barre = P&L moyen, divergente depuis zéro",
   "weekdayPnl.tooltip.day": "Jour",
   "weekdayPnl.tooltip.averagePnl": "P&L Moyen",
   "weekdayPnl.tooltip.trades": "Trades",
@@ -1971,6 +2003,11 @@ export default {
     title: "Performance par Durée",
     description:
       "Distribution du P&L moyen et du taux de réussite selon les durées de trades",
+    subtitle: {
+      empty: "Aucune moyenne par durée pour l'instant",
+      best: "{label} a la meilleure moyenne · barre = P&L moyen",
+      worst: "{label} a la moyenne la plus faible · barre = P&L moyen",
+    },
     tooltip: {
       timeRange: "Durée",
       avgPnl: "P&L Moyen",
