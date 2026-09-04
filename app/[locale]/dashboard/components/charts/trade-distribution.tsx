@@ -4,13 +4,17 @@ import * as React from "react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, Label } from "recharts"
 import type { Props } from 'recharts/types/component/Label'
 import type { PolarViewBox } from 'recharts/types/util/types'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useData } from "@/context/data-provider"
-import { cn } from "@/lib/utils"
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
-import { InfoBubble } from "@/components/ui/info-bubble"
 import { useI18n } from "@/locales/client"
 import { DonutChartLoadingSkeleton } from "./chart-loading-skeleton"
+import { shareConclusion } from "./chart-conclusions"
+import {
+  CHART_TOOLTIP_CLASS,
+  CHART_TOOLTIP_WRAPPER,
+  chartTooltipFontSize,
+} from "./chart-glance"
+import { ChartWidgetFrame } from "./chart-widget-frame"
 
 interface TradeDistributionProps {
   size?: WidgetSize
@@ -35,7 +39,7 @@ const CustomTooltip = ({ active, payload }: TooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="rounded-lg border bg-background p-2 shadow-xs">
+      <div className={CHART_TOOLTIP_CLASS}>
         <div className="grid gap-2">
           <div className="flex flex-col">
             <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -76,126 +80,102 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
     ]
   }, [nbWin, nbLoss, nbBe, nbTrades, t])
 
+  const conclusion = shareConclusion(nbWin, nbTrades)
+  const subtitle =
+    conclusion.kind === "empty"
+      ? t("tradeDistribution.subtitle.empty")
+      : t("tradeDistribution.subtitle.share", { percent: conclusion.percent })
+
   const renderColorfulLegendText = (value: string, entry: any) => {
     return <span className="text-xs text-muted-foreground">{value}</span>;
   }
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader 
-        className={cn(
-          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === 'small' ? "p-2 h-10" : "p-3 sm:p-4 h-14"
-        )}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-1.5">
-            <CardTitle 
-              className={cn(
-                "line-clamp-1",
-                size === 'small' ? "text-sm" : "text-base"
-              )}
+    <ChartWidgetFrame
+      size={size}
+      title={t('tradeDistribution.title')}
+      subtitle={subtitle}
+      description={t('tradeDistribution.description')}
+    >
+      {isLoading ? (
+        <DonutChartLoadingSkeleton size={size} />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="45%"
+              innerRadius={size === 'small' ? "60%" : "65%"}
+              outerRadius={size === 'small' ? "80%" : "85%"}
+              paddingAngle={2}
+              dataKey="value"
+              startAngle={90}
+              endAngle={-270}
+              stroke="hsl(var(--background))"
+              strokeWidth={1}
             >
-              {t('tradeDistribution.title')}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === 'small' ? "size-3.5" : "size-4")}
-            >
-              <p>{t('tradeDistribution.description')}</p>
-            </InfoBubble>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent 
-        className={cn(
-          "flex-1 min-h-0",
-          size === 'small' ? "p-1" : "p-2 sm:p-4"
-        )}
-      >
-        <div className="w-full h-full">
-          {isLoading ? (
-            <DonutChartLoadingSkeleton size={size} />
-          ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="45%"
-                innerRadius={size === 'small' ? "60%" : "65%"}
-                outerRadius={size === 'small' ? "80%" : "85%"}
-                paddingAngle={2}
-                dataKey="value"
-                startAngle={90}
-                endAngle={-270}
-                stroke="hsl(var(--background))"
-                strokeWidth={1}
-              >
-                {chartData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.color}
-                    className="transition-opacity duration-300 ease-out hover:opacity-80 dark:brightness-90"
-                  />
-                ))}
-                <Label
-                  position="center"
-                  content={(props: Props) => {
-                    if (!props.viewBox) return null;
-                    const viewBox = props.viewBox as PolarViewBox;
-                    if (!viewBox.cx || !viewBox.cy) return null;
-                    const cx = viewBox.cx;
-                    const cy = viewBox.cy;
-
-                    // Use a percentage of the distance from center to edge for label positioning
-                    const labelRadius = Math.min(cx, cy) * (size === 'small' ? 0.95 : 1.1); // Position labels at 95% or 100% of available space
-
-                    return chartData.map((entry, index) => {
-                      const angle = -90 + (360 * (entry.value / 100) / 2) + (360 * chartData.slice(0, index).reduce((acc, curr) => acc + curr.value, 0) / 100);
-                      const x = cx + labelRadius * Math.cos((angle * Math.PI) / 180);
-                      const y = cy + labelRadius * Math.sin((angle * Math.PI) / 180);
-                      return (
-                        <text
-                          key={index}
-                          x={x}
-                          y={y}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                          className="fill-muted-foreground font-medium translate-y-2"
-                          style={{ 
-                            fontSize: size === 'small' ? '10px' : '12px'
-                          }}
-                        >
-                          {entry.value > 5 ? `${Math.round(entry.value)}%` : ''}
-                        </text>
-                      );
-                    });
-                  }}
+              {chartData.map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={entry.color}
                 />
-              </Pie>
-              <Legend 
-                verticalAlign="bottom"
-                align="center"
-                iconSize={8}
-                iconType="circle"
-                formatter={renderColorfulLegendText}
-                wrapperStyle={{
-                  paddingTop: size === 'small' ? 0 : 16
+              ))}
+              <Label
+                position="center"
+                content={(props: Props) => {
+                  if (!props.viewBox) return null;
+                  const viewBox = props.viewBox as PolarViewBox;
+                  if (!viewBox.cx || !viewBox.cy) return null;
+                  const cx = viewBox.cx;
+                  const cy = viewBox.cy;
+
+                  // Use a percentage of the distance from center to edge for label positioning
+                  const labelRadius = Math.min(cx, cy) * (size === 'small' ? 0.95 : 1.1); // Position labels at 95% or 100% of available space
+
+                  return chartData.map((entry, index) => {
+                    const angle = -90 + (360 * (entry.value / 100) / 2) + (360 * chartData.slice(0, index).reduce((acc, curr) => acc + curr.value, 0) / 100);
+                    const x = cx + labelRadius * Math.cos((angle * Math.PI) / 180);
+                    const y = cy + labelRadius * Math.sin((angle * Math.PI) / 180);
+                    return (
+                      <text
+                        key={index}
+                        x={x}
+                        y={y}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        className="fill-muted-foreground font-medium translate-y-2"
+                        style={{ 
+                          fontSize: size === 'small' ? '10px' : '12px'
+                        }}
+                      >
+                        {entry.value > 5 ? `${Math.round(entry.value)}%` : ''}
+                      </text>
+                    );
+                  });
                 }}
               />
-              <Tooltip 
-                content={<CustomTooltip />}
-                wrapperStyle={{ 
-                  fontSize: size === 'small' ? '10px' : '12px',
-                  zIndex: 1000
-                }} 
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            </Pie>
+            <Legend 
+              verticalAlign="bottom"
+              align="center"
+              iconSize={8}
+              iconType="circle"
+              formatter={renderColorfulLegendText}
+              wrapperStyle={{
+                paddingTop: size === 'small' ? 0 : 16
+              }}
+            />
+            <Tooltip 
+              content={<CustomTooltip />}
+              wrapperStyle={{
+                fontSize: chartTooltipFontSize(size),
+                ...CHART_TOOLTIP_WRAPPER,
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      )}
+    </ChartWidgetFrame>
   )
 }
