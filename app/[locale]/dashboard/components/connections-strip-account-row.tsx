@@ -8,7 +8,6 @@ import { CommandItem } from '@/components/ui/command'
 import { useUserStore } from '@/store/user-store'
 import type { ConnectionsPageAccount } from '@/app/[locale]/dashboard/connections/types'
 import {
-  accountDisplayName,
   formatStripBalance,
   isMaskedAccount,
   journaledAccountBalance,
@@ -46,8 +45,6 @@ export function ConnectionsStripAccountRow({
   onRequestDelete: (account: ConnectionsPageAccount) => void
 }) {
   const t = useI18n()
-  const displayName = accountDisplayName(account)
-  const title = displayName ?? account.number
   const masked = isMaskedAccount(account, hiddenGroupId)
   const storeAccount = useUserStore((state) =>
     state.accounts.find(
@@ -60,10 +57,24 @@ export function ConnectionsStripAccountRow({
 
   return (
     <CommandItem
-      value={`${displayName ?? ''} ${account.number}`}
+      value={`${account.number} ${account.propfirm ?? ''}`}
       onSelect={() => onSelect(account.number)}
       className="items-center gap-2 rounded-[3px] px-3 py-2"
     >
+      {selected ? (
+        <Check
+          className={cn(
+            'h-4 w-4 shrink-0',
+            masked
+              ? 'text-[#686D67] dark:text-muted-foreground'
+              : 'text-[#171917] dark:text-foreground'
+          )}
+          strokeWidth={2}
+          aria-hidden
+        />
+      ) : (
+        <span className="inline-block h-4 w-4 shrink-0" aria-hidden />
+      )}
       <span
         className={cn(
           'min-w-0 flex-1',
@@ -72,21 +83,23 @@ export function ConnectionsStripAccountRow({
       >
         <span
           className={cn(
-            'block h-7 truncate px-1.5 text-base font-medium leading-7 sm:text-sm',
+            'block truncate text-base font-medium leading-6 sm:text-sm',
             masked
               ? 'text-[#686D67] dark:text-muted-foreground'
               : 'text-[#171917] dark:text-foreground'
           )}
         >
-          {title}
+          {account.number}
         </span>
         <span
-          className={cn(
-            'mt-0.5 block h-4 truncate px-1.5 text-xs leading-4',
-            'text-[#686D67] dark:text-muted-foreground'
-          )}
+          className="mt-0.5 block truncate text-xs leading-4 text-[#686D67] dark:text-muted-foreground tabular-nums"
+          aria-label={
+            formattedBalance
+              ? t('connections.strip.balance', { amount: formattedBalance })
+              : undefined
+          }
         >
-          {displayName ? account.number : '\u00a0'}
+          {formattedBalance ?? '\u00a0'}
         </span>
       </span>
 
@@ -134,60 +147,29 @@ export function ConnectionsStripAccountRow({
             />
           </span>
         </button>
-        <div className={cn('flex items-center gap-0.5', masked && 'opacity-60')}>
-          {formattedBalance ? (
-            <span
-              className={cn(
-                'min-w-0 max-w-[6.5rem] truncate px-1.5 text-xs tabular-nums',
-                masked
-                  ? 'text-[#686D67] dark:text-muted-foreground'
-                  : 'text-[#171917] dark:text-foreground'
-              )}
-              aria-label={t('connections.strip.balance', {
-                amount: formattedBalance,
-              })}
-            >
-              {formattedBalance}
-            </span>
-          ) : null}
-          {canDelete ? (
-            <button
-              type="button"
-              className={cn(
-                iconButtonClass,
-                'text-[#686D67] dark:text-muted-foreground',
-                masked
-                  ? 'hover:bg-[#F5F5F5] hover:text-[#686D67] dark:hover:bg-muted/50 dark:hover:text-muted-foreground'
-                  : 'hover:bg-[#F5F5F5] hover:text-red-600 dark:hover:bg-muted/50 dark:hover:text-red-400'
-              )}
-              aria-label={t('connections.strip.deleteAccount', {
-                account: displayName ?? account.number,
-              })}
-              disabled={deleting}
-              onClick={() => onRequestDelete(account)}
-            >
-              {deleting ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-              ) : (
-                <Trash2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-              )}
-            </button>
-          ) : null}
-          {selected ? (
-            <Check
-              className={cn(
-                'h-4 w-4 shrink-0',
-                masked
-                  ? 'text-[#686D67] dark:text-muted-foreground'
-                  : 'text-[#171917] dark:text-foreground'
-              )}
-              strokeWidth={2}
-              aria-hidden
-            />
-          ) : (
-            <span className="inline-block h-4 w-4 shrink-0" aria-hidden />
-          )}
-        </div>
+        {canDelete ? (
+          <button
+            type="button"
+            className={cn(
+              iconButtonClass,
+              'text-[#686D67] dark:text-muted-foreground',
+              masked
+                ? 'hover:bg-[#F5F5F5] hover:text-[#686D67] dark:hover:bg-muted/50 dark:hover:text-muted-foreground'
+                : 'hover:bg-[#F5F5F5] hover:text-red-600 dark:hover:bg-muted/50 dark:hover:text-red-400'
+            )}
+            aria-label={t('connections.strip.deleteAccount', {
+              account: account.number,
+            })}
+            disabled={deleting}
+            onClick={() => onRequestDelete(account)}
+          >
+            {deleting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+            )}
+          </button>
+        ) : null}
       </div>
     </CommandItem>
   )

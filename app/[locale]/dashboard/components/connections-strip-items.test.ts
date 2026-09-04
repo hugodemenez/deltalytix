@@ -3,7 +3,7 @@ import {
   buildStripItems,
   canSyncStripItem,
   chipAccountCountLabel,
-  chipShowsDesktopSync,
+  footerShowsDesktopSync,
   accountDisplayName,
   formatStripBalance,
   isMaskedAccount,
@@ -275,13 +275,13 @@ describe('strip sync eligibility', () => {
     ).toBe(false)
   })
 
-  it('shows Sync on the chip only after desktop is confirmed', () => {
+  it('shows footer Sync only after desktop is confirmed', () => {
     const tradovate = { kind: 'connection' as const, service: 'tradovate' }
     const standalone = { kind: 'standalone' as const, service: null }
-    expect(chipShowsDesktopSync(tradovate, false)).toBe(true)
-    expect(chipShowsDesktopSync(tradovate, true)).toBe(false)
-    expect(chipShowsDesktopSync(tradovate, undefined)).toBe(false)
-    expect(chipShowsDesktopSync(standalone, false)).toBe(false)
+    expect(footerShowsDesktopSync(tradovate, false)).toBe(true)
+    expect(footerShowsDesktopSync(tradovate, true)).toBe(false)
+    expect(footerShowsDesktopSync(tradovate, undefined)).toBe(false)
+    expect(footerShowsDesktopSync(standalone, false)).toBe(false)
   })
 })
 

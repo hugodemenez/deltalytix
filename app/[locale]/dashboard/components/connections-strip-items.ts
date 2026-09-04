@@ -46,12 +46,11 @@ export function canSyncStripItem(item: Pick<StripItem, 'kind' | 'service'>): boo
 }
 
 /**
- * Desktop-only: Sync replaces the account-count meta on the chip.
- * Mobile never shows Sync on the chip (or in the drawer).
+ * Desktop dropdown footer only. Never on the chip, never in the mobile drawer.
  * `isMobile` is `undefined` until the viewport is measured — treat that as
- * "not desktop" so a phone never flashes a nested Sync button.
+ * "not desktop" so a phone never flashes Sync.
  */
-export function chipShowsDesktopSync(
+export function footerShowsDesktopSync(
   item: Pick<StripItem, 'kind' | 'service'>,
   isMobile: boolean | undefined
 ): boolean {

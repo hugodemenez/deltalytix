@@ -8,7 +8,7 @@ import {
   type ButtonHTMLAttributes,
 } from 'react'
 import Link from 'next/link'
-import { ChevronDown, Loader2, Plus } from 'lucide-react'
+import { ChevronDown, Loader2, Plus, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
@@ -58,7 +58,7 @@ import { HIDDEN_GROUP_NAME } from '@/app/[locale]/dashboard/components/filters/a
 import {
   buildStripItems,
   chipAccountCountLabel,
-  chipShowsDesktopSync,
+  footerShowsDesktopSync,
   isStandaloneAccount,
   mapConnectionsAccounts,
   removeConnectionsAccount,
@@ -218,6 +218,7 @@ function AccountPickerList({
   onMask,
   onRequestDelete,
   listClassName,
+  footerSync,
 }: {
   item: StripItem
   selectedAccounts: string[]
@@ -231,6 +232,7 @@ function AccountPickerList({
   onMask: (account: ConnectionsPageAccount, masked: boolean) => void
   onRequestDelete: (account: ConnectionsPageAccount) => void
   listClassName: string
+  footerSync?: { syncing: boolean; onSync: () => void } | null
 }) {
   const t = useI18n()
   const query = searchTerm.trim().toLowerCase()
@@ -276,14 +278,20 @@ function AccountPickerList({
           ))}
         </CommandGroup>
       </CommandList>
-      <div className="border-t border-[#E5E5E5] dark:border-border">
+      <div className="flex items-center justify-between gap-3 border-t border-[#E5E5E5] px-3 py-2 dark:border-border">
         <Link
           href="/dashboard/connections"
-          className="block px-3 py-2.5 text-sm font-medium text-[#3E7550] transition-colors hover:bg-[#EFF5EC] dark:text-[#9BC4A8] dark:hover:bg-[#243028]"
+          className="min-w-0 truncate text-sm font-medium text-[#3E7550] transition-colors hover:text-[#2F5C3E] dark:text-[#9BC4A8] dark:hover:text-[#B7D4C2]"
           onClick={onClose}
         >
           {t('connections.manageConnection')}
         </Link>
+        {footerSync ? (
+          <StripSyncButton
+            syncing={footerSync.syncing}
+            onSync={footerSync.onSync}
+          />
+        ) : null}
       </div>
     </Command>
   )
@@ -306,15 +314,18 @@ function StripSyncButton({
         onSync()
       }}
       className={cn(
-        'inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-[3px] px-1.5 text-xs font-medium text-[#171917]',
-        'transition-[background-color,transform] duration-150 hover:bg-[#F5F5F5] active:scale-[0.96]',
+        'inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-[4px] border border-[#E5E5E5] bg-white px-2.5 text-sm font-medium text-[#171917]',
+        'transition-[background-color,border-color,transform] duration-150',
+        'hover:bg-[#F5F5F5] active:scale-[0.96]',
         'disabled:pointer-events-none disabled:opacity-40',
-        'dark:text-foreground dark:hover:bg-muted/50'
+        'dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/50'
       )}
     >
       {syncing ? (
-        <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
-      ) : null}
+        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+      ) : (
+        <RefreshCw className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+      )}
       {t('connections.strip.sync')}
     </button>
   )
@@ -341,13 +352,11 @@ function ConnectionChip({
   onRequestDelete: (account: ConnectionsPageAccount) => void
   onSynced: () => void
 }) {
-  const t = useI18n()
   const isMobile = useIsMobileLayout()
   const [open, setOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const { canSync, sync, syncing } = useStripConnectionSync(item, onSynced)
-  const showDesktopSync = chipShowsDesktopSync(item, isMobile) && canSync
-  const statusLabel = chipStatusLabel(item.status, t)
+  const showFooterSync = footerShowsDesktopSync(item, isMobile) && canSync
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
@@ -359,7 +368,7 @@ function ConnectionChip({
     onRequestDelete(account)
   }
 
-  const picker = (listClassName: string) => (
+  const picker = (listClassName: string, withFooterSync: boolean) => (
     <AccountPickerList
       item={item}
       selectedAccounts={selectedAccounts}
@@ -373,6 +382,11 @@ function ConnectionChip({
       onMask={onMask}
       onRequestDelete={requestDelete}
       listClassName={listClassName}
+      footerSync={
+        withFooterSync
+          ? { syncing, onSync: () => void sync() }
+          : null
+      }
     />
   )
 
@@ -398,7 +412,8 @@ function ConnectionChip({
               </DrawerTitle>
             </DrawerHeader>
             {picker(
-              'max-h-[min(320px,50svh)] pb-[max(0.5rem,env(safe-area-inset-bottom))]'
+              'max-h-[min(320px,50svh)] pb-[max(0.5rem,env(safe-area-inset-bottom))]',
+              false
             )}
           </DrawerContent>
         </Drawer>
@@ -406,80 +421,19 @@ function ConnectionChip({
     )
   }
 
-  if (!showDesktopSync) {
-    return (
-      <Popover open={open} onOpenChange={handleOpenChange}>
-        <PopoverTrigger asChild>
-          <ChipTrigger item={item} open={open} />
-        </PopoverTrigger>
-        <PopoverContent
-          align="start"
-          sideOffset={8}
-          className="w-[min(28rem,calc(100vw-2rem))] rounded-[4px] border-[#E5E5E5] bg-white p-0 shadow-md dark:border-border dark:bg-background"
-        >
-          {picker('max-h-[320px]')}
-        </PopoverContent>
-      </Popover>
-    )
-  }
-
   return (
-    <div
-      className={cn(
-        'inline-flex h-9 max-w-[18rem] shrink-0 items-center rounded-[4px] border bg-white text-sm tracking-[-0.01em] dark:bg-background',
-        open
-          ? 'border-[#181A18] dark:border-white'
-          : 'border-[#E5E5E5] dark:border-border'
-      )}
-    >
-      <Popover open={open} onOpenChange={handleOpenChange}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            aria-haspopup="listbox"
-            aria-expanded={open}
-            className="inline-flex h-full min-w-0 items-center gap-2 rounded-l-[3px] pl-3 pr-1 text-left transition-[background-color,transform] duration-150 hover:bg-[#F5F5F5] active:scale-[0.98] dark:hover:bg-muted/50"
-          >
-            <span className="min-w-0 truncate font-medium text-[#171917] dark:text-foreground">
-              {item.displayName}
-            </span>
-            <span
-              className={cn(
-                'h-1.5 w-1.5 shrink-0 rounded-full',
-                item.status === 'connected' && 'bg-[#3E7550]',
-                item.status === 'error' && 'bg-red-500',
-                item.status === 'offline' && 'bg-[#A3A3A3]'
-              )}
-              aria-label={statusLabel}
-            />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          align="start"
-          sideOffset={8}
-          className="w-[min(28rem,calc(100vw-2rem))] rounded-[4px] border-[#E5E5E5] bg-white p-0 shadow-md dark:border-border dark:bg-background"
-        >
-          {picker('max-h-[320px]')}
-        </PopoverContent>
-      </Popover>
-      <StripSyncButton syncing={syncing} onSync={() => void sync()} />
-      <button
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-label={item.displayName}
-        className="inline-flex h-full items-center rounded-r-[3px] pr-3 pl-1 text-[#686D67] transition-[background-color,transform] duration-150 hover:bg-[#F5F5F5] active:scale-[0.98] dark:text-muted-foreground dark:hover:bg-muted/50"
-        onClick={() => handleOpenChange(true)}
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        <ChipTrigger item={item} open={open} />
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={8}
+        className="w-[min(28rem,calc(100vw-2rem))] rounded-[4px] border-[#E5E5E5] bg-white p-0 shadow-md dark:border-border dark:bg-background"
       >
-        <ChevronDown
-          className={cn(
-            'h-3.5 w-3.5 shrink-0 transition-transform duration-150',
-            open && 'rotate-180'
-          )}
-          aria-hidden
-        />
-      </button>
-    </div>
+        {picker('max-h-[320px]', showFooterSync)}
+      </PopoverContent>
+    </Popover>
   )
 }
 
