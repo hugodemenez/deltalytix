@@ -19,6 +19,14 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
+import {
+  CHART_BAR_CAP,
+  CHART_GRID_PROPS,
+  CHART_LINE_STROKE,
+  CHART_ZERO_LINE_PROPS,
+  chartMaxBarSize,
+  honestSignedDomain,
+} from "./chart-glance";
 
 const MUTED_BAR_FILL = "hsl(var(--muted-foreground) / 0.35)";
 const DEFAULT_LOADING_LABEL = "Loading chart data...";
@@ -85,13 +93,7 @@ export function getAxisDimensions(
 }
 
 export function getSignedDomain(values: number[]) {
-  if (values.length === 0) {
-    return [0, 0] as [number, number];
-  }
-
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  return [Math.min(min * 1.1, 0), Math.max(max * 1.1, 0)] as [number, number];
+  return honestSignedDomain(values);
 }
 
 interface ChartAxisSkeletonOverlayProps {
@@ -177,7 +179,7 @@ export function BarChartLoadingSkeleton({
   const { xAxisHeight } = getAxisDimensions(size, yAxisWidth);
   const values = data.map((row) => Number(row[yDataKey]));
   const yDomain = domain ?? getSignedDomain(values);
-  const barSize = maxBarSize ?? (size === "small" ? 25 : 40);
+  const barSize = maxBarSize ?? chartMaxBarSize(size);
 
   return (
     <ChartLoadingContainer
@@ -193,10 +195,7 @@ export function BarChartLoadingSkeleton({
       />
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={margin}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            className="text-border dark:opacity-[0.12] opacity-[0.2]"
-          />
+          <CartesianGrid {...CHART_GRID_PROPS} />
           <XAxis
             dataKey={xDataKey}
             tickLine={false}
@@ -214,11 +213,11 @@ export function BarChartLoadingSkeleton({
             domain={yDomain}
           />
           {showReferenceLine ? (
-            <ReferenceLine y={0} stroke="hsl(var(--border))" />
+            <ReferenceLine y={0} {...CHART_ZERO_LINE_PROPS} />
           ) : null}
           <Bar
             dataKey={yDataKey}
-            radius={[3, 3, 0, 0]}
+            radius={[CHART_BAR_CAP, CHART_BAR_CAP, 0, 0]}
             maxBarSize={barSize}
             className="transition-none"
             fill={MUTED_BAR_FILL}
@@ -266,10 +265,7 @@ export function LineChartLoadingSkeleton({
       />
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={margin}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            className="text-border dark:opacity-[0.12] opacity-[0.2]"
-          />
+          <CartesianGrid {...CHART_GRID_PROPS} />
           <XAxis
             dataKey={xDataKey}
             tickLine={false}
@@ -286,18 +282,13 @@ export function LineChartLoadingSkeleton({
             tick={false}
           />
           {showReferenceLine ? (
-            <ReferenceLine
-              y={0}
-              stroke="hsl(var(--muted-foreground))"
-              strokeDasharray="3 3"
-              strokeOpacity={0.5}
-            />
+            <ReferenceLine y={0} {...CHART_ZERO_LINE_PROPS} />
           ) : null}
           <Line
             type="monotone"
             dataKey={yDataKey}
             stroke={MUTED_BAR_FILL}
-            strokeWidth={2}
+            strokeWidth={CHART_LINE_STROKE}
             dot={false}
             className="transition-none"
           />
@@ -401,10 +392,7 @@ export function ComposedChartLoadingSkeleton({
       />
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={margin}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            className="text-border dark:opacity-[0.12] opacity-[0.2]"
-          />
+          <CartesianGrid {...CHART_GRID_PROPS} />
           <XAxis
             dataKey={xDataKey}
             tickLine={false}
@@ -419,10 +407,10 @@ export function ComposedChartLoadingSkeleton({
             tickMargin={4}
             tick={false}
           />
-          <ReferenceLine y={0} stroke="hsl(var(--border))" />
+          <ReferenceLine y={0} {...CHART_ZERO_LINE_PROPS} />
           <Bar
             dataKey={barDataKey}
-            radius={[3, 3, 0, 0]}
+            radius={[CHART_BAR_CAP, CHART_BAR_CAP, 0, 0]}
             maxBarSize={size === "small" ? 20 : 30}
             className="transition-none"
             fill={MUTED_BAR_FILL}
@@ -435,7 +423,7 @@ export function ComposedChartLoadingSkeleton({
             type="stepAfter"
             dataKey={lineDataKey}
             stroke={MUTED_BAR_FILL}
-            strokeWidth={2}
+            strokeWidth={CHART_LINE_STROKE}
             dot={false}
             className="transition-none"
           />

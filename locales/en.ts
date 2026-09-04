@@ -1139,6 +1139,8 @@ export default {
   "commissions.title": "P/L vs Commissions",
   "commissions.tooltip.description":
     "Distribution of net profit/loss versus commissions paid",
+  "commissions.subtitle.empty": "No commission split in this range",
+  "commissions.subtitle.share": "Commissions take {percent}% of the absolute split · slice = share",
   "commissions.tooltip.type": "Type",
   "commissions.tooltip.amount": "Amount",
   "commissions.tooltip.percentage": "Percentage",
@@ -1154,6 +1156,7 @@ export default {
   equity: {
     title: "Equity",
     description: "Track your equity over time",
+    subtitle: "Line = cumulative equity · selected accounts",
     loading: "Loading chart data...",
     toggle: {
       individual: "Individual",
@@ -1203,6 +1206,9 @@ export default {
   },
   "pnl.title": "Daily Profit/Loss",
   "pnl.description": "Showing daily P/L over time",
+  "pnl.subtitle.empty": "No closed days in this range",
+  "pnl.subtitle.greenDays": "{green} of {total} days finished green · bar = daily net",
+  "pnl.subtitle.redDays": "{red} of {total} days finished red · bar = daily net",
   "pnl.tooltip.date": "Date",
   "pnl.tooltip.pnl": "P/L",
   "pnl.tooltip.longTrades": "Long Trades",
@@ -1210,6 +1216,10 @@ export default {
   "pnlBySide.title": "P/L by Side",
   "pnlBySide.description":
     "Profit/loss comparison between long and short trades",
+  "pnlBySide.subtitle.empty": "No long or short trades in this range",
+  "pnlBySide.subtitle.best": "{label}s are ahead · bar = {mode}",
+  "pnlBySide.mode.average": "average P/L",
+  "pnlBySide.mode.total": "total P/L",
   "pnlBySide.tooltip.side": "Side",
   "pnlBySide.tooltip.averageTotal": "Average P/L",
   "pnlBySide.tooltip.winRate": "Win Rate",
@@ -1220,6 +1230,9 @@ export default {
   "pnlPerContract.title": "Avg Net P/L per Contract",
   "pnlPerContract.description":
     "Average net profit/loss per contract by trading instrument (after commissions)",
+  "pnlPerContract.subtitle.empty": "No instrument averages yet",
+  "pnlPerContract.subtitle.best": "{label} leads per contract · bar = average net",
+  "pnlPerContract.subtitle.worst": "{label} lags per contract · bar = average net",
   "pnlPerContract.tooltip.instrument": "Instrument",
   "pnlPerContract.tooltip.averagePnl": "Avg Net P/L per Contract",
   "pnlPerContract.tooltip.totalPnl": "Total Net P/L",
@@ -1232,6 +1245,9 @@ export default {
   "pnlPerContractDaily.title": "Daily Avg Net P/L per contract",
   "pnlPerContractDaily.description":
     "Average net profit/loss per contract per day for selected instrument (after commissions)",
+  "pnlPerContractDaily.subtitle.empty": "No daily averages for this instrument",
+  "pnlPerContractDaily.subtitle.greenDays": "{green} of {total} days finished green · bar = daily average net",
+  "pnlPerContractDaily.subtitle.redDays": "{red} of {total} days finished red · bar = daily average net",
   "pnlPerContractDaily.selectInstrument": "Select Instrument",
   "pnlPerContractDaily.noData": "No data available for selected instrument",
   "pnlPerContractDaily.tooltip.date": "Date",
@@ -1243,6 +1259,9 @@ export default {
   "pnlPerContractDaily.tooltip.contracts": "contracts",
   "pnlTime.title": "Average P/L by Hour",
   "pnlTime.description": "Average profit/loss for each hour of the day",
+  "pnlTime.subtitle.empty": "No hourly averages yet",
+  "pnlTime.subtitle.best": "Most of the edge sits at {label}:00 · bar = average P/L",
+  "pnlTime.subtitle.worst": "{label}:00 is the weakest hour · bar = average P/L",
   "pnlTime.tooltip.time": "Time",
   "pnlTime.tooltip.averagePnl": "Average P/L",
   "pnlTime.tooltip.trades": "Trades",
@@ -1252,6 +1271,10 @@ export default {
   tickDistribution: {
     title: "Tick Distribution",
     description: "Distribution of trades by tick value (PnL per contract)",
+    subtitle: {
+      empty: "No tick counts in this range",
+      peak: "Most trades close at {label} ticks · bar = trade count",
+    },
     tooltip: {
       ticks: "ticks",
       tick: "tick",
@@ -1265,6 +1288,8 @@ export default {
   "timeInPosition.title": "Average Time in Position",
   "timeInPosition.description":
     "Average time in position for each hour of the day",
+  "timeInPosition.subtitle.empty": "No holding-time averages yet",
+  "timeInPosition.subtitle.peak": "Longest holds start at {label}:00 · bar = average duration",
   "timeInPosition.tooltip.time": "Time",
   "timeInPosition.tooltip.averageDuration": "Average Duration",
   "timeInPosition.tooltip.trades": "Trades",
@@ -1272,6 +1297,9 @@ export default {
   "timeInPosition.tooltip.trades_plural": "trades",
   "weekdayPnl.title": "Average P/L by Day",
   "weekdayPnl.description": "Average profit/loss for each day of the week",
+  "weekdayPnl.subtitle.empty": "No weekday averages yet",
+  "weekdayPnl.subtitle.best": "{label} is the strongest day · bar = average P/L",
+  "weekdayPnl.subtitle.worst": "{label} is the weakest day · bar = average P/L",
   "weekdayPnl.tooltip.day": "Day",
   "weekdayPnl.tooltip.averagePnl": "Average P/L",
   "weekdayPnl.tooltip.trades": "Trades",
@@ -1649,6 +1677,10 @@ export default {
   tradeDistribution: {
     title: "Trade Distribution",
     description: "Distribution of winning, losing, and breakeven trades",
+    subtitle: {
+      empty: "No closed trades in this range",
+      share: "{percent}% of trades are winners · slice = share",
+    },
     win: "Winning trades",
     loss: "Losing trades",
     breakeven: "Breakeven trades",
@@ -1856,6 +1888,11 @@ export default {
     title: "Time Range Performance",
     description:
       "Average P&L and win rate distribution across different holding times",
+    subtitle: {
+      empty: "No holding-time averages yet",
+      best: "{label} holds the best average · bar = average P/L",
+      worst: "{label} holds the weakest average · bar = average P/L",
+    },
     tooltip: {
       timeRange: "Time Range",
       avgPnl: "Average P&L",

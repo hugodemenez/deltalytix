@@ -12,28 +12,32 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartConfig } from "@/components/ui/chart";
 import { useData } from "@/context/data-provider";
-import { cn } from "@/lib/utils";
-import { InfoBubble } from "@/components/ui/info-bubble";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
 import {
   BarChartLoadingSkeleton,
+  getChartMargins,
   LOADING_MOCK_AVERAGE_PNL,
 } from "./chart-loading-skeleton";
+import { namedSignedConclusion } from "./chart-conclusions";
+import {
+  CHART_GRID_PROPS,
+  CHART_TOOLTIP_CLASS,
+  CHART_TOOLTIP_WRAPPER,
+  CHART_ZERO_LINE_PROPS,
+  chartMaxBarSize,
+  chartTickStyle,
+  chartTooltipFontSize,
+  honestSignedDomain,
+  signedFill,
+} from "./chart-glance";
+import { GlanceBar } from "./chart-glance-bar";
+import { ChartWidgetFrame } from "./chart-widget-frame";
 
 interface PnLPerContractChartProps {
   size?: WidgetSize;
 }
-
-const chartConfig = {
-  pnl: {
-    label: "Avg P/L per Contract",
-    color: "hsl(var(--chart-loss))",
-  },
-} satisfies ChartConfig;
 
 const formatCurrency = (value: number) =>
   value.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -43,7 +47,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="rounded-lg border bg-background p-2 shadow-xs">
+      <div className={CHART_TOOLTIP_CLASS}>
         <div className="grid gap-2">
           <div className="flex flex-col">
             <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -138,127 +142,83 @@ export default function PnLPerContractChart({
       .sort((a, b) => b.averagePnl - a.averagePnl); // Sort by average PnL descending
   }, [trades]);
 
-  const maxPnL = Math.max(...chartData.map((d) => d.averagePnl));
-  const minPnL = Math.min(...chartData.map((d) => d.averagePnl));
-  const absMax = Math.max(Math.abs(maxPnL), Math.abs(minPnL));
-
-  const getColor = (value: number) => {
-    const ratio = Math.abs(value / absMax);
-    const baseColorVar = value >= 0 ? "--chart-win" : "--chart-4";
-    const intensity = Math.max(0.2, ratio);
-    return `hsl(var(${baseColorVar}) / ${intensity})`;
-  };
+  const conclusion = namedSignedConclusion(
+    chartData.map((entry) => ({
+      label: entry.instrument,
+      value: entry.averagePnl,
+    })),
+  );
+  const subtitle =
+    conclusion.kind === "empty"
+      ? t("pnlPerContract.subtitle.empty")
+      : t(`pnlPerContract.subtitle.${conclusion.kind}`, {
+          label: conclusion.label,
+        });
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader
-        className={cn(
-          "flex flex-col items-stretch space-y-0 border-b shrink-0",
-          size === "small" ? "p-2" : "p-3 sm:p-4",
-        )}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1",
-                size === "small" ? "text-sm" : "text-base",
-              )}
-            >
-              {t("pnlPerContract.title")}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
-            >
-              <p>{t("pnlPerContract.description")}</p>
-            </InfoBubble>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "flex-1 min-h-0",
-          size === "small" ? "p-1" : "p-2 sm:p-4",
-        )}
-      >
-        <div className={cn("w-full h-full")}>
-          {isLoading ? (
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_AVERAGE_PNL}
-              xDataKey="instrument"
-              yDataKey="averagePnl"
-              showReferenceLine
+    <ChartWidgetFrame
+      size={size}
+      title={t("pnlPerContract.title")}
+      subtitle={subtitle}
+      description={t("pnlPerContract.description")}
+    >
+      {isLoading ? (
+        <BarChartLoadingSkeleton
+          size={size}
+          data={LOADING_MOCK_AVERAGE_PNL}
+          xDataKey="instrument"
+          yDataKey="averagePnl"
+          showReferenceLine
+        />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={getChartMargins(size)}>
+            <CartesianGrid {...CHART_GRID_PROPS} />
+            <XAxis
+              dataKey="instrument"
+              tickLine={false}
+              axisLine={false}
+              height={size === "small" ? 20 : 24}
+              tickMargin={size === "small" ? 4 : 8}
+              tick={chartTickStyle(size)}
+              angle={-45}
+              textAnchor="end"
             />
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={
-                  size === "small"
-                    ? { left: 10, right: 4, top: 4, bottom: 20 }
-                    : { left: 10, right: 8, top: 8, bottom: 24 }
-                }
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  className="text-border dark:opacity-[0.12] opacity-[0.2]"
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              width={60}
+              tickMargin={4}
+              tick={chartTickStyle(size)}
+              tickFormatter={formatCurrency}
+              domain={honestSignedDomain(
+                chartData.map((entry) => entry.averagePnl),
+              )}
+            />
+            <ReferenceLine y={0} {...CHART_ZERO_LINE_PROPS} />
+            <Tooltip
+              content={<CustomTooltip />}
+              wrapperStyle={{
+                fontSize: chartTooltipFontSize(size),
+                ...CHART_TOOLTIP_WRAPPER,
+              }}
+            />
+            <Bar
+              dataKey="averagePnl"
+              maxBarSize={chartMaxBarSize(size)}
+              shape={<GlanceBar />}
+              className="motion-reduce:transition-none transition-opacity duration-300 ease-out"
+            >
+              {chartData.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={signedFill(entry.averagePnl)}
                 />
-                <XAxis
-                  dataKey="instrument"
-                  tickLine={false}
-                  axisLine={false}
-                  height={size === "small" ? 20 : 24}
-                  tickMargin={size === "small" ? 4 : 8}
-                  tick={{
-                    fontSize: size === "small" ? 9 : 11,
-                    fill: "currentColor",
-                  }}
-                  angle={size === "small" ? -45 : -45}
-                  textAnchor="end"
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  width={60}
-                  tickMargin={4}
-                  tick={{
-                    fontSize: size === "small" ? 9 : 11,
-                    fill: "currentColor",
-                  }}
-                  tickFormatter={formatCurrency}
-                  domain={[
-                    Math.min(minPnL * 1.1, 0),
-                    Math.max(maxPnL * 1.1, 0),
-                  ]}
-                />
-                <ReferenceLine y={0} stroke="hsl(var(--border))" />
-                <Tooltip
-                  content={<CustomTooltip />}
-                  wrapperStyle={{
-                    fontSize: size === "small" ? "10px" : "12px",
-                    zIndex: 1000,
-                  }}
-                />
-                <Bar
-                  dataKey="averagePnl"
-                  radius={[3, 3, 0, 0]}
-                  maxBarSize={size === "small" ? 25 : 40}
-                  className="transition-opacity duration-300 ease-out"
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={getColor(entry.averagePnl)}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </ChartWidgetFrame>
   );
 }

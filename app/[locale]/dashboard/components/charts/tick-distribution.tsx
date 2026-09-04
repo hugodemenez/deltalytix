@@ -11,19 +11,30 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartConfig } from "@/components/ui/chart";
 import { useData } from "@/context/data-provider";
-import { cn } from "@/lib/utils";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
-import { InfoBubble } from "@/components/ui/info-bubble";
 import { useI18n } from "@/locales/client";
 import { Button } from "@/components/ui/button";
 import { useTickDetailsStore } from "@/store/tick-details-store";
 import {
   BarChartLoadingSkeleton,
+  getChartMargins,
   LOADING_MOCK_TICKS,
 } from "./chart-loading-skeleton";
+import { countPeakConclusion } from "./chart-conclusions";
+import {
+  CHART_GRID_PROPS,
+  CHART_TOOLTIP_CLASS,
+  CHART_TOOLTIP_WRAPPER,
+  chartMaxBarSize,
+  chartTickStyle,
+  chartTooltipFontSize,
+  filterBarOpacity,
+  honestPositiveDomain,
+  unsignedFill,
+} from "./chart-glance";
+import { GlanceBar } from "./chart-glance-bar";
+import { ChartWidgetFrame } from "./chart-widget-frame";
 
 interface TickDistributionProps {
   size?: WidgetSize;
@@ -42,19 +53,12 @@ interface TooltipProps {
   label?: string;
 }
 
-const chartConfig = {
-  count: {
-    label: "Count",
-    color: "hsl(var(--chart-7))",
-  },
-} satisfies ChartConfig;
-
 const CustomTooltip = ({ active, payload }: TooltipProps) => {
   const t = useI18n();
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="rounded-lg border bg-background p-2 shadow-xs">
+      <div className={CHART_TOOLTIP_CLASS}>
         <div className="grid gap-2">
           <div className="flex flex-col">
             <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -147,153 +151,120 @@ export default function TickDistributionChart({
     }
   };
 
+  const conclusion = countPeakConclusion(
+    chartData.map((entry) => ({ label: entry.ticks, count: entry.count })),
+  );
+  const subtitle =
+    conclusion.kind === "empty"
+      ? t("tickDistribution.subtitle.empty")
+      : t("tickDistribution.subtitle.peak", { label: conclusion.label });
+  const hasFilter = Boolean(tickFilter.value);
+
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader
-        className={cn(
-          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === "small" ? "p-2 h-10" : "p-3 sm:p-4 h-14",
-        )}
-      >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1",
-                size === "small" ? "text-sm" : "text-base",
-              )}
-            >
-              {t("tickDistribution.title")}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
-            >
-              <p>{t("tickDistribution.description")}</p>
-            </InfoBubble>
-          </div>
-          {tickFilter.value && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 lg:px-3"
-              onClick={() => setTickFilter({ value: null })}
-            >
-              {t("tickDistribution.clearFilter")}
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent
-        className={cn(
-          "flex-1 min-h-0",
-          size === "small" ? "p-1" : "p-2 sm:p-4",
-        )}
-      >
-        <div className={cn("w-full h-full")}>
-          {isLoading ? (
-            <BarChartLoadingSkeleton
-              size={size}
-              data={LOADING_MOCK_TICKS}
-              xDataKey="ticks"
-              yDataKey="count"
-              yAxisWidth={45}
-              showReferenceLine={false}
-              domain={[
-                0,
-                Math.max(...LOADING_MOCK_TICKS.map((d) => d.count)) * 1.1,
-              ]}
+    <ChartWidgetFrame
+      size={size}
+      title={t("tickDistribution.title")}
+      subtitle={subtitle}
+      description={t("tickDistribution.description")}
+      actions={
+        hasFilter ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 lg:px-3"
+            onClick={() => setTickFilter({ value: null })}
+          >
+            {t("tickDistribution.clearFilter")}
+          </Button>
+        ) : null
+      }
+    >
+      {isLoading ? (
+        <BarChartLoadingSkeleton
+          size={size}
+          data={LOADING_MOCK_TICKS}
+          xDataKey="ticks"
+          yDataKey="count"
+          yAxisWidth={45}
+          showReferenceLine={false}
+          domain={honestPositiveDomain(LOADING_MOCK_TICKS.map((d) => d.count))}
+        />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            margin={getChartMargins(size, "hourly")}
+            onClick={(e) =>
+              e?.activePayload && handleBarClick(e.activePayload[0].payload)
+            }
+          >
+            <CartesianGrid {...CHART_GRID_PROPS} />
+            <XAxis
+              dataKey="ticks"
+              tickLine={false}
+              axisLine={false}
+              height={size === "small" ? 20 : 24}
+              tickMargin={size === "small" ? 4 : 8}
+              tick={(props) => {
+                const { x, y, payload } = props;
+                return (
+                  <g transform={`translate(${x},${y})`}>
+                    <text
+                      x={0}
+                      y={0}
+                      dy={size === "small" ? 8 : 4}
+                      textAnchor={size === "small" ? "end" : "middle"}
+                      fill="currentColor"
+                      fontSize={size === "small" ? 9 : 11}
+                      fontWeight={600}
+                      transform={
+                        size === "small" ? "rotate(-45)" : "rotate(0)"
+                      }
+                    >
+                      {payload.value}
+                    </text>
+                  </g>
+                );
+              }}
+              interval="preserveStartEnd"
+              allowDataOverflow={true}
             />
-          ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={
-                size === "small"
-                  ? { left: 0, right: 4, top: 4, bottom: 20 }
-                  : { left: 0, right: 8, top: 8, bottom: 24 }
-              }
-              onClick={(e) =>
-                e?.activePayload && handleBarClick(e.activePayload[0].payload)
-              }
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              width={45}
+              tickMargin={4}
+              tickFormatter={formatCount}
+              tick={chartTickStyle(size)}
+              domain={honestPositiveDomain(chartData.map((entry) => entry.count))}
+            />
+            <Tooltip
+              content={<CustomTooltip />}
+              wrapperStyle={{
+                fontSize: chartTooltipFontSize(size),
+                ...CHART_TOOLTIP_WRAPPER,
+              }}
+            />
+            <Bar
+              dataKey="count"
+              fill={unsignedFill()}
+              maxBarSize={chartMaxBarSize(size)}
+              shape={<GlanceBar />}
+              className="motion-reduce:transition-none transition-opacity duration-300 ease-out"
             >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                className="text-border dark:opacity-[0.12] opacity-[0.2]"
-              />
-              <XAxis
-                dataKey="ticks"
-                tickLine={false}
-                axisLine={false}
-                height={size === "small" ? 20 : 24}
-                tickMargin={size === "small" ? 4 : 8}
-                tick={(props) => {
-                  const { x, y, payload } = props;
-                  return (
-                    <g transform={`translate(${x},${y})`}>
-                      <text
-                        x={0}
-                        y={0}
-                        dy={size === "small" ? 8 : 4}
-                        textAnchor={size === "small" ? "end" : "middle"}
-                        fill="currentColor"
-                        fontSize={size === "small" ? 9 : 11}
-                        transform={
-                          size === "small" ? "rotate(-45)" : "rotate(0)"
-                        }
-                      >
-                        {payload.value}
-                      </text>
-                    </g>
-                  );
-                }}
-                interval="preserveStartEnd"
-                allowDataOverflow={true}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={45}
-                tickMargin={4}
-                tickFormatter={formatCount}
-                tick={{
-                  fontSize: size === "small" ? 9 : 11,
-                  fill: "currentColor",
-                }}
-              />
-              <Tooltip
-                content={<CustomTooltip />}
-                wrapperStyle={{
-                  fontSize: size === "small" ? "10px" : "12px",
-                  zIndex: 1000,
-                }}
-              />
-              <Bar
-                dataKey="count"
-                fill={chartConfig.count.color}
-                radius={[3, 3, 0, 0]}
-                maxBarSize={size === "small" ? 25 : 40}
-                className="transition-opacity duration-300 ease-out"
-                opacity={tickFilter.value ? 0.3 : 1}
-              >
-                {chartData.map((entry) => (
-                  <Cell
-                    key={`cell-${entry.ticks}`}
-                    opacity={
-                      tickFilter.value === entry.ticks
-                        ? 1
-                        : tickFilter.value
-                          ? 0.3
-                          : 1
-                    }
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              {chartData.map((entry) => (
+                <Cell
+                  key={`cell-${entry.ticks}`}
+                  opacity={filterBarOpacity(
+                    tickFilter.value === entry.ticks,
+                    hasFilter,
+                  )}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </ChartWidgetFrame>
   );
 }
