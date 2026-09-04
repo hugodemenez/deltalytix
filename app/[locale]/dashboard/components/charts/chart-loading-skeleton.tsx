@@ -22,8 +22,11 @@ import type { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import {
   CHART_BAR_CAP,
   CHART_GRID_PROPS,
+  CHART_GRID_PROPS_HORIZONTAL,
   CHART_LINE_STROKE,
   CHART_ZERO_LINE_PROPS,
+  type ChartBarLayout,
+  chartBarRadius,
   chartMaxBarSize,
   honestSignedDomain,
 } from "./chart-glance";
@@ -55,7 +58,7 @@ function ChartLoadingContainer({
   );
 }
 
-export type ChartMarginVariant = "default" | "hourly" | "calendar";
+export type ChartMarginVariant = "default" | "hourly" | "calendar" | "horizontal";
 
 export function getChartMargins(
   size: WidgetSize = "medium",
@@ -65,6 +68,12 @@ export function getChartMargins(
     return size === "small"
       ? { left: 0, right: 4, top: 4, bottom: 20 }
       : { left: 0, right: 8, top: 8, bottom: 24 };
+  }
+
+  if (variant === "horizontal") {
+    return size === "small"
+      ? { left: 0, right: 8, top: 4, bottom: 4 }
+      : { left: 4, right: 12, top: 8, bottom: 8 };
   }
 
   if (variant === "calendar") {
@@ -160,6 +169,7 @@ interface BarChartLoadingSkeletonProps {
   domain?: [number, number];
   xTickCount?: number;
   loadingLabel?: string;
+  layout?: ChartBarLayout;
 }
 
 export function BarChartLoadingSkeleton({
@@ -174,12 +184,19 @@ export function BarChartLoadingSkeleton({
   domain,
   xTickCount = 6,
   loadingLabel,
+  layout = "vertical",
 }: BarChartLoadingSkeletonProps) {
-  const margin = getChartMargins(size, marginVariant);
+  const margin = getChartMargins(
+    size,
+    marginVariant === "default" && layout === "horizontal"
+      ? "horizontal"
+      : marginVariant,
+  );
   const { xAxisHeight } = getAxisDimensions(size, yAxisWidth);
   const values = data.map((row) => Number(row[yDataKey]));
   const yDomain = domain ?? getSignedDomain(values);
   const barSize = maxBarSize ?? chartMaxBarSize(size);
+  const horizontal = layout === "horizontal";
 
   return (
     <ChartLoadingContainer
@@ -194,30 +211,62 @@ export function BarChartLoadingSkeleton({
         xTickCount={xTickCount}
       />
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={margin}>
-          <CartesianGrid {...CHART_GRID_PROPS} />
-          <XAxis
-            dataKey={xDataKey}
-            tickLine={false}
-            axisLine={false}
-            height={xAxisHeight}
-            tick={false}
-            minTickGap={size === "small" ? 30 : 50}
+        <BarChart
+          data={data}
+          margin={margin}
+          layout={horizontal ? "vertical" : "horizontal"}
+        >
+          <CartesianGrid
+            {...(horizontal ? CHART_GRID_PROPS_HORIZONTAL : CHART_GRID_PROPS)}
           />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={yAxisWidth}
-            tickMargin={4}
-            tick={false}
-            domain={yDomain}
-          />
+          {horizontal ? (
+            <>
+              <XAxis
+                type="number"
+                tickLine={false}
+                axisLine={false}
+                height={xAxisHeight}
+                tick={false}
+                domain={yDomain}
+              />
+              <YAxis
+                type="category"
+                dataKey={xDataKey}
+                tickLine={false}
+                axisLine={false}
+                width={yAxisWidth}
+                tick={false}
+              />
+            </>
+          ) : (
+            <>
+              <XAxis
+                dataKey={xDataKey}
+                tickLine={false}
+                axisLine={false}
+                height={xAxisHeight}
+                tick={false}
+                minTickGap={size === "small" ? 30 : 50}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                width={yAxisWidth}
+                tickMargin={4}
+                tick={false}
+                domain={yDomain}
+              />
+            </>
+          )}
           {showReferenceLine ? (
-            <ReferenceLine y={0} {...CHART_ZERO_LINE_PROPS} />
+            <ReferenceLine
+              {...(horizontal ? { x: 0 } : { y: 0 })}
+              {...CHART_ZERO_LINE_PROPS}
+            />
           ) : null}
           <Bar
             dataKey={yDataKey}
-            radius={[CHART_BAR_CAP, CHART_BAR_CAP, 0, 0]}
+            radius={chartBarRadius(1, layout)}
             maxBarSize={barSize}
             className="transition-none"
             fill={MUTED_BAR_FILL}
@@ -301,6 +350,39 @@ export function LineChartLoadingSkeleton({
 interface DonutChartLoadingSkeletonProps {
   size?: WidgetSize;
   loadingLabel?: string;
+}
+
+export function UnitFieldLoadingSkeleton({
+  size = "medium",
+  loadingLabel,
+}: DonutChartLoadingSkeletonProps) {
+  const compact = size === "small";
+  const columns = 10;
+  const rows = compact ? 6 : 10;
+
+  return (
+    <ChartLoadingContainer
+      loadingLabel={loadingLabel}
+      className="flex animate-pulse flex-col items-center justify-center gap-3"
+    >
+      <div
+        className="grid gap-1.5"
+        style={{
+          gridTemplateColumns: `repeat(${columns}, ${compact ? "0.55rem" : "0.7rem"})`,
+        }}
+      >
+        {Array.from({ length: columns * rows }).map((_, i) => (
+          <span
+            key={`unit-skeleton-${i}`}
+            className={cn(
+              "rounded-full bg-muted-foreground/30",
+              compact ? "size-2" : "size-2.5",
+            )}
+          />
+        ))}
+      </div>
+    </ChartLoadingContainer>
+  );
 }
 
 export function DonutChartLoadingSkeleton({

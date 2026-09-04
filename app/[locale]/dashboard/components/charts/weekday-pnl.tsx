@@ -24,7 +24,7 @@ import {
 } from "./chart-loading-skeleton";
 import { namedSignedConclusion } from "./chart-conclusions";
 import {
-  CHART_GRID_PROPS,
+  CHART_GRID_PROPS_HORIZONTAL,
   CHART_TOOLTIP_CLASS,
   CHART_TOOLTIP_WRAPPER,
   CHART_ZERO_LINE_PROPS,
@@ -176,35 +176,43 @@ export default function WeekdayPNLChart({
           data={LOADING_MOCK_WEEKDAY}
           xDataKey="day"
           yDataKey="pnl"
-          yAxisWidth={45}
+          yAxisWidth={size === "small" ? 36 : 72}
           xTickCount={7}
+          layout="horizontal"
+          showReferenceLine
         />
       ) : (
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={weekdayData} margin={getChartMargins(size, "hourly")}>
-            <CartesianGrid {...CHART_GRID_PROPS} />
+          <BarChart
+            data={weekdayData}
+            layout="vertical"
+            margin={getChartMargins(size, "horizontal")}
+          >
+            <CartesianGrid {...CHART_GRID_PROPS_HORIZONTAL} />
             <XAxis
-              dataKey="day"
+              type="number"
               tickLine={false}
               axisLine={false}
               height={size === "small" ? 20 : 24}
               tickMargin={size === "small" ? 4 : 8}
+              tick={chartTickStyle(size)}
+              tickFormatter={formatCurrency}
+              domain={honestSignedDomain(weekdayData.map((entry) => entry.pnl))}
+            />
+            <YAxis
+              type="category"
+              dataKey="day"
+              tickLine={false}
+              axisLine={false}
+              width={size === "small" ? 36 : 72}
+              tickMargin={4}
               tick={chartTickStyle(size)}
               tickFormatter={(value) => {
                 const dayName = translateWeekdayPnL(t, value);
                 return size === "small" ? dayName.slice(0, 3) : dayName;
               }}
             />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              width={45}
-              tickMargin={4}
-              tick={chartTickStyle(size)}
-              tickFormatter={formatCurrency}
-              domain={honestSignedDomain(weekdayData.map((entry) => entry.pnl))}
-            />
-            <ReferenceLine y={0} {...CHART_ZERO_LINE_PROPS} />
+            <ReferenceLine x={0} {...CHART_ZERO_LINE_PROPS} />
             <Tooltip
               content={<CustomTooltip />}
               wrapperStyle={{
@@ -215,7 +223,7 @@ export default function WeekdayPNLChart({
             <Bar
               dataKey="pnl"
               maxBarSize={chartMaxBarSize(size)}
-              shape={<GlanceBar />}
+              shape={<GlanceBar layout="horizontal" />}
               className="motion-reduce:transition-none transition-opacity duration-300 ease-out"
             >
               {weekdayData.map((entry) => (

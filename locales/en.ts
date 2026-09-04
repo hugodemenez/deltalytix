@@ -1140,7 +1140,7 @@ export default {
   "commissions.tooltip.description":
     "Distribution of net profit/loss versus commissions paid",
   "commissions.subtitle.empty": "No commission split in this range",
-  "commissions.subtitle.share": "Commissions take {percent}% of the absolute split · slice = share",
+  "commissions.subtitle.share": "Commissions take {percent}% of the absolute split · one dot = one percent",
   "commissions.tooltip.type": "Type",
   "commissions.tooltip.amount": "Amount",
   "commissions.tooltip.percentage": "Percentage",
@@ -1207,8 +1207,8 @@ export default {
   "pnl.title": "Daily Profit/Loss",
   "pnl.description": "Showing daily P/L over time",
   "pnl.subtitle.empty": "No closed days in this range",
-  "pnl.subtitle.greenDays": "{green} of {total} days finished green · bar = daily net",
-  "pnl.subtitle.redDays": "{red} of {total} days finished red · bar = daily net",
+  "pnl.subtitle.greenDays": "{green} of {total} days finished green · stem = day · cap = daily net",
+  "pnl.subtitle.redDays": "{red} of {total} days finished red · stem = day · cap = daily net",
   "pnl.tooltip.date": "Date",
   "pnl.tooltip.pnl": "P/L",
   "pnl.tooltip.longTrades": "Long Trades",
@@ -1217,7 +1217,7 @@ export default {
   "pnlBySide.description":
     "Profit/loss comparison between long and short trades",
   "pnlBySide.subtitle.empty": "No long or short trades in this range",
-  "pnlBySide.subtitle.best": "{label}s are ahead · bar = {mode}",
+  "pnlBySide.subtitle.best": "{label}s are ahead · bar = {mode}, diverging from zero",
   "pnlBySide.mode.average": "average P/L",
   "pnlBySide.mode.total": "total P/L",
   "pnlBySide.tooltip.side": "Side",
@@ -1246,8 +1246,8 @@ export default {
   "pnlPerContractDaily.description":
     "Average net profit/loss per contract per day for selected instrument (after commissions)",
   "pnlPerContractDaily.subtitle.empty": "No daily averages for this instrument",
-  "pnlPerContractDaily.subtitle.greenDays": "{green} of {total} days finished green · bar = daily average net",
-  "pnlPerContractDaily.subtitle.redDays": "{red} of {total} days finished red · bar = daily average net",
+  "pnlPerContractDaily.subtitle.greenDays": "{green} of {total} days finished green · stem = day · cap = daily average net",
+  "pnlPerContractDaily.subtitle.redDays": "{red} of {total} days finished red · stem = day · cap = daily average net",
   "pnlPerContractDaily.selectInstrument": "Select Instrument",
   "pnlPerContractDaily.noData": "No data available for selected instrument",
   "pnlPerContractDaily.tooltip.date": "Date",
@@ -1274,6 +1274,7 @@ export default {
     subtitle: {
       empty: "No tick counts in this range",
       peak: "Most trades close at {label} ticks · bar = trade count",
+      peakStacks: "Most trades close at {label} ticks · one stack = one tick · one dot = one trade",
     },
     tooltip: {
       ticks: "ticks",
@@ -1298,8 +1299,8 @@ export default {
   "weekdayPnl.title": "Average P/L by Day",
   "weekdayPnl.description": "Average profit/loss for each day of the week",
   "weekdayPnl.subtitle.empty": "No weekday averages yet",
-  "weekdayPnl.subtitle.best": "{label} is the strongest day · bar = average P/L",
-  "weekdayPnl.subtitle.worst": "{label} is the weakest day · bar = average P/L",
+  "weekdayPnl.subtitle.best": "{label} is the strongest day · bar = average P/L, diverging from zero",
+  "weekdayPnl.subtitle.worst": "{label} is the weakest day · bar = average P/L, diverging from zero",
   "weekdayPnl.tooltip.day": "Day",
   "weekdayPnl.tooltip.averagePnl": "Average P/L",
   "weekdayPnl.tooltip.trades": "Trades",
@@ -1679,7 +1680,8 @@ export default {
     description: "Distribution of winning, losing, and breakeven trades",
     subtitle: {
       empty: "No closed trades in this range",
-      share: "{percent}% of trades are winners · slice = share",
+      share: "{percent}% of trades are winners · one dot = one trade",
+      sharePacked: "{percent}% of trades are winners · one dot = one percent",
     },
     win: "Winning trades",
     loss: "Losing trades",

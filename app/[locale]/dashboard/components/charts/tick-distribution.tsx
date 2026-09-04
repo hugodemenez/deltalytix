@@ -34,6 +34,10 @@ import {
   unsignedFill,
 } from "./chart-glance";
 import { GlanceBar } from "./chart-glance-bar";
+import {
+  canDrawUnitHistogram,
+  UnitHistogram,
+} from "./chart-unit-histogram";
 import { ChartWidgetFrame } from "./chart-widget-frame";
 
 interface TickDistributionProps {
@@ -154,10 +158,16 @@ export default function TickDistributionChart({
   const conclusion = countPeakConclusion(
     chartData.map((entry) => ({ label: entry.ticks, count: entry.count })),
   );
+  const useStacks = canDrawUnitHistogram(chartData.map((entry) => entry.count));
   const subtitle =
     conclusion.kind === "empty"
       ? t("tickDistribution.subtitle.empty")
-      : t("tickDistribution.subtitle.peak", { label: conclusion.label });
+      : t(
+          useStacks
+            ? "tickDistribution.subtitle.peakStacks"
+            : "tickDistribution.subtitle.peak",
+          { label: conclusion.label },
+        );
   const hasFilter = Boolean(tickFilter.value);
 
   return (
@@ -190,6 +200,21 @@ export default function TickDistributionChart({
           domain={honestPositiveDomain(LOADING_MOCK_TICKS.map((d) => d.count))}
         />
       ) : (
+        useStacks ? (
+          <UnitHistogram
+            size={size}
+            label={subtitle}
+            activeKey={tickFilter.value}
+            hasFilter={hasFilter}
+            onSelect={(key) => handleBarClick({ ticks: key })}
+            buckets={chartData.map((entry) => ({
+              key: entry.ticks,
+              label: entry.ticks,
+              count: entry.count,
+              signed: Number(entry.ticks.replace("+", "")),
+            }))}
+          />
+        ) : (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
@@ -264,6 +289,7 @@ export default function TickDistributionChart({
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        )
       )}
     </ChartWidgetFrame>
   );

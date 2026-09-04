@@ -42,7 +42,7 @@ import {
   honestSignedDomain,
   signedFill,
 } from "./chart-glance";
-import { GlanceBar } from "./chart-glance-bar";
+import { LollipopBar } from "./chart-lollipop-bar";
 import { ChartWidgetFrame } from "./chart-widget-frame";
 
 interface PnLPerContractDailyChartProps {
@@ -574,7 +574,7 @@ export default function PnLPerContractDailyChart({
                   <Bar
                     dataKey="averagePnl"
                     maxBarSize={chartMaxBarSize(size)}
-                    shape={<GlanceBar />}
+                    shape={<LollipopBar />}
                     className="transition-none"
                     fill="hsl(var(--muted-foreground) / 0.35)"
                   >
@@ -631,7 +631,7 @@ export default function PnLPerContractDailyChart({
             <Bar
               dataKey="averagePnl"
               maxBarSize={chartMaxBarSize(size)}
-              shape={<GlanceBar />}
+              shape={<LollipopBar />}
               className="motion-reduce:transition-none transition-opacity duration-300 ease-out"
             >
               {chartData.map((entry, index) => (

@@ -35,7 +35,7 @@ import {
   honestSignedDomain,
   signedFill,
 } from "./chart-glance";
-import { GlanceBar } from "./chart-glance-bar";
+import { LollipopBar } from "./chart-lollipop-bar";
 import { ChartWidgetFrame } from "./chart-widget-frame";
 
 interface PNLChartProps {
@@ -185,7 +185,7 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
             <Bar
               dataKey="pnl"
               maxBarSize={chartMaxBarSize(size)}
-              shape={<GlanceBar />}
+              shape={<LollipopBar />}
               className="motion-reduce:transition-none transition-opacity duration-300 ease-out"
             >
               {chartData.map((entry, index) => (

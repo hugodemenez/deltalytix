@@ -22,7 +22,7 @@ import {
   LOADING_MOCK_SIDE_PNL,
 } from "./chart-loading-skeleton";
 import {
-  CHART_GRID_PROPS,
+  CHART_GRID_PROPS_HORIZONTAL,
   CHART_TOOLTIP_CLASS,
   CHART_TOOLTIP_WRAPPER,
   CHART_ZERO_LINE_PROPS,
@@ -181,29 +181,37 @@ export default function PnLBySideChart({
           yDataKey="pnl"
           showReferenceLine
           xTickCount={2}
+          yAxisWidth={size === "small" ? 40 : 56}
+          layout="horizontal"
         />
       ) : (
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={getChartMargins(size)}>
-            <CartesianGrid {...CHART_GRID_PROPS} />
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={getChartMargins(size, "horizontal")}
+          >
+            <CartesianGrid {...CHART_GRID_PROPS_HORIZONTAL} />
             <XAxis
-              dataKey="side"
+              type="number"
               tickLine={false}
               axisLine={false}
               height={size === "small" ? 20 : 24}
               tickMargin={size === "small" ? 4 : 8}
               tick={chartTickStyle(size)}
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              width={60}
-              tickMargin={4}
-              tick={chartTickStyle(size)}
               tickFormatter={formatCurrency}
               domain={honestSignedDomain(chartData.map((entry) => entry.pnl))}
             />
-            <ReferenceLine y={0} {...CHART_ZERO_LINE_PROPS} />
+            <YAxis
+              type="category"
+              dataKey="side"
+              tickLine={false}
+              axisLine={false}
+              width={size === "small" ? 40 : 56}
+              tickMargin={4}
+              tick={chartTickStyle(size)}
+            />
+            <ReferenceLine x={0} {...CHART_ZERO_LINE_PROPS} />
             <Tooltip
               content={<CustomTooltip />}
               wrapperStyle={{
@@ -214,7 +222,7 @@ export default function PnLBySideChart({
             <Bar
               dataKey="pnl"
               maxBarSize={chartMaxBarSize(size)}
-              shape={<GlanceBar />}
+              shape={<GlanceBar layout="horizontal" />}
               className="motion-reduce:transition-none transition-opacity duration-300 ease-out"
             >
               {chartData.map((entry, index) => (

@@ -5,9 +5,12 @@ import {
   filterBarOpacity,
   honestPositiveDomain,
   honestSignedDomain,
+  normalizeBarRect,
   peakIndex,
   signedFill,
 } from "./chart-glance"
+import { expandUnitDots, shouldPackUnitField } from "./chart-unit-field"
+import { canDrawUnitHistogram } from "./chart-unit-histogram"
 import {
   countPeakConclusion,
   dailyPnlConclusion,
@@ -22,6 +25,85 @@ describe("chartBarRadius", () => {
 
   it("rounds the outer end of a negative bar", () => {
     expect(chartBarRadius(-4)).toEqual([0, 0, 8, 8])
+  })
+
+  it("rounds the outer end of a horizontal negative bar", () => {
+    expect(chartBarRadius(-4, "horizontal")).toEqual([8, 0, 0, 8])
+  })
+
+  it("rounds the outer end of a horizontal positive bar", () => {
+    expect(chartBarRadius(12, "horizontal")).toEqual([0, 8, 8, 0])
+  })
+})
+
+describe("normalizeBarRect", () => {
+  it("keeps a positive-height rect in place", () => {
+    expect(normalizeBarRect(10, 20, 8, 40)).toEqual({
+      x: 10,
+      y: 20,
+      width: 8,
+      height: 40,
+    })
+  })
+
+  it("flips a negative-height rect so y is the visual top", () => {
+    expect(normalizeBarRect(10, 80, 8, -40)).toEqual({
+      x: 10,
+      y: 40,
+      width: 8,
+      height: 40,
+    })
+  })
+
+  it("flips a negative-width rect so x is the visual left", () => {
+    expect(normalizeBarRect(80, 20, -40, 8)).toEqual({
+      x: 40,
+      y: 20,
+      width: 40,
+      height: 8,
+    })
+  })
+})
+
+describe("expandUnitDots", () => {
+  it("emits one dot per record", () => {
+    expect(
+      expandUnitDots(
+        [
+          { key: "win", label: "Win", color: "green", count: 2 },
+          { key: "loss", label: "Loss", color: "red", count: 1 },
+        ],
+        "record",
+      ),
+    ).toHaveLength(3)
+  })
+
+  it("packs percent mode to 100 dots", () => {
+    const dots = expandUnitDots(
+      [
+        { key: "win", label: "Win", color: "green", count: 3 },
+        { key: "loss", label: "Loss", color: "red", count: 1 },
+      ],
+      "percent",
+    )
+    expect(dots).toHaveLength(100)
+    expect(dots.filter((dot) => dot.key.startsWith("win-"))).toHaveLength(75)
+    expect(dots.filter((dot) => dot.key.startsWith("loss-"))).toHaveLength(25)
+  })
+})
+
+describe("shouldPackUnitField", () => {
+  it("packs only dense trade counts", () => {
+    expect(shouldPackUnitField(120)).toBe(false)
+    expect(shouldPackUnitField(121)).toBe(true)
+  })
+})
+
+describe("canDrawUnitHistogram", () => {
+  it("rejects a histogram that would crush the dots", () => {
+    expect(canDrawUnitHistogram([2, 4, 3])).toBe(true)
+    expect(canDrawUnitHistogram(Array.from({ length: 20 }, () => 2))).toBe(false)
+    expect(canDrawUnitHistogram([80])).toBe(false)
   })
 })
 

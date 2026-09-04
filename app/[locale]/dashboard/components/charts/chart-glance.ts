@@ -1,16 +1,15 @@
 import type { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard"
 
 /**
- * Glance-family defaults for dashboard chart widgets.
+ * Chart encodings for dashboard widgets, mapped from lieflat-charts
+ * data shapes. Implementations are original React/SVG on Paper tokens.
  *
- * Mapped from lieflat-charts catalog shapes (dashboard context → Glance):
- * daily / weekday / hour / side / instrument P&L → G10 diverging bars
- * equity → G18 draw-in + counter
- * tick histogram → F1 rung bars (bins as categories)
- * win/loss/BE and P/L-vs-fees → F4 tick donut
- *
- * Visual rules stay on Paper tokens. Length still encodes value, axes stay
- * unbroken, fills stay solid, and bar caps round on the outer end.
+ * trade / commission share → L14 / G4 unit field (one dot = one trade or 1%)
+ * daily P/L sequence → L3 barcode lollipop (stem = day, cap = net)
+ * weekday / side → G10 / F5 horizontal diverging bars
+ * tick histogram → F1 countable stacks (one dot = one trade)
+ * hourly / instrument P/L → G10 vertical diverging bars
+ * equity → G18 counter + line
  */
 
 export const CHART_WIN = "hsl(var(--chart-win))"
@@ -26,6 +25,12 @@ export const CHART_GRID_PROPS = {
   strokeOpacity: 0.45,
 } as const
 
+export const CHART_GRID_PROPS_HORIZONTAL = {
+  horizontal: false,
+  stroke: "hsl(var(--border))",
+  strokeOpacity: 0.45,
+} as const
+
 export const CHART_ZERO_LINE_PROPS = {
   stroke: "hsl(var(--muted-foreground))",
   strokeOpacity: 0.45,
@@ -35,12 +40,35 @@ export function chartMaxBarSize(size: WidgetSize = "medium") {
   return size === "small" ? 28 : 52
 }
 
+export type ChartBarLayout = "vertical" | "horizontal"
+
+export function normalizeBarRect(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  return {
+    x: width < 0 ? x + width : x,
+    y: height < 0 ? y + height : y,
+    width: Math.abs(width),
+    height: Math.abs(height),
+  }
+}
+
 export function chartBarRadius(
   value: number,
+  layout: ChartBarLayout = "vertical",
 ): [number, number, number, number] {
-  return value >= 0
-    ? [CHART_BAR_CAP, CHART_BAR_CAP, 0, 0]
-    : [0, 0, CHART_BAR_CAP, CHART_BAR_CAP]
+  const negative = value < 0
+  if (layout === "horizontal") {
+    return negative
+      ? [CHART_BAR_CAP, 0, 0, CHART_BAR_CAP]
+      : [0, CHART_BAR_CAP, CHART_BAR_CAP, 0]
+  }
+  return negative
+    ? [0, 0, CHART_BAR_CAP, CHART_BAR_CAP]
+    : [CHART_BAR_CAP, CHART_BAR_CAP, 0, 0]
 }
 
 export function chartTickStyle(size: WidgetSize = "medium") {
