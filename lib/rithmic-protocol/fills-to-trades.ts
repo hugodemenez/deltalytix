@@ -7,6 +7,7 @@ import {
 import { formatTimestamp } from '@/lib/date-utils'
 import type { RithmicProtocolFill } from './types'
 import { commissionForFillQuantity } from './commission-rates'
+import { canonicalRithmicFillId } from './dedupe-fills'
 
 interface TickSpec {
   tickSize: number
@@ -114,6 +115,7 @@ export function buildTradesFromRithmicFills(
       (a, b) => fillTimestampMs(a) - fillTimestampMs(b),
     )
     const openPositions: Record<string, OpenPosition> = {}
+    const seenFillIds = new Set<string>()
 
     for (const fill of sorted) {
       const instrument = normalizeInstrument(fill.symbol)
@@ -123,8 +125,16 @@ export function buildTradesFromRithmicFills(
 
       const side = fillSide(fill.transactionType)
       const timestampMs = fillTimestampMs(fill)
+      // Same Rithmic fill_id from overlapping sources must not FIFO-join into
+      // `1452840-1452840` (2× qty / PnL). Dedupe at fetch is the primary
+      // guard; this is the last line of defense.
+      const fillId = canonicalRithmicFillId(fill.fillId)
+      if (fillId) {
+        if (seenFillIds.has(fillId)) continue
+        seenFillIds.add(fillId)
+      }
       const orderId =
-        fill.fillId ||
+        fillId ||
         fill.sequenceNumber ||
         `${fill.basketId ?? 'fill'}-${timestampMs}-${quantity}`
 

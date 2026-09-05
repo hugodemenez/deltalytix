@@ -28,6 +28,7 @@ import {
   getRithmicProtocolAppVersion,
   normalizeGatewayUri,
 } from './systems'
+import { dedupeFills, shouldReplayRecentExecutions } from './dedupe-fills'
 
 /** Wall-clock budget for a full PnL snapshot sweep across a user's accounts. */
 const PNL_SNAPSHOT_TOTAL_BUDGET_MS = 30_000
@@ -802,10 +803,11 @@ export class RithmicProtocolClient {
         continue
       }
 
-      // Summary/detail streams may also emit exchange notifications.
+      // Exchange notifications on this stream are the same executions as
+      // ResponseShowFillHistory, but transaction_type is the enum (1/2)
+      // instead of "BUY"/"SELL". Collecting both used to survive the old
+      // composite dedupe and FIFO-join into `fillId-fillId` journal rows.
       if (msg.templateId === RithmicTemplateId.EXCHANGE_ORDER_NOTIFICATION) {
-        const fill = this.decodeExchangeFill(msg.raw, params.accountId)
-        if (fill) fills.push(fill)
         continue
       }
 
@@ -1411,6 +1413,7 @@ export async function fetchFillsForAccounts(params: {
 
       let historyFills = 0
       let usedOrderHistoryFallback = false
+      const accountHistory: RithmicProtocolFill[] = []
       for (const window of windows) {
         try {
           const accountFills = await client.getFillHistory({
@@ -1421,7 +1424,7 @@ export async function fetchFillsForAccounts(params: {
             endDateYyyymmdd: toYyyymmddNumber(window.end),
           })
           historyFills += accountFills.length
-          fills.push(...accountFills)
+          accountHistory.push(...accountFills)
         } catch (error) {
           console.warn(
             `[RITHMIC-PROTOCOL] Fill history failed for ${accountId} (${toYyyymmddString(window.start)}–${toYyyymmddString(window.end)}), falling back to order history`,
@@ -1438,7 +1441,7 @@ export async function fetchFillsForAccounts(params: {
             console.log(
               `[RITHMIC-PROTOCOL] Order-history fallback for ${accountId}: ${fallback.length} fill(s)`,
             )
-            fills.push(...fallback)
+            accountHistory.push(...fallback)
           }
           break
         }
@@ -1457,7 +1460,7 @@ export async function fetchFillsForAccounts(params: {
           console.log(
             `[RITHMIC-PROTOCOL] Empty ShowFillHistory for ${accountId}; order-history fallback: ${fallback.length} fill(s)`,
           )
-          fills.push(...fallback)
+          accountHistory.push(...fallback)
         } catch (error) {
           console.warn(
             `[RITHMIC-PROTOCOL] Order-history fallback failed for ${accountId}`,
@@ -1470,28 +1473,39 @@ export async function fetchFillsForAccounts(params: {
         )
       }
 
-      // Same-day fills on Test often land in ReplayExecutions before ShowFillHistory
-      // publishes the trade date (history dates currently lag behind UTC "today").
-      const finishSsboe = Math.floor(Date.now() / 1000) + 60
-      const startSsboe = finishSsboe - Math.min(lookbackDays, 2) * 24 * 60 * 60
-      try {
-        const replayed = await client.replayExecutions({
-          fcmId,
-          ibId,
-          accountId,
-          startSsboe,
-          finishSsboe,
-        })
-        if (replayed.length > 0) {
-          console.log(
-            `[RITHMIC-PROTOCOL] ReplayExecutions returned ${replayed.length} fill(s) for ${accountId}`,
+      fills.push(...accountHistory)
+
+      // Same-day fills on Test often land in ReplayExecutions before
+      // ShowFillHistory publishes the trade date. Skip when this account's
+      // history already includes UTC today — always-on replay doubled Apex
+      // fills (ticket-18).
+      const todayYmd = toYyyymmddString(end)
+      if (shouldReplayRecentExecutions(accountHistory, todayYmd)) {
+        const finishSsboe = Math.floor(Date.now() / 1000) + 60
+        const startSsboe = finishSsboe - Math.min(lookbackDays, 2) * 24 * 60 * 60
+        try {
+          const replayed = await client.replayExecutions({
+            fcmId,
+            ibId,
+            accountId,
+            startSsboe,
+            finishSsboe,
+          })
+          if (replayed.length > 0) {
+            console.log(
+              `[RITHMIC-PROTOCOL] ReplayExecutions returned ${replayed.length} fill(s) for ${accountId}`,
+            )
+            fills.push(...replayed)
+          }
+        } catch (error) {
+          console.warn(
+            `[RITHMIC-PROTOCOL] ReplayExecutions failed for ${accountId}`,
+            error instanceof Error ? error.message : error,
           )
-          fills.push(...replayed)
         }
-      } catch (error) {
-        console.warn(
-          `[RITHMIC-PROTOCOL] ReplayExecutions failed for ${accountId}`,
-          error instanceof Error ? error.message : error,
+      } else {
+        console.log(
+          `[RITHMIC-PROTOCOL] Skipping ReplayExecutions for ${accountId}; ShowFillHistory already has ${todayYmd}`,
         )
       }
     }
@@ -1512,29 +1526,6 @@ function toYyyymmddNumber(d: Date): number {
 
 function toYyyymmddString(d: Date): string {
   return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`
-}
-
-function dedupeFills(fills: RithmicProtocolFill[]): RithmicProtocolFill[] {
-  const seen = new Set<string>()
-  const out: RithmicProtocolFill[] = []
-  for (const fill of fills) {
-    const key = [
-      fill.accountId,
-      fill.basketId ?? '',
-      fill.fillId ?? '',
-      fill.symbol,
-      fill.transactionType,
-      fill.fillPrice,
-      fill.fillSize,
-      fill.ssboe ?? '',
-      fill.fillDate ?? '',
-      fill.fillTime ?? '',
-    ].join('|')
-    if (seen.has(key)) continue
-    seen.add(key)
-    out.push(fill)
-  }
-  return out
 }
 
 function utcCalendarDay(d: Date): Date {
