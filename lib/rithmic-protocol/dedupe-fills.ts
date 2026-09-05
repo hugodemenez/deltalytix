@@ -1,7 +1,7 @@
 import type { RithmicProtocolFill } from './types'
 
 /**
- * Rithmic `fill_id` is unique per execution on an account.
+ * Rithmic `fill_id` is unique per execution on an account *for a trade date*.
  *
  * FIFO `entryId`/`closeId` join fill ids with `-`. When the same fill is
  * ingested twice, that produces a doubled journal row (`1452840-1452840`)
@@ -21,44 +21,33 @@ export function canonicalRithmicFillId(
   return trimmed
 }
 
-function fillOccursOnUtcYyyymmdd(
-  fill: RithmicProtocolFill,
-  yyyymmdd: string,
-): boolean {
+/**
+ * Exchange trade date for identity (`fill_date`), not a UTC calendar day.
+ * CME sessions roll ~17:00 CT, so `fill_date` can already be the next session
+ * while `ssboe` is still the previous UTC date. Prefer `fillDate` when the
+ * plant sent it; only fall back to ssboe truncated to a UTC day.
+ */
+export function fillDayKey(fill: RithmicProtocolFill): string {
   if (fill.fillDate) {
     const date = fill.fillDate.replace(/-/g, '')
-    if (date === yyyymmdd) return true
+    if (/^\d{8}$/.test(date)) return date
   }
   if (typeof fill.ssboe === 'number' && fill.ssboe > 0) {
     const at = new Date(fill.ssboe * 1000)
-    const fromSsboe = `${at.getUTCFullYear()}${String(at.getUTCMonth() + 1).padStart(2, '0')}${String(at.getUTCDate()).padStart(2, '0')}`
-    if (fromSsboe === yyyymmdd) return true
+    return `${at.getUTCFullYear()}${String(at.getUTCMonth() + 1).padStart(2, '0')}${String(at.getUTCDate()).padStart(2, '0')}`
   }
-  return false
+  return ''
 }
 
-/**
- * ReplayExecutions exists for plants (Rithmic Test) where ShowFillHistory
- * lags UTC today. On Apex / production, history already has those fills —
- * always-on replay was a second source of the same `fill_id`.
- */
-export function shouldReplayRecentExecutions(
-  historyFills: RithmicProtocolFill[],
-  todayUtcYyyymmdd: string,
-): boolean {
-  return !historyFills.some((fill) =>
-    fillOccursOnUtcYyyymmdd(fill, todayUtcYyyymmdd),
-  )
-}
-
-function fillIdentityKey(fill: RithmicProtocolFill): string {
+export function fillIdentityKey(fill: RithmicProtocolFill): string {
   const fillId = canonicalRithmicFillId(fill.fillId)
   if (fillId) {
     // ShowFillHistory stores transaction_type as a string ("BUY");
     // ExchangeOrderNotification / ReplayExecutions decode the same field as
-    // enum 1/2. A composite key that includes transactionType, ssboe, or
-    // basketId therefore keeps both copies.
-    return `id|${fill.accountId}|${fillId}`
+    // enum 1/2. Do not put those, ssboe, or basketId in the key — they differ
+    // across sources of the same execution. Include trade day so a recycled
+    // fill_id on a later session stays a distinct fill.
+    return `id|${fill.accountId}|${fillDayKey(fill)}|${fillId}`
   }
   return [
     'fields',

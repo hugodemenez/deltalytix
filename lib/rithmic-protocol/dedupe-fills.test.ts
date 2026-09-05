@@ -3,11 +3,16 @@ import { buildTradesFromRithmicFills } from './fills-to-trades'
 import {
   canonicalRithmicFillId,
   dedupeFills,
-  shouldReplayRecentExecutions,
+  fillDayKey,
+  fillIdentityKey,
 } from './dedupe-fills'
 import type { RithmicProtocolFill } from './types'
 
 const tickBySymbol = new Map([['ES', { tickSize: 0.25, tickValue: 12.5 }]])
+
+/** 2026-09-02 19:30 UTC — still 14:30 CT, same CME session as fillDate. */
+const SEP2_SSBOE = Date.UTC(2026, 8, 2, 19, 30, 0) / 1000
+const SEP2_EXIT_SSBOE = Date.UTC(2026, 8, 2, 19, 40, 0) / 1000
 
 function historyFill(
   overrides: Partial<RithmicProtocolFill> = {},
@@ -21,7 +26,7 @@ function historyFill(
     fillId: '1452840',
     fillDate: '20260902',
     fillTime: '14:30:00',
-    ssboe: 1_725_289_800,
+    ssboe: SEP2_SSBOE,
     ...overrides,
   }
 }
@@ -35,7 +40,6 @@ function replayTwin(
     ...fill,
     transactionType,
     basketId: fill.basketId ?? 'basket-1',
-    fillDate: undefined,
     fillTime: undefined,
     ssboe: (fill.ssboe ?? 0) + 1,
   }
@@ -55,6 +59,27 @@ describe('canonicalRithmicFillId', () => {
   })
 })
 
+describe('fillDayKey', () => {
+  it('prefers fill_date (exchange trade date) over ssboe UTC day', () => {
+    // After ~17:00 CT the session date is already the next day; ssboe can
+    // still be the previous UTC calendar day. Identity must follow fill_date.
+    const evening = historyFill({
+      fillDate: '20260903',
+      ssboe: Date.UTC(2026, 8, 2, 23, 30, 0) / 1000,
+    })
+    expect(fillDayKey(evening)).toBe('20260903')
+    expect(fillIdentityKey(evening)).toBe(
+      'id|PA-APEX-39878-10|20260903|1452840',
+    )
+  })
+
+  it('falls back to ssboe truncated to a UTC day when fill_date is absent', () => {
+    expect(
+      fillDayKey(historyFill({ fillDate: undefined, ssboe: SEP2_SSBOE })),
+    ).toBe('20260902')
+  })
+})
+
 describe('dedupeFills', () => {
   it('keeps one row when the same fill_id arrives from history and replay', () => {
     const history = historyFill({ transactionType: 'BUY' })
@@ -63,6 +88,18 @@ describe('dedupeFills', () => {
     expect(out).toHaveLength(1)
     expect(out[0].fillId).toBe('1452840')
     expect(out[0].transactionType).toBe('BUY')
+  })
+
+  it('collapses a replay twin that only has ssboe on the same trade day', () => {
+    const history = historyFill({ fillDate: '20260902', ssboe: SEP2_SSBOE })
+    const replay = {
+      ...history,
+      transactionType: '1',
+      fillDate: undefined,
+      fillTime: undefined,
+      ssboe: SEP2_SSBOE + 1,
+    }
+    expect(dedupeFills([history, replay])).toHaveLength(1)
   })
 
   it('treats id and id-id as the same fill', () => {
@@ -76,12 +113,24 @@ describe('dedupeFills', () => {
     expect(out[0].fillId).toBe('1452840')
   })
 
-  it('keeps distinct fill ids', () => {
+  it('keeps distinct fill ids on the same day', () => {
     const out = dedupeFills([
       historyFill({ fillId: '1452840', transactionType: 'BUY' }),
       historyFill({ fillId: '1452841', transactionType: 'SELL', fillSize: 1 }),
     ])
     expect(out.map((fill) => fill.fillId)).toEqual(['1452840', '1452841'])
+  })
+
+  it('does not collapse the same fill_id on different trade dates', () => {
+    const day1 = historyFill({ fillId: '1452840', fillDate: '20260902' })
+    const day2 = historyFill({
+      fillId: '1452840',
+      fillDate: '20260903',
+      ssboe: Date.UTC(2026, 8, 3, 19, 30, 0) / 1000,
+    })
+    const out = dedupeFills([day1, day2])
+    expect(out).toHaveLength(2)
+    expect(out.map((fill) => fillDayKey(fill))).toEqual(['20260902', '20260903'])
   })
 
   it('still dedupes exact copies when fill_id is missing', () => {
@@ -91,38 +140,18 @@ describe('dedupeFills', () => {
   })
 })
 
-describe('shouldReplayRecentExecutions', () => {
-  it('skips replay when ShowFillHistory already has UTC today', () => {
-    expect(
-      shouldReplayRecentExecutions(
-        [historyFill({ fillDate: '20260904' })],
-        '20260904',
-      ),
-    ).toBe(false)
-  })
-
-  it('replays when history has older days only (Test same-day lag)', () => {
-    expect(
-      shouldReplayRecentExecutions(
-        [historyFill({ fillDate: '20260902', ssboe: undefined })],
-        '20260904',
-      ),
-    ).toBe(true)
-  })
-})
-
 describe('duplicate fills do not inflate FIFO trades', () => {
   const entry = historyFill({
     fillId: '1452840',
     transactionType: 'BUY',
     fillPrice: 5000,
-    ssboe: 1_725_289_800,
+    ssboe: SEP2_SSBOE,
   })
   const exit = historyFill({
     fillId: '1452900',
     transactionType: 'SELL',
     fillPrice: 5010,
-    ssboe: 1_725_290_400,
+    ssboe: SEP2_EXIT_SSBOE,
   })
 
   function pnlOf(fills: RithmicProtocolFill[]) {
@@ -164,5 +193,45 @@ describe('duplicate fills do not inflate FIFO trades', () => {
     expect(trades[0].closeId).toBe('1452900')
     expect(trades[0].quantity).toBe(1)
     expect(trades[0].pnl).toBe(500)
+  })
+
+  it('FIFO still matches two same-id fills that fall on different trade dates', () => {
+    const day1Entry = historyFill({
+      fillId: '1452840',
+      fillDate: '20260902',
+      transactionType: 'BUY',
+      fillPrice: 5000,
+      ssboe: SEP2_SSBOE,
+    })
+    const day1Exit = historyFill({
+      fillId: '1452900',
+      fillDate: '20260902',
+      transactionType: 'SELL',
+      fillPrice: 5010,
+      ssboe: SEP2_EXIT_SSBOE,
+    })
+    const day2Entry = historyFill({
+      fillId: '1452840',
+      fillDate: '20260903',
+      transactionType: 'BUY',
+      fillPrice: 5000,
+      ssboe: Date.UTC(2026, 8, 3, 19, 30, 0) / 1000,
+    })
+    const day2Exit = historyFill({
+      fillId: '1452900',
+      fillDate: '20260903',
+      transactionType: 'SELL',
+      fillPrice: 5010,
+      ssboe: Date.UTC(2026, 8, 3, 19, 40, 0) / 1000,
+    })
+
+    const { trades } = buildTradesFromRithmicFills(
+      [day1Entry, day1Exit, day2Entry, day2Exit],
+      'user-1',
+      tickBySymbol,
+    )
+    expect(trades).toHaveLength(2)
+    expect(trades.every((trade) => trade.quantity === 1)).toBe(true)
+    expect(trades.every((trade) => trade.pnl === 500)).toBe(true)
   })
 })
