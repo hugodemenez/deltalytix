@@ -156,6 +156,8 @@ export default {
   "connections.strip.unmask": "Afficher",
   "connections.strip.rename": "Renommer",
   "connections.strip.saveName": "Enregistrer le nom",
+  "connections.strip.sync": "Synchroniser",
+  "connections.strip.balance": "Solde {amount}",
   "connections.strip.deleteAccount": "Supprimer {account}",
   "connections.strip.deleteConfirmTitle": "Supprimer ce compte ?",
   "connections.strip.deleteConfirmDescription":

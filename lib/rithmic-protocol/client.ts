@@ -28,6 +28,7 @@ import {
   getRithmicProtocolAppVersion,
   normalizeGatewayUri,
 } from './systems'
+import { dedupeFills } from './dedupe-fills'
 
 /** Wall-clock budget for a full PnL snapshot sweep across a user's accounts. */
 const PNL_SNAPSHOT_TOTAL_BUDGET_MS = 30_000
@@ -802,7 +803,9 @@ export class RithmicProtocolClient {
         continue
       }
 
-      // Summary/detail streams may also emit exchange notifications.
+      // Some plants emit fills only as exchange notifications on this stream.
+      // Keep them; account + trade-date + fill_id dedupe collapses twins of
+      // ResponseShowFillHistory (string BUY/SELL vs enum 1/2).
       if (msg.templateId === RithmicTemplateId.EXCHANGE_ORDER_NOTIFICATION) {
         const fill = this.decodeExchangeFill(msg.raw, params.accountId)
         if (fill) fills.push(fill)
@@ -1470,8 +1473,11 @@ export async function fetchFillsForAccounts(params: {
         )
       }
 
-      // Same-day fills on Test often land in ReplayExecutions before ShowFillHistory
-      // publishes the trade date (history dates currently lag behind UTC "today").
+      // Always replay recent executions. ShowFillHistory can lag mid-session
+      // (Test date index; some plants omit the latest fills). Twins collapse
+      // in dedupeFills — do not skip replay just because history has a
+      // fill_date that looks like "today" (that field is the exchange trade
+      // date, which rolls ~17:00 CT, not UTC midnight).
       const finishSsboe = Math.floor(Date.now() / 1000) + 60
       const startSsboe = finishSsboe - Math.min(lookbackDays, 2) * 24 * 60 * 60
       try {
@@ -1512,29 +1518,6 @@ function toYyyymmddNumber(d: Date): number {
 
 function toYyyymmddString(d: Date): string {
   return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`
-}
-
-function dedupeFills(fills: RithmicProtocolFill[]): RithmicProtocolFill[] {
-  const seen = new Set<string>()
-  const out: RithmicProtocolFill[] = []
-  for (const fill of fills) {
-    const key = [
-      fill.accountId,
-      fill.basketId ?? '',
-      fill.fillId ?? '',
-      fill.symbol,
-      fill.transactionType,
-      fill.fillPrice,
-      fill.fillSize,
-      fill.ssboe ?? '',
-      fill.fillDate ?? '',
-      fill.fillTime ?? '',
-    ].join('|')
-    if (seen.has(key)) continue
-    seen.add(key)
-    out.push(fill)
-  }
-  return out
 }
 
 function utcCalendarDay(d: Date): Date {

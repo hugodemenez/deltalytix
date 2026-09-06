@@ -154,7 +154,13 @@ date to today with `ShowFillHistory` in **serial ≤30-day windows** (Rithmic gu
 that predate the start-date field.
 
 Same-day fills are also pulled via `ReplayExecutions` (ssboe), because on Test the
-fill/order history date index often lags UTC “today”.
+fill/order history date index often lags mid-session. History-stream exchange
+notifications are kept (some plants emit fills only that way). `dedupeFills`
+collapses the same `accountId + fill_date + fill_id` — `fill_date` is the exchange
+trade date (rolls ~17:00 CT), not a UTC calendar day; `ssboe` is only a fallback
+when `fill_date` is absent. The old composite-field key (transaction type, ssboe,
+basket) kept history `BUY` and replay enum `1` as two fills, and FIFO joined them
+into `fillId-fillId` journal rows (2× qty / PnL).
 Order-history fallback also requests dates one at a time. When `ShowFillHistory`
 returns empty (rp_code `7 no data`) — common on prop-firm plants such as
 **LucidTrading** — sync still tries order-history dates before giving up. Fill
