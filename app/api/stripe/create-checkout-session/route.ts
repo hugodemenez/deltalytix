@@ -18,6 +18,7 @@ import {
   readAttributionFromCookies,
 } from "@/lib/attribution-server";
 import {
+  createCheckoutSessionWithPromoFallback,
   resolveBackToWorkPromoCode,
   stripeCheckoutPromoParams,
 } from "@/lib/back-to-work-promo";
@@ -206,7 +207,15 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         }
     }
 
-    const session = await stripe.checkout.sessions.create(sessionConfig);
+    // Auto-apply is currency-specific. If Stripe still rejects the promo
+    // (e.g. EUR price vs USD coupon), retry without discounts instead of 500.
+    const session = await createCheckoutSessionWithPromoFallback(
+        (params) =>
+            stripe.checkout.sessions.create(
+                params as Parameters<typeof stripe.checkout.sessions.create>[0],
+            ),
+        sessionConfig,
+    );
 
     const attributionProps = attributionToPostHogProperties(attribution);
     const setOnce = attributionToPersonSetOnce(attribution);
