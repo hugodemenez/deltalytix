@@ -4,15 +4,28 @@ import {
   activeBackToWorkIntervals,
   applyBackToWorkCoupon,
   backToWorkPeriodDisplay,
+  backToWorkPromoEnvKey,
   buildBackToWorkPricingDisplay,
+  createCheckoutSessionWithPromoFallback,
+  firstConfiguredBackToWorkPromoId,
   formatBackToWorkOfferUntil,
   isBackToWorkOfferActive,
+  isStripePromoCurrencyMismatch,
   resolveBackToWorkPromoCode,
   stripeCheckoutPromoParams,
   type BackToWorkPromoEnv,
 } from "./back-to-work-promo";
 
 const env: BackToWorkPromoEnv = {
+  STRIPE_BTW_MONTHLY_PROMO: "test-monthly-promo",
+  STRIPE_BTW_QUARTERLY_PROMO: "test-quarterly-promo",
+  STRIPE_BTW_YEARLY_PROMO: "test-yearly-promo",
+  STRIPE_BTW_MONTHLY_PROMO_EUR: "test-monthly-promo-eur",
+  STRIPE_BTW_QUARTERLY_PROMO_EUR: "test-quarterly-promo-eur",
+  STRIPE_BTW_YEARLY_PROMO_EUR: "test-yearly-promo-eur",
+};
+
+const usdOnlyEnv: BackToWorkPromoEnv = {
   STRIPE_BTW_MONTHLY_PROMO: "test-monthly-promo",
   STRIPE_BTW_QUARTERLY_PROMO: "test-quarterly-promo",
   STRIPE_BTW_YEARLY_PROMO: "test-yearly-promo",
@@ -40,15 +53,49 @@ describe("resolveBackToWorkPromoCode", () => {
     ).toBe("test-yearly-promo");
   });
 
-  it("applies for both usd and eur Plus prices", () => {
-    for (const currency of ["usd", "eur"] as const) {
-      expect(
-        resolveBackToWorkPromoCode(
-          { lookupKey: `plus_monthly_${currency}`, currency },
-          env,
-        ),
-      ).toBe("test-monthly-promo");
-    }
+  it("picks USD vs EUR promo ids by price currency", () => {
+    expect(
+      resolveBackToWorkPromoCode(
+        { lookupKey: "plus_monthly_usd", currency: "usd" },
+        env,
+      ),
+    ).toBe("test-monthly-promo");
+    expect(
+      resolveBackToWorkPromoCode(
+        { lookupKey: "plus_monthly_eur", currency: "eur" },
+        env,
+      ),
+    ).toBe("test-monthly-promo-eur");
+    expect(
+      resolveBackToWorkPromoCode(
+        { lookupKey: "plus_yearly_eur", currency: "eur" },
+        env,
+      ),
+    ).toBe("test-yearly-promo-eur");
+  });
+
+  it("infers currency from the lookup key when price.currency is omitted", () => {
+    expect(
+      resolveBackToWorkPromoCode({ lookupKey: "plus_monthly_eur" }, env),
+    ).toBe("test-monthly-promo-eur");
+    expect(
+      resolveBackToWorkPromoCode({ lookupKey: "plus_monthly_usd" }, env),
+    ).toBe("test-monthly-promo");
+  });
+
+  it("does not apply a USD promo id to a EUR Plus price", () => {
+    expect(
+      resolveBackToWorkPromoCode(
+        { lookupKey: "plus_monthly_eur", currency: "eur" },
+        usdOnlyEnv,
+      ),
+    ).toBeUndefined();
+    expect(
+      resolveBackToWorkPromoCode(
+        { lookupKey: billingLookupKey("quarterly", "EUR"), currency: "eur" },
+        usdOnlyEnv,
+      ),
+    ).toBeUndefined();
   });
 
   it("uses catalog lookup keys for every sold Plus recurring period and currency", () => {
@@ -63,7 +110,7 @@ describe("resolveBackToWorkPromoCode", () => {
         { lookupKey: billingLookupKey("quarterly", "EUR"), currency: "eur" },
         env,
       ),
-    ).toBe("test-quarterly-promo");
+    ).toBe("test-quarterly-promo-eur");
     expect(
       resolveBackToWorkPromoCode(
         { lookupKey: billingLookupKey("yearly", "USD"), currency: "usd" },
@@ -83,7 +130,7 @@ describe("resolveBackToWorkPromoCode", () => {
         },
         env,
       ),
-    ).toBe("test-quarterly-promo");
+    ).toBe("test-quarterly-promo-eur");
   });
 
   it("uses Stripe recurring interval when the lookup key is only Plus-shaped", () => {
@@ -180,9 +227,26 @@ describe("resolveBackToWorkPromoCode", () => {
     expect(
       resolveBackToWorkPromoCode(
         { lookupKey: "plus_yearly_eur", currency: "eur" },
-        { STRIPE_BTW_YEARLY_PROMO: "  test-yearly-promo  " },
+        { STRIPE_BTW_YEARLY_PROMO_EUR: "  test-yearly-promo-eur  " },
       ),
-    ).toBe("test-yearly-promo");
+    ).toBe("test-yearly-promo-eur");
+  });
+
+  it("skips EUR when the EUR env var is missing even if the USD key is set", () => {
+    expect(
+      resolveBackToWorkPromoCode(
+        { lookupKey: "plus_monthly_eur", currency: "eur" },
+        { STRIPE_BTW_MONTHLY_PROMO: "test-monthly-promo" },
+      ),
+    ).toBeUndefined();
+  });
+
+  it("maps interval+currency to the documented env keys", () => {
+    expect(backToWorkPromoEnvKey("monthly", "usd")).toBe("STRIPE_BTW_MONTHLY_PROMO");
+    expect(backToWorkPromoEnvKey("monthly", "eur")).toBe(
+      "STRIPE_BTW_MONTHLY_PROMO_EUR",
+    );
+    expect(backToWorkPromoEnvKey("yearly", "eur")).toBe("STRIPE_BTW_YEARLY_PROMO_EUR");
   });
 
   it("skips non-Plus plans", () => {
@@ -239,6 +303,98 @@ describe("stripeCheckoutPromoParams", () => {
   });
 });
 
+describe("isStripePromoCurrencyMismatch", () => {
+  it("detects the live Stripe promotion/line-item currency error", () => {
+    expect(
+      isStripePromoCurrencyMismatch(
+        new Error(
+          "The promotion code default currency (usd) does not match the line item currency (eur).",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      isStripePromoCurrencyMismatch({
+        message:
+          "The promotion code default currency (eur) does not match the line item currency (usd).",
+      }),
+    ).toBe(true);
+  });
+
+  it("ignores unrelated Stripe and non-error values", () => {
+    expect(
+      isStripePromoCurrencyMismatch(new Error("No such promotion code: promo_x")),
+    ).toBe(false);
+    expect(isStripePromoCurrencyMismatch(new Error("card_declined"))).toBe(false);
+    expect(isStripePromoCurrencyMismatch(null)).toBe(false);
+    expect(isStripePromoCurrencyMismatch("usd")).toBe(false);
+  });
+});
+
+describe("createCheckoutSessionWithPromoFallback", () => {
+  it("returns the first session when create succeeds", async () => {
+    const create = async () => ({ id: "cs_ok" });
+    await expect(
+      createCheckoutSessionWithPromoFallback(create, {
+        discounts: [{ promotion_code: "test-monthly-promo" }],
+      }),
+    ).resolves.toEqual({ id: "cs_ok" });
+  });
+
+  it("retries without discounts on a promo currency mismatch", async () => {
+    const calls: Record<string, unknown>[] = [];
+    const create = async (params: Record<string, unknown>) => {
+      calls.push(params);
+      if (params.discounts) {
+        throw new Error(
+          "The promotion code default currency (usd) does not match the line item currency (eur).",
+        );
+      }
+      return { id: "cs_fallback" };
+    };
+
+    await expect(
+      createCheckoutSessionWithPromoFallback(create, {
+        mode: "subscription",
+        discounts: [{ promotion_code: "test-monthly-promo" }],
+      }),
+    ).resolves.toEqual({ id: "cs_fallback" });
+
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toEqual({
+      mode: "subscription",
+      allow_promotion_codes: true,
+    });
+    expect(calls[1]).not.toHaveProperty("discounts");
+  });
+
+  it("rethrows non-mismatch Stripe errors", async () => {
+    const create = async () => {
+      throw new Error("No such price: price_missing");
+    };
+    await expect(
+      createCheckoutSessionWithPromoFallback(create, {
+        discounts: [{ promotion_code: "test-monthly-promo" }],
+      }),
+    ).rejects.toThrow("No such price: price_missing");
+  });
+
+  it("does not retry when the first attempt had no discounts", async () => {
+    let attempts = 0;
+    const create = async () => {
+      attempts += 1;
+      throw new Error(
+        "The promotion code default currency (usd) does not match the line item currency (eur).",
+      );
+    };
+    await expect(
+      createCheckoutSessionWithPromoFallback(create, {
+        allow_promotion_codes: true,
+      }),
+    ).rejects.toThrow(/does not match/);
+    expect(attempts).toBe(1);
+  });
+});
+
 describe("back-to-work pricing display", () => {
   it("lists only intervals with a non-empty env value", () => {
     expect(
@@ -247,6 +403,19 @@ describe("back-to-work pricing display", () => {
         STRIPE_BTW_QUARTERLY_PROMO: "  ",
       }),
     ).toEqual(["monthly"]);
+    expect(
+      activeBackToWorkIntervals({
+        STRIPE_BTW_YEARLY_PROMO_EUR: "test-yearly-promo-eur",
+      }),
+    ).toEqual(["yearly"]);
+    expect(firstConfiguredBackToWorkPromoId("yearly", env)).toBe(
+      "test-yearly-promo",
+    );
+    expect(
+      firstConfiguredBackToWorkPromoId("monthly", {
+        STRIPE_BTW_MONTHLY_PROMO_EUR: "test-monthly-promo-eur",
+      }),
+    ).toBe("test-monthly-promo-eur");
   });
 
   it("applies percent and amount coupons to list charges", () => {
@@ -282,6 +451,20 @@ describe("back-to-work pricing display", () => {
     expect(JSON.stringify(display)).not.toMatch(/test-monthly-promo|promo_/);
     expect(isBackToWorkOfferActive(display)).toBe(true);
     expect(backToWorkPeriodDisplay(display, "lifetime")).toBeUndefined();
+  });
+
+  it("treats an interval as active when only the EUR env key is set", () => {
+    const display = buildBackToWorkPricingDisplay(
+      { STRIPE_BTW_QUARTERLY_PROMO_EUR: "test-quarterly-promo-eur" },
+      { quarterly: { percentOff: 20 } },
+    );
+
+    expect(display.quarterly).toMatchObject({
+      offerActive: true,
+      listCharge: 45,
+      saleCharge: 36,
+    });
+    expect(display.monthly).toBeUndefined();
   });
 
   it("marks an interval active from env even when the coupon cannot be resolved", () => {

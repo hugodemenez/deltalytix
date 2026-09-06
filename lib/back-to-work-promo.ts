@@ -4,10 +4,19 @@ import {
   type BillingPeriod,
 } from "./billing-plan-catalog";
 
+export const BACK_TO_WORK_PROMO_CURRENCIES = ["usd", "eur"] as const;
+
+export type BackToWorkPromoCurrency =
+  (typeof BACK_TO_WORK_PROMO_CURRENCIES)[number];
+
+/** Unsuffixed keys are USD. EUR uses `*_EUR`. */
 export const BACK_TO_WORK_PROMO_ENV_KEYS = [
   "STRIPE_BTW_MONTHLY_PROMO",
   "STRIPE_BTW_QUARTERLY_PROMO",
   "STRIPE_BTW_YEARLY_PROMO",
+  "STRIPE_BTW_MONTHLY_PROMO_EUR",
+  "STRIPE_BTW_QUARTERLY_PROMO_EUR",
+  "STRIPE_BTW_YEARLY_PROMO_EUR",
 ] as const;
 
 export type BackToWorkPromoEnvKey = (typeof BACK_TO_WORK_PROMO_ENV_KEYS)[number];
@@ -27,11 +36,28 @@ export type BackToWorkPromoInput = {
   priceType?: string | null;
 };
 
-const ENV_BY_INTERVAL: Record<BackToWorkPromoInterval, BackToWorkPromoEnvKey> = {
-  monthly: "STRIPE_BTW_MONTHLY_PROMO",
-  quarterly: "STRIPE_BTW_QUARTERLY_PROMO",
-  yearly: "STRIPE_BTW_YEARLY_PROMO",
+const ENV_BY_INTERVAL_AND_CURRENCY: Record<
+  BackToWorkPromoCurrency,
+  Record<BackToWorkPromoInterval, BackToWorkPromoEnvKey>
+> = {
+  usd: {
+    monthly: "STRIPE_BTW_MONTHLY_PROMO",
+    quarterly: "STRIPE_BTW_QUARTERLY_PROMO",
+    yearly: "STRIPE_BTW_YEARLY_PROMO",
+  },
+  eur: {
+    monthly: "STRIPE_BTW_MONTHLY_PROMO_EUR",
+    quarterly: "STRIPE_BTW_QUARTERLY_PROMO_EUR",
+    yearly: "STRIPE_BTW_YEARLY_PROMO_EUR",
+  },
 };
+
+export function backToWorkPromoEnvKey(
+  interval: BackToWorkPromoInterval,
+  currency: BackToWorkPromoCurrency,
+): BackToWorkPromoEnvKey {
+  return ENV_BY_INTERVAL_AND_CURRENCY[currency][interval];
+}
 
 function normalize(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase();
@@ -95,6 +121,7 @@ function trimmedEnvValue(
 /**
  * Returns the Stripe promotion_code id to auto-apply on a new Plus Checkout,
  * or undefined when this purchase is ineligible or the matching env var is unset.
+ * USD uses `STRIPE_BTW_*_PROMO`; EUR uses `STRIPE_BTW_*_PROMO_EUR`.
  * Reads the provided env bag only — call with process.env at request time.
  */
 export function resolveBackToWorkPromoCode(
@@ -125,7 +152,7 @@ export function resolveBackToWorkPromoCode(
     return undefined;
   }
 
-  return trimmedEnvValue(env, ENV_BY_INTERVAL[interval]);
+  return trimmedEnvValue(env, backToWorkPromoEnvKey(interval, currency));
 }
 
 export type StripeCheckoutPromoParams =
@@ -145,11 +172,82 @@ export function stripeCheckoutPromoParams(
   return { allow_promotion_codes: true };
 }
 
+function stripeErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error && "message" in error) {
+    return String((error as { message: unknown }).message);
+  }
+  return "";
+}
+
+/**
+ * Stripe rejects a Checkout Session when the promotion code coupon currency
+ * does not match the line-item price currency. Detect that so callers can
+ * retry without auto-applied discounts instead of 500ing.
+ */
+export function isStripePromoCurrencyMismatch(error: unknown): boolean {
+  const message = stripeErrorMessage(error).toLowerCase();
+  return (
+    message.includes("promotion code") &&
+    message.includes("currency") &&
+    message.includes("does not match")
+  );
+}
+
+/**
+ * Retry helper for Checkout Session create. On a promo/line-item currency
+ * mismatch, strip `discounts` and re-enable typed codes. Other errors rethrow.
+ */
+export async function createCheckoutSessionWithPromoFallback<TSession>(
+  create: (params: Record<string, unknown>) => Promise<TSession>,
+  sessionConfig: Record<string, unknown>,
+): Promise<TSession> {
+  try {
+    return await create(sessionConfig);
+  } catch (error) {
+    if (!sessionConfig.discounts || !isStripePromoCurrencyMismatch(error)) {
+      throw error;
+    }
+
+    console.warn(
+      "[back-to-work-promo] Stripe rejected auto-applied promotion for currency mismatch; retrying checkout without discounts",
+      stripeErrorMessage(error),
+    );
+
+    const { discounts: _discounts, ...withoutDiscounts } = sessionConfig;
+    return create({
+      ...withoutDiscounts,
+      ...stripeCheckoutPromoParams(undefined),
+    });
+  }
+}
+
+function intervalHasPromo(
+  env: BackToWorkPromoEnv,
+  interval: BackToWorkPromoInterval,
+): boolean {
+  return BACK_TO_WORK_PROMO_CURRENCIES.some((currency) =>
+    Boolean(trimmedEnvValue(env, backToWorkPromoEnvKey(interval, currency))),
+  );
+}
+
+/** First configured promo id for an interval (USD, then EUR). Used for coupon display. */
+export function firstConfiguredBackToWorkPromoId(
+  interval: BackToWorkPromoInterval,
+  env: BackToWorkPromoEnv = process.env,
+): string | undefined {
+  for (const currency of BACK_TO_WORK_PROMO_CURRENCIES) {
+    const value = trimmedEnvValue(env, backToWorkPromoEnvKey(interval, currency));
+    if (value) return value;
+  }
+  return undefined;
+}
+
 export function activeBackToWorkIntervals(
   env: BackToWorkPromoEnv = process.env,
 ): BackToWorkPromoInterval[] {
   return (["monthly", "quarterly", "yearly"] as const).filter((interval) =>
-    Boolean(trimmedEnvValue(env, ENV_BY_INTERVAL[interval])),
+    intervalHasPromo(env, interval),
   );
 }
 
@@ -218,7 +316,7 @@ export function buildBackToWorkPricingDisplay(
   const display: BackToWorkPricingDisplay = {};
 
   for (const interval of ["monthly", "quarterly", "yearly"] as const) {
-    if (!trimmedEnvValue(env, ENV_BY_INTERVAL[interval])) continue;
+    if (!intervalHasPromo(env, interval)) continue;
 
     const listCharge = PLUS_PLAN_PRICES[interval];
     const rawSale = applyBackToWorkCoupon(listCharge, coupons[interval]);

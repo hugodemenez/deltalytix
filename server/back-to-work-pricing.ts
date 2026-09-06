@@ -5,16 +5,11 @@ import { stripe } from "@/server/stripe";
 import {
   activeBackToWorkIntervals,
   buildBackToWorkPricingDisplay,
+  firstConfiguredBackToWorkPromoId,
   type BackToWorkCouponLike,
   type BackToWorkPricingDisplay,
   type BackToWorkPromoInterval,
 } from "@/lib/back-to-work-promo";
-
-const INTERVAL_ENV_KEY = {
-  monthly: "STRIPE_BTW_MONTHLY_PROMO",
-  quarterly: "STRIPE_BTW_QUARTERLY_PROMO",
-  yearly: "STRIPE_BTW_YEARLY_PROMO",
-} as const;
 
 async function couponFromEnvValue(
   value: string,
@@ -51,7 +46,7 @@ async function loadBackToWorkPricingDisplay(): Promise<BackToWorkPricingDisplay>
 
   await Promise.all(
     intervals.map(async (interval) => {
-      const value = env[INTERVAL_ENV_KEY[interval]]?.trim();
+      const value = firstConfiguredBackToWorkPromoId(interval, env);
       if (!value) return;
 
       const coupon = await couponFromEnvValue(value);
