@@ -9,7 +9,13 @@ export const BACK_TO_WORK_PROMO_CURRENCIES = ["usd", "eur"] as const;
 export type BackToWorkPromoCurrency =
   (typeof BACK_TO_WORK_PROMO_CURRENCIES)[number];
 
-/** Unsuffixed keys are USD. EUR uses `*_EUR`. */
+/**
+ * Unsuffixed keys are USD. EUR uses `*_EUR`.
+ * Live EUR promotion_code ids (set on Vercel production/preview, not in git):
+ * - STRIPE_BTW_MONTHLY_PROMO_EUR=promo_1UCdjtCgu8zCkThCaRPGy5Nj (WORK10EUR)
+ * - STRIPE_BTW_QUARTERLY_PROMO_EUR=promo_1UCdjuCgu8zCkThCUq9dJh42 (WORK15EUR)
+ * - STRIPE_BTW_YEARLY_PROMO_EUR=promo_1UCdjuCgu8zCkThCjeCfEwV8 (WORK50EUR)
+ */
 export const BACK_TO_WORK_PROMO_ENV_KEYS = [
   "STRIPE_BTW_MONTHLY_PROMO",
   "STRIPE_BTW_QUARTERLY_PROMO",

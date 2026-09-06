@@ -53,6 +53,48 @@ describe("resolveBackToWorkPromoCode", () => {
     ).toBe("test-yearly-promo");
   });
 
+  it("resolves live EUR promo ids when price.currency is eur", () => {
+    const live: BackToWorkPromoEnv = {
+      STRIPE_BTW_MONTHLY_PROMO: "promo_usd_monthly",
+      STRIPE_BTW_QUARTERLY_PROMO: "promo_usd_quarterly",
+      STRIPE_BTW_YEARLY_PROMO: "promo_usd_yearly",
+      STRIPE_BTW_MONTHLY_PROMO_EUR: "promo_1UCdjtCgu8zCkThCaRPGy5Nj",
+      STRIPE_BTW_QUARTERLY_PROMO_EUR: "promo_1UCdjuCgu8zCkThCUq9dJh42",
+      STRIPE_BTW_YEARLY_PROMO_EUR: "promo_1UCdjuCgu8zCkThCjeCfEwV8",
+    };
+
+    expect(
+      resolveBackToWorkPromoCode(
+        { lookupKey: "plus_monthly_eur", currency: "eur" },
+        live,
+      ),
+    ).toBe("promo_1UCdjtCgu8zCkThCaRPGy5Nj");
+    expect(
+      resolveBackToWorkPromoCode(
+        { lookupKey: "plus_quarterly_eur", currency: "eur" },
+        live,
+      ),
+    ).toBe("promo_1UCdjuCgu8zCkThCUq9dJh42");
+    expect(
+      resolveBackToWorkPromoCode(
+        { lookupKey: "plus_yearly_eur", currency: "eur" },
+        live,
+      ),
+    ).toBe("promo_1UCdjuCgu8zCkThCjeCfEwV8");
+    expect(
+      resolveBackToWorkPromoCode(
+        { lookupKey: "plus_monthly_usd", currency: "usd" },
+        live,
+      ),
+    ).toBe("promo_usd_monthly");
+    expect(
+      resolveBackToWorkPromoCode(
+        { lookupKey: "plus_yearly_usd", currency: "usd" },
+        live,
+      ),
+    ).toBe("promo_usd_yearly");
+  });
+
   it("picks USD vs EUR promo ids by price currency", () => {
     expect(
       resolveBackToWorkPromoCode(
