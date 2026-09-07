@@ -95,11 +95,10 @@ function useFilledUnitGrid(count: number) {
     if (!node) return
 
     const update = () => {
-      const next = pickUnitFieldGrid(
-        node.clientWidth,
-        node.clientHeight,
-        count,
-      )
+      const width = node.clientWidth
+      const height = node.clientHeight
+      if (width < 8 || height < 8) return
+      const next = pickUnitFieldGrid(width, height, count)
       setGrid((current) =>
         current.columns === next.columns && current.rows === next.rows
           ? current
@@ -108,9 +107,13 @@ function useFilledUnitGrid(count: number) {
     }
 
     update()
+    const frame = window.requestAnimationFrame(update)
     const observer = new ResizeObserver(update)
     observer.observe(node)
-    return () => observer.disconnect()
+    return () => {
+      window.cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
   }, [count])
 
   return { ref, ...grid }
@@ -171,8 +174,8 @@ export function UnitDotField({
   )
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2">
-      <div ref={ref} className="min-h-0 flex-1">
+    <div className="flex h-full min-h-0 w-full flex-col gap-2">
+      <div ref={ref} className="min-h-0 min-w-0 w-full flex-1">
         <UnitFieldGrid
           dots={dots}
           columns={columns}
