@@ -1,9 +1,11 @@
 "use client"
 
+import * as React from "react"
 import { cn } from "@/lib/utils"
 import type { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard"
 
 export const UNIT_FIELD_RECORD_LIMIT = 120
+export const UNIT_FIELD_PERCENT_DOTS = 100
 
 export interface UnitFieldGroup {
   key: string
@@ -28,10 +30,11 @@ export function expandUnitDots(
 
     const raw = groups.map((group) => ({
       group,
-      exact: (group.count / total) * 100,
+      exact: (group.count / total) * UNIT_FIELD_PERCENT_DOTS,
     }))
     const dots = raw.map((row) => Math.floor(row.exact))
-    let remaining = 100 - dots.reduce((sum, value) => sum + value, 0)
+    let remaining =
+      UNIT_FIELD_PERCENT_DOTS - dots.reduce((sum, value) => sum + value, 0)
     const order = raw
       .map((row, index) => ({ index, frac: row.exact - Math.floor(row.exact) }))
       .sort((a, b) => b.frac - a.frac)
@@ -62,9 +65,97 @@ export function shouldPackUnitField(total: number) {
   return total > UNIT_FIELD_RECORD_LIMIT
 }
 
+export function pickUnitFieldGrid(
+  width: number,
+  height: number,
+  count = UNIT_FIELD_PERCENT_DOTS,
+): { columns: number; rows: number } {
+  const safeCount = Math.max(1, count)
+  if (width <= 0 || height <= 0) {
+    return { columns: 10, rows: Math.ceil(safeCount / 10) }
+  }
+
+  const ratio = width / height
+  const columns = Math.min(
+    20,
+    Math.max(4, Math.round(Math.sqrt(safeCount * ratio))),
+  )
+  return { columns, rows: Math.ceil(safeCount / columns) }
+}
+
+function useFilledUnitGrid(count: number) {
+  const ref = React.useRef<HTMLDivElement>(null)
+  const [grid, setGrid] = React.useState({
+    columns: 10,
+    rows: Math.ceil(Math.max(count, 1) / 10),
+  })
+
+  React.useLayoutEffect(() => {
+    const node = ref.current
+    if (!node) return
+
+    const update = () => {
+      const next = pickUnitFieldGrid(
+        node.clientWidth,
+        node.clientHeight,
+        count,
+      )
+      setGrid((current) =>
+        current.columns === next.columns && current.rows === next.rows
+          ? current
+          : next,
+      )
+    }
+
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [count])
+
+  return { ref, ...grid }
+}
+
+export function UnitFieldGrid({
+  dots,
+  columns,
+  rows,
+  size = "medium",
+  label,
+}: {
+  dots: Array<{ key: string; color: string; label?: string }>
+  columns: number
+  rows: number
+  size?: WidgetSize
+  label?: string
+}) {
+  const compact = size === "small" || size === "tiny"
+
+  return (
+    <div
+      role={label ? "img" : undefined}
+      aria-label={label}
+      className={cn("grid h-full min-h-0 w-full", compact ? "gap-1" : "gap-1.5")}
+      style={{
+        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+        gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+      }}
+    >
+      {dots.map((dot) => (
+        <span
+          key={dot.key}
+          title={dot.label}
+          className="min-h-0 min-w-0 rounded-full"
+          style={{ backgroundColor: dot.color }}
+        />
+      ))}
+    </div>
+  )
+}
+
 export function UnitDotField({
   groups,
-  mode = "record",
+  mode = "percent",
   label,
   size = "medium",
 }: {
@@ -74,31 +165,25 @@ export function UnitDotField({
   size?: WidgetSize
 }) {
   const dots = expandUnitDots(groups, mode)
-  const compact = size === "small"
-  const columns = mode === "percent" || dots.length > 40 ? 10 : 8
+  const compact = size === "small" || size === "tiny"
+  const { ref, columns, rows } = useFilledUnitGrid(
+    dots.length || UNIT_FIELD_PERCENT_DOTS,
+  )
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
-      <div
-        role="img"
-        aria-label={label}
-        className="grid min-h-0 flex-1 content-center justify-center gap-1.5"
-        style={{
-          gridTemplateColumns: `repeat(${columns}, ${compact ? "0.55rem" : "0.7rem"})`,
-        }}
-      >
-        {dots.map((dot) => (
-          <span
-            key={dot.key}
-            title={dot.label}
-            className={cn("rounded-full", compact ? "size-2" : "size-2.5")}
-            style={{ backgroundColor: dot.color }}
-          />
-        ))}
+    <div className="flex h-full min-h-0 flex-col gap-2">
+      <div ref={ref} className="min-h-0 flex-1">
+        <UnitFieldGrid
+          dots={dots}
+          columns={columns}
+          rows={rows}
+          size={size}
+          label={label}
+        />
       </div>
       <ul
         className={cn(
-          "flex flex-wrap justify-center gap-x-3 gap-y-1 text-muted-foreground",
+          "flex shrink-0 flex-wrap justify-center gap-x-3 gap-y-1 text-muted-foreground",
           compact ? "text-[10px]" : "text-[11px]",
         )}
       >

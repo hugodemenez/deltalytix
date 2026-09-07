@@ -4,7 +4,7 @@ import type { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard"
  * Chart encodings for dashboard widgets, mapped from lieflat-charts
  * data shapes. Implementations are original React/SVG on Paper tokens.
  *
- * trade / commission share → L14 / G4 unit field (one dot = one trade or 1%)
+ * trade / commission share → L14 / G4 unit field (one dot = 1%, fills the card)
  * daily P/L sequence → L3 barcode lollipop (stem = day, cap = net)
  * weekday / side → G10 / F5 horizontal diverging bars
  * tick histogram → F1 countable stacks (one dot = one trade)

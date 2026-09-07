@@ -1680,7 +1680,7 @@ export default {
     description: "Distribution of winning, losing, and breakeven trades",
     subtitle: {
       empty: "No closed trades in this range",
-      share: "{percent}% of trades are winners · one dot = one trade",
+      share: "{percent}% of trades are winners · one dot = one percent",
       sharePacked: "{percent}% of trades are winners · one dot = one percent",
     },
     win: "Winning trades",

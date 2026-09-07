@@ -356,28 +356,27 @@ export function UnitFieldLoadingSkeleton({
   size = "medium",
   loadingLabel,
 }: DonutChartLoadingSkeletonProps) {
-  const compact = size === "small";
-  const columns = 10;
-  const rows = compact ? 6 : 10;
+  const compact = size === "small" || size === "tiny";
 
   return (
     <ChartLoadingContainer
       loadingLabel={loadingLabel}
-      className="flex animate-pulse flex-col items-center justify-center gap-3"
+      className="flex h-full min-h-0 animate-pulse flex-col"
     >
       <div
-        className="grid gap-1.5"
+        className={cn(
+          "grid h-full min-h-0 w-full",
+          compact ? "gap-1" : "gap-1.5",
+        )}
         style={{
-          gridTemplateColumns: `repeat(${columns}, ${compact ? "0.55rem" : "0.7rem"})`,
+          gridTemplateColumns: "repeat(10, minmax(0, 1fr))",
+          gridTemplateRows: "repeat(10, minmax(0, 1fr))",
         }}
       >
-        {Array.from({ length: columns * rows }).map((_, i) => (
+        {Array.from({ length: 100 }).map((_, i) => (
           <span
             key={`unit-skeleton-${i}`}
-            className={cn(
-              "rounded-full bg-muted-foreground/30",
-              compact ? "size-2" : "size-2.5",
-            )}
+            className="min-h-0 min-w-0 rounded-full bg-muted-foreground/25"
           />
         ))}
       </div>

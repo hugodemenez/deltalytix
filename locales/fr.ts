@@ -1227,7 +1227,7 @@ export default {
     description: "Répartition des trades gagnants, perdants et à l'équilibre",
     subtitle: {
       empty: "Aucun trade clôturé sur cette période",
-      share: "{percent}% des trades sont gagnants · un point = un trade",
+      share: "{percent}% des trades sont gagnants · un point = un pour cent",
       sharePacked: "{percent}% des trades sont gagnants · un point = un pour cent",
     },
     win: "Trades gagnants",

@@ -9,7 +9,11 @@ import {
   peakIndex,
   signedFill,
 } from "./chart-glance"
-import { expandUnitDots, shouldPackUnitField } from "./chart-unit-field"
+import {
+  expandUnitDots,
+  pickUnitFieldGrid,
+  shouldPackUnitField,
+} from "./chart-unit-field"
 import { canDrawUnitHistogram } from "./chart-unit-histogram"
 import {
   countPeakConclusion,
@@ -96,6 +100,18 @@ describe("shouldPackUnitField", () => {
   it("packs only dense trade counts", () => {
     expect(shouldPackUnitField(120)).toBe(false)
     expect(shouldPackUnitField(121)).toBe(true)
+  })
+})
+
+describe("pickUnitFieldGrid", () => {
+  it("keeps a square field on a 10 by 10 waffle", () => {
+    expect(pickUnitFieldGrid(200, 200, 100)).toEqual({ columns: 10, rows: 10 })
+  })
+
+  it("adds columns on a wide card so cells stay close to square", () => {
+    const grid = pickUnitFieldGrid(320, 160, 100)
+    expect(grid.columns).toBeGreaterThan(grid.rows)
+    expect(grid.columns * grid.rows).toBeGreaterThanOrEqual(100)
   })
 })
 

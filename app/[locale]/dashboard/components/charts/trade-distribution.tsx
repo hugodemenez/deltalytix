@@ -7,10 +7,7 @@ import { useI18n } from "@/locales/client"
 import { UnitFieldLoadingSkeleton } from "./chart-loading-skeleton"
 import { shareConclusion } from "./chart-conclusions"
 import { ChartWidgetFrame } from "./chart-widget-frame"
-import {
-  shouldPackUnitField,
-  UnitDotField,
-} from "./chart-unit-field"
+import { UnitDotField } from "./chart-unit-field"
 
 interface TradeDistributionProps {
   size?: WidgetSize
@@ -19,7 +16,6 @@ interface TradeDistributionProps {
 export default function TradeDistributionChart({ size = 'medium' }: TradeDistributionProps) {
   const { statistics: { nbWin, nbLoss, nbBe, nbTrades }, isLoading } = useData()
   const t = useI18n()
-  const packed = shouldPackUnitField(nbTrades)
 
   const groups = React.useMemo(() => [
     {
@@ -46,12 +42,7 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
   const subtitle =
     conclusion.kind === "empty"
       ? t("tradeDistribution.subtitle.empty")
-      : t(
-          packed
-            ? "tradeDistribution.subtitle.sharePacked"
-            : "tradeDistribution.subtitle.share",
-          { percent: conclusion.percent },
-        )
+      : t("tradeDistribution.subtitle.share", { percent: conclusion.percent })
 
   return (
     <ChartWidgetFrame
@@ -65,7 +56,7 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
       ) : (
         <UnitDotField
           groups={groups}
-          mode={packed ? "percent" : "record"}
+          mode="percent"
           label={subtitle}
           size={size}
         />
