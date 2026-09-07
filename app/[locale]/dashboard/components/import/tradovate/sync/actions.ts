@@ -5,6 +5,11 @@ import { saveTradesAction } from '@/server/database'
 import { Trade, TickDetails } from '@/prisma/generated/prisma/client'
 import crypto from 'crypto'
 import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
+import {
+  TRADOVATE_TRADE_TAG,
+  tradovateRoundTripFillIds,
+  tradovateSideFromBuyFirst,
+} from '@/lib/tradovate/identity'
 import { getTickDetails } from '@/server/tick-details'
 import { prisma } from '@/lib/prisma'
 import { upsertAccountsForNumbers } from '@/server/connections'
@@ -1353,7 +1358,12 @@ async function buildTradesFromFillPairs(
       
       // If buy happened first, it's a long trade (buy then sell)
       // If sell happened first, it's a short trade (sell then buy)
-      const side = isBuyFirst ? 'Long' : 'Short'
+      const side = tradovateSideFromBuyFirst(isBuyFirst)
+      const { entryId, closeId } = tradovateRoundTripFillIds({
+        buyFillId: fillPair.buyFillId,
+        sellFillId: fillPair.sellFillId,
+        isBuyFirst,
+      })
       
       // Calculate P&L using tick value (more accurate for futures)
       const tickDetail = tickDetails.find(detail => detail.ticker === contractSymbol)
@@ -1423,8 +1433,8 @@ async function buildTradesFromFillPairs(
 
       const tradeData = {
         accountNumber: accountLabel,
-        entryId: isBuyFirst ? `fill_${fillPair.buyFillId}` : `fill_${fillPair.sellFillId}`,
-        closeId: isBuyFirst ? `fill_${fillPair.sellFillId}` : `fill_${fillPair.buyFillId}`,
+        entryId,
+        closeId,
         instrument: contractSymbol,
         entryPrice: entryPrice.toString(),
         closePrice: exitPrice.toString(),
@@ -1439,8 +1449,8 @@ async function buildTradesFromFillPairs(
         id: generateDeterministicTradeId(tradeData),
         accountNumber: accountLabel,
         quantity: fillPair.qty,
-        entryId: isBuyFirst ? `fill_${fillPair.buyFillId}` : `fill_${fillPair.sellFillId}`,
-        closeId: isBuyFirst ? `fill_${fillPair.sellFillId}` : `fill_${fillPair.buyFillId}`,
+        entryId,
+        closeId,
         instrument: contractSymbol,
         entryPrice: entryPrice.toString(),
         closePrice: exitPrice.toString(),
@@ -1451,7 +1461,7 @@ async function buildTradesFromFillPairs(
         userId: userId,
         side: side,
         commission: totalCommission,
-        tags: ['tradovate'],
+        tags: [TRADOVATE_TRADE_TAG],
       })
 
       trades.push(trade)

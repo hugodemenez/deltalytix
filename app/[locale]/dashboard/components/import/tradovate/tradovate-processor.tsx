@@ -10,6 +10,11 @@ import { useTradesStore } from '@/store/trades-store'
 import { generateTradeHash } from '@/lib/utils'
 import { PlatformProcessorProps } from '../config/platforms'
 import { ProcessedTradesPreview } from '../components/processed-trades-preview'
+import {
+  TRADOVATE_TRADE_TAG,
+  tradovateRoundTripFillIds,
+  tradovateSideFromBuyFirst,
+} from '@/lib/tradovate/identity'
 
 const formatPnl = (pnl: string | undefined): { pnl: number, error?: string } => {
     if (typeof pnl !== 'string' || pnl.trim() === '') {
@@ -188,21 +193,32 @@ export default function TradovateProcessor({ headers, csvData, processedTrades, 
                 }
             }
 
-            // If entryDate is after closeDate (which is buy and sell on tradovate then it means it is short)
-            if (item.entryDate && item.closeDate && new Date(item.entryDate) > new Date(item.closeDate)) {
-                item.side = 'short'
-                // For short trades, swap the dates because Tradovate's "boughtTimestamp" 
-                // is actually the sell (entry) and "soldTimestamp" is the buy (exit)
+            // boughtTimestamp/soldTimestamp stay mapped to entry/close until we
+            // know which fill happened first. Shorts sell first.
+            const isBuyFirst = !(
+                item.entryDate &&
+                item.closeDate &&
+                new Date(item.entryDate) > new Date(item.closeDate)
+            )
+            const { entryId, closeId } = tradovateRoundTripFillIds({
+                buyFillId: item.entryId,
+                sellFillId: item.closeId,
+                isBuyFirst,
+            })
+            item.entryId = entryId
+            item.closeId = closeId
+            item.side = tradovateSideFromBuyFirst(isBuyFirst)
+            item.tags = [TRADOVATE_TRADE_TAG]
+
+            if (!isBuyFirst) {
+                // Tradovate's "boughtTimestamp" is the buy (exit) on a short.
                 const tempDate = item.entryDate;
                 item.entryDate = item.closeDate;
                 item.closeDate = tempDate;
 
-                // Swap the buy and sell prices
                 const tempPrice = item.entryPrice;
                 item.entryPrice = item.closePrice;
                 item.closePrice = tempPrice;
-            } else {
-                item.side = 'long'
             }
 
             item.id = generateTradeHash(item as Trade).toString();
