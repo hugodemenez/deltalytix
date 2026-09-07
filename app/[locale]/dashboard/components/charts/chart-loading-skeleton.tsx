@@ -352,7 +352,7 @@ interface DonutChartLoadingSkeletonProps {
   loadingLabel?: string;
 }
 
-export function UnitFieldLoadingSkeleton({
+export function ShareSplitLoadingSkeleton({
   size = "medium",
   loadingLabel,
 }: DonutChartLoadingSkeletonProps) {
@@ -361,27 +361,23 @@ export function UnitFieldLoadingSkeleton({
   return (
     <ChartLoadingContainer
       loadingLabel={loadingLabel}
-      className="flex h-full min-h-0 animate-pulse flex-col"
+      className="flex h-full min-h-0 animate-pulse flex-col justify-center gap-5"
     >
-      <div
-        className={cn(
-          "grid h-full min-h-0 w-full",
-          compact ? "gap-1" : "gap-1.5",
-        )}
-        style={{
-          gridTemplateColumns: "repeat(10, minmax(0, 1fr))",
-          gridTemplateRows: "repeat(10, minmax(0, 1fr))",
-        }}
-      >
-        {Array.from({ length: 100 }).map((_, i) => (
-          <span
-            key={`unit-skeleton-${i}`}
-            className="min-h-0 min-w-0 rounded-full bg-muted-foreground/25"
-          />
-        ))}
+      <div className="space-y-2">
+        <Skeleton className={cn(compact ? "h-8 w-16" : "h-12 w-24")} />
+        <Skeleton className={cn(compact ? "h-3 w-36" : "h-4 w-48")} />
+      </div>
+      <Skeleton className={cn("w-full rounded-full", compact ? "h-2.5" : "h-3")} />
+      <div className="flex gap-4">
+        <Skeleton className={cn(compact ? "h-3 w-20" : "h-3.5 w-24")} />
+        <Skeleton className={cn(compact ? "h-3 w-20" : "h-3.5 w-24")} />
       </div>
     </ChartLoadingContainer>
   );
+}
+
+export function UnitFieldLoadingSkeleton(props: DonutChartLoadingSkeletonProps) {
+  return <ShareSplitLoadingSkeleton {...props} />;
 }
 
 export function DonutChartLoadingSkeleton({

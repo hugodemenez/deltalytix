@@ -4,10 +4,10 @@ import * as React from "react"
 import { useData } from "@/context/data-provider"
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import { useI18n } from "@/locales/client"
-import { UnitFieldLoadingSkeleton } from "./chart-loading-skeleton"
+import { ShareSplitLoadingSkeleton } from "./chart-loading-skeleton"
 import { shareConclusion } from "./chart-conclusions"
 import { ChartWidgetFrame } from "./chart-widget-frame"
-import { UnitDotField } from "./chart-unit-field"
+import { ShareSplit } from "./chart-share-split"
 
 interface TradeDistributionProps {
   size?: WidgetSize
@@ -39,10 +39,11 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
   ], [nbWin, nbLoss, nbBe, nbTrades, t])
 
   const conclusion = shareConclusion(nbWin, nbTrades)
+  const percent = conclusion.kind === "empty" ? 0 : conclusion.percent
   const subtitle =
     conclusion.kind === "empty"
       ? t("tradeDistribution.subtitle.empty")
-      : t("tradeDistribution.subtitle.share", { percent: conclusion.percent })
+      : t("tradeDistribution.subtitle.share", { percent })
 
   return (
     <ChartWidgetFrame
@@ -52,11 +53,12 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
       description={t('tradeDistribution.description')}
     >
       {isLoading ? (
-        <UnitFieldLoadingSkeleton size={size} />
+        <ShareSplitLoadingSkeleton size={size} />
       ) : (
-        <UnitDotField
+        <ShareSplit
           groups={groups}
-          mode="percent"
+          headline={conclusion.kind === "empty" ? "—" : `${percent}%`}
+          caption={t("tradeDistribution.caption.winners")}
           label={subtitle}
           size={size}
         />

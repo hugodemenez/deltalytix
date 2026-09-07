@@ -14,6 +14,7 @@ import {
   pickUnitFieldGrid,
   shouldPackUnitField,
 } from "./chart-unit-field"
+import { sharePercents } from "./chart-share-split"
 import { canDrawUnitHistogram } from "./chart-unit-histogram"
 import {
   countPeakConclusion,
@@ -112,6 +113,16 @@ describe("pickUnitFieldGrid", () => {
     const grid = pickUnitFieldGrid(320, 160, 100)
     expect(grid.columns).toBeGreaterThan(grid.rows)
     expect(grid.columns * grid.rows).toBeGreaterThanOrEqual(100)
+  })
+})
+
+describe("sharePercents", () => {
+  it("splits a whole into rounded percents", () => {
+    const parts = sharePercents([
+      { key: "win", label: "Win", color: "green", count: 2 },
+      { key: "loss", label: "Loss", color: "red", count: 1 },
+    ])
+    expect(parts.map((part) => part.percent)).toEqual([67, 33])
   })
 })
 

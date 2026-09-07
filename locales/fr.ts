@@ -1121,7 +1121,8 @@ export default {
   "commissions.tooltip.description":
     "Distribution des profits/pertes nets par rapport aux commissions payées",
   "commissions.subtitle.empty": "Aucune répartition de commissions sur cette période",
-  "commissions.subtitle.share": "Les commissions prennent {percent}% de la répartition absolue · un point = un pour cent",
+  "commissions.subtitle.share": "Les commissions prennent {percent}% de la répartition",
+  "commissions.caption.share": "de la répartition absolue",
   "commissions.tooltip.type": "Type",
   "commissions.tooltip.amount": "Montant",
   "commissions.tooltip.percentage": "Pourcentage",
@@ -1227,8 +1228,11 @@ export default {
     description: "Répartition des trades gagnants, perdants et à l'équilibre",
     subtitle: {
       empty: "Aucun trade clôturé sur cette période",
-      share: "{percent}% des trades sont gagnants · un point = un pour cent",
-      sharePacked: "{percent}% des trades sont gagnants · un point = un pour cent",
+      share: "{percent}% des trades sont gagnants",
+      sharePacked: "{percent}% des trades sont gagnants",
+    },
+    caption: {
+      winners: "des trades sont gagnants",
     },
     win: "Trades gagnants",
     loss: "Trades perdants",

@@ -4,10 +4,10 @@ import * as React from "react";
 import { useData } from "@/context/data-provider";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
-import { UnitFieldLoadingSkeleton } from "./chart-loading-skeleton";
+import { ShareSplitLoadingSkeleton } from "./chart-loading-skeleton";
 import { shareConclusion } from "./chart-conclusions";
 import { ChartWidgetFrame } from "./chart-widget-frame";
-import { UnitDotField } from "./chart-unit-field";
+import { ShareSplit } from "./chart-share-split";
 
 interface CommissionsPnLChartProps {
   size?: WidgetSize;
@@ -48,10 +48,11 @@ export default function CommissionsPnLChart({
     };
   }, [trades, t]);
 
+  const percent = conclusion.kind === "empty" ? 0 : conclusion.percent;
   const subtitle =
     conclusion.kind === "empty"
       ? t("commissions.subtitle.empty")
-      : t("commissions.subtitle.share", { percent: conclusion.percent });
+      : t("commissions.subtitle.share", { percent });
 
   return (
     <ChartWidgetFrame
@@ -61,11 +62,12 @@ export default function CommissionsPnLChart({
       description={t("commissions.tooltip.description")}
     >
       {isLoading ? (
-        <UnitFieldLoadingSkeleton size={size} />
+        <ShareSplitLoadingSkeleton size={size} />
       ) : (
-        <UnitDotField
+        <ShareSplit
           groups={groups}
-          mode="percent"
+          headline={conclusion.kind === "empty" ? "—" : `${percent}%`}
+          caption={t("commissions.caption.share")}
           label={subtitle}
           size={size}
         />

@@ -1140,7 +1140,8 @@ export default {
   "commissions.tooltip.description":
     "Distribution of net profit/loss versus commissions paid",
   "commissions.subtitle.empty": "No commission split in this range",
-  "commissions.subtitle.share": "Commissions take {percent}% of the absolute split · one dot = one percent",
+  "commissions.subtitle.share": "Commissions take {percent}% of the split",
+  "commissions.caption.share": "of the absolute split",
   "commissions.tooltip.type": "Type",
   "commissions.tooltip.amount": "Amount",
   "commissions.tooltip.percentage": "Percentage",
@@ -1680,8 +1681,11 @@ export default {
     description: "Distribution of winning, losing, and breakeven trades",
     subtitle: {
       empty: "No closed trades in this range",
-      share: "{percent}% of trades are winners · one dot = one percent",
-      sharePacked: "{percent}% of trades are winners · one dot = one percent",
+      share: "{percent}% of trades are winners",
+      sharePacked: "{percent}% of trades are winners",
+    },
+    caption: {
+      winners: "of trades are winners",
     },
     win: "Winning trades",
     loss: "Losing trades",
