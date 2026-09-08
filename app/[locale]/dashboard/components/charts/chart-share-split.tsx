@@ -103,11 +103,11 @@ export function ShareSplit({
           <div
             key={part.key}
             className={cn(
-              "flex min-h-0 min-w-0 flex-col justify-center rounded-lg bg-muted/40",
+              "flex min-h-0 min-w-0 flex-col rounded-lg bg-muted/40",
               compact ? "gap-1 px-2.5 py-1.5" : "gap-1.5 px-3 py-2",
             )}
           >
-            <div className="flex items-baseline justify-between gap-3">
+            <div className="flex shrink-0 items-baseline justify-between gap-3">
               <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
                 <span
                   className="size-2 shrink-0 rounded-full"
@@ -122,28 +122,30 @@ export function ShareSplit({
                   {part.label}
                 </span>
               </span>
-              <span
-                className={cn(
-                  "shrink-0 font-semibold tabular-nums text-foreground",
-                  compact ? "text-sm" : "text-base",
-                )}
-              >
-                {part.percent}%
+              <span className="flex shrink-0 items-baseline gap-2">
+                {part.detail ? (
+                  <span
+                    className={cn(
+                      "tabular-nums text-muted-foreground",
+                      compact ? "text-[10px]" : "text-xs",
+                    )}
+                  >
+                    {part.detail}
+                  </span>
+                ) : null}
+                <span
+                  className={cn(
+                    "font-semibold tabular-nums text-foreground",
+                    compact ? "text-sm" : "text-base",
+                  )}
+                >
+                  {part.percent}%
+                </span>
               </span>
             </div>
-            {part.detail ? (
-              <p
-                className={cn(
-                  "truncate tabular-nums text-muted-foreground",
-                  compact ? "text-[10px]" : "text-xs",
-                )}
-              >
-                {part.detail}
-              </p>
-            ) : null}
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div className="min-h-2 w-full flex-1 overflow-hidden rounded-md bg-muted">
               <span
-                className="block h-full rounded-full"
+                className="block h-full rounded-md"
                 style={{
                   width: `${part.percent}%`,
                   backgroundColor: part.color,
