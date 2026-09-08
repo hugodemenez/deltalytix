@@ -75,10 +75,16 @@ export function ChartWidgetFrame({
         </div>
       </CardHeader>
       <CardContent
-        className={cn("min-h-0 flex-1", compact ? "p-1" : "p-2 sm:p-4")}
+        className={cn(
+          "flex min-h-0 flex-1 flex-col",
+          compact ? "p-1" : "p-2 sm:p-4",
+        )}
       >
         <div
-          className={cn("h-full w-full", contentInteractive && "cursor-pointer")}
+          className={cn(
+            "min-h-0 w-full flex-1",
+            contentInteractive && "cursor-pointer",
+          )}
           onClick={onContentClick}
         >
           {children}
