@@ -5,7 +5,7 @@ import { PrismaClient, Trade, Payout } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { computeMetricsForAccounts } from '@/lib/account-metrics'
 import { Account } from '@/context/data-provider'
-import { updateTag } from 'next/cache'
+import { revalidateTag, updateTag } from 'next/cache'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -188,6 +188,18 @@ export async function deleteTradesByIdsAction(tradeIds: string[]): Promise<void>
       userId: userId
     }
   })
+  // Expire cached trade reads so a later force:false refresh (e.g. Tradovate
+  // sync) does not rehydrate deleted rows from unstable_cache.
+  // Prefer updateTag in a Server Action; it expires AND immediately refreshes
+  // the cache. updateTag throws from some Route Handler contexts, so fall back
+  // to revalidateTag — same pattern as saveTradesAction.
+  try {
+    updateTag(`trades-${userId}`)
+    updateTag(`user-data-${userId}`)
+  } catch {
+    revalidateTag(`trades-${userId}`, { expire: 0 })
+    revalidateTag(`user-data-${userId}`, { expire: 0 })
+  }
 }
 
 export async function setupAccountAction(account: Account): Promise<Account> {
