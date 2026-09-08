@@ -12,6 +12,7 @@ export interface UnitFieldGroup {
   label: string
   color: string
   count: number
+  detail?: string
 }
 
 export interface UnitDot {

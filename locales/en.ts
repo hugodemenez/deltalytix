@@ -1687,6 +1687,9 @@ export default {
     caption: {
       winners: "of trades are winners",
     },
+    detail: {
+      count: "{count} of {total}",
+    },
     win: "Winning trades",
     loss: "Losing trades",
     breakeven: "Breakeven trades",

@@ -1234,6 +1234,9 @@ export default {
     caption: {
       winners: "des trades sont gagnants",
     },
+    detail: {
+      count: "{count} sur {total}",
+    },
     win: "Trades gagnants",
     loss: "Trades perdants",
     breakeven: "Trades à l'équilibre",

@@ -50,15 +50,16 @@ export function ShareSplit({
   size?: WidgetSize
 }) {
   const compact = size === "small" || size === "tiny"
-  const parts = sharePercents(groups).filter((part) => part.percent > 0)
+  const parts = sharePercents(groups)
+  const trackParts = parts.filter((part) => part.percent > 0)
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col justify-center gap-5">
-      <div className="min-w-0">
+    <div className="flex h-full min-h-0 w-full flex-col gap-3">
+      <div className="shrink-0">
         <p
           className={cn(
             "font-semibold tracking-[-0.04em] tabular-nums text-foreground",
-            compact ? "text-3xl" : "text-5xl",
+            compact ? "text-3xl" : "text-4xl",
           )}
         >
           {headline}
@@ -71,44 +72,81 @@ export function ShareSplit({
         >
           {caption}
         </p>
-      </div>
-      <div
-        role="img"
-        aria-label={label}
-        className={cn(
-          "flex w-full overflow-hidden rounded-full bg-muted",
-          compact ? "h-2.5" : "h-3",
-        )}
-      >
-        {parts.map((part) => (
-          <span
-            key={part.key}
-            title={`${part.label} · ${part.percent}%`}
-            className="min-w-0"
-            style={{
-              flexGrow: part.percent,
-              backgroundColor: part.color,
-            }}
-          />
-        ))}
-      </div>
-      <ul
-        className={cn(
-          "flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground",
-          compact ? "text-[10px]" : "text-[11px]",
-        )}
-      >
-        {groups
-          .filter((group) => group.count > 0)
-          .map((group) => (
-            <li key={group.key} className="flex items-center gap-1.5">
-              <span
-                className="size-2 shrink-0 rounded-full"
-                style={{ backgroundColor: group.color }}
-              />
-              <span className="leading-none">{group.label}</span>
-            </li>
+        <div
+          role="img"
+          aria-label={label}
+          className={cn(
+            "mt-3 flex w-full overflow-hidden rounded-full bg-muted",
+            compact ? "h-2" : "h-2.5",
+          )}
+        >
+          {trackParts.map((part) => (
+            <span
+              key={part.key}
+              title={`${part.label} · ${part.percent}%`}
+              className="min-w-0"
+              style={{
+                flexGrow: part.percent,
+                backgroundColor: part.color,
+              }}
+            />
           ))}
+        </div>
+      </div>
+      <ul className="flex min-h-0 flex-1 flex-col gap-2">
+        {parts.map((part) => (
+          <li
+            key={part.key}
+            className={cn(
+              "flex min-h-0 min-w-0 flex-1 flex-col justify-center rounded-lg bg-muted/40",
+              compact ? "gap-1 px-2.5 py-1.5" : "gap-1.5 px-3 py-2",
+            )}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+                <span
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: part.color }}
+                />
+                <span
+                  className={cn(
+                    "truncate",
+                    compact ? "text-[11px]" : "text-sm",
+                  )}
+                >
+                  {part.label}
+                </span>
+              </span>
+              <span
+                className={cn(
+                  "shrink-0 font-semibold tabular-nums text-foreground",
+                  compact ? "text-sm" : "text-base",
+                )}
+              >
+                {part.percent}%
+              </span>
+            </div>
+            {part.detail ? (
+              <p
+                className={cn(
+                  "truncate tabular-nums text-muted-foreground",
+                  compact ? "text-[10px]" : "text-xs",
+                )}
+              >
+                {part.detail}
+              </p>
+            ) : null}
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <span
+                className="block h-full rounded-full"
+                style={{
+                  width: `${part.percent}%`,
+                  backgroundColor: part.color,
+                }}
+              />
+            </div>
+          </li>
+        ))}
       </ul>
     </div>
   )

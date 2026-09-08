@@ -16,6 +16,9 @@ interface CommissionsPnLChartProps {
 const PNL_COLOR = "hsl(var(--chart-win))";
 const COMMISSIONS_COLOR = "hsl(var(--chart-loss))";
 
+const formatCurrency = (value: number) =>
+  value.toLocaleString("en-US", { style: "currency", currency: "USD" });
+
 export default function CommissionsPnLChart({
   size = "medium",
 }: CommissionsPnLChartProps) {
@@ -34,12 +37,14 @@ export default function CommissionsPnLChart({
         {
           key: "pnl",
           label: t("commissions.legend.netPnl"),
+          detail: formatCurrency(totalPnL),
           color: PNL_COLOR,
           count: Math.abs(totalPnL),
         },
         {
           key: "commissions",
           label: t("commissions.legend.commissions"),
+          detail: formatCurrency(totalCommissions),
           color: COMMISSIONS_COLOR,
           count: Math.abs(totalCommissions),
         },

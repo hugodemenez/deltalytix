@@ -20,19 +20,22 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
   const groups = React.useMemo(() => [
     {
       key: "win",
-      label: t('tradeDistribution.winWithCount', { count: nbWin, total: nbTrades }),
+      label: t('tradeDistribution.win'),
+      detail: t('tradeDistribution.detail.count', { count: nbWin, total: nbTrades }),
       color: 'hsl(var(--chart-win))',
       count: nbWin,
     },
     {
       key: "breakeven",
-      label: t('tradeDistribution.breakevenWithCount', { count: nbBe, total: nbTrades }),
+      label: t('tradeDistribution.breakeven'),
+      detail: t('tradeDistribution.detail.count', { count: nbBe, total: nbTrades }),
       color: 'hsl(var(--muted-foreground))',
       count: nbBe,
     },
     {
       key: "loss",
-      label: t('tradeDistribution.lossWithCount', { count: nbLoss, total: nbTrades }),
+      label: t('tradeDistribution.loss'),
+      detail: t('tradeDistribution.detail.count', { count: nbLoss, total: nbTrades }),
       color: 'hsl(var(--chart-loss))',
       count: nbLoss,
     },

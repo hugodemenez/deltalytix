@@ -361,16 +361,17 @@ export function ShareSplitLoadingSkeleton({
   return (
     <ChartLoadingContainer
       loadingLabel={loadingLabel}
-      className="flex h-full min-h-0 animate-pulse flex-col justify-center gap-5"
+      className="flex h-full min-h-0 animate-pulse flex-col gap-3"
     >
-      <div className="space-y-2">
-        <Skeleton className={cn(compact ? "h-8 w-16" : "h-12 w-24")} />
-        <Skeleton className={cn(compact ? "h-3 w-36" : "h-4 w-48")} />
+      <div className="shrink-0 space-y-2">
+        <Skeleton className={cn(compact ? "h-8 w-16" : "h-10 w-20")} />
+        <Skeleton className={cn(compact ? "h-3 w-36" : "h-4 w-44")} />
+        <Skeleton className={cn("w-full rounded-full", compact ? "h-2" : "h-2.5")} />
       </div>
-      <Skeleton className={cn("w-full rounded-full", compact ? "h-2.5" : "h-3")} />
-      <div className="flex gap-4">
-        <Skeleton className={cn(compact ? "h-3 w-20" : "h-3.5 w-24")} />
-        <Skeleton className={cn(compact ? "h-3 w-20" : "h-3.5 w-24")} />
+      <div className="flex min-h-0 flex-1 flex-col gap-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={`share-row-${i}`} className="min-h-0 flex-1 rounded-lg" />
+        ))}
       </div>
     </ChartLoadingContainer>
   );
