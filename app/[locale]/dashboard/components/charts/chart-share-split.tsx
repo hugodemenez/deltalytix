@@ -54,8 +54,8 @@ export function ShareSplit({
   const trackParts = parts.filter((part) => part.percent > 0)
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col gap-3">
-      <div className="shrink-0">
+    <div className="grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)] gap-3">
+      <div className="min-w-0">
         <p
           className={cn(
             "font-semibold tracking-[-0.04em] tabular-nums text-foreground",
@@ -93,12 +93,17 @@ export function ShareSplit({
           ))}
         </div>
       </div>
-      <ul className="flex min-h-0 flex-1 flex-col gap-2">
+      <div
+        className="grid min-h-0 gap-2"
+        style={{
+          gridTemplateRows: `repeat(${Math.max(parts.length, 1)}, minmax(0, 1fr))`,
+        }}
+      >
         {parts.map((part) => (
-          <li
+          <div
             key={part.key}
             className={cn(
-              "flex min-h-0 min-w-0 flex-1 flex-col justify-center rounded-lg bg-muted/40",
+              "flex min-h-0 min-w-0 flex-col justify-center rounded-lg bg-muted/40",
               compact ? "gap-1 px-2.5 py-1.5" : "gap-1.5 px-3 py-2",
             )}
           >
@@ -145,9 +150,9 @@ export function ShareSplit({
                 }}
               />
             </div>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   )
 }
