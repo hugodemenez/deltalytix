@@ -4,12 +4,12 @@ import { useRef } from 'react'
 import { useCurrentLocale, useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   TRADOVATE_FEE_EXAMPLE,
   getTotalFeeFromFillFee,
@@ -83,67 +83,65 @@ export function TradovateFeeExamplePicker({
   onDismiss: () => void | Promise<void>
 }) {
   const t = useI18n()
-  // A pick closes the dialog; do not treat that close as a skip (which would
-  // persist commission-only and overwrite the choice).
-  const settledRef = useRef(false)
-
-  const settle = (action: () => void | Promise<void>) => {
-    if (settledRef.current) return
-    settledRef.current = true
-    void action()
-  }
+  const choseRef = useRef(false)
 
   return (
-    <Dialog
+    <AlertDialog
       open={open}
       onOpenChange={(next) => {
         if (next) {
-          settledRef.current = false
+          choseRef.current = false
           onOpenChange(true)
           return
         }
-        if (!settledRef.current) {
-          settle(onDismiss)
-        }
         onOpenChange(false)
+        if (!choseRef.current) void onDismiss()
       }}
     >
-      <DialogContent
+      <AlertDialogContent
         className="rounded-sm border-black/10 dark:border-white/10"
         data-testid="tradovate-fee-example-picker"
       >
-        <DialogHeader>
-          <DialogTitle className="font-normal tracking-tight">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="font-normal tracking-tight">
             {t('tradovateSync.multiAccount.feeExample.title')}
-          </DialogTitle>
-          <DialogDescription className="text-black/55 dark:text-white/55">
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-black/55 dark:text-white/55">
             {t('tradovateSync.multiAccount.feeExample.description', {
               instrument: TRADOVATE_FEE_EXAMPLE.instrument,
               quantity: TRADOVATE_FEE_EXAMPLE.quantity,
             })}
-          </DialogDescription>
-        </DialogHeader>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
         <div className="space-y-3">
           <p className="text-xs text-black/45 dark:text-white/45">
             {t('tradovateSync.multiAccount.feeExample.exampleNote')}
           </p>
           <ExampleChoiceCard
             choice="commission-only"
-            onSelect={(choice) => settle(() => onChoose(choice))}
+            onSelect={(choice) => {
+              choseRef.current = true
+              onOpenChange(false)
+              void onChoose(choice)
+            }}
           />
           <ExampleChoiceCard
             choice="all-fees"
-            onSelect={(choice) => settle(() => onChoose(choice))}
+            onSelect={(choice) => {
+              choseRef.current = true
+              onOpenChange(false)
+              void onChoose(choice)
+            }}
           />
           <button
             type="button"
             className={cn(skipButtonClassName, 'w-full')}
-            onClick={() => settle(onDismiss)}
+            onClick={() => onOpenChange(false)}
           >
             {t('tradovateSync.multiAccount.feeExample.skip')}
           </button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

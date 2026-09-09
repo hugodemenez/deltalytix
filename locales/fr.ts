@@ -2476,6 +2476,7 @@ export default {
         allFeesTitle: "Tous les frais",
         allFeesHint: "Commission, exchange, clearing, NFA, et le reste",
         skip: "Passer — commission seule",
+        setFees: "Choisir les frais",
       },
       presets: {
         morning: "Matin (8:00)",
