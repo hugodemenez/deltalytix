@@ -201,30 +201,11 @@ interface Fill {
   commission: number
 }
 
-import { DEFAULT_INCLUDED_FEE_TYPES, type TradovateIncludedFeeTypes } from './fee-types'
-
-/** Sum fees based on which types are included */
-function getTotalFeeFromFillFee(fee: TradovateFillFee, includedFeeTypes: TradovateIncludedFeeTypes | boolean): number {
-  if (includedFeeTypes === true) {
-    return (
-      Number(fee.commission ?? 0) +
-      Number(fee.exchangeFee ?? 0) +
-      Number(fee.clearingFee ?? 0) +
-      Number(fee.nfaFee ?? 0) +
-      Number(fee.brokerageFee ?? 0) +
-      Number(fee.orderRoutingFee ?? 0)
-    )
-  }
-  const types = typeof includedFeeTypes === 'object' ? includedFeeTypes : { commission: true }
-  let total = 0
-  if (types.commission) total += Number(fee.commission ?? 0)
-  if (types.exchangeFee) total += Number(fee.exchangeFee ?? 0)
-  if (types.clearingFee) total += Number(fee.clearingFee ?? 0)
-  if (types.nfaFee) total += Number(fee.nfaFee ?? 0)
-  if (types.brokerageFee) total += Number(fee.brokerageFee ?? 0)
-  if (types.orderRoutingFee) total += Number(fee.orderRoutingFee ?? 0)
-  return total
-}
+import {
+  DEFAULT_INCLUDED_FEE_TYPES,
+  getTotalFeeFromFillFee,
+  type TradovateIncludedFeeTypes,
+} from './fee-types'
 
 
 interface TradovateTradesResult {
@@ -1630,6 +1611,7 @@ export async function updateTradovateIncludedFeeTypes(
       },
       data: { includedFeeTypes }
     })
+    await invalidateConnectionsPageCache(user.id)
 
     return { success: true }
   } catch (error) {

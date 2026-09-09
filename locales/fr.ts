@@ -2466,6 +2466,17 @@ export default {
         brokerageFee: "Courtage",
         orderRoutingFee: "Routage d'ordres",
       },
+      feeExample: {
+        title: "Quels frais correspondent à votre plateforme ?",
+        description:
+          "Exemple : {quantity} {instrument}, aller-retour. Choisissez le total que vous attendez.",
+        exampleNote: "Exemple illustratif — pas un cours en direct.",
+        commissionOnlyTitle: "Commission seule",
+        commissionOnlyHint: "Ligne de commission uniquement",
+        allFeesTitle: "Tous les frais",
+        allFeesHint: "Commission, exchange, clearing, NFA, et le reste",
+        skip: "Passer — commission seule",
+      },
       presets: {
         morning: "Matin (8:00)",
         midday: "Midi (12:00)",

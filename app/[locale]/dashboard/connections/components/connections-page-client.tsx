@@ -9,7 +9,7 @@ import {
   useState,
 } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, Loader2, Trash2 } from 'lucide-react'
+import { ChevronDown, Loader2, Settings, Trash2 } from 'lucide-react'
 import { useCurrentLocale, useI18n } from '@/locales/client'
 import { cn } from '@/lib/utils'
 import {
@@ -52,6 +52,15 @@ import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ServiceMonochromeLogo } from '@/components/monochrome-logo'
 import { useConnectionsRefresh } from './connections-refresh'
+import { TradovateFeeConfigDialog } from './tradovate-fee-config-dialog'
+import { TradovateFeeExamplePicker } from './tradovate-fee-example-picker'
+import {
+  DEFAULT_INCLUDED_FEE_TYPES,
+  includedFeeTypesForExampleChoice,
+  shouldPromptTradovateFeeExample,
+  shouldShowTradovateFeeSettings,
+  type TradovateFeeExampleChoice,
+} from '@/app/[locale]/dashboard/components/import/tradovate/sync/fee-types'
 
 // One shape for every status, so a row does not reflow when a connection breaks.
 const statusActionClassName =
@@ -346,7 +355,19 @@ function ConnectionRow({
   const [nowMs, setNowMs] = useState<number | null>(null)
   const { openConnect } = useConnectionsRefresh()
   const tradovateStore = useTradovateSyncStore()
-  const { performSyncForAccount: syncTradovate } = useTradovateSyncContext()
+  const {
+    performSyncForAccount: syncTradovate,
+    getIncludedFeeTypesForAccount,
+    updateIncludedFeeTypesForAccount,
+  } = useTradovateSyncContext()
+  const [feeConfigOpen, setFeeConfigOpen] = useState(false)
+  const [feeExampleOpen, setFeeExampleOpen] = useState(false)
+  const [savingFees, setSavingFees] = useState(false)
+  const showFeeSettings = shouldShowTradovateFeeSettings(connection.service)
+  const needsFeeExample = shouldPromptTradovateFeeExample(
+    connection.service,
+    connection.includedFeeTypes
+  )
   const { performSyncForAccount: syncDxFeed } = useDxFeedSyncContext()
   const { performSyncForAccount: syncIbkr } = useIbkrSyncContext()
   const {
@@ -408,6 +429,24 @@ function ConnectionRow({
     return () => window.clearInterval(id)
   }, [canSchedule, scheduleMode])
 
+  const persistTradovateFees = useCallback(
+    async (includedFeeTypes: Record<string, boolean>) => {
+      const result = await updateIncludedFeeTypesForAccount(
+        connection.accountId,
+        includedFeeTypes
+      )
+      if (!result.success) {
+        toast.error(
+          result.error || t('tradovateSync.multiAccount.feeConfigUpdateError')
+        )
+        return false
+      }
+      onChanged()
+      return true
+    },
+    [connection.accountId, onChanged, t, updateIncludedFeeTypesForAccount]
+  )
+
   const handleSync = useCallback(async () => {
     const usesLocalSyncState =
       connection.service !== 'rithmic-protocol' && connection.service !== 'ig'
@@ -457,6 +496,51 @@ function ConnectionRow({
     syncTradovate,
     t,
   ])
+
+  const requestSync = useCallback(() => {
+    if (needsFeeExample) {
+      setFeeExampleOpen(true)
+      return
+    }
+    void handleSync()
+  }, [handleSync, needsFeeExample])
+
+  const handleFeeExampleChoose = useCallback(
+    async (choice: TradovateFeeExampleChoice) => {
+      const persisted = await persistTradovateFees(
+        includedFeeTypesForExampleChoice(choice)
+      )
+      setFeeExampleOpen(false)
+      if (persisted) {
+        toast.success(t('tradovateSync.multiAccount.feeConfigUpdated'))
+        await handleSync()
+      }
+    },
+    [handleSync, persistTradovateFees, t]
+  )
+
+  const handleFeeExampleDismiss = useCallback(async () => {
+    setFeeExampleOpen(false)
+    // Fallback: keep commission-only and do not ask again.
+    await persistTradovateFees({ ...DEFAULT_INCLUDED_FEE_TYPES })
+    await handleSync()
+  }, [handleSync, persistTradovateFees])
+
+  const handleFeeConfigSave = useCallback(
+    async (includedFeeTypes: Record<string, boolean>) => {
+      setSavingFees(true)
+      try {
+        const persisted = await persistTradovateFees(includedFeeTypes)
+        if (persisted) {
+          toast.success(t('tradovateSync.multiAccount.feeConfigUpdated'))
+          setFeeConfigOpen(false)
+        }
+      } finally {
+        setSavingFees(false)
+      }
+    },
+    [persistTradovateFees, t]
+  )
 
   const handleReconnect = useCallback(async () => {
     // Tradovate can re-auth in place via OAuth without opening the add sheet.
@@ -548,9 +632,20 @@ function ConnectionRow({
               canSync={canSyncRow}
               syncing={rowSyncing}
               reconnecting={reconnecting}
-              onSync={() => void handleSync()}
+              onSync={() => requestSync()}
               onReconnect={() => void handleReconnect()}
             />
+            {showFeeSettings && (
+              <button
+                type="button"
+                data-testid="tradovate-fee-settings"
+                className={iconButtonClassName}
+                aria-label={t('tradovateSync.multiAccount.configureFees')}
+                onClick={() => setFeeConfigOpen(true)}
+              >
+                <Settings className="h-4 w-4" strokeWidth={1.75} />
+              </button>
+            )}
             <button
               type="button"
               className={iconButtonClassName}
@@ -686,6 +781,25 @@ function ConnectionRow({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showFeeSettings && (
+        <>
+          <TradovateFeeConfigDialog
+            open={feeConfigOpen}
+            accountLabel={connection.displayName}
+            initialFeeTypes={getIncludedFeeTypesForAccount(connection.accountId)}
+            saving={savingFees}
+            onOpenChange={setFeeConfigOpen}
+            onSave={handleFeeConfigSave}
+          />
+          <TradovateFeeExamplePicker
+            open={feeExampleOpen}
+            onOpenChange={setFeeExampleOpen}
+            onChoose={handleFeeExampleChoose}
+            onDismiss={handleFeeExampleDismiss}
+          />
+        </>
+      )}
 
     </div>
   )
@@ -932,7 +1046,9 @@ export function ConnectionsPageClient({
   const {
     loadAccounts: loadTradovate,
     performSyncForAccount: syncTradovate,
+    updateIncludedFeeTypesForAccount: updateTradovateFees,
   } = useTradovateSyncContext()
+  const [syncAllFeeExampleOpen, setSyncAllFeeExampleOpen] = useState(false)
   const {
     loadAccounts: loadDxFeed,
     performSyncForAccount: syncDxFeed,
@@ -1184,7 +1300,37 @@ export function ConnectionsPageClient({
     [data]
   )
 
-  const handleSyncAll = useCallback(async () => {
+  const unsetTradovateConnections = useMemo(
+    () =>
+      (data?.connections ?? []).filter((connection) =>
+        shouldPromptTradovateFeeExample(
+          connection.service,
+          connection.includedFeeTypes
+        )
+      ),
+    [data]
+  )
+
+  const persistFeesForUnsetTradovate = useCallback(
+    async (includedFeeTypes: Record<string, boolean>) => {
+      let failed = 0
+      for (const connection of unsetTradovateConnections) {
+        const result = await updateTradovateFees(
+          connection.accountId,
+          includedFeeTypes
+        )
+        if (!result.success) failed += 1
+      }
+      if (failed > 0) {
+        toast.error(t('tradovateSync.multiAccount.feeConfigUpdateError'))
+        return false
+      }
+      return true
+    },
+    [t, unsetTradovateConnections, updateTradovateFees]
+  )
+
+  const runSyncAll = useCallback(async () => {
     if (syncableConnections.length === 0) return
 
     setSyncingAll(true)
@@ -1236,6 +1382,36 @@ export function ConnectionsPageClient({
     t,
   ])
 
+  const handleSyncAll = useCallback(async () => {
+    if (syncableConnections.length === 0) return
+    if (unsetTradovateConnections.length > 0) {
+      setSyncAllFeeExampleOpen(true)
+      return
+    }
+    await runSyncAll()
+  }, [runSyncAll, syncableConnections.length, unsetTradovateConnections.length])
+
+  const handleSyncAllFeeExampleChoose = useCallback(
+    async (choice: TradovateFeeExampleChoice) => {
+      const persisted = await persistFeesForUnsetTradovate(
+        includedFeeTypesForExampleChoice(choice)
+      )
+      setSyncAllFeeExampleOpen(false)
+      if (!persisted) return
+      toast.success(t('tradovateSync.multiAccount.feeConfigUpdated'))
+      await load({ quiet: true })
+      await runSyncAll()
+    },
+    [load, persistFeesForUnsetTradovate, runSyncAll, t]
+  )
+
+  const handleSyncAllFeeExampleDismiss = useCallback(async () => {
+    setSyncAllFeeExampleOpen(false)
+    await persistFeesForUnsetTradovate({ ...DEFAULT_INCLUDED_FEE_TYPES })
+    await load({ quiet: true })
+    await runSyncAll()
+  }, [load, persistFeesForUnsetTradovate, runSyncAll])
+
   // Publish the action so the page chrome can render "Sync all" alongside the
   // other header actions (this list streams in behind its own Suspense boundary).
   useEffect(() => {
@@ -1267,6 +1443,13 @@ export function ConnectionsPageClient({
           {t('connections.noConnectionsYet')}
         </p>
       )}
+
+      <TradovateFeeExamplePicker
+        open={syncAllFeeExampleOpen}
+        onOpenChange={setSyncAllFeeExampleOpen}
+        onChoose={handleSyncAllFeeExampleChoose}
+        onDismiss={handleSyncAllFeeExampleDismiss}
+      />
 
       {(data?.standaloneAccounts.length ?? 0) > 0 && (
         <section className="space-y-2">
