@@ -1,0 +1,15 @@
+---
+title: 'Tradovate sync and CSV no longer duplicate the same fill'
+description: 'A fill imported from live sync and again from a weekly movements CSV now lands as one trade.'
+date: '2026-09-08'
+status: completed
+completedDate: '2026-09-08'
+---
+
+# Tradovate sync and CSV no longer duplicate the same fill
+
+Tradovate live sync still covers only the [current trading day](/en/updates/tradovate-sync-current-day-import-guidance). Many traders then import a weekly movements CSV for the rest of the week. Those two sources used to store the same fill as two rows — different IDs, same Monday position.
+
+Sync and CSV now treat the same account, side, and fill pair as one trade. A later CSV of a day you already synced no longer doubles the position on the calendar or in the trade table.
+
+Rows that were already saved twice are not removed automatically. Delete the extra copy in the table if it is already there. Sync from [Connections](/en/dashboard/connections), then import the movements file from [Connections](/en/dashboard/connections) when you backfill older days.

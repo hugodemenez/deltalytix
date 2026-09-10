@@ -1,0 +1,15 @@
+---
+title: 'Deleted trades stay deleted after a later sync'
+description: 'Removing rows from the trade table no longer lets a later sync or refresh bring those trades back.'
+date: '2026-09-08'
+status: completed
+completedDate: '2026-09-08'
+---
+
+# Deleted trades stay deleted after a later sync
+
+When you delete trades in the table, a later sync or account refresh could put the same rows back on screen — the list was still serving a cached copy. Delete now expires that cache, so the next read hits the database.
+
+This is not limited to Tradovate. Any later sync or refresh that reused the cached list could revive deleted rows. Trades you did not delete are unchanged. There is no new confirm dialog.
+
+On [the dashboard](/en/dashboard), delete a duplicate, then sync or refresh another account: the deleted rows stay gone.
