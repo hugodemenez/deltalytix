@@ -36,11 +36,14 @@ export function ChartWidgetMasthead({
       <div className="flex min-w-0 flex-1 items-start gap-2">
         <ChartWidgetKindMark kind={kind} compact={compact} />
         <div className="min-w-0 flex-1">
-          {compact ? null : (
-            <p className="mb-0.5 truncate text-[11px] font-medium leading-none text-muted-foreground">
-              {eyebrow}
-            </p>
-          )}
+          <p
+            className={cn(
+              "mb-0.5 truncate font-medium leading-none text-muted-foreground",
+              compact ? "text-[10px]" : "text-[11px]",
+            )}
+          >
+            {eyebrow}
+          </p>
           <div className="flex items-center gap-1.5">
             <CardTitle
               className={cn(
