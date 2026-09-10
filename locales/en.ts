@@ -2334,6 +2334,18 @@ export default {
         brokerageFee: "Brokerage",
         orderRoutingFee: "Order routing",
       },
+      feeExample: {
+        title: "Which fees match your platform?",
+        description:
+          "Example: {quantity} {instrument}, round-turn. Pick the total you expect.",
+        exampleNote: "Illustrative example — not a live quote.",
+        commissionOnlyTitle: "Commission only",
+        commissionOnlyHint: "Broker commission line only",
+        allFeesTitle: "All fees",
+        allFeesHint: "Commission, exchange, clearing, NFA, and the rest",
+        skip: "Skip — use commission only",
+        setFees: "Choose fees",
+      },
       presets: {
         morning: "Morning (8:00 AM)",
         midday: "Midday (12:00 PM)",
