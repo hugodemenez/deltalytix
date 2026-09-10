@@ -85,7 +85,9 @@ See [`agents/skills/README.md`](./agents/skills/README.md) for the catalog and h
 
 ## Changelog entries
 
-For beta → main promotion PRs, use three sequential specialist roles. When subagents are available, assign each stage to a separate agent.
+For a beta → main release, open the promotion PR **from `beta` directly** (head `beta`, base `main`). Do not cut a `cursor/release-*` or other feature branch for the merge. Changelog outline, EN/FR copy, and media commits land on `beta` and update that same PR.
+
+Then use three sequential specialist roles. When subagents are available, assign each stage to a separate agent.
 
 Changelog publication is append-only: add new EN/FR entries and media, but never revise an entry already present on the base branch. Use descriptive localized Markdown links for product routes instead of bare paths.
 
@@ -151,7 +153,9 @@ Public agent-facing surfaces and the constraints that keep them working:
 
 ## Before opening a PR
 
-Open PRs against **`beta`** (not `main`). `main` is production; feature work lands on `beta` first.
+Open feature PRs against **`beta`** (not `main`). `main` is production; day-to-day work lands on `beta` first.
+
+For a production promotion, open the PR **from `beta` to `main`** — head is `beta`, not a release branch. See **Changelog entries** above.
 
 1. `git fetch origin beta && git rebase origin/beta`
 2. `bun install`
@@ -172,7 +176,7 @@ Do not spring-scale parents of chart axes; SFX must use local `staticFile()` cue
 - **Auth**: Uses `LOCAL_DASHBOARD_AUTH_BYPASS=true` — no external Supabase keys needed. The dashboard is accessible at `http://localhost:3000/dashboard` as `local-dashboard-user`.
 - **Third-party skills**: `bash scripts/install-skills.sh` (also in this environment's `install` script) restores `remotion-*` and `better-*` from `skills-lock.json`.
 - **Tailscale**: Cloud Agent `install` runs `curl -fsSL https://tailscale.com/install.sh | sh`. These VMs have no systemd, so `start` runs `bash scripts/tailscale-bootstrap.sh`, which launches `tailscaled` and, when `TS_AUTHKEY` is set, runs `sudo tailscale up`. When `/dev/net/tun` is absent the script falls back to `--tun=userspace-networking` so joining the tailnet still works.
-- **PRs target `beta`**, not `main`.
+- **Feature PRs target `beta`**, not `main`. **Release PRs are `beta` → `main`**, opened from `beta` directly.
 
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
