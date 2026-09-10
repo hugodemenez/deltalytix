@@ -13,6 +13,11 @@ import {
   generatePersistedTradeUUID,
   RITHMIC_PROTOCOL_TRADE_TAG,
 } from '@/lib/trade-id-utils'
+import {
+  isTradovatePersistedTrade,
+  resolveTradovatePersistedId,
+  tradovateFillIdLookupValues,
+} from '@/lib/tradovate/identity'
 import { isDuplicateTradesOnlySave } from '@/lib/trades/save-trades-outcome'
 import { capturePostHogEvent } from '@/lib/posthog-server'
 
@@ -84,6 +89,42 @@ async function backfillRithmicProtocolCommissions(
   return updates.length
 }
 
+async function assignExistingTradovateIds(
+  userId: string,
+  trades: Trade[],
+): Promise<Trade[]> {
+  const tradovateTrades = trades.filter(isTradovatePersistedTrade)
+  if (tradovateTrades.length === 0) return trades
+
+  const fillCandidates = [
+    ...new Set(
+      tradovateTrades.flatMap((trade) => [
+        ...tradovateFillIdLookupValues(trade.entryId),
+        ...tradovateFillIdLookupValues(trade.closeId),
+      ]),
+    ),
+  ]
+  if (fillCandidates.length === 0) return trades
+
+  const existing = await prisma.trade.findMany({
+    where: {
+      userId,
+      OR: [
+        { entryId: { in: fillCandidates } },
+        { closeId: { in: fillCandidates } },
+      ],
+    },
+    select: { id: true, accountNumber: true, entryId: true, closeId: true },
+  })
+  if (existing.length === 0) return trades
+
+  return trades.map((trade) => {
+    if (!isTradovatePersistedTrade(trade)) return trade
+    const existingId = resolveTradovatePersistedId(trade, existing)
+    return existingId ? { ...trade, id: existingId } : trade
+  })
+}
+
 export async function saveTradesAction(
   data: Trade[],
   options?: { userId?: string; connectionId?: string | null }
@@ -116,7 +157,7 @@ export async function saveTradesAction(
     )
 
     // Clean the data to remove undefined values and ensure all required fields are present
-    const userAssignedTrades = data.map(trade => {
+    const preparedTrades = data.map(trade => {
       const accountId =
         trade.accountId ||
         (trade.accountNumber
@@ -131,6 +172,11 @@ export async function saveTradesAction(
         id: generatePersistedTradeUUID({ ...trade, userId }),
       } as Trade
     })
+
+    const userAssignedTrades = await assignExistingTradovateIds(
+      userId,
+      preparedTrades,
+    )
 
     const result = await prisma.trade.createMany({
       data: userAssignedTrades,

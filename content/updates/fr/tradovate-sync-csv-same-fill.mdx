@@ -1,0 +1,15 @@
+---
+title: 'Sync Tradovate et CSV ne doublent plus la même exécution'
+description: 'Une exécution importée par la sync du jour puis par un CSV de mouvements hebdomadaire n''apparaît plus qu''une fois.'
+date: '2026-09-08'
+status: completed
+completedDate: '2026-09-08'
+---
+
+# Sync Tradovate et CSV ne doublent plus la même exécution
+
+La sync Tradovate en direct ne couvre toujours que [la journée de trading en cours](/fr/updates/tradovate-sync-current-day-import-guidance). Beaucoup de traders importent ensuite un CSV de mouvements de la semaine. Les deux sources enregistraient la même exécution comme deux lignes — des identifiants différents, la même position du lundi.
+
+La sync et le CSV traitent maintenant le même compte, le même sens et la même paire d'exécutions comme un seul trade. Un CSV plus tard pour un jour déjà synchronisé ne double plus la position dans le calendrier ni dans le tableau.
+
+Les lignes déjà enregistrées en double ne sont pas retirées automatiquement. Supprimez la copie en trop dans le tableau si elle est déjà là. Synchronisez depuis [Connexions](/fr/dashboard/connections), puis importez le fichier de mouvements depuis [Connexions](/fr/dashboard/connections) pour les jours plus anciens.

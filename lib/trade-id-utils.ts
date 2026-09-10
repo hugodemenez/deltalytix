@@ -1,7 +1,13 @@
 import crypto from 'crypto'
 import { v5 as uuidv5 } from 'uuid'
+import {
+  isTradovatePersistedTrade,
+  normalizeTradeSide,
+  normalizeTradovateFillId,
+} from '@/lib/tradovate/identity'
 
 export const RITHMIC_PROTOCOL_TRADE_TAG = 'rithmic-protocol'
+export { TRADOVATE_TRADE_TAG } from '@/lib/tradovate/identity'
 
 /** Same DNS namespace used by `saveTradesAction` since Protocol imports began. */
 const TRADE_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
@@ -67,11 +73,37 @@ export type PersistedTradeIdentity = {
 }
 
 /**
- * UUID v5 written by `saveTradesAction`. Protocol rows were first stored with
- * `commission: 0`, so the identity hash still uses 0 for that source — otherwise
- * a later Product RMS rate would insert a second row for the same round-trip.
+ * UUID v5 written by `saveTradesAction`.
+ *
+ * Protocol rows were first stored with `commission: 0`, so the identity hash
+ * still uses 0 for that source — otherwise a later Product RMS rate would
+ * insert a second row for the same round-trip.
+ *
+ * Tradovate live sync and weekly movement CSVs describe the same fill with
+ * different wrappers (`fill_` prefix, Long/long) and different fee/PnL math.
+ * Identity is the account + unordered fill pair so `skipDuplicates` can drop
+ * the re-import. Dates, prices, duration, pnl, and commission stay off the
+ * hash — they are the noisy fields between those two sources.
  */
 export function generatePersistedTradeUUID(trade: PersistedTradeIdentity): string {
+  if (isTradovatePersistedTrade(trade)) {
+    const fillA = normalizeTradovateFillId(trade.entryId)
+    const fillB = normalizeTradovateFillId(trade.closeId)
+    const [entryId, closeId] = [fillA, fillB].sort()
+    const tradeSignature = [
+      trade.userId || '',
+      trade.accountNumber || '',
+      trade.instrument || '',
+      (trade.quantity || 0).toString(),
+      entryId,
+      closeId,
+      normalizeTradeSide(trade.side),
+      '0',
+      '0',
+    ].join('|')
+    return uuidv5(tradeSignature, TRADE_NAMESPACE)
+  }
+
   const identityCommission = trade.tags?.includes(RITHMIC_PROTOCOL_TRADE_TAG)
     ? 0
     : (trade.commission || 0)

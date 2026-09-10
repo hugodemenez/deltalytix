@@ -1,0 +1,15 @@
+---
+title: 'Les trades supprimés restent absents après une sync plus tard'
+description: 'Enlever des lignes du tableau ne laisse plus une sync ou un rafraîchissement les faire réapparaître.'
+date: '2026-09-08'
+status: completed
+completedDate: '2026-09-08'
+---
+
+# Les trades supprimés restent absents après une sync plus tard
+
+Quand vous supprimez des trades dans le tableau, une sync ou un rafraîchissement d'un autre compte pouvait les remettre à l'écran — la liste servait encore une copie en cache. La suppression expire maintenant ce cache, donc la lecture suivante interroge la base.
+
+Ce n'est pas limité à Tradovate. Toute sync ou rafraîchissement qui réutilisait la liste en cache pouvait faire revenir les lignes. Les trades que vous n'avez pas supprimés ne changent pas. Il n'y a pas de nouvelle boîte de confirmation.
+
+Sur [le tableau de bord](/fr/dashboard), supprimez un doublon, puis synchronisez ou rafraîchissez un autre compte : les lignes restent absentes.

@@ -72,7 +72,8 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
     try {
       const response = await fetch("/api/tradovate/synchronizations", {
         method: "GET",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+        cache: "no-store",
       })
 
       if (!response.ok) {

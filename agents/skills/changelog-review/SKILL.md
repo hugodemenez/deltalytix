@@ -21,7 +21,7 @@ Do not write final MDX or capture media in this stage.
 
 ## Inputs
 
-- A beta → main promotion PR, or `git log main..beta` plus relevant diffs.
+- A beta → main promotion PR opened **from `beta` directly** (head `beta`, base `main` — never a `cursor/release-*` branch), or `git log main..beta` plus relevant diffs.
 - The oldest and newest commits in the release window.
 - Recent entries under `content/updates/en/` and `content/updates/fr/`.
 - Product code for any change whose visible behavior is unclear from the PR description.
