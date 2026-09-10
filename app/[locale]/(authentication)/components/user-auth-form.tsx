@@ -49,6 +49,8 @@ const OTP_SLOT =
 const FIELD =
     "h-11 rounded-sm border-black/10 bg-transparent shadow-none placeholder:text-black/40 focus-visible:ring-1 focus-visible:ring-black/25 focus-visible:ring-offset-0 dark:border-white/10 dark:placeholder:text-white/40 dark:focus-visible:ring-white/25"
 
+const RESEND_COOLDOWN_SECONDS = 15
+
 const formSchema = z.object({
     email: z.string().email(),
     password: z.union([
@@ -65,6 +67,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const [isLoading, setIsLoading] = React.useState<boolean>(false)
     const [isEmailSent, setIsEmailSent] = React.useState<boolean>(false)
     const [countdown, setCountdown] = React.useState<number>(0)
+    const [cooldownEpoch, setCooldownEpoch] = React.useState(0)
     const [isSubscription, setIsSubscription] = React.useState<boolean>(false)
     const [lookupKey, setLookupKey] = React.useState<string | null>(null)
     const [referralCode, setReferralCode] = React.useState<string | null>(null)
@@ -79,6 +82,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     /* Ref rather than state: the auto-verify guard has to be correct within a
        single change event, before a state update could land. */
     const isVerifyingRef = React.useRef(false)
+    const sentEmailRef = React.useRef("")
     const t = useI18n()
     const locale = useCurrentLocale()
 
@@ -112,11 +116,25 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     }, [])
 
     React.useEffect(() => {
-        if (countdown > 0) {
-            const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
-            return () => clearTimeout(timer)
-        }
-    }, [countdown])
+        if (countdown <= 0) return
+        const timer = setTimeout(() => {
+            setCountdown((seconds) => seconds - 1)
+        }, 1000)
+        return () => clearTimeout(timer)
+    }, [countdown, cooldownEpoch])
+
+    function restartResendCooldown() {
+        setCountdown(RESEND_COOLDOWN_SECONDS)
+        setCooldownEpoch((epoch) => epoch + 1)
+    }
+
+    function getAuthNextPath() {
+        const referralParam = referralCode ? `&referral=${encodeURIComponent(referralCode)}` : ''
+        const promoParam = promoCode ? `&promo_code=${encodeURIComponent(promoCode)}` : ''
+        return isSubscription
+            ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}${promoParam}`
+            : nextUrl
+    }
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -134,6 +152,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setOtp("")
         setCountdown(0)
         setAuthMethod(null)
+        sentEmailRef.current = ""
     }
 
     function toggleUsePassword() {
@@ -149,20 +168,31 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setIsLoading(true)
         setAuthMethod('email')
         try {
-            const referralParam = referralCode ? `&referral=${encodeURIComponent(referralCode)}` : '';
-            const promoParam = promoCode ? `&promo_code=${encodeURIComponent(promoCode)}` : '';
-            const next = isSubscription 
-                ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}${promoParam}` 
-                : nextUrl;
-            await signInWithEmail(values.email, next, locale)
+            await signInWithEmail(values.email, getAuthNextPath(), locale)
+            sentEmailRef.current = values.email
             setIsEmailSent(true)
             setShowOtpInput(true)
-            setCountdown(15)
+            restartResendCooldown()
         } catch (error) {
             console.error(error)
             setAuthMethod(null)
         } finally {
             setIsLoading(false)
+        }
+    }
+
+    async function onResendEmail() {
+        if (countdown > 0) return
+        const email = form.getValues('email') || sentEmailRef.current
+        if (!email) return
+
+        /* Restart immediately on click so the cooldown is visible even if the
+           OTP request is slow or rate-limited. */
+        restartResendCooldown()
+        try {
+            await signInWithEmail(email, getAuthNextPath(), locale)
+        } catch (error) {
+            console.error(error)
         }
     }
 
@@ -338,12 +368,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setAuthMethod('discord')
 
         try {
-            const referralParam = referralCode ? `&referral=${encodeURIComponent(referralCode)}` : '';
-            const promoParam = promoCode ? `&promo_code=${encodeURIComponent(promoCode)}` : '';
-            const next = isSubscription 
-                ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}${promoParam}` 
-                : nextUrl;
-            await signInWithDiscord(next, locale)
+            await signInWithDiscord(getAuthNextPath(), locale)
         } catch (error) {
             console.error(error)
             setAuthMethod(null)
@@ -357,12 +382,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setAuthMethod('google')
 
         try {
-            const referralParam = referralCode ? `&referral=${encodeURIComponent(referralCode)}` : '';
-            const promoParam = promoCode ? `&promo_code=${encodeURIComponent(promoCode)}` : '';
-            const next = isSubscription 
-                ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}${promoParam}` 
-                : nextUrl;
-            await signInWithGoogle(next, locale)
+            await signInWithGoogle(getAuthNextPath(), locale)
         } catch (error) {
             console.error(error)
             setAuthMethod(null)
@@ -490,9 +510,10 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                                 {t('auth.openMailbox')}
                             </Button>
                             <Button
-                                type="submit"
+                                type="button"
                                 variant="outline"
                                 className={SECONDARY_ACTION}
+                                onClick={onResendEmail}
                                 disabled={countdown > 0 || authMethod === 'discord' || authMethod === 'google'}
                             >
                                 {countdown > 0
