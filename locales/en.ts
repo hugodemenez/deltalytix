@@ -1136,6 +1136,7 @@ export default {
   "calendar.charts.equityVariation": "Equity Variation",
   "calendar.charts.dailyPnlDistribution": "Daily P&L Distribution",
   "calendar.charts.totalPnlAfterComm": "Total P&L (after commissions)",
+  "commissions.eyebrow": "Cost vs result",
   "commissions.title": "P/L vs Commissions",
   "commissions.tooltip.description":
     "Distribution of net profit/loss versus commissions paid",
@@ -1155,6 +1156,7 @@ export default {
   "contracts.tooltip.numberOfTrades": "Number of Trades",
   "contracts.axis.contracts": "Contracts",
   equity: {
+    eyebrow: "Running total",
     title: "Equity",
     description: "Track your equity over time",
     subtitle: "Line = cumulative equity · selected accounts",
@@ -1205,6 +1207,7 @@ export default {
       maxAccountsInfo: "At most {max} accounts can be charted at once",
     },
   },
+  "pnl.eyebrow": "Each session",
   "pnl.title": "Daily Profit/Loss",
   "pnl.description": "Showing daily P/L over time",
   "pnl.subtitle.empty": "No closed days in this range",
@@ -1214,6 +1217,7 @@ export default {
   "pnl.tooltip.pnl": "P/L",
   "pnl.tooltip.longTrades": "Long Trades",
   "pnl.tooltip.shortTrades": "Short Trades",
+  "pnlBySide.eyebrow": "Long vs short",
   "pnlBySide.title": "P/L by Side",
   "pnlBySide.description":
     "Profit/loss comparison between long and short trades",
@@ -1228,6 +1232,7 @@ export default {
   "pnlBySide.tooltip.wins": "win",
   "pnlBySide.tooltip.wins_plural": "wins",
   "pnlBySide.toggle.showAverage": "Show Average",
+  "pnlPerContract.eyebrow": "By instrument",
   "pnlPerContract.title": "Avg Net P/L per Contract",
   "pnlPerContract.description":
     "Average net profit/loss per contract by trading instrument (after commissions)",
@@ -1243,6 +1248,7 @@ export default {
   "pnlPerContract.tooltip.wins_plural": "wins",
   "pnlPerContract.tooltip.totalContracts": "Total Contracts",
   "pnlPerContract.tooltip.contracts": "contracts",
+  "pnlPerContractDaily.eyebrow": "Per contract",
   "pnlPerContractDaily.title": "Daily Avg Net P/L per contract",
   "pnlPerContractDaily.description":
     "Average net profit/loss per contract per day for selected instrument (after commissions)",
@@ -1258,6 +1264,7 @@ export default {
   "pnlPerContractDaily.tooltip.trades": "Trades",
   "pnlPerContractDaily.tooltip.totalContracts": "Total contracts",
   "pnlPerContractDaily.tooltip.contracts": "contracts",
+  "pnlTime.eyebrow": "By hour",
   "pnlTime.title": "Average P/L by Hour",
   "pnlTime.description": "Average profit/loss for each hour of the day",
   "pnlTime.subtitle.empty": "No hourly averages yet",
@@ -1270,6 +1277,7 @@ export default {
   "pnlTime.tooltip.trades_plural": "trades",
   "pnlTime.clearFilter": "Clear Filter",
   tickDistribution: {
+    eyebrow: "By tick size",
     title: "Tick Distribution",
     description: "Distribution of trades by tick value (PnL per contract)",
     subtitle: {
@@ -1287,6 +1295,7 @@ export default {
     },
     clearFilter: "Clear filter",
   },
+  "timeInPosition.eyebrow": "Hold time",
   "timeInPosition.title": "Average Time in Position",
   "timeInPosition.description":
     "Average time in position for each hour of the day",
@@ -1297,6 +1306,7 @@ export default {
   "timeInPosition.tooltip.trades": "Trades",
   "timeInPosition.tooltip.trade": "trade",
   "timeInPosition.tooltip.trades_plural": "trades",
+  "weekdayPnl.eyebrow": "By weekday",
   "weekdayPnl.title": "Average P/L by Day",
   "weekdayPnl.description": "Average profit/loss for each day of the week",
   "weekdayPnl.subtitle.empty": "No weekday averages yet",
@@ -1677,6 +1687,7 @@ export default {
   "toolbar.resetSettings": "Reset to Default",
   "toolbar.contextMenu": "Right-click for options",
   tradeDistribution: {
+    eyebrow: "Winners and losers",
     title: "Trade Distribution",
     description: "Distribution of winning, losing, and breakeven trades",
     subtitle: {
@@ -1894,6 +1905,7 @@ export default {
     noCredentials: "No credentials",
   },
   timeRangePerformance: {
+    eyebrow: "Session window",
     title: "Time Range Performance",
     description:
       "Average P&L and win rate distribution across different holding times",

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { CHART_WIDGET_KINDS } from "./chart-widget-kind"
 import {
   chartBarRadius,
   chartMaxBarSize,
@@ -219,5 +220,18 @@ describe("shareConclusion", () => {
 describe("peakIndex", () => {
   it("returns -1 for an empty list", () => {
     expect(peakIndex([], (value: number) => value)).toBe(-1)
+  })
+})
+
+describe("chart widget kinds", () => {
+  it("keeps one family per encoding", () => {
+    expect(CHART_WIDGET_KINDS).toEqual([
+      "series",
+      "share",
+      "category",
+      "duration",
+      "ticks",
+      "metric",
+    ])
   })
 })

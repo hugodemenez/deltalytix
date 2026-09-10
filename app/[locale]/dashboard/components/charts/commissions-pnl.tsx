@@ -62,6 +62,8 @@ export default function CommissionsPnLChart({
   return (
     <ChartWidgetFrame
       size={size}
+      kind="share"
+      eyebrow={t("commissions.eyebrow")}
       title={t("commissions.title")}
       subtitle={subtitle}
       description={t("commissions.tooltip.description")}

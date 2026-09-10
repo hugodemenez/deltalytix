@@ -183,6 +183,8 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
   return (
     <ChartWidgetFrame
       size={size}
+      kind="duration"
+      eyebrow={t('timeRangePerformance.eyebrow')}
       title={t('timeRangePerformance.title')}
       subtitle={subtitle}
       description={t('timeRangePerformance.description')}

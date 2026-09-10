@@ -23,7 +23,7 @@ import { fr, enUS } from "date-fns/locale";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import {
   ChartConfig,
@@ -48,6 +48,7 @@ import {
   LineChartLoadingSkeleton,
   LOADING_MOCK_EQUITY,
 } from "./chart-loading-skeleton";
+import { ChartWidgetMasthead } from "./chart-widget-frame";
 import {
   CHART_GRID_PROPS,
   CHART_LINE_STROKE,
@@ -989,48 +990,39 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   }, [isSharedView, showIndividual, chartData]);
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card
+      data-widget-kind="series"
+      className="flex h-full flex-col overflow-hidden"
+    >
       <CardHeader
         className={cn(
-          "flex min-h-11 shrink-0 flex-col items-stretch space-y-0 border-b",
-          size === "small" ? "p-2" : "px-3 py-2.5"
+          "flex shrink-0 flex-col items-stretch space-y-0 border-b bg-muted/40",
+          size === "small" ? "p-2" : "p-3 sm:p-4"
         )}
       >
-        <div className="flex items-center justify-between h-full">
-          <div className="flex items-center gap-1.5">
-            <div className="min-w-0">
-              <CardTitle
-                className={cn(
-                  "line-clamp-1 text-xs font-semibold tracking-[-0.02em]"
-                )}
-              >
-                {t("equity.title")}
-              </CardTitle>
-              <p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">
-                {t("equity.subtitle")}
-              </p>
-            </div>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
-            >
-              <p>{t("equity.description")}</p>
-            </InfoBubble>
-          </div>
-          {!isSharedView && !isTeamView && (
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="view-mode"
-                checked={showIndividual}
-                onCheckedChange={setShowIndividualConfig}
-                className="shrink-0"
-              />
-              <Label htmlFor="view-mode" className="text-sm">
-                {t("equity.toggle.individual")}
-              </Label>
-            </div>
-          )}
-        </div>
+        <ChartWidgetMasthead
+          kind="series"
+          eyebrow={t("equity.eyebrow")}
+          title={t("equity.title")}
+          subtitle={t("equity.subtitle")}
+          description={t("equity.description")}
+          compact={size === "small"}
+          actions={
+            !isSharedView && !isTeamView ? (
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="view-mode"
+                  checked={showIndividual}
+                  onCheckedChange={setShowIndividualConfig}
+                  className="shrink-0"
+                />
+                <Label htmlFor="view-mode" className="text-sm">
+                  {t("equity.toggle.individual")}
+                </Label>
+              </div>
+            ) : undefined
+          }
+        />
       </CardHeader>
       <CardContent
         className={cn(

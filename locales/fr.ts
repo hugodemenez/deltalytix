@@ -1117,6 +1117,7 @@ export default {
   "calendar.charts.equityVariation": "Variation des profits",
   "calendar.charts.dailyPnlDistribution": "Distribution du P&L journalier",
   "calendar.charts.totalPnlAfterComm": "P&L total (après commissions)",
+  "commissions.eyebrow": "Coût vs résultat",
   "commissions.title": "P&L vs Commissions",
   "commissions.tooltip.description":
     "Distribution des profits/pertes nets par rapport aux commissions payées",
@@ -1136,6 +1137,7 @@ export default {
   "contracts.tooltip.numberOfTrades": "Nombre de Trades",
   "contracts.axis.contracts": "Contrats",
   equity: {
+    eyebrow: "Cumul",
     title: "Profits",
     description: "Suivez l'évolution de vos profits dans le temps",
     subtitle: "Ligne = profits cumulés · comptes sélectionnés",
@@ -1224,6 +1226,7 @@ export default {
   "toolbar.resetSettings": "Réinitialiser par défaut",
   "toolbar.contextMenu": "Clic droit pour les options",
   tradeDistribution: {
+    eyebrow: "Gagnants et perdants",
     title: "Distribution des trades",
     description: "Répartition des trades gagnants, perdants et à l'équilibre",
     subtitle: {
@@ -1671,6 +1674,7 @@ export default {
         "Répartition de vos trades entre gagnants, à l'équilibre et perdants. Cette métrique vous aide à comprendre votre taux de réussite global et votre cohérence dans le trading.",
     },
   },
+  "pnl.eyebrow": "Chaque séance",
   "pnl.title": "Profits et Pertes Quotidiens",
   "pnl.description": "Affichage des P&L quotidiens dans le temps",
   "pnl.subtitle.empty": "Aucun jour clôturé sur cette période",
@@ -1680,6 +1684,7 @@ export default {
   "pnl.tooltip.pnl": "P&L",
   "pnl.tooltip.longTrades": "Trades Long",
   "pnl.tooltip.shortTrades": "Trades Short",
+  "pnlBySide.eyebrow": "Long vs short",
   "pnlBySide.title": "P&L par Direction",
   "pnlBySide.description":
     "Comparaison des profits et pertes entre les trades long et short",
@@ -1694,6 +1699,7 @@ export default {
   "pnlBySide.tooltip.wins": "gain",
   "pnlBySide.tooltip.wins_plural": "gains",
   "pnlBySide.toggle.showAverage": "Afficher la Moyenne",
+  "pnlPerContract.eyebrow": "Par instrument",
   "pnlPerContract.title": "P&L Net Moyen par Contrat",
   "pnlPerContract.description":
     "Profit/perte net moyen par contrat par instrument de trading (après commissions)",
@@ -1709,6 +1715,7 @@ export default {
   "pnlPerContract.tooltip.wins_plural": "gains",
   "pnlPerContract.tooltip.totalContracts": "Total des Contrats",
   "pnlPerContract.tooltip.contracts": "contrats",
+  "pnlPerContractDaily.eyebrow": "Par contrat",
   "pnlPerContractDaily.title": "P&L Net moyen par contrat par jour",
   "pnlPerContractDaily.description":
     "Profit/perte net moyen par contrat par jour pour l'instrument sélectionné (après commissions)",
@@ -1725,6 +1732,7 @@ export default {
   "pnlPerContractDaily.tooltip.trades": "Trades",
   "pnlPerContractDaily.tooltip.totalContracts": "Total des contrats",
   "pnlPerContractDaily.tooltip.contracts": "contrats",
+  "pnlTime.eyebrow": "Par heure",
   "pnlTime.title": "P&L moyen par heure",
   "pnlTime.description":
     "Profits et pertes moyens pour chaque heure de la journée",
@@ -1902,6 +1910,7 @@ export default {
       invalidTimeFormat: "Format d'heure invalide",
     },
   },
+  "tickDistribution.eyebrow": "Par tick",
   "tickDistribution.title": "Distribution des ticks",
   "tickDistribution.description":
     "Visualisez la distribution de vos trades par ticks",
@@ -1915,6 +1924,7 @@ export default {
   "tickDistribution.subtitle.empty": "Aucun décompte de ticks sur cette période",
   "tickDistribution.subtitle.peak": "La plupart des trades se referment à {label} ticks · barre = nombre de trades",
   "tickDistribution.subtitle.peakStacks": "La plupart des trades se referment à {label} ticks · une pile = un tick · un point = un trade",
+  "timeInPosition.eyebrow": "Durée de détention",
   "timeInPosition.title": "Temps Moyen en Position",
   "timeInPosition.description":
     "Temps moyen en position pour chaque heure de la journée",
@@ -1925,6 +1935,7 @@ export default {
   "timeInPosition.tooltip.trades": "Trades",
   "timeInPosition.tooltip.trade": "trade",
   "timeInPosition.tooltip.trades_plural": "trades",
+  "weekdayPnl.eyebrow": "Par jour",
   "weekdayPnl.title": "P&L Moyen par Jour",
   "weekdayPnl.description":
     "Profits et pertes moyens pour chaque jour de la semaine",
@@ -2007,6 +2018,7 @@ export default {
   "dataManagement.validate": "Valider",
   "dataManagement.validating": "Validation...",
   timeRangePerformance: {
+    eyebrow: "Fenêtre de séance",
     title: "Performance par Durée",
     description:
       "Distribution du P&L moyen et du taux de réussite selon les durées de trades",

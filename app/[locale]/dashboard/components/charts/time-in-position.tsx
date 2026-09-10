@@ -134,6 +134,8 @@ export default function TimeInPositionChart({
   return (
     <ChartWidgetFrame
       size={size}
+      kind="duration"
+      eyebrow={t("timeInPosition.eyebrow")}
       title={t("timeInPosition.title")}
       subtitle={subtitle}
       description={t("timeInPosition.description")}

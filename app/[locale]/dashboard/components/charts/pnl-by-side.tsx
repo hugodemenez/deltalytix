@@ -151,6 +151,8 @@ export default function PnLBySideChart({
   return (
     <ChartWidgetFrame
       size={size}
+      kind="category"
+      eyebrow={t("pnlBySide.eyebrow")}
       title={t("pnlBySide.title")}
       subtitle={subtitle}
       description={t("pnlBySide.description")}

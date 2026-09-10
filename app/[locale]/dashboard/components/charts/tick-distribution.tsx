@@ -173,6 +173,8 @@ export default function TickDistributionChart({
   return (
     <ChartWidgetFrame
       size={size}
+      kind="ticks"
+      eyebrow={t("tickDistribution.eyebrow")}
       title={t("tickDistribution.title")}
       subtitle={subtitle}
       description={t("tickDistribution.description")}

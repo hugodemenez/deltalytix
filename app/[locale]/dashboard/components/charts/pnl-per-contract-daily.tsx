@@ -200,6 +200,8 @@ export default function PnLPerContractDailyChart({
   return (
     <ChartWidgetFrame
       size={size}
+      kind="series"
+      eyebrow={t("pnlPerContractDaily.eyebrow")}
       title={t("pnlPerContractDaily.title")}
       subtitle={subtitle}
       description={t("pnlPerContractDaily.description")}

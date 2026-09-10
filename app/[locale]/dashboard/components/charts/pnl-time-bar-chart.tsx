@@ -154,6 +154,8 @@ export default function TimeOfDayTradeChart({
   return (
     <ChartWidgetFrame
       size={size}
+      kind="category"
+      eyebrow={t("pnlTime.eyebrow")}
       title={t("pnlTime.title")}
       subtitle={subtitle}
       description={t("pnlTime.description")}

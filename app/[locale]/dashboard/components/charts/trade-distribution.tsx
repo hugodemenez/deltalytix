@@ -51,6 +51,8 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
   return (
     <ChartWidgetFrame
       size={size}
+      kind="share"
+      eyebrow={t('tradeDistribution.eyebrow')}
       title={t('tradeDistribution.title')}
       subtitle={subtitle}
       description={t('tradeDistribution.description')}

@@ -158,6 +158,8 @@ export default function PnLPerContractChart({
   return (
     <ChartWidgetFrame
       size={size}
+      kind="category"
+      eyebrow={t("pnlPerContract.eyebrow")}
       title={t("pnlPerContract.title")}
       subtitle={subtitle}
       description={t("pnlPerContract.description")}

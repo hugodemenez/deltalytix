@@ -134,6 +134,8 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
   return (
     <ChartWidgetFrame
       size={size}
+      kind="series"
+      eyebrow={t("pnl.eyebrow")}
       title={t("pnl.title")}
       subtitle={subtitle}
       description={t("pnl.description")}

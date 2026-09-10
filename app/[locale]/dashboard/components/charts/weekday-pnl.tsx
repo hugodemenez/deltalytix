@@ -152,6 +152,8 @@ export default function WeekdayPNLChart({
   return (
     <ChartWidgetFrame
       size={size}
+      kind="category"
+      eyebrow={t("weekdayPnl.eyebrow")}
       title={t("weekdayPnl.title")}
       subtitle={subtitle}
       description={t("weekdayPnl.description")}
