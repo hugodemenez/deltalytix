@@ -8,6 +8,7 @@ import {
   dismissCookies,
   ensureCookiesDismissed,
   injectBillingPaymentHistoryMock,
+  injectTradovateFeeCaptureConnection,
   newCapturePage,
   outputDir,
   recordVideo,
@@ -358,7 +359,7 @@ async function revealPickerOption(page, name) {
   await page.waitForTimeout(600)
 }
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form' | 'compare-hub-journals-table' | 'compare-tradezella-what-you-get' | 'connections-import-picker-deepcharts' | 'dashboard-strip-standalone-actions' | 'dashboard-strip-standalone-delete-confirm' | 'public-404-agent-resources' | 'calendar-header-month-year-news' | 'dashboard-centered-view-tabs' | 'dashboard-home-email' | 'renewal-notice-email' | 'landing-hero-16-9-frame'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form' | 'compare-hub-journals-table' | 'compare-tradezella-what-you-get' | 'connections-import-picker-deepcharts' | 'dashboard-strip-standalone-actions' | 'dashboard-strip-standalone-delete-confirm' | 'public-404-agent-resources' | 'calendar-header-month-year-news' | 'dashboard-centered-view-tabs' | 'dashboard-home-email' | 'renewal-notice-email' | 'landing-hero-16-9-frame' | 'tradovate-connections-fee-config'} ChangelogScene */
 
 
 /**
@@ -924,6 +925,33 @@ export async function captureScene(browser, options) {
       await page.waitForTimeout(1200)
       await assertNoDevIssues(page, `${locale} connections hub`)
       await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'tradovate-connections-fee-config': {
+      // Desktop Connections. Local seed has no Tradovate OAuth row, so the
+      // JSON refresh is patched with a capture-only Apex connection.
+      // Viewport: desktop. Route: /{locale}/dashboard/connections via navbar.
+      // Interaction: click [data-testid="tradovate-fee-settings"].
+      // Expected: dialog Fee config for Apex / Config des commissions pour Apex
+      // with Commission checked and Select all / Tout sélectionner visible.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await injectTradovateFeeCaptureConnection(page)
+      await openConnectionsForImport(page, locale, siteUrl)
+      const settings = page.getByTestId('tradovate-fee-settings')
+      await settings.waitFor({ timeout: 30_000 })
+      await settings.click()
+      const dialog = page.getByTestId('tradovate-fee-config-dialog')
+      await dialog.waitFor({ timeout: 15_000 })
+      await waitForNoVisibleToasts(page)
+      await assertNoDevIssues(page, `${locale} tradovate fee config`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [dialog], 28),
+      })
       await page.close()
       return
     }
