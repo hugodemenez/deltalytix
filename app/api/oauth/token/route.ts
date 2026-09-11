@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { oauthError } from "@/lib/api/errors"
 import {
+  authenticateOAuthClient,
+  readOAuthFormOrJson,
+  resolveClientCredentials,
+} from "@/lib/api/oauth-client"
+import {
   ACCESS_TOKEN_TTL_SECONDS,
   accessTokenExpiresAt,
   generateAccessToken,
@@ -14,48 +19,15 @@ import {
 /** Thrown inside the token transaction when another exchange won the race. */
 class AuthorizationCodeAlreadyUsed extends Error {}
 
-async function readTokenBody(
-  request: NextRequest,
-): Promise<Record<string, string>> {
-  const contentType = request.headers.get("content-type") || ""
-  if (contentType.includes("application/json")) {
-    const json = (await request.json()) as Record<string, unknown>
-    const out: Record<string, string> = {}
-    for (const [key, value] of Object.entries(json)) {
-      if (value != null) out[key] = String(value)
-    }
-    return out
-  }
-
-  const form = await request.formData()
-  const out: Record<string, string> = {}
-  form.forEach((value, key) => {
-    if (typeof value === "string") out[key] = value
-  })
-  return out
-}
-
-async function authenticateClient(
-  clientId: string | undefined,
-  clientSecret: string | undefined,
-) {
-  if (!clientId) return null
-  const app = await prisma.oAuthApp.findUnique({ where: { clientId } })
-  if (!app) return null
-  if (clientSecret) {
-    if (sha256(clientSecret) !== app.clientSecretHash) return null
-  }
-  return app
-}
-
 export async function POST(request: NextRequest) {
   try {
-    const body = await readTokenBody(request)
+    const body = await readOAuthFormOrJson(request)
+    const credentials = resolveClientCredentials(request, body)
     const grantType = body.grant_type
 
     if (grantType === "authorization_code") {
-      const { code, redirect_uri, client_id, client_secret, code_verifier } = body
-      if (!code || !redirect_uri || !client_id) {
+      const { code, redirect_uri, code_verifier } = body
+      if (!code || !redirect_uri || !credentials.clientId) {
         return oauthError(
           400,
           "invalid_request",
@@ -63,37 +35,28 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const app = await authenticateClient(client_id, client_secret)
+      const app = await authenticateOAuthClient(credentials, {
+        requireSecret: false,
+      })
       if (!app) {
         return oauthError(401, "invalid_client", "Invalid client credentials")
       }
 
-      const authCode = await prisma.oAuthAuthorizationCode.findUnique({
+      const pending = await prisma.oAuthAuthorizationCode.findUnique({
         where: { codeHash: sha256(code) },
       })
 
       if (
-        !authCode ||
-        authCode.appId !== app.id ||
-        authCode.consumedAt ||
-        authCode.expiresAt.getTime() <= Date.now() ||
-        authCode.redirectUri !== redirect_uri
+        !pending ||
+        pending.appId !== app.id ||
+        pending.consumedAt ||
+        pending.expiresAt.getTime() <= Date.now() ||
+        pending.redirectUri !== redirect_uri
       ) {
         return oauthError(400, "invalid_grant", "Invalid or expired authorization code")
       }
 
-      if (authCode.codeChallenge) {
-        if (!code_verifier) {
-          return oauthError(400, "invalid_grant", "code_verifier is required")
-        }
-        const method = authCode.codeChallengeMethod || "S256"
-        if (method !== "S256") {
-          return oauthError(400, "invalid_grant", "Unsupported code_challenge_method")
-        }
-        if (pkceS256Challenge(code_verifier) !== authCode.codeChallenge) {
-          return oauthError(400, "invalid_grant", "Invalid code_verifier")
-        }
-      } else if (!client_secret) {
+      if (!pending.codeChallenge && !credentials.clientSecret) {
         return oauthError(
           401,
           "invalid_client",
@@ -101,9 +64,22 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      if (pending.codeChallenge) {
+        if (!code_verifier) {
+          return oauthError(400, "invalid_grant", "code_verifier is required")
+        }
+        const method = pending.codeChallengeMethod || "S256"
+        if (method !== "S256") {
+          return oauthError(400, "invalid_grant", "Unsupported code_challenge_method")
+        }
+        if (pkceS256Challenge(code_verifier) !== pending.codeChallenge) {
+          return oauthError(400, "invalid_grant", "Invalid code_verifier")
+        }
+      }
+
       const accessToken = generateAccessToken()
       const refreshToken = generateRefreshToken()
-      const scopes = authCode.scopes
+      const scopes = pending.scopes
 
       // Burn the code and mint the tokens together. `updateMany` filtered on
       // `consumedAt: null` makes the burn a single conditional write, so two
@@ -112,7 +88,7 @@ export async function POST(request: NextRequest) {
       try {
         await prisma.$transaction(async (tx) => {
           const consumed = await tx.oAuthAuthorizationCode.updateMany({
-            where: { id: authCode.id, consumedAt: null },
+            where: { id: pending.id, consumedAt: null },
             data: { consumedAt: new Date() },
           })
 
@@ -125,7 +101,7 @@ export async function POST(request: NextRequest) {
               tokenHash: sha256(accessToken),
               refreshTokenHash: sha256(refreshToken),
               appId: app.id,
-              userId: authCode.userId,
+              userId: pending.userId,
               scopes,
               expiresAt: accessTokenExpiresAt(),
               refreshTokenExpiresAt: refreshTokenExpiresAt(),
@@ -153,8 +129,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (grantType === "refresh_token") {
-      const { refresh_token, client_id, client_secret } = body
-      if (!refresh_token || !client_id) {
+      const { refresh_token } = body
+      if (!refresh_token || !credentials.clientId) {
         return oauthError(
           400,
           "invalid_request",
@@ -162,7 +138,9 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const app = await authenticateClient(client_id, client_secret)
+      const app = await authenticateOAuthClient(credentials, {
+        requireSecret: true,
+      })
       if (!app) {
         return oauthError(401, "invalid_client", "Invalid client credentials")
       }

@@ -47,7 +47,7 @@ curl https://www.deltalytix.app/api/v1/me \
 
 ### Demo token
 
-The documentation playground can issue a short-lived, read-only demo token without signing in. It authenticates as a shared sample account (`DEMO-001`) so you can try `GET` routes. Write scopes require your own docs token or PAT.
+The documentation playground can issue a short-lived, read-only demo token without signing in. It authenticates as a shared sample account (`DEMO-001`) so you can try `GET` routes. Write scopes require your own docs token or PAT. Signed-in docs playground tokens expire after 24 hours.
 
 ## OAuth 2.0
 
@@ -106,7 +106,7 @@ curl -X POST https://www.deltalytix.app/api/oauth/token \
   -d "code_verifier=PKCE_VERIFIER"
 ```
 
-Confidential clients may send `client_secret` instead of (or in addition to) PKCE, depending on how the app was registered.
+Confidential clients may send `client_secret` in the body or as `Authorization: Basic` (`client_secret_basic`). Refresh and revoke always require the client secret. Authorization-code exchange may omit it only when the code was issued with PKCE.
 
 <DocsResponse tone="success" label="Success">
 

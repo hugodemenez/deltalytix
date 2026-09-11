@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto"
 export const ACCESS_TOKEN_TTL_SECONDS = 3600
 export const REFRESH_TOKEN_TTL_DAYS = 30
 export const AUTHORIZATION_CODE_TTL_MINUTES = 10
+export const DOCS_PLAYGROUND_TOKEN_TTL_HOURS = 24
 
 export function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex")
@@ -46,6 +47,12 @@ export function refreshTokenExpiresAt(from = new Date()): Date {
 
 export function authorizationCodeExpiresAt(from = new Date()): Date {
   return new Date(from.getTime() + AUTHORIZATION_CODE_TTL_MINUTES * 60 * 1000)
+}
+
+export function docsPlaygroundTokenExpiresAt(from = new Date()): Date {
+  return new Date(
+    from.getTime() + DOCS_PLAYGROUND_TOKEN_TTL_HOURS * 60 * 60 * 1000,
+  )
 }
 
 export function pkceS256Challenge(verifier: string): string {

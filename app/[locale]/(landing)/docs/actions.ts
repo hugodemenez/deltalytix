@@ -5,6 +5,7 @@ import { createClient } from "@/server/auth"
 import { issueDocsDemoToken } from "@/lib/api/docs-demo"
 import { isValidScope } from "@/lib/api/scopes"
 import {
+  docsPlaygroundTokenExpiresAt,
   generatePersonalAccessToken,
   sha256,
 } from "@/lib/api/tokens"
@@ -135,7 +136,7 @@ export async function createDocsPlaygroundTokenAction(
         userId: user.id,
         scopes: requested,
         appId: null,
-        expiresAt: null,
+        expiresAt: docsPlaygroundTokenExpiresAt(),
       },
     })
 
