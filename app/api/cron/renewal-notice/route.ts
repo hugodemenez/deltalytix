@@ -3,9 +3,12 @@ import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { Resend } from 'resend'
 import { headers } from 'next/headers'
-import { format, subDays, isEqual, startOfDay } from 'date-fns'
-import { enUS, fr } from 'date-fns/locale'
+import { subDays, isEqual, startOfDay } from 'date-fns'
 import RenewalNoticeEmail from '@/components/emails/renewal-notice'
+import {
+  buildRenewalNoticeCopy,
+  resolveRenewalNoticeFirstName,
+} from '@/lib/renewal-notice-copy'
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -14,31 +17,11 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter })
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-// Utility function to get date locale
-const getDateLocale = (language: string) => {
-  return language === 'fr' ? fr : enUS
-}
-
-// Utility function to format payment frequency for display
-const getFrequencyDisplay = (frequency: string, language: string) => {
-  const frequencies = {
-    en: {
-      monthly: 'Monthly',
-      quarterly: 'Quarterly',
-      biannual: 'Bi-annual', 
-      annual: 'Annual',
-      custom: 'Custom'
-    },
-    fr: {
-      monthly: 'Mensuel',
-      quarterly: 'Trimestriel',
-      biannual: 'Semestriel',
-      annual: 'Annuel',
-      custom: 'Personnalisé'
-    }
-  }
-  
-  return frequencies[language as keyof typeof frequencies]?.[frequency as keyof typeof frequencies.en] || frequency
+function appOrigin(): string {
+  return (process.env.NEXT_PUBLIC_APP_URL || "https://www.deltalytix.app").replace(
+    /\/$/,
+    "",
+  )
 }
 
 // Utility function to calculate next payment date based on frequency
@@ -108,7 +91,7 @@ export async function GET(req: Request) {
           select: {
             id: true,
             email: true,
-            language: true
+            language: true,
           }
         }
       }
@@ -149,41 +132,62 @@ export async function GET(req: Request) {
       }
     })
 
+    const userEmails = [...userAccountsMap.keys()]
+    const newsletters = userEmails.length
+      ? await prisma.newsletter.findMany({
+          where: { email: { in: userEmails } },
+          select: { email: true, firstName: true },
+        })
+      : []
+    const firstNameByEmail = new Map(
+      newsletters.map((row) => [row.email, row.firstName]),
+    )
+    const origin = appOrigin()
+    const dashboardUrl = `${origin}/dashboard`
+
     // Send emails to each user
     for (const [userEmail, userAccounts] of userAccountsMap) {
       try {
         const user = userAccounts[0].user!
         const userLanguage = user.language || 'en'
-        const locale = getDateLocale(userLanguage)
+        const userFirstName = resolveRenewalNoticeFirstName(
+          firstNameByEmail.get(userEmail),
+        )
         
         // If user has multiple accounts expiring, send one email with all accounts
         // For simplicity, we'll send separate emails for each account
         for (const account of userAccounts) {
           try {
             const daysUntilRenewal = account.renewalNotice!
-            const nextPaymentDate = format(account.nextPaymentDate!, 'PPP', { locale })
+            const nextPaymentDate = account.nextPaymentDate!.toISOString()
             const accountName = account.number || `Account ${account.id}`
             const propFirmName = account.propfirm || 'Unknown Prop Firm'
             const frequency = account.paymentFrequency || 'monthly'
+            const copy = buildRenewalNoticeCopy({
+              language: userLanguage,
+              firstName: userFirstName,
+              propFirmName,
+              daysUntilRenewal,
+            })
             
-            const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings/notifications`
+            const unsubscribeUrl = `${origin}/settings/notifications`
 
             const { data, error } = await resend.emails.send({
               from: 'Deltalytix Renewals <renewals@eu.updates.deltalytix.app>',
               to: userEmail,
-              subject: userLanguage === 'fr' 
-                ? `Renouvellement prochain - ${accountName}`
-                : `Upcoming Renewal - ${accountName}`,
+              subject: copy.subject,
               react: RenewalNoticeEmail({
-                userFirstName: user.email.split('@')[0],
+                userFirstName,
                 userEmail: userEmail,
                 accountName: accountName,
                 propFirmName: propFirmName,
-                nextPaymentDate: nextPaymentDate,
+                nextPaymentDate,
                 daysUntilRenewal: daysUntilRenewal,
                 paymentFrequency: frequency,
                 language: userLanguage,
-                unsubscribeUrl: unsubscribeUrl
+                unsubscribeUrl: unsubscribeUrl,
+                changeReminderUrl: dashboardUrl,
+                turnOffNoticeUrl: dashboardUrl,
               }),
               replyTo: 'hugo.demenez@deltalytix.app',
               headers: {

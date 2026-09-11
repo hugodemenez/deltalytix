@@ -70,9 +70,9 @@ export function MobileWidgetDeleteDialog({
             variant={appearance === "default" ? "destructive" : "ghost"}
             className={cn(
               appearance === "strip"
-                ? "inline-flex size-8 items-center justify-center rounded-full text-[#DC2626] hover:bg-black/5 hover:text-[#DC2626]"
+                ? "inline-flex size-8 items-center justify-center rounded-full text-[#DC2626] transition-colors hover:bg-black/5 hover:text-[#DC2626] dark:hover:bg-white/10"
                 : appearance === "pill"
-                  ? "inline-flex size-8 items-center justify-center rounded-none text-[#DC2626] hover:bg-transparent hover:text-[#DC2626]"
+                  ? "inline-flex size-8 items-center justify-center rounded-[4px] text-[#DC2626] transition-colors hover:bg-[#FAFAFA] hover:text-[#DC2626] dark:hover:bg-muted/40"
                   : "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
               appearance === "default" && (compact ? "w-10 shrink-0 p-0" : "min-w-[120px] gap-3 px-4")
             )}

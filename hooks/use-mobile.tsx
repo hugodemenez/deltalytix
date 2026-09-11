@@ -1,7 +1,6 @@
 "use client"
 
-import * as React from "react"
-import { useMediaQuery } from "@/hooks/use-media-query"
+import { useLayoutMediaQuery, useMediaQuery } from "@/hooks/use-media-query"
 
 export const MOBILE_BREAKPOINT = 768
 
@@ -22,15 +21,5 @@ export function useIsMobile() {
  * so the first paint never shows the wrong dashboard layout.
  */
 export function useIsMobileLayout(): boolean | undefined {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
-
-  React.useLayoutEffect(() => {
-    const mql = window.matchMedia(MOBILE_MEDIA_QUERY)
-    const onChange = () => setIsMobile(mql.matches)
-    onChange()
-    mql.addEventListener("change", onChange)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
-
-  return isMobile
+  return useLayoutMediaQuery(MOBILE_MEDIA_QUERY)
 }

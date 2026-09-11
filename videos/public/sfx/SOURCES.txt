@@ -1,0 +1,9 @@
+Sound sources for videos/public/sfx
+
+remotion/
+  Downloaded from https://remotion.media (same files as @remotion/sfx).
+
+kenney/
+  Kenney Interface Sounds (CC0).
+  https://www.kenney.nl
+  Vendored from https://github.com/kapishdima/soundcn/tree/main/assets/kenney_interface-sounds

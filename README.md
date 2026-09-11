@@ -58,7 +58,7 @@ Then open <http://localhost:3000/dashboard>. The quickstart starts Postgres, wri
 | [`SELF_HOSTING.md`](./SELF_HOSTING.md) | Deployment, configuration, and health checks |
 | [`AGENTS.md`](./AGENTS.md) | Build commands, conventions, and PR checklist — for contributors and AI agents alike |
 | [`SECURITY.md`](./SECURITY.md) | Reporting a vulnerability |
-| [`agents/skills/`](./agents/skills/) | Shared skill library for AI coding agents |
+| [`agents/skills/`](./agents/skills/) | First-party AI agent skills. Third-party skills (`remotion-*`, `better-*`) restore from [`skills-lock.json`](./skills-lock.json) via `bun run skills:install` |
 | [deltalytix.app/updates](https://deltalytix.app/updates) | Release notes |
 
 ## Built with

@@ -1,0 +1,17 @@
+---
+title: 'Les soldes Rithmic en direct couvrent aussi les comptes Protocol'
+description: 'Les comptes liés à une connexion Rithmic Protocol affichent la même colonne Solde Rithmic et le même contrôle d''actualisation que le Rithmic classique.'
+date: '2026-08-26'
+status: completed
+completedDate: '2026-08-26'
+---
+
+# Les soldes Rithmic en direct couvrent aussi les comptes Protocol
+
+Les comptes liés à une connexion **Rithmic Protocol** affichent désormais la même colonne **Solde Rithmic** et le même contrôle d'actualisation que [le Rithmic classique](/fr/updates/rithmic-live-balance-display). Les valeurs en direct viennent du PnL plant Protocol. C'est la suite logique du moment où [Protocol est devenu la connexion Rithmic principale](/fr/updates/rithmic-protocol-primary-connection) — la configuration Protocol elle-même ne change pas.
+
+Sur [le tableau de bord](/fr/dashboard), passez en vue **Comptes**. La colonne apparaît dans le tableau et sur les cartes de compte, avec **Récupération du solde Rithmic…** pendant le chargement, et un contrôle d'actualisation à côté du titre. Une erreur Protocol peut s'afficher près de l'actualisation sans bloquer les soldes Rithmic classiques déjà présents. La correspondance des comptes ignore la casse ; l'échec d'un compte ne fait pas disparaître les soldes déjà récupérés.
+
+La colonne reste masquée tant qu'aucun lien Rithmic classique ou Protocol n'existe, et les valeurs restantes disparaissent une fois ces sources parties. Pour voir de vrais chiffres, il faut un point d'accès Protocol configuré et des identifiants en direct. Sans connexion Protocol, aucun WebSocket Protocol n'est ouvert.
+
+Avec une connexion Rithmic Protocol, ouvrez [le tableau de bord](/fr/dashboard), passez en **Comptes**, et actualisez **Solde Rithmic**.

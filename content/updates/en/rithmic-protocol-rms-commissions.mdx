@@ -1,0 +1,17 @@
+---
+title: 'Protocol imports now include Product RMS commissions'
+description: 'Closed Protocol trades store commission from the current Product RMS fill rate, so dashboard net no longer ignores those fees; a resync updates the existing row.'
+date: '2026-08-28'
+status: completed
+completedDate: '2026-08-28'
+---
+
+# Protocol imports now include Product RMS commissions
+
+**Rithmic Protocol** sync now writes commission on each closed trade from Product RMS: fill rate × fill quantity, on entry and exit. Dashboard net (`pnl − commission`) on calendar day totals, the trade table **Commission** column, and net P&L widgets no longer looks high versus Rithmic account P&L for Protocol-imported trades that previously stored commission as `0`.
+
+The rate is the same Product RMS source as R | API+ **ProductRmsListInfo** and the Orders CSV **Commission Fill Rate**. Sync uses the current RMS config, not historical rates for older fill dates. If Product RMS fails, the sync still saves fills with commission `0` and logs a warning. A later sync updates the existing row instead of inserting a duplicate round-trip — trades first stored without RMS keep the same identity, so calendar net is not counted twice.
+
+Classic Rithmic CSV and API+ paths are unchanged. There is no new column or settings toggle. Live rates need a configured Protocol endpoint and live credentials.
+
+With a Rithmic Protocol connection, sync again from [Connections](/en/dashboard/connections), then check commission and calendar net on [the dashboard](/en/dashboard).

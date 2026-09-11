@@ -5,6 +5,11 @@ import { saveTradesAction } from '@/server/database'
 import { Trade, TickDetails } from '@/prisma/generated/prisma/client'
 import crypto from 'crypto'
 import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
+import {
+  TRADOVATE_TRADE_TAG,
+  tradovateRoundTripFillIds,
+  tradovateSideFromBuyFirst,
+} from '@/lib/tradovate/identity'
 import { getTickDetails } from '@/server/tick-details'
 import { prisma } from '@/lib/prisma'
 import { upsertAccountsForNumbers } from '@/server/connections'
@@ -197,30 +202,11 @@ interface Fill {
   commission: number
 }
 
-import { DEFAULT_INCLUDED_FEE_TYPES, type TradovateIncludedFeeTypes } from './fee-types'
-
-/** Sum fees based on which types are included */
-function getTotalFeeFromFillFee(fee: TradovateFillFee, includedFeeTypes: TradovateIncludedFeeTypes | boolean): number {
-  if (includedFeeTypes === true) {
-    return (
-      Number(fee.commission ?? 0) +
-      Number(fee.exchangeFee ?? 0) +
-      Number(fee.clearingFee ?? 0) +
-      Number(fee.nfaFee ?? 0) +
-      Number(fee.brokerageFee ?? 0) +
-      Number(fee.orderRoutingFee ?? 0)
-    )
-  }
-  const types = typeof includedFeeTypes === 'object' ? includedFeeTypes : { commission: true }
-  let total = 0
-  if (types.commission) total += Number(fee.commission ?? 0)
-  if (types.exchangeFee) total += Number(fee.exchangeFee ?? 0)
-  if (types.clearingFee) total += Number(fee.clearingFee ?? 0)
-  if (types.nfaFee) total += Number(fee.nfaFee ?? 0)
-  if (types.brokerageFee) total += Number(fee.brokerageFee ?? 0)
-  if (types.orderRoutingFee) total += Number(fee.orderRoutingFee ?? 0)
-  return total
-}
+import {
+  DEFAULT_INCLUDED_FEE_TYPES,
+  getTotalFeeFromFillFee,
+  type TradovateIncludedFeeTypes,
+} from './fee-types'
 
 
 interface TradovateTradesResult {
@@ -1354,7 +1340,12 @@ async function buildTradesFromFillPairs(
       
       // If buy happened first, it's a long trade (buy then sell)
       // If sell happened first, it's a short trade (sell then buy)
-      const side = isBuyFirst ? 'Long' : 'Short'
+      const side = tradovateSideFromBuyFirst(isBuyFirst)
+      const { entryId, closeId } = tradovateRoundTripFillIds({
+        buyFillId: fillPair.buyFillId,
+        sellFillId: fillPair.sellFillId,
+        isBuyFirst,
+      })
       
       // Calculate P&L using tick value (more accurate for futures)
       const tickDetail = tickDetails.find(detail => detail.ticker === contractSymbol)
@@ -1424,8 +1415,8 @@ async function buildTradesFromFillPairs(
 
       const tradeData = {
         accountNumber: accountLabel,
-        entryId: isBuyFirst ? `fill_${fillPair.buyFillId}` : `fill_${fillPair.sellFillId}`,
-        closeId: isBuyFirst ? `fill_${fillPair.sellFillId}` : `fill_${fillPair.buyFillId}`,
+        entryId,
+        closeId,
         instrument: contractSymbol,
         entryPrice: entryPrice.toString(),
         closePrice: exitPrice.toString(),
@@ -1440,8 +1431,8 @@ async function buildTradesFromFillPairs(
         id: generateDeterministicTradeId(tradeData),
         accountNumber: accountLabel,
         quantity: fillPair.qty,
-        entryId: isBuyFirst ? `fill_${fillPair.buyFillId}` : `fill_${fillPair.sellFillId}`,
-        closeId: isBuyFirst ? `fill_${fillPair.sellFillId}` : `fill_${fillPair.buyFillId}`,
+        entryId,
+        closeId,
         instrument: contractSymbol,
         entryPrice: entryPrice.toString(),
         closePrice: exitPrice.toString(),
@@ -1452,7 +1443,7 @@ async function buildTradesFromFillPairs(
         userId: userId,
         side: side,
         commission: totalCommission,
-        tags: ['tradovate'],
+        tags: [TRADOVATE_TRADE_TAG],
       })
 
       trades.push(trade)
@@ -1630,6 +1621,7 @@ export async function updateTradovateIncludedFeeTypes(
       },
       data: { includedFeeTypes }
     })
+    await invalidateConnectionsPageCache(user.id)
 
     return { success: true }
   } catch (error) {

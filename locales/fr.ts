@@ -251,6 +251,8 @@ export default {
   "connections.strip.unmask": "Afficher",
   "connections.strip.rename": "Renommer",
   "connections.strip.saveName": "Enregistrer le nom",
+  "connections.strip.sync": "Synchroniser",
+  "connections.strip.balance": "Solde {amount}",
   "connections.strip.deleteAccount": "Supprimer {account}",
   "connections.strip.deleteConfirmTitle": "Supprimer ce compte ?",
   "connections.strip.deleteConfirmDescription":
@@ -804,6 +806,7 @@ export default {
     allDates: "Toutes les dates",
     addFilter: "+ Filtrer",
     addFilterAria: "Filtres",
+    addFilterAriaCount: "Filtres, {count} actifs",
     thisMonth: "Ce mois",
     lastThreeMonths: "Derniers 3 mois",
     lastSixMonths: "Les 6 derniers mois",
@@ -861,8 +864,10 @@ export default {
       placeholder: "Rechercher des filtres...",
       searchPlaceholder: "Rechercher des filtres...",
       searchPlaceholderMobile: "Filtres",
+      clearSection: "Effacer {section}",
       sections: {
         accounts: "Comptes",
+        date: "Date",
         dateRange: "Période",
         pnl: "PnL",
         instruments: "Instruments",
@@ -1170,6 +1175,8 @@ export default {
   "calendar.months.october": "Octobre",
   "calendar.months.november": "Novembre",
   "calendar.months.december": "Décembre",
+  "calendar.monthYearPicker.month": "Mois",
+  "calendar.monthYearPicker.year": "Année",
   "calendar.modal.tradeDetails":
     "Détails des trades et analyse de performance pour cette journée.",
   "calendar.modal.table": "Tableau",
@@ -1574,6 +1581,7 @@ export default {
   "share.titleLabel": "Titre",
   "share.titlePlaceholder":
     "Entrez un titre pour votre tableau de bord partagé",
+  "share.defaultTitle": "Tableau de bord partagé",
   "share.error.refresh":
     "Une erreur est survenue lors de l'actualisation des trades",
   "share.refresh": "Actualiser les trades",
@@ -1582,8 +1590,8 @@ export default {
   "share.endDateLabel": "Date de fin (Optionnel)",
   "share.startDatePlaceholder": "Sélectionner une date de début",
   "share.endDatePlaceholder": "Sélectionner une date de fin",
-  "share.accountsLabel": "Sélectionner un compte",
-  "share.accountsPlaceholder": "Sélectionnez un compte à partager",
+  "share.accountsLabel": "Comptes",
+  "share.accountsPlaceholder": "Sélectionnez des comptes à partager",
   "share.dateRangeLabel": "Sélectionner la Période",
   "share.expirationLabel": "Définir la Date d'Expiration",
   "share.publicLabel": "Rendre Public",
@@ -2553,6 +2561,18 @@ export default {
         brokerageFee: "Courtage",
         orderRoutingFee: "Routage d'ordres",
       },
+      feeExample: {
+        title: "Quels frais correspondent à votre plateforme ?",
+        description:
+          "Exemple : {quantity} {instrument}, aller-retour. Choisissez le total que vous attendez.",
+        exampleNote: "Exemple illustratif — pas un cours en direct.",
+        commissionOnlyTitle: "Commission seule",
+        commissionOnlyHint: "Ligne de commission uniquement",
+        allFeesTitle: "Tous les frais",
+        allFeesHint: "Commission, exchange, clearing, NFA, et le reste",
+        skip: "Passer — commission seule",
+        setFees: "Choisir les frais",
+      },
       presets: {
         morning: "Matin (8:00)",
         midday: "Midi (12:00)",
@@ -3219,6 +3239,10 @@ export default {
     medium: "Moyen",
     high: "Élevé",
     title: "Filtrer les news par importance",
+    label: "News",
+  },
+  "calendar.newsFilter": {
+    ariaLabel: "Filtrer les news par pays et importance",
   },
   "calendar.viewMode": {
     daily: "Vue Journalière",

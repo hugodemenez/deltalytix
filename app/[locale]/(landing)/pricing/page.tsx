@@ -1,9 +1,11 @@
-"use client";
-
-import { useEffect } from "react";
 import PricingPlans from "@/components/pricing-plans";
-import { useI18n } from "@/locales/landing-client";
-import { getReferralCode } from "@/lib/referral-storage";
+import { getCurrentLocale, getI18n } from "@/locales/server";
+import { getBackToWorkPricingDisplay } from "@/server/back-to-work-pricing";
+import {
+  formatBackToWorkOfferUntil,
+  isBackToWorkOfferActive,
+} from "@/lib/back-to-work-promo";
+import { setStaticParamsLocale } from "next-international/server";
 
 /**
  * Also rendered as the pricing section of the landing page. There it is nested
@@ -11,12 +13,22 @@ import { getReferralCode } from "@/lib/referral-storage";
  * to drop to a `<div>` and an `<h2>` and keep the document outline valid — the
  * styling is identical either way.
  */
-export default function PricingPage({ embedded = false }: { embedded?: boolean }) {
-  const t = useI18n();
-  // Store referral code from URL on mount
-  useEffect(() => {
-    getReferralCode();
-  }, []);
+export default async function PricingPage({
+  embedded = false,
+  params,
+}: {
+  embedded?: boolean;
+  params?: Promise<{ locale: string }>;
+}) {
+  if (params) {
+    setStaticParamsLocale((await params).locale);
+  }
+
+  const t = await getI18n();
+  const locale = await getCurrentLocale();
+  const promo = await getBackToWorkPricingDisplay();
+  const offerActive = isBackToWorkOfferActive(promo);
+  const offerUntil = formatBackToWorkOfferUntil(promo.validUntilMs, locale);
 
   const Container = embedded ? "div" : "main";
   const Heading = embedded ? "h2" : "h1";
@@ -30,8 +42,15 @@ export default function PricingPage({ embedded = false }: { embedded?: boolean }
         <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-black/55 dark:text-white/55 md:text-lg">
           {t("pricing.subheading")}
         </p>
+        {offerActive ? (
+          <p className="mx-auto mt-3 max-w-xl text-pretty text-sm leading-relaxed text-black/55 dark:text-white/55">
+            {offerUntil
+              ? t("pricing.backToWork.sectionNoteUntil", { date: offerUntil })
+              : t("pricing.backToWork.sectionNote")}
+          </p>
+        ) : null}
       </div>
-      <PricingPlans />
+      <PricingPlans promo={promo} />
     </Container>
   );
 }

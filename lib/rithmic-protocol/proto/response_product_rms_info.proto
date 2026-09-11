@@ -1,0 +1,38 @@
+
+package rti;
+
+message ResponseProductRmsInfo
+	{
+	// PB_OFFSET = 100000, is the offset added for each MNM field id
+
+	enum PresenceBits {
+	                   BUY_LIMIT            =  1;
+			   SELL_LIMIT           =  2;
+			   LOSS_LIMIT           =  4;
+			   MAX_ORDER_QUANTITY   =  8;
+			   BUY_MARGIN_RATE      = 16;
+			   SELL_MARGIN_RATE     = 32;
+			   COMMISSION_FILL_RATE = 64;
+	                  }
+
+	required int32    template_id            = 154467;
+	repeated string   user_msg               = 132760;
+	repeated string   rq_handler_rp_code     = 132764;
+	repeated string   rp_code                = 132766;
+
+	optional uint32   presence_bits          = 153622;
+
+	optional string   fcm_id                 = 154013;
+	optional string   ib_id                  = 154014;
+	optional string   account_id             = 154008;
+	optional string   product_code           = 100749;
+
+	optional double   loss_limit             = 154019;
+	optional double   commission_fill_rate   = 156969;
+	optional double   buy_margin_rate        = 157003;
+	optional double   sell_margin_rate       = 157004;
+
+	optional int32    buy_limit              = 154009;
+	optional int32    max_order_quantity     = 110105;
+	optional int32    sell_limit             = 154035;
+	}

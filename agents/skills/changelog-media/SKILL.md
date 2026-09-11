@@ -141,6 +141,7 @@ If all entries have zero visuals, do not create an empty recipe and do not run c
 | `accounts-table-desktop` | `.png` | Desktop accounts table |
 | `widgets-mobile` | `.png` | Mobile widget carousel |
 | `billing-mobile` | `.png` | Mobile payment history |
+| `tradovate-connections-fee-config` | `.png` | Connections Tradovate fee-config dialog |
 
 If no scene can show the planned evidence, add a narrowly named reusable scene. Document the viewport, route, locator, interaction, and expected state in code. Do not weaken the media plan to fit the existing scene catalog.
 

@@ -27,6 +27,9 @@ bunx prisma generate
 OPENAI_API_KEY=dummy bun run build
 bun run typecheck
 bun run lint
+bun run test
+# Live Rithmic Protocol Product RMS (skipped unless e2e secrets are set)
+# bun run test:e2e:rithmic
 ```
 
 ## Local env (dashboard bypass)
@@ -68,7 +71,9 @@ curl -s -o /dev/null -D - "http://localhost:3000/authentication?next=dashboard" 
 
 ## Shared agent skills
 
-The canonical, cross-agent skill library lives in [`agents/skills/`](./agents/skills/). It holds the only copy of each skill; `.claude/skills/` and `.cursor/skills/` contain symlinks into it so Claude Code and Cursor auto-discover the same files. Never copy a skill into an agent-specific tree.
+First-party skills live in [`agents/skills/`](./agents/skills/). `.claude/skills/` and `.cursor/skills/` contain symlinks into that directory so Claude Code and Cursor auto-discover the same files. Never copy a first-party skill into an agent-specific tree.
+
+Third-party skills (`remotion-*`, `better-*`) are installed with [`npx skills`](https://skills.sh/) into `.agents/skills/` and gitignored. Restore them after clone with `bun run skills:install` (wraps `npx skills experimental_install` and links the copies into Cursor and Claude Code). The lockfile is [`skills-lock.json`](./skills-lock.json).
 
 When a task names a skill or matches a skill's frontmatter description:
 
@@ -76,11 +81,13 @@ When a task names a skill or matches a skill's frontmatter description:
 2. Resolve linked resources relative to the skill directory.
 3. Use `better-interface` for a holistic interface review; it coordinates the focused `better-accessibility`, `better-colors`, `better-layout`, `better-typography`, `better-ui`, and `better-writing` skills.
 
-See [`agents/skills/README.md`](./agents/skills/README.md) for the catalog and upstream provenance.
+See [`agents/skills/README.md`](./agents/skills/README.md) for the catalog and how to add first-party vs third-party skills.
 
 ## Changelog entries
 
-For beta → main promotion PRs, use three sequential specialist roles. When subagents are available, assign each stage to a separate agent.
+For a beta → main release, open the promotion PR **from `beta` directly** (head `beta`, base `main`). Do not cut a `cursor/release-*` or other feature branch for the merge. Changelog outline, EN/FR copy, and media commits land on `beta` and update that same PR.
+
+Then use three sequential specialist roles. When subagents are available, assign each stage to a separate agent.
 
 Changelog publication is append-only: add new EN/FR entries and media, but never revise an entry already present on the base branch. Use descriptive localized Markdown links for product routes instead of bare paths.
 
@@ -146,7 +153,9 @@ Public agent-facing surfaces and the constraints that keep them working:
 
 ## Before opening a PR
 
-Open PRs against **`beta`** (not `main`). `main` is production; feature work lands on `beta` first.
+Open feature PRs against **`beta`** (not `main`). `main` is production; day-to-day work lands on `beta` first.
+
+For a production promotion, open the PR **from `beta` to `main`** — head is `beta`, not a release branch. See **Changelog entries** above.
 
 1. `git fetch origin beta && git rebase origin/beta`
 2. `bun install`
@@ -155,12 +164,19 @@ Open PRs against **`beta`** (not `main`). `main` is production; feature work lan
 5. `OPENAI_API_KEY=dummy bun run build`
 6. Run dashboard health checks above
 
+## Promo motion
+
+Remotion lives in `videos/`. Motion spec and agent handoff: [`videos/motion/AGENTS.md`](./videos/motion/AGENTS.md).
+Do not spring-scale parents of chart axes; SFX must use local `staticFile()` cues.
+
 ## Cursor Cloud specific instructions
 
 - **Docker-in-Docker**: Cloud Agent VMs require `fuse-overlayfs` storage driver and `iptables-legacy` for Docker to work. Run `bash scripts/docker-bootstrap.sh` first; if it fails with overlay errors, install `fuse-overlayfs` (`sudo apt-get install -y fuse-overlayfs`) and set `/etc/docker/daemon.json` to `{"storage-driver": "fuse-overlayfs"}` before starting `dockerd`.
 - **Full local setup**: Run `bash scripts/self-host-quickstart.sh` then `bash scripts/dev.sh`. This handles Docker Postgres, `.env.local`, Bun install, Prisma, seeding, and dev server startup.
 - **Auth**: Uses `LOCAL_DASHBOARD_AUTH_BYPASS=true` — no external Supabase keys needed. The dashboard is accessible at `http://localhost:3000/dashboard` as `local-dashboard-user`.
-- **PRs target `beta`**, not `main`.
+- **Third-party skills**: `bash scripts/install-skills.sh` (also in this environment's `install` script) restores `remotion-*` and `better-*` from `skills-lock.json`.
+- **Tailscale**: Cloud Agent `install` runs `curl -fsSL https://tailscale.com/install.sh | sh`. These VMs have no systemd, so `start` runs `bash scripts/tailscale-bootstrap.sh`, which launches `tailscaled` and, when `TS_AUTHKEY` is set, runs `sudo tailscale up`. When `/dev/net/tun` is absent the script falls back to `--tun=userspace-networking` so joining the tailnet still works.
+- **Feature PRs target `beta`**, not `main`. **Release PRs are `beta` → `main`**, opened from `beta` directly.
 
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know

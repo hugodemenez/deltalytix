@@ -17,6 +17,11 @@ import {
   pendingPurchaseSetCookieHeader,
   readAttributionFromCookies,
 } from "@/lib/attribution-server";
+import {
+  createCheckoutSessionWithPromoFallback,
+  resolveBackToWorkPromoCode,
+  stripeCheckoutPromoParams,
+} from "@/lib/back-to-work-promo";
 
 // This endpoint renders no page of ours — it redirects straight to Stripe — so
 // a signup marker arriving here would never reach the Google tag. Forward it to
@@ -171,7 +176,19 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         // Abandoning checkout does not undo the registration, so the marker
         // rides the cancel path too.
         cancel_url: buildReturnUrl(websiteURL, 'pricing', { canceled: 'true' }, signupSuccess),
-        allow_promotion_codes: true,
+        // promo_code query/form field stays metadata-only. Auto-apply uses the
+        // env-var helper only — Stripe forbids combining discounts with
+        // allow_promotion_codes.
+        ...stripeCheckoutPromoParams(
+            resolveBackToWorkPromoCode({
+                lookupKey: lookup_key,
+                interval: price.recurring?.interval,
+                intervalCount: price.recurring?.interval_count,
+                currency: price.currency,
+                isLifetime: isLifetimePlan,
+                priceType: price.type,
+            }),
+        ),
     };
 
     if (isLifetimePlan) {
@@ -190,7 +207,15 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         }
     }
 
-    const session = await stripe.checkout.sessions.create(sessionConfig);
+    // Auto-apply is currency-specific. If Stripe still rejects the promo
+    // (e.g. EUR price vs USD coupon), retry without discounts instead of 500.
+    const session = await createCheckoutSessionWithPromoFallback(
+        (params) =>
+            stripe.checkout.sessions.create(
+                params as Parameters<typeof stripe.checkout.sessions.create>[0],
+            ),
+        sessionConfig,
+    );
 
     const attributionProps = attributionToPostHogProperties(attribution);
     const setOnce = attributionToPersonSetOnce(attribution);

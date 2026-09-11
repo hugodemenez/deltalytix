@@ -1,0 +1,17 @@
+---
+title: 'Live Rithmic balances now cover Protocol accounts'
+description: 'Accounts on a Rithmic Protocol connection show the same Rithmic balance column and refresh control as classic Rithmic.'
+date: '2026-08-26'
+status: completed
+completedDate: '2026-08-26'
+---
+
+# Live Rithmic balances now cover Protocol accounts
+
+Accounts linked to a **Rithmic Protocol** connection now show the same **Rithmic balance** column and refresh control that [classic Rithmic already had](/en/updates/rithmic-live-balance-display). Live values come from the Protocol PnL plant. This is a follow-up now that [Protocol is the primary Rithmic connection](/en/updates/rithmic-protocol-primary-connection) — it does not change how you set Protocol up.
+
+On [the dashboard](/en/dashboard), switch to **Accounts**. The column appears on the table and on account cards, with **Fetching Rithmic balance…** while a value loads, and a refresh control next to the heading. Protocol errors can appear next to refresh without blocking classic Rithmic balances already on the page. Account matching is case-insensitive; one account failing does not drop balances already collected.
+
+The column stays hidden when no classic Rithmic or Protocol source is linked, and leftover values disappear once those sources are gone. Seeing real numbers requires a configured Protocol endpoint and live credentials. Traders without a Protocol connection never open a Protocol WebSocket.
+
+With a Rithmic Protocol connection, open [the dashboard](/en/dashboard), switch to **Accounts**, and use refresh on **Rithmic balance**.

@@ -1,9 +1,18 @@
 import type { Trade } from "@/prisma/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { formatTimestamp } from "@/lib/date-utils"
-import { v5 as uuidv5 } from "uuid"
 import { capturePostHogEvent } from "@/lib/posthog-server"
 import { revalidateTag, updateTag } from "next/cache"
+import {
+  generatePersistedTradeUUID,
+  RITHMIC_PROTOCOL_TRADE_TAG,
+} from "@/lib/trade-id-utils"
+import {
+  isTradovatePersistedTrade,
+  resolveTradovatePersistedId,
+  tradovateFillIdLookupValues,
+} from "@/lib/tradovate/identity"
+import { isDuplicateTradesOnlySave } from "@/lib/trades/save-trades-outcome"
 
 export type TradeError =
   | "DUPLICATE_TRADES"
@@ -18,27 +27,8 @@ export interface TradeSaveResult {
   trades?: Trade[]
 }
 
-const TRADE_NAMESPACE = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
-
 export function generateTradeUUID(trade: Partial<Trade>): string {
-  const tradeSignature = [
-    trade.userId || "",
-    trade.accountNumber || "",
-    trade.instrument || "",
-    trade.entryDate || "",
-    trade.closeDate || "",
-    trade.entryPrice || "",
-    trade.closePrice || "",
-    (trade.quantity || 0).toString(),
-    trade.entryId || "",
-    trade.closeId || "",
-    (trade.timeInPosition || 0).toString(),
-    trade.side || "",
-    (trade.pnl || 0).toString(),
-    (trade.commission || 0).toString(),
-  ].join("|")
-
-  return uuidv5(tradeSignature, TRADE_NAMESPACE)
+  return generatePersistedTradeUUID(trade)
 }
 
 async function invalidateTradeCaches(userId: string): Promise<void> {
@@ -49,6 +39,80 @@ async function invalidateTradeCaches(userId: string): Promise<void> {
     revalidateTag(`trades-${userId}`, { expire: 0 })
     revalidateTag(`user-data-${userId}`, { expire: 0 })
   }
+}
+
+async function backfillRithmicProtocolCommissions(
+  userId: string,
+  trades: Trade[],
+): Promise<number> {
+  const protocolTrades = trades.filter(
+    (trade) => trade.tags?.includes(RITHMIC_PROTOCOL_TRADE_TAG) && trade.id,
+  )
+  if (protocolTrades.length === 0) return 0
+
+  const existing = await prisma.trade.findMany({
+    where: { userId, id: { in: protocolTrades.map((trade) => trade.id) } },
+    select: { id: true, commission: true },
+  })
+  const currentById = new Map(existing.map((row) => [row.id, row.commission]))
+  const updates = protocolTrades.filter((trade) => {
+    const current = currentById.get(trade.id)
+    return current != null && current !== trade.commission
+  })
+  if (updates.length === 0) return 0
+
+  const chunkSize = 100
+  for (let offset = 0; offset < updates.length; offset += chunkSize) {
+    const chunk = updates.slice(offset, offset + chunkSize)
+    await prisma.$transaction(
+      chunk.map((trade) =>
+        prisma.trade.updateMany({
+          where: { id: trade.id, userId },
+          data: { commission: trade.commission },
+        }),
+      ),
+    )
+  }
+  console.log(
+    `[saveTrades] Updated commission on ${updates.length} existing ${RITHMIC_PROTOCOL_TRADE_TAG} trade(s)`,
+  )
+  return updates.length
+}
+
+async function assignExistingTradovateIds(
+  userId: string,
+  trades: Trade[],
+): Promise<Trade[]> {
+  const tradovateTrades = trades.filter(isTradovatePersistedTrade)
+  if (tradovateTrades.length === 0) return trades
+
+  const fillCandidates = [
+    ...new Set(
+      tradovateTrades.flatMap((trade) => [
+        ...tradovateFillIdLookupValues(trade.entryId),
+        ...tradovateFillIdLookupValues(trade.closeId),
+      ]),
+    ),
+  ]
+  if (fillCandidates.length === 0) return trades
+
+  const existing = await prisma.trade.findMany({
+    where: {
+      userId,
+      OR: [
+        { entryId: { in: fillCandidates } },
+        { closeId: { in: fillCandidates } },
+      ],
+    },
+    select: { id: true, accountNumber: true, entryId: true, closeId: true },
+  })
+  if (existing.length === 0) return trades
+
+  return trades.map((trade) => {
+    if (!isTradovatePersistedTrade(trade)) return trade
+    const existingId = resolveTradovatePersistedId(trade, existing)
+    return existingId ? { ...trade, id: existingId } : trade
+  })
 }
 
 export async function saveTradesCore(
@@ -84,7 +148,7 @@ export async function saveTradesCore(
       options.connectionId,
     )
 
-    const userAssignedTrades = data.map((trade) => {
+    const preparedTrades = data.map((trade) => {
       const accountId =
         trade.accountId ||
         (trade.accountNumber
@@ -96,16 +160,26 @@ export async function saveTradesCore(
         ...trade,
         userId,
         accountId,
-        id: generateTradeUUID({ ...trade, userId }),
+        id: generatePersistedTradeUUID({ ...trade, userId }),
       } as Trade
     })
+
+    const userAssignedTrades = await assignExistingTradovateIds(
+      userId,
+      preparedTrades,
+    )
 
     const result = await prisma.trade.createMany({
       data: userAssignedTrades,
       skipDuplicates: true,
     })
 
-    if (result.count === 0) {
+    const commissionsUpdated = await backfillRithmicProtocolCommissions(
+      userId,
+      userAssignedTrades,
+    )
+
+    if (isDuplicateTradesOnlySave(result.count, commissionsUpdated)) {
       const tradeIds = userAssignedTrades.map((trade) => trade.id)
       const existingTrades = await prisma.trade.findMany({
         where: { id: { in: tradeIds } },

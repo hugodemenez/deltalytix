@@ -31,6 +31,12 @@ import {
   type BillingPeriod,
 } from "@/lib/billing-plan-catalog";
 import {
+  backToWorkPeriodDisplay,
+  isBackToWorkOfferActive,
+  type BackToWorkPricingDisplay,
+} from "@/lib/back-to-work-promo";
+import { getBackToWorkPricingDisplay } from "@/server/back-to-work-pricing";
+import {
   changeBillingPlan,
   submitBillingCheckout,
 } from "@/lib/billing-plan-change.client";
@@ -52,6 +58,7 @@ interface PricingPlansProps {
   isModal?: boolean;
   onClose?: () => void;
   trigger?: React.ReactNode;
+  promo?: BackToWorkPricingDisplay | null;
   currentSubscription?: {
     id: string;
     status: string;
@@ -67,6 +74,7 @@ export default function PricingPlans({
   isModal,
   onClose,
   trigger,
+  promo: promoProp,
   currentSubscription,
 }: PricingPlansProps) {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
@@ -74,9 +82,13 @@ export default function PricingPlans({
   const [showLifetimeConfirm, setShowLifetimeConfirm] = useState(false);
   const [pendingLookupKey, setPendingLookupKey] = useState<string>("");
   const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [loadedPromo, setLoadedPromo] = useState<BackToWorkPricingDisplay | null>(
+    promoProp ?? null,
+  );
   const t = useI18n();
   const locale = useCurrentLocale();
   const { currency, symbol } = useBillingCurrency();
+  const promo = promoProp ?? loadedPromo;
 
   // Read referral code from URL params or localStorage on mount
   useEffect(() => {
@@ -89,6 +101,11 @@ export default function PricingPlans({
       });
     }
   }, []);
+
+  useEffect(() => {
+    if (promoProp !== undefined || currentSubscription) return;
+    void getBackToWorkPricingDisplay().then(setLoadedPromo);
+  }, [promoProp, currentSubscription]);
 
   // Compatibility wrappers keep full pricing behavior on the shared catalog.
   const isCurrentPlan = (lookupKey: string) => {
@@ -288,7 +305,12 @@ export default function PricingPlans({
     </article>
   );
 
-  const currentPricing =
+  const campaignActive =
+    !currentSubscription && isBackToWorkOfferActive(promo);
+  const periodOffer = currentSubscription
+    ? undefined
+    : backToWorkPeriodDisplay(promo, billingPeriod);
+  const listMonthly =
     billingPeriod === "yearly"
       ? plans.plus.price.yearly / 12
       : billingPeriod === "quarterly"
@@ -296,23 +318,36 @@ export default function PricingPlans({
         : billingPeriod === "lifetime"
           ? plans.plus.price.lifetime
           : plans.plus.price.monthly;
+  const currentPricing = periodOffer?.saleMonthlyEquivalent ?? listMonthly;
+  const showSale = Boolean(
+    periodOffer?.offerActive && periodOffer.saleMonthlyEquivalent !== undefined,
+  );
+  const listCharge =
+    billingPeriod === "yearly"
+      ? plans.plus.price.yearly
+      : billingPeriod === "quarterly"
+        ? plans.plus.price.quarterly
+        : plans.plus.price.monthly;
+  const billedTotal = periodOffer?.saleCharge ?? listCharge;
+  const listMonthlyFormatted = formatBillingAmount(
+    listMonthly,
+    currency,
+    locale,
+  );
+  const saleMonthlyFormatted = formatBillingAmount(
+    currentPricing,
+    currency,
+    locale,
+  );
 
   const billingDetail =
     billingPeriod === "yearly"
       ? t("pricing.billedYearly", {
-          total: formatBillingAmount(
-            plans.plus.price.yearly,
-            currency,
-            locale,
-          ),
+          total: formatBillingAmount(billedTotal, currency, locale),
         })
       : billingPeriod === "quarterly"
         ? t("pricing.billedQuarterly", {
-          total: formatBillingAmount(
-              plans.plus.price.quarterly,
-              currency,
-              locale,
-            ),
+            total: formatBillingAmount(billedTotal, currency, locale),
           })
         : billingPeriod === "lifetime"
           ? t("pricing.oneTimePayment")
@@ -352,27 +387,69 @@ export default function PricingPlans({
         {billingPeriodSelector}
       </div>
       <div>
-        <div className="flex items-baseline justify-between gap-4">
-          <h3 className="text-2xl font-normal tracking-tight">
-            {plans.plus.name}
-          </h3>
-          <div className="flex min-w-[11rem] shrink-0 items-baseline justify-end sm:min-w-[12rem]">
-            <span className="text-2xl font-normal tabular-nums">
-              <NumberFlow
-                prefix={currency === "EUR" ? undefined : symbol}
-                suffix={currency === "EUR" ? symbol : undefined}
-                value={currentPricing}
-                digits={{ 1: { max: 2 } }}
-              />
-            </span>
-            <span
-              className={cn(
-                "ml-1 text-sm text-black/55 dark:text-white/55",
-                billingPeriod === "lifetime" && "invisible",
-              )}
-            >
-              / {t("pricing.month")}
-            </span>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h3 className="text-2xl font-normal tracking-tight">
+              {plans.plus.name}
+            </h3>
+            {campaignActive ? (
+              <p
+                className={cn(
+                  "mt-1 text-xs text-black/55 dark:text-white/55",
+                  !periodOffer?.offerActive && "invisible",
+                )}
+                aria-hidden={!periodOffer?.offerActive}
+              >
+                {t("pricing.backToWork.badge")}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex min-w-[11rem] shrink-0 flex-col items-end sm:min-w-[12rem]">
+            {campaignActive ? (
+              <>
+                {showSale ? (
+                  <span className="sr-only">
+                    {t("pricing.backToWork.regularPrice", {
+                      price: listMonthlyFormatted,
+                    })}
+                  </span>
+                ) : null}
+                <s
+                  aria-hidden
+                  className={cn(
+                    "h-5 text-sm tabular-nums text-black/40 dark:text-white/40",
+                    !showSale && "invisible",
+                  )}
+                >
+                  {listMonthlyFormatted}
+                </s>
+                {showSale ? (
+                  <span className="sr-only">
+                    {t("pricing.backToWork.offerPrice", {
+                      price: saleMonthlyFormatted,
+                    })}
+                  </span>
+                ) : null}
+              </>
+            ) : null}
+            <div className="flex items-baseline">
+              <span className="text-2xl font-normal tabular-nums">
+                <NumberFlow
+                  prefix={currency === "EUR" ? undefined : symbol}
+                  suffix={currency === "EUR" ? symbol : undefined}
+                  value={currentPricing}
+                  digits={{ 1: { max: 2 } }}
+                />
+              </span>
+              <span
+                className={cn(
+                  "ml-1 text-sm text-black/55 dark:text-white/55",
+                  billingPeriod === "lifetime" && "invisible",
+                )}
+              >
+                / {t("pricing.month")}
+              </span>
+            </div>
           </div>
         </div>
         <p

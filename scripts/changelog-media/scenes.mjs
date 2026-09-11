@@ -8,14 +8,17 @@ import {
   dismissCookies,
   ensureCookiesDismissed,
   injectBillingPaymentHistoryMock,
+  injectTradovateFeeCaptureConnection,
   newCapturePage,
   outputDir,
   recordVideo,
   screenshot,
   waitForDashboard,
   waitForNavbarBadgeSettled,
+  prepareForScreenshot,
 } from './helpers.mjs'
-import { LABELS, viewport } from './constants.mjs'
+import { execFileSync } from 'child_process'
+import { LABELS, resolveDeviceScaleFactor, viewport } from './constants.mjs'
 
 /** Seeded standalone account the IG import capture targets. */
 const CAPTURE_ACCOUNT = 'LOCAL-SIM-001'
@@ -57,6 +60,20 @@ const CAPTURE_LABELS = {
     weeklyRecap: /^Weekly recap$/i,
     deleteAccount: /^Delete account$/i,
     addChip: /^Add$/i,
+    accountTrigger: /^Account$/,
+    connectionsNav: /^Connections$/,
+    standaloneChip: /Standalone/,
+    mask: /^Mask$/,
+    deleteStandalone: /^(Delete Local Simulation|Delete LOCAL-SIM-001)$/,
+    deleteConfirmTitle: /^Delete this account\?$/,
+    cancel: /^Cancel$/,
+    compareJournalsHeading: /^Journals comparison$/,
+    youAreHere: /You.?re here/,
+    viewMore: /View more/,
+    compareWhatYouGet: /WHAT YOU GET/,
+    agentResources: /^For AI agents and crawlers$/,
+    deepcharts: /DeepCharts/,
+    platformCsv: /Platform CSV Import/,
   },
   fr: {
     dxfeed: /^DxFeed$/i,
@@ -76,6 +93,20 @@ const CAPTURE_LABELS = {
     weeklyRecap: /^Récap hebdomadaire$/i,
     deleteAccount: /^Supprimer le compte$/i,
     addChip: /^Ajouter$/i,
+    accountTrigger: /^Compte$/,
+    connectionsNav: /^Connexions$/,
+    standaloneChip: /Autonome/,
+    mask: /^Masquer$/,
+    deleteStandalone: /^(Supprimer Local Simulation|Supprimer LOCAL-SIM-001)$/,
+    deleteConfirmTitle: /^Supprimer ce compte \?$/,
+    cancel: /^Annuler$/,
+    compareJournalsHeading: /^Comparaison des journaux$/,
+    youAreHere: /Vous êtes ici/,
+    viewMore: /Voir plus/,
+    compareWhatYouGet: /Ce que vous avez/,
+    agentResources: /^For AI agents and crawlers$/,
+    deepcharts: /DeepCharts/,
+    platformCsv: /Import CSV Plateforme/,
   },
 }
 
@@ -239,7 +270,15 @@ async function blockLandingDataRefresh(page, locale, siteUrl) {
  */
 async function openConnectionsForImport(page, locale, siteUrl) {
   await waitForDashboard(page, locale, siteUrl)
-  await page.locator('nav a#import-data').first().click()
+  // v5 chrome: Connections is in the Account menu, not a navbar #import-data link.
+  await page
+    .getByRole('button', { name: CAPTURE_LABELS[locale].accountTrigger })
+    .click()
+  await page
+    .getByRole('menuitem', { name: CAPTURE_LABELS[locale].connectionsNav })
+    .or(page.getByRole('link', { name: CAPTURE_LABELS[locale].connectionsNav }))
+    .first()
+    .click()
   await page.waitForURL(/\/dashboard\/connections/, { timeout: 60_000 })
   await dismissCookies(page, locale)
   await page.getByText(CAPTURE_ACCOUNT).first().waitFor({ timeout: 90_000 })
@@ -269,6 +308,40 @@ async function openImportPicker(page, locale) {
   return { heading, trigger, picker }
 }
 
+/**
+ * Open the dashboard connections-strip Standalone / Autonome chip picker.
+ * Viewport/route: desktop /{locale}/dashboard (not the Connections page).
+ * Seeded row is propfirm "Local Simulation" above number LOCAL-SIM-001.
+ * Expected: Mask/Masquer eye and standalone Delete trash. Does not click
+ * mask (persists Hidden Accounts) and does not confirm delete.
+ */
+async function openStandaloneStripPicker(page, locale, siteUrl) {
+  await waitForDashboard(page, locale, siteUrl)
+  const strip = page.getByRole('navigation', {
+    name: CAPTURE_LABELS[locale].connectionsStrip,
+  })
+  await strip.waitFor({ timeout: 30_000 })
+  await waitForNoVisibleToasts(page)
+  const chip = strip.getByRole('button', {
+    name: CAPTURE_LABELS[locale].standaloneChip,
+  }).first()
+  await chip.waitFor({ timeout: 15_000 })
+  await chip.click()
+  const picker = page.locator('[cmdk-root]').last()
+  await picker.waitFor({ timeout: 15_000 })
+  await page.getByText(CAPTURE_ACCOUNT, { exact: true }).first().waitFor({
+    timeout: 15_000,
+  })
+  await page.getByRole('button', { name: CAPTURE_LABELS[locale].mask }).waitFor({
+    timeout: 10_000,
+  })
+  await page
+    .getByRole('button', { name: CAPTURE_LABELS[locale].deleteStandalone })
+    .waitFor({ timeout: 10_000 })
+  await page.waitForTimeout(600)
+  return { strip, chip, picker }
+}
+
 /** Scroll the picker's own list so a named option is visible in the capture. */
 async function revealPickerOption(page, name) {
   await page.evaluate((optionName) => {
@@ -286,7 +359,8 @@ async function revealPickerOption(page, name) {
   await page.waitForTimeout(600)
 }
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form' | 'compare-hub-journals-table' | 'compare-tradezella-what-you-get' | 'connections-import-picker-deepcharts' | 'dashboard-strip-standalone-actions' | 'dashboard-strip-standalone-delete-confirm' | 'public-404-agent-resources' | 'calendar-header-month-year-news' | 'dashboard-centered-view-tabs' | 'dashboard-home-email' | 'renewal-notice-email' | 'landing-hero-16-9-frame' | 'tradovate-connections-fee-config'} ChangelogScene */
+
 
 /**
  * @param {import('playwright-core').Browser} browser
@@ -296,6 +370,60 @@ export async function captureScene(browser, options) {
   const { batch, locale, file, scene, route, siteUrl, playwrightLocale } = options
 
   switch (scene) {
+    case 'landing-hero-16-9-frame': {
+      // Tight clip of the mint hero well. 1440×900 first-viewport
+      // landing-hero leaves most of the 16:9 frame below the fold.
+      // Scrolls `.aspect-video`, pauses at t=3 (ONE DASHBOARD frame; t=0 is a white intro),
+      // clips the mint parent. Expected: 16:9 product demo, not the
+      // ultrawide crop, not the #features section.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        colorScheme: 'light',
+        ...viewport('desktop'),
+      })
+      await page.addInitScript(() => {
+        window.localStorage.setItem('theme', 'light')
+      })
+      await page.goto(`${siteUrl}/${locale}`, { waitUntil: 'networkidle', timeout: 120_000 })
+      await dismissCookies(page, locale)
+      const frame = page.locator('.aspect-video').first()
+      await frame.waitFor({ timeout: 30_000 })
+      await frame.scrollIntoViewIfNeeded()
+      await page.waitForFunction(
+        () => {
+          const video = document.querySelector('.aspect-video video')
+          return Boolean(video && video.readyState >= 2)
+        },
+        undefined,
+        { timeout: 45_000 },
+      )
+      await page.evaluate(async () => {
+        const video = document.querySelector('.aspect-video video')
+        if (!video) return
+        video.pause()
+        video.currentTime = 3
+        await new Promise((resolve) => {
+          const done = () => {
+            video.removeEventListener('seeked', done)
+            resolve()
+          }
+          video.addEventListener('seeked', done)
+          setTimeout(done, 1500)
+        })
+        video.style.opacity = '1'
+      })
+      const well = frame.locator('xpath=ancestor::div[contains(@class,"overflow-hidden")][1]')
+      await well.waitFor({ timeout: 10_000 })
+      await page.waitForTimeout(500)
+      await ensureCookiesDismissed(page, locale)
+      await assertNoDevIssues(page, `${locale} landing hero 16:9 frame`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [well], 16),
+      })
+      await page.close()
+      return
+    }
+
     case 'landing-hero': {
       const page = await newCapturePage(browser, {
         locale: playwrightLocale,
@@ -797,6 +925,33 @@ export async function captureScene(browser, options) {
       await page.waitForTimeout(1200)
       await assertNoDevIssues(page, `${locale} connections hub`)
       await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'tradovate-connections-fee-config': {
+      // Desktop Connections. Local seed has no Tradovate OAuth row, so the
+      // JSON refresh is patched with a capture-only Apex connection.
+      // Viewport: desktop. Route: /{locale}/dashboard/connections via navbar.
+      // Interaction: click [data-testid="tradovate-fee-settings"].
+      // Expected: dialog Fee config for Apex / Config des commissions pour Apex
+      // with Commission checked and Select all / Tout sélectionner visible.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await injectTradovateFeeCaptureConnection(page)
+      await openConnectionsForImport(page, locale, siteUrl)
+      const settings = page.getByTestId('tradovate-fee-settings')
+      await settings.waitFor({ timeout: 30_000 })
+      await settings.click()
+      const dialog = page.getByTestId('tradovate-fee-config-dialog')
+      await dialog.waitFor({ timeout: 15_000 })
+      await waitForNoVisibleToasts(page)
+      await assertNoDevIssues(page, `${locale} tradovate fee config`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [dialog], 28),
+      })
       await page.close()
       return
     }
@@ -1620,6 +1775,407 @@ export async function captureScene(browser, options) {
           [heading, description, usernameField, passwordField, connect],
           20,
         ),
+      })
+      await page.close()
+      return
+    }
+
+    case 'compare-hub-journals-table': {
+      // Desktop public hub /{locale}/trading-journal/futures.
+      // Viewport 1440x900. Interaction: dismiss cookies, scroll to the
+      // journals section (the hero H1 is the already-published journal line).
+      // Locator: h2 Journals comparison / Comparaison des journaux, then the
+      // wrapping <section>. Expected: Deltalytix Us/Nous + You're here /
+      // Vous êtes ici, three View more → / Voir plus → rows, no Soon/Later.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await page.goto(`${siteUrl}/${locale}/trading-journal/futures`, {
+        waitUntil: 'networkidle',
+        timeout: 120_000,
+      })
+      await dismissCookies(page, locale)
+      const heading = page.getByRole('heading', {
+        level: 2,
+        name: CAPTURE_LABELS[locale].compareJournalsHeading,
+      })
+      await heading.waitFor({ timeout: 30_000 })
+      const journals = heading.locator('xpath=ancestor::section[1]')
+      await journals.scrollIntoViewIfNeeded()
+      await journals.getByText(CAPTURE_LABELS[locale].youAreHere).first().waitFor({
+        timeout: 15_000,
+      })
+      const viewMore = journals.getByText(CAPTURE_LABELS[locale].viewMore)
+      await viewMore.first().waitFor({ timeout: 15_000 })
+      if ((await viewMore.count()) < 3) {
+        throw new Error(`Hub table is missing competitor View more rows for ${locale}`)
+      }
+      const leftover = await journals.getByText(/Soon|Later|Bientôt/i).count()
+      if (leftover > 0) {
+        throw new Error(`Hub table still shows Soon/Later chips for ${locale}`)
+      }
+      await page.waitForTimeout(800)
+      await ensureCookiesDismissed(page, locale)
+      await assertNoDevIssues(page, `${locale} compare hub journals table`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [journals], 24),
+      })
+      await page.close()
+      return
+    }
+
+    case 'compare-tradezella-what-you-get': {
+      // Desktop 1:1 /{locale}/trading-journal/futures/tradezella.
+      // Viewport 1440x1400 so the large H1 and first Us vs Them section share
+      // a frame. Locator: breadcrumb nav, h1 Deltalytix vs TradeZella.,
+      // heading 01 WHAT YOU GET / 01 Ce que vous avez. Expected: Deltalytix
+      // and TradeZella columns under that section. No interaction beyond load.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+        viewport: { width: 1440, height: 1400 },
+      })
+      await page.goto(
+        `${siteUrl}/${locale}/trading-journal/futures/tradezella`,
+        { waitUntil: 'networkidle', timeout: 120_000 },
+      )
+      await dismissCookies(page, locale)
+      const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' })
+      const title = page.getByRole('heading', {
+        level: 1,
+        name: /Deltalytix vs TradeZella/i,
+      })
+      await title.waitFor({ timeout: 30_000 })
+      const whatYouGet = page.getByRole('heading', {
+        name: CAPTURE_LABELS[locale].compareWhatYouGet,
+      })
+      await whatYouGet.waitFor({ timeout: 15_000 })
+      const section = whatYouGet.locator('xpath=ancestor::section[1]')
+      await title.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(600)
+      await ensureCookiesDismissed(page, locale)
+      await assertNoDevIssues(page, `${locale} compare TradeZella 1:1`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [breadcrumb, title, section], 24),
+      })
+      await page.close()
+      return
+    }
+
+    case 'connections-import-picker-deepcharts': {
+      // Desktop Connections, file-import picker filtered to DeepCharts.
+      // Viewport 1440x900. Route: /{locale}/dashboard then navbar to
+      // /dashboard/connections (openConnectionsForImport). Interaction: open
+      // Upload a file / Ajouter avec un fichier, type "deepcharts".
+      // Locator: [cmdk-root] option DeepCharts under Platform CSV Import /
+      // Import CSV Plateforme. Expected: monochrome mark + DeepCharts Trade
+      // List CSV / CSV Trade List DeepCharts. Does not select CSV with AI.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await openConnectionsForImport(page, locale, siteUrl)
+      await sanitizeConnectionIdentifiers(page)
+      const { heading, trigger, picker } = await openImportPicker(page, locale)
+      await picker.locator('[cmdk-input]').fill('deepcharts')
+      const option = page.getByRole('option', {
+        name: CAPTURE_LABELS[locale].deepcharts,
+      }).first()
+      await option.waitFor({ state: 'visible', timeout: 15_000 })
+      await option.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(700)
+      await assertNoDevIssues(page, `${locale} DeepCharts import picker`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [heading, trigger, picker], 24),
+      })
+      await page.close()
+      return
+    }
+
+    case 'dashboard-strip-standalone-actions': {
+      // Desktop dashboard connections strip — not the Connections page.
+      // Viewport 1440x900. Route: /{locale}/dashboard. Interaction: click the
+      // Standalone / Autonome chip. Locator: strip nav + chip + [cmdk-root]
+      // popover. Expected: LOCAL-SIM-001 with name-above-number, Mask/Masquer
+      // eye, rename pencil, and Delete trash. Do not click mask (persists
+      // Hidden Accounts) and do not click trash in this scene.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      const { chip, picker } = await openStandaloneStripPicker(
+        page,
+        locale,
+        siteUrl,
+      )
+      await waitForNoVisibleToasts(page)
+      await assertNoDevIssues(page, `${locale} strip standalone actions`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [chip, picker], 24),
+      })
+      await page.close()
+      return
+    }
+
+    case 'dashboard-strip-standalone-delete-confirm': {
+      // Same dashboard strip path. After the picker is open, click trash on
+      // LOCAL-SIM-001 only. The confirm dialog lives on the strip (picker
+      // closes). Expected: Delete this account? / Supprimer ce compte ? with
+      // Cancel / Annuler and Delete account / Supprimer le compte.
+      // MUST click Cancel only — never the destructive action.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await openStandaloneStripPicker(page, locale, siteUrl)
+      await page
+        .getByRole('button', { name: CAPTURE_LABELS[locale].deleteStandalone })
+        .click()
+      const dialog = page
+        .getByRole('alertdialog')
+        .or(page.getByRole('dialog'))
+        .last()
+      await dialog.waitFor({ timeout: 15_000 })
+      await dialog
+        .getByRole('heading', { name: CAPTURE_LABELS[locale].deleteConfirmTitle })
+        .waitFor({ timeout: 10_000 })
+      await dialog.getByText(CAPTURE_ACCOUNT).first().waitFor({ timeout: 10_000 })
+      const cancel = dialog.getByRole('button', {
+        name: CAPTURE_LABELS[locale].cancel,
+      })
+      await cancel.waitFor({ timeout: 10_000 })
+      await page.waitForTimeout(500)
+      await waitForNoVisibleToasts(page)
+      await assertNoDevIssues(page, `${locale} strip standalone delete confirm`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [dialog], 20),
+      })
+      await cancel.click()
+      await dialog.waitFor({ state: 'hidden', timeout: 10_000 })
+      await page.close()
+      return
+    }
+
+    case 'calendar-header-month-year-news': {
+      // Desktop Widgets view, daily calendar header only — not the day grid.
+      // Viewport 1440x900. Route: /{locale}/dashboard.
+      // Interaction: wait for dashboard, ensure Widgets, scroll the picker
+      // into view. Does not open Month, Year, or News (closed chips are the
+      // claim; native <select> lists are OS chrome).
+      // Locator: [data-slot="calendar-month-year-picker"] with month + year
+      // selects visible, plus [data-slot="calendar-news-filter"], clipped
+      // via the wrapping [data-slot="card-header"].
+      // Expected: prev / month chip / next / year chip / monthly total /
+      // News (newspaper icon + News label). EN month name + News; FR month
+      // name + News.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      await clickTab(page, LABELS[locale].widgetsTab)
+      const picker = page.locator('[data-slot="calendar-month-year-picker"]')
+      await picker.waitFor({ timeout: 30_000 })
+      await page.locator('[data-slot="calendar-month-select"]').waitFor({
+        timeout: 15_000,
+      })
+      await page.locator('[data-slot="calendar-year-select"]').waitFor({
+        timeout: 15_000,
+      })
+      const news = page.locator('[data-slot="calendar-news-filter"]')
+      await news.waitFor({ timeout: 15_000 })
+      const header = picker.locator(
+        'xpath=ancestor::*[@data-slot="card-header"][1]',
+      )
+      await header.scrollIntoViewIfNeeded()
+      await waitForNoVisibleToasts(page)
+      await page.waitForTimeout(600)
+      await assertNoDevIssues(page, `${locale} calendar header month year news`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [header], 8),
+      })
+      await page.close()
+      return
+    }
+
+    case 'dashboard-centered-view-tabs': {
+      // Desktop home navbar at 1440 so md tabs paint (hidden below md).
+      // Viewport 1440x900. Route: /{locale}/dashboard (home chrome only).
+      // Interaction: wait for dashboard, confirm Widgets selected, settle
+      // the navbar subscription badge. Does not open the phone dropdown.
+      // Locator: sticky <nav> (h-14). Expected: logo + filters on the left,
+      // centered tablist Widgets | Table | Accounts (FR: Widgets | Tableau |
+      // Comptes) with Widgets as the raised white pill, share + account on
+      // the right.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      const tablist = page.getByRole('tablist').first()
+      await tablist.waitFor({ timeout: 15_000 })
+      const widgets = tablist.getByRole('tab', {
+        name: LABELS[locale].widgetsTab,
+      })
+      await widgets.waitFor({ timeout: 10_000 })
+      if ((await widgets.getAttribute('aria-selected')) !== 'true') {
+        await widgets.click()
+        await page.waitForTimeout(400)
+      }
+      await tablist
+        .getByRole('tab', { name: LABELS[locale].tableTab })
+        .waitFor({ timeout: 10_000 })
+      await tablist
+        .getByRole('tab', { name: LABELS[locale].accountsTab })
+        .waitFor({ timeout: 10_000 })
+      await waitForNavbarBadgeSettled(page)
+      await waitForNoVisibleToasts(page)
+      const nav = page.locator('nav').first()
+      await page.waitForTimeout(400)
+      await assertNoDevIssues(page, `${locale} dashboard centered view tabs`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [nav], 12),
+      })
+      await page.close()
+      return
+    }
+
+    case 'dashboard-home-email': {
+      // Email still (16:9): current beta dashboard HOME from the top of the
+      // window through the first widget row. Not a changelog card crop and
+      // not the landing Import Trades shot. Viewport 1440×900 desktop so md
+      // tabs paint; clip is 1440×810 (16:9) from y=0. Light theme. Widgets
+      // selected. Centered tablist in the top bar (not the phone dropdown).
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        colorScheme: 'light',
+        ...viewport('desktop'),
+      })
+      await page.addInitScript(() => {
+        window.localStorage.setItem('theme', 'light')
+      })
+      await waitForDashboard(page, locale, siteUrl)
+      const tablist = page.getByRole('tablist').first()
+      await tablist.waitFor({ timeout: 15_000 })
+      const widgets = tablist.getByRole('tab', {
+        name: LABELS[locale].widgetsTab,
+      })
+      await widgets.waitFor({ timeout: 10_000 })
+      if ((await widgets.getAttribute('aria-selected')) !== 'true') {
+        await widgets.click()
+        await page.waitForTimeout(400)
+      }
+      await tablist
+        .getByRole('tab', { name: LABELS[locale].tableTab })
+        .waitFor({ timeout: 10_000 })
+      await tablist
+        .getByRole('tab', { name: LABELS[locale].accountsTab })
+        .waitFor({ timeout: 10_000 })
+      await page
+        .getByRole('navigation', { name: CAPTURE_LABELS[locale].connectionsStrip })
+        .waitFor({ timeout: 30_000 })
+      await page.locator('.react-grid-item').first().waitFor({ timeout: 30_000 })
+      await waitForNavbarBadgeSettled(page)
+      await waitForNoVisibleToasts(page)
+      const size = page.viewportSize()
+      const clipWidth = size?.width ?? 1440
+      const clipHeight = Math.round((clipWidth * 9) / 16)
+      await page.waitForTimeout(600)
+      await assertNoDevIssues(page, `${locale} dashboard home email`)
+      await screenshot(page, batch, locale, file, {
+        clip: { x: 0, y: 0, width: clipWidth, height: clipHeight },
+      })
+      await page.close()
+      return
+    }
+
+    case 'renewal-notice-email': {
+      // Inbox letter, not an in-app route. Renders RenewalNoticeEmail with
+      // the locked Paper sample (Hugo / Apex / LOCAL-SIM-001 / 5→12 Sep).
+      // Viewport 720×1600 so the fluid 100% table stays letter-width.
+      // Expected EN: Account payment, Hi Hugo,, Apex payment in 7 days.,
+      // September, Change reminder. FR: Paiement du compte, Bonjour Hugo,,
+      // Paiement Apex dans 7 jours., Septembre, Modifier le rappel.
+      const html = execFileSync(
+        'bun',
+        [path.join(process.cwd(), 'scripts/changelog-media/render-renewal-notice.mjs'), locale],
+        { encoding: 'utf8', cwd: process.cwd() },
+      )
+      const expected = locale === 'fr'
+        ? ['Paiement du compte', 'Bonjour Hugo,', 'Paiement Apex dans 7 jours.', 'Septembre', 'Modifier le rappel']
+        : ['Account payment', 'Hi Hugo,', 'Apex payment in 7 days.', 'September', 'Change reminder']
+      for (const needle of expected) {
+        if (!html.includes(needle)) {
+          throw new Error(`renewal-notice-email ${locale} HTML missing “${needle}”`)
+        }
+      }
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        colorScheme: 'light',
+        viewport: { width: 720, height: 1600 },
+        deviceScaleFactor: resolveDeviceScaleFactor(),
+      })
+      await page.setContent(html, { waitUntil: 'networkidle' })
+      await page.locator('img.brand-mark-light').first().waitFor({ state: 'visible', timeout: 15_000 })
+      await page.getByText(expected[2], { exact: true }).waitFor({ timeout: 10_000 })
+      const body = page.locator('body')
+      const box = await body.boundingBox()
+      if (!box || box.height < 400) {
+        throw new Error(`renewal-notice-email ${locale} body is too short to be the letter`)
+      }
+      await page.waitForTimeout(400)
+      // setContent has no origin, so skip screenshot()'s localStorage cookie helper.
+      await prepareForScreenshot(page)
+      const out = path.join(outputDir(batch, locale), `${file}.png`)
+      await page.screenshot({
+        path: out,
+        type: 'png',
+        fullPage: false,
+        clip: {
+          x: Math.max(0, box.x),
+          y: Math.max(0, box.y),
+          width: Math.min(720, box.width),
+          height: Math.min(1600, box.height),
+        },
+        scale: 'device',
+        animations: 'disabled',
+      })
+      console.log('Saved', out)
+      await page.close()
+      return
+    }
+
+    case 'public-404-agent-resources': {
+      // Desktop public unmatched URL /{locale}/this-page-does-not-exist.
+      // Must hit app/global-not-found.tsx (agent block), not in-route
+      // app/not-found.tsx. Viewport 1440x900. Locator: section labelled
+      // "For AI agents and crawlers" (hardcoded English in both locales).
+      // Interaction: wait, scroll into view. Expected: sitemap /llms.txt /
+      // API pointers and collapsed Markdown version. Does not expand details
+      // and does not include the unchanged 404 illustration.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await page.goto(`${siteUrl}/${locale}/this-page-does-not-exist`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 120_000,
+      })
+      const heading = page.getByRole('heading', {
+        name: CAPTURE_LABELS[locale].agentResources,
+      })
+      await heading.waitFor({ timeout: 30_000 })
+      const section = page.locator(
+        'section[aria-labelledby="agent-resources-heading"]',
+      )
+      await section.scrollIntoViewIfNeeded()
+      await section.getByText('llms.txt').first().waitFor({ timeout: 10_000 })
+      await section.getByText('Markdown version').waitFor({ timeout: 10_000 })
+      await page.waitForTimeout(600)
+      await assertNoDevIssues(page, `${locale} public 404 agent resources`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [section], 20),
       })
       await page.close()
       return

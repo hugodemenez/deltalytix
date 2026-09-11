@@ -23,11 +23,11 @@ import { translateWeekday, translateWeekdayShort } from "@/lib/translation-utils
 import { WeeklyModal } from "./weekly-modal"
 import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
 import { CalendarResponsiveOverlay } from "./calendar-responsive-overlay"
-import { ImportanceFilter } from "@/app/[locale]/dashboard/components/importance-filter"
-import { CountryFilter } from "@/components/country-filter"
+import { CalendarNewsFilter } from "./calendar-news-filter"
 import { useNewsFilterStore } from "@/store/filters/news-filter-store"
 import { useCalendarViewStore } from "@/store/widgets/calendar-view"
 import WeeklyCalendarPnl from "./weekly-calendar"
+import { CalendarMonthYearPicker } from "./calendar-month-year-picker"
 import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
 import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
 import { useUserStore } from "@/store/user-store"
@@ -54,6 +54,28 @@ const WEEKDAYS_MONDAY_START = [
   'calendar.weekdays.sat',
   'calendar.weekdays.sun'
 ] as const
+
+function CalendarStepButton({
+  label,
+  onClick,
+  icon: Icon,
+}: {
+  label: string
+  onClick: () => void
+  icon: typeof ChevronLeft
+}) {
+  return (
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={onClick}
+      className="relative z-10 h-7 w-7 shrink-0 rounded-[4px] border-[#E5E5E5] bg-white text-[#171717] shadow-none hover:bg-[#FAFAFA] dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/40"
+      aria-label={label}
+    >
+      <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
+    </Button>
+  )
+}
 
 
 const formatCurrency = (value: number, options?: { minimumFractionDigits?: number; maximumFractionDigits?: number; signed?: boolean }) => {
@@ -119,7 +141,6 @@ const truncateAccountNumber = (accountNumber: string, maxLength: number = 15): s
 interface CalendarPnlProps {
   calendarData: CalendarData;
   financialEvents?: FinancialEvent[];
-  hideFiltersOnMobile?: boolean;
 }
 
 
@@ -320,7 +341,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
   )
 }
 
-export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobile = false }: CalendarPnlProps) {
+export default function ResponsiveCalendarPnl({ calendarData }: CalendarPnlProps) {
   const accounts = useUserStore(state => state.accounts)
   const groups = useUserStore(state => state.groups)
   const t = useI18n()
@@ -531,14 +552,44 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
   return (
     <Card className="h-full flex flex-col">
       <CardHeader
-        className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between space-y-0 border-b shrink-0 p-2 sm:p-4 min-h-[56px]"
+        className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 border-b shrink-0 p-2 sm:p-4 min-h-[56px]"
       >
-        <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 min-w-0">
-          <CardTitle className="text-sm sm:text-lg font-semibold truncate capitalize">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <CardTitle className="sr-only">
             {viewMode === 'daily'
               ? format(currentDate, 'MMMM yyyy', { locale: dateLocale })
               : format(currentDate, 'yyyy', { locale: dateLocale })}
           </CardTitle>
+          <CalendarMonthYearPicker
+            date={currentDate}
+            viewMode={viewMode}
+            onDateChange={setCurrentDate}
+            className="mx-0"
+            monthNav={{
+              prev: (
+                <CalendarStepButton
+                  label={viewMode === "daily" ? "Previous month" : "Previous year"}
+                  onClick={() =>
+                    viewMode === "daily"
+                      ? handlePrevMonth()
+                      : setCurrentDate(new Date(getYear(currentDate) - 1, 0, 1))
+                  }
+                  icon={ChevronLeft}
+                />
+              ),
+              next: (
+                <CalendarStepButton
+                  label={viewMode === "daily" ? "Next month" : "Next year"}
+                  onClick={() =>
+                    viewMode === "daily"
+                      ? handleNextMonth()
+                      : setCurrentDate(new Date(getYear(currentDate) + 1, 0, 1))
+                  }
+                  icon={ChevronRight}
+                />
+              ),
+            }}
+          />
           <div className={cn(
             "text-xs sm:text-base font-semibold shrink-0",
             (viewMode === 'daily' ? monthlyTotal : yearTotal) >= 0
@@ -548,45 +599,13 @@ export default function ResponsiveCalendarPnl({ calendarData, hideFiltersOnMobil
             <ResponsiveCurrency value={viewMode === 'daily' ? monthlyTotal : yearTotal} />
           </div>
         </div>
-        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
-          {/* Impact Level Filter */}
-          <div className={cn("flex items-center gap-2", hideFiltersOnMobile && "max-sm:hidden")}>
-            <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-              {t('calendar.importanceFilter.title')}
-            </span>
-            <ImportanceFilter
-              value={impactLevels}
-              onValueChange={setImpactLevels}
-              className="h-8"
-            />
-          </div>
-          <CountryFilter
-            countries={countries}
-            value={selectedCountries}
-            onValueChange={setSelectedCountries}
-            className={cn("h-8", hideFiltersOnMobile && "max-sm:hidden")}
-          />
-          <div className="flex items-center gap-1 sm:gap-1.5">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => viewMode === 'daily' ? handlePrevMonth() : setCurrentDate(new Date(getYear(currentDate) - 1, 0, 1))}
-              className="h-7 w-7 sm:h-8 sm:w-8"
-              aria-label={viewMode === 'daily' ? "Previous month" : "Previous year"}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => viewMode === 'daily' ? handleNextMonth() : setCurrentDate(new Date(getYear(currentDate) + 1, 0, 1))}
-              className="h-7 w-7 sm:h-8 sm:w-8"
-              aria-label={viewMode === 'daily' ? "Next month" : "Next year"}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <CalendarNewsFilter
+          impactLevels={impactLevels}
+          onImpactLevelsChange={setImpactLevels}
+          countries={countries}
+          selectedCountries={selectedCountries}
+          onSelectedCountriesChange={setSelectedCountries}
+        />
       </CardHeader>
       <CardContent className="flex-1 min-h-0 p-1 sm:p-4">
         {viewMode === 'daily' ? (

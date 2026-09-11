@@ -58,6 +58,7 @@ export function CountryFilter({ countries, value, onValueChange, className }: Co
             value.length > 0 && "bg-accent",
             className
           )}
+          aria-label={t('mindset.newsImpact.filterByCountry')}
         >
           <Globe className="h-4 w-4" />
           {value.length > 0 && (
@@ -108,4 +109,4 @@ export function CountryFilter({ countries, value, onValueChange, className }: Co
       </DropdownMenuContent>
     </DropdownMenu>
   )
-} 
+}

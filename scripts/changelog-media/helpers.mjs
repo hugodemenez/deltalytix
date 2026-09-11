@@ -160,6 +160,72 @@ export async function assertNoDevIssues(page, context) {
   }
 }
 
+/**
+ * Capture-only Tradovate row for Connections fee-settings screenshots.
+ * Local seed has no Tradovate OAuth connection. Intercepts the JSON refresh
+ * the page already runs on mount — does not write to the database.
+ */
+export const TRADOVATE_FEE_CAPTURE_CONNECTION = {
+  id: 'changelog-tradovate-fee-connection',
+  displayName: 'Apex',
+  loginLabel: 'APEX-MNQ-001',
+  accountId: 'APEX-MNQ-001',
+}
+
+export async function injectTradovateFeeCaptureConnection(page) {
+  const now = new Date().toISOString()
+  const connection = {
+    id: TRADOVATE_FEE_CAPTURE_CONNECTION.id,
+    userId: 'local-dashboard-user',
+    service: 'tradovate',
+    externalId: TRADOVATE_FEE_CAPTURE_CONNECTION.accountId,
+    accountId: TRADOVATE_FEE_CAPTURE_CONNECTION.accountId,
+    lastSyncedAt: now,
+    createdAt: now,
+    updatedAt: now,
+    tokenExpiresAt: null,
+    dailySyncTime: null,
+    syncIntervalMinutes: null,
+    includedFeeTypes: null,
+    environment: 'demo',
+    accounts: [
+      {
+        id: 'changelog-tradovate-fee-account',
+        number: TRADOVATE_FEE_CAPTURE_CONNECTION.accountId,
+        propfirm: TRADOVATE_FEE_CAPTURE_CONNECTION.displayName,
+        connectionId: TRADOVATE_FEE_CAPTURE_CONNECTION.id,
+        groupId: null,
+        createdAt: now,
+        tradeCount: 12,
+        lastTradeDate: now,
+      },
+    ],
+    status: 'connected',
+    displayName: TRADOVATE_FEE_CAPTURE_CONNECTION.displayName,
+    loginLabel: TRADOVATE_FEE_CAPTURE_CONNECTION.loginLabel,
+    authError: null,
+  }
+
+  await page.route('**/api/connections/page-data', async (route) => {
+    const response = await route.fetch()
+    const json = await response.json()
+    const connections = Array.isArray(json?.connections) ? json.connections : []
+    const alreadyPresent = connections.some(
+      (row) => row?.id === TRADOVATE_FEE_CAPTURE_CONNECTION.id,
+    )
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...json,
+        connections: alreadyPresent
+          ? connections
+          : [...connections, connection],
+      }),
+    })
+  })
+}
+
 export async function injectBillingPaymentHistoryMock(page, locale) {
   const mock = BILLING_CAPTURE_MOCK[locale]
   await page.evaluate((data) => {
