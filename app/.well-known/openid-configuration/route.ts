@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import {
+  absoluteUrl,
   getOAuthEndpoint,
   getOAuthIssuer,
   scopeNames,
@@ -15,15 +16,19 @@ export async function GET(request: NextRequest) {
     issuer,
     authorization_endpoint: getOAuthEndpoint("authorize", request),
     token_endpoint: getOAuthEndpoint("token", request),
-    jwks_uri: getOAuthEndpoint(".well-known/jwks.json", request),
+    revocation_endpoint: getOAuthEndpoint("revoke", request),
     grant_types_supported: ["authorization_code", "refresh_token"],
     response_types_supported: ["code"],
+    // Opaque bearer tokens, not signed ID tokens: no `id_token` is ever issued,
+    // so the OIDC signing-algorithm claims are deliberately absent.
     subject_types_supported: ["public"],
-    id_token_signing_alg_values_supported: ["RS256"],
-    scopes_supported: scopeNames(),
+    code_challenge_methods_supported: ["S256"],
     token_endpoint_auth_methods_supported: [
       "client_secret_basic",
       "client_secret_post",
+      "none",
     ],
+    scopes_supported: scopeNames(),
+    service_documentation: absoluteUrl("/docs/api", request),
   });
 }

@@ -11,7 +11,13 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
  */
 export default defineConfig({
   resolve: {
-    alias: [{ find: /^@\//, replacement: `${rootDir}/` }],
+    alias: [
+      { find: /^@\//, replacement: `${rootDir}/` },
+      // `server-only` throws on import outside a server build, and its
+      // `exports` map hides the no-op `empty.js` Next swaps in. Point it at a
+      // local no-op so server modules can be unit-tested.
+      { find: /^server-only$/, replacement: `${rootDir}/test/stubs/server-only.ts` },
+    ],
   },
   test: {
     // `app/**` and `components/**` colocate tests next to the source they cover.

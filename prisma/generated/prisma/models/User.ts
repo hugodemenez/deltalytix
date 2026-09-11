@@ -223,6 +223,9 @@ export type UserWhereInput = {
   votes?: Prisma.VoteListRelationFilter
   businessSubscriptions?: Prisma.BusinessSubscriptionListRelationFilter
   referral?: Prisma.XOR<Prisma.ReferralNullableScalarRelationFilter, Prisma.ReferralWhereInput> | null
+  oauthApps?: Prisma.OAuthAppListRelationFilter
+  oauthAccessTokens?: Prisma.OAuthAccessTokenListRelationFilter
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -251,6 +254,9 @@ export type UserOrderByWithRelationInput = {
   votes?: Prisma.VoteOrderByRelationAggregateInput
   businessSubscriptions?: Prisma.BusinessSubscriptionOrderByRelationAggregateInput
   referral?: Prisma.ReferralOrderByWithRelationInput
+  oauthApps?: Prisma.OAuthAppOrderByRelationAggregateInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenOrderByRelationAggregateInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -282,6 +288,9 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   votes?: Prisma.VoteListRelationFilter
   businessSubscriptions?: Prisma.BusinessSubscriptionListRelationFilter
   referral?: Prisma.XOR<Prisma.ReferralNullableScalarRelationFilter, Prisma.ReferralWhereInput> | null
+  oauthApps?: Prisma.OAuthAppListRelationFilter
+  oauthAccessTokens?: Prisma.OAuthAccessTokenListRelationFilter
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeListRelationFilter
 }, "id" | "email" | "auth_user_id">
 
 export type UserOrderByWithAggregationInput = {
@@ -338,6 +347,9 @@ export type UserCreateInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -366,6 +378,9 @@ export type UserUncheckedCreateInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -394,6 +409,9 @@ export type UserUpdateInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -422,6 +440,9 @@ export type UserUncheckedUpdateInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -553,6 +574,48 @@ export type UserUpdateOneRequiredWithoutNotificationsNestedInput = {
 
 export type BoolFieldUpdateOperationsInput = {
   set?: boolean
+}
+
+export type UserCreateNestedOneWithoutOauthAppsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutOauthAppsInput, Prisma.UserUncheckedCreateWithoutOauthAppsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutOauthAppsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutOauthAppsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutOauthAppsInput, Prisma.UserUncheckedCreateWithoutOauthAppsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutOauthAppsInput
+  upsert?: Prisma.UserUpsertWithoutOauthAppsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutOauthAppsInput, Prisma.UserUpdateWithoutOauthAppsInput>, Prisma.UserUncheckedUpdateWithoutOauthAppsInput>
+}
+
+export type UserCreateNestedOneWithoutOauthAuthorizationCodesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutOauthAuthorizationCodesInput, Prisma.UserUncheckedCreateWithoutOauthAuthorizationCodesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutOauthAuthorizationCodesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutOauthAuthorizationCodesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutOauthAuthorizationCodesInput, Prisma.UserUncheckedCreateWithoutOauthAuthorizationCodesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutOauthAuthorizationCodesInput
+  upsert?: Prisma.UserUpsertWithoutOauthAuthorizationCodesInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutOauthAuthorizationCodesInput, Prisma.UserUpdateWithoutOauthAuthorizationCodesInput>, Prisma.UserUncheckedUpdateWithoutOauthAuthorizationCodesInput>
+}
+
+export type UserCreateNestedOneWithoutOauthAccessTokensInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutOauthAccessTokensInput, Prisma.UserUncheckedCreateWithoutOauthAccessTokensInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutOauthAccessTokensInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutOauthAccessTokensNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutOauthAccessTokensInput, Prisma.UserUncheckedCreateWithoutOauthAccessTokensInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutOauthAccessTokensInput
+  upsert?: Prisma.UserUpsertWithoutOauthAccessTokensInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutOauthAccessTokensInput, Prisma.UserUpdateWithoutOauthAccessTokensInput>, Prisma.UserUncheckedUpdateWithoutOauthAccessTokensInput>
 }
 
 export type UserCreateNestedOneWithoutConnectionsInput = {
@@ -762,6 +825,9 @@ export type UserCreateWithoutSubscriptionsInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutSubscriptionsInput = {
@@ -789,6 +855,9 @@ export type UserUncheckedCreateWithoutSubscriptionsInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutSubscriptionsInput = {
@@ -832,6 +901,9 @@ export type UserUpdateWithoutSubscriptionsInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSubscriptionsInput = {
@@ -859,6 +931,9 @@ export type UserUncheckedUpdateWithoutSubscriptionsInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutBusinessSubscriptionsInput = {
@@ -886,6 +961,9 @@ export type UserCreateWithoutBusinessSubscriptionsInput = {
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutBusinessSubscriptionsInput = {
@@ -913,6 +991,9 @@ export type UserUncheckedCreateWithoutBusinessSubscriptionsInput = {
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutBusinessSubscriptionsInput = {
@@ -956,6 +1037,9 @@ export type UserUpdateWithoutBusinessSubscriptionsInput = {
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutBusinessSubscriptionsInput = {
@@ -983,6 +1067,9 @@ export type UserUncheckedUpdateWithoutBusinessSubscriptionsInput = {
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutTeamSubscriptionsInput = {
@@ -1010,6 +1097,9 @@ export type UserCreateWithoutTeamSubscriptionsInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutTeamSubscriptionsInput = {
@@ -1037,6 +1127,9 @@ export type UserUncheckedCreateWithoutTeamSubscriptionsInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutTeamSubscriptionsInput = {
@@ -1080,6 +1173,9 @@ export type UserUpdateWithoutTeamSubscriptionsInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutTeamSubscriptionsInput = {
@@ -1107,6 +1203,9 @@ export type UserUncheckedUpdateWithoutTeamSubscriptionsInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutNotificationsInput = {
@@ -1134,6 +1233,9 @@ export type UserCreateWithoutNotificationsInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutNotificationsInput = {
@@ -1161,6 +1263,9 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutNotificationsInput = {
@@ -1204,6 +1309,9 @@ export type UserUpdateWithoutNotificationsInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNotificationsInput = {
@@ -1231,6 +1339,417 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutOauthAppsInput = {
+  id?: string
+  email: string
+  auth_user_id: string
+  isFirstConnection?: boolean
+  etpToken?: string | null
+  isBeta?: boolean
+  language?: string
+  thorToken?: string | null
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  businesses?: Prisma.BusinessCreateNestedManyWithoutUserInput
+  teams?: Prisma.TeamCreateNestedManyWithoutUserInput
+  teamSubscriptions?: Prisma.TeamSubscriptionCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  dashboardLayout?: Prisma.DashboardLayoutCreateNestedOneWithoutUserInput
+  groups?: Prisma.GroupCreateNestedManyWithoutUserInput
+  moods?: Prisma.MoodCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  posts?: Prisma.PostCreateNestedManyWithoutUserInput
+  subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
+  tags?: Prisma.TagCreateNestedManyWithoutUserInput
+  votes?: Prisma.VoteCreateNestedManyWithoutUserInput
+  businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
+  referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutOauthAppsInput = {
+  id?: string
+  email: string
+  auth_user_id: string
+  isFirstConnection?: boolean
+  etpToken?: string | null
+  isBeta?: boolean
+  language?: string
+  thorToken?: string | null
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  businesses?: Prisma.BusinessUncheckedCreateNestedManyWithoutUserInput
+  teams?: Prisma.TeamUncheckedCreateNestedManyWithoutUserInput
+  teamSubscriptions?: Prisma.TeamSubscriptionUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  dashboardLayout?: Prisma.DashboardLayoutUncheckedCreateNestedOneWithoutUserInput
+  groups?: Prisma.GroupUncheckedCreateNestedManyWithoutUserInput
+  moods?: Prisma.MoodUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
+  tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
+  votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
+  businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
+  referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutOauthAppsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutOauthAppsInput, Prisma.UserUncheckedCreateWithoutOauthAppsInput>
+}
+
+export type UserUpsertWithoutOauthAppsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutOauthAppsInput, Prisma.UserUncheckedUpdateWithoutOauthAppsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutOauthAppsInput, Prisma.UserUncheckedCreateWithoutOauthAppsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutOauthAppsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutOauthAppsInput, Prisma.UserUncheckedUpdateWithoutOauthAppsInput>
+}
+
+export type UserUpdateWithoutOauthAppsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  auth_user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  isFirstConnection?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  etpToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isBeta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  language?: Prisma.StringFieldUpdateOperationsInput | string
+  thorToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  businesses?: Prisma.BusinessUpdateManyWithoutUserNestedInput
+  teams?: Prisma.TeamUpdateManyWithoutUserNestedInput
+  teamSubscriptions?: Prisma.TeamSubscriptionUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  dashboardLayout?: Prisma.DashboardLayoutUpdateOneWithoutUserNestedInput
+  groups?: Prisma.GroupUpdateManyWithoutUserNestedInput
+  moods?: Prisma.MoodUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  posts?: Prisma.PostUpdateManyWithoutUserNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
+  tags?: Prisma.TagUpdateManyWithoutUserNestedInput
+  votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
+  businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
+  referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutOauthAppsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  auth_user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  isFirstConnection?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  etpToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isBeta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  language?: Prisma.StringFieldUpdateOperationsInput | string
+  thorToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  businesses?: Prisma.BusinessUncheckedUpdateManyWithoutUserNestedInput
+  teams?: Prisma.TeamUncheckedUpdateManyWithoutUserNestedInput
+  teamSubscriptions?: Prisma.TeamSubscriptionUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  dashboardLayout?: Prisma.DashboardLayoutUncheckedUpdateOneWithoutUserNestedInput
+  groups?: Prisma.GroupUncheckedUpdateManyWithoutUserNestedInput
+  moods?: Prisma.MoodUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
+  tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
+  votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
+  businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
+  referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutOauthAuthorizationCodesInput = {
+  id?: string
+  email: string
+  auth_user_id: string
+  isFirstConnection?: boolean
+  etpToken?: string | null
+  isBeta?: boolean
+  language?: string
+  thorToken?: string | null
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  businesses?: Prisma.BusinessCreateNestedManyWithoutUserInput
+  teams?: Prisma.TeamCreateNestedManyWithoutUserInput
+  teamSubscriptions?: Prisma.TeamSubscriptionCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  dashboardLayout?: Prisma.DashboardLayoutCreateNestedOneWithoutUserInput
+  groups?: Prisma.GroupCreateNestedManyWithoutUserInput
+  moods?: Prisma.MoodCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  posts?: Prisma.PostCreateNestedManyWithoutUserInput
+  subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
+  tags?: Prisma.TagCreateNestedManyWithoutUserInput
+  votes?: Prisma.VoteCreateNestedManyWithoutUserInput
+  businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
+  referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutOauthAuthorizationCodesInput = {
+  id?: string
+  email: string
+  auth_user_id: string
+  isFirstConnection?: boolean
+  etpToken?: string | null
+  isBeta?: boolean
+  language?: string
+  thorToken?: string | null
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  businesses?: Prisma.BusinessUncheckedCreateNestedManyWithoutUserInput
+  teams?: Prisma.TeamUncheckedCreateNestedManyWithoutUserInput
+  teamSubscriptions?: Prisma.TeamSubscriptionUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  dashboardLayout?: Prisma.DashboardLayoutUncheckedCreateNestedOneWithoutUserInput
+  groups?: Prisma.GroupUncheckedCreateNestedManyWithoutUserInput
+  moods?: Prisma.MoodUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
+  tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
+  votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
+  businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
+  referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutOauthAuthorizationCodesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutOauthAuthorizationCodesInput, Prisma.UserUncheckedCreateWithoutOauthAuthorizationCodesInput>
+}
+
+export type UserUpsertWithoutOauthAuthorizationCodesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutOauthAuthorizationCodesInput, Prisma.UserUncheckedUpdateWithoutOauthAuthorizationCodesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutOauthAuthorizationCodesInput, Prisma.UserUncheckedCreateWithoutOauthAuthorizationCodesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutOauthAuthorizationCodesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutOauthAuthorizationCodesInput, Prisma.UserUncheckedUpdateWithoutOauthAuthorizationCodesInput>
+}
+
+export type UserUpdateWithoutOauthAuthorizationCodesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  auth_user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  isFirstConnection?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  etpToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isBeta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  language?: Prisma.StringFieldUpdateOperationsInput | string
+  thorToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  businesses?: Prisma.BusinessUpdateManyWithoutUserNestedInput
+  teams?: Prisma.TeamUpdateManyWithoutUserNestedInput
+  teamSubscriptions?: Prisma.TeamSubscriptionUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  dashboardLayout?: Prisma.DashboardLayoutUpdateOneWithoutUserNestedInput
+  groups?: Prisma.GroupUpdateManyWithoutUserNestedInput
+  moods?: Prisma.MoodUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  posts?: Prisma.PostUpdateManyWithoutUserNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
+  tags?: Prisma.TagUpdateManyWithoutUserNestedInput
+  votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
+  businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
+  referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutOauthAuthorizationCodesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  auth_user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  isFirstConnection?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  etpToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isBeta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  language?: Prisma.StringFieldUpdateOperationsInput | string
+  thorToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  businesses?: Prisma.BusinessUncheckedUpdateManyWithoutUserNestedInput
+  teams?: Prisma.TeamUncheckedUpdateManyWithoutUserNestedInput
+  teamSubscriptions?: Prisma.TeamSubscriptionUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  dashboardLayout?: Prisma.DashboardLayoutUncheckedUpdateOneWithoutUserNestedInput
+  groups?: Prisma.GroupUncheckedUpdateManyWithoutUserNestedInput
+  moods?: Prisma.MoodUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
+  tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
+  votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
+  businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
+  referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutOauthAccessTokensInput = {
+  id?: string
+  email: string
+  auth_user_id: string
+  isFirstConnection?: boolean
+  etpToken?: string | null
+  isBeta?: boolean
+  language?: string
+  thorToken?: string | null
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  businesses?: Prisma.BusinessCreateNestedManyWithoutUserInput
+  teams?: Prisma.TeamCreateNestedManyWithoutUserInput
+  teamSubscriptions?: Prisma.TeamSubscriptionCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  dashboardLayout?: Prisma.DashboardLayoutCreateNestedOneWithoutUserInput
+  groups?: Prisma.GroupCreateNestedManyWithoutUserInput
+  moods?: Prisma.MoodCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  posts?: Prisma.PostCreateNestedManyWithoutUserInput
+  subscriptions?: Prisma.SubscriptionCreateNestedOneWithoutUserInput
+  connections?: Prisma.ConnectionCreateNestedManyWithoutUserInput
+  tags?: Prisma.TagCreateNestedManyWithoutUserInput
+  votes?: Prisma.VoteCreateNestedManyWithoutUserInput
+  businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
+  referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutOauthAccessTokensInput = {
+  id?: string
+  email: string
+  auth_user_id: string
+  isFirstConnection?: boolean
+  etpToken?: string | null
+  isBeta?: boolean
+  language?: string
+  thorToken?: string | null
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  businesses?: Prisma.BusinessUncheckedCreateNestedManyWithoutUserInput
+  teams?: Prisma.TeamUncheckedCreateNestedManyWithoutUserInput
+  teamSubscriptions?: Prisma.TeamSubscriptionUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  dashboardLayout?: Prisma.DashboardLayoutUncheckedCreateNestedOneWithoutUserInput
+  groups?: Prisma.GroupUncheckedCreateNestedManyWithoutUserInput
+  moods?: Prisma.MoodUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
+  subscriptions?: Prisma.SubscriptionUncheckedCreateNestedOneWithoutUserInput
+  connections?: Prisma.ConnectionUncheckedCreateNestedManyWithoutUserInput
+  tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
+  votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
+  businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
+  referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutOauthAccessTokensInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutOauthAccessTokensInput, Prisma.UserUncheckedCreateWithoutOauthAccessTokensInput>
+}
+
+export type UserUpsertWithoutOauthAccessTokensInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutOauthAccessTokensInput, Prisma.UserUncheckedUpdateWithoutOauthAccessTokensInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutOauthAccessTokensInput, Prisma.UserUncheckedCreateWithoutOauthAccessTokensInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutOauthAccessTokensInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutOauthAccessTokensInput, Prisma.UserUncheckedUpdateWithoutOauthAccessTokensInput>
+}
+
+export type UserUpdateWithoutOauthAccessTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  auth_user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  isFirstConnection?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  etpToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isBeta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  language?: Prisma.StringFieldUpdateOperationsInput | string
+  thorToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  businesses?: Prisma.BusinessUpdateManyWithoutUserNestedInput
+  teams?: Prisma.TeamUpdateManyWithoutUserNestedInput
+  teamSubscriptions?: Prisma.TeamSubscriptionUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  dashboardLayout?: Prisma.DashboardLayoutUpdateOneWithoutUserNestedInput
+  groups?: Prisma.GroupUpdateManyWithoutUserNestedInput
+  moods?: Prisma.MoodUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  posts?: Prisma.PostUpdateManyWithoutUserNestedInput
+  subscriptions?: Prisma.SubscriptionUpdateOneWithoutUserNestedInput
+  connections?: Prisma.ConnectionUpdateManyWithoutUserNestedInput
+  tags?: Prisma.TagUpdateManyWithoutUserNestedInput
+  votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
+  businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
+  referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutOauthAccessTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  auth_user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  isFirstConnection?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  etpToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isBeta?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  language?: Prisma.StringFieldUpdateOperationsInput | string
+  thorToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  businesses?: Prisma.BusinessUncheckedUpdateManyWithoutUserNestedInput
+  teams?: Prisma.TeamUncheckedUpdateManyWithoutUserNestedInput
+  teamSubscriptions?: Prisma.TeamSubscriptionUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  dashboardLayout?: Prisma.DashboardLayoutUncheckedUpdateOneWithoutUserNestedInput
+  groups?: Prisma.GroupUncheckedUpdateManyWithoutUserNestedInput
+  moods?: Prisma.MoodUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
+  subscriptions?: Prisma.SubscriptionUncheckedUpdateOneWithoutUserNestedInput
+  connections?: Prisma.ConnectionUncheckedUpdateManyWithoutUserNestedInput
+  tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
+  votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
+  businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
+  referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutConnectionsInput = {
@@ -1258,6 +1777,9 @@ export type UserCreateWithoutConnectionsInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutConnectionsInput = {
@@ -1285,6 +1807,9 @@ export type UserUncheckedCreateWithoutConnectionsInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutConnectionsInput = {
@@ -1328,6 +1853,9 @@ export type UserUpdateWithoutConnectionsInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutConnectionsInput = {
@@ -1355,6 +1883,9 @@ export type UserUncheckedUpdateWithoutConnectionsInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutTeamsInput = {
@@ -1382,6 +1913,9 @@ export type UserCreateWithoutTeamsInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutTeamsInput = {
@@ -1409,6 +1943,9 @@ export type UserUncheckedCreateWithoutTeamsInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutTeamsInput = {
@@ -1452,6 +1989,9 @@ export type UserUpdateWithoutTeamsInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutTeamsInput = {
@@ -1479,6 +2019,9 @@ export type UserUncheckedUpdateWithoutTeamsInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutBusinessesInput = {
@@ -1506,6 +2049,9 @@ export type UserCreateWithoutBusinessesInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutBusinessesInput = {
@@ -1533,6 +2079,9 @@ export type UserUncheckedCreateWithoutBusinessesInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutBusinessesInput = {
@@ -1576,6 +2125,9 @@ export type UserUpdateWithoutBusinessesInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutBusinessesInput = {
@@ -1603,6 +2155,9 @@ export type UserUncheckedUpdateWithoutBusinessesInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutGroupsInput = {
@@ -1630,6 +2185,9 @@ export type UserCreateWithoutGroupsInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutGroupsInput = {
@@ -1657,6 +2215,9 @@ export type UserUncheckedCreateWithoutGroupsInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutGroupsInput = {
@@ -1700,6 +2261,9 @@ export type UserUpdateWithoutGroupsInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutGroupsInput = {
@@ -1727,6 +2291,9 @@ export type UserUncheckedUpdateWithoutGroupsInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAccountsInput = {
@@ -1754,6 +2321,9 @@ export type UserCreateWithoutAccountsInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAccountsInput = {
@@ -1781,6 +2351,9 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAccountsInput = {
@@ -1824,6 +2397,9 @@ export type UserUpdateWithoutAccountsInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -1851,6 +2427,9 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutDashboardLayoutInput = {
@@ -1878,6 +2457,9 @@ export type UserCreateWithoutDashboardLayoutInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutDashboardLayoutInput = {
@@ -1905,6 +2487,9 @@ export type UserUncheckedCreateWithoutDashboardLayoutInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutDashboardLayoutInput = {
@@ -1948,6 +2533,9 @@ export type UserUpdateWithoutDashboardLayoutInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDashboardLayoutInput = {
@@ -1975,6 +2563,9 @@ export type UserUncheckedUpdateWithoutDashboardLayoutInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutMoodsInput = {
@@ -2002,6 +2593,9 @@ export type UserCreateWithoutMoodsInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutMoodsInput = {
@@ -2029,6 +2623,9 @@ export type UserUncheckedCreateWithoutMoodsInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutMoodsInput = {
@@ -2072,6 +2669,9 @@ export type UserUpdateWithoutMoodsInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMoodsInput = {
@@ -2099,6 +2699,9 @@ export type UserUncheckedUpdateWithoutMoodsInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutReferralInput = {
@@ -2126,6 +2729,9 @@ export type UserCreateWithoutReferralInput = {
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutReferralInput = {
@@ -2153,6 +2759,9 @@ export type UserUncheckedCreateWithoutReferralInput = {
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutReferralInput = {
@@ -2196,6 +2805,9 @@ export type UserUpdateWithoutReferralInput = {
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutReferralInput = {
@@ -2223,6 +2835,9 @@ export type UserUncheckedUpdateWithoutReferralInput = {
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutTagsInput = {
@@ -2250,6 +2865,9 @@ export type UserCreateWithoutTagsInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutTagsInput = {
@@ -2277,6 +2895,9 @@ export type UserUncheckedCreateWithoutTagsInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutTagsInput = {
@@ -2320,6 +2941,9 @@ export type UserUpdateWithoutTagsInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutTagsInput = {
@@ -2347,6 +2971,9 @@ export type UserUncheckedUpdateWithoutTagsInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutPostsInput = {
@@ -2374,6 +3001,9 @@ export type UserCreateWithoutPostsInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutPostsInput = {
@@ -2401,6 +3031,9 @@ export type UserUncheckedCreateWithoutPostsInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutPostsInput = {
@@ -2444,6 +3077,9 @@ export type UserUpdateWithoutPostsInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutPostsInput = {
@@ -2471,6 +3107,9 @@ export type UserUncheckedUpdateWithoutPostsInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutCommentsInput = {
@@ -2498,6 +3137,9 @@ export type UserCreateWithoutCommentsInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutCommentsInput = {
@@ -2525,6 +3167,9 @@ export type UserUncheckedCreateWithoutCommentsInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutCommentsInput = {
@@ -2568,6 +3213,9 @@ export type UserUpdateWithoutCommentsInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCommentsInput = {
@@ -2595,6 +3243,9 @@ export type UserUncheckedUpdateWithoutCommentsInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutVotesInput = {
@@ -2622,6 +3273,9 @@ export type UserCreateWithoutVotesInput = {
   tags?: Prisma.TagCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutVotesInput = {
@@ -2649,6 +3303,9 @@ export type UserUncheckedCreateWithoutVotesInput = {
   tags?: Prisma.TagUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutVotesInput = {
@@ -2692,6 +3349,9 @@ export type UserUpdateWithoutVotesInput = {
   tags?: Prisma.TagUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutVotesInput = {
@@ -2719,6 +3379,9 @@ export type UserUncheckedUpdateWithoutVotesInput = {
   tags?: Prisma.TagUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutOrdersInput = {
@@ -2746,6 +3409,9 @@ export type UserCreateWithoutOrdersInput = {
   votes?: Prisma.VoteCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutOrdersInput = {
@@ -2773,6 +3439,9 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedCreateNestedManyWithoutUserInput
   referral?: Prisma.ReferralUncheckedCreateNestedOneWithoutUserInput
+  oauthApps?: Prisma.OAuthAppUncheckedCreateNestedManyWithoutUserInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedCreateNestedManyWithoutUserInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutOrdersInput = {
@@ -2816,6 +3485,9 @@ export type UserUpdateWithoutOrdersInput = {
   votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutOrdersInput = {
@@ -2843,6 +3515,9 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
   businessSubscriptions?: Prisma.BusinessSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   referral?: Prisma.ReferralUncheckedUpdateOneWithoutUserNestedInput
+  oauthApps?: Prisma.OAuthAppUncheckedUpdateManyWithoutUserNestedInput
+  oauthAccessTokens?: Prisma.OAuthAccessTokenUncheckedUpdateManyWithoutUserNestedInput
+  oauthAuthorizationCodes?: Prisma.OAuthAuthorizationCodeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 
@@ -2865,6 +3540,9 @@ export type UserCountOutputType = {
   tags: number
   votes: number
   businessSubscriptions: number
+  oauthApps: number
+  oauthAccessTokens: number
+  oauthAuthorizationCodes: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2882,6 +3560,9 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   tags?: boolean | UserCountOutputTypeCountTagsArgs
   votes?: boolean | UserCountOutputTypeCountVotesArgs
   businessSubscriptions?: boolean | UserCountOutputTypeCountBusinessSubscriptionsArgs
+  oauthApps?: boolean | UserCountOutputTypeCountOauthAppsArgs
+  oauthAccessTokens?: boolean | UserCountOutputTypeCountOauthAccessTokensArgs
+  oauthAuthorizationCodes?: boolean | UserCountOutputTypeCountOauthAuthorizationCodesArgs
 }
 
 /**
@@ -2992,6 +3673,27 @@ export type UserCountOutputTypeCountBusinessSubscriptionsArgs<ExtArgs extends ru
   where?: Prisma.BusinessSubscriptionWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountOauthAppsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.OAuthAppWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountOauthAccessTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.OAuthAccessTokenWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountOauthAuthorizationCodesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.OAuthAuthorizationCodeWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -3019,6 +3721,9 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   votes?: boolean | Prisma.User$votesArgs<ExtArgs>
   businessSubscriptions?: boolean | Prisma.User$businessSubscriptionsArgs<ExtArgs>
   referral?: boolean | Prisma.User$referralArgs<ExtArgs>
+  oauthApps?: boolean | Prisma.User$oauthAppsArgs<ExtArgs>
+  oauthAccessTokens?: boolean | Prisma.User$oauthAccessTokensArgs<ExtArgs>
+  oauthAuthorizationCodes?: boolean | Prisma.User$oauthAuthorizationCodesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -3074,6 +3779,9 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   votes?: boolean | Prisma.User$votesArgs<ExtArgs>
   businessSubscriptions?: boolean | Prisma.User$businessSubscriptionsArgs<ExtArgs>
   referral?: boolean | Prisma.User$referralArgs<ExtArgs>
+  oauthApps?: boolean | Prisma.User$oauthAppsArgs<ExtArgs>
+  oauthAccessTokens?: boolean | Prisma.User$oauthAccessTokensArgs<ExtArgs>
+  oauthAuthorizationCodes?: boolean | Prisma.User$oauthAuthorizationCodesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -3099,6 +3807,9 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     votes: Prisma.$VotePayload<ExtArgs>[]
     businessSubscriptions: Prisma.$BusinessSubscriptionPayload<ExtArgs>[]
     referral: Prisma.$ReferralPayload<ExtArgs> | null
+    oauthApps: Prisma.$OAuthAppPayload<ExtArgs>[]
+    oauthAccessTokens: Prisma.$OAuthAccessTokenPayload<ExtArgs>[]
+    oauthAuthorizationCodes: Prisma.$OAuthAuthorizationCodePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -3520,6 +4231,9 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   votes<T extends Prisma.User$votesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$votesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   businessSubscriptions<T extends Prisma.User$businessSubscriptionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$businessSubscriptionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BusinessSubscriptionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   referral<T extends Prisma.User$referralArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$referralArgs<ExtArgs>>): Prisma.Prisma__ReferralClient<runtime.Types.Result.GetResult<Prisma.$ReferralPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  oauthApps<T extends Prisma.User$oauthAppsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$oauthAppsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OAuthAppPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  oauthAccessTokens<T extends Prisma.User$oauthAccessTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$oauthAccessTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OAuthAccessTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  oauthAuthorizationCodes<T extends Prisma.User$oauthAuthorizationCodesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$oauthAuthorizationCodesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OAuthAuthorizationCodePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4340,6 +5054,78 @@ export type User$referralArgs<ExtArgs extends runtime.Types.Extensions.InternalA
    */
   include?: Prisma.ReferralInclude<ExtArgs> | null
   where?: Prisma.ReferralWhereInput
+}
+
+/**
+ * User.oauthApps
+ */
+export type User$oauthAppsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the OAuthApp
+   */
+  select?: Prisma.OAuthAppSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the OAuthApp
+   */
+  omit?: Prisma.OAuthAppOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OAuthAppInclude<ExtArgs> | null
+  where?: Prisma.OAuthAppWhereInput
+  orderBy?: Prisma.OAuthAppOrderByWithRelationInput | Prisma.OAuthAppOrderByWithRelationInput[]
+  cursor?: Prisma.OAuthAppWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.OAuthAppScalarFieldEnum | Prisma.OAuthAppScalarFieldEnum[]
+}
+
+/**
+ * User.oauthAccessTokens
+ */
+export type User$oauthAccessTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the OAuthAccessToken
+   */
+  select?: Prisma.OAuthAccessTokenSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the OAuthAccessToken
+   */
+  omit?: Prisma.OAuthAccessTokenOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OAuthAccessTokenInclude<ExtArgs> | null
+  where?: Prisma.OAuthAccessTokenWhereInput
+  orderBy?: Prisma.OAuthAccessTokenOrderByWithRelationInput | Prisma.OAuthAccessTokenOrderByWithRelationInput[]
+  cursor?: Prisma.OAuthAccessTokenWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.OAuthAccessTokenScalarFieldEnum | Prisma.OAuthAccessTokenScalarFieldEnum[]
+}
+
+/**
+ * User.oauthAuthorizationCodes
+ */
+export type User$oauthAuthorizationCodesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the OAuthAuthorizationCode
+   */
+  select?: Prisma.OAuthAuthorizationCodeSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the OAuthAuthorizationCode
+   */
+  omit?: Prisma.OAuthAuthorizationCodeOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OAuthAuthorizationCodeInclude<ExtArgs> | null
+  where?: Prisma.OAuthAuthorizationCodeWhereInput
+  orderBy?: Prisma.OAuthAuthorizationCodeOrderByWithRelationInput | Prisma.OAuthAuthorizationCodeOrderByWithRelationInput[]
+  cursor?: Prisma.OAuthAuthorizationCodeWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.OAuthAuthorizationCodeScalarFieldEnum | Prisma.OAuthAuthorizationCodeScalarFieldEnum[]
 }
 
 /**

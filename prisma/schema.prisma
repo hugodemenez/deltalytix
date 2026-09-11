@@ -147,8 +147,71 @@ model User {
   votes                 Vote[]
   businessSubscriptions BusinessSubscription[]
   referral              Referral?
+  oauthApps             OAuthApp[]
+  oauthAccessTokens     OAuthAccessToken[]
+  oauthAuthorizationCodes OAuthAuthorizationCode[]
 
   @@index([email])
+  @@schema("public")
+}
+
+model OAuthApp {
+  id               String   @id @default(uuid())
+  userId           String
+  name             String
+  description      String?
+  logoUrl          String?
+  clientId         String   @unique
+  clientSecretHash String
+  redirectUris     String[]
+  scopes           String[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authorizationCodes OAuthAuthorizationCode[]
+  accessTokens     OAuthAccessToken[]
+
+  @@index([userId])
+  @@schema("public")
+}
+
+model OAuthAuthorizationCode {
+  id                  String    @id @default(uuid())
+  codeHash            String    @unique
+  appId               String
+  userId              String
+  scopes              String[]
+  redirectUri         String
+  codeChallenge       String?
+  codeChallengeMethod String?
+  expiresAt           DateTime
+  consumedAt          DateTime?
+  app                 OAuthApp  @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([appId])
+  @@index([userId])
+  @@schema("public")
+}
+
+model OAuthAccessToken {
+  id                    String    @id @default(uuid())
+  name                  String?
+  tokenHash             String    @unique
+  refreshTokenHash      String?   @unique
+  appId                 String?
+  userId                String
+  scopes                String[]
+  expiresAt             DateTime?
+  refreshTokenExpiresAt DateTime?
+  lastUsedAt            DateTime?
+  revokedAt             DateTime?
+  createdAt             DateTime  @default(now())
+  app                   OAuthApp? @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([appId])
   @@schema("public")
 }
 

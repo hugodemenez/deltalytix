@@ -23,6 +23,7 @@ import {
   decryptConnectionToken,
   encryptConnectionToken,
 } from '@/lib/connection-token-crypto'
+import { serverActor, trustedUserId, type TrustedActor } from "@/lib/api/server-actor"
 
 // Helper function to format dates in the required format: 2025-06-05T08:38:40+00:00
 function formatDateForAPI(date: Date): string {
@@ -1463,20 +1464,29 @@ export async function storeTradovateToken(
   accessToken: string,
   expiresAt: string,
   environment: TradovateEnvironment = 'demo',
-  accountId: string = 'default'
+  accountId: string = 'default',
+  options?: TrustedActor,
 ) {
   try {
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    let userId = trustedUserId(options)
+    if (!userId) {
+      const supabase = await createClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (authError || !user) {
+      if (authError || !user) {
+        return { error: 'User not authenticated' }
+      }
+      userId = user.id
+    }
+    if (!userId) {
       return { error: 'User not authenticated' }
     }
+    const resolvedUserId = userId
 
     const existingConnection = await prisma.connection.findUnique({
       where: {
         userId_service_externalId: {
-          userId: user.id,
+          userId: resolvedUserId,
           service: 'tradovate',
           externalId: accountId
         }
@@ -1488,7 +1498,7 @@ export async function storeTradovateToken(
     await prisma.connection.upsert({
       where: {
         userId_service_externalId: {
-          userId: user.id,
+          userId: resolvedUserId,
           service: 'tradovate',
           externalId: accountId
         }
@@ -1501,7 +1511,7 @@ export async function storeTradovateToken(
         updatedAt: new Date()
       },
       create: {
-        userId: user.id,
+        userId: resolvedUserId,
         service: 'tradovate',
         externalId: accountId,
         token: encryptConnectionToken(accessToken),
@@ -1513,7 +1523,7 @@ export async function storeTradovateToken(
 
     if (!existingConnection) {
       await capturePostHogEvent({
-        distinctId: user.id,
+        distinctId: resolvedUserId,
         event: 'integration_connected',
         properties: {
           integration: 'tradovate',
@@ -1684,14 +1694,18 @@ export async function setCustomTradovateToken(
   accessToken: string,
   expiresAt: string,
   accountId: string = 'custom',
-  environment: TradovateEnvironment = 'demo'
+  environment: TradovateEnvironment = 'demo',
+  options?: TrustedActor,
 ) {
   try {
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const actorUserId = trustedUserId(options)
+    if (!actorUserId) {
+      const supabase = await createClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (authError || !user) {
-      return { error: 'User not authenticated' }
+      if (authError || !user) {
+        return { error: 'User not authenticated' }
+      }
     }
 
     // Validate token format (basic check)
@@ -1706,7 +1720,13 @@ export async function setCustomTradovateToken(
     }
 
     // Store the custom token
-    const result = await storeTradovateToken(accessToken, expiresAt, environment, accountId)
+    const result = await storeTradovateToken(
+      accessToken,
+      expiresAt,
+      environment,
+      accountId,
+      actorUserId ? serverActor(actorUserId) : undefined,
+    )
     
     if (result.error) {
       return result
@@ -1802,8 +1822,7 @@ async function updateLastSyncedAt(userId: string, connectionExternalId: string) 
   
 export async function getTradovateTrades(
   accessToken: string,
-  options?: {
-    userId?: string
+  options?: TrustedActor & {
     includeAllFees?: boolean
     includedFeeTypes?: TradovateIncludedFeeTypes
     environment?: TradovateEnvironment
@@ -1819,7 +1838,7 @@ export async function getTradovateTrades(
       options?.includedFeeTypes ?? (options?.includeAllFees ? true : DEFAULT_INCLUDED_FEE_TYPES)
 
     // Resolve userId either from caller (e.g. cron) or current session
-    let userId = options?.userId ?? null
+    let userId = trustedUserId(options)
     if (!userId) {
       const supabase = await createClient()
       const { data: { user }, error: authError } = await supabase.auth.getUser()

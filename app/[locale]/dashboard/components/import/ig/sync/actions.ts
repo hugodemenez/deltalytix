@@ -27,6 +27,7 @@ import type {
   IgStoredCredentials,
   IgTradesResult,
 } from "./ig-types";
+import { trustedUserId, type TrustedActor } from "@/lib/api/server-actor";
 
 const SERVICE = "ig";
 /**
@@ -516,7 +517,7 @@ export async function getIgSynchronizations() {
 
 export async function getIgTrades(
   initialTokenJson: string,
-  options?: { userId?: string; connectionId?: string },
+  options?: TrustedActor & { connectionId?: string },
 ): Promise<IgTradesResult> {
   const syncStats = {
     tradingAccounts: 0,
@@ -535,7 +536,7 @@ export async function getIgTrades(
     }
     environment = credentials.environment;
 
-    let userId = options?.userId ?? null;
+    let userId = trustedUserId(options);
     if (!userId) {
       const supabase = await createClient();
       const {

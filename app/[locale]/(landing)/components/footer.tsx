@@ -13,6 +13,8 @@ export default function Footer() {
       { name: t('footer.product.propfirms'), href: '/propfirms' },
       { name: t('footer.product.teams'), href: '/teams' },
       { name: t('footer.product.support'), href: '/support' },
+      { name: t('landing.navbar.documentation'), href: '/help' },
+      { name: t('landing.navbar.api'), href: '/docs' },
     ],
     company: [
       { name: t('footer.company.about'), href: '/about' },

@@ -1,0 +1,175 @@
+---
+title: Trades
+description: Lister et créer des trades avec filtres, pagination et le pipeline partagé d’import / déduplication.
+order: 3
+---
+Gérez l’historique de trades de l’utilisateur authentifié.
+
+## Lister les trades
+
+```http
+GET /api/v1/trades
+```
+
+**Scope :** `trades:read`
+
+<DocsEndpointTry method="GET" path="/api/v1/trades" />
+
+### Paramètres de requête
+
+| Paramètre | Description |
+| --- | --- |
+| `accountNumber` | Filtrer par numéro de compte |
+| `instrument` | Filtrer par instrument |
+| `side` | Filtrer par sens |
+| `from` | Borne inférieure inclusive sur `entryDate` (ISO 8601) |
+| `to` | Borne supérieure inclusive sur `entryDate` (ISO 8601) |
+| `cursor` | Curseur de pagination opaque |
+| `limit` | Taille de page (défaut `100`, max `500`) |
+
+### Exemple
+
+```bash
+curl "https://www.deltalytix.app/api/v1/trades?accountNumber=SIM-001&limit=50" \
+  -H "Authorization: Bearer dltx_at_…"
+```
+
+```js
+const params = new URLSearchParams({
+  accountNumber: "SIM-001",
+  from: "2026-01-01T00:00:00.000Z",
+  limit: "50",
+});
+
+const res = await fetch(`https://www.deltalytix.app/api/v1/trades?${params}`, {
+  headers: { Authorization: `Bearer ${accessToken}` },
+});
+const page = await res.json();
+```
+
+### Réponse `200`
+
+<DocsResponse tone="success" label="Succès">
+
+```json
+{
+  "data": [
+    {
+      "id": "trade_01HZX…",
+      "accountNumber": "SIM-001",
+      "instrument": "ES",
+      "side": "long",
+      "quantity": 2,
+      "entryPrice": 5120.25,
+      "closePrice": 5128.5,
+      "entryDate": "2026-03-15T14:30:00.000Z",
+      "closeDate": "2026-03-15T15:10:00.000Z",
+      "pnl": 825,
+      "commission": 8.64,
+      "timeInPosition": 2400,
+      "tags": ["breakout"],
+      "comment": "Morning continuation",
+      "createdAt": "2026-03-15T15:12:01.000Z"
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+</DocsResponse>
+
+## Créer des trades
+
+```http
+POST /api/v1/trades
+```
+
+**Scope :** `trades:write`
+
+<DocsEndpointTry method="POST" path="/api/v1/trades" />
+
+Crée un ou plusieurs trades via le même pipeline de déduplication que le tableau de bord (`UUID v5` + `createMany` avec `skipDuplicates`). Les doublons sont comptés, pas traités comme des erreurs dures.
+
+### Corps de requête
+
+```json
+{
+  "trades": [
+    {
+      "accountNumber": "SIM-001",
+      "instrument": "ES",
+      "quantity": 2,
+      "entryPrice": 5120.25,
+      "closePrice": 5128.5,
+      "entryDate": "2026-03-15T14:30:00.000Z",
+      "closeDate": "2026-03-15T15:10:00.000Z",
+      "pnl": 825,
+      "side": "long",
+      "commission": 8.64,
+      "entryId": "optional-broker-entry-id",
+      "closeId": "optional-broker-close-id",
+      "timeInPosition": 2400,
+      "tags": ["breakout"],
+      "comment": "Morning continuation"
+    }
+  ]
+}
+```
+
+| Champ | Requis | Notes |
+| --- | --- | --- |
+| `accountNumber` | Oui | Compte cible |
+| `instrument` | Oui | Symbole / contrat |
+| `quantity` | Oui | Taille |
+| `entryPrice` | Oui | Prix d’entrée |
+| `closePrice` | Oui | Prix de sortie |
+| `entryDate` | Oui | ISO 8601 |
+| `closeDate` | Oui | ISO 8601 |
+| `pnl` | Oui | P&amp;L réalisé |
+| `side` | Non | ex. `long` / `short` |
+| `commission` | Non | Frais |
+| `entryId` | Non | Identifiant d’entrée broker |
+| `closeId` | Non | Identifiant de sortie broker |
+| `timeInPosition` | Non | Durée en secondes |
+| `tags` | Non | Tableau de chaînes |
+| `comment` | Non | Texte libre |
+
+### Exemple
+
+```bash
+curl -X POST https://www.deltalytix.app/api/v1/trades \
+  -H "Authorization: Bearer dltx_at_…" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "trades": [
+      {
+        "accountNumber": "SIM-001",
+        "instrument": "ES",
+        "quantity": 2,
+        "entryPrice": 5120.25,
+        "closePrice": 5128.5,
+        "entryDate": "2026-03-15T14:30:00.000Z",
+        "closeDate": "2026-03-15T15:10:00.000Z",
+        "pnl": 825,
+        "side": "long",
+        "commission": 8.64
+      }
+    ]
+  }'
+```
+
+### Réponse `201`
+
+<DocsResponse tone="success" label="Succès">
+
+```json
+{
+  "imported": 1,
+  "duplicates": 0,
+  "total": 1
+}
+```
+
+</DocsResponse>
+
+Si chaque ligne est un doublon, la réponse reste un succès avec des compteurs (par exemple `"imported": 0, "duplicates": 3, "total": 3`), pas un statut d’erreur.

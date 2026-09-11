@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/accordion";
 import { Logo } from "@/components/logo";
 import {
-  FileText,
   Cpu,
   Users,
   Layers,
@@ -174,6 +173,22 @@ const itemVariant = {
   },
 };
 
+type NavChild = {
+  path: string
+  title: string
+  icon?: React.ReactNode
+  /** Renders as a plain anchor with target="_blank". */
+  external?: boolean
+  /** Marks the "learn more" style entry rendered below the icon list. */
+  meta?: boolean
+}
+
+type NavLink = {
+  title: string
+  path?: string
+  children?: NavChild[]
+}
+
 export default function Component() {
   const { theme, effectiveTheme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
@@ -290,7 +305,7 @@ export default function Component() {
     closeMenu();
   };
 
-  const links = [
+  const links: NavLink[] = [
     {
       title: t("landing.navbar.features"),
       children: [
@@ -318,6 +333,11 @@ export default function Component() {
           path: "/#data-import",
           title: t("landing.navbar.dataImport"),
           icon: <Database className="h-4 w-4" />,
+        },
+        {
+          path: "/help",
+          title: t("landing.navbar.learnMore"),
+          meta: true,
         },
       ],
     },
@@ -362,11 +382,6 @@ export default function Component() {
         },
         {
           path: "/docs",
-          title: t("landing.navbar.documentation"),
-          icon: <FileText className="h-4 w-4" />,
-        },
-        {
-          path: "/api",
           title: t("landing.navbar.api"),
           icon: <Cpu className="h-4 w-4" />,
         },
@@ -406,7 +421,7 @@ export default function Component() {
                   onMouseEnter={() => setHoveredItem("features")}
                   onMouseLeave={() => setHoveredItem(null)}
                 >
-                  <ul className="grid gap-3 p-6 md:w-[500px] lg:w-[600px] lg:grid-cols-[.75fr_1fr] list-none">
+                  <ul className="grid list-none gap-3 p-6 pb-3 md:w-[500px] lg:w-[600px] lg:grid-cols-[.75fr_1fr]">
                     <li className="row-span-5">
                       <NavigationMenuLink asChild>
                         <Link
@@ -461,6 +476,16 @@ export default function Component() {
                       </ListItem>
                     </div>
                   </ul>
+                  <div className="px-6 pb-4">
+                    <NavigationMenuLink asChild>
+                      <Link
+                        href={localize("/help")}
+                        className="flex min-h-11 items-center border-t border-black/10 pt-3 text-sm text-black/55 transition-colors hover:text-foreground hover:underline hover:underline-offset-4 dark:border-white/10 dark:text-white/55 dark:hover:text-white"
+                      >
+                        {t("landing.navbar.learnMore")}
+                      </Link>
+                    </NavigationMenuLink>
+                  </div>
                 </NavigationMenuContent>
               </NavigationMenuItem>
               <NavigationMenuItem
@@ -568,6 +593,13 @@ export default function Component() {
                         {t("landing.navbar.joinCommunityDescription")}
                       </ListItem>
                     )}
+                    <ListItem
+                      href={localize("/docs")}
+                      title={t("landing.navbar.api")}
+                      icon={<Cpu className="h-4 w-4" />}
+                    >
+                      {t("landing.navbar.apiDescription")}
+                    </ListItem>
                   </ul>
                 </NavigationMenuContent>
               </NavigationMenuItem>
@@ -768,6 +800,11 @@ export default function Component() {
                                       duration: 0.2,
                                       delay: childIndex * 0.05,
                                     }}
+                                    className={
+                                      child.meta
+                                        ? "border-t border-black/10 pt-8 dark:border-white/10"
+                                        : undefined
+                                    }
                                   >
                                     <motion.div
                                       whileHover={{ x: 4 }}
@@ -787,9 +824,15 @@ export default function Component() {
                                         <Link
                                           onClick={() => handleNavClick(href)}
                                           href={href}
-                                          className="text-black/55 dark:text-white/55 flex items-center space-x-2"
+                                          className={
+                                            child.meta
+                                              ? "block text-lg text-black/45 dark:text-white/45"
+                                              : "flex items-center space-x-2 text-black/55 dark:text-white/55"
+                                          }
                                         >
-                                          <span>{child.icon}</span>
+                                          {child.meta ? null : (
+                                            <span>{child.icon}</span>
+                                          )}
                                           <span>{child.title}</span>
                                         </Link>
                                       )}

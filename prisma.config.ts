@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { config } from "dotenv";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 
 if (existsSync(".env.local")) {
   config({ path: ".env.local", override: true });
@@ -15,7 +15,12 @@ export default defineConfig({
   datasource: {
     // Use DIRECT_URL (non-pooled, port 5432) for CLI commands like migrate/db push.
     // The pooled DATABASE_URL is used at runtime via the PrismaPg adapter in lib/prisma.ts.
-    url: env("DIRECT_URL"),
+    // `env()` throws if the variable is unset — worktrees and `prisma generate`
+    // often have no .env.local yet, and generate does not connect.
+    url:
+      process.env.DIRECT_URL ||
+      process.env.DATABASE_URL ||
+      "postgresql://devuser:devpass@localhost:5432/deltalytix_dev",
   },
 //   experimental: {
 //     externalTables: true,

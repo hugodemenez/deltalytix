@@ -240,8 +240,9 @@ export default {
       developers: "Développeurs",
       openSource: "Open Source",
       documentation: "Documentation",
+      learnMore: "En savoir plus…",
       joinCommunity: "Rejoindre la communauté",
-      api: "API",
+      api: "Documentation API",
       pricing: "Tarifs",
       support: "Support",
       updates: "Mises à jour",
@@ -276,11 +277,14 @@ export default {
         "Suivez l'équité, les résultats quotidiens et votre progression vers vos objectifs.",
       openSourceDescription: "Explorez nos projets open-source et contribuez.",
       youtubeDescription: "Regardez des tutoriels et des analyses de trading.",
-      documentationDescription: "Guides complets et références API.",
+      documentationDescription:
+        "Guides pour importer vos trades, lire vos performances et tenir un journal.",
+      learnMoreDescription:
+        "Comment importer vos trades, lire vos performances et tenir un journal.",
       joinCommunityDescription:
         "Connectez-vous avec d'autres développeurs et traders.",
       apiDescription:
-        "Accédez à notre API pour des intégrations personnalisées.",
+        "OAuth, REST, OpenAPI et un playground pour tester en direct.",
       oneApi: "Une API pour les gouverner toutes",
       oneApiDescription:
         "Une seule API se connectant sans effort à plusieurs fournisseurs et obtenant un format unifié.",

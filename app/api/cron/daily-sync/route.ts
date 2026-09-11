@@ -9,6 +9,7 @@ import { syncIbkrAccount } from '@/app/[locale]/dashboard/components/import/ibkr
 import { getTradovateTrades } from '@/app/[locale]/dashboard/components/import/tradovate/sync/actions'
 import { getIgTrades } from '@/app/[locale]/dashboard/components/import/ig/sync/actions'
 import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connections/data'
+import { serverActor } from "@/lib/api/server-actor"
 
 export const maxDuration = 300
 
@@ -72,7 +73,7 @@ async function syncConnection(connection: {
   if (connection.service === 'tradovate') {
     error = (
       await getTradovateTrades(storedTokenJson, {
-        userId: connection.userId,
+        ...serverActor(connection.userId),
         // Account-level fee config lives on the connection row.
         includedFeeTypes:
           (connection.includedFeeTypes as Record<string, boolean> | null) ??
@@ -84,28 +85,29 @@ async function syncConnection(connection: {
   } else if (connection.service === 'dxfeed') {
     error = (
       await getDxFeedTrades(storedTokenJson, {
-        userId: connection.userId,
+        ...serverActor(connection.userId),
         accountId: connection.externalId,
       })
     ).error
   } else if (connection.service === 'ibkr') {
     // IBKR re-reads and decrypts the bundle itself; the check above is only a
     // cheap guard against scheduling a connection with no credentials left.
-    const result = await syncIbkrAccount(connection.externalId, {
-      userId: connection.userId,
-    })
+    const result = await syncIbkrAccount(
+      connection.externalId,
+      serverActor(connection.userId),
+    )
     error = result.error && !IBKR_EMPTY_RESULTS.has(result.error) ? result.error : undefined
   } else if (connection.service === 'ig') {
     error = (
       await getIgTrades(storedTokenJson, {
-        userId: connection.userId,
+        ...serverActor(connection.userId),
         connectionId: connection.id,
       })
     ).error
   } else {
     error = (
       await getRithmicProtocolTrades(storedTokenJson, {
-        userId: connection.userId,
+        ...serverActor(connection.userId),
         connectionId: connection.id,
       })
     ).error

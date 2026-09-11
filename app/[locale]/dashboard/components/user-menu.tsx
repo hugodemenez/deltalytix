@@ -125,6 +125,13 @@ function MenuLinks({
         {t('dashboard.settings')}
       </Link>
       <Link
+        href="/dashboard/developers"
+        onClick={onNavigate}
+        className={itemClass}
+      >
+        {t('apiAccess.title')}
+      </Link>
+      <Link
         href={`/${currentLocale}/dashboard/billing`}
         onClick={onNavigate}
         className={cn(itemClass, 'justify-between gap-3')}
@@ -368,6 +375,9 @@ export default function UserMenu() {
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
             <Link href="/dashboard/settings">{t('dashboard.settings')}</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/developers">{t('apiAccess.title')}</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link

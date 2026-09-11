@@ -1,6 +1,6 @@
 'use server'
 import { Trade, Prisma, DashboardLayout } from '@/prisma/generated/prisma/client'
-import { revalidatePath, revalidateTag, updateTag } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { Widget, Layouts } from '@/app/[locale]/dashboard/types/dashboard'
 import { createClient, getUserId } from './auth'
 import { startOfDay } from 'date-fns'
@@ -10,30 +10,9 @@ import { unstable_cache } from 'next/cache'
 import { defaultLayouts } from '@/lib/default-layouts'
 import { formatTimestamp } from '@/lib/date-utils'
 import {
-  generatePersistedTradeUUID,
-  RITHMIC_PROTOCOL_TRADE_TAG,
-} from '@/lib/trade-id-utils'
-import {
-  isTradovatePersistedTrade,
-  resolveTradovatePersistedId,
-  tradovateFillIdLookupValues,
-} from '@/lib/tradovate/identity'
-import { isDuplicateTradesOnlySave } from '@/lib/trades/save-trades-outcome'
-import { capturePostHogEvent } from '@/lib/posthog-server'
-
-type TradeError =
-  | 'DUPLICATE_TRADES'
-  | 'NO_TRADES_ADDED'
-  | 'DATABASE_ERROR'
-  | 'INVALID_DATA'
-
-interface TradeResponse {
-  error: TradeError | false
-  numberOfTradesAdded: number
-  details?: unknown
-  /** Trades prepared with server-assigned IDs/accountIds for client merge */
-  trades?: Trade[]
-}
+  saveTradesCore,
+  type TradeSaveResult as TradeResponse,
+} from '@/lib/trades/save-trades-core'
 
 export async function revalidateCache(tags: string[]) {
   console.log(`[revalidateCache] Starting cache invalidation for tags:`, tags)
@@ -51,222 +30,16 @@ export async function revalidateCache(tags: string[]) {
   console.log(`[revalidateCache] Completed cache invalidation for ${tags.length} tags`)
 }
 
-async function backfillRithmicProtocolCommissions(
-  userId: string,
-  trades: Trade[],
-): Promise<number> {
-  const protocolTrades = trades.filter(
-    (trade) => trade.tags?.includes(RITHMIC_PROTOCOL_TRADE_TAG) && trade.id,
-  )
-  if (protocolTrades.length === 0) return 0
-
-  const existing = await prisma.trade.findMany({
-    where: { userId, id: { in: protocolTrades.map((trade) => trade.id) } },
-    select: { id: true, commission: true },
-  })
-  const currentById = new Map(existing.map((row) => [row.id, row.commission]))
-  const updates = protocolTrades.filter((trade) => {
-    const current = currentById.get(trade.id)
-    return current != null && current !== trade.commission
-  })
-  if (updates.length === 0) return 0
-
-  const chunkSize = 100
-  for (let offset = 0; offset < updates.length; offset += chunkSize) {
-    const chunk = updates.slice(offset, offset + chunkSize)
-    await prisma.$transaction(
-      chunk.map((trade) =>
-        prisma.trade.updateMany({
-          where: { id: trade.id, userId },
-          data: { commission: trade.commission },
-        }),
-      ),
-    )
-  }
-  console.log(
-    `[saveTrades] Updated commission on ${updates.length} existing ${RITHMIC_PROTOCOL_TRADE_TAG} trade(s)`,
-  )
-  return updates.length
-}
-
-async function assignExistingTradovateIds(
-  userId: string,
-  trades: Trade[],
-): Promise<Trade[]> {
-  const tradovateTrades = trades.filter(isTradovatePersistedTrade)
-  if (tradovateTrades.length === 0) return trades
-
-  const fillCandidates = [
-    ...new Set(
-      tradovateTrades.flatMap((trade) => [
-        ...tradovateFillIdLookupValues(trade.entryId),
-        ...tradovateFillIdLookupValues(trade.closeId),
-      ]),
-    ),
-  ]
-  if (fillCandidates.length === 0) return trades
-
-  const existing = await prisma.trade.findMany({
-    where: {
-      userId,
-      OR: [
-        { entryId: { in: fillCandidates } },
-        { closeId: { in: fillCandidates } },
-      ],
-    },
-    select: { id: true, accountNumber: true, entryId: true, closeId: true },
-  })
-  if (existing.length === 0) return trades
-
-  return trades.map((trade) => {
-    if (!isTradovatePersistedTrade(trade)) return trade
-    const existingId = resolveTradovatePersistedId(trade, existing)
-    return existingId ? { ...trade, id: existingId } : trade
-  })
-}
-
 export async function saveTradesAction(
   data: Trade[],
   options?: { userId?: string; connectionId?: string | null }
 ): Promise<TradeResponse> {
   console.log('[saveTrades] Saving trades:', data.length)
   const userId = options?.userId ?? await getUserId()
-  if (!Array.isArray(data) || data.length === 0) {
-    return {
-      error: 'INVALID_DATA',
-      numberOfTradesAdded: 0,
-      details: 'No trades provided'
-    }
-  }
-
-  try {
-    const hadExistingTrades = Boolean(await prisma.trade.findFirst({
-      where: { userId },
-      select: { id: true },
-    }))
-
-    const accountNumbers = data
-      .map((trade) => trade.accountNumber)
-      .filter((n): n is string => Boolean(n))
-
-    const { upsertAccountsForNumbers } = await import('@/server/connections')
-    const accountIdByNumber = await upsertAccountsForNumbers(
-      userId,
-      accountNumbers,
-      options?.connectionId
-    )
-
-    // Clean the data to remove undefined values and ensure all required fields are present
-    const preparedTrades = data.map(trade => {
-      const accountId =
-        trade.accountId ||
-        (trade.accountNumber
-          ? accountIdByNumber.get(trade.accountNumber)
-          : undefined) ||
-        null
-
-      return {
-        ...trade,
-        userId: userId,
-        accountId,
-        id: generatePersistedTradeUUID({ ...trade, userId }),
-      } as Trade
-    })
-
-    const userAssignedTrades = await assignExistingTradovateIds(
-      userId,
-      preparedTrades,
-    )
-
-    const result = await prisma.trade.createMany({
-      data: userAssignedTrades,
-      skipDuplicates: true
-    })
-
-    const commissionsUpdated = await backfillRithmicProtocolCommissions(
-      userId,
-      userAssignedTrades,
-    )
-
-    // createMany can insert 0 rows on a Protocol resync while the backfill
-    // still writes commissions. Only skip cache invalidation when nothing
-    // changed — callers (dashboard widgets) must read their own writes.
-    if (isDuplicateTradesOnlySave(result.count, commissionsUpdated)) {
-      console.log('[saveTrades] No trades added. Checking for duplicates:', { attempted: data.length })
-      const tradeIds = userAssignedTrades.map(trade => trade.id)
-      const existingTrades = await prisma.trade.findMany({
-        where: { id: { in: tradeIds } },
-        select: {
-          id: true,
-          entryDate: true,
-          instrument: true
-        }
-      })
-
-      if (existingTrades.length > 0) {
-        console.log('[saveTrades] Found existing trades:', existingTrades)
-        return {
-          error: 'DUPLICATE_TRADES',
-          numberOfTradesAdded: 0,
-          details: existingTrades
-        }
-      }
-    }
-
-    // Prefer updateTag: in a Server Action context (e.g. client-side import)
-    // it expires AND immediately refreshes the cache, so the caller reads its
-    // own writes without a separate refetch. updateTag throws when called from
-    // a Route Handler (e.g. /api/dxfeed/sync, /api/thor/store), so fall back to
-    // revalidateTag there — that's expected, not an error.
-    try {
-      updateTag(`trades-${userId}`)
-      updateTag(`user-data-${userId}`)
-    } catch {
-      revalidateTag(`trades-${userId}`, { expire: 0 })
-      revalidateTag(`user-data-${userId}`, { expire: 0 })
-    }
-
-    if (result.count > 0) {
-      const sources = Array.from(new Set(
-        userAssignedTrades.flatMap((trade) => trade.tags ?? [])
-      ))
-
-      await capturePostHogEvent({
-        distinctId: userId,
-        event: 'trades_imported',
-        properties: {
-          imported_trade_count: result.count,
-          attempted_trade_count: data.length,
-          import_sources: sources.join(','),
-          is_first_import: !hadExistingTrades,
-        },
-      })
-
-      if (!hadExistingTrades) {
-        await capturePostHogEvent({
-          distinctId: userId,
-          event: 'first_trade_imported',
-          properties: {
-            imported_trade_count: result.count,
-            import_sources: sources.join(','),
-          },
-        })
-      }
-    }
-
-    return {
-      error: result.count === 0 ? 'NO_TRADES_ADDED' : false,
-      numberOfTradesAdded: result.count,
-      trades: result.count > 0 ? userAssignedTrades : undefined,
-    }
-  } catch (error) {
-    console.error('[saveTrades] Database error:', error)
-    return {
-      error: 'DATABASE_ERROR',
-      numberOfTradesAdded: 0,
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }
-  }
+  return saveTradesCore(data, {
+    userId,
+    connectionId: options?.connectionId,
+  })
 }
 
 // Create cache function dynamically for each user/subscription combination
