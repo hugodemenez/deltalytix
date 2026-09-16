@@ -23,6 +23,22 @@ import {
   decryptConnectionToken,
   encryptConnectionToken,
 } from '@/lib/connection-token-crypto'
+import {
+  type TradovateApiHosts,
+  type TradovateEnvInput,
+  TRADOVATE_OAUTH_AUTHORIZE_ORIGIN,
+  hostsAfterAuthResponse,
+  normalizeHostContext,
+  normalizeTradovateEnvironment,
+  parseTradovateApiHosts,
+  readApiHostsFromAuthResponse,
+  tradovateTradingRestBaseUrl,
+  withTradovateHost,
+} from '@/lib/tradovate/api-hosts'
+import { tradovateFetch } from '@/lib/tradovate/fetch'
+
+export type { TradovateApiHosts }
+export type { TradovateEnvironment } from '@/lib/tradovate/api-hosts'
 
 // Helper function to format dates in the required format: 2025-06-05T08:38:40+00:00
 function formatDateForAPI(date: Date): string {
@@ -73,28 +89,17 @@ const logger = {
 }
 
 
-export type TradovateEnvironment = 'demo' | 'live'
+type TradovateEnvironment = import('@/lib/tradovate/api-hosts').TradovateEnvironment
 
-// Environment URLs - OAuth authorization is shared, API host differs per environment
-const TRADOVATE_ENVIRONMENTS = {
-  demo: {
-    auth: 'https://trader.tradovate.com', // OAuth authorization
-    api: 'https://demo.tradovateapi.com'   // API calls
-  },
-  live: {
-    auth: 'https://trader.tradovate.com', // OAuth authorization
-    api: 'https://live.tradovateapi.com'   // API calls
-  }
-} as const
-
-// Resolve the API base URL for a given environment, defaulting to demo for safety
-function getApiBaseUrl(environment: TradovateEnvironment = 'demo'): string {
-  return TRADOVATE_ENVIRONMENTS[environment]?.api ?? TRADOVATE_ENVIRONMENTS.demo.api
+// OAuth authorization stays on the shared trader origin. REST/WebSocket API
+// hosts come from auth-returned `apiHosts`, with the historical demo/live map
+// as fallback when that object is omitted (errors, MFA, older sessions).
+function getApiBaseUrl(environment: TradovateEnvInput = 'demo'): string {
+  return tradovateTradingRestBaseUrl(environment)
 }
 
-// Normalize an arbitrary value into a valid environment
 function normalizeEnvironment(value: unknown): TradovateEnvironment {
-  return value === 'live' ? 'live' : 'demo'
+  return normalizeTradovateEnvironment(value)
 }
 
 // The OAuth state is encoded as `${environment}.${randomHex}` so the environment
@@ -128,6 +133,9 @@ interface TradovateTokenResponse {
   token_type: string
   expires_in: number
   scope: string
+  /** Present on current NT auth responses; optional on errors/MFA. */
+  apiHosts?: unknown
+  api_hosts?: unknown
 }
 
 interface TradovateOAuthResult {
@@ -216,11 +224,11 @@ interface TradovateTradesResult {
 }
 
 // Helper function to fetch contract details
-async function getContractById(accessToken: string, contractId: number, environment: TradovateEnvironment = 'demo'): Promise<TradovateContract | null> {
+async function getContractById(accessToken: string, contractId: number, environment: TradovateEnvInput = 'demo'): Promise<TradovateContract | null> {
   try {
     const apiBaseUrl = getApiBaseUrl(environment)
     const params = new URLSearchParams({ id: String(contractId) }).toString()
-    const response = await fetch(`${apiBaseUrl}/v1/contract/item?${params}`, {
+    const response = await tradovateFetch(`${apiBaseUrl}/v1/contract/item?${params}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json'
@@ -240,7 +248,7 @@ async function getContractById(accessToken: string, contractId: number, environm
 }
 
 // Helper function to fetch multiple fill fees by IDs in batch with fallback
-async function getFillFeesByIds(accessToken: string, fillIds: number[], environment: TradovateEnvironment = 'demo'): Promise<TradovateFillFee[]> {
+async function getFillFeesByIds(accessToken: string, fillIds: number[], environment: TradovateEnvInput = 'demo'): Promise<TradovateFillFee[]> {
   try {
     if (fillIds.length === 0) return []
 
@@ -256,7 +264,7 @@ async function getFillFeesByIds(accessToken: string, fillIds: number[], environm
       try {
         // Use GET with comma-separated IDs as per Tradovate API docs
         const idsParam = batch.join(',')
-        const response = await fetch(`${apiBaseUrl}/v1/fillFee/items?ids=${idsParam}`, {
+        const response = await tradovateFetch(`${apiBaseUrl}/v1/fillFee/items?ids=${idsParam}`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Accept': 'application/json'
@@ -289,7 +297,7 @@ async function getFillFeesByIds(accessToken: string, fillIds: number[], environm
         // Fallback to individual requests for this batch
         const batchPromises = batch.map(async (fillId) => {
           try {
-            const fee = await getFillFeeById(accessToken, fillId)
+            const fee = await getFillFeeById(accessToken, fillId, environment)
             return fee
           } catch (error) {
             logger.warn(`Failed to fetch fill fee ${fillId}:`, error)
@@ -315,11 +323,11 @@ async function getFillFeesByIds(accessToken: string, fillIds: number[], environm
 }
 
 // Helper function to fetch fill fees (kept for backward compatibility)
-async function getFillFeeById(accessToken: string, fillId: number, environment: TradovateEnvironment = 'demo'): Promise<TradovateFillFee | null> {
+async function getFillFeeById(accessToken: string, fillId: number, environment: TradovateEnvInput = 'demo'): Promise<TradovateFillFee | null> {
   try {
     const apiBaseUrl = getApiBaseUrl(environment)
     const params = new URLSearchParams({ id: String(fillId) }).toString()
-    const response = await fetch(`${apiBaseUrl}/v1/fillFee/item?${params}`, {
+    const response = await tradovateFetch(`${apiBaseUrl}/v1/fillFee/item?${params}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json'
@@ -339,10 +347,10 @@ async function getFillFeeById(accessToken: string, fillId: number, environment: 
 }
 
 // Helper function to fetch fill pairs
-async function getFillPairs(accessToken: string, environment: TradovateEnvironment = 'demo'): Promise<TradovateFillPair[]> {
+async function getFillPairs(accessToken: string, environment: TradovateEnvInput = 'demo'): Promise<TradovateFillPair[]> {
   try {
     const apiBaseUrl = getApiBaseUrl(environment)
-    const response = await fetch(`${apiBaseUrl}/v1/fillPair/list`, {
+    const response = await tradovateFetch(`${apiBaseUrl}/v1/fillPair/list`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json'
@@ -363,7 +371,7 @@ async function getFillPairs(accessToken: string, environment: TradovateEnvironme
 }
 
 // Helper function to fetch multiple fills by IDs in batch with fallback
-async function getFillsByIds(accessToken: string, fillIds: number[], environment: TradovateEnvironment = 'demo'): Promise<any[]> {
+async function getFillsByIds(accessToken: string, fillIds: number[], environment: TradovateEnvInput = 'demo'): Promise<any[]> {
   console.warn('getFillsByIds')
   try {
     if (fillIds.length === 0) return []
@@ -381,7 +389,7 @@ async function getFillsByIds(accessToken: string, fillIds: number[], environment
       try {
         // Use GET with comma-separated IDs as per Tradovate API docs
         const idsParam = batch.join(',')
-        const response = await fetch(`${apiBaseUrl}/v1/fill/items?ids=${idsParam}`, {
+        const response = await tradovateFetch(`${apiBaseUrl}/v1/fill/items?ids=${idsParam}`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Accept': 'application/json'
@@ -398,7 +406,7 @@ async function getFillsByIds(accessToken: string, fillIds: number[], environment
           // Fallback to individual requests for this batch
           const batchPromises = batch.map(async (fillId) => {
             try {
-              const fill = await getFillById(accessToken, fillId)
+              const fill = await getFillById(accessToken, fillId, environment)
               return fill
             } catch (error) {
               logger.warn(`Failed to fetch fill ${fillId}:`, error)
@@ -441,11 +449,11 @@ async function getFillsByIds(accessToken: string, fillIds: number[], environment
 }
 
 // Helper function to fetch individual fill details (kept for backward compatibility)
-async function getFillById(accessToken: string, fillId: number, environment: TradovateEnvironment = 'demo'): Promise<any | null> {
+async function getFillById(accessToken: string, fillId: number, environment: TradovateEnvInput = 'demo'): Promise<any | null> {
   try {
     const apiBaseUrl = getApiBaseUrl(environment)
     const params = new URLSearchParams({ id: String(fillId) }).toString()
-    const response = await fetch(`${apiBaseUrl}/v1/fill/item?${params}`, {
+    const response = await tradovateFetch(`${apiBaseUrl}/v1/fill/item?${params}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json'
@@ -465,7 +473,7 @@ async function getFillById(accessToken: string, fillId: number, environment: Tra
 }
 
 // Helper function to fetch multiple orders by IDs in batch with fallback
-async function getOrdersByIds(accessToken: string, orderIds: number[], environment: TradovateEnvironment = 'demo'): Promise<any[]> {
+async function getOrdersByIds(accessToken: string, orderIds: number[], environment: TradovateEnvInput = 'demo'): Promise<any[]> {
   try {
     if (orderIds.length === 0) return []
 
@@ -483,7 +491,7 @@ async function getOrdersByIds(accessToken: string, orderIds: number[], environme
       try {
         // Use GET with comma-separated IDs as per Tradovate API docs
         const idsParam = batch.join(',')
-        const response = await fetch(`${apiBaseUrl}/v1/order/items?ids=${idsParam}`, {
+        const response = await tradovateFetch(`${apiBaseUrl}/v1/order/items?ids=${idsParam}`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Accept': 'application/json'
@@ -543,11 +551,11 @@ async function getOrdersByIds(accessToken: string, orderIds: number[], environme
 }
 
 // Helper function to fetch order details by orderId (kept for backward compatibility)
-async function getOrderById(accessToken: string, orderId: number, environment: TradovateEnvironment = 'demo'): Promise<any | null> {
+async function getOrderById(accessToken: string, orderId: number, environment: TradovateEnvInput = 'demo'): Promise<any | null> {
   try {
     const apiBaseUrl = getApiBaseUrl(environment)
     const params = new URLSearchParams({ id: String(orderId) }).toString()
-    const response = await fetch(`${apiBaseUrl}/v1/order/item?${params}`, {
+    const response = await tradovateFetch(`${apiBaseUrl}/v1/order/item?${params}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json'
@@ -583,9 +591,9 @@ interface TradovateUserListResponse {
   data?: TradovateUser[]
 }
 
-export async function getTradovateUsername(accessToken: string, environment: TradovateEnvironment = 'demo'): Promise<string> {
+export async function getTradovateUsername(accessToken: string, environment: TradovateEnvInput = 'demo'): Promise<string> {
   const apiBaseUrl = getApiBaseUrl(environment)
-  const response = await fetch(`${apiBaseUrl}/v1/user/list`, {
+  const response = await tradovateFetch(`${apiBaseUrl}/v1/user/list`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Accept': 'application/json'
@@ -655,9 +663,10 @@ export async function initiateTradovateOAuth(
 
     console.log('User authenticated:', { userId: user.id })
 
-    // Build OAuth URL for the selected environment
-    const authBaseUrl = TRADOVATE_ENVIRONMENTS[environment].auth
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS[environment].api
+    // OAuth authorize is shared. The first token exchange still uses the
+    // historical env host; subsequent calls read `apiHosts` from the response.
+    const authBaseUrl = TRADOVATE_OAUTH_AUTHORIZE_ORIGIN
+    const apiBaseUrl = getApiBaseUrl(environment)
     console.log('Using auth URL:', authBaseUrl)
     console.log('Using API URL:', apiBaseUrl)
     
@@ -687,7 +696,7 @@ async function fetchTradovateAuthMe(
   label: string
 ): Promise<TradovateAuthMe | null> {
   try {
-    const response = await fetch(`${apiBaseUrl}/v1/auth/me`, {
+    const response = await tradovateFetch(`${apiBaseUrl}/v1/auth/me`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: 'application/json',
@@ -715,29 +724,28 @@ async function fetchTradovateAuthMe(
 
 async function getTradovateAuthMe(
   accessToken: string,
-  environment: TradovateEnvironment = 'demo'
+  environment: TradovateEnvInput = 'demo'
 ): Promise<TradovateAuthMe | null> {
+  const ctx = normalizeHostContext(environment)
   const primary = await fetchTradovateAuthMe(
     accessToken,
-    getApiBaseUrl(environment),
-    environment
+    getApiBaseUrl(ctx),
+    ctx.environment
   )
   if (primary && !primary.errorText) {
     return primary
   }
 
-  // Demo OAuth tokens often require auth/me on the live host.
-  const shouldRetryLive =
-    environment === 'demo' &&
-    (!primary ||
-      !!primary.errorText?.toLowerCase().includes('live.tradovateapi.com'))
-  if (!shouldRetryLive) {
+  // Demo OAuth tokens often require auth/me on the live host. This used to fire
+  // only when the error text named `live.tradovateapi.com`; a migrated org gets
+  // its own hostname in that message, so retry whenever the demo attempt failed.
+  if (ctx.environment !== 'demo') {
     return null
   }
 
   const liveMe = await fetchTradovateAuthMe(
     accessToken,
-    TRADOVATE_ENVIRONMENTS.live.api,
+    getApiBaseUrl({ environment: 'live', apiHosts: ctx.apiHosts }),
     'live-fallback'
   )
   if (liveMe && !liveMe.errorText) {
@@ -748,11 +756,11 @@ async function getTradovateAuthMe(
 
 async function getFirstTradovateAccountName(
   accessToken: string,
-  environment: TradovateEnvironment
+  environment: TradovateEnvInput
 ): Promise<string | null> {
   try {
     const apiBaseUrl = getApiBaseUrl(environment)
-    const response = await fetch(`${apiBaseUrl}/v1/account/list`, {
+    const response = await tradovateFetch(`${apiBaseUrl}/v1/account/list`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: 'application/json',
@@ -771,9 +779,9 @@ async function getFirstTradovateAccountName(
   }
 }
 
-export async function getPropfirmName(accessToken: string, environment: TradovateEnvironment = 'demo'): Promise<string> {
+export async function getPropfirmName(accessToken: string, environment: TradovateEnvInput = 'demo'): Promise<string> {
   const apiBaseUrl = getApiBaseUrl(environment)
-  const response = await fetch(`${apiBaseUrl}/v1/organization/list`, {
+  const response = await tradovateFetch(`${apiBaseUrl}/v1/organization/list`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Accept': 'application/json'
@@ -843,11 +851,15 @@ export async function handleTradovateCallback(code: string, state: string): Prom
       return { error: 'User not authenticated' }
     }
 
-    // Exchange code for tokens using the selected environment
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS[environment].api
+    // First hop still uses the shared env host; `apiHosts` is not known yet.
+    const apiBaseUrl = getApiBaseUrl(environment)
     console.log('Exchanging code for tokens:', { apiBaseUrl, environment, userId: user.id })
     
-    const tokenResponse = await fetch(`${apiBaseUrl}/auth/oauthtoken`, {
+    // Hosts are unknown until this responds, so the first hop uses the shared
+    // host and may be redirected. Note where it lands in case the body omits
+    // `apiHosts`.
+    const redirected: { host: string | null } = { host: null }
+    const tokenResponse = await tradovateFetch(`${apiBaseUrl}/auth/oauthtoken`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -859,6 +871,9 @@ export async function handleTradovateCallback(code: string, state: string): Prom
         redirect_uri: TRADOVATE_REDIRECT_URI,
         client_id: TRADOVATE_CLIENT_ID
       })
+    }, {
+      label: 'oauthtoken',
+      onHostRedirect: (host) => { redirected.host = host },
     })
 
     if (!tokenResponse.ok) {
@@ -885,6 +900,7 @@ export async function handleTradovateCallback(code: string, state: string): Prom
       hasRefreshToken: !!tokens?.refresh_token,
       expiresIn: tokens?.expires_in,
       scope: tokens?.scope,
+      hasApiHosts: !!readApiHostsFromAuthResponse(tokens),
       fullResponse: tokens
     })
     
@@ -906,16 +922,24 @@ export async function handleTradovateCallback(code: string, state: string): Prom
     
     // Calculate expiration time
     const expiresAt = formatDateForAPI(new Date(Date.now() + (tokens.expires_in * 1000)))
+    const apiHosts = hostsAfterAuthResponse(
+      redirected.host
+        ? withTradovateHost(null, 'trading', environment, redirected.host)
+        : null,
+      tokens,
+    )
+    const hostContext = { environment, apiHosts }
 
     // Org is optional. Resolve a stable externalId (org → auth/me → account → env fallback).
-    const propfirm = await getPropfirmName(tokens.access_token, environment)
+    const propfirm = await getPropfirmName(tokens.access_token, hostContext)
 
     // Store token in database
     const storeResult = await storeTradovateToken(
       tokens.access_token,
       expiresAt,
       environment,
-      propfirm //accountId
+      propfirm, //accountId
+      apiHosts,
     )
     if (storeResult.error) {
       logger.warn('Failed to store token in database:', storeResult.error)
@@ -928,6 +952,7 @@ export async function handleTradovateCallback(code: string, state: string): Prom
           accessToken: tokens.access_token,
           environment,
           connectionExternalId: propfirm,
+          apiHosts,
         })
       } catch (linkError) {
         logger.warn('Failed to link Tradovate accounts after OAuth:', linkError)
@@ -958,11 +983,15 @@ export async function handleTradovateCallback(code: string, state: string): Prom
 }
 
 // New function using Tradovate's renewAccessToken endpoint
-export async function renewTradovateAccessToken(accessToken: string, environment: TradovateEnvironment = 'demo'): Promise<TradovateOAuthResult> {
+export async function renewTradovateAccessToken(
+  accessToken: string,
+  environmentInput: TradovateEnvInput = 'demo',
+): Promise<TradovateOAuthResult> {
   try {
-    const apiBaseUrl = getApiBaseUrl(environment)
+    const { environment, apiHosts } = normalizeHostContext(environmentInput)
+    const apiBaseUrl = getApiBaseUrl({ environment, apiHosts })
     
-    const renewal = await fetch(`${apiBaseUrl}/auth/renewAccessToken`, {
+    const renewal = await tradovateFetch(`${apiBaseUrl}/auth/renewAccessToken`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -987,11 +1016,20 @@ export async function renewTradovateAccessToken(accessToken: string, environment
     logger.info('Token renewed successfully', {
       userStatus: renewalData.userStatus,
       userId: renewalData.userId,
-      hasLive: renewalData.hasLive
+      hasLive: renewalData.hasLive,
+      hasApiHosts: !!readApiHostsFromAuthResponse(renewalData),
     });
 
+    const nextHosts = hostsAfterAuthResponse(apiHosts, renewalData)
+
     // Update database with new token
-    const storeResult = await storeTradovateToken(renewalData.accessToken, renewalData.expirationTime, environment)
+    const storeResult = await storeTradovateToken(
+      renewalData.accessToken,
+      renewalData.expirationTime,
+      environment,
+      'default',
+      nextHosts,
+    )
     if (storeResult.error) {
       logger.warn('Failed to update token in database:', storeResult.error)
       // Continue anyway - token is still valid for this session
@@ -1010,7 +1048,11 @@ export async function renewTradovateAccessToken(accessToken: string, environment
 }
 
 // Keep the old function for backward compatibility (OAuth refresh)
-export async function refreshTradovateToken(refreshToken: string, environment: TradovateEnvironment = 'demo'): Promise<TradovateOAuthResult> {
+export async function refreshTradovateToken(
+  refreshToken: string,
+  environmentInput: TradovateEnvInput = 'demo',
+): Promise<TradovateOAuthResult> {
+  const { environment, apiHosts } = normalizeHostContext(environmentInput)
   try {
     if (!TRADOVATE_CLIENT_ID || !TRADOVATE_CLIENT_SECRET) {
       return { error: 'Tradovate OAuth credentials not configured' }
@@ -1024,8 +1066,8 @@ export async function refreshTradovateToken(refreshToken: string, environment: T
       return { error: 'User not authenticated' }
     }
 
-    const apiBaseUrl = getApiBaseUrl(environment)
-    const tokenResponse = await fetch(`${apiBaseUrl}/auth/oauthtoken`, {
+    const apiBaseUrl = getApiBaseUrl({ environment, apiHosts })
+    const tokenResponse = await tradovateFetch(`${apiBaseUrl}/auth/oauthtoken`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -1083,12 +1125,12 @@ export async function refreshTradovateToken(refreshToken: string, environment: T
 }
 
 // Test authentication with demo user list endpoint
-export async function testTradovateAuth(accessToken: string, environment: TradovateEnvironment = 'demo') {
+export async function testTradovateAuth(accessToken: string, environment: TradovateEnvInput = 'demo') {
   try {
     const apiBaseUrl = getApiBaseUrl(environment)
-    console.log(`Testing Tradovate authentication with ${environment} user list endpoint`)
+    console.log(`Testing Tradovate authentication with ${normalizeHostContext(environment).environment} user list endpoint`)
     
-    const response = await fetch(`${apiBaseUrl}/v1/user/list`, {
+    const response = await tradovateFetch(`${apiBaseUrl}/v1/user/list`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json'
@@ -1116,17 +1158,17 @@ export async function testTradovateAuth(accessToken: string, environment: Tradov
   }
 }
 
-export async function getTradovateAccounts(accessToken: string, environment: TradovateEnvironment = 'demo'): Promise<TradovateAccountsResult> {
+export async function getTradovateAccounts(accessToken: string, environment: TradovateEnvInput = 'demo'): Promise<TradovateAccountsResult> {
   try {
     const apiBaseUrl = getApiBaseUrl(environment)
-    console.log(`Fetching Tradovate accounts (${environment}):`, {
+    console.log(`Fetching Tradovate accounts (${normalizeHostContext(environment).environment}):`, {
       apiBaseUrl,
       hasToken: !!accessToken,
       tokenPrefix: accessToken?.substring(0, 10) + '...'
     })
     
     // Use simple account list endpoint that we validated works
-    const response = await fetch(`${apiBaseUrl}/v1/account/list`, {
+    const response = await tradovateFetch(`${apiBaseUrl}/v1/account/list`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json'
@@ -1153,7 +1195,7 @@ export async function getTradovateAccounts(accessToken: string, environment: Tra
     
     if (!Array.isArray(accounts) || accounts.length === 0) {
       console.log('No accounts returned from Tradovate')
-      return { error: `No accounts found on ${environment} environment` }
+      return { error: `No accounts found on ${normalizeHostContext(environment).environment} environment` }
     }
 
     console.log('Final accounts result:', {
@@ -1179,7 +1221,8 @@ function tradovateAccountLabel(account: TradovateAccount): string {
  */
 async function getTradovateAccountsFromBothEnvironments(
   accessToken: string,
-  preferredEnvironment: TradovateEnvironment
+  preferredEnvironment: TradovateEnvironment,
+  apiHosts?: TradovateApiHosts | null,
 ): Promise<{
   accounts: TradovateAccount[]
   /** Env to store for sync when only one side has accounts; else preferred. */
@@ -1188,8 +1231,8 @@ async function getTradovateAccountsFromBothEnvironments(
   liveCount: number
 }> {
   const [demoResult, liveResult] = await Promise.all([
-    getTradovateAccounts(accessToken, 'demo'),
-    getTradovateAccounts(accessToken, 'live'),
+    getTradovateAccounts(accessToken, { environment: 'demo', apiHosts }),
+    getTradovateAccounts(accessToken, { environment: 'live', apiHosts }),
   ])
 
   const demoAccounts = demoResult.accounts ?? []
@@ -1229,10 +1272,11 @@ async function linkTradovateAccountsToConnection(params: {
   accessToken: string
   environment: TradovateEnvironment
   connectionExternalId?: string | null
+  apiHosts?: TradovateApiHosts | null
 }): Promise<void> {
-  const { userId, accessToken, environment, connectionExternalId } = params
+  const { userId, accessToken, environment, connectionExternalId, apiHosts } = params
   const { accounts, resolvedEnvironment, demoCount, liveCount } =
-    await getTradovateAccountsFromBothEnvironments(accessToken, environment)
+    await getTradovateAccountsFromBothEnvironments(accessToken, environment, apiHosts)
   if (!accounts.length) {
     return
   }
@@ -1463,7 +1507,8 @@ export async function storeTradovateToken(
   accessToken: string,
   expiresAt: string,
   environment: TradovateEnvironment = 'demo',
-  accountId: string = 'default'
+  accountId: string = 'default',
+  apiHosts?: TradovateApiHosts | null,
 ) {
   try {
     const supabase = await createClient()
@@ -1484,6 +1529,9 @@ export async function storeTradovateToken(
       select: { id: true }
     })
 
+    const parsedHosts = parseTradovateApiHosts(apiHosts)
+    const hostsUpdate = parsedHosts ? { apiHosts: parsedHosts } : {}
+
     // Store token in Connection table
     await prisma.connection.upsert({
       where: {
@@ -1498,7 +1546,8 @@ export async function storeTradovateToken(
         tokenExpiresAt: new Date(expiresAt),
         environment,
         lastSyncedAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        ...hostsUpdate,
       },
       create: {
         userId: user.id,
@@ -1507,7 +1556,8 @@ export async function storeTradovateToken(
         token: encryptConnectionToken(accessToken),
         tokenExpiresAt: new Date(expiresAt),
         environment,
-        lastSyncedAt: new Date()
+        lastSyncedAt: new Date(),
+        ...hostsUpdate,
       }
     })
 
@@ -1581,7 +1631,8 @@ export async function getTradovateToken(accountId: string = 'default') {
       expiresAt: syncData.tokenExpiresAt?.toISOString() || '',
       environment: normalizeEnvironment(syncData.environment),
       accountId: syncData.externalId,
-      includedFeeTypes: includedFeeTypes ?? undefined
+      includedFeeTypes: includedFeeTypes ?? undefined,
+      apiHosts: parseTradovateApiHosts(syncData.apiHosts),
     }
   } catch (error) {
     console.error('Failed to get Tradovate token:', error)
@@ -1744,7 +1795,7 @@ export async function testCustomTradovateToken(
     // Test the token by making a simple API call
     const apiBaseUrl = getApiBaseUrl(environment)
     
-    const response = await fetch(`${apiBaseUrl}/v1/user/list`, {
+    const response = await tradovateFetch(`${apiBaseUrl}/v1/user/list`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json'
@@ -1808,6 +1859,7 @@ export async function getTradovateTrades(
     includedFeeTypes?: TradovateIncludedFeeTypes
     environment?: TradovateEnvironment
     connectionExternalId?: string
+    apiHosts?: TradovateApiHosts | null
   }
 ): Promise<TradovateTradesResult> {
   try {
@@ -1834,11 +1886,25 @@ export async function getTradovateTrades(
     const resolvedUserId = userId
     const connectionExternalId = options?.connectionExternalId ?? null
 
-    const apiBaseUrl = getApiBaseUrl(environment)
+    let apiHosts = parseTradovateApiHosts(options?.apiHosts)
+    if (!apiHosts && connectionExternalId) {
+      const stored = await prisma.connection.findUnique({
+        where: {
+          userId_service_externalId: {
+            userId: resolvedUserId,
+            service: 'tradovate',
+            externalId: connectionExternalId,
+          },
+        },
+        select: { apiHosts: true },
+      })
+      apiHosts = parseTradovateApiHosts(stored?.apiHosts)
+    }
+    const hostContext = { environment, apiHosts }
 
     // Fetch fill pairs which are trades
     logger.info('Fetching fill pairs...')
-    const fillPairs = await getFillPairs(accessToken, environment)
+    const fillPairs = await getFillPairs(accessToken, hostContext)
     logger.info(`Received ${fillPairs.length} fill pairs from Tradovate`)
     
     // Means there are no trades to import — still attach trading accounts to the Connection
@@ -1852,6 +1918,7 @@ export async function getTradovateTrades(
         accessToken,
         environment,
         connectionExternalId,
+        apiHosts,
       })
       return { processedTrades: [], savedCount: 0, ordersCount: 0 }
     }
@@ -1860,7 +1927,8 @@ export async function getTradovateTrades(
     logger.info('Fetching accounts for account resolution (demo + live)...')
     const { accounts } = await getTradovateAccountsFromBothEnvironments(
       accessToken,
-      environment
+      environment,
+      apiHosts,
     )
     const accountsById = new Map<number, TradovateAccount>()
     accounts.forEach(account => accountsById.set(account.id, account))
@@ -1897,8 +1965,8 @@ export async function getTradovateTrades(
 
     // Step 2: Fetch all fills and fees in parallel batches
     const [allFills, allFees] = await Promise.all([
-      getFillsByIds(accessToken, Array.from(allFillIds), environment),
-      getFillFeesByIds(accessToken, Array.from(allFillIds), environment)
+      getFillsByIds(accessToken, Array.from(allFillIds), hostContext),
+      getFillFeesByIds(accessToken, Array.from(allFillIds), hostContext)
     ])
 
     logger.info(`Fetched ${allFills.length} fills and ${allFees.length} fees in batch`)
@@ -1931,7 +1999,7 @@ export async function getTradovateTrades(
     const contracts = new Map<number, TradovateContract>()
     const contractPromises = Array.from(uniqueContractIds).map(async (contractId) => {
       try {
-        const contract = await getContractById(accessToken, contractId, environment)
+        const contract = await getContractById(accessToken, contractId, hostContext)
         if (contract) {
           contracts.set(contractId, contract)
           logger.debug(`Contract ${contractId}: ${contract.name} (${contract.symbol})`)
@@ -1955,7 +2023,7 @@ export async function getTradovateTrades(
     logger.info(`Fetching ${sellOrderIds.size} sell order details for account resolution`)
 
     // Fetch only sell order details in batch
-    const sellOrders = await getOrdersByIds(accessToken, Array.from(sellOrderIds), environment)
+    const sellOrders = await getOrdersByIds(accessToken, Array.from(sellOrderIds), hostContext)
     const ordersById = new Map<number, any>()
     sellOrders.forEach(order => {
       ordersById.set(order.id, order)

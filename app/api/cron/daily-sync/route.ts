@@ -9,6 +9,7 @@ import { syncIbkrAccount } from '@/app/[locale]/dashboard/components/import/ibkr
 import { getTradovateTrades } from '@/app/[locale]/dashboard/components/import/tradovate/sync/actions'
 import { getIgTrades } from '@/app/[locale]/dashboard/components/import/ig/sync/actions'
 import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connections/data'
+import { parseTradovateApiHosts } from '@/lib/tradovate/api-hosts'
 
 export const maxDuration = 300
 
@@ -58,6 +59,7 @@ async function syncConnection(connection: {
   token: string | null
   environment: string
   includedFeeTypes: unknown
+  apiHosts: unknown
 }): Promise<{ ok: boolean; reason?: string }> {
   const storedTokenJson = decryptConnectionToken(connection.token)
   if (!storedTokenJson) {
@@ -79,6 +81,7 @@ async function syncConnection(connection: {
           undefined,
         environment: connection.environment === 'live' ? 'live' : 'demo',
         connectionExternalId: connection.externalId,
+        apiHosts: parseTradovateApiHosts(connection.apiHosts),
       })
     ).error
   } else if (connection.service === 'dxfeed') {
@@ -155,6 +158,7 @@ export async function GET(request: NextRequest) {
         token: true,
         environment: true,
         includedFeeTypes: true,
+        apiHosts: true,
         dailySyncTime: true,
         syncIntervalMinutes: true,
         lastSyncedAt: true,
