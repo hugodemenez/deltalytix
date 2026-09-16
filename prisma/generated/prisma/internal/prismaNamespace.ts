@@ -2893,7 +2893,8 @@ export const ConnectionScalarFieldEnum = {
   dailySyncTime: 'dailySyncTime',
   syncIntervalMinutes: 'syncIntervalMinutes',
   includedFeeTypes: 'includedFeeTypes',
-  environment: 'environment'
+  environment: 'environment',
+  apiHosts: 'apiHosts'
 } as const
 
 export type ConnectionScalarFieldEnum = (typeof ConnectionScalarFieldEnum)[keyof typeof ConnectionScalarFieldEnum]

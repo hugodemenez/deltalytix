@@ -171,6 +171,12 @@ model Connection {
   syncIntervalMinutes Int?
   includedFeeTypes    Json?
   environment         String    @default("demo")
+  /**
+   * Tradovate/NinjaTrader `apiHosts` from the latest successful auth or renew.
+   * Bare hostnames keyed by purpose (`demo`, `live`, `mdDemo`, …). Null means
+   * fall back to the shared environment map.
+   */
+  apiHosts            Json?
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accounts            Account[]
 
