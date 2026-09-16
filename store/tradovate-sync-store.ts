@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { tradovateTradingRestBaseUrl } from '@/lib/tradovate/api-hosts'
 
 interface TradovateAccount {
   id: number
@@ -41,7 +40,6 @@ interface TradovateSyncStore extends TradovateOAuthState {
   isTokenExpired: () => boolean
   getValidToken: () => string | null
   setEnvironment: (environment: TradovateEnvironment) => void
-  getApiBaseUrl: () => string
   syncWithSessionStorage: () => void
   loadFromSessionStorage: () => boolean
 }
@@ -134,10 +132,6 @@ export const useTradovateSyncStore = create<TradovateSyncStore>()(
           lastSync: undefined,
           oauthState: undefined
         })
-      },
-
-      getApiBaseUrl: () => {
-        return tradovateTradingRestBaseUrl(get().environment)
       },
 
       // Sync tokens with sessionStorage for web worker

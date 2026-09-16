@@ -71,6 +71,10 @@ export function normalizeTradovateEnvironment(
   return value === 'live' ? 'live' : 'demo'
 }
 
+/** `host` or `host:port` only. Rejects userinfo (`user@host`) so a hostname we
+ * persist can never redirect a bearer token somewhere else. */
+const HOSTNAME_PATTERN = /^[a-z0-9.-]+(:\d+)?$/i
+
 /** Strip a scheme/path so we always store the bare hostname NT returns. */
 export function normalizeTradovateHostname(value: string): string | null {
   const trimmed = value.trim()
@@ -79,14 +83,37 @@ export function normalizeTradovateHostname(value: string): string | null {
   if (trimmed.includes('://')) {
     try {
       const url = new URL(trimmed)
-      return url.host || null
+      // `url.host` already drops userinfo, but validate anyway.
+      return HOSTNAME_PATTERN.test(url.host) ? url.host : null
     } catch {
       return null
     }
   }
 
   const host = trimmed.replace(/\/+$/, '').split('/')[0]?.trim()
-  return host || null
+  if (!host || !HOSTNAME_PATTERN.test(host)) return null
+  return host
+}
+
+/**
+ * Hosts we will re-attach an `Authorization` header to when NT answers a REST
+ * call with a cross-host 307. The auth-returned `apiHosts` object is trusted on
+ * its own merits (it arrives over TLS from an authenticated call); a `Location`
+ * header is only as trustworthy as the host that sent it, so gate it.
+ */
+export const TRADOVATE_TRUSTED_HOST_SUFFIXES = [
+  'tradovateapi.com',
+  'tradovate.com',
+  'ninjatrader.com',
+] as const
+
+export function isTrustedTradovateHost(hostname: string): boolean {
+  const host = normalizeTradovateHostname(hostname)
+  if (!host) return false
+  const bare = host.split(':')[0]!.toLowerCase()
+  return TRADOVATE_TRUSTED_HOST_SUFFIXES.some(
+    (suffix) => bare === suffix || bare.endsWith(`.${suffix}`),
+  )
 }
 
 /**
@@ -124,16 +151,47 @@ export function readApiHostsFromAuthResponse(
 
 /**
  * Re-read hosts on every authenticate/renew.
- * Present `apiHosts` replace what we stored. Omitted bodies (errors, MFA)
- * keep the previous session hosts so we do not wipe a working org host.
+ *
+ * Returned fields overwrite what we stored, field by field. A body that names
+ * only some hosts must not drop the others: `resolveTradovateHostname` falls
+ * back per field, so dropping a known `live` would silently send that traffic
+ * back to the shared host — the 307 this module exists to avoid. Omitted
+ * `apiHosts` (errors, MFA) keeps the previous hosts untouched.
  */
 export function hostsAfterAuthResponse(
   previous: TradovateApiHosts | null | undefined,
   body: unknown,
 ): TradovateApiHosts | null {
+  const known = parseTradovateApiHosts(previous)
   const incoming = readApiHostsFromAuthResponse(body)
-  if (incoming) return incoming
-  return previous ?? null
+  if (!incoming) return known
+  if (!known) return incoming
+  return { ...known, ...incoming }
+}
+
+/** The `apiHosts` field a purpose reads in a given environment. */
+export function hostFieldForPurpose(
+  purpose: TradovateHostPurpose,
+  environment: TradovateEnvironment,
+): string {
+  return PURPOSE_FIELD[purpose][environment]
+}
+
+/**
+ * Record a host we learned outside the `apiHosts` object — today, the target of
+ * a cross-host 307. Lets a connection created before the changeover reach the
+ * right host on its next call instead of re-redirecting every time.
+ */
+export function withTradovateHost(
+  hosts: TradovateApiHosts | null | undefined,
+  purpose: TradovateHostPurpose,
+  environment: TradovateEnvironment,
+  hostname: string,
+): TradovateApiHosts | null {
+  const known = parseTradovateApiHosts(hosts)
+  const host = normalizeTradovateHostname(hostname)
+  if (!host) return known
+  return { ...(known ?? {}), [hostFieldForPurpose(purpose, environment)]: host }
 }
 
 export function normalizeHostContext(

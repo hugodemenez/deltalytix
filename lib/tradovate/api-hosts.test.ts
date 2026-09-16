@@ -2,13 +2,16 @@ import { describe, expect, it } from 'vitest'
 import {
   TRADOVATE_FALLBACK_HOSTS,
   hostsAfterAuthResponse,
+  isTrustedTradovateHost,
   normalizeHostContext,
+  normalizeTradovateHostname,
   parseTradovateApiHosts,
   readApiHostsFromAuthResponse,
   resolveTradovateHostname,
   tradovateRestBaseUrl,
   tradovateTradingRestBaseUrl,
   tradovateWebSocketBaseUrl,
+  withTradovateHost,
 } from './api-hosts'
 
 const ORG_HOSTS = {
@@ -185,5 +188,59 @@ describe('re-read hosts on every authenticate/renew', () => {
         api_hosts: { demo: 'org-demo.example.ninjatrader.com' },
       }),
     ).toEqual({ demo: 'org-demo.example.ninjatrader.com' })
+  })
+})
+
+describe('partial renew responses', () => {
+  it('merges returned hosts over stored ones instead of dropping the rest', () => {
+    // A body naming only `demo` must not send live traffic back to the shared
+    // host — resolution falls back per field, so a dropped `live` is a 307.
+    const merged = hostsAfterAuthResponse(ORG_HOSTS, {
+      accessToken: 'tok',
+      apiHosts: { demo: 'moved-demo.example.ninjatrader.com' },
+    })
+
+    expect(merged?.demo).toBe('moved-demo.example.ninjatrader.com')
+    expect(merged?.live).toBe(ORG_HOSTS.live)
+    expect(merged?.mdDemo).toBe(ORG_HOSTS.mdDemo)
+    expect(resolveTradovateHostname('marketData', 'demo', merged)).toBe(
+      ORG_HOSTS.mdDemo,
+    )
+  })
+})
+
+describe('withTradovateHost (hosts learned from a 307)', () => {
+  it('records a redirect target for the purpose it was reached through', () => {
+    const hosts = withTradovateHost(null, 'trading', 'demo', 'org-1.tradovateapi.com')
+
+    expect(resolveTradovateHostname('trading', 'demo', hosts)).toBe(
+      'org-1.tradovateapi.com',
+    )
+    // Untouched purposes keep falling back.
+    expect(resolveTradovateHostname('trading', 'live', hosts)).toBe(
+      TRADOVATE_FALLBACK_HOSTS.live,
+    )
+  })
+
+  it('leaves stored hosts alone when the redirect target is unusable', () => {
+    expect(withTradovateHost(ORG_HOSTS, 'trading', 'demo', '   ')).toEqual(
+      ORG_HOSTS,
+    )
+  })
+})
+
+describe('hostname hardening', () => {
+  it('rejects values that could redirect a bearer token elsewhere', () => {
+    expect(normalizeTradovateHostname('demo.tradovateapi.com@evil.test')).toBeNull()
+    expect(normalizeTradovateHostname('https://user:pw@evil.test')).toBe('evil.test')
+    expect(parseTradovateApiHosts({ demo: 'a b.test' })).toBeNull()
+  })
+
+  it('trusts NinjaTrader hosts only', () => {
+    expect(isTrustedTradovateHost('org-1.tradovateapi.com')).toBe(true)
+    expect(isTrustedTradovateHost('trader.tradovate.com')).toBe(true)
+    expect(isTrustedTradovateHost('org.example.ninjatrader.com')).toBe(true)
+    expect(isTrustedTradovateHost('ninjatrader.com.evil.test')).toBe(false)
+    expect(isTrustedTradovateHost('evil.test')).toBe(false)
   })
 })
