@@ -4,6 +4,12 @@ import {
   decryptConnectionToken,
   encryptConnectionToken,
 } from '@/lib/connection-token-crypto';
+import {
+  hostsAfterAuthResponse,
+  normalizeTradovateEnvironment,
+  parseTradovateApiHosts,
+  tradovateTradingRestBaseUrl,
+} from '@/lib/tradovate/api-hosts';
 import { NextRequest } from 'next/server';
 
 /**
@@ -73,13 +79,22 @@ export async function GET(request: NextRequest) {
  * 
  * @param synchronization The synchronization record containing user, environment, and token info.
  */
-async function renewUserToken(synchronization: any): Promise<boolean> {
+async function renewUserToken(synchronization: {
+  id: string
+  externalId: string
+  environment: string
+  token: string | null
+  apiHosts?: unknown
+}): Promise<boolean> {
   try {
-    const apiBaseUrl = synchronization.environment === 'demo' 
-      ? 'https://demo.tradovateapi.com' 
-      : 'https://live.tradovateapi.com';
-    
-        const plaintextToken = decryptConnectionToken(synchronization.token)
+    const environment = normalizeTradovateEnvironment(synchronization.environment)
+    const storedHosts = parseTradovateApiHosts(synchronization.apiHosts)
+    const apiBaseUrl = tradovateTradingRestBaseUrl({
+      environment,
+      apiHosts: storedHosts,
+    })
+
+    const plaintextToken = decryptConnectionToken(synchronization.token)
     if (!plaintextToken) {
       console.error(`[CRON] Missing token for account ${synchronization.externalId}`);
       return false;
@@ -105,6 +120,7 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
     }
 
     const renewalData = await renewal.json();
+    const nextHosts = hostsAfterAuthResponse(storedHosts, renewalData)
     
     // Update database
     await prisma.connection.update({
@@ -112,6 +128,7 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
       data: {
         token: encryptConnectionToken(renewalData.accessToken),
         tokenExpiresAt: new Date(renewalData.expirationTime),
+        ...(nextHosts ? { apiHosts: nextHosts } : {}),
       }
     });
 

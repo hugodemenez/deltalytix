@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { tradovateTradingRestBaseUrl } from '@/lib/tradovate/api-hosts'
 
 interface TradovateAccount {
   id: number
@@ -136,10 +137,7 @@ export const useTradovateSyncStore = create<TradovateSyncStore>()(
       },
 
       getApiBaseUrl: () => {
-        const state = get()
-        return state.environment === 'demo' 
-          ? 'https://demo.tradovateapi.com' 
-          : 'https://live.tradovateapi.com'
+        return tradovateTradingRestBaseUrl(get().environment)
       },
 
       // Sync tokens with sessionStorage for web worker

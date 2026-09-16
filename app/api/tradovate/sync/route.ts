@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
       includedFeeTypes: tokenResult.includedFeeTypes,
       environment: tokenResult.environment,
       connectionExternalId: accountId,
+      apiHosts: tokenResult.apiHosts,
     });
     if (syncResult.error) {
       return NextResponse.json(
