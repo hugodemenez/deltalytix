@@ -1,8 +1,8 @@
 # Changelog media plan: pr-518
 
-This batch ships three already-written entries from `batches/pr-515/` plus one new slug. Covered-entry media was already decided in [`batches/pr-515/media-plan.md`](../pr-515/media-plan.md) and must not be recaptured, rewired, or rewritten. Published `weekly-trading-recap-email` media stays on `pr-452` and is also left untouched.
+This batch ships three already-written entries from `batches/pr-515/` plus two new slugs. Covered-entry media was already decided in [`batches/pr-515/media-plan.md`](../pr-515/media-plan.md) and must not be recaptured, rewired, or rewritten. Published `weekly-trading-recap-email` media stays on `pr-452` and is also left untouched.
 
-No recipe. No capture. The only new entry is text-only.
+No recipe. No capture. Both new entries are text-only.
 
 ## tradovate-connexions-fee-settings
 
@@ -42,6 +42,18 @@ No recipe. No capture. The only new entry is text-only.
   - Settings **Weekly recap** / **Récap hebdomadaire** switch (`settings-account-list`) — preference chrome, not the Sunday paragraph.
   - Dashboard calendar with a single green day — wrong surface; this entry is inbox copy, not widgets.
   - Before/after invented ramp vs honest intro — would require staging the old “started soft” / “ramped up” bug. Do not invent a fake before.
+
+## tradovate-ninjatrader-dynamic-api-hosts
+
+- Decision: 0 visuals
+- Rationale: The claim is which hostname Tradovate sync and renew call after NinjaTrader’s 3 October 2026 org-host cutover. Connections chrome is unchanged — same **Sync now**, same **Demo** / **Live**. A screenshot of the row would not prove host routing. There is no product error screen for REST 307 / WS 421 to photograph. Text can name the date and the outcome; a still cannot.
+- Primary/card asset: none.
+- Additional assets: none.
+- Omitted candidates:
+  - Connections Tradovate row with **Sync now** — unchanged chrome; already used for fee-settings evidence.
+  - **Demo** / **Live** picker — published `tradovate-live-environment-support`; this entry does not change that control.
+  - A mocked 307/421 failure — the product does not show that UI; staging it would invent a screen.
+  - Network waterfall / hostname overlay — implementation, not a trader-facing state.
 
 ## weekly-trading-recap-email
 

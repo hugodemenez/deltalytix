@@ -1,0 +1,15 @@
+---
+title: 'Tradovate sync follows NinjaTrader org API hosts'
+description: 'Eval and demo connections keep syncing after NinjaTrader’s 3 October 2026 host changeover, using the API hosts returned at sign-in instead of the old shared demo server.'
+date: '2026-09-16'
+status: completed
+completedDate: '2026-09-16'
+---
+
+# Tradovate sync follows NinjaTrader org API hosts
+
+NinjaTrader is moving eval and demo accounts onto organization-specific API hosts on **Saturday 3 October 2026**. Tradovate **Sync now** on [Connections](/en/dashboard/connections), daily sync, and token renewal now use the hosts returned at sign-in or renew, instead of always calling the shared demo or live server.
+
+**Demo** and **Live** when you add a connection are unchanged. The first sign-in still uses the shared host until NinjaTrader sends the org hosts; later calls follow those hosts. If a response omits them, the previously stored hosts — or the historical shared servers — stay in use. Existing connections pick this up on the next successful sign-in or token renew. Nothing new to toggle.
+
+This does not change [which Tradovate fees count](/en/updates/tradovate-connexions-fee-settings) or [Demo versus Live](/en/updates/tradovate-live-environment-support).

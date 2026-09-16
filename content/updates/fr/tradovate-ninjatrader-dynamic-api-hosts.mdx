@@ -1,0 +1,15 @@
+---
+title: 'La sync Tradovate suit les hôtes API NinjaTrader de l''organisation'
+description: 'Les connexions eval et démo continuent de synchroniser après le changement d''hôtes NinjaTrader du 3 octobre 2026, en utilisant les hôtes renvoyés à la connexion plutôt que l''ancien serveur démo partagé.'
+date: '2026-09-16'
+status: completed
+completedDate: '2026-09-16'
+---
+
+# La sync Tradovate suit les hôtes API NinjaTrader de l'organisation
+
+NinjaTrader déplace les comptes eval et démo vers des hôtes API propres à l'organisation le **samedi 3 octobre 2026**. **Synchroniser** dans [Connexions](/fr/dashboard/connections), la sync quotidienne et le renouvellement de jeton utilisent maintenant les hôtes renvoyés à la connexion ou au renouvellement, au lieu d'appeler toujours le serveur démo ou réel partagé.
+
+**Démo** et **Réel** à l'ajout d'une connexion ne changent pas. La première connexion utilise encore l'hôte partagé jusqu'à ce que NinjaTrader envoie les hôtes de l'organisation ; les appels suivants les suivent. Si une réponse les omet, les hôtes déjà enregistrés — ou les serveurs partagés d'avant — restent en vigueur. Les connexions existantes les reçoivent à la prochaine connexion ou au prochain renouvellement de jeton réussi. Rien de nouveau à régler.
+
+Cela ne change pas [quels frais Tradovate compter](/fr/updates/tradovate-connexions-fee-settings) ni [Démo versus Réel](/fr/updates/tradovate-live-environment-support).
