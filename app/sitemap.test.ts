@@ -68,12 +68,12 @@ describe("sitemap", () => {
     }
 
     const pricing = entries.find((entry) => new URL(entry.url).pathname === "/en/pricing");
-    expect(pricing?.alternates?.languages?.en).toBeDefined();
-    expect(pricing?.alternates?.languages?.fr).toBeDefined();
-    expect(new URL(pricing!.alternates!.languages!.en).pathname).toBe("/en/pricing");
-    expect(new URL(pricing!.alternates!.languages!.fr).pathname).toBe("/fr/pricing");
-    expect(pricing?.alternates?.languages?.["x-default"]).toBe(
-      pricing?.alternates?.languages?.en,
-    );
+    const enPricing = pricing?.alternates?.languages?.en;
+    const frPricing = pricing?.alternates?.languages?.fr;
+    expect(enPricing).toBeDefined();
+    expect(frPricing).toBeDefined();
+    expect(new URL(enPricing!).pathname).toBe("/en/pricing");
+    expect(new URL(frPricing!).pathname).toBe("/fr/pricing");
+    expect(pricing?.alternates?.languages?.["x-default"]).toBe(enPricing);
   });
 });

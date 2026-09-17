@@ -128,16 +128,18 @@ export function publicPageMetadata(
   extra: Metadata = {},
   origin?: string,
 ): Metadata {
-  const alternates = publicPageAlternates(locale, pathWithoutLocale, origin);
+  const canonical = siteUrl(localizedPath(locale, pathWithoutLocale), origin);
+  const languages = languageAlternateUrls(pathWithoutLocale, origin);
 
   return {
     ...extra,
     alternates: {
       ...extra.alternates,
-      ...alternates,
+      canonical,
+      languages,
     },
     openGraph: {
-      url: alternates.canonical,
+      url: canonical,
       ...extra.openGraph,
     },
   };
