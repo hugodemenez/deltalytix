@@ -1,5 +1,15 @@
 const FALLBACK_SITE_HOST = "deltalytix.app";
 const FALLBACK_SITE_ORIGIN = `https://${FALLBACK_SITE_HOST}`;
+/**
+ * Preferred public host for canonicals, sitemaps, and absolute marketing URLs.
+ *
+ * Vercel 308s apex `deltalytix.app` → `www.deltalytix.app`, Ads Final URLs
+ * already use www, and robots.txt on www advertises the www sitemap. Keep the
+ * apex hostname in the trust list (requests and legacy env) but never emit it
+ * as a public URL.
+ */
+export const CANONICAL_SITE_HOST = `www.${FALLBACK_SITE_HOST}`;
+export const CANONICAL_SITE_ORIGIN = `https://${CANONICAL_SITE_HOST}`;
 // `.vercel.app` is trusted so preview deployments self-reference (OG/metadata
 // only). Trade-off: the app will reflect any *.vercel.app Host header.
 const TRUSTED_HOST_SUFFIXES = [`.${FALLBACK_SITE_HOST}`, ".vercel.app"];
@@ -95,6 +105,25 @@ export function getSiteOrigin(origin?: string) {
   return normalizeLegacyOrigin(origin) ?? originFromEnv() ?? FALLBACK_SITE_ORIGIN;
 }
 
+/**
+ * Origin used in canonical tags, the sitemap, and other public absolute URLs.
+ * Production apex/www collapse to www; preview, localhost, and custom hosts
+ * stay as-is so deployments keep self-referencing.
+ */
+export function getCanonicalOrigin(origin?: string) {
+  const resolved = getSiteOrigin(origin);
+
+  try {
+    const { hostname, origin: resolvedOrigin } = new URL(resolved);
+    if (hostname === FALLBACK_SITE_HOST || hostname === CANONICAL_SITE_HOST) {
+      return CANONICAL_SITE_ORIGIN;
+    }
+    return resolvedOrigin;
+  } catch {
+    return CANONICAL_SITE_ORIGIN;
+  }
+}
+
 export function getRequestOrigin(headers: HeaderLike) {
   const origin = normalizeLegacyOrigin(originFromForwardedHeaders(headers));
 
@@ -106,5 +135,5 @@ export function getRequestOrigin(headers: HeaderLike) {
 }
 
 export function siteUrl(path = "/", origin?: string) {
-  return new URL(path, getSiteOrigin(origin)).toString();
+  return new URL(path, getCanonicalOrigin(origin)).toString();
 }
