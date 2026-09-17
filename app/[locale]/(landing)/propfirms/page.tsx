@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import { Suspense } from 'react'
 import { getI18n } from '@/locales/server'
+import { publicPageMetadata } from '@/lib/seo-urls'
 import { propFirms } from '@/app/[locale]/dashboard/components/accounts/config'
 import { getPropfirmCatalogueData } from './actions/get-propfirm-catalogue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,13 +11,18 @@ import { SortControls } from './components/sort-controls'
 import { TimeframeControls } from './components/timeframe-controls'
 import type { Timeframe } from './actions/timeframe-utils'
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
   const t = await getI18n()
-  
-  return {
+  const { locale } = await params
+
+  return publicPageMetadata(locale, '/propfirms', {
     title: `${t('landing.propfirms.title')} - Deltalytix`,
     description: t('landing.propfirms.description'),
-  }
+  })
 }
 
 // Format currency with $ symbol (always USD)

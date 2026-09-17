@@ -1,7 +1,13 @@
 import { Suspense } from 'react'
+import type { Metadata } from 'next'
 import { AuthProfileButton } from '../components/auth-profile-button'
 import { TeamManagement } from '../components/team-management'
 import { AuthProfileButtonSkeleton } from '../components/auth-profile-button-skeleton'
+import { PRIVATE_PAGE_ROBOTS } from '@/lib/seo-urls'
+
+export const metadata: Metadata = {
+  robots: PRIVATE_PAGE_ROBOTS,
+}
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
 

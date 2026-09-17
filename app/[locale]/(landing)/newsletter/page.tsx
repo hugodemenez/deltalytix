@@ -7,6 +7,7 @@ import { getScopedI18n } from "@/locales/server"
 export const metadata: Metadata = {
   title: "Newsletter Preferences | Delatlytix",
   description: "Manage your newsletter preferences and subscription settings",
+  robots: { index: false, follow: false },
 }
 
 async function NewsletterPageContent({
