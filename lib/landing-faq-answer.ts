@@ -161,8 +161,8 @@ const PRODUCT_FACTS: Record<LandingFaqLocale, KnowledgeEntry[]> = {
 };
 
 const FALLBACK: Record<LandingFaqLocale, string> = {
-  en: "That is not in the published FAQ. Ask support for a precise answer—Deltalytix is a journal and dashboard, not a brokerage, and we only answer from product facts we have already published.",
-  fr: "Cette question n'est pas dans la FAQ publiée. Écrivez au support pour une réponse précise—Deltalytix est un journal et un tableau de bord, pas un courtier, et nous ne répondons qu'à partir des faits déjà publiés.",
+  en: "That is not in the published FAQ. Deltalytix is a journal and dashboard, not a brokerage, and we only answer from product facts we have already published.",
+  fr: "Cette question n'est pas dans la FAQ publiée. Deltalytix est un journal et un tableau de bord, pas un courtier, et nous ne répondons qu'à partir des faits déjà publiés.",
 };
 
 const STOP_WORDS = new Set([
