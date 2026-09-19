@@ -58,6 +58,16 @@ describe("matchLandingFaqAnswer", () => {
   it("returns null for an unrelated question", () => {
     expect(matchLandingFaqAnswer("What is the weather in Lisbon?", "en")).toBeNull();
   });
+
+  it("prefers the not-a-broker FAQ when asked to place trades on a venue", () => {
+    const matched = matchLandingFaqAnswer(
+      "Can you place trades on Rithmic for me?",
+      "en",
+    );
+
+    expect(matched?.id).toBe("faq-1");
+    expect(matched?.answer).toBe(enFaq.faq.answer1);
+  });
 });
 
 describe("answerLandingFaqQuestion", () => {

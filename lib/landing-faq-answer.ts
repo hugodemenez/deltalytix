@@ -21,9 +21,13 @@ type FaqCopy = {
 const FAQ_KEYWORDS: Record<(typeof FAQ_KNOWLEDGE_ITEMS)[number], string[]> = {
   1: [
     "trade",
+    "trades",
     "broker",
     "brokerage",
     "execute",
+    "place",
+    "placer",
+    "executer",
     "orders",
     "journal",
     "dashboard",
@@ -329,6 +333,22 @@ function scoreKnowledgeEntry(
   return score / questionTokens.length;
 }
 
+const BROKERAGE_INTENT_VERBS = new Set(["place", "placer", "execute"]);
+const BROKERAGE_INTENT_OBJECTS = new Set([
+  "trade",
+  "trades",
+  "order",
+  "orders",
+  "ordres",
+]);
+
+function hasBrokerageIntent(tokens: string[]): boolean {
+  return (
+    tokens.some((token) => BROKERAGE_INTENT_VERBS.has(token)) &&
+    tokens.some((token) => BROKERAGE_INTENT_OBJECTS.has(token))
+  );
+}
+
 export function matchLandingFaqAnswer(
   question: string,
   locale: LandingFaqLocale,
@@ -339,7 +359,11 @@ export function matchLandingFaqAnswer(
   let best: { answer: string; id: string; score: number } | null = null;
 
   for (const entry of landingFaqKnowledge(locale)) {
-    const score = scoreKnowledgeEntry(questionTokens, entry);
+    let score = scoreKnowledgeEntry(questionTokens, entry);
+    // Broker names like Rithmic otherwise pull the sync FAQ for "place trades".
+    if (entry.id === "faq-1" && hasBrokerageIntent(questionTokens)) {
+      score += 2;
+    }
     if (!best || score > best.score) {
       best = { answer: entry.answer, id: entry.id, score };
     }
