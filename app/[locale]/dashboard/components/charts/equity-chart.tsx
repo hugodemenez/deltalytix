@@ -23,7 +23,7 @@ import { fr, enUS } from "date-fns/locale";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import {
   ChartConfig,
@@ -48,6 +48,14 @@ import {
   LineChartLoadingSkeleton,
   LOADING_MOCK_EQUITY,
 } from "./chart-loading-skeleton";
+import { ChartWidgetMasthead } from "./chart-widget-frame";
+import {
+  CHART_GRID_PROPS,
+  CHART_LINE_STROKE,
+  CHART_TOOLTIP_CLASS,
+  CHART_ZERO_LINE_PROPS,
+  chartTickStyle,
+} from "./chart-glance";
 import { usePathname } from "next/navigation";
 
 interface EquityChartProps {
@@ -273,7 +281,7 @@ const OptimizedTooltip = React.memo(
     // In shared view, show simplified tooltip without payouts/resets
     if (isSharedView) {
       return (
-        <div className="rounded-lg border bg-background p-2 shadow-xs">
+        <div className={CHART_TOOLTIP_CLASS}>
           <div className="grid gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -327,7 +335,7 @@ const OptimizedTooltip = React.memo(
 
     // Only show tooltip in grouped mode
     return (
-      <div className="rounded-lg border bg-background p-2 shadow-xs">
+      <div className={CHART_TOOLTIP_CLASS}>
         <div className="grid gap-2">
           <div className="flex flex-col">
             <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -910,7 +918,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
         <Line
           type="monotone"
           dataKey="equity"
-          strokeWidth={2}
+          strokeWidth={CHART_LINE_STROKE}
           dot={renderDot}
           isAnimationActive={false}
           activeDot={{ r: 3, style: { fill: "hsl(var(--chart-2))" } }}
@@ -959,7 +967,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
           key={accountNumber}
           type="linear" // Linear is faster than monotone
           dataKey={`equity_${accountNumber}`}
-          strokeWidth={1.5} // Thinner lines for better performance
+          strokeWidth={CHART_LINE_STROKE}
           dot={renderDot}
           isAnimationActive={false}
           activeDot={renderClosestActiveDot}
@@ -982,43 +990,39 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   }, [isSharedView, showIndividual, chartData]);
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card
+      data-widget-kind="series"
+      className="flex h-full flex-col overflow-hidden"
+    >
       <CardHeader
         className={cn(
-          "flex h-11 shrink-0 flex-col items-stretch space-y-0 border-b",
-          size === "small" ? "p-2" : "px-3 py-2.5"
+          "flex shrink-0 flex-col items-stretch space-y-0 border-b bg-muted/40",
+          size === "small" ? "p-2" : "p-3 sm:p-4"
         )}
       >
-        <div className="flex items-center justify-between h-full">
-          <div className="flex items-center gap-1.5">
-            <CardTitle
-              className={cn(
-                "line-clamp-1 text-xs font-semibold tracking-[-0.02em]"
-              )}
-            >
-              {t("equity.title")}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={cn(size === "small" ? "size-3.5" : "size-4")}
-            >
-              <p>{t("equity.description")}</p>
-            </InfoBubble>
-          </div>
-          {!isSharedView && !isTeamView && (
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="view-mode"
-                checked={showIndividual}
-                onCheckedChange={setShowIndividualConfig}
-                className="shrink-0"
-              />
-              <Label htmlFor="view-mode" className="text-sm">
-                {t("equity.toggle.individual")}
-              </Label>
-            </div>
-          )}
-        </div>
+        <ChartWidgetMasthead
+          kind="series"
+          eyebrow={t("equity.eyebrow")}
+          title={t("equity.title")}
+          subtitle={t("equity.subtitle")}
+          description={t("equity.description")}
+          compact={size === "small"}
+          actions={
+            !isSharedView && !isTeamView ? (
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="view-mode"
+                  checked={showIndividual}
+                  onCheckedChange={setShowIndividualConfig}
+                  className="shrink-0"
+                />
+                <Label htmlFor="view-mode" className="text-sm">
+                  {t("equity.toggle.individual")}
+                </Label>
+              </div>
+            ) : undefined
+          }
+        />
       </CardHeader>
       <CardContent
         className={cn(
@@ -1078,20 +1082,14 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
                       setPointerValue(null);
                     }}
                   >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      className="text-border dark:opacity-[0.12] opacity-[0.2]"
-                    />
+                    <CartesianGrid {...CHART_GRID_PROPS} />
                     <XAxis
                       dataKey="date"
                       tickLine={false}
                       axisLine={false}
                       height={size === "small" ? 20 : 24}
                       tickMargin={size === "small" ? 4 : 8}
-                      tick={{
-                        fontSize: size === "small" ? 9 : 11,
-                        fill: "currentColor",
-                      }}
+                      tick={chartTickStyle(size)}
                       tickFormatter={(value) =>
                         format(new Date(value), "MMM d", { locale: dateLocale })
                       }
@@ -1101,18 +1099,10 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
                       axisLine={false}
                       width={60}
                       tickMargin={4}
-                      tick={{
-                        fontSize: size === "small" ? 9 : 11,
-                        fill: "currentColor",
-                      }}
+                      tick={chartTickStyle(size)}
                       tickFormatter={formatCurrency}
                     />
-                    <ReferenceLine
-                      y={0}
-                      stroke="hsl(var(--muted-foreground))"
-                      strokeDasharray="3 3"
-                      strokeOpacity={0.5}
-                    />
+                    <ReferenceLine y={0} {...CHART_ZERO_LINE_PROPS} />
                     <ChartTooltip
                       content={({
                         active,
