@@ -13,6 +13,16 @@ export default {
         answer5: 'Yes. Deltalytix ships a local / self-hosted dashboard mode for developers and agents. It needs some coding familiarity—Bun, Docker, and a terminal—but the repo is agent-ready: AGENTS.md and SELF_HOSTING.md spell out the full bootstrap.\n\nLocal mode supports CSV and PDF imports with seeded demo data. Live broker sync (Rithmic, Tradovate, Thor) stays on the cloud app. Paste the prompt below into Cursor, ChatGPT, or Claude to have an agent set it up for you.',
         question6: 'Why doesn\'t the Plus plan include a trial?',
         answer6: 'Most trading journals offer a short free trial, then require payment. Deltalytix works differently: our Free plan has no time limit.\n\nOn Free, trade data is stored for a rolling 14-day window—older history isn\'t retained. That gives you plenty of time to explore features and decide whether Plus fits your workflow before upgrading.',
+        askAnything: {
+            label: 'Ask anything else',
+            placeholder: 'Your question…',
+            send: 'Send question',
+            loading: 'Looking up an answer…',
+            empty: 'Type a question first.',
+            error: 'Unable to get an answer. Try again.',
+            fallbackHint: 'Need a precise answer?',
+            support: 'Ask support',
+        },
         selfHost: {
             promptLabel: 'Agent setup prompt',
             copy: 'Copy prompt',
