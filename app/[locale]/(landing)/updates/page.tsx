@@ -3,6 +3,7 @@ import { cacheLife } from "next/cache";
 import { setStaticParamsLocale } from "next-international/server";
 import { getI18n } from "@/locales/server";
 import { getStaticParams as getLocaleStaticParams } from "@/locales/server";
+import { createPublicPageMetadata } from "@/lib/seo-urls";
 import CompletedTimeline from "../components/completed-timeline";
 import { getAllPosts } from "@/lib/posts";
 import { getLatestVideoFromPlaylist } from "@/app/[locale]/admin/actions/youtube";
@@ -18,6 +19,8 @@ interface PageProps {
 export function generateStaticParams() {
   return getLocaleStaticParams();
 }
+
+export const generateMetadata = createPublicPageMetadata("/updates");
 
 async function isMobileScreenshot(image?: string) {
   if (!image) return false;

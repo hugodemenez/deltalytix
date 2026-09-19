@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { absoluteUrl } from "@/lib/agent-discovery/metadata";
+import { siteUrl } from "@/lib/site-url";
 
 export function GET(request: NextRequest) {
   const apiCatalogUrl = absoluteUrl("/.well-known/api-catalog", request);
   const openApiUrl = absoluteUrl("/openapi.json", request);
+  const canonicalUrl = siteUrl("/docs/api");
 
   return new NextResponse(
     `<!doctype html>
@@ -12,6 +14,7 @@ export function GET(request: NextRequest) {
   <head>
     <meta charset="utf-8" />
     <title>Deltalytix API Documentation</title>
+    <link rel="canonical" href="${canonicalUrl}" />
   </head>
   <body>
     <main>

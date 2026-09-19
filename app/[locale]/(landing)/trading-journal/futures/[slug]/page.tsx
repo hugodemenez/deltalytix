@@ -12,6 +12,7 @@ import {
 import { compareMdxComponents } from "../../components/compare-mdx";
 import { localizeLandingHref } from "@/lib/landing-nav-paths";
 import { siteUrl } from "@/lib/site-url";
+import { publicPageMetadata } from "@/lib/seo-urls";
 import { truncateForSocialDescription } from "@/lib/og/site-metadata";
 import { LANDING_SECTION_CONTAINER_CLASSNAME } from "../../../components/landing-section-container";
 import { getCompareCopy } from "../../compare-copy";
@@ -72,16 +73,9 @@ async function getCachedCompareMetadata(
   );
   const url = siteUrl(`/${locale}/trading-journal/futures/${slug}`);
 
-  return {
+  return publicPageMetadata(locale, `/trading-journal/futures/${slug}`, {
     title,
     description,
-    alternates: {
-      canonical: url,
-      languages: {
-        en: siteUrl(`/en/trading-journal/futures/${slug}`),
-        fr: siteUrl(`/fr/trading-journal/futures/${slug}`),
-      },
-    },
     openGraph: {
       title,
       description,
@@ -95,7 +89,7 @@ async function getCachedCompareMetadata(
       title,
       description,
     },
-  };
+  });
 }
 
 export async function generateMetadata({
