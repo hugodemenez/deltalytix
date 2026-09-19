@@ -14,7 +14,10 @@ import {
   sanitizeRithmicSecret,
 } from './client'
 import { lookupCommissionFillRate } from './commission-rates'
-import { shouldSkipSilentGithubRithmicLogin } from './silent-login-timeout'
+import {
+  isRithmicConnectReset,
+  shouldSkipSilentGithubRithmicLogin,
+} from './silent-login-timeout'
 import { gatewayUri, RITHMIC_PROTOCOL_GATEWAYS } from './systems'
 
 const username = sanitizeRithmicSecret(process.env.RITHMIC_PROTOCOL_E2E_USERNAME ?? '')
@@ -43,6 +46,36 @@ function e2eSystemName(): string {
   return process.env.RITHMIC_PROTOCOL_E2E_SYSTEM_NAME?.trim() || 'Rithmic Paper Trading'
 }
 
+function skipGithubRithmicEgress(
+  ctx: { skip: () => void },
+  error: unknown,
+): boolean {
+  if (!shouldSkipSilentGithubRithmicLogin(error)) return false
+  const detail = error instanceof Error ? error.message : String(error)
+  e2eLog(`skip: GitHub-hosted Azure egress — ${detail}`)
+  console.log(
+    '::warning::Rithmic WSS from GitHub-hosted Azure egress failed before a protocol reply (TLS reset or silent login). In-app login goes through Vercel. Set RITHMIC_PROTOCOL_E2E_REQUIRE_LOGIN=1 to fail this step.',
+  )
+  ctx.skip()
+  return true
+}
+
+async function withConnectRetries<T>(label: string, run: () => Promise<T>): Promise<T> {
+  const attempts = 3
+  let lastError: unknown
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await run()
+    } catch (error) {
+      lastError = error
+      if (!isRithmicConnectReset(error) || attempt === attempts) throw error
+      const detail = error instanceof Error ? error.message : String(error)
+      e2eLog(`${label} retry ${attempt + 1}/${attempts} after connect reset: ${detail}`)
+    }
+  }
+  throw lastError
+}
+
 it.skipIf(hasLiveCredentials)(
   'does not open a Rithmic socket without RITHMIC_PROTOCOL_E2E_USERNAME and PASSWORD',
   () => {
@@ -54,13 +87,21 @@ it.skipIf(hasLiveCredentials)(
 describe.skipIf(!hasLiveCredentials)(
   'Rithmic Protocol Product RMS (live gateway)',
   () => {
-    it('opens WSS and lists systems via RequestRithmicSystemInfo', async () => {
+    it('opens WSS and lists systems via RequestRithmicSystemInfo', async (ctx) => {
       const gateway = e2eGatewayUri()
       e2eLog(
         `runtime node=${process.version} force_ipv4=${process.env.RITHMIC_PROTOCOL_FORCE_IPV4 ?? 'off'}`,
       )
       e2eLog(`probe RequestRithmicSystemInfo gateway=${gateway}`)
-      const probe = await fetchAvailableSystems(gateway)
+      let probe: Awaited<ReturnType<typeof fetchAvailableSystems>>
+      try {
+        probe = await withConnectRetries('system-info', () =>
+          fetchAvailableSystems(gateway),
+        )
+      } catch (error) {
+        if (skipGithubRithmicEgress(ctx, error)) return
+        throw error
+      }
       e2eLog(
         `available systems: ${probe.systems.join(', ') || '(none)'} peer=${probe.peerAddress ?? '(unknown)'}`,
       )
@@ -77,7 +118,15 @@ describe.skipIf(!hasLiveCredentials)(
       )
 
       e2eLog('probe RequestRithmicSystemInfo on a short-lived socket (Rithmic sequence)')
-      const probe = await fetchAvailableSystems(gateway)
+      let probe: Awaited<ReturnType<typeof fetchAvailableSystems>>
+      try {
+        probe = await withConnectRetries('system-info', () =>
+          fetchAvailableSystems(gateway),
+        )
+      } catch (error) {
+        if (skipGithubRithmicEgress(ctx, error)) return
+        throw error
+      }
       e2eLog(
         `available systems: ${probe.systems.join(', ') || '(none)'} peer=${probe.peerAddress ?? '(unknown)'}`,
       )
@@ -87,24 +136,18 @@ describe.skipIf(!hasLiveCredentials)(
 
       let result: Awaited<ReturnType<typeof fetchProductCommissionRates>>
       try {
-        result = await fetchProductCommissionRates({
-          gatewayUri: gateway,
-          systemName,
-          username,
-          password,
-          accountIds: pinnedAccount ? [pinnedAccount] : [],
-          pinAddress: probe.peerAddress,
-        })
+        result = await withConnectRetries('product-rms', () =>
+          fetchProductCommissionRates({
+            gatewayUri: gateway,
+            systemName,
+            username,
+            password,
+            accountIds: pinnedAccount ? [pinnedAccount] : [],
+            pinAddress: probe.peerAddress,
+          }),
+        )
       } catch (error) {
-        if (shouldSkipSilentGithubRithmicLogin(error)) {
-          const detail = error instanceof Error ? error.message : String(error)
-          e2eLog(`skip: GitHub-hosted Azure egress — ${detail}`)
-          console.log(
-            '::warning::RequestLogin got no reply from GitHub-hosted Azure egress. Rithmic has no customer IP allowlist; in-app login goes through Vercel. Set RITHMIC_PROTOCOL_E2E_REQUIRE_LOGIN=1 to fail this step.',
-          )
-          ctx.skip()
-          return
-        }
+        if (skipGithubRithmicEgress(ctx, error)) return
         throw error
       }
 

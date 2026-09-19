@@ -85,7 +85,7 @@ jobs:
           fi
 
           echo "::notice::Live Protocol system-info + login → $RITHMIC_PROTOCOL_E2E_GATEWAY / $RITHMIC_PROTOCOL_E2E_SYSTEM_NAME"
-          # ubuntu-latest egress is Azure. Unauthenticated system-info works;
-          # RequestLogin has been silent on that path (Vercel login still works).
-          # The e2e suite skips a silent login timeout unless REQUIRE_LOGIN=1.
+          # ubuntu-latest egress is Azure. Unauthenticated system-info often
+          # works; RequestLogin can be silent and the TLS handshake can reset.
+          # The e2e suite skips those flakes unless REQUIRE_LOGIN=1.
           bun run test:e2e:rithmic
