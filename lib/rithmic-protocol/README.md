@@ -140,9 +140,10 @@ Without the two secrets the workflow still runs the proto/unit checks and
 to Core (`RequestRithmicSystemInfo` works) but `RequestLogin` has been silent
 from the same IPv4 peer. Rithmic does not offer a customer IP allowlist;
 runners egress from Azure, while in-app reconnect goes through Vercel. On
-Actions a silent login timeout is **skipped** (system-info still required);
-a login reject or credential error still fails. Set
-`RITHMIC_PROTOCOL_E2E_REQUIRE_LOGIN=1` to fail on timeout (self-hosted runner
+Actions a silent login timeout or a TLS/socket reset before WSS opens is
+**skipped** (Azure egress to Core is flaky). A login reject or credential
+error still fails. Set
+`RITHMIC_PROTOCOL_E2E_REQUIRE_LOGIN=1` to fail on those flakes (self-hosted runner
 or a Vercel-path job). The live step prints DNS, egress IP, socket
 remote/local, and template traffic — never username/password. Login uses a
 second socket after the system-info probe (the plant closes the probe with

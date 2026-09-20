@@ -251,19 +251,24 @@ function ConnectionsPageChromeInner({ children }: { children: ReactNode }) {
               </Popover>
             )}
             {syncAll && (
-              <button
-                type="button"
-                onClick={syncAll.run}
-                disabled={syncAll.syncing}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-sm border border-black/20 px-6 text-sm font-medium transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:border-white/20 dark:hover:bg-white/5"
-              >
-                {syncAll.syncing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />
-                ) : (
-                  <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
-                )}
-                {t('connections.sync.syncAll')}
-              </button>
+              <span title={syncAll.unavailableReason}>
+                <button
+                  type="button"
+                  onClick={syncAll.run}
+                  disabled={syncAll.syncing || Boolean(syncAll.unavailableReason)}
+                  title={syncAll.unavailableReason}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-sm border border-black/20 px-6 text-sm font-medium transition-[opacity,transform,background-color] duration-150 hover:bg-black/5 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 dark:border-white/20 dark:hover:bg-white/5"
+                >
+                  {syncAll.syncing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
+                  )}
+                  {syncAll.unavailableReason
+                    ? t('import.type.rithmicWeekendWarningShort')
+                    : t('connections.sync.syncAll')}
+                </button>
+              </span>
             )}
           </div>
         </header>

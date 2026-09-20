@@ -83,6 +83,21 @@ describe("landing page server-rendered content", () => {
     expect(pricing).toContain("formatBackToWorkOfferUntil");
   });
 
+  it("keeps closed FAQ answers mounted so they reach the raw HTML", () => {
+    const faq = read("components/faq.tsx");
+    const accordion = fs.readFileSync(
+      path.join(process.cwd(), "components/ui/accordion.tsx"),
+      "utf8",
+    );
+
+    // Radix Presence unmounts AccordionContent when closed unless forceMount
+    // is set. Without it, a crawler that does not open the accordion never
+    // sees the published answers. forceMount also skips Radix's hidden
+    // attribute, so closed panels need an explicit height-0.
+    expect(faq).toMatch(/<AccordionContent[\s\S]*?forceMount/);
+    expect(accordion).toContain("data-[state=closed]:h-0");
+  });
+
   it("keeps enough English landing copy for an agent to understand the product", async () => {
     const [{ default: landing }, { default: faq }] = await Promise.all([
       import("@/locales/en/landing"),
