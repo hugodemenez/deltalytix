@@ -33,7 +33,12 @@ export default function FAQ() {
               <AccordionTrigger className="w-full py-5 text-start text-lg font-semibold hover:no-underline">
                 {t(`faq.question${n}`)}
               </AccordionTrigger>
-              <AccordionContent className="pb-5 text-start [&>div]:text-base">
+              <AccordionContent
+                // Keep closed answers in the prerendered HTML. Radix Presence
+                // otherwise unmounts them, so a no-JS crawler only sees titles.
+                forceMount
+                className="pb-5 text-start [&>div]:text-base"
+              >
                 <FaqAnswer text={t(`faq.answer${n}`)} />
                 {n === SELF_HOST_FAQ_ITEM ? <FaqSelfHostPrompt /> : null}
               </AccordionContent>
