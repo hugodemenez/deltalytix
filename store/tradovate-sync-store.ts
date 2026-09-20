@@ -40,7 +40,6 @@ interface TradovateSyncStore extends TradovateOAuthState {
   isTokenExpired: () => boolean
   getValidToken: () => string | null
   setEnvironment: (environment: TradovateEnvironment) => void
-  getApiBaseUrl: () => string
   syncWithSessionStorage: () => void
   loadFromSessionStorage: () => boolean
 }
@@ -133,13 +132,6 @@ export const useTradovateSyncStore = create<TradovateSyncStore>()(
           lastSync: undefined,
           oauthState: undefined
         })
-      },
-
-      getApiBaseUrl: () => {
-        const state = get()
-        return state.environment === 'demo' 
-          ? 'https://demo.tradovateapi.com' 
-          : 'https://live.tradovateapi.com'
       },
 
       // Sync tokens with sessionStorage for web worker

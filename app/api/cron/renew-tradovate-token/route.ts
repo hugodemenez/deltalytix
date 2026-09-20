@@ -4,6 +4,14 @@ import {
   decryptConnectionToken,
   encryptConnectionToken,
 } from '@/lib/connection-token-crypto';
+import {
+  hostsAfterAuthResponse,
+  normalizeTradovateEnvironment,
+  parseTradovateApiHosts,
+  tradovateTradingRestBaseUrl,
+  withTradovateHost,
+} from '@/lib/tradovate/api-hosts';
+import { tradovateFetch } from '@/lib/tradovate/fetch';
 import { NextRequest } from 'next/server';
 
 /**
@@ -73,13 +81,22 @@ export async function GET(request: NextRequest) {
  * 
  * @param synchronization The synchronization record containing user, environment, and token info.
  */
-async function renewUserToken(synchronization: any): Promise<boolean> {
+async function renewUserToken(synchronization: {
+  id: string
+  externalId: string
+  environment: string
+  token: string | null
+  apiHosts?: unknown
+}): Promise<boolean> {
   try {
-    const apiBaseUrl = synchronization.environment === 'demo' 
-      ? 'https://demo.tradovateapi.com' 
-      : 'https://live.tradovateapi.com';
-    
-        const plaintextToken = decryptConnectionToken(synchronization.token)
+    const environment = normalizeTradovateEnvironment(synchronization.environment)
+    const storedHosts = parseTradovateApiHosts(synchronization.apiHosts)
+    const apiBaseUrl = tradovateTradingRestBaseUrl({
+      environment,
+      apiHosts: storedHosts,
+    })
+
+    const plaintextToken = decryptConnectionToken(synchronization.token)
     if (!plaintextToken) {
       console.error(`[CRON] Missing token for account ${synchronization.externalId}`);
       return false;
@@ -87,16 +104,29 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
     
     console.log(`[CRON] Attempting token renewal for account ${synchronization.externalId}`);
     
-    const renewal = await fetch(`${apiBaseUrl}/auth/renewAccessToken`, {
-      headers: {
-        'Authorization': `Bearer ${plaintextToken}`
-      }
-    });
-    
+    // A connection stored before the changeover has no `apiHosts`, so this
+    // first call still goes to the shared host and may be redirected. Capture
+    // where it lands so the next run goes straight there.
+    const redirected: { host: string | null } = { host: null }
+    const renewal = await tradovateFetch(
+      `${apiBaseUrl}/auth/renewAccessToken`,
+      { headers: { 'Authorization': `Bearer ${plaintextToken}` } },
+      {
+        label: 'renewAccessToken',
+        onHostRedirect: (host) => { redirected.host = host },
+      },
+    );
+
     if (!renewal.ok) {
       const errorText = await renewal.text();
-      console.error(`[CRON] Failed to renew token for account ${synchronization.externalId}: ${errorText}`);
-      // Remove invalid/expired token
+      console.error(`[CRON] Failed to renew token for account ${synchronization.externalId} (${renewal.status}): ${errorText}`);
+      // Only an outright rejection means the token is dead. Clearing it on a
+      // 5xx, a timeout or an unfollowable redirect would disconnect the user
+      // over a transient failure and force a full re-auth; leave it for the
+      // next run instead.
+      if (renewal.status !== 401 && renewal.status !== 403) {
+        return false;
+      }
       await prisma.connection.update({
         where: { id: synchronization.id },
         data: { token: null, tokenExpiresAt: null }
@@ -105,6 +135,11 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
     }
 
     const renewalData = await renewal.json();
+    // Hosts named in the body win; the redirect target fills in what it omits.
+    const discoveredHosts = redirected.host
+      ? withTradovateHost(storedHosts, 'trading', environment, redirected.host)
+      : storedHosts
+    const nextHosts = hostsAfterAuthResponse(discoveredHosts, renewalData)
     
     // Update database
     await prisma.connection.update({
@@ -112,17 +147,15 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
       data: {
         token: encryptConnectionToken(renewalData.accessToken),
         tokenExpiresAt: new Date(renewalData.expirationTime),
+        ...(nextHosts ? { apiHosts: nextHosts } : {}),
       }
     });
 
     return true;
   } catch (error) {
+    // Network failures and DB hiccups say nothing about the token's validity,
+    // so keep it and retry on the next run rather than forcing a re-auth.
     console.error(`[CRON] Error renewing token for account ${synchronization.externalId}:`, error);
-    // On unexpected error, also expire the token to force re-auth
-    await prisma.connection.update({
-      where: { id: synchronization.id },
-      data: { token: null, tokenExpiresAt: null }
-    });
     return false;
   }
 }
