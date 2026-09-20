@@ -232,7 +232,11 @@ function AccountPickerList({
   onMask: (account: ConnectionsPageAccount, masked: boolean) => void
   onRequestDelete: (account: ConnectionsPageAccount) => void
   listClassName: string
-  footerSync?: { syncing: boolean; onSync: () => void } | null
+  footerSync?: {
+    syncing: boolean
+    onSync: () => void
+    unavailableReason?: string
+  } | null
 }) {
   const t = useI18n()
   const query = searchTerm.trim().toLowerCase()
@@ -290,6 +294,7 @@ function AccountPickerList({
           <StripSyncButton
             syncing={footerSync.syncing}
             onSync={footerSync.onSync}
+            unavailableReason={footerSync.unavailableReason}
           />
         ) : null}
       </div>
@@ -300,34 +305,42 @@ function AccountPickerList({
 function StripSyncButton({
   syncing,
   onSync,
+  unavailableReason,
 }: {
   syncing: boolean
   onSync: () => void
+  unavailableReason?: string
 }) {
   const t = useI18n()
+  const unavailable = Boolean(unavailableReason)
   return (
-    <button
-      type="button"
-      disabled={syncing}
-      onClick={(event) => {
-        event.stopPropagation()
-        onSync()
-      }}
-      className={cn(
-        'inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-[4px] border border-[#E5E5E5] bg-white px-2.5 text-sm font-medium text-[#171917]',
-        'transition-[background-color,border-color,transform] duration-150',
-        'hover:bg-[#F5F5F5] active:scale-[0.96]',
-        'disabled:pointer-events-none disabled:opacity-40',
-        'dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/50'
-      )}
-    >
-      {syncing ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-      ) : (
-        <RefreshCw className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-      )}
-      {t('connections.strip.sync')}
-    </button>
+    <span title={unavailableReason}>
+      <button
+        type="button"
+        disabled={syncing || unavailable}
+        title={unavailableReason}
+        onClick={(event) => {
+          event.stopPropagation()
+          onSync()
+        }}
+        className={cn(
+          'inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-[4px] border border-[#E5E5E5] bg-white px-2.5 text-sm font-medium text-[#171917]',
+          'transition-[background-color,border-color,transform] duration-150',
+          'hover:bg-[#F5F5F5] active:scale-[0.96]',
+          'disabled:pointer-events-none disabled:opacity-40',
+          'dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-muted/50'
+        )}
+      >
+        {syncing ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+        ) : (
+          <RefreshCw className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+        )}
+        {unavailable
+          ? t('import.type.rithmicWeekendWarningShort')
+          : t('connections.strip.sync')}
+      </button>
+    </span>
   )
 }
 
@@ -355,7 +368,10 @@ function ConnectionChip({
   const isMobile = useIsMobileLayout()
   const [open, setOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const { canSync, sync, syncing } = useStripConnectionSync(item, onSynced)
+  const { canSync, sync, syncing, weekendReason } = useStripConnectionSync(
+    item,
+    onSynced
+  )
   const showFooterSync = footerShowsDesktopSync(item, isMobile) && canSync
 
   const handleOpenChange = (next: boolean) => {
@@ -384,7 +400,11 @@ function ConnectionChip({
       listClassName={listClassName}
       footerSync={
         withFooterSync
-          ? { syncing, onSync: () => void sync() }
+          ? {
+              syncing,
+              onSync: () => void sync(),
+              unavailableReason: weekendReason,
+            }
           : null
       }
     />
