@@ -51,6 +51,13 @@ import { useIgSyncContext } from '@/context/ig-sync-context'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ServiceMonochromeLogo } from '@/components/monochrome-logo'
+import {
+  excludeWeekendBlockedConnections,
+  isRithmicWeekendDowntime,
+  RITHMIC_WEEKEND_UNAVAILABLE,
+  RITHMIC_WEEKEND_WARNING_KEY,
+  RITHMIC_WEEKEND_WARNING_SHORT_KEY,
+} from '@/lib/rithmic-weekend'
 import { useConnectionsRefresh } from './connections-refresh'
 import { TradovateFeeConfigDialog } from './tradovate-fee-config-dialog'
 import { TradovateFeeExamplePicker } from './tradovate-fee-example-picker'
@@ -258,6 +265,7 @@ function ConnectionStatusAction({
   canSync,
   syncing,
   reconnecting,
+  syncUnavailableReason,
   onSync,
   onReconnect,
 }: {
@@ -266,22 +274,29 @@ function ConnectionStatusAction({
   canSync: boolean
   syncing: boolean
   reconnecting: boolean
+  /** Weekend Rithmic downtime — connection is fine; sync is not offered. */
+  syncUnavailableReason?: string | null
   onSync: () => void
   onReconnect: () => void
 }) {
   const t = useI18n()
+  // Downtime only replaces Sync while the connection itself is healthy.
+  const weekendUnavailable =
+    Boolean(syncUnavailableReason) && status === 'connected' && !syncFailed
   const isError = syncFailed || status !== 'connected'
-  const statusLabel = syncFailed
-    ? t('connections.status.syncFailed')
-    : isError
-      ? t('connections.status.error')
-      : t('connections.status.connected')
+  const statusLabel = weekendUnavailable
+    ? syncUnavailableReason!
+    : syncFailed
+      ? t('connections.status.syncFailed')
+      : isError
+        ? t('connections.status.error')
+        : t('connections.status.connected')
 
   const dot = (
     <span
       className={cn(
         'h-2 w-2 shrink-0 rounded-full',
-        isError ? 'bg-red-500' : 'bg-emerald-500'
+        isError ? 'bg-red-500' : weekendUnavailable ? 'bg-amber-500' : 'bg-emerald-500'
       )}
       aria-hidden
     />
@@ -317,12 +332,13 @@ function ConnectionStatusAction({
     )
   }
 
-  return (
+  const syncButton = (
     <button
       type="button"
       className={statusActionClassName}
       title={statusLabel}
-      disabled={syncing}
+      disabled={syncing || weekendUnavailable}
+      data-testid={weekendUnavailable ? 'connection-sync-weekend' : undefined}
       onClick={onSync}
     >
       {syncing ? (
@@ -331,9 +347,19 @@ function ConnectionStatusAction({
         dot
       )}
       <span className="sr-only">{statusLabel}, </span>
-      {t('connections.sync.now')}
+      {weekendUnavailable
+        ? t(RITHMIC_WEEKEND_WARNING_SHORT_KEY)
+        : t('connections.sync.now')}
     </button>
   )
+
+  // Native disabled + pointer-events-none hides the button title; wrap so
+  // hover still explains why Sync is unavailable.
+  if (weekendUnavailable) {
+    return <span title={statusLabel}>{syncButton}</span>
+  }
+
+  return syncButton
 }
 
 function ConnectionRow({
@@ -463,12 +489,18 @@ function ConnectionRow({
     [connection.accountId, onChanged, t, updateIncludedFeeTypesForAccount]
   )
 
+  const weekendBlocked = isRithmicWeekendDowntime(connection.service)
+
   const handleSync = useCallback(async () => {
+    if (isRithmicWeekendDowntime(connection.service)) {
+      toast.message(t(RITHMIC_WEEKEND_WARNING_KEY))
+      return
+    }
     const usesLocalSyncState =
       connection.service !== 'rithmic-protocol' && connection.service !== 'ig'
     if (usesLocalSyncState) setSyncing(true)
     try {
-      let result: { success?: boolean } | void
+      let result: { success?: boolean; message?: string } | void
       if (connection.service === 'tradovate') {
         result = await syncTradovate(connection.accountId)
       } else if (connection.service === 'dxfeed') {
@@ -485,6 +517,13 @@ function ConnectionRow({
         return
       }
       if (result && result.success === false) {
+        if (
+          result.message === RITHMIC_WEEKEND_UNAVAILABLE ||
+          isRithmicWeekendDowntime(connection.service)
+        ) {
+          toast.message(t(RITHMIC_WEEKEND_WARNING_KEY))
+          return
+        }
         setSyncFailed(true)
         if (usesLocalSyncState) {
           toast.error(t('connections.sync.failed'))
@@ -495,6 +534,10 @@ function ConnectionRow({
       onChanged()
     } catch (error) {
       console.error(error)
+      if (isRithmicWeekendDowntime(connection.service)) {
+        toast.message(t(RITHMIC_WEEKEND_WARNING_KEY))
+        return
+      }
       setSyncFailed(true)
       if (usesLocalSyncState) {
         toast.error(t('connections.sync.failed'))
@@ -657,6 +700,9 @@ function ConnectionRow({
               canSync={canSyncRow}
               syncing={rowSyncing}
               reconnecting={reconnecting}
+              syncUnavailableReason={
+                weekendBlocked ? t(RITHMIC_WEEKEND_WARNING_KEY) : null
+              }
               onSync={() => requestSync()}
               onReconnect={() => void handleReconnect()}
             />
@@ -1375,15 +1421,27 @@ export function ConnectionsPageClient({
     [t, unsetTradovateConnections, updateTradovateFees]
   )
 
+  const weekdaySyncableConnections = useMemo(
+    () => excludeWeekendBlockedConnections(syncableConnections),
+    [syncableConnections]
+  )
+  const weekendSyncAllBlocked =
+    syncableConnections.length > 0 && weekdaySyncableConnections.length === 0
+
   const runSyncAll = useCallback(async () => {
-    if (syncableConnections.length === 0) return
+    if (weekdaySyncableConnections.length === 0) {
+      if (syncableConnections.length > 0) {
+        toast.message(t(RITHMIC_WEEKEND_WARNING_KEY))
+      }
+      return
+    }
 
     setSyncingAll(true)
     let failed = 0
     try {
-      for (const connection of syncableConnections) {
+      for (const connection of weekdaySyncableConnections) {
         try {
-          let result: { success?: boolean } | void
+          let result: { success?: boolean; message?: string } | void
           if (connection.service === 'tradovate') {
             result = await syncTradovate(connection.accountId)
           } else if (connection.service === 'dxfeed') {
@@ -1398,6 +1456,12 @@ export function ConnectionsPageClient({
             result = await syncRithmic(connection.accountId)
           }
           if (result && result.success === false) {
+            if (
+              result.message === RITHMIC_WEEKEND_UNAVAILABLE ||
+              isRithmicWeekendDowntime(connection.service)
+            ) {
+              continue
+            }
             failed += 1
           }
         } catch (error) {
@@ -1423,19 +1487,30 @@ export function ConnectionsPageClient({
     syncRithmic,
     syncRithmicProtocol,
     syncTradovate,
-    syncableConnections,
+    syncableConnections.length,
     t,
+    weekdaySyncableConnections,
   ])
 
   const handleSyncAll = useCallback(async () => {
     if (syncableConnections.length === 0) return
+    if (weekdaySyncableConnections.length === 0) {
+      toast.message(t(RITHMIC_WEEKEND_WARNING_KEY))
+      return
+    }
     if (unsetTradovateConnections.length > 0) {
       syncAllFeeExampleOpenedAtRef.current = Date.now()
       window.setTimeout(() => setSyncAllFeeExampleOpen(true), 50)
       return
     }
     await runSyncAll()
-  }, [runSyncAll, syncableConnections.length, unsetTradovateConnections.length])
+  }, [
+    runSyncAll,
+    syncableConnections.length,
+    t,
+    unsetTradovateConnections.length,
+    weekdaySyncableConnections.length,
+  ])
 
   const handleSyncAllFeeExampleChoose = useCallback(
     async (choice: TradovateFeeExampleChoice) => {
@@ -1469,9 +1544,22 @@ export function ConnectionsPageClient({
       setSyncAll(null)
       return
     }
-    setSyncAll({ syncing: syncingAll, run: () => void handleSyncAll() })
+    setSyncAll({
+      syncing: syncingAll,
+      run: () => void handleSyncAll(),
+      unavailableReason: weekendSyncAllBlocked
+        ? t(RITHMIC_WEEKEND_WARNING_KEY)
+        : undefined,
+    })
     return () => setSyncAll(null)
-  }, [handleSyncAll, setSyncAll, syncableConnections.length, syncingAll])
+  }, [
+    handleSyncAll,
+    setSyncAll,
+    syncableConnections.length,
+    syncingAll,
+    t,
+    weekendSyncAllBlocked,
+  ])
 
   return (
     <div className="space-y-14 md:space-y-16">
