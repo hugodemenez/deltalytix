@@ -51,7 +51,6 @@ import { useIgSyncContext } from '@/context/ig-sync-context'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ServiceMonochromeLogo } from '@/components/monochrome-logo'
-import { RithmicWeekendWarning } from '@/components/rithmic-weekend-warning'
 import {
   excludeWeekendBlockedConnections,
   isRithmicWeekendDowntime,
@@ -267,7 +266,6 @@ function ConnectionStatusAction({
   syncing,
   reconnecting,
   syncUnavailableReason,
-  syncUnavailableDescribedBy,
   onSync,
   onReconnect,
 }: {
@@ -278,7 +276,6 @@ function ConnectionStatusAction({
   reconnecting: boolean
   /** Weekend Rithmic downtime — connection is fine; sync is not offered. */
   syncUnavailableReason?: string | null
-  syncUnavailableDescribedBy?: string
   onSync: () => void
   onReconnect: () => void
 }) {
@@ -341,9 +338,6 @@ function ConnectionStatusAction({
       className={statusActionClassName}
       title={statusLabel}
       disabled={syncing || weekendUnavailable}
-      aria-describedby={
-        weekendUnavailable ? syncUnavailableDescribedBy : undefined
-      }
       data-testid={weekendUnavailable ? 'connection-sync-weekend' : undefined}
       onClick={onSync}
     >
@@ -496,7 +490,6 @@ function ConnectionRow({
   )
 
   const weekendBlocked = isRithmicWeekendDowntime(connection.service)
-  const weekendWarningId = `rithmic-weekend-${connection.service}`
 
   const handleSync = useCallback(async () => {
     if (isRithmicWeekendDowntime(connection.service)) {
@@ -709,9 +702,6 @@ function ConnectionRow({
               reconnecting={reconnecting}
               syncUnavailableReason={
                 weekendBlocked ? t(RITHMIC_WEEKEND_WARNING_KEY) : null
-              }
-              syncUnavailableDescribedBy={
-                weekendBlocked ? weekendWarningId : undefined
               }
               onSync={() => requestSync()}
               onReconnect={() => void handleReconnect()}
@@ -1072,8 +1062,6 @@ function TypeSection({
   // New connection: reserve a slot at the end (matches createdAt sort) to avoid CLS.
   const showTrailingPending = !!oauthPending && !hasInPlacePending
 
-  const weekendDowntime = isRithmicWeekendDowntime(service)
-
   return (
     <section className="space-y-2">
       <div className="flex items-center gap-4">
@@ -1089,12 +1077,6 @@ function TypeSection({
           {label}
         </h2>
       </div>
-      {weekendDowntime ? (
-        <RithmicWeekendWarning
-          id={`rithmic-weekend-${service}`}
-          className="max-w-xl"
-        />
-      ) : null}
       <div className="divide-y divide-black/10 border-y border-black/10 dark:divide-white/10 dark:border-white/10">
         {connections.map((connection) => {
           const isReplacing =
