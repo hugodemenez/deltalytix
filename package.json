@@ -10,6 +10,7 @@
     "dev": "next dev",
     "prebuild": "node --experimental-strip-types scripts/generate-routes.ts && bunx prisma generate",
     "build": "next build",
+    "vercel-build": "bash scripts/vercel-build.sh",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
