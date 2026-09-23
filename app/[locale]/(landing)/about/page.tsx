@@ -1,6 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { BookOpen, Code, LineChart, GraduationCap } from "lucide-react"
+import { createPublicPageMetadata } from "@/lib/seo-urls"
+
+export const generateMetadata = createPublicPageMetadata("/about")
 
 export default function AboutPage() {
   const founderSkills = [

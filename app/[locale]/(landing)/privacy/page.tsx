@@ -1,4 +1,7 @@
 import React from 'react';
+import { createPublicPageMetadata } from "@/lib/seo-urls";
+
+export const generateMetadata = createPublicPageMetadata("/privacy");
 
 export default function PrivacyPolicy() {
   return (

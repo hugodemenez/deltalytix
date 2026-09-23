@@ -4,6 +4,7 @@ import { Metadata } from 'next';
 import { cacheLife } from 'next/cache';
 import { truncateForSocialDescription } from "@/lib/og/site-metadata";
 import { resolveLocale } from "@/lib/locale-params";
+import { publicPageMetadata } from "@/lib/seo-urls";
 
 type Locale = 'en' | 'fr';
 
@@ -35,7 +36,7 @@ async function getCachedTeamLandingMetadata(locale: Locale): Promise<Metadata> {
 
 export async function generateMetadata(props: { params: Promise<{ locale: Locale }> }): Promise<Metadata> {
   const locale = (await resolveLocale(props.params)) as Locale;
-  return getCachedTeamLandingMetadata(locale);
+  return publicPageMetadata(locale, "/teams", await getCachedTeamLandingMetadata(locale));
 }
 
 export default async function TeamLayout({

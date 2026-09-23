@@ -1,11 +1,14 @@
 import PricingPlans from "@/components/pricing-plans";
 import { getCurrentLocale, getI18n } from "@/locales/server";
+import { createPublicPageMetadata } from "@/lib/seo-urls";
 import { getBackToWorkPricingDisplay } from "@/server/back-to-work-pricing";
 import {
   formatBackToWorkOfferUntil,
   isBackToWorkOfferActive,
 } from "@/lib/back-to-work-promo";
 import { setStaticParamsLocale } from "next-international/server";
+
+export const generateMetadata = createPublicPageMetadata("/pricing");
 
 /**
  * Also rendered as the pricing section of the landing page. There it is nested
