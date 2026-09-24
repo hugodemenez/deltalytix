@@ -50,6 +50,21 @@ function toDate(d: string | Date | null | undefined): Date | null {
   return isNaN(dt.getTime()) ? null : dt
 }
 
+/**
+ * Convert a user-entered payout amount (usually net paid by prop firm)
+ * into its effective balance impact using the account profit-sharing ratio.
+ */
+export function getPayoutBalanceImpact(
+  payoutAmount: number,
+  profitSharing: number | null | undefined,
+): number {
+  if (!Number.isFinite(payoutAmount)) return 0
+  if (!profitSharing || profitSharing <= 0 || profitSharing >= 100) {
+    return payoutAmount
+  }
+  return payoutAmount / (profitSharing / 100)
+}
+
 export function computeAccountMetrics(
   account: Account,
   allTrades: PrismaTrade[]
@@ -74,7 +89,10 @@ export function computeAccountMetrics(
     // Build time-ordered event stream of trades and payouts (paid/validated)
     const validPayouts = (account.payouts || [])
       .filter(p => ['PAID', 'VALIDATED'].includes(p.status))
-      .map(p => ({ date: toDate(p.date)!, amount: p.amount }))
+      .map(p => ({
+        date: toDate(p.date)!,
+        amount: getPayoutBalanceImpact(p.amount, account.profitSharing),
+      }))
       .sort((a, b) => a.date.getTime() - b.date.getTime())
 
     type Event =
@@ -152,7 +170,10 @@ export function computeAccountMetrics(
     runningBalance += pnl
     if (runningBalance > highestBalance) highestBalance = runningBalance
   }
-  const totalPayouts = validPayouts.reduce((s, p) => s + p.amount, 0)
+  const totalPayouts = validPayouts.reduce(
+    (s, p) => s + getPayoutBalanceImpact(p.amount, account.profitSharing),
+    0,
+  )
   const currentBalance = runningBalance - totalPayouts
 
   let drawdownLevel: number
@@ -205,8 +226,11 @@ export function computeAccountMetrics(
         : dailyTradesPnL <= (totalProfit * ((account.consistencyPercentage || 30) / 100))
 
       const payout = (account.payouts || []).find(p => toDate(p.date)!.toISOString().split('T')[0] === date)
+      const payoutImpact = payout
+        ? getPayoutBalanceImpact(payout.amount, account.profitSharing)
+        : 0
       if (payout?.status === 'PAID') {
-        dailyRunningBalance -= payout.amount
+        dailyRunningBalance -= payoutImpact
       }
 
       return {
