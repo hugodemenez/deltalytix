@@ -132,3 +132,4 @@ Demo video: `public/img/self-hosting/dashboard-demo.mp4`
 - `bun run seed:self-host` replaces trades/payouts for the local demo account — dev databases only.
 - ATAS import uses `read-excel-file@9.0.10` (do not re-add abandoned npm `xlsx`).
 - Cloud/agent shells with a pre-set `DATABASE_URL`: `unset DATABASE_URL DIRECT_URL` before `source .env.local`. At app startup, `lib/load-env-local.node.ts` also loads `.env.local` with `override: true` so local Docker Postgres wins over injected remote URLs.
+- Vercel `beta` and `main` deploys run `prisma migrate deploy` from `scripts/vercel-build.sh` (the `vercel-build` package script). Both environments must set `DIRECT_URL` (direct Postgres, not the pooled `DATABASE_URL`). Preview PR deploys skip migrate and should not receive production `DIRECT_URL`. Local `bun run build` is unchanged.

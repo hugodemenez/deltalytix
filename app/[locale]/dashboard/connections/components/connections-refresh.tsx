@@ -21,6 +21,8 @@ type RefreshFn = () => void
 export type SyncAllAction = {
   syncing: boolean
   run: () => void
+  /** When set, Sync all is unavailable (e.g. Rithmic weekend downtime). */
+  unavailableReason?: string
 } | null
 
 type ConnectionsRefreshContextValue = {
