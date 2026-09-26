@@ -18,26 +18,26 @@ export const CONVERSION_EVENTS = [
   "user_signed_up",
 ] as const;
 
-export type ConversionPropertyValue =
-  | boolean
-  | number
-  | string
-  | null
-  | undefined
-  | Record<string, boolean | number | string | null | undefined>;
-
-export type ConversionProperties = Record<string, ConversionPropertyValue>;
+export interface ConversionProperties {
+  [key: string]:
+    | boolean
+    | number
+    | string
+    | null
+    | undefined
+    | ConversionProperties;
+}
 
 const EMAIL_KEYS = new Set(["email", "$email", "user_email"]);
 
 function stripEmailFromRecord(
-  record: Record<string, ConversionPropertyValue>,
-): Record<string, ConversionPropertyValue> {
-  const next: Record<string, ConversionPropertyValue> = {};
+  record: ConversionProperties,
+): ConversionProperties {
+  const next: ConversionProperties = {};
   for (const [key, value] of Object.entries(record)) {
     if (EMAIL_KEYS.has(key.toLowerCase())) continue;
     if (value && typeof value === "object" && !Array.isArray(value)) {
-      next[key] = stripEmailFromRecord(value as Record<string, ConversionPropertyValue>);
+      next[key] = stripEmailFromRecord(value);
       continue;
     }
     next[key] = value;

@@ -8,15 +8,15 @@ import { readCountryFromHeaders, requiresCookieConsent } from "@/lib/consent-reg
 import { isConversionEvent, sanitizeConversionProperties } from "@/lib/conversion-analytics";
 import { POSTHOG_API_HOST } from "@/lib/posthog-browser-config";
 
-type PostHogPropertyValue =
-  | boolean
-  | number
-  | string
-  | null
-  | undefined
-  | Record<string, boolean | number | string | null | undefined>;
-
-type PostHogProperties = Record<string, PostHogPropertyValue>;
+interface PostHogProperties {
+  [key: string]:
+    | boolean
+    | number
+    | string
+    | null
+    | undefined
+    | PostHogProperties;
+}
 
 let posthogClient: PostHog | null = null;
 

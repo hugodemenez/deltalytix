@@ -8,7 +8,6 @@ import {
   CONSENT_UPDATED_EVENT,
   DEFAULT_CONSENT_SETTINGS,
   type ConsentSettings,
-  DEFAULT_CONSENT_SETTINGS,
   parseSharedAnalyticsConsent,
   readStoredConsentSettings,
 } from "./consent-settings";

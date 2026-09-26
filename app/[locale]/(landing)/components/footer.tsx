@@ -29,7 +29,7 @@ export default function Footer() {
       { name: t('landing.consent.record.settings'), href: '/settings#privacy' },
       { name: t('footer.legal.terms'), href: '/terms' },
       { name: t('footer.legal.disclaimers'), href: '/disclaimers' },
-    ] as const
+    ],
     social: [
       { name: 'GitHub', href: 'https://github.com/hugodemenez/deltalytix', icon: (props: React.SVGProps<SVGSVGElement>) => (
         <svg fill="currentColor" viewBox="0 0 24 24" {...props}>
