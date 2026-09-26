@@ -87,6 +87,21 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // PostHog's capture endpoints use trailing slashes (`/e/`). Without this,
+  // Next would 308 them and the first-party /ingest proxy would drop events.
+  skipTrailingSlashRedirect: true,
+  async rewrites() {
+    return [
+      {
+        source: "/ingest/static/:path*",
+        destination: "https://eu-assets.i.posthog.com/static/:path*",
+      },
+      {
+        source: "/ingest/:path*",
+        destination: "https://eu.i.posthog.com/:path*",
+      },
+    ];
+  },
   pageExtensions: ['mdx', 'ts', 'tsx'],
   typescript: {
     // Keep full checking in `bun run typecheck`; do not duplicate it inside `next build`.

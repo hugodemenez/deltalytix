@@ -1,7 +1,9 @@
 /**
- * Session replay follows analytics consent. The SDK is initialized without a
- * hard `disable_session_recording: true` so recordings can start; these helpers
- * start or stop the recorder when the banner grants or withdraws analytics.
+ * Session replay follows identified analytics consent (EU accept, or US
+ * default). Inputs are always masked at init (`maskAllInputs: true`).
+ * The SDK is not hard-disabled with `disable_session_recording: true` when
+ * consent is already granted, so recordings can start; these helpers start
+ * or stop the recorder when that consent changes.
  */
 
 export type PostHogReplayClient = {

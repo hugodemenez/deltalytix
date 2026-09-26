@@ -5,7 +5,8 @@ import { createClient, getWebsiteURL } from "@/server/auth";
 import { stripe } from "@/server/stripe";
 import { getSubscriptionDetails } from "@/server/subscription";
 import { getReferralBySlug } from "@/server/referral";
-import { capturePostHogEvent, hasAnalyticsConsent } from "@/lib/posthog-server";
+import { capturePostHogEvent, hasAnalyticsConsent, readRequestCountry } from "@/lib/posthog-server";
+import { buildCheckoutStartedCapture } from "@/lib/conversion-analytics";
 import { applySignupSuccess, hasSignupSuccess } from "@/lib/signup-redirect";
 import {
   attributionToPersonSetOnce,
@@ -147,18 +148,20 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
 
     // Create session with appropriate mode based on price type
     const analyticsConsent = await hasAnalyticsConsent();
+    const visitorCountry = await readRequestCountry();
     const attribution = await readAttributionFromCookies();
     const attributionMeta = attributionToStripeMetadata(attribution);
     const sessionConfig: any = {
         customer: customerId,
         metadata: {
             plan: lookup_key,
+            posthog_distinct_id: user.id,
+            ...(visitorCountry && { visitor_country: visitorCountry }),
             ...(referral && { referral_code: referral }),
             ...(promo_code && { promo_code: promo_code }),
             ...attributionMeta,
             ...(analyticsConsent && {
                 analytics_consent: 'granted',
-                posthog_distinct_id: user.id,
             }),
         },
         line_items: [
@@ -219,14 +222,20 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
 
     const attributionProps = attributionToPostHogProperties(attribution);
     const setOnce = attributionToPersonSetOnce(attribution);
+    const amount =
+        minorUnitsToMajor(session.amount_total) ??
+        minorUnitsToMajor(price.unit_amount);
 
-    await capturePostHogEvent({
+    await capturePostHogEvent(buildCheckoutStartedCapture({
         distinctId: user.id,
-        event: 'checkout_started',
+        country: visitorCountry,
         properties: {
             lookup_key,
             plan,
             billing_interval: billingInterval,
+            currency: (session.currency || price.currency || 'eur').toLowerCase(),
+            ...(amount !== null ? { amount, revenue: amount } : {}),
+            ...(promo_code ? { promo_code } : {}),
             is_lifetime: isLifetimePlan,
             has_referral: Boolean(referral),
             has_promo_code: Boolean(promo_code),
@@ -234,7 +243,7 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
             ...attributionProps,
             ...(setOnce ? { $set_once: setOnce } : {}),
         },
-    });
+    }));
 
     const response = NextResponse.redirect(session.url as string, 303);
 

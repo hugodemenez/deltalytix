@@ -6,7 +6,8 @@ import { stripe } from "@/server/stripe";
 import { PrismaClient } from "@/prisma/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { sendSubscriptionErrorEmail } from "@/app/[locale]/(landing)/actions/send-support-email";
-import { capturePostHogEvent } from "@/lib/posthog-server";
+import { capturePostHogEvent, shutdownPostHog } from "@/lib/posthog-server";
+import { buildSubscriptionPurchasedCapture } from "@/lib/conversion-analytics";
 import {
   attributionFromStripeMetadata,
   attributionToPersonSetOnce,
@@ -143,7 +144,7 @@ export async function POST(req: Request) {
 
             console.log('subscription created/updated', subscription)
 
-            if (data.metadata?.analytics_consent === 'granted' && user?.id) {
+            if (user?.id) {
               const attribution = attributionFromStripeMetadata(data.metadata);
               const attributionProps = attributionToPostHogProperties(attribution);
               const setOnce = attributionToPersonSetOnce(attribution);
@@ -151,24 +152,26 @@ export async function POST(req: Request) {
                 amountTotal: data.amount_total,
                 priceUnitAmount: price.unit_amount,
               });
+              const promoCode = data.metadata?.promo_code;
 
-              await capturePostHogEvent({
-                consentGranted: true,
-                distinctId: data.metadata.posthog_distinct_id || user.id,
-                event: 'subscription_purchased',
+              await capturePostHogEvent(buildSubscriptionPurchasedCapture({
+                distinctId: data.metadata?.posthog_distinct_id || user.id,
+                stripeEventId: event.id,
+                country: data.metadata?.visitor_country,
                 properties: {
-                  $insert_id: event.id,
                   plan: subscriptionPlan,
                   billing_interval: interval,
                   currency: data.currency,
                   // Prefer Stripe amount_total; fall back to catalog price so we
                   // never invent 0 when Stripe has a real amount.
-                  ...(revenue !== null ? { revenue } : {}),
+                  ...(revenue !== null ? { amount: revenue, revenue } : {}),
+                  ...(promoCode ? { promo_code: promoCode } : {}),
                   stripe_checkout_session_id: data.id,
                   ...attributionProps,
                   ...(setOnce ? { $set_once: setOnce } : {}),
                 },
-              })
+              }))
+              await shutdownPostHog()
             }
             
             // Apply referral code if present in metadata
@@ -245,7 +248,7 @@ export async function POST(req: Request) {
 
                 console.log('lifetime subscription created/updated')
 
-                if (data.metadata?.analytics_consent === 'granted' && user?.id) {
+                if (user?.id) {
                   const attribution = attributionFromStripeMetadata(data.metadata);
                   const attributionProps = attributionToPostHogProperties(attribution);
                   const setOnce = attributionToPersonSetOnce(attribution);
@@ -255,22 +258,24 @@ export async function POST(req: Request) {
                     lineItemAmountTotal,
                     priceUnitAmount: price.unit_amount,
                   });
+                  const promoCode = data.metadata?.promo_code;
 
-                  await capturePostHogEvent({
-                    consentGranted: true,
-                    distinctId: data.metadata.posthog_distinct_id || user.id,
-                    event: 'subscription_purchased',
+                  await capturePostHogEvent(buildSubscriptionPurchasedCapture({
+                    distinctId: data.metadata?.posthog_distinct_id || user.id,
+                    stripeEventId: event.id,
+                    country: data.metadata?.visitor_country,
                     properties: {
-                      $insert_id: event.id,
                       plan: subscriptionPlan,
                       billing_interval: 'lifetime',
                       currency: data.currency,
-                      ...(revenue !== null ? { revenue } : {}),
+                      ...(revenue !== null ? { amount: revenue, revenue } : {}),
+                      ...(promoCode ? { promo_code: promoCode } : {}),
                       stripe_checkout_session_id: data.id,
                       ...attributionProps,
                       ...(setOnce ? { $set_once: setOnce } : {}),
                     },
-                  })
+                  }))
+                  await shutdownPostHog()
                 }
                 
                 // Apply referral code if present in metadata (for lifetime plans too)

@@ -8,6 +8,7 @@ import {
   CONSENT_UPDATED_EVENT,
   DEFAULT_CONSENT_SETTINGS,
   type ConsentSettings,
+  DEFAULT_CONSENT_SETTINGS,
   parseSharedAnalyticsConsent,
   readStoredConsentSettings,
 } from "./consent-settings";
@@ -117,4 +118,13 @@ export function resetConsentDecision() {
     }
   }
   window.dispatchEvent(new Event(CONSENT_RESET_EVENT));
+}
+
+/** CCPA-style persistent opt-out. Writes the shared cookie so reload keeps it. */
+export function persistAnalyticsOptOut() {
+  const stored = readStoredConsentSettings() ?? DEFAULT_CONSENT_SETTINGS;
+  persistConsentSettings({
+    ...stored,
+    analytics_storage: false,
+  });
 }

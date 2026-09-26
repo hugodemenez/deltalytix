@@ -6,6 +6,8 @@
  * the two from drifting apart when a category is added.
  */
 
+import { readClientCountry, requiresCookieConsent } from "./consent-region";
+
 export interface ConsentSettings {
   analytics_storage: boolean;
   ad_storage: boolean;
@@ -124,17 +126,24 @@ export function parseSharedAnalyticsConsent(
 /**
  * Cookie is the cross-origin source of truth. localStorage is the fallback for
  * an origin-local decision that has not been migrated onto the shared cookie.
+ *
+ * With no decision yet: EEA/UK/CH/unknown stay identified-off (cookieless
+ * pageviews still fire via `cookieless_mode: 'on_reject'`). Everywhere else
+ * defaults to identified capture (CCPA-style opt-out).
  */
 export function hasAnalyticsConsentFromStores({
   cookieHeader,
   storedConsent,
+  country = null,
 }: {
   cookieHeader: string;
   storedConsent: Partial<ConsentSettings> | null;
+  country?: string | null;
 }): boolean {
   const shared = parseSharedAnalyticsConsent(cookieHeader);
   if (shared !== null) return shared;
-  return storedConsent?.analytics_storage === true;
+  if (storedConsent !== null) return storedConsent.analytics_storage === true;
+  return !requiresCookieConsent(country);
 }
 
 /** Browser-only — used by PostHog init and the cookie banner. */
@@ -143,6 +152,30 @@ export function hasClientAnalyticsConsent(): boolean {
   return hasAnalyticsConsentFromStores({
     cookieHeader: document.cookie,
     storedConsent: readStoredConsentSettings(),
+    country: readClientCountry(),
+  });
+}
+
+/** First-visit banner: consent-region only, and only until a decision exists. */
+export function shouldShowConsentBannerFromStores({
+  cookieHeader,
+  storedConsent,
+  country,
+}: {
+  cookieHeader: string;
+  storedConsent: Partial<ConsentSettings> | null;
+  country: string | null;
+}): boolean {
+  if (!requiresCookieConsent(country)) return false;
+  return !hasConsentDecisionFromStores({ cookieHeader, storedConsent });
+}
+
+export function shouldShowClientConsentBanner(): boolean {
+  if (typeof document === "undefined") return false;
+  return shouldShowConsentBannerFromStores({
+    cookieHeader: document.cookie,
+    storedConsent: readStoredConsentSettings(),
+    country: readClientCountry(),
   });
 }
 

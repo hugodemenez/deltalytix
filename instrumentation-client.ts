@@ -1,28 +1,25 @@
 import posthog from "posthog-js";
 
 import { hasClientAnalyticsConsent } from "@/lib/consent-settings";
+import { readClientCountry, requiresCookieConsent } from "@/lib/consent-region";
+import { buildPostHogBrowserInitConfig } from "@/lib/posthog-browser-config";
 import { syncPostHogSessionRecording } from "@/lib/posthog-session-recording";
 
 const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
-const apiHost = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com";
 
 if (projectToken) {
-  const analyticsConsent = hasClientAnalyticsConsent();
+  const identifiedConsent = hasClientAnalyticsConsent();
+  const countryRequiresConsent = requiresCookieConsent(readClientCountry());
 
-  posthog.init(projectToken, {
-    api_host: apiHost,
-    defaults: "2026-05-30",
-    person_profiles: "identified_only",
-    opt_out_capturing_by_default: !analyticsConsent,
-    opt_out_capturing_persistence_type: "localStorage",
-    autocapture: false,
-    capture_pageview: true,
-    capture_pageleave: true,
-  });
+  posthog.init(projectToken, buildPostHogBrowserInitConfig({
+    identifiedConsent,
+    requiresCookieConsent: countryRequiresConsent,
+  }));
 
   // Replay is on in PostHog project 50101. Do not hard-disable it here —
-  // start only with analytics consent, and stop if that consent is missing.
-  syncPostHogSessionRecording(posthog, analyticsConsent);
+  // start only with identified analytics consent, and stop otherwise.
+  // Inputs are always masked via session_recording.maskAllInputs.
+  syncPostHogSessionRecording(posthog, identifiedConsent);
 }
 
 export { posthog };

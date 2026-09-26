@@ -1,8 +1,12 @@
 import "server-only";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { PostHog } from "posthog-node";
 
 import { ANALYTICS_CONSENT_COOKIE } from "@/lib/consent-settings";
+import { readCountryFromHeaders, requiresCookieConsent } from "@/lib/consent-region";
+import { isConversionEvent, sanitizeConversionProperties } from "@/lib/conversion-analytics";
+import { POSTHOG_API_HOST } from "@/lib/posthog-browser-config";
 
 type PostHogPropertyValue =
   | boolean
@@ -14,57 +18,116 @@ type PostHogPropertyValue =
 
 type PostHogProperties = Record<string, PostHogPropertyValue>;
 
+let posthogClient: PostHog | null = null;
+
+function getProjectToken(): string | undefined {
+  return process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+}
+
+function getServerHost(): string {
+  return (
+    process.env.POSTHOG_SERVER_HOST ??
+    process.env.NEXT_PUBLIC_POSTHOG_HOST ??
+    POSTHOG_API_HOST
+  ).replace(/\/$/, "");
+}
+
+function getPostHogClient(): PostHog | null {
+  const projectToken = getProjectToken();
+  if (!projectToken) return null;
+
+  if (!posthogClient) {
+    posthogClient = new PostHog(projectToken, {
+      host: getServerHost(),
+      // Serverless: flush immediately so the isolate is not frozen mid-batch.
+      flushAt: 1,
+      flushInterval: 0,
+    });
+  }
+
+  return posthogClient;
+}
+
+export async function readRequestCountry(): Promise<string | null> {
+  try {
+    return readCountryFromHeaders(await headers());
+  } catch {
+    return null;
+  }
+}
+
 export async function hasAnalyticsConsent(): Promise<boolean> {
   try {
-    return (await cookies()).get(ANALYTICS_CONSENT_COOKIE)?.value === "granted";
+    const jar = await cookies();
+    const shared = jar.get(ANALYTICS_CONSENT_COOKIE)?.value;
+    if (shared === "granted") return true;
+    if (shared === "denied") return false;
+    return !requiresCookieConsent(await readRequestCountry());
   } catch {
-    return false;
+    return !requiresCookieConsent(await readRequestCountry());
   }
+}
+
+export async function flushPostHog(): Promise<void> {
+  if (!posthogClient) return;
+  await posthogClient.flush();
+}
+
+/**
+ * Drain the client before a serverless isolate exits. Safe to call when
+ * nothing was captured — posthog-node no-ops on a quiet client.
+ */
+export async function shutdownPostHog(): Promise<void> {
+  if (!posthogClient) return;
+  const client = posthogClient;
+  posthogClient = null;
+  await client.shutdown();
 }
 
 /**
  * Returns true when PostHog accepted the event. Callers that treat delivery as
  * best-effort can ignore it; callers with no other durable store (feedback)
  * use it to surface a retry to the user.
+ *
+ * Conversion events (`user_signed_up`, `checkout_started`,
+ * `subscription_purchased`) always skip the browser consent cookie.
  */
 export async function capturePostHogEvent({
   consentGranted = false,
+  skipConsent = false,
   distinctId,
   event,
   properties = {},
+  country,
 }: {
   consentGranted?: boolean;
+  skipConsent?: boolean;
   distinctId: string;
   event: string;
   properties?: PostHogProperties;
+  country?: string | null;
 }): Promise<boolean> {
-  const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
-  if (!projectToken || (!consentGranted && !(await hasAnalyticsConsent()))) return false;
+  const client = getPostHogClient();
+  if (!client) return false;
 
-  const apiHost = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com";
+  const isConversion = skipConsent || isConversionEvent(event);
+  if (!isConversion && !consentGranted && !(await hasAnalyticsConsent())) {
+    return false;
+  }
+
+  const resolvedCountry = country ?? (await readRequestCountry());
+  const sanitized = sanitizeConversionProperties(properties, resolvedCountry);
 
   try {
-    const response = await fetch(`${apiHost.replace(/\/$/, "")}/capture/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        api_key: projectToken,
-        event,
-        properties: {
-          distinct_id: distinctId,
-          $lib: "deltalytix-server",
-          ...properties,
-        },
-      }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(2_000),
+    client.capture({
+      distinctId,
+      event,
+      properties: {
+        $lib: "deltalytix-server",
+        ...sanitized,
+      },
     });
-
-    if (!response.ok) {
-      console.warn(`[PostHog] Failed to capture ${event}: ${response.status}`);
-      return false;
-    }
-
+    await client.flush();
     return true;
   } catch (error) {
     console.warn(`[PostHog] Failed to capture ${event}`, error);
