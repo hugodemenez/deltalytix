@@ -13,6 +13,7 @@ import { MdxSidebar } from "@/components/mdx-sidebar";
 import { UpdatesNavigation } from "@/components/updates-navigation";
 import { siteUrl } from "@/lib/site-url";
 import { truncateForSocialDescription } from "@/lib/og/site-metadata";
+import { publicPageMetadata } from "@/lib/seo-urls";
 
 type ParamsInput =
   | {
@@ -82,16 +83,9 @@ async function getCachedUpdateMetadata(
     const shareTitle = `${shareTitleLabel} · ${formattedShareDate} | Deltalytix`;
     const description = truncateForSocialDescription(meta.description);
 
-    return {
+    return publicPageMetadata(locale, `/updates/${slug}`, {
       title: meta.title,
       description,
-      alternates: {
-        canonical: url,
-        languages: {
-          en: siteUrl(`/en/updates/${slug}`),
-          fr: siteUrl(`/fr/updates/${slug}`),
-        },
-      },
       openGraph: {
         title: shareTitle,
         description,
@@ -107,7 +101,7 @@ async function getCachedUpdateMetadata(
         title: shareTitle,
         description,
       },
-    };
+    });
   } catch (postError) {
     console.error("Error fetching post:", postError);
     return {

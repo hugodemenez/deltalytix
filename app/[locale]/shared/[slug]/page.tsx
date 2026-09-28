@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import { getShared } from "@/server/shared"
 import { SharedPageClient } from "./shared-page-client"
 import { getRequestOrigin, siteUrl } from "@/lib/site-url"
+import { publicPageMetadata } from "@/lib/seo-urls"
 import { headers } from "next/headers"
 import { truncateForSocialDescription } from "@/lib/og/site-metadata"
 import { CacheComponentsDynamicMarker } from "@/components/cache-components-dynamic-marker"
@@ -35,12 +36,10 @@ export async function generateMetadata({ params }: SharedPageProps): Promise<Met
   )
   const url = siteUrl(`/${locale}/shared/${slug}`, origin)
 
-  return {
+  return publicPageMetadata(locale, `/shared/${slug}`, {
     title,
     description,
-    alternates: {
-      canonical: url,
-    },
+    robots: { index: false, follow: true },
     openGraph: {
       title,
       description,
@@ -62,7 +61,7 @@ export async function generateMetadata({ params }: SharedPageProps): Promise<Met
       description,
       images: [siteUrl(`/${locale}/shared/${slug}/opengraph-image`, origin)],
     },
-  }
+  }, origin)
 }
 
 async function SharedPageContent({ params }: SharedPageProps) {

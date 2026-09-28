@@ -1,6 +1,12 @@
 import AdminLayoutClient from "./admin-layout-client";
 import { I18nProviderClient } from "@/locales/client";
 import { resolveLocale } from "@/lib/locale-params";
+import { PRIVATE_PAGE_ROBOTS } from "@/lib/seo-urls";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: PRIVATE_PAGE_ROBOTS,
+};
 
 export default async function AdminLayout({
   children,

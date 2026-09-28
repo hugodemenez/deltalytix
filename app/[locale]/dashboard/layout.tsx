@@ -17,6 +17,12 @@ import { ConsentRuntime } from "@/components/consent-runtime";
 import { PostHogIdentity } from "@/components/posthog-identity";
 import { createClient } from "@/server/auth";
 import { resolveLocale } from "@/lib/locale-params";
+import { PRIVATE_PAGE_ROBOTS } from "@/lib/seo-urls";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: PRIVATE_PAGE_ROBOTS,
+};
 
 /**
  * Locale + auth for PostHog only — keep URL data inside Suspense so the

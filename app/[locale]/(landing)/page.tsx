@@ -2,6 +2,7 @@ import Partners from "./components/partners";
 import { setStaticParamsLocale } from "next-international/server";
 import Hero from "./components/hero";
 import { getStaticParams } from "@/locales/server";
+import { createPublicPageMetadata } from "@/lib/seo-urls";
 
 // Every section is imported statically.
 //
@@ -19,6 +20,8 @@ import OpenSource from "./components/open-source";
 export function generateStaticParams() {
   return getStaticParams();
 }
+
+export const generateMetadata = createPublicPageMetadata("/");
 
 export default async function LandingPage({
   params,

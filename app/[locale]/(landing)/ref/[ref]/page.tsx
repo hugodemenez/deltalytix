@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { isValidReferralSlug } from "@/lib/referral-url";
 import { siteUrl } from "@/lib/site-url";
 import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
+import { publicPageMetadata } from "@/lib/seo-urls";
 
 type PageProps = {
   params: Promise<{ locale: string; ref: string }>;
@@ -23,12 +24,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const url = siteUrl(`/${locale}/ref/${encodeURIComponent(ref)}`);
   const openGraphLocale = locale === "fr" ? "fr_FR" : "en_US";
 
-  return {
+  return publicPageMetadata(locale, `/ref/${encodeURIComponent(ref)}`, {
     title,
     description,
-    alternates: {
-      canonical: url,
-    },
     openGraph: {
       title,
       description,
@@ -43,7 +41,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       // twitter:image is also derived from opengraph-image.tsx.
     },
-  };
+  });
 }
 
 export default async function ReferralLandingPage({ params }: PageProps) {

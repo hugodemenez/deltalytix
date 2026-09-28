@@ -5,7 +5,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
 import { ScrollLockFix } from "@/components/scroll-lock-fix";
-import { getSiteOrigin, siteUrl } from "@/lib/site-url";
+import { getCanonicalOrigin } from "@/lib/site-url";
 import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
 import { cn } from "@/lib/utils";
 import { Suspense } from "react";
@@ -15,7 +15,7 @@ import { GoogleAdsConversions } from "@/components/google-ads-conversions";
 import { CANVAS_THEME_COLOR } from "@/lib/canvas-theme-color";
 
 const inter = Inter({ subsets: ["latin"] });
-const metadataBase = new URL(getSiteOrigin());
+const metadataBase = new URL(getCanonicalOrigin());
 const defaultSiteCopy = getSiteMetadataCopy("en");
 
 export const metadata: Metadata = {
@@ -25,13 +25,6 @@ export const metadata: Metadata = {
   },
   description: defaultSiteCopy.description,
   metadataBase,
-  alternates: {
-    canonical: siteUrl("/"),
-    languages: {
-      "en-US": siteUrl("/"),
-      "fr-FR": siteUrl("/fr"),
-    },
-  },
   // ---------- OPEN GRAPH ----------
   openGraph: {
     title: defaultSiteCopy.title,
