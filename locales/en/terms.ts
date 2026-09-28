@@ -37,7 +37,7 @@ export default {
             },
             dataProtection: {
                 title: "6. Data Protection and Privacy",
-                content: "We comply with the General Data Protection Regulation (GDPR) and other applicable data protection laws. We protect user data by using Supabase, which is SOC 2 compliant, and by anonymizing data in our database. We do not use third-party analytics services. For more information, please see our Privacy Policy.",
+                content: "We comply with the General Data Protection Regulation (GDPR) and other applicable data protection laws. We protect user data by using Supabase, which is SOC 2 compliant, and by anonymizing data in our database. Analytics and regional consent are described in our Privacy Policy.",
                 dataExport: "Users can, at any time, request a copy of their data in a readable format (CSV, JSON)."
             },
             liability: {

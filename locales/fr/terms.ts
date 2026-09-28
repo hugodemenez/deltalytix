@@ -37,7 +37,7 @@ export default {
             },
             dataProtection: {
                 title: "6. Protection des données et confidentialité",
-                content: "Nous nous conformons au Règlement Général sur la Protection des Données (RGPD) et aux autres lois applicables sur la protection des données. Nous protégeons les données utilisateur en utilisant Supabase, qui est conforme SOC 2, et en anonymisant les données dans notre base de données. Nous n'utilisons pas de services d'analyse tiers. Pour plus d'informations, veuillez consulter notre Politique de confidentialité.",
+                content: "Nous nous conformons au Règlement Général sur la Protection des Données (RGPD) et aux autres lois applicables sur la protection des données. Nous protégeons les données utilisateur en utilisant Supabase, qui est conforme SOC 2, et en anonymisant les données dans notre base de données. La mesure d'audience et le consentement régional sont décrits dans notre Politique de confidentialité.",
                 dataExport: "Les utilisateurs peuvent, à tout moment, demander une copie de leurs données dans un format lisible (CSV, JSON)."
             },
             liability: {

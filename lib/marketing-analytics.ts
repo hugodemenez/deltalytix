@@ -8,7 +8,9 @@ import {
 function canCapture() {
   if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return false;
   if (typeof window === "undefined") return false;
-  return !posthog.has_opted_out_capturing();
+  // `is_capturing()` is true in EU cookieless mode before the banner is
+  // answered; `has_opted_out_capturing()` is not.
+  return posthog.is_capturing();
 }
 
 export function captureMarketingCtaClicked({

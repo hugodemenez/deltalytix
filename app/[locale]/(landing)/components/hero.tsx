@@ -1,5 +1,4 @@
 "use client";
-import { ConsentRecordPrompt, getConsentRecordCopy } from "@/components/consent-record";
 import { useCurrentLocale, useI18n } from "@/locales/landing-client";
 import { localizeLandingHref, scrollToLandingHash } from "@/lib/landing-nav-paths";
 import Link, { useLinkStatus } from "next/link";
@@ -174,10 +173,6 @@ export default function Hero() {
           </div>
         </div>
       </div>
-      <ConsentRecordPrompt
-        copy={getConsentRecordCopy(t)}
-        privacyHref={localizeLandingHref(locale, "/settings#privacy")}
-      />
     </div>
   );
 }

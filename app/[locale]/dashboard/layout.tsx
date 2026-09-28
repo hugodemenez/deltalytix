@@ -13,7 +13,6 @@ import { DxFeedSyncContextProvider } from "@/context/dxfeed-sync-context";
 import { IbkrSyncContextProvider } from "@/context/ibkr-sync-context";
 import { RithmicProtocolSyncContextProvider } from "@/context/rithmic-protocol-sync-context";
 import { IgSyncContextProvider } from "@/context/ig-sync-context";
-import { ConsentRuntime } from "@/components/consent-runtime";
 import { PostHogIdentity } from "@/components/posthog-identity";
 import { createClient } from "@/server/auth";
 import { resolveLocale } from "@/lib/locale-params";
@@ -56,7 +55,6 @@ export default function RootLayout({
   // and that read stays behind Suspense.
   return (
     <>
-      <ConsentRuntime />
       <Suspense fallback={null}>
         <DashboardPostHogIdentity params={params} />
       </Suspense>

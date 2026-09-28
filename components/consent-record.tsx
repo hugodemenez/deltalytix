@@ -22,7 +22,7 @@ import {
   CONSENT_UPDATED_EVENT,
   type ConsentRecordChoices,
   fromRecordChoices,
-  hasClientConsentDecision,
+  shouldShowClientConsentBanner,
   parseSharedAnalyticsConsent,
   readStoredConsentSettings,
   toRecordChoices,
@@ -434,7 +434,7 @@ export function ConsentRecordPrompt({
 
   useEffect(() => {
     const syncVisibility = () => {
-      setVisible(!hasClientConsentDecision());
+      setVisible(shouldShowClientConsentBanner());
       setChoices(readChoicesFromStores());
     };
 

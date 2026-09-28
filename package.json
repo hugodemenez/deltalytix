@@ -116,6 +116,7 @@
     "pdf2json": "^3.2.2",
     "pg": "^8.17.2",
     "posthog-js": "^1.403.0",
+    "posthog-node": "^5.54.1",
     "prisma": "7.8.0",
     "protobufjs": "^8.7.1",
     "radix-ui": "^1.6.0",

@@ -9,11 +9,12 @@ vi.mock("posthog-js", () => ({
     has_opted_in_capturing: vi.fn(() => false),
     has_opted_out_capturing: vi.fn(() => false),
     capture: vi.fn(),
+    is_capturing: vi.fn(() => true),
   },
 }));
 
 import posthog from "posthog-js";
-import { persistConsentSettings } from "./consent-persist";
+import { persistAnalyticsOptOut, persistConsentSettings } from "./consent-persist";
 import { fromRecordChoices } from "./consent-settings";
 
 describe("persistConsentSettings", () => {
@@ -46,6 +47,13 @@ describe("persistConsentSettings", () => {
 
     expect(posthog.startSessionRecording).toHaveBeenCalledOnce();
     expect(posthog.stopSessionRecording).not.toHaveBeenCalled();
+  });
+
+  it("persists a CCPA-style analytics opt-out", () => {
+    persistAnalyticsOptOut();
+
+    expect(posthog.opt_out_capturing).toHaveBeenCalledOnce();
+    expect(posthog.stopSessionRecording).toHaveBeenCalledOnce();
   });
 
   it("stops replay immediately when Product use is saved off", () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { AnalyticsOptOutLink } from "@/components/analytics-opt-out-link";
 import {
   ConsentPrivacyControls,
   getConsentRecordCopy,
@@ -19,6 +20,13 @@ export default function SettingsPage() {
         <h2 className="text-xl font-semibold text-foreground">{copy.privacy}</h2>
         <div className="mt-6 rounded-sm border border-[#E5E5E5] bg-white p-5 dark:border-white/15 dark:bg-[oklch(0.17_0_0)]">
           <ConsentPrivacyControls copy={copy} />
+          <p className="mt-4 text-sm text-black/55 dark:text-white/55">
+            <AnalyticsOptOutLink
+              label={t("footer.legal.optOut")}
+              optedOutLabel={t("footer.legal.optedOut")}
+              className="text-primary hover:underline"
+            />
+          </p>
         </div>
       </section>
     </div>

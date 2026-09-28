@@ -118,3 +118,12 @@ export function resetConsentDecision() {
   }
   window.dispatchEvent(new Event(CONSENT_RESET_EVENT));
 }
+
+/** CCPA-style persistent opt-out. Writes the shared cookie so reload keeps it. */
+export function persistAnalyticsOptOut() {
+  const stored = readStoredConsentSettings() ?? DEFAULT_CONSENT_SETTINGS;
+  persistConsentSettings({
+    ...stored,
+    analytics_storage: false,
+  });
+}
