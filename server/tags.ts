@@ -2,7 +2,15 @@
 
 import { createClient } from './auth'
 import { prisma } from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { Prisma, Tag } from '@/prisma/generated/prisma/client'
+import { revalidatePath, updateTag } from 'next/cache'
+import {
+  normalizeTagName,
+  uniqueTradeIds,
+  type TradeTagOperation,
+} from '@/lib/trades/tag-merge'
+
+const DEFAULT_TAG_COLOR = '#CBD5E1'
 
 export async function getTagsAction(userId: string) {
   console.log('getTags', userId)
@@ -246,4 +254,74 @@ export async function syncTradeTagsToTagTableAction() {
     console.error('Failed to sync tags:', error)
     throw new Error('Failed to sync tags')
   }
+}
+
+export async function bulkUpdateTradeTagsAction(
+  tradeIds: string[],
+  tag: string,
+  operation: TradeTagOperation,
+): Promise<{ updatedCount: number; tag: Tag | null }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    throw new Error('Unauthorized')
+  }
+
+  const tagName = normalizeTagName(tag)
+  const ids = uniqueTradeIds(tradeIds)
+
+  if (!tagName || ids.length === 0) {
+    return { updatedCount: 0, tag: null }
+  }
+
+  const idList = Prisma.join(ids.map((id) => Prisma.sql`${id}`))
+
+  const updatedCount =
+    operation === 'add'
+      ? await prisma.$executeRaw`
+          UPDATE "Trade"
+          SET tags = CASE
+            WHEN ${tagName} = ANY(tags) THEN tags
+            ELSE array_append(tags, ${tagName})
+          END
+          WHERE id IN (${idList})
+            AND "userId" = ${user.id}
+        `
+      : await prisma.$executeRaw`
+          UPDATE "Trade"
+          SET tags = array_remove(tags, ${tagName})
+          WHERE id IN (${idList})
+            AND "userId" = ${user.id}
+        `
+
+  let catalogTag: Tag | null = null
+  if (operation === 'add') {
+    await prisma.tag.createMany({
+      data: [
+        {
+          name: tagName,
+          userId: user.id,
+          color: DEFAULT_TAG_COLOR,
+        },
+      ],
+      skipDuplicates: true,
+    })
+    catalogTag = await prisma.tag.findUnique({
+      where: {
+        name_userId: {
+          name: tagName,
+          userId: user.id,
+        },
+      },
+    })
+  }
+
+  updateTag(`trades-${user.id}`)
+  revalidatePath('/dashboard')
+
+  return { updatedCount, tag: catalogTag }
 } 
