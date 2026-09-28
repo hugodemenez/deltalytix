@@ -14,6 +14,7 @@ import {
   Payout as PrismaPayout,
   DashboardLayout as PrismaDashboardLayout,
   Subscription as PrismaSubscription,
+  Tag as PrismaTag,
 } from "@/prisma/generated/prisma/browser";
 import { SharedParams } from "@/server/shared";
 import {
@@ -29,6 +30,12 @@ import {
   ungroupTradesAction,
   updateTradesAction,
 } from "@/server/database";
+import { bulkUpdateTradeTagsAction } from "@/server/tags";
+import {
+  mergeTagsOnTrades,
+  uniqueTradeIds,
+  type TradeTagOperation,
+} from "@/lib/trades/tag-merge";
 import {
   deletePayoutAction,
   deleteAccountAction,
@@ -259,6 +266,11 @@ interface DataContextType {
     tradeIds: string[],
     update: Partial<PrismaTrade>
   ) => Promise<void>;
+  updateTradeTags: (
+    tradeIds: string[],
+    tag: string,
+    operation: TradeTagOperation
+  ) => Promise<{ updatedCount: number; tag: PrismaTag | null } | undefined>;
   deleteTrades: (tradeIds: string[]) => Promise<void>;
   groupTrades: (tradeIds: string[]) => Promise<void>;
   ungroupTrades: (tradeIds: string[]) => Promise<void>;
@@ -1529,6 +1541,37 @@ export const DataProvider: React.FC<{
     [supabaseUser?.id, trades, setTrades]
   );
 
+  const updateTradeTags = useCallback(
+    async (
+      tradeIds: string[],
+      tag: string,
+      operation: TradeTagOperation
+    ) => {
+      if (!supabaseUser?.id) return;
+      const ids = uniqueTradeIds(tradeIds);
+      if (ids.length === 0) {
+        return { updatedCount: 0, tag: null };
+      }
+
+      setTrades(mergeTagsOnTrades(trades, ids, tag, operation));
+      const result = await bulkUpdateTradeTagsAction(ids, tag, operation);
+      if (result.tag) {
+        const { tags, addTag } = useUserStore.getState();
+        if (
+          !tags.some(
+            (existing) =>
+              existing.id === result.tag!.id ||
+              existing.name === result.tag!.name
+          )
+        ) {
+          addTag(result.tag);
+        }
+      }
+      return result;
+    },
+    [supabaseUser?.id, trades, setTrades]
+  );
+
   const groupTrades = useCallback(
     async (tradeIds: string[]) => {
       if (!supabaseUser?.id) return;
@@ -1654,6 +1697,7 @@ export const DataProvider: React.FC<{
 
     // Update trade
     updateTrades,
+    updateTradeTags,
     deleteTrades,
     groupTrades,
     ungroupTrades,
