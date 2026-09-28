@@ -103,7 +103,9 @@ import {
 import { EditableTimeCell } from "./editable-time-cell";
 import { EditableInstrumentCell } from "./editable-instrument-cell";
 import { BulkEditPanel } from "./bulk-edit-panel";
+import { BulkTagActions } from "./bulk-tag-actions";
 import { TradeTableVirtualBody } from "./trade-table-virtual-body";
+import { unionTagLists } from "@/lib/trades/tag-merge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DEFAULT_TRADE_TABLE_PAGE_SIZE,
@@ -537,7 +539,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           instrument: trade.instrument,
           entryDate: roundedEntryDate.toISOString(),
           closeDate: trade.closeDate,
-          tags: trade.tags,
+          tags: [...trade.tags],
           images: trade.images,
           imageBase64: trade.imageBase64,
           imageBase64Second: trade.imageBase64Second,
@@ -572,6 +574,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           ...trade,
           trades: [],
         });
+        group.tags = unionTagLists(group.trades.map((groupedTrade) => groupedTrade.tags));
         group.pnl += trade.pnl || 0;
         group.commission += trade.commission || 0;
         group.quantity += trade.quantity || 0;
@@ -1365,6 +1368,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                 {t("trade-table.ungroupTrades")}
               </Button>
             )}
+            <BulkTagActions selectedTradeIds={selectedTrades} trades={trades} />
             {config?.groupTrades !== false && (
               <Select
                 value={groupingMode}
