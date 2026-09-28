@@ -197,16 +197,21 @@ function formatWeekRange(
   return `${startDay} ${startMonth}–${endDay} ${endMonth}`;
 }
 
-function formatPnLMagnitude(value: number): string {
-  // Lock shows full euro amounts (e.g. +875€) — never K-truncate in this recap.
-  return Math.trunc(Math.abs(value)).toString();
+function formatPnLMagnitude(value: number, locale: Locale): string {
+  // Lock shows full USD amounts (e.g. +$1,410 / +1 410 $) — never K-truncate in this recap.
+  const digits = Math.trunc(Math.abs(value)).toString();
+  return digits.replace(
+    /\B(?=(\d{3})+(?!\d))/g,
+    locale === "fr" ? " " : ",",
+  );
 }
 
-function formatSignedEuro(pnl: number): string {
-  const amount = formatPnLMagnitude(pnl);
-  if (pnl > 0) return `+${amount}€`;
-  if (pnl < 0) return `−${amount}€`;
-  return `${amount}€`;
+function formatSignedUsd(pnl: number, locale: Locale): string {
+  const amount = formatPnLMagnitude(pnl, locale);
+  const withCurrency = locale === "fr" ? `${amount} $` : `$${amount}`;
+  if (pnl > 0) return `+${withCurrency}`;
+  if (pnl < 0) return `−${withCurrency}`;
+  return withCurrency;
 }
 
 function pnlColor(pnl: number): string {
@@ -563,7 +568,7 @@ export default function TraderStatsEmail({
                             fontFeatureSettings: '"tnum"',
                           }}
                         >
-                          {formatSignedEuro(weekPnL)}
+                          {formatSignedUsd(weekPnL, locale)}
                         </h1>
 
                         <p className="dm-text" style={bodyStyle}>
@@ -651,7 +656,7 @@ export default function TraderStatsEmail({
                                   >
                                     {day.pnl === null
                                       ? "—"
-                                      : formatSignedEuro(day.pnl)}
+                                      : formatSignedUsd(day.pnl, locale)}
                                   </td>
                                 </tr>
                               );

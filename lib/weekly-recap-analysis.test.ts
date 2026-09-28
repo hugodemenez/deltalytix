@@ -3,6 +3,7 @@ import {
   WEEKLY_ANALYSIS_MODEL,
   WEEKLY_ANALYSIS_REASONING_EFFORT,
   buildWeeklyAnalysisPrompt,
+  formatDailyPnLForPrompt,
   formatWeekShapeForPrompt,
   summarizeWeekShape,
 } from "./weekly-recap-analysis"
@@ -87,6 +88,21 @@ describe("formatWeekShapeForPrompt", () => {
   })
 })
 
+describe("formatDailyPnLForPrompt", () => {
+  it("feeds USD amounts with $ and keeps signed negatives", () => {
+    const text = formatDailyPnLForPrompt(
+      [
+        { date: monday, pnl: 1410.62 },
+        { date: tuesday, pnl: -90 },
+      ],
+      "en",
+    )
+    expect(text).toContain("$1410.62")
+    expect(text).toContain("-$90")
+    expect(text).not.toContain("€")
+  })
+})
+
 describe("buildWeeklyAnalysisPrompt", () => {
   const oneDay = [{ date: monday, pnl: 275.5 }]
   const variedDays = [
@@ -106,7 +122,10 @@ describe("buildWeeklyAnalysisPrompt", () => {
     expect(prompt).toContain("tableau de bord")
     expect(prompt).not.toContain("toujours positif")
     expect(prompt).not.toContain("Trouve toujours quelque chose de positif")
-    expect(prompt).toContain("275.5€")
+    expect(prompt).toContain("$275.5")
+    expect(prompt).toContain("dollars américains")
+    expect(prompt).toContain("+1 410 $")
+    expect(prompt).not.toContain("€")
   })
 
   it("writes EN rules that block 1-day ramps and vague fluff", () => {
@@ -121,7 +140,10 @@ describe("buildWeeklyAnalysisPrompt", () => {
     expect(prompt).toContain("dashboard")
     expect(prompt).not.toContain("always positive")
     expect(prompt).not.toContain("Always find something positive")
-    expect(prompt).toContain("275.5€")
+    expect(prompt).toContain("$275.5")
+    expect(prompt).toContain("US dollars")
+    expect(prompt).toContain("+$1,410")
+    expect(prompt).not.toContain("€")
   })
 
   it("allows day-to-day language only for a varied multi-day series", () => {

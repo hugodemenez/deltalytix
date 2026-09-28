@@ -25,7 +25,7 @@ describe("generateTradingAnalysis", () => {
     streamObject.mockReturnValue({
       partialObjectStream: objectStream([
         {
-          intro: "One session this week, +120€ on Monday.",
+          intro: "One session this week, +$120 on Monday.",
           tips: "Open the calendar and tag that session in the journal.",
         },
       ]),
@@ -37,7 +37,7 @@ describe("generateTradingAnalysis", () => {
     )
 
     expect(result.resultAnalysisIntro).toBe(
-      "One session this week, +120€ on Monday.",
+      "One session this week, +$120 on Monday.",
     )
     expect(result.tipsForNextWeek).toContain("calendar")
 
@@ -47,6 +47,9 @@ describe("generateTradingAnalysis", () => {
     expect(call.providerOptions?.openai?.reasoningEffort).toBe("high")
     expect(call.prompt).toContain("Trading days this week: 1")
     expect(call.prompt).toContain("single-day")
+    expect(call.prompt).toContain("$120")
+    expect(call.prompt).toContain("US dollars")
+    expect(call.prompt).not.toContain("€")
     expect(call.prompt).not.toContain("gpt-4.1-nano")
   })
 
