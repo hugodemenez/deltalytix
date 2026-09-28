@@ -467,24 +467,20 @@ export default async function proxy(req: NextRequest) {
     }
   }
 
-  // Skip geo cookies on cacheable landing/referral routes only (not all marketing pages).
-  const normalizedPathname = withoutLocale(pathname)
-  const skipGeoCookie =
-    isHomepage(pathname) || normalizedPathname.startsWith("/ref/")
+  // Country cookie is set on every HTML response, including the cached
+  // homepage, so the first-visit consent banner can read it immediately.
 
   try {
     const geo = geolocation(req)
 
     if (geo.country) {
       response.headers.set("x-user-country", geo.country)
-      if (!skipGeoCookie) {
-        response.cookies.set("user-country", geo.country, {
-          path: "/",
-          maxAge: 60 * 60 * 24, // 24 hours
-          sameSite: "lax",
-          secure: process.env.NODE_ENV === "production",
-        })
-      }
+      response.cookies.set("user-country", geo.country, {
+        path: "/",
+        maxAge: 60 * 60 * 24, // 24 hours
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      })
     }
 
     if (geo.city) {
@@ -502,14 +498,12 @@ export default async function proxy(req: NextRequest) {
 
     if (country) {
       response.headers.set("x-user-country", country)
-      if (!skipGeoCookie) {
-        response.cookies.set("user-country", country, {
-          path: "/",
-          maxAge: 60 * 60 * 24,
-          sameSite: "lax",
-          secure: process.env.NODE_ENV === "production",
-        })
-      }
+      response.cookies.set("user-country", country, {
+        path: "/",
+        maxAge: 60 * 60 * 24,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      })
     }
     if (city) response.headers.set("x-user-city", encodeURIComponent(city))
     if (region) response.headers.set("x-user-region", encodeURIComponent(region))
@@ -529,6 +523,6 @@ export const config = {
      * - opengraph-image (Open Graph image generation)
      * - public files with extensions
      */
-    "/((?!_next/static|_next/image|favicon.ico|api|opengraph-image|.*\\.(?:svg|png|jpg|jpeg|mp4|webm|gif|html|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api|ingest|opengraph-image|.*\\.(?:svg|png|jpg|jpeg|mp4|webm|gif|html|webp)$).*)",
   ],
 }

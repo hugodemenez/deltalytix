@@ -16,6 +16,10 @@ import { useRithmicSyncStore } from "@/store/rithmic-sync-store";
 import { useTradesStore } from "@/store/trades-store";
 import { getUserId } from "@/server/auth";
 import { useUserStore } from "@/store/user-store";
+import {
+  isLocalWeekend,
+  RITHMIC_WEEKEND_UNAVAILABLE,
+} from "@/lib/rithmic-weekend";
 
 interface RithmicCredentials {
   username: string;
@@ -534,6 +538,13 @@ export function RithmicSyncContextProvider({
   // Run a sync for a credential
   const performSyncForCredential = useCallback(
     async (credentialId: string) => {
+      if (isLocalWeekend()) {
+        return {
+          success: false,
+          rateLimited: false,
+          message: RITHMIC_WEEKEND_UNAVAILABLE,
+        };
+      }
       // If we are already syncing, return
       if (isAutoSyncing) return;
 

@@ -6,7 +6,9 @@ import {
   fromRecordChoices,
   hasAnalyticsConsentFromStores,
   hasConsentDecisionFromStores,
+  isExplicitAnalyticsDenialFromStores,
   isGoogleTagAllowed,
+  shouldShowConsentBannerFromStores,
   parseSharedAnalyticsConsent,
   toGoogleConsent,
   toRecordChoices,
@@ -169,12 +171,113 @@ describe("hasAnalyticsConsentFromStores", () => {
     ).toBe(true);
   });
 
-  it("denies when neither store has granted analytics", () => {
+  it("denies when neither store has granted analytics and country is unknown", () => {
     expect(
       hasAnalyticsConsentFromStores({
         cookieHeader: "",
         storedConsent: null,
       }),
     ).toBe(false);
+  });
+
+  it("defaults identified capture on for US visitors with no stored decision", () => {
+    expect(
+      hasAnalyticsConsentFromStores({
+        cookieHeader: "",
+        storedConsent: null,
+        country: "US",
+      }),
+    ).toBe(true);
+  });
+
+  it("turns identified capture off for a US visitor who opted out", () => {
+    expect(
+      hasAnalyticsConsentFromStores({
+        cookieHeader: "deltalytix_analytics_consent=denied",
+        storedConsent: null,
+        country: "US",
+      }),
+    ).toBe(false);
+  });
+
+  it("defaults identified capture off for EU visitors with no stored decision", () => {
+    expect(
+      hasAnalyticsConsentFromStores({
+        cookieHeader: "",
+        storedConsent: null,
+        country: "FR",
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("isExplicitAnalyticsDenialFromStores", () => {
+  it("is true for a denied shared cookie in any region", () => {
+    expect(
+      isExplicitAnalyticsDenialFromStores({
+        cookieHeader: "deltalytix_analytics_consent=denied",
+        storedConsent: null,
+      }),
+    ).toBe(true);
+  });
+
+  it("is false when there is no saved decision", () => {
+    expect(
+      isExplicitAnalyticsDenialFromStores({
+        cookieHeader: "",
+        storedConsent: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("is false when analytics was granted", () => {
+    expect(
+      isExplicitAnalyticsDenialFromStores({
+        cookieHeader: "deltalytix_analytics_consent=granted",
+        storedConsent: DEFAULT_CONSENT_SETTINGS,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("shouldShowConsentBannerFromStores", () => {
+  it("shows the banner for EU visitors with no decision", () => {
+    expect(
+      shouldShowConsentBannerFromStores({
+        cookieHeader: "",
+        storedConsent: null,
+        country: "FR",
+      }),
+    ).toBe(true);
+  });
+
+  it("hides the banner for US visitors even with no decision", () => {
+    expect(
+      shouldShowConsentBannerFromStores({
+        cookieHeader: "",
+        storedConsent: null,
+        country: "US",
+      }),
+    ).toBe(false);
+  });
+
+  it("hides the banner once a decision is stored", () => {
+    expect(
+      shouldShowConsentBannerFromStores({
+        cookieHeader: "deltalytix_analytics_consent=denied",
+        storedConsent: null,
+        country: "FR",
+      }),
+    ).toBe(false);
+  });
+
+  it("shows the banner when country is unknown", () => {
+    expect(
+      shouldShowConsentBannerFromStores({
+        cookieHeader: "",
+        storedConsent: null,
+        country: null,
+      }),
+    ).toBe(true);
   });
 });

@@ -5,6 +5,8 @@ import { CommandItem } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 import { AlertTriangle, ChevronRight } from "lucide-react"
 import { ThemeAwareLogo } from "@/components/monochrome-logo"
+import { RithmicWeekendWarning } from "@/components/rithmic-weekend-warning"
+import { isLocalWeekend } from "@/lib/rithmic-weekend"
 import { PlatformConfig } from "../config/platforms"
 import { useI18n } from "@/locales/client"
 
@@ -14,7 +16,6 @@ interface PlatformItemProps {
   onSelect: (type: string) => void
   onHover: (category: string) => void
   onLeave: () => void
-  isWeekend: boolean
   showNavigateHint?: boolean
 }
 
@@ -24,10 +25,11 @@ export function PlatformItem({
   onSelect,
   onHover,
   onLeave,
-  isWeekend,
   showNavigateHint = false,
 }: PlatformItemProps) {
   const t = useI18n()
+  const showWeekendWarning =
+    !platform.isDisabled && !!platform.isRithmic && isLocalWeekend()
 
   return (
     <div className={cn(
@@ -82,14 +84,8 @@ export function PlatformItem({
               </Badge>
             )}
           </div>
-          {!platform.isDisabled && platform.isRithmic && isWeekend && (
-            <p className="mt-1.5 flex items-start gap-1.5 rounded-md bg-yellow-500/10 px-2 py-1 text-[11px] leading-snug text-yellow-800 dark:text-yellow-400 sm:text-xs">
-              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
-              <span>
-                <span className="sm:hidden">{t('import.type.rithmicWeekendWarningShort')}</span>
-                <span className="hidden sm:inline">{t('import.type.rithmicWeekendWarning')}</span>
-              </span>
-            </p>
+          {showWeekendWarning && (
+            <RithmicWeekendWarning className="mt-1.5" />
           )}
           <div className="text-sm text-muted-foreground">
             {t(platform.description as keyof typeof t)}

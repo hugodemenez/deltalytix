@@ -15,6 +15,7 @@ import faq from "./en/faq";
 import support from "./en/support";
 import feedback from "./en/feedback";
 import landingPreview from "./en/landing-preview";
+import privacy from "./en/privacy";
 export default {
   ...shared,
   ...landing,
@@ -33,6 +34,7 @@ export default {
   ...faq,
   ...support,
   ...feedback,
+  ...privacy,
   "footer.heading": "Footer",
   "footer.description": "A trading journal for every futures account.",
   "footer.product.title": "Product",
@@ -52,6 +54,8 @@ export default {
   "footer.legal.privacy": "Privacy Policy",
   "footer.legal.terms": "Terms of Service",
   "footer.legal.disclaimers": "Disclaimers",
+  "footer.legal.optOut": "Opt out of analytics",
+  "footer.legal.optedOut": "Analytics opted out",
   "footer.copyright": "© {year} Deltalytix. All rights reserved.",
   "authentication.title": "Authentication",
   "authentication.description":
@@ -1375,6 +1379,12 @@ export default {
     noTagsFound: "No tags found",
     addTag: 'Add "{tag}"',
     existingTags: "Existing Tags",
+    bulkAddTag: "Add tag",
+    bulkRemoveTag: "Remove tag",
+    bulkAddTagSuccess: "Tag added to {count} trades",
+    bulkRemoveTagSuccess: "Tag removed from {count} trades",
+    bulkTagError: "Failed to update tags",
+    bulkNoTagsToRemove: "No tags on selected trades",
     noResults: "No results found.",
     rowsPerPage: "Rows per page",
     page: "Page {current} of {total}",

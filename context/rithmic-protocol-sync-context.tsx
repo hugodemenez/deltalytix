@@ -12,6 +12,10 @@ import {
 import { useData } from '@/context/data-provider'
 import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
+import {
+  isLocalWeekend,
+  RITHMIC_WEEKEND_UNAVAILABLE,
+} from '@/lib/rithmic-weekend'
 
 export interface RithmicProtocolSyncAccount {
   id: string
@@ -155,6 +159,9 @@ export function RithmicProtocolSyncContextProvider({
 
   const performSyncForAccount = useCallback(
     async (accountId: string) => {
+      if (isLocalWeekend()) {
+        return { success: false, message: RITHMIC_WEEKEND_UNAVAILABLE }
+      }
       const account = accountsRef.current.find((acc) => acc.accountId === accountId)
       if (!account) {
         return {

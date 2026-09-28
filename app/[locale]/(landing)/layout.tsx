@@ -3,7 +3,6 @@ import Navbar from "./components/navbar";
 import Footer from "./components/footer";
 import { ThemeProvider } from "@/context/theme-provider";
 import { I18nProviderClient } from "@/locales/landing-client";
-import { ConsentRuntime } from "@/components/consent-runtime";
 import { cacheLife } from "next/cache";
 
 import { Metadata } from "next";
@@ -56,7 +55,6 @@ export default async function RootLayout(
 
   return (
     <I18nProviderClient locale={locale}>
-      <ConsentRuntime />
       {/*
         Theme tokens wrap ThemeProvider so the shared Safari chrome sampler
         inherits the landing --background values (not the app shell defaults).

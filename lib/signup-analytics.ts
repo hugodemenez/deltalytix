@@ -5,11 +5,10 @@
  * creates the public `User` row — every first-account path (password,
  * magic link, OAuth) goes through that helper.
  *
- * Consent is granted here on purpose. The analytics cookie is almost
- * never present yet on the OAuth / magic-link callback (the banner is
- * answered after the user lands on the dashboard), so gating on it
- * dropped most real signups while `$identify` still fired later.
- * Same first-party exception as `feedback_submitted`.
+ * This is a server conversion: it never depends on the browser consent
+ * cookie. `user_signed_up` is the signup event — do not add a second
+ * `signup` capture. Same first-party exception as `checkout_started`
+ * and `subscription_purchased`.
  */
 
 export const USER_SIGNED_UP_EVENT = "user_signed_up";

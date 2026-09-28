@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { AnalyticsOptOutLink } from '@/components/analytics-opt-out-link'
 import { Logo } from '../../../../components/logo'
 import { useI18n } from "@/locales/landing-client"
 
@@ -122,6 +123,13 @@ export default function Footer() {
                       </Link>
                     </li>
                   ))}
+                  <li>
+                    <AnalyticsOptOutLink
+                      label={t("footer.legal.optOut")}
+                      optedOutLabel={t("footer.legal.optedOut")}
+                      className="text-sm leading-6 text-black/55 transition-colors hover:text-foreground dark:text-white/55"
+                    />
+                  </li>
                 </ul>
               </div>
             </div>

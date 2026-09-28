@@ -72,7 +72,9 @@ export function formatDailyPnLForPrompt(
         month: "long",
         timeZone: "UTC",
       })
-      return `- ${label}: ${day.pnl}€`
+      const amount =
+        day.pnl < 0 ? `-$${Math.abs(day.pnl)}` : `$${day.pnl}`
+      return `- ${label}: ${amount}`
     })
     .join("\n")
 }
@@ -126,7 +128,7 @@ ${DELTALYTIX_CONTEXT.fr}
 
 ${meta}
 
-P&L journalier de la semaine du récap (ce sont les seules journées — il n'y a pas de série de la semaine précédente) :
+P&L journalier de la semaine du récap (ce sont les seules journées — il n'y a pas de série de la semaine précédente). Les montants sont en dollars américains :
 ${series}
 
 Pour l'analyse (intro) :
@@ -137,6 +139,7 @@ Pour l'analyse (intro) :
 5. Parle comme à un ami, avec des mots simples
 6. N'invente ni jours supplémentaires, ni comparaison avec une semaine précédente absente des données
 7. Toute affirmation sur un jour plus fort ou plus faible doit correspondre à la liste de P&L
+8. Les montants sont en dollars US. Écris-les avec $ (ex. +1 410 $). N'utilise jamais le signe euro ni le mot euro.
 
 Pour les conseils (tips) :
 1. Un conseil simple, jusqu'à 36 mots
@@ -153,7 +156,7 @@ ${DELTALYTIX_CONTEXT.en}
 
 ${meta}
 
-Daily P&L for the recap week (these are the only days — there is no previous-week series):
+Daily P&L for the recap week (these are the only days — there is no previous-week series). Amounts are in US dollars:
 ${series}
 
 For the analysis (intro):
@@ -164,6 +167,7 @@ For the analysis (intro):
 5. Speak like a friend, using simple words
 6. Do not invent extra days or a previous-week comparison that is not in the data
 7. Any claim about a stronger or weaker day must match the P&L list
+8. Amounts are in US dollars. Write them with $ (e.g. +$1,410). Never use the euro sign or the word euro.
 
 For the tips:
 1. One simple tip, up to 36 words

@@ -5,6 +5,7 @@ import terms from "./terms";
 import referral from "./referral";
 import support from "./support";
 import landingPreview from "./landing-preview";
+import privacy from "./privacy";
 
 /** Slim locale entry for marketing/landing client components (lazy-loaded separately from fr.ts). */
 export default {
@@ -15,6 +16,7 @@ export default {
   ...referral,
   ...landingPreview,
   ...support,
+  ...privacy,
   "footer.heading": "Pied de page",
   "footer.description": "Un journal de trading pour tous vos comptes futures.",
   "footer.product.title": "Produit",
@@ -34,6 +36,8 @@ export default {
   "footer.legal.privacy": "Politique de confidentialité",
   "footer.legal.terms": "Conditions d'utilisation",
   "footer.legal.disclaimers": "Avertissements",
+  "footer.legal.optOut": "Refuser la mesure d'audience",
+  "footer.legal.optedOut": "Mesure d'audience refusée",
   "footer.copyright": "© {year} Deltalytix. Tous droits réservés.",
   "disclaimer.risk.title": "Avertissement relatif aux risques",
   "disclaimer.risk.content":

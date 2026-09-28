@@ -36,11 +36,6 @@ const categoryIcons: Record<PlatformConfig['category'], React.ReactNode> = {
   'Manual Entry': <Pencil className="h-4 w-4" />
 }
 
-function isWeekend() {
-  const day = new Date().getDay()
-  return day === 0 || day === 6
-}
-
 function MobileStepIndicator({
   step,
   total,
@@ -186,7 +181,6 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                         onSelect={(type) => handlePlatformSelect(type as ImportType)}
                         onHover={(category) => setHoveredCategory(category as PlatformConfig['category'])}
                         onLeave={() => setHoveredCategory(null)}
-                        isWeekend={isWeekend()}
                         showNavigateHint={isMobile}
                       />
                     ))}

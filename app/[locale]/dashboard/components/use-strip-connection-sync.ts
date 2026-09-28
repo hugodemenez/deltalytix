@@ -13,6 +13,11 @@ import {
   canSyncStripItem,
   type StripItem,
 } from './connections-strip-items'
+import {
+  isRithmicWeekendDowntime,
+  RITHMIC_WEEKEND_UNAVAILABLE,
+  RITHMIC_WEEKEND_WARNING_KEY,
+} from '@/lib/rithmic-weekend'
 
 /**
  * Reuses the same broker sync contexts and handlers as
@@ -33,6 +38,7 @@ export function useStripConnectionSync(item: StripItem, onSynced: () => void) {
     useIgSyncContext()
 
   const canSync = canSyncStripItem(item) && Boolean(item.accountId)
+  const weekendBlocked = isRithmicWeekendDowntime(item.service)
   const contextSyncing =
     item.kind === 'connection' &&
     ((item.service === 'rithmic-protocol' &&
@@ -42,13 +48,17 @@ export function useStripConnectionSync(item: StripItem, onSynced: () => void) {
 
   const sync = useCallback(async () => {
     if (!canSync || !item.accountId || syncing) return
+    if (isRithmicWeekendDowntime(item.service)) {
+      toast.message(t(RITHMIC_WEEKEND_WARNING_KEY))
+      return
+    }
 
     const usesLocalSyncState =
       item.service !== 'rithmic-protocol' && item.service !== 'ig'
     if (usesLocalSyncState) setLocalSyncing(true)
 
     try {
-      let result: { success?: boolean } | void
+      let result: { success?: boolean; message?: string } | void
       if (item.service === 'tradovate') {
         result = await syncTradovate(item.accountId)
       } else if (item.service === 'dxfeed') {
@@ -67,6 +77,13 @@ export function useStripConnectionSync(item: StripItem, onSynced: () => void) {
       }
 
       if (result && result.success === false) {
+        if (
+          result.message === RITHMIC_WEEKEND_UNAVAILABLE ||
+          isRithmicWeekendDowntime(item.service)
+        ) {
+          toast.message(t(RITHMIC_WEEKEND_WARNING_KEY))
+          return
+        }
         if (usesLocalSyncState) {
           toast.error(t('connections.sync.failed'))
         }
@@ -76,7 +93,9 @@ export function useStripConnectionSync(item: StripItem, onSynced: () => void) {
       onSynced()
     } catch (error) {
       console.error(error)
-      if (usesLocalSyncState) {
+      if (isRithmicWeekendDowntime(item.service)) {
+        toast.message(t(RITHMIC_WEEKEND_WARNING_KEY))
+      } else if (usesLocalSyncState) {
         toast.error(t('connections.sync.failed'))
       }
     } finally {
@@ -97,5 +116,9 @@ export function useStripConnectionSync(item: StripItem, onSynced: () => void) {
     t,
   ])
 
-  return { canSync, sync, syncing }
+  const weekendReason = weekendBlocked
+    ? t(RITHMIC_WEEKEND_WARNING_KEY)
+    : undefined
+
+  return { canSync, sync, syncing, weekendBlocked, weekendReason }
 }
