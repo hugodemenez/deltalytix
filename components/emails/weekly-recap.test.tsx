@@ -35,7 +35,8 @@ describe("TraderStatsEmail weekly recap Zeno chrome lock", () => {
     expect(html).toContain(
       "This recap is generated automatically and may contain errors.",
     );
-    expect(html).toContain("+875€");
+    expect(html).toContain("+$875");
+    expect(html).not.toContain("€");
     expect(html).toContain("Daily");
     expect(html).toContain("Wins and losses");
     expect(html).toContain("Win rate");
@@ -127,6 +128,8 @@ describe("TraderStatsEmail weekly recap Zeno chrome lock", () => {
     expect(html).toContain("/fr/dashboard?utm_source=resend");
     expect(html).toContain("/fr/privacy");
     expect(html).toContain('width="680"');
+    expect(html).toContain("+875 $");
+    expect(html).not.toContain("€");
     expect(html).not.toContain("#FAFAFA");
   });
 
@@ -139,13 +142,14 @@ describe("TraderStatsEmail weekly recap Zeno chrome lock", () => {
       }),
     );
 
-    expect(html).toContain("+100€");
+    expect(html).toContain("+$100");
     expect(html).toContain("—");
-    expect(html).not.toContain(">0€<");
+    expect(html).not.toContain(">$0<");
+    expect(html).not.toContain("€");
   });
 
-  test("does not K-truncate euro amounts", async () => {
-    const html = await render(
+  test("does not K-truncate USD amounts and groups thousands by locale", async () => {
+    const enHtml = await render(
       TraderStatsEmail({
         ...baseProps,
         language: "en",
@@ -156,9 +160,37 @@ describe("TraderStatsEmail weekly recap Zeno chrome lock", () => {
       }),
     );
 
-    expect(html).toContain("+1250€");
-    expect(html).toContain("−1100€");
-    expect(html).not.toMatch(/\d+K€/);
-    expect(html).not.toContain("+1K");
+    expect(enHtml).toContain("+$1,250");
+    expect(enHtml).toContain("−$1,100");
+    expect(enHtml).toContain("+$150");
+
+    const reportedAmountHtml = await render(
+      TraderStatsEmail({
+        ...baseProps,
+        language: "en",
+        dailyPnL: [{ date: new Date(Date.UTC(2026, 7, 3)), pnl: 1410.62 }],
+      }),
+    );
+    expect(reportedAmountHtml).toContain("+$1,410");
+    expect(reportedAmountHtml).not.toContain("1,410.62");
+    expect(enHtml).not.toMatch(/\d+K\$/);
+    expect(enHtml).not.toContain("+1K");
+    expect(enHtml).not.toContain("€");
+
+    const frHtml = await render(
+      TraderStatsEmail({
+        ...baseProps,
+        language: "fr",
+        dailyPnL: [
+          { date: new Date(Date.UTC(2026, 7, 3)), pnl: 1410 },
+          { date: new Date(Date.UTC(2026, 7, 4)), pnl: -1410 },
+        ],
+      }),
+    );
+
+    expect(frHtml).toContain("+1 410 $");
+    expect(frHtml).toContain("−1 410 $");
+    expect(frHtml).toContain("0 $");
+    expect(frHtml).not.toContain("€");
   });
 });

@@ -90,7 +90,7 @@ export async function getDefaultTemplateProps(template: EmailTemplate): Promise<
         resultAnalysisIntro:
           "Five sessions this week, Thursday carrying most of the size. Losses stayed small relative to wins.",
         tipsForNextWeek:
-          "Keep sizing where the week already worked. Thursday’s +310€ came from fewer, cleaner trades. That’s the pattern to repeat.",
+          "Keep sizing where the week already worked. Thursday’s +$310 came from fewer, cleaner trades. That’s the pattern to repeat.",
         language: "en",
       }
     case "new-feature":
