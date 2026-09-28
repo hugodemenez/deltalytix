@@ -158,6 +158,7 @@ export async function POST(req: Request) {
                 distinctId: data.metadata?.posthog_distinct_id || user.id,
                 stripeEventId: event.id,
                 country: data.metadata?.visitor_country,
+                consentDenied: data.metadata?.analytics_consent === 'denied',
                 properties: {
                   plan: subscriptionPlan,
                   billing_interval: interval,
@@ -264,6 +265,7 @@ export async function POST(req: Request) {
                     distinctId: data.metadata?.posthog_distinct_id || user.id,
                     stripeEventId: event.id,
                     country: data.metadata?.visitor_country,
+                    consentDenied: data.metadata?.analytics_consent === 'denied',
                     properties: {
                       plan: subscriptionPlan,
                       billing_interval: 'lifetime',

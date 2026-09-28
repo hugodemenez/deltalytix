@@ -28,6 +28,16 @@ describe("sanitizeConversionProperties", () => {
       sanitizeConversionProperties({ email: "a@b.com", plan: "PRO" }, "US"),
     ).toEqual({ email: "a@b.com", plan: "PRO" });
   });
+
+  it("strips email for US visitors who saved an analytics denial", () => {
+    expect(
+      sanitizeConversionProperties(
+        { email: "a@b.com", plan: "PRO" },
+        "US",
+        { consentDenied: true },
+      ),
+    ).toEqual({ plan: "PRO" });
+  });
 });
 
 describe("buildCheckoutStartedCapture", () => {

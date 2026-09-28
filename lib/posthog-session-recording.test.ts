@@ -43,6 +43,9 @@ describe("instrumentation-client replay config", () => {
 
   it("keeps autocapture off, proxies through /ingest, and gates replay on identified consent", () => {
     expect(source).toMatch(/buildPostHogBrowserInitConfig/);
-    expect(source).toMatch(/syncPostHogSessionRecording\(posthog,\s*identifiedConsent\)/);
+    expect(source).toMatch(/resolvePostHogBrowserInitInput/);
+    expect(source).toMatch(
+      /syncPostHogSessionRecording\(posthog,\s*initInput\.identifiedConsent\)/,
+    );
   });
 });

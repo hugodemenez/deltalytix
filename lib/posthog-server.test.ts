@@ -21,6 +21,7 @@ vi.mock("next/headers", () => ({
   headers: vi.fn(async () => new Headers({ "x-user-country": "FR" })),
 }));
 
+import { cookies, headers } from "next/headers";
 import { capturePostHogEvent, shutdownPostHog } from "./posthog-server";
 
 describe("capturePostHogEvent", () => {
@@ -31,6 +32,12 @@ describe("capturePostHogEvent", () => {
     shutdown.mockReset();
     flush.mockResolvedValue(undefined);
     shutdown.mockResolvedValue(undefined);
+    vi.mocked(cookies).mockResolvedValue({
+      get: () => undefined,
+    } as never);
+    vi.mocked(headers).mockResolvedValue(
+      new Headers({ "x-user-country": "FR" }),
+    );
   });
 
   it("captures conversion events without the analytics cookie and flushes", async () => {
@@ -74,5 +81,40 @@ describe("capturePostHogEvent", () => {
     await shutdownPostHog();
 
     expect(shutdown).toHaveBeenCalledOnce();
+  });
+
+  it("strips email on US conversions when the analytics cookie is denied", async () => {
+    vi.mocked(cookies).mockResolvedValueOnce({
+      get: (name?: string) =>
+        name === "deltalytix_analytics_consent"
+          ? { value: "denied" }
+          : undefined,
+    } as never);
+    vi.mocked(headers).mockResolvedValueOnce(
+      new Headers({ "x-user-country": "US" }),
+    );
+
+    await capturePostHogEvent({
+      skipConsent: true,
+      distinctId: "user-1",
+      event: "checkout_started",
+      country: "US",
+      properties: { email: "a@b.com", plan: "PRO" },
+    });
+
+    expect(capture.mock.calls[0][0].properties.email).toBeUndefined();
+    expect(capture.mock.calls[0][0].properties.plan).toBe("PRO");
+  });
+
+  it("keeps a passed email for US conversions when analytics is not denied", async () => {
+    await capturePostHogEvent({
+      skipConsent: true,
+      distinctId: "user-1",
+      event: "checkout_started",
+      country: "US",
+      properties: { email: "a@b.com", plan: "PRO" },
+    });
+
+    expect(capture.mock.calls[0][0].properties.email).toBe("a@b.com");
   });
 });

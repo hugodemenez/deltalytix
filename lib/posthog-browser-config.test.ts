@@ -7,6 +7,7 @@ import {
   POSTHOG_INGEST_PATH,
   POSTHOG_UI_HOST,
   buildPostHogBrowserInitConfig,
+  resolvePostHogBrowserInitInput,
   shouldStartSessionRecording,
 } from "./posthog-browser-config";
 
@@ -49,6 +50,63 @@ describe("buildPostHogBrowserInitConfig", () => {
 
     expect(config.cookieless_mode).toBeUndefined();
     expect(config.opt_out_capturing_by_default).toBe(false);
+    expect(config.disable_session_recording).toBe(false);
+    expect(config.session_recording.maskAllInputs).toBe(true);
+  });
+});
+
+const DENIED = "deltalytix_analytics_consent=denied";
+const GRANTED = "deltalytix_analytics_consent=granted";
+
+describe("resolvePostHogBrowserInitInput regional denial", () => {
+  function configFor(country: string | null, cookieHeader: string) {
+    return buildPostHogBrowserInitConfig(
+      resolvePostHogBrowserInitInput({
+        cookieHeader,
+        storedConsent: null,
+        country,
+      }),
+    );
+  }
+
+  it("US + denied: no capture, memory persistence, no cookies, no replay", () => {
+    const config = configFor("US", DENIED);
+
+    expect(config.opt_out_capturing_by_default).toBe(true);
+    expect(config.persistence).toBe("memory");
+    expect(config.cookieless_mode).toBeUndefined();
+    expect(config.capture_pageview).toBe(false);
+    expect(config.capture_pageleave).toBe(false);
+    expect(config.disable_session_recording).toBe(true);
+  });
+
+  it("US + no cookie: identified capture on by default", () => {
+    const config = configFor("US", "");
+
+    expect(config.opt_out_capturing_by_default).toBe(false);
+    expect(config.persistence).toBeUndefined();
+    expect(config.cookieless_mode).toBeUndefined();
+    expect(config.capture_pageview).toBe(true);
+    expect(config.disable_session_recording).toBe(false);
+  });
+
+  it("EU + denied: no browser capture (stricter than cookieless anonymous)", () => {
+    const config = configFor("FR", DENIED);
+
+    expect(config.opt_out_capturing_by_default).toBe(true);
+    expect(config.persistence).toBe("memory");
+    expect(config.cookieless_mode).toBeUndefined();
+    expect(config.capture_pageview).toBe(false);
+    expect(config.disable_session_recording).toBe(true);
+  });
+
+  it("EU + accepted: identified tracking and masked replay", () => {
+    const config = configFor("FR", GRANTED);
+
+    expect(config.opt_out_capturing_by_default).toBe(false);
+    expect(config.persistence).toBeUndefined();
+    expect(config.cookieless_mode).toBeUndefined();
+    expect(config.capture_pageview).toBe(true);
     expect(config.disable_session_recording).toBe(false);
     expect(config.session_recording.maskAllInputs).toBe(true);
   });

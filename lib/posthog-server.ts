@@ -68,6 +68,16 @@ export async function hasAnalyticsConsent(): Promise<boolean> {
   }
 }
 
+/** True only for a saved `denied` cookie — not EU pending / no decision. */
+export async function hasDeniedAnalyticsCookie(): Promise<boolean> {
+  try {
+    const jar = await cookies();
+    return jar.get(ANALYTICS_CONSENT_COOKIE)?.value === "denied";
+  } catch {
+    return false;
+  }
+}
+
 export async function flushPostHog(): Promise<void> {
   if (!posthogClient) return;
   await posthogClient.flush();
@@ -99,6 +109,7 @@ export async function capturePostHogEvent({
   event,
   properties = {},
   country,
+  consentDenied = false,
 }: {
   consentGranted?: boolean;
   skipConsent?: boolean;
@@ -106,6 +117,7 @@ export async function capturePostHogEvent({
   event: string;
   properties?: PostHogProperties;
   country?: string | null;
+  consentDenied?: boolean;
 }): Promise<boolean> {
   const client = getPostHogClient();
   if (!client) return false;
@@ -116,7 +128,10 @@ export async function capturePostHogEvent({
   }
 
   const resolvedCountry = country ?? (await readRequestCountry());
-  const sanitized = sanitizeConversionProperties(properties, resolvedCountry);
+  const denied = consentDenied || (await hasDeniedAnalyticsCookie());
+  const sanitized = sanitizeConversionProperties(properties, resolvedCountry, {
+    consentDenied: denied,
+  });
 
   try {
     client.capture({

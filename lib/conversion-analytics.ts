@@ -47,13 +47,14 @@ function stripEmailFromRecord(
 
 /**
  * EU / unknown visitors must not have email on conversion properties.
- * Non-EU can keep it if a caller passed one (we still default to omitting it).
+ * Non-EU can keep it unless they saved an analytics denial (US CCPA opt-out).
  */
 export function sanitizeConversionProperties(
   properties: ConversionProperties,
   country: string | null | undefined,
+  options?: { consentDenied?: boolean },
 ): ConversionProperties {
-  if (requiresCookieConsent(country)) {
+  if (requiresCookieConsent(country) || options?.consentDenied) {
     return stripEmailFromRecord(properties);
   }
   return properties;
@@ -74,10 +75,12 @@ export function subscriptionPurchasedInsertId(stripeEventId: string): string {
 export function buildCheckoutStartedCapture({
   distinctId,
   country,
+  consentDenied = false,
   properties = {},
 }: {
   distinctId: string;
   country?: string | null;
+  consentDenied?: boolean;
   properties?: ConversionProperties;
 }): {
   skipConsent: true;
@@ -100,6 +103,7 @@ export function buildCheckoutStartedCapture({
         $insert_id: checkoutStartedInsertId(checkoutSessionId),
       },
       country,
+      { consentDenied },
     ),
   };
 }
@@ -108,11 +112,13 @@ export function buildSubscriptionPurchasedCapture({
   distinctId,
   stripeEventId,
   country,
+  consentDenied = false,
   properties = {},
 }: {
   distinctId: string;
   stripeEventId: string;
   country?: string | null;
+  consentDenied?: boolean;
   properties?: ConversionProperties;
 }): {
   skipConsent: true;
@@ -130,6 +136,7 @@ export function buildSubscriptionPurchasedCapture({
         $insert_id: subscriptionPurchasedInsertId(stripeEventId),
       },
       country,
+      { consentDenied },
     ),
   };
 }

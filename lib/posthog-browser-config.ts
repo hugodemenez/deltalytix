@@ -3,6 +3,13 @@
  * cookieless anonymous capture before EU opt-in, masked replay.
  */
 
+import {
+  hasAnalyticsConsentFromStores,
+  isExplicitAnalyticsDenialFromStores,
+  type ConsentSettings,
+} from "@/lib/consent-settings";
+import { requiresCookieConsent as countryRequiresCookieConsent } from "@/lib/consent-region";
+
 export const POSTHOG_INGEST_PATH = "/ingest";
 export const POSTHOG_UI_HOST = "https://eu.posthog.com";
 export const POSTHOG_API_HOST = "https://eu.i.posthog.com";
@@ -13,6 +20,11 @@ export type PostHogBrowserInitInput = {
   identifiedConsent: boolean;
   /** True for EEA/UK/CH or unknown country. */
   requiresCookieConsent: boolean;
+  /**
+   * Saved refusal (`deltalytix_analytics_consent=denied` or localStorage).
+   * Distinct from EU “no decision yet”, which still allows cookieless counts.
+   */
+  explicitDenial?: boolean;
 };
 
 export type PostHogSessionRecordingInit = {
@@ -35,19 +47,54 @@ export type PostHogBrowserInitConfig = {
 };
 
 /**
- * EU / unknown, no accept yet: `cookieless_mode: 'on_reject'` plus
+ * Resolve init flags from the same stores PostHog reads at boot, so a US
+ * footer opt-out is visible before the first `$pageview`.
+ */
+export function resolvePostHogBrowserInitInput({
+  cookieHeader,
+  storedConsent,
+  country,
+}: {
+  cookieHeader: string;
+  storedConsent: Partial<ConsentSettings> | null;
+  country: string | null;
+}): PostHogBrowserInitInput {
+  return {
+    identifiedConsent: hasAnalyticsConsentFromStores({
+      cookieHeader,
+      storedConsent,
+      country,
+    }),
+    requiresCookieConsent: countryRequiresCookieConsent(country),
+    explicitDenial: isExplicitAnalyticsDenialFromStores({
+      cookieHeader,
+      storedConsent,
+    }),
+  };
+}
+
+/**
+ * EU / unknown, no decision yet: `cookieless_mode: 'on_reject'` plus
  * `opt_out_capturing_by_default` so pending consent is treated as rejected.
  * posthog-js then captures anonymously (no cookies, no localStorage, no
  * stored id, no replay) instead of dropping every event.
  *
- * After opt-in, or outside the consent region, cookies and masked replay
- * are allowed.
+ * Explicit denial (any region, including a US CCPA-style opt-out): no
+ * browser capture at all. Cookieless anonymous counts would satisfy
+ * opt-out of sale/sharing; we take the stricter option so `ph_*` cookies
+ * and an identified pageview cannot land before ConsentRuntime runs.
+ *
+ * After opt-in, or outside the consent region with no saved refusal,
+ * cookies and masked replay are allowed.
  */
 export function buildPostHogBrowserInitConfig({
   identifiedConsent,
   requiresCookieConsent,
+  explicitDenial = false,
 }: PostHogBrowserInitInput): PostHogBrowserInitConfig {
-  const cookielessUntilIdentified = requiresCookieConsent && !identifiedConsent;
+  const cookielessAnonymous =
+    requiresCookieConsent && !identifiedConsent && !explicitDenial;
+  const disableBrowserCapture = explicitDenial || (!identifiedConsent && !cookielessAnonymous);
 
   return {
     api_host: POSTHOG_INGEST_PATH,
@@ -55,11 +102,11 @@ export function buildPostHogBrowserInitConfig({
     defaults: "2026-05-30",
     person_profiles: "identified_only",
     autocapture: false,
-    capture_pageview: true,
-    capture_pageleave: true,
-    ...(cookielessUntilIdentified ? { cookieless_mode: "on_reject" as const } : {}),
-    opt_out_capturing_by_default: cookielessUntilIdentified,
-    ...(cookielessUntilIdentified ? { persistence: "memory" as const } : {}),
+    capture_pageview: !disableBrowserCapture,
+    capture_pageleave: !disableBrowserCapture,
+    ...(cookielessAnonymous ? { cookieless_mode: "on_reject" as const } : {}),
+    opt_out_capturing_by_default: !identifiedConsent,
+    ...(!identifiedConsent ? { persistence: "memory" as const } : {}),
     disable_session_recording: !identifiedConsent,
     session_recording: { maskAllInputs: true },
   };

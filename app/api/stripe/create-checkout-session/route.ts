@@ -5,7 +5,7 @@ import { createClient, getWebsiteURL } from "@/server/auth";
 import { stripe } from "@/server/stripe";
 import { getSubscriptionDetails } from "@/server/subscription";
 import { getReferralBySlug } from "@/server/referral";
-import { capturePostHogEvent, hasAnalyticsConsent, readRequestCountry } from "@/lib/posthog-server";
+import { capturePostHogEvent, hasAnalyticsConsent, hasDeniedAnalyticsCookie, readRequestCountry } from "@/lib/posthog-server";
 import { buildCheckoutStartedCapture } from "@/lib/conversion-analytics";
 import { applySignupSuccess, hasSignupSuccess } from "@/lib/signup-redirect";
 import {
@@ -148,6 +148,7 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
 
     // Create session with appropriate mode based on price type
     const analyticsConsent = await hasAnalyticsConsent();
+    const consentDenied = await hasDeniedAnalyticsCookie();
     const visitorCountry = await readRequestCountry();
     const attribution = await readAttributionFromCookies();
     const attributionMeta = attributionToStripeMetadata(attribution);
@@ -160,9 +161,11 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
             ...(referral && { referral_code: referral }),
             ...(promo_code && { promo_code: promo_code }),
             ...attributionMeta,
-            ...(analyticsConsent && {
-                analytics_consent: 'granted',
-            }),
+            ...(analyticsConsent
+                ? { analytics_consent: 'granted' }
+                : consentDenied
+                    ? { analytics_consent: 'denied' }
+                    : {}),
         },
         line_items: [
             {
@@ -229,6 +232,7 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
     await capturePostHogEvent(buildCheckoutStartedCapture({
         distinctId: user.id,
         country: visitorCountry,
+        consentDenied,
         properties: {
             lookup_key,
             plan,

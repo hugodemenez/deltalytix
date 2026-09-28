@@ -12,6 +12,8 @@ describe("checkout_started server capture", () => {
     expect(source).toMatch(/buildCheckoutStartedCapture/);
     expect(source).toMatch(/posthog_distinct_id: user\.id/);
     expect(source).toMatch(/visitor_country/);
+    expect(source).toMatch(/consentDenied/);
+    expect(source).toMatch(/analytics_consent: 'denied'/);
     expect(source).toMatch(/promo_code/);
     expect(source).toMatch(/amount/);
   });

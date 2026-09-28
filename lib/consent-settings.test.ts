@@ -6,6 +6,7 @@ import {
   fromRecordChoices,
   hasAnalyticsConsentFromStores,
   hasConsentDecisionFromStores,
+  isExplicitAnalyticsDenialFromStores,
   isGoogleTagAllowed,
   shouldShowConsentBannerFromStores,
   parseSharedAnalyticsConsent,
@@ -189,12 +190,51 @@ describe("hasAnalyticsConsentFromStores", () => {
     ).toBe(true);
   });
 
+  it("turns identified capture off for a US visitor who opted out", () => {
+    expect(
+      hasAnalyticsConsentFromStores({
+        cookieHeader: "deltalytix_analytics_consent=denied",
+        storedConsent: null,
+        country: "US",
+      }),
+    ).toBe(false);
+  });
+
   it("defaults identified capture off for EU visitors with no stored decision", () => {
     expect(
       hasAnalyticsConsentFromStores({
         cookieHeader: "",
         storedConsent: null,
         country: "FR",
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("isExplicitAnalyticsDenialFromStores", () => {
+  it("is true for a denied shared cookie in any region", () => {
+    expect(
+      isExplicitAnalyticsDenialFromStores({
+        cookieHeader: "deltalytix_analytics_consent=denied",
+        storedConsent: null,
+      }),
+    ).toBe(true);
+  });
+
+  it("is false when there is no saved decision", () => {
+    expect(
+      isExplicitAnalyticsDenialFromStores({
+        cookieHeader: "",
+        storedConsent: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("is false when analytics was granted", () => {
+    expect(
+      isExplicitAnalyticsDenialFromStores({
+        cookieHeader: "deltalytix_analytics_consent=granted",
+        storedConsent: DEFAULT_CONSENT_SETTINGS,
       }),
     ).toBe(false);
   });

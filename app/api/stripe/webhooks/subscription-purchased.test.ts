@@ -13,5 +13,6 @@ describe("Stripe webhook subscription_purchased", () => {
     expect(source).toMatch(/shutdownPostHog/);
     expect(source).toMatch(/promo_code/);
     expect(source).toMatch(/visitor_country/);
+    expect(source).toMatch(/consentDenied: data\.metadata\?\.analytics_consent === 'denied'/);
   });
 });

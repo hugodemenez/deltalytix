@@ -156,6 +156,33 @@ export function hasClientAnalyticsConsent(): boolean {
   });
 }
 
+/**
+ * True when the visitor has saved a refusal (shared cookie `denied`, or
+ * localStorage analytics off). Distinct from “no decision yet”.
+ */
+export function isExplicitAnalyticsDenialFromStores({
+  cookieHeader,
+  storedConsent,
+}: {
+  cookieHeader: string;
+  storedConsent: Partial<ConsentSettings> | null;
+}): boolean {
+  const shared = parseSharedAnalyticsConsent(cookieHeader);
+  if (shared === false) return true;
+  if (shared === true) return false;
+  if (storedConsent === null) return false;
+  return storedConsent.analytics_storage !== true;
+}
+
+/** Browser-only — used by PostHog init so a footer opt-out survives reload. */
+export function hasClientExplicitAnalyticsDenial(): boolean {
+  if (typeof document === "undefined") return false;
+  return isExplicitAnalyticsDenialFromStores({
+    cookieHeader: document.cookie,
+    storedConsent: readStoredConsentSettings(),
+  });
+}
+
 /** First-visit banner: consent-region only, and only until a decision exists. */
 export function shouldShowConsentBannerFromStores({
   cookieHeader,
