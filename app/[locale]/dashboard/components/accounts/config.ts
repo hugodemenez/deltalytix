@@ -32,6 +32,8 @@ interface AccountSize {
 
 interface PropFirm {
   name: string;
+  /** Extra search tokens (abbreviations) for the account-template picker. */
+  aliases?: string[];
   accountSizes: Record<string, AccountSize>;
 }
 
@@ -1742,6 +1744,404 @@ export const propFirms: Record<string, PropFirm> = {
       },
     },
   },
+  /**
+   * Funded Futures Family (FFF / FFFamily) — not My Funded Futures (MFFU)
+   * and not Funded Futures Network (FFN).
+   *
+   * Public list prices and rules from fundedfuturesfamily.com (Prime,
+   * Velocity, Premier+, S2F pages and payout-rules), reviewed Sep 2026.
+   * Promo checkout prices are not stored: priceWithPromo equals list price.
+   */
+  fundedFuturesFamily: {
+    name: 'Funded Futures Family',
+    aliases: ['FFF', 'FFFamily'],
+    accountSizes: {
+      PRIME_25K: fundedFuturesFamilySize({
+        name: 'Prime 25K',
+        balance: 25000,
+        price: 129,
+        evaluation: true,
+        minDays: 1,
+        target: 1250,
+        drawdown: 1000,
+        trailing: 'EOD',
+        consistency: 40,
+        isRecursively: 'Monthly',
+        payoutPolicy: 'Every 3 trading days',
+        balanceRequired: 26100,
+        minTradingDaysForPayout: 3,
+        maxPayout: '$1,000 first / $1,500 later',
+        maxContracts: 2,
+      }),
+      PRIME_50K: fundedFuturesFamilySize({
+        name: 'Prime 50K',
+        balance: 50000,
+        price: 179,
+        evaluation: true,
+        minDays: 1,
+        target: 3000,
+        drawdown: 2000,
+        trailing: 'EOD',
+        consistency: 40,
+        isRecursively: 'Monthly',
+        payoutPolicy: 'Every 3 trading days',
+        balanceRequired: 52100,
+        minTradingDaysForPayout: 3,
+        maxPayout: '$2,000 first / $2,500 later',
+        maxContracts: 4,
+      }),
+      PRIME_100K: fundedFuturesFamilySize({
+        name: 'Prime 100K',
+        balance: 100000,
+        price: 279,
+        evaluation: true,
+        minDays: 1,
+        target: 6000,
+        drawdown: 3000,
+        trailing: 'EOD',
+        consistency: 40,
+        isRecursively: 'Monthly',
+        payoutPolicy: 'Every 3 trading days',
+        balanceRequired: 103100,
+        minTradingDaysForPayout: 3,
+        maxPayout: '$3,000 first / $3,500 later',
+        maxContracts: 6,
+      }),
+      PRIME_150K: fundedFuturesFamilySize({
+        name: 'Prime 150K',
+        balance: 150000,
+        price: 365,
+        evaluation: true,
+        minDays: 1,
+        target: 9000,
+        drawdown: 4500,
+        trailing: 'EOD',
+        consistency: 40,
+        isRecursively: 'Monthly',
+        payoutPolicy: 'Every 3 trading days',
+        balanceRequired: 154600,
+        minTradingDaysForPayout: 3,
+        maxPayout: '$3,500 first / $4,000 later',
+        maxContracts: 10,
+      }),
+      VELOCITY_25K: fundedFuturesFamilySize({
+        name: 'Velocity 25K',
+        balance: 25000,
+        price: 79,
+        evaluation: true,
+        minDays: 3,
+        target: 2500,
+        drawdown: 1250,
+        trailing: 'Intraday',
+        consistency: 40,
+        isRecursively: 'Monthly',
+        payoutPolicy: 'Every 3 trading days',
+        balanceRequired: 0,
+        minTradingDaysForPayout: 3,
+        maxPayout: '$750',
+        maxContracts: 3,
+      }),
+      VELOCITY_50K: fundedFuturesFamilySize({
+        name: 'Velocity 50K',
+        balance: 50000,
+        price: 125,
+        evaluation: true,
+        minDays: 3,
+        target: 4000,
+        drawdown: 2250,
+        trailing: 'Intraday',
+        consistency: 40,
+        isRecursively: 'Monthly',
+        payoutPolicy: 'Every 3 trading days',
+        balanceRequired: 0,
+        minTradingDaysForPayout: 3,
+        maxPayout: '$1,250',
+        maxContracts: 5,
+      }),
+      VELOCITY_100K: fundedFuturesFamilySize({
+        name: 'Velocity 100K',
+        balance: 100000,
+        price: 225,
+        evaluation: true,
+        minDays: 3,
+        target: 7000,
+        drawdown: 3250,
+        trailing: 'Intraday',
+        consistency: 40,
+        isRecursively: 'Monthly',
+        payoutPolicy: 'Every 3 trading days',
+        balanceRequired: 0,
+        minTradingDaysForPayout: 3,
+        maxPayout: '$2,250',
+        maxContracts: 10,
+      }),
+      VELOCITY_150K: fundedFuturesFamilySize({
+        name: 'Velocity 150K',
+        balance: 150000,
+        price: 325,
+        evaluation: true,
+        minDays: 3,
+        target: 10000,
+        drawdown: 4750,
+        trailing: 'Intraday',
+        consistency: 40,
+        isRecursively: 'Monthly',
+        payoutPolicy: 'Every 3 trading days',
+        balanceRequired: 0,
+        minTradingDaysForPayout: 3,
+        maxPayout: '$3,250',
+        maxContracts: 15,
+      }),
+      PREMIER_PLUS_25K: fundedFuturesFamilySize({
+        name: 'Premier+ 25K',
+        balance: 25000,
+        price: 114,
+        evaluation: true,
+        minDays: 1,
+        target: 1500,
+        drawdown: 1000,
+        trailing: 'Intraday',
+        consistency: 40,
+        isRecursively: 'Monthly',
+        payoutPolicy: 'Every 5 qualifying days ($200+)',
+        balanceRequired: 0,
+        minTradingDaysForPayout: 5,
+        maxPayout: '50% of profit, up to $1,000',
+        maxContracts: 2,
+      }),
+      PREMIER_PLUS_50K: fundedFuturesFamilySize({
+        name: 'Premier+ 50K',
+        balance: 50000,
+        price: 154,
+        evaluation: true,
+        minDays: 1,
+        target: 3000,
+        drawdown: 2000,
+        trailing: 'Intraday',
+        consistency: 40,
+        isRecursively: 'Monthly',
+        payoutPolicy: 'Every 5 qualifying days ($200+)',
+        balanceRequired: 0,
+        minTradingDaysForPayout: 5,
+        maxPayout: '50% of profit, up to $2,000',
+        maxContracts: 4,
+      }),
+      PREMIER_PLUS_100K: fundedFuturesFamilySize({
+        name: 'Premier+ 100K',
+        balance: 100000,
+        price: 229,
+        evaluation: true,
+        minDays: 1,
+        target: 6000,
+        drawdown: 3000,
+        trailing: 'Intraday',
+        consistency: 40,
+        isRecursively: 'Monthly',
+        payoutPolicy: 'Every 5 qualifying days ($200+)',
+        balanceRequired: 0,
+        minTradingDaysForPayout: 5,
+        maxPayout: '50% of profit, up to $2,500',
+        maxContracts: 6,
+      }),
+      PREMIER_PLUS_150K: fundedFuturesFamilySize({
+        name: 'Premier+ 150K',
+        balance: 150000,
+        price: 319,
+        evaluation: true,
+        minDays: 1,
+        target: 9000,
+        drawdown: 4500,
+        trailing: 'Intraday',
+        consistency: 40,
+        isRecursively: 'Monthly',
+        payoutPolicy: 'Every 5 qualifying days ($200+)',
+        balanceRequired: 0,
+        minTradingDaysForPayout: 5,
+        maxPayout: '50% of profit, up to $3,000',
+        maxContracts: 10,
+      }),
+      S2F_25K: fundedFuturesFamilySize({
+        name: 'S2F 25K',
+        balance: 25000,
+        price: 329,
+        evaluation: false,
+        minDays: 0,
+        target: 1500,
+        drawdown: 1000,
+        trailing: 'EOD',
+        consistency: 25,
+        isRecursively: 'Unique',
+        payoutPolicy: 'Every 7 qualifying days ($200+)',
+        balanceRequired: 0,
+        minTradingDaysForPayout: 7,
+        maxPayout: '$1,000',
+        maxContracts: 1,
+      }),
+      S2F_50K: fundedFuturesFamilySize({
+        name: 'S2F 50K',
+        balance: 50000,
+        price: 469,
+        evaluation: false,
+        minDays: 0,
+        target: 3000,
+        drawdown: 2000,
+        trailing: 'EOD',
+        consistency: 25,
+        isRecursively: 'Unique',
+        payoutPolicy: 'Every 7 qualifying days ($200+)',
+        balanceRequired: 0,
+        minTradingDaysForPayout: 7,
+        maxPayout: '$2,000 first 3 / $2,500 later',
+        maxContracts: 5,
+      }),
+      S2F_100K: fundedFuturesFamilySize({
+        name: 'S2F 100K',
+        balance: 100000,
+        price: 629,
+        evaluation: false,
+        minDays: 0,
+        target: 6000,
+        drawdown: 3000,
+        trailing: 'EOD',
+        consistency: 25,
+        isRecursively: 'Unique',
+        payoutPolicy: 'Every 7 qualifying days ($200+)',
+        balanceRequired: 0,
+        minTradingDaysForPayout: 7,
+        maxPayout: '$2,500 first 3 / $3,000 later',
+        maxContracts: 10,
+      }),
+      S2F_150K: fundedFuturesFamilySize({
+        name: 'S2F 150K',
+        balance: 150000,
+        price: 734,
+        evaluation: false,
+        minDays: 0,
+        target: 9000,
+        drawdown: 4500,
+        trailing: 'EOD',
+        consistency: 25,
+        isRecursively: 'Unique',
+        payoutPolicy: 'Every 7 qualifying days ($200+)',
+        balanceRequired: 0,
+        minTradingDaysForPayout: 7,
+        maxPayout: '$3,000 first 3 / $3,500 later',
+        maxContracts: 15,
+      }),
+    },
+  },
 };
+
+type FundedFuturesFamilySizeInput = Pick<
+  AccountSize,
+  | 'name'
+  | 'balance'
+  | 'price'
+  | 'evaluation'
+  | 'minDays'
+  | 'target'
+  | 'drawdown'
+  | 'trailing'
+  | 'consistency'
+  | 'isRecursively'
+  | 'payoutPolicy'
+  | 'balanceRequired'
+  | 'minTradingDaysForPayout'
+  | 'maxPayout'
+  | 'maxContracts'
+>
+
+/**
+ * Shared FFF fields verified across every published plan: 90/10 split, no
+ * daily loss limit, no activation fee, news trading allowed, $200 qualifying
+ * day, 5 funded accounts per household. List price is stored without a promo.
+ */
+function fundedFuturesFamilySize(size: FundedFuturesFamilySizeInput): AccountSize {
+  const priceWithPromo = size.price
+  return {
+    name: size.name,
+    balance: size.balance,
+    price: size.price,
+    priceWithPromo,
+    evaluation: size.evaluation,
+    minDays: size.minDays,
+    target: size.target,
+    dailyLoss: null,
+    drawdown: size.drawdown,
+    rulesDailyLoss: 'No',
+    trailing: size.trailing,
+    consistency: size.consistency,
+    ratioTargetDailyLoss: null,
+    ratioTargetDrawdown:
+      size.drawdown > 0 ? Number((size.target / size.drawdown).toFixed(2)) : 0,
+    ratioDrawdownPrice:
+      priceWithPromo > 0 ? Number((size.drawdown / priceWithPromo).toFixed(2)) : 0,
+    tradingNewsAllowed: true,
+    activationFees: 0,
+    isRecursively: size.isRecursively,
+    payoutBonus: 0,
+    profitSharing: 90,
+    payoutPolicy: size.payoutPolicy,
+    balanceRequired: size.balanceRequired,
+    minTradingDaysForPayout: size.minTradingDaysForPayout,
+    minPayout: 0,
+    maxPayout: size.maxPayout,
+    maxFundedAccounts: 5,
+    minPnlToCountAsDay: 200,
+    maxContracts: size.maxContracts,
+  }
+}
+
+function accountSizeMatchesQuery(
+  sizeKey: string,
+  accountSize: AccountSize,
+  query: string,
+): boolean {
+  return (
+    sizeKey.toLowerCase().includes(query) ||
+    accountSize.name.toLowerCase().includes(query) ||
+    accountSize.balance.toString().includes(query) ||
+    accountSize.target.toString().includes(query)
+  )
+}
+
+function propFirmIdentityMatchesQuery(
+  firmKey: string,
+  firm: PropFirm,
+  query: string,
+): boolean {
+  if (firmKey.toLowerCase().includes(query)) return true
+  if (firm.name.toLowerCase().includes(query)) return true
+  return Boolean(firm.aliases?.some((alias) => alias.toLowerCase().includes(query)))
+}
+
+/** True when the account-template picker should show this firm for `rawQuery`. */
+export function propFirmMatchesSearch(
+  firmKey: string,
+  firm: PropFirm,
+  rawQuery: string,
+): boolean {
+  const query = rawQuery.toLowerCase().trim()
+  if (!query) return true
+  if (propFirmIdentityMatchesQuery(firmKey, firm, query)) return true
+  return Object.entries(firm.accountSizes).some(([sizeKey, accountSize]) =>
+    accountSizeMatchesQuery(sizeKey, accountSize, query),
+  )
+}
+
+/** Account sizes to list for a firm in the template picker, given the search box. */
+export function getMatchingAccountSizes(
+  firmKey: string,
+  firm: PropFirm,
+  rawQuery: string,
+): Array<[string, AccountSize]> {
+  const query = rawQuery.toLowerCase().trim()
+  const entries = Object.entries(firm.accountSizes)
+  if (!query) return entries
+  if (propFirmIdentityMatchesQuery(firmKey, firm, query)) return entries
+  return entries.filter(([sizeKey, accountSize]) =>
+    accountSizeMatchesQuery(sizeKey, accountSize, query),
+  )
+}
 
 export type { AccountSize, PropFirm };

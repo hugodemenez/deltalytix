@@ -25,7 +25,7 @@ import { useI18n } from "@/locales/client"
 import { useParams } from 'next/navigation'
 import { enUS, fr } from 'date-fns/locale'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { propFirms } from './config'
+import { getMatchingAccountSizes, propFirmMatchesSearch, propFirms } from './config'
 import { HIDDEN_GROUP_NAME } from "../filters/account-group-board"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -305,37 +305,9 @@ export function AccountConfigurator({
     (pendingChanges?.trailingDrawdown && typeof pendingChanges?.trailingStopProfit === 'number' && pendingChanges.trailingStopProfit <= 0) ||
     isSaving
 
-  // Filter prop firms and account sizes based on search query
-  const filteredPropFirms = Object.entries(propFirms).filter(([firmKey, firm]) => {
-    if (!searchQuery.trim()) return true
-    
-    const query = searchQuery.toLowerCase().trim()
-    const firmNameMatch = firm.name.toLowerCase().includes(query)
-    
-    // Check if any account size matches
-    const hasMatchingAccountSize = Object.entries(firm.accountSizes).some(([sizeKey, accountSize]) => {
-      const sizeNameMatch = accountSize.name.toLowerCase().includes(query)
-      const balanceMatch = accountSize.balance.toString().includes(query)
-      const targetMatch = accountSize.target.toString().includes(query)
-      return sizeNameMatch || balanceMatch || targetMatch
-    })
-    
-    return firmNameMatch || hasMatchingAccountSize
-  })
-
-  // Filter account sizes within each firm
-  const getFilteredAccountSizes = (firm: typeof propFirms[string]) => {
-    if (!searchQuery.trim()) return Object.entries(firm.accountSizes)
-    
-    const query = searchQuery.toLowerCase().trim()
-    return Object.entries(firm.accountSizes).filter(([sizeKey, accountSize]) => {
-      const sizeNameMatch = accountSize.name.toLowerCase().includes(query)
-      const balanceMatch = accountSize.balance.toString().includes(query)
-      const targetMatch = accountSize.target.toString().includes(query)
-      const firmNameMatch = firm.name.toLowerCase().includes(query)
-      return sizeNameMatch || balanceMatch || targetMatch || firmNameMatch
-    })
-  }
+  const filteredPropFirms = Object.entries(propFirms).filter(([firmKey, firm]) =>
+    propFirmMatchesSearch(firmKey, firm, searchQuery)
+  )
 
   return (
     <div className="space-y-6">
@@ -434,7 +406,7 @@ export function AccountConfigurator({
                 </CarouselItem>
               ) : (
                 filteredPropFirms.map(([firmKey, firm]) => {
-                  const filteredAccountSizes = getFilteredAccountSizes(firm)
+                  const filteredAccountSizes = getMatchingAccountSizes(firmKey, firm, searchQuery)
                   
                   return (
                     <CarouselItem key={firmKey} className="basis-1/2 xl:basis-1/5">
