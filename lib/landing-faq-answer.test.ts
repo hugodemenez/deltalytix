@@ -27,9 +27,9 @@ describe("matchLandingFaqAnswer", () => {
     expect(matched?.answer).toBe(enFaq.faq.answer1);
   });
 
-  it("maps the Plus trial question to FAQ 6 in English", () => {
+  it("maps the Unlimited trial question to FAQ 6 in English", () => {
     const matched = matchLandingFaqAnswer(
-      "Why doesn't the Plus plan include a trial?",
+      "Why doesn't the Unlimited plan include a trial?",
       "en",
     );
 
@@ -48,7 +48,7 @@ describe("matchLandingFaqAnswer", () => {
   });
 
   it("answers a pricing question without quoting an amount", () => {
-    const matched = matchLandingFaqAnswer("How much does Plus cost?", "en");
+    const matched = matchLandingFaqAnswer("How much does Unlimited cost?", "en");
 
     expect(matched?.id).toBe("pricing");
     expect(matched?.answer).not.toMatch(/€|\$|\d+\.\d{2}/);

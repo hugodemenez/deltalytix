@@ -9,7 +9,7 @@ export const COMPARE_COPY_BY_LOCALE = {
       youAreHere: "You’re here",
       viewMore: "View more →",
       afterHeading: "Start free, forever.",
-      afterLede: "Plus from 19.99/month when you need more than 2 weeks. Or Lifetime.",
+      afterLede: "Unlimited from 19.99/month when you need more than 2 weeks. Or Lifetime.",
       usOneLiner: "Import your futures. Read P&L in one journal.",
     },
     oneToOne: {
@@ -19,7 +19,7 @@ export const COMPARE_COPY_BY_LOCALE = {
       usLabel: "Deltalytix",
       footerHeading: "One journal for every futures account.",
       footerLead: "Start free, forever.",
-      footerLede: "Plus from 19.99/month when you need more than 2 weeks. Or Lifetime.",
+      footerLede: "Unlimited from 19.99/month when you need more than 2 weeks. Or Lifetime.",
     },
     cta: {
       getStarted: "Get Started",
@@ -36,7 +36,7 @@ export const COMPARE_COPY_BY_LOCALE = {
       youAreHere: "Vous êtes ici",
       viewMore: "Voir plus →",
       afterHeading: "Commencez gratuitement, pour de bon.",
-      afterLede: "Plus à partir de 19,99 €/mois quand vous avez besoin de plus de 2 semaines. Ou Lifetime.",
+      afterLede: "Illimité à partir de 19,99 €/mois quand vous avez besoin de plus de 2 semaines. Ou Lifetime.",
       usOneLiner: "Importez vos futures. Lisez le P&L dans un seul journal.",
     },
     oneToOne: {
@@ -46,7 +46,7 @@ export const COMPARE_COPY_BY_LOCALE = {
       usLabel: "Deltalytix",
       footerHeading: "Un journal pour tous vos comptes futures.",
       footerLead: "Commencez gratuitement, pour de bon.",
-      footerLede: "Plus à partir de 19,99 €/mois quand vous avez besoin de plus de 2 semaines. Ou Lifetime.",
+      footerLede: "Illimité à partir de 19,99 €/mois quand vous avez besoin de plus de 2 semaines. Ou Lifetime.",
     },
     cta: {
       getStarted: "Commencer",

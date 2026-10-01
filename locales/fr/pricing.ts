@@ -82,6 +82,7 @@ export default {
         },
         plus: {
             name: 'Plus',
+            publicName: 'Illimité',
             description: 'Pour les traders sérieux qui veulent libérer leur plein potentiel.',
             feature1: 'Comptes illimités (aucune limite sur le nombre de comptes à importer)',
             feature2: 'Stockage de données illimité (stockez autant de trades que vous le souhaitez)',
