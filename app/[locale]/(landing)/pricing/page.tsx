@@ -1,10 +1,6 @@
 import PricingPlans from "@/components/pricing-plans";
-import { getCurrentLocale, getI18n } from "@/locales/server";
+import { getI18n } from "@/locales/server";
 import { getBackToWorkPricingDisplay } from "@/server/back-to-work-pricing";
-import {
-  formatBackToWorkOfferUntil,
-  isBackToWorkOfferActive,
-} from "@/lib/back-to-work-promo";
 import { setStaticParamsLocale } from "next-international/server";
 
 /**
@@ -25,10 +21,7 @@ export default async function PricingPage({
   }
 
   const t = await getI18n();
-  const locale = await getCurrentLocale();
   const promo = await getBackToWorkPricingDisplay();
-  const offerActive = isBackToWorkOfferActive(promo);
-  const offerUntil = formatBackToWorkOfferUntil(promo.validUntilMs, locale);
 
   const Container = embedded ? "div" : "main";
   const Heading = embedded ? "h2" : "h1";
@@ -42,13 +35,6 @@ export default async function PricingPage({
         <p className="mx-auto mt-5 max-w-xl text-pretty text-base leading-relaxed text-black/55 dark:text-white/55 md:text-lg">
           {t("pricing.subheading")}
         </p>
-        {offerActive ? (
-          <p className="mx-auto mt-3 max-w-xl text-pretty text-sm leading-relaxed text-black/55 dark:text-white/55">
-            {offerUntil
-              ? t("pricing.backToWork.sectionNoteUntil", { date: offerUntil })
-              : t("pricing.backToWork.sectionNote")}
-          </p>
-        ) : null}
       </div>
       <PricingPlans promo={promo} />
     </Container>

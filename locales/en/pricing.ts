@@ -82,6 +82,7 @@ export default {
         },
         plus: {
             name: 'Plus',
+            publicName: 'Unlimited',
             description: 'For serious traders who want to unlock their full potential.',
             feature1: 'Unlimited accounts (no limit on how many accounts to import)',
             feature2: 'Unlimited data storage (store as many trades as you want)',
