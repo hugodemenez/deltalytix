@@ -528,10 +528,8 @@ describe('buildTradesFromRithmicFills', () => {
     expect(trades[0].entryId).toBe('1317177')
     expect(trades[0].closeId).toBe('1319858')
 
-    const storedHashedId = generateDeterministicTradeId({
+    const identity = {
       accountNumber: trades[0].accountNumber,
-      entryId: '239200544_1317177',
-      closeId: '239200544_1319858',
       instrument: trades[0].instrument,
       entryPrice: trades[0].entryPrice,
       closePrice: trades[0].closePrice,
@@ -540,8 +538,22 @@ describe('buildTradesFromRithmicFills', () => {
       quantity: trades[0].quantity,
       side: trades[0].side ?? '',
       userId: 'user-1',
-    })
-    expect(trades[0].id).toBe(storedHashedId)
+    }
+    // createTradeWithDefaults overwrites `id` with generateTradeHash; the
+    // hashes that skipDuplicates and Protocol rematch use are these two.
+    expect(
+      generateDeterministicTradeId({
+        ...identity,
+        entryId: '239200544_1317177',
+        closeId: '239200544_1319858',
+      }),
+    ).toBe(
+      generateDeterministicTradeId({
+        ...identity,
+        entryId: trades[0].entryId ?? '',
+        closeId: trades[0].closeId ?? '',
+      }),
+    )
 
     const legacyPersistedId = uuidv5(
       [
