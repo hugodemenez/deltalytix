@@ -1,11 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { dedupeFills } from './dedupe-fills'
+import { v5 as uuidv5 } from 'uuid'
+import {
+  generateDeterministicTradeId,
+  generatePersistedTradeUUID,
+  RITHMIC_PROTOCOL_TRADE_TAG,
+} from '@/lib/trade-id-utils'
+import {
+  dedupeFills,
+  resolveRithmicProtocolPersistedId,
+} from './dedupe-fills'
 import {
   buildTradesFromRithmicFills,
   fillSide,
   fillTimestampMs,
 } from './fills-to-trades'
 import type { RithmicProtocolFill } from './types'
+
+const TRADE_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
 
 describe('buildTradesFromRithmicFills', () => {
   it('matches a simple long round trip', () => {
@@ -478,6 +489,123 @@ describe('buildTradesFromRithmicFills', () => {
     expect(openSkipped).toBe(0)
     expect(trades).toHaveLength(12)
     expectLucidH2P6Oct1Pairs(trades)
+  })
+
+  it('keeps the trade id when a stored Replay prefix is resynced from history plus Replay', () => {
+    const accountId = 'LFF050-H2P6PP65-PRO001'
+    const historyEntry = atasToFill(accountId, [
+      'Buy',
+      30799.25,
+      '01/10/2026 08:29:40',
+      '1317177',
+    ])
+    const historyExit = atasToFill(accountId, [
+      'Sell',
+      30785.5,
+      '01/10/2026 08:35:27',
+      '1319858',
+    ])
+    const replayEntry = {
+      ...historyEntry,
+      transactionType: '1',
+      fillId: '239200544_1317177',
+      ssboe: (historyEntry.ssboe ?? 0) + 1,
+    }
+    const replayExit = {
+      ...historyExit,
+      transactionType: '2',
+      fillId: '239200544_1319858',
+      ssboe: (historyExit.ssboe ?? 0) + 1,
+    }
+
+    const { trades } = buildTradesFromRithmicFills(
+      dedupeFills([historyEntry, historyExit, replayEntry, replayExit]),
+      'user-1',
+      mnqTicks,
+    )
+
+    expect(trades).toHaveLength(1)
+    expect(trades[0].entryId).toBe('1317177')
+    expect(trades[0].closeId).toBe('1319858')
+
+    const identity = {
+      accountNumber: trades[0].accountNumber,
+      instrument: trades[0].instrument,
+      entryPrice: trades[0].entryPrice,
+      closePrice: trades[0].closePrice,
+      entryDate: trades[0].entryDate,
+      closeDate: trades[0].closeDate,
+      quantity: trades[0].quantity,
+      side: trades[0].side ?? '',
+      userId: 'user-1',
+    }
+    // createTradeWithDefaults overwrites `id` with generateTradeHash; the
+    // hashes that skipDuplicates and Protocol rematch use are these two.
+    expect(
+      generateDeterministicTradeId({
+        ...identity,
+        entryId: '239200544_1317177',
+        closeId: '239200544_1319858',
+      }),
+    ).toBe(
+      generateDeterministicTradeId({
+        ...identity,
+        entryId: trades[0].entryId ?? '',
+        closeId: trades[0].closeId ?? '',
+      }),
+    )
+
+    const legacyPersistedId = uuidv5(
+      [
+        'user-1',
+        trades[0].accountNumber,
+        trades[0].instrument,
+        trades[0].entryDate,
+        trades[0].closeDate,
+        trades[0].entryPrice,
+        trades[0].closePrice,
+        String(trades[0].quantity),
+        '239200544_1317177',
+        '239200544_1319858',
+        String(trades[0].timeInPosition),
+        trades[0].side ?? '',
+        String(trades[0].pnl),
+        '0',
+      ].join('|'),
+      TRADE_NAMESPACE,
+    )
+    expect(
+      generatePersistedTradeUUID({
+        ...trades[0],
+        entryId: '239200544_1317177',
+        closeId: '239200544_1319858',
+        tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+      }),
+    ).toBe(
+      generatePersistedTradeUUID({
+        ...trades[0],
+        tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+      }),
+    )
+    expect(
+      generatePersistedTradeUUID({
+        ...trades[0],
+        tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+      }),
+    ).not.toBe(legacyPersistedId)
+    expect(
+      resolveRithmicProtocolPersistedId(trades[0], [
+        {
+          id: legacyPersistedId,
+          accountNumber: trades[0].accountNumber,
+          instrument: trades[0].instrument,
+          entryDate: trades[0].entryDate,
+          closeDate: trades[0].closeDate,
+          entryId: '239200544_1317177',
+          closeId: '239200544_1319858',
+        },
+      ]),
+    ).toBe(legacyPersistedId)
   })
 
   it('reverses a long into a short when the sell is larger than open longs', () => {

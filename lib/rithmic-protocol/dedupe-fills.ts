@@ -35,6 +35,62 @@ export function canonicalRithmicFillId(
   return collapsed
 }
 
+/** Raw plus canonical forms so a stored Replay `basketId_fillId` still matches. */
+export function rithmicFillIdLookupValues(
+  id: string | null | undefined,
+): string[] {
+  const trimmed = (id ?? '').trim()
+  if (!trimmed) return []
+  const canonical = canonicalRithmicFillId(trimmed)
+  const values = new Set<string>([trimmed])
+  if (canonical) values.add(canonical)
+  return [...values]
+}
+
+export type RithmicProtocolFillPairIdentity = {
+  accountNumber?: string | null
+  instrument?: string | null
+  entryDate?: string | null
+  closeDate?: string | null
+  entryId?: string | null
+  closeId?: string | null
+}
+
+/**
+ * Account + instrument + dates + canonical fill pair.
+ *
+ * Used to reuse a row stored with Replay `basketId_fillId` entry/close ids
+ * after FIFO started persisting the bare history id. Dates stay in the key
+ * so a recycled fill_id on a later session cannot steal the earlier UUID.
+ */
+export function rithmicProtocolFillPairKey(
+  trade: RithmicProtocolFillPairIdentity,
+): string | null {
+  const entryId = canonicalRithmicFillId(trade.entryId)
+  const closeId = canonicalRithmicFillId(trade.closeId)
+  if (!entryId || !closeId) return null
+  return [
+    trade.accountNumber ?? '',
+    trade.instrument ?? '',
+    trade.entryDate ?? '',
+    trade.closeDate ?? '',
+    entryId,
+    closeId,
+  ].join('|')
+}
+
+export function resolveRithmicProtocolPersistedId(
+  incoming: RithmicProtocolFillPairIdentity,
+  existingRows: Array<{ id: string } & RithmicProtocolFillPairIdentity>,
+): string | undefined {
+  const incomingKey = rithmicProtocolFillPairKey(incoming)
+  if (!incomingKey) return undefined
+  for (const row of existingRows) {
+    if (rithmicProtocolFillPairKey(row) === incomingKey) return row.id
+  }
+  return undefined
+}
+
 /** BUY/1 and SELL/2 are the same side across history vs replay. */
 function identitySide(transactionType: string | undefined): 'B' | 'S' {
   const t = String(transactionType ?? '')
