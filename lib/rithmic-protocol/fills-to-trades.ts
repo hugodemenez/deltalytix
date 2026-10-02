@@ -306,6 +306,9 @@ export function buildTradesFromRithmicFills(
         }
         seenFillIds.add(seenKey)
       }
+      // Persist the canonical id (history form). Trade UUID hashing also
+      // canonicalizes Replay prefixes, and save rematches rows stored under
+      // the older `basketId_fillId` form.
       const orderId =
         fillId ||
         fill.sequenceNumber ||

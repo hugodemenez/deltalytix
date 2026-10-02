@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import { v5 as uuidv5 } from 'uuid'
+import { canonicalRithmicFillId } from '@/lib/rithmic-protocol/dedupe-fills'
 import {
   isTradovatePersistedTrade,
   normalizeTradeSide,
@@ -26,12 +27,16 @@ export function generateDeterministicTradeId(tradeData: {
   side: string
   userId: string
 }): string {
-  // Create a deterministic string from trade characteristics
+  // Replay `basketId_fillId` and the bare history id are the same fill.
+  // Hash the canonical form so a row stored under the prefixed id keeps
+  // this in-memory id on resync.
+  const entryId = canonicalRithmicFillId(tradeData.entryId) ?? tradeData.entryId
+  const closeId = canonicalRithmicFillId(tradeData.closeId) ?? tradeData.closeId
   const tradeSignature = [
     tradeData.userId,
     tradeData.accountNumber,
-    tradeData.entryId,
-    tradeData.closeId,
+    entryId,
+    closeId,
     tradeData.instrument,
     tradeData.entryPrice,
     tradeData.closePrice,
@@ -77,7 +82,10 @@ export type PersistedTradeIdentity = {
  *
  * Protocol rows were first stored with `commission: 0`, so the identity hash
  * still uses 0 for that source — otherwise a later Product RMS rate would
- * insert a second row for the same round-trip.
+ * insert a second row for the same round-trip. Replay `basketId_fillId`
+ * entry/close ids hash as the bare history id so a resync after #536 does
+ * not mint a second UUID. Rows already stored under the prefixed hash are
+ * rematched in `saveTradesAction`.
  *
  * Tradovate live sync and weekly movement CSVs describe the same fill with
  * different wrappers (`fill_` prefix, Long/long) and different fee/PnL math.
@@ -104,9 +112,14 @@ export function generatePersistedTradeUUID(trade: PersistedTradeIdentity): strin
     return uuidv5(tradeSignature, TRADE_NAMESPACE)
   }
 
-  const identityCommission = trade.tags?.includes(RITHMIC_PROTOCOL_TRADE_TAG)
-    ? 0
-    : (trade.commission || 0)
+  const isRithmicProtocol = trade.tags?.includes(RITHMIC_PROTOCOL_TRADE_TAG) === true
+  const identityCommission = isRithmicProtocol ? 0 : (trade.commission || 0)
+  const entryId = isRithmicProtocol
+    ? (canonicalRithmicFillId(trade.entryId) || trade.entryId || '')
+    : (trade.entryId || '')
+  const closeId = isRithmicProtocol
+    ? (canonicalRithmicFillId(trade.closeId) || trade.closeId || '')
+    : (trade.closeId || '')
 
   const tradeSignature = [
     trade.userId || '',
@@ -117,8 +130,8 @@ export function generatePersistedTradeUUID(trade: PersistedTradeIdentity): strin
     trade.entryPrice || '',
     trade.closePrice || '',
     (trade.quantity || 0).toString(),
-    trade.entryId || '',
-    trade.closeId || '',
+    entryId,
+    closeId,
     (trade.timeInPosition || 0).toString(),
     trade.side || '',
     (trade.pnl || 0).toString(),

@@ -5,6 +5,9 @@ import {
   dedupeFills,
   fillDayKey,
   fillIdentityKey,
+  resolveRithmicProtocolPersistedId,
+  rithmicFillIdLookupValues,
+  rithmicProtocolFillPairKey,
 } from './dedupe-fills'
 import type { RithmicProtocolFill } from './types'
 
@@ -63,6 +66,58 @@ describe('canonicalRithmicFillId', () => {
     expect(canonicalRithmicFillId('239200544_1319858-239200544_1319858')).toBe(
       '1319858',
     )
+  })
+})
+
+describe('rithmic protocol persisted fill identity', () => {
+  const prefixedPair = {
+    accountNumber: 'LFF050-H2P6PP65-PRO001',
+    instrument: 'MNQ',
+    entryDate: '2026-10-01T08:29:40.000+00:00',
+    closeDate: '2026-10-01T08:35:27.000+00:00',
+    entryId: '239200544_1317177',
+    closeId: '239200544_1319858',
+  }
+  const historyPair = {
+    ...prefixedPair,
+    entryId: '1317177',
+    closeId: '1319858',
+  }
+
+  it('lists the raw Replay id and its bare history twin', () => {
+    expect(rithmicFillIdLookupValues('239200544_1319858')).toEqual(
+      expect.arrayContaining(['239200544_1319858', '1319858']),
+    )
+    expect(rithmicFillIdLookupValues('1319858')).toEqual(['1319858'])
+  })
+
+  it('treats a stored Replay prefix and a history resync as the same pair', () => {
+    expect(rithmicProtocolFillPairKey(prefixedPair)).toBe(
+      rithmicProtocolFillPairKey(historyPair),
+    )
+    expect(
+      resolveRithmicProtocolPersistedId(historyPair, [
+        { id: 'stored-prefixed-uuid', ...prefixedPair },
+      ]),
+    ).toBe('stored-prefixed-uuid')
+  })
+
+  it('does not rematch a recycled fill pair on another session or symbol', () => {
+    expect(
+      resolveRithmicProtocolPersistedId(historyPair, [
+        {
+          id: 'other-day',
+          ...prefixedPair,
+          entryDate: '2026-10-02T08:29:40.000+00:00',
+          closeDate: '2026-10-02T08:35:27.000+00:00',
+        },
+        {
+          id: 'other-symbol',
+          ...prefixedPair,
+          instrument: 'ES',
+        },
+      ]),
+    ).toBeUndefined()
   })
 })
 
