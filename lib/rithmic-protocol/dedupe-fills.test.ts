@@ -5,6 +5,9 @@ import {
   dedupeFills,
   fillDayKey,
   fillIdentityKey,
+  resolveRithmicProtocolPersistedId,
+  rithmicFillIdLookupValues,
+  rithmicProtocolFillPairKey,
 } from './dedupe-fills'
 import type { RithmicProtocolFill } from './types'
 
@@ -57,6 +60,65 @@ describe('canonicalRithmicFillId', () => {
   it('does not collapse two distinct hyphenated ids', () => {
     expect(canonicalRithmicFillId('1452840-1452841')).toBe('1452840-1452841')
   })
+
+  it('strips a ReplayExecutions basketId_fillId prefix', () => {
+    expect(canonicalRithmicFillId('239200544_1319858')).toBe('1319858')
+    expect(canonicalRithmicFillId('239200544_1319858-239200544_1319858')).toBe(
+      '1319858',
+    )
+  })
+})
+
+describe('rithmic protocol persisted fill identity', () => {
+  const prefixedPair = {
+    accountNumber: 'LFF050-H2P6PP65-PRO001',
+    instrument: 'MNQ',
+    entryDate: '2026-10-01T08:29:40.000+00:00',
+    closeDate: '2026-10-01T08:35:27.000+00:00',
+    entryId: '239200544_1317177',
+    closeId: '239200544_1319858',
+  }
+  const historyPair = {
+    ...prefixedPair,
+    entryId: '1317177',
+    closeId: '1319858',
+  }
+
+  it('lists the raw Replay id and its bare history twin', () => {
+    expect(rithmicFillIdLookupValues('239200544_1319858')).toEqual(
+      expect.arrayContaining(['239200544_1319858', '1319858']),
+    )
+    expect(rithmicFillIdLookupValues('1319858')).toEqual(['1319858'])
+  })
+
+  it('treats a stored Replay prefix and a history resync as the same pair', () => {
+    expect(rithmicProtocolFillPairKey(prefixedPair)).toBe(
+      rithmicProtocolFillPairKey(historyPair),
+    )
+    expect(
+      resolveRithmicProtocolPersistedId(historyPair, [
+        { id: 'stored-prefixed-uuid', ...prefixedPair },
+      ]),
+    ).toBe('stored-prefixed-uuid')
+  })
+
+  it('does not rematch a recycled fill pair on another session or symbol', () => {
+    expect(
+      resolveRithmicProtocolPersistedId(historyPair, [
+        {
+          id: 'other-day',
+          ...prefixedPair,
+          entryDate: '2026-10-02T08:29:40.000+00:00',
+          closeDate: '2026-10-02T08:35:27.000+00:00',
+        },
+        {
+          id: 'other-symbol',
+          ...prefixedPair,
+          instrument: 'ES',
+        },
+      ]),
+    ).toBeUndefined()
+  })
 })
 
 describe('fillDayKey', () => {
@@ -69,7 +131,7 @@ describe('fillDayKey', () => {
     })
     expect(fillDayKey(evening)).toBe('20260903')
     expect(fillIdentityKey(evening)).toBe(
-      'id|PA-APEX-39878-10|20260903|1452840',
+      'id|PA-APEX-39878-10|20260903|1452840|ESH5|B|5000|1',
     )
   })
 
@@ -131,6 +193,40 @@ describe('dedupeFills', () => {
     const out = dedupeFills([day1, day2])
     expect(out).toHaveLength(2)
     expect(out.map((fill) => fillDayKey(fill))).toEqual(['20260902', '20260903'])
+  })
+
+  it('does not collapse the same fill_id on different symbols or prices', () => {
+    const mnqSell = historyFill({
+      symbol: 'MNQZ6',
+      fillId: '1319858',
+      transactionType: 'SELL',
+      fillPrice: 30785.5,
+      fillDate: '20261001',
+    })
+    const esBuy = historyFill({
+      symbol: 'ESZ6',
+      fillId: '1319858',
+      transactionType: 'BUY',
+      fillPrice: 6700,
+      fillDate: '20261001',
+    })
+    const out = dedupeFills([esBuy, mnqSell])
+    expect(out).toHaveLength(2)
+    expect(out.some((fill) => fill.symbol === 'MNQZ6' && fill.fillPrice === 30785.5)).toBe(
+      true,
+    )
+  })
+
+  it('collapses a ReplayExecutions basketId_fillId twin of a history fill_id', () => {
+    const history = historyFill({ fillId: '1319858', transactionType: 'SELL' })
+    const replay = replayTwin(
+      { ...history, fillId: '239200544_1319858' },
+      '2',
+    )
+    const out = dedupeFills([history, replay])
+    expect(out).toHaveLength(1)
+    expect(out[0].fillId).toBe('1319858')
+    expect(out[0].transactionType).toBe('SELL')
   })
 
   it('still dedupes exact copies when fill_id is missing', () => {

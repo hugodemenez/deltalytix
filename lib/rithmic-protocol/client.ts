@@ -28,7 +28,7 @@ import {
   getRithmicProtocolAppVersion,
   normalizeGatewayUri,
 } from './systems'
-import { dedupeFills } from './dedupe-fills'
+import { dedupeFillsWithStats } from './dedupe-fills'
 
 /** Wall-clock budget for a full PnL snapshot sweep across a user's accounts. */
 const PNL_SNAPSHOT_TOTAL_BUDGET_MS = 30_000
@@ -141,6 +141,12 @@ export function sanitizeRithmicSecret(value: string): string {
 
 function forceIpv4(): boolean {
   const flag = process.env.RITHMIC_PROTOCOL_FORCE_IPV4?.trim().toLowerCase()
+  return flag === '1' || flag === 'true'
+}
+
+/** Per-message inbound logs flood production (~250-line truncation). Opt in. */
+function debugInboundTemplates(): boolean {
+  const flag = process.env.RITHMIC_PROTOCOL_DEBUG_INBOUND?.trim().toLowerCase()
   return flag === '1' || flag === 'true'
 }
 
@@ -306,9 +312,11 @@ export class RithmicProtocolClient {
           )
           this.inboundCount += 1
           this.lastInboundTemplateId = base.templateId
-          console.log(
-            `[RITHMIC-PROTOCOL] inbound template=${base.templateId} bytes=${raw.length} n=${this.inboundCount}`,
-          )
+          if (debugInboundTemplates()) {
+            console.log(
+              `[RITHMIC-PROTOCOL] inbound template=${base.templateId} bytes=${raw.length} n=${this.inboundCount}`,
+            )
+          }
           if (base.templateId === RithmicTemplateId.REJECT) {
             const rejected = decodeMessage<{ rpCode?: string[] }>(
               this.root!,
@@ -1320,6 +1328,11 @@ export async function fetchFillsForAccounts(params: {
   fills: RithmicProtocolFill[]
   uniqueUserId?: string
   commissionRates: Map<string, number>
+  fillStats: {
+    received: number
+    afterDedup: number
+    dropped: Record<string, number>
+  }
 }> {
   /** Rithmic guidance: ≤30 days of fill history per ShowFillHistory request. */
   const MAX_FILL_WINDOW_DAYS = 30
@@ -1502,10 +1515,16 @@ export async function fetchFillsForAccounts(params: {
       }
     }
 
+    const deduped = dedupeFillsWithStats(fills)
     return {
-      fills: dedupeFills(fills),
+      fills: deduped.fills,
       uniqueUserId,
       commissionRates: indexProductRmsCommissionRates(rmsRows),
+      fillStats: {
+        received: deduped.stats.received,
+        afterDedup: deduped.stats.afterDedup,
+        dropped: { ...deduped.stats.dropped },
+      },
     }
   } finally {
     await client.close()
