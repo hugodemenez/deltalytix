@@ -57,6 +57,13 @@ describe('canonicalRithmicFillId', () => {
   it('does not collapse two distinct hyphenated ids', () => {
     expect(canonicalRithmicFillId('1452840-1452841')).toBe('1452840-1452841')
   })
+
+  it('strips a ReplayExecutions basketId_fillId prefix', () => {
+    expect(canonicalRithmicFillId('239200544_1319858')).toBe('1319858')
+    expect(canonicalRithmicFillId('239200544_1319858-239200544_1319858')).toBe(
+      '1319858',
+    )
+  })
 })
 
 describe('fillDayKey', () => {
@@ -69,7 +76,7 @@ describe('fillDayKey', () => {
     })
     expect(fillDayKey(evening)).toBe('20260903')
     expect(fillIdentityKey(evening)).toBe(
-      'id|PA-APEX-39878-10|20260903|1452840',
+      'id|PA-APEX-39878-10|20260903|1452840|ESH5|B|5000|1',
     )
   })
 
@@ -131,6 +138,40 @@ describe('dedupeFills', () => {
     const out = dedupeFills([day1, day2])
     expect(out).toHaveLength(2)
     expect(out.map((fill) => fillDayKey(fill))).toEqual(['20260902', '20260903'])
+  })
+
+  it('does not collapse the same fill_id on different symbols or prices', () => {
+    const mnqSell = historyFill({
+      symbol: 'MNQZ6',
+      fillId: '1319858',
+      transactionType: 'SELL',
+      fillPrice: 30785.5,
+      fillDate: '20261001',
+    })
+    const esBuy = historyFill({
+      symbol: 'ESZ6',
+      fillId: '1319858',
+      transactionType: 'BUY',
+      fillPrice: 6700,
+      fillDate: '20261001',
+    })
+    const out = dedupeFills([esBuy, mnqSell])
+    expect(out).toHaveLength(2)
+    expect(out.some((fill) => fill.symbol === 'MNQZ6' && fill.fillPrice === 30785.5)).toBe(
+      true,
+    )
+  })
+
+  it('collapses a ReplayExecutions basketId_fillId twin of a history fill_id', () => {
+    const history = historyFill({ fillId: '1319858', transactionType: 'SELL' })
+    const replay = replayTwin(
+      { ...history, fillId: '239200544_1319858' },
+      '2',
+    )
+    const out = dedupeFills([history, replay])
+    expect(out).toHaveLength(1)
+    expect(out[0].fillId).toBe('1319858')
+    expect(out[0].transactionType).toBe('SELL')
   })
 
   it('still dedupes exact copies when fill_id is missing', () => {

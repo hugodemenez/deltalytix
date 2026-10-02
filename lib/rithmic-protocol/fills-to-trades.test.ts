@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { dedupeFills } from './dedupe-fills'
 import {
   buildTradesFromRithmicFills,
   fillSide,
@@ -346,6 +347,137 @@ describe('buildTradesFromRithmicFills', () => {
     expect(trades.every((trade) => trade.side === 'Long')).toBe(true)
     // (10 + 6) points * $50
     expect(trades.reduce((sum, trade) => sum + trade.pnl, 0)).toBe(800)
+  })
+
+  /**
+   * Lucid LFF050-H2P6PP65-PRO001 MNQZ6 2026-10-01 (UTC). Broker export order.
+   * History-style short fill ids are not monotonic in time (Sell 1316966 is
+   * earlier in id-space than the 08:29 buy). Afternoon ids look like
+   * `basketId_fillId` from ReplayExecutions.
+   */
+  const LUCID_H2P6_OCT1_MORNING = [
+    ['Buy', 30799.25, '01/10/2026 08:29:40', '1317177'],
+    ['Buy', 30778.75, '01/10/2026 08:31:23', '1318523'],
+    ['Sell', 30785.5, '01/10/2026 08:35:27', '1319858'],
+    ['Sell', 30803, '01/10/2026 08:37:07', '1316966'],
+    ['Buy', 30791.25, '01/10/2026 08:48:25', '1318030'],
+    ['Sell', 30801.5, '01/10/2026 08:48:59', '1318584'],
+    ['Buy', 30794.25, '01/10/2026 08:49:39', '1317159'],
+    ['Sell', 30799.75, '01/10/2026 08:49:54', '1319222'],
+  ] as const
+
+  const LUCID_H2P6_OCT1_AFTERNOON = [
+    ['Buy', 30620, '01/10/2026 12:18:00', '239200544_1347863'],
+    ['Sell', 30611.75, '01/10/2026 12:19:00', '239200544_1347864'],
+    ['Buy', 30630, '01/10/2026 12:22:00', '239200544_1347865'],
+    ['Sell', 30640, '01/10/2026 12:25:00', '239200544_1347866'],
+    ['Buy', 30610, '01/10/2026 12:28:00', '239200544_1347867'],
+    ['Sell', 30618, '01/10/2026 12:30:00', '239200544_1347868'],
+    ['Buy', 30600, '01/10/2026 12:33:00', '239200544_1347869'],
+    ['Sell', 30605, '01/10/2026 12:35:00', '239200544_1347870'],
+    ['Buy', 30640, '01/10/2026 12:38:00', '239200544_1347871'],
+    ['Sell', 30650, '01/10/2026 12:40:00', '239200544_1347872'],
+    ['Buy', 30655, '01/10/2026 12:43:00', '239200544_1347873'],
+    ['Sell', 30648, '01/10/2026 12:45:00', '239200544_1347874'],
+    ['Buy', 30608, '01/10/2026 12:48:00', '239200544_1347875'],
+    ['Sell', 30622, '01/10/2026 12:50:00', '239200544_1347876'],
+    ['Buy', 30617.25, '01/10/2026 12:52:00', '239200544_1347877'],
+    ['Sell', 30659.25, '01/10/2026 12:55:00', '239200544_1347878'],
+  ] as const
+
+  function expectLucidH2P6Oct1Pairs(trades: { entryPrice: string; closePrice: string; closeId: string | null }[]) {
+    expect(trades.some((trade) => trade.closeId === '1319858' || trade.closePrice === '30785.5')).toBe(
+      true,
+    )
+    expect(
+      trades.some(
+        (trade) =>
+          trade.entryPrice === '30794.25' && trade.closePrice === '30799.75',
+      ),
+    ).toBe(true)
+    expect(
+      trades.some(
+        (trade) =>
+          trade.entryPrice === '30794.25' && trade.closePrice === '30611.75',
+      ),
+    ).toBe(false)
+    const last = trades[trades.length - 1]
+    expect(last?.entryPrice).toBe('30617.25')
+    expect(last?.closePrice).toBe('30659.25')
+  }
+
+  it('pairs Lucid H2P6 Oct 1 in time order even when fill ids go backwards', () => {
+    const fills = [
+      ...LUCID_H2P6_OCT1_MORNING.map((row) =>
+        atasToFill('LFF050-H2P6PP65-PRO001', row),
+      ),
+      ...LUCID_H2P6_OCT1_AFTERNOON.map((row) =>
+        atasToFill('LFF050-H2P6PP65-PRO001', row),
+      ),
+    ]
+    const { trades, openSkipped } = buildTradesFromRithmicFills(
+      fills,
+      'user-1',
+      mnqTicks,
+    )
+    expect(openSkipped).toBe(0)
+    expect(trades).toHaveLength(12)
+    expectLucidH2P6Oct1Pairs(trades)
+  })
+
+  it('does not drop Sell 30785.5 (1319858) when a same-id fill on another symbol shares the trade day', () => {
+    const accountId = 'LFF050-H2P6PP65-PRO001'
+    const morning = LUCID_H2P6_OCT1_MORNING.map((row) => atasToFill(accountId, row))
+    const afternoon = LUCID_H2P6_OCT1_AFTERNOON.map((row) =>
+      atasToFill(accountId, row),
+    )
+    // Replay lookback / another instrument can reuse fill_id on the same
+    // exchange date. Identity used to be account+day+id only, so this row
+    // swallowed the MNQ sell and shifted every later FIFO pair by one.
+    const foreignSameId: RithmicProtocolFill = {
+      accountId,
+      symbol: 'ESZ6',
+      transactionType: 'BUY',
+      fillPrice: 6700,
+      fillSize: 1,
+      fillId: '1319858',
+      fillDate: '20261001',
+      ssboe: Math.floor(Date.UTC(2026, 9, 1, 0, 15, 0) / 1000),
+    }
+    const fills = dedupeFills([foreignSameId, ...morning, ...afternoon])
+    const { trades, openSkipped } = buildTradesFromRithmicFills(
+      fills,
+      'user-1',
+      mnqTicks,
+    )
+    expect(trades.filter((trade) => trade.instrument === 'MNQ')).toHaveLength(12)
+    expectLucidH2P6Oct1Pairs(trades.filter((trade) => trade.instrument === 'MNQ'))
+    // The ES row is a distinct execution; it stays an open lot.
+    expect(openSkipped).toBe(1)
+  })
+
+  it('does not double morning FIFO when ReplayExecutions restates history ids as basketId_fillId', () => {
+    const accountId = 'LFF050-H2P6PP65-PRO001'
+    const history = LUCID_H2P6_OCT1_MORNING.map((row) => atasToFill(accountId, row))
+    const replayTwins = history.map((fill) => ({
+      ...fill,
+      transactionType: fill.transactionType.startsWith('B') ? '1' : '2',
+      fillDate: undefined,
+      fillTime: undefined,
+      fillId: `239200544_${fill.fillId}`,
+      ssboe: (fill.ssboe ?? 0) + 1,
+    }))
+    const afternoon = LUCID_H2P6_OCT1_AFTERNOON.map((row) =>
+      atasToFill(accountId, row, { ssboe: true }),
+    )
+    const { trades, openSkipped } = buildTradesFromRithmicFills(
+      dedupeFills([...history, ...replayTwins, ...afternoon]),
+      'user-1',
+      mnqTicks,
+    )
+    expect(openSkipped).toBe(0)
+    expect(trades).toHaveLength(12)
+    expectLucidH2P6Oct1Pairs(trades)
   })
 
   it('reverses a long into a short when the sell is larger than open longs', () => {

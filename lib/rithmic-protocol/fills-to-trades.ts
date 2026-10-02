@@ -7,7 +7,7 @@ import {
 import { formatTimestamp } from '@/lib/date-utils'
 import type { RithmicProtocolFill } from './types'
 import { commissionForFillQuantity } from './commission-rates'
-import { canonicalRithmicFillId, fillDayKey } from './dedupe-fills'
+import { canonicalRithmicFillId, fillIdentityKey } from './dedupe-fills'
 
 interface TickSpec {
   tickSize: number
@@ -111,12 +111,16 @@ export function fillTimestampMs(fill: RithmicProtocolFill): number {
   return 0
 }
 
-function compareFills(a: RithmicProtocolFill, b: RithmicProtocolFill): number {
+function compareFills(
+  a: RithmicProtocolFill,
+  aIndex: number,
+  b: RithmicProtocolFill,
+  bIndex: number,
+): number {
   const byTime = fillTimestampMs(a) - fillTimestampMs(b)
   if (byTime !== 0) return byTime
-  const aId = canonicalRithmicFillId(a.fillId) ?? a.sequenceNumber ?? ''
-  const bId = canonicalRithmicFillId(b.fillId) ?? b.sequenceNumber ?? ''
-  return aId.localeCompare(bId)
+  // Fill ids are not monotonic in time. When clocks tie, keep arrival order.
+  return aIndex - bIndex
 }
 
 function lotPnL(
@@ -245,13 +249,24 @@ export function buildTradesFromRithmicFills(
   userId: string,
   tickBySymbol: Map<string, TickSpec>,
   commissionRates?: Map<string, number>,
-): { trades: Trade[]; openSkipped: number } {
+): { trades: Trade[]; openSkipped: number; skipped: Record<string, number> } {
   const trades: Trade[] = []
   const books = new Map<string, LotBook>()
+  const skipped: Record<string, number> = {}
+  const bumpSkip = (reason: string) => {
+    skipped[reason] = (skipped[reason] ?? 0) + 1
+  }
 
   const byAccount = new Map<string, RithmicProtocolFill[]>()
   for (const fill of fills) {
-    if (!fill.symbol || !fill.fillSize || fill.fillSize <= 0) continue
+    if (!fill.symbol) {
+      bumpSkip('missing_symbol')
+      continue
+    }
+    if (!fill.fillSize || fill.fillSize <= 0) {
+      bumpSkip('missing_size')
+      continue
+    }
     const accountId = fill.accountId || 'unknown'
     const list = byAccount.get(accountId) ?? []
     list.push(fill)
@@ -259,24 +274,36 @@ export function buildTradesFromRithmicFills(
   }
 
   for (const [accountId, accountFills] of byAccount) {
-    const sorted = [...accountFills].sort(compareFills)
+    const sorted = accountFills
+      .map((fill, index) => ({ fill, index }))
+      .sort((a, b) => compareFills(a.fill, a.index, b.fill, b.index))
     const seenFillIds = new Set<string>()
 
-    for (const fill of sorted) {
+    for (const { fill } of sorted) {
       const instrument = normalizeInstrument(fill.symbol)
       const quantity = Math.abs(Number(fill.fillSize))
       const price = Number(fill.fillPrice || fill.avgFillPrice || 0)
-      if (!quantity || !price) continue
+      if (!quantity) {
+        bumpSkip('missing_size')
+        continue
+      }
+      if (!price) {
+        bumpSkip('missing_price')
+        continue
+      }
 
       const side = fillSide(fill.transactionType)
       const timestampMs = fillTimestampMs(fill)
       // Same Rithmic fill_id from overlapping sources must not FIFO-join into
-      // `1452840-1452840` (2× qty / PnL). Key includes trade day so a recycled
-      // fill_id on a later session is still a distinct fill.
+      // `1452840-1452840` (2× qty / PnL). Identity includes symbol + fingerprint
+      // so a reused fill_id on another instrument cannot drop this execution.
       const fillId = canonicalRithmicFillId(fill.fillId)
       if (fillId) {
-        const seenKey = `${fillDayKey(fill)}|${fillId}`
-        if (seenFillIds.has(seenKey)) continue
+        const seenKey = fillIdentityKey(fill)
+        if (seenFillIds.has(seenKey)) {
+          bumpSkip('duplicate_id')
+          continue
+        }
         seenFillIds.add(seenKey)
       }
       const orderId =
@@ -319,10 +346,9 @@ export function buildTradesFromRithmicFills(
 
   let openSkipped = 0
   for (const book of books.values()) {
-    if (book.longs.length > 0 || book.shorts.length > 0) {
-      openSkipped += 1
-    }
+    for (const lot of book.longs) openSkipped += lot.quantity
+    for (const lot of book.shorts) openSkipped += lot.quantity
   }
 
-  return { trades, openSkipped }
+  return { trades, openSkipped, skipped }
 }

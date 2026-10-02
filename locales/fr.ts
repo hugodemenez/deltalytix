@@ -2915,6 +2915,8 @@ export default {
       inProgress: "Synchronisation des fills Rithmic pour {accountId}…",
       tokenMissing: "Identifiants manquants — reconnectez-vous",
       accountNotFound: "Compte introuvable. Actualisez la liste.",
+      summary:
+        "{fills} fills, {matched} trades appariés, {saved} nouveaux, {open} positions ouvertes",
     },
     multiAccount: {
       empty:
