@@ -68,9 +68,11 @@ export function computeAccountMetrics(
 
   // Apply buffer filtering if enabled (default to true)
   const considerBuffer = account.considerBuffer ?? true
+  const bufferThreshold = account.buffer ?? 0
+  const applyBuffer = considerBuffer && bufferThreshold > 0
   let filteredTrades = sortedTrades
   let aboveBuffer = 0
-  if (considerBuffer && (account.buffer ?? 0) > 0) {
+  if (applyBuffer) {
     // Build time-ordered event stream of trades and payouts (paid/validated)
     const validPayouts = (account.payouts || [])
       .filter(p => ['PAID', 'VALIDATED'].includes(p.status))
@@ -98,7 +100,7 @@ export function computeAccountMetrics(
 
     const out: PrismaTrade[] = []
     let accProfit = 0 // accumulated profit since last baseline (reset/payouts effect included)
-    const threshold = account.buffer || 0
+    const threshold = bufferThreshold
 
     for (const ev of events) {
       if (ev.kind === 'payout') {
@@ -121,14 +123,18 @@ export function computeAccountMetrics(
   }
 
   const dailyPnL: { [date: string]: number } = {}
-  let totalProfit = 0
+  let filteredTradesProfit = 0
   for (const trade of filteredTrades) {
     const d = toDate(trade.entryDate)!
     const key = d.toISOString().split('T')[0]
     const pnl = trade.pnl - (trade.commission || 0)
     dailyPnL[key] = (dailyPnL[key] || 0) + pnl
-    totalProfit += pnl
+    filteredTradesProfit += pnl
   }
+
+  // Headline profit uses profit above the buffer (payouts already netted in accProfit).
+  // Filtered trades stay intact so per-day figures still include the crossing trade in full.
+  const totalProfit = applyBuffer ? aboveBuffer : filteredTradesProfit
 
   const hasProfitableData = totalProfit > 0
   const isConfigured = (account.profitTarget ?? 0) > 0 || (account.drawdownThreshold ?? 0) > 0
@@ -153,7 +159,12 @@ export function computeAccountMetrics(
     if (runningBalance > highestBalance) highestBalance = runningBalance
   }
   const totalPayouts = validPayouts.reduce((s, p) => s + p.amount, 0)
-  const currentBalance = runningBalance - totalPayouts
+  // When a buffer applies, accProfit already subtracted PAID/VALIDATED payouts.
+  // Reusing starting + kept trades - payouts would both keep the buffer-filling
+  // slice of the crossing trade and double-subtract those payouts.
+  const currentBalance = applyBuffer
+    ? (account.startingBalance || 0) + aboveBuffer
+    : runningBalance - totalPayouts
 
   let drawdownLevel: number
   if (account.trailingDrawdown) {
