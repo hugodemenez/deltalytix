@@ -253,15 +253,17 @@ function withUtm(url: string): string {
   return `${url}${separator}utm_source=resend&utm_medium=email&utm_campaign=weekly_recap`;
 }
 
-function MsoComment({ html }: { html: string }) {
+/**
+ * Emit a raw HTML comment as a sibling (not inside a box).
+ * React cannot render comments, so we close/reopen a <style> tag.
+ * Outlook then sees a real 640px table wrapping the canvas; other
+ * clients treat <!--[if mso]> as a normal comment and ignore it.
+ */
+function MsoBoundary({ html }: { html: string }) {
   return (
-    <div
-      dangerouslySetInnerHTML={{ __html: html }}
-      style={{
-        fontSize: "0px",
-        lineHeight: "0px",
-        height: "0px",
-        overflow: "hidden",
+    <style
+      dangerouslySetInnerHTML={{
+        __html: `</style>${html}<style type="text/css">`,
       }}
     />
   );
@@ -363,7 +365,11 @@ export default function TraderStatsEmail({
         <meta name="x-apple-disable-message-reformatting" />
         <meta name="color-scheme" content="light dark" />
         <meta name="supported-color-schemes" content="light dark" />
-        <style dangerouslySetInnerHTML={{ __html: zenoChromeCss }} />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `${zenoChromeCss}</style><!--[if mso]><style type="text/css">.email-canvas { width:${CANVAS_MAX_WIDTH_PX}px !important; }</style><![endif]--><style type="text/css">`,
+          }}
+        />
       </Head>
       <Preview>{t.preview}</Preview>
       {/* Fluid shell: 100% on phones, 640px cap on wide desktops. */}
@@ -406,7 +412,7 @@ export default function TraderStatsEmail({
                   paddingLeft: 0,
                 }}
               >
-                <MsoComment
+                <MsoBoundary
                   html={`<!--[if mso]><table align="center" role="presentation" cellpadding="0" cellspacing="0" border="0" width="${CANVAS_MAX_WIDTH_PX}"><tr><td width="${CANVAS_MAX_WIDTH_PX}"><![endif]-->`}
                 />
                 <table
@@ -1011,7 +1017,7 @@ export default function TraderStatsEmail({
                     </tr>
                   </tbody>
                 </table>
-                <MsoComment html="<!--[if mso]></td></tr></table><![endif]-->" />
+                <MsoBoundary html="<!--[if mso]></td></tr></table><![endif]-->" />
               </td>
             </tr>
           </tbody>

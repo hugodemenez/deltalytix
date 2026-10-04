@@ -68,6 +68,27 @@ describe("TraderStatsEmail weekly recap Zeno chrome lock", () => {
     expect(html).toContain("margin:0 auto");
     expect(html).toContain("<!--[if mso]>");
     expect(html).toContain('width="640"');
+    // Outlook wrapper must be sibling comments around the canvas, not
+    // comments trapped in height:0 / overflow:hidden boxes.
+    expect(html).toMatch(
+      /<!--\[if mso\]><table[^>]*width="640"[^>]*>[\s\S]*?<td[^>]*width="640"[^>]*><!\[endif]-->(?:\s*<style[^>]*>\s*<\/style>\s*)*<table[^>]*class="[^"]*email-canvas/,
+    );
+    expect(html).toContain("<!--[if mso]></td></tr></table><![endif]-->");
+    const canvasTableAt = html.indexOf('class="dm-bg email-canvas"');
+    expect(canvasTableAt).toBeGreaterThan(-1);
+    expect(html.indexOf("<!--[if mso]><table")).toBeLessThan(canvasTableAt);
+    expect(canvasTableAt).toBeLessThan(
+      html.indexOf("<!--[if mso]></td></tr></table><![endif]-->"),
+    );
+    expect(html).toContain(
+      `.email-canvas { width:640px !important; }`,
+    );
+    expect(html).not.toMatch(
+      /overflow:hidden[^>]*>\s*<!--\[if mso\]/,
+    );
+    expect(html).not.toMatch(
+      /height:0px[^>]*>\s*<!--\[if mso\]/,
+    );
     expect(html).not.toContain('width="680"');
     expect(html).not.toContain("max-width:680px");
     expect(html).not.toContain(
