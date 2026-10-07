@@ -30,7 +30,7 @@ export const COMPARE_COPY_BY_LOCALE = {
   fr: {
     hub: {
       eyebrow: "Journal de trading · Futures",
-      title: "Un journal de trading pour tous vos comptes futures.",
+      title: "Un seul journal pour tous vos comptes futures.",
       lede: "Importez vos brokers et vos comptes funded, puis lisez le P&L au même endroit. Commencez gratuitement.",
       heroCta: "Commencer gratuitement",
       journalsHeading: "Comparaison des journaux",
