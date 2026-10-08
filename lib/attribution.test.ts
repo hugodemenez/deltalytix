@@ -12,6 +12,7 @@ import {
   parseAttributionParams,
   resolveCheckoutRevenueMajor,
   serializeAttribution,
+  withoutClickIds,
 } from "./attribution";
 
 describe("parseAttributionParams", () => {
@@ -209,5 +210,19 @@ describe("resolveCheckoutRevenueMajor", () => {
         priceUnitAmount: null,
       }),
     ).toBeNull();
+  });
+});
+
+describe("withoutClickIds", () => {
+  it("drops Google click ids and keeps UTM labels", () => {
+    expect(
+      withoutClickIds({
+        utm_source: "google",
+        utm_campaign: "relaunch",
+        gclid: "g",
+        gbraid: "b",
+        wbraid: "w",
+      }),
+    ).toEqual({ utm_source: "google", utm_campaign: "relaunch" });
   });
 });

@@ -26,6 +26,9 @@ export const ATTRIBUTION_PARAM_KEYS = [
 
 export type AttributionParamKey = (typeof ATTRIBUTION_PARAM_KEYS)[number];
 
+/** Google click ids — ad storage, unlike the UTM campaign labels. */
+export const CLICK_ID_PARAM_KEYS = ["gclid", "gbraid", "wbraid"] as const;
+
 export type Attribution = Partial<Record<AttributionParamKey, string>>;
 
 export type PendingPurchase = {
@@ -93,6 +96,12 @@ export function mergeAttributionFirstTouch(
     }
   }
   return merged;
+}
+
+export function withoutClickIds(attribution: Attribution): Attribution {
+  const stripped: Attribution = { ...attribution };
+  for (const key of CLICK_ID_PARAM_KEYS) delete stripped[key];
+  return stripped;
 }
 
 export function serializeAttribution(attribution: Attribution): string {

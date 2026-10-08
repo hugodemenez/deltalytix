@@ -15,11 +15,11 @@ import {
   parseAttributionParams,
   readClientAttribution,
   serializeAttribution,
+  withoutClickIds,
 } from "@/lib/attribution";
 import {
   CONSENT_UPDATED_EVENT,
-  isGoogleTagAllowed,
-  readStoredConsentSettings,
+  resolveClientGoogleConsent,
 } from "@/lib/consent-settings";
 
 /**
@@ -33,14 +33,16 @@ import {
 let bufferedAttribution: Attribution | null = null;
 
 /**
- * Attribution is marketing data, not a functional requirement, so it lives
- * behind the same gate as the Google tag: no banner decision yet, or a decision
- * that turned both analytics and ads off, means nothing is written anywhere.
+ * Attribution is marketing data, not a functional requirement, so it follows
+ * the Google tag's Consent Mode state (region default or saved decision):
+ * nothing is written unless analytics or ad storage is granted, and the Google
+ * click ids are only written with ad storage granted.
  */
-function attributionStorageAllowed(): boolean {
-  const settings = readStoredConsentSettings();
-  if (!settings) return false;
-  return isGoogleTagAllowed(settings);
+function storableAttribution(attribution: Attribution): Attribution | null {
+  const consent = resolveClientGoogleConsent();
+  const adStorage = consent.ad_storage === "granted";
+  if (!adStorage && consent.analytics_storage !== "granted") return null;
+  return adStorage ? attribution : withoutClickIds(attribution);
 }
 
 function writeAttributionCookie(attribution: Attribution) {
@@ -101,12 +103,11 @@ export function AttributionCapture() {
         fromUrl,
       );
 
-      if (!attributionStorageAllowed()) return;
+      const merged = storableAttribution(
+        mergeAttributionFirstTouch(readClientAttribution(), bufferedAttribution),
+      );
 
-      const existing = readClientAttribution();
-      const merged = mergeAttributionFirstTouch(existing, bufferedAttribution);
-
-      if (!hasAttribution(merged)) return;
+      if (!merged || !hasAttribution(merged)) return;
 
       // Re-persist so cookie Max-Age refreshes when we already had storage only.
       persistAttribution(merged);
