@@ -7,6 +7,7 @@ vi.mock("server-only", () => ({}));
 import {
   normalizeEmailForAds,
   resolveConversionSendTo,
+  routePublishesAdsUserData,
   setAdsHashedEmail,
   waitForAdsHashedEmail,
 } from "./google-ads";
@@ -93,8 +94,40 @@ describe("waitForAdsHashedEmail", () => {
     setAdsHashedEmail(null);
   });
 
+  it("resolves at once without waiting when the timeout is zero", async () => {
+    setAdsHashedEmail(null);
+    vi.useFakeTimers();
+    try {
+      await expect(waitForAdsHashedEmail(0)).resolves.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("returns an already published hash even with a zero timeout", async () => {
+    setAdsHashedEmail("ready");
+    await expect(waitForAdsHashedEmail(0)).resolves.toBe("ready");
+    setAdsHashedEmail(null);
+  });
+
   it("resolves null when no hash arrives in time", async () => {
     setAdsHashedEmail(null);
     await expect(waitForAdsHashedEmail(5)).resolves.toBeNull();
   });
+});
+
+describe("routePublishesAdsUserData", () => {
+  it.each(["/dashboard", "/en/dashboard", "/fr/dashboard/settings", "/dashboard/billing"])(
+    "waits for the hash on dashboard route %s",
+    (path) => {
+      expect(routePublishesAdsUserData(path)).toBe(true);
+    },
+  );
+
+  it.each(["/en/pricing", "/pricing", "/en", "/", "/en/authentication", "/en/dashboards", "/xx/dashboard-like"])(
+    "does not hold the conversion on %s",
+    (path) => {
+      expect(routePublishesAdsUserData(path)).toBe(false);
+    },
+  );
 });

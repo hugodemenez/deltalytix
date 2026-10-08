@@ -17,6 +17,8 @@
  * inline them into the client bundle.
  */
 
+import { LOCALES } from "./locales";
+
 export const DEFAULT_GOOGLE_ADS_ID = "AW-16864609071";
 export const DEFAULT_GOOGLE_ANALYTICS_ID = "G-PYK62LTZRQ";
 
@@ -80,6 +82,20 @@ export function normalizeEmailForAds(email: string): string | null {
 }
 
 /**
+ * Only the dashboard layout publishes the email hash, so only dashboard routes
+ * are worth holding a conversion back for. Anywhere else a wait would only
+ * delay the conversion and lose it if the visitor leaves in that window.
+ */
+export function routePublishesAdsUserData(pathname: string): boolean {
+  const segments = pathname.split("/").filter(Boolean);
+  const first = segments[0];
+  const rest = (LOCALES as readonly string[]).includes(first ?? "")
+    ? segments.slice(1)
+    : segments;
+  return rest[0] === "dashboard";
+}
+
+/**
  * Hashed email of the signed-in user, published by the dashboard layout so
  * conversions can attach enhanced-conversion `user_data` without the raw
  * address ever reaching client code.
@@ -97,6 +113,7 @@ export function setAdsHashedEmail(hash: string | null) {
 /** Resolves with the hash, or null when none arrives within `timeoutMs`. */
 export function waitForAdsHashedEmail(timeoutMs: number): Promise<string | null> {
   if (hashedEmail) return Promise.resolve(hashedEmail);
+  if (timeoutMs <= 0) return Promise.resolve(null);
   return new Promise((resolve) => {
     const onHash = (hash: string) => {
       clearTimeout(timer);

@@ -20,6 +20,7 @@ import {
   GA4_SIGNUP_EVENT,
   GOOGLE_ANALYTICS_ID,
   PURCHASE_SEND_TO,
+  routePublishesAdsUserData,
   SIGNUP_SEND_TO,
   waitForAdsHashedEmail,
 } from "@/lib/google-ads";
@@ -39,8 +40,11 @@ import {
 const SIGNUP_CONVERSION_ID_KEY = "deltalytix_signup_conversion_id";
 const PURCHASE_CONVERSION_ID_KEY = "deltalytix_purchase_conversion_id";
 
-/** How long a conversion waits for the dashboard to publish the email hash. */
-const USER_DATA_WAIT_MS = 3000;
+/**
+ * How long a dashboard conversion waits for the layout to publish the email
+ * hash. Kept short: the conversion is not on the wire until it resolves.
+ */
+const USER_DATA_WAIT_MS = 1500;
 
 /** Conversions already running in this tab; effects re-run on navigation. */
 const inFlight = new Set<string>();
@@ -87,7 +91,10 @@ function newConversionId(): string {
 /** Enhanced conversions: hashed email, only with ad_user_data granted. */
 async function attachUserData(consent: GoogleConsentState) {
   if (consent.ad_user_data !== "granted") return;
-  const hash = await waitForAdsHashedEmail(USER_DATA_WAIT_MS);
+  const waitMs = routePublishesAdsUserData(window.location.pathname)
+    ? USER_DATA_WAIT_MS
+    : 0;
+  const hash = await waitForAdsHashedEmail(waitMs);
   if (hash) window.gtag?.("set", "user_data", { sha256_email_address: hash });
 }
 
