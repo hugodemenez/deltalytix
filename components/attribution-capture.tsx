@@ -9,13 +9,12 @@ import {
   ATTRIBUTION_STORAGE_KEY,
   type Attribution,
   attributionToPostHogProperties,
-  hasAttribution,
   isDeltalytixHost,
   mergeAttributionFirstTouch,
   parseAttributionParams,
+  planAttributionStorage,
   readClientAttribution,
   serializeAttribution,
-  withoutClickIds,
 } from "@/lib/attribution";
 import {
   CONSENT_UPDATED_EVENT,
@@ -31,19 +30,6 @@ import {
  * lives as long as the tab, and is gone with it.
  */
 let bufferedAttribution: Attribution | null = null;
-
-/**
- * Attribution is marketing data, not a functional requirement, so it follows
- * the Google tag's Consent Mode state (region default or saved decision):
- * nothing is written unless analytics or ad storage is granted, and the Google
- * click ids are only written with ad storage granted.
- */
-function storableAttribution(attribution: Attribution): Attribution | null {
-  const consent = resolveClientGoogleConsent();
-  const adStorage = consent.ad_storage === "granted";
-  if (!adStorage && consent.analytics_storage !== "granted") return null;
-  return adStorage ? attribution : withoutClickIds(attribution);
-}
 
 function writeAttributionCookie(attribution: Attribution) {
   const value = encodeURIComponent(serializeAttribution(attribution));
@@ -65,6 +51,20 @@ function persistAttribution(attribution: Attribution) {
     );
   } catch {
     // private mode / quota — cookie still carries attribution across OAuth
+  }
+}
+
+function clearAttribution() {
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  const expired = `${ATTRIBUTION_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax${secure}`;
+  document.cookie = expired;
+  if (isDeltalytixHost(window.location.hostname)) {
+    document.cookie = `${expired}; Domain=.deltalytix.app`;
+  }
+  try {
+    window.localStorage.removeItem(ATTRIBUTION_STORAGE_KEY);
+  } catch {
+    // private mode — nothing was stored there
   }
 }
 
@@ -103,15 +103,22 @@ export function AttributionCapture() {
         fromUrl,
       );
 
-      const merged = storableAttribution(
-        mergeAttributionFirstTouch(readClientAttribution(), bufferedAttribution),
-      );
+      // Attribution is marketing data, so it follows the Google tag's Consent
+      // Mode state (region default or saved decision).
+      const consent = resolveClientGoogleConsent();
+      const plan = planAttributionStorage({
+        stored: readClientAttribution(),
+        incoming: bufferedAttribution,
+        adStorage: consent.ad_storage === "granted",
+        analyticsStorage: consent.analytics_storage === "granted",
+      });
 
-      if (!merged || !hasAttribution(merged)) return;
+      if (plan.action === "clear") clearAttribution();
+      if (plan.action !== "persist") return;
 
       // Re-persist so cookie Max-Age refreshes when we already had storage only.
-      persistAttribution(merged);
-      registerWithPostHog(merged);
+      persistAttribution(plan.attribution);
+      registerWithPostHog(plan.attribution);
     };
 
     capture();

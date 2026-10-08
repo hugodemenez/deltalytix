@@ -10,6 +10,7 @@ import {
   hasAttribution,
   mergeAttributionFirstTouch,
   parseAttributionParams,
+  planAttributionStorage,
   resolveCheckoutRevenueMajor,
   serializeAttribution,
   withoutClickIds,
@@ -224,5 +225,78 @@ describe("withoutClickIds", () => {
         wbraid: "w",
       }),
     ).toEqual({ utm_source: "google", utm_campaign: "relaunch" });
+  });
+});
+
+describe("planAttributionStorage", () => {
+  const full = { utm_source: "google", gclid: "g" };
+
+  it("persists everything with ad storage granted", () => {
+    expect(
+      planAttributionStorage({
+        stored: null,
+        incoming: full,
+        adStorage: true,
+        analyticsStorage: false,
+      }),
+    ).toEqual({ action: "persist", attribution: full });
+  });
+
+  it("keeps first-touch values over later landings", () => {
+    expect(
+      planAttributionStorage({
+        stored: { gclid: "first" },
+        incoming: { gclid: "second", utm_source: "google" },
+        adStorage: true,
+        analyticsStorage: true,
+      }),
+    ).toEqual({
+      action: "persist",
+      attribution: { gclid: "first", utm_source: "google" },
+    });
+  });
+
+  it("persists UTMs without click ids when only analytics is granted", () => {
+    expect(
+      planAttributionStorage({
+        stored: null,
+        incoming: full,
+        adStorage: false,
+        analyticsStorage: true,
+      }),
+    ).toEqual({ action: "persist", attribution: { utm_source: "google" } });
+  });
+
+  it("clears a stored click id once ad storage is withdrawn", () => {
+    expect(
+      planAttributionStorage({
+        stored: { gclid: "g" },
+        incoming: null,
+        adStorage: false,
+        analyticsStorage: true,
+      }),
+    ).toEqual({ action: "clear" });
+  });
+
+  it("clears stored attribution when both are denied", () => {
+    expect(
+      planAttributionStorage({
+        stored: full,
+        incoming: full,
+        adStorage: false,
+        analyticsStorage: false,
+      }),
+    ).toEqual({ action: "clear" });
+  });
+
+  it("writes nothing before consent when nothing is stored", () => {
+    expect(
+      planAttributionStorage({
+        stored: null,
+        incoming: full,
+        adStorage: false,
+        analyticsStorage: false,
+      }),
+    ).toEqual({ action: "none" });
   });
 });

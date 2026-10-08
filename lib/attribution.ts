@@ -104,6 +104,41 @@ export function withoutClickIds(attribution: Attribution): Attribution {
   return stripped;
 }
 
+export type AttributionStoragePlan =
+  | { action: "persist"; attribution: Attribution }
+  | { action: "clear" }
+  | { action: "none" };
+
+/**
+ * What first-party attribution storage should hold under the current consent.
+ *
+ * Nothing is kept unless analytics or ad storage is granted, and click ids
+ * only with ad storage. When consent no longer covers what is stored, the
+ * stored copy is cleared rather than left behind — `stored` only exists
+ * because consent was granted at some point, so this is a withdrawal.
+ */
+export function planAttributionStorage({
+  stored,
+  incoming,
+  adStorage,
+  analyticsStorage,
+}: {
+  stored: Attribution | null;
+  incoming: Attribution | null;
+  adStorage: boolean;
+  analyticsStorage: boolean;
+}): AttributionStoragePlan {
+  const hadStored = hasAttribution(stored);
+  if (!adStorage && !analyticsStorage) {
+    return hadStored ? { action: "clear" } : { action: "none" };
+  }
+
+  const merged = mergeAttributionFirstTouch(stored, incoming);
+  const allowed = adStorage ? merged : withoutClickIds(merged);
+  if (hasAttribution(allowed)) return { action: "persist", attribution: allowed };
+  return hadStored ? { action: "clear" } : { action: "none" };
+}
+
 export function serializeAttribution(attribution: Attribution): string {
   return JSON.stringify(attribution);
 }
