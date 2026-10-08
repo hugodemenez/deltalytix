@@ -3,18 +3,11 @@
 import { useEffect } from "react";
 
 import {
+  CONSENT_RESET_EVENT,
   CONSENT_UPDATED_EVENT,
-  type ConsentSettings,
-  isGoogleTagAllowed,
-  readStoredConsentSettings,
-  toGoogleConsent,
+  resolveClientGoogleConsent,
 } from "@/lib/consent-settings";
-
-const GOOGLE_ANALYTICS_ID =
-  process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID?.trim() || "G-PYK62LTZRQ";
-/** Google Ads account tag. Override with NEXT_PUBLIC_GOOGLE_ADS_ID if needed. */
-const GOOGLE_ADS_ID =
-  process.env.NEXT_PUBLIC_GOOGLE_ADS_ID?.trim() || "AW-16864609071";
+import { GOOGLE_ADS_ID, GOOGLE_ANALYTICS_ID } from "@/lib/google-ads";
 
 function isProductionHost() {
   return (
@@ -23,59 +16,64 @@ function isProductionHost() {
   );
 }
 
-function configureGoogleTag(settings: ConsentSettings) {
-  if (!isProductionHost()) return;
+/**
+ * Loads the Google tag on production hosts, always.
+ *
+ * Consent Mode v2 decides what the tag may store, not whether it loads: the
+ * `consent default` is queued before gtag.js is requested, so with consent
+ * denied Google only receives cookieless pings (used for conversion
+ * modelling). Idempotent — conversions call it too, so their events can never
+ * be queued ahead of the consent default and `config` commands.
+ */
+export function ensureGoogleTag(): boolean {
+  if (typeof window === "undefined" || !isProductionHost()) return false;
 
-  // Without consent the tag is never injected, so there is nothing to load and
-  // at most an already-loaded tag to notify of the withdrawal.
-  if (!isGoogleTagAllowed(settings)) {
-    window.gtag?.("consent", "update", toGoogleConsent(settings));
-    return;
+  if (
+    document.querySelector(`script[data-google-tag="${GOOGLE_ADS_ID}"]`) &&
+    window.gtag
+  ) {
+    return true;
   }
-
-  const existingScript = document.querySelector(
-    `script[data-google-tag="${GOOGLE_ADS_ID}"]`,
-  );
 
   const dataLayer = (window.dataLayer = window.dataLayer || []);
-  window.gtag =
-    window.gtag ||
-    function gtag() {
-      // Google Tag's command queue expects the function's arguments object.
-      // eslint-disable-next-line prefer-rest-params
-      dataLayer.push(arguments);
-    };
+  window.gtag = function gtag() {
+    // Google Tag's command queue expects the function's arguments object.
+    // eslint-disable-next-line prefer-rest-params
+    dataLayer.push(arguments);
+  };
 
-  if (existingScript) {
-    window.gtag("consent", "update", toGoogleConsent(settings));
-    return;
-  }
-
-  window.gtag("consent", "default", toGoogleConsent(settings));
+  window.gtag("consent", "default", {
+    ...resolveClientGoogleConsent(),
+    // Gives a first-visit banner choice a moment to land before tags fire.
+    wait_for_update: 500,
+  });
   window.gtag("js", new Date());
   window.gtag("config", GOOGLE_ANALYTICS_ID);
-  window.gtag("config", GOOGLE_ADS_ID);
+  window.gtag("config", GOOGLE_ADS_ID, { allow_enhanced_conversions: true });
 
   const script = document.createElement("script");
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`;
   script.dataset.googleTag = GOOGLE_ADS_ID;
   document.head.appendChild(script);
+  return true;
 }
 
 export function GoogleTag() {
   useEffect(() => {
-    const initialSettings = readStoredConsentSettings();
-    if (initialSettings) configureGoogleTag(initialSettings);
+    ensureGoogleTag();
 
-    const handleConsentUpdate = (event: Event) => {
-      const settings = (event as CustomEvent<ConsentSettings>).detail;
-      if (settings) configureGoogleTag(settings);
+    const handleConsentChange = () => {
+      if (!ensureGoogleTag()) return;
+      window.gtag?.("consent", "update", resolveClientGoogleConsent());
     };
 
-    window.addEventListener(CONSENT_UPDATED_EVENT, handleConsentUpdate);
-    return () =>
-      window.removeEventListener(CONSENT_UPDATED_EVENT, handleConsentUpdate);
+    window.addEventListener(CONSENT_UPDATED_EVENT, handleConsentChange);
+    window.addEventListener(CONSENT_RESET_EVENT, handleConsentChange);
+    return () => {
+      window.removeEventListener(CONSENT_UPDATED_EVENT, handleConsentChange);
+      window.removeEventListener(CONSENT_RESET_EVENT, handleConsentChange);
+    };
   }, []);
 
   return null;
