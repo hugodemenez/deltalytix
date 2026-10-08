@@ -84,7 +84,11 @@ async function CachedCompareHub({ locale }: { locale: string }) {
             {copy.hub.lede}
           </p>
           <div className="mt-8">
-            <CompareCtas locale={locale} placement="compare_hub_hero" />
+            <CompareCtas
+              locale={locale}
+              placement="compare_hub_hero"
+              primaryLabel={copy.hub.heroCta}
+            />
           </div>
         </div>
       </header>
