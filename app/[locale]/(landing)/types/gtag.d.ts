@@ -7,10 +7,11 @@ interface Window {
     (
       command: 'consent',
       action: 'default' | 'update',
-      settings: Record<string, GtagConsentValue>,
+      settings: Record<string, GtagConsentValue | number>,
     ): void;
     (command: 'js', date: Date): void;
     (command: 'config', targetId: string, config?: Record<string, unknown>): void;
+    (command: 'set', field: string, value: unknown): void;
     (command: 'event', eventName: string, params?: Record<string, unknown>): void;
   };
   // Present only once the tag (or its queue stub) has initialised it.

@@ -254,14 +254,50 @@ export function toGoogleConsent(
 }
 
 /**
- * Whether the Google tag may load at all.
+ * Consent Mode v2 state for the Google tag, using the same region rule as
+ * PostHog (`requiresCookieConsent`).
  *
- * Analytics and Ads are served by the same tag, so consenting to either one is
- * enough to justify loading it — gating on analytics alone silently drops Ads
- * conversions for anyone who accepts ad storage but declines analytics.
+ * - No decision, EEA/UK/CH/unknown country: every optional category denied.
+ *   The tag still loads and sends cookieless pings.
+ * - No decision, elsewhere: analytics and ads granted (opt-out regime).
+ * - Saved decision: the banner's choice. Outside the consent region the banner
+ *   only exposes an ads on/off, so user data and personalization follow it.
+ *   Inside the region they stay as stored: the Ads switch promises "no ad
+ *   profile" and does not ask about either.
  */
-export function isGoogleTagAllowed(
-  settings: Partial<ConsentSettings>,
-): boolean {
-  return Boolean(settings.analytics_storage || settings.ad_storage);
+export function resolveGoogleConsent({
+  storedConsent,
+  country,
+}: {
+  storedConsent: Partial<ConsentSettings> | null;
+  country: string | null;
+}): GoogleConsentState {
+  const inConsentRegion = requiresCookieConsent(country);
+
+  if (storedConsent) {
+    const state = toGoogleConsent(storedConsent);
+    if (!inConsentRegion) {
+      state.ad_user_data = state.ad_storage;
+      state.ad_personalization = state.ad_storage;
+    }
+    return state;
+  }
+
+  if (inConsentRegion) return toGoogleConsent(DEFAULT_CONSENT_SETTINGS);
+
+  return toGoogleConsent({
+    ...DEFAULT_CONSENT_SETTINGS,
+    analytics_storage: true,
+    ad_storage: true,
+    ad_user_data: true,
+    ad_personalization: true,
+  });
+}
+
+/** Browser-only — the Google tag, Ads conversions and click-id capture. */
+export function resolveClientGoogleConsent(): GoogleConsentState {
+  return resolveGoogleConsent({
+    storedConsent: readStoredConsentSettings(),
+    country: readClientCountry(),
+  });
 }
