@@ -54,12 +54,22 @@ const TIME_PRESETS = ['morning', 'midday', 'after-close', 'midnight'] as const
 
 type TimePreset = (typeof TIME_PRESETS)[number]
 
-const PRESET_LABEL_KEYS = {
-  morning: 'connections.syncSchedule.presets.morning',
-  midday: 'connections.syncSchedule.presets.midday',
-  'after-close': 'connections.syncSchedule.presets.afterClose',
-  midnight: 'connections.syncSchedule.presets.midnight',
-} as const
+/**
+ * Resolved with literal keys. Calling `t(PRESET_LABEL_KEYS[preset])` asks
+ * TypeScript to widen the argument over every translation key at once, which
+ * overflows the union size limit (TS2590) at the size the key set has reached.
+ * The Record return type still forces a label for every preset.
+ */
+function presetLabels(
+  t: ReturnType<typeof useI18n>,
+): Record<TimePreset, string> {
+  return {
+    morning: t('connections.syncSchedule.presets.morning'),
+    midday: t('connections.syncSchedule.presets.midday'),
+    'after-close': t('connections.syncSchedule.presets.afterClose'),
+    midnight: t('connections.syncSchedule.presets.midnight'),
+  }
+}
 
 /** Cadence label: "Every 5 min", "Every hour", "Every 4 hours". */
 function formatSyncIntervalLabel(
@@ -162,6 +172,7 @@ export function SyncSchedulePicker({
   onChanged: () => void
 }) {
   const t = useI18n()
+  const presetLabel = presetLabels(t)
   const isMobile = useIsMobile()
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -334,7 +345,7 @@ export function SyncSchedulePicker({
                         className={cn(secondaryButtonClassName, 'h-9')}
                         onClick={() => applyDailyTime(presetToLocalTime(preset))}
                       >
-                        {t(PRESET_LABEL_KEYS[preset])}
+                        {presetLabel[preset]}
                       </button>
                     ))}
                   </div>
@@ -412,7 +423,7 @@ export function SyncSchedulePicker({
                   className="rounded-sm"
                   onSelect={() => applyDailyTime(presetToLocalTime(preset))}
                 >
-                  {t(PRESET_LABEL_KEYS[preset])}
+                  {presetLabel[preset]}
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />

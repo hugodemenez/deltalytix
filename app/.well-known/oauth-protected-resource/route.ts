@@ -20,6 +20,5 @@ export function GET(request: NextRequest) {
     })),
     bearer_methods_supported: ["header"],
     resource_documentation: absoluteUrl("/docs/api", request),
-    resource_signing_alg_values_supported: ["RS256"],
   });
 }
