@@ -1,7 +1,6 @@
 import { Suspense } from "react"
 import { connection } from "next/server"
 import { redirect } from "next/navigation"
-import { headers } from "next/headers"
 import { loadAuthorizeContext } from "./actions"
 import { AuthorizeConsent } from "./consent"
 import { API_SCOPE_DESCRIPTIONS, type ApiScope } from "@/lib/api/scopes"
@@ -43,10 +42,11 @@ async function AuthorizeRequest({
   const codeChallenge = get("code_challenge")
   const codeChallengeMethod = get("code_challenge_method")
 
-  const headerList = await headers()
-  const host = headerList.get("x-forwarded-host") || headerList.get("host") || "localhost:3000"
-  const proto = headerList.get("x-forwarded-proto") || "http"
-  const currentUrl = `${proto}://${host}/oauth/authorize?${new URLSearchParams(
+  // Relative and without a leading slash, like `next=dashboard`: the sign-in
+  // form only follows same-origin targets (`signupRedirectPath`), so an
+  // absolute URL built from forwarded headers would drop the user on the
+  // dashboard instead of bringing them back to this consent screen.
+  const nextTarget = `oauth/authorize?${new URLSearchParams(
     Object.entries({
       client_id: clientId,
       redirect_uri: redirectUri,
@@ -71,7 +71,7 @@ async function AuthorizeRequest({
   })
 
   if (!context.authenticated) {
-    redirect(`/authentication?next=${encodeURIComponent(currentUrl)}`)
+    redirect(`/authentication?next=${encodeURIComponent(nextTarget)}`)
   }
 
   if ("error" in context && context.error) {

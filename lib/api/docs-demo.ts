@@ -137,29 +137,24 @@ function sampleTrades(userId: string, accountId: string) {
 }
 
 async function ensureDocsDemoUser() {
-  try {
-    return await prisma.user.upsert({
-      where: { id: DOCS_DEMO_USER_ID },
-      update: {
-        email: DOCS_DEMO_USER_EMAIL,
-        auth_user_id: DOCS_DEMO_USER_ID,
-        isFirstConnection: false,
-      },
-      create: {
-        id: DOCS_DEMO_USER_ID,
-        auth_user_id: DOCS_DEMO_USER_ID,
-        email: DOCS_DEMO_USER_EMAIL,
-        language: "en",
-        isFirstConnection: false,
-      },
-    })
-  } catch (error) {
-    const existing = await prisma.user.findUnique({
-      where: { email: DOCS_DEMO_USER_EMAIL },
-    })
-    if (existing) return existing
-    throw error
-  }
+  // No fallback lookup by email on conflict: anyone can request a demo token,
+  // so if a real account ever held the demo address, handing its id out here
+  // would give anonymous visitors read access to that account.
+  return prisma.user.upsert({
+    where: { id: DOCS_DEMO_USER_ID },
+    update: {
+      email: DOCS_DEMO_USER_EMAIL,
+      auth_user_id: DOCS_DEMO_USER_ID,
+      isFirstConnection: false,
+    },
+    create: {
+      id: DOCS_DEMO_USER_ID,
+      auth_user_id: DOCS_DEMO_USER_ID,
+      email: DOCS_DEMO_USER_EMAIL,
+      language: "en",
+      isFirstConnection: false,
+    },
+  })
 }
 
 async function ensureDocsDemoDataset() {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticateApiRequest } from "@/lib/api/auth"
+import { apiError } from "@/lib/api/errors"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(request: NextRequest) {
@@ -18,10 +19,7 @@ export async function GET(request: NextRequest) {
   })
 
   if (!user) {
-    return NextResponse.json(
-      { error: "not_found", message: "User not found" },
-      { status: 404 },
-    )
+    return apiError(404, "not_found", "User not found")
   }
 
   return NextResponse.json({
