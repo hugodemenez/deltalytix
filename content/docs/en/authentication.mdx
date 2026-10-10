@@ -103,10 +103,11 @@ curl -X POST https://www.deltalytix.app/api/oauth/token \
   -d "code=AUTHORIZATION_CODE" \
   -d "redirect_uri=https://your-app.example/callback" \
   -d "client_id=dltx_app_…" \
+  -d "client_secret=dltx_secret_…" \
   -d "code_verifier=PKCE_VERIFIER"
 ```
 
-Confidential clients may send `client_secret` in the body or as `Authorization: Basic` (`client_secret_basic`). Refresh and revoke always require the client secret. Authorization-code exchange may omit it only when the code was issued with PKCE.
+Every OAuth app is a confidential client. Send `client_secret` in the body (`client_secret_post`) or as `Authorization: Basic` (`client_secret_basic`) on the code exchange, on refresh, and on revoke. A missing or wrong secret returns `401 invalid_client`. PKCE is still recommended: a code issued with a `code_challenge` also needs the matching `code_verifier`.
 
 <DocsResponse tone="success" label="Success">
 
@@ -129,7 +130,7 @@ OAuth errors follow RFC 6749:
 ```json
 {
   "error": "invalid_grant",
-  "error_description": "Authorization code is invalid or expired"
+  "error_description": "Invalid or expired authorization code"
 }
 ```
 
@@ -164,8 +165,6 @@ curl -X POST https://www.deltalytix.app/api/oauth/token \
 ```
 
 Refresh tokens rotate on use. Store the new `refresh_token` from each successful response.
-
-Public clients that obtained tokens via PKCE may refresh without a client secret when that was how the original token was issued.
 
 ### 5. Revoke a token
 
@@ -217,5 +216,5 @@ Valid tokens without the required scope return `403`:
 
 In the dashboard developer settings you can:
 
-- Create OAuth apps (name, redirect URIs, allowed scopes) — `client_id` is always visible; `client_secret` is shown once
+- Create OAuth apps (name, redirect URIs, allowed scopes) — `client_id` is always visible; `client_secret` is shown once. Redirect URIs must be absolute `https` URLs (plain `http` only on `localhost`) without a fragment.
 - Create and revoke personal access tokens with chosen scopes — the PAT value is shown once

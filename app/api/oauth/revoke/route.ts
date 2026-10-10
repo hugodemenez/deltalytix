@@ -4,6 +4,7 @@ import { oauthError } from "@/lib/api/errors"
 import { sha256 } from "@/lib/api/tokens"
 import {
   authenticateOAuthClient,
+  InvalidOAuthRequestBody,
   readOAuthFormOrJson,
   resolveClientCredentials,
 } from "@/lib/api/oauth-client"
@@ -14,19 +15,16 @@ export async function POST(request: NextRequest) {
     const credentials = resolveClientCredentials(request, body)
     const { token } = body
 
-    // RFC 7009: an unknown token is still 200. A confidential client that
-    // cannot prove its secret is refused before any revocation runs.
-    if (!token) {
-      return new NextResponse(null, { status: 200 })
-    }
-
-    const app = await authenticateOAuthClient(credentials, {
-      requireSecret: true,
-    })
+    const app = await authenticateOAuthClient(credentials)
     if (!app) {
       return oauthError(401, "invalid_client", "Client authentication failed")
     }
 
+    if (!token) {
+      return oauthError(400, "invalid_request", "token is required")
+    }
+
+    // RFC 7009: a token that is unknown or belongs to another client is still 200.
     const hash = sha256(token)
     await prisma.oAuthAccessToken.updateMany({
       where: {
@@ -37,6 +35,9 @@ export async function POST(request: NextRequest) {
       data: { revokedAt: new Date() },
     })
   } catch (error) {
+    if (error instanceof InvalidOAuthRequestBody) {
+      return oauthError(400, "invalid_request", error.message)
+    }
     console.error("[oauth/revoke]", error)
     return oauthError(500, "server_error", "Unexpected server error")
   }

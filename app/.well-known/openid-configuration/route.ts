@@ -26,7 +26,6 @@ export async function GET(request: NextRequest) {
     token_endpoint_auth_methods_supported: [
       "client_secret_basic",
       "client_secret_post",
-      "none",
     ],
     scopes_supported: scopeNames(),
     service_documentation: absoluteUrl("/docs/api", request),

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { oauthError } from "@/lib/api/errors"
 import {
   authenticateOAuthClient,
+  InvalidOAuthRequestBody,
   readOAuthFormOrJson,
   resolveClientCredentials,
 } from "@/lib/api/oauth-client"
@@ -35,9 +36,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const app = await authenticateOAuthClient(credentials, {
-        requireSecret: false,
-      })
+      const app = await authenticateOAuthClient(credentials)
       if (!app) {
         return oauthError(401, "invalid_client", "Invalid client credentials")
       }
@@ -54,14 +53,6 @@ export async function POST(request: NextRequest) {
         pending.redirectUri !== redirect_uri
       ) {
         return oauthError(400, "invalid_grant", "Invalid or expired authorization code")
-      }
-
-      if (!pending.codeChallenge && !credentials.clientSecret) {
-        return oauthError(
-          401,
-          "invalid_client",
-          "client_secret is required for confidential clients without PKCE",
-        )
       }
 
       if (pending.codeChallenge) {
@@ -138,9 +129,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const app = await authenticateOAuthClient(credentials, {
-        requireSecret: true,
-      })
+      const app = await authenticateOAuthClient(credentials)
       if (!app) {
         return oauthError(401, "invalid_client", "Invalid client credentials")
       }
@@ -164,8 +153,14 @@ export async function POST(request: NextRequest) {
       const accessToken = generateAccessToken()
       const refreshToken = generateRefreshToken()
 
-      await prisma.oAuthAccessToken.update({
-        where: { id: existing.id },
+      // Conditional on the presented refresh token so two concurrent refreshes
+      // of one token cannot both rotate it; the loser gets invalid_grant.
+      const rotated = await prisma.oAuthAccessToken.updateMany({
+        where: {
+          id: existing.id,
+          refreshTokenHash: existing.refreshTokenHash,
+          revokedAt: null,
+        },
         data: {
           tokenHash: sha256(accessToken),
           refreshTokenHash: sha256(refreshToken),
@@ -174,6 +169,10 @@ export async function POST(request: NextRequest) {
           lastUsedAt: new Date(),
         },
       })
+
+      if (rotated.count === 0) {
+        return oauthError(400, "invalid_grant", "Invalid or expired refresh token")
+      }
 
       return NextResponse.json({
         access_token: accessToken,
@@ -186,6 +185,9 @@ export async function POST(request: NextRequest) {
 
     return oauthError(400, "unsupported_grant_type", "Unsupported grant_type")
   } catch (error) {
+    if (error instanceof InvalidOAuthRequestBody) {
+      return oauthError(400, "invalid_request", error.message)
+    }
     console.error("[oauth/token]", error)
     return oauthError(500, "server_error", "Unexpected server error")
   }

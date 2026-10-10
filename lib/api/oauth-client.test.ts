@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest"
+import { NextRequest } from "next/server"
 import { sha256 } from "./tokens"
 import {
   clientSecretSatisfies,
+  InvalidOAuthRequestBody,
   parseBasicClientAuth,
+  readOAuthFormOrJson,
   resolveClientCredentials,
 } from "./oauth-client"
 
@@ -40,17 +43,44 @@ describe("parseBasicClientAuth", () => {
 describe("clientSecretSatisfies", () => {
   const hash = sha256("dltx_secret_xyz")
 
-  it("rejects a missing or wrong secret when refresh or revoke requires one", () => {
-    expect(clientSecretSatisfies(hash, undefined, true)).toBe(false)
-    expect(clientSecretSatisfies(hash, "", true)).toBe(false)
-    expect(clientSecretSatisfies(hash, "wrong", true)).toBe(false)
-    expect(clientSecretSatisfies(hash, "dltx_secret_xyz", true)).toBe(true)
+  it("accepts only the matching secret", () => {
+    expect(clientSecretSatisfies(hash, "dltx_secret_xyz")).toBe(true)
   })
 
-  it("allows an omitted secret only for PKCE, and still rejects a wrong one", () => {
-    expect(clientSecretSatisfies(hash, undefined, false)).toBe(true)
-    expect(clientSecretSatisfies(hash, "wrong", false)).toBe(false)
-    expect(clientSecretSatisfies(hash, "dltx_secret_xyz", false)).toBe(true)
+  it("rejects a missing, empty, or wrong secret", () => {
+    expect(clientSecretSatisfies(hash, undefined)).toBe(false)
+    expect(clientSecretSatisfies(hash, "")).toBe(false)
+    expect(clientSecretSatisfies(hash, "wrong")).toBe(false)
+  })
+})
+
+describe("readOAuthFormOrJson", () => {
+  function post(body: string, contentType: string) {
+    return new NextRequest("https://example.test/api/oauth/token", {
+      method: "POST",
+      headers: { "Content-Type": contentType },
+      body,
+    })
+  }
+
+  it("parses JSON and form bodies into strings", async () => {
+    await expect(
+      readOAuthFormOrJson(post('{"grant_type":"refresh_token","n":1}', "application/json")),
+    ).resolves.toEqual({ grant_type: "refresh_token", n: "1" })
+    await expect(
+      readOAuthFormOrJson(
+        post("grant_type=authorization_code", "application/x-www-form-urlencoded"),
+      ),
+    ).resolves.toEqual({ grant_type: "authorization_code" })
+  })
+
+  it("throws InvalidOAuthRequestBody for malformed or non-object JSON", async () => {
+    await expect(
+      readOAuthFormOrJson(post("{not json", "application/json")),
+    ).rejects.toBeInstanceOf(InvalidOAuthRequestBody)
+    await expect(
+      readOAuthFormOrJson(post("[1,2]", "application/json")),
+    ).rejects.toBeInstanceOf(InvalidOAuthRequestBody)
   })
 })
 

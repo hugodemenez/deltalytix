@@ -103,10 +103,11 @@ curl -X POST https://www.deltalytix.app/api/oauth/token \
   -d "code=AUTHORIZATION_CODE" \
   -d "redirect_uri=https://your-app.example/callback" \
   -d "client_id=dltx_app_…" \
+  -d "client_secret=dltx_secret_…" \
   -d "code_verifier=PKCE_VERIFIER"
 ```
 
-Les clients confidentiels peuvent envoyer `client_secret` dans le corps ou via `Authorization: Basic` (`client_secret_basic`). Le refresh et la révocation exigent toujours le secret. L’échange du code d’autorisation peut l’omettre uniquement si le code a été émis avec PKCE.
+Chaque application OAuth est un client confidentiel. Envoyez `client_secret` dans le corps (`client_secret_post`) ou via `Authorization: Basic` (`client_secret_basic`) lors de l’échange du code, du refresh et de la révocation. Un secret absent ou incorrect renvoie `401 invalid_client`. PKCE reste recommandé : un code émis avec un `code_challenge` exige aussi le `code_verifier` correspondant.
 
 <DocsResponse tone="success" label="Succès">
 
@@ -129,7 +130,7 @@ Les erreurs OAuth suivent la RFC 6749 :
 ```json
 {
   "error": "invalid_grant",
-  "error_description": "Authorization code is invalid or expired"
+  "error_description": "Invalid or expired authorization code"
 }
 ```
 
@@ -164,8 +165,6 @@ curl -X POST https://www.deltalytix.app/api/oauth/token \
 ```
 
 Les refresh tokens tournent à chaque usage. Conservez le nouveau `refresh_token` de chaque réponse réussie.
-
-Les clients publics ayant obtenu des jetons via PKCE peuvent rafraîchir sans client secret lorsque c’était le mode d’émission d’origine.
 
 ### 5. Révoquer un jeton
 
@@ -217,5 +216,5 @@ Un jeton valide sans le scope requis renvoie `403` :
 
 Dans les paramètres développeur du tableau de bord, vous pouvez :
 
-- Créer des applications OAuth (nom, redirect URIs, scopes autorisés) — `client_id` toujours visible ; `client_secret` affiché une fois
+- Créer des applications OAuth (nom, redirect URIs, scopes autorisés) — `client_id` toujours visible ; `client_secret` affiché une fois. Les redirect URIs doivent être des URL `https` absolues (`http` uniquement sur `localhost`), sans fragment.
 - Créer et révoquer des personal access tokens avec les scopes choisis — la valeur du PAT est affichée une fois

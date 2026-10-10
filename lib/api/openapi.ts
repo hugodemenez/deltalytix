@@ -176,7 +176,9 @@ export function buildOpenApiDocument(request?: NextRequest | Request) {
           operationId: "exchangeOAuthToken",
           summary: "Exchange an authorization code or refresh token",
           description:
-            "RFC 6749 token endpoint. Errors use the OAuth `error` / " +
+            "RFC 6749 token endpoint. Every grant requires client " +
+            "authentication: send `client_id` and `client_secret` in the body " +
+            "or as HTTP Basic. Errors use the OAuth `error` / " +
             "`error_description` shape, not the API `Error` envelope.",
           security: [{}],
           requestBody: {
@@ -185,7 +187,7 @@ export function buildOpenApiDocument(request?: NextRequest | Request) {
               "application/x-www-form-urlencoded": {
                 schema: {
                   type: "object",
-                  required: ["grant_type", "client_id"],
+                  required: ["grant_type"],
                   properties: {
                     grant_type: {
                       type: "string",
@@ -238,8 +240,10 @@ export function buildOpenApiDocument(request?: NextRequest | Request) {
           operationId: "revokeOAuthToken",
           summary: "Revoke an access or refresh token",
           description:
-            "RFC 7009 revocation endpoint. Always answers 200 so a caller cannot " +
-            "probe which tokens exist.",
+            "RFC 7009 revocation endpoint. Requires client authentication " +
+            "(body or HTTP Basic). Once the client is authenticated it answers " +
+            "200 whether or not the token existed, so a caller cannot probe " +
+            "which tokens exist.",
           security: [{}],
           requestBody: {
             required: true,
@@ -261,7 +265,23 @@ export function buildOpenApiDocument(request?: NextRequest | Request) {
             },
           },
           responses: {
-            "200": { description: "Always succeeds" },
+            "200": { description: "Token revoked, or it was unknown to this client" },
+            "400": {
+              description: "Missing token or malformed body",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/OAuthError" },
+                },
+              },
+            },
+            "401": {
+              description: "Invalid client credentials",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/OAuthError" },
+                },
+              },
+            },
           },
         },
       },
