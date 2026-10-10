@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Trade, PrismaClient } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { saveTradesAction } from '@/server/database';
+import { serverActor } from '@/lib/api/server-actor';
 
 // Create a new PrismaClient instance for this API route
 const adapter = new PrismaPg({
@@ -135,7 +136,7 @@ export async function POST(req: NextRequest) {
     })
 
     const result = await saveTradesAction(trades as Trade[], {
-      userId: user.id,
+      ...serverActor(user.id),
       connectionId: connection?.id,
     })
 

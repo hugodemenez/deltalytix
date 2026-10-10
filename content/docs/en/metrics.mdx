@@ -1,0 +1,167 @@
+---
+title: Metrics
+description: Summary statistics, equity curves, and per-account performance metrics.
+order: 7
+---
+Compute performance analytics from the authenticated user’s trades.
+
+All metrics endpoints require the `metrics:read` scope.
+
+## Summary
+
+```http
+GET /api/v1/metrics/summary
+```
+
+<DocsEndpointTry method="GET" path="/api/v1/metrics/summary" />
+
+Uses the same filters as [`GET /api/v1/trades`](/docs/trades). Statistics come from `calculateStatistics` plus the dashboard profit-factor formula (gross wins and losses net of commission).
+
+### Query parameters
+
+| Parameter | Description |
+| --- | --- |
+| `accountNumber` | Filter by account |
+| `instrument` | Filter by instrument |
+| `side` | Filter by side |
+| `from` / `to` | Bounds on `entryDate` |
+| `cursor` / `limit` | Accepted for consistency with trades filters where applicable |
+
+### Example
+
+```bash
+curl "https://www.deltalytix.app/api/v1/metrics/summary?from=2026-01-01T00:00:00.000Z" \
+  -H "Authorization: Bearer dltx_at_…"
+```
+
+### Response `200`
+
+<DocsResponse tone="success" label="Success">
+
+```json
+{
+  "totalPnl": 12450.5,
+  "totalCommission": 312.4,
+  "tradeCount": 186,
+  "winCount": 102,
+  "lossCount": 78,
+  "breakevenCount": 6,
+  "winRate": 0.5484,
+  "profitFactor": 1.62,
+  "averageWin": 215.3,
+  "averageLoss": -142.1,
+  "longCount": 110,
+  "shortCount": 76,
+  "tradingDays": 48
+}
+```
+
+</DocsResponse>
+
+## Equity curve
+
+```http
+GET /api/v1/metrics/equity
+```
+
+<DocsEndpointTry method="GET" path="/api/v1/metrics/equity" />
+
+Builds daily equity points via `computeEquityChartData`.
+
+### Query parameters
+
+| Parameter | Description |
+| --- | --- |
+| `from` | Start date (ISO 8601) |
+| `to` | End date (ISO 8601) |
+| `accountNumbers` | Comma-separated account numbers; when provided, also returns per-account series |
+
+### Example
+
+```bash
+curl "https://www.deltalytix.app/api/v1/metrics/equity?accountNumbers=SIM-001,SIM-002&from=2026-01-01T00:00:00.000Z" \
+  -H "Authorization: Bearer dltx_at_…"
+```
+
+```js
+const params = new URLSearchParams({
+  accountNumbers: "SIM-001,SIM-002",
+  from: "2026-01-01T00:00:00.000Z",
+});
+
+const res = await fetch(
+  `https://www.deltalytix.app/api/v1/metrics/equity?${params}`,
+  { headers: { Authorization: `Bearer ${accessToken}` } },
+);
+const equity = await res.json();
+```
+
+### Response `200`
+
+<DocsResponse tone="success" label="Success">
+
+```json
+{
+  "points": [
+    {
+      "date": "2026-01-02",
+      "equity": 50120.5
+    },
+    {
+      "date": "2026-01-03",
+      "equity": 50385.25
+    }
+  ],
+  "accounts": {
+    "SIM-001": [
+      { "date": "2026-01-02", "equity": 25050.0 },
+      { "date": "2026-01-03", "equity": 25210.75 }
+    ],
+    "SIM-002": [
+      { "date": "2026-01-02", "equity": 25070.5 },
+      { "date": "2026-01-03", "equity": 25174.5 }
+    ]
+  }
+}
+```
+
+</DocsResponse>
+
+The `accounts` object is included when `accountNumbers` is requested.
+
+## Account metrics
+
+```http
+GET /api/v1/metrics/accounts
+```
+
+<DocsEndpointTry method="GET" path="/api/v1/metrics/accounts" />
+
+Runs `computeMetricsForAccounts` for all of the user’s accounts.
+
+### Example
+
+```bash
+curl https://www.deltalytix.app/api/v1/metrics/accounts \
+  -H "Authorization: Bearer dltx_at_…"
+```
+
+### Response `200`
+
+<DocsResponse tone="success" label="Success">
+
+```json
+{
+  "data": [
+    {
+      "accountNumber": "SIM-001",
+      "balance": 52480.12,
+      "drawdown": 3.4,
+      "consistency": 0.82,
+      "progress": 0.61
+    }
+  ]
+}
+```
+
+</DocsResponse>

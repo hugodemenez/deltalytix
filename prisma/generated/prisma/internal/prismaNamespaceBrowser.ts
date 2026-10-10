@@ -58,6 +58,9 @@ export const ModelName = {
   TeamSubscription: 'TeamSubscription',
   Notification: 'Notification',
   User: 'User',
+  OAuthApp: 'OAuthApp',
+  OAuthAuthorizationCode: 'OAuthAuthorizationCode',
+  OAuthAccessToken: 'OAuthAccessToken',
   Connection: 'Connection',
   Team: 'Team',
   TeamInvitation: 'TeamInvitation',
@@ -211,6 +214,57 @@ export const UserScalarFieldEnum = {
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const OAuthAppScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  description: 'description',
+  logoUrl: 'logoUrl',
+  clientId: 'clientId',
+  clientSecretHash: 'clientSecretHash',
+  redirectUris: 'redirectUris',
+  scopes: 'scopes',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type OAuthAppScalarFieldEnum = (typeof OAuthAppScalarFieldEnum)[keyof typeof OAuthAppScalarFieldEnum]
+
+
+export const OAuthAuthorizationCodeScalarFieldEnum = {
+  id: 'id',
+  codeHash: 'codeHash',
+  appId: 'appId',
+  userId: 'userId',
+  scopes: 'scopes',
+  redirectUri: 'redirectUri',
+  codeChallenge: 'codeChallenge',
+  codeChallengeMethod: 'codeChallengeMethod',
+  expiresAt: 'expiresAt',
+  consumedAt: 'consumedAt'
+} as const
+
+export type OAuthAuthorizationCodeScalarFieldEnum = (typeof OAuthAuthorizationCodeScalarFieldEnum)[keyof typeof OAuthAuthorizationCodeScalarFieldEnum]
+
+
+export const OAuthAccessTokenScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  tokenHash: 'tokenHash',
+  refreshTokenHash: 'refreshTokenHash',
+  appId: 'appId',
+  userId: 'userId',
+  scopes: 'scopes',
+  expiresAt: 'expiresAt',
+  refreshTokenExpiresAt: 'refreshTokenExpiresAt',
+  lastUsedAt: 'lastUsedAt',
+  revokedAt: 'revokedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type OAuthAccessTokenScalarFieldEnum = (typeof OAuthAccessTokenScalarFieldEnum)[keyof typeof OAuthAccessTokenScalarFieldEnum]
 
 
 export const ConnectionScalarFieldEnum = {

@@ -1,0 +1,97 @@
+---
+title: Imports
+description: Upload CSV or XLSX trade files with AI mapping or platform-specific parsers.
+order: 6
+---
+Import trades from files without going through the dashboard UI.
+
+## Upload a file
+
+```http
+POST /api/v1/imports
+```
+
+**Scope:** `imports:write`
+
+**Content-Type:** `multipart/form-data`
+
+<DocsEndpointTry method="POST" path="/api/v1/imports" />
+
+### Form fields
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `file` | Yes | `.csv` or `.xlsx` file |
+| `type` | Yes | `"ai"` or a platform name |
+| `accountNumber` | Yes | Destination account number |
+
+### AI import (`type=ai`)
+
+The server parses the file (Papa Parse for CSV, `read-excel-file` for XLSX), runs the same AI mapping and formatting pipeline used by the dashboard, then saves trades through the shared trades-save core.
+
+```bash
+curl -X POST https://www.deltalytix.app/api/v1/imports \
+  -H "Authorization: Bearer dltx_at_…" \
+  -F "file=@./trades.csv" \
+  -F "type=ai" \
+  -F "accountNumber=SIM-001"
+```
+
+```js
+const form = new FormData();
+form.append("file", fileInput.files[0]);
+form.append("type", "ai");
+form.append("accountNumber", "SIM-001");
+
+const res = await fetch("https://www.deltalytix.app/api/v1/imports", {
+  method: "POST",
+  headers: { Authorization: `Bearer ${accessToken}` },
+  body: form,
+});
+const result = await res.json();
+```
+
+### Platform import (`type=<platform>`)
+
+When `type` is a platform key, the server uses a registered parser extracted from the dashboard import flow. Supported platforms depend on which parsers are available as pure functions (candidates include `tradezella`, `tradovate`, `quantower`, `topstep`, `ftmo`, `atas`, and others).
+
+```bash
+curl -X POST https://www.deltalytix.app/api/v1/imports \
+  -H "Authorization: Bearer dltx_at_…" \
+  -F "file=@./export.xlsx" \
+  -F "type=tradovate" \
+  -F "accountNumber=SIM-001"
+```
+
+### Success response
+
+<DocsResponse tone="success" label="Success">
+
+```json
+{
+  "imported": 128,
+  "duplicates": 4,
+  "total": 132,
+  "accountNumber": "SIM-001"
+}
+```
+
+</DocsResponse>
+
+### Unsupported platform → `422`
+
+<DocsResponse tone="error" label="Error">
+
+```json
+{
+  "error": "unsupported_service",
+  "message": "Unknown import type",
+  "details": {
+    "supported": ["ai", "tradovate", "tradezella", "quantower"]
+  }
+}
+```
+
+</DocsResponse>
+
+The exact `details.supported` list reflects the live parser registry.
