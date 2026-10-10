@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { resolveDbUserId } from "@/lib/api/db-user"
+import { redirectUriProblem } from "@/lib/api/redirect-uri"
 import { API_SCOPES, isValidScope, parseScopes } from "@/lib/api/scopes"
 import {
   generateClientId,
@@ -47,6 +48,10 @@ export async function createOAuthAppAction(input: {
     .map((u) => u.trim())
     .filter(Boolean)
   if (redirectUris.length === 0) throw new Error("At least one redirect URI is required")
+  for (const uri of redirectUris) {
+    const problem = redirectUriProblem(uri)
+    if (problem) throw new Error(`Redirect URI ${uri} ${problem}`)
+  }
 
   const scopes = input.scopes.filter(isValidScope)
   if (scopes.length === 0) throw new Error("At least one scope is required")
