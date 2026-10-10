@@ -442,7 +442,7 @@ export function SyncSchedulePicker({
                     aria-label={t('connections.syncSchedule.timeLabel')}
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
-                    className="h-8 flex-1 rounded-sm border-black/10 bg-transparent px-2 text-sm shadow-none focus-visible:border-black/30 focus-visible:ring-0 dark:border-white/10"
+                    className="h-8 flex-1 rounded-sm border-black/10 bg-transparent px-2 text-base shadow-none focus-visible:border-black/30 sm:text-sm focus-visible:ring-0 dark:border-white/10"
                   />
                   <button
                     type="button"
