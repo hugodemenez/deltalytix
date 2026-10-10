@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { resolveInternalDestination } from "@/lib/signup-redirect"
 import { createI18nMiddleware } from "next-international/middleware"
 import { createServerClient } from "@supabase/ssr"
 import { geolocation } from "@vercel/functions"
@@ -467,9 +468,16 @@ export default async function proxy(req: NextRequest) {
   } else {
     // Authenticated - redirect from auth to dashboard
     if (withoutLocale(pathname) === "/authentication") {
+      // `next` is attacker-controlled: `/${"/evil.com"}` would resolve to
+      // https://evil.com, so resolve it against our origin and fall back to
+      // the dashboard, as the sign-in form and auth callback do.
       const nextParam = req.nextUrl.searchParams.get("next")
-      const redirectUrl = nextParam ? `/${nextParam}` : "/dashboard"
-      return NextResponse.redirect(new URL(redirectUrl, req.url))
+      return NextResponse.redirect(
+        resolveInternalDestination(
+          nextParam ? `/${nextParam.replace(/^[/\\]+/, "")}` : null,
+          req.nextUrl.origin,
+        ),
+      )
     }
   }
 

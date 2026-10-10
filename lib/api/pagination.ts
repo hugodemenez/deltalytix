@@ -19,7 +19,8 @@ export function decodeCursor(cursor: string | null): number {
     const parsed = JSON.parse(
       Buffer.from(cursor, "base64url").toString("utf8"),
     ) as { o?: number }
-    return typeof parsed.o === "number" && parsed.o >= 0 ? parsed.o : 0
+    // Prisma's `skip` must be an integer; a hand-made `{"o":1.5}` would 500.
+    return Number.isSafeInteger(parsed.o) && parsed.o! >= 0 ? parsed.o! : 0
   } catch {
     return 0
   }
@@ -33,6 +34,40 @@ export type TradeListFilters = {
   to?: string
 }
 
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * `entryDate` is stored as an ISO string, so filters compare as strings.
+ * A date-only `from` is the start of that day; a date-only `to` is the start of
+ * the next day (used as an exclusive bound), matching `/metrics/equity`, which
+ * treats `to` as end of day. Full timestamps are normalized to UTC ISO.
+ * Returns null when the value does not parse.
+ */
+export function dateFilterBound(
+  value: string,
+  side: "from" | "to",
+): string | null {
+  if (DATE_ONLY.test(value)) {
+    const day = new Date(`${value}T00:00:00.000Z`)
+    if (Number.isNaN(day.getTime())) return null
+    if (side === "to") day.setUTCDate(day.getUTCDate() + 1)
+    return day.toISOString().slice(0, 10)
+  }
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return null
+  if (side === "to") parsed.setTime(parsed.getTime() + 1)
+  return parsed.toISOString()
+}
+
+/** The first `from`/`to` query value that does not parse as a date, if any. */
+export function invalidDateFilter(params: URLSearchParams): string | null {
+  for (const side of ["from", "to"] as const) {
+    const value = params.get(side)
+    if (value && !dateFilterBound(value, side)) return side
+  }
+  return null
+}
+
 export function buildTradeWhere(
   userId: string,
   filters: TradeListFilters,
@@ -43,10 +78,13 @@ export function buildTradeWhere(
   if (filters.instrument) where.instrument = filters.instrument
   if (filters.side) where.side = filters.side
 
-  if (filters.from || filters.to) {
+  const from = filters.from ? dateFilterBound(filters.from, "from") : null
+  const to = filters.to ? dateFilterBound(filters.to, "to") : null
+  if (from || to) {
     where.entryDate = {}
-    if (filters.from) where.entryDate.gte = filters.from
-    if (filters.to) where.entryDate.lte = filters.to
+    if (from) where.entryDate.gte = from
+    // Exclusive bound: a date-only `to` covers that whole day.
+    if (to) where.entryDate.lt = to
   }
 
   return where

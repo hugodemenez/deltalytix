@@ -246,7 +246,7 @@ export async function getIgCredentialsForSync(accountId: string): Promise<
 /**
  * Map + save transactions already fetched from IG in the browser (or server).
  */
-export async function importIgSyncedHistory(params: {
+export async function importIgSyncedHistory(params: TrustedActor & {
   accountId: string;
   connectionId: string;
   perAccount: Array<{
@@ -255,8 +255,6 @@ export async function importIgSyncedHistory(params: {
     error?: string;
   }>;
   accounts?: IgApiAccount[];
-  /** Cron passes the owning user; interactive sync uses the session. */
-  userId?: string;
   /** When set, skip re-loading/persisting credentials from the connection row. */
   credentials?: IgStoredCredentials;
 }): Promise<IgTradesResult> {
@@ -269,10 +267,9 @@ export async function importIgSyncedHistory(params: {
   };
 
   try {
-    let userId = params.userId ?? null;
-    if (!userId) {
-      userId = await getUserId();
-    }
+    // A browser can call this server action directly, so the acting user
+    // only comes from an in-process `serverActor` (cron) or the session.
+    const userId = trustedUserId(params) ?? (await getUserId());
     if (!userId) {
       return { error: "USER_NOT_AUTHENTICATED", syncStats };
     }
@@ -612,7 +609,7 @@ export async function getIgTrades(
       connectionId,
       perAccount: history.perAccount,
       accounts: history.accounts,
-      userId,
+      ...serverActor(userId),
       credentials,
     });
   } catch (error) {

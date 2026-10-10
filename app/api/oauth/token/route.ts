@@ -17,6 +17,9 @@ import {
   sha256,
 } from "@/lib/api/tokens"
 
+// RFC 6749 §5.1: responses carrying tokens must not be cached.
+const NO_STORE = { "Cache-Control": "no-store", Pragma: "no-cache" }
+
 /** Thrown inside the token transaction when another exchange won the race. */
 class AuthorizationCodeAlreadyUsed extends Error {}
 
@@ -116,7 +119,7 @@ export async function POST(request: NextRequest) {
         expires_in: ACCESS_TOKEN_TTL_SECONDS,
         refresh_token: refreshToken,
         scope: scopes.join(" "),
-      })
+      }, { headers: NO_STORE })
     }
 
     if (grantType === "refresh_token") {
@@ -180,7 +183,7 @@ export async function POST(request: NextRequest) {
         expires_in: ACCESS_TOKEN_TTL_SECONDS,
         refresh_token: refreshToken,
         scope: existing.scopes.join(" "),
-      })
+      }, { headers: NO_STORE })
     }
 
     return oauthError(400, "unsupported_grant_type", "Unsupported grant_type")

@@ -1,5 +1,10 @@
 import type { Trade } from "@/prisma/generated/prisma/client"
 import { generateTradeHash } from "@/lib/utils"
+import {
+  TRADOVATE_TRADE_TAG,
+  tradovateRoundTripFillIds,
+  tradovateSideFromBuyFirst,
+} from "@/lib/tradovate/identity"
 
 const mappings: Record<string, string> = {
   symbol: "instrument",
@@ -44,7 +49,8 @@ function parseTradovateDate(cellValue: string): string | undefined {
   }
   const localDate = new Date(year, month - 1, day, hours, minutes, seconds)
   if (isNaN(localDate.getTime())) return undefined
-  return localDate.toISOString()
+  // Same stored shape as the dashboard Tradovate processor.
+  return localDate.toISOString().replace("Z", "+00:00")
 }
 
 export function parseTradovateCsv(
@@ -100,9 +106,35 @@ export function parseTradovateCsv(
 
     if (!valid || !item.instrument || !item.quantity) continue
 
+    // Mirrors the dashboard Tradovate processor so API and dashboard imports
+    // of the same export store the same trades (and dedupe against each other).
+    item.instrument = item.instrument.slice(0, -2)
+
+    // boughtTimestamp/soldTimestamp map to entry/close until we know which
+    // fill happened first. Shorts sell first.
+    const isBuyFirst = !(
+      item.entryDate &&
+      item.closeDate &&
+      new Date(item.entryDate) > new Date(item.closeDate)
+    )
+    const { entryId, closeId } = tradovateRoundTripFillIds({
+      buyFillId: item.entryId,
+      sellFillId: item.closeId,
+      isBuyFirst,
+    })
+    item.entryId = entryId
+    item.closeId = closeId
+    item.side = tradovateSideFromBuyFirst(isBuyFirst)
+    item.tags = [TRADOVATE_TRADE_TAG]
+
+    if (!isBuyFirst) {
+      // Tradovate's "boughtTimestamp" is the buy (exit) on a short.
+      ;[item.entryDate, item.closeDate] = [item.closeDate, item.entryDate]
+      ;[item.entryPrice, item.closePrice] = [item.closePrice, item.entryPrice]
+    }
+
     item.accountNumber = accountNumber
     item.commission = item.commission ?? 0
-    item.side = item.side || ""
     item.id = generateTradeHash(item).toString()
     trades.push(item as Trade)
   }

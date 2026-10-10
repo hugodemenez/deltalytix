@@ -79,10 +79,15 @@ export async function aiNormalizeTrades(params: {
   })
 
   const batchSize = 50
-  const trades: Trade[] = []
-
+  // Batches run a few at a time: one after another, a few hundred rows would
+  // outlast the route's maxDuration and the caller would get a bare 504.
+  const concurrency = 5
+  const batches: Record<string, string>[][] = []
   for (let i = 0; i < objects.length; i += batchSize) {
-    const batch = objects.slice(i, i + batchSize)
+    batches.push(objects.slice(i, i + batchSize))
+  }
+
+  const formatBatch = async (batch: Record<string, string>[]) => {
     const rows = batch.map((obj) => headers.map((h) => obj[h] ?? ""))
 
     const { object } = await generateObject({
@@ -100,15 +105,22 @@ ${rows.map((row) => row.join(", ")).join("\n")}
       temperature: 0.1,
     })
 
-    for (const trade of object) {
-      trades.push(
+    return object.map(
+      (trade) =>
         createTradeWithDefaults({
           ...trade,
           accountNumber: trade.accountNumber || accountNumber,
           tags: ["ai-import"],
         }) as Trade,
-      )
-    }
+    )
+  }
+
+  const trades: Trade[] = []
+  for (let i = 0; i < batches.length; i += concurrency) {
+    const results = await Promise.all(
+      batches.slice(i, i + concurrency).map(formatBatch),
+    )
+    for (const batchTrades of results) trades.push(...batchTrades)
   }
 
   return trades

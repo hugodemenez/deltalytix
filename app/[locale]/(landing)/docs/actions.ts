@@ -123,6 +123,9 @@ export async function createDocsPlaygroundTokenAction(
         userId: user.id,
         appId: null,
         name: DOCS_PLAYGROUND_TOKEN_NAME,
+        // Playground tokens always expire; a long-lived PAT the user happened
+        // to name "Docs playground" must survive.
+        expiresAt: { not: null },
         revokedAt: null,
       },
       data: { revokedAt: new Date() },

@@ -12,6 +12,10 @@ import type { Trade } from "@/prisma/generated/prisma/client"
 
 export const maxDuration = 60
 
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+/** AI import costs one model call per 50 rows; keep it inside maxDuration. */
+const MAX_AI_IMPORT_ROWS = 500
+
 export async function POST(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["imports:write"])
   if (!auth.ok) return auth.response
@@ -43,6 +47,14 @@ export async function POST(request: NextRequest) {
     return apiError(400, "validation_error", "file must be .csv or .xlsx")
   }
 
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return apiError(
+      400,
+      "validation_error",
+      `file must be at most ${MAX_UPLOAD_BYTES / 1024 / 1024} MB`,
+    )
+  }
+
   const buffer = Buffer.from(await file.arrayBuffer())
   let parsed
   try {
@@ -59,6 +71,13 @@ export async function POST(request: NextRequest) {
   let trades: Trade[] = []
 
   if (type === "ai") {
+    if (parsed.objects.length > MAX_AI_IMPORT_ROWS) {
+      return apiError(
+        400,
+        "validation_error",
+        `AI import accepts at most ${MAX_AI_IMPORT_ROWS} rows per file; split the file or use a platform type`,
+      )
+    }
     try {
       trades = await aiNormalizeTrades({
         headers: parsed.headers,
@@ -83,11 +102,20 @@ export async function POST(request: NextRequest) {
         { supported: ["ai", ...SUPPORTED_IMPORT_PLATFORMS] },
       )
     }
-    trades = parser(parsed.headers, parsed.rows, accountNumber).map((trade) => ({
-      ...trade,
-      accountNumber: trade.accountNumber || accountNumber,
-      userId: auth.auth.userId,
-    }))
+    try {
+      trades = parser(parsed.headers, parsed.rows, accountNumber).map((trade) => ({
+        ...trade,
+        accountNumber: trade.accountNumber || accountNumber,
+        userId: auth.auth.userId,
+      }))
+    } catch (error) {
+      return apiError(
+        400,
+        "parse_error",
+        `Failed to read the file as a ${type} export`,
+        error instanceof Error ? error.message : String(error),
+      )
+    }
   }
 
   if (trades.length === 0) {

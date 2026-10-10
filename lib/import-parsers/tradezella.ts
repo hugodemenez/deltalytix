@@ -64,12 +64,12 @@ export function parseTradezellaCsv(
     if (Object.values(item).some((value) => value === undefined)) return
 
     if (entryTime && closeTime) {
-      item.entryDate = new Date(
-        `${item.entryDate} ${entryTime.slice(0, 8)}`,
-      ).toISOString()
-      item.closeDate = new Date(
-        `${item.closeDate} ${closeTime.slice(0, 8)}`,
-      ).toISOString()
+      const entry = combineDateAndTime(String(item.entryDate), entryTime)
+      const close = combineDateAndTime(String(item.closeDate), closeTime)
+      // An unparseable date would throw in toISOString(); skip the row instead.
+      if (!entry || !close) return
+      item.entryDate = entry
+      item.closeDate = close
     }
 
     item.accountNumber = item.accountNumber || accountNumber
@@ -82,4 +82,18 @@ export function parseTradezellaCsv(
   })
 
   return trades
+}
+
+/**
+ * XLSX date and time cells arrive as ISO strings (`2024-01-02T00:00:00.000Z`,
+ * `1899-12-30T09:30:00.000Z`), CSV cells as plain `2024-01-02` / `09:30:00`.
+ * Returns null when the pair does not form a valid date.
+ */
+function combineDateAndTime(date: string, time: string): string | null {
+  const datePart = date.includes("T") ? date.slice(0, 10) : date
+  const timePart = time.includes("T")
+    ? (time.split("T")[1] ?? "").slice(0, 8)
+    : time.slice(0, 8)
+  const parsed = new Date(`${datePart} ${timePart}`)
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
 }

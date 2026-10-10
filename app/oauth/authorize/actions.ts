@@ -78,14 +78,18 @@ export async function loadAuthorizeContext(params: AuthorizeParams) {
     }
   }
 
+  // RFC 7636 reads a missing method as `plain`, which the token endpoint
+  // never accepts, so require S256 explicitly rather than fail at exchange.
   if (
-    params.codeChallengeMethod &&
-    params.codeChallengeMethod !== "S256"
+    (params.codeChallenge || params.codeChallengeMethod) &&
+    (params.codeChallengeMethod !== "S256" ||
+      !/^[A-Za-z0-9_-]{43,128}$/.test(params.codeChallenge ?? ""))
   ) {
     return {
       authenticated: true as const,
       error: "invalid_request" as const,
-      message: "Only code_challenge_method=S256 is supported",
+      message:
+        "PKCE requires code_challenge_method=S256 and a base64url code_challenge",
     }
   }
 
@@ -121,7 +125,7 @@ export async function approveAuthorizationAction(formData: FormData) {
     throw new Error("Invalid authorization request")
   }
 
-  if (codeChallengeMethod && codeChallengeMethod !== "S256") {
+  if ((codeChallenge || codeChallengeMethod) && codeChallengeMethod !== "S256") {
     throw new Error("Invalid authorization request")
   }
 

@@ -5,6 +5,7 @@ import {
   buildTradeWhere,
   decodeCursor,
   encodeCursor,
+  invalidDateFilter,
   parseLimit,
   serializeTrade,
 } from "@/lib/api/pagination"
@@ -15,11 +16,47 @@ import {
 } from "@/lib/trades/save-trades-core"
 import type { Trade } from "@/prisma/generated/prisma/client"
 
+const MAX_TRADES_PER_REQUEST = 5000
+
+const NUMERIC_FIELDS = [
+  "quantity",
+  "entryPrice",
+  "closePrice",
+  "pnl",
+  "commission",
+  "timeInPosition",
+] as const
+
+function invalidTradeFields(
+  trade: Record<string, unknown>,
+  index: number,
+): { field: string; message: string }[] {
+  const details: { field: string; message: string }[] = []
+  for (const field of NUMERIC_FIELDS) {
+    const value = trade[field]
+    if (value == null) continue
+    if (typeof value === "boolean" || !Number.isFinite(Number(value))) {
+      details.push({ field: `trades[${index}].${field}`, message: "must be a number" })
+    }
+  }
+  for (const field of ["entryDate", "closeDate"] as const) {
+    const value = trade[field]
+    if (typeof value !== "string" || Number.isNaN(new Date(value).getTime())) {
+      details.push({ field: `trades[${index}].${field}`, message: "must be an ISO 8601 date" })
+    }
+  }
+  return details
+}
+
 export async function GET(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["trades:read"])
   if (!auth.ok) return auth.response
 
   const { searchParams } = new URL(request.url)
+  const badDate = invalidDateFilter(searchParams)
+  if (badDate) {
+    return apiError(400, "validation_error", `${badDate} must be an ISO 8601 date`)
+  }
   const limit = parseLimit(searchParams.get("limit"))
   const offset = decodeCursor(searchParams.get("cursor"))
   const where = buildTradeWhere(auth.auth.userId, {
@@ -61,8 +98,15 @@ export async function POST(request: NextRequest) {
   if (!Array.isArray(tradesInput) || tradesInput.length === 0) {
     return apiError(400, "validation_error", "Body must include a non-empty trades array")
   }
+  if (tradesInput.length > MAX_TRADES_PER_REQUEST) {
+    return apiError(
+      400,
+      "validation_error",
+      `At most ${MAX_TRADES_PER_REQUEST} trades can be sent per request`,
+    )
+  }
 
-  for (const trade of tradesInput) {
+  for (const [index, trade] of tradesInput.entries()) {
     if (!trade || typeof trade !== "object") {
       return apiError(400, "validation_error", "Each trade must be an object")
     }
@@ -82,6 +126,13 @@ export async function POST(request: NextRequest) {
         "validation_error",
         "Each trade requires accountNumber, instrument, quantity, entryPrice, closePrice, entryDate, closeDate, and pnl",
       )
+    }
+
+    // `Number("1,234.50")` is NaN, which would land in the float columns and
+    // turn every later metric into NaN; reject it here instead.
+    const details = invalidTradeFields(t, index)
+    if (details.length > 0) {
+      return apiError(400, "validation_error", "Invalid trade data", details)
     }
   }
 

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticateApiRequest } from "@/lib/api/auth"
-import { buildTradeWhere, computeProfitFactor } from "@/lib/api/pagination"
+import { apiError } from "@/lib/api/errors"
+import {
+  buildTradeWhere,
+  computeProfitFactor,
+  invalidDateFilter,
+} from "@/lib/api/pagination"
 import { calculateStatistics, calculateTradingDays } from "@/lib/utils"
 import { prisma } from "@/lib/prisma"
 import type { Trade } from "@/prisma/generated/prisma/client"
@@ -10,6 +15,10 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response
 
   const { searchParams } = new URL(request.url)
+  const badDate = invalidDateFilter(searchParams)
+  if (badDate) {
+    return apiError(400, "validation_error", `${badDate} must be an ISO 8601 date`)
+  }
   const where = buildTradeWhere(auth.auth.userId, {
     accountNumber: searchParams.get("accountNumber") || undefined,
     instrument: searchParams.get("instrument") || undefined,
