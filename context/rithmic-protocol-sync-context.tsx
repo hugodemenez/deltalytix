@@ -40,6 +40,28 @@ interface SyncApiPayload {
   errorParams?: Record<string, string | number>
   savedCount?: number
   tradesCount?: number
+  syncStats?: {
+    rawFills?: number
+    fillsAfterDedup?: number
+    closedTrades?: number
+    openTradesSkipped?: number
+    savedCount?: number
+  }
+}
+
+function syncSummaryToast(
+  t: (key: string, params?: Record<string, string | number>) => string,
+  payload: SyncApiPayload,
+) {
+  toast.success(
+    t('rithmicProtocolSync.sync.summary', {
+      fills:
+        payload.syncStats?.fillsAfterDedup ?? payload.syncStats?.rawFills ?? 0,
+      matched: payload.syncStats?.closedTrades ?? payload.tradesCount ?? 0,
+      saved: payload.savedCount ?? payload.syncStats?.savedCount ?? 0,
+      open: payload.syncStats?.openTradesSkipped ?? 0,
+    }),
+  )
 }
 
 interface RithmicProtocolSyncContextType {
@@ -191,6 +213,10 @@ export function RithmicProtocolSyncContextProvider({
         if (payload?.message === 'DUPLICATE_TRADES') {
           await loadAccounts()
           await refreshTradesOnly({ force: false })
+          syncSummaryToast(
+            t as (key: string, params?: Record<string, string | number>) => string,
+            payload,
+          )
           return { success: true, message: 'DUPLICATE_TRADES' }
         }
 
@@ -210,6 +236,10 @@ export function RithmicProtocolSyncContextProvider({
 
         await loadAccounts()
         await refreshTradesOnly({ force: false })
+        syncSummaryToast(
+          t as (key: string, params?: Record<string, string | number>) => string,
+          payload,
+        )
         return { success: true, message: 'OK' }
       } catch (error) {
         console.error('Rithmic Protocol sync error:', error)

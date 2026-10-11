@@ -69,6 +69,29 @@ describe('generatePersistedTradeUUID', () => {
     ).toBe(historical)
   })
 
+  it('hashes a Replay basketId_fillId as the bare history fill id', () => {
+    const prefixed = generatePersistedTradeUUID({
+      ...baseTrade,
+      entryId: '239200544_1317177',
+      closeId: '239200544_1319858',
+      tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+    })
+    const history = generatePersistedTradeUUID({
+      ...baseTrade,
+      entryId: '1317177',
+      closeId: '1319858',
+      tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+    })
+    expect(prefixed).toBe(history)
+    expect(
+      generatePersistedTradeUUID({
+        ...baseTrade,
+        entryId: '239200544_1317177',
+        closeId: '239200544_1319858',
+      }),
+    ).not.toBe(history)
+  })
+
   it('still includes commission for non-Protocol imports', () => {
     const zero = generatePersistedTradeUUID({ ...baseTrade, commission: 0 })
     const charged = generatePersistedTradeUUID({ ...baseTrade, commission: 4.8 })

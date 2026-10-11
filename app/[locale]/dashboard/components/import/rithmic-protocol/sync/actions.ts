@@ -669,9 +669,12 @@ export async function getRithmicProtocolTrades(
   const syncStats = {
     tradingAccounts: 0,
     rawFills: 0,
+    fillsAfterDedup: 0,
     closedTrades: 0,
     openTradesSkipped: 0,
+    savedCount: 0,
     fetchFailures: 0,
+    droppedByReason: {} as Record<string, number>,
   }
 
   try {
@@ -764,24 +767,23 @@ export async function getRithmicProtocolTrades(
       `Fetching fills for ${resolvedAccountIds.length} accounts (from ${credentials.historyStartDate ?? `${DEFAULT_LOOKBACK_DAYS}d lookback`}, ≤30d windows)`,
     )
 
-    const { fills, uniqueUserId, commissionRates } = await fetchFillsForAccounts({
-      gatewayUri: credentials.gatewayUri,
-      systemName: credentials.systemName,
-      username: credentials.username,
-      password: credentials.password,
-      fcmId: credentials.fcmId,
-      ibId: credentials.ibId,
-      accountIds: resolvedAccountIds,
-      accounts: credentials.accounts,
-      historyStartDate: credentials.historyStartDate,
-      lookbackDays: DEFAULT_LOOKBACK_DAYS,
-    })
+    const { fills, uniqueUserId, commissionRates, fillStats } =
+      await fetchFillsForAccounts({
+        gatewayUri: credentials.gatewayUri,
+        systemName: credentials.systemName,
+        username: credentials.username,
+        password: credentials.password,
+        fcmId: credentials.fcmId,
+        ibId: credentials.ibId,
+        accountIds: resolvedAccountIds,
+        accounts: credentials.accounts,
+        historyStartDate: credentials.historyStartDate,
+        lookbackDays: DEFAULT_LOOKBACK_DAYS,
+      })
 
-    logger.info(
-      `Sync fill fetch done unique_user_id=${uniqueUserId ?? credentials.uniqueUserId ?? '(none)'} fills=${fills.length}`,
-    )
-
-    syncStats.rawFills = fills.length
+    syncStats.rawFills = fillStats.received
+    syncStats.fillsAfterDedup = fillStats.afterDedup
+    syncStats.droppedByReason = { ...fillStats.dropped }
 
     const tickDetails = await getTickDetails()
     const tickBySymbol = new Map(
@@ -791,19 +793,32 @@ export async function getRithmicProtocolTrades(
       ]),
     )
 
-    const { trades, openSkipped } = buildTradesFromRithmicFills(
+    const { trades, openSkipped, skipped } = buildTradesFromRithmicFills(
       fills,
       userId,
       tickBySymbol,
       commissionRates,
     )
+    for (const [reason, count] of Object.entries(skipped)) {
+      syncStats.droppedByReason[reason] =
+        (syncStats.droppedByReason[reason] ?? 0) + count
+    }
     syncStats.closedTrades = trades.length
     syncStats.openTradesSkipped = openSkipped
     const commissionZeroCount = trades.filter((trade) => !trade.commission).length
-    logger.info(
-      `Matched ${trades.length} closed trade(s), openSkipped=${openSkipped}, ` +
-        `commissionRates=${commissionRates.size}, commissionZero=${commissionZeroCount}`,
-    )
+
+    const logSyncSummary = (saved: number) => {
+      syncStats.savedCount = saved
+      // First result line — keep this ahead of any extra per-sync chatter so
+      // production log truncation still leaves the histogram.
+      logger.info(
+        `sync summary unique_user_id=${uniqueUserId ?? credentials.uniqueUserId ?? '(none)'} ` +
+          `fillsReceived=${syncStats.rawFills} afterDedup=${syncStats.fillsAfterDedup} ` +
+          `dropped=${JSON.stringify(syncStats.droppedByReason)} ` +
+          `closed=${syncStats.closedTrades} openSkipped=${syncStats.openTradesSkipped} ` +
+          `saved=${saved} commissionZero=${commissionZeroCount}`,
+      )
+    }
 
     // Stamped before saving: the fills were fetched, so the connection has synced
     // even when every trade turns out to be a duplicate. Leaving it unstamped made
@@ -837,6 +852,7 @@ export async function getRithmicProtocolTrades(
         saveResult.error !== 'NO_TRADES_ADDED' &&
         saveResult.error !== 'DUPLICATE_TRADES'
       ) {
+        logSyncSummary(0)
         return {
           error: 'SAVE_TRADES_FAILED',
           errorParams: { detail: String(saveResult.error) },
@@ -845,6 +861,8 @@ export async function getRithmicProtocolTrades(
       }
       savedCount = saveResult.numberOfTradesAdded
     }
+
+    logSyncSummary(savedCount)
 
     return {
       processedTrades: trades,

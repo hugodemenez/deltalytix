@@ -14,6 +14,9 @@ import {
   RITHMIC_PROTOCOL_TRADE_TAG,
 } from '@/lib/trade-id-utils'
 import {
+  resolveRithmicProtocolPersistedId,
+} from '@/lib/rithmic-protocol/dedupe-fills'
+import {
   isTradovatePersistedTrade,
   resolveTradovatePersistedId,
   tradovateFillIdLookupValues,
@@ -125,6 +128,58 @@ async function assignExistingTradovateIds(
   })
 }
 
+function isRithmicProtocolPersistedTrade(trade: {
+  tags?: string[] | null
+}): boolean {
+  return trade.tags?.includes(RITHMIC_PROTOCOL_TRADE_TAG) === true
+}
+
+/**
+ * #536 started persisting bare history fill ids. Rows stored earlier with
+ * Replay `basketId_fillId` hashed to a different UUID. Reuse that UUID so
+ * `skipDuplicates` does not insert a second round-trip.
+ */
+async function assignExistingRithmicProtocolIds(
+  userId: string,
+  trades: Trade[],
+): Promise<Trade[]> {
+  const protocolTrades = trades.filter(isRithmicProtocolPersistedTrade)
+  if (protocolTrades.length === 0) return trades
+
+  const accountNumbers = [
+    ...new Set(
+      protocolTrades
+        .map((trade) => trade.accountNumber)
+        .filter((accountNumber): accountNumber is string => Boolean(accountNumber)),
+    ),
+  ]
+  if (accountNumbers.length === 0) return trades
+
+  const existing = await prisma.trade.findMany({
+    where: {
+      userId,
+      accountNumber: { in: accountNumbers },
+      tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
+    },
+    select: {
+      id: true,
+      accountNumber: true,
+      instrument: true,
+      entryDate: true,
+      closeDate: true,
+      entryId: true,
+      closeId: true,
+    },
+  })
+  if (existing.length === 0) return trades
+
+  return trades.map((trade) => {
+    if (!isRithmicProtocolPersistedTrade(trade)) return trade
+    const existingId = resolveRithmicProtocolPersistedId(trade, existing)
+    return existingId ? { ...trade, id: existingId } : trade
+  })
+}
+
 export async function saveTradesAction(
   data: Trade[],
   options?: { userId?: string; connectionId?: string | null }
@@ -173,9 +228,13 @@ export async function saveTradesAction(
       } as Trade
     })
 
-    const userAssignedTrades = await assignExistingTradovateIds(
+    const tradovateAssignedTrades = await assignExistingTradovateIds(
       userId,
       preparedTrades,
+    )
+    const userAssignedTrades = await assignExistingRithmicProtocolIds(
+      userId,
+      tradovateAssignedTrades,
     )
 
     const result = await prisma.trade.createMany({

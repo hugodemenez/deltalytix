@@ -2769,6 +2769,8 @@ export default {
       inProgress: "Syncing Rithmic fills for {accountId}…",
       tokenMissing: "Connection missing credentials — reconnect",
       accountNotFound: "Account not found. Refresh the list and try again.",
+      summary:
+        "{fills} fills, {matched} trades matched, {saved} new, {open} open positions",
     },
     multiAccount: {
       empty: "No Rithmic Protocol connections yet. Click Connect to add one.",

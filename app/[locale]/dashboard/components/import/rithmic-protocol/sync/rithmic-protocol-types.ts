@@ -29,9 +29,12 @@ export interface RithmicProtocolStoredCredentials {
 export interface RithmicProtocolSyncStats {
   tradingAccounts: number
   rawFills: number
+  fillsAfterDedup: number
   closedTrades: number
   openTradesSkipped: number
+  savedCount: number
   fetchFailures: number
+  droppedByReason: Record<string, number>
 }
 
 export interface RithmicProtocolTradesResult {

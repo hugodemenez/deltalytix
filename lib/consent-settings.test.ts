@@ -7,7 +7,7 @@ import {
   hasAnalyticsConsentFromStores,
   hasConsentDecisionFromStores,
   isExplicitAnalyticsDenialFromStores,
-  isGoogleTagAllowed,
+  resolveGoogleConsent,
   shouldShowConsentBannerFromStores,
   parseSharedAnalyticsConsent,
   toGoogleConsent,
@@ -46,19 +46,102 @@ describe("toGoogleConsent", () => {
   });
 });
 
-describe("isGoogleTagAllowed", () => {
-  it("allows the tag on analytics consent alone", () => {
-    expect(isGoogleTagAllowed({ ...denyAll, analytics_storage: true })).toBe(true);
+describe("resolveGoogleConsent", () => {
+  const optional = (state: ReturnType<typeof resolveGoogleConsent>) => ({
+    analytics_storage: state.analytics_storage,
+    ad_storage: state.ad_storage,
+    ad_user_data: state.ad_user_data,
+    ad_personalization: state.ad_personalization,
+  });
+  const allDenied = {
+    analytics_storage: "denied",
+    ad_storage: "denied",
+    ad_user_data: "denied",
+    ad_personalization: "denied",
+  };
+  const allGranted = {
+    analytics_storage: "granted",
+    ad_storage: "granted",
+    ad_user_data: "granted",
+    ad_personalization: "granted",
+  };
+
+  it.each(["FR", "DE", "GB", "CH", "NO", null])(
+    "denies every optional category by default in the consent region (%s)",
+    (country) => {
+      expect(
+        optional(resolveGoogleConsent({ storedConsent: null, country })),
+      ).toEqual(allDenied);
+    },
+  );
+
+  it.each(["US", "CA", "BR", "AU"])(
+    "grants analytics and ads by default outside the consent region (%s)",
+    (country) => {
+      expect(
+        optional(resolveGoogleConsent({ storedConsent: null, country })),
+      ).toEqual(allGranted);
+    },
+  );
+
+  it("keeps necessary storage granted while optional storage is denied", () => {
+    const state = resolveGoogleConsent({ storedConsent: null, country: "FR" });
+    expect(state.security_storage).toBe("granted");
+    expect(state.functionality_storage).toBe("granted");
   });
 
-  it("allows the tag on ad consent alone, so Ads conversions still fire", () => {
-    expect(isGoogleTagAllowed({ ...denyAll, ad_storage: true })).toBe(true);
-  });
-
-  it("blocks the tag when both are refused", () => {
+  it("applies an EEA banner accept without granting user data or personalization", () => {
     expect(
-      isGoogleTagAllowed({ ...denyAll, functionality_storage: true }),
-    ).toBe(false);
+      optional(
+        resolveGoogleConsent({
+          storedConsent: fromRecordChoices({ productUse: true, ads: true }),
+          country: "FR",
+        }),
+      ),
+    ).toEqual({
+      analytics_storage: "granted",
+      ad_storage: "granted",
+      ad_user_data: "denied",
+      ad_personalization: "denied",
+    });
+  });
+
+  it("applies an EEA banner decline", () => {
+    expect(
+      optional(
+        resolveGoogleConsent({
+          storedConsent: fromRecordChoices({ productUse: false, ads: false }),
+          country: "DE",
+        }),
+      ),
+    ).toEqual(allDenied);
+  });
+
+  it("lets user data and personalization follow ad storage outside the region", () => {
+    expect(
+      optional(
+        resolveGoogleConsent({
+          storedConsent: fromRecordChoices({ productUse: false, ads: true }),
+          country: "US",
+        }),
+      ),
+    ).toEqual({
+      analytics_storage: "denied",
+      ad_storage: "granted",
+      ad_user_data: "granted",
+      ad_personalization: "granted",
+    });
+  });
+
+  it("honours an opt-out saved outside the region", () => {
+    expect(
+      optional(
+        resolveGoogleConsent({
+          storedConsent: DEFAULT_CONSENT_SETTINGS,
+          country: "US",
+        }),
+      ),
+    ).toEqual(allDenied);
   });
 });
 

@@ -240,7 +240,7 @@ export default function PricingPlans({
       ],
     },
     plus: {
-      name: t("pricing.plus.name"),
+      name: t("pricing.plus.publicName"),
       description: t("pricing.plus.description"),
       price: PLUS_PLAN_PRICES,
       isPopular: true,
@@ -392,17 +392,6 @@ export default function PricingPlans({
             <h3 className="text-2xl font-normal tracking-tight">
               {plans.plus.name}
             </h3>
-            {campaignActive ? (
-              <p
-                className={cn(
-                  "mt-1 text-xs text-black/55 dark:text-white/55",
-                  !periodOffer?.offerActive && "invisible",
-                )}
-                aria-hidden={!periodOffer?.offerActive}
-              >
-                {t("pricing.backToWork.badge")}
-              </p>
-            ) : null}
           </div>
           <div className="flex min-w-[11rem] shrink-0 flex-col items-end sm:min-w-[12rem]">
             {campaignActive ? (

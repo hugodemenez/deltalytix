@@ -75,7 +75,7 @@ const FAQ_KEYWORDS: Record<(typeof FAQ_KNOWLEDGE_ITEMS)[number], string[]> = {
     "localhost",
     "localement",
   ],
-  6: ["trial", "essai", "plus", "free", "gratuit", "14", "rolling", "storage"],
+  6: ["trial", "essai", "plus", "unlimited", "illimite", "free", "gratuit", "14", "rolling", "storage"],
 };
 
 type KnowledgeEntry = {
@@ -103,19 +103,20 @@ const PRODUCT_FACTS: Record<LandingFaqLocale, KnowledgeEntry[]> = {
         "cost",
         "plan",
         "plus",
+        "unlimited",
         "free",
         "subscribe",
         "payment",
       ],
       answer:
-        "Deltalytix has a Free plan with no time limit—trade history is kept on a rolling 14-day window—and a Plus plan with unlimited history and accounts.\n\nCurrent prices are on the pricing section of this page. We do not quote amounts here because they can change.",
+        "Deltalytix has a Free plan with no time limit—trade history is kept on a rolling 14-day window—and an Unlimited plan with unlimited history and accounts.\n\nCurrent prices are on the pricing section of this page. We do not quote amounts here because they can change.",
     },
     {
       id: "start",
       question: "How do I get started?",
       keywords: ["start", "signup", "account", "begin", "try"],
       answer:
-        "Create a Free account and import or sync your trades. The Free plan has no time limit, so you can explore the journal before deciding whether Plus fits.",
+        "Create a Free account and import or sync your trades. The Free plan has no time limit, so you can explore the journal before deciding whether Unlimited fits.",
     },
   ],
   fr: [
@@ -143,19 +144,20 @@ const PRODUCT_FACTS: Record<LandingFaqLocale, KnowledgeEntry[]> = {
         "cout",
         "plan",
         "plus",
+        "illimite",
         "gratuit",
         "abonnement",
         "paiement",
       ],
       answer:
-        "Deltalytix propose un plan Gratuit sans limite de durée—l'historique est conservé sur 14 jours glissants—et un plan Plus avec historique et comptes illimités.\n\nLes prix en vigueur sont dans la section tarifs de cette page. Nous n'indiquons pas de montants ici, car ils peuvent changer.",
+        "Deltalytix propose un plan Gratuit sans limite de durée—l'historique est conservé sur 14 jours glissants—et un plan Illimité avec historique et comptes illimités.\n\nLes prix en vigueur sont dans la section tarifs de cette page. Nous n'indiquons pas de montants ici, car ils peuvent changer.",
     },
     {
       id: "start",
       question: "Comment commencer ?",
       keywords: ["commencer", "inscription", "compte", "essayer", "demarrer"],
       answer:
-        "Créez un compte Gratuit et importez ou synchronisez vos trades. Le plan Gratuit n'a pas de limite de durée : vous pouvez explorer le journal avant de décider si Plus vous convient.",
+        "Créez un compte Gratuit et importez ou synchronisez vos trades. Le plan Gratuit n'a pas de limite de durée : vous pouvez explorer le journal avant de décider si Illimité vous convient.",
     },
   ],
 };

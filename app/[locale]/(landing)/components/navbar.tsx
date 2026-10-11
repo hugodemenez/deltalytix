@@ -484,7 +484,7 @@ export default function Component() {
                     </ListItem>
                     <ListItem
                       href={localize("#pricing")}
-                      title={t("pricing.plus.name")}
+                      title={t("pricing.plus.publicName")}
                       icon={<Crown className="h-4 w-4" />}
                     >
                       {t("pricing.plus.description")}

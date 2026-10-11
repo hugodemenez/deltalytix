@@ -13,12 +13,17 @@ import { DxFeedSyncContextProvider } from "@/context/dxfeed-sync-context";
 import { IbkrSyncContextProvider } from "@/context/ibkr-sync-context";
 import { RithmicProtocolSyncContextProvider } from "@/context/rithmic-protocol-sync-context";
 import { IgSyncContextProvider } from "@/context/ig-sync-context";
+import { ConsentBanner } from "@/components/consent-banner";
+import { ConsentRuntime } from "@/components/consent-runtime";
 import { PostHogIdentity } from "@/components/posthog-identity";
+import { GoogleAdsUserData } from "@/components/google-ads-user-data";
 import { createClient } from "@/server/auth";
 import { resolveLocale } from "@/lib/locale-params";
+import { hashEmailForAds } from "@/lib/google-ads-server";
 
 /**
- * Locale + auth for PostHog only — keep URL data inside Suspense so the
+ * Locale + auth for PostHog identity and the Ads enhanced-conversion email
+ * hash — keep URL data inside Suspense so the
  * dashboard App Shell stays reusable for Instant Navigations.
  * Parent `[locale]/layout` already provides `I18nProviderClient`.
  */
@@ -38,8 +43,13 @@ async function DashboardPostHogIdentity({
 
   if (!user?.id || !user.email) return null;
 
+  const hashedEmail = hashEmailForAds(user.email);
+
   return (
-    <PostHogIdentity userId={user.id} email={user.email} language={locale} />
+    <>
+      <PostHogIdentity userId={user.id} email={user.email} language={locale} />
+      {hashedEmail ? <GoogleAdsUserData hashedEmail={hashedEmail} /> : null}
+    </>
   );
 }
 
@@ -55,6 +65,7 @@ export default function RootLayout({
   // and that read stays behind Suspense.
   return (
     <>
+      <ConsentRuntime />
       <Suspense fallback={null}>
         <DashboardPostHogIdentity params={params} />
       </Suspense>
@@ -72,6 +83,9 @@ export default function RootLayout({
                           <Toaster />
                           <Navbar />
                           {children}
+                          <Suspense fallback={null}>
+                            <ConsentBanner />
+                          </Suspense>
                           <Modals />
                         </div>
                       </IgSyncContextProvider>

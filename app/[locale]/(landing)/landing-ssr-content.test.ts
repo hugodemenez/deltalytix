@@ -77,10 +77,10 @@ describe("landing page server-rendered content", () => {
     const pricing = read("pricing/page.tsx");
 
     // Next.js rejects Date.now() / new Date() during static generation of
-    // /[locale]. Format promo.validUntilMs via the clock-free helper instead.
+    // /[locale]. Public pricing no longer formats a Back to Work until-date;
+    // keep the page clock-free if a later promo note is added.
     expect(pricing).not.toMatch(/Date\.now\s*\(/);
     expect(pricing).not.toMatch(/new Date\s*\(\s*\)/);
-    expect(pricing).toContain("formatBackToWorkOfferUntil");
   });
 
   it("keeps closed FAQ answers mounted so they reach the raw HTML", () => {
