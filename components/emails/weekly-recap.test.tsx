@@ -21,7 +21,7 @@ const baseProps = {
 };
 
 describe("TraderStatsEmail weekly recap Zeno chrome lock", () => {
-  test("renders green-week EN on Zeno 680px chrome (not 9OS-0 gray card)", async () => {
+  test("renders green-week EN on fluid 640px chrome (not 9OS-0 gray card)", async () => {
     const html = await render(
       TraderStatsEmail({
         ...baseProps,
@@ -48,7 +48,11 @@ describe("TraderStatsEmail weekly recap Zeno chrome lock", () => {
     expect(html).toContain("Founder of Deltalytix");
     expect(html).toContain("—");
 
-    // Zeno chrome shell
+    // Fluid chrome shell — 100% on phones, 640px cap on wide desktops
+    expect(html).toContain(
+      'name="viewport" content="width=device-width, initial-scale=1"',
+    );
+    expect(html).toContain('name="x-apple-disable-message-reformatting"');
     expect(html).toContain('name="color-scheme" content="light dark"');
     expect(html).toContain("supported-color-schemes");
     expect(html).toContain("prefers-color-scheme: dark");
@@ -56,10 +60,40 @@ describe("TraderStatsEmail weekly recap Zeno chrome lock", () => {
     expect(html).toContain(".dm-heading");
     expect(html).toContain(".dm-button");
     expect(html).toContain("Geist,Arial,Helvetica,sans-serif");
-    expect(html).toContain('width="680"');
-    expect(html).toContain("max-width:680px");
-    expect(html).toContain("padding-top:24px");
-    expect(html).toContain("padding-right:8px");
+    expect(html).toContain("email-shell");
+    expect(html).toContain("email-canvas");
+    expect(html).toContain("email-pad");
+    expect(html).toContain("max-width:100%");
+    expect(html).toContain("max-width:640px");
+    expect(html).toContain("margin:0 auto");
+    expect(html).toContain("<!--[if mso]>");
+    expect(html).toContain('width="640"');
+    // Outlook wrapper must be sibling comments around the canvas, not
+    // comments trapped in height:0 / overflow:hidden boxes.
+    expect(html).toMatch(
+      /<!--\[if mso\]><table[^>]*width="640"[^>]*>[\s\S]*?<td[^>]*width="640"[^>]*><!\[endif]-->(?:\s*<style[^>]*>\s*<\/style>\s*)*<table[^>]*class="[^"]*email-canvas/,
+    );
+    expect(html).toContain("<!--[if mso]></td></tr></table><![endif]-->");
+    const canvasTableAt = html.indexOf('class="dm-bg email-canvas"');
+    expect(canvasTableAt).toBeGreaterThan(-1);
+    expect(html.indexOf("<!--[if mso]><table")).toBeLessThan(canvasTableAt);
+    expect(canvasTableAt).toBeLessThan(
+      html.indexOf("<!--[if mso]></td></tr></table><![endif]-->"),
+    );
+    expect(html).toContain(
+      `.email-canvas { width:640px !important; }`,
+    );
+    expect(html).not.toMatch(
+      /overflow:hidden[^>]*>\s*<!--\[if mso\]/,
+    );
+    expect(html).not.toMatch(
+      /height:0px[^>]*>\s*<!--\[if mso\]/,
+    );
+    expect(html).not.toContain('width="680"');
+    expect(html).not.toContain("max-width:680px");
+    expect(html).not.toContain(
+      "padding-top:24px;padding-right:8px;padding-bottom:24px;padding-left:8px",
+    );
     expect(html).toContain("padding-top:38px");
     expect(html).toContain("padding-left:12px");
     expect(html).toContain("deltalytix-mark.png");
@@ -127,7 +161,8 @@ describe("TraderStatsEmail weekly recap Zeno chrome lock", () => {
     expect(html).toContain("Politique de confidentialité");
     expect(html).toContain("/fr/dashboard?utm_source=resend");
     expect(html).toContain("/fr/privacy");
-    expect(html).toContain('width="680"');
+    expect(html).toContain("max-width:640px");
+    expect(html).not.toContain('width="680"');
     expect(html).toContain("+875 $");
     expect(html).not.toContain("€");
     expect(html).not.toContain("#FAFAFA");

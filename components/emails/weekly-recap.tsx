@@ -99,9 +99,19 @@ const translations = {
   },
 } as const;
 
+const CANVAS_MAX_WIDTH_PX = 640;
+
 /** Zeno PR439 chrome CSS — exact from live broadcasts EN b2119984 / FR 9d018101. */
 const zenoChromeCss = `
 :root { color-scheme: light dark; supported-color-schemes: light dark; }
+@media only screen and (max-width: 620px) {
+  .email-shell,
+  .email-canvas,
+  .email-pad {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
 @media (prefers-color-scheme: dark) {
   .dm-bg { background-color:#111411 !important; }
   .dm-heading { color:#f3f6f2 !important; }
@@ -243,6 +253,22 @@ function withUtm(url: string): string {
   return `${url}${separator}utm_source=resend&utm_medium=email&utm_campaign=weekly_recap`;
 }
 
+/**
+ * Emit a raw HTML comment as a sibling (not inside a box).
+ * React cannot render comments, so we close/reopen a <style> tag.
+ * Outlook then sees a real 640px table wrapping the canvas; other
+ * clients treat <!--[if mso]> as a normal comment and ignore it.
+ */
+function MsoBoundary({ html }: { html: string }) {
+  return (
+    <style
+      dangerouslySetInnerHTML={{
+        __html: `</style>${html}<style type="text/css">`,
+      }}
+    />
+  );
+}
+
 function Spacer({ height }: { height: number }) {
   return (
     <table
@@ -335,12 +361,18 @@ export default function TraderStatsEmail({
   return (
     <Html lang={locale}>
       <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="x-apple-disable-message-reformatting" />
         <meta name="color-scheme" content="light dark" />
         <meta name="supported-color-schemes" content="light dark" />
-        <style dangerouslySetInnerHTML={{ __html: zenoChromeCss }} />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `${zenoChromeCss}</style><!--[if mso]><style type="text/css">.email-canvas { width:${CANVAS_MAX_WIDTH_PX}px !important; }</style><![endif]--><style type="text/css">`,
+          }}
+        />
       </Head>
       <Preview>{t.preview}</Preview>
-      {/* Zeno chrome shell — tables only, matching PR439 broadcasts */}
+      {/* Fluid shell: 100% on phones, 640px cap on wide desktops. */}
       <body
         className="dm-bg"
         style={{
@@ -348,18 +380,23 @@ export default function TraderStatsEmail({
           marginRight: 0,
           marginBottom: 0,
           marginLeft: 0,
+          paddingTop: 0,
+          paddingRight: 0,
+          paddingBottom: 0,
+          paddingLeft: 0,
           backgroundColor: "#ffffff",
           fontFamily: FONT,
         }}
       >
         <table
-          className="dm-bg"
+          className="dm-bg email-shell"
           width="100%"
           cellPadding={0}
           cellSpacing={0}
           border={0}
           role="presentation"
           bgcolor="#ffffff"
+          style={{ width: "100%", maxWidth: "100%", backgroundColor: "#ffffff" }}
         >
           <tbody>
             <tr>
@@ -369,15 +406,18 @@ export default function TraderStatsEmail({
                 bgcolor="#ffffff"
                 style={{
                   backgroundColor: "#ffffff",
-                  paddingTop: "24px",
-                  paddingRight: "8px",
-                  paddingBottom: "24px",
-                  paddingLeft: "8px",
+                  paddingTop: 0,
+                  paddingRight: 0,
+                  paddingBottom: 0,
+                  paddingLeft: 0,
                 }}
               >
+                <MsoBoundary
+                  html={`<!--[if mso]><table align="center" role="presentation" cellpadding="0" cellspacing="0" border="0" width="${CANVAS_MAX_WIDTH_PX}"><tr><td width="${CANVAS_MAX_WIDTH_PX}"><![endif]-->`}
+                />
                 <table
-                  className="dm-bg"
-                  width="680"
+                  className="dm-bg email-canvas"
+                  width="100%"
                   cellPadding={0}
                   cellSpacing={0}
                   border={0}
@@ -385,13 +425,15 @@ export default function TraderStatsEmail({
                   bgcolor="#ffffff"
                   style={{
                     width: "100%",
-                    maxWidth: "680px",
+                    maxWidth: `${CANVAS_MAX_WIDTH_PX}px`,
+                    margin: "0 auto",
                     backgroundColor: "#ffffff",
                   }}
                 >
                   <tbody>
                     <tr>
                       <td
+                        className="email-pad"
                         style={{
                           paddingTop: "38px",
                           paddingRight: "12px",
@@ -975,6 +1017,7 @@ export default function TraderStatsEmail({
                     </tr>
                   </tbody>
                 </table>
+                <MsoBoundary html="<!--[if mso]></td></tr></table><![endif]-->" />
               </td>
             </tr>
           </tbody>
