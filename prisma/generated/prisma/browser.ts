@@ -53,6 +53,21 @@ export type Notification = Prisma.NotificationModel
  */
 export type User = Prisma.UserModel
 /**
+ * Model OAuthApp
+ * 
+ */
+export type OAuthApp = Prisma.OAuthAppModel
+/**
+ * Model OAuthAuthorizationCode
+ * 
+ */
+export type OAuthAuthorizationCode = Prisma.OAuthAuthorizationCodeModel
+/**
+ * Model OAuthAccessToken
+ * 
+ */
+export type OAuthAccessToken = Prisma.OAuthAccessTokenModel
+/**
  * Model Connection
  * 
  */
