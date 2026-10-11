@@ -273,6 +273,229 @@ describe("computeAccountMetrics buffer handling", () => {
     expect(result.trades).toHaveLength(2)
   })
 
+  it("does not mark a trailing account breached on the buffer-filling slice of the crossing trade", () => {
+    // +6,000 fills a $5,000 buffer and leaves $1,000 above it.
+    // Kept-trade equity peaks at starting + 6,000. With a $2,500 trailing
+    // drawdown that high sits above the floored headline balance, so
+    // remainingLoss hits 0 the moment the account crosses.
+    const trades = [makeTrade("crossing", 6_000, "2026-03-01T14:00:00.000Z")]
+    const result = computeAccountMetrics(
+      makeAccount({
+        trailingDrawdown: true,
+        drawdownThreshold: 2_500,
+      }),
+      trades
+    )
+
+    expect(result.metrics.currentBalance).toBeCloseTo(151_000, 5)
+    expect(result.metrics.highestBalance).toBeCloseTo(151_000, 5)
+    expect(result.metrics.drawdownLevel).toBeCloseTo(148_500, 5)
+    expect(result.metrics.remainingLoss).toBeCloseTo(2_500, 5)
+  })
+
+  it("trails the above-buffer high, not the kept-trade high, after further profit", () => {
+    // Crossing slice is $356.40 of the $2,859.20 trade. A later +1,000
+    // peaks counted profit at 3,502.80. The kept-trade high is 356.40 higher.
+    const trades = [
+      makeTrade("pre-buffer", 4_643.6, "2026-03-01T14:00:00.000Z"),
+      makeTrade("crossing", 2_859.2, "2026-03-02T14:00:00.000Z"),
+      makeTrade("after", 1_000, "2026-03-03T14:00:00.000Z"),
+    ]
+    const result = computeAccountMetrics(
+      makeAccount({
+        trailingDrawdown: true,
+        drawdownThreshold: 2_500,
+      }),
+      trades
+    )
+
+    expect(result.metrics.currentBalance).toBeCloseTo(153_502.8, 5)
+    expect(result.metrics.highestBalance).toBeCloseTo(153_502.8, 5)
+    expect(result.metrics.drawdownLevel).toBeCloseTo(151_002.8, 5)
+    expect(result.metrics.remainingLoss).toBeCloseTo(2_500, 5)
+  })
+
+  it("locks trailing drawdown from above-buffer profit, not the buffer-filling slice", () => {
+    // Kept-trade profit is $6,500, which would trip a $2,000 trailing stop.
+    // Counted profit is only $1,500, so the floor must keep trailing.
+    const trades = [makeTrade("crossing", 6_500, "2026-03-01T14:00:00.000Z")]
+    const result = computeAccountMetrics(
+      makeAccount({
+        trailingDrawdown: true,
+        trailingStopProfit: 2_000,
+        drawdownThreshold: 2_500,
+      }),
+      trades
+    )
+
+    expect(result.metrics.highestBalance).toBeCloseTo(151_500, 5)
+    expect(result.metrics.drawdownLevel).toBeCloseTo(149_000, 5)
+    expect(result.metrics.remainingLoss).toBeCloseTo(2_500, 5)
+  })
+
+  it("shows a static drawdown breach when a re-dip falls through the buffer past the floor", () => {
+    // +6,000 then -4,500 → $1,500 net, $3,500 below the $5,000 buffer.
+    // Headline balance floors at the start, and full kept-trade equity
+    // (starting + 1,500) is still above a $2,000 static floor, so both hide
+    // the breach. Buffer-adjusted equity is starting - 3,500.
+    const trades = [
+      makeTrade("up", 6_000, "2026-03-01T14:00:00.000Z"),
+      makeTrade("redip", -4_500, "2026-03-02T14:00:00.000Z"),
+    ]
+    const result = computeAccountMetrics(
+      makeAccount({
+        trailingDrawdown: false,
+        drawdownThreshold: 2_000,
+      }),
+      trades
+    )
+
+    expect(result.metrics.currentBalance).toBe(150_000)
+    expect(result.metrics.highestBalance).toBeCloseTo(151_000, 5)
+    expect(result.metrics.drawdownLevel).toBe(148_000)
+    expect(result.metrics.remainingLoss).toBe(0)
+    expect(result.metrics.drawdownProgress).toBe(100)
+  })
+
+  it("keeps static remaining loss while a re-dip is still inside the drawdown", () => {
+    // +6,000 then -2,000 → counted profit -1,000. Floor is 2,000 below the start.
+    const trades = [
+      makeTrade("up", 6_000, "2026-03-01T14:00:00.000Z"),
+      makeTrade("redip", -2_000, "2026-03-02T14:00:00.000Z"),
+    ]
+    const result = computeAccountMetrics(
+      makeAccount({
+        trailingDrawdown: false,
+        drawdownThreshold: 2_000,
+      }),
+      trades
+    )
+
+    expect(result.metrics.currentBalance).toBe(150_000)
+    expect(result.metrics.remainingLoss).toBeCloseTo(1_000, 5)
+    expect(result.metrics.drawdownProgress).toBeCloseTo(50, 5)
+  })
+
+  it("does not let a payout raise the trailing high, and still nets it into remaining loss", () => {
+    const trades = [
+      makeTrade("up", 8_000, "2026-03-01T14:00:00.000Z"),
+      makeTrade("after", 500, "2026-03-03T14:00:00.000Z"),
+    ]
+    const result = computeAccountMetrics(
+      makeAccount({
+        trailingDrawdown: true,
+        drawdownThreshold: 2_500,
+        payouts: [makePayout(1_000, "2026-03-02T14:00:00.000Z", "PAID")],
+      }),
+      trades
+    )
+
+    // Peak counted profit is 8,000 - 5,000 = 3,000, before the payout.
+    // Final counted profit is 8,500 - 1,000 - 5,000 = 2,500.
+    expect(result.metrics.currentBalance).toBeCloseTo(152_500, 5)
+    expect(result.metrics.highestBalance).toBeCloseTo(153_000, 5)
+    expect(result.metrics.drawdownLevel).toBeCloseTo(150_500, 5)
+    expect(result.metrics.remainingLoss).toBeCloseTo(2_000, 5)
+  })
+
+  it("does not breach trailing drawdown on a re-dip that stays within the above-buffer high", () => {
+    // Counted profit peaks at $3,000 and settles at $2,600. A $2,500 trail
+    // still has $2,100 of room. Kept-trade equity would already be breached.
+    const trades = [
+      makeTrade("up", 8_000, "2026-03-01T14:00:00.000Z"),
+      makeTrade("dip", -400, "2026-03-02T14:00:00.000Z"),
+    ]
+    const result = computeAccountMetrics(
+      makeAccount({
+        trailingDrawdown: true,
+        drawdownThreshold: 2_500,
+      }),
+      trades
+    )
+
+    expect(result.metrics.highestBalance).toBeCloseTo(153_000, 5)
+    expect(result.metrics.drawdownLevel).toBeCloseTo(150_500, 5)
+    expect(result.metrics.currentBalance).toBeCloseTo(152_600, 5)
+    expect(result.metrics.remainingLoss).toBeCloseTo(2_100, 5)
+  })
+
+  it("breaches trailing drawdown when the re-dip gives back more than the threshold from the above-buffer high", () => {
+    const trades = [
+      makeTrade("up", 8_000, "2026-03-01T14:00:00.000Z"),
+      makeTrade("dip", -4_000, "2026-03-02T14:00:00.000Z"),
+    ]
+    const result = computeAccountMetrics(
+      makeAccount({
+        trailingDrawdown: true,
+        drawdownThreshold: 2_500,
+      }),
+      trades
+    )
+
+    expect(result.metrics.highestBalance).toBeCloseTo(153_000, 5)
+    expect(result.metrics.drawdownLevel).toBeCloseTo(150_500, 5)
+    expect(result.metrics.remainingLoss).toBe(0)
+  })
+
+  it("locks the trailing floor once above-buffer profit reaches the stop", () => {
+    const trades = [makeTrade("crossing", 7_000, "2026-03-01T14:00:00.000Z")]
+    const result = computeAccountMetrics(
+      makeAccount({
+        trailingDrawdown: true,
+        trailingStopProfit: 2_000,
+        drawdownThreshold: 2_500,
+      }),
+      trades
+    )
+
+    expect(result.metrics.highestBalance).toBeCloseTo(152_000, 5)
+    expect(result.metrics.drawdownLevel).toBe(149_500)
+    // Locked floor is stop minus the threshold. At the stop, room equals the threshold.
+    expect(result.metrics.remainingLoss).toBeCloseTo(2_500, 5)
+  })
+
+  it("keeps pre-buffer drawdown metrics flat until the buffer is crossed", () => {
+    const trades = [makeTrade("below", 3_000, "2026-03-01T14:00:00.000Z")]
+    const result = computeAccountMetrics(
+      makeAccount({
+        trailingDrawdown: true,
+        drawdownThreshold: 2_500,
+      }),
+      trades
+    )
+
+    expect(result.metrics.currentBalance).toBe(150_000)
+    expect(result.metrics.highestBalance).toBe(150_000)
+    expect(result.metrics.drawdownLevel).toBe(147_500)
+    expect(result.metrics.remainingLoss).toBe(2_500)
+  })
+
+  it("still measures drawdown from full equity when the buffer is off", () => {
+    const trailing = computeAccountMetrics(
+      makeAccount({
+        buffer: 0,
+        trailingDrawdown: true,
+        drawdownThreshold: 2_000,
+      }),
+      [makeTrade("win", 1_000, "2026-03-01T14:00:00.000Z")]
+    )
+    expect(trailing.metrics.highestBalance).toBe(151_000)
+    expect(trailing.metrics.drawdownLevel).toBe(149_000)
+    expect(trailing.metrics.remainingLoss).toBe(2_000)
+
+    const breached = computeAccountMetrics(
+      makeAccount({
+        buffer: 0,
+        trailingDrawdown: false,
+        drawdownThreshold: 2_000,
+      }),
+      [makeTrade("loss", -3_000, "2026-03-01T14:00:00.000Z")]
+    )
+    expect(breached.metrics.currentBalance).toBe(147_000)
+    expect(breached.metrics.drawdownLevel).toBe(148_000)
+    expect(breached.metrics.remainingLoss).toBe(0)
+  })
+
   it("propagates the same headline figures through computeMetricsForAccounts", () => {
     const trades = [
       makeTrade("pre-buffer", 4_643.6, "2026-03-01T14:00:00.000Z"),
