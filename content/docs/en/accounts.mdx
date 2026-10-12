@@ -47,29 +47,32 @@ const payload = await res.json();
   "data": [
     {
       "id": "acc_01HZX…",
-      "accountNumber": "SIM-001",
-      "name": "Evaluation A",
+      "number": "SIM-001",
+      "propfirm": "Topstep",
+      "startingBalance": 50000,
+      "createdAt": "2026-01-15T09:00:00.000Z",
+      "hidden": false,
+      "group": { "id": "grp_01HZX…", "name": "Evaluations" },
+      "balance": 52480.12,
       "payouts": [
         {
           "id": "pay_01HZX…",
           "amount": 2500,
           "date": "2026-02-01T00:00:00.000Z",
-          "status": "paid"
+          "status": "PAID"
         }
       ],
-      "metrics": {
-        "balance": 52480.12,
-        "drawdown": 3.4,
-        "consistency": 0.82,
-        "progress": 0.61
-      }
+      "metrics": { "…": "…" }
     }
-  ],
-  "nextCursor": null
+  ]
 }
 ```
 
 </DocsResponse>
+
+### Hidden accounts
+
+Every account is returned, including ones hidden in the dashboard. Hiding an account moves it into the **Hidden Accounts** group, so `hidden` is `true` for those accounts and `group.name` is `"Hidden Accounts"`. Skip accounts where `hidden` is `true` to match what the dashboard shows. `group` is `null` for accounts that are not in any group.
 
 `metrics` is present only when `includeMetrics=true`. Metric fields include balance, drawdown, consistency, and progress toward account targets.
 

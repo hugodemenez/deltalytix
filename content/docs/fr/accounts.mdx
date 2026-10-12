@@ -47,29 +47,32 @@ const payload = await res.json();
   "data": [
     {
       "id": "acc_01HZX…",
-      "accountNumber": "SIM-001",
-      "name": "Evaluation A",
+      "number": "SIM-001",
+      "propfirm": "Topstep",
+      "startingBalance": 50000,
+      "createdAt": "2026-01-15T09:00:00.000Z",
+      "hidden": false,
+      "group": { "id": "grp_01HZX…", "name": "Evaluations" },
+      "balance": 52480.12,
       "payouts": [
         {
           "id": "pay_01HZX…",
           "amount": 2500,
           "date": "2026-02-01T00:00:00.000Z",
-          "status": "paid"
+          "status": "PAID"
         }
       ],
-      "metrics": {
-        "balance": 52480.12,
-        "drawdown": 3.4,
-        "consistency": 0.82,
-        "progress": 0.61
-      }
+      "metrics": { "…": "…" }
     }
-  ],
-  "nextCursor": null
+  ]
 }
 ```
 
 </DocsResponse>
+
+### Comptes masqués
+
+Tous les comptes sont renvoyés, y compris ceux masqués dans le tableau de bord. Masquer un compte le place dans le groupe **Hidden Accounts** : `hidden` vaut alors `true` et `group.name` vaut `"Hidden Accounts"`. Ignorez les comptes où `hidden` vaut `true` pour retrouver ce qu’affiche le tableau de bord. `group` vaut `null` pour un compte qui n’appartient à aucun groupe.
 
 `metrics` n’est présent que lorsque `includeMetrics=true`. Les champs incluent balance, drawdown, consistency et progress vers les objectifs du compte.
 
