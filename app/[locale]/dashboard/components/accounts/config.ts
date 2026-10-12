@@ -32,6 +32,8 @@ interface AccountSize {
 
 interface PropFirm {
   name: string;
+  /** Extra search tokens (abbreviations) for the account-template picker. */
+  aliases?: string[];
   accountSizes: Record<string, AccountSize>;
 }
 
@@ -1806,6 +1808,7 @@ export const propFirms: Record<string, PropFirm> = {
    */
   fundedFuturesFamily: {
     name: 'Funded Futures Family',
+    aliases: ['FFF', 'FFFamily'],
     accountSizes: {
       VELOCITY_25K: fffAccount({
         name: 'Velocity 25K',
@@ -2805,5 +2808,57 @@ export const propFirms: Record<string, PropFirm> = {
     },
   },
 };
+
+function accountSizeMatchesQuery(
+  sizeKey: string,
+  accountSize: AccountSize,
+  query: string,
+): boolean {
+  return (
+    sizeKey.toLowerCase().includes(query) ||
+    accountSize.name.toLowerCase().includes(query) ||
+    accountSize.balance.toString().includes(query) ||
+    accountSize.target.toString().includes(query)
+  );
+}
+
+function propFirmIdentityMatchesQuery(
+  firmKey: string,
+  firm: PropFirm,
+  query: string,
+): boolean {
+  if (firmKey.toLowerCase().includes(query)) return true;
+  if (firm.name.toLowerCase().includes(query)) return true;
+  return Boolean(firm.aliases?.some((alias) => alias.toLowerCase().includes(query)));
+}
+
+/** True when the account-template picker should show this firm for `rawQuery`. */
+export function propFirmMatchesSearch(
+  firmKey: string,
+  firm: PropFirm,
+  rawQuery: string,
+): boolean {
+  const query = rawQuery.toLowerCase().trim();
+  if (!query) return true;
+  if (propFirmIdentityMatchesQuery(firmKey, firm, query)) return true;
+  return Object.entries(firm.accountSizes).some(([sizeKey, accountSize]) =>
+    accountSizeMatchesQuery(sizeKey, accountSize, query),
+  );
+}
+
+/** Account sizes to list for a firm in the template picker, given the search box. */
+export function getMatchingAccountSizes(
+  firmKey: string,
+  firm: PropFirm,
+  rawQuery: string,
+): Array<[string, AccountSize]> {
+  const query = rawQuery.toLowerCase().trim();
+  const entries = Object.entries(firm.accountSizes);
+  if (!query) return entries;
+  if (propFirmIdentityMatchesQuery(firmKey, firm, query)) return entries;
+  return entries.filter(([sizeKey, accountSize]) =>
+    accountSizeMatchesQuery(sizeKey, accountSize, query),
+  );
+}
 
 export type { AccountSize, PropFirm };

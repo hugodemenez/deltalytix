@@ -27,6 +27,7 @@ import type {
   IgStoredCredentials,
   IgTradesResult,
 } from "./ig-types";
+import { serverActor, trustedUserId, type TrustedActor } from "@/lib/api/server-actor";
 
 const SERVICE = "ig";
 /**
@@ -245,7 +246,7 @@ export async function getIgCredentialsForSync(accountId: string): Promise<
 /**
  * Map + save transactions already fetched from IG in the browser (or server).
  */
-export async function importIgSyncedHistory(params: {
+export async function importIgSyncedHistory(params: TrustedActor & {
   accountId: string;
   connectionId: string;
   perAccount: Array<{
@@ -254,8 +255,6 @@ export async function importIgSyncedHistory(params: {
     error?: string;
   }>;
   accounts?: IgApiAccount[];
-  /** Cron passes the owning user; interactive sync uses the session. */
-  userId?: string;
   /** When set, skip re-loading/persisting credentials from the connection row. */
   credentials?: IgStoredCredentials;
 }): Promise<IgTradesResult> {
@@ -268,10 +267,9 @@ export async function importIgSyncedHistory(params: {
   };
 
   try {
-    let userId = params.userId ?? null;
-    if (!userId) {
-      userId = await getUserId();
-    }
+    // A browser can call this server action directly, so the acting user
+    // only comes from an in-process `serverActor` (cron) or the session.
+    const userId = trustedUserId(params) ?? (await getUserId());
     if (!userId) {
       return { error: "USER_NOT_AUTHENTICATED", syncStats };
     }
@@ -395,7 +393,7 @@ export async function importIgSyncedHistory(params: {
     const saveResult =
       allTrades.length > 0
         ? await saveTradesAction(allTrades, {
-            userId,
+            ...serverActor(userId),
             connectionId: params.connectionId,
           })
         : null;
@@ -516,7 +514,7 @@ export async function getIgSynchronizations() {
 
 export async function getIgTrades(
   initialTokenJson: string,
-  options?: { userId?: string; connectionId?: string },
+  options?: TrustedActor & { connectionId?: string },
 ): Promise<IgTradesResult> {
   const syncStats = {
     tradingAccounts: 0,
@@ -535,7 +533,7 @@ export async function getIgTrades(
     }
     environment = credentials.environment;
 
-    let userId = options?.userId ?? null;
+    let userId = trustedUserId(options);
     if (!userId) {
       const supabase = await createClient();
       const {
@@ -611,7 +609,7 @@ export async function getIgTrades(
       connectionId,
       perAccount: history.perAccount,
       accounts: history.accounts,
-      userId,
+      ...serverActor(userId),
       credentials,
     });
   } catch (error) {
