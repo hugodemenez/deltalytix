@@ -2,6 +2,13 @@ import type { MDXComponents } from 'mdx/types';
 import Image, { ImageProps } from 'next/image';
 import Link from 'next/link';
 import { AnchorHTMLAttributes, ComponentProps, HTMLAttributes, ImgHTMLAttributes } from 'react';
+import {
+  MdxTable,
+  MdxTd,
+  MdxTh,
+  MdxThead,
+  MdxTr,
+} from '@/components/mdx/table';
 
 // Extract ref from props to avoid type issues
 type WithoutRef<T> = Omit<T, 'ref'>;
@@ -48,32 +55,11 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
         />
       );
     },
-    table: ({ ...props }: WithoutRef<HTMLAttributes<HTMLTableElement>>) => (
-      <div className="mt-6 mb-8 w-full overflow-x-auto">
-        <table className="w-full border-collapse text-sm" {...props} />
-      </div>
-    ),
-    thead: ({ ...props }: WithoutRef<HTMLAttributes<HTMLTableSectionElement>>) => (
-      <thead className="border-b border-neutral-200 dark:border-neutral-800" {...props} />
-    ),
-    th: ({ ...props }: WithoutRef<HTMLAttributes<HTMLTableHeaderCellElement>>) => (
-      <th
-        className="border-b border-neutral-200 dark:border-neutral-800 px-6 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100"
-        {...props}
-      />
-    ),
-    td: ({ ...props }: WithoutRef<HTMLAttributes<HTMLTableDataCellElement>>) => (
-      <td
-        className="border-b border-neutral-200 dark:border-neutral-800 px-6 py-3 text-neutral-700 dark:text-neutral-300"
-        {...props}
-      />
-    ),
-    tr: ({ ...props }: WithoutRef<HTMLAttributes<HTMLTableRowElement>>) => (
-      <tr
-        className="m-0 p-0 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-900/30"
-        {...props}
-      />
-    ),
+    table: MdxTable,
+    thead: MdxThead,
+    th: MdxTh,
+    td: MdxTd,
+    tr: MdxTr,
     h1: ({ className, ...props }: WithoutRef<HTMLAttributes<HTMLHeadingElement>>) => (
       <h1
         className="mt-8 mb-4 text-3xl font-bold text-neutral-900 dark:text-neutral-100 scroll-m-20"

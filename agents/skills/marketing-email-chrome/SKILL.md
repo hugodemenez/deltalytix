@@ -15,7 +15,7 @@ Do **not** originate campaign copy in this file or in a send. Copy is Shake (EN)
 
 Use this lock for Resend broadcasts (latest-release, product news, similar audience mail).
 
-Do **not** copy width or CTA chrome from the weekly recap React Email. `components/emails/weekly-recap.tsx` still uses a **680px** inner table and a green `#EFF5EC` CTA panel from the earlier PR439 Zeno look. That is a different product mail (`newsletter@…`, app unsubscribe URLs). Auth templates live under `supabase/templates/` and are also out of scope.
+Do **not** copy width or CTA chrome from the weekly recap React Email. `components/emails/weekly-recap.tsx` uses a **640px** max canvas and a green `#EFF5EC` CTA panel from the earlier PR439 Zeno look. That is a different product mail (`newsletter@…`, app unsubscribe URLs). Auth templates live under `supabase/templates/` and are also out of scope.
 
 ## Width / mobile
 

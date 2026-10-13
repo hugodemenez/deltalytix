@@ -8,18 +8,15 @@ function document() {
 }
 
 describe("the published OpenAPI description", () => {
-  it("declares scoped OAuth 2.0 alongside bearer and API-key schemes", async () => {
+  it("declares scoped OAuth 2.0 alongside the bearer token scheme", async () => {
     const { components } = document();
     const schemes = components.securitySchemes;
 
-    expect(Object.keys(schemes).sort()).toEqual([
-      "apiKeyAuth",
-      "bearerAuth",
-      "oauth2",
-    ]);
+    // Only the two schemes the runtime actually accepts: an OAuth access token
+    // or a personal access token, both presented as `Authorization: Bearer`.
+    expect(Object.keys(schemes).sort()).toEqual(["bearerAuth", "oauth2"]);
     expect(schemes.oauth2.type).toBe("oauth2");
     expect(schemes.bearerAuth).toMatchObject({ type: "http", scheme: "bearer" });
-    expect(schemes.apiKeyAuth).toMatchObject({ type: "apiKey", in: "header" });
   });
 
   it("documents every scope with a description in the authorization code flow", async () => {
@@ -77,6 +74,33 @@ describe("the published OpenAPI description", () => {
         $ref: "#/components/schemas/Error",
       });
     }
+  });
+
+  it("scopes every /v1 operation to a scope the authorization server issues", () => {
+    const doc = document();
+    const known = new Set(scopeNames());
+
+    for (const [path, item] of Object.entries(doc.paths)) {
+      if (!path.startsWith("/v1")) continue;
+      for (const [method, operation] of Object.entries(
+        item as Record<string, { security?: Record<string, string[]>[] }>,
+      )) {
+        const security = operation.security;
+        expect(security, `${method} ${path} has no security`).toBeDefined();
+        for (const scope of security![0].oauth2 ?? []) {
+          expect(known, `${method} ${path} requires unknown ${scope}`).toContain(
+            scope,
+          );
+        }
+      }
+    }
+  });
+
+  it("documents the OAuth endpoints as unauthenticated", () => {
+    const doc = document();
+
+    expect(doc.paths["/oauth/token"].post.security).toEqual([{}]);
+    expect(doc.paths["/oauth/revoke"].post.security).toEqual([{}]);
   });
 
   it("resolves server and documentation URLs against the requesting host", () => {

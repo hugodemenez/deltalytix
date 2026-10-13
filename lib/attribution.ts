@@ -26,6 +26,9 @@ export const ATTRIBUTION_PARAM_KEYS = [
 
 export type AttributionParamKey = (typeof ATTRIBUTION_PARAM_KEYS)[number];
 
+/** Google click ids — ad storage, unlike the UTM campaign labels. */
+export const CLICK_ID_PARAM_KEYS = ["gclid", "gbraid", "wbraid"] as const;
+
 export type Attribution = Partial<Record<AttributionParamKey, string>>;
 
 export type PendingPurchase = {
@@ -93,6 +96,47 @@ export function mergeAttributionFirstTouch(
     }
   }
   return merged;
+}
+
+export function withoutClickIds(attribution: Attribution): Attribution {
+  const stripped: Attribution = { ...attribution };
+  for (const key of CLICK_ID_PARAM_KEYS) delete stripped[key];
+  return stripped;
+}
+
+export type AttributionStoragePlan =
+  | { action: "persist"; attribution: Attribution }
+  | { action: "clear" }
+  | { action: "none" };
+
+/**
+ * What first-party attribution storage should hold under the current consent.
+ *
+ * Nothing is kept unless analytics or ad storage is granted, and click ids
+ * only with ad storage. When consent no longer covers what is stored, the
+ * stored copy is cleared rather than left behind — `stored` only exists
+ * because consent was granted at some point, so this is a withdrawal.
+ */
+export function planAttributionStorage({
+  stored,
+  incoming,
+  adStorage,
+  analyticsStorage,
+}: {
+  stored: Attribution | null;
+  incoming: Attribution | null;
+  adStorage: boolean;
+  analyticsStorage: boolean;
+}): AttributionStoragePlan {
+  const hadStored = hasAttribution(stored);
+  if (!adStorage && !analyticsStorage) {
+    return hadStored ? { action: "clear" } : { action: "none" };
+  }
+
+  const merged = mergeAttributionFirstTouch(stored, incoming);
+  const allowed = adStorage ? merged : withoutClickIds(merged);
+  if (hasAttribution(allowed)) return { action: "persist", attribution: allowed };
+  return hadStored ? { action: "clear" } : { action: "none" };
 }
 
 export function serializeAttribution(attribution: Attribution): string {

@@ -68,9 +68,17 @@ export function computeAccountMetrics(
 
   // Apply buffer filtering if enabled (default to true)
   const considerBuffer = account.considerBuffer ?? true
+  const bufferThreshold = account.buffer ?? 0
+  const applyBuffer = considerBuffer && bufferThreshold > 0
   let filteredTrades = sortedTrades
   let aboveBuffer = 0
-  if (considerBuffer && (account.buffer ?? 0) > 0) {
+  // Unfloored profit relative to the buffer, after the account has crossed it.
+  // Headline balance floors this at 0; drawdown does not, so a re-dip through
+  // the buffer can still reach the floor.
+  let hasCrossedBuffer = false
+  let bufferCountedProfit = 0
+  let bufferPeakProfit = 0
+  if (applyBuffer) {
     // Build time-ordered event stream of trades and payouts (paid/validated)
     const validPayouts = (account.payouts || [])
       .filter(p => ['PAID', 'VALIDATED'].includes(p.status))
@@ -98,22 +106,30 @@ export function computeAccountMetrics(
 
     const out: PrismaTrade[] = []
     let accProfit = 0 // accumulated profit since last baseline (reset/payouts effect included)
-    const threshold = account.buffer || 0
+    const threshold = bufferThreshold
 
     for (const ev of events) {
       if (ev.kind === 'payout') {
         // Payout reduces accumulated profit; can push us back under buffer
         accProfit -= ev.amount
-        continue
+      } else {
+        const next = accProfit + ev.pnl
+        const wasAbove = accProfit >= threshold
+        const crossesNow = accProfit < threshold && next >= threshold
+        if (wasAbove || crossesNow) {
+          out.push(ev.trade)
+        }
+        accProfit = next
       }
 
-      const next = accProfit + ev.pnl
-      const wasAbove = accProfit >= threshold
-      const crossesNow = accProfit < threshold && next >= threshold
-      if (wasAbove || crossesNow) {
-        out.push(ev.trade)
+      if (accProfit >= threshold) hasCrossedBuffer = true
+      if (hasCrossedBuffer) {
+        // Subtract the whole buffer, not the kept crossing trade. That drops
+        // the slice that only filled the buffer, and lets a later loss count
+        // below the starting balance.
+        bufferCountedProfit = accProfit - threshold
+        if (bufferCountedProfit > bufferPeakProfit) bufferPeakProfit = bufferCountedProfit
       }
-      accProfit = next
     }
 
     filteredTrades = out
@@ -121,14 +137,18 @@ export function computeAccountMetrics(
   }
 
   const dailyPnL: { [date: string]: number } = {}
-  let totalProfit = 0
+  let filteredTradesProfit = 0
   for (const trade of filteredTrades) {
     const d = toDate(trade.entryDate)!
     const key = d.toISOString().split('T')[0]
     const pnl = trade.pnl - (trade.commission || 0)
     dailyPnL[key] = (dailyPnL[key] || 0) + pnl
-    totalProfit += pnl
+    filteredTradesProfit += pnl
   }
+
+  // Headline profit uses profit above the buffer (payouts already netted in accProfit).
+  // Filtered trades stay intact so per-day figures still include the crossing trade in full.
+  const totalProfit = applyBuffer ? aboveBuffer : filteredTradesProfit
 
   const hasProfitableData = totalProfit > 0
   const isConfigured = (account.profitTarget ?? 0) > 0 || (account.drawdownThreshold ?? 0) > 0
@@ -144,33 +164,50 @@ export function computeAccountMetrics(
   }
 
   const validPayouts = (account.payouts || []).filter(p => ['PAID', 'VALIDATED'].includes(p.status))
-  let runningBalance = account.startingBalance || 0
-  let highestBalance = account.startingBalance || 0
+  const startingBalance = account.startingBalance || 0
+  let runningBalance = startingBalance
+  let highestBalance = startingBalance
 
-  for (const trade of filteredTrades) {
-    const pnl = trade.pnl - (trade.commission || 0)
-    runningBalance += pnl
-    if (runningBalance > highestBalance) highestBalance = runningBalance
+  if (applyBuffer) {
+    // Same above-buffer curve as currentBalance. The peak ignores the
+    // buffer-filling slice, so a trailing floor does not jump on the cross.
+    highestBalance = startingBalance + bufferPeakProfit
+  } else {
+    for (const trade of filteredTrades) {
+      const pnl = trade.pnl - (trade.commission || 0)
+      runningBalance += pnl
+      if (runningBalance > highestBalance) highestBalance = runningBalance
+    }
   }
   const totalPayouts = validPayouts.reduce((s, p) => s + p.amount, 0)
-  const currentBalance = runningBalance - totalPayouts
+  // When a buffer applies, accProfit already subtracted PAID/VALIDATED payouts.
+  // Reusing starting + kept trades - payouts would both keep the buffer-filling
+  // slice of the crossing trade and double-subtract those payouts.
+  const currentBalance = applyBuffer
+    ? startingBalance + aboveBuffer
+    : runningBalance - totalPayouts
+  // Drawdown compares the unfloored curve. After a re-dip, counted profit can
+  // be negative while headline balance stays at the starting balance.
+  const drawdownBalance = applyBuffer
+    ? startingBalance + bufferCountedProfit
+    : currentBalance
 
   let drawdownLevel: number
   if (account.trailingDrawdown) {
-    const profitMade = Math.max(0, highestBalance - (account.startingBalance || 0))
+    const profitMade = Math.max(0, highestBalance - startingBalance)
     if (account.trailingStopProfit && profitMade >= account.trailingStopProfit) {
-      drawdownLevel = ((account.startingBalance || 0) + account.trailingStopProfit) - (account.drawdownThreshold || 0)
+      drawdownLevel = (startingBalance + account.trailingStopProfit) - (account.drawdownThreshold || 0)
     } else {
       drawdownLevel = highestBalance - (account.drawdownThreshold || 0)
     }
   } else {
-    drawdownLevel = (account.startingBalance || 0) - (account.drawdownThreshold || 0)
+    drawdownLevel = startingBalance - (account.drawdownThreshold || 0)
   }
-  const remainingLoss = Math.max(0, currentBalance - drawdownLevel)
+  const remainingLoss = Math.max(0, drawdownBalance - drawdownLevel)
   const dd = account.drawdownThreshold || 0
   const drawdownProgress = dd > 0 ? (((dd) - remainingLoss) / dd) * 100 : 0
 
-  const currentProfit = currentBalance - (account.startingBalance || 0)
+  const currentProfit = currentBalance - startingBalance
   const pt = account.profitTarget || 0
   const progress = pt > 0 ? (currentProfit / pt) * 100 : 0
   const remainingToTarget = pt > 0 ? Math.max(0, pt - currentProfit) : 0

@@ -3,7 +3,7 @@
 import { getUserId } from '@/server/auth'
 import { PrismaClient, Trade, Payout } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { computeMetricsForAccounts } from '@/lib/account-metrics'
+import { computeAccountMetrics, computeMetricsForAccounts } from '@/lib/account-metrics'
 import { Account } from '@/context/data-provider'
 import { revalidateTag, updateTag } from 'next/cache'
 
@@ -604,6 +604,7 @@ export async function calculateAccountBalanceAction(
     },
     select: {
       accountNumber: true,
+      entryDate: true,
       pnl: true,
       commission: true,
     },
@@ -616,7 +617,7 @@ export async function calculateAccountBalanceAction(
     }
     acc[trade.accountNumber].push(trade);
     return acc;
-  }, {} as Record<string, Array<{ accountNumber: string; pnl: number; commission: number }>>);
+  }, {} as Record<string, Array<{ accountNumber: string; pnl: number; commission: number; entryDate: string }>>);
 
   return accounts.map(account => {
     const accountTrades = tradesByAccount[account.number] || [];
@@ -635,20 +636,9 @@ export async function calculateAccountBalanceAction(
  */
 function calculateAccountBalance(
   account: Account,
-  trades: Array<{ accountNumber: string; pnl: number; commission: number }>
+  trades: Array<{ accountNumber: string; pnl: number; commission: number; entryDate?: string | Date | null }>
 ): number {
-  let balance = account.startingBalance || 0;
-
-  // Calculate PnL from trades (trades are already filtered by account)
-  const tradesPnL = trades.reduce((sum, trade) => sum + (trade.pnl - trade.commission), 0);
-  balance += tradesPnL;
-
-  // Add payouts
-  // const payouts = account.payouts || [];
-  // const payoutsSum = payouts.reduce((sum, payout) => sum + payout.amount, 0);
-  // balance += payoutsSum;
-
-  return balance;
+  return computeAccountMetrics(account, trades as Trade[]).balanceToDate
 }
 
 /**
