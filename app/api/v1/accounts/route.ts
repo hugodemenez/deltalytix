@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticateApiRequest } from "@/lib/api/auth"
 import { computeMetricsForAccounts } from "@/lib/account-metrics"
+import { HIDDEN_GROUP_NAME } from "@/lib/account-groups"
 import { prisma } from "@/lib/prisma"
 import type { Account } from "@/context/data-provider"
 
@@ -14,6 +15,7 @@ export async function GET(request: NextRequest) {
   const accounts = await prisma.account.findMany({
     where: { userId: auth.auth.userId },
     include: {
+      group: { select: { id: true, name: true } },
       payouts: {
         select: {
           id: true,
@@ -26,6 +28,20 @@ export async function GET(request: NextRequest) {
     orderBy: { createdAt: "asc" },
   })
 
+  // Hiding an account in the dashboard moves it into the "Hidden Accounts"
+  // group; expose both so clients can skip hidden accounts or show groups.
+  const groupFields = new Map(
+    accounts.map((account) => [
+      account.id,
+      {
+        hidden: account.group?.name === HIDDEN_GROUP_NAME,
+        group: account.group
+          ? { id: account.group.id, name: account.group.name }
+          : null,
+      },
+    ]),
+  )
+
   if (!includeMetrics) {
     return NextResponse.json({
       data: accounts.map((account) => ({
@@ -34,6 +50,7 @@ export async function GET(request: NextRequest) {
         propfirm: account.propfirm,
         startingBalance: account.startingBalance,
         createdAt: account.createdAt.toISOString(),
+        ...groupFields.get(account.id),
         payouts: account.payouts.map((p) => ({
           id: p.id,
           amount: p.amount,
@@ -60,6 +77,7 @@ export async function GET(request: NextRequest) {
       propfirm: account.propfirm,
       startingBalance: account.startingBalance,
       createdAt: account.createdAt.toISOString(),
+      ...groupFields.get(account.id),
       balance: account.balanceToDate,
       drawdown: account.metrics?.drawdownProgress ?? null,
       consistency: account.metrics?.isConsistent ?? null,

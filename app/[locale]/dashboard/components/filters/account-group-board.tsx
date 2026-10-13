@@ -26,7 +26,8 @@ import { useUserStore } from "@/store/user-store"
 import { useData, Account, Group } from "@/context/data-provider"
 import { removeAccountsFromTradesAction } from "@/server/accounts"
 
-export const HIDDEN_GROUP_NAME = "Hidden Accounts"
+export { HIDDEN_GROUP_NAME } from "@/lib/account-groups"
+import { HIDDEN_GROUP_NAME } from "@/lib/account-groups"
 
 type BoardAccount = {
   id: string

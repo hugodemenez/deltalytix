@@ -432,6 +432,10 @@ export function buildOpenApiDocument(request?: NextRequest | Request) {
         get: {
           operationId: "listAccounts",
           summary: "List accounts",
+          description:
+            "Every account is returned, including ones hidden in the dashboard. " +
+            "`hidden` is true for accounts in the Hidden Accounts group; `group` " +
+            "is the account's group ({ id, name }) or null.",
           security: [{ oauth2: ["accounts:read"] }, { bearerAuth: [] }],
           parameters: [
             {
