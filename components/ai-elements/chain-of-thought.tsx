@@ -178,8 +178,13 @@ export const ChainOfThoughtContent = memo(
     useChainOfThought();
 
     return (
-      // forceMount keeps the steps' own open state while the summary is closed.
-      <TraceCollapsibleContent forceMount className={className} {...props}>
+      // forceMount keeps the steps' own open state while the summary is
+      // closed, so the closed state has to hide the steps itself.
+      <TraceCollapsibleContent
+        forceMount
+        className={cn("in-data-[state=closed]:hidden", className)}
+        {...props}
+      >
         <Trace>{children}</Trace>
       </TraceCollapsibleContent>
     );

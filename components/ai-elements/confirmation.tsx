@@ -72,7 +72,8 @@ export const ConfirmationTitle = ({
   description,
   ...props
 }: ConfirmationTitleProps) => (
-  <ItemContent>
+  // The minimum width moves the actions to their own row in narrow chats.
+  <ItemContent className="min-w-48">
     <ItemTitle {...props} />
     {description && <ItemDescription>{description}</ItemDescription>}
   </ItemContent>

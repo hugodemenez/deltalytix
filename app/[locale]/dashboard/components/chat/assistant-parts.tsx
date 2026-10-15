@@ -209,19 +209,30 @@ function StepsSummary({
   const [open, setOpen] = useState<boolean>();
   const failed = countFailedSteps(steps, { streaming });
   const count = steps.length;
+  const summarized = count > 1;
 
+  // A lone step renders without the summary line. The content keeps its
+  // place in the tree either way, so steps do not remount when a second one
+  // arrives and the reasoning keeps its measured duration.
   return (
-    <ChainOfThought open={open ?? running} onOpenChange={setOpen}>
-      <ChainOfThoughtHeader
-        status={running ? "running" : failed > 0 ? "error" : undefined}
+    <ChainOfThought
+      open={summarized ? (open ?? running) : true}
+      onOpenChange={setOpen}
+    >
+      {summarized && (
+        <ChainOfThoughtHeader
+          status={running ? "running" : failed > 0 ? "error" : undefined}
+        >
+          {running
+            ? t("chat.trace.working")
+            : failed > 0
+              ? t("chat.trace.workedWithFailures", { count, failed })
+              : t("chat.trace.worked", { count })}
+        </ChainOfThoughtHeader>
+      )}
+      <ChainOfThoughtContent
+        className={summarized ? undefined : "m-0 border-l-0 p-0"}
       >
-        {running
-          ? t("chat.trace.working")
-          : failed > 0
-            ? t("chat.trace.workedWithFailures", { count, failed })
-            : t("chat.trace.worked", { count })}
-      </ChainOfThoughtHeader>
-      <ChainOfThoughtContent>
         {steps.map(({ part, index }) => (
           <Step
             key={part.toolCallId ?? `step-${index}`}
@@ -425,15 +436,11 @@ export function AssistantParts({
 
       return (
         <TraceMessage key={key}>
-          {segment.steps.length === 1 ? (
-            <Step part={segment.steps[0].part} streaming={streaming} />
-          ) : (
-            <StepsSummary
-              steps={segment.steps}
-              streaming={streaming}
-              running={running}
-            />
-          )}
+          <StepsSummary
+            steps={segment.steps}
+            streaming={streaming}
+            running={running}
+          />
         </TraceMessage>
       );
     }
