@@ -8,17 +8,32 @@ import {
   readOAuthFormOrJson,
   resolveClientCredentials,
 } from "@/lib/api/oauth-client"
+import { setPublicApiRequestLogContext } from "@/lib/api/request-log"
+import { withPublicApiRequestLog } from "@/lib/api/with-request-log"
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const body = await readOAuthFormOrJson(request)
     const credentials = resolveClientCredentials(request, body)
     const { token } = body
 
+    if (credentials.clientId) {
+      setPublicApiRequestLogContext({
+        tokenType: "client",
+        clientId: credentials.clientId,
+      })
+    }
+
     const app = await authenticateOAuthClient(credentials)
     if (!app) {
       return oauthError(401, "invalid_client", "Client authentication failed")
     }
+
+    setPublicApiRequestLogContext({
+      tokenType: "client",
+      appId: app.id,
+      clientId: app.clientId,
+    })
 
     if (!token) {
       return oauthError(400, "invalid_request", "token is required")
@@ -44,3 +59,5 @@ export async function POST(request: NextRequest) {
 
   return new NextResponse(null, { status: 200 })
 }
+
+export const POST = withPublicApiRequestLog(postHandler)

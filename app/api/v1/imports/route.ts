@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { authenticateApiRequest } from "@/lib/api/auth"
 import { apiError } from "@/lib/api/errors"
 import { aiNormalizeTrades } from "@/lib/api/ai-import"
+import { withPublicApiRequestLog } from "@/lib/api/with-request-log"
 import {
   getPlatformParser,
   SUPPORTED_IMPORT_PLATFORMS,
@@ -16,7 +17,7 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 /** AI import costs one model call per 50 rows; keep it inside maxDuration. */
 const MAX_AI_IMPORT_ROWS = 500
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["imports:write"])
   if (!auth.ok) return auth.response
 
@@ -141,3 +142,5 @@ export async function POST(request: NextRequest) {
     accountNumber,
   })
 }
+
+export const POST = withPublicApiRequestLog(postHandler)

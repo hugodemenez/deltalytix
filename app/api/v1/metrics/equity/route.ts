@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticateApiRequest } from "@/lib/api/auth"
 import { computeEquityChartData } from "@/lib/equity-chart"
+import { withPublicApiRequestLog } from "@/lib/api/with-request-log"
 import { prisma } from "@/lib/prisma"
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["metrics:read"])
   if (!auth.ok) return auth.response
 
@@ -88,3 +89,5 @@ export async function GET(request: NextRequest) {
     dateRange: result.dateRange,
   })
 }
+
+export const GET = withPublicApiRequestLog(getHandler)
