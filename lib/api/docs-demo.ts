@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { prisma } from "@/lib/prisma"
+import { formatDateToTimestamp } from "@/lib/date-utils"
 import {
   accessTokenExpiresAt,
   generateAccessToken,
@@ -124,8 +125,8 @@ function sampleTrades(userId: string, accountId: string) {
       instrument: row.instrument,
       entryPrice: row.entryPrice.toFixed(2),
       closePrice: row.closePrice.toFixed(2),
-      entryDate: entry.toISOString(),
-      closeDate: close.toISOString(),
+      entryDate: formatDateToTimestamp(entry),
+      closeDate: formatDateToTimestamp(close),
       pnl: row.pnl,
       timeInPosition: row.holdMinutes,
       userId,
