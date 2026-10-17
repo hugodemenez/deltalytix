@@ -9,6 +9,7 @@ import {
   parseLimit,
   serializeTrade,
 } from "@/lib/api/pagination"
+import { withPublicApiRequestLog } from "@/lib/api/with-request-log"
 import { prisma } from "@/lib/prisma"
 import {
   normalizeTradeInput,
@@ -48,7 +49,7 @@ function invalidTradeFields(
   return details
 }
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["trades:read"])
   if (!auth.ok) return auth.response
 
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
   })
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["trades:write"])
   if (!auth.ok) return auth.response
 
@@ -169,3 +170,6 @@ export async function POST(request: NextRequest) {
     { status: 201 },
   )
 }
+
+export const GET = withPublicApiRequestLog(getHandler)
+export const POST = withPublicApiRequestLog(postHandler)
