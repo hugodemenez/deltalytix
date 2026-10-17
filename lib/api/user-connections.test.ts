@@ -8,6 +8,7 @@ const {
   findFirstApp,
   updateManyApps,
   deleteManyApps,
+  createApp,
   transaction,
 } = vi.hoisted(() => ({
   findManyTokens: vi.fn(),
@@ -17,6 +18,7 @@ const {
   findFirstApp: vi.fn(),
   updateManyApps: vi.fn(),
   deleteManyApps: vi.fn(),
+  createApp: vi.fn(),
   transaction: vi.fn(),
 }))
 
@@ -34,6 +36,7 @@ vi.mock("@/lib/prisma", () => ({
       findFirst: findFirstApp,
       updateMany: updateManyApps,
       deleteMany: deleteManyApps,
+      create: createApp,
     },
     $transaction: transaction,
   },
@@ -46,11 +49,17 @@ vi.mock("@/lib/api/tokens", async () => {
   return {
     ...actual,
     generateClientSecret: () => "dltx_secret_rotated_test_value",
+    generateClientId: () => "dltx_app_generated",
   }
 })
 
 import {
+  activeGrantWhere,
+  countConnectedUsersByApp,
+  createOwnedOAuthAppForUser,
   deleteOwnedOAuthAppForUser,
+  getOwnedOAuthAppForUser,
+  updateOwnedOAuthAppForUser,
   listAuthorizedOAuthAppsForUser,
   listOwnedOAuthAppsForUser,
   listPersonalAccessTokensForUser,
@@ -238,6 +247,7 @@ describe("owned OAuth apps", () => {
     expect(result).toEqual({
       clientId: "dltx_app_abc",
       clientSecret: "dltx_secret_rotated_test_value",
+      secretRotatedAt: expect.any(Date),
     })
     expect(findFirstApp).toHaveBeenCalledWith({
       where: { id: "app-1", userId: "user-a" },
@@ -247,6 +257,7 @@ describe("owned OAuth apps", () => {
       where: { id: "app-1", userId: "user-a" },
       data: {
         clientSecretHash: sha256("dltx_secret_rotated_test_value"),
+        secretRotatedAt: expect.any(Date),
       },
     })
   })
@@ -259,11 +270,238 @@ describe("owned OAuth apps", () => {
   })
 
   it("deletes only owned apps", async () => {
-    deleteManyApps.mockResolvedValue({ count: 0 })
+    findFirstApp.mockResolvedValue(null)
     const result = await deleteOwnedOAuthAppForUser("attacker", "victim-app")
-    expect(result).toEqual({ deleted: false })
-    expect(deleteManyApps).toHaveBeenCalledWith({
+    expect(result).toEqual({ deleted: false, disconnectedUserCount: 0 })
+    expect(findFirstApp).toHaveBeenCalledWith({
       where: { id: "victim-app", userId: "attacker" },
+      select: { id: true },
+    })
+    expect(deleteManyApps).not.toHaveBeenCalled()
+  })
+})
+
+const baseApp = {
+  id: "app-1",
+  name: "My trading bot",
+  description: null,
+  logoUrl: null,
+  clientId: "dltx_app_abc",
+  redirectUris: ["https://bot.example.com/callback"],
+  scopes: ["trades:read"],
+  createdAt: new Date("2026-10-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-10-01T00:00:00.000Z"),
+  secretRotatedAt: null,
+}
+
+describe("connected user counts", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("counts distinct users per app among active grants, zero-filling", async () => {
+    findManyTokens.mockResolvedValue([
+      { appId: "app-1", userId: "u1" },
+      { appId: "app-1", userId: "u2" },
+      // duplicate row must not double count even if distinct is ignored
+      { appId: "app-1", userId: "u2" },
+      { appId: "app-2", userId: "u1" },
+    ])
+
+    const counts = await countConnectedUsersByApp(["app-1", "app-2", "app-3"])
+
+    expect(counts.get("app-1")).toBe(2)
+    expect(counts.get("app-2")).toBe(1)
+    expect(counts.get("app-3")).toBe(0)
+    const call = findManyTokens.mock.calls[0][0]
+    expect(call.where.appId).toEqual({ in: ["app-1", "app-2", "app-3"] })
+    expect(call.where.revokedAt).toBeNull()
+    expect(call.distinct).toEqual(["appId", "userId"])
+  })
+
+  it("skips the query when there are no apps", async () => {
+    const counts = await countConnectedUsersByApp([])
+    expect(counts.size).toBe(0)
+    expect(findManyTokens).not.toHaveBeenCalled()
+  })
+
+  it("treats unexpired access tokens or live refresh tokens as active", () => {
+    const now = new Date("2026-10-17T12:00:00.000Z")
+    expect(activeGrantWhere(now)).toEqual({
+      revokedAt: null,
+      OR: [
+        { expiresAt: null },
+        { expiresAt: { gt: now } },
+        {
+          refreshTokenHash: { not: null },
+          OR: [
+            { refreshTokenExpiresAt: null },
+            { refreshTokenExpiresAt: { gt: now } },
+          ],
+        },
+      ],
+    })
+  })
+
+  it("adds connectedUserCount and secretRotatedAt to owned apps", async () => {
+    findManyApps.mockResolvedValue([
+      baseApp,
+      { ...baseApp, id: "app-2", secretRotatedAt: new Date("2026-10-10T00:00:00.000Z") },
+    ])
+    findManyTokens.mockResolvedValue([
+      { appId: "app-1", userId: "u1" },
+      { appId: "app-1", userId: "u2" },
+      { appId: "app-1", userId: "u3" },
+    ])
+
+    const apps = await listOwnedOAuthAppsForUser("user-a")
+
+    expect(apps.map((a) => [a.id, a.connectedUserCount])).toEqual([
+      ["app-1", 3],
+      ["app-2", 0],
+    ])
+    expect(apps[0].secretRotatedAt).toBeNull()
+    expect(apps[1].secretRotatedAt).toEqual(new Date("2026-10-10T00:00:00.000Z"))
+    expect(findManyApps.mock.calls[0][0].select.secretRotatedAt).toBe(true)
+  })
+
+  it("returns null for an app the user does not own", async () => {
+    findFirstApp.mockResolvedValue(null)
+    expect(await getOwnedOAuthAppForUser("attacker", "victim-app")).toBeNull()
+    expect(findFirstApp.mock.calls[0][0].where).toEqual({
+      id: "victim-app",
+      userId: "attacker",
+    })
+  })
+})
+
+describe("createOwnedOAuthAppForUser", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("stores only the secret hash and stamps secretRotatedAt", async () => {
+    createApp.mockImplementation(async ({ data }) => ({
+      ...baseApp,
+      name: data.name,
+      clientId: data.clientId,
+      redirectUris: data.redirectUris,
+      scopes: data.scopes,
+      secretRotatedAt: data.secretRotatedAt,
+    }))
+
+    const result = await createOwnedOAuthAppForUser("user-a", {
+      name: "  My trading bot ",
+      redirectUris: ["https://bot.example.com/callback", " ", "https://bot.example.com/callback"],
+      scopes: ["trades:read", "profile:read"],
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data.clientSecret).toBe("dltx_secret_rotated_test_value")
+    expect(result.data.app.connectedUserCount).toBe(0)
+    const data = createApp.mock.calls[0][0].data
+    expect(data).toMatchObject({
+      userId: "user-a",
+      name: "My trading bot",
+      description: null,
+      clientId: "dltx_app_generated",
+      clientSecretHash: sha256("dltx_secret_rotated_test_value"),
+      redirectUris: ["https://bot.example.com/callback"],
+      scopes: ["trades:read", "profile:read"],
+    })
+    expect(data.secretRotatedAt).toBeInstanceOf(Date)
+    expect(JSON.stringify(data)).not.toContain('"dltx_secret_rotated_test_value"')
+  })
+
+  it("returns field errors and writes nothing on invalid input", async () => {
+    const result = await createOwnedOAuthAppForUser("user-a", {
+      name: "",
+      redirectUris: ["http://bot.example.com/cb"],
+      scopes: [],
+    })
+    expect(result).toEqual({
+      ok: false,
+      reason: "invalid",
+      errors: [
+        { field: "name", message: "Name is required." },
+        { field: "redirectUris", index: 0, message: "Use https, or http only for localhost." },
+        { field: "scopes", message: "Choose at least one permission." },
+      ],
+    })
+    expect(createApp).not.toHaveBeenCalled()
+  })
+})
+
+describe("updateOwnedOAuthAppForUser", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("updates only the provided fields, scoped to the owner, and never touches grants", async () => {
+    updateManyApps.mockResolvedValue({ count: 1 })
+    findFirstApp.mockResolvedValue({ ...baseApp, scopes: ["trades:read", "trades:write"] })
+    findManyTokens.mockResolvedValue([{ appId: "app-1", userId: "u1" }])
+
+    const result = await updateOwnedOAuthAppForUser("user-a", "app-1", {
+      scopes: ["trades:read", "trades:write"],
+      description: "  ",
+    })
+
+    expect(updateManyApps).toHaveBeenCalledWith({
+      where: { id: "app-1", userId: "user-a" },
+      data: { description: null, scopes: ["trades:read", "trades:write"] },
+    })
+    expect(updateManyTokens).not.toHaveBeenCalled()
+    expect(deleteManyCodes).not.toHaveBeenCalled()
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data.app.connectedUserCount).toBe(1)
+  })
+
+  it("returns not_found when the app belongs to someone else", async () => {
+    updateManyApps.mockResolvedValue({ count: 0 })
+    const result = await updateOwnedOAuthAppForUser("attacker", "victim-app", {
+      name: "Pwned",
+    })
+    expect(result).toEqual({ ok: false, reason: "not_found" })
+    expect(updateManyApps).toHaveBeenCalledWith({
+      where: { id: "victim-app", userId: "attacker" },
+      data: { name: "Pwned" },
+    })
+  })
+
+  it("rejects removing the last redirect URI without writing", async () => {
+    const result = await updateOwnedOAuthAppForUser("user-a", "app-1", {
+      redirectUris: [""],
+    })
+    expect(result).toEqual({
+      ok: false,
+      reason: "invalid",
+      errors: [{ field: "redirectUris", message: "At least one redirect URI is required." }],
+    })
+    expect(updateManyApps).not.toHaveBeenCalled()
+  })
+})
+
+describe("deleteOwnedOAuthAppForUser connected count", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("reports how many users were disconnected", async () => {
+    findFirstApp.mockResolvedValue({ id: "app-1" })
+    findManyTokens.mockResolvedValue([
+      { appId: "app-1", userId: "u1" },
+      { appId: "app-1", userId: "u2" },
+    ])
+    deleteManyApps.mockResolvedValue({ count: 1 })
+
+    const result = await deleteOwnedOAuthAppForUser("user-a", "app-1")
+
+    expect(result).toEqual({ deleted: true, disconnectedUserCount: 2 })
+    expect(deleteManyApps).toHaveBeenCalledWith({
+      where: { id: "app-1", userId: "user-a" },
     })
   })
 })
