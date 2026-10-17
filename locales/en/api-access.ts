@@ -18,6 +18,9 @@ export default {
   "apiAccess.apps.deleted": "App deleted",
   "apiAccess.apps.empty": "No OAuth apps yet.",
   "apiAccess.apps.delete": "Delete",
+  "apiAccess.apps.rotateSecret": "Rotate secret",
+  "apiAccess.apps.rotated": "Client secret rotated",
+  "apiAccess.apps.rotateFailed": "Failed to rotate client secret",
   "apiAccess.apps.secretTitle": "Client secret (shown once)",
   "apiAccess.apps.secretDescription":
     "Copy these credentials now. The secret cannot be retrieved again.",
@@ -32,12 +35,34 @@ export default {
   "apiAccess.tokens.empty": "No personal access tokens yet.",
   "apiAccess.tokens.untitled": "Untitled token",
   "apiAccess.tokens.createdAt": "Created {date}",
+  "apiAccess.tokens.lastUsed": "Last used {date}",
+  "apiAccess.tokens.lastUsedNever": "Never used",
   "apiAccess.tokens.revoke": "Revoke",
   "apiAccess.tokens.revoked": "Revoked",
   "apiAccess.tokens.revokedToast": "Token revoked",
+  "apiAccess.tokens.revokeFailed": "Failed to revoke token",
   "apiAccess.tokens.secretTitle": "Personal access token (shown once)",
   "apiAccess.tokens.secretDescription":
     "Store this token securely. It will not be shown again.",
   "apiAccess.scopes": "Scopes",
   "apiAccess.dismiss": "Dismiss",
+  "dashboard.settings.apiConnections": "API connections",
+  "dashboard.settings.apiConnections.description":
+    "Apps and tokens that can access your Deltalytix data.",
+  "dashboard.settings.apiConnections.authorizedApps": "Authorized apps",
+  "dashboard.settings.apiConnections.authorizedEmpty":
+    "No third-party apps authorized.",
+  "dashboard.settings.apiConnections.authorizedOn": "Authorized {date}",
+  "dashboard.settings.apiConnections.lastUsed": "Last used {date}",
+  "dashboard.settings.apiConnections.lastUsedNever": "Never used",
+  "dashboard.settings.apiConnections.revokeApp": "Revoke",
+  "dashboard.settings.apiConnections.revokedApp": "Access revoked",
+  "dashboard.settings.apiConnections.revokeAppFailed":
+    "Could not revoke app access.",
+  "dashboard.settings.apiConnections.personalTokens": "Personal access tokens",
+  "dashboard.settings.apiConnections.tokensEmpty":
+    "No personal access tokens.",
+  "dashboard.settings.apiConnections.manageDevelopers":
+    "Manage OAuth apps →",
+  "dashboard.settings.apiConnections.untitledApp": "Untitled app",
 } as const

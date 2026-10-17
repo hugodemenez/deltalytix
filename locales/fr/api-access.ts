@@ -18,6 +18,9 @@ export default {
   "apiAccess.apps.deleted": "Application supprimée",
   "apiAccess.apps.empty": "Aucune application OAuth pour le moment.",
   "apiAccess.apps.delete": "Supprimer",
+  "apiAccess.apps.rotateSecret": "Régénérer le secret",
+  "apiAccess.apps.rotated": "Secret client régénéré",
+  "apiAccess.apps.rotateFailed": "Échec de la régénération du secret client",
   "apiAccess.apps.secretTitle": "Secret client (affiché une seule fois)",
   "apiAccess.apps.secretDescription":
     "Copiez ces identifiants maintenant. Le secret ne pourra pas être récupéré à nouveau.",
@@ -32,12 +35,34 @@ export default {
   "apiAccess.tokens.empty": "Aucun jeton d'accès personnel pour le moment.",
   "apiAccess.tokens.untitled": "Jeton sans nom",
   "apiAccess.tokens.createdAt": "Créé le {date}",
+  "apiAccess.tokens.lastUsed": "Dernière utilisation {date}",
+  "apiAccess.tokens.lastUsedNever": "Jamais utilisé",
   "apiAccess.tokens.revoke": "Révoquer",
   "apiAccess.tokens.revoked": "Révoqué",
   "apiAccess.tokens.revokedToast": "Jeton révoqué",
+  "apiAccess.tokens.revokeFailed": "Échec de la révocation du jeton",
   "apiAccess.tokens.secretTitle": "Jeton d'accès personnel (affiché une seule fois)",
   "apiAccess.tokens.secretDescription":
     "Conservez ce jeton en lieu sûr. Il ne sera plus affiché.",
   "apiAccess.scopes": "Portées",
   "apiAccess.dismiss": "Fermer",
+  "dashboard.settings.apiConnections": "Connexions API",
+  "dashboard.settings.apiConnections.description":
+    "Applications et jetons qui peuvent accéder à vos données Deltalytix.",
+  "dashboard.settings.apiConnections.authorizedApps": "Applications autorisées",
+  "dashboard.settings.apiConnections.authorizedEmpty":
+    "Aucune application tierce autorisée.",
+  "dashboard.settings.apiConnections.authorizedOn": "Autorisée le {date}",
+  "dashboard.settings.apiConnections.lastUsed": "Dernière utilisation {date}",
+  "dashboard.settings.apiConnections.lastUsedNever": "Jamais utilisée",
+  "dashboard.settings.apiConnections.revokeApp": "Révoquer",
+  "dashboard.settings.apiConnections.revokedApp": "Accès révoqué",
+  "dashboard.settings.apiConnections.revokeAppFailed":
+    "Impossible de révoquer l'accès de l'application.",
+  "dashboard.settings.apiConnections.personalTokens": "Jetons d'accès personnels",
+  "dashboard.settings.apiConnections.tokensEmpty":
+    "Aucun jeton d'accès personnel.",
+  "dashboard.settings.apiConnections.manageDevelopers":
+    "Gérer les applications OAuth →",
+  "dashboard.settings.apiConnections.untitledApp": "Application sans nom",
 } as const

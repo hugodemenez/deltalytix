@@ -11,27 +11,22 @@ import {
   generatePersonalAccessToken,
   sha256,
 } from "@/lib/api/tokens"
+import {
+  deleteOwnedOAuthAppForUser,
+  listOwnedOAuthAppsForUser,
+  listPersonalAccessTokensForUser,
+  revokePersonalAccessTokenForUser,
+  rotateOAuthAppSecretForUser,
+} from "@/lib/api/user-connections"
 
 function revalidateDevelopers() {
   revalidatePath("/dashboard/developers")
+  revalidatePath("/dashboard/settings")
 }
 
 export async function listOAuthAppsAction() {
   const userId = await resolveDbUserId()
-  return prisma.oAuthApp.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      clientId: true,
-      redirectUris: true,
-      scopes: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  })
+  return listOwnedOAuthAppsForUser(userId)
 }
 
 export async function createOAuthAppAction(input: {
@@ -81,24 +76,23 @@ export async function createOAuthAppAction(input: {
 
 export async function deleteOAuthAppAction(appId: string) {
   const userId = await resolveDbUserId()
-  await prisma.oAuthApp.deleteMany({ where: { id: appId, userId } })
+  await deleteOwnedOAuthAppForUser(userId, appId)
   revalidateDevelopers()
+}
+
+export async function rotateOAuthAppSecretAction(appId: string) {
+  const userId = await resolveDbUserId()
+  const result = await rotateOAuthAppSecretForUser(userId, appId)
+  if (!result) {
+    throw new Error("OAuth app not found")
+  }
+  revalidateDevelopers()
+  return result
 }
 
 export async function listPersonalAccessTokensAction() {
   const userId = await resolveDbUserId()
-  return prisma.oAuthAccessToken.findMany({
-    where: { userId, appId: null },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      scopes: true,
-      createdAt: true,
-      lastUsedAt: true,
-      revokedAt: true,
-    },
-  })
+  return listPersonalAccessTokensForUser(userId, { includeRevoked: true })
 }
 
 export async function createPersonalAccessTokenAction(input: {
@@ -130,10 +124,7 @@ export async function createPersonalAccessTokenAction(input: {
 
 export async function revokePersonalAccessTokenAction(tokenId: string) {
   const userId = await resolveDbUserId()
-  await prisma.oAuthAccessToken.updateMany({
-    where: { id: tokenId, userId, appId: null, revokedAt: null },
-    data: { revokedAt: new Date() },
-  })
+  await revokePersonalAccessTokenForUser(userId, tokenId)
   revalidateDevelopers()
 }
 

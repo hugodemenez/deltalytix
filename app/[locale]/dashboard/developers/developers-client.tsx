@@ -16,6 +16,7 @@ import {
   createPersonalAccessTokenAction,
   deleteOAuthAppAction,
   revokePersonalAccessTokenAction,
+  rotateOAuthAppSecretAction,
 } from './actions'
 import type { ApiScope } from '@/lib/api/scopes'
 
@@ -267,20 +268,47 @@ export default function DevelopersClient({
                         ))}
                       </div>
                     </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      disabled={pending}
-                      onClick={() =>
-                        startTransition(async () => {
-                          await deleteOAuthAppAction(app.id)
-                          setApps((prev) => prev.filter((a) => a.id !== app.id))
-                          toast.success(t('apiAccess.apps.deleted'))
-                        })
-                      }
-                    >
-                      {t('apiAccess.apps.delete')}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={pending}
+                        onClick={() =>
+                          startTransition(async () => {
+                            try {
+                              const result = await rotateOAuthAppSecretAction(app.id)
+                              setCreatedSecret({
+                                clientId: result.clientId,
+                                clientSecret: result.clientSecret,
+                              })
+                              toast.success(t('apiAccess.apps.rotated'))
+                            } catch (error) {
+                              toast.error(
+                                error instanceof Error
+                                  ? error.message
+                                  : t('apiAccess.apps.rotateFailed'),
+                              )
+                            }
+                          })
+                        }
+                      >
+                        {t('apiAccess.apps.rotateSecret')}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={pending}
+                        onClick={() =>
+                          startTransition(async () => {
+                            await deleteOAuthAppAction(app.id)
+                            setApps((prev) => prev.filter((a) => a.id !== app.id))
+                            toast.success(t('apiAccess.apps.deleted'))
+                          })
+                        }
+                      >
+                        {t('apiAccess.apps.delete')}
+                      </Button>
+                    </div>
                   </div>
                 ))
               )}
@@ -347,6 +375,12 @@ export default function DevelopersClient({
                         {t('apiAccess.tokens.createdAt', {
                           date: new Date(token.createdAt).toLocaleString(),
                         })}
+                        {' · '}
+                        {token.lastUsedAt
+                          ? t('apiAccess.tokens.lastUsed', {
+                              date: new Date(token.lastUsedAt).toLocaleString(),
+                            })
+                          : t('apiAccess.tokens.lastUsedNever')}
                         {token.revokedAt ? ` · ${t('apiAccess.tokens.revoked')}` : ''}
                       </p>
                       <div className="flex flex-wrap gap-1 pt-1">
