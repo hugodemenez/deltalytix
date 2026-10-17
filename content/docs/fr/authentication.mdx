@@ -78,7 +78,7 @@ GET /oauth/authorize
 | `code_challenge` | Recommandé | Challenge PKCE S256 |
 | `code_challenge_method` | Avec challenge | Doit être `S256` |
 
-En cas d’approbation, Deltalytix émet un code d’autorisation à usage unique (TTL de 10 minutes) et redirige :
+En cas d’approbation, Deltalytix émet un code d’autorisation à usage unique (TTL de 10 minutes) et redirige. Une nouvelle approbation de la même application pour le même utilisateur révoque les jetons d’accès et de rafraîchissement antérieurs de cette paire et invalide les codes d’autorisation non utilisés, afin que seul le nouvel octroi reste utilisable :
 
 ```text
 https://your-app.example/callback?code=…&state=…

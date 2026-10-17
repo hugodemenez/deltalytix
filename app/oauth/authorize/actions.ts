@@ -9,6 +9,7 @@ import {
   generateAuthorizationCode,
   sha256,
 } from "@/lib/api/tokens"
+import { revokePriorOAuthGrantsForUserApp } from "@/lib/api/revoke-prior-oauth-grants"
 import { isValidScope, parseScopes } from "@/lib/api/scopes"
 
 export type AuthorizeParams = {
@@ -143,17 +144,26 @@ export async function approveAuthorizationAction(formData: FormData) {
 
   const code = generateAuthorizationCode()
 
-  await prisma.oAuthAuthorizationCode.create({
-    data: {
-      codeHash: sha256(code),
-      appId: app.id,
+  // Re-consent replaces the prior grant: revoke existing tokens and burn any
+  // unused codes for this user+app before minting the new authorization code.
+  await prisma.$transaction(async (tx) => {
+    await revokePriorOAuthGrantsForUserApp(tx, {
       userId,
-      scopes,
-      redirectUri,
-      codeChallenge: codeChallenge ?? null,
-      codeChallengeMethod: codeChallengeMethod ?? null,
-      expiresAt: authorizationCodeExpiresAt(),
-    },
+      appId: app.id,
+    })
+
+    await tx.oAuthAuthorizationCode.create({
+      data: {
+        codeHash: sha256(code),
+        appId: app.id,
+        userId,
+        scopes,
+        redirectUri,
+        codeChallenge: codeChallenge ?? null,
+        codeChallengeMethod: codeChallengeMethod ?? null,
+        expiresAt: authorizationCodeExpiresAt(),
+      },
+    })
   })
 
   const url = new URL(redirectUri)
