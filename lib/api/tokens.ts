@@ -5,6 +5,28 @@ export const REFRESH_TOKEN_TTL_DAYS = 30
 export const AUTHORIZATION_CODE_TTL_MINUTES = 10
 export const DOCS_PLAYGROUND_TOKEN_TTL_HOURS = 24
 
+/** Stable name used when issuing authenticated docs playground PATs. */
+export const DOCS_PLAYGROUND_TOKEN_NAME = "Docs playground"
+
+/**
+ * Decide whether an access-token row is expired for API authentication.
+ *
+ * Legitimate personal access tokens intentionally use `expiresAt: null`
+ * (non-expiring). Docs playground tokens must always carry an expiry; a legacy
+ * playground row with null `expiresAt` is treated as expired so it cannot keep
+ * working indefinitely. Revoke that row via the connections settings UI — this
+ * helper does not write to the database.
+ */
+export function isAccessTokenExpired(
+  token: { name: string | null; expiresAt: Date | null },
+  now = new Date(),
+): boolean {
+  if (token.expiresAt == null) {
+    return token.name === DOCS_PLAYGROUND_TOKEN_NAME
+  }
+  return token.expiresAt.getTime() <= now.getTime()
+}
+
 export function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex")
 }
