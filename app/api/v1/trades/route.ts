@@ -14,6 +14,7 @@ import {
   normalizeTradeInput,
   saveTradesCore,
 } from "@/lib/trades/save-trades-core"
+import { normalizeTradeDate } from "@/lib/trades/normalize-trade-date"
 import type { Trade } from "@/prisma/generated/prisma/client"
 
 const MAX_TRADES_PER_REQUEST = 5000
@@ -41,7 +42,8 @@ function invalidTradeFields(
   }
   for (const field of ["entryDate", "closeDate"] as const) {
     const value = trade[field]
-    if (typeof value !== "string" || Number.isNaN(new Date(value).getTime())) {
+    // Same rule saveTradesCore applies, so the caller gets a per-field 400.
+    if (typeof value !== "string" || normalizeTradeDate(value) === null) {
       details.push({ field: `trades[${index}].${field}`, message: "must be an ISO 8601 date" })
     }
   }
