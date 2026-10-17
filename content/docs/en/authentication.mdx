@@ -78,7 +78,7 @@ GET /oauth/authorize
 | `code_challenge` | Recommended | PKCE S256 challenge |
 | `code_challenge_method` | With challenge | Must be `S256` |
 
-On approve, Deltalytix issues a single-use authorization code (10 minute TTL) and redirects:
+On approve, Deltalytix issues a single-use authorization code (10 minute TTL) and redirects. Re-approving the same app for the same user revokes that pair’s prior access and refresh tokens and invalidates unused authorization codes so only the new grant remains usable:
 
 ```text
 https://your-app.example/callback?code=…&state=…
