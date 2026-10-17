@@ -165,6 +165,9 @@ model OAuthApp {
   clientSecretHash String
   redirectUris     String[]
   scopes           String[]
+  /// When the client secret was last generated (create or rotate). Null for
+  /// apps created before this column existed; fall back to createdAt.
+  secretRotatedAt  DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
