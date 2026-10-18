@@ -3,12 +3,21 @@ import { loadEnvLocal } from "../lib/load-env-local.node"
 
 loadEnvLocal()
 
-import { randomUUID } from "crypto"
+import { createHash, randomUUID } from "crypto"
 import { PrismaPg } from "@prisma/adapter-pg"
 import pg from "pg"
 
 import { PrismaClient } from "../prisma/generated/prisma/client"
+import { API_SCOPES } from "../lib/api/scopes"
 import { formatDateToTimestamp } from "../lib/date-utils"
+
+const SEED_OAUTH_CLIENT_ID = "dltx_app_seed_demo_connections"
+const SEED_OAUTH_APP_NAME = "Seed Chart Companion"
+const SEED_PAT_NAME = "Seed local scripts"
+
+function sha256(value: string): string {
+  return createHash("sha256").update(value).digest("hex")
+}
 
 const LOCAL_USER_ID = process.env.LOCAL_DASHBOARD_USER_ID || "local-dashboard-user"
 const LOCAL_USER_EMAIL =
@@ -240,8 +249,70 @@ async function main() {
       ],
     })
 
+    // Demo OAuth authorization + PAT for settings → API connections UI.
+    // Safe for local-only seed: fixed client id, replaced on every run.
+    const existingSeedApp = await prisma.oAuthApp.findUnique({
+      where: { clientId: SEED_OAUTH_CLIENT_ID },
+      select: { id: true },
+    })
+    if (existingSeedApp) {
+      await prisma.oAuthAccessToken.deleteMany({
+        where: { appId: existingSeedApp.id },
+      })
+      await prisma.oAuthAuthorizationCode.deleteMany({
+        where: { appId: existingSeedApp.id },
+      })
+      await prisma.oAuthApp.delete({ where: { id: existingSeedApp.id } })
+    }
+    await prisma.oAuthAccessToken.deleteMany({
+      where: { userId: user.id, appId: null, name: SEED_PAT_NAME },
+    })
+
+    const seedApp = await prisma.oAuthApp.create({
+      data: {
+        userId: user.id,
+        name: SEED_OAUTH_APP_NAME,
+        description: "Local seed OAuth app for settings connections UI",
+        logoUrl: "/logos/rithmic-logo-black.png",
+        clientId: SEED_OAUTH_CLIENT_ID,
+        clientSecretHash: sha256("dltx_secret_seed_demo_only"),
+        redirectUris: ["http://localhost:3000/oauth/callback"],
+        scopes: [...API_SCOPES],
+      },
+    })
+
+    const authorizedAt = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+    const lastUsedAt = new Date(Date.now() - 2 * 60 * 60 * 1000)
+    await prisma.oAuthAccessToken.create({
+      data: {
+        name: null,
+        tokenHash: sha256(`seed-access-${user.id}`),
+        refreshTokenHash: sha256(`seed-refresh-${user.id}`),
+        appId: seedApp.id,
+        userId: user.id,
+        scopes: ["profile:read", "trades:read", "accounts:read"],
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        refreshTokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        lastUsedAt,
+        createdAt: authorizedAt,
+      },
+    })
+
+    await prisma.oAuthAccessToken.create({
+      data: {
+        name: SEED_PAT_NAME,
+        tokenHash: sha256(`seed-pat-${user.id}`),
+        appId: null,
+        userId: user.id,
+        scopes: ["profile:read", "trades:read"],
+        expiresAt: null,
+        lastUsedAt: new Date(Date.now() - 26 * 60 * 60 * 1000),
+        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      },
+    })
+
     console.log(
-      `[seed-self-host] Ready: user=${user.id}, account=${account.number}, trades=${trades.length}, days=${tradeDayCount}`,
+      `[seed-self-host] Ready: user=${user.id}, account=${account.number}, trades=${trades.length}, days=${tradeDayCount}, oauthApp=${seedApp.clientId}`,
     )
   } finally {
     await prisma.$disconnect()
