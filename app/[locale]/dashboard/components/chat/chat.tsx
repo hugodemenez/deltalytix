@@ -13,8 +13,7 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
-import { Marker, MarkerContent } from "@/components/ui/marker";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import type { UIMessage } from "ai";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
@@ -23,7 +22,8 @@ import { BotMessage } from "./bot-message";
 import { UserMessage } from "./user-message";
 import { ChatInput } from "./input";
 import { ChatHeader } from "./header";
-import { EquityChartMessage } from "./equity-chart-message";
+import { AssistantParts, ThinkingLine } from "./assistant-parts";
+import { isAwaitingStep, type ChatPart } from "./message-parts";
 import { useCurrentLocale } from "@/locales/client";
 import { useI18n } from "@/locales/client";
 import { loadChat, saveChat } from "./actions/chat";
@@ -85,19 +85,6 @@ function useMessageVirtualization(messages: UIMessage[]) {
   };
 }
 
-// Add new message type components
-const ThinkingMessage = () => {
-  const t = useI18n();
-  return (
-    <Marker>
-      <MarkerContent className="shimmer">
-        {t("chat.aiThinking")}
-      </MarkerContent>
-    </Marker>
-  );
-};
-
-
 const FirstMessageLoading = () => {
   const t = useI18n();
   return (
@@ -107,46 +94,6 @@ const FirstMessageLoading = () => {
         {t("chat.loading.firstMessage")}
       </p>
     </div>
-  );
-};
-
-const ToolCallMessage = ({
-  toolName,
-  args,
-  state,
-}: {
-  toolName: string;
-  args: any;
-  state: string;
-  output?: any;
-}) => {
-  const isLoading = state === "call" || state === "partial-call";
-  const label = state === "result" || state === "output-available"
-    ? `Completed ${toolName}`
-    : state === "partial-call"
-      ? `Preparing ${toolName}...`
-      : `Calling ${toolName}...`;
-
-  return (
-    <Marker variant={isLoading ? "default" : "border"}>
-      {isLoading && (
-        <MarkerContent className="shimmer">{label}</MarkerContent>
-      )}
-      {!isLoading && (
-        <MarkerContent>
-          {label}
-          {args && (
-            <span className="mt-1 block text-xs opacity-70">
-              {Object.entries(args).map(([key, value]) => (
-                <span key={key} className="mr-2">
-                  {key}: {JSON.stringify(value)}
-                </span>
-              ))}
-            </span>
-          )}
-        </MarkerContent>
-      )}
-    </Marker>
   );
 };
 
@@ -291,14 +238,30 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
         (message as any).parts?.some(
           (part: any) =>
             part?.type?.startsWith("tool-") &&
-            !["result", "output-available", "error"].includes(part?.state)
+            ![
+              "result",
+              "output-available",
+              "output-error",
+              "output-denied",
+              "error",
+            ].includes(part?.state)
         )
       ),
     [messages]
   );
 
-  const isProcessingResponse =
-    status === "streaming" || status === "submitted" || hasPendingToolCalls;
+  const isStreamingStatus = status === "streaming" || status === "submitted";
+  const isProcessingResponse = isStreamingStatus || hasPendingToolCalls;
+  const showFirstMessageLoading =
+    isStarted &&
+    messages.filter((message) => message.role === "user").length === 1 &&
+    isProcessingResponse;
+  const showThinkingLine =
+    !showFirstMessageLoading &&
+    isAwaitingStep(
+      messages.at(-1) as { role: string; parts?: ChatPart[] } | undefined,
+      isStreamingStatus
+    );
 
   const uiStatus: ChatStatus = isProcessingResponse
     ? "streaming"
@@ -377,9 +340,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                 </motion.div>
               )}
 
-              {isStarted &&
-                messages.filter((message) => message.role === "user").length === 1 &&
-                isProcessingResponse && (
+              {showFirstMessageLoading && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -437,185 +398,18 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                     );
                   case "assistant":
                     if (message.parts) {
-                      return message.parts.map((part: any, index: number) => {
-                        switch (part.type) {
-                          case "step-start":
-                            if (message.parts && message.parts.length > index) {
-                              return null;
-                            }
-                            return (
-                              <ThinkingMessage
-                                key={`${message.id}-step-${index}`}
-                              />
-                            );
-                          case "text":
-                            return (
-                              <BotMessage
-                                key={`${message.id}-${index}`}
-                                status={uiStatus}
-                              >
-                                {part.text}
-                              </BotMessage>
-                            );
-                          case "file":
-                            if (part.mediaType?.startsWith("image/")) {
-                              return (
-                                <BotMessage
-                                  key={`${message.id}-image-${index}`}
-                                    status={uiStatus}
-                                >
-                                  <div className="mt-2">
-                                    <img
-                                      src={part.url}
-                                      alt={`attachment-${index}`}
-                                      className="rounded-lg max-w-full h-auto max-h-96"
-                                    />
-                                  </div>
-                                </BotMessage>
-                              );
-                            }
-                            return null;
-                          case "tool-askForConfirmation": {
-                            switch (part.state) {
-                              case "input-available":
-                                return (
-                                  <BotMessage
-                                    key={`${part.toolCallId}-input`}
-                                    status={uiStatus}
-                                  >
-                                    {part.input?.message}
-                                  </BotMessage>
-                                );
-                              case "call":
-                                return (
-                                  <BotMessage
-                                    key={`${part.toolCallId}-call`}
-                                    status={uiStatus}
-                                  >
-                                    {part.input?.message}
-                                    <div className="flex gap-2 mt-2">
-                                      <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        onClick={() =>
-                                          addToolResult({
-                                            tool: "askForConfirmation",
-                                            toolCallId: part.toolCallId,
-                                            output: "Yes, confirmed.",
-                                          })
-                                        }
-                                      >
-                                        Yes
-                                      </Button>
-                                      <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        onClick={() =>
-                                          addToolResult({
-                                            tool: "askForConfirmation",
-                                            toolCallId: part.toolCallId,
-                                            output: "No, denied",
-                                          })
-                                        }
-                                      >
-                                        No
-                                      </Button>
-                                    </div>
-                                  </BotMessage>
-                                );
-                              case "result":
-                              case "output-available":
-                                return (
-                                  <BotMessage
-                                    key={`${part.toolCallId}-result`}
-                                    status={uiStatus}
-                                  >
-                                    Response: {part.output}
-                                  </BotMessage>
-                                );
-                              default:
-                                return null;
-                            }
+                      return (
+                        <AssistantParts
+                          messageId={message.id}
+                          parts={message.parts as ChatPart[]}
+                          streaming={
+                            isStreamingStatus &&
+                            message.id === messages.at(-1)?.id
                           }
-                          case "tool-generateEquityChart": {
-                            switch (part.state) {
-                              case "input-available":
-                              case "call":
-                                return (
-                                  <div
-                                    key={`${part.toolCallId}-input`}
-                                    className="p-3 rounded-lg bg-muted/50"
-                                  >
-                                    {t("chat.chart.generating")}
-                                  </div>
-                                );
-                              case "result":
-                              case "output-available":
-                                const chartData = part.output;
-
-                                // Check if we have valid chart data
-                                if (
-                                  chartData &&
-                                  typeof chartData === "object" &&
-                                  "chartData" in chartData
-                                ) {
-                                  return (
-                                    <div key={`${part.toolCallId}-result`}>
-                                      <EquityChartMessage
-                                        chartData={chartData.chartData}
-                                        accountNumbers={
-                                          chartData.accountNumbers
-                                        }
-                                        showIndividual={
-                                          chartData.showIndividual
-                                        }
-                                        dateRange={chartData.dateRange}
-                                        timezone={chartData.timezone}
-                                        totalTrades={chartData.totalTrades}
-                                      />
-                                    </div>
-                                  );
-                                } else {
-                                  return (
-                                    <div
-                                      key={`${part.toolCallId}-result`}
-                                      className="p-3 rounded-lg bg-destructive/10 text-destructive border border-destructive/20"
-                                    >
-                                      Error: Invalid chart data received -
-                                      missing required properties
-                                    </div>
-                                  );
-                                }
-                              case "error":
-                                return (
-                                  <div
-                                    key={`${part.toolCallId}-error`}
-                                    className="p-3 rounded-lg bg-destructive/10 text-destructive border border-destructive/20"
-                                  >
-                                    Error: {part.errorText}
-                                  </div>
-                                );
-                              default:
-                                return null;
-                            }
-                          }
-                          default:
-                            // Handle other tool types generically
-                            if (part.type.startsWith("tool-")) {
-                              const toolName = part.type.replace("tool-", "");
-                              return (
-                                <ToolCallMessage
-                                  key={`${part.toolCallId}-${part.state}`}
-                                  toolName={toolName}
-                                  args={part.input}
-                                  state={part.state}
-                                  output={part.output}
-                                />
-                              );
-                            }
-                            return null;
-                        }
-                      });
+                          status={uiStatus}
+                          addToolResult={addToolResult}
+                        />
+                      );
                     }
                     const messageText = getMessageText(message);
                     return (
@@ -641,6 +435,12 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                   </MessageScrollerItem>
                 );
               })}
+
+              {showThinkingLine && (
+                <MessageScrollerItem key="awaiting-step">
+                  <ThinkingLine />
+                </MessageScrollerItem>
+              )}
             </AnimatePresence>
               </MessageScrollerContent>
             </MessageScrollerViewport>
