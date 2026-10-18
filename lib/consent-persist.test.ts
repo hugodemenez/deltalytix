@@ -14,8 +14,17 @@ vi.mock("posthog-js", () => ({
 }));
 
 import posthog from "posthog-js";
-import { persistAnalyticsOptOut, persistConsentSettings } from "./consent-persist";
-import { fromRecordChoices } from "./consent-settings";
+import {
+  persistAnalyticsOptOut,
+  persistConsentSettings,
+  reconcileStoredConsent,
+} from "./consent-persist";
+import {
+  CONSENT_STORAGE_KEY,
+  CONSENT_UPDATED_EVENT,
+  DEFAULT_CONSENT_SETTINGS,
+  fromRecordChoices,
+} from "./consent-settings";
 
 describe("persistConsentSettings", () => {
   beforeEach(() => {
@@ -62,5 +71,92 @@ describe("persistConsentSettings", () => {
     expect(posthog.stopSessionRecording).toHaveBeenCalledOnce();
     expect(posthog.startSessionRecording).not.toHaveBeenCalled();
     expect(posthog.opt_out_capturing).toHaveBeenCalledOnce();
+  });
+});
+
+describe("reconcileStoredConsent", () => {
+  const dispatchEvent = vi.fn();
+  const storage = new Map<string, string>();
+
+  beforeEach(() => {
+    storage.clear();
+    dispatchEvent.mockClear();
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test");
+    const localStorage = {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        storage.set(key, value);
+      },
+      removeItem: (key: string) => {
+        storage.delete(key);
+      },
+    };
+    vi.stubGlobal("localStorage", localStorage);
+    vi.stubGlobal("document", { cookie: "" });
+    vi.stubGlobal("window", {
+      location: {
+        hostname: "localhost",
+        protocol: "http:",
+        href: "http://localhost/",
+      },
+      localStorage,
+      dispatchEvent,
+    });
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("copies a denied shared cookie and announces the consent change", () => {
+    document.cookie = "deltalytix_analytics_consent=denied";
+
+    const settings = reconcileStoredConsent();
+
+    expect(settings).toMatchObject({
+      analytics_storage: false,
+      ad_storage: false,
+    });
+    expect(storage.get(CONSENT_STORAGE_KEY)).toContain(
+      '"analytics_storage":false',
+    );
+    expect(dispatchEvent).toHaveBeenCalledOnce();
+    expect(dispatchEvent.mock.calls[0]?.[0]).toMatchObject({
+      type: CONSENT_UPDATED_EVENT,
+      detail: expect.objectContaining({ analytics_storage: false }),
+    });
+  });
+
+  it("does not announce when localStorage already matches the cookie", () => {
+    storage.set(
+      CONSENT_STORAGE_KEY,
+      JSON.stringify(DEFAULT_CONSENT_SETTINGS),
+    );
+    document.cookie = "deltalytix_analytics_consent=denied";
+
+    reconcileStoredConsent();
+
+    expect(dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it("announces when the shared cookie overrides a stale local grant", () => {
+    storage.set(
+      CONSENT_STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULT_CONSENT_SETTINGS,
+        analytics_storage: true,
+      }),
+    );
+    document.cookie = "deltalytix_analytics_consent=denied";
+
+    reconcileStoredConsent();
+
+    expect(dispatchEvent).toHaveBeenCalledOnce();
+    expect(dispatchEvent.mock.calls[0]?.[0]).toMatchObject({
+      type: CONSENT_UPDATED_EVENT,
+      detail: expect.objectContaining({ analytics_storage: false }),
+    });
   });
 });
