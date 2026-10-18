@@ -1,8 +1,11 @@
+import { ArrowLeftRight, Eye, LayoutGrid, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { isWriteScope, redirectHost, SCOPE_PLAIN_LABELS } from "@/app/[locale]/dashboard/settings/connections-format"
+import type { ApiScope } from "@/lib/api/scopes"
 import { approveAuthorizationAction, denyAuthorizationAction } from "./actions"
 
 type Props = {
+  email: string
   app: {
     id: string
     name: string
@@ -18,7 +21,15 @@ type Props = {
   scopeValue: string
 }
 
+function scopeLabel(scope: { id: string; description: string }): string {
+  if (scope.id in SCOPE_PLAIN_LABELS) {
+    return SCOPE_PLAIN_LABELS[scope.id as ApiScope]
+  }
+  return scope.description
+}
+
 export function AuthorizeConsent({
+  email,
   app,
   scopes,
   redirectUri,
@@ -27,61 +38,80 @@ export function AuthorizeConsent({
   codeChallengeMethod,
   scopeValue,
 }: Props) {
+  const host = redirectHost(redirectUri)
+
   return (
-    <main className="min-h-screen bg-gradient-to-b from-zinc-100 to-zinc-50 text-zinc-900 flex items-center justify-center p-6">
-      <Card className="w-full max-w-lg border-zinc-200 shadow-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex items-center gap-3">
-            {app.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={app.logoUrl}
-                alt=""
-                className="h-10 w-10 rounded-md object-cover"
-              />
-            ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-zinc-900 text-sm font-semibold text-white">
-                {app.name.slice(0, 1).toUpperCase()}
-              </div>
-            )}
-            <div>
-              <CardTitle className="text-xl tracking-tight">{app.name}</CardTitle>
-              <CardDescription>
-                wants to access your Deltalytix account
-              </CardDescription>
-            </div>
-          </div>
-          {app.description ? (
-            <p className="text-sm text-zinc-600">{app.description}</p>
-          ) : null}
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <p className="text-sm font-medium text-zinc-800">Requested permissions</p>
-            <ul className="mt-2 space-y-2">
-              {scopes.map((scope) => (
+    <main className="flex min-h-screen flex-col items-center bg-[#FAFAFA] px-4 py-14 text-[#171717]">
+      <p className="mb-6 text-[15px] font-semibold tracking-tight">Deltalytix</p>
+      <div className="w-full max-w-[420px] rounded-[4px] border border-[#E5E5E5] bg-white px-6 pb-6 pt-7">
+        <div className="mb-[18px] flex items-center justify-center gap-2.5 text-[#A3A3A3]">
+          {app.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={app.logoUrl}
+              alt=""
+              className="size-10 rounded-[6px] border border-[#E5E5E5] object-cover"
+            />
+          ) : (
+            <span className="flex size-10 items-center justify-center rounded-[6px] border border-[#E5E5E5] bg-[#F5F5F5] text-[#404040]">
+              <LayoutGrid className="size-3.5" />
+            </span>
+          )}
+          <ArrowLeftRight className="size-4" aria-hidden />
+          <span className="flex size-10 items-center justify-center rounded-[6px] border border-[#171717] bg-[#171717] text-[15px] font-semibold text-white">
+            D
+          </span>
+        </div>
+        <h1 className="text-center text-lg font-semibold leading-6 tracking-tight">
+          {app.name} wants to access your Deltalytix account
+        </h1>
+        {email ? (
+          <p className="mt-1.5 text-center text-xs leading-4 text-[#686D67]">
+            Signed in as {email}
+          </p>
+        ) : null}
+        <div className="mt-5 overflow-hidden rounded-[4px] border border-[#E5E5E5]">
+          <p className="px-3 pt-2.5 text-xs font-medium text-[#686D67]">It will be able to</p>
+          <ul>
+            {scopes.map((scope) => {
+              const write = isWriteScope(scope.id)
+              return (
                 <li
                   key={scope.id}
-                  className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2"
+                  className="flex items-center gap-2.5 border-t border-[#F0F0F0] px-3 py-2.5 text-sm first:border-t-0"
                 >
-                  <p className="text-sm font-medium">{scope.description}</p>
-                  <p className="text-xs font-mono text-zinc-500">{scope.id}</p>
+                  <span className="text-[#686D67]">
+                    {write ? (
+                      <Pencil className="size-4" aria-hidden />
+                    ) : (
+                      <Eye className="size-4" aria-hidden />
+                    )}
+                  </span>
+                  <span>{scopeLabel(scope)}</span>
+                  {write ? (
+                    <span className="ml-auto rounded-[4px] border border-[#E5E5E5] px-1.5 text-[11px] leading-4 text-[#404040]">
+                      Can change data
+                    </span>
+                  ) : null}
                 </li>
-              ))}
-            </ul>
-          </div>
-          <p className="text-xs text-zinc-500">
-            You will be redirected to{" "}
-            <span className="font-mono break-all">{redirectUri}</span>
-          </p>
-        </CardContent>
-        <CardFooter className="flex gap-3">
+              )
+            })}
+          </ul>
+        </div>
+        <p className="mt-3.5 text-xs leading-4 text-[#686D67]">
+          It can’t see your password. You can disconnect it anytime in Settings.
+        </p>
+        <div className="mt-5 flex gap-2">
           <form action={denyAuthorizationAction} className="flex-1">
             <input type="hidden" name="client_id" value={app.clientId} />
             <input type="hidden" name="redirect_uri" value={redirectUri} />
             {state ? <input type="hidden" name="state" value={state} /> : null}
-            <Button type="submit" variant="outline" className="w-full">
-              Deny
+            <Button
+              type="submit"
+              variant="outline"
+              className="h-9 w-full rounded-[4px] border-[#E5E5E5] bg-white text-sm font-medium text-[#171717] shadow-none hover:bg-[#FAFAFA]"
+            >
+              Cancel
             </Button>
           </form>
           <form action={approveAuthorizationAction} className="flex-1">
@@ -99,12 +129,18 @@ export function AuthorizeConsent({
                 value={codeChallengeMethod}
               />
             ) : null}
-            <Button type="submit" className="w-full">
-              Authorize
+            <Button
+              type="submit"
+              className="h-9 w-full rounded-[4px] bg-[#171717] text-sm font-medium text-white shadow-none hover:bg-[#171717]/90"
+            >
+              Allow
             </Button>
           </form>
-        </CardFooter>
-      </Card>
+        </div>
+        <p className="mt-3.5 text-center text-xs leading-4 text-[#686D67]">
+          You’ll be sent back to <span className="font-medium text-[#404040]">{host}</span>
+        </p>
+      </div>
     </main>
   )
 }

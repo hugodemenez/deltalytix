@@ -46,6 +46,7 @@ import { getUserTeams } from './actions'
 import { cn } from '@/lib/utils'
 import ApiConnectionsSection, {
   type AuthorizedAppRow,
+  type OwnedAppRow,
   type PersonalTokenRow,
 } from './api-connections-section'
 
@@ -121,9 +122,11 @@ function RowAction({
 export default function SettingsPage({
   initialAuthorizedApps = [],
   initialPersonalTokens = [],
+  initialOwnedApps = [],
 }: {
   initialAuthorizedApps?: AuthorizedAppRow[]
   initialPersonalTokens?: PersonalTokenRow[]
+  initialOwnedApps?: OwnedAppRow[]
 }) {
   const t = useI18n()
   const consentCopy = getConsentRecordCopy(t)
@@ -415,6 +418,12 @@ export default function SettingsPage({
           </div>
         </SettingsSection>
 
+        <ApiConnectionsSection
+          initialAuthorizedApps={initialAuthorizedApps}
+          initialPersonalTokens={initialPersonalTokens}
+          initialOwnedApps={initialOwnedApps}
+        />
+
         <SettingsSection label={t('dashboard.settings.weeklyRecap')}>
           <div className="divide-y divide-[#E5E5E5] dark:divide-border">
             <PrefRow>
@@ -456,11 +465,6 @@ export default function SettingsPage({
             <ConsentPrivacyControls copy={consentCopy} />
           </div>
         </SettingsSection>
-
-        <ApiConnectionsSection
-          initialAuthorizedApps={initialAuthorizedApps}
-          initialPersonalTokens={initialPersonalTokens}
-        />
 
         <div className="space-y-4">
           <button

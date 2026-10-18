@@ -96,6 +96,7 @@ export async function loadAuthorizeContext(params: AuthorizeParams) {
 
   return {
     authenticated: true as const,
+    email: user.email ?? "",
     app: {
       id: app.id,
       name: app.name,

@@ -2,6 +2,7 @@ import { connection } from 'next/server'
 import SettingsClient from './settings-client'
 import {
   listAuthorizedOAuthAppsAction,
+  listOwnedOAuthAppsAction,
   listSettingsPersonalAccessTokensAction,
 } from './connections-actions'
 
@@ -13,9 +14,10 @@ import {
 export default async function SettingsPage() {
     await connection()
 
-    const [authorizedApps, personalTokens] = await Promise.all([
+    const [authorizedApps, personalTokens, ownedApps] = await Promise.all([
         listAuthorizedOAuthAppsAction(),
         listSettingsPersonalAccessTokensAction(),
+        listOwnedOAuthAppsAction(),
     ])
 
     return (
@@ -35,6 +37,7 @@ export default async function SettingsPage() {
                 createdAt: token.createdAt.toISOString(),
                 lastUsedAt: token.lastUsedAt?.toISOString() ?? null,
             }))}
+            initialOwnedApps={ownedApps}
         />
     )
 }
