@@ -7,6 +7,8 @@ import {
   readOAuthFormOrJson,
   resolveClientCredentials,
 } from "@/lib/api/oauth-client"
+import { setPublicApiRequestLogContext } from "@/lib/api/request-log"
+import { withPublicApiRequestLog } from "@/lib/api/with-request-log"
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   accessTokenExpiresAt,
@@ -23,11 +25,18 @@ const NO_STORE = { "Cache-Control": "no-store", Pragma: "no-cache" }
 /** Thrown inside the token transaction when another exchange won the race. */
 class AuthorizationCodeAlreadyUsed extends Error {}
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const body = await readOAuthFormOrJson(request)
     const credentials = resolveClientCredentials(request, body)
     const grantType = body.grant_type
+
+    if (credentials.clientId) {
+      setPublicApiRequestLogContext({
+        tokenType: "client",
+        clientId: credentials.clientId,
+      })
+    }
 
     if (grantType === "authorization_code") {
       const { code, redirect_uri, code_verifier } = body
@@ -44,6 +53,12 @@ export async function POST(request: NextRequest) {
         return oauthError(401, "invalid_client", "Invalid client credentials")
       }
 
+      setPublicApiRequestLogContext({
+        tokenType: "client",
+        appId: app.id,
+        clientId: app.clientId,
+      })
+
       const pending = await prisma.oAuthAuthorizationCode.findUnique({
         where: { codeHash: sha256(code) },
       })
@@ -57,6 +72,8 @@ export async function POST(request: NextRequest) {
       ) {
         return oauthError(400, "invalid_grant", "Invalid or expired authorization code")
       }
+
+      setPublicApiRequestLogContext({ userId: pending.userId })
 
       if (pending.codeChallenge) {
         if (!code_verifier) {
@@ -137,6 +154,12 @@ export async function POST(request: NextRequest) {
         return oauthError(401, "invalid_client", "Invalid client credentials")
       }
 
+      setPublicApiRequestLogContext({
+        tokenType: "client",
+        appId: app.id,
+        clientId: app.clientId,
+      })
+
       const existing = await prisma.oAuthAccessToken.findFirst({
         where: {
           refreshTokenHash: sha256(refresh_token),
@@ -152,6 +175,8 @@ export async function POST(request: NextRequest) {
       ) {
         return oauthError(400, "invalid_grant", "Invalid or expired refresh token")
       }
+
+      setPublicApiRequestLogContext({ userId: existing.userId })
 
       const accessToken = generateAccessToken()
       const refreshToken = generateRefreshToken()
@@ -195,3 +220,5 @@ export async function POST(request: NextRequest) {
     return oauthError(500, "server_error", "Unexpected server error")
   }
 }
+
+export const POST = withPublicApiRequestLog(postHandler)

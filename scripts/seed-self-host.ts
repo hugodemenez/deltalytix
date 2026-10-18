@@ -9,6 +9,7 @@ import pg from "pg"
 
 import { PrismaClient } from "../prisma/generated/prisma/client"
 import { API_SCOPES } from "../lib/api/scopes"
+import { formatDateToTimestamp } from "../lib/date-utils"
 
 const SEED_OAUTH_CLIENT_ID = "dltx_app_seed_demo_connections"
 const SEED_OAUTH_APP_NAME = "Seed Chart Companion"
@@ -97,8 +98,8 @@ function buildTrades(userId: string, dayCount: number): SeedTrade[] {
         instrument,
         entryPrice: entryPriceNumber.toFixed(2),
         closePrice: closePriceNumber.toFixed(2),
-        entryDate: entry.toISOString(),
-        closeDate: close.toISOString(),
+        entryDate: formatDateToTimestamp(entry),
+        closeDate: formatDateToTimestamp(close),
         pnl,
         timeInPosition: holdMinutes,
         userId,

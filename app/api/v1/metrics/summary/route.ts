@@ -4,13 +4,15 @@ import { apiError } from "@/lib/api/errors"
 import {
   buildTradeWhere,
   computeProfitFactor,
+  filterAndSortTradesByEntryDate,
   invalidDateFilter,
 } from "@/lib/api/pagination"
+import { withPublicApiRequestLog } from "@/lib/api/with-request-log"
 import { calculateStatistics, calculateTradingDays } from "@/lib/utils"
 import { prisma } from "@/lib/prisma"
 import type { Trade } from "@/prisma/generated/prisma/client"
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["metrics:read"])
   if (!auth.ok) return auth.response
 
@@ -19,15 +21,18 @@ export async function GET(request: NextRequest) {
   if (badDate) {
     return apiError(400, "validation_error", `${badDate} must be an ISO 8601 date`)
   }
+  const from = searchParams.get("from") || undefined
+  const to = searchParams.get("to") || undefined
   const where = buildTradeWhere(auth.auth.userId, {
     accountNumber: searchParams.get("accountNumber") || undefined,
     instrument: searchParams.get("instrument") || undefined,
     side: searchParams.get("side") || undefined,
-    from: searchParams.get("from") || undefined,
-    to: searchParams.get("to") || undefined,
   })
 
-  const trades = (await prisma.trade.findMany({ where })) as Trade[]
+  const trades = filterAndSortTradesByEntryDate(
+    (await prisma.trade.findMany({ where })) as Trade[],
+    { from, to },
+  )
   const stats = calculateStatistics(trades)
   const tradingDays = calculateTradingDays(trades)
   const profitFactor = computeProfitFactor(trades)
@@ -64,3 +69,5 @@ export async function GET(request: NextRequest) {
     tradingDays: tradingDays.totalTradingDays,
   })
 }
+
+export const GET = withPublicApiRequestLog(getHandler)

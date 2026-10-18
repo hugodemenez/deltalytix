@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticateApiRequest } from "@/lib/api/auth"
 import { apiError } from "@/lib/api/errors"
+import { withPublicApiRequestLog } from "@/lib/api/with-request-log"
 import { prisma } from "@/lib/prisma"
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["profile:read"])
   if (!auth.ok) return auth.response
 
@@ -28,3 +29,5 @@ export async function GET(request: NextRequest) {
     language: user.language,
   })
 }
+
+export const GET = withPublicApiRequestLog(getHandler)

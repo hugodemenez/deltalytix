@@ -5,12 +5,11 @@ import { createClient } from "@/server/auth"
 import { issueDocsDemoToken } from "@/lib/api/docs-demo"
 import { isValidScope } from "@/lib/api/scopes"
 import {
+  DOCS_PLAYGROUND_TOKEN_NAME,
   docsPlaygroundTokenExpiresAt,
   generatePersonalAccessToken,
   sha256,
 } from "@/lib/api/tokens"
-
-const DOCS_PLAYGROUND_TOKEN_NAME = "Docs playground"
 
 const DOCS_PLAYGROUND_READ_SCOPES = [
   "profile:read",
