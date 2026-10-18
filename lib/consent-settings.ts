@@ -294,10 +294,39 @@ export function resolveGoogleConsent({
   });
 }
 
+/**
+ * Cookie is the cross-origin source of truth for analytics. localStorage is
+ * the fallback when this origin has a decision the shared cookie does not.
+ *
+ * A cookie and no local payload becomes the same object `reconcileStoredConsent`
+ * writes (`DEFAULT_CONSENT_SETTINGS` plus the cookie). That is a saved
+ * decision, so a non-EEA visitor who opted out on www or beta is not granted
+ * the region default. With neither store set, the result is null and
+ * `resolveGoogleConsent` keeps the region default.
+ */
+export function storedConsentFromStores({
+  cookieHeader,
+  storedConsent,
+}: {
+  cookieHeader: string;
+  storedConsent: Partial<ConsentSettings> | null;
+}): Partial<ConsentSettings> | null {
+  const shared = parseSharedAnalyticsConsent(cookieHeader);
+  if (shared === null) return storedConsent;
+  return {
+    ...(storedConsent ?? DEFAULT_CONSENT_SETTINGS),
+    analytics_storage: shared,
+  };
+}
+
 /** Browser-only — the Google tag, Ads conversions and click-id capture. */
 export function resolveClientGoogleConsent(): GoogleConsentState {
+  const cookieHeader = typeof document === "undefined" ? "" : document.cookie;
   return resolveGoogleConsent({
-    storedConsent: readStoredConsentSettings(),
+    storedConsent: storedConsentFromStores({
+      cookieHeader,
+      storedConsent: readStoredConsentSettings(),
+    }),
     country: readClientCountry(),
   });
 }
