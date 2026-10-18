@@ -8,6 +8,7 @@ import { PrismaPg } from "@prisma/adapter-pg"
 import pg from "pg"
 
 import { PrismaClient } from "../prisma/generated/prisma/client"
+import { formatDateToTimestamp } from "../lib/date-utils"
 
 const LOCAL_USER_ID = process.env.LOCAL_DASHBOARD_USER_ID || "local-dashboard-user"
 const LOCAL_USER_EMAIL =
@@ -88,8 +89,8 @@ function buildTrades(userId: string, dayCount: number): SeedTrade[] {
         instrument,
         entryPrice: entryPriceNumber.toFixed(2),
         closePrice: closePriceNumber.toFixed(2),
-        entryDate: entry.toISOString(),
-        closeDate: close.toISOString(),
+        entryDate: formatDateToTimestamp(entry),
+        closeDate: formatDateToTimestamp(close),
         pnl,
         timeInPosition: holdMinutes,
         userId,

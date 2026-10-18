@@ -131,6 +131,9 @@ export async function POST(request: NextRequest) {
   if (result.error === "DATABASE_ERROR") {
     return apiError(500, "database_error", "Failed to save imported trades", result.details)
   }
+  if (result.error === "INVALID_DATA") {
+    return apiError(400, "validation_error", "Imported trades have invalid data", result.details)
+  }
 
   const imported = result.numberOfTradesAdded
   const total = trades.length
