@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { sha256 } from "./tokens"
+import { DOCS_PLAYGROUND_TOKEN_NAME, sha256 } from "./tokens"
 
 const { findUnique, update, afterMock } = vi.hoisted(() => ({
   findUnique: vi.fn(),
@@ -36,6 +36,7 @@ function tokenRecord(
   overrides: Partial<{
     id: string
     userId: string
+    name: string | null
     scopes: string[]
     revokedAt: Date | null
     expiresAt: Date | null
@@ -44,6 +45,8 @@ function tokenRecord(
   return {
     id: "tok_1",
     userId: "user_1",
+    name: null,
+    appId: null,
     scopes: ["profile:read"],
     revokedAt: null,
     expiresAt: new Date(Date.now() + 60_000),
@@ -100,6 +103,31 @@ describe("authenticateApiRequest", () => {
     expect(afterMock).not.toHaveBeenCalled()
   })
 
+  it("rejects a legacy docs playground token with null expiry", async () => {
+    findUnique.mockResolvedValueOnce(
+      tokenRecord({
+        name: DOCS_PLAYGROUND_TOKEN_NAME,
+        expiresAt: null,
+      }),
+    )
+
+    const result = await authenticateApiRequest(bearerRequest("dltx_at_valid"))
+
+    expect(result.ok).toBe(false)
+    expect(afterMock).not.toHaveBeenCalled()
+  })
+
+  it("keeps a personal access token with null expiry", async () => {
+    findUnique.mockResolvedValueOnce(
+      tokenRecord({ name: "CI integration", expiresAt: null }),
+    )
+
+    const result = await authenticateApiRequest(bearerRequest("dltx_at_valid"))
+
+    expect(result.ok).toBe(true)
+    expect(afterMock).toHaveBeenCalledTimes(1)
+  })
+
   it("rejects insufficient scopes without scheduling lastUsedAt", async () => {
     findUnique.mockResolvedValueOnce(tokenRecord({ scopes: ["profile:read"] }))
 
@@ -126,6 +154,8 @@ describe("authenticateApiRequest", () => {
         userId: "user_1",
         scopes: ["profile:read"],
         tokenId: "tok_1",
+        appId: null,
+        clientId: null,
       },
     })
     expect(update).not.toHaveBeenCalled()

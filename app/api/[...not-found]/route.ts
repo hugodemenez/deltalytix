@@ -1,11 +1,15 @@
 import type { NextRequest } from "next/server";
 import { jsonError } from "@/lib/api/json-error";
+import { withPublicApiRequestLog } from "@/lib/api/with-request-log";
 
 /**
  * Catch-all for unmatched `/api/*` paths.
  *
  * Without it Next.js falls through to the HTML error document, which an agent
  * cannot parse. Every method answers with the shared JSON error envelope.
+ *
+ * Wrapped so unmatched `/api/v1/*` and `/api/oauth/*` still emit one structured
+ * request log line (other `/api/*` misses stay silent).
  */
 function notFound(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -18,10 +22,12 @@ function notFound(request: NextRequest) {
   });
 }
 
-export const GET = notFound;
-export const POST = notFound;
-export const PUT = notFound;
-export const PATCH = notFound;
-export const DELETE = notFound;
-export const HEAD = notFound;
-export const OPTIONS = notFound;
+const loggedNotFound = withPublicApiRequestLog(notFound);
+
+export const GET = loggedNotFound;
+export const POST = loggedNotFound;
+export const PUT = loggedNotFound;
+export const PATCH = loggedNotFound;
+export const DELETE = loggedNotFound;
+export const HEAD = loggedNotFound;
+export const OPTIONS = loggedNotFound;

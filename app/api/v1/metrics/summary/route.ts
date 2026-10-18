@@ -7,11 +7,12 @@ import {
   filterAndSortTradesByEntryDate,
   invalidDateFilter,
 } from "@/lib/api/pagination"
+import { withPublicApiRequestLog } from "@/lib/api/with-request-log"
 import { calculateStatistics, calculateTradingDays } from "@/lib/utils"
 import { prisma } from "@/lib/prisma"
 import type { Trade } from "@/prisma/generated/prisma/client"
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["metrics:read"])
   if (!auth.ok) return auth.response
 
@@ -68,3 +69,5 @@ export async function GET(request: NextRequest) {
     tradingDays: tradingDays.totalTradingDays,
   })
 }
+
+export const GET = withPublicApiRequestLog(getHandler)

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticateApiRequest } from "@/lib/api/auth"
 import { computeMetricsForAccounts } from "@/lib/account-metrics"
+import { withPublicApiRequestLog } from "@/lib/api/with-request-log"
 import { prisma } from "@/lib/prisma"
 import type { Account } from "@/context/data-provider"
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["metrics:read"])
   if (!auth.ok) return auth.response
 
@@ -33,3 +34,5 @@ export async function GET(request: NextRequest) {
     })),
   })
 }
+
+export const GET = withPublicApiRequestLog(getHandler)
