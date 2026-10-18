@@ -37,26 +37,69 @@ export type TradeListFilters = {
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
 
 /**
- * `entryDate` is stored as an ISO string, so filters compare as strings.
- * A date-only `from` is the start of that day; a date-only `to` is the start of
- * the next day (used as an exclusive bound), matching `/metrics/equity`, which
- * treats `to` as end of day. Full timestamps are normalized to UTC ISO.
- * Returns null when the value does not parse.
+ * Parse a `from`/`to` query bound into a Date for in-memory comparison.
+ * A date-only `from` is the start of that UTC day; a date-only `to` is the
+ * start of the next UTC day (exclusive), matching `/metrics/equity`, which
+ * treats `to` as end of day. Full timestamps use an exclusive upper bound of
+ * the parsed instant + 1ms. Returns null when the value does not parse.
  */
 export function dateFilterBound(
   value: string,
   side: "from" | "to",
-): string | null {
+): Date | null {
   if (DATE_ONLY.test(value)) {
     const day = new Date(`${value}T00:00:00.000Z`)
     if (Number.isNaN(day.getTime())) return null
     if (side === "to") day.setUTCDate(day.getUTCDate() + 1)
-    return day.toISOString().slice(0, 10)
+    return day
   }
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) return null
   if (side === "to") parsed.setTime(parsed.getTime() + 1)
-  return parsed.toISOString()
+  return parsed
+}
+
+/** Parse a stored trade `entryDate` (ISO or legacy month-first strings). */
+export function parseStoredTradeDate(value: string): Date | null {
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+/** Inclusive `from`, exclusive `to`, comparing parsed instants. */
+export function tradeMatchesDateRange(
+  entryDate: string,
+  from: Date | null,
+  to: Date | null,
+): boolean {
+  const parsed = parseStoredTradeDate(entryDate)
+  if (!parsed) return false
+  if (from && parsed < from) return false
+  if (to && parsed >= to) return false
+  return true
+}
+
+/**
+ * Filter by parsed `from`/`to` and sort by parsed entryDate desc, id desc.
+ * Needed because some older rows store non-ISO `entryDate` strings
+ * (e.g. `02/18/2025 11:01:49`); Prisma string compares would exclude/mis-order them.
+ */
+export function filterAndSortTradesByEntryDate<
+  T extends { id: string; entryDate: string },
+>(trades: T[], filters: Pick<TradeListFilters, "from" | "to">): T[] {
+  const from = filters.from ? dateFilterBound(filters.from, "from") : null
+  const to = filters.to ? dateFilterBound(filters.to, "to") : null
+
+  const filtered =
+    from || to
+      ? trades.filter((trade) => tradeMatchesDateRange(trade.entryDate, from, to))
+      : trades.slice()
+
+  return filtered.sort((a, b) => {
+    const aTime = parseStoredTradeDate(a.entryDate)?.getTime() ?? Number.NEGATIVE_INFINITY
+    const bTime = parseStoredTradeDate(b.entryDate)?.getTime() ?? Number.NEGATIVE_INFINITY
+    if (bTime !== aTime) return bTime - aTime
+    return a.id < b.id ? 1 : a.id > b.id ? -1 : 0
+  })
 }
 
 /** The first `from`/`to` query value that does not parse as a date, if any. */
@@ -68,6 +111,10 @@ export function invalidDateFilter(params: URLSearchParams): string | null {
   return null
 }
 
+/**
+ * Prisma filters for non-date fields only. Date range is applied in memory via
+ * {@link filterAndSortTradesByEntryDate} so legacy non-ISO `entryDate` values match.
+ */
 export function buildTradeWhere(
   userId: string,
   filters: TradeListFilters,
@@ -77,15 +124,6 @@ export function buildTradeWhere(
   if (filters.accountNumber) where.accountNumber = filters.accountNumber
   if (filters.instrument) where.instrument = filters.instrument
   if (filters.side) where.side = filters.side
-
-  const from = filters.from ? dateFilterBound(filters.from, "from") : null
-  const to = filters.to ? dateFilterBound(filters.to, "to") : null
-  if (from || to) {
-    where.entryDate = {}
-    if (from) where.entryDate.gte = from
-    // Exclusive bound: a date-only `to` covers that whole day.
-    if (to) where.entryDate.lt = to
-  }
 
   return where
 }

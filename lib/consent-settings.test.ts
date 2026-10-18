@@ -1,15 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   type ConsentSettings,
+  CONSENT_STORAGE_KEY,
   DEFAULT_CONSENT_SETTINGS,
   fromRecordChoices,
   hasAnalyticsConsentFromStores,
   hasConsentDecisionFromStores,
   isExplicitAnalyticsDenialFromStores,
+  resolveClientGoogleConsent,
   resolveGoogleConsent,
   shouldShowConsentBannerFromStores,
   parseSharedAnalyticsConsent,
+  storedConsentFromStores,
   toGoogleConsent,
   toRecordChoices,
 } from "./consent-settings";
@@ -142,6 +145,156 @@ describe("resolveGoogleConsent", () => {
         }),
       ),
     ).toEqual(allDenied);
+  });
+
+  it("denies a non-EEA visitor who opted out via the shared cookie", () => {
+    expect(
+      optional(
+        resolveGoogleConsent({
+          storedConsent: storedConsentFromStores({
+            cookieHeader: "deltalytix_analytics_consent=denied",
+            storedConsent: null,
+          }),
+          country: "US",
+        }),
+      ),
+    ).toEqual(allDenied);
+  });
+});
+
+describe("storedConsentFromStores", () => {
+  it("materializes the default decision from a denied shared cookie", () => {
+    expect(
+      storedConsentFromStores({
+        cookieHeader: "deltalytix_analytics_consent=denied",
+        storedConsent: null,
+      }),
+    ).toMatchObject({
+      analytics_storage: false,
+      ad_storage: false,
+    });
+  });
+
+  it("lets the shared cookie override a stale localStorage grant", () => {
+    expect(
+      storedConsentFromStores({
+        cookieHeader: "deltalytix_analytics_consent=denied",
+        storedConsent: { analytics_storage: true, ad_storage: true },
+      }),
+    ).toMatchObject({
+      analytics_storage: false,
+      ad_storage: true,
+    });
+  });
+
+  it("falls back to localStorage when the cookie is absent", () => {
+    expect(
+      storedConsentFromStores({
+        cookieHeader: "",
+        storedConsent: { analytics_storage: true },
+      }),
+    ).toEqual({ analytics_storage: true });
+  });
+
+  it("returns null when neither store has a decision", () => {
+    expect(
+      storedConsentFromStores({ cookieHeader: "", storedConsent: null }),
+    ).toBeNull();
+  });
+});
+
+describe("resolveClientGoogleConsent", () => {
+  const optional = (state: ReturnType<typeof resolveClientGoogleConsent>) => ({
+    analytics_storage: state.analytics_storage,
+    ad_storage: state.ad_storage,
+    ad_user_data: state.ad_user_data,
+    ad_personalization: state.ad_personalization,
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function installBrowser(cookie: string, stored: string | null = null) {
+    const storage = new Map<string, string>();
+    if (stored !== null) storage.set(CONSENT_STORAGE_KEY, stored);
+    const localStorage = {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        storage.set(key, value);
+      },
+      removeItem: (key: string) => {
+        storage.delete(key);
+      },
+    };
+    vi.stubGlobal("document", { cookie });
+    vi.stubGlobal("localStorage", localStorage);
+    vi.stubGlobal("window", { localStorage });
+  }
+
+  it("denies analytics and ads when a non-EEA visitor opted out on another host", () => {
+    installBrowser("user-country=US; deltalytix_analytics_consent=denied");
+
+    expect(optional(resolveClientGoogleConsent())).toEqual({
+      analytics_storage: "denied",
+      ad_storage: "denied",
+      ad_user_data: "denied",
+      ad_personalization: "denied",
+    });
+  });
+
+  it("prefers a denied shared cookie over a stale localStorage grant", () => {
+    installBrowser(
+      "user-country=US; deltalytix_analytics_consent=denied",
+      JSON.stringify({
+        ...DEFAULT_CONSENT_SETTINGS,
+        analytics_storage: true,
+        ad_storage: true,
+      }),
+    );
+
+    expect(optional(resolveClientGoogleConsent())).toEqual({
+      analytics_storage: "denied",
+      ad_storage: "granted",
+      ad_user_data: "granted",
+      ad_personalization: "granted",
+    });
+  });
+
+  it("falls back to localStorage when the shared cookie is absent", () => {
+    installBrowser(
+      "user-country=US",
+      JSON.stringify(DEFAULT_CONSENT_SETTINGS),
+    );
+
+    expect(optional(resolveClientGoogleConsent())).toEqual({
+      analytics_storage: "denied",
+      ad_storage: "denied",
+      ad_user_data: "denied",
+      ad_personalization: "denied",
+    });
+  });
+
+  it("keeps the non-EEA grant when neither store has a decision", () => {
+    installBrowser("user-country=US");
+
+    expect(optional(resolveClientGoogleConsent())).toEqual({
+      analytics_storage: "granted",
+      ad_storage: "granted",
+      ad_user_data: "granted",
+      ad_personalization: "granted",
+    });
+  });
+
+  it("keeps the consent-region denial when neither store has a decision", () => {
+    installBrowser("user-country=FR");
+
+    expect(optional(resolveClientGoogleConsent())).toEqual({
+      analytics_storage: "denied",
+      ad_storage: "denied",
+      ad_user_data: "denied",
+      ad_personalization: "denied",
+    });
   });
 });
 

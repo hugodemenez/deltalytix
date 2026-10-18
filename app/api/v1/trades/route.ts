@@ -5,6 +5,7 @@ import {
   buildTradeWhere,
   decodeCursor,
   encodeCursor,
+  filterAndSortTradesByEntryDate,
   invalidDateFilter,
   parseLimit,
   serializeTrade,
@@ -14,6 +15,7 @@ import {
   normalizeTradeInput,
   saveTradesCore,
 } from "@/lib/trades/save-trades-core"
+import { normalizeTradeDate } from "@/lib/trades/normalize-trade-date"
 import type { Trade } from "@/prisma/generated/prisma/client"
 
 const MAX_TRADES_PER_REQUEST = 5000
@@ -41,7 +43,8 @@ function invalidTradeFields(
   }
   for (const field of ["entryDate", "closeDate"] as const) {
     const value = trade[field]
-    if (typeof value !== "string" || Number.isNaN(new Date(value).getTime())) {
+    // Same rule saveTradesCore applies, so the caller gets a per-field 400.
+    if (typeof value !== "string" || normalizeTradeDate(value) === null) {
       details.push({ field: `trades[${index}].${field}`, message: "must be an ISO 8601 date" })
     }
   }
@@ -59,23 +62,23 @@ export async function GET(request: NextRequest) {
   }
   const limit = parseLimit(searchParams.get("limit"))
   const offset = decodeCursor(searchParams.get("cursor"))
+  const from = searchParams.get("from") || undefined
+  const to = searchParams.get("to") || undefined
   const where = buildTradeWhere(auth.auth.userId, {
     accountNumber: searchParams.get("accountNumber") || undefined,
     instrument: searchParams.get("instrument") || undefined,
     side: searchParams.get("side") || undefined,
-    from: searchParams.get("from") || undefined,
-    to: searchParams.get("to") || undefined,
   })
 
-  const trades = await prisma.trade.findMany({
-    where,
-    orderBy: [{ entryDate: "desc" }, { id: "desc" }],
-    skip: offset,
-    take: limit + 1,
-  })
+  // Load matching rows, then filter/sort by parsed entryDate so legacy
+  // non-ISO strings (e.g. `02/18/2025 11:01:49`) participate correctly.
+  const trades = filterAndSortTradesByEntryDate(
+    await prisma.trade.findMany({ where }),
+    { from, to },
+  )
 
-  const hasMore = trades.length > limit
-  const page = hasMore ? trades.slice(0, limit) : trades
+  const page = trades.slice(offset, offset + limit)
+  const hasMore = offset + limit < trades.length
 
   return NextResponse.json({
     data: page.map(serializeTrade),

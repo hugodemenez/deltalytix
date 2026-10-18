@@ -10,6 +10,7 @@ import {
   type ConsentSettings,
   parseSharedAnalyticsConsent,
   readStoredConsentSettings,
+  storedConsentFromStores,
 } from "./consent-settings";
 import { syncPostHogSessionRecording } from "./posthog-session-recording";
 
@@ -81,21 +82,48 @@ export function persistConsentSettings(settings: ConsentSettings) {
   );
 }
 
+function storedConsentChanged(
+  before: Partial<ConsentSettings> | null,
+  after: Partial<ConsentSettings>,
+): boolean {
+  if (!before) return true;
+  const keys = new Set([
+    ...(Object.keys(before) as (keyof ConsentSettings)[]),
+    ...(Object.keys(after) as (keyof ConsentSettings)[]),
+  ]);
+  for (const key of keys) {
+    if ((before[key] === true) !== (after[key] === true)) return true;
+  }
+  return false;
+}
+
 /**
  * Cookie is the cross-origin source of truth. Reconcile it with localStorage
  * and apply the already-saved choice to PostHog without showing the prompt.
+ *
+ * The Google tag queues its consent default from `resolveClientGoogleConsent`
+ * before this runs. When the write changes the stored decision, announce it
+ * so the tag sends `gtag('consent', 'update', …)`.
  */
 export function reconcileStoredConsent(): ConsentSettings | null {
   const sharedAnalyticsConsent = parseSharedAnalyticsConsent(document.cookie);
   const stored = readStoredConsentSettings();
 
   if (sharedAnalyticsConsent !== null) {
-    const settings: ConsentSettings = {
-      ...(stored ?? DEFAULT_CONSENT_SETTINGS),
-      analytics_storage: sharedAnalyticsConsent,
-    };
+    const settings = storedConsentFromStores({
+      cookieHeader: document.cookie,
+      storedConsent: stored,
+    }) as ConsentSettings;
+    const changed = storedConsentChanged(stored, settings);
     localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(settings));
     syncPostHogConsent(sharedAnalyticsConsent);
+    if (changed) {
+      window.dispatchEvent(
+        new CustomEvent(CONSENT_UPDATED_EVENT, {
+          detail: settings,
+        }),
+      );
+    }
     return settings;
   }
 

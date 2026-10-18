@@ -14,6 +14,7 @@ import {
   tradovateFillIdLookupValues,
 } from "@/lib/tradovate/identity"
 import { isDuplicateTradesOnlySave } from "@/lib/trades/save-trades-outcome"
+import { normalizeTradeDates } from "@/lib/trades/normalize-trade-date"
 
 export type TradeError =
   | "DUPLICATE_TRADES"
@@ -182,6 +183,23 @@ export async function saveTradesCore(
     }
   }
 
+  // Every importer, broker sync, and API route lands here, so this is the one
+  // place that guarantees the stored date shape. Reject the batch rather than
+  // store a value `/api/v1/trades` and the calendar would mis-sort.
+  const dateCheck = normalizeTradeDates(data)
+  if (!dateCheck.ok) {
+    return {
+      error: "INVALID_DATA",
+      numberOfTradesAdded: 0,
+      details: {
+        message:
+          "entryDate and closeDate must be ISO 8601 dates (e.g. 2025-01-06T14:30:00Z)",
+        invalidDates: dateCheck.issues.slice(0, 20),
+      },
+    }
+  }
+  const normalizedDates = dateCheck.trades
+
   try {
     const hadExistingTrades = Boolean(
       await prisma.trade.findFirst({
@@ -201,7 +219,7 @@ export async function saveTradesCore(
       options.connectionId,
     )
 
-    const preparedTrades = data.map((trade) => {
+    const preparedTrades = data.map((trade, index) => {
       const accountId =
         trade.accountId ||
         (trade.accountNumber
@@ -211,9 +229,13 @@ export async function saveTradesCore(
 
       return {
         ...trade,
+        // Hash the dates exactly as the importer produced them so rows saved
+        // before normalization keep deduping on re-import; store canonical.
+        id: generatePersistedTradeUUID({ ...trade, userId }),
+        entryDate: normalizedDates[index].entryDate,
+        closeDate: normalizedDates[index].closeDate,
         userId,
         accountId,
-        id: generatePersistedTradeUUID({ ...trade, userId }),
       } as Trade
     })
 
