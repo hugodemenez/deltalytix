@@ -5,6 +5,7 @@ import {
   buildTradeWhere,
   decodeCursor,
   encodeCursor,
+  filterAndSortTradesByEntryDate,
   invalidDateFilter,
   parseLimit,
   serializeTrade,
@@ -59,23 +60,23 @@ export async function GET(request: NextRequest) {
   }
   const limit = parseLimit(searchParams.get("limit"))
   const offset = decodeCursor(searchParams.get("cursor"))
+  const from = searchParams.get("from") || undefined
+  const to = searchParams.get("to") || undefined
   const where = buildTradeWhere(auth.auth.userId, {
     accountNumber: searchParams.get("accountNumber") || undefined,
     instrument: searchParams.get("instrument") || undefined,
     side: searchParams.get("side") || undefined,
-    from: searchParams.get("from") || undefined,
-    to: searchParams.get("to") || undefined,
   })
 
-  const trades = await prisma.trade.findMany({
-    where,
-    orderBy: [{ entryDate: "desc" }, { id: "desc" }],
-    skip: offset,
-    take: limit + 1,
-  })
+  // Load matching rows, then filter/sort by parsed entryDate so legacy
+  // non-ISO strings (e.g. `02/18/2025 11:01:49`) participate correctly.
+  const trades = filterAndSortTradesByEntryDate(
+    await prisma.trade.findMany({ where }),
+    { from, to },
+  )
 
-  const hasMore = trades.length > limit
-  const page = hasMore ? trades.slice(0, limit) : trades
+  const page = trades.slice(offset, offset + limit)
+  const hasMore = offset + limit < trades.length
 
   return NextResponse.json({
     data: page.map(serializeTrade),
