@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticateApiRequest } from "@/lib/api/auth"
 import { apiError } from "@/lib/api/errors"
+import { withPublicApiRequestLog } from "@/lib/api/with-request-log"
 import { getConnectionsForUser } from "@/server/connections"
 import {
   createServerSyncableConnection,
@@ -23,7 +24,7 @@ function serializeConnection(
   }
 }
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["connections:read"])
   if (!auth.ok) return auth.response
 
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
   })
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["connections:write"])
   if (!auth.ok) return auth.response
 
@@ -46,3 +47,6 @@ export async function POST(request: NextRequest) {
 
   return createServerSyncableConnection(auth.auth.userId, body)
 }
+
+export const GET = withPublicApiRequestLog(getHandler)
+export const POST = withPublicApiRequestLog(postHandler)
