@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma"
 import { hasRequiredScopes } from "@/lib/api/scopes"
 import { sha256 } from "@/lib/api/tokens"
 import { insufficientScope, unauthorized } from "@/lib/api/errors"
-import type { NextResponse } from "next/server"
+import { after, type NextResponse } from "next/server"
 
 export type AuthenticatedApiRequest = {
   userId: string
@@ -53,12 +53,14 @@ export async function authenticateApiRequest(
     }
   }
 
-  void prisma.oAuthAccessToken
-    .update({
-      where: { id: record.id },
-      data: { lastUsedAt: new Date() },
-    })
-    .catch(() => undefined)
+  after(() =>
+    prisma.oAuthAccessToken
+      .update({
+        where: { id: record.id },
+        data: { lastUsedAt: new Date() },
+      })
+      .catch(() => undefined),
+  )
 
   return {
     ok: true,
