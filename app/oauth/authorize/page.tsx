@@ -13,7 +13,7 @@ export default function OAuthAuthorizePage({
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-zinc-50 text-zinc-900 flex items-center justify-center p-6" />
+        <main className="min-h-screen bg-[#FAFAFA]" />
       }
     >
       <AuthorizeRequest searchParams={searchParams} />
@@ -76,11 +76,12 @@ async function AuthorizeRequest({
 
   if ("error" in context && context.error) {
     return (
-      <main className="min-h-screen bg-zinc-50 text-zinc-900 flex items-center justify-center p-6">
-        <div className="max-w-md w-full rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h1 className="text-xl font-semibold tracking-tight">Authorization error</h1>
-          <p className="mt-2 text-sm text-zinc-600">{context.message}</p>
-          <p className="mt-4 text-xs font-mono text-zinc-500">{context.error}</p>
+      <main className="flex min-h-screen flex-col items-center bg-[#FAFAFA] px-4 py-14 text-[#171717]">
+        <p className="mb-6 text-[15px] font-semibold tracking-tight">Deltalytix</p>
+        <div className="w-full max-w-[420px] rounded-[4px] border border-[#E5E5E5] bg-white px-6 py-6">
+          <h1 className="text-lg font-semibold leading-6 tracking-tight">Authorization error</h1>
+          <p className="mt-2 text-sm text-[#686D67]">{context.message}</p>
+          <p className="mt-4 font-mono text-xs text-[#686D67]">{context.error}</p>
         </div>
       </main>
     )
@@ -97,6 +98,7 @@ async function AuthorizeRequest({
 
   return (
     <AuthorizeConsent
+      email={"email" in context ? context.email : ""}
       app={context.app}
       scopes={scopeItems}
       redirectUri={context.redirectUri}
