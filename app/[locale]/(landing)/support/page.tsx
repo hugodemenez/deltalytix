@@ -25,7 +25,6 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useChat } from '@ai-sdk/react';
 import { Response } from '@/components/ai-elements/response';
 import {
-  ChevronDownIcon,
   PencilIcon,
   RefreshCcwIcon,
 } from 'lucide-react';
@@ -331,9 +330,6 @@ function ReasoningBlock({
           label={label}
           isStreaming={isStreaming}
         />
-        {canExpand ? (
-          <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
-        ) : null}
       </ReasoningTrigger>
       {canExpand ? <ReasoningContent>{text}</ReasoningContent> : null}
     </Reasoning>

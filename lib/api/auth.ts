@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma"
 import { hasRequiredScopes } from "@/lib/api/scopes"
-import { sha256 } from "@/lib/api/tokens"
+import { isAccessTokenExpired, sha256 } from "@/lib/api/tokens"
 import { insufficientScope, unauthorized } from "@/lib/api/errors"
 import { setPublicApiRequestLogContext } from "@/lib/api/request-log"
-import type { NextResponse } from "next/server"
+import { after, type NextResponse } from "next/server"
 
 export type AuthenticatedApiRequest = {
   userId: string
@@ -45,7 +45,7 @@ export async function authenticateApiRequest(
     return { ok: false, response: unauthorized("Invalid or revoked access token", request) }
   }
 
-  if (record.expiresAt && record.expiresAt.getTime() <= Date.now()) {
+  if (isAccessTokenExpired(record)) {
     setPublicApiRequestLogContext({
       tokenType: record.appId ? "oauth" : "pat",
       appId: record.appId,
@@ -73,12 +73,14 @@ export async function authenticateApiRequest(
     }
   }
 
-  void prisma.oAuthAccessToken
-    .update({
-      where: { id: record.id },
-      data: { lastUsedAt: new Date() },
-    })
-    .catch(() => undefined)
+  after(() =>
+    prisma.oAuthAccessToken
+      .update({
+        where: { id: record.id },
+        data: { lastUsedAt: new Date() },
+      })
+      .catch(() => undefined),
+  )
 
   return {
     ok: true,

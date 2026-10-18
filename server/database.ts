@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { unstable_cache } from 'next/cache'
 import { defaultLayouts } from '@/lib/default-layouts'
 import { formatTimestamp } from '@/lib/date-utils'
+import { normalizeTradeDate } from '@/lib/trades/normalize-trade-date'
 import {
   saveTradesCore,
   type TradeSaveResult as TradeResponse,
@@ -225,6 +226,15 @@ export async function updateTradesAction(tradesIds: string[], update: Partial<Tr
     delete normalUpdate.instrumentTrim
     delete normalUpdate.instrumentPrefix
     delete normalUpdate.instrumentSuffix
+
+    for (const field of ['entryDate', 'closeDate'] as const) {
+      if (normalUpdate[field] === undefined) continue
+      const normalized = normalizeTradeDate(normalUpdate[field])
+      if (normalized === null) {
+        throw new Error(`Invalid ${field}: ${String(normalUpdate[field])}`)
+      }
+      normalUpdate[field] = normalized
+    }
 
     let result = { count: 0 }
     if (Object.keys(normalUpdate).length > 0) {
