@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { hasRequiredScopes } from "@/lib/api/scopes"
-import { sha256 } from "@/lib/api/tokens"
+import { isAccessTokenExpired, sha256 } from "@/lib/api/tokens"
 import { insufficientScope, unauthorized } from "@/lib/api/errors"
 import { after, type NextResponse } from "next/server"
 
@@ -39,7 +39,7 @@ export async function authenticateApiRequest(
     return { ok: false, response: unauthorized("Invalid or revoked access token", request) }
   }
 
-  if (record.expiresAt && record.expiresAt.getTime() <= Date.now()) {
+  if (isAccessTokenExpired(record)) {
     return { ok: false, response: unauthorized("Access token has expired", request) }
   }
 
