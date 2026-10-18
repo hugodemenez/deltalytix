@@ -257,9 +257,13 @@ type ChartOutput = {
 const isChartOutput = (output: unknown): output is ChartOutput =>
   Boolean(output) && typeof output === "object" && "chartData" in output!;
 
+/**
+ * The equity chart before it has data: a running line while the tool works,
+ * or the failure with its input. A chart with data renders in the response
+ * body instead (see the CHART_TOOL branch below).
+ */
 function ChartStep({ part, streaming }: { part: ChatPart; streaming: boolean }) {
   const t = useI18n();
-  const [open, setOpen] = useState<boolean>();
   const output = part.output ?? part.result;
   const chart = isChartOutput(output) ? output : null;
   let phase = getToolPhase(part.state ?? "", { streaming });
@@ -274,38 +278,34 @@ function ChartStep({ part, streaming }: { part: ChatPart; streaming: boolean }) 
         ? t("chat.chart.error")
         : t("chat.chart.done");
 
+  if (phase !== "error") {
+    return (
+      <Trace className="not-prose">
+        <ToolLine
+          phase={phase}
+          title={t("chat.chart.running")}
+          icon={<ChartLineIcon />}
+          getTitle={title}
+        />
+      </Trace>
+    );
+  }
+
   return (
-    <Tool open={open ?? Boolean(chart)} onOpenChange={setOpen}>
+    <Tool>
       <ToolHeader
         type={CHART_TOOL}
-        state={phase === "error" ? "output-error" : (part.state ?? "")}
+        state="output-error"
         streaming={streaming}
         icon={<ChartLineIcon />}
         getTitle={title}
       />
       <ToolContent>
-        {chart ? (
-          <ToolOutput
-            output={
-              <EquityChartMessage
-                chartData={chart.chartData}
-                accountNumbers={chart.accountNumbers}
-                showIndividual={chart.showIndividual}
-                dateRange={chart.dateRange}
-                timezone={chart.timezone}
-                totalTrades={chart.totalTrades}
-              />
-            }
-          />
-        ) : (
-          phase === "error" && (
-            <ToolOutput
-              output={null}
-              errorText={part.errorText ?? t("chat.chart.invalid")}
-              label={t("chat.tools.output")}
-            />
-          )
-        )}
+        <ToolOutput
+          output={null}
+          errorText={part.errorText ?? t("chat.chart.invalid")}
+          label={t("chat.tools.output")}
+        />
         {hasValues(part.input) && (
           <ToolInput input={part.input} label={t("chat.tools.input")} />
         )}
@@ -473,6 +473,25 @@ export function AssistantParts({
     }
 
     if (part.type === CHART_TOOL) {
+      const output = part.output ?? part.result;
+      if (isChartOutput(output)) {
+        // The chart is part of the answer: it sits in the response body like
+        // text and images, not inside a collapsible tool step.
+        return (
+          <BotMessage key={key} status={status}>
+            <div className="mt-2">
+              <EquityChartMessage
+                chartData={output.chartData}
+                accountNumbers={output.accountNumbers}
+                showIndividual={output.showIndividual}
+                dateRange={output.dateRange}
+                timezone={output.timezone}
+                totalTrades={output.totalTrades}
+              />
+            </div>
+          </BotMessage>
+        );
+      }
       return (
         <TraceMessage key={key}>
           <ChartStep part={part} streaming={streaming} />
