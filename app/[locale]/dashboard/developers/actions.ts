@@ -3,15 +3,10 @@
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { resolveDbUserId } from "@/lib/api/db-user"
-import { redirectUriProblem } from "@/lib/api/redirect-uri"
 import { API_SCOPES, isValidScope, parseScopes } from "@/lib/api/scopes"
+import { generatePersonalAccessToken, sha256 } from "@/lib/api/tokens"
 import {
-  generateClientId,
-  generateClientSecret,
-  generatePersonalAccessToken,
-  sha256,
-} from "@/lib/api/tokens"
-import {
+  createOwnedOAuthAppForUser,
   deleteOwnedOAuthAppForUser,
   listOwnedOAuthAppsForUser,
   listPersonalAccessTokensForUser,
@@ -36,48 +31,28 @@ export async function createOAuthAppAction(input: {
   scopes: string[]
 }) {
   const userId = await resolveDbUserId()
-  const name = input.name.trim()
-  if (!name) throw new Error("Name is required")
-
-  const redirectUris = input.redirectUris
-    .map((u) => u.trim())
-    .filter(Boolean)
-  if (redirectUris.length === 0) throw new Error("At least one redirect URI is required")
-  for (const uri of redirectUris) {
-    const problem = redirectUriProblem(uri)
-    if (problem) throw new Error(`Redirect URI ${uri} ${problem}`)
+  const result = await createOwnedOAuthAppForUser(userId, input)
+  if (!result.ok) {
+    throw new Error(
+      result.reason === "invalid"
+        ? result.errors.map((e) => e.message).join(" ")
+        : "OAuth app not found",
+    )
   }
-
-  const scopes = input.scopes.filter(isValidScope)
-  if (scopes.length === 0) throw new Error("At least one scope is required")
-
-  const clientId = generateClientId()
-  const clientSecret = generateClientSecret()
-
-  const app = await prisma.oAuthApp.create({
-    data: {
-      userId,
-      name,
-      description: input.description?.trim() || null,
-      clientId,
-      clientSecretHash: sha256(clientSecret),
-      redirectUris,
-      scopes,
-    },
-  })
 
   revalidateDevelopers()
   return {
-    id: app.id,
-    clientId: app.clientId,
-    clientSecret,
+    id: result.data.app.id,
+    clientId: result.data.app.clientId,
+    clientSecret: result.data.clientSecret,
   }
 }
 
 export async function deleteOAuthAppAction(appId: string) {
   const userId = await resolveDbUserId()
-  await deleteOwnedOAuthAppForUser(userId, appId)
+  const result = await deleteOwnedOAuthAppForUser(userId, appId)
   revalidateDevelopers()
+  return result
 }
 
 export async function rotateOAuthAppSecretAction(appId: string) {

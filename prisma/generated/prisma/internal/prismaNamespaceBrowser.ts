@@ -226,6 +226,7 @@ export const OAuthAppScalarFieldEnum = {
   clientSecretHash: 'clientSecretHash',
   redirectUris: 'redirectUris',
   scopes: 'scopes',
+  secretRotatedAt: 'secretRotatedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

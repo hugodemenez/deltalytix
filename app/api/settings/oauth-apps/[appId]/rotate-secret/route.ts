@@ -25,7 +25,8 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json({
       clientId: result.clientId,
       clientSecret: result.clientSecret,
-    })
+      secretRotatedAt: result.secretRotatedAt.toISOString(),
+    }, { headers: { "Cache-Control": "no-store" } })
   } catch (error) {
     console.error("[settings/oauth-apps/rotate-secret] POST failed", error)
     return jsonError({
