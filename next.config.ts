@@ -85,6 +85,13 @@ const nextConfig: NextConfig = {
         destination: '/:locale/trading-journal/futures',
         permanent: true,
       },
+      // Locale-scoped so i18n middleware still owns unprefixed /dashboard/developers.
+      // Hash is the Connections section on the settings page.
+      {
+        source: '/:locale(en|fr)/dashboard/developers',
+        destination: '/:locale/dashboard/settings#connections',
+        permanent: true,
+      },
     ];
   },
   // PostHog's capture endpoints use trailing slashes (`/e/`). Without this,
