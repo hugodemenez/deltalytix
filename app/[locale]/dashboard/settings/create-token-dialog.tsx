@@ -4,14 +4,14 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
 import { Button } from '@/components/ui/button'
-import { OAUTH_APP_ERROR_MESSAGES } from '@/lib/api/oauth-app-input'
 import type { ApiScope } from '@/lib/api/scopes'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { createPersonalAccessTokenAction } from '../developers/actions'
-import { defaultReadScopes } from './connections-format'
+import { defaultReadScopes, localizeOAuthAppMessage } from './connections-format'
 import {
   CopyValue,
   NameField,
+  oauthAppErrorTranslator,
   ScopeChips,
   ScopePicker,
   SettingsDialog,
@@ -58,11 +58,11 @@ export function CreateTokenDialog({
   async function createToken() {
     const trimmed = name.trim()
     if (!trimmed) {
-      setNameError(OAUTH_APP_ERROR_MESSAGES.nameRequired)
+      setNameError(t('validation.nameRequired'))
       return
     }
     if (scopes.length === 0) {
-      setScopeError(OAUTH_APP_ERROR_MESSAGES.scopeRequired)
+      setScopeError(t('validation.scopesRequired'))
       return
     }
     setNameError(undefined)
@@ -82,9 +82,10 @@ export function CreateTokenDialog({
       setCreated(token)
       onCreated(token)
     } catch (error) {
-      const message = error instanceof Error ? error.message : ''
-      if (message.toLowerCase().includes('name')) setNameError(message)
-      else if (message.toLowerCase().includes('scope')) setScopeError(message)
+      const raw = error instanceof Error ? error.message : ''
+      const message = localizeOAuthAppMessage(raw, oauthAppErrorTranslator(t))
+      if (raw.toLowerCase().includes('name')) setNameError(message)
+      else if (raw.toLowerCase().includes('scope')) setScopeError(message)
       else toast.error(message || t('dashboard.settings.connections.tokenFailed'))
     } finally {
       setPending(false)

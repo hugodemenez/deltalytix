@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useCurrentLocale, useI18n } from '@/locales/client'
 import { Button } from '@/components/ui/button'
@@ -30,6 +30,7 @@ import {
   formatConnectionDate,
   secretRotatedSource,
   type AppDraft,
+  localizeOAuthAppErrors,
 } from './connections-format'
 import {
   CopyValue,
@@ -44,6 +45,7 @@ import {
   primaryButtonClass,
   smOutlineButtonClass,
   toggleScope,
+  oauthAppErrorTranslator,
 } from './connections-ui'
 
 export function ManageAppSheet({
@@ -64,7 +66,11 @@ export function ManageAppSheet({
   const isMobile = useIsMobile()
   const [draft, setDraft] = useState<AppDraft>(() => draftFromApp(app))
   const [saved, setSaved] = useState<AppDraft>(() => draftFromApp(app))
-  const [errors, setErrors] = useState<OAuthAppFieldError[]>([])
+  const [rawErrors, setErrors] = useState<OAuthAppFieldError[]>([])
+  const errors = useMemo(
+    () => localizeOAuthAppErrors(rawErrors, oauthAppErrorTranslator(t)),
+    [rawErrors, t],
+  )
   const [pending, setPending] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmRotate, setConfirmRotate] = useState(false)

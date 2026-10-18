@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useCurrentLocale, useI18n } from '@/locales/client'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import {
   defaultReadScopes,
   fieldErrorMessage,
   firstErrorStep,
+  localizeOAuthAppErrors,
 } from './connections-format'
 import { useIsMobile } from '@/hooks/use-mobile'
 import {
@@ -29,6 +30,7 @@ import {
   outlineButtonClass,
   primaryButtonClass,
   toggleScope,
+  oauthAppErrorTranslator,
 } from './connections-ui'
 
 type Step = 1 | 2 | 3 | 4
@@ -52,7 +54,11 @@ export function AddAppDialog({
   const [description, setDescription] = useState('')
   const [uris, setUris] = useState<string[]>([''])
   const [scopes, setScopes] = useState<string[]>(defaultReadScopes())
-  const [errors, setErrors] = useState<OAuthAppFieldError[]>([])
+  const [rawErrors, setErrors] = useState<OAuthAppFieldError[]>([])
+  const errors = useMemo(
+    () => localizeOAuthAppErrors(rawErrors, oauthAppErrorTranslator(t)),
+    [rawErrors, t],
+  )
   const [pending, setPending] = useState(false)
   const [secret, setSecret] = useState<string | null>(null)
   const [clientId, setClientId] = useState<string | null>(null)

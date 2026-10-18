@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { Check, Copy, Info, LayoutGrid, Plus, X } from 'lucide-react'
 import { useI18n } from '@/locales/client'
@@ -30,9 +30,35 @@ import type { OAuthAppFieldError } from '@/lib/api/oauth-app-input'
 import {
   canRemoveRedirectUri,
   fieldErrorMessage,
+  type OAuthAppErrorLocaleKey,
   scopeGroups,
   uriRowErrorMessage,
 } from './connections-format'
+
+/**
+ * Translator for server validation keys. Each key is a literal `t()` call, so
+ * the i18n types stay simple (passing the key union to `t` is too complex for
+ * TypeScript).
+ */
+export function oauthAppErrorTranslator(
+  t: ReturnType<typeof useI18n>,
+): (key: OAuthAppErrorLocaleKey) => string {
+  const copy: Record<OAuthAppErrorLocaleKey, string> = {
+    'validation.nameRequired': t('validation.nameRequired'),
+    'validation.nameTooLong': t('validation.nameTooLong'),
+    'validation.descriptionTooLong': t('validation.descriptionTooLong'),
+    'validation.redirectUriRequired': t('validation.redirectUriRequired'),
+    'validation.redirectUrisTooMany': t('validation.redirectUrisTooMany'),
+    'validation.redirectUriScheme': t('validation.redirectUriScheme'),
+    'validation.redirectUriInvalid': t('validation.redirectUriInvalid'),
+    'validation.redirectUriFragment': t('validation.redirectUriFragment'),
+    'validation.redirectUriUserinfo': t('validation.redirectUriUserinfo'),
+    'validation.scopesRequired': t('validation.scopesRequired'),
+    'validation.scopeUnknown': t('validation.scopeUnknown'),
+    'validation.nothingToUpdate': t('validation.nothingToUpdate'),
+  }
+  return (key) => copy[key]
+}
 
 export const primaryButtonClass =
   'h-9 rounded-[4px] bg-[#171717] px-4 text-sm font-medium text-white shadow-none hover:bg-[#171717]/90 dark:bg-foreground dark:text-background dark:hover:bg-foreground/90'
@@ -384,6 +410,43 @@ export function DescriptionField({
   )
 }
 
+type CopyState = 'idle' | 'copied' | 'failed'
+
+const COPY_FEEDBACK_MS = 2000
+
+function selectElementText(element: HTMLElement | null) {
+  if (!element || typeof window === 'undefined') return
+  const selection = window.getSelection()
+  if (!selection) return
+  const range = document.createRange()
+  range.selectNodeContents(element)
+  selection.removeAllRanges()
+  selection.addRange(range)
+}
+
+/**
+ * Copy `value`, falling back to `execCommand('copy')` on the selected text.
+ * iOS Safari can lack `navigator.clipboard` or reject `writeText`, so both
+ * paths are awaited and caught. Leaves the text selected when both fail so
+ * the user can copy it by hand.
+ */
+export async function copyText(value: string, element: HTMLElement | null): Promise<boolean> {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value)
+      return true
+    }
+  } catch {
+    // Fall through to the selection fallback.
+  }
+  selectElementText(element)
+  try {
+    return typeof document !== 'undefined' && document.execCommand('copy')
+  } catch {
+    return false
+  }
+}
+
 export function CopyValue({
   label,
   value,
@@ -396,6 +459,30 @@ export function CopyValue({
   compact?: boolean
 }) {
   const t = useI18n()
+  const valueRef = useRef<HTMLDivElement>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [state, setState] = useState<CopyState>('idle')
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
+
+  async function handleCopy() {
+    const ok = await copyText(value, valueRef.current)
+    if (!ok) selectElementText(valueRef.current)
+    setState(ok ? 'copied' : 'failed')
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => setState('idle'), COPY_FEEDBACK_MS)
+  }
+
+  const buttonLabel =
+    state === 'copied'
+      ? t('dashboard.settings.connections.copied')
+      : state === 'failed'
+        ? t('dashboard.settings.connections.copyFailed')
+        : t('dashboard.settings.connections.copy')
 
   return (
     <div className="mt-4">
@@ -411,8 +498,9 @@ export function CopyValue({
       ) : null}
       <div className="flex items-center gap-2">
         <div
+          ref={valueRef}
           className={cn(
-            'flex h-10 min-w-0 flex-1 items-center overflow-hidden whitespace-nowrap rounded-[4px] border border-[#E5E5E5] bg-[#FAFAFA] px-3 font-mono text-[#171717] dark:border-border dark:bg-muted dark:text-foreground',
+            'flex h-10 min-w-0 flex-1 select-all items-center overflow-hidden whitespace-nowrap rounded-[4px] border border-[#E5E5E5] bg-[#FAFAFA] px-3 font-mono text-[#171717] dark:border-border dark:bg-muted dark:text-foreground',
             compact ? 'text-xs' : 'text-[13px]',
           )}
         >
@@ -421,14 +509,30 @@ export function CopyValue({
         <Button
           type="button"
           variant="outline"
-          className={cn(outlineButtonClass, 'h-10 shrink-0')}
+          data-state={state}
+          className={cn(
+            outlineButtonClass,
+            'h-10 shrink-0',
+            state === 'failed' && 'border-[#DC2626] text-[#DC2626] hover:text-[#DC2626]',
+          )}
           onClick={() => {
-            void navigator.clipboard.writeText(value)
+            void handleCopy()
           }}
         >
-          <Copy className="size-3.5" />
-          {t('dashboard.settings.connections.copy')}
+          {state === 'copied' ? (
+            <Check className="size-3.5" aria-hidden />
+          ) : (
+            <Copy className="size-3.5" aria-hidden />
+          )}
+          {buttonLabel}
         </Button>
+        <span className="sr-only" aria-live="polite" role="status">
+          {state === 'copied'
+            ? t('dashboard.settings.connections.copied')
+            : state === 'failed'
+              ? t('dashboard.settings.connections.copyFailed')
+              : ''}
+        </span>
       </div>
     </div>
   )

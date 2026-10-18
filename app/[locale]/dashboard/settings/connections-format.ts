@@ -1,5 +1,9 @@
 import { API_SCOPES, type ApiScope } from "@/lib/api/scopes"
-import type { OAuthAppField, OAuthAppFieldError } from "@/lib/api/oauth-app-input"
+import {
+  OAUTH_APP_ERROR_MESSAGES,
+  type OAuthAppField,
+  type OAuthAppFieldError,
+} from "@/lib/api/oauth-app-input"
 
 /**
  * Read scopes in the Connections design order. Write scopes follow, also in
@@ -256,4 +260,57 @@ export function countLabelKind(count: number): "none" | "one" | "many" {
 /** The last redirect URI cannot be removed. */
 export function canRemoveRedirectUri(count: number): boolean {
   return count > 1
+}
+
+/**
+ * Locale keys for the server validation copy. The API keeps returning English
+ * `message` strings (the public contract), and the settings UI swaps each one
+ * for its translation. Messages are shared constants, so the match is exact.
+ */
+export const OAUTH_APP_ERROR_LOCALE_KEYS = {
+  nameRequired: "validation.nameRequired",
+  nameTooLong: "validation.nameTooLong",
+  descriptionTooLong: "validation.descriptionTooLong",
+  redirectUriRequired: "validation.redirectUriRequired",
+  tooManyRedirectUris: "validation.redirectUrisTooMany",
+  redirectUriNotAbsolute: "validation.redirectUriInvalid",
+  redirectUriHttps: "validation.redirectUriScheme",
+  redirectUriFragment: "validation.redirectUriFragment",
+  redirectUriCredentials: "validation.redirectUriUserinfo",
+  scopeRequired: "validation.scopesRequired",
+  scopeUnknown: "validation.scopeUnknown",
+  nothingToUpdate: "validation.nothingToUpdate",
+} as const satisfies Record<keyof typeof OAUTH_APP_ERROR_MESSAGES, `validation.${string}`>
+
+export type OAuthAppErrorLocaleKey =
+  (typeof OAUTH_APP_ERROR_LOCALE_KEYS)[keyof typeof OAUTH_APP_ERROR_LOCALE_KEYS]
+
+const MESSAGE_TO_LOCALE_KEY = new Map<string, OAuthAppErrorLocaleKey>(
+  (Object.keys(OAUTH_APP_ERROR_MESSAGES) as (keyof typeof OAUTH_APP_ERROR_MESSAGES)[]).map(
+    (code) => [OAUTH_APP_ERROR_MESSAGES[code], OAUTH_APP_ERROR_LOCALE_KEYS[code]],
+  ),
+)
+
+/** The locale key for a server validation message, or undefined if unknown. */
+export function oauthAppErrorLocaleKey(message: string): OAuthAppErrorLocaleKey | undefined {
+  return MESSAGE_TO_LOCALE_KEY.get(message)
+}
+
+/** Translate a known validation message; unknown messages pass through. */
+export function localizeOAuthAppMessage(
+  message: string,
+  translate: (key: OAuthAppErrorLocaleKey) => string,
+): string {
+  const key = oauthAppErrorLocaleKey(message)
+  return key ? translate(key) : message
+}
+
+export function localizeOAuthAppErrors(
+  errors: readonly OAuthAppFieldError[],
+  translate: (key: OAuthAppErrorLocaleKey) => string,
+): OAuthAppFieldError[] {
+  return errors.map((error) => ({
+    ...error,
+    message: localizeOAuthAppMessage(error.message, translate),
+  }))
 }
