@@ -140,16 +140,18 @@ export function CreateTokenDialog({
           <CopyValue value={created.token} />
           <div className="mt-4 overflow-hidden rounded-[4px] border border-[#E5E5E5] dark:border-border">
             <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-[13px]">
-              <span className="text-[#686D67] dark:text-muted-foreground">
+              <span className="shrink-0 text-[#686D67] dark:text-muted-foreground">
                 {t('dashboard.settings.connections.name')}
               </span>
-              <span className="font-medium">{created.name}</span>
+              <span className="min-w-0 truncate font-medium" title={created.name}>
+                {created.name}
+              </span>
             </div>
             <div className="flex items-center justify-between gap-3 border-t border-[#E5E5E5] px-3 py-2.5 text-[13px] dark:border-border">
-              <span className="text-[#686D67] dark:text-muted-foreground">
+              <span className="shrink-0 text-[#686D67] dark:text-muted-foreground">
                 {t('dashboard.settings.connections.scopes')}
               </span>
-              <ScopeChips scopes={created.scopes} className="mt-0 justify-end" />
+              <ScopeChips scopes={created.scopes} className="mt-0 min-w-0 justify-end" />
             </div>
           </div>
         </>
