@@ -117,41 +117,6 @@ export default function ApiConnectionsSection({
       </h2>
       <div className="divide-y divide-[#E5E5E5] overflow-hidden rounded-[4px] border border-[#E5E5E5] bg-white dark:divide-border dark:border-border dark:bg-card">
         <GroupHead
-          title={t('dashboard.settings.connections.authorizedApps')}
-          description={t('dashboard.settings.connections.authorizedApps.description')}
-        />
-        {apps.length === 0 ? (
-          <CenteredEmpty
-            title={t('dashboard.settings.connections.authorizedEmpty.title')}
-            description={t('dashboard.settings.connections.authorizedEmpty.description')}
-          />
-        ) : (
-          apps.map((app) => (
-            <div key={app.appId} className="flex items-start gap-3 px-4 py-3.5">
-              <AppMark name={app.name} logoUrl={app.logoUrl} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="truncate text-sm font-medium text-[#171717] dark:text-foreground">
-                    {app.name || t('dashboard.settings.connections.untitled')}
-                  </p>
-                  <RowAction disabled={pending} onClick={() => setRevokeApp(app)}>
-                    {t('dashboard.settings.connections.revoke')}
-                  </RowAction>
-                </div>
-                <ScopeChips scopes={app.scopes} />
-                <p className="mt-1.5 text-xs leading-4 text-[#686D67] dark:text-muted-foreground">
-                  {t('dashboard.settings.connections.authorizedOn', {
-                    date: formatConnectionDate(app.authorizedAt, locale),
-                  })}
-                  <MetaSep />
-                  {lastUsedPhrase(app.lastUsedAt)}
-                </p>
-              </div>
-            </div>
-          ))
-        )}
-
-        <GroupHead
           title={t('dashboard.settings.connections.tokens')}
           description={t('dashboard.settings.connections.tokens.description')}
           action={
@@ -222,6 +187,41 @@ export default function ApiConnectionsSection({
               </div>
             )
           })
+        )}
+
+        <GroupHead
+          title={t('dashboard.settings.connections.authorizedApps')}
+          description={t('dashboard.settings.connections.authorizedApps.description')}
+        />
+        {apps.length === 0 ? (
+          <CenteredEmpty
+            title={t('dashboard.settings.connections.authorizedEmpty.title')}
+            description={t('dashboard.settings.connections.authorizedEmpty.description')}
+          />
+        ) : (
+          apps.map((app) => (
+            <div key={app.appId} className="flex items-start gap-3 px-4 py-3.5">
+              <AppMark name={app.name} logoUrl={app.logoUrl} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="truncate text-sm font-medium text-[#171717] dark:text-foreground">
+                    {app.name || t('dashboard.settings.connections.untitled')}
+                  </p>
+                  <RowAction disabled={pending} onClick={() => setRevokeApp(app)}>
+                    {t('dashboard.settings.connections.revoke')}
+                  </RowAction>
+                </div>
+                <ScopeChips scopes={app.scopes} />
+                <p className="mt-1.5 text-xs leading-4 text-[#686D67] dark:text-muted-foreground">
+                  {t('dashboard.settings.connections.authorizedOn', {
+                    date: formatConnectionDate(app.authorizedAt, locale),
+                  })}
+                  <MetaSep />
+                  {lastUsedPhrase(app.lastUsedAt)}
+                </p>
+              </div>
+            </div>
+          ))
         )}
       </div>
 
