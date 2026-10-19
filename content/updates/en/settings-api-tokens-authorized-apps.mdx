@@ -1,0 +1,19 @@
+---
+title: 'Manage API tokens and authorized apps in Settings'
+description: 'Settings → Connections lists your personal API tokens and the apps you have authorized, with when each was last used and a one-click revoke.'
+date: '2026-10-18'
+status: completed
+completedDate: '2026-10-19'
+image: '/updates/pr-543/en/settings-connections-api.png'
+---
+
+# Manage API tokens and authorized apps in Settings
+
+[Settings → Connections](/en/dashboard/settings#connections) now shows everything that can reach your account through the API.
+
+![Settings Connections with one API token, one authorized app, and the developer docs link](/updates/pr-543/en/settings-connections-api.png)
+
+- **API tokens** come first. Use **Create token**, pick a name and scopes, and copy the token right away: it's only shown once. Each row shows its scopes, when it was created, and when it was last used.
+- **Authorized apps** lists the apps you've approved, with their scopes and last use. **Revoke** cuts an app's access immediately; you'd need to authorize it again to use it.
+
+Building your own integration? The link at the bottom of the section goes to the [developer docs](/en/docs) and to your apps. API access is no longer in the account menu; it lives here now.

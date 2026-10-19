@@ -1,0 +1,26 @@
+---
+title: 'Deltalytix a désormais une API publique, avec applications OAuth et documentation développeur'
+description: 'Lisez et écrivez trades, comptes, connexions, imports et métriques via l''API v1, connectez-vous avec OAuth ou un jeton personnel, et gérez vos applications sur une nouvelle page Développeurs.'
+date: '2026-10-11'
+status: completed
+completedDate: '2026-10-19'
+image: '/updates/pr-543/fr/public-api-docs.png'
+---
+
+# Deltalytix a désormais une API publique, avec applications OAuth et documentation développeur
+
+Votre journal est maintenant accessible depuis vos propres scripts et outils. L'API v1 couvre votre profil, vos trades, vos comptes, vos connexions broker (y compris le lancement d'une sync), les imports et les métriques comme le résumé et la courbe d'équité. Chaque jeton n'obtient que les scopes que vous choisissez, par exemple `trades:read` ou `imports:write`.
+
+![Page de documentation API listant ce que permet chaque scope](/updates/pr-543/fr/public-api-docs.png)
+
+[Consultez la documentation API](/fr/docs) pour l'authentification, chaque route, les codes d'erreur et la référence OpenAPI complète. La plupart des guides permettent d'essayer une requête directement sur la page.
+
+## Créez une application que d'autres traders peuvent connecter
+
+Si vous développez un outil pour d'autres traders, enregistrez-le comme application OAuth. Ils se connectent avec Deltalytix, voient précisément ce que votre application demande, puis l'approuvent. Ils peuvent la déconnecter à tout moment.
+
+Les applications se gèrent sur la nouvelle [page Développeurs](/fr/dashboard/developers) : ajoutez une application, définissez ses URI de redirection et ses permissions, renouvelez son secret et voyez combien de traders l'ont connectée.
+
+![Page Développeurs avec une application, ses scopes et son nombre d'utilisateurs connectés](/updates/pr-543/fr/developers-oauth-apps.png)
+
+Besoin d'un simple jeton pour vos scripts ? Créez-le dans [Paramètres → Connexions](/fr/dashboard/settings#connections).

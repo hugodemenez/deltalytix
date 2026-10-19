@@ -1,0 +1,13 @@
+---
+title: 'Le drawdown des comptes avec buffer suit le profit réellement compté'
+description: 'Pour les comptes prop avec buffer, le plus haut et le seuil de drawdown utilisent désormais la même équité au-dessus du buffer que le solde affiché.'
+date: '2026-10-11'
+status: completed
+completedDate: '2026-10-11'
+---
+
+# Le drawdown des comptes avec buffer suit le profit réellement compté
+
+Sur un compte avec buffer, le solde ne compte que le profit au-delà du buffer, mais le drawdown était encore calculé sur l'équité totale. Un compte trailing pouvait donc apparaître en violation juste après avoir franchi le buffer, ou un compte statique masquer une vraie violation après être repassé sous le buffer.
+
+Le drawdown utilise maintenant la même courbe que le solde : le seuil trailing et la perte restante correspondent à ce que le compte compte vraiment. Les comptes sans buffer ne changent pas.
