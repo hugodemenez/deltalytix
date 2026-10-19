@@ -638,7 +638,7 @@ export function SettingsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          'gap-0 rounded-[4px] border-[#E5E5E5] p-6 shadow-lg dark:border-border',
+          'grid-cols-[minmax(0,1fr)] gap-0 rounded-[4px] border-[#E5E5E5] p-6 shadow-lg dark:border-border',
           wide ? 'sm:max-w-[520px]' : 'sm:max-w-[448px]',
         )}
       >
