@@ -134,7 +134,7 @@ export default {
   "docs.playground.copied": "Copié",
   "docs.playground.signIn": "Se connecter pour générer un token",
   "docs.playground.signInHint":
-    "Ou collez un personal access token depuis Dashboard → Développeurs.",
+    "Ou collez un personal access token depuis Paramètres → Connexions.",
   "docs.playground.pasteToken": "Jeton Bearer",
   "docs.playground.pastePlaceholder": "dltx_pat_…",
   "docs.playground.writeScopes": "Scopes d’écriture optionnels",

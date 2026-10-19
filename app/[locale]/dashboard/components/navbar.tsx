@@ -36,6 +36,8 @@ function subpageTitle(
       return t('dashboard.settings')
     case 'billing':
       return t('dashboard.billingSheet.title')
+    case 'developers':
+      return t('dashboard.developers.title')
   }
 }
 

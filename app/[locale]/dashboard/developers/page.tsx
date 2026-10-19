@@ -1,16 +1,14 @@
-import { permanentRedirect } from "next/navigation"
-import { resolveLocale } from "@/lib/locale-params"
+import { connection } from "next/server"
+import DevelopersClient from "./developers-client"
+import { listOwnedOAuthAppsAction } from "../settings/connections-actions"
 
 /**
- * API tokens and OAuth apps moved into Settings → Connections.
- * `next.config.ts` sends the HTTP 308 before this runs. This stays so a
- * request that reaches the page still lands on the same section.
+ * Developers: OAuth apps this user registered (create, edit, rotate the
+ * secret, delete). Traders' own connections and API tokens stay in
+ * Settings → Connections; the API docs link here.
  */
-export default async function DevelopersPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>
-}) {
-  const locale = await resolveLocale(params)
-  permanentRedirect(`/${locale}/dashboard/settings#connections`)
+export default async function DevelopersPage() {
+  await connection()
+  const ownedApps = await listOwnedOAuthAppsAction()
+  return <DevelopersClient initialOwnedApps={ownedApps} />
 }

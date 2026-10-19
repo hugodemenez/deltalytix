@@ -69,6 +69,12 @@ export default {
   "dashboard.settings.connections.descriptionHint":
     "Affichée aux traders au moment où ils approuvent votre application.",
   "dashboard.settings.connections.apiDocs": "Documentation de l’API",
+  "dashboard.settings.connections.developerLine.before": "Vous développez une intégration ?",
+  "dashboard.settings.connections.developerLine.docs": "Consultez la documentation développeur",
+  "dashboard.settings.connections.developerLine.yourApps": "Vos applications",
+  "dashboard.developers.title": "Développeurs",
+  "dashboard.developers.tokensHint.before": "Les jetons d’API personnels se trouvent dans",
+  "dashboard.developers.tokensHint.link": "Paramètres → Connexions",
   "dashboard.settings.connections.continue": "Continuer",
   "dashboard.settings.connections.redirects.title": "URI de redirection",
   "dashboard.settings.connections.redirects.description":

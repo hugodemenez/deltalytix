@@ -46,7 +46,6 @@ import { getUserTeams } from './actions'
 import { cn } from '@/lib/utils'
 import ApiConnectionsSection, {
   type AuthorizedAppRow,
-  type OwnedAppRow,
   type PersonalTokenRow,
 } from './api-connections-section'
 
@@ -122,11 +121,11 @@ function RowAction({
 export default function SettingsPage({
   initialAuthorizedApps = [],
   initialPersonalTokens = [],
-  initialOwnedApps = [],
+  ownedAppCount = 0,
 }: {
   initialAuthorizedApps?: AuthorizedAppRow[]
   initialPersonalTokens?: PersonalTokenRow[]
-  initialOwnedApps?: OwnedAppRow[]
+  ownedAppCount?: number
 }) {
   const t = useI18n()
   const consentCopy = getConsentRecordCopy(t)
@@ -421,7 +420,7 @@ export default function SettingsPage({
         <ApiConnectionsSection
           initialAuthorizedApps={initialAuthorizedApps}
           initialPersonalTokens={initialPersonalTokens}
-          initialOwnedApps={initialOwnedApps}
+          ownedAppCount={ownedAppCount}
         />
 
         <SettingsSection label={t('dashboard.settings.weeklyRecap')}>

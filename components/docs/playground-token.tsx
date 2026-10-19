@@ -81,7 +81,7 @@ const COPY = {
     hide: "Hide",
     signIn: "Sign in to generate a token",
     signInHint:
-      "Or paste a personal access token from Dashboard → Developers.",
+      "Or paste a personal access token from Settings → Connections.",
     pasteToken: "Bearer token",
     pastePlaceholder: "dltx_pat_…",
     writeScopes: "Optional write scopes",
@@ -138,7 +138,7 @@ const COPY = {
     hide: "Masquer",
     signIn: "Se connecter pour générer un token",
     signInHint:
-      "Ou collez un personal access token depuis Dashboard → Développeurs.",
+      "Ou collez un personal access token depuis Paramètres → Connexions.",
     pasteToken: "Jeton Bearer",
     pastePlaceholder: "dltx_pat_…",
     writeScopes: "Scopes d’écriture optionnels",

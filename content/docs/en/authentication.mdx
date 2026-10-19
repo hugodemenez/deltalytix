@@ -38,7 +38,7 @@ Request only the scopes your integration needs. Space-separate them in OAuth `sc
 
 ### Personal access tokens
 
-PATs are ideal for scripts and private tools. Create and revoke them from the dashboard developer settings, choosing the scopes you need. The token value is shown once.
+PATs are ideal for scripts and private tools. Create and revoke them in [Settings → Connections](/en/dashboard/settings#connections), choosing the scopes you need. The token value is shown once.
 
 ```bash
 curl https://www.deltalytix.app/api/v1/me \
@@ -50,6 +50,8 @@ curl https://www.deltalytix.app/api/v1/me \
 The documentation playground can issue a short-lived, read-only demo token without signing in. It authenticates as a shared sample account (`DEMO-001`) so you can try `GET` routes. Write scopes require your own docs token or PAT. Signed-in docs playground tokens expire after 24 hours.
 
 ## OAuth 2.0
+
+Register your app on the [Developers page](/en/dashboard/developers) to get a `client_id` and a `client_secret`.
 
 ### 1. Authorize
 
@@ -214,7 +216,12 @@ Valid tokens without the required scope return `403`:
 
 ### Managing apps and tokens
 
-In the dashboard developer settings you can:
+On the [Developers page](/en/dashboard/developers) you can:
 
 - Create OAuth apps (name, redirect URIs, allowed scopes) — `client_id` is always visible; `client_secret` is shown once. Redirect URIs must be absolute `https` URLs (plain `http` only on `localhost`) without a fragment.
+- Edit an app, regenerate its secret, or delete it
+
+In [Settings → Connections](/en/dashboard/settings#connections) you can:
+
 - Create and revoke personal access tokens with chosen scopes — the PAT value is shown once
+- Revoke apps you authorized on your own account

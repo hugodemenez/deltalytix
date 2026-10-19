@@ -37,7 +37,7 @@ export default async function SettingsPage() {
                 createdAt: token.createdAt.toISOString(),
                 lastUsedAt: token.lastUsedAt?.toISOString() ?? null,
             }))}
-            initialOwnedApps={ownedApps}
+            ownedAppCount={ownedApps.length}
         />
     )
 }
