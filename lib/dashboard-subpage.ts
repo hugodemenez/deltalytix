@@ -3,6 +3,7 @@ export const DASHBOARD_SUBPAGES = [
   "data",
   "settings",
   "billing",
+  "developers",
 ] as const
 
 export type DashboardSubpage = (typeof DASHBOARD_SUBPAGES)[number]

@@ -38,7 +38,7 @@ Demandez uniquement les scopes dont votre intégration a besoin. Séparez-les pa
 
 ### Personal access tokens
 
-Les PAT conviennent aux scripts et outils privés. Créez-les et révoquez-les depuis les paramètres développeur du tableau de bord, en choisissant les scopes nécessaires. La valeur du jeton n’est affichée qu’une fois.
+Les PAT conviennent aux scripts et outils privés. Créez-les et révoquez-les dans [Paramètres → Connexions](/fr/dashboard/settings#connections), en choisissant les scopes nécessaires. La valeur du jeton n’est affichée qu’une fois.
 
 ```bash
 curl https://www.deltalytix.app/api/v1/me \
@@ -50,6 +50,8 @@ curl https://www.deltalytix.app/api/v1/me \
 Le playground de la documentation peut émettre un token démo de courte durée, en lecture seule, sans connexion. Il authentifie un compte d’exemple partagé (`DEMO-001`) pour essayer les routes `GET`. Les scopes d’écriture exigent votre propre token docs ou PAT. Les tokens docs générés une fois connecté expirent au bout de 24 heures.
 
 ## OAuth 2.0
+
+Enregistrez votre application sur la [page Développeurs](/fr/dashboard/developers) pour obtenir un `client_id` et un `client_secret`.
 
 ### 1. Autoriser
 
@@ -214,7 +216,12 @@ Un jeton valide sans le scope requis renvoie `403` :
 
 ### Gérer les applications et les jetons
 
-Dans les paramètres développeur du tableau de bord, vous pouvez :
+Sur la [page Développeurs](/fr/dashboard/developers), vous pouvez :
 
 - Créer des applications OAuth (nom, redirect URIs, scopes autorisés) — `client_id` toujours visible ; `client_secret` affiché une fois. Les redirect URIs doivent être des URL `https` absolues (`http` uniquement sur `localhost`), sans fragment.
+- Modifier une application, régénérer son secret client ou la supprimer
+
+Dans [Paramètres → Connexions](/fr/dashboard/settings#connections), vous pouvez :
+
 - Créer et révoquer des personal access tokens avec les scopes choisis — la valeur du PAT est affichée une fois
+- Révoquer les applications que vous avez autorisées sur votre compte

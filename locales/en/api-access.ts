@@ -69,6 +69,12 @@ export default {
   "dashboard.settings.connections.descriptionHint":
     "Shown to people when they approve your app.",
   "dashboard.settings.connections.apiDocs": "API docs",
+  "dashboard.settings.connections.developerLine.before": "Building something?",
+  "dashboard.settings.connections.developerLine.docs": "Read the developer docs",
+  "dashboard.settings.connections.developerLine.yourApps": "Your apps",
+  "dashboard.developers.title": "Developers",
+  "dashboard.developers.tokensHint.before": "Personal API tokens are in",
+  "dashboard.developers.tokensHint.link": "Settings → Connections",
   "dashboard.settings.connections.continue": "Continue",
   "dashboard.settings.connections.redirects.title": "Redirect URIs",
   "dashboard.settings.connections.redirects.description":

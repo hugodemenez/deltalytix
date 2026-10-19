@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, type ComponentProps, type ReactNode } from 'react'
+import { useState, useTransition, type ReactNode } from 'react'
 import { KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCurrentLocale, useI18n } from '@/locales/client'
@@ -9,32 +9,28 @@ import { cn } from '@/lib/utils'
 import {
   revokeAuthorizedOAuthAppAction,
   revokeSettingsPersonalAccessTokenAction,
-  type OwnedOAuthAppDTO,
 } from './connections-actions'
 import {
   appColor,
   appInitials,
   classifyLastUsed,
-  countLabelKind,
   formatConnectionDate,
   maskTokenPrefix,
   tokenLast4,
-  truncateIdentifier,
 } from './connections-format'
 import {
+  GroupHead,
   MetaSep,
-  OwnedAppIcon,
+  RowAction,
   ScopeChips,
   SettingsDialog,
+  TextLink,
   dangerButtonClass,
   outlineButtonClass,
   smOutlineButtonClass,
   smPrimaryButtonClass,
 } from './connections-ui'
-import { AddAppDialog } from './add-app-dialog'
 import { CreateTokenDialog } from './create-token-dialog'
-import { HowItWorksDialog } from './how-it-works-dialog'
-import { ManageAppSheet } from './manage-app-sheet'
 
 export type AuthorizedAppRow = {
   appId: string
@@ -51,45 +47,6 @@ export type PersonalTokenRow = {
   scopes: string[]
   createdAt: string
   lastUsedAt: string | null
-}
-
-export type OwnedAppRow = OwnedOAuthAppDTO
-
-function GroupHead({
-  title,
-  description,
-  action,
-}: {
-  title: string
-  description: ReactNode
-  action?: ReactNode
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4 bg-[#FCFCFC] px-4 py-3.5 dark:bg-muted/20">
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-[#171717] dark:text-foreground">{title}</p>
-        <div className="mt-0.5 max-w-[440px] text-xs leading-4 text-[#686D67] dark:text-muted-foreground">
-          {description}
-        </div>
-      </div>
-      {action}
-    </div>
-  )
-}
-
-function RowAction({
-  children,
-  ...props
-}: ComponentProps<'button'>) {
-  return (
-    <button
-      type="button"
-      className="shrink-0 text-sm text-[#686D67] hover:text-[#171717] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 dark:text-muted-foreground dark:hover:text-foreground"
-      {...props}
-    >
-      {children}
-    </button>
-  )
 }
 
 function CenteredEmpty({
@@ -115,35 +72,23 @@ function CenteredEmpty({
 export default function ApiConnectionsSection({
   initialAuthorizedApps,
   initialPersonalTokens,
-  initialOwnedApps = [],
+  ownedAppCount = 0,
 }: {
   initialAuthorizedApps: AuthorizedAppRow[]
   initialPersonalTokens: PersonalTokenRow[]
-  initialOwnedApps?: OwnedAppRow[]
+  /** Apps this user registered. They are managed on /dashboard/developers. */
+  ownedAppCount?: number
 }) {
   const t = useI18n()
   const locale = useCurrentLocale()
   const [pending, startTransition] = useTransition()
   const [apps, setApps] = useState(initialAuthorizedApps)
   const [tokens, setTokens] = useState(initialPersonalTokens)
-  const [owned, setOwned] = useState(initialOwnedApps)
   const [tokenSuffixes, setTokenSuffixes] = useState<Record<string, string>>({})
   const [freshTokenId, setFreshTokenId] = useState<string | null>(null)
-  const [addOpen, setAddOpen] = useState(false)
-  const [howOpen, setHowOpen] = useState(false)
   const [tokenOpen, setTokenOpen] = useState(false)
-  const [manageId, setManageId] = useState<string | null>(null)
   const [revokeApp, setRevokeApp] = useState<AuthorizedAppRow | null>(null)
   const [revokeToken, setRevokeToken] = useState<PersonalTokenRow | null>(null)
-
-  const managed = owned.find((app) => app.id === manageId) ?? null
-
-  function usersPhrase(count: number) {
-    const kind = countLabelKind(count)
-    if (kind === 'none') return t('dashboard.settings.connections.usersNone')
-    if (kind === 'one') return t('dashboard.settings.connections.usersOne')
-    return t('dashboard.settings.connections.usersMany', { count: String(count) })
-  }
 
   function lastUsedPhrase(iso: string | null) {
     const kind = classifyLastUsed(iso)
@@ -165,127 +110,12 @@ export default function ApiConnectionsSection({
     return t('dashboard.settings.connections.lastUsed', { when })
   }
 
-  function openTokenDialog() {
-    setAddOpen(false)
-    setHowOpen(false)
-    setTokenOpen(true)
-  }
-
   return (
     <section id="connections" className="scroll-mt-24">
       <h2 className="mb-3 text-xs font-medium text-[#686D67] dark:text-muted-foreground">
         {t('dashboard.settings.connections')}
       </h2>
       <div className="divide-y divide-[#E5E5E5] overflow-hidden rounded-[4px] border border-[#E5E5E5] bg-white dark:divide-border dark:border-border dark:bg-card">
-        <GroupHead
-          title={t('dashboard.settings.connections.yourApps')}
-          description={
-            <>
-              {t('dashboard.settings.connections.yourApps.description')}{' '}
-              <button
-                type="button"
-                className="text-xs text-[#686D67] underline decoration-[#D4D4D4] underline-offset-[3px] hover:text-[#171717] dark:text-muted-foreground dark:hover:text-foreground"
-                onClick={() => setHowOpen(true)}
-              >
-                {t('dashboard.settings.connections.howItWorks')}
-              </button>
-            </>
-          }
-          action={
-            owned.length > 0 ? (
-              <Button
-                type="button"
-                variant="outline"
-                className={smOutlineButtonClass}
-                onClick={() => setAddOpen(true)}
-              >
-                {t('dashboard.settings.connections.addApp')}
-              </Button>
-            ) : null
-          }
-        />
-        {owned.length === 0 ? (
-          <div className="flex items-center justify-between gap-4 px-4 py-5">
-            <div>
-              <p className="text-[13px] leading-[18px] text-[#686D67] dark:text-muted-foreground">
-                {t('dashboard.settings.connections.yourApps.empty')}
-              </p>
-              <p className="mt-0.5 text-xs text-[#A3A3A3]">
-                {t('dashboard.settings.connections.yourApps.emptyExample')}
-              </p>
-            </div>
-            <Button
-              type="button"
-              className={cn(smPrimaryButtonClass, 'shrink-0')}
-              onClick={() => setAddOpen(true)}
-            >
-              {t('dashboard.settings.connections.addApp')}
-            </Button>
-          </div>
-        ) : (
-          owned.map((app) => (
-            <div key={app.id} className="flex items-start gap-3 px-4 py-3.5">
-              <OwnedAppIcon />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="flex min-w-0 flex-wrap items-baseline gap-2 text-sm font-medium text-[#171717] dark:text-foreground">
-                    <span className="truncate">{app.name}</span>
-                    <span className="font-mono text-xs font-normal text-[#686D67] dark:text-muted-foreground">
-                      {truncateIdentifier(app.clientId)}
-                    </span>
-                  </p>
-                  <RowAction onClick={() => setManageId(app.id)}>
-                    {t('dashboard.settings.connections.manage')}
-                  </RowAction>
-                </div>
-                <ScopeChips scopes={app.scopes} />
-                <p className="mt-1.5 text-xs leading-4 text-[#686D67] dark:text-muted-foreground">
-                  {t('dashboard.settings.connections.created', {
-                    date: formatConnectionDate(app.createdAt, locale),
-                  })}
-                  <MetaSep />
-                  {usersPhrase(app.connectedUserCount)}
-                </p>
-              </div>
-            </div>
-          ))
-        )}
-
-        <GroupHead
-          title={t('dashboard.settings.connections.authorizedApps')}
-          description={t('dashboard.settings.connections.authorizedApps.description')}
-        />
-        {apps.length === 0 ? (
-          <CenteredEmpty
-            title={t('dashboard.settings.connections.authorizedEmpty.title')}
-            description={t('dashboard.settings.connections.authorizedEmpty.description')}
-          />
-        ) : (
-          apps.map((app) => (
-            <div key={app.appId} className="flex items-start gap-3 px-4 py-3.5">
-              <AppMark name={app.name} logoUrl={app.logoUrl} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="truncate text-sm font-medium text-[#171717] dark:text-foreground">
-                    {app.name || t('dashboard.settings.connections.untitled')}
-                  </p>
-                  <RowAction disabled={pending} onClick={() => setRevokeApp(app)}>
-                    {t('dashboard.settings.connections.revoke')}
-                  </RowAction>
-                </div>
-                <ScopeChips scopes={app.scopes} />
-                <p className="mt-1.5 text-xs leading-4 text-[#686D67] dark:text-muted-foreground">
-                  {t('dashboard.settings.connections.authorizedOn', {
-                    date: formatConnectionDate(app.authorizedAt, locale),
-                  })}
-                  <MetaSep />
-                  {lastUsedPhrase(app.lastUsedAt)}
-                </p>
-              </div>
-            </div>
-          ))
-        )}
-
         <GroupHead
           title={t('dashboard.settings.connections.tokens')}
           description={t('dashboard.settings.connections.tokens.description')}
@@ -358,15 +188,58 @@ export default function ApiConnectionsSection({
             )
           })
         )}
+
+        <GroupHead
+          title={t('dashboard.settings.connections.authorizedApps')}
+          description={t('dashboard.settings.connections.authorizedApps.description')}
+        />
+        {apps.length === 0 ? (
+          <CenteredEmpty
+            title={t('dashboard.settings.connections.authorizedEmpty.title')}
+            description={t('dashboard.settings.connections.authorizedEmpty.description')}
+          />
+        ) : (
+          apps.map((app) => (
+            <div key={app.appId} className="flex items-start gap-3 px-4 py-3.5">
+              <AppMark name={app.name} logoUrl={app.logoUrl} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="truncate text-sm font-medium text-[#171717] dark:text-foreground">
+                    {app.name || t('dashboard.settings.connections.untitled')}
+                  </p>
+                  <RowAction disabled={pending} onClick={() => setRevokeApp(app)}>
+                    {t('dashboard.settings.connections.revoke')}
+                  </RowAction>
+                </div>
+                <ScopeChips scopes={app.scopes} />
+                <p className="mt-1.5 text-xs leading-4 text-[#686D67] dark:text-muted-foreground">
+                  {t('dashboard.settings.connections.authorizedOn', {
+                    date: formatConnectionDate(app.authorizedAt, locale),
+                  })}
+                  <MetaSep />
+                  {lastUsedPhrase(app.lastUsedAt)}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
-      <AddAppDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        onCreated={(app) => setOwned((current) => [app, ...current.filter((item) => item.id !== app.id)])}
-        onUseToken={openTokenDialog}
-      />
-      <HowItWorksDialog open={howOpen} onOpenChange={setHowOpen} onUseToken={openTokenDialog} />
+      <p className="mt-3 text-xs leading-4 text-[#A3A3A3] dark:text-muted-foreground">
+        {t('dashboard.settings.connections.developerLine.before')}{' '}
+        <TextLink href={`/${locale}/docs`} className="text-xs">
+          {t('dashboard.settings.connections.developerLine.docs')}
+        </TextLink>
+        {ownedAppCount > 0 ? (
+          <>
+            <MetaSep />
+            <TextLink href={`/${locale}/dashboard/developers`} className="text-xs">
+              {t('dashboard.settings.connections.developerLine.yourApps')}
+            </TextLink>
+          </>
+        ) : null}
+      </p>
+
       <CreateTokenDialog
         open={tokenOpen}
         onOpenChange={setTokenOpen}
@@ -388,24 +261,6 @@ export default function ApiConnectionsSection({
           ])
         }}
       />
-      {managed ? (
-        <ManageAppSheet
-          key={managed.id}
-          app={managed}
-          open
-          onOpenChange={(next) => {
-            if (!next) setManageId(null)
-          }}
-          onUpdated={(app) =>
-            setOwned((current) => current.map((item) => (item.id === app.id ? app : item)))
-          }
-          onDeleted={(id) => {
-            setOwned((current) => current.filter((item) => item.id !== id))
-            setManageId(null)
-          }}
-        />
-      ) : null}
-
       <SettingsDialog
         open={revokeApp !== null}
         onOpenChange={(next) => {

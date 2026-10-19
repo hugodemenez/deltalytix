@@ -133,7 +133,7 @@ export default {
   "docs.playground.copied": "Copied",
   "docs.playground.signIn": "Sign in to generate a token",
   "docs.playground.signInHint":
-    "Or paste a personal access token from Dashboard → Developers.",
+    "Or paste a personal access token from Settings → Connections.",
   "docs.playground.pasteToken": "Bearer token",
   "docs.playground.pastePlaceholder": "dltx_pat_…",
   "docs.playground.writeScopes": "Optional write scopes",

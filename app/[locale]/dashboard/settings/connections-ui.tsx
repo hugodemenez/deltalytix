@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import Link from 'next/link'
 import { Check, Copy, Info, LayoutGrid, Plus, X } from 'lucide-react'
 import { useI18n } from '@/locales/client'
@@ -681,5 +681,43 @@ export function SplitFooter({
       <div>{start}</div>
       <div className="flex gap-2">{children}</div>
     </div>
+  )
+}
+
+/** Group header row inside a Connections / Developers card. */
+export function GroupHead({
+  title,
+  description,
+  action,
+}: {
+  title: string
+  description: ReactNode
+  action?: ReactNode
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 bg-[#FCFCFC] px-4 py-3.5 dark:bg-muted/20">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-[#171717] dark:text-foreground">{title}</p>
+        <div className="mt-0.5 max-w-[440px] text-xs leading-4 text-[#686D67] dark:text-muted-foreground">
+          {description}
+        </div>
+      </div>
+      {action}
+    </div>
+  )
+}
+
+export function RowAction({
+  children,
+  ...props
+}: ComponentProps<'button'>) {
+  return (
+    <button
+      type="button"
+      className="shrink-0 text-sm text-[#686D67] hover:text-[#171717] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 dark:text-muted-foreground dark:hover:text-foreground"
+      {...props}
+    >
+      {children}
+    </button>
   )
 }
