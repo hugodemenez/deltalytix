@@ -359,7 +359,44 @@ async function revealPickerOption(page, name) {
   await page.waitForTimeout(600)
 }
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form' | 'compare-hub-journals-table' | 'compare-tradezella-what-you-get' | 'connections-import-picker-deepcharts' | 'dashboard-strip-standalone-actions' | 'dashboard-strip-standalone-delete-confirm' | 'public-404-agent-resources' | 'calendar-header-month-year-news' | 'dashboard-centered-view-tabs' | 'dashboard-home-email' | 'renewal-notice-email' | 'landing-hero-16-9-frame' | 'tradovate-connections-fee-config'} ChangelogScene */
+/**
+ * Capture-only: the self-host seed points the demo OAuth app logo at a broker
+ * wordmark, which crops badly in a 28px app mark. Serve a neutral app glyph.
+ */
+async function mockSeedOAuthAppLogo(page) {
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">' +
+    '<rect width="56" height="56" rx="8" fill="#4f46e5"/>' +
+    '<path d="M14 38 L24 26 L31 32 L42 18" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  await page.route('**/logos/rithmic-logo-black.png', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/svg+xml', body: svg }),
+  )
+}
+
+/** Union clip of the Developers app card and its footer line. */
+async function developersCardClip(page, padding = 28) {
+  const box = await page.evaluate(() => {
+    const name = [...document.querySelectorAll('main *')].find(
+      (el) => el.children.length === 0 && el.textContent?.trim() === 'Seed Chart Companion',
+    )
+    if (!name) return null
+    let card = name
+    while (card.parentElement && card.getBoundingClientRect().width < 380) card = card.parentElement
+    while (card.parentElement && !getComputedStyle(card).borderTopWidth.startsWith('1')) card = card.parentElement
+    const group = card.parentElement ?? card
+    const r = group.getBoundingClientRect()
+    return { x: r.x, y: r.y + window.scrollY, width: r.width, height: r.height }
+  })
+  if (!box) return undefined
+  return {
+    x: Math.max(0, box.x - padding),
+    y: Math.max(0, box.y - padding),
+    width: box.width + padding * 2,
+    height: box.height + padding * 2,
+  }
+}
+
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form' | 'compare-hub-journals-table' | 'compare-tradezella-what-you-get' | 'connections-import-picker-deepcharts' | 'dashboard-strip-standalone-actions' | 'dashboard-strip-standalone-delete-confirm' | 'public-404-agent-resources' | 'calendar-header-month-year-news' | 'dashboard-centered-view-tabs' | 'dashboard-home-email' | 'renewal-notice-email' | 'landing-hero-16-9-frame' | 'tradovate-connections-fee-config' | 'settings-connections-api' | 'developers-oauth-apps' | 'docs-api-overview'} ChangelogScene */
 
 
 /**
@@ -924,6 +961,82 @@ export async function captureScene(browser, options) {
       }).catch(() => {})
       await page.waitForTimeout(1200)
       await assertNoDevIssues(page, `${locale} connections hub`)
+      await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'settings-connections-api': {
+      // pr-543: Settings → Connections section. Desktop. Route:
+      // /{locale}/dashboard/settings, section#connections. Seed provides one
+      // personal API token and the demo OAuth app as an authorized app.
+      // Expected: API tokens first, Authorized apps second, developer docs line.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await mockSeedOAuthAppLogo(page)
+      await waitForDashboard(page, locale, siteUrl)
+      await page.goto(`${siteUrl}/${locale}/dashboard/settings#connections`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 120_000,
+      })
+      await dismissCookies(page, locale)
+      const section = page.locator('section#connections')
+      await section.waitFor({ timeout: 60_000 })
+      await page.waitForTimeout(2500)
+      // Keep the sticky subpage header off the section heading.
+      await section.evaluate((el) => {
+        window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 160)
+      })
+      await page.waitForTimeout(600)
+      await waitForNoVisibleToasts(page)
+      await assertNoDevIssues(page, `${locale} settings connections`)
+      await screenshot(page, batch, locale, file, {
+        clip: await clipAround(page, [section], 28),
+      })
+      await page.close()
+      return
+    }
+
+    case 'developers-oauth-apps': {
+      // pr-543: Developers page with the seeded OAuth app. Desktop. Route:
+      // /{locale}/dashboard/developers. Expected: header + owned app list.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await mockSeedOAuthAppLogo(page)
+      await waitForDashboard(page, locale, siteUrl)
+      await page.goto(`${siteUrl}/${locale}/dashboard/developers`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 120_000,
+      })
+      await dismissCookies(page, locale)
+      await page.locator('main').first().waitFor({ timeout: 60_000 })
+      await page.waitForTimeout(3000)
+      await waitForNoVisibleToasts(page)
+      await assertNoDevIssues(page, `${locale} developers`)
+      await screenshot(page, batch, locale, file, {
+        clip: await developersCardClip(page),
+      })
+      await page.close()
+      return
+    }
+
+    case 'docs-api-overview': {
+      // pr-543: public developer docs landing. Desktop. Route: /{locale}/docs.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await page.goto(`${siteUrl}/${locale}/docs`, {
+        waitUntil: 'networkidle',
+        timeout: 120_000,
+      })
+      await dismissCookies(page, locale)
+      await page.waitForTimeout(2000)
+      await assertNoDevIssues(page, `${locale} docs`)
       await screenshot(page, batch, locale, file)
       await page.close()
       return

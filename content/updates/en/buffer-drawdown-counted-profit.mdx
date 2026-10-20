@@ -1,0 +1,13 @@
+---
+title: 'Drawdown on buffered accounts now follows counted profit'
+description: 'For prop accounts with a buffer, the high-water mark and drawdown floor now use the same above-buffer equity as the headline balance.'
+date: '2026-10-11'
+status: completed
+completedDate: '2026-10-11'
+---
+
+# Drawdown on buffered accounts now follows counted profit
+
+On accounts with a buffer, the balance only counts profit above the buffer, but drawdown was still measured on full equity. That could show a trailing account as breached right after it crossed the buffer, or hide a real breach on a static account after a dip back through it.
+
+Drawdown now uses the same above-buffer curve as the balance, so the trailing floor and remaining loss match what the account actually counts. Accounts without a buffer are unchanged.

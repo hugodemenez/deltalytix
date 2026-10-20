@@ -1,0 +1,26 @@
+---
+title: 'Deltalytix now has a public API, with OAuth apps and developer docs'
+description: 'Read and write trades, accounts, connections, imports, and metrics through API v1, sign in with OAuth or a personal token, and manage your apps on a new Developers page.'
+date: '2026-10-11'
+status: completed
+completedDate: '2026-10-19'
+image: '/updates/pr-543/en/public-api-docs.png'
+---
+
+# Deltalytix now has a public API, with OAuth apps and developer docs
+
+You can now reach your journal from your own scripts and tools. API v1 covers your profile, trades, accounts, broker connections (including starting a sync), imports, and metrics such as the summary and equity curve. Each token only gets the scopes you pick, like `trades:read` or `imports:write`.
+
+![API documentation page listing what you can do with each scope](/updates/pr-543/en/public-api-docs.png)
+
+[Read the API documentation](/en/docs) for authentication, every route, error codes, and the full OpenAPI reference. Most guides let you try a request right on the page.
+
+## Build an app other traders can connect
+
+If you're building a tool for other traders, register it as an OAuth app. They sign in with Deltalytix, see exactly what your app asks for, and approve it. They can disconnect it at any time.
+
+Apps live on the new [Developers page](/en/dashboard/developers). Add an app, set its redirect URIs and permissions, rotate its secret, and see how many traders have connected it.
+
+![Developers page with one app, its scopes, and its connected-user count](/updates/pr-543/en/developers-oauth-apps.png)
+
+Just need a token for your own scripts? Create one in [Settings → Connections](/en/dashboard/settings#connections).
