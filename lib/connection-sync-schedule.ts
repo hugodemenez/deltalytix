@@ -22,6 +22,13 @@ export const SYNC_INTERVAL_OPTIONS = [5, 15, 30, 60, 240, 720] as const
 
 export type SyncIntervalMinutes = (typeof SYNC_INTERVAL_OPTIONS)[number]
 
+/**
+ * Cadence a brand-new connection starts with, so automatic sync is on by
+ * default. Applied only when the row is created (never on update), so existing
+ * connections — including ones a user switched to manual — are left untouched.
+ */
+export const DEFAULT_SYNC_INTERVAL_MINUTES: SyncIntervalMinutes = 60
+
 export function isSupportedSyncInterval(
   value: unknown,
 ): value is SyncIntervalMinutes {

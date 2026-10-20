@@ -12,6 +12,7 @@ import {
 } from '@/lib/tradovate/identity'
 import { getTickDetails } from '@/server/tick-details'
 import { prisma } from '@/lib/prisma'
+import { DEFAULT_SYNC_INTERVAL_MINUTES } from '@/lib/connection-sync-schedule'
 import { upsertAccountsForNumbers } from '@/server/connections'
 import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connections/data'
 
@@ -1572,6 +1573,7 @@ export async function storeTradovateToken(
         tokenExpiresAt: new Date(expiresAt),
         environment,
         lastSyncedAt: new Date(),
+        syncIntervalMinutes: DEFAULT_SYNC_INTERVAL_MINUTES,
         ...hostsUpdate,
       }
     })

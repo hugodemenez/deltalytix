@@ -3,6 +3,7 @@
 import { createClient, getUserId } from "@/server/auth";
 import { saveTradesAction } from "@/server/database";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_SYNC_INTERVAL_MINUTES } from "@/lib/connection-sync-schedule";
 import {
   decryptConnectionToken,
   encryptConnectionToken,
@@ -102,6 +103,7 @@ async function persistIgCredentials(
       token: encryptedToken,
       lastSyncedAt: new Date(),
       environment: (JSON.parse(tokenJson) as IgStoredCredentials).environment,
+      syncIntervalMinutes: DEFAULT_SYNC_INTERVAL_MINUTES,
     },
   });
 

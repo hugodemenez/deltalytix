@@ -2,6 +2,8 @@
 
 import { encryptConnectionToken } from '@/lib/connection-token-crypto'
 import { prisma } from '@/lib/prisma'
+import { DEFAULT_SYNC_INTERVAL_MINUTES } from '@/lib/connection-sync-schedule'
+import { supportsDailySync } from '@/app/[locale]/dashboard/connections/daily-sync-services'
 
 /**
  * Upsert trading accounts by number and optionally attach them to a Connection.
@@ -98,6 +100,12 @@ export async function ensureConnection(params: {
       token: encryptedToken ?? null,
       tokenExpiresAt: tokenExpiresAt ?? null,
       dailySyncTime: dailySyncTime ?? null,
+      // Auto sync on by default for new connections of schedulable services,
+      // unless the caller picked a daily time.
+      syncIntervalMinutes:
+        supportsDailySync(service) && !dailySyncTime
+          ? DEFAULT_SYNC_INTERVAL_MINUTES
+          : null,
       includedFeeTypes: includedFeeTypes as object | undefined,
       environment,
     },
