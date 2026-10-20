@@ -2,7 +2,11 @@ import { ArrowLeftRight, Eye, LayoutGrid, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { isWriteScope, redirectHost, SCOPE_PLAIN_LABELS } from "@/app/[locale]/dashboard/settings/connections-format"
 import type { ApiScope } from "@/lib/api/scopes"
-import { approveAuthorizationAction, denyAuthorizationAction } from "./actions"
+import {
+  approveAuthorizationAction,
+  denyAuthorizationAction,
+  switchAccountAction,
+} from "./actions"
 
 type Props = {
   email: string
@@ -19,7 +23,15 @@ type Props = {
   codeChallenge?: string
   codeChallengeMethod?: string
   scopeValue: string
+  /** Relative `oauth/authorize?…` target to come back to after switching account. */
+  switchAccountNext?: string
+  locale?: "en" | "fr"
 }
+
+const SWITCH_ACCOUNT_LABEL = {
+  en: "Use another account",
+  fr: "Changer de compte",
+} as const
 
 function scopeLabel(scope: { id: string; description: string }): string {
   if (scope.id in SCOPE_PLAIN_LABELS) {
@@ -37,6 +49,8 @@ export function AuthorizeConsent({
   codeChallenge,
   codeChallengeMethod,
   scopeValue,
+  switchAccountNext,
+  locale = "en",
 }: Props) {
   const host = redirectHost(redirectUri)
 
@@ -69,6 +83,17 @@ export function AuthorizeConsent({
           <p className="mt-1.5 text-center text-xs leading-4 text-[#686D67]">
             Signed in as {email}
           </p>
+        ) : null}
+        {switchAccountNext ? (
+          <form action={switchAccountAction} className="mt-1 text-center">
+            <input type="hidden" name="next" value={switchAccountNext} />
+            <button
+              type="submit"
+              className="text-xs font-medium leading-4 text-[#404040] underline underline-offset-2 hover:text-[#171717]"
+            >
+              {SWITCH_ACCOUNT_LABEL[locale]}
+            </button>
+          </form>
         ) : null}
         <div className="mt-5 overflow-hidden rounded-[4px] border border-[#E5E5E5]">
           <p className="px-3 pt-2.5 text-xs font-medium text-[#686D67]">It will be able to</p>
