@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   CATCH_UP_WINDOW_MS,
+  defaultDailySyncTime,
   isDailySyncDue,
   lastOccurrenceOf,
 } from './daily-sync-schedule'
@@ -11,6 +12,15 @@ function scheduleAt(hours: number, minutes = 0): Date {
 }
 
 const HOUR = 60 * 60 * 1000
+
+describe('defaultDailySyncTime', () => {
+  it('is 22:00 UTC, the after-market-close preset', () => {
+    const time = defaultDailySyncTime()
+    expect(time.toISOString()).toBe('1970-01-01T22:00:00.000Z')
+    expect(time.getUTCHours()).toBe(22)
+    expect(time.getUTCMinutes()).toBe(0)
+  })
+})
 
 describe('lastOccurrenceOf', () => {
   it('returns today when the time has already passed', () => {
