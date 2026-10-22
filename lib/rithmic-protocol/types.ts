@@ -38,6 +38,12 @@ export interface RithmicProtocolFill {
   ssboe?: number
   usecs?: number
   avgFillPrice?: number
+  /**
+   * Where the fill came from. ShowFillHistory (and its order-history
+   * fallback) is the settled record; ReplayExecutions only tops up the
+   * latest fills history has not published yet.
+   */
+  source?: 'history' | 'replay'
 }
 
 export interface RithmicProtocolCredentials {

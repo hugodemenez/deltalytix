@@ -28,7 +28,11 @@ import {
   getRithmicProtocolAppVersion,
   normalizeGatewayUri,
 } from './systems'
-import { dedupeFillsWithStats } from './dedupe-fills'
+import {
+  dedupeFillsWithStats,
+  markFillSource,
+  preferHistoryFills,
+} from './dedupe-fills'
 
 /** Wall-clock budget for a full PnL snapshot sweep across a user's accounts. */
 const PNL_SNAPSHOT_TOTAL_BUDGET_MS = 30_000
@@ -1437,7 +1441,7 @@ export async function fetchFillsForAccounts(params: {
             endDateYyyymmdd: toYyyymmddNumber(window.end),
           })
           historyFills += accountFills.length
-          fills.push(...accountFills)
+          fills.push(...markFillSource(accountFills, 'history'))
         } catch (error) {
           console.warn(
             `[RITHMIC-PROTOCOL] Fill history failed for ${accountId} (${toYyyymmddString(window.start)}–${toYyyymmddString(window.end)}), falling back to order history`,
@@ -1454,7 +1458,7 @@ export async function fetchFillsForAccounts(params: {
             console.log(
               `[RITHMIC-PROTOCOL] Order-history fallback for ${accountId}: ${fallback.length} fill(s)`,
             )
-            fills.push(...fallback)
+            fills.push(...markFillSource(fallback, 'history'))
           }
           break
         }
@@ -1473,7 +1477,7 @@ export async function fetchFillsForAccounts(params: {
           console.log(
             `[RITHMIC-PROTOCOL] Empty ShowFillHistory for ${accountId}; order-history fallback: ${fallback.length} fill(s)`,
           )
-          fills.push(...fallback)
+          fills.push(...markFillSource(fallback, 'history'))
         } catch (error) {
           console.warn(
             `[RITHMIC-PROTOCOL] Order-history fallback failed for ${accountId}`,
@@ -1505,7 +1509,7 @@ export async function fetchFillsForAccounts(params: {
           console.log(
             `[RITHMIC-PROTOCOL] ReplayExecutions returned ${replayed.length} fill(s) for ${accountId}`,
           )
-          fills.push(...replayed)
+          fills.push(...markFillSource(replayed, 'replay'))
         }
       } catch (error) {
         console.warn(
@@ -1515,7 +1519,7 @@ export async function fetchFillsForAccounts(params: {
       }
     }
 
-    const deduped = dedupeFillsWithStats(fills)
+    const deduped = dedupeFillsWithStats(preferHistoryFills(fills))
     return {
       fills: deduped.fills,
       uniqueUserId,
