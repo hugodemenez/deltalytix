@@ -535,7 +535,7 @@ describe("computeAccountMetrics timezone", () => {
     const { metrics } = computeAccountMetrics(account, trades, timezone)
     const calendar = formatCalendarData(trades, [account], timezone)
     const calendarPnL = Object.fromEntries(
-      Object.entries(calendar).map(([date, day]: [string, { pnl: number }]) => [date, day.pnl])
+      Object.entries(calendar).map(([date, day]) => [date, (day as { pnl: number }).pnl])
     )
 
     expect(metrics.dailyPnL).toEqual(calendarPnL)
