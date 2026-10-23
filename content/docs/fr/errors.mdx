@@ -1,0 +1,115 @@
+---
+title: Erreurs
+description: Enveloppe d’erreur REST, codes de statut HTTP et réponses d’erreur OAuth.
+order: 8
+---
+## Enveloppe d’erreur REST
+
+Les erreurs de l’API v1 utilisent un corps JSON cohérent :
+
+<DocsResponse tone="error" label="Erreur">
+
+```json
+{
+  "error": "machine_code",
+  "message": "Explication lisible",
+  "details": {}
+}
+```
+
+</DocsResponse>
+
+| Champ | Description |
+| --- | --- |
+| `error` | Code machine stable |
+| `message` | Explication lisible |
+| `details` | Contexte structuré optionnel (validation, valeurs supportées, …) |
+
+## Codes de statut HTTP
+
+| Statut | Cause typique |
+| --- | --- |
+| `400` | Erreur de validation (query/body mal formé) |
+| `401` | Bearer manquant, expiré, révoqué ou invalide |
+| `403` | Authentifié mais scope requis manquant |
+| `404` | Ressource introuvable |
+| `422` | Requête sémantiquement invalide (service/type non supporté) |
+| `500` | Erreur serveur inattendue |
+
+### Non autorisé (`401`)
+
+<DocsResponse tone="error" label="Erreur">
+
+```json
+{
+  "error": "unauthorized",
+  "message": "Missing or invalid access token"
+}
+```
+
+</DocsResponse>
+
+Les réponses incluent :
+
+```http
+WWW-Authenticate: Bearer resource_metadata="https://www.deltalytix.app/.well-known/oauth-protected-resource"
+```
+
+### Scope insuffisant (`403`)
+
+<DocsResponse tone="error" label="Erreur">
+
+```json
+{
+  "error": "insufficient_scope",
+  "message": "Token is missing required scope trades:write"
+}
+```
+
+</DocsResponse>
+
+### Service non supporté (`422`)
+
+<DocsResponse tone="error" label="Erreur">
+
+```json
+{
+  "error": "unsupported_service",
+  "message": "Only credential-based connection services can be created in v1",
+  "details": {
+    "supported": ["ibkr", "dxfeed", "rithmic-protocol"]
+  }
+}
+```
+
+</DocsResponse>
+
+## Erreurs OAuth
+
+Les échecs du token endpoint utilisent la forme RFC 6749 (pas l’enveloppe REST) :
+
+<DocsResponse tone="error" label="Erreur">
+
+```json
+{
+  "error": "invalid_grant",
+  "error_description": "Authorization code is invalid or expired"
+}
+```
+
+</DocsResponse>
+
+Les valeurs OAuth `error` courantes incluent `invalid_request`, `invalid_client`, `invalid_grant`, `unauthorized_client`, `unsupported_grant_type` et `invalid_scope`.
+
+Les refus sur l’authorization endpoint redirigent vers le `redirect_uri` enregistré avec `error=access_denied` (et le `state` d’origine s’il a été fourni).
+
+## Compteurs hors erreur
+
+Certains endpoints d’écriture signalent des doublons ou des imports nuls avec un succès HTTP et des compteurs, plutôt qu’un corps d’erreur. Par exemple, [`POST /api/v1/trades`](/docs/trades) renvoie `201` avec `"imported": 0` lorsque chaque ligne existe déjà.
+
+## Conseils de gestion
+
+1. Branchez d’abord sur le statut HTTP, puis sur `error`.
+2. Affichez `message` aux développeurs ; utilisez `error` pour la logique programmatique.
+3. Traitez `details.supported` comme la liste autorisée faisant autorité lorsqu’elle est présente.
+4. Sur `401`, rafraîchissez l’access token OAuth ou demandez un nouveau PAT ; ne réessayez pas indéfiniment.

@@ -28,6 +28,7 @@ import type {
   IbkrSyncStats,
   IbkrTradesResult,
 } from './ibkr-types'
+import { serverActor, trustedUserId, type TrustedActor } from "@/lib/api/server-actor"
 
 const SERVICE = 'ibkr'
 
@@ -158,7 +159,10 @@ async function persistTrades(
   connectionId: string,
 ): Promise<PersistResult> {
   const processedTrades = toPrismaTrades(trades, userId)
-  const saveResult = await saveTradesAction(processedTrades, { userId, connectionId })
+  const saveResult = await saveTradesAction(processedTrades, {
+    ...serverActor(userId),
+    connectionId,
+  })
 
   if (saveResult.error) {
     if (saveResult.error === 'DUPLICATE_TRADES') {
@@ -183,12 +187,17 @@ async function persistTrades(
  * one Flex round-trip fewer — IBKR allows only 10 requests per minute per
  * token, and each statement costs several.
  */
-export async function connectIbkrFlexAccount(rawInput: string): Promise<IbkrConnectResult> {
-  let userId: string
-  try {
-    userId = await getUserId()
-  } catch {
-    return { error: IbkrErrorCode.USER_NOT_AUTHENTICATED }
+export async function connectIbkrFlexAccount(
+  rawInput: string,
+  options?: TrustedActor,
+): Promise<IbkrConnectResult> {
+  let userId = trustedUserId(options) ?? undefined
+  if (!userId) {
+    try {
+      userId = await getUserId()
+    } catch {
+      return { error: IbkrErrorCode.USER_NOT_AUTHENTICATED }
+    }
   }
 
   const { token, queryId } = parseIbkrCredentialsInput(rawInput)
@@ -279,9 +288,9 @@ export async function connectIbkrFlexAccount(rawInput: string): Promise<IbkrConn
 
 export async function syncIbkrAccount(
   accountId: string,
-  options?: { userId?: string },
+  options?: TrustedActor,
 ): Promise<IbkrTradesResult> {
-  let userId = options?.userId
+  let userId = trustedUserId(options) ?? undefined
   if (!userId) {
     try {
       userId = await getUserId()

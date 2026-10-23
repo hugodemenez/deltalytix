@@ -6,10 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StarIcon } from "lucide-react";
 import { ContributionGraph } from "./contribution-graph";
 import { GITHUB_REPO_NAME, GITHUB_REPO_URL } from "@/lib/github-repo";
-import {
-  fetchGithubStatsPayload,
-  type GithubStatsPayload,
-} from "../actions/github-data";
+import type { GithubStatsPayload } from "../actions/github-data";
 
 const formatTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
@@ -122,10 +119,10 @@ function GithubStatsFallback({ starLabel }: { starLabel: string }) {
 /**
  * Landing GitHub card: SSR/client initial paint is a static skeleton only.
  *
- * Stats load in `useEffect` (after paint) via a server action so homepage HTML
- * never waits on GitHub commit pagination. Do not await this data in RSC or
- * wrap it in server Suspense — that reopens a streaming hole and stalls
- * document-complete.
+ * Stats load in `useEffect` (after paint) via GET `/api/github-stats` so
+ * homepage HTML never waits on GitHub commit pagination. Do not await this
+ * data in RSC or wrap it in server Suspense — that reopens a streaming hole
+ * and stalls document-complete.
  */
 export function CachedGithubData({
   starLabel,
@@ -138,20 +135,36 @@ export function CachedGithubData({
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
-    fetchGithubStatsPayload(locale)
+    void fetch(`/api/github-stats?locale=${encodeURIComponent(locale)}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`GITHUB_STATS_UNAVAILABLE:${response.status}`);
+        }
+        return (await response.json()) as GithubStatsPayload | { error?: string };
+      })
       .then((payload) => {
-        if (!cancelled) setData(payload);
+        if (controller.signal.aborted) return;
+        if (!payload || typeof payload !== "object" || !("githubStats" in payload)) {
+          setFailed(true);
+          return;
+        }
+        setData(payload);
       })
       .catch((error: unknown) => {
-        if (cancelled) return;
-        console.error("[CachedGithubData] Failed to load GitHub stats:", error);
+        if (controller.signal.aborted) return;
+        if (error instanceof DOMException && error.name === "AbortError") return;
         setFailed(true);
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [locale]);
 

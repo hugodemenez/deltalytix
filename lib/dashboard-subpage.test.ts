@@ -13,6 +13,7 @@ describe("resolveDashboardSubpage", () => {
     ["/dashboard/settings", "settings"],
     ["/dashboard/billing", "billing"],
     ["/en/dashboard/billing", "billing"],
+    ["/fr/dashboard/developers", "developers"],
   ] as const)("reads %s as %s", (pathname, subpage) => {
     expect(resolveDashboardSubpage(pathname)).toBe(subpage)
   })

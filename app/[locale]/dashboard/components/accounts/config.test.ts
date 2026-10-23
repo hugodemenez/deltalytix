@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { propFirms } from './config'
+import { getMatchingAccountSizes, propFirmMatchesSearch, propFirms } from './config'
 
 describe('Funded Futures Family presets', () => {
   const firm = propFirms.fundedFuturesFamily
@@ -7,6 +7,7 @@ describe('Funded Futures Family presets', () => {
   it('is listed under its own name and is not Funded Futures Network or My Funded Futures', () => {
     expect(firm).toBeDefined()
     expect(firm.name).toBe('Funded Futures Family')
+    expect(firm.aliases).toEqual(['FFF', 'FFFamily'])
     expect(propFirms.myFundedFutures.name).toBe('My Funded Futures')
     expect(Object.keys(propFirms)).not.toContain('ffn')
     expect(Object.keys(propFirms)).not.toContain('fundedFuturesNetwork')
@@ -168,5 +169,23 @@ describe('Funded Futures Family presets', () => {
       expect(size.maxFundedAccounts).toBe(5)
       expect(size.priceWithPromo).toBe(size.price)
     }
+  })
+
+  it('shows up when searching FFF, Family, or a plan name', () => {
+    expect(propFirmMatchesSearch('fundedFuturesFamily', firm, 'fff')).toBe(true)
+    expect(propFirmMatchesSearch('fundedFuturesFamily', firm, 'FFFamily')).toBe(true)
+    expect(propFirmMatchesSearch('fundedFuturesFamily', firm, 'family')).toBe(true)
+    expect(propFirmMatchesSearch('fundedFuturesFamily', firm, 'premier+')).toBe(true)
+    expect(propFirmMatchesSearch('myFundedFutures', propFirms.myFundedFutures, 'fff')).toBe(
+      false,
+    )
+    expect(propFirmMatchesSearch('myFundedFutures', propFirms.myFundedFutures, 'family')).toBe(
+      false,
+    )
+  })
+
+  it('lists every FFF size when the query matches the firm, not a single size', () => {
+    const sizes = getMatchingAccountSizes('fundedFuturesFamily', firm, 'FFF')
+    expect(sizes.map(([key]) => key)).toEqual(Object.keys(firm.accountSizes))
   })
 })

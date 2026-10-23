@@ -44,6 +44,10 @@ import {
 } from '@/components/consent-record'
 import { getUserTeams } from './actions'
 import { cn } from '@/lib/utils'
+import ApiConnectionsSection, {
+  type AuthorizedAppRow,
+  type PersonalTokenRow,
+} from './api-connections-section'
 
 interface UserIdentity {
   id: string
@@ -114,7 +118,15 @@ function RowAction({
   )
 }
 
-export default function SettingsPage() {
+export default function SettingsPage({
+  initialAuthorizedApps = [],
+  initialPersonalTokens = [],
+  ownedAppCount = 0,
+}: {
+  initialAuthorizedApps?: AuthorizedAppRow[]
+  initialPersonalTokens?: PersonalTokenRow[]
+  ownedAppCount?: number
+}) {
   const t = useI18n()
   const consentCopy = getConsentRecordCopy(t)
   const isMobile = useIsMobile()
@@ -404,6 +416,12 @@ export default function SettingsPage() {
             </PrefRow>
           </div>
         </SettingsSection>
+
+        <ApiConnectionsSection
+          initialAuthorizedApps={initialAuthorizedApps}
+          initialPersonalTokens={initialPersonalTokens}
+          ownedAppCount={ownedAppCount}
+        />
 
         <SettingsSection label={t('dashboard.settings.weeklyRecap')}>
           <div className="divide-y divide-[#E5E5E5] dark:divide-border">

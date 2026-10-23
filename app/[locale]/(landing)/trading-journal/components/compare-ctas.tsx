@@ -33,10 +33,13 @@ export function CompareCtas({
   locale,
   placement,
   layout = "row",
+  primaryLabel,
 }: {
   locale: string;
   placement: string;
   layout?: "row" | "stack";
+  /** Overrides the shared `cta.getStarted` label. Hub hero only. */
+  primaryLabel?: string;
 }) {
   const copy = getCompareCopy(locale);
   const pricingHref = localizeLandingHref(locale, COMPARE_PRICING_HREF);
@@ -61,7 +64,9 @@ export function CompareCtas({
         }
         className="inline-flex h-12 w-full items-center justify-center rounded-[4px] bg-[oklch(0.22_0.01_95)] px-6 text-sm font-medium text-white transition-[opacity,transform] hover:opacity-85 active:scale-[0.96] sm:w-auto dark:bg-[oklch(0.94_0.01_95)] dark:text-[oklch(0.17_0_0)]"
       >
-        <GetStartedLabel>{copy.cta.getStarted}</GetStartedLabel>
+        <GetStartedLabel>
+          {primaryLabel ?? copy.cta.getStarted}
+        </GetStartedLabel>
         <span className="ms-3">→</span>
       </Link>
       <Link

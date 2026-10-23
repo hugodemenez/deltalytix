@@ -9,17 +9,16 @@ import {
   ATTRIBUTION_STORAGE_KEY,
   type Attribution,
   attributionToPostHogProperties,
-  hasAttribution,
   isDeltalytixHost,
   mergeAttributionFirstTouch,
   parseAttributionParams,
+  planAttributionStorage,
   readClientAttribution,
   serializeAttribution,
 } from "@/lib/attribution";
 import {
   CONSENT_UPDATED_EVENT,
-  isGoogleTagAllowed,
-  readStoredConsentSettings,
+  resolveClientGoogleConsent,
 } from "@/lib/consent-settings";
 
 /**
@@ -31,17 +30,6 @@ import {
  * lives as long as the tab, and is gone with it.
  */
 let bufferedAttribution: Attribution | null = null;
-
-/**
- * Attribution is marketing data, not a functional requirement, so it lives
- * behind the same gate as the Google tag: no banner decision yet, or a decision
- * that turned both analytics and ads off, means nothing is written anywhere.
- */
-function attributionStorageAllowed(): boolean {
-  const settings = readStoredConsentSettings();
-  if (!settings) return false;
-  return isGoogleTagAllowed(settings);
-}
 
 function writeAttributionCookie(attribution: Attribution) {
   const value = encodeURIComponent(serializeAttribution(attribution));
@@ -63,6 +51,20 @@ function persistAttribution(attribution: Attribution) {
     );
   } catch {
     // private mode / quota — cookie still carries attribution across OAuth
+  }
+}
+
+function clearAttribution() {
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  const expired = `${ATTRIBUTION_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax${secure}`;
+  document.cookie = expired;
+  if (isDeltalytixHost(window.location.hostname)) {
+    document.cookie = `${expired}; Domain=.deltalytix.app`;
+  }
+  try {
+    window.localStorage.removeItem(ATTRIBUTION_STORAGE_KEY);
+  } catch {
+    // private mode — nothing was stored there
   }
 }
 
@@ -101,16 +103,22 @@ export function AttributionCapture() {
         fromUrl,
       );
 
-      if (!attributionStorageAllowed()) return;
+      // Attribution is marketing data, so it follows the Google tag's Consent
+      // Mode state (region default or saved decision).
+      const consent = resolveClientGoogleConsent();
+      const plan = planAttributionStorage({
+        stored: readClientAttribution(),
+        incoming: bufferedAttribution,
+        adStorage: consent.ad_storage === "granted",
+        analyticsStorage: consent.analytics_storage === "granted",
+      });
 
-      const existing = readClientAttribution();
-      const merged = mergeAttributionFirstTouch(existing, bufferedAttribution);
-
-      if (!hasAttribution(merged)) return;
+      if (plan.action === "clear") clearAttribution();
+      if (plan.action !== "persist") return;
 
       // Re-persist so cookie Max-Age refreshes when we already had storage only.
-      persistAttribution(merged);
-      registerWithPostHog(merged);
+      persistAttribution(plan.attribution);
+      registerWithPostHog(plan.attribution);
     };
 
     capture();
