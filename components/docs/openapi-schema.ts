@@ -43,6 +43,7 @@ export type DocsOpenApiDocument = {
     version?: string
     description?: string
   }
+  servers?: Array<{ url: string }>
   paths?: Record<string, OpenApiPathItem>
 }
 
@@ -61,6 +62,28 @@ export function getOpenApiOperation(
   method: string,
   path: string,
 ): OpenApiOperation | null {
-  const operation = document?.paths?.[path]?.[method.toLowerCase()]
-  return operation && !Array.isArray(operation) ? operation : null
+  const key = method.toLowerCase()
+  const paths = document?.paths
+  if (!paths) return null
+  // Spec paths are relative to the server URL (e.g. https://host/api), while
+  // docs pages use the full same-origin path (/api/v1/...). Try both.
+  const candidates = [path]
+  for (const server of document?.servers ?? []) {
+    let base = ""
+    try {
+      base = new URL(server.url, "https://placeholder.local").pathname
+    } catch {
+      continue
+    }
+    base = base.replace(/\/+$/, "")
+    if (base && path.startsWith(`${base}/`)) {
+      candidates.push(path.slice(base.length))
+    }
+  }
+  if (path.startsWith("/api/")) candidates.push(path.slice(4))
+  for (const candidate of candidates) {
+    const operation = paths[candidate]?.[key]
+    if (operation && !Array.isArray(operation)) return operation
+  }
+  return null
 }
