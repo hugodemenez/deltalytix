@@ -32,6 +32,7 @@ import {
   dedupeFillsWithStats,
   markFillSource,
   preferHistoryFills,
+  consolidateOrderFills,
 } from './dedupe-fills'
 
 /** Wall-clock budget for a full PnL snapshot sweep across a user's accounts. */
@@ -1520,6 +1521,8 @@ export async function fetchFillsForAccounts(params: {
     }
 
     const deduped = dedupeFillsWithStats(preferHistoryFills(fills))
+    // Merge split order pieces only after exact re-deliveries are dropped.
+    deduped.fills = consolidateOrderFills(deduped.fills)
     return {
       fills: deduped.fills,
       uniqueUserId,
