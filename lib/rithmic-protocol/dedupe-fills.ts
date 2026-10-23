@@ -79,6 +79,50 @@ export function rithmicProtocolFillPairKey(
   ].join('|')
 }
 
+/**
+ * ShowFillHistory and ReplayExecutions stamp the same execution a few
+ * seconds apart (seen up to ~10s on Lucid). A resync that takes the other
+ * source must still land on the stored row instead of inserting a twin.
+ */
+export const RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS = 2 * 60 * 1000
+
+function parseIdentityTime(value: string | null | undefined): number | null {
+  if (!value) return null
+  const ms = Date.parse(value)
+  return Number.isNaN(ms) ? null : ms
+}
+
+/**
+ * Same round-trip when account, instrument, canonical fill pair match and
+ * both entry and close times sit within the jitter tolerance. The time
+ * window (not a calendar day) keeps a recycled fill_id from a later session
+ * from stealing an earlier row.
+ */
+export function isSameRithmicProtocolRoundTrip(
+  a: RithmicProtocolFillPairIdentity,
+  b: RithmicProtocolFillPairIdentity,
+  toleranceMs = RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS,
+): boolean {
+  const aEntryId = canonicalRithmicFillId(a.entryId)
+  const aCloseId = canonicalRithmicFillId(a.closeId)
+  if (!aEntryId || !aCloseId) return false
+  if (aEntryId !== canonicalRithmicFillId(b.entryId)) return false
+  if (aCloseId !== canonicalRithmicFillId(b.closeId)) return false
+  if ((a.accountNumber ?? '') !== (b.accountNumber ?? '')) return false
+  if ((a.instrument ?? '') !== (b.instrument ?? '')) return false
+  const aEntry = parseIdentityTime(a.entryDate)
+  const bEntry = parseIdentityTime(b.entryDate)
+  const aClose = parseIdentityTime(a.closeDate)
+  const bClose = parseIdentityTime(b.closeDate)
+  if (aEntry == null || bEntry == null || aClose == null || bClose == null) {
+    return false
+  }
+  return (
+    Math.abs(aEntry - bEntry) <= toleranceMs &&
+    Math.abs(aClose - bClose) <= toleranceMs
+  )
+}
+
 export function resolveRithmicProtocolPersistedId(
   incoming: RithmicProtocolFillPairIdentity,
   existingRows: Array<{ id: string } & RithmicProtocolFillPairIdentity>,
@@ -87,6 +131,11 @@ export function resolveRithmicProtocolPersistedId(
   if (!incomingKey) return undefined
   for (const row of existingRows) {
     if (rithmicProtocolFillPairKey(row) === incomingKey) return row.id
+  }
+  // Close time is not part of identity: same fill pair, timestamps jittered
+  // between ShowFillHistory and ReplayExecutions.
+  for (const row of existingRows) {
+    if (isSameRithmicProtocolRoundTrip(incoming, row)) return row.id
   }
   return undefined
 }
@@ -193,4 +242,89 @@ export function dedupeFillsWithStats(
 
 export function dedupeFills(fills: RithmicProtocolFill[]): RithmicProtocolFill[] {
   return dedupeFillsWithStats(fills).fills
+}
+
+export function markFillSource(
+  fills: RithmicProtocolFill[],
+  source: NonNullable<RithmicProtocolFill['source']>,
+): RithmicProtocolFill[] {
+  return fills.map((fill) => ({ ...fill, source }))
+}
+
+function sourceTimestampMs(fill: RithmicProtocolFill): number | null {
+  if (typeof fill.ssboe === 'number' && fill.ssboe > 0) {
+    const usecs = typeof fill.usecs === 'number' ? fill.usecs : 0
+    return fill.ssboe * 1000 + Math.floor(usecs / 1000)
+  }
+  return null
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/**
+ * ShowFillHistory is the settled record; ReplayExecutions only fills the gap
+ * after the last fill history has published. Mixing both for the same period
+ * double-counted executions on Lucid: Replay can split one history fill into
+ * partials under different fill ids (history 1163441 ×5 vs replay 1163440 ×2
+ * + 1163441 ×3), omit `fill_date`, and stamp a different time — so the
+ * fingerprint dedupe kept both, FIFO saw extra contracts, and an open lot
+ * carried into the next session as a phantom overnight trade.
+ *
+ * Per account, a replay fill is dropped when:
+ * - history has the same canonical fill id + symbol within a day of it, or
+ * - it is at or before the newest history fill (+ jitter tolerance).
+ * Accounts with no history fills keep every replay fill.
+ */
+export function preferHistoryFills(
+  fills: RithmicProtocolFill[],
+  toleranceMs = RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS,
+): RithmicProtocolFill[] {
+  const historyByAccount = new Map<
+    string,
+    { newestMs: number; idTimes: Map<string, number[]> }
+  >()
+  for (const fill of fills) {
+    if (fill.source !== 'history') continue
+    const accountId = fill.accountId || 'unknown'
+    const entry = historyByAccount.get(accountId) ?? {
+      newestMs: Number.NEGATIVE_INFINITY,
+      idTimes: new Map<string, number[]>(),
+    }
+    const ts = sourceTimestampMs(fill)
+    if (ts != null && ts > entry.newestMs) entry.newestMs = ts
+    const fillId = canonicalRithmicFillId(fill.fillId)
+    if (fillId) {
+      const key = `${fillId}|${(fill.symbol ?? '').trim().toUpperCase()}`
+      const times = entry.idTimes.get(key) ?? []
+      times.push(ts ?? Number.NaN)
+      entry.idTimes.set(key, times)
+    }
+    historyByAccount.set(accountId, entry)
+  }
+  if (historyByAccount.size === 0) return fills
+
+  return fills.filter((fill) => {
+    if (fill.source !== 'replay') return true
+    const history = historyByAccount.get(fill.accountId || 'unknown')
+    if (!history) return true
+    const ts = sourceTimestampMs(fill)
+    const fillId = canonicalRithmicFillId(fill.fillId)
+    if (fillId) {
+      const times = history.idTimes.get(
+        `${fillId}|${(fill.symbol ?? '').trim().toUpperCase()}`,
+      )
+      if (
+        times?.some(
+          (historyTs) =>
+            ts == null || Number.isNaN(historyTs) || Math.abs(historyTs - ts) <= DAY_MS,
+        )
+      ) {
+        return false
+      }
+    }
+    if (ts != null && Number.isFinite(history.newestMs)) {
+      return ts > history.newestMs + toleranceMs
+    }
+    return true
+  })
 }
