@@ -7,7 +7,10 @@ import {
   generatePersistedTradeUUID,
   RITHMIC_PROTOCOL_TRADE_TAG,
 } from "@/lib/trade-id-utils"
-import { resolveRithmicProtocolPersistedId } from "@/lib/rithmic-protocol/dedupe-fills"
+import {
+  filterRithmicProtocolTradesCoveredByStoredRows,
+  resolveRithmicProtocolPersistedId,
+} from "@/lib/rithmic-protocol/dedupe-fills"
 import {
   isTradovatePersistedTrade,
   resolveTradovatePersistedId,
@@ -158,15 +161,34 @@ async function assignExistingRithmicProtocolIds(
       closeDate: true,
       entryId: true,
       closeId: true,
+      side: true,
+      quantity: true,
+      entryPrice: true,
+      closePrice: true,
     },
   })
   if (existing.length === 0) return trades
 
-  return trades.map((trade) => {
+  const assigned = trades.map((trade) => {
     if (!isRithmicProtocolPersistedTrade(trade)) return trade
     const existingId = resolveRithmicProtocolPersistedId(trade, existing)
     return existingId ? { ...trade, id: existingId } : trade
   })
+
+  // Stored rows can pair the same contracts differently (rebuilt from a
+  // broker export, or saved before split order pieces were merged). Skip a
+  // trade whose entry and exit contracts are already stored so the sync does
+  // not insert a second copy next to them.
+  const { skipped } = filterRithmicProtocolTradesCoveredByStoredRows(
+    assigned.filter(isRithmicProtocolPersistedTrade),
+    existing,
+  )
+  if (skipped.length === 0) return assigned
+  console.log(
+    `[saveTrades] Skipped ${skipped.length} ${RITHMIC_PROTOCOL_TRADE_TAG} trade(s) already covered by stored rows`,
+  )
+  const skippedSet = new Set(skipped)
+  return assigned.filter((trade) => !skippedSet.has(trade))
 }
 
 export async function saveTradesCore(
