@@ -96,6 +96,9 @@ describe("agent resources", () => {
     expect(paths).toContain("/llms.txt");
     expect(paths).toContain("/docs/api");
     expect(paths).toContain("/openapi.json");
+    expect(paths).toContain("/api/mcp");
+    expect(paths).toContain("/.well-known/oauth-authorization-server");
+    expect(paths).toContain("/.well-known/oauth-protected-resource/api/mcp");
   });
 
   it("uses root-relative paths only", () => {

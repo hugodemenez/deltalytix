@@ -1,0 +1,123 @@
+---
+title: MCP
+description: Connecter Claude, ChatGPT, Cursor ou Grok à vos données Deltalytix via le Model Context Protocol.
+order: 2
+---
+
+Le serveur MCP est un endpoint HTTP streamable à l’adresse `https://www.deltalytix.app/api/mcp`. Il parle le Model Context Protocol et appelle les mêmes fonctions serveur que les routes de lecture sous `/api/v1`. Chaque outil est limité à l’utilisateur propriétaire du jeton bearer.
+
+Le serveur est sans état. Envoyez un message JSON-RPC par `POST`. Les réponses sont en `application/json` (pas un flux SSE maintenu ouvert). `GET` et `DELETE` répondent 405.
+
+## Authentification
+
+Envoyez le même jeton bearer que l’API REST :
+
+```http
+Authorization: Bearer dltx_pat_…
+```
+
+Deux types de jetons fonctionnent :
+
+- Un **personal access token** depuis [Paramètres → Connexions](/fr/dashboard/settings#connections). Choisissez les scopes de lecture dont les outils ont besoin. La valeur n’est affichée qu’une fois. C’est le chemin que Claude, ChatGPT, Cursor et Grok peuvent utiliser aujourd’hui.
+- Un **access token OAuth** issu du flux authorization code sur `/oauth/authorize`, avec PKCE `S256`. Le jeton et le refresh token sont les mêmes enregistrements que l’API REST. Révoquer l’application dans Paramètres → Connexions pose `revokedAt`, et l’appel MCP suivant est refusé.
+
+Un jeton absent, inconnu, expiré ou révoqué renvoie HTTP 401. L’en-tête `WWW-Authenticate` indique `resource_metadata` pour ce serveur :
+
+```http
+WWW-Authenticate: Bearer realm="mcp", resource_metadata="https://www.deltalytix.app/.well-known/oauth-protected-resource/api/mcp"
+```
+
+Ce document pointe `authorization_servers` vers Deltalytix. Le client lit ensuite [`/.well-known/oauth-authorization-server`](/.well-known/oauth-authorization-server) pour les endpoints d’autorisation, de jeton et de révocation, et pour `code_challenge_methods_supported: ["S256"]`.
+
+### Enregistrement dynamique de client
+
+Non pris en charge. Chaque application OAuth est un client confidentiel appartenant à un utilisateur connecté, créée sur la [page Développeurs](/fr/dashboard/developers), avec un client secret et des URI de redirection préenregistrées. Les métadonnées du serveur d’autorisation n’annoncent pas `registration_endpoint`.
+
+Les clients qui ne savent se connecter qu’en s’enregistrant eux-mêmes (certains flux de connecteurs Claude et ChatGPT) doivent utiliser un personal access token dans l’en-tête `Authorization` en attendant cet enregistrement. Un client capable de stocker un client id et un secret peut utiliser le flux authorization code + PKCE déjà en place.
+
+### Scopes
+
+Les outils vérifient les scopes du jeton. Un jeton qui peut appeler `get_profile` ne peut pas appeler `list_trades` sans `trades:read`. L’appel renvoie une erreur d’outil et ne lit aucune donnée.
+
+| Outil | Scope | Route REST |
+| --- | --- | --- |
+| `get_profile` | `profile:read` | `GET /api/v1/me` |
+| `list_accounts` | `accounts:read` | `GET /api/v1/accounts` |
+| `list_trades` | `trades:read` | `GET /api/v1/trades` |
+| `get_metrics_summary` | `metrics:read` | `GET /api/v1/metrics/summary` |
+| `get_account_metrics` | `metrics:read` | `GET /api/v1/metrics/accounts` |
+| `get_equity_curve` | `metrics:read` | `GET /api/v1/metrics/equity` |
+| `get_daily_pnl` | `metrics:read` | série quotidienne de `GET /api/v1/metrics/equity` |
+| `list_connections` | `connections:read` | `GET /api/v1/connections` |
+
+Un jeton en lecture seule doit demander `profile:read trades:read accounts:read connections:read metrics:read`.
+
+`list_trades` utilise `limit` (défaut 100, maximum 500) et `cursor`. `get_equity_curve` et `get_daily_pnl` utilisent `limit` (défaut 366, maximum 1000) et `cursor`. Aucun outil n’accepte d’identifiant utilisateur. `list_connections` ne renvoie pas les jetons courtier.
+
+Les outils d’écriture (créer des trades, importer un fichier, créer ou synchroniser une connexion courtier) ne sont pas exposés. Utilisez l’API REST pour cela, avec le scope d’écriture correspondant.
+
+### Révoquer l’accès
+
+Paramètres → Connexions liste les personal access tokens et les applications OAuth que vous avez autorisées. Révoquez l’un ou l’autre ici. Le serveur MCP lit la même table de jetons : un jeton révoqué cesse de fonctionner à la requête suivante. Il n’y a pas de liste séparée de clients MCP.
+
+## Connexion
+
+### Cursor
+
+`~/.cursor/mcp.json` ou le `.cursor/mcp.json` du projet :
+
+```json
+{
+  "mcpServers": {
+    "deltalytix": {
+      "url": "https://www.deltalytix.app/api/mcp",
+      "headers": {
+        "Authorization": "Bearer dltx_pat_YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+### Claude
+
+Ajoutez un connecteur personnalisé et indiquez l’URL `https://www.deltalytix.app/api/mcp`.
+
+Quand le connecteur accepte un en-tête, définissez :
+
+```http
+Authorization: Bearer dltx_pat_YOUR_TOKEN
+```
+
+La configuration de Claude Desktop reprend la même forme que Cursor, avec `"type": "http"` :
+
+```json
+{
+  "mcpServers": {
+    "deltalytix": {
+      "type": "http",
+      "url": "https://www.deltalytix.app/api/mcp",
+      "headers": {
+        "Authorization": "Bearer dltx_pat_YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+Si Claude exige un enregistrement OAuth dynamique, utilisez l’en-tête ci-dessus. Cet enregistrement n’est pas proposé pour l’instant.
+
+### ChatGPT
+
+Dans les réglages des connecteurs, ajoutez un serveur MCP avec l’URL `https://www.deltalytix.app/api/mcp`. Fournissez le personal access token comme credential bearer ou comme en-tête `Authorization`, la même valeur que ci-dessus. Les flux ChatGPT qui exigent l’enregistrement dynamique de client ne peuvent pas terminer OAuth contre ce serveur pour l’instant ; le jeton bearer est le chemin pris en charge.
+
+### Grok et les autres clients
+
+Tout client qui implémente le HTTP streamable peut `POST` vers `https://www.deltalytix.app/api/mcp` avec :
+
+- `Authorization: Bearer dltx_pat_YOUR_TOKEN`
+- `Accept: application/json, text/event-stream`
+- `Content-Type: application/json`
+- `MCP-Protocol-Version: 2025-06-18` sur chaque requête après `initialize`
+
+Découverte pour le client : [`/.well-known/mcp/server-card.json`](/.well-known/mcp/server-card.json).

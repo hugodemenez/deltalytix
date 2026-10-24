@@ -96,17 +96,42 @@ export function apiError(
   })
 }
 
+export type UnauthorizedOptions = {
+  /** Path inserted into `resource_metadata`. Defaults to the site-wide document. */
+  resourceMetadataPath?: string
+  /** `realm` auth-param. Omitted unless a caller needs a distinct audience. */
+  realm?: string
+  /**
+   * Space-separated scopes a client should request. Quoted because the value
+   * contains spaces (RFC 7235 auth-param).
+   */
+  scopes?: readonly string[]
+}
+
+export function wwwAuthenticateHeader(
+  request?: Request,
+  options?: UnauthorizedOptions,
+): string {
+  const resourceMetadata = absoluteUrl(
+    options?.resourceMetadataPath ?? "/.well-known/oauth-protected-resource",
+    request,
+  )
+  const params = [
+    options?.realm ? `realm="${options.realm}"` : null,
+    `resource_metadata="${resourceMetadata}"`,
+    options?.scopes?.length ? `scope="${options.scopes.join(" ")}"` : null,
+  ].filter((part): part is string => Boolean(part))
+
+  return `Bearer ${params.join(", ")}`
+}
+
 export function unauthorized(
   message = "Missing or invalid access token",
   request?: Request,
+  options?: UnauthorizedOptions,
 ): NextResponse {
-  const resourceMetadata = absoluteUrl(
-    "/.well-known/oauth-protected-resource",
-    request,
-  )
-
   return apiError(401, "unauthorized", message, undefined, {
-    "WWW-Authenticate": `Bearer resource_metadata="${resourceMetadata}"`,
+    "WWW-Authenticate": wwwAuthenticateHeader(request, options),
   })
 }
 

@@ -1,38 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticateApiRequest } from "@/lib/api/auth"
-import { computeMetricsForAccounts } from "@/lib/account-metrics"
+import { readAccountMetrics } from "@/lib/api/v1/reads"
 import { withPublicApiRequestLog } from "@/lib/api/with-request-log"
-import { prisma } from "@/lib/prisma"
-import type { Account } from "@/context/data-provider"
 
 async function getHandler(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["metrics:read"])
   if (!auth.ok) return auth.response
 
-  const [accounts, trades] = await Promise.all([
-    prisma.account.findMany({
-      where: { userId: auth.auth.userId },
-      include: { payouts: true },
-    }),
-    prisma.trade.findMany({ where: { userId: auth.auth.userId } }),
-  ])
-
-  const withMetrics = computeMetricsForAccounts(
-    accounts as unknown as Account[],
-    trades,
-  )
-
-  return NextResponse.json({
-    data: withMetrics.map((account) => ({
-      id: account.id,
-      number: account.number,
-      balance: account.balanceToDate,
-      drawdown: account.metrics?.drawdownProgress ?? null,
-      consistency: account.metrics?.isConsistent ?? null,
-      progress: account.metrics?.progress ?? null,
-      metrics: account.metrics ?? null,
-    })),
-  })
+  return NextResponse.json(await readAccountMetrics(auth.auth.userId))
 }
 
 export const GET = withPublicApiRequestLog(getHandler)

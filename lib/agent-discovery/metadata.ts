@@ -139,14 +139,33 @@ export const AGENT_RESOURCES = [
     description: "Published agent skills with content digests.",
   },
   {
+    title: "MCP server",
+    path: "/api/mcp",
+    description:
+      "Streamable HTTP Model Context Protocol endpoint. Requires a bearer token; read tools cover the authenticated user's accounts, trades, and metrics.",
+  },
+  {
     title: "MCP server card",
     path: "/.well-known/mcp/server-card.json",
-    description: "Model Context Protocol server card for browser-exposed tools.",
+    description:
+      "Model Context Protocol server card advertising the streamable HTTP endpoint and its tools.",
   },
   {
     title: "OAuth protected resource metadata",
     path: "/.well-known/oauth-protected-resource",
     description: "RFC 9728 metadata listing the authorization server and supported scopes.",
+  },
+  {
+    title: "MCP protected resource metadata",
+    path: "/.well-known/oauth-protected-resource/api/mcp",
+    description:
+      "RFC 9728 metadata for the MCP server, pointing at the Deltalytix authorization server.",
+  },
+  {
+    title: "OAuth authorization server metadata",
+    path: "/.well-known/oauth-authorization-server",
+    description:
+      "RFC 8414 metadata: authorization, token, and revocation endpoints, with PKCE S256.",
   },
   {
     title: "OpenID Connect discovery",
@@ -307,6 +326,7 @@ Use Deltalytix to help traders understand imported trade history, dashboard anal
 
 - The user wants to discover Deltalytix product capabilities.
 - The user needs API, authentication, MCP, or browser tool discovery metadata.
+- The user wants an agent (Claude, ChatGPT, Cursor, Grok) to read their Deltalytix accounts, trades, or metrics.
 - The user asks how to import trades, review analytics, journal trades, or work with team dashboards.
 
 ## Useful resources
@@ -314,7 +334,10 @@ Use Deltalytix to help traders understand imported trade history, dashboard anal
 - Site index for language models: /llms.txt
 - API catalog: /.well-known/api-catalog
 - OpenAPI description (security schemes and scopes): /openapi.json
+- MCP server (streamable HTTP, bearer token required): /api/mcp
 - MCP server card: /.well-known/mcp/server-card.json
+- MCP protected resource metadata: /.well-known/oauth-protected-resource/api/mcp
+- OAuth authorization server metadata: /.well-known/oauth-authorization-server
 - OAuth protected resource metadata: /.well-known/oauth-protected-resource
 - Homepage markdown: request / with Accept: text/markdown
 
@@ -325,4 +348,4 @@ Unknown /api/* paths return 404 with that envelope, never HTML.
 `;
 
 export const deltalytixSkillDigest =
-  "sha256:9fff4eb496cd629f20f7f2dd54b566859e855017ac6537d62a61a4b855dee8a4";
+  "sha256:bee3d05b482078e22188101b8fd23f39901f097c77ee7b1daf8541ab04e16246";

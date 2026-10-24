@@ -96,6 +96,15 @@ describe("the published OpenAPI description", () => {
     }
   });
 
+  it("documents the streamable HTTP MCP endpoint", () => {
+    const doc = document();
+
+    expect(doc.paths["/mcp"].post.operationId).toBe("mcpStreamableHttp");
+    expect(doc.paths["/mcp"].post.security).toContainEqual({
+      oauth2: READ_ONLY_SCOPES,
+    });
+  });
+
   it("documents the OAuth endpoints as unauthenticated", () => {
     const doc = document();
 

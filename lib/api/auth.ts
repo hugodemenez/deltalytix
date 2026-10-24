@@ -1,7 +1,11 @@
 import { prisma } from "@/lib/prisma"
 import { hasRequiredScopes } from "@/lib/api/scopes"
 import { isAccessTokenExpired, sha256 } from "@/lib/api/tokens"
-import { insufficientScope, unauthorized } from "@/lib/api/errors"
+import {
+  insufficientScope,
+  unauthorized,
+  type UnauthorizedOptions,
+} from "@/lib/api/errors"
 import { setPublicApiRequestLogContext } from "@/lib/api/request-log"
 import { after, type NextResponse } from "next/server"
 
@@ -27,11 +31,15 @@ function extractBearerToken(request: Request): string | null {
 export async function authenticateApiRequest(
   request: Request,
   requiredScopes?: string[],
+  options?: UnauthorizedOptions,
 ): Promise<AuthenticateApiResult> {
   const token = extractBearerToken(request)
   if (!token) {
     setPublicApiRequestLogContext({ tokenType: "none" })
-    return { ok: false, response: unauthorized("Missing access token", request) }
+    return {
+      ok: false,
+      response: unauthorized("Missing access token", request, options),
+    }
   }
 
   const tokenHash = sha256(token)
@@ -42,7 +50,10 @@ export async function authenticateApiRequest(
 
   if (!record || record.revokedAt) {
     setPublicApiRequestLogContext({ tokenType: "unknown" })
-    return { ok: false, response: unauthorized("Invalid or revoked access token", request) }
+    return {
+      ok: false,
+      response: unauthorized("Invalid or revoked access token", request, options),
+    }
   }
 
   if (isAccessTokenExpired(record)) {
@@ -52,7 +63,10 @@ export async function authenticateApiRequest(
       clientId: record.app?.clientId ?? null,
       userId: record.userId,
     })
-    return { ok: false, response: unauthorized("Access token has expired", request) }
+    return {
+      ok: false,
+      response: unauthorized("Access token has expired", request, options),
+    }
   }
 
   const tokenType = record.appId ? "oauth" : "pat"

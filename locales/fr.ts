@@ -82,7 +82,7 @@ export default {
   "updates.weeklyVideo": "📺 Dernière vidéo de la semaine",
   "docs.title": "Documentation API.",
   "docs.description":
-    "Authentifiez-vous avec OAuth ou des personal access tokens, puis lisez et écrivez trades, comptes, connexions, imports et métriques via l’API publique Deltalytix v1.",
+    "Authentifiez-vous avec OAuth ou des personal access tokens, puis lisez et écrivez trades, comptes, connexions, imports et métriques via l’API publique Deltalytix v1. Connectez Claude, ChatGPT, Cursor ou Grok via MCP.",
   "docs.sections": "Guides",
   "docs.sectionLabel": "Section {number}",
   "docs.onThisPage": "Sur cette page",

@@ -84,8 +84,9 @@ function errorResponseForPath(pathname: string): Response {
 }
 
 /**
- * Wrap an App Router handler so every `/api/v1` and `/api/oauth` request emits
- * exactly one structured log line (method, route, status, latency, actor).
+ * Wrap an App Router handler so every `/api/v1`, `/api/oauth`, and `/api/mcp`
+ * request emits exactly one structured log line (method, route, status,
+ * latency, actor).
  *
  * The returned handler accepts an optional context so unit tests can call
  * `GET(request)` while App Router still passes `{ params }`.
@@ -107,10 +108,12 @@ export function withPublicApiRequestLog<C extends RouteContext = RouteContext>(
           const response = await handler(request, (context ?? {}) as C)
           return finalizeAndLog(request, startedAt, response)
         } catch (error) {
-          console.error(
-            `[${pathname.startsWith("/api/oauth") ? "oauth" : "api/v1"}]`,
-            error,
-          )
+          const label = pathname.startsWith("/api/oauth")
+            ? "oauth"
+            : pathname === "/api/mcp"
+              ? "mcp"
+              : "api/v1"
+          console.error(`[${label}]`, error)
           const response = errorResponseForPath(pathname)
           return finalizeAndLog(request, startedAt, response)
         }

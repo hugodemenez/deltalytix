@@ -18,7 +18,9 @@ Every `/api/v1/*` request requires a Bearer token:
 Authorization: Bearer dltx_at_…
 ```
 
-REST endpoints are served from `https://www.deltalytix.app` under **API v1** (`/api/v1/*`). List endpoints accept `limit` (default `100`, max `500`) and `cursor`. Timestamps are ISO 8601. Machine-readable discovery: [`/openapi.json`](/openapi.json), [`/.well-known/openid-configuration`](/.well-known/openid-configuration), [`/.well-known/oauth-protected-resource`](/.well-known/oauth-protected-resource).
+REST endpoints are served from `https://www.deltalytix.app` under **API v1** (`/api/v1/*`). List endpoints accept `limit` (default `100`, max `500`) and `cursor`. Timestamps are ISO 8601. Machine-readable discovery: [`/openapi.json`](/openapi.json), [`/.well-known/openid-configuration`](/.well-known/openid-configuration), [`/.well-known/oauth-authorization-server`](/.well-known/oauth-authorization-server), [`/.well-known/oauth-protected-resource`](/.well-known/oauth-protected-resource).
+
+AI agents connect to the same data over MCP. See [MCP](/en/docs#mcp).
 
 ### Token formats
 

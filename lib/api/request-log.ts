@@ -42,7 +42,8 @@ export function isPublicApiLogPath(pathname: string): boolean {
     pathname === "/api/v1" ||
     pathname.startsWith("/api/v1/") ||
     pathname === "/api/oauth" ||
-    pathname.startsWith("/api/oauth/")
+    pathname.startsWith("/api/oauth/") ||
+    pathname === "/api/mcp"
   )
 }
 

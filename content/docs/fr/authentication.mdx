@@ -18,7 +18,9 @@ Chaque requête `/api/v1/*` exige un jeton Bearer :
 Authorization: Bearer dltx_at_…
 ```
 
-Les endpoints REST sont servis depuis `https://www.deltalytix.app` sous **API v1** (`/api/v1/*`). Les listes acceptent `limit` (défaut `100`, max `500`) et `cursor`. Les timestamps sont en ISO 8601. Découverte machine-readable : [`/openapi.json`](/openapi.json), [`/.well-known/openid-configuration`](/.well-known/openid-configuration), [`/.well-known/oauth-protected-resource`](/.well-known/oauth-protected-resource).
+Les endpoints REST sont servis depuis `https://www.deltalytix.app` sous **API v1** (`/api/v1/*`). Les listes acceptent `limit` (défaut `100`, max `500`) et `cursor`. Les timestamps sont en ISO 8601. Découverte machine-readable : [`/openapi.json`](/openapi.json), [`/.well-known/openid-configuration`](/.well-known/openid-configuration), [`/.well-known/oauth-authorization-server`](/.well-known/oauth-authorization-server), [`/.well-known/oauth-protected-resource`](/.well-known/oauth-protected-resource).
+
+Les agents IA se connectent aux mêmes données via MCP. Voir [MCP](/fr/docs#mcp).
 
 ### Formats de jetons
 
