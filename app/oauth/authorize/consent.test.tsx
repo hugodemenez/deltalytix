@@ -47,7 +47,35 @@ describe("AuthorizeConsent", () => {
     expect(html).toContain('name="resource"')
     expect(html).toContain("https://www.deltalytix.app/api/mcp")
     expect(html).toContain("Use another account")
+    expect(html).not.toContain("Unverified app")
     expect(html).not.toContain("<img")
+  })
+
+  it("warns when the client was dynamically registered, in English and French", () => {
+    const props = {
+      email: "hugo@example.com",
+      app: {
+        id: "app-1",
+        name: "MCP Inspector",
+        description: null,
+        logoUrl: null,
+        clientId: "dltx_app_example",
+        dynamicallyRegistered: true,
+      },
+      scopes: [{ id: "trades:read", description: "Read your trades" }],
+      redirectUri: "http://127.0.0.1:6276/oauth/callback",
+      scopeValue: "trades:read",
+    }
+    const en = renderToStaticMarkup(<AuthorizeConsent {...props} />)
+    expect(en).toContain("Unverified app")
+    expect(en).toContain("Deltalytix hasn’t reviewed this app.")
+    expect(en).toContain("127.0.0.1:6276")
+
+    const fr = renderToStaticMarkup(<AuthorizeConsent {...props} locale="fr" />)
+    expect(fr).toContain("Application non vérifiée")
+    expect(fr).toContain("Deltalytix n’a pas examiné cette application.")
+    expect(fr).toContain("127.0.0.1:6276")
+    expect(fr).not.toContain("Unverified app")
   })
 
   it("offers to switch account, in French when the locale is fr", () => {

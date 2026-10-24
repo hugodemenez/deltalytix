@@ -37,12 +37,20 @@ export function resourceIndicatorProblem(
   return null
 }
 
-/** A bound token may be used only on the resource path it was issued for. */
+function audienceIdentity(value: string): string {
+  const url = new URL(value)
+  const path = url.pathname.replace(/\/$/, "") || "/"
+  return `${url.origin}${path}`
+}
+
+/**
+ * A bound token may be used only on the resource it was issued for.
+ * Scheme, host, port, and path all have to match. A trailing slash on the
+ * path does not make a different audience.
+ */
 export function audienceMatchesRequest(resource: string, request: Request): boolean {
   try {
-    const audiencePath = new URL(resource).pathname.replace(/\/$/, "") || "/"
-    const requestPath = new URL(request.url).pathname.replace(/\/$/, "") || "/"
-    return audiencePath === requestPath
+    return audienceIdentity(resource) === audienceIdentity(request.url)
   } catch {
     return false
   }

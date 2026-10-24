@@ -12,13 +12,26 @@ describe("resource indicator", () => {
     expect(resourceIndicatorProblem(`${issuer}/api/mcp?x=1`, issuer)).not.toBeNull()
   })
 
-  it("binds a token to the resource path", () => {
+  it("binds a token to the resource origin and path", () => {
     const request = new Request("https://www.deltalytix.app/api/mcp")
     expect(audienceMatchesRequest(`${issuer}/api/mcp`, request)).toBe(true)
+    expect(audienceMatchesRequest(`${issuer}/api/mcp/`, request)).toBe(true)
     expect(
       audienceMatchesRequest(
         `${issuer}/api/mcp`,
         new Request("https://www.deltalytix.app/api/v1/trades"),
+      ),
+    ).toBe(false)
+    expect(
+      audienceMatchesRequest(`${issuer}/api/mcp`, new Request("http://localhost:3000/api/mcp")),
+    ).toBe(false)
+    expect(
+      audienceMatchesRequest(`${issuer}/api/mcp`, new Request("https://evil.example/api/mcp")),
+    ).toBe(false)
+    expect(
+      audienceMatchesRequest(
+        `${issuer}/api/mcp`,
+        new Request("https://www.deltalytix.app:8443/api/mcp"),
       ),
     ).toBe(false)
   })

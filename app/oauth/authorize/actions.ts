@@ -146,6 +146,7 @@ export async function loadAuthorizeContext(params: AuthorizeParams) {
       description: app.description,
       logoUrl: app.logoUrl,
       clientId: app.clientId,
+      dynamicallyRegistered: app.dynamicallyRegistered,
     },
     scopes: requested,
     redirectUri: params.redirectUri,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { validateClientRegistration } from "./oauth-registration"
+import { registrationClientKey, validateClientRegistration } from "./oauth-registration"
 
 const redirect = "https://claude.ai/api/mcp/auth_callback"
 
@@ -55,5 +55,40 @@ describe("validateClientRegistration", () => {
       token_endpoint_auth_method: "none",
     })
     expect(parsed.ok).toBe(true)
+  })
+})
+
+describe("registrationClientKey", () => {
+  function request(headers: Record<string, string>) {
+    return new Request("https://www.deltalytix.app/oauth/register", { headers })
+  }
+
+  it("prefers the Vercel client IP over the first X-Forwarded-For entry", () => {
+    const trusted = registrationClientKey(
+      request({ "x-vercel-forwarded-for": "203.0.113.10, 10.0.0.1" }),
+    )
+    expect(
+      registrationClientKey(
+        request({
+          "x-forwarded-for": "1.2.3.4, 203.0.113.10",
+          "x-real-ip": "198.51.100.8",
+          "x-vercel-forwarded-for": "203.0.113.10, 10.0.0.1",
+        }),
+      ),
+    ).toBe(trusted)
+    expect(
+      registrationClientKey(
+        request({
+          "x-forwarded-for": "1.2.3.4",
+          "x-real-ip": "198.51.100.8",
+        }),
+      ),
+    ).toBe(registrationClientKey(request({ "x-real-ip": "198.51.100.8" })))
+    expect(
+      registrationClientKey(request({ "x-forwarded-for": "1.2.3.4, 8.8.8.8" })),
+    ).toBe(registrationClientKey(request({ "x-forwarded-for": "1.2.3.4" })))
+    expect(trusted).not.toBe(
+      registrationClientKey(request({ "x-real-ip": "198.51.100.8" })),
+    )
   })
 })

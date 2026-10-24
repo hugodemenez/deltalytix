@@ -4,7 +4,7 @@ import { NextRequest } from "next/server"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import { sha256 } from "@/lib/api/tokens"
-import { MCP_TOOLS } from "@/lib/mcp/catalog"
+import { MCP_TOOLS, mcpToolScopes } from "@/lib/mcp/catalog"
 
 const { findUnique, update, accountFindMany, tradeFindMany, afterMock } = vi.hoisted(
   () => ({
@@ -386,7 +386,8 @@ describe("MCP discovery documents", () => {
 
     expect(resource.resource).toBe("https://www.deltalytix.app/api/mcp")
     expect(resource.authorization_servers).toEqual(["https://www.deltalytix.app"])
-    expect(resource.scopes_supported).toContain("trades:read")
+    expect(resource.scopes_supported).toEqual(mcpToolScopes())
+    expect(resource.scopes_supported).not.toContain("trades:write")
     expect(server.issuer).toBe("https://www.deltalytix.app")
     expect(server.authorization_endpoint).toBe("https://www.deltalytix.app/oauth/authorize")
     expect(server.token_endpoint).toBe("https://www.deltalytix.app/api/oauth/token")

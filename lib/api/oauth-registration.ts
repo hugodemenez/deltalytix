@@ -217,9 +217,21 @@ export function validateClientRegistration(
   }
 }
 
+function firstHeaderAddress(value: string | null): string {
+  return value?.split(",")[0]?.trim() || ""
+}
+
+/**
+ * Client address for the registration window. Vercel sets
+ * `x-vercel-forwarded-for` and `x-real-ip` at the edge; the first
+ * `X-Forwarded-For` entry is client-controlled, so it is only a fallback.
+ */
 export function registrationClientKey(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-  const ip = forwarded || request.headers.get("x-real-ip")?.trim() || "unknown"
+  const ip =
+    firstHeaderAddress(request.headers.get("x-vercel-forwarded-for")) ||
+    request.headers.get("x-real-ip")?.trim() ||
+    firstHeaderAddress(request.headers.get("x-forwarded-for")) ||
+    "unknown"
   return sha256(`oauth-register:${ip}`)
 }
 

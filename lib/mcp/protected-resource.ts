@@ -1,10 +1,6 @@
 import type { NextRequest } from "next/server"
-import {
-  absoluteUrl,
-  getOAuthIssuer,
-  scopeNames,
-} from "@/lib/agent-discovery/metadata"
-import { MCP_PATH, MCP_SERVER_NAME } from "@/lib/mcp/catalog"
+import { absoluteUrl, getOAuthIssuer } from "@/lib/agent-discovery/metadata"
+import { MCP_PATH, MCP_SERVER_NAME, mcpToolScopes } from "@/lib/mcp/catalog"
 
 /**
  * RFC 9728 protected-resource metadata for the MCP server. `resource` is the
@@ -17,7 +13,7 @@ export function buildMcpProtectedResourceMetadata(
   return {
     resource: absoluteUrl(MCP_PATH, request),
     authorization_servers: [getOAuthIssuer(request)],
-    scopes_supported: scopeNames(),
+    scopes_supported: mcpToolScopes(),
     bearer_methods_supported: ["header"],
     resource_name: MCP_SERVER_NAME,
     resource_documentation: absoluteUrl("/docs/api", request),
