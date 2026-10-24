@@ -1,14 +1,21 @@
 "use server"
 
+import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { createClient } from "@/server/auth"
 import { resolveDbUserId } from "@/lib/api/db-user"
+import { getOAuthIssuer } from "@/lib/agent-discovery/metadata"
 import {
   authorizationCodeExpiresAt,
   generateAuthorizationCode,
   sha256,
 } from "@/lib/api/tokens"
+import { authorizePkceProblem } from "@/lib/api/oauth-pkce"
+import {
+  canonicalMcpResource,
+  resourceIndicatorProblem,
+} from "@/lib/api/oauth-resource"
 import { revokePriorOAuthGrantsForUserApp } from "@/lib/api/revoke-prior-oauth-grants"
 import { isValidScope, parseScopes } from "@/lib/api/scopes"
 
@@ -20,6 +27,22 @@ export type AuthorizeParams = {
   state?: string
   codeChallenge?: string
   codeChallengeMethod?: string
+  resource?: string
+  issuer: string
+}
+
+async function requestIssuer(): Promise<string> {
+  const headerList = await headers()
+  return getOAuthIssuer(new Request("http://localhost", { headers: headerList }))
+}
+
+function withIssuer(redirectUri: string, issuer: string, params: Record<string, string>) {
+  const url = new URL(redirectUri)
+  for (const [key, value] of Object.entries(params)) {
+    if (value) url.searchParams.set(key, value)
+  }
+  url.searchParams.set("iss", issuer)
+  return url
 }
 
 export async function loadAuthorizeContext(params: AuthorizeParams) {
@@ -60,12 +83,19 @@ export async function loadAuthorizeContext(params: AuthorizeParams) {
     }
   }
 
+  const oauthErrorRedirect = {
+    redirectUri: params.redirectUri,
+    state: params.state,
+    issuer: params.issuer,
+  }
+
   const requested = parseScopes(params.scope).filter(isValidScope)
   if (requested.length === 0) {
     return {
       authenticated: true as const,
       error: "invalid_scope" as const,
       message: "At least one valid scope is required",
+      ...oauthErrorRedirect,
     }
   }
 
@@ -76,21 +106,34 @@ export async function loadAuthorizeContext(params: AuthorizeParams) {
       authenticated: true as const,
       error: "invalid_scope" as const,
       message: `App is not allowed to request: ${unauthorized.join(", ")}`,
+      ...oauthErrorRedirect,
     }
   }
 
-  // RFC 7636 reads a missing method as `plain`, which the token endpoint
-  // never accepts, so require S256 explicitly rather than fail at exchange.
-  if (
-    (params.codeChallenge || params.codeChallengeMethod) &&
-    (params.codeChallengeMethod !== "S256" ||
-      !/^[A-Za-z0-9_-]{43,128}$/.test(params.codeChallenge ?? ""))
-  ) {
+  const pkceProblem = authorizePkceProblem(
+    app,
+    params.codeChallenge,
+    params.codeChallengeMethod,
+  )
+  if (pkceProblem) {
     return {
       authenticated: true as const,
       error: "invalid_request" as const,
-      message:
-        "PKCE requires code_challenge_method=S256 and a base64url code_challenge",
+      message: pkceProblem,
+      ...oauthErrorRedirect,
+    }
+  }
+
+  const resource = params.resource?.trim() || ""
+  if (resource) {
+    const resourceProblem = resourceIndicatorProblem(resource, params.issuer)
+    if (resourceProblem) {
+      return {
+        authenticated: true as const,
+        error: "invalid_target" as const,
+        message: resourceProblem,
+        ...oauthErrorRedirect,
+      }
     }
   }
 
@@ -109,6 +152,7 @@ export async function loadAuthorizeContext(params: AuthorizeParams) {
     state: params.state,
     codeChallenge: params.codeChallenge,
     codeChallengeMethod: params.codeChallengeMethod,
+    resource: resource ? canonicalMcpResource(params.issuer) : undefined,
   }
 }
 
@@ -121,14 +165,24 @@ export async function approveAuthorizationAction(formData: FormData) {
   const codeChallenge = String(formData.get("code_challenge") || "") || undefined
   const codeChallengeMethod =
     String(formData.get("code_challenge_method") || "") || undefined
+  const resourceField = String(formData.get("resource") || "").trim()
 
   const app = await prisma.oAuthApp.findUnique({ where: { clientId } })
   if (!app || !app.redirectUris.includes(redirectUri)) {
     throw new Error("Invalid authorization request")
   }
 
-  if ((codeChallenge || codeChallengeMethod) && codeChallengeMethod !== "S256") {
+  if (authorizePkceProblem(app, codeChallenge, codeChallengeMethod)) {
     throw new Error("Invalid authorization request")
+  }
+
+  const issuer = await requestIssuer()
+  let resource: string | null = null
+  if (resourceField) {
+    if (resourceIndicatorProblem(resourceField, issuer)) {
+      throw new Error("Invalid authorization request")
+    }
+    resource = canonicalMcpResource(issuer)
   }
 
   // The consent screen renders hidden inputs, so re-check everything
@@ -162,15 +216,18 @@ export async function approveAuthorizationAction(formData: FormData) {
         redirectUri,
         codeChallenge: codeChallenge ?? null,
         codeChallengeMethod: codeChallengeMethod ?? null,
+        resource,
         expiresAt: authorizationCodeExpiresAt(),
       },
     })
   })
 
-  const url = new URL(redirectUri)
-  url.searchParams.set("code", code)
-  if (state) url.searchParams.set("state", state)
-  redirect(url.toString())
+  redirect(
+    withIssuer(redirectUri, issuer, {
+      code,
+      ...(state ? { state } : {}),
+    }).toString(),
+  )
 }
 
 export async function denyAuthorizationAction(formData: FormData) {
@@ -187,10 +244,13 @@ export async function denyAuthorizationAction(formData: FormData) {
     throw new Error("Invalid authorization request")
   }
 
-  const url = new URL(redirectUri)
-  url.searchParams.set("error", "access_denied")
-  if (state) url.searchParams.set("state", state)
-  redirect(url.toString())
+  const issuer = await requestIssuer()
+  redirect(
+    withIssuer(redirectUri, issuer, {
+      error: "access_denied",
+      ...(state ? { state } : {}),
+    }).toString(),
+  )
 }
 
 /**

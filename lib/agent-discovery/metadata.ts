@@ -28,6 +28,7 @@ const OAUTH_ENDPOINTS: Record<string, string> = {
   authorize: "/oauth/authorize",
   token: "/api/oauth/token",
   revoke: "/api/oauth/revoke",
+  register: "/oauth/register",
 };
 
 export function getOAuthEndpoint(path: string, request?: NextRequest | Request) {
@@ -337,7 +338,7 @@ Use Deltalytix to help traders understand imported trade history, dashboard anal
 - MCP server (streamable HTTP, bearer token required): /api/mcp
 - MCP server card: /.well-known/mcp/server-card.json
 - MCP protected resource metadata: /.well-known/oauth-protected-resource/api/mcp
-- OAuth authorization server metadata: /.well-known/oauth-authorization-server
+- OAuth authorization server metadata (includes registration_endpoint): /.well-known/oauth-authorization-server
 - OAuth protected resource metadata: /.well-known/oauth-protected-resource
 - Homepage markdown: request / with Accept: text/markdown
 
@@ -348,4 +349,4 @@ Unknown /api/* paths return 404 with that envelope, never HTML.
 `;
 
 export const deltalytixSkillDigest =
-  "sha256:bee3d05b482078e22188101b8fd23f39901f097c77ee7b1daf8541ab04e16246";
+  "sha256:f0986a4fe5bda5affd1be497d4ca34d765e74d48c2fca1375e5b2860908b29d1";

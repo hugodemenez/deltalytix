@@ -75,7 +75,7 @@ Connect an MCP client to `https://www.deltalytix.app/api/mcp` (streamable HTTP, 
 
 Send `Authorization: Bearer <token>` on every request. The token is a personal access token (`dltx_pat_…`) from Settings → Connections, or an OAuth access token from `/oauth/authorize`. Both are checked by the same authenticator as `/api/v1`, including revocation.
 
-Unauthenticated calls return HTTP 401 with `WWW-Authenticate` pointing at `/.well-known/oauth-protected-resource/api/mcp`. That document lists the authorization server. The authorization server metadata is `/.well-known/oauth-authorization-server` (authorization code + PKCE S256). Dynamic client registration is not available: register an OAuth app on the Developers page, or use a personal access token.
+Unauthenticated calls return HTTP 401 with `WWW-Authenticate` pointing at `/.well-known/oauth-protected-resource/api/mcp`. That document lists the authorization server. The authorization server metadata is `/.well-known/oauth-authorization-server` (authorization code, PKCE S256, and `registration_endpoint` at `/oauth/register`). Public clients register there and must use PKCE. Confidential apps created on the Developers page still use a client secret.
 
 Tools are read-only and limited to the token's user: `get_profile`, `list_accounts`, `list_trades`, `get_metrics_summary`, `get_account_metrics`, `get_equity_curve`, `get_daily_pnl`, `list_connections`. Revoke the token or the OAuth app from Settings → Connections; the next call is rejected.
 
@@ -94,7 +94,7 @@ Cursor (`~/.cursor/mcp.json`):
 }
 ```
 
-Claude and ChatGPT: add a custom connector with that URL. If the client asks for a header, use the same `Authorization` value. Clients that can only complete OAuth via dynamic client registration need a personal access token until registration is added.
+Claude, ChatGPT, and Cursor can also connect with OAuth and no pasted token: give them the URL `https://www.deltalytix.app/api/mcp`. They register a public client, send the user through the consent screen, and the grant shows up under Settings → Connections. Cursor install link: `cursor://anysphere.cursor-deeplink/mcp/install?name=deltalytix&config=eyJ1cmwiOiJodHRwczovL3d3dy5kZWx0YWx5dGl4LmFwcC9hcGkvbWNwIn0%3D`.
 
 ## Errors
 Every `/api/*` failure returns JSON, never HTML:

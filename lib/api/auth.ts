@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { hasRequiredScopes } from "@/lib/api/scopes"
+import { audienceMatchesRequest } from "@/lib/api/oauth-resource"
 import { isAccessTokenExpired, sha256 } from "@/lib/api/tokens"
 import {
   insufficientScope,
@@ -53,6 +54,26 @@ export async function authenticateApiRequest(
     return {
       ok: false,
       response: unauthorized("Invalid or revoked access token", request, options),
+    }
+  }
+
+  if (
+    record.resource &&
+    !audienceMatchesRequest(record.resource, request)
+  ) {
+    setPublicApiRequestLogContext({
+      tokenType: record.appId ? "oauth" : "pat",
+      appId: record.appId,
+      clientId: record.app?.clientId ?? null,
+      userId: record.userId,
+    })
+    return {
+      ok: false,
+      response: unauthorized(
+        "Access token is not valid for this resource",
+        request,
+        options,
+      ),
     }
   }
 

@@ -15,6 +15,9 @@ export function redirectUriProblem(value: string): string | null {
     return "is not an absolute URL"
   }
 
+  if (value.includes("*")) {
+    return "must not contain a wildcard"
+  }
   if (url.protocol !== "https:" && url.protocol !== "http:") {
     return "must use https"
   }

@@ -111,7 +111,9 @@ curl -X POST https://www.deltalytix.app/api/oauth/token \
   -d "code_verifier=PKCE_VERIFIER"
 ```
 
-Chaque application OAuth est un client confidentiel. Envoyez `client_secret` dans le corps (`client_secret_post`) ou via `Authorization: Basic` (`client_secret_basic`) lors de l’échange du code, du refresh et de la révocation. Un secret absent ou incorrect renvoie `401 invalid_client`. PKCE reste recommandé : un code émis avec un `code_challenge` exige aussi le `code_verifier` correspondant.
+Les applications créées sur la page Développeurs sont des clients confidentiels. Envoyez `client_secret` dans le corps (`client_secret_post`) ou via `Authorization: Basic` (`client_secret_basic`) lors de l’échange du code, du refresh et de la révocation. Un secret absent ou incorrect renvoie `401 invalid_client`. PKCE reste recommandé pour ces applications : un code émis avec un `code_challenge` exige aussi le `code_verifier` correspondant.
+
+Les clients publics issus de `POST /oauth/register` n’ont pas de secret (`token_endpoint_auth_method: none`) et doivent utiliser PKCE S256. Envoyez `resource=https://www.deltalytix.app/api/mcp` pour lier le jeton au serveur MCP. Voir la [section MCP](/fr/docs#mcp).
 
 <DocsResponse tone="success" label="Succès">
 

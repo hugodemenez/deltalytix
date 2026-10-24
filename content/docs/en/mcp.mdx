@@ -31,9 +31,15 @@ That document points `authorization_servers` at Deltalytix. Clients then read [`
 
 ### Dynamic client registration
 
-Not supported. Every OAuth app is a confidential client owned by a signed-in user, created on the [Developers page](/en/dashboard/developers), with a client secret and pre-registered redirect URIs. The authorization-server metadata does not advertise `registration_endpoint`.
+`POST /oauth/register` (RFC 7591) is advertised as `registration_endpoint`. Claude, ChatGPT, and Cursor register a **public client** (`token_endpoint_auth_method: none`) and must use PKCE S256. Redirect URIs are exact: `https`, or `http` on `localhost`, `127.0.0.1`, or `[::1]`. Wildcards are rejected. That allows:
 
-Clients that can only connect by registering themselves (some Claude and ChatGPT connector flows) should use a personal access token in the `Authorization` header until registration exists. A client that can store a client id and secret can use the existing authorization-code + PKCE flow.
+- `https://claude.ai/api/mcp/auth_callback` and Claude Code's loopback callback
+- `https://chatgpt.com/connector_platform_oauth_redirect` and `https://chatgpt.com/connector/oauth/{callback_id}`
+- `https://www.cursor.com/agents/mcp/oauth/callback` and `http://localhost:8787/callback`
+
+Registration is limited to 10 requests an hour per client address. The consent screen shows the client name, the scopes it asked for, and **Use another account**. After you allow it, Settings → Connections lists that client by name and can revoke it. A personal access token still works if you prefer not to use OAuth.
+
+Apps you create on the [Developers page](/en/dashboard/developers) stay confidential clients with a client secret. PKCE stays recommended for them and required for public clients. Authorization responses include `iss` (RFC 9207). A token issued with `resource` set to the MCP URL (RFC 8707) is only accepted on `/api/mcp`.
 
 ### Scopes
 
@@ -64,52 +70,37 @@ Settings → Connections lists personal access tokens and OAuth apps you have au
 
 ### Cursor
 
-`~/.cursor/mcp.json` or the project `.cursor/mcp.json`:
+One click installs the server and starts OAuth (dynamic registration, PKCE):
+
+[Add Deltalytix to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=deltalytix&config=eyJ1cmwiOiJodHRwczovL3d3dy5kZWx0YWx5dGl4LmFwcC9hcGkvbWNwIn0%3D)
+
+Or put this in `~/.cursor/mcp.json` and let Cursor sign you in:
 
 ```json
 {
   "mcpServers": {
     "deltalytix": {
-      "url": "https://www.deltalytix.app/api/mcp",
-      "headers": {
-        "Authorization": "Bearer dltx_pat_YOUR_TOKEN"
-      }
+      "url": "https://www.deltalytix.app/api/mcp"
     }
   }
 }
 ```
 
+A personal access token still works if you set `headers.Authorization` to `Bearer dltx_pat_…` instead of signing in.
+
 ### Claude
 
-Add a custom connector and set the server URL to `https://www.deltalytix.app/api/mcp`.
+In Claude, add a custom connector and set the URL to `https://www.deltalytix.app/api/mcp`. Claude registers itself, sends you to the Deltalytix consent screen, and stores the token. You do not paste a client id.
 
-When the connector accepts a request header, set:
+A personal access token still works as a request header:
 
 ```http
 Authorization: Bearer dltx_pat_YOUR_TOKEN
 ```
 
-Claude Desktop's config uses the same shape as Cursor, with `"type": "http"`:
-
-```json
-{
-  "mcpServers": {
-    "deltalytix": {
-      "type": "http",
-      "url": "https://www.deltalytix.app/api/mcp",
-      "headers": {
-        "Authorization": "Bearer dltx_pat_YOUR_TOKEN"
-      }
-    }
-  }
-}
-```
-
-If Claude insists on OAuth dynamic registration, use the header above instead. Registration is not offered yet.
-
 ### ChatGPT
 
-In connector settings, add an MCP server with the URL `https://www.deltalytix.app/api/mcp`. Provide the personal access token as the bearer credential or as an `Authorization` header, the same value as above. ChatGPT flows that require dynamic client registration cannot finish OAuth against this server yet; the bearer token is the supported path.
+In connector settings, add an MCP server with the URL `https://www.deltalytix.app/api/mcp`. ChatGPT registers a public client and opens the consent screen. The authorization response includes `iss`, so ChatGPT can use its stable redirect URI. A personal access token remains available as a bearer credential if you do not want OAuth.
 
 ### Grok and other clients
 

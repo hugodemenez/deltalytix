@@ -22,6 +22,7 @@ type Props = {
   state?: string
   codeChallenge?: string
   codeChallengeMethod?: string
+  resource?: string
   scopeValue: string
   /** Relative `oauth/authorize?…` target to come back to after switching account. */
   switchAccountNext?: string
@@ -48,6 +49,7 @@ export function AuthorizeConsent({
   state,
   codeChallenge,
   codeChallengeMethod,
+  resource,
   scopeValue,
   switchAccountNext,
   locale = "en",
@@ -154,6 +156,7 @@ export function AuthorizeConsent({
                 value={codeChallengeMethod}
               />
             ) : null}
+            {resource ? <input type="hidden" name="resource" value={resource} /> : null}
             <Button
               type="submit"
               className="h-9 w-full rounded-[4px] bg-[#171717] text-sm font-medium text-white shadow-none hover:bg-[#171717]/90"

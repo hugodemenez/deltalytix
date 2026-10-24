@@ -27,6 +27,8 @@ describe("AuthorizeConsent", () => {
         ]}
         redirectUri="https://mytradingbot.app/callback"
         scopeValue="trades:read accounts:read trades:write"
+        resource="https://www.deltalytix.app/api/mcp"
+        switchAccountNext="oauth/authorize?client_id=dltx_app_example"
       />,
     )
 
@@ -42,6 +44,9 @@ describe("AuthorizeConsent", () => {
     expect(html).toContain("Allow")
     expect(html).toContain("You’ll be sent back to")
     expect(html).toContain("mytradingbot.app")
+    expect(html).toContain('name="resource"')
+    expect(html).toContain("https://www.deltalytix.app/api/mcp")
+    expect(html).toContain("Use another account")
     expect(html).not.toContain("<img")
   })
 

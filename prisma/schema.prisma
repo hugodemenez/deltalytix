@@ -157,12 +157,17 @@ model User {
 
 model OAuthApp {
   id               String   @id @default(uuid())
-  userId           String
+  /// Null for a dynamically registered client. User-owned apps still set it.
+  userId           String?
   name             String
   description      String?
   logoUrl          String?
   clientId         String   @unique
-  clientSecretHash String
+  /// Null for a public client (`token_endpoint_auth_method=none`).
+  clientSecretHash String?
+  /// `none`, `client_secret_basic`, or `client_secret_post`.
+  tokenEndpointAuthMethod String @default("client_secret_basic")
+  dynamicallyRegistered Boolean @default(false)
   redirectUris     String[]
   scopes           String[]
   /// When the client secret was last generated (create or rotate). Null for
@@ -170,7 +175,7 @@ model OAuthApp {
   secretRotatedAt  DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   authorizationCodes OAuthAuthorizationCode[]
   accessTokens     OAuthAccessToken[]
 
@@ -187,6 +192,8 @@ model OAuthAuthorizationCode {
   redirectUri         String
   codeChallenge       String?
   codeChallengeMethod String?
+  /// RFC 8707 resource indicator. Null when the client did not bind an audience.
+  resource            String?
   expiresAt           DateTime
   consumedAt          DateTime?
   app                 OAuthApp  @relation(fields: [appId], references: [id], onDelete: Cascade)
@@ -207,6 +214,8 @@ model OAuthAccessToken {
   scopes                String[]
   expiresAt             DateTime?
   refreshTokenExpiresAt DateTime?
+  /// RFC 8707 audience. Null for personal access tokens and older OAuth grants.
+  resource              String?
   lastUsedAt            DateTime?
   revokedAt             DateTime?
   createdAt             DateTime  @default(now())
@@ -215,6 +224,16 @@ model OAuthAccessToken {
 
   @@index([userId])
   @@index([appId])
+  @@schema("public")
+}
+
+/// Sliding-window counter for POST /oauth/register. Hashes the client address.
+model OAuthRegistrationAttempt {
+  id        String   @id @default(uuid())
+  keyHash   String
+  createdAt DateTime @default(now())
+
+  @@index([keyHash, createdAt])
   @@schema("public")
 }
 
