@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 import { connection } from "next/server"
 import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 import { loadAuthorizeContext } from "./actions"
 import { AuthorizeConsent } from "./consent"
 import { API_SCOPE_DESCRIPTIONS, type ApiScope } from "@/lib/api/scopes"
@@ -106,6 +107,8 @@ async function AuthorizeRequest({
       codeChallenge={context.codeChallenge}
       codeChallengeMethod={context.codeChallengeMethod}
       scopeValue={context.scopes.join(" ")}
+      switchAccountNext={nextTarget}
+      locale={(await cookies()).get("Next-Locale")?.value === "fr" ? "fr" : "en"}
     />
   )
 }

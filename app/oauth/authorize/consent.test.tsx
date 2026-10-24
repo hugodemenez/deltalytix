@@ -5,6 +5,7 @@ import { AuthorizeConsent } from "./consent"
 vi.mock("./actions", () => ({
   approveAuthorizationAction: vi.fn(),
   denyAuthorizationAction: vi.fn(),
+  switchAccountAction: vi.fn(),
 }))
 
 describe("AuthorizeConsent", () => {
@@ -42,5 +43,21 @@ describe("AuthorizeConsent", () => {
     expect(html).toContain("You’ll be sent back to")
     expect(html).toContain("mytradingbot.app")
     expect(html).not.toContain("<img")
+  })
+
+  it("offers to switch account, in French when the locale is fr", () => {
+    const props = {
+      email: "hugo@example.com",
+      app: { id: "a", name: "Bot", description: null, logoUrl: null, clientId: "c" },
+      scopes: [],
+      redirectUri: "https://bot.app/cb",
+      scopeValue: "",
+      switchAccountNext: "oauth/authorize?client_id=c&state=xyz",
+    }
+    const en = renderToStaticMarkup(<AuthorizeConsent {...props} />)
+    expect(en).toContain("Use another account")
+    expect(en).toContain('value="oauth/authorize?client_id=c&amp;state=xyz"')
+    const fr = renderToStaticMarkup(<AuthorizeConsent {...props} locale="fr" />)
+    expect(fr).toContain("Changer de compte")
   })
 })
