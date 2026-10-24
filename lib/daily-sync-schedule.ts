@@ -12,6 +12,31 @@
  */
 export const CATCH_UP_WINDOW_MS = 6 * 60 * 60 * 1000
 
+/**
+ * Time-of-day a brand-new schedulable connection starts with.
+ *
+ * 22:00 UTC is the existing "After Market Close" preset in the sync schedule
+ * picker (18:00 in New York during daylight time, 17:00 during standard time).
+ * Only the UTC hours and minutes are read by the daily cron; the date is a
+ * fixed anchor so the stored value does not depend on when the row was created.
+ */
+export const DEFAULT_DAILY_SYNC_UTC_HOUR = 22
+export const DEFAULT_DAILY_SYNC_UTC_MINUTE = 0
+
+export function defaultDailySyncTime(): Date {
+  return new Date(
+    Date.UTC(
+      1970,
+      0,
+      1,
+      DEFAULT_DAILY_SYNC_UTC_HOUR,
+      DEFAULT_DAILY_SYNC_UTC_MINUTE,
+      0,
+      0,
+    ),
+  )
+}
+
 /** Most recent moment the configured time-of-day elapsed, in UTC. */
 export function lastOccurrenceOf(dailySyncTime: Date, now: Date): Date {
   const occurrence = new Date(

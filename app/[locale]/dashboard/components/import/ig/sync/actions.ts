@@ -3,6 +3,7 @@
 import { createClient, getUserId } from "@/server/auth";
 import { saveTradesAction } from "@/server/database";
 import { prisma } from "@/lib/prisma";
+import { defaultDailySyncTime } from "@/lib/daily-sync-schedule";
 import {
   decryptConnectionToken,
   encryptConnectionToken,
@@ -102,6 +103,7 @@ async function persistIgCredentials(
       token: encryptedToken,
       lastSyncedAt: new Date(),
       environment: (JSON.parse(tokenJson) as IgStoredCredentials).environment,
+      dailySyncTime: defaultDailySyncTime(),
     },
   });
 
