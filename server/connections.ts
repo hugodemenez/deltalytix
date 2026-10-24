@@ -109,6 +109,9 @@ export async function getConnectionsForUser(userId: string) {
     where: { userId },
     include: {
       accounts: {
+        // An account row can point at this connection without sharing its
+        // user. Never return that row from a user-scoped read.
+        where: { userId },
         select: {
           id: true,
           number: true,

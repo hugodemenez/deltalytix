@@ -101,6 +101,10 @@ export function mcpOptionsResponse() {
 
 export type McpRouteResult = Response
 
+/**
+ * `/api/v1` has no per-token rate limiter. MCP authenticates the same tokens
+ * and does not add a second limiter.
+ */
 export async function dispatchMcp(request: NextRequest): Promise<Response> {
   if (request.method === "OPTIONS") return mcpOptionsResponse()
 

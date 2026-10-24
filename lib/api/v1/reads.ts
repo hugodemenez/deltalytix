@@ -35,6 +35,14 @@ function dateError(from?: string, to?: string): string | null {
   return bad ? `${bad} must be an ISO 8601 date` : null
 }
 
+function requireUserId(userId: string): string {
+  const id = userId.trim()
+  if (!id) {
+    throw new Error("A read requires the authenticated user id")
+  }
+  return id
+}
+
 function limitFrom(value: number | string | null | undefined): number {
   if (typeof value === "number" && Number.isFinite(value)) {
     return parseLimit(String(Math.trunc(value)))
@@ -44,10 +52,10 @@ function limitFrom(value: number | string | null | undefined): number {
 }
 
 export async function readProfile(userId: string) {
+  // Tokens store `User.id` (see resolveDbUserId). Matching auth_user_id as
+  // well could return a different person when the two identifiers collide.
   const user = await prisma.user.findFirst({
-    where: {
-      OR: [{ id: userId }, { auth_user_id: userId }],
-    },
+    where: { id: requireUserId(userId) },
     select: {
       id: true,
       email: true,
@@ -68,10 +76,11 @@ export async function readAccounts(
   userId: string,
   options: { includeMetrics?: boolean } = {},
 ) {
+  const ownerId = requireUserId(userId)
   const accounts = await prisma.account.findMany({
-    where: { userId },
+    where: { userId: ownerId },
     include: {
-      group: { select: { id: true, name: true } },
+      group: { select: { id: true, name: true, userId: true } },
       payouts: {
         select: {
           id: true,
@@ -85,15 +94,17 @@ export async function readAccounts(
   })
 
   const groupFields = new Map(
-    accounts.map((account) => [
-      account.id,
-      {
-        hidden: account.group?.name === HIDDEN_GROUP_NAME,
-        group: account.group
-          ? { id: account.group.id, name: account.group.name }
-          : null,
-      },
-    ]),
+    accounts.map((account) => {
+      const group =
+        account.group && account.group.userId === ownerId ? account.group : null
+      return [
+        account.id,
+        {
+          hidden: group?.name === HIDDEN_GROUP_NAME,
+          group: group ? { id: group.id, name: group.name } : null,
+        },
+      ] as const
+    }),
   )
 
   if (!options.includeMetrics) {
@@ -116,7 +127,7 @@ export async function readAccounts(
   }
 
   const trades = await prisma.trade.findMany({
-    where: { userId },
+    where: { userId: ownerId },
   })
 
   const withMetrics = computeMetricsForAccounts(
@@ -153,12 +164,13 @@ export async function readTrades(
 ): Promise<
   ReadResult<{ data: ReturnType<typeof serializeTrade>[]; nextCursor: string | null }>
 > {
+  const ownerId = requireUserId(userId)
   const dateProblem = dateError(query.from, query.to)
   if (dateProblem) return { ok: false, message: dateProblem }
 
   const limit = limitFrom(query.limit)
   const offset = decodeCursor(query.cursor ?? null)
-  const where = buildTradeWhere(userId, {
+  const where = buildTradeWhere(ownerId, {
     accountNumber: query.accountNumber,
     instrument: query.instrument,
     side: query.side,
@@ -201,10 +213,11 @@ export async function readMetricsSummary(
     tradingDays: number
   }>
 > {
+  const ownerId = requireUserId(userId)
   const dateProblem = dateError(query.from, query.to)
   if (dateProblem) return { ok: false, message: dateProblem }
 
-  const where = buildTradeWhere(userId, {
+  const where = buildTradeWhere(ownerId, {
     accountNumber: query.accountNumber,
     instrument: query.instrument,
     side: query.side,
@@ -257,12 +270,13 @@ export async function readMetricsSummary(
 }
 
 export async function readAccountMetrics(userId: string) {
+  const ownerId = requireUserId(userId)
   const [accounts, trades] = await Promise.all([
     prisma.account.findMany({
-      where: { userId },
+      where: { userId: ownerId },
       include: { payouts: true },
     }),
-    prisma.trade.findMany({ where: { userId } }),
+    prisma.trade.findMany({ where: { userId: ownerId } }),
   ])
 
   const withMetrics = computeMetricsForAccounts(
@@ -290,23 +304,39 @@ export type EquityReadQuery = {
   showIndividual?: boolean
 }
 
+const emptyEquity = {
+  data: [] as ReturnType<typeof computeEquityChartData>["chartData"],
+  accountNumbers: [] as string[],
+  dateRange: { startDate: "", endDate: "" },
+}
+
 export async function readEquity(userId: string, query: EquityReadQuery = {}) {
+  const ownerId = requireUserId(userId)
   const from = query.from
   const to = query.to
-  const accountNumbers = query.accountNumbers ?? []
+  const requested = (query.accountNumbers ?? []).map((value) => value.trim()).filter(Boolean)
   const showIndividual = query.showIndividual === true
 
   const [allTrades, accounts, groups] = await Promise.all([
-    prisma.trade.findMany({ where: { userId } }),
+    prisma.trade.findMany({ where: { userId: ownerId } }),
     prisma.account.findMany({
-      where: { userId },
+      where: { userId: ownerId },
       include: { payouts: true },
     }),
     prisma.group.findMany({
-      where: { userId },
-      include: { accounts: { select: { number: true } } },
+      where: { userId: ownerId },
+      include: { accounts: { where: { userId: ownerId }, select: { number: true } } },
     }),
   ])
+
+  // An empty selection means "every account this user owns". A selection that
+  // names only someone else's accounts must stay empty, not fall through to all.
+  const owned = new Set(accounts.map((account) => account.number))
+  const accountNumbers =
+    requested.length > 0 ? requested.filter((number) => owned.has(number)) : []
+  if (requested.length > 0 && accountNumbers.length === 0) {
+    return emptyEquity
+  }
 
   const fromDate = from ? new Date(from) : null
   const toDate = to ? new Date(to) : null
@@ -367,7 +397,7 @@ export async function readEquity(userId: string, query: EquityReadQuery = {}) {
 }
 
 export async function readConnections(userId: string) {
-  const connections = await getConnectionsForUser(userId)
+  const connections = await getConnectionsForUser(requireUserId(userId))
   return {
     data: connections.map((connection) => ({
       id: connection.id,
