@@ -20,9 +20,11 @@ export function GET(request: NextRequest) {
       <p>The full reference, guides, and an authenticated playground live at <a href="${absoluteUrl("/en/docs", request)}">/docs</a>.</p>
       <h2>Discovery resources</h2>
       <ul>
+        <li><a href="${absoluteUrl("/en/docs#mcp", request)}">MCP server (connect Claude, ChatGPT, Cursor, or Grok)</a></li>
         <li><a href="${absoluteUrl("/en/docs", request)}">Human-readable API documentation</a></li>
         <li><a href="${apiCatalogUrl}">API catalog</a></li>
         <li><a href="${openApiUrl}">OpenAPI description</a></li>
+        <li><a href="${absoluteUrl("/api/mcp", request)}">MCP endpoint</a></li>
         <li><a href="${absoluteUrl("/api", request)}">Health endpoint</a></li>
       </ul>
       <h2>Authentication</h2>

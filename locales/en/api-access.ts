@@ -195,6 +195,7 @@ export default {
   "validation.redirectUriRequired": "At least one redirect URI is required.",
   "validation.redirectUrisTooMany": "Add at most 10 redirect URIs.",
   "validation.redirectUriScheme": "Use https, or http only for localhost.",
+  "validation.redirectUriWildcard": "Redirect URIs cannot contain a wildcard.",
   "validation.redirectUriInvalid": "Enter a full URL, like https://example.com/callback.",
   "validation.redirectUriFragment": "Full URLs only. No # fragments.",
   "validation.redirectUriUserinfo": "No user:password in the link.",

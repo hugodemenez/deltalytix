@@ -1,0 +1,114 @@
+---
+title: MCP
+description: Connect Claude, ChatGPT, Cursor, or Grok to your Deltalytix data over the Model Context Protocol.
+order: 2
+---
+
+The MCP server is a streamable HTTP endpoint at `https://www.deltalytix.app/api/mcp`. It speaks the Model Context Protocol and calls the same server functions as the read routes under `/api/v1`. Every tool is limited to the user who owns the bearer token.
+
+The server is stateless. Send one JSON-RPC message per `POST`. Responses are `application/json` (not a long-lived SSE stream). `GET` and `DELETE` return 405.
+
+## Authenticate
+
+Send the same bearer token the REST API accepts:
+
+```http
+Authorization: Bearer dltx_pat_…
+```
+
+Two kinds of token work:
+
+- A **personal access token** from [Settings → Connections](/en/dashboard/settings#connections). Choose the read scopes the tools need. The value is shown once. This is the path Claude, ChatGPT, Cursor, and Grok can use today.
+- An **OAuth access token** from the authorization-code flow on `/oauth/authorize`, with PKCE `S256`. The token and refresh token are the same records the REST API uses. Revoking the app in Settings → Connections sets `revokedAt`, and the next MCP call is rejected.
+
+A missing, unknown, expired, or revoked token returns HTTP 401. The `WWW-Authenticate` header includes `resource_metadata` for this server:
+
+```http
+WWW-Authenticate: Bearer realm="mcp", resource_metadata="https://www.deltalytix.app/.well-known/oauth-protected-resource/api/mcp"
+```
+
+That document points `authorization_servers` at Deltalytix. Clients then read [`/.well-known/oauth-authorization-server`](/.well-known/oauth-authorization-server) for the authorize, token, and revocation endpoints and for `code_challenge_methods_supported: ["S256"]`.
+
+### Dynamic client registration
+
+`POST /oauth/register` (RFC 7591) is advertised as `registration_endpoint`. Claude, ChatGPT, and Cursor register a **public client** (`token_endpoint_auth_method: none`) and must use PKCE S256. Redirect URIs are exact: `https`, or `http` on `localhost`, `127.0.0.1`, or `[::1]`. Wildcards are rejected. That allows:
+
+- `https://claude.ai/api/mcp/auth_callback` and Claude Code's loopback callback
+- `https://chatgpt.com/connector_platform_oauth_redirect` and `https://chatgpt.com/connector/oauth/{callback_id}`
+- `https://www.cursor.com/agents/mcp/oauth/callback` and `http://localhost:8787/callback`
+
+Registration is limited to 10 requests an hour per client address. The consent screen shows the client name, the scopes it asked for, and **Use another account**. After you allow it, Settings → Connections lists that client by name and can revoke it. A personal access token still works if you prefer not to use OAuth.
+
+Apps you create on the [Developers page](/en/dashboard/developers) stay confidential clients with a client secret. PKCE stays recommended for them and required for public clients. Authorization responses include `iss` (RFC 9207). A token issued with `resource` set to the MCP URL (RFC 8707) is only accepted on `/api/mcp`.
+
+### Scopes
+
+Tools check the token's scopes. A token that can call `get_profile` cannot call `list_trades` unless it also has `trades:read`. The call returns a tool error and does not read data.
+
+| Tool | Scope | REST route |
+| --- | --- | --- |
+| `get_profile` | `profile:read` | `GET /api/v1/me` |
+| `list_accounts` | `accounts:read` | `GET /api/v1/accounts` |
+| `list_trades` | `trades:read` | `GET /api/v1/trades` |
+| `get_metrics_summary` | `metrics:read` | `GET /api/v1/metrics/summary` |
+| `get_account_metrics` | `metrics:read` | `GET /api/v1/metrics/accounts` |
+| `get_equity_curve` | `metrics:read` | `GET /api/v1/metrics/equity` |
+| `get_daily_pnl` | `metrics:read` | daily series from `GET /api/v1/metrics/equity` |
+| `list_connections` | `connections:read` | `GET /api/v1/connections` |
+
+Read-only tokens should request `profile:read trades:read accounts:read connections:read metrics:read`.
+
+`list_trades` uses `limit` (default 100, maximum 500) and `cursor`. `get_equity_curve` and `get_daily_pnl` use `limit` (default 366, maximum 1000) and `cursor`. None of the tools accept a user id. Broker tokens are not returned by `list_connections`.
+
+Write tools (creating trades, uploading imports, creating or syncing broker connections) are not exposed. Use the REST API for those, with the matching write scope.
+
+### Revoke access
+
+Settings → Connections lists personal access tokens and OAuth apps you have authorized. Revoke either one there. The MCP server reads the same token table, so a revoked token stops working on the next request. There is no separate MCP client list.
+
+## Connect
+
+### Cursor
+
+One click installs the server and starts OAuth (dynamic registration, PKCE):
+
+[Add Deltalytix to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=deltalytix&config=eyJ1cmwiOiJodHRwczovL3d3dy5kZWx0YWx5dGl4LmFwcC9hcGkvbWNwIn0%3D)
+
+Or put this in `~/.cursor/mcp.json` and let Cursor sign you in:
+
+```json
+{
+  "mcpServers": {
+    "deltalytix": {
+      "url": "https://www.deltalytix.app/api/mcp"
+    }
+  }
+}
+```
+
+A personal access token still works if you set `headers.Authorization` to `Bearer dltx_pat_…` instead of signing in.
+
+### Claude
+
+In Claude, add a custom connector and set the URL to `https://www.deltalytix.app/api/mcp`. Claude registers itself, sends you to the Deltalytix consent screen, and stores the token. You do not paste a client id.
+
+A personal access token still works as a request header:
+
+```http
+Authorization: Bearer dltx_pat_YOUR_TOKEN
+```
+
+### ChatGPT
+
+In connector settings, add an MCP server with the URL `https://www.deltalytix.app/api/mcp`. ChatGPT registers a public client and opens the consent screen. The authorization response includes `iss`, so ChatGPT can use its stable redirect URI. A personal access token remains available as a bearer credential if you do not want OAuth.
+
+### Grok and other clients
+
+Any client that implements streamable HTTP can `POST` to `https://www.deltalytix.app/api/mcp` with:
+
+- `Authorization: Bearer dltx_pat_YOUR_TOKEN`
+- `Accept: application/json, text/event-stream`
+- `Content-Type: application/json`
+- `MCP-Protocol-Version: 2025-06-18` on every request after `initialize`
+
+Discovery for the client: [`/.well-known/mcp/server-card.json`](/.well-known/mcp/server-card.json).

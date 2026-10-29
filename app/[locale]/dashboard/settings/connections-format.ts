@@ -275,6 +275,7 @@ export const OAUTH_APP_ERROR_LOCALE_KEYS = {
   tooManyRedirectUris: "validation.redirectUrisTooMany",
   redirectUriNotAbsolute: "validation.redirectUriInvalid",
   redirectUriHttps: "validation.redirectUriScheme",
+  redirectUriWildcard: "validation.redirectUriWildcard",
   redirectUriFragment: "validation.redirectUriFragment",
   redirectUriCredentials: "validation.redirectUriUserinfo",
   scopeRequired: "validation.scopesRequired",

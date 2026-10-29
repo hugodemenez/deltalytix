@@ -119,6 +119,11 @@ export function buildTradeWhere(
   userId: string,
   filters: TradeListFilters,
 ): Prisma.TradeWhereInput {
+  // The account number, instrument, and side are filters on top of the token's
+  // user. A blank user id must not become a query that matches every tenant.
+  if (!userId.trim()) {
+    throw new Error("Trade queries require the authenticated user id")
+  }
   const where: Prisma.TradeWhereInput = { userId }
 
   if (filters.accountNumber) where.accountNumber = filters.accountNumber

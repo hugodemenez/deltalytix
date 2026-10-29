@@ -16,12 +16,15 @@ type Props = {
     description: string | null
     logoUrl: string | null
     clientId: string
+    /** Set for clients created at POST /oauth/register. */
+    dynamicallyRegistered?: boolean
   }
   scopes: { id: string; description: string }[]
   redirectUri: string
   state?: string
   codeChallenge?: string
   codeChallengeMethod?: string
+  resource?: string
   scopeValue: string
   /** Relative `oauth/authorize?…` target to come back to after switching account. */
   switchAccountNext?: string
@@ -31,6 +34,17 @@ type Props = {
 const SWITCH_ACCOUNT_LABEL = {
   en: "Use another account",
   fr: "Changer de compte",
+} as const
+
+const UNVERIFIED_APP = {
+  en: {
+    badge: "Unverified app",
+    warning: "Deltalytix hasn’t reviewed this app.",
+  },
+  fr: {
+    badge: "Application non vérifiée",
+    warning: "Deltalytix n’a pas examiné cette application.",
+  },
 } as const
 
 function scopeLabel(scope: { id: string; description: string }): string {
@@ -48,11 +62,13 @@ export function AuthorizeConsent({
   state,
   codeChallenge,
   codeChallengeMethod,
+  resource,
   scopeValue,
   switchAccountNext,
   locale = "en",
 }: Props) {
   const host = redirectHost(redirectUri)
+  const unverified = app.dynamicallyRegistered ? UNVERIFIED_APP[locale] : null
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-[#FAFAFA] px-4 py-14 text-[#171717]">
@@ -79,6 +95,17 @@ export function AuthorizeConsent({
         <h1 className="text-center text-lg font-semibold leading-6 tracking-tight">
           {app.name} wants to access your Deltalytix account
         </h1>
+        {unverified ? (
+          <div className="mt-3 text-center">
+            <p className="inline-flex rounded-[4px] border border-[#E5E5E5] bg-[#FAFAFA] px-2 py-0.5 text-[11px] font-medium leading-4 text-[#404040]">
+              {unverified.badge}
+            </p>
+            <p className="mt-2 text-xs leading-4 text-[#686D67]">
+              {unverified.warning}{" "}
+              <span className="font-medium text-[#404040]">{host}</span>
+            </p>
+          </div>
+        ) : null}
         {email ? (
           <p className="mt-1.5 text-center text-xs leading-4 text-[#686D67]">
             Signed in as {email}
@@ -154,6 +181,7 @@ export function AuthorizeConsent({
                 value={codeChallengeMethod}
               />
             ) : null}
+            {resource ? <input type="hidden" name="resource" value={resource} /> : null}
             <Button
               type="submit"
               className="h-9 w-full rounded-[4px] bg-[#171717] text-sm font-medium text-white shadow-none hover:bg-[#171717]/90"

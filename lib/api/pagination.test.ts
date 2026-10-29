@@ -84,3 +84,13 @@ describe("filterAndSortTradesByEntryDate", () => {
     expect(parsed?.toISOString()).toBe("2025-02-18T11:01:49.000Z")
   })
 })
+
+describe("buildTradeWhere", () => {
+  it("always binds the token user and refuses a blank id", () => {
+    expect(buildTradeWhere("user_a", { accountNumber: "B-1" })).toEqual({
+      userId: "user_a",
+      accountNumber: "B-1",
+    })
+    expect(() => buildTradeWhere("  ", {})).toThrow(/user id/)
+  })
+})

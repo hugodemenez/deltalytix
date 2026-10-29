@@ -106,7 +106,7 @@ const nextConfig: NextConfig = {
   // `read-excel-file/node` pulls in `unzipper`, whose optional S3 support
   // requires '@aws-sdk/client-s3' at runtime; keep it external so Turbopack
   // does not try to resolve that optional dependency at build time.
-  serverExternalPackages: ['read-excel-file', 'unzipper'],
+  serverExternalPackages: ['read-excel-file', 'unzipper', '@modelcontextprotocol/sdk'],
   typescript: {
     // Keep full checking in `bun run typecheck`; do not duplicate it inside `next build`.
     ignoreBuildErrors: true,
