@@ -1,0 +1,17 @@
+---
+title: 'La sync Rithmic Protocol garde la bonne taille des ordres découpés'
+description: 'La sync Rithmic Protocol conserve la taille de l''historique quand un ordre arrive aussi en morceaux, et elle ignore une seconde copie de contrats déjà dans le journal.'
+date: '2026-10-23'
+status: completed
+completedDate: '2026-10-23'
+---
+
+# La sync Rithmic Protocol garde la bonne taille des ordres découpés
+
+La synchronisation Rithmic Protocol n'enregistre plus une mauvaise taille de contrat lorsqu'un ordre arrive en une seule exécution complète dans l'historique et en plusieurs morceaux dans le replay en direct. Elle ignore aussi une seconde copie d'un trade dont les contrats sont déjà dans le journal, avec un autre appariement.
+
+- Les exécutions qui partagent le compte, l'instrument, le sens et le prix à moins de deux secondes, ou qui partagent un panier, comptent comme un seul ordre. Si l'historique contient déjà cet ordre, sa taille est conservée et les morceaux du replay sont écartés. Les morceaux d'une même source deviennent une seule exécution, à la taille totale.
+- Un trade Rithmic est ignoré quand des lignes déjà en journal, pour le même compte et le même instrument, couvrent ses contrats d'entrée et de sortie (même sens, même prix, à moins de deux minutes), même si un import antérieur comme ATAS les a appariés autrement.
+- Une exécution stockée d'une autre taille reste sa propre ligne, et sa commission ne bouge pas.
+
+Les prochaines synchronisations utilisent cette correspondance. Les trades déjà dans le journal ne sont pas réécrits.

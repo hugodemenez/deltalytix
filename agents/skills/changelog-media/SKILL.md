@@ -145,6 +145,7 @@ If all entries have zero visuals, do not create an empty recipe and do not run c
 | `settings-connections-api` | `.png` | Settings → Connections API tokens + authorized apps |
 | `developers-oauth-apps` | `.png` | Developers page OAuth app card |
 | `docs-api-overview` | `.png` | Public API docs landing |
+| `docs-header-try-with-ai` | `.png` | Docs header Try it with AI row (Claude, ChatGPT, Grok) |
 
 If no scene can show the planned evidence, add a narrowly named reusable scene. Document the viewport, route, locator, interaction, and expected state in code. Do not weaken the media plan to fit the existing scene catalog.
 
