@@ -396,7 +396,7 @@ async function developersCardClip(page, padding = 28) {
   }
 }
 
-/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form' | 'compare-hub-journals-table' | 'compare-tradezella-what-you-get' | 'connections-import-picker-deepcharts' | 'dashboard-strip-standalone-actions' | 'dashboard-strip-standalone-delete-confirm' | 'public-404-agent-resources' | 'calendar-header-month-year-news' | 'dashboard-centered-view-tabs' | 'dashboard-home-email' | 'renewal-notice-email' | 'landing-hero-16-9-frame' | 'tradovate-connections-fee-config' | 'settings-connections-api' | 'developers-oauth-apps' | 'docs-api-overview'} ChangelogScene */
+/** @typedef {'landing-hero' | 'landing-scroll' | 'landing-contribution-graph' | 'landing-contribution-graph-hover' | 'landing-ai-journaling-demo' | 'landing-features-carousel' | 'landing-navbar-updates' | 'landing-faq-expanded' | 'landing-faq-self-host' | 'landing-pricing-stability' | 'landing-features-transition' | 'import-mobile' | 'support' | 'trade-table-mobile' | 'trade-table-desktop' | 'trade-table-scroll-video' | 'calendar-widgets' | 'calendar-table' | 'accounts-mobile' | 'accounts-table-desktop' | 'widgets-mobile' | 'widgets-mobile-minimap' | 'billing-mobile' | 'connections-hub' | 'connections-import-picker' | 'connections-import-picker-search' | 'connections-ig-import-preview' | 'widget-info-popover-mobile' | 'feedback-popover' | 'update-og-image' | 'equity-nearest-line' | 'equity-account-selector' | 'dxfeed-firm-search' | 'dxfeed-credentials-step' | 'ibkr-read-only-guide' | 'ibkr-token-query-form' | 'mobile-form-focus-stability' | 'authentication-desktop' | 'authentication-email-code' | 'authentication-mobile' | 'support-source-investigation' | 'support-question-edit' | 'support-contact-form' | 'connection-sync-intervals' | 'connection-sync-daily' | 'connection-sync-mobile' | 'rithmic-system-search' | 'rithmic-credentials-step' | 'rithmic-performance-picker' | 'rithmic-performance-preview' | 'dashboard-shell-home' | 'dashboard-shell-filters' | 'settings-account-list' | 'dxfeed-single-step-form' | 'compare-hub-journals-table' | 'compare-tradezella-what-you-get' | 'connections-import-picker-deepcharts' | 'dashboard-strip-standalone-actions' | 'dashboard-strip-standalone-delete-confirm' | 'public-404-agent-resources' | 'calendar-header-month-year-news' | 'dashboard-centered-view-tabs' | 'dashboard-home-email' | 'renewal-notice-email' | 'landing-hero-16-9-frame' | 'tradovate-connections-fee-config' | 'settings-connections-api' | 'developers-oauth-apps' | 'docs-api-overview' | 'docs-header-try-with-ai'} ChangelogScene */
 
 
 /**
@@ -1038,6 +1038,61 @@ export async function captureScene(browser, options) {
       await page.waitForTimeout(2000)
       await assertNoDevIssues(page, `${locale} docs`)
       await screenshot(page, batch, locale, file)
+      await page.close()
+      return
+    }
+
+    case 'docs-header-try-with-ai': {
+      // pr-575: tight crop of the public docs header assistant row.
+      // Desktop 1440×900. Route: /{locale}/docs. No click.
+      // Expected: label "Try it with AI" / "Essayer avec l’IA" and buttons
+      // Claude, ChatGPT, and Grok. Does not include the page title or guides.
+      const page = await newCapturePage(browser, {
+        locale: playwrightLocale,
+        ...viewport('desktop'),
+      })
+      await page.goto(`${siteUrl}/${locale}/docs`, {
+        waitUntil: 'networkidle',
+        timeout: 120_000,
+      })
+      await dismissCookies(page, locale)
+      const labelPattern =
+        locale === 'fr' ? /Essayer avec l[’']IA/ : /^Try it with AI$/
+      const group = page.getByRole('group', { name: labelPattern })
+      await group.waitFor({ timeout: 30_000 })
+      await page.getByRole('link', { name: /Claude/ }).waitFor({ timeout: 15_000 })
+      await assertNoDevIssues(page, `${locale} docs try with ai`)
+      // The label is a full-width paragraph and the group stretches across
+      // the docs column. Measure the text and the three buttons instead.
+      const clip = await page.evaluate(() => {
+        const group = document.querySelector('[role="group"]')
+        const labelId = group?.getAttribute('aria-labelledby')
+        const label = labelId ? document.getElementById(labelId) : null
+        const links = group ? [...group.querySelectorAll('a')] : []
+        const boxes = []
+        if (label) {
+          const range = document.createRange()
+          range.selectNodeContents(label)
+          boxes.push(range.getBoundingClientRect())
+        }
+        for (const link of links) boxes.push(link.getBoundingClientRect())
+        if (boxes.length === 0) return null
+        const pad = 16
+        const viewport = { width: window.innerWidth, height: window.innerHeight }
+        const left = Math.max(0, Math.min(...boxes.map((b) => b.x)) - pad)
+        const top = Math.max(0, Math.min(...boxes.map((b) => b.y)) - pad)
+        const right = Math.min(
+          viewport.width,
+          Math.max(...boxes.map((b) => b.x + b.width)) + pad,
+        )
+        const bottom = Math.min(
+          viewport.height,
+          Math.max(...boxes.map((b) => b.y + b.height)) + pad,
+        )
+        return { x: left, y: top, width: right - left, height: bottom - top }
+      })
+      if (!clip) throw new Error(`${locale} docs try-with-ai row was not measurable`)
+      await screenshot(page, batch, locale, file, { clip })
       await page.close()
       return
     }

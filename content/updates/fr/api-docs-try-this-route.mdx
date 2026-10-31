@@ -1,0 +1,13 @@
+---
+title: 'Essayer cette route charge chaque appel documenté, et le nouveau jeton reste visible'
+description: 'Dans la documentation API, Essayer cette route ouvre l''opération du guide, et un jeton que vous venez de générer reste lisible à côté de Copier tant que la feuille est ouverte.'
+date: '2026-10-23'
+status: completed
+completedDate: '2026-10-23'
+---
+
+# Essayer cette route charge chaque appel documenté, et le nouveau jeton reste visible
+
+Dans la [documentation API](/fr/docs), **Essayer cette route** charge maintenant l'opération live de chaque route documentée, y compris les guides que le panneau présentait comme absents du document d'API. Vous pouvez envoyer la requête depuis le guide. L'étape d'autorisation dans le navigateur, l'envoi d'un fichier et un corps de formulaire encodé ne partent toujours pas depuis le panneau : ces guides renvoient à l'exemple documenté.
+
+**Générer un token docs**, une fois connecté, et **Utiliser un token démo**, pour des données d'exemple en lecture seule, fermaient la feuille immédiatement et laissaient le jeton masqué. La feuille reste ouverte, avec le jeton visible à côté de **Copier**, jusqu'à ce que vous la fermiez. La création du jeton ne change pas, et il ne s'affiche que tant que cette feuille est ouverte.
