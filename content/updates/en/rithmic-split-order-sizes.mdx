@@ -1,0 +1,17 @@
+---
+title: 'Rithmic Protocol sync keeps split orders at the right size'
+description: 'Rithmic Protocol sync keeps the history size when one order also arrives in pieces, and it skips a second copy of contracts already in the journal.'
+date: '2026-10-23'
+status: completed
+completedDate: '2026-10-23'
+---
+
+# Rithmic Protocol sync keeps split orders at the right size
+
+Rithmic Protocol sync no longer stores the wrong contract size when one order arrives as a single full fill in history and as several pieces in the live replay. It also skips a second copy of a trade whose contracts are already in the journal under a different pairing.
+
+- Fills that share the account, symbol, side, and price within two seconds, or that share a basket, count as one order. When history already has that order, its size is kept and the replay pieces are dropped. Pieces from the same source are saved as one fill at the total size.
+- A Rithmic trade is skipped when stored rows for the same account and instrument already cover its entry and exit contracts (same side, same price, within two minutes), even when an earlier import such as ATAS paired them differently.
+- A stored fill of a different size is left as its own row, so its commission stays as saved.
+
+The next sync uses this matching. Trades already in the journal are not rewritten.
