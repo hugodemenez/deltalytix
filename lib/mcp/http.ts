@@ -64,7 +64,7 @@ export async function handleMcpPost(
   request: Request,
   auth: AuthenticatedApiRequest,
 ): Promise<Response> {
-  const server = createDeltalytixMcpServer(auth)
+  const server = createDeltalytixMcpServer(auth, request)
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,

@@ -16,11 +16,10 @@ import {
 import {
   MCP_SERIES_DEFAULT_LIMIT,
   MCP_SERIES_MAX_LIMIT,
-  MCP_SERVER_NAME,
-  MCP_SERVER_VERSION,
   MCP_TOOLS,
   type McpToolName,
 } from "@/lib/mcp/catalog"
+import { buildMcpServerInfo } from "@/lib/mcp/server-info"
 
 const annotations = {
   readOnlyHint: true,
@@ -123,11 +122,13 @@ function definition(name: McpToolName) {
   return tool
 }
 
-export function createDeltalytixMcpServer(auth: AuthenticatedApiRequest) {
-  const server = new McpServer(
-    { name: MCP_SERVER_NAME, version: MCP_SERVER_VERSION },
-    { capabilities: { tools: { listChanged: false } } },
-  )
+export function createDeltalytixMcpServer(
+  auth: AuthenticatedApiRequest,
+  request: Request,
+) {
+  const server = new McpServer(buildMcpServerInfo(request), {
+    capabilities: { tools: { listChanged: false } },
+  })
 
   const profile = definition("get_profile")
   server.registerTool(

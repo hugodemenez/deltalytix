@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { absoluteUrl, SITE_NAME } from "@/lib/agent-discovery/metadata";
+import { absoluteUrl } from "@/lib/agent-discovery/metadata";
 import {
   MCP_PATH,
   MCP_RESOURCE_METADATA_PATH,
-  MCP_SERVER_VERSION,
   MCP_TOOLS,
   OAUTH_AUTHORIZATION_SERVER_PATH,
 } from "@/lib/mcp/catalog";
+import { buildMcpServerInfo } from "@/lib/mcp/server-info";
 
 export function GET(request: NextRequest) {
   const tools = MCP_TOOLS.map((tool) => ({
@@ -21,10 +21,7 @@ export function GET(request: NextRequest) {
   }));
 
   return NextResponse.json({
-    serverInfo: {
-      name: SITE_NAME,
-      version: MCP_SERVER_VERSION,
-    },
+    serverInfo: buildMcpServerInfo(request),
     transports: [
       {
         type: "streamable-http",
