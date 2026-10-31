@@ -5,6 +5,7 @@ import { saveTradesAction } from '@/server/database'
 import { Trade } from '@/prisma/generated/prisma/client'
 import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
 import { prisma } from '@/lib/prisma'
+import { defaultDailySyncTime } from '@/lib/daily-sync-schedule'
 import { formatTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
@@ -848,6 +849,7 @@ export async function storeDxFeedToken(
         token: encryptConnectionToken(tokenJson),
         tokenExpiresAt: options?.tokenExpiresAt ?? null,
         lastSyncedAt: new Date(),
+        dailySyncTime: defaultDailySyncTime(),
         includedFeeTypes: undefined, // DxFeed has no fee differentiator
       },
     })

@@ -328,3 +328,236 @@ export function preferHistoryFills(
     return true
   })
 }
+
+/** Pieces of one order land within this window of each other in one source. */
+export const RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS = 2 * 1000
+
+function orderGroupKey(fill: RithmicProtocolFill): string {
+  const symbol = (fill.symbol ?? '').trim().toUpperCase()
+  const price = Number(fill.fillPrice || fill.avgFillPrice || 0)
+  return `${fill.accountId || 'unknown'}|${symbol}|${identitySide(fill.transactionType)}|${price}`
+}
+
+function numericFillId(fill: RithmicProtocolFill): number {
+  const id = canonicalRithmicFillId(fill.fillId)
+  const n = id ? Number(id) : Number.NaN
+  return Number.isFinite(n) ? n : Number.NEGATIVE_INFINITY
+}
+
+type OrderCluster = {
+  fills: RithmicProtocolFill[]
+  startMs: number
+  endMs: number
+  basketId?: string
+}
+
+function clusterOneSource(
+  fills: RithmicProtocolFill[],
+  windowMs: number,
+): OrderCluster[] {
+  const sorted = [...fills].sort(
+    (a, b) => (sourceTimestampMs(a) ?? 0) - (sourceTimestampMs(b) ?? 0),
+  )
+  const clusters: OrderCluster[] = []
+  for (const fill of sorted) {
+    const ts = sourceTimestampMs(fill) ?? 0
+    const last = clusters[clusters.length - 1]
+    const sameBasket =
+      last?.basketId != null && fill.basketId != null && last.basketId === fill.basketId
+    if (last && (sameBasket || ts - last.endMs <= windowMs)) {
+      last.fills.push(fill)
+      last.endMs = Math.max(last.endMs, ts)
+      continue
+    }
+    clusters.push({ fills: [fill], startMs: ts, endMs: ts, basketId: fill.basketId })
+  }
+  return clusters
+}
+
+function mergeCluster(cluster: OrderCluster): RithmicProtocolFill {
+  if (cluster.fills.length === 1) return cluster.fills[0]
+  const first = cluster.fills[0]
+  const canonical = cluster.fills.reduce((best, fill) =>
+    numericFillId(fill) > numericFillId(best) ? fill : best,
+  )
+  const size = cluster.fills.reduce(
+    (sum, fill) => sum + Math.abs(Number(fill.fillSize) || 0),
+    0,
+  )
+  const fillId = canonicalRithmicFillId(canonical.fillId) ?? canonical.fillId
+  return { ...first, fillId, fillSize: size }
+}
+
+/**
+ * Rithmic reports one order differently per source: ShowFillHistory can roll
+ * the partials up under the last fill id with the order's total size
+ * (1245663 ×5), while ReplayExecutions sends each piece (1245660 ×1 …
+ * 1245663 ×2). Mixing them mis-sized orders (too many or too few contracts),
+ * left lots open and paired them with the wrong fills.
+ *
+ * Per account + symbol + side + price, pieces within ±2s (or sharing a
+ * basketId) are one order. When history has the order, only history's volume
+ * counts and every replay piece is dropped; within a source, pieces merge
+ * into one fill with the summed size and the largest fill id.
+ *
+ * Run after `dedupeFills` so an exact re-delivery is not summed twice.
+ */
+export function consolidateOrderFills(
+  fills: RithmicProtocolFill[],
+  pieceWindowMs = RITHMIC_PROTOCOL_ORDER_PIECE_WINDOW_MS,
+  crossSourceToleranceMs = RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS,
+): RithmicProtocolFill[] {
+  const groups = new Map<string, RithmicProtocolFill[]>()
+  for (const fill of fills) {
+    const key = orderGroupKey(fill)
+    const list = groups.get(key) ?? []
+    list.push(fill)
+    groups.set(key, list)
+  }
+
+  const out: RithmicProtocolFill[] = []
+  for (const groupFills of groups.values()) {
+    const history = groupFills.filter((fill) => fill.source !== 'replay')
+    const replay = groupFills.filter((fill) => fill.source === 'replay')
+    const historyClusters = clusterOneSource(history, pieceWindowMs)
+    for (const cluster of historyClusters) out.push(mergeCluster(cluster))
+    for (const cluster of clusterOneSource(replay, pieceWindowMs)) {
+      const coveredByHistory = historyClusters.some(
+        (h) =>
+          cluster.startMs <= h.endMs + crossSourceToleranceMs &&
+          cluster.endMs >= h.startMs - crossSourceToleranceMs,
+      )
+      if (!coveredByHistory) out.push(mergeCluster(cluster))
+    }
+  }
+
+  // Keep the caller's order stable for FIFO tie-breaks.
+  const rank = new Map(fills.map((fill, index) => [fill, index]))
+  return out.sort((a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0))
+}
+
+export type RithmicProtocolStoredLegRow = RithmicProtocolFillPairIdentity & {
+  id?: string
+  side?: string | null
+  quantity?: number | null
+  entryPrice?: string | null
+  closePrice?: string | null
+}
+
+type Leg = {
+  key: string
+  direction: 'B' | 'S'
+  price: number
+  timeMs: number
+  remaining: number
+}
+
+function tradeLegs(row: RithmicProtocolStoredLegRow): [Leg, Leg] | null {
+  const entryMs = parseIdentityTime(row.entryDate)
+  const closeMs = parseIdentityTime(row.closeDate)
+  const quantity = Math.abs(Number(row.quantity) || 0)
+  const entryPrice = Number(row.entryPrice)
+  const closePrice = Number(row.closePrice)
+  if (
+    entryMs == null ||
+    closeMs == null ||
+    !quantity ||
+    !Number.isFinite(entryPrice) ||
+    !Number.isFinite(closePrice)
+  ) {
+    return null
+  }
+  const isLong = String(row.side ?? '').trim().toLowerCase() === 'long'
+  const key = `${row.accountNumber ?? ''}|${row.instrument ?? ''}`
+  return [
+    { key, direction: isLong ? 'B' : 'S', price: entryPrice, timeMs: entryMs, remaining: quantity },
+    { key, direction: isLong ? 'S' : 'B', price: closePrice, timeMs: closeMs, remaining: quantity },
+  ]
+}
+
+function takeLeg(pool: Leg[], want: Leg, toleranceMs: number): Leg | undefined {
+  return pool.find(
+    (leg) =>
+      leg.remaining > 0 &&
+      leg.key === want.key &&
+      leg.direction === want.direction &&
+      leg.price === want.price &&
+      Math.abs(leg.timeMs - want.timeMs) <= toleranceMs,
+  )
+}
+
+/**
+ * Drop incoming Protocol trades whose contracts are already stored, even
+ * when the stored rows pair the fills differently (e.g. rows rebuilt from a
+ * broker export, or saved before order pieces were consolidated). A trade is
+ * covered when stored rows for the same account + instrument still have
+ * unclaimed contracts at the same side, price and time (± tolerance) for both
+ * its entry and its exit.
+ *
+ * Trades that already resolved to a same-size stored row are left alone
+ * (createMany's skipDuplicates handles them) and claim that row's legs first.
+ */
+export function filterRithmicProtocolTradesCoveredByStoredRows<
+  T extends RithmicProtocolStoredLegRow & { id: string },
+>(
+  incoming: T[],
+  existingRows: Array<RithmicProtocolStoredLegRow & { id: string }>,
+  toleranceMs = RITHMIC_PROTOCOL_TIMESTAMP_TOLERANCE_MS,
+): { kept: T[]; skipped: T[] } {
+  const existingById = new Map(existingRows.map((row) => [row.id, row]))
+  const pool: Leg[] = []
+  for (const row of existingRows) {
+    const legs = tradeLegs(row)
+    if (legs) pool.push(...legs)
+  }
+  const kept: T[] = []
+  const skipped: T[] = []
+  const pending: T[] = []
+  for (const trade of incoming) {
+    // Fill-pair matching ignores size, so a 5-lot can resolve to a stored
+    // 2-lot piece. Only a same-size match is the same row; anything else is
+    // checked for coverage (and skipped if covered, so the commission
+    // backfill does not rewrite the smaller row).
+    const match = existingById.get(trade.id)
+    if (match && Number(match.quantity) === Number(trade.quantity)) {
+      for (const want of tradeLegs(trade) ?? []) {
+        const leg = takeLeg(pool, want, toleranceMs)
+        if (leg) leg.remaining = Math.max(0, leg.remaining - want.remaining)
+      }
+      kept.push(trade)
+    } else {
+      pending.push(trade)
+    }
+  }
+  for (const trade of pending) {
+    const legs = tradeLegs(trade)
+    if (!legs) {
+      kept.push(trade)
+      continue
+    }
+    const claims: Array<{ leg: Leg; qty: number }> = []
+    let covered = true
+    for (const want of legs) {
+      let need = want.remaining
+      while (need > 0) {
+        const leg = takeLeg(pool, want, toleranceMs)
+        if (!leg) break
+        const qty = Math.min(need, leg.remaining)
+        leg.remaining -= qty
+        claims.push({ leg, qty })
+        need -= qty
+      }
+      if (need > 0) {
+        covered = false
+        break
+      }
+    }
+    if (covered) {
+      skipped.push(trade)
+    } else {
+      for (const claim of claims) claim.leg.remaining += claim.qty
+      kept.push(trade)
+    }
+  }
+  return { kept, skipped }
+}

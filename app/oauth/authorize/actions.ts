@@ -192,3 +192,21 @@ export async function denyAuthorizationAction(formData: FormData) {
   if (state) url.searchParams.set("state", state)
   redirect(url.toString())
 }
+
+/**
+ * "Use another account": sign the current user out and send them to sign-in,
+ * coming back to this exact consent screen afterwards. `next` is the relative
+ * `oauth/authorize?…` target built by the page; anything else is dropped so the
+ * form can't be used as an open redirect.
+ */
+export async function switchAccountAction(formData: FormData) {
+  const next = String(formData.get("next") || "")
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  const safeNext = next.startsWith("oauth/authorize?") ? next : ""
+  redirect(
+    safeNext
+      ? `/authentication?next=${encodeURIComponent(safeNext)}`
+      : "/authentication",
+  )
+}

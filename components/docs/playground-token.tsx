@@ -9,9 +9,12 @@ import {
   useMemo,
   useState,
   useTransition,
+  type Dispatch,
   type ReactNode,
+  type SetStateAction,
 } from "react"
 import Link from "next/link"
+import { tokenSheetOpenAfter } from "./token-sheet-state"
 import { useCurrentLocale } from "@/locales/landing-client"
 import {
   createDocsDemoTokenAction,
@@ -190,7 +193,7 @@ type PlaygroundTokenContextValue = {
   ) => void
   tokenSheetOpen: boolean
   openTokenSheet: () => void
-  setTokenSheetOpen: (open: boolean) => void
+  setTokenSheetOpen: Dispatch<SetStateAction<boolean>>
   openApiDocument: DocsOpenApiDocument | null
   openApiLoading: boolean
   openApiError: boolean
@@ -482,7 +485,10 @@ export function DocsBearerTokenPanel({
           return
         }
         persistToken(result.token, result.id, "docs")
-        setTokenSheetOpen(false)
+        // Keep the sheet open and show the new token so it can be copied;
+        // only the user closes the sheet.
+        setTokenSheetOpen((open) => tokenSheetOpenAfter("created", open))
+        setRevealed(true)
       } catch {
         setTokenActionError(labels.tokenError)
       }
@@ -500,7 +506,10 @@ export function DocsBearerTokenPanel({
           return
         }
         persistToken(result.token, result.id, "demo")
-        setTokenSheetOpen(false)
+        // Keep the sheet open and show the new token so it can be copied;
+        // only the user closes the sheet.
+        setTokenSheetOpen((open) => tokenSheetOpenAfter("created", open))
+        setRevealed(true)
       } catch {
         setTokenActionError(labels.demoError)
       }

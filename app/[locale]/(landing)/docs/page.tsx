@@ -11,6 +11,7 @@ import type { DocsNavItem } from "@/components/docs/docs-section-nav"
 import { MdxCodeCopy } from "@/components/mdx/code-copy"
 import { DocsOpenApiReference } from "@/components/docs/openapi-reference"
 import { DocsPlaygroundTokenProvider } from "@/components/docs/playground-token"
+import { DocsTryWithAi } from "@/components/docs/try-with-ai"
 import {
   DocsCapabilityToc,
   docsTocHeadingId,
@@ -129,6 +130,19 @@ async function CachedDocsPage({ locale }: { locale: string }) {
             <p className="mt-5 max-w-[680px] text-pretty text-base leading-relaxed text-black/60 dark:text-white/60 sm:text-lg">
               {t("docs.description")}
             </p>
+            {/* Keep {docsUrl} and {openApiUrl}; the client fills them from this origin. */}
+            <DocsTryWithAi
+              label={t("docs.tryWithAi")}
+              promptTemplate={t("docs.tryWithAi.prompt", {
+                docsUrl: "{docsUrl}",
+                openApiUrl: "{openApiUrl}",
+              })}
+              openLabel={{
+                claude: t("docs.tryWithAi.claude"),
+                chatgpt: t("docs.tryWithAi.chatgpt"),
+                grok: t("docs.tryWithAi.grok"),
+              }}
+            />
           </div>
         </header>
 

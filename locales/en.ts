@@ -104,6 +104,12 @@ export default {
   "docs.toc.importsWrite": "Upload import files",
   "docs.toc.metricsRead": "Read summary, equity, and account metrics",
   "docs.tryIt": "Try it",
+  "docs.tryWithAi": "Try it with AI",
+  "docs.tryWithAi.prompt":
+    "Read the Deltalytix API docs at {docsUrl} and the OpenAPI spec at {openApiUrl}. Then guide me step by step to try the API myself: how to create an API token in Deltalytix settings, how to authenticate, and give me ready-to-run curl examples for the main endpoints (e.g. listing my accounts and trades). Ask me which endpoint I want to try first.",
+  "docs.tryWithAi.claude": "Try it with Claude",
+  "docs.tryWithAi.chatgpt": "Try it with ChatGPT",
+  "docs.tryWithAi.grok": "Try it with Grok",
   "docs.openApi": "OpenAPI reference",
   "docs.openApiJson": "OpenAPI JSON",
   "docs.openapi.title": "OpenAPI reference",
