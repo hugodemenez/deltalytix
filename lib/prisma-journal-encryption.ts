@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@/prisma/generated/prisma/client'
 import {
-  decryptJournalConversation,
-  decryptJournalField,
+  decryptJournalConversationSafe,
+  decryptJournalFieldSafe,
   encryptJournalConversation,
   encryptJournalField,
 } from '@/lib/journal-field-crypto'
@@ -16,104 +16,165 @@ const WRITE_OPERATIONS = new Set([
   'upsert',
 ])
 
-function encryptTradeData(data: unknown): void {
-  if (data == null) return
-  if (Array.isArray(data)) {
-    for (const item of data) encryptTradeData(item)
-    return
+function encryptStringOrSet(value: unknown): unknown {
+  if (typeof value === 'string') return encryptJournalField(value)
+  if (value && typeof value === 'object' && 'set' in value) {
+    const rec = value as { set: unknown }
+    if (typeof rec.set === 'string') {
+      rec.set = encryptJournalField(rec.set)
+    }
+    return value
   }
-  if (typeof data !== 'object') return
-  const rec = data as Record<string, unknown>
-  if (typeof rec.comment === 'string') {
-    rec.comment = encryptJournalField(rec.comment)
-  }
+  return value
 }
 
-function encryptMoodData(data: unknown): void {
-  if (data == null) return
+function encryptConversationOrSet(value: unknown): unknown {
+  if (value && typeof value === 'object' && 'set' in value && !Array.isArray(value)) {
+    const rec = value as { set: unknown }
+    rec.set = encryptJournalConversation(rec.set)
+    return value
+  }
+  return encryptJournalConversation(value)
+}
+
+const SKIP_NESTED_WALK_KEYS = new Set([
+  'where',
+  'cursor',
+  'orderBy',
+  'select',
+  'include',
+  'omit',
+  'connect',
+  'disconnect',
+  'delete',
+  'deleteMany',
+])
+
+/**
+ * Encrypt journal fields on write payloads, including `{ set }` and nested
+ * `create` / `createMany` / `update` / `upsert` under relation keys.
+ */
+export function encryptWritePayload(data: unknown): void {
+  if (data == null || typeof data !== 'object') return
   if (Array.isArray(data)) {
-    for (const item of data) encryptMoodData(item)
+    for (const item of data) encryptWritePayload(item)
     return
   }
-  if (typeof data !== 'object') return
+
   const rec = data as Record<string, unknown>
-  if (typeof rec.journalContent === 'string') {
-    rec.journalContent = encryptJournalField(rec.journalContent)
+  if (typeof rec.comment === 'string' || (rec.comment && typeof rec.comment === 'object')) {
+    rec.comment = encryptStringOrSet(rec.comment)
+  }
+  if (
+    typeof rec.journalContent === 'string' ||
+    (rec.journalContent && typeof rec.journalContent === 'object')
+  ) {
+    rec.journalContent = encryptStringOrSet(rec.journalContent)
   }
   if (rec.conversation !== undefined) {
-    rec.conversation = encryptJournalConversation(rec.conversation)
+    rec.conversation = encryptConversationOrSet(rec.conversation)
+  }
+
+  for (const [key, value] of Object.entries(rec)) {
+    if (
+      key === 'comment' ||
+      key === 'journalContent' ||
+      key === 'conversation' ||
+      SKIP_NESTED_WALK_KEYS.has(key)
+    ) {
+      continue
+    }
+    if (value && typeof value === 'object') {
+      encryptWritePayload(value)
+    }
   }
 }
 
-function encryptArgs(
-  args: Record<string, unknown> | undefined,
-  encryptData: (data: unknown) => void,
-): void {
+export function encryptWriteArgs(args: Record<string, unknown> | undefined): void {
   if (!args) return
-  if (args.data !== undefined) encryptData(args.data)
-  if (args.create !== undefined) encryptData(args.create)
-  if (args.update !== undefined) encryptData(args.update)
+  if (args.data !== undefined) encryptWritePayload(args.data)
+  if (args.create !== undefined) encryptWritePayload(args.create)
+  if (args.update !== undefined) encryptWritePayload(args.update)
 }
 
-function decryptTradeRow(row: Record<string, unknown>): void {
+function decryptRowFields(row: Record<string, unknown>): void {
   if (typeof row.comment === 'string') {
-    row.comment = decryptJournalField(row.comment)
+    row.comment = decryptJournalFieldSafe(row.comment, row.id, 'trade.comment')
   }
-}
-
-function decryptMoodRow(row: Record<string, unknown>): void {
   if (typeof row.journalContent === 'string') {
-    row.journalContent = decryptJournalField(row.journalContent)
+    row.journalContent = decryptJournalFieldSafe(
+      row.journalContent,
+      row.id,
+      'mood.journalContent',
+    )
   }
   if (row.conversation !== undefined) {
-    row.conversation = decryptJournalConversation(row.conversation)
+    row.conversation = decryptJournalConversationSafe(row.conversation, row.id)
   }
 }
 
-function decryptResult(
-  result: unknown,
-  decryptRow: (row: Record<string, unknown>) => void,
-): unknown {
-  if (result == null) return result
+/**
+ * Decrypt journal fields on a query result, including nested `include`/`select`
+ * relation rows. One bad ciphertext cannot fail the whole response.
+ */
+export function decryptResultTree(result: unknown): unknown {
+  if (result == null || typeof result !== 'object') return result
   if (Array.isArray(result)) {
-    for (const item of result) {
-      if (item && typeof item === 'object') {
-        decryptRow(item as Record<string, unknown>)
-      }
-    }
+    for (const item of result) decryptResultTree(item)
     return result
   }
-  if (typeof result === 'object' && result !== null) {
-    const rec = result as Record<string, unknown>
-    if ('count' in rec && !('id' in rec)) return result
-    decryptRow(rec)
+
+  const rec = result as Record<string, unknown>
+  if ('count' in rec && !('id' in rec) && !('comment' in rec) && !('journalContent' in rec)) {
+    return result
+  }
+
+  decryptRowFields(rec)
+  for (const [key, value] of Object.entries(rec)) {
+    if (key === 'comment' || key === 'journalContent' || key === 'conversation') continue
+    decryptResultTree(value)
   }
   return result
 }
 
 /**
  * Transparent AES-256-GCM for Mood journal/conversation and Trade.comment.
- * Writes store `jrn:v1:` blobs; reads return plaintext to the app.
+ * Query hooks cover nested writes; result extensions + tree walk cover includes.
  */
 export function withJournalFieldEncryption<T extends PrismaClient>(client: T): T {
   return client.$extends({
-    query: {
+    result: {
       trade: {
-        async $allOperations({ operation, args, query }) {
-          if (WRITE_OPERATIONS.has(operation)) {
-            encryptArgs(args as Record<string, unknown>, encryptTradeData)
-          }
-          const result = await query(args)
-          return decryptResult(result, decryptTradeRow)
+        comment: {
+          needs: { comment: true, id: true },
+          compute(row) {
+            return decryptJournalFieldSafe(row.comment, row.id, 'trade.comment')
+          },
         },
       },
       mood: {
+        journalContent: {
+          needs: { journalContent: true, id: true },
+          compute(row) {
+            return decryptJournalFieldSafe(row.journalContent, row.id, 'mood.journalContent')
+          },
+        },
+        conversation: {
+          needs: { conversation: true, id: true },
+          compute(row) {
+            return decryptJournalConversationSafe(row.conversation, row.id)
+          },
+        },
+      },
+    },
+    query: {
+      $allModels: {
         async $allOperations({ operation, args, query }) {
           if (WRITE_OPERATIONS.has(operation)) {
-            encryptArgs(args as Record<string, unknown>, encryptMoodData)
+            encryptWriteArgs(args as Record<string, unknown>)
           }
           const result = await query(args)
-          return decryptResult(result, decryptMoodRow)
+          return decryptResultTree(result)
         },
       },
     },

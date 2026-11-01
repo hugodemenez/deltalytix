@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { PrismaClient } from "@/prisma/generated/prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
+import { prisma } from "@/lib/prisma"
 import { generateText, Output } from "ai"
 import { formatNameBatchError } from "@/lib/ai/format-name-batch"
 import { resolveAiTask } from "@/lib/ai/resolve-ai-task"
 import { z } from "zod"
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = new PrismaClient({ adapter })
 
 // Schema for the AI response
 const nameInferenceSchema = z.object({
@@ -187,8 +180,6 @@ Return the inferred names with confidence levels:
       },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
@@ -230,7 +221,5 @@ export async function GET(req: NextRequest) {
       },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
   }
 }

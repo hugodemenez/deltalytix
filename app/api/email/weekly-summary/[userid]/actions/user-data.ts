@@ -1,17 +1,10 @@
 'use server'
 
-import { PrismaClient } from "@/prisma/generated/prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
 import {
   getRecapWeekUtc,
   isEntryInWeek,
 } from "@/lib/weekly-newsletter-window"
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = new PrismaClient({ adapter })
+import { prisma } from "@/lib/prisma"
 
 interface UserData {
   user: {

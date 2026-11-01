@@ -85,8 +85,6 @@ export async function createShared(data: SharedParams): Promise<string> {
       throw new Error(`Failed to share trades: ${error.message}`)
     }
     throw new Error('An unexpected error occurred while sharing trades')
-  } finally {
-    await prisma.$disconnect()
   }
 }
 

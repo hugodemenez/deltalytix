@@ -1,5 +1,5 @@
 import type { Prisma } from "@/prisma/generated/prisma/client"
-import { decryptJournalField } from "@/lib/journal-field-crypto"
+import { decryptJournalFieldSafe } from "@/lib/journal-field-crypto"
 
 export const DEFAULT_PAGE_LIMIT = 100
 export const MAX_PAGE_LIMIT = 500
@@ -165,7 +165,7 @@ export function serializeTrade(trade: {
     commission: trade.commission,
     timeInPosition: trade.timeInPosition,
     tags: trade.tags,
-    comment: decryptJournalField(trade.comment),
+    comment: decryptJournalFieldSafe(trade.comment, trade.id, "trade.comment"),
     createdAt: trade.createdAt.toISOString(),
   }
 }

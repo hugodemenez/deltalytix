@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
-import { PrismaClient } from "@/prisma/generated/prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
 import { Resend } from 'resend'
+import { prisma } from '@/lib/prisma'
 import { headers } from 'next/headers'
 import { subDays, isEqual, startOfDay } from 'date-fns'
 import RenewalNoticeEmail from '@/components/emails/renewal-notice'
@@ -10,11 +9,6 @@ import {
   resolveRenewalNoticeFirstName,
 } from '@/lib/renewal-notice-copy'
 
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = new PrismaClient({ adapter })
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 function appOrigin(): string {
@@ -250,7 +244,5 @@ export async function GET(req: Request) {
       { error: 'Internal server error' },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
   }
 } 
