@@ -8,6 +8,7 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
   }
 })
 import { prisma } from '@/lib/prisma'
+import { decryptJournalField } from '@/lib/journal-field-crypto'
 
 export async function getUserStats() {
   let allUsers: any[] = []
@@ -657,7 +658,7 @@ export async function exportTeamTradesAction(teamId: string): Promise<string> {
       (trade.commission || 0).toString(),
       netPnl.toString(),
       trade.tags.join('; '),
-      trade.comment || '',
+      decryptJournalField(trade.comment) || '',
       trade.createdAt.toISOString()
     ].map(field => {
       // Convert to string and escape fields that contain commas, quotes, or newlines

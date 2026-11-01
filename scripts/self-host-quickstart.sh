@@ -42,8 +42,9 @@ LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local
 NEXT_PUBLIC_LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 OPENAI_API_KEY=dummy
-# Local AES key for Connection.token encryption (dev only — rotate for real deployments)
+# Local AES keys (dev only — rotate for real deployments; set distinct keys on Vercel)
 ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+JOURNAL_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 EOF
 
 unset DATABASE_URL DIRECT_URL

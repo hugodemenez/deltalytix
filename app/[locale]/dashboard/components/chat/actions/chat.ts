@@ -5,6 +5,10 @@ import { addDays, format } from "date-fns"
 import { Mood } from "@/prisma/generated/prisma/client"
 import { revalidateTag } from "next/cache"
 import { getUserId } from "@/server/auth"
+import {
+  decryptJournalConversation,
+  encryptJournalConversation,
+} from "@/lib/journal-field-crypto"
 
 export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
   const userId = await getUserId()
@@ -64,7 +68,9 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
         id: existingMood.id,
       },
       data: {
-        conversation: JSON.stringify(textOnlyMessages),
+        conversation: encryptJournalConversation(
+          JSON.stringify(textOnlyMessages),
+        ),
       },
     })
     return updatedMood
@@ -75,7 +81,9 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
         userId,
         day: todayUTC,
         mood: "NEUTRAL", // Default mood
-        conversation: JSON.stringify(textOnlyMessages),
+        conversation: encryptJournalConversation(
+          JSON.stringify(textOnlyMessages),
+        ),
       },
     })
     return newMood
@@ -115,6 +123,11 @@ export async function loadChat(): Promise<UIMessage[]> {
     },
   })
 
-  // Return conversation if it exists, otherwise empty array
-  return mood?.conversation ? JSON.parse(mood.conversation as string) : []
+  const conversation = decryptJournalConversation(mood?.conversation)
+  if (!conversation) return []
+  if (Array.isArray(conversation)) return conversation as UIMessage[]
+  if (typeof conversation === "string") {
+    return JSON.parse(conversation) as UIMessage[]
+  }
+  return []
 } 

@@ -7,8 +7,10 @@ import {
   filterAndSortTradesByEntryDate,
   invalidDateFilter,
   parseStoredTradeDate,
+  serializeTrade,
   tradeMatchesDateRange,
 } from "./pagination"
+import { encryptJournalField } from "../journal-field-crypto"
 
 describe("decodeCursor", () => {
   it("round-trips an offset", () => {
@@ -92,5 +94,35 @@ describe("buildTradeWhere", () => {
       accountNumber: "B-1",
     })
     expect(() => buildTradeWhere("  ", {})).toThrow(/user id/)
+  })
+})
+
+describe("serializeTrade", () => {
+  const base = {
+    id: "t1",
+    accountNumber: "A-1",
+    instrument: "ES",
+    side: "long",
+    quantity: 1,
+    entryPrice: "1",
+    closePrice: "2",
+    entryDate: "2026-01-01T00:00:00.000Z",
+    closeDate: "2026-01-01T00:01:00.000Z",
+    pnl: 10,
+    commission: 0,
+    timeInPosition: 60,
+    tags: [] as string[],
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  }
+
+  it("decrypts encrypted comments and passes through legacy plaintext", () => {
+    process.env.JOURNAL_ENCRYPTION_KEY = "9".repeat(64)
+    const encrypted = encryptJournalField("held the loser")
+    expect(serializeTrade({ ...base, comment: encrypted }).comment).toBe(
+      "held the loser",
+    )
+    expect(serializeTrade({ ...base, comment: "legacy note" }).comment).toBe(
+      "legacy note",
+    )
   })
 })

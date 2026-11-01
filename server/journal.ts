@@ -4,6 +4,17 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { createClient } from './auth';
 import { Mood } from '@/prisma/generated/prisma/client';
+import {
+  encryptJournalConversation,
+  encryptJournalField,
+  withDecryptedMoodFields,
+} from '@/lib/journal-field-crypto';
+
+function parseStoredConversation(value: unknown) {
+  if (value == null) return null
+  if (typeof value !== 'string') return value
+  return JSON.parse(value)
+}
 
 export type Conversation = {
   role: 'user' | 'assistant' | 'system';
@@ -66,13 +77,13 @@ export async function saveMindset(
         data: {
           emotionValue: data.emotionValue,
           selectedNews: data.selectedNews,
-          journalContent: data.journalContent,
+          journalContent: encryptJournalField(data.journalContent),
           mood: getMoodLabel(data.emotionValue),
           updatedAt: now,
         },
       })
       revalidatePath('/')
-      return updatedMood
+      return withDecryptedMoodFields(updatedMood)
     }
 
     // Create new mood
@@ -82,13 +93,13 @@ export async function saveMindset(
         day: today,
         emotionValue: data.emotionValue,
         selectedNews: data.selectedNews,
-        journalContent: data.journalContent,
+        journalContent: encryptJournalField(data.journalContent),
         mood: getMoodLabel(data.emotionValue),
       },
     })
 
     revalidatePath('/')
-    return newMood
+    return withDecryptedMoodFields(newMood)
   } catch (error) {
     console.error('Error saving mindset:', error)
     throw error
@@ -134,12 +145,14 @@ export async function saveMood(
         where: { id: existingMood.id },
         data: {
           mood,
-          conversation: conversation ? JSON.stringify(conversation) : undefined,
+          conversation: conversation
+            ? encryptJournalConversation(JSON.stringify(conversation))
+            : undefined,
           updatedAt: now,
         },
       })
       revalidatePath('/')
-      return updatedMood
+      return withDecryptedMoodFields(updatedMood)
     }
 
     // Create new mood
@@ -148,12 +161,14 @@ export async function saveMood(
         userId: user.id,
         day: today,
         mood,
-        conversation: conversation ? JSON.stringify(conversation) : undefined,
+        conversation: conversation
+          ? encryptJournalConversation(JSON.stringify(conversation))
+          : undefined,
       },
     })
 
     revalidatePath('/')
-    return newMood
+    return withDecryptedMoodFields(newMood)
   } catch (error) {
     console.error('Error saving mood:', error)
     throw error
@@ -184,10 +199,12 @@ export async function getMoodForDay(date: string) {
       },
     })
 
-    return mood ? {
-      ...mood,
-      conversation: mood.conversation ? JSON.parse(mood.conversation as string) : null,
-    } : null
+    if (!mood) return null
+    const decrypted = withDecryptedMoodFields(mood)
+    return {
+      ...decrypted,
+      conversation: parseStoredConversation(decrypted.conversation),
+    }
   } catch (error) {
     console.error('Error getting mood:', error)
     throw error
@@ -214,10 +231,13 @@ export async function getMoodHistory(fromDate?: Date, toDate?: Date): Promise<Mo
       },
     })
 
-    return moods.map(mood => ({
-      ...mood,
-      conversation: mood.conversation ? JSON.parse(mood.conversation as string) : null,
-    }))
+    return moods.map(mood => {
+      const decrypted = withDecryptedMoodFields(mood)
+      return {
+        ...decrypted,
+        conversation: parseStoredConversation(decrypted.conversation),
+      }
+    })
   } catch (error) {
     console.error('Error getting mood history:', error)
     throw error
@@ -300,12 +320,12 @@ export async function saveJournal(
       const updatedMood = await prisma.mood.update({
         where: { id: existingMood.id },
         data: {
-          journalContent,
+          journalContent: encryptJournalField(journalContent),
           updatedAt: now,
         },
       })
       revalidatePath('/')
-      return updatedMood
+      return withDecryptedMoodFields(updatedMood)
     }
 
     // Create new mood with only journal content
@@ -313,14 +333,14 @@ export async function saveJournal(
       data: {
         userId: user.id,
         day: today,
-        journalContent,
+        journalContent: encryptJournalField(journalContent),
         mood: 'NEUTRAL', // Default mood
         emotionValue: 50, // Default emotion value
       },
     })
 
     revalidatePath('/')
-    return newMood
+    return withDecryptedMoodFields(newMood)
   } catch (error) {
     console.error('Error saving journal:', error)
     throw error

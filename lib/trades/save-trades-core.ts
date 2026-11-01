@@ -22,6 +22,7 @@ import {
   createManyTradesInChunks,
   TRADE_CREATE_MANY_CHUNK_SIZE,
 } from "@/lib/trades/create-many-trades"
+import { encryptJournalField } from "@/lib/journal-field-crypto"
 
 export type TradeError =
   | "DUPLICATE_TRADES"
@@ -284,9 +285,15 @@ export async function saveTradesCore(
     // fail the whole import on timeout and hold row locks for the duration.
     // A later chunk can fail after earlier chunks are committed. That count
     // has to come back so the cache is dropped and the UI shows the rows.
-    const insert = { data: userAssignedTrades, skipDuplicates: true as const }
+    const insert = {
+      data: userAssignedTrades.map((trade) => ({
+        ...trade,
+        comment: encryptJournalField(trade.comment),
+      })),
+      skipDuplicates: true as const,
+    }
     const result =
-      userAssignedTrades.length <= TRADE_CREATE_MANY_CHUNK_SIZE
+      insert.data.length <= TRADE_CREATE_MANY_CHUNK_SIZE
         ? await prisma.trade.createMany(insert)
         : await createManyTradesInChunks(async (chunk) => {
             try {
