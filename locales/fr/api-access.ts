@@ -196,6 +196,7 @@ export default {
   "validation.redirectUriRequired": "Ajoutez au moins une URI de redirection.",
   "validation.redirectUrisTooMany": "Vous pouvez ajouter 10 URI de redirection au maximum.",
   "validation.redirectUriScheme": "Utilisez https (http uniquement pour localhost).",
+  "validation.redirectUriWildcard": "Les URI de redirection ne peuvent pas contenir de joker.",
   "validation.redirectUriInvalid": "Saisissez une URL complète, par exemple https://example.com/callback.",
   "validation.redirectUriFragment": "Saisissez une URL complète, sans fragment #.",
   "validation.redirectUriUserinfo": "Le lien ne doit pas contenir de user:password.",

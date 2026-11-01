@@ -18,7 +18,9 @@ Every `/api/v1/*` request requires a Bearer token:
 Authorization: Bearer dltx_at_…
 ```
 
-REST endpoints are served from `https://www.deltalytix.app` under **API v1** (`/api/v1/*`). List endpoints accept `limit` (default `100`, max `500`) and `cursor`. Timestamps are ISO 8601. Machine-readable discovery: [`/openapi.json`](/openapi.json), [`/.well-known/openid-configuration`](/.well-known/openid-configuration), [`/.well-known/oauth-protected-resource`](/.well-known/oauth-protected-resource).
+REST endpoints are served from `https://www.deltalytix.app` under **API v1** (`/api/v1/*`). List endpoints accept `limit` (default `100`, max `500`) and `cursor`. Timestamps are ISO 8601. Machine-readable discovery: [`/openapi.json`](/openapi.json), [`/.well-known/openid-configuration`](/.well-known/openid-configuration), [`/.well-known/oauth-authorization-server`](/.well-known/oauth-authorization-server), [`/.well-known/oauth-protected-resource`](/.well-known/oauth-protected-resource).
+
+AI agents connect to the same data over MCP. See [MCP](/en/docs#mcp).
 
 ### Token formats
 
@@ -109,7 +111,9 @@ curl -X POST https://www.deltalytix.app/api/oauth/token \
   -d "code_verifier=PKCE_VERIFIER"
 ```
 
-Every OAuth app is a confidential client. Send `client_secret` in the body (`client_secret_post`) or as `Authorization: Basic` (`client_secret_basic`) on the code exchange, on refresh, and on revoke. A missing or wrong secret returns `401 invalid_client`. PKCE is still recommended: a code issued with a `code_challenge` also needs the matching `code_verifier`.
+Apps you create on the Developers page are confidential clients. Send `client_secret` in the body (`client_secret_post`) or as `Authorization: Basic` (`client_secret_basic`) on the code exchange, on refresh, and on revoke. A missing or wrong secret returns `401 invalid_client`. PKCE is recommended for those apps: a code issued with a `code_challenge` also needs the matching `code_verifier`.
+
+Public clients from `POST /oauth/register` have no secret (`token_endpoint_auth_method: none`) and must use PKCE S256. Send `resource=https://www.deltalytix.app/api/mcp` to audience-bind the token to the MCP server. See the [MCP section](/en/docs#mcp).
 
 <DocsResponse tone="success" label="Success">
 

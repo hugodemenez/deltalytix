@@ -23,4 +23,16 @@ describe("redirectUriProblem", () => {
     expect(redirectUriProblem("https://app.example/cb#")).not.toBeNull()
     expect(redirectUriProblem("https://user:pass@app.example/cb")).not.toBeNull()
   })
+
+  it("accepts the Claude, ChatGPT, and Cursor callbacks and rejects wildcards", () => {
+    expect(redirectUriProblem("https://claude.ai/api/mcp/auth_callback")).toBeNull()
+    expect(redirectUriProblem("https://chatgpt.com/connector_platform_oauth_redirect")).toBeNull()
+    expect(redirectUriProblem("https://chatgpt.com/connector/oauth/cb_123")).toBeNull()
+    expect(redirectUriProblem("https://www.cursor.com/agents/mcp/oauth/callback")).toBeNull()
+    expect(redirectUriProblem("http://localhost:8787/callback")).toBeNull()
+    expect(redirectUriProblem("http://127.0.0.1:6274/oauth/callback")).toBeNull()
+    expect(redirectUriProblem("https://claude.ai/api/mcp/*")).not.toBeNull()
+    expect(redirectUriProblem("https://evil.example/cb*")).not.toBeNull()
+    expect(redirectUriProblem("cursor://anysphere.cursor-mcp/oauth/callback")).not.toBeNull()
+  })
 })

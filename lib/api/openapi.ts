@@ -125,8 +125,9 @@ export function buildOpenApiDocument(request?: NextRequest | Request) {
       description:
         "OAuth 2.0 protected REST API for Deltalytix trades, accounts, broker " +
         "connections, imports, and performance metrics. Authorize with OAuth 2.0 " +
-        "and request only the scopes an agent needs. Every failure uses the JSON " +
-        "`Error` envelope described below.",
+        "and request only the scopes an agent needs. AI agents can also connect " +
+        "to the streamable HTTP MCP server at /mcp (served at /api/mcp). Every " +
+        "REST failure uses the JSON `Error` envelope described below.",
       license: { name: "CC-BY-NC-4.0", url: absoluteUrl("/terms", request) },
     },
     externalDocs: {
@@ -647,6 +648,34 @@ export function buildOpenApiDocument(request?: NextRequest | Request) {
           responses: {
             "200": { description: "Account metrics" },
             ...AUTHED_ERRORS,
+          },
+        },
+      },
+      "/mcp": {
+        post: {
+          operationId: "mcpStreamableHttp",
+          summary: "Model Context Protocol (streamable HTTP)",
+          description:
+            "Stateless streamable HTTP MCP endpoint. Send one JSON-RPC message " +
+            "per POST with Accept: application/json, text/event-stream. " +
+            "Authenticate with the same bearer token as the REST API (personal " +
+            "access token or OAuth access token). Unauthenticated calls return " +
+            "401 and WWW-Authenticate with resource_metadata pointing at " +
+            "/.well-known/oauth-protected-resource/api/mcp. Tools are read-only " +
+            "and call the same server functions as the /v1 read routes. " +
+            "Successful responses are JSON-RPC, not the REST error envelope.",
+          security: [{ oauth2: READ_ONLY_SCOPES }, { bearerAuth: [] }],
+          responses: {
+            "200": {
+              description: "JSON-RPC result (application/json).",
+            },
+            "401": {
+              description:
+                "Missing, invalid, or revoked bearer token. WWW-Authenticate includes resource_metadata.",
+            },
+            "405": {
+              description: "Only POST and OPTIONS are accepted.",
+            },
           },
         },
       },

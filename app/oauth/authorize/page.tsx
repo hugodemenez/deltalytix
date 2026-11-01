@@ -1,7 +1,8 @@
 import { Suspense } from "react"
 import { connection } from "next/server"
 import { redirect } from "next/navigation"
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
+import { getOAuthIssuer } from "@/lib/agent-discovery/metadata"
 import { loadAuthorizeContext } from "./actions"
 import { AuthorizeConsent } from "./consent"
 import { API_SCOPE_DESCRIPTIONS, type ApiScope } from "@/lib/api/scopes"
@@ -42,6 +43,10 @@ async function AuthorizeRequest({
   const state = get("state")
   const codeChallenge = get("code_challenge")
   const codeChallengeMethod = get("code_challenge_method")
+  const resource = get("resource")
+  const issuer = getOAuthIssuer(
+    new Request("http://localhost", { headers: await headers() }),
+  )
 
   // Relative and without a leading slash, like `next=dashboard`: the sign-in
   // form only follows same-origin targets (`signupRedirectPath`), so an
@@ -58,6 +63,7 @@ async function AuthorizeRequest({
       ...(codeChallengeMethod
         ? { code_challenge_method: codeChallengeMethod }
         : {}),
+      ...(resource ? { resource } : {}),
     }).filter(([, v]) => Boolean(v)) as [string, string][],
   ).toString()}`
 
@@ -69,6 +75,8 @@ async function AuthorizeRequest({
     state,
     codeChallenge,
     codeChallengeMethod,
+    resource,
+    issuer,
   })
 
   if (!context.authenticated) {
@@ -76,6 +84,14 @@ async function AuthorizeRequest({
   }
 
   if ("error" in context && context.error) {
+    if ("redirectUri" in context && context.redirectUri && context.issuer) {
+      const url = new URL(context.redirectUri)
+      url.searchParams.set("error", context.error)
+      url.searchParams.set("error_description", context.message)
+      url.searchParams.set("iss", context.issuer)
+      if (context.state) url.searchParams.set("state", context.state)
+      redirect(url.toString())
+    }
     return (
       <main className="flex min-h-screen flex-col items-center bg-[#FAFAFA] px-4 py-14 text-[#171717]">
         <p className="mb-6 text-[15px] font-semibold tracking-tight">Deltalytix</p>
@@ -106,6 +122,7 @@ async function AuthorizeRequest({
       state={context.state}
       codeChallenge={context.codeChallenge}
       codeChallengeMethod={context.codeChallengeMethod}
+      resource={context.resource}
       scopeValue={context.scopes.join(" ")}
       switchAccountNext={nextTarget}
       locale={(await cookies()).get("Next-Locale")?.value === "fr" ? "fr" : "en"}

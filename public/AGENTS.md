@@ -53,8 +53,11 @@ turn raw trade history into clear insights, better habits, and consistent result
 - `/openapi.json`: OpenAPI 3.1 description, including security schemes and scopes.
 - `/docs/api`: human-readable API documentation.
 - `/.well-known/api-catalog`: RFC 9727 linkset.
-- `/.well-known/mcp/server-card.json`: Model Context Protocol server card.
+- `/.well-known/mcp/server-card.json`: Model Context Protocol server card (streamable HTTP tools).
+- `/api/mcp`: streamable HTTP MCP endpoint. Requires a bearer token.
 - `/.well-known/oauth-protected-resource`: RFC 9728 metadata with the supported scopes.
+- `/.well-known/oauth-protected-resource/api/mcp`: RFC 9728 metadata for the MCP server.
+- `/.well-known/oauth-authorization-server`: RFC 8414 authorization server metadata (PKCE S256).
 - `/.well-known/openid-configuration`: OpenID Connect discovery metadata.
 - `/.well-known/agent-skills/index.json`: published agent skills with content digests.
 
@@ -62,10 +65,36 @@ Request `/` with `Accept: text/markdown` for a markdown summary of the homepage.
 Responses that are content-negotiated send `Vary: Accept, Accept-Encoding`.
 
 ## Authentication scopes
-Authorize with OAuth 2.0 and request only what the task needs:
-`openid`, `profile`, `email`, `trades:read`, `trades:write`, `journal:read`,
-`journal:write`, `analytics:read`. Read-only agents should request
-`trades:read`, `journal:read`, `analytics:read`.
+Authorize with OAuth 2.0 or a personal access token and request only what the task needs:
+`profile:read`, `trades:read`, `trades:write`, `accounts:read`, `connections:read`,
+`connections:write`, `imports:write`, `metrics:read`. Read-only agents should request
+`profile:read`, `trades:read`, `accounts:read`, `connections:read`, `metrics:read`.
+
+## MCP
+Connect an MCP client to `https://www.deltalytix.app/api/mcp` (streamable HTTP, stateless, JSON responses).
+
+Send `Authorization: Bearer <token>` on every request. The token is a personal access token (`dltx_pat_…`) from Settings → Connections, or an OAuth access token from `/oauth/authorize`. Both are checked by the same authenticator as `/api/v1`, including revocation.
+
+Unauthenticated calls return HTTP 401 with `WWW-Authenticate` pointing at `/.well-known/oauth-protected-resource/api/mcp`. That document lists the authorization server. The authorization server metadata is `/.well-known/oauth-authorization-server` (authorization code, PKCE S256, and `registration_endpoint` at `/oauth/register`). Public clients register there and must use PKCE. Confidential apps created on the Developers page still use a client secret.
+
+Tools are read-only and limited to the token's user: `get_profile`, `list_accounts`, `list_trades`, `get_metrics_summary`, `get_account_metrics`, `get_equity_curve`, `get_daily_pnl`, `list_connections`. Revoke the token or the OAuth app from Settings → Connections; the next call is rejected.
+
+Cursor (`~/.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "deltalytix": {
+      "url": "https://www.deltalytix.app/api/mcp",
+      "headers": {
+        "Authorization": "Bearer dltx_pat_YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+Claude, ChatGPT, and Cursor can also connect with OAuth and no pasted token: give them the URL `https://www.deltalytix.app/api/mcp`. They register a public client, send the user through the consent screen, and the grant shows up under Settings → Connections. Cursor install link: `cursor://anysphere.cursor-deeplink/mcp/install?name=deltalytix&config=eyJ1cmwiOiJodHRwczovL3d3dy5kZWx0YWx5dGl4LmFwcC9hcGkvbWNwIn0%3D`.
 
 ## Errors
 Every `/api/*` failure returns JSON, never HTML:

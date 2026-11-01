@@ -516,6 +516,11 @@ export type UserMinOrderByAggregateInput = {
   thorToken?: Prisma.SortOrder
 }
 
+export type UserNullableScalarRelationFilter = {
+  is?: Prisma.UserWhereInput | null
+  isNot?: Prisma.UserWhereInput | null
+}
+
 export type UserCreateNestedOneWithoutSubscriptionsInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutSubscriptionsInput, Prisma.UserUncheckedCreateWithoutSubscriptionsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutSubscriptionsInput
@@ -582,10 +587,12 @@ export type UserCreateNestedOneWithoutOauthAppsInput = {
   connect?: Prisma.UserWhereUniqueInput
 }
 
-export type UserUpdateOneRequiredWithoutOauthAppsNestedInput = {
+export type UserUpdateOneWithoutOauthAppsNestedInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutOauthAppsInput, Prisma.UserUncheckedCreateWithoutOauthAppsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutOauthAppsInput
   upsert?: Prisma.UserUpsertWithoutOauthAppsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
   connect?: Prisma.UserWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutOauthAppsInput, Prisma.UserUpdateWithoutOauthAppsInput>, Prisma.UserUncheckedUpdateWithoutOauthAppsInput>
 }

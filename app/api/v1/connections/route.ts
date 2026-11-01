@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticateApiRequest } from "@/lib/api/auth"
 import { apiError } from "@/lib/api/errors"
+import { readConnections } from "@/lib/api/v1/reads"
 import { withPublicApiRequestLog } from "@/lib/api/with-request-log"
-import { getConnectionsForUser } from "@/server/connections"
 import {
   createServerSyncableConnection,
   type CreateConnectionBody,
@@ -10,28 +10,11 @@ import {
 
 export const maxDuration = 300
 
-function serializeConnection(
-  connection: Awaited<ReturnType<typeof getConnectionsForUser>>[number],
-) {
-  return {
-    id: connection.id,
-    service: connection.service,
-    externalId: connection.externalId,
-    lastSyncedAt: connection.lastSyncedAt.toISOString(),
-    environment: connection.environment,
-    accountNumbers: connection.accounts.map((a) => a.number),
-    createdAt: connection.createdAt.toISOString(),
-  }
-}
-
 async function getHandler(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["connections:read"])
   if (!auth.ok) return auth.response
 
-  const connections = await getConnectionsForUser(auth.auth.userId)
-  return NextResponse.json({
-    data: connections.map(serializeConnection),
-  })
+  return NextResponse.json(await readConnections(auth.auth.userId))
 }
 
 async function postHandler(request: NextRequest) {

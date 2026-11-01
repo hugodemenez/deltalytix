@@ -61,6 +61,7 @@ export const ModelName = {
   OAuthApp: 'OAuthApp',
   OAuthAuthorizationCode: 'OAuthAuthorizationCode',
   OAuthAccessToken: 'OAuthAccessToken',
+  OAuthRegistrationAttempt: 'OAuthRegistrationAttempt',
   Connection: 'Connection',
   Team: 'Team',
   TeamInvitation: 'TeamInvitation',
@@ -224,6 +225,8 @@ export const OAuthAppScalarFieldEnum = {
   logoUrl: 'logoUrl',
   clientId: 'clientId',
   clientSecretHash: 'clientSecretHash',
+  tokenEndpointAuthMethod: 'tokenEndpointAuthMethod',
+  dynamicallyRegistered: 'dynamicallyRegistered',
   redirectUris: 'redirectUris',
   scopes: 'scopes',
   secretRotatedAt: 'secretRotatedAt',
@@ -243,6 +246,7 @@ export const OAuthAuthorizationCodeScalarFieldEnum = {
   redirectUri: 'redirectUri',
   codeChallenge: 'codeChallenge',
   codeChallengeMethod: 'codeChallengeMethod',
+  resource: 'resource',
   expiresAt: 'expiresAt',
   consumedAt: 'consumedAt'
 } as const
@@ -260,12 +264,22 @@ export const OAuthAccessTokenScalarFieldEnum = {
   scopes: 'scopes',
   expiresAt: 'expiresAt',
   refreshTokenExpiresAt: 'refreshTokenExpiresAt',
+  resource: 'resource',
   lastUsedAt: 'lastUsedAt',
   revokedAt: 'revokedAt',
   createdAt: 'createdAt'
 } as const
 
 export type OAuthAccessTokenScalarFieldEnum = (typeof OAuthAccessTokenScalarFieldEnum)[keyof typeof OAuthAccessTokenScalarFieldEnum]
+
+
+export const OAuthRegistrationAttemptScalarFieldEnum = {
+  id: 'id',
+  keyHash: 'keyHash',
+  createdAt: 'createdAt'
+} as const
+
+export type OAuthRegistrationAttemptScalarFieldEnum = (typeof OAuthRegistrationAttemptScalarFieldEnum)[keyof typeof OAuthRegistrationAttemptScalarFieldEnum]
 
 
 export const ConnectionScalarFieldEnum = {

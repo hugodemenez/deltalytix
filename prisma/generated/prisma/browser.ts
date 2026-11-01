@@ -68,6 +68,11 @@ export type OAuthAuthorizationCode = Prisma.OAuthAuthorizationCodeModel
  */
 export type OAuthAccessToken = Prisma.OAuthAccessTokenModel
 /**
+ * Model OAuthRegistrationAttempt
+ * Sliding-window counter for POST /oauth/register. Hashes the client address.
+ */
+export type OAuthRegistrationAttempt = Prisma.OAuthRegistrationAttemptModel
+/**
  * Model Connection
  * 
  */

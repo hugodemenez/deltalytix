@@ -32,6 +32,8 @@ export type OAuthAppMinAggregateOutputType = {
   logoUrl: string | null
   clientId: string | null
   clientSecretHash: string | null
+  tokenEndpointAuthMethod: string | null
+  dynamicallyRegistered: boolean | null
   secretRotatedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -45,6 +47,8 @@ export type OAuthAppMaxAggregateOutputType = {
   logoUrl: string | null
   clientId: string | null
   clientSecretHash: string | null
+  tokenEndpointAuthMethod: string | null
+  dynamicallyRegistered: boolean | null
   secretRotatedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -58,6 +62,8 @@ export type OAuthAppCountAggregateOutputType = {
   logoUrl: number
   clientId: number
   clientSecretHash: number
+  tokenEndpointAuthMethod: number
+  dynamicallyRegistered: number
   redirectUris: number
   scopes: number
   secretRotatedAt: number
@@ -75,6 +81,8 @@ export type OAuthAppMinAggregateInputType = {
   logoUrl?: true
   clientId?: true
   clientSecretHash?: true
+  tokenEndpointAuthMethod?: true
+  dynamicallyRegistered?: true
   secretRotatedAt?: true
   createdAt?: true
   updatedAt?: true
@@ -88,6 +96,8 @@ export type OAuthAppMaxAggregateInputType = {
   logoUrl?: true
   clientId?: true
   clientSecretHash?: true
+  tokenEndpointAuthMethod?: true
+  dynamicallyRegistered?: true
   secretRotatedAt?: true
   createdAt?: true
   updatedAt?: true
@@ -101,6 +111,8 @@ export type OAuthAppCountAggregateInputType = {
   logoUrl?: true
   clientId?: true
   clientSecretHash?: true
+  tokenEndpointAuthMethod?: true
+  dynamicallyRegistered?: true
   redirectUris?: true
   scopes?: true
   secretRotatedAt?: true
@@ -183,12 +195,14 @@ export type OAuthAppGroupByArgs<ExtArgs extends runtime.Types.Extensions.Interna
 
 export type OAuthAppGroupByOutputType = {
   id: string
-  userId: string
+  userId: string | null
   name: string
   description: string | null
   logoUrl: string | null
   clientId: string
-  clientSecretHash: string
+  clientSecretHash: string | null
+  tokenEndpointAuthMethod: string
+  dynamicallyRegistered: boolean
   redirectUris: string[]
   scopes: string[]
   secretRotatedAt: Date | null
@@ -219,30 +233,34 @@ export type OAuthAppWhereInput = {
   OR?: Prisma.OAuthAppWhereInput[]
   NOT?: Prisma.OAuthAppWhereInput | Prisma.OAuthAppWhereInput[]
   id?: Prisma.StringFilter<"OAuthApp"> | string
-  userId?: Prisma.StringFilter<"OAuthApp"> | string
+  userId?: Prisma.StringNullableFilter<"OAuthApp"> | string | null
   name?: Prisma.StringFilter<"OAuthApp"> | string
   description?: Prisma.StringNullableFilter<"OAuthApp"> | string | null
   logoUrl?: Prisma.StringNullableFilter<"OAuthApp"> | string | null
   clientId?: Prisma.StringFilter<"OAuthApp"> | string
-  clientSecretHash?: Prisma.StringFilter<"OAuthApp"> | string
+  clientSecretHash?: Prisma.StringNullableFilter<"OAuthApp"> | string | null
+  tokenEndpointAuthMethod?: Prisma.StringFilter<"OAuthApp"> | string
+  dynamicallyRegistered?: Prisma.BoolFilter<"OAuthApp"> | boolean
   redirectUris?: Prisma.StringNullableListFilter<"OAuthApp">
   scopes?: Prisma.StringNullableListFilter<"OAuthApp">
   secretRotatedAt?: Prisma.DateTimeNullableFilter<"OAuthApp"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"OAuthApp"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"OAuthApp"> | Date | string
-  user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   authorizationCodes?: Prisma.OAuthAuthorizationCodeListRelationFilter
   accessTokens?: Prisma.OAuthAccessTokenListRelationFilter
 }
 
 export type OAuthAppOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  userId?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   name?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   logoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   clientId?: Prisma.SortOrder
-  clientSecretHash?: Prisma.SortOrder
+  clientSecretHash?: Prisma.SortOrderInput | Prisma.SortOrder
+  tokenEndpointAuthMethod?: Prisma.SortOrder
+  dynamicallyRegistered?: Prisma.SortOrder
   redirectUris?: Prisma.SortOrder
   scopes?: Prisma.SortOrder
   secretRotatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -259,29 +277,33 @@ export type OAuthAppWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.OAuthAppWhereInput | Prisma.OAuthAppWhereInput[]
   OR?: Prisma.OAuthAppWhereInput[]
   NOT?: Prisma.OAuthAppWhereInput | Prisma.OAuthAppWhereInput[]
-  userId?: Prisma.StringFilter<"OAuthApp"> | string
+  userId?: Prisma.StringNullableFilter<"OAuthApp"> | string | null
   name?: Prisma.StringFilter<"OAuthApp"> | string
   description?: Prisma.StringNullableFilter<"OAuthApp"> | string | null
   logoUrl?: Prisma.StringNullableFilter<"OAuthApp"> | string | null
-  clientSecretHash?: Prisma.StringFilter<"OAuthApp"> | string
+  clientSecretHash?: Prisma.StringNullableFilter<"OAuthApp"> | string | null
+  tokenEndpointAuthMethod?: Prisma.StringFilter<"OAuthApp"> | string
+  dynamicallyRegistered?: Prisma.BoolFilter<"OAuthApp"> | boolean
   redirectUris?: Prisma.StringNullableListFilter<"OAuthApp">
   scopes?: Prisma.StringNullableListFilter<"OAuthApp">
   secretRotatedAt?: Prisma.DateTimeNullableFilter<"OAuthApp"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"OAuthApp"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"OAuthApp"> | Date | string
-  user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   authorizationCodes?: Prisma.OAuthAuthorizationCodeListRelationFilter
   accessTokens?: Prisma.OAuthAccessTokenListRelationFilter
 }, "id" | "clientId">
 
 export type OAuthAppOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  userId?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   name?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   logoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   clientId?: Prisma.SortOrder
-  clientSecretHash?: Prisma.SortOrder
+  clientSecretHash?: Prisma.SortOrderInput | Prisma.SortOrder
+  tokenEndpointAuthMethod?: Prisma.SortOrder
+  dynamicallyRegistered?: Prisma.SortOrder
   redirectUris?: Prisma.SortOrder
   scopes?: Prisma.SortOrder
   secretRotatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -297,12 +319,14 @@ export type OAuthAppScalarWhereWithAggregatesInput = {
   OR?: Prisma.OAuthAppScalarWhereWithAggregatesInput[]
   NOT?: Prisma.OAuthAppScalarWhereWithAggregatesInput | Prisma.OAuthAppScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"OAuthApp"> | string
-  userId?: Prisma.StringWithAggregatesFilter<"OAuthApp"> | string
+  userId?: Prisma.StringNullableWithAggregatesFilter<"OAuthApp"> | string | null
   name?: Prisma.StringWithAggregatesFilter<"OAuthApp"> | string
   description?: Prisma.StringNullableWithAggregatesFilter<"OAuthApp"> | string | null
   logoUrl?: Prisma.StringNullableWithAggregatesFilter<"OAuthApp"> | string | null
   clientId?: Prisma.StringWithAggregatesFilter<"OAuthApp"> | string
-  clientSecretHash?: Prisma.StringWithAggregatesFilter<"OAuthApp"> | string
+  clientSecretHash?: Prisma.StringNullableWithAggregatesFilter<"OAuthApp"> | string | null
+  tokenEndpointAuthMethod?: Prisma.StringWithAggregatesFilter<"OAuthApp"> | string
+  dynamicallyRegistered?: Prisma.BoolWithAggregatesFilter<"OAuthApp"> | boolean
   redirectUris?: Prisma.StringNullableListFilter<"OAuthApp">
   scopes?: Prisma.StringNullableListFilter<"OAuthApp">
   secretRotatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"OAuthApp"> | Date | string | null
@@ -316,25 +340,29 @@ export type OAuthAppCreateInput = {
   description?: string | null
   logoUrl?: string | null
   clientId: string
-  clientSecretHash: string
+  clientSecretHash?: string | null
+  tokenEndpointAuthMethod?: string
+  dynamicallyRegistered?: boolean
   redirectUris?: Prisma.OAuthAppCreateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppCreatescopesInput | string[]
   secretRotatedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  user: Prisma.UserCreateNestedOneWithoutOauthAppsInput
+  user?: Prisma.UserCreateNestedOneWithoutOauthAppsInput
   authorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutAppInput
   accessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutAppInput
 }
 
 export type OAuthAppUncheckedCreateInput = {
   id?: string
-  userId: string
+  userId?: string | null
   name: string
   description?: string | null
   logoUrl?: string | null
   clientId: string
-  clientSecretHash: string
+  clientSecretHash?: string | null
+  tokenEndpointAuthMethod?: string
+  dynamicallyRegistered?: boolean
   redirectUris?: Prisma.OAuthAppCreateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppCreatescopesInput | string[]
   secretRotatedAt?: Date | string | null
@@ -350,25 +378,29 @@ export type OAuthAppUpdateInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  clientSecretHash?: Prisma.StringFieldUpdateOperationsInput | string
+  clientSecretHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenEndpointAuthMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  dynamicallyRegistered?: Prisma.BoolFieldUpdateOperationsInput | boolean
   redirectUris?: Prisma.OAuthAppUpdateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppUpdatescopesInput | string[]
   secretRotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  user?: Prisma.UserUpdateOneRequiredWithoutOauthAppsNestedInput
+  user?: Prisma.UserUpdateOneWithoutOauthAppsNestedInput
   authorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutAppNestedInput
   accessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutAppNestedInput
 }
 
 export type OAuthAppUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  clientSecretHash?: Prisma.StringFieldUpdateOperationsInput | string
+  clientSecretHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenEndpointAuthMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  dynamicallyRegistered?: Prisma.BoolFieldUpdateOperationsInput | boolean
   redirectUris?: Prisma.OAuthAppUpdateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppUpdatescopesInput | string[]
   secretRotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -380,12 +412,14 @@ export type OAuthAppUncheckedUpdateInput = {
 
 export type OAuthAppCreateManyInput = {
   id?: string
-  userId: string
+  userId?: string | null
   name: string
   description?: string | null
   logoUrl?: string | null
   clientId: string
-  clientSecretHash: string
+  clientSecretHash?: string | null
+  tokenEndpointAuthMethod?: string
+  dynamicallyRegistered?: boolean
   redirectUris?: Prisma.OAuthAppCreateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppCreatescopesInput | string[]
   secretRotatedAt?: Date | string | null
@@ -399,7 +433,9 @@ export type OAuthAppUpdateManyMutationInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  clientSecretHash?: Prisma.StringFieldUpdateOperationsInput | string
+  clientSecretHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenEndpointAuthMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  dynamicallyRegistered?: Prisma.BoolFieldUpdateOperationsInput | boolean
   redirectUris?: Prisma.OAuthAppUpdateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppUpdatescopesInput | string[]
   secretRotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -409,12 +445,14 @@ export type OAuthAppUpdateManyMutationInput = {
 
 export type OAuthAppUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  clientSecretHash?: Prisma.StringFieldUpdateOperationsInput | string
+  clientSecretHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenEndpointAuthMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  dynamicallyRegistered?: Prisma.BoolFieldUpdateOperationsInput | boolean
   redirectUris?: Prisma.OAuthAppUpdateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppUpdatescopesInput | string[]
   secretRotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -440,6 +478,8 @@ export type OAuthAppCountOrderByAggregateInput = {
   logoUrl?: Prisma.SortOrder
   clientId?: Prisma.SortOrder
   clientSecretHash?: Prisma.SortOrder
+  tokenEndpointAuthMethod?: Prisma.SortOrder
+  dynamicallyRegistered?: Prisma.SortOrder
   redirectUris?: Prisma.SortOrder
   scopes?: Prisma.SortOrder
   secretRotatedAt?: Prisma.SortOrder
@@ -455,6 +495,8 @@ export type OAuthAppMaxOrderByAggregateInput = {
   logoUrl?: Prisma.SortOrder
   clientId?: Prisma.SortOrder
   clientSecretHash?: Prisma.SortOrder
+  tokenEndpointAuthMethod?: Prisma.SortOrder
+  dynamicallyRegistered?: Prisma.SortOrder
   secretRotatedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -468,6 +510,8 @@ export type OAuthAppMinOrderByAggregateInput = {
   logoUrl?: Prisma.SortOrder
   clientId?: Prisma.SortOrder
   clientSecretHash?: Prisma.SortOrder
+  tokenEndpointAuthMethod?: Prisma.SortOrder
+  dynamicallyRegistered?: Prisma.SortOrder
   secretRotatedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -579,7 +623,9 @@ export type OAuthAppCreateWithoutUserInput = {
   description?: string | null
   logoUrl?: string | null
   clientId: string
-  clientSecretHash: string
+  clientSecretHash?: string | null
+  tokenEndpointAuthMethod?: string
+  dynamicallyRegistered?: boolean
   redirectUris?: Prisma.OAuthAppCreateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppCreatescopesInput | string[]
   secretRotatedAt?: Date | string | null
@@ -595,7 +641,9 @@ export type OAuthAppUncheckedCreateWithoutUserInput = {
   description?: string | null
   logoUrl?: string | null
   clientId: string
-  clientSecretHash: string
+  clientSecretHash?: string | null
+  tokenEndpointAuthMethod?: string
+  dynamicallyRegistered?: boolean
   redirectUris?: Prisma.OAuthAppCreateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppCreatescopesInput | string[]
   secretRotatedAt?: Date | string | null
@@ -636,12 +684,14 @@ export type OAuthAppScalarWhereInput = {
   OR?: Prisma.OAuthAppScalarWhereInput[]
   NOT?: Prisma.OAuthAppScalarWhereInput | Prisma.OAuthAppScalarWhereInput[]
   id?: Prisma.StringFilter<"OAuthApp"> | string
-  userId?: Prisma.StringFilter<"OAuthApp"> | string
+  userId?: Prisma.StringNullableFilter<"OAuthApp"> | string | null
   name?: Prisma.StringFilter<"OAuthApp"> | string
   description?: Prisma.StringNullableFilter<"OAuthApp"> | string | null
   logoUrl?: Prisma.StringNullableFilter<"OAuthApp"> | string | null
   clientId?: Prisma.StringFilter<"OAuthApp"> | string
-  clientSecretHash?: Prisma.StringFilter<"OAuthApp"> | string
+  clientSecretHash?: Prisma.StringNullableFilter<"OAuthApp"> | string | null
+  tokenEndpointAuthMethod?: Prisma.StringFilter<"OAuthApp"> | string
+  dynamicallyRegistered?: Prisma.BoolFilter<"OAuthApp"> | boolean
   redirectUris?: Prisma.StringNullableListFilter<"OAuthApp">
   scopes?: Prisma.StringNullableListFilter<"OAuthApp">
   secretRotatedAt?: Prisma.DateTimeNullableFilter<"OAuthApp"> | Date | string | null
@@ -655,24 +705,28 @@ export type OAuthAppCreateWithoutAuthorizationCodesInput = {
   description?: string | null
   logoUrl?: string | null
   clientId: string
-  clientSecretHash: string
+  clientSecretHash?: string | null
+  tokenEndpointAuthMethod?: string
+  dynamicallyRegistered?: boolean
   redirectUris?: Prisma.OAuthAppCreateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppCreatescopesInput | string[]
   secretRotatedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  user: Prisma.UserCreateNestedOneWithoutOauthAppsInput
+  user?: Prisma.UserCreateNestedOneWithoutOauthAppsInput
   accessTokens?: Prisma.OAuthAccessTokenCreateNestedManyWithoutAppInput
 }
 
 export type OAuthAppUncheckedCreateWithoutAuthorizationCodesInput = {
   id?: string
-  userId: string
+  userId?: string | null
   name: string
   description?: string | null
   logoUrl?: string | null
   clientId: string
-  clientSecretHash: string
+  clientSecretHash?: string | null
+  tokenEndpointAuthMethod?: string
+  dynamicallyRegistered?: boolean
   redirectUris?: Prisma.OAuthAppCreateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppCreatescopesInput | string[]
   secretRotatedAt?: Date | string | null
@@ -703,24 +757,28 @@ export type OAuthAppUpdateWithoutAuthorizationCodesInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  clientSecretHash?: Prisma.StringFieldUpdateOperationsInput | string
+  clientSecretHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenEndpointAuthMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  dynamicallyRegistered?: Prisma.BoolFieldUpdateOperationsInput | boolean
   redirectUris?: Prisma.OAuthAppUpdateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppUpdatescopesInput | string[]
   secretRotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  user?: Prisma.UserUpdateOneRequiredWithoutOauthAppsNestedInput
+  user?: Prisma.UserUpdateOneWithoutOauthAppsNestedInput
   accessTokens?: Prisma.OAuthAccessTokenUpdateManyWithoutAppNestedInput
 }
 
 export type OAuthAppUncheckedUpdateWithoutAuthorizationCodesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  clientSecretHash?: Prisma.StringFieldUpdateOperationsInput | string
+  clientSecretHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenEndpointAuthMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  dynamicallyRegistered?: Prisma.BoolFieldUpdateOperationsInput | boolean
   redirectUris?: Prisma.OAuthAppUpdateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppUpdatescopesInput | string[]
   secretRotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -735,24 +793,28 @@ export type OAuthAppCreateWithoutAccessTokensInput = {
   description?: string | null
   logoUrl?: string | null
   clientId: string
-  clientSecretHash: string
+  clientSecretHash?: string | null
+  tokenEndpointAuthMethod?: string
+  dynamicallyRegistered?: boolean
   redirectUris?: Prisma.OAuthAppCreateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppCreatescopesInput | string[]
   secretRotatedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  user: Prisma.UserCreateNestedOneWithoutOauthAppsInput
+  user?: Prisma.UserCreateNestedOneWithoutOauthAppsInput
   authorizationCodes?: Prisma.OAuthAuthorizationCodeCreateNestedManyWithoutAppInput
 }
 
 export type OAuthAppUncheckedCreateWithoutAccessTokensInput = {
   id?: string
-  userId: string
+  userId?: string | null
   name: string
   description?: string | null
   logoUrl?: string | null
   clientId: string
-  clientSecretHash: string
+  clientSecretHash?: string | null
+  tokenEndpointAuthMethod?: string
+  dynamicallyRegistered?: boolean
   redirectUris?: Prisma.OAuthAppCreateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppCreatescopesInput | string[]
   secretRotatedAt?: Date | string | null
@@ -783,24 +845,28 @@ export type OAuthAppUpdateWithoutAccessTokensInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  clientSecretHash?: Prisma.StringFieldUpdateOperationsInput | string
+  clientSecretHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenEndpointAuthMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  dynamicallyRegistered?: Prisma.BoolFieldUpdateOperationsInput | boolean
   redirectUris?: Prisma.OAuthAppUpdateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppUpdatescopesInput | string[]
   secretRotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  user?: Prisma.UserUpdateOneRequiredWithoutOauthAppsNestedInput
+  user?: Prisma.UserUpdateOneWithoutOauthAppsNestedInput
   authorizationCodes?: Prisma.OAuthAuthorizationCodeUpdateManyWithoutAppNestedInput
 }
 
 export type OAuthAppUncheckedUpdateWithoutAccessTokensInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  clientSecretHash?: Prisma.StringFieldUpdateOperationsInput | string
+  clientSecretHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenEndpointAuthMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  dynamicallyRegistered?: Prisma.BoolFieldUpdateOperationsInput | boolean
   redirectUris?: Prisma.OAuthAppUpdateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppUpdatescopesInput | string[]
   secretRotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -815,7 +881,9 @@ export type OAuthAppCreateManyUserInput = {
   description?: string | null
   logoUrl?: string | null
   clientId: string
-  clientSecretHash: string
+  clientSecretHash?: string | null
+  tokenEndpointAuthMethod?: string
+  dynamicallyRegistered?: boolean
   redirectUris?: Prisma.OAuthAppCreateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppCreatescopesInput | string[]
   secretRotatedAt?: Date | string | null
@@ -829,7 +897,9 @@ export type OAuthAppUpdateWithoutUserInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  clientSecretHash?: Prisma.StringFieldUpdateOperationsInput | string
+  clientSecretHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenEndpointAuthMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  dynamicallyRegistered?: Prisma.BoolFieldUpdateOperationsInput | boolean
   redirectUris?: Prisma.OAuthAppUpdateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppUpdatescopesInput | string[]
   secretRotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -845,7 +915,9 @@ export type OAuthAppUncheckedUpdateWithoutUserInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  clientSecretHash?: Prisma.StringFieldUpdateOperationsInput | string
+  clientSecretHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenEndpointAuthMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  dynamicallyRegistered?: Prisma.BoolFieldUpdateOperationsInput | boolean
   redirectUris?: Prisma.OAuthAppUpdateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppUpdatescopesInput | string[]
   secretRotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -861,7 +933,9 @@ export type OAuthAppUncheckedUpdateManyWithoutUserInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  clientSecretHash?: Prisma.StringFieldUpdateOperationsInput | string
+  clientSecretHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenEndpointAuthMethod?: Prisma.StringFieldUpdateOperationsInput | string
+  dynamicallyRegistered?: Prisma.BoolFieldUpdateOperationsInput | boolean
   redirectUris?: Prisma.OAuthAppUpdateredirectUrisInput | string[]
   scopes?: Prisma.OAuthAppUpdatescopesInput | string[]
   secretRotatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -917,12 +991,14 @@ export type OAuthAppSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   logoUrl?: boolean
   clientId?: boolean
   clientSecretHash?: boolean
+  tokenEndpointAuthMethod?: boolean
+  dynamicallyRegistered?: boolean
   redirectUris?: boolean
   scopes?: boolean
   secretRotatedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.OAuthApp$userArgs<ExtArgs>
   authorizationCodes?: boolean | Prisma.OAuthApp$authorizationCodesArgs<ExtArgs>
   accessTokens?: boolean | Prisma.OAuthApp$accessTokensArgs<ExtArgs>
   _count?: boolean | Prisma.OAuthAppCountOutputTypeDefaultArgs<ExtArgs>
@@ -936,12 +1012,14 @@ export type OAuthAppSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   logoUrl?: boolean
   clientId?: boolean
   clientSecretHash?: boolean
+  tokenEndpointAuthMethod?: boolean
+  dynamicallyRegistered?: boolean
   redirectUris?: boolean
   scopes?: boolean
   secretRotatedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.OAuthApp$userArgs<ExtArgs>
 }, ExtArgs["result"]["oAuthApp"]>
 
 export type OAuthAppSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -952,12 +1030,14 @@ export type OAuthAppSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   logoUrl?: boolean
   clientId?: boolean
   clientSecretHash?: boolean
+  tokenEndpointAuthMethod?: boolean
+  dynamicallyRegistered?: boolean
   redirectUris?: boolean
   scopes?: boolean
   secretRotatedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.OAuthApp$userArgs<ExtArgs>
 }, ExtArgs["result"]["oAuthApp"]>
 
 export type OAuthAppSelectScalar = {
@@ -968,6 +1048,8 @@ export type OAuthAppSelectScalar = {
   logoUrl?: boolean
   clientId?: boolean
   clientSecretHash?: boolean
+  tokenEndpointAuthMethod?: boolean
+  dynamicallyRegistered?: boolean
   redirectUris?: boolean
   scopes?: boolean
   secretRotatedAt?: boolean
@@ -975,35 +1057,46 @@ export type OAuthAppSelectScalar = {
   updatedAt?: boolean
 }
 
-export type OAuthAppOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "name" | "description" | "logoUrl" | "clientId" | "clientSecretHash" | "redirectUris" | "scopes" | "secretRotatedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["oAuthApp"]>
+export type OAuthAppOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "name" | "description" | "logoUrl" | "clientId" | "clientSecretHash" | "tokenEndpointAuthMethod" | "dynamicallyRegistered" | "redirectUris" | "scopes" | "secretRotatedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["oAuthApp"]>
 export type OAuthAppInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.OAuthApp$userArgs<ExtArgs>
   authorizationCodes?: boolean | Prisma.OAuthApp$authorizationCodesArgs<ExtArgs>
   accessTokens?: boolean | Prisma.OAuthApp$accessTokensArgs<ExtArgs>
   _count?: boolean | Prisma.OAuthAppCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type OAuthAppIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.OAuthApp$userArgs<ExtArgs>
 }
 export type OAuthAppIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.OAuthApp$userArgs<ExtArgs>
 }
 
 export type $OAuthAppPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "OAuthApp"
   objects: {
-    user: Prisma.$UserPayload<ExtArgs>
+    user: Prisma.$UserPayload<ExtArgs> | null
     authorizationCodes: Prisma.$OAuthAuthorizationCodePayload<ExtArgs>[]
     accessTokens: Prisma.$OAuthAccessTokenPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    userId: string
+    /**
+     * Null for a dynamically registered client. User-owned apps still set it.
+     */
+    userId: string | null
     name: string
     description: string | null
     logoUrl: string | null
     clientId: string
-    clientSecretHash: string
+    /**
+     * Null for a public client (`token_endpoint_auth_method=none`).
+     */
+    clientSecretHash: string | null
+    /**
+     * `none`, `client_secret_basic`, or `client_secret_post`.
+     */
+    tokenEndpointAuthMethod: string
+    dynamicallyRegistered: boolean
     redirectUris: string[]
     scopes: string[]
     /**
@@ -1407,7 +1500,7 @@ readonly fields: OAuthAppFieldRefs;
  */
 export interface Prisma__OAuthAppClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  user<T extends Prisma.OAuthApp$userArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.OAuthApp$userArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   authorizationCodes<T extends Prisma.OAuthApp$authorizationCodesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.OAuthApp$authorizationCodesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OAuthAuthorizationCodePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   accessTokens<T extends Prisma.OAuthApp$accessTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.OAuthApp$accessTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OAuthAccessTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
@@ -1446,6 +1539,8 @@ export interface OAuthAppFieldRefs {
   readonly logoUrl: Prisma.FieldRef<"OAuthApp", 'String'>
   readonly clientId: Prisma.FieldRef<"OAuthApp", 'String'>
   readonly clientSecretHash: Prisma.FieldRef<"OAuthApp", 'String'>
+  readonly tokenEndpointAuthMethod: Prisma.FieldRef<"OAuthApp", 'String'>
+  readonly dynamicallyRegistered: Prisma.FieldRef<"OAuthApp", 'Boolean'>
   readonly redirectUris: Prisma.FieldRef<"OAuthApp", 'String[]'>
   readonly scopes: Prisma.FieldRef<"OAuthApp", 'String[]'>
   readonly secretRotatedAt: Prisma.FieldRef<"OAuthApp", 'DateTime'>
@@ -1849,6 +1944,25 @@ export type OAuthAppDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * Limit how many OAuthApps to delete.
    */
   limit?: number
+}
+
+/**
+ * OAuthApp.user
+ */
+export type OAuthApp$userArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User
+   */
+  select?: Prisma.UserSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the User
+   */
+  omit?: Prisma.UserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
 }
 
 /**

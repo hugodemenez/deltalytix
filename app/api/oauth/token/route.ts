@@ -9,6 +9,12 @@ import {
 } from "@/lib/api/oauth-client"
 import { setPublicApiRequestLogContext } from "@/lib/api/request-log"
 import { withPublicApiRequestLog } from "@/lib/api/with-request-log"
+import { getOAuthIssuer } from "@/lib/agent-discovery/metadata"
+import { isPublicOAuthClient } from "@/lib/api/oauth-pkce"
+import {
+  canonicalMcpResource,
+  resourceIndicatorProblem,
+} from "@/lib/api/oauth-resource"
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   accessTokenExpiresAt,
@@ -75,6 +81,10 @@ async function postHandler(request: NextRequest) {
 
       setPublicApiRequestLogContext({ userId: pending.userId })
 
+      if (isPublicOAuthClient(app) && !pending.codeChallenge) {
+        return oauthError(400, "invalid_grant", "PKCE code_challenge is required")
+      }
+
       if (pending.codeChallenge) {
         if (!code_verifier) {
           return oauthError(400, "invalid_grant", "code_verifier is required")
@@ -88,9 +98,26 @@ async function postHandler(request: NextRequest) {
         }
       }
 
+      const issuer = getOAuthIssuer(request)
+      const requestedResource = body.resource?.trim()
+      if (requestedResource) {
+        if (
+          resourceIndicatorProblem(requestedResource, issuer) ||
+          !pending.resource ||
+          pending.resource !== canonicalMcpResource(issuer)
+        ) {
+          return oauthError(
+            400,
+            "invalid_target",
+            "resource does not match the authorization request",
+          )
+        }
+      }
+
       const accessToken = generateAccessToken()
       const refreshToken = generateRefreshToken()
       const scopes = pending.scopes
+      const audience = pending.resource
 
       // Burn the code and mint the tokens together. `updateMany` filtered on
       // `consumedAt: null` makes the burn a single conditional write, so two
@@ -116,6 +143,7 @@ async function postHandler(request: NextRequest) {
               scopes,
               expiresAt: accessTokenExpiresAt(),
               refreshTokenExpiresAt: refreshTokenExpiresAt(),
+              resource: audience,
             },
           })
         })
@@ -177,6 +205,17 @@ async function postHandler(request: NextRequest) {
       }
 
       setPublicApiRequestLogContext({ userId: existing.userId })
+
+      const refreshResource = body.resource?.trim()
+      if (refreshResource) {
+        const issuer = getOAuthIssuer(request)
+        if (
+          resourceIndicatorProblem(refreshResource, issuer) ||
+          existing.resource !== canonicalMcpResource(issuer)
+        ) {
+          return oauthError(400, "invalid_target", "resource does not match this token")
+        }
+      }
 
       const accessToken = generateAccessToken()
       const refreshToken = generateRefreshToken()

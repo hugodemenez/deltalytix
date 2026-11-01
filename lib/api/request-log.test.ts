@@ -21,9 +21,10 @@ describe("public API request log", () => {
     vi.restoreAllMocks()
   })
 
-  it("scopes logging to /api/v1 and /api/oauth paths", () => {
+  it("scopes logging to /api/v1, /api/oauth, and /api/mcp", () => {
     expect(isPublicApiLogPath("/api/v1/me")).toBe(true)
     expect(isPublicApiLogPath("/api/oauth/token")).toBe(true)
+    expect(isPublicApiLogPath("/api/mcp")).toBe(true)
     expect(isPublicApiLogPath("/api/ai/chat")).toBe(false)
     expect(isPublicApiLogPath("/dashboard")).toBe(false)
   })

@@ -394,6 +394,7 @@ export const ModelName = {
   OAuthApp: 'OAuthApp',
   OAuthAuthorizationCode: 'OAuthAuthorizationCode',
   OAuthAccessToken: 'OAuthAccessToken',
+  OAuthRegistrationAttempt: 'OAuthRegistrationAttempt',
   Connection: 'Connection',
   Team: 'Team',
   TeamInvitation: 'TeamInvitation',
@@ -433,7 +434,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "trade" | "tickDetails" | "subscription" | "businessSubscription" | "teamSubscription" | "notification" | "user" | "oAuthApp" | "oAuthAuthorizationCode" | "oAuthAccessToken" | "connection" | "team" | "teamInvitation" | "teamManager" | "business" | "businessManager" | "businessInvitation" | "group" | "account" | "payout" | "dashboardLayout" | "subscriptionFeedback" | "mood" | "shared" | "referral" | "financialEvent" | "tag" | "newsletter" | "post" | "comment" | "vote" | "order" | "tradeAnalytics" | "historicalData"
+    modelProps: "trade" | "tickDetails" | "subscription" | "businessSubscription" | "teamSubscription" | "notification" | "user" | "oAuthApp" | "oAuthAuthorizationCode" | "oAuthAccessToken" | "oAuthRegistrationAttempt" | "connection" | "team" | "teamInvitation" | "teamManager" | "business" | "businessManager" | "businessInvitation" | "group" | "account" | "payout" | "dashboardLayout" | "subscriptionFeedback" | "mood" | "shared" | "referral" | "financialEvent" | "tag" | "newsletter" | "post" | "comment" | "vote" | "order" | "tradeAnalytics" | "historicalData"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1174,6 +1175,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.OAuthAccessTokenCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.OAuthAccessTokenCountAggregateOutputType> | number
+        }
+      }
+    }
+    OAuthRegistrationAttempt: {
+      payload: Prisma.$OAuthRegistrationAttemptPayload<ExtArgs>
+      fields: Prisma.OAuthRegistrationAttemptFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.OAuthRegistrationAttemptFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OAuthRegistrationAttemptPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.OAuthRegistrationAttemptFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OAuthRegistrationAttemptPayload>
+        }
+        findFirst: {
+          args: Prisma.OAuthRegistrationAttemptFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OAuthRegistrationAttemptPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.OAuthRegistrationAttemptFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OAuthRegistrationAttemptPayload>
+        }
+        findMany: {
+          args: Prisma.OAuthRegistrationAttemptFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OAuthRegistrationAttemptPayload>[]
+        }
+        create: {
+          args: Prisma.OAuthRegistrationAttemptCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OAuthRegistrationAttemptPayload>
+        }
+        createMany: {
+          args: Prisma.OAuthRegistrationAttemptCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.OAuthRegistrationAttemptCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OAuthRegistrationAttemptPayload>[]
+        }
+        delete: {
+          args: Prisma.OAuthRegistrationAttemptDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OAuthRegistrationAttemptPayload>
+        }
+        update: {
+          args: Prisma.OAuthRegistrationAttemptUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OAuthRegistrationAttemptPayload>
+        }
+        deleteMany: {
+          args: Prisma.OAuthRegistrationAttemptDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.OAuthRegistrationAttemptUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.OAuthRegistrationAttemptUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OAuthRegistrationAttemptPayload>[]
+        }
+        upsert: {
+          args: Prisma.OAuthRegistrationAttemptUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$OAuthRegistrationAttemptPayload>
+        }
+        aggregate: {
+          args: Prisma.OAuthRegistrationAttemptAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateOAuthRegistrationAttempt>
+        }
+        groupBy: {
+          args: Prisma.OAuthRegistrationAttemptGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.OAuthRegistrationAttemptGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.OAuthRegistrationAttemptCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.OAuthRegistrationAttemptCountAggregateOutputType> | number
         }
       }
     }
@@ -3113,6 +3188,8 @@ export const OAuthAppScalarFieldEnum = {
   logoUrl: 'logoUrl',
   clientId: 'clientId',
   clientSecretHash: 'clientSecretHash',
+  tokenEndpointAuthMethod: 'tokenEndpointAuthMethod',
+  dynamicallyRegistered: 'dynamicallyRegistered',
   redirectUris: 'redirectUris',
   scopes: 'scopes',
   secretRotatedAt: 'secretRotatedAt',
@@ -3132,6 +3209,7 @@ export const OAuthAuthorizationCodeScalarFieldEnum = {
   redirectUri: 'redirectUri',
   codeChallenge: 'codeChallenge',
   codeChallengeMethod: 'codeChallengeMethod',
+  resource: 'resource',
   expiresAt: 'expiresAt',
   consumedAt: 'consumedAt'
 } as const
@@ -3149,12 +3227,22 @@ export const OAuthAccessTokenScalarFieldEnum = {
   scopes: 'scopes',
   expiresAt: 'expiresAt',
   refreshTokenExpiresAt: 'refreshTokenExpiresAt',
+  resource: 'resource',
   lastUsedAt: 'lastUsedAt',
   revokedAt: 'revokedAt',
   createdAt: 'createdAt'
 } as const
 
 export type OAuthAccessTokenScalarFieldEnum = (typeof OAuthAccessTokenScalarFieldEnum)[keyof typeof OAuthAccessTokenScalarFieldEnum]
+
+
+export const OAuthRegistrationAttemptScalarFieldEnum = {
+  id: 'id',
+  keyHash: 'keyHash',
+  createdAt: 'createdAt'
+} as const
+
+export type OAuthRegistrationAttemptScalarFieldEnum = (typeof OAuthRegistrationAttemptScalarFieldEnum)[keyof typeof OAuthRegistrationAttemptScalarFieldEnum]
 
 
 export const ConnectionScalarFieldEnum = {
@@ -3854,6 +3942,7 @@ export type GlobalOmitConfig = {
   oAuthApp?: Prisma.OAuthAppOmit
   oAuthAuthorizationCode?: Prisma.OAuthAuthorizationCodeOmit
   oAuthAccessToken?: Prisma.OAuthAccessTokenOmit
+  oAuthRegistrationAttempt?: Prisma.OAuthRegistrationAttemptOmit
   connection?: Prisma.ConnectionOmit
   team?: Prisma.TeamOmit
   teamInvitation?: Prisma.TeamInvitationOmit

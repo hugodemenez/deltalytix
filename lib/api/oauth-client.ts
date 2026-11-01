@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto"
 import { prisma } from "@/lib/prisma"
+import { isPublicOAuthClient } from "@/lib/api/oauth-pkce"
 import { sha256 } from "@/lib/api/tokens"
 import type { NextRequest } from "next/server"
 
@@ -11,7 +12,8 @@ export type OAuthClientCredentials = {
 export type AuthenticatedOAuthApp = {
   id: string
   clientId: string
-  clientSecretHash: string
+  clientSecretHash: string | null
+  tokenEndpointAuthMethod: string
   scopes: string[]
   redirectUris: string[]
 }
@@ -91,9 +93,10 @@ export async function readOAuthFormOrJson(
 }
 
 /**
- * Every registered app is a confidential client: it is issued a secret at
- * creation and there is no public-client registration, so the secret is
- * required on every grant and on revocation.
+ * Confidential clients must present the secret. Public clients
+ * (`token_endpoint_auth_method=none`) authenticate with the client id alone;
+ * a secret on that request is rejected so a public client cannot be confused
+ * with a confidential one.
  */
 export function clientSecretSatisfies(
   clientSecretHash: string,
@@ -114,7 +117,9 @@ export async function authenticateOAuthClient(
   const app = await prisma.oAuthApp.findUnique({ where: { clientId } })
   if (!app) return null
 
-  if (!clientSecretSatisfies(app.clientSecretHash, clientSecret)) {
+  if (isPublicOAuthClient(app)) {
+    if (clientSecret) return null
+  } else if (!app.clientSecretHash || !clientSecretSatisfies(app.clientSecretHash, clientSecret)) {
     return null
   }
 

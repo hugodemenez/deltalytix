@@ -50,6 +50,7 @@ export function oauthAppErrorTranslator(
     'validation.redirectUriRequired': t('validation.redirectUriRequired'),
     'validation.redirectUrisTooMany': t('validation.redirectUrisTooMany'),
     'validation.redirectUriScheme': t('validation.redirectUriScheme'),
+    'validation.redirectUriWildcard': t('validation.redirectUriWildcard'),
     'validation.redirectUriInvalid': t('validation.redirectUriInvalid'),
     'validation.redirectUriFragment': t('validation.redirectUriFragment'),
     'validation.redirectUriUserinfo': t('validation.redirectUriUserinfo'),

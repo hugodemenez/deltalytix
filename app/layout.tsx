@@ -194,7 +194,10 @@ export default function RootLayout({
                       apiCatalog: new URL('/.well-known/api-catalog', location.origin).toString(),
                       agentSkills: new URL('/.well-known/agent-skills/index.json', location.origin).toString(),
                       mcpServerCard: new URL('/.well-known/mcp/server-card.json', location.origin).toString(),
+                      mcpEndpoint: new URL('/api/mcp', location.origin).toString(),
                       oauthProtectedResource: new URL('/.well-known/oauth-protected-resource', location.origin).toString(),
+                      mcpProtectedResource: new URL('/.well-known/oauth-protected-resource/api/mcp', location.origin).toString(),
+                      oauthAuthorizationServer: new URL('/.well-known/oauth-authorization-server', location.origin).toString(),
                       openidConfiguration: new URL('/.well-known/openid-configuration', location.origin).toString()
                     }
                   };

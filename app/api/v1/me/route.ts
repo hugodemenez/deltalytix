@@ -1,33 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { authenticateApiRequest } from "@/lib/api/auth"
 import { apiError } from "@/lib/api/errors"
+import { readProfile } from "@/lib/api/v1/reads"
 import { withPublicApiRequestLog } from "@/lib/api/with-request-log"
-import { prisma } from "@/lib/prisma"
 
 async function getHandler(request: NextRequest) {
   const auth = await authenticateApiRequest(request, ["profile:read"])
   if (!auth.ok) return auth.response
 
-  const user = await prisma.user.findFirst({
-    where: {
-      OR: [{ id: auth.auth.userId }, { auth_user_id: auth.auth.userId }],
-    },
-    select: {
-      id: true,
-      email: true,
-      language: true,
-    },
-  })
-
+  const user = await readProfile(auth.auth.userId)
   if (!user) {
     return apiError(404, "not_found", "User not found")
   }
 
-  return NextResponse.json({
-    id: user.id,
-    email: user.email,
-    language: user.language,
-  })
+  return NextResponse.json(user)
 }
 
 export const GET = withPublicApiRequestLog(getHandler)

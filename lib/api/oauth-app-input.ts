@@ -43,6 +43,7 @@ export const OAUTH_APP_ERROR_MESSAGES = {
   tooManyRedirectUris: `Add at most ${OAUTH_APP_MAX_REDIRECT_URIS} redirect URIs.`,
   redirectUriNotAbsolute: "Enter a full URL, like https://example.com/callback.",
   redirectUriHttps: "Use https, or http only for localhost.",
+  redirectUriWildcard: "Redirect URIs cannot contain a wildcard.",
   redirectUriFragment: "Full URLs only. No # fragments.",
   redirectUriCredentials: "No user:password in the link.",
   scopeRequired: "Choose at least one permission.",
@@ -57,6 +58,7 @@ export function redirectUriErrorMessage(uri: string): string | null {
   if (problem === "is not an absolute URL") return OAUTH_APP_ERROR_MESSAGES.redirectUriNotAbsolute
   if (problem === "must not contain a fragment") return OAUTH_APP_ERROR_MESSAGES.redirectUriFragment
   if (problem === "must not contain credentials") return OAUTH_APP_ERROR_MESSAGES.redirectUriCredentials
+  if (problem === "must not contain a wildcard") return OAUTH_APP_ERROR_MESSAGES.redirectUriWildcard
   return OAUTH_APP_ERROR_MESSAGES.redirectUriHttps
 }
 
