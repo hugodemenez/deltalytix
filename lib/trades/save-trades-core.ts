@@ -18,6 +18,7 @@ import {
 } from "@/lib/tradovate/identity"
 import { isDuplicateTradesOnlySave } from "@/lib/trades/save-trades-outcome"
 import { normalizeTradeDates } from "@/lib/trades/normalize-trade-date"
+import { encryptJournalField } from "@/lib/journal-field-crypto"
 
 export type TradeError =
   | "DUPLICATE_TRADES"
@@ -271,7 +272,10 @@ export async function saveTradesCore(
     )
 
     const result = await prisma.trade.createMany({
-      data: userAssignedTrades,
+      data: userAssignedTrades.map((trade) => ({
+        ...trade,
+        comment: encryptJournalField(trade.comment),
+      })),
       skipDuplicates: true,
     })
 

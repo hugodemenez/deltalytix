@@ -6,6 +6,7 @@ import { parseISO, isValid } from 'date-fns'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { GroupWithAccounts } from './groups'
+import { withDecryptedTradeComment } from '@/lib/journal-field-crypto'
 
 export interface SharedParams {
   userId: string
@@ -170,7 +171,7 @@ export async function getShared(slug: string): Promise<{params: SharedParams, tr
         expiresAt: shared.expiresAt || undefined,
         tickDetails,
       },
-      trades,
+      trades: trades.map(withDecryptedTradeComment),
       groups,
     }
   } catch (error) {

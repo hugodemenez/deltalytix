@@ -26,6 +26,7 @@ model Trade {
   side              String?  @default("")
   commission        Float    @default(0)
   createdAt         DateTime @default(now())
+  /// User-authored trade note. Encrypted at rest (`jrn:v1:` AES-256-GCM).
   comment           String?
   tags              String[] @default([])
   imageBase64       String?
@@ -493,11 +494,13 @@ model Mood {
   userId               String
   day                  DateTime
   mood                 String
+  /// AI coach transcript. Encrypted at rest (`jrn:v1:` AES-256-GCM).
   conversation         Json?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   emotionValue         Int      @default(50)
   hasTradingExperience Boolean?
+  /// Daily journal HTML. Encrypted at rest (`jrn:v1:` AES-256-GCM).
   journalContent       String?
   selectedNews         String[] @default([])
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
