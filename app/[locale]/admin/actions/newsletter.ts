@@ -1,18 +1,12 @@
 "use server"
 
-import { PrismaClient, User } from "@/prisma/generated/prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
+import { User } from "@/prisma/generated/prisma/client"
 import { Resend } from 'resend'
+import { prisma } from '@/lib/prisma'
 import NewsletterEmail from '@/components/emails/new-feature'
 import { revalidatePath } from "next/cache"
 import { parse } from "csv-parse"
 import { render } from "@react-email/render"
-
-// Initialize PrismaClient outside of the actions
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-const prisma = new PrismaClient({ adapter })
 
 interface SendNewsletterParams {
   subject: string

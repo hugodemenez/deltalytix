@@ -29,8 +29,6 @@ export async function addTagToTrade(tradeId: string, tag: string) {
   } catch (error) {
     console.error('Failed to add tag:', error)
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
@@ -59,8 +57,6 @@ export async function removeTagFromTrade(tradeId: string, tagToRemove: string) {
   } catch (error) {
     console.error('Failed to remove tag:', error)
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
@@ -96,8 +92,6 @@ export async function deleteTagFromAllTrades(tag: string) {
   } catch (error) {
     console.error('Failed to delete tag:', error)
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
@@ -130,8 +124,6 @@ export async function updateTradeImage(
   } catch (error) {
     console.error('Failed to update trade image:', error)
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
@@ -185,7 +177,5 @@ export async function addTagsToTradesForDay(date: string, tags: string[]) {
   } catch (error) {
     console.error('Failed to add tags to trades for day:', error)
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
