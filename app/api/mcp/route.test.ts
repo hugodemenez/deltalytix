@@ -67,6 +67,32 @@ function tokenRecord(
   }
 }
 
+function expectedServerInfo(origin: string) {
+  return {
+    name: "Deltalytix",
+    title: "Deltalytix",
+    version: "1.0.0",
+    websiteUrl: `${origin}/`,
+    icons: [
+      {
+        src: `${origin}/android-chrome-512x512.png`,
+        mimeType: "image/png",
+        sizes: ["512x512"],
+      },
+      {
+        src: `${origin}/apple-touch-icon.png`,
+        mimeType: "image/png",
+        sizes: ["180x180"],
+      },
+      {
+        src: `${origin}/icon.svg`,
+        mimeType: "image/svg+xml",
+        sizes: ["any"],
+      },
+    ],
+  }
+}
+
 function accountRow(number: string) {
   return {
     id: `acc-${number}`,
@@ -197,10 +223,9 @@ describe("MCP tool calls", () => {
     )
 
     expect(initialized.response.status).toBe(200)
-    expect(initialized.body.result.serverInfo).toMatchObject({
-      name: "Deltalytix",
-      version: "1.0.0",
-    })
+    expect(initialized.body.result.serverInfo).toEqual(
+      expectedServerInfo("https://www.deltalytix.app"),
+    )
     expect(initialized.body.result.protocolVersion).toBe("2025-06-18")
 
     const listed = await mcp("tools/list", {}, TOKEN, 2)
@@ -365,6 +390,8 @@ describe("MCP discovery documents", () => {
     )
     const body = await response.json()
 
+    expect(body.serverInfo).toEqual(expectedServerInfo("https://www.deltalytix.app"))
+    expect(body.serverInfo).not.toHaveProperty("iconUrl")
     expect(body.transports[0]).toMatchObject({
       type: "streamable-http",
       endpoint: "https://www.deltalytix.app/api/mcp",
@@ -375,6 +402,23 @@ describe("MCP discovery documents", () => {
     expect(body.capabilities.tools.tools.map((tool: { name: string }) => tool.name)).toEqual(
       MCP_TOOLS.map((tool) => tool.name),
     )
+  })
+
+  it("advertises the same icons on the host that served the server card", async () => {
+    const response = await serverCard(
+      new NextRequest("https://beta.deltalytix.app/.well-known/mcp/server-card.json", {
+        headers: { host: "beta.deltalytix.app" },
+      }),
+    )
+    const body = await response.json()
+
+    expect(body.serverInfo).toEqual(expectedServerInfo("https://beta.deltalytix.app"))
+    expect(body.serverInfo.icons[0].mimeType).toBe("image/png")
+    expect(body.serverInfo.icons.map((icon: { src: string }) => icon.src)).toEqual([
+      "https://beta.deltalytix.app/android-chrome-512x512.png",
+      "https://beta.deltalytix.app/apple-touch-icon.png",
+      "https://beta.deltalytix.app/icon.svg",
+    ])
   })
 
   it("points the MCP protected resource at the authorization server and supports PKCE", async () => {
