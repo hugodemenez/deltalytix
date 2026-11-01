@@ -60,6 +60,9 @@ interface ChartEvent {
   isReset?: boolean;
   payoutStatus?: string;
   accountNumber: string;
+  /** Gross trade PnL and commission, set only on trade events. */
+  tradePnL?: number;
+  tradeCommission?: number;
 }
 
 /**
@@ -298,6 +301,8 @@ export function computeEquityChartData(
       date,
       dateKey: formatInTimeZone(date, params.timezone, "yyyy-MM-dd"),
       amount: trade.pnl - (trade.commission || 0),
+      tradePnL: trade.pnl,
+      tradeCommission: trade.commission || 0,
       isPayout: false,
       isReset: false,
       accountNumber: trade.accountNumber,
@@ -372,6 +377,9 @@ export function computeEquityChartData(
     const point: ChartDataPoint = {
       date: dateKey,
       equity: 0,
+      dailyPnL: 0,
+      dailyCommissions: 0,
+      netPnL: 0,
     };
 
     if (params.showIndividual) {
@@ -405,6 +413,16 @@ export function computeEquityChartData(
           }
         } else {
           accountEquities[accountNumber] += event.amount;
+
+          if (event.tradePnL !== undefined) {
+            point.dailyPnL = (point.dailyPnL ?? 0) + event.tradePnL;
+            point.dailyCommissions =
+              (point.dailyCommissions ?? 0) + (event.tradeCommission ?? 0);
+            point.netPnL =
+              (point.netPnL ?? 0) +
+              event.tradePnL -
+              (event.tradeCommission ?? 0);
+          }
 
           if (!accountFirstActivity[accountNumber]) {
             accountFirstActivity[accountNumber] = dateKey;
