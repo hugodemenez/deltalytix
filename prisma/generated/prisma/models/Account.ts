@@ -629,6 +629,7 @@ export type AccountWhereInput = {
   connection?: Prisma.XOR<Prisma.ConnectionNullableScalarRelationFilter, Prisma.ConnectionWhereInput> | null
   payouts?: Prisma.PayoutListRelationFilter
   trades?: Prisma.TradeListRelationFilter
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillListRelationFilter
 }
 
 export type AccountOrderByWithRelationInput = {
@@ -683,6 +684,7 @@ export type AccountOrderByWithRelationInput = {
   connection?: Prisma.ConnectionOrderByWithRelationInput
   payouts?: Prisma.PayoutOrderByRelationAggregateInput
   trades?: Prisma.TradeOrderByRelationAggregateInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillOrderByRelationAggregateInput
 }
 
 export type AccountWhereUniqueInput = Prisma.AtLeast<{
@@ -741,6 +743,7 @@ export type AccountWhereUniqueInput = Prisma.AtLeast<{
   connection?: Prisma.XOR<Prisma.ConnectionNullableScalarRelationFilter, Prisma.ConnectionWhereInput> | null
   payouts?: Prisma.PayoutListRelationFilter
   trades?: Prisma.TradeListRelationFilter
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillListRelationFilter
 }, "id" | "id" | "number_userId">
 
 export type AccountOrderByWithAggregationInput = {
@@ -898,6 +901,7 @@ export type AccountCreateInput = {
   connection?: Prisma.ConnectionCreateNestedOneWithoutAccountsInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutAccountInput
   trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateInput = {
@@ -949,6 +953,7 @@ export type AccountUncheckedCreateInput = {
   shouldConsiderTradesBeforeReset?: boolean
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutAccountInput
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUpdateInput = {
@@ -1000,6 +1005,7 @@ export type AccountUpdateInput = {
   connection?: Prisma.ConnectionUpdateOneWithoutAccountsNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutAccountNestedInput
   trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateInput = {
@@ -1051,6 +1057,7 @@ export type AccountUncheckedUpdateInput = {
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutAccountNestedInput
   trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateManyInput = {
@@ -1597,6 +1604,22 @@ export type AccountUpdateOneRequiredWithoutPayoutsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.AccountUpdateToOneWithWhereWithoutPayoutsInput, Prisma.AccountUpdateWithoutPayoutsInput>, Prisma.AccountUncheckedUpdateWithoutPayoutsInput>
 }
 
+export type AccountCreateNestedOneWithoutRithmicProtocolFillsInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutRithmicProtocolFillsInput, Prisma.AccountUncheckedCreateWithoutRithmicProtocolFillsInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutRithmicProtocolFillsInput
+  connect?: Prisma.AccountWhereUniqueInput
+}
+
+export type AccountUpdateOneWithoutRithmicProtocolFillsNestedInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutRithmicProtocolFillsInput, Prisma.AccountUncheckedCreateWithoutRithmicProtocolFillsInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutRithmicProtocolFillsInput
+  upsert?: Prisma.AccountUpsertWithoutRithmicProtocolFillsInput
+  disconnect?: Prisma.AccountWhereInput | boolean
+  delete?: Prisma.AccountWhereInput | boolean
+  connect?: Prisma.AccountWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AccountUpdateToOneWithWhereWithoutRithmicProtocolFillsInput, Prisma.AccountUpdateWithoutRithmicProtocolFillsInput>, Prisma.AccountUncheckedUpdateWithoutRithmicProtocolFillsInput>
+}
+
 export type AccountCreateWithoutTradesInput = {
   id?: string
   number: string
@@ -1645,6 +1668,7 @@ export type AccountCreateWithoutTradesInput = {
   user: Prisma.UserCreateNestedOneWithoutAccountsInput
   connection?: Prisma.ConnectionCreateNestedOneWithoutAccountsInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutAccountInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutTradesInput = {
@@ -1695,6 +1719,7 @@ export type AccountUncheckedCreateWithoutTradesInput = {
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutAccountInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutTradesInput = {
@@ -1761,6 +1786,7 @@ export type AccountUpdateWithoutTradesInput = {
   user?: Prisma.UserUpdateOneRequiredWithoutAccountsNestedInput
   connection?: Prisma.ConnectionUpdateOneWithoutAccountsNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutAccountNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutTradesInput = {
@@ -1811,6 +1837,7 @@ export type AccountUncheckedUpdateWithoutTradesInput = {
   considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutAccountNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateWithoutUserInput = {
@@ -1861,6 +1888,7 @@ export type AccountCreateWithoutUserInput = {
   connection?: Prisma.ConnectionCreateNestedOneWithoutAccountsInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutAccountInput
   trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutUserInput = {
@@ -1911,6 +1939,7 @@ export type AccountUncheckedCreateWithoutUserInput = {
   shouldConsiderTradesBeforeReset?: boolean
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutAccountInput
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutUserInput = {
@@ -2039,6 +2068,7 @@ export type AccountCreateWithoutConnectionInput = {
   user: Prisma.UserCreateNestedOneWithoutAccountsInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutAccountInput
   trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutConnectionInput = {
@@ -2089,6 +2119,7 @@ export type AccountUncheckedCreateWithoutConnectionInput = {
   shouldConsiderTradesBeforeReset?: boolean
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutAccountInput
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutConnectionInput = {
@@ -2165,6 +2196,7 @@ export type AccountCreateWithoutGroupInput = {
   connection?: Prisma.ConnectionCreateNestedOneWithoutAccountsInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutAccountInput
   trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutGroupInput = {
@@ -2215,6 +2247,7 @@ export type AccountUncheckedCreateWithoutGroupInput = {
   shouldConsiderTradesBeforeReset?: boolean
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutAccountInput
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutGroupInput = {
@@ -2291,6 +2324,7 @@ export type AccountCreateWithoutPayoutsInput = {
   user: Prisma.UserCreateNestedOneWithoutAccountsInput
   connection?: Prisma.ConnectionCreateNestedOneWithoutAccountsInput
   trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutPayoutsInput = {
@@ -2341,6 +2375,7 @@ export type AccountUncheckedCreateWithoutPayoutsInput = {
   considerBuffer?: boolean
   shouldConsiderTradesBeforeReset?: boolean
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutPayoutsInput = {
@@ -2407,6 +2442,7 @@ export type AccountUpdateWithoutPayoutsInput = {
   user?: Prisma.UserUpdateOneRequiredWithoutAccountsNestedInput
   connection?: Prisma.ConnectionUpdateOneWithoutAccountsNestedInput
   trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutPayoutsInput = {
@@ -2456,6 +2492,227 @@ export type AccountUncheckedUpdateWithoutPayoutsInput = {
   buffer?: Prisma.FloatFieldUpdateOperationsInput | number
   considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountCreateWithoutRithmicProtocolFillsInput = {
+  id?: string
+  number: string
+  propfirm?: string
+  drawdownThreshold?: number
+  profitTarget?: number
+  isPerformance?: boolean
+  createdAt?: Date | string
+  startingBalance?: number
+  payoutCount?: number
+  trailingDrawdown?: boolean
+  trailingStopProfit?: number | null
+  resetDate?: Date | string | null
+  consistencyPercentage?: number | null
+  accountSize?: string | null
+  accountSizeName?: string | null
+  activationFees?: number | null
+  balanceRequired?: number | null
+  dailyLoss?: number | null
+  evaluation?: boolean
+  isRecursively?: string | null
+  maxFundedAccounts?: number | null
+  maxPayout?: string | null
+  minDays?: number | null
+  minPayout?: number | null
+  minTradingDaysForPayout?: number | null
+  payoutBonus?: number | null
+  payoutPolicy?: string | null
+  price?: number | null
+  priceWithPromo?: number | null
+  profitSharing?: number | null
+  rulesDailyLoss?: string | null
+  tradingNewsAllowed?: boolean
+  trailing?: string | null
+  autoRenewal?: boolean
+  nextPaymentDate?: Date | string | null
+  paymentFrequency?: $Enums.PaymentFrequency | null
+  promoPercentage?: number | null
+  promoType?: $Enums.PromoType | null
+  renewalNotice?: number | null
+  minPnlToCountAsDay?: number | null
+  buffer?: number
+  considerBuffer?: boolean
+  shouldConsiderTradesBeforeReset?: boolean
+  group?: Prisma.GroupCreateNestedOneWithoutAccountsInput
+  user: Prisma.UserCreateNestedOneWithoutAccountsInput
+  connection?: Prisma.ConnectionCreateNestedOneWithoutAccountsInput
+  payouts?: Prisma.PayoutCreateNestedManyWithoutAccountInput
+  trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
+}
+
+export type AccountUncheckedCreateWithoutRithmicProtocolFillsInput = {
+  id?: string
+  number: string
+  propfirm?: string
+  drawdownThreshold?: number
+  profitTarget?: number
+  isPerformance?: boolean
+  userId: string
+  createdAt?: Date | string
+  startingBalance?: number
+  payoutCount?: number
+  trailingDrawdown?: boolean
+  trailingStopProfit?: number | null
+  resetDate?: Date | string | null
+  consistencyPercentage?: number | null
+  groupId?: string | null
+  accountSize?: string | null
+  accountSizeName?: string | null
+  activationFees?: number | null
+  balanceRequired?: number | null
+  dailyLoss?: number | null
+  evaluation?: boolean
+  isRecursively?: string | null
+  maxFundedAccounts?: number | null
+  maxPayout?: string | null
+  minDays?: number | null
+  minPayout?: number | null
+  minTradingDaysForPayout?: number | null
+  payoutBonus?: number | null
+  payoutPolicy?: string | null
+  price?: number | null
+  priceWithPromo?: number | null
+  profitSharing?: number | null
+  rulesDailyLoss?: string | null
+  tradingNewsAllowed?: boolean
+  trailing?: string | null
+  autoRenewal?: boolean
+  nextPaymentDate?: Date | string | null
+  paymentFrequency?: $Enums.PaymentFrequency | null
+  promoPercentage?: number | null
+  promoType?: $Enums.PromoType | null
+  renewalNotice?: number | null
+  minPnlToCountAsDay?: number | null
+  connectionId?: string | null
+  buffer?: number
+  considerBuffer?: boolean
+  shouldConsiderTradesBeforeReset?: boolean
+  payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutAccountInput
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
+}
+
+export type AccountCreateOrConnectWithoutRithmicProtocolFillsInput = {
+  where: Prisma.AccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.AccountCreateWithoutRithmicProtocolFillsInput, Prisma.AccountUncheckedCreateWithoutRithmicProtocolFillsInput>
+}
+
+export type AccountUpsertWithoutRithmicProtocolFillsInput = {
+  update: Prisma.XOR<Prisma.AccountUpdateWithoutRithmicProtocolFillsInput, Prisma.AccountUncheckedUpdateWithoutRithmicProtocolFillsInput>
+  create: Prisma.XOR<Prisma.AccountCreateWithoutRithmicProtocolFillsInput, Prisma.AccountUncheckedCreateWithoutRithmicProtocolFillsInput>
+  where?: Prisma.AccountWhereInput
+}
+
+export type AccountUpdateToOneWithWhereWithoutRithmicProtocolFillsInput = {
+  where?: Prisma.AccountWhereInput
+  data: Prisma.XOR<Prisma.AccountUpdateWithoutRithmicProtocolFillsInput, Prisma.AccountUncheckedUpdateWithoutRithmicProtocolFillsInput>
+}
+
+export type AccountUpdateWithoutRithmicProtocolFillsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  number?: Prisma.StringFieldUpdateOperationsInput | string
+  propfirm?: Prisma.StringFieldUpdateOperationsInput | string
+  drawdownThreshold?: Prisma.FloatFieldUpdateOperationsInput | number
+  profitTarget?: Prisma.FloatFieldUpdateOperationsInput | number
+  isPerformance?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startingBalance?: Prisma.FloatFieldUpdateOperationsInput | number
+  payoutCount?: Prisma.IntFieldUpdateOperationsInput | number
+  trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accountSizeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activationFees?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  balanceRequired?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  dailyLoss?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  evaluation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isRecursively?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  maxFundedAccounts?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  maxPayout?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  minDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  minPayout?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rulesDailyLoss?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tradingNewsAllowed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trailing?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoRenewal?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  nextPaymentDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paymentFrequency?: Prisma.NullableEnumPaymentFrequencyFieldUpdateOperationsInput | $Enums.PaymentFrequency | null
+  promoPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  promoType?: Prisma.NullableEnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType | null
+  renewalNotice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  minPnlToCountAsDay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  buffer?: Prisma.FloatFieldUpdateOperationsInput | number
+  considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  group?: Prisma.GroupUpdateOneWithoutAccountsNestedInput
+  user?: Prisma.UserUpdateOneRequiredWithoutAccountsNestedInput
+  connection?: Prisma.ConnectionUpdateOneWithoutAccountsNestedInput
+  payouts?: Prisma.PayoutUpdateManyWithoutAccountNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountUncheckedUpdateWithoutRithmicProtocolFillsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  number?: Prisma.StringFieldUpdateOperationsInput | string
+  propfirm?: Prisma.StringFieldUpdateOperationsInput | string
+  drawdownThreshold?: Prisma.FloatFieldUpdateOperationsInput | number
+  profitTarget?: Prisma.FloatFieldUpdateOperationsInput | number
+  isPerformance?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startingBalance?: Prisma.FloatFieldUpdateOperationsInput | number
+  payoutCount?: Prisma.IntFieldUpdateOperationsInput | number
+  trailingDrawdown?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trailingStopProfit?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  resetDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consistencyPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accountSize?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accountSizeName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activationFees?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  balanceRequired?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  dailyLoss?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  evaluation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isRecursively?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  maxFundedAccounts?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  maxPayout?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  minDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  minPayout?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rulesDailyLoss?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tradingNewsAllowed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  trailing?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  autoRenewal?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  nextPaymentDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paymentFrequency?: Prisma.NullableEnumPaymentFrequencyFieldUpdateOperationsInput | $Enums.PaymentFrequency | null
+  promoPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  promoType?: Prisma.NullableEnumPromoTypeFieldUpdateOperationsInput | $Enums.PromoType | null
+  renewalNotice?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  minPnlToCountAsDay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  connectionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  buffer?: Prisma.FloatFieldUpdateOperationsInput | number
+  considerBuffer?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  payouts?: Prisma.PayoutUncheckedUpdateManyWithoutAccountNestedInput
   trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
 }
 
@@ -2555,6 +2812,7 @@ export type AccountUpdateWithoutUserInput = {
   connection?: Prisma.ConnectionUpdateOneWithoutAccountsNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutAccountNestedInput
   trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutUserInput = {
@@ -2605,6 +2863,7 @@ export type AccountUncheckedUpdateWithoutUserInput = {
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutAccountNestedInput
   trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateManyWithoutUserInput = {
@@ -2751,6 +3010,7 @@ export type AccountUpdateWithoutConnectionInput = {
   user?: Prisma.UserUpdateOneRequiredWithoutAccountsNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutAccountNestedInput
   trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutConnectionInput = {
@@ -2801,6 +3061,7 @@ export type AccountUncheckedUpdateWithoutConnectionInput = {
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutAccountNestedInput
   trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateManyWithoutConnectionInput = {
@@ -2947,6 +3208,7 @@ export type AccountUpdateWithoutGroupInput = {
   connection?: Prisma.ConnectionUpdateOneWithoutAccountsNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutAccountNestedInput
   trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutGroupInput = {
@@ -2997,6 +3259,7 @@ export type AccountUncheckedUpdateWithoutGroupInput = {
   shouldConsiderTradesBeforeReset?: Prisma.BoolFieldUpdateOperationsInput | boolean
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutAccountNestedInput
   trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateManyWithoutGroupInput = {
@@ -3055,11 +3318,13 @@ export type AccountUncheckedUpdateManyWithoutGroupInput = {
 export type AccountCountOutputType = {
   payouts: number
   trades: number
+  rithmicProtocolFills: number
 }
 
 export type AccountCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   payouts?: boolean | AccountCountOutputTypeCountPayoutsArgs
   trades?: boolean | AccountCountOutputTypeCountTradesArgs
+  rithmicProtocolFills?: boolean | AccountCountOutputTypeCountRithmicProtocolFillsArgs
 }
 
 /**
@@ -3084,6 +3349,13 @@ export type AccountCountOutputTypeCountPayoutsArgs<ExtArgs extends runtime.Types
  */
 export type AccountCountOutputTypeCountTradesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.TradeWhereInput
+}
+
+/**
+ * AccountCountOutputType without action
+ */
+export type AccountCountOutputTypeCountRithmicProtocolFillsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RithmicProtocolFillWhereInput
 }
 
 
@@ -3139,6 +3411,7 @@ export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   connection?: boolean | Prisma.Account$connectionArgs<ExtArgs>
   payouts?: boolean | Prisma.Account$payoutsArgs<ExtArgs>
   trades?: boolean | Prisma.Account$tradesArgs<ExtArgs>
+  rithmicProtocolFills?: boolean | Prisma.Account$rithmicProtocolFillsArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["account"]>
 
@@ -3302,6 +3575,7 @@ export type AccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   connection?: boolean | Prisma.Account$connectionArgs<ExtArgs>
   payouts?: boolean | Prisma.Account$payoutsArgs<ExtArgs>
   trades?: boolean | Prisma.Account$tradesArgs<ExtArgs>
+  rithmicProtocolFills?: boolean | Prisma.Account$rithmicProtocolFillsArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type AccountIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -3323,6 +3597,7 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     connection: Prisma.$ConnectionPayload<ExtArgs> | null
     payouts: Prisma.$PayoutPayload<ExtArgs>[]
     trades: Prisma.$TradePayload<ExtArgs>[]
+    rithmicProtocolFills: Prisma.$RithmicProtocolFillPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -3770,6 +4045,7 @@ export interface Prisma__AccountClient<T, Null = never, ExtArgs extends runtime.
   connection<T extends Prisma.Account$connectionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$connectionArgs<ExtArgs>>): Prisma.Prisma__ConnectionClient<runtime.Types.Result.GetResult<Prisma.$ConnectionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   payouts<T extends Prisma.Account$payoutsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$payoutsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PayoutPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   trades<T extends Prisma.Account$tradesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$tradesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TradePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  rithmicProtocolFills<T extends Prisma.Account$rithmicProtocolFillsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$rithmicProtocolFillsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RithmicProtocolFillPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4329,6 +4605,30 @@ export type Account$tradesArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   distinct?: Prisma.TradeScalarFieldEnum | Prisma.TradeScalarFieldEnum[]
+}
+
+/**
+ * Account.rithmicProtocolFills
+ */
+export type Account$rithmicProtocolFillsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the RithmicProtocolFill
+   */
+  select?: Prisma.RithmicProtocolFillSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the RithmicProtocolFill
+   */
+  omit?: Prisma.RithmicProtocolFillOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RithmicProtocolFillInclude<ExtArgs> | null
+  where?: Prisma.RithmicProtocolFillWhereInput
+  orderBy?: Prisma.RithmicProtocolFillOrderByWithRelationInput | Prisma.RithmicProtocolFillOrderByWithRelationInput[]
+  cursor?: Prisma.RithmicProtocolFillWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RithmicProtocolFillScalarFieldEnum | Prisma.RithmicProtocolFillScalarFieldEnum[]
 }
 
 /**

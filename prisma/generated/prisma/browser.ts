@@ -178,6 +178,15 @@ export type Comment = Prisma.CommentModel
  */
 export type Vote = Prisma.VoteModel
 /**
+ * Model RithmicProtocolFill
+ * Durable Rithmic Protocol execution ledger. Sync upserts raw fills (including
+ * split order pieces) by `userId` + `identityKey`, then FIFO derives `Trade`
+ * rows from this table so a partial history window cannot invent overnight
+ * phantoms from a trades-only snapshot. Same account/user fields as `Trade`;
+ * no extra customer PII.
+ */
+export type RithmicProtocolFill = Prisma.RithmicProtocolFillModel
+/**
  * Model Order
  * 
  */

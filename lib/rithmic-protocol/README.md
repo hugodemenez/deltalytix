@@ -9,6 +9,9 @@ TypeScript client for Rithmic's WebSocket + protobuf **R | Protocol API**, used 
 - `etc/rithmic_ssl_cert_auth_params` — SSL auth params from the kit
 - `client.ts` — system-info probe, ORDER_PLANT login, account list, **Product RMS commission rates**, fill / order-history fetch, **PNL_PLANT live balances**
 - `commission-rates.ts` — `commission_fill_rate` presence bit 64, index, `rate × fill qty`
+- `fill-ledger.ts` / `fill-ledger-store.ts` — durable fill upsert keyed by identity, then FIFO from the ledger
+- `lookback.ts` — ReplayExecutions window (7d default, 2d fallback)
+- `history-fallback.ts` — order-history when any ShowFillHistory window is empty
 - `fills-to-trades.ts` — FIFO round-trip matching into Deltalytix `Trade` rows
 - `balances.ts` — map `AccountPnLPositionUpdate` → Solde Rithmic balance rows
 
@@ -93,6 +96,7 @@ RITHMIC_PROTOCOL_ALLOW_TEST_GATEWAY=   # show UAT in the picker; defaults to tru
 RITHMIC_PROTOCOL_APP_NAME=DeltalytixRithmicProtocolAPI
 RITHMIC_PROTOCOL_APP_VERSION=0.1.0
 RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS=30
+RITHMIC_PROTOCOL_REPLAY_LOOKBACK_DAYS=7   # ReplayExecutions ssboe window; falls back to 2d on error
 
 # Live e2e only (`bun run test:e2e:rithmic`). Username/password via secrets; never commit.
 RITHMIC_PROTOCOL_E2E_USERNAME=
@@ -154,23 +158,39 @@ date to today with `ShowFillHistory` in **serial ≤30-day windows** (Rithmic gu
 `RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS` is only a fallback for legacy connections
 that predate the start-date field.
 
-Same-day fills are also pulled via `ReplayExecutions` (ssboe), because on Test the
-fill/order history date index often lags mid-session. History-stream exchange
-notifications are kept (some plants emit fills only that way). `dedupeFills`
-collapses the same `accountId + fill_date + fill_id + symbol + side + price + size`
+Fills are **upserted into `RithmicProtocolFill` first** (unique on
+`userId` + `fillIdentityKey`), including split order pieces. FIFO then derives
+`Trade` rows from the merged ledger, not from a single plant snapshot. A later
+sync that recovers a missing window closes leftover lots instead of inventing
+an overnight round-trip from incomplete history. Existing accounts backfill on
+the next sync; Trade rows keep their UUID (and journal notes) when the fill
+pair rematches. Unannotated Protocol trades whose pair is no longer produced,
+but whose legs are both on the ledger, are removed as overnight phantoms.
+Annotated rows are kept.
+
+`ReplayExecutions` uses an ssboe window of up to **7 calendar days**
+(`RITHMIC_PROTOCOL_REPLAY_LOOKBACK_DAYS`), never longer than the sync range.
+Many plants only retain about **2 days** and simply return a shorter slice; a
+hard reject retries 2d so those plants keep working. Already-seen identity keys
+are dropped from Replay / order-history / ShowFillHistory before upsert.
+History-stream exchange notifications are kept (some plants emit fills only
+that way). `dedupeFills` collapses the same
+`accountId + fill_date + fill_id + symbol + side + price + size`
 — `fill_date` is the exchange trade date (rolls ~17:00 CT), not a UTC calendar
 day; `ssboe` is only a fallback when `fill_date` is absent. Replay sometimes
 sends `basketId_fillId`; that canonicalizes to the trailing fill id. The old
-key omitted symbol/fingerprint and dropped a distinct Lucid MNQ sell when
-another instrument reused `fill_id` on the same session. The older
-composite-field key (raw transaction type, ssboe, basket) kept history `BUY`
-and replay enum `1` as two fills, and FIFO joined them into `fillId-fillId`
-journal rows (2× qty / PnL).
-Order-history fallback also requests dates one at a time. When `ShowFillHistory`
-returns empty (rp_code `7 no data`) — common on prop-firm plants such as
-**LucidTrading** — sync still tries order-history dates before giving up. Fill
-requests use each account’s own FCM/IB from `ResponseAccountList`, not only the
+key omitted symbol/fingerprint and dropped a distinct MNQ sell when another
+instrument reused `fill_id` on the same session. The older composite-field key
+(raw transaction type, ssboe, basket) kept history `BUY` and replay enum `1`
+as two fills, and FIFO joined them into `fillId-fillId` journal rows (2× qty / PnL).
+Order-history fallback also requests dates one at a time. When any
+`ShowFillHistory` window is empty (rp_code `7 no data`) — common on prop-firm
+plants — sync still tries order-history dates before giving up. Fill requests
+use each account’s own FCM/IB from `ResponseAccountList`, not only the
 login-level ids.
+
+Do **not** expire open lots at the Globex/CME session roll. Real multi-day
+holds stay open until a matching fill arrives on the ledger.
 
 Protocol API has a **separate conformance** process from R | API+. Conformance is
 approved, so production connect points are live; Rithmic Test remains available for

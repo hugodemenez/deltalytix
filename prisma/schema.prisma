@@ -264,6 +264,7 @@ model Connection {
   apiHosts            Json?
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accounts            Account[]
+  rithmicProtocolFills RithmicProtocolFill[]
 
   @@unique([userId, service, externalId], map: "Synchronization_userId_service_accountId_key")
   @@index([userId])
@@ -435,6 +436,7 @@ model Account {
   connection                      Connection?       @relation(fields: [connectionId], references: [id], onDelete: SetNull)
   payouts                         Payout[]
   trades                          Trade[]
+  rithmicProtocolFills            RithmicProtocolFill[]
   buffer                          Float             @default(0)
   considerBuffer                  Boolean           @default(true)
   shouldConsiderTradesBeforeReset Boolean           @default(true)
@@ -637,6 +639,50 @@ model Vote {
   @@unique([postId, userId])
   @@index([postId])
   @@index([userId])
+  @@schema("public")
+}
+
+/// Durable Rithmic Protocol execution ledger. Sync upserts raw fills (including
+/// split order pieces) by `userId` + `identityKey`, then FIFO derives `Trade`
+/// rows from this table so a partial history window cannot invent overnight
+/// phantoms from a trades-only snapshot. Same account/user fields as `Trade`;
+/// no extra customer PII.
+model RithmicProtocolFill {
+  id              String   @id @default(uuid())
+  userId          String
+  /// Rithmic trading account id — same value as `Trade.accountNumber`.
+  accountNumber   String
+  accountId       String?
+  /// `fillIdentityKey()` — stable per account + session date + fill id + fingerprint.
+  identityKey     String
+  /// Canonical plant fill id (basket prefix stripped).
+  fillId          String   @default("")
+  /// Original plant fill id when it differed from `fillId` (`basketId_fillId`).
+  rawFillId       String?
+  symbol          String
+  exchange        String?
+  transactionType String
+  fillPrice       Float
+  fillSize        Float
+  fillDate        String?
+  fillTime        String?
+  basketId        String?
+  sequenceNumber  String?
+  ssboe           Int?
+  usecs           Int?
+  /// `history` (ShowFillHistory / order-history fallback) or `replay`.
+  source          String   @default("history")
+  connectionId    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  account         Account?    @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  connection      Connection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, identityKey])
+  @@index([userId, accountNumber])
+  @@index([userId, fillId])
+  @@index([accountId])
+  @@index([connectionId])
   @@schema("public")
 }
 
