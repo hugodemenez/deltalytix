@@ -34,6 +34,7 @@ import {
   preferHistoryFills,
   consolidateOrderFills,
 } from './dedupe-fills'
+import { orderHistoryFallbackPlan } from './history-fallback'
 
 /** Wall-clock budget for a full PnL snapshot sweep across a user's accounts. */
 const PNL_SNAPSHOT_TOTAL_BUDGET_MS = 30_000
@@ -1431,7 +1432,20 @@ export async function fetchFillsForAccounts(params: {
       }
 
       let historyFills = 0
+      let missingWindows = 0
       let usedOrderHistoryFallback = false
+      const pullOrderHistory = async (source: 'history' | 'replay') => {
+        const fallback = await client.getFillsViaOrderHistory({
+          fcmId,
+          ibId,
+          accountId,
+          startDateYyyymmdd: startYmdStr,
+        })
+        console.log(
+          `[RITHMIC-PROTOCOL] Order-history fallback for ${accountId} (${source}): ${fallback.length} fill(s)`,
+        )
+        fills.push(...markFillSource(fallback, source))
+      }
       for (const window of windows) {
         try {
           const accountFills = await client.getFillHistory({
@@ -1442,43 +1456,45 @@ export async function fetchFillsForAccounts(params: {
             endDateYyyymmdd: toYyyymmddNumber(window.end),
           })
           historyFills += accountFills.length
+          if (accountFills.length === 0) missingWindows += 1
           fills.push(...markFillSource(accountFills, 'history'))
         } catch (error) {
+          missingWindows += 1
           console.warn(
             `[RITHMIC-PROTOCOL] Fill history failed for ${accountId} (${toYyyymmddString(window.start)}–${toYyyymmddString(window.end)}), falling back to order history`,
             error instanceof Error ? error.message : error,
           )
-          if (!usedOrderHistoryFallback) {
+          const plan = orderHistoryFallbackPlan({
+            historyFillCount: historyFills,
+            missingWindowCount: missingWindows,
+            alreadyFetched: usedOrderHistoryFallback,
+          })
+          if (plan) {
             usedOrderHistoryFallback = true
-            const fallback = await client.getFillsViaOrderHistory({
-              fcmId,
-              ibId,
-              accountId,
-              startDateYyyymmdd: startYmdStr,
-            })
-            console.log(
-              `[RITHMIC-PROTOCOL] Order-history fallback for ${accountId}: ${fallback.length} fill(s)`,
-            )
-            fills.push(...markFillSource(fallback, 'history'))
+            try {
+              await pullOrderHistory(plan.source)
+            } catch (fallbackError) {
+              console.warn(
+                `[RITHMIC-PROTOCOL] Order-history fallback failed for ${accountId}`,
+                fallbackError instanceof Error ? fallbackError.message : fallbackError,
+              )
+            }
           }
           break
         }
       }
 
       // ShowFillHistory can return rp_code 7 (no data) with no exception — common
-      // on some prop-firm plants. Still try order-history dates before giving up.
-      if (historyFills === 0 && !usedOrderHistoryFallback) {
+      // on some prop-firm plants. Also run when later windows are empty after
+      // an earlier window returned rows; otherwise October+ is never fetched.
+      const fallbackPlan = orderHistoryFallbackPlan({
+        historyFillCount: historyFills,
+        missingWindowCount: missingWindows,
+        alreadyFetched: usedOrderHistoryFallback,
+      })
+      if (fallbackPlan) {
         try {
-          const fallback = await client.getFillsViaOrderHistory({
-            fcmId,
-            ibId,
-            accountId,
-            startDateYyyymmdd: startYmdStr,
-          })
-          console.log(
-            `[RITHMIC-PROTOCOL] Empty ShowFillHistory for ${accountId}; order-history fallback: ${fallback.length} fill(s)`,
-          )
-          fills.push(...markFillSource(fallback, 'history'))
+          await pullOrderHistory(fallbackPlan.source)
         } catch (error) {
           console.warn(
             `[RITHMIC-PROTOCOL] Order-history fallback failed for ${accountId}`,
