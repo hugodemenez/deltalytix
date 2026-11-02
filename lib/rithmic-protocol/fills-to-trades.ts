@@ -31,70 +31,6 @@ function bookKey(accountId: string, instrument: string): string {
   return `${accountId}|${instrument}`
 }
 
-/** CME Globex session rolls at 17:00 America/Chicago. */
-const CME_SESSION_ROLL_HOUR = 17
-
-/**
- * Pair fills a few minutes across the 17:00 CT roll. A flatten a few
- * seconds after 17:00 CT is one round-trip, not an overnight. Multi-day
- * leftovers are hours to weeks apart.
- */
-export const RITHMIC_PROTOCOL_SESSION_ROLL_GRACE_MS = 5 * 60 * 1000
-
-/**
- * Exchange session date for FIFO (YYYYMMDD). 17:00 CT belongs to the next
- * session, matching Globex. Used so unmatched lots from an incomplete day
- * cannot FIFO-join a fill on a later session into a phantom overnight short.
- */
-export function cmeSessionDayKey(timestampMs: number): string {
-  if (!Number.isFinite(timestampMs) || timestampMs <= 0) return ''
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Chicago',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      hourCycle: 'h23',
-    })
-      .formatToParts(new Date(timestampMs))
-      .filter((part) => part.type !== 'literal')
-      .map((part) => [part.type, part.value]),
-  ) as Record<string, string>
-  let year = Number(parts.year)
-  let month = Number(parts.month)
-  let day = Number(parts.day)
-  const hour = Number(parts.hour)
-  if (hour >= CME_SESSION_ROLL_HOUR) {
-    const next = new Date(Date.UTC(year, month - 1, day + 1))
-    year = next.getUTCFullYear()
-    month = next.getUTCMonth() + 1
-    day = next.getUTCDate()
-  }
-  return `${year}${String(month).padStart(2, '0')}${String(day).padStart(2, '0')}`
-}
-
-export function isSameCmeSession(
-  leftMs: number,
-  rightMs: number,
-  graceMs = RITHMIC_PROTOCOL_SESSION_ROLL_GRACE_MS,
-): boolean {
-  if (cmeSessionDayKey(leftMs) === cmeSessionDayKey(rightMs)) return true
-  return Math.abs(leftMs - rightMs) <= graceMs
-}
-
-function expireStaleLots(book: LotBook, incomingTimestampMs: number): number {
-  let expired = 0
-  const keep = (lot: OpenLot) => {
-    if (isSameCmeSession(lot.timestampMs, incomingTimestampMs)) return true
-    expired += lot.quantity
-    return false
-  }
-  book.longs = book.longs.filter(keep)
-  book.shorts = book.shorts.filter(keep)
-  return expired
-}
-
 export function normalizeInstrument(symbol: string): string {
   const clean = symbol.trim().toUpperCase()
   // Strip month/year code when present (e.g. ESH5 -> ES, MNQH5 -> MNQ)
@@ -307,11 +243,6 @@ function applyFillToBook(
  * A Sell with no long to close opens a short; a Buy closes that short (or
  * opens a long). Long-only pairing — treating every Buy as an entry and
  * skipping orphan Sells — mis-pairs short sellers as losing longs.
- *
- * Unmatched lots do not carry into a later CME session (17:00 CT, with a
- * short grace around the roll). Extra contracts from an incomplete
- * history/replay merge used to FIFO-join the next sitting's fills and show
- * up as multi-day overnight shorts with both legs filled.
  */
 export function buildTradesFromRithmicFills(
   fills: RithmicProtocolFill[],
@@ -321,7 +252,6 @@ export function buildTradesFromRithmicFills(
 ): { trades: Trade[]; openSkipped: number; skipped: Record<string, number> } {
   const trades: Trade[] = []
   const books = new Map<string, LotBook>()
-  let openSkipped = 0
   const skipped: Record<string, number> = {}
   const bumpSkip = (reason: string) => {
     skipped[reason] = (skipped[reason] ?? 0) + 1
@@ -402,7 +332,6 @@ export function buildTradesFromRithmicFills(
 
       const key = bookKey(accountId, instrument)
       const book = books.get(key) ?? { longs: [], shorts: [] }
-      openSkipped += expireStaleLots(book, timestampMs)
       trades.push(
         ...applyFillToBook(
           book,
@@ -418,6 +347,7 @@ export function buildTradesFromRithmicFills(
     }
   }
 
+  let openSkipped = 0
   for (const book of books.values()) {
     for (const lot of book.longs) openSkipped += lot.quantity
     for (const lot of book.shorts) openSkipped += lot.quantity
