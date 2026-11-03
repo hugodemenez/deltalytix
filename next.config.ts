@@ -1,7 +1,10 @@
 import type { NextConfig } from 'next';
 import createMDX from '@next/mdx';
 import os from 'os';
-import { SUPPORT_SEARCH_TRACE_INCLUDES } from './lib/ai/search-codebase';
+import {
+  SUPPORT_SEARCH_TRACE_INCLUDES,
+  SUPPORT_SEARCH_TRACE_NESTED_EXCLUDE_ROUTE,
+} from './lib/ai/search-codebase';
 import { AGENT_SKILLS_TRACE_INCLUDES } from './lib/agent-skills/load-skill';
 import { LOCALES } from './lib/locales';
 
@@ -27,6 +30,27 @@ const buildWorkers =
 const RITHMIC_PROTOCOL_TRACE_INCLUDES = [
   './lib/rithmic-protocol/proto/**/*',
   './lib/rithmic-protocol/etc/**/*',
+] as const;
+
+/**
+ * Optional native addons and extra sharp platform binaries that NFT will
+ * otherwise copy into every serverless trace. Vercel is linux-x64/glibc;
+ * linuxmusl (~16MB × 2 copies, app + next/sharp) is unused there.
+ * `canvas` / Playwright / Puppeteer are not imported by app or API routes.
+ */
+const UNUSED_NATIVE_TRACE_EXCLUDES = [
+  'node_modules/canvas/**',
+  'node_modules/puppeteer/**',
+  'node_modules/puppeteer-core/**',
+  'node_modules/playwright/**',
+  'node_modules/playwright-core/**',
+  'node_modules/**/@img/sharp-libvips-linuxmusl-*/**',
+  'node_modules/**/@img/sharp-linuxmusl-*/**',
+  'node_modules/**/@img/sharp-libvips-darwin-*/**',
+  'node_modules/**/@img/sharp-darwin-*/**',
+  'node_modules/**/@img/sharp-win32-*/**',
+  'node_modules/**/@img/sharp-libvips-linux-arm*/**',
+  'node_modules/**/@img/sharp-linux-arm*/**',
 ] as const;
 
 const nextConfig: NextConfig = {
@@ -106,7 +130,16 @@ const nextConfig: NextConfig = {
   // `read-excel-file/node` pulls in `unzipper`, whose optional S3 support
   // requires '@aws-sdk/client-s3' at runtime; keep it external so Turbopack
   // does not try to resolve that optional dependency at build time.
-  serverExternalPackages: ['read-excel-file', 'unzipper', '@modelcontextprotocol/sdk'],
+  // `docx` (and `sharp`, already on Next's default list) must stay external so
+  // journal Word export does not land in a shared server chunk that every
+  // API route, including `/api/ai/support/translate-label`, would ship.
+  serverExternalPackages: [
+    'read-excel-file',
+    'unzipper',
+    '@modelcontextprotocol/sdk',
+    'docx',
+    'sharp',
+  ],
   typescript: {
     // Keep full checking in `bun run typecheck`; do not duplicate it inside `next build`.
     ignoreBuildErrors: true,
@@ -146,6 +179,17 @@ const nextConfig: NextConfig = {
     // Include assets for all server traces so preview/production lambdas can load protos.
     '/*': [...RITHMIC_PROTOCOL_TRACE_INCLUDES],
     '/api/rithmic-protocol/**': [...RITHMIC_PROTOCOL_TRACE_INCLUDES],
+  },
+  outputFileTracingExcludes: {
+    // See SUPPORT_SEARCH_TRACE_NESTED_EXCLUDE_ROUTE. Also drop `docx` if a
+    // shared chunk ever traces it into these title-translation lambdas.
+    // Turbopack often ignores these excludes (it leaves fileHashes in place);
+    // `scripts/prune-function-traces.mjs` is the production backstop.
+    [SUPPORT_SEARCH_TRACE_NESTED_EXCLUDE_ROUTE]: [
+      ...SUPPORT_SEARCH_TRACE_INCLUDES,
+      'node_modules/docx/**',
+    ],
+    '/*': [...UNUSED_NATIVE_TRACE_EXCLUDES],
   },
 }
 

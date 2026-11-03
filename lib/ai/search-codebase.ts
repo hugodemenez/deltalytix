@@ -9,7 +9,11 @@ import {
   shouldLogSearchDebug,
 } from "./codebase-index";
 
-export { SUPPORT_SEARCH_TRACE_INCLUDES, kindsForScope } from "./codebase-index";
+export {
+  SUPPORT_SEARCH_TRACE_INCLUDES,
+  SUPPORT_SEARCH_TRACE_NESTED_EXCLUDE_ROUTE,
+  kindsForScope,
+} from "./codebase-index";
 export type { CorpusKind, CorpusScope } from "./codebase-index";
 
 const MAX_FILES = 8;
