@@ -1,5 +1,6 @@
 import { format, parseISO } from "date-fns"
 import { enUS, fr } from "date-fns/locale"
+// Listed in `serverExternalPackages` so this stays out of shared server chunks.
 import {
   AlignmentType,
   BorderStyle,

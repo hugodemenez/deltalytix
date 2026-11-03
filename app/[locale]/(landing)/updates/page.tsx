@@ -7,7 +7,6 @@ import CompletedTimeline from "../components/completed-timeline";
 import { getAllPosts } from "@/lib/posts";
 import { getLatestVideoFromPlaylist } from "@/app/[locale]/admin/actions/youtube";
 import path from "node:path";
-import sharp from "sharp";
 
 interface PageProps {
   params: Promise<{
@@ -33,6 +32,7 @@ async function isMobileScreenshot(image?: string) {
   }
 
   try {
+    const { default: sharp } = await import("sharp");
     const { width, height } = await sharp(imagePath).metadata();
     return Boolean(width && height && height > width);
   } catch {

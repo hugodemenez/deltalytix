@@ -106,6 +106,20 @@ export const SUPPORT_SEARCH_TRACE_INCLUDES: readonly string[] = CORPUS_ROOTS.fla
       : root.extensions.map((extension) => `./${root.path}/**/*${extension}`),
 );
 
+/**
+ * Nested routes under `/api/ai/support` that must **not** inherit the corpus.
+ *
+ * Next.js matches `outputFileTracingIncludes` keys with picomatch
+ * `{ contains: true }`, so `/api/ai/support` also matches
+ * `/api/ai/support/translate-label`. That route only translates a title; if it
+ * also receives ~12MB of app/lib/components source it is the function that
+ * tips Vercel's 250MB uncompressed limit.
+ *
+ * `/api/ai/support/*` matches those children and does not match the parent
+ * chat route, which still needs the corpus.
+ */
+export const SUPPORT_SEARCH_TRACE_NESTED_EXCLUDE_ROUTE = "/api/ai/support/*";
+
 function extractTitle(relativePath: string, content: string): string | undefined {
   const frontmatterTitle = /^---\r?\n[\s\S]*?^title:\s*["']?(.+?)["']?\s*$/m.exec(content);
   if (frontmatterTitle) return frontmatterTitle[1].trim();
