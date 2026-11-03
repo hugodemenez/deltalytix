@@ -15,6 +15,7 @@ import {
   type TradeSaveResult as TradeResponse,
 } from '@/lib/trades/save-trades-core'
 import { trustedUserId, type TrustedActor } from '@/lib/api/server-actor'
+import { encryptJournalField, withDecryptedTradeComment } from '@/lib/journal-field-crypto'
 
 export async function revalidateCache(tags: string[]) {
   console.log(`[revalidateCache] Starting cache invalidation for tags:`, tags)
@@ -105,7 +106,7 @@ export async function getTradesAction(forceRefresh: boolean = false): Promise<Tr
     console.log(`[getTrades] Force refresh - Found ${trades.length} trades`)
 
     return trades.map(trade => ({
-      ...trade,
+      ...withDecryptedTradeComment(trade),
       entryDate: new Date(trade.entryDate).toISOString(),
       exitDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
     }))
@@ -137,7 +138,7 @@ export async function getTradesAction(forceRefresh: boolean = false): Promise<Tr
   // Tell the server that the trades have changed
   // Next page reload will fetch the new trades instead of using the cached data
   return trades.map(trade => ({
-    ...trade,
+    ...withDecryptedTradeComment(trade),
     entryDate: new Date(trade.entryDate).toISOString(),
     exitDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
   }))
@@ -238,6 +239,9 @@ export async function updateTradesAction(tradesIds: string[], update: Partial<Tr
 
     let result = { count: 0 }
     if (Object.keys(normalUpdate).length > 0) {
+      if (typeof normalUpdate.comment === 'string') {
+        normalUpdate.comment = encryptJournalField(normalUpdate.comment)
+      }
       result = await prisma.trade.updateMany({
         where: { id: { in: tradesIds }, userId },
         data: normalUpdate
@@ -262,7 +266,7 @@ export async function updateTradeCommentAction(tradeId: string, comment: string 
   try {
     await prisma.trade.update({
       where: { id: tradeId, userId },
-      data: { comment }
+      data: { comment: comment == null ? comment : encryptJournalField(comment) }
     })
     revalidatePath('/')
   } catch (error) {

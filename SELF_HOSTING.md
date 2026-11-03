@@ -39,6 +39,8 @@ LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local
 NEXT_PUBLIC_LOCAL_DASHBOARD_USER_EMAIL=local-dashboard@deltalytix.local
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 OPENAI_API_KEY=dummy
+ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+JOURNAL_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 ```
 
 Credentials match `docker-compose.yml` defaults (`devuser` / `devpass`).
@@ -133,3 +135,9 @@ Demo video: `public/img/self-hosting/dashboard-demo.mp4`
 - ATAS import uses `read-excel-file@9.0.10` (do not re-add abandoned npm `xlsx`).
 - Cloud/agent shells with a pre-set `DATABASE_URL`: `unset DATABASE_URL DIRECT_URL` before `source .env.local`. At app startup, `lib/load-env-local.node.ts` also loads `.env.local` with `override: true` so local Docker Postgres wins over injected remote URLs.
 - Vercel `beta` and `main` deploys run `prisma migrate deploy` from `scripts/vercel-build.sh` (the `vercel-build` package script). Both environments must set `DIRECT_URL` (direct Postgres, not the pooled `DATABASE_URL`). Preview PR deploys skip migrate and should not receive production `DIRECT_URL`. Local `bun run build` is unchanged.
+- Journal notes (`Mood.journalContent`), AI coach transcripts (`Mood.conversation`), and trade comments (`Trade.comment`) are encrypted at rest with AES-256-GCM. Set `JOURNAL_ENCRYPTION_KEY` (exact 32-byte hex or base64; `openssl rand -hex 32`) on Vercel **Preview (`beta`)** and **Production**. Those environments refuse `ENCRYPTION_KEY` fallback, passphrases, and committed placeholders. Optional rotation: `JOURNAL_ENCRYPTION_PREVIOUS_KEY`. Do not bake a default into Docker — pass the key at runtime. Local/dev may fall back to `ENCRYPTION_KEY`. New writes encrypt automatically; existing plaintext keeps working until you backfill:
+
+```bash
+bun run migrate:encrypt-journal-fields -- --dry-run
+bun run migrate:encrypt-journal-fields
+```

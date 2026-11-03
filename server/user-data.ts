@@ -10,6 +10,7 @@ import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
 import { ensureLocalDashboardUserInDatabase } from '@/server/local-dashboard-bootstrap'
 import { Account, Group } from '@/context/data-provider'
 import { revalidateTag, unstable_cache } from 'next/cache'
+import { withDecryptedMoodFields } from '@/lib/journal-field-crypto'
 
 export type SharedDataResponse = {
   trades: Trade[]
@@ -137,7 +138,7 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
       accounts,
       groups,
       financialEvents,
-      moodHistory
+      moodHistory: moodHistory.map(withDecryptedMoodFields),
     }
   }
 
@@ -208,7 +209,7 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
     accounts,
     groups,
     financialEvents,
-    moodHistory
+    moodHistory: moodHistory.map(withDecryptedMoodFields),
   }
 }
 

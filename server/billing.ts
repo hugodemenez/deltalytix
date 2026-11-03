@@ -2,21 +2,14 @@
 
 import { createClient } from '@/server/auth'
 import { cookies } from 'next/headers'
-import { PrismaClient } from '@/prisma/generated/prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
 import { stripe } from '@/server/stripe'
+import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
 import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
 import {
   mapStripePaymentRecord,
   type BillingInvoiceRecord,
 } from '@/lib/billing-invoice'
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = new PrismaClient({ adapter })
 
 // Helper function to get current period end from subscription items
 function getCurrentPeriodEnd(subscription: Stripe.Subscription): number {

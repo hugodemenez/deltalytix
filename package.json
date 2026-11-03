@@ -22,7 +22,8 @@
     "capture:changelog-pr-249": "node scripts/capture-changelog-pr-249.mjs",
     "skills:install": "bash scripts/install-skills.sh",
     "seed:self-host": "bun scripts/seed-self-host.ts",
-    "migrate:encrypt-connection-tokens": "bun scripts/migrate-encrypt-connection-tokens.ts"
+    "migrate:encrypt-connection-tokens": "bun scripts/migrate-encrypt-connection-tokens.ts",
+    "migrate:encrypt-journal-fields": "bun scripts/migrate-encrypt-journal-fields.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.10",

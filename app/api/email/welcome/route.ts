@@ -1,15 +1,9 @@
 import { NextResponse } from "next/server"
-import { PrismaClient } from "@/prisma/generated/prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
 import { Resend } from 'resend'
+import { prisma } from '@/lib/prisma'
 import WelcomeEmail, { renderWelcomeEmailText, WELCOME_VIDEO_IDS } from '@/components/emails/welcome'
 import { getLatestVideoFromPlaylist } from "@/app/[locale]/admin/actions/youtube"
 
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = new PrismaClient({ adapter })
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: Request) {
