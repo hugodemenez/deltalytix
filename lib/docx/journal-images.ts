@@ -1,4 +1,3 @@
-import sharp from "sharp"
 import {
   JOURNAL_IMAGE_FETCH_BUDGET_MS,
   JOURNAL_IMAGE_FETCH_CONCURRENCY,
@@ -59,6 +58,7 @@ export async function normalizeJournalImageBytes(
   }
 
   try {
+    const { default: sharp } = await import("sharp")
     const image = sharp(input, {
       failOn: "error",
       limitInputPixels: 40_000_000,

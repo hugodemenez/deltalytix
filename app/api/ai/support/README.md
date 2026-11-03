@@ -39,7 +39,12 @@ Tools (`tools/search-codebase.ts`):
 - **listCodebaseFiles** — enumerate files matching a glob before grepping an area.
 
 The corpus is read from disk at runtime, so `next.config.ts` traces it into the
-serverless bundle via `SUPPORT_SEARCH_TRACE_INCLUDES`.
+serverless bundle via `SUPPORT_SEARCH_TRACE_INCLUDES`. Nested routes such as
+`/api/ai/support/translate-label` must **not** inherit that include: Next.js
+matches tracing globs with picomatch `{ contains: true }`, so the parent key
+would otherwise copy ~12MB of source into every child function and tip
+Vercel's 250MB uncompressed limit. `SUPPORT_SEARCH_TRACE_NESTED_EXCLUDE_ROUTE`
+strips the corpus back off those children.
 
 ## Agent
 

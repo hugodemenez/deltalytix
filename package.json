@@ -9,7 +9,7 @@
     "predev": "bunx prisma generate",
     "dev": "next dev",
     "prebuild": "node --experimental-strip-types scripts/generate-routes.ts && bunx prisma generate",
-    "build": "next build",
+    "build": "next build && node scripts/prune-function-traces.mjs",
     "vercel-build": "bash scripts/vercel-build.sh",
     "start": "next start",
     "lint": "eslint",
@@ -22,7 +22,8 @@
     "capture:changelog-pr-249": "node scripts/capture-changelog-pr-249.mjs",
     "skills:install": "bash scripts/install-skills.sh",
     "seed:self-host": "bun scripts/seed-self-host.ts",
-    "migrate:encrypt-connection-tokens": "bun scripts/migrate-encrypt-connection-tokens.ts"
+    "migrate:encrypt-connection-tokens": "bun scripts/migrate-encrypt-connection-tokens.ts",
+    "analyze:function-traces": "node scripts/analyze-function-traces.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.10",
