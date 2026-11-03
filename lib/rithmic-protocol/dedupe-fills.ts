@@ -251,19 +251,80 @@ export function markFillSource(
   return fills.map((fill) => ({ ...fill, source }))
 }
 
+function utcDayFromSsboe(ssboe: number): string {
+  const at = new Date(ssboe * 1000)
+  return `${at.getUTCFullYear()}${String(at.getUTCMonth() + 1).padStart(2, '0')}${String(at.getUTCDate()).padStart(2, '0')}`
+}
+
+function fillClockMs(fill: RithmicProtocolFill): number | null {
+  const day = fillDayKey(fill)
+  if (!/^\d{8}$/.test(day)) return null
+  const date = `${day.slice(0, 4)}-${day.slice(4, 6)}-${day.slice(6, 8)}`
+  let time = '00:00:00'
+  if (fill.fillTime) {
+    const trimmed = fill.fillTime.trim()
+    const clock = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(trimmed)
+    if (clock) {
+      time = `${clock[1].padStart(2, '0')}:${clock[2]}:${(clock[3] ?? '00').padStart(2, '0')}`
+    } else {
+      const digits = trimmed.replace(/\D/g, '')
+      if (digits.length >= 6) {
+        time = `${digits.slice(0, 2)}:${digits.slice(2, 4)}:${digits.slice(4, 6)}`
+      } else if (digits.length === 4) {
+        time = `${digits.slice(0, 2)}:${digits.slice(2, 4)}:00`
+      }
+    }
+  }
+  const parsed = Date.parse(`${date}T${time}Z`)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
 function sourceTimestampMs(fill: RithmicProtocolFill): number | null {
   if (typeof fill.ssboe === 'number' && fill.ssboe > 0) {
     const usecs = typeof fill.usecs === 'number' ? fill.usecs : 0
     return fill.ssboe * 1000 + Math.floor(usecs / 1000)
   }
-  return null
+  // Plants that omit ssboe still stamp fill_date. Without this, clustering
+  // treats every fill as t=0 and merges same-price orders across weeks.
+  return fillClockMs(fill)
+}
+
+function historyCoverageDays(fill: RithmicProtocolFill): string[] {
+  const days = new Set<string>()
+  if (fill.fillDate) {
+    const date = fill.fillDate.replace(/-/g, '')
+    if (/^\d{8}$/.test(date)) days.add(date)
+  }
+  if (typeof fill.ssboe === 'number' && fill.ssboe > 0) {
+    days.add(utcDayFromSsboe(fill.ssboe))
+  }
+  const fallback = fillDayKey(fill)
+  if (fallback) days.add(fallback)
+  return [...days]
+}
+
+function neighborDays(day: string): string[] {
+  if (!/^\d{8}$/.test(day)) return day ? [day] : []
+  const year = Number(day.slice(0, 4))
+  const month = Number(day.slice(4, 6))
+  const date = Number(day.slice(6, 8))
+  const center = Date.UTC(year, month - 1, date)
+  const out: string[] = []
+  for (const offset of [-1, 0, 1]) {
+    const at = new Date(center + offset * DAY_MS)
+    out.push(
+      `${at.getUTCFullYear()}${String(at.getUTCMonth() + 1).padStart(2, '0')}${String(at.getUTCDate()).padStart(2, '0')}`,
+    )
+  }
+  return out
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
- * ShowFillHistory is the settled record; ReplayExecutions only fills the gap
- * after the last fill history has published. Mixing both for the same period
+ * ShowFillHistory is the settled record; ReplayExecutions (and order-history
+ * marked as replay) only fill days history did not cover, plus the tail after
+ * that day's newest history fill. Mixing both for the same period
  * double-counted executions on Lucid: Replay can split one history fill into
  * partials under different fill ids (history 1163441 ×5 vs replay 1163440 ×2
  * + 1163441 ×3), omit `fill_date`, and stamp a different time — so the
@@ -272,7 +333,12 @@ const DAY_MS = 24 * 60 * 60 * 1000
  *
  * Per account, a replay fill is dropped when:
  * - history has the same canonical fill id + symbol within a day of it, or
- * - it is at or before the newest history fill (+ jitter tolerance).
+ * - it falls on a day history already covers and is at or before that day's
+ *   newest history fill (+ jitter tolerance).
+ * Replay (and order-history marked as replay) on days history did not cover
+ * is kept, even when it is earlier than the global newest history fill —
+ * otherwise an empty later ShowFillHistory window can never be filled from
+ * order-history once an earlier window returned rows.
  * Accounts with no history fills keep every replay fill.
  */
 export function preferHistoryFills(
@@ -281,23 +347,34 @@ export function preferHistoryFills(
 ): RithmicProtocolFill[] {
   const historyByAccount = new Map<
     string,
-    { newestMs: number; idTimes: Map<string, number[]> }
+    {
+      idTimes: Map<string, number[]>
+      days: Set<string>
+      newestByDay: Map<string, number>
+    }
   >()
   for (const fill of fills) {
     if (fill.source !== 'history') continue
     const accountId = fill.accountId || 'unknown'
     const entry = historyByAccount.get(accountId) ?? {
-      newestMs: Number.NEGATIVE_INFINITY,
       idTimes: new Map<string, number[]>(),
+      days: new Set<string>(),
+      newestByDay: new Map<string, number>(),
     }
     const ts = sourceTimestampMs(fill)
-    if (ts != null && ts > entry.newestMs) entry.newestMs = ts
     const fillId = canonicalRithmicFillId(fill.fillId)
     if (fillId) {
       const key = `${fillId}|${(fill.symbol ?? '').trim().toUpperCase()}`
       const times = entry.idTimes.get(key) ?? []
       times.push(ts ?? Number.NaN)
       entry.idTimes.set(key, times)
+    }
+    for (const day of historyCoverageDays(fill)) {
+      entry.days.add(day)
+      if (ts != null) {
+        const newest = entry.newestByDay.get(day) ?? Number.NEGATIVE_INFINITY
+        if (ts > newest) entry.newestByDay.set(day, ts)
+      }
     }
     historyByAccount.set(accountId, entry)
   }
@@ -322,10 +399,21 @@ export function preferHistoryFills(
         return false
       }
     }
-    if (ts != null && Number.isFinite(history.newestMs)) {
-      return ts > history.newestMs + toleranceMs
+    const coveredDays = historyCoverageDays(fill).flatMap((day) =>
+      neighborDays(day).filter((candidate) => history.days.has(candidate)),
+    )
+    if (coveredDays.length === 0) return true
+    let newestOnCovered = Number.NEGATIVE_INFINITY
+    for (const day of coveredDays) {
+      const newest = history.newestByDay.get(day)
+      if (newest != null && newest > newestOnCovered) newestOnCovered = newest
     }
-    return true
+    if (ts != null && Number.isFinite(newestOnCovered)) {
+      return ts > newestOnCovered + toleranceMs
+    }
+    // History covers the day but neither side has a clock — drop the replay
+    // twin rather than double-count.
+    return false
   })
 }
 

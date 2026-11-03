@@ -28,12 +28,14 @@ import {
   getRithmicProtocolAppVersion,
   normalizeGatewayUri,
 } from './systems'
+import { fillIdentityKey, markFillSource } from './dedupe-fills'
+import { prepareRithmicProtocolFills } from './fill-ledger'
+import { orderHistoryFallbackPlan } from './history-fallback'
 import {
-  dedupeFillsWithStats,
-  markFillSource,
-  preferHistoryFills,
-  consolidateOrderFills,
-} from './dedupe-fills'
+  SHOW_FILL_HISTORY_MAX_WINDOW_DAYS,
+  replayWindowStartSsboe,
+  resolveReplayLookbackDays,
+} from './lookback'
 
 /** Wall-clock budget for a full PnL snapshot sweep across a user's accounts. */
 const PNL_SNAPSHOT_TOTAL_BUDGET_MS = 30_000
@@ -1329,18 +1331,28 @@ export async function fetchFillsForAccounts(params: {
   historyStartDate?: string
   /** Fallback when `historyStartDate` is missing (legacy connections). */
   lookbackDays?: number
+  /**
+   * Fill identity keys already stored on the Protocol ledger. Matching plant
+   * rows are not pushed into `rawFills` (Replay / order-history twins of a
+   * stored execution are still fetched so preferHistory can drop them).
+   */
+  seenIdentityKeys?: ReadonlySet<string>
+  /** Override ReplayExecutions lookback; defaults to env / 7d with 2d fallback. */
+  replayLookbackDays?: number
 }): Promise<{
   fills: RithmicProtocolFill[]
+  rawFills: RithmicProtocolFill[]
   uniqueUserId?: string
   commissionRates: Map<string, number>
   fillStats: {
     received: number
     afterDedup: number
     dropped: Record<string, number>
+    skippedAlreadySeen: number
   }
 }> {
   /** Rithmic guidance: ≤30 days of fill history per ShowFillHistory request. */
-  const MAX_FILL_WINDOW_DAYS = 30
+  const MAX_FILL_WINDOW_DAYS = SHOW_FILL_HISTORY_MAX_WINDOW_DAYS
   const client = new RithmicProtocolClient()
   const fills: RithmicProtocolFill[] = []
   const rmsRows: ProductRmsCommissionRow[] = []
@@ -1399,6 +1411,24 @@ export async function fetchFillsForAccounts(params: {
       1,
       Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1,
     )
+    const replayLookback = resolveReplayLookbackDays({
+      syncRangeDays: lookbackDays,
+      requestedDays: params.replayLookbackDays,
+    })
+    let skippedAlreadySeen = 0
+    const pushFills = (batch: RithmicProtocolFill[]) => {
+      if (!params.seenIdentityKeys || params.seenIdentityKeys.size === 0) {
+        fills.push(...batch)
+        return
+      }
+      for (const fill of batch) {
+        if (params.seenIdentityKeys.has(fillIdentityKey(fill))) {
+          skippedAlreadySeen += 1
+          continue
+        }
+        fills.push(fill)
+      }
+    }
 
     console.log(
       `[RITHMIC-PROTOCOL] Fill history range ${startYmdStr}–${toYyyymmddString(end)} (${windows.length} × ≤${MAX_FILL_WINDOW_DAYS}d windows)`,
@@ -1431,7 +1461,20 @@ export async function fetchFillsForAccounts(params: {
       }
 
       let historyFills = 0
+      let missingWindows = 0
       let usedOrderHistoryFallback = false
+      const pullOrderHistory = async (source: 'history' | 'replay') => {
+        const fallback = await client.getFillsViaOrderHistory({
+          fcmId,
+          ibId,
+          accountId,
+          startDateYyyymmdd: startYmdStr,
+        })
+        console.log(
+          `[RITHMIC-PROTOCOL] Order-history fallback for ${accountId} (${source}): ${fallback.length} fill(s)`,
+        )
+        pushFills(markFillSource(fallback, source))
+      }
       for (const window of windows) {
         try {
           const accountFills = await client.getFillHistory({
@@ -1442,43 +1485,45 @@ export async function fetchFillsForAccounts(params: {
             endDateYyyymmdd: toYyyymmddNumber(window.end),
           })
           historyFills += accountFills.length
-          fills.push(...markFillSource(accountFills, 'history'))
+          if (accountFills.length === 0) missingWindows += 1
+          pushFills(markFillSource(accountFills, 'history'))
         } catch (error) {
+          missingWindows += 1
           console.warn(
             `[RITHMIC-PROTOCOL] Fill history failed for ${accountId} (${toYyyymmddString(window.start)}–${toYyyymmddString(window.end)}), falling back to order history`,
             error instanceof Error ? error.message : error,
           )
-          if (!usedOrderHistoryFallback) {
+          const plan = orderHistoryFallbackPlan({
+            historyFillCount: historyFills,
+            missingWindowCount: missingWindows,
+            alreadyFetched: usedOrderHistoryFallback,
+          })
+          if (plan) {
             usedOrderHistoryFallback = true
-            const fallback = await client.getFillsViaOrderHistory({
-              fcmId,
-              ibId,
-              accountId,
-              startDateYyyymmdd: startYmdStr,
-            })
-            console.log(
-              `[RITHMIC-PROTOCOL] Order-history fallback for ${accountId}: ${fallback.length} fill(s)`,
-            )
-            fills.push(...markFillSource(fallback, 'history'))
+            try {
+              await pullOrderHistory(plan.source)
+            } catch (fallbackError) {
+              console.warn(
+                `[RITHMIC-PROTOCOL] Order-history fallback failed for ${accountId}`,
+                fallbackError instanceof Error ? fallbackError.message : fallbackError,
+              )
+            }
           }
           break
         }
       }
 
       // ShowFillHistory can return rp_code 7 (no data) with no exception — common
-      // on some prop-firm plants. Still try order-history dates before giving up.
-      if (historyFills === 0 && !usedOrderHistoryFallback) {
+      // on some prop-firm plants. Also run when later windows are empty after
+      // an earlier window returned rows; otherwise October+ is never fetched.
+      const fallbackPlan = orderHistoryFallbackPlan({
+        historyFillCount: historyFills,
+        missingWindowCount: missingWindows,
+        alreadyFetched: usedOrderHistoryFallback,
+      })
+      if (fallbackPlan) {
         try {
-          const fallback = await client.getFillsViaOrderHistory({
-            fcmId,
-            ibId,
-            accountId,
-            startDateYyyymmdd: startYmdStr,
-          })
-          console.log(
-            `[RITHMIC-PROTOCOL] Empty ShowFillHistory for ${accountId}; order-history fallback: ${fallback.length} fill(s)`,
-          )
-          fills.push(...markFillSource(fallback, 'history'))
+          await pullOrderHistory(fallbackPlan.source)
         } catch (error) {
           console.warn(
             `[RITHMIC-PROTOCOL] Order-history fallback failed for ${accountId}`,
@@ -1493,44 +1538,60 @@ export async function fetchFillsForAccounts(params: {
 
       // Always replay recent executions. ShowFillHistory can lag mid-session
       // (Test date index; some plants omit the latest fills). Twins collapse
-      // in dedupeFills — do not skip replay just because history has a
+      // in preferHistoryFills — do not skip replay just because history has a
       // fill_date that looks like "today" (that field is the exchange trade
       // date, which rolls ~17:00 CT, not UTC midnight).
+      //
+      // Ask for up to 7d (or RITHMIC_PROTOCOL_REPLAY_LOOKBACK_DAYS), never more
+      // than the sync range. Plants that only retain ~2d simply return a
+      // shorter slice. A hard failure retries the 2-day window.
       const finishSsboe = Math.floor(Date.now() / 1000) + 60
-      const startSsboe = finishSsboe - Math.min(lookbackDays, 2) * 24 * 60 * 60
-      try {
+      const pullReplay = async (days: number) => {
         const replayed = await client.replayExecutions({
           fcmId,
           ibId,
           accountId,
-          startSsboe,
+          startSsboe: replayWindowStartSsboe(finishSsboe, days),
           finishSsboe,
         })
         if (replayed.length > 0) {
           console.log(
-            `[RITHMIC-PROTOCOL] ReplayExecutions returned ${replayed.length} fill(s) for ${accountId}`,
+            `[RITHMIC-PROTOCOL] ReplayExecutions (${days}d) returned ${replayed.length} fill(s) for ${accountId}`,
           )
-          fills.push(...markFillSource(replayed, 'replay'))
+          pushFills(markFillSource(replayed, 'replay'))
         }
+      }
+      try {
+        await pullReplay(replayLookback.primary)
       } catch (error) {
         console.warn(
-          `[RITHMIC-PROTOCOL] ReplayExecutions failed for ${accountId}`,
+          `[RITHMIC-PROTOCOL] ReplayExecutions failed for ${accountId} (${replayLookback.primary}d)`,
           error instanceof Error ? error.message : error,
         )
+        if (replayLookback.primary > replayLookback.fallback) {
+          try {
+            await pullReplay(replayLookback.fallback)
+          } catch (fallbackError) {
+            console.warn(
+              `[RITHMIC-PROTOCOL] ReplayExecutions fallback failed for ${accountId} (${replayLookback.fallback}d)`,
+              fallbackError instanceof Error ? fallbackError.message : fallbackError,
+            )
+          }
+        }
       }
     }
 
-    const deduped = dedupeFillsWithStats(preferHistoryFills(fills))
-    // Merge split order pieces only after exact re-deliveries are dropped.
-    deduped.fills = consolidateOrderFills(deduped.fills)
+    const prepared = prepareRithmicProtocolFills(fills)
     return {
-      fills: deduped.fills,
+      fills: prepared.fills,
+      rawFills: fills,
       uniqueUserId,
       commissionRates: indexProductRmsCommissionRates(rmsRows),
       fillStats: {
-        received: deduped.stats.received,
-        afterDedup: deduped.stats.afterDedup,
-        dropped: { ...deduped.stats.dropped },
+        received: prepared.stats.received + skippedAlreadySeen,
+        afterDedup: prepared.stats.afterDedup,
+        dropped: { ...prepared.stats.dropped },
+        skippedAlreadySeen,
       },
     }
   } finally {

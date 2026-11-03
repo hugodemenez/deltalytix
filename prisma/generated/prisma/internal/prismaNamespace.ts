@@ -416,6 +416,7 @@ export const ModelName = {
   Post: 'Post',
   Comment: 'Comment',
   Vote: 'Vote',
+  RithmicProtocolFill: 'RithmicProtocolFill',
   Order: 'Order',
   TradeAnalytics: 'TradeAnalytics',
   HistoricalData: 'HistoricalData'
@@ -434,7 +435,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "trade" | "tickDetails" | "subscription" | "businessSubscription" | "teamSubscription" | "notification" | "user" | "oAuthApp" | "oAuthAuthorizationCode" | "oAuthAccessToken" | "oAuthRegistrationAttempt" | "connection" | "team" | "teamInvitation" | "teamManager" | "business" | "businessManager" | "businessInvitation" | "group" | "account" | "payout" | "dashboardLayout" | "subscriptionFeedback" | "mood" | "shared" | "referral" | "financialEvent" | "tag" | "newsletter" | "post" | "comment" | "vote" | "order" | "tradeAnalytics" | "historicalData"
+    modelProps: "trade" | "tickDetails" | "subscription" | "businessSubscription" | "teamSubscription" | "notification" | "user" | "oAuthApp" | "oAuthAuthorizationCode" | "oAuthAccessToken" | "oAuthRegistrationAttempt" | "connection" | "team" | "teamInvitation" | "teamManager" | "business" | "businessManager" | "businessInvitation" | "group" | "account" | "payout" | "dashboardLayout" | "subscriptionFeedback" | "mood" | "shared" | "referral" | "financialEvent" | "tag" | "newsletter" | "post" | "comment" | "vote" | "rithmicProtocolFill" | "order" | "tradeAnalytics" | "historicalData"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2806,6 +2807,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    RithmicProtocolFill: {
+      payload: Prisma.$RithmicProtocolFillPayload<ExtArgs>
+      fields: Prisma.RithmicProtocolFillFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.RithmicProtocolFillFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RithmicProtocolFillPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.RithmicProtocolFillFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RithmicProtocolFillPayload>
+        }
+        findFirst: {
+          args: Prisma.RithmicProtocolFillFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RithmicProtocolFillPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.RithmicProtocolFillFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RithmicProtocolFillPayload>
+        }
+        findMany: {
+          args: Prisma.RithmicProtocolFillFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RithmicProtocolFillPayload>[]
+        }
+        create: {
+          args: Prisma.RithmicProtocolFillCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RithmicProtocolFillPayload>
+        }
+        createMany: {
+          args: Prisma.RithmicProtocolFillCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.RithmicProtocolFillCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RithmicProtocolFillPayload>[]
+        }
+        delete: {
+          args: Prisma.RithmicProtocolFillDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RithmicProtocolFillPayload>
+        }
+        update: {
+          args: Prisma.RithmicProtocolFillUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RithmicProtocolFillPayload>
+        }
+        deleteMany: {
+          args: Prisma.RithmicProtocolFillDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.RithmicProtocolFillUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.RithmicProtocolFillUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RithmicProtocolFillPayload>[]
+        }
+        upsert: {
+          args: Prisma.RithmicProtocolFillUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RithmicProtocolFillPayload>
+        }
+        aggregate: {
+          args: Prisma.RithmicProtocolFillAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRithmicProtocolFill>
+        }
+        groupBy: {
+          args: Prisma.RithmicProtocolFillGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RithmicProtocolFillGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.RithmicProtocolFillCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RithmicProtocolFillCountAggregateOutputType> | number
+        }
+      }
+    }
     Order: {
       payload: Prisma.$OrderPayload<ExtArgs>
       fields: Prisma.OrderFieldRefs
@@ -3570,6 +3645,34 @@ export const VoteScalarFieldEnum = {
 export type VoteScalarFieldEnum = (typeof VoteScalarFieldEnum)[keyof typeof VoteScalarFieldEnum]
 
 
+export const RithmicProtocolFillScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  accountNumber: 'accountNumber',
+  accountId: 'accountId',
+  identityKey: 'identityKey',
+  fillId: 'fillId',
+  rawFillId: 'rawFillId',
+  symbol: 'symbol',
+  exchange: 'exchange',
+  transactionType: 'transactionType',
+  fillPrice: 'fillPrice',
+  fillSize: 'fillSize',
+  fillDate: 'fillDate',
+  fillTime: 'fillTime',
+  basketId: 'basketId',
+  sequenceNumber: 'sequenceNumber',
+  ssboe: 'ssboe',
+  usecs: 'usecs',
+  source: 'source',
+  connectionId: 'connectionId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RithmicProtocolFillScalarFieldEnum = (typeof RithmicProtocolFillScalarFieldEnum)[keyof typeof RithmicProtocolFillScalarFieldEnum]
+
+
 export const OrderScalarFieldEnum = {
   id: 'id',
   accountId: 'accountId',
@@ -3964,6 +4067,7 @@ export type GlobalOmitConfig = {
   post?: Prisma.PostOmit
   comment?: Prisma.CommentOmit
   vote?: Prisma.VoteOmit
+  rithmicProtocolFill?: Prisma.RithmicProtocolFillOmit
   order?: Prisma.OrderOmit
   tradeAnalytics?: Prisma.TradeAnalyticsOmit
   historicalData?: Prisma.HistoricalDataOmit

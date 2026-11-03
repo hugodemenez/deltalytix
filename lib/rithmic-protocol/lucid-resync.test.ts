@@ -109,6 +109,36 @@ describe('Lucid history vs replay', () => {
   it('keeps every replay fill on accounts with no history', () => {
     expect(preferHistoryFills(replay)).toHaveLength(3)
   })
+
+  it('keeps order-history fills on a later day history did not cover', () => {
+    const oct9 = markFillSource(
+      [
+        fill({
+          fillId: '9000101',
+          fillDate: '20261009',
+          ssboe: at('2026-10-09T14:37:01Z'),
+        }),
+      ],
+      'replay',
+    )
+    const fills = preferHistoryFills([...history, ...oct9])
+    expect(fills.map((f) => f.fillId)).toContain('9000101')
+  })
+
+  it('keeps order-history fills on an earlier day history did not cover', () => {
+    const sep4 = markFillSource(
+      [
+        fill({
+          fillId: '9000102',
+          fillDate: '20260904',
+          ssboe: at('2026-09-04T15:31:14Z'),
+        }),
+      ],
+      'replay',
+    )
+    const fills = preferHistoryFills([...history, ...sep4])
+    expect(fills.map((f) => f.fillId)).toContain('9000102')
+  })
 })
 
 describe('persisted identity ignores close-time jitter', () => {

@@ -282,6 +282,7 @@ export type ConnectionWhereInput = {
   apiHosts?: Prisma.JsonNullableFilter<"Connection">
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   accounts?: Prisma.AccountListRelationFilter
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillListRelationFilter
 }
 
 export type ConnectionOrderByWithRelationInput = {
@@ -301,6 +302,7 @@ export type ConnectionOrderByWithRelationInput = {
   apiHosts?: Prisma.SortOrderInput | Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
   accounts?: Prisma.AccountOrderByRelationAggregateInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillOrderByRelationAggregateInput
 }
 
 export type ConnectionWhereUniqueInput = Prisma.AtLeast<{
@@ -324,6 +326,7 @@ export type ConnectionWhereUniqueInput = Prisma.AtLeast<{
   apiHosts?: Prisma.JsonNullableFilter<"Connection">
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   accounts?: Prisma.AccountListRelationFilter
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillListRelationFilter
 }, "id" | "userId_service_externalId">
 
 export type ConnectionOrderByWithAggregationInput = {
@@ -384,6 +387,7 @@ export type ConnectionCreateInput = {
   apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   user: Prisma.UserCreateNestedOneWithoutConnectionsInput
   accounts?: Prisma.AccountCreateNestedManyWithoutConnectionInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateInput = {
@@ -402,6 +406,7 @@ export type ConnectionUncheckedCreateInput = {
   environment?: string
   apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutConnectionInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUpdateInput = {
@@ -420,6 +425,7 @@ export type ConnectionUpdateInput = {
   apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   user?: Prisma.UserUpdateOneRequiredWithoutConnectionsNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutConnectionNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateInput = {
@@ -438,6 +444,7 @@ export type ConnectionUncheckedUpdateInput = {
   environment?: Prisma.StringFieldUpdateOperationsInput | string
   apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutConnectionNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionCreateManyInput = {
@@ -632,6 +639,22 @@ export type ConnectionUpdateOneWithoutAccountsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ConnectionUpdateToOneWithWhereWithoutAccountsInput, Prisma.ConnectionUpdateWithoutAccountsInput>, Prisma.ConnectionUncheckedUpdateWithoutAccountsInput>
 }
 
+export type ConnectionCreateNestedOneWithoutRithmicProtocolFillsInput = {
+  create?: Prisma.XOR<Prisma.ConnectionCreateWithoutRithmicProtocolFillsInput, Prisma.ConnectionUncheckedCreateWithoutRithmicProtocolFillsInput>
+  connectOrCreate?: Prisma.ConnectionCreateOrConnectWithoutRithmicProtocolFillsInput
+  connect?: Prisma.ConnectionWhereUniqueInput
+}
+
+export type ConnectionUpdateOneWithoutRithmicProtocolFillsNestedInput = {
+  create?: Prisma.XOR<Prisma.ConnectionCreateWithoutRithmicProtocolFillsInput, Prisma.ConnectionUncheckedCreateWithoutRithmicProtocolFillsInput>
+  connectOrCreate?: Prisma.ConnectionCreateOrConnectWithoutRithmicProtocolFillsInput
+  upsert?: Prisma.ConnectionUpsertWithoutRithmicProtocolFillsInput
+  disconnect?: Prisma.ConnectionWhereInput | boolean
+  delete?: Prisma.ConnectionWhereInput | boolean
+  connect?: Prisma.ConnectionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ConnectionUpdateToOneWithWhereWithoutRithmicProtocolFillsInput, Prisma.ConnectionUpdateWithoutRithmicProtocolFillsInput>, Prisma.ConnectionUncheckedUpdateWithoutRithmicProtocolFillsInput>
+}
+
 export type ConnectionCreateWithoutUserInput = {
   id?: string
   service: string
@@ -647,6 +670,7 @@ export type ConnectionCreateWithoutUserInput = {
   environment?: string
   apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accounts?: Prisma.AccountCreateNestedManyWithoutConnectionInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutUserInput = {
@@ -664,6 +688,7 @@ export type ConnectionUncheckedCreateWithoutUserInput = {
   environment?: string
   apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutConnectionInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutUserInput = {
@@ -727,6 +752,7 @@ export type ConnectionCreateWithoutAccountsInput = {
   environment?: string
   apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   user: Prisma.UserCreateNestedOneWithoutConnectionsInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionUncheckedCreateWithoutAccountsInput = {
@@ -744,6 +770,7 @@ export type ConnectionUncheckedCreateWithoutAccountsInput = {
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: string
   apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedCreateNestedManyWithoutConnectionInput
 }
 
 export type ConnectionCreateOrConnectWithoutAccountsInput = {
@@ -777,6 +804,7 @@ export type ConnectionUpdateWithoutAccountsInput = {
   environment?: Prisma.StringFieldUpdateOperationsInput | string
   apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   user?: Prisma.UserUpdateOneRequiredWithoutConnectionsNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutAccountsInput = {
@@ -794,6 +822,95 @@ export type ConnectionUncheckedUpdateWithoutAccountsInput = {
   includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   environment?: Prisma.StringFieldUpdateOperationsInput | string
   apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedUpdateManyWithoutConnectionNestedInput
+}
+
+export type ConnectionCreateWithoutRithmicProtocolFillsInput = {
+  id?: string
+  service: string
+  externalId: string
+  lastSyncedAt: Date | string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  token?: string | null
+  tokenExpiresAt?: Date | string | null
+  dailySyncTime?: Date | string | null
+  syncIntervalMinutes?: number | null
+  includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: string
+  apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  user: Prisma.UserCreateNestedOneWithoutConnectionsInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutConnectionInput
+}
+
+export type ConnectionUncheckedCreateWithoutRithmicProtocolFillsInput = {
+  id?: string
+  userId: string
+  service: string
+  externalId: string
+  lastSyncedAt: Date | string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  token?: string | null
+  tokenExpiresAt?: Date | string | null
+  dailySyncTime?: Date | string | null
+  syncIntervalMinutes?: number | null
+  includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: string
+  apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutConnectionInput
+}
+
+export type ConnectionCreateOrConnectWithoutRithmicProtocolFillsInput = {
+  where: Prisma.ConnectionWhereUniqueInput
+  create: Prisma.XOR<Prisma.ConnectionCreateWithoutRithmicProtocolFillsInput, Prisma.ConnectionUncheckedCreateWithoutRithmicProtocolFillsInput>
+}
+
+export type ConnectionUpsertWithoutRithmicProtocolFillsInput = {
+  update: Prisma.XOR<Prisma.ConnectionUpdateWithoutRithmicProtocolFillsInput, Prisma.ConnectionUncheckedUpdateWithoutRithmicProtocolFillsInput>
+  create: Prisma.XOR<Prisma.ConnectionCreateWithoutRithmicProtocolFillsInput, Prisma.ConnectionUncheckedCreateWithoutRithmicProtocolFillsInput>
+  where?: Prisma.ConnectionWhereInput
+}
+
+export type ConnectionUpdateToOneWithWhereWithoutRithmicProtocolFillsInput = {
+  where?: Prisma.ConnectionWhereInput
+  data: Prisma.XOR<Prisma.ConnectionUpdateWithoutRithmicProtocolFillsInput, Prisma.ConnectionUncheckedUpdateWithoutRithmicProtocolFillsInput>
+}
+
+export type ConnectionUpdateWithoutRithmicProtocolFillsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  service?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.StringFieldUpdateOperationsInput | string
+  lastSyncedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncIntervalMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.StringFieldUpdateOperationsInput | string
+  apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  user?: Prisma.UserUpdateOneRequiredWithoutConnectionsNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutConnectionNestedInput
+}
+
+export type ConnectionUncheckedUpdateWithoutRithmicProtocolFillsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  service?: Prisma.StringFieldUpdateOperationsInput | string
+  externalId?: Prisma.StringFieldUpdateOperationsInput | string
+  lastSyncedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dailySyncTime?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  syncIntervalMinutes?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  includedFeeTypes?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.StringFieldUpdateOperationsInput | string
+  apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionCreateManyUserInput = {
@@ -827,6 +944,7 @@ export type ConnectionUpdateWithoutUserInput = {
   environment?: Prisma.StringFieldUpdateOperationsInput | string
   apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accounts?: Prisma.AccountUpdateManyWithoutConnectionNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateWithoutUserInput = {
@@ -844,6 +962,7 @@ export type ConnectionUncheckedUpdateWithoutUserInput = {
   environment?: Prisma.StringFieldUpdateOperationsInput | string
   apiHosts?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutConnectionNestedInput
+  rithmicProtocolFills?: Prisma.RithmicProtocolFillUncheckedUpdateManyWithoutConnectionNestedInput
 }
 
 export type ConnectionUncheckedUpdateManyWithoutUserInput = {
@@ -869,10 +988,12 @@ export type ConnectionUncheckedUpdateManyWithoutUserInput = {
 
 export type ConnectionCountOutputType = {
   accounts: number
+  rithmicProtocolFills: number
 }
 
 export type ConnectionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   accounts?: boolean | ConnectionCountOutputTypeCountAccountsArgs
+  rithmicProtocolFills?: boolean | ConnectionCountOutputTypeCountRithmicProtocolFillsArgs
 }
 
 /**
@@ -890,6 +1011,13 @@ export type ConnectionCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.E
  */
 export type ConnectionCountOutputTypeCountAccountsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.AccountWhereInput
+}
+
+/**
+ * ConnectionCountOutputType without action
+ */
+export type ConnectionCountOutputTypeCountRithmicProtocolFillsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RithmicProtocolFillWhereInput
 }
 
 
@@ -910,6 +1038,7 @@ export type ConnectionSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   apiHosts?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   accounts?: boolean | Prisma.Connection$accountsArgs<ExtArgs>
+  rithmicProtocolFills?: boolean | Prisma.Connection$rithmicProtocolFillsArgs<ExtArgs>
   _count?: boolean | Prisma.ConnectionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["connection"]>
 
@@ -970,6 +1099,7 @@ export type ConnectionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs
 export type ConnectionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   accounts?: boolean | Prisma.Connection$accountsArgs<ExtArgs>
+  rithmicProtocolFills?: boolean | Prisma.Connection$rithmicProtocolFillsArgs<ExtArgs>
   _count?: boolean | Prisma.ConnectionCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ConnectionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -984,6 +1114,7 @@ export type $ConnectionPayload<ExtArgs extends runtime.Types.Extensions.Internal
   objects: {
     user: Prisma.$UserPayload<ExtArgs>
     accounts: Prisma.$AccountPayload<ExtArgs>[]
+    rithmicProtocolFills: Prisma.$RithmicProtocolFillPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1408,6 +1539,7 @@ export interface Prisma__ConnectionClient<T, Null = never, ExtArgs extends runti
   readonly [Symbol.toStringTag]: "PrismaPromise"
   user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   accounts<T extends Prisma.Connection$accountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$accountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  rithmicProtocolFills<T extends Prisma.Connection$rithmicProtocolFillsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Connection$rithmicProtocolFillsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RithmicProtocolFillPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1873,6 +2005,30 @@ export type Connection$accountsArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.AccountScalarFieldEnum | Prisma.AccountScalarFieldEnum[]
+}
+
+/**
+ * Connection.rithmicProtocolFills
+ */
+export type Connection$rithmicProtocolFillsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the RithmicProtocolFill
+   */
+  select?: Prisma.RithmicProtocolFillSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the RithmicProtocolFill
+   */
+  omit?: Prisma.RithmicProtocolFillOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RithmicProtocolFillInclude<ExtArgs> | null
+  where?: Prisma.RithmicProtocolFillWhereInput
+  orderBy?: Prisma.RithmicProtocolFillOrderByWithRelationInput | Prisma.RithmicProtocolFillOrderByWithRelationInput[]
+  cursor?: Prisma.RithmicProtocolFillWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RithmicProtocolFillScalarFieldEnum | Prisma.RithmicProtocolFillScalarFieldEnum[]
 }
 
 /**
