@@ -15,6 +15,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard"
 import { toast } from "sonner"
@@ -26,7 +32,11 @@ import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
 import { useTradesStore } from "@/store/trades-store"
 import { useCurrentLocale } from "@/locales/client"
 import { tradeMatchesDateKey } from "@/lib/trades/trade-matches-date"
-import { htmlToPlainText } from "@/lib/journal/html-to-plain-text"
+import {
+  extractJournalImageSrcs,
+  htmlToJournalExportText,
+  htmlToPlainText,
+} from "@/lib/journal/html-to-plain-text"
 import { FinancialEvent } from "@/prisma/generated/prisma/browser"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -252,23 +262,44 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     setIsTimelineVisible(!isTimelineVisible)
   }
 
+  const collectSavedMoods = () => {
+    return (moods ?? [])
+      .filter((mood) => mood?.day)
+      .map((mood) => {
+        const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
+        const html = mood.journalContent ?? ""
+        return {
+          date: format(moodDate, "yyyy-MM-dd"),
+          emotionValue: mood.emotionValue ?? 0,
+          selectedNewsCount: mood.selectedNews?.length ?? 0,
+          html,
+        }
+      })
+      .sort((a, b) => a.date.localeCompare(b.date))
+  }
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
   const handleExportAllPdf = async () => {
     if (isExporting) {
       return
     }
 
-    const savedEntries = (moods ?? [])
-      .filter((mood) => mood?.day)
-      .map((mood) => {
-        const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-        return {
-          date: format(moodDate, "yyyy-MM-dd"),
-          emotionValue: mood.emotionValue ?? 0,
-          selectedNewsCount: mood.selectedNews?.length ?? 0,
-          journalText: htmlToPlainText(mood.journalContent ?? ""),
-        }
-      })
-      .sort((a, b) => a.date.localeCompare(b.date))
+    const savedEntries = collectSavedMoods().map((entry) => ({
+      date: entry.date,
+      emotionValue: entry.emotionValue,
+      selectedNewsCount: entry.selectedNewsCount,
+      journalText: htmlToPlainText(entry.html),
+    }))
 
     if (savedEntries.length === 0) {
       toast.error(t("mindset.exportAllPdfNoEntries"))
@@ -292,20 +323,61 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         throw new Error(`PDF request failed with status ${response.status}`)
       }
 
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = `journal-export-${format(new Date(), "yyyy-MM-dd")}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(url)
-
+      downloadBlob(await response.blob(), `journal-export-${format(new Date(), "yyyy-MM-dd")}.pdf`)
       toast.success(t("mindset.exportAllPdfSuccess"))
     } catch (error) {
       console.error("Failed to export journal PDF:", error)
       toast.error(t("mindset.exportAllPdfError"))
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handleExportAllDocx = async () => {
+    if (isExporting) {
+      return
+    }
+
+    const savedEntries = collectSavedMoods().map((entry) => ({
+      date: entry.date,
+      emotionValue: entry.emotionValue,
+      selectedNewsCount: entry.selectedNewsCount,
+      journalText: htmlToJournalExportText(entry.html),
+      imageUrls: extractJournalImageSrcs(entry.html),
+    }))
+
+    if (savedEntries.length === 0) {
+      toast.error(t("mindset.exportAllPdfNoEntries"))
+      return
+    }
+
+    try {
+      setIsExporting(true)
+
+      const response = await fetch("/api/journal-docx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          locale,
+          entries: savedEntries,
+        }),
+      })
+
+      const contentType = response.headers.get("Content-Type")
+      if (
+        !response.ok ||
+        !contentType?.includes(
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+      ) {
+        throw new Error(`DOCX request failed with status ${response.status}`)
+      }
+
+      downloadBlob(await response.blob(), `journal-export-${format(new Date(), "yyyy-MM-dd")}.docx`)
+      toast.success(t("mindset.exportAllDocxSuccess"))
+    } catch (error) {
+      console.error("Failed to export journal DOCX:", error)
+      toast.error(t("mindset.exportAllDocxError"))
     } finally {
       setIsExporting(false)
     }
@@ -341,28 +413,49 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
             </InfoBubble>
           </div>
           <div className="flex items-center gap-2">
-            <TooltipProvider>
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleExportAllPdf}
-                    disabled={isExporting}
-                    className="h-6 w-6"
-                  >
-                    <Download className="h-3 w-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>
-                    {isExporting
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={isExporting}
+                  className="h-6 w-6"
+                  title={
+                    isExporting
                       ? t("share.exportPdfInProgress")
-                      : t("mindset.exportAllPdf")}
-                  </p>
-                </TooltipContent>
-              </UITooltip>
-            </TooltipProvider>
+                      : t("mindset.exportMenu")
+                  }
+                  aria-label={
+                    isExporting
+                      ? t("share.exportPdfInProgress")
+                      : t("mindset.exportMenu")
+                  }
+                >
+                  <Download className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem
+                  disabled={isExporting}
+                  onSelect={() => {
+                    void handleExportAllPdf()
+                  }}
+                >
+                  {t("mindset.exportAllPdf")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={isExporting}
+                  onSelect={() => {
+                    void handleExportAllDocx()
+                  }}
+                >
+                  <span>{t("mindset.exportAllDocx")}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {t("mindset.exportAllDocxDescription")}
+                  </span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="flex items-center gap-1.5">
               {(["journal", "summary"] as const).map((step) => (
                 <button

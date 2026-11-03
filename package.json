@@ -95,6 +95,7 @@
     "d3-shape": "^3.2.0",
     "date-fns": "^3.6.0",
     "date-fns-tz": "^3.2.0",
+    "docx": "^9.15.2",
     "dotenv": "^17.2.3",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^11.18.2",
