@@ -23,6 +23,16 @@ import {
   invalidateThrottledFetch,
   withThrottledFetch,
 } from '@/lib/rithmic-protocol/fetch-throttle'
+import {
+  buildLedgerSeenIndex,
+  canonicalLedgerFillIds,
+  deriveTradesFromFillLedger,
+} from '@/lib/rithmic-protocol/fill-ledger'
+import {
+  deleteUnannotatedPhantomProtocolTrades,
+  loadRithmicProtocolFills,
+  upsertRithmicProtocolFills,
+} from '@/lib/rithmic-protocol/fill-ledger-store'
 import { buildTradesFromRithmicFills } from '@/lib/rithmic-protocol/fills-to-trades'
 import {
   gatewayUri as gatewayUriFor,
@@ -773,7 +783,13 @@ export async function getRithmicProtocolTrades(
       `Fetching fills for ${resolvedAccountIds.length} accounts (from ${credentials.historyStartDate ?? `${DEFAULT_LOOKBACK_DAYS}d lookback`}, ≤30d windows)`,
     )
 
-    const { fills, uniqueUserId, commissionRates, fillStats } =
+    const storedFills = await loadRithmicProtocolFills({
+      userId,
+      accountNumbers: resolvedAccountIds,
+    })
+    const seen = buildLedgerSeenIndex(storedFills)
+
+    const { rawFills, uniqueUserId, commissionRates, fillStats } =
       await fetchFillsForAccounts({
         gatewayUri: credentials.gatewayUri,
         systemName: credentials.systemName,
@@ -785,11 +801,34 @@ export async function getRithmicProtocolTrades(
         accounts: credentials.accounts,
         historyStartDate: credentials.historyStartDate,
         lookbackDays: DEFAULT_LOOKBACK_DAYS,
+        seenIdentityKeys: seen.identityKeys,
       })
 
+    const accountRows = await prisma.account.findMany({
+      where: { userId, number: { in: resolvedAccountIds } },
+      select: { id: true, number: true },
+    })
+    const accountIdByNumber = new Map(
+      accountRows.map((account) => [account.number, account.id]),
+    )
+
+    const ledgerWrite = await upsertRithmicProtocolFills({
+      userId,
+      fills: rawFills,
+      stored: storedFills,
+      accountIdByNumber,
+      connectionId,
+    })
+    const prepared = deriveTradesFromFillLedger(storedFills, rawFills)
+
     syncStats.rawFills = fillStats.received
-    syncStats.fillsAfterDedup = fillStats.afterDedup
-    syncStats.droppedByReason = { ...fillStats.dropped }
+    syncStats.fillsAfterDedup = prepared.stats.afterDedup
+    syncStats.droppedByReason = {
+      ...prepared.stats.dropped,
+      already_in_ledger: fillStats.skippedAlreadySeen + ledgerWrite.skipped,
+      ledger_inserted: ledgerWrite.inserted,
+      ledger_updated: ledgerWrite.updated,
+    }
 
     const tickDetails = await getTickDetails()
     const tickBySymbol = new Map(
@@ -800,7 +839,7 @@ export async function getRithmicProtocolTrades(
     )
 
     const { trades, openSkipped, skipped } = buildTradesFromRithmicFills(
-      fills,
+      prepared.fills,
       userId,
       tickBySymbol,
       commissionRates,
@@ -866,6 +905,19 @@ export async function getRithmicProtocolTrades(
         }
       }
       savedCount = saveResult.numberOfTradesAdded
+    }
+
+    const phantomsRemoved = await deleteUnannotatedPhantomProtocolTrades({
+      userId,
+      accountNumbers: resolvedAccountIds,
+      derivedTrades: trades,
+      ledgerFillIds: canonicalLedgerFillIds([...storedFills, ...rawFills]),
+    })
+    if (phantomsRemoved > 0) {
+      syncStats.droppedByReason.phantoms_removed = phantomsRemoved
+      logger.info(
+        `Removed ${phantomsRemoved} unannotated ${SERVICE} overnight phantom trade(s)`,
+      )
     }
 
     logSyncSummary(savedCount)

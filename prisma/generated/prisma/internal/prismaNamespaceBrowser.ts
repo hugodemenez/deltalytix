@@ -83,6 +83,7 @@ export const ModelName = {
   Post: 'Post',
   Comment: 'Comment',
   Vote: 'Vote',
+  RithmicProtocolFill: 'RithmicProtocolFill',
   Order: 'Order',
   TradeAnalytics: 'TradeAnalytics',
   HistoricalData: 'HistoricalData'
@@ -605,6 +606,34 @@ export const VoteScalarFieldEnum = {
 } as const
 
 export type VoteScalarFieldEnum = (typeof VoteScalarFieldEnum)[keyof typeof VoteScalarFieldEnum]
+
+
+export const RithmicProtocolFillScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  accountNumber: 'accountNumber',
+  accountId: 'accountId',
+  identityKey: 'identityKey',
+  fillId: 'fillId',
+  rawFillId: 'rawFillId',
+  symbol: 'symbol',
+  exchange: 'exchange',
+  transactionType: 'transactionType',
+  fillPrice: 'fillPrice',
+  fillSize: 'fillSize',
+  fillDate: 'fillDate',
+  fillTime: 'fillTime',
+  basketId: 'basketId',
+  sequenceNumber: 'sequenceNumber',
+  ssboe: 'ssboe',
+  usecs: 'usecs',
+  source: 'source',
+  connectionId: 'connectionId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RithmicProtocolFillScalarFieldEnum = (typeof RithmicProtocolFillScalarFieldEnum)[keyof typeof RithmicProtocolFillScalarFieldEnum]
 
 
 export const OrderScalarFieldEnum = {

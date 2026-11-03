@@ -109,6 +109,34 @@ describe('Rithmic split order pieces (Lucid Sep 30)', () => {
     const b = fill({ fillId: '2', ssboe: at('2026-09-30T14:10:00Z') })
     expect(consolidateOrderFills(markFillSource([a, b], 'replay'))).toHaveLength(2)
   })
+
+  it('does not merge same-price sells from different days when ssboe is missing', () => {
+    const sep25: RithmicProtocolFill = {
+      accountId: ACCOUNT,
+      symbol: 'MESZ6',
+      transactionType: 'SELL',
+      fillPrice: 7764.75,
+      fillSize: 5,
+      fillId: '9001',
+      fillDate: '20260925',
+      fillTime: '16:25:47',
+      source: 'history',
+    }
+    const sep30: RithmicProtocolFill = {
+      accountId: ACCOUNT,
+      symbol: 'MESZ6',
+      transactionType: 'SELL',
+      fillPrice: 7764.75,
+      fillSize: 5,
+      fillId: '9002',
+      fillDate: '20260930',
+      fillTime: '16:30:05',
+      source: 'history',
+    }
+    const merged = consolidateOrderFills([sep25, sep30])
+    expect(merged).toHaveLength(2)
+    expect(merged.map((f) => f.fillSize)).toEqual([5, 5])
+  })
 })
 
 /** Rows rebuilt from the trader's ATAS export: the 5-lot stored as four ATAS pieces. */
