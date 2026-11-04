@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest"
-import { journalMobileDateLine } from "./journal-mobile-date"
+import {
+  formatJournalDayPnl,
+  journalDayPnlTone,
+  journalMobileDateLabel,
+  journalMobileDateLine,
+} from "./journal-mobile-date"
+
+function withRegularSpaces(value: string): string {
+  return value.replace(/[\u00A0\u202F\u2009]/g, " ")
+}
 
 describe("journalMobileDateLine", () => {
   it("formats the French proof date with no trades", () => {
@@ -20,5 +29,41 @@ describe("journalMobileDateLine", () => {
         many: (count) => `${count} trades`,
       }),
     ).toBe("Tuesday 3 November · 4 trades")
+  })
+})
+
+describe("journalMobileDateLabel", () => {
+  it("capitalizes the French weekday for the date chip", () => {
+    expect(journalMobileDateLabel(new Date(2026, 10, 4), "fr")).toBe(
+      "Mercredi 4 novembre",
+    )
+  })
+})
+
+describe("journalDayPnlTone", () => {
+  it("uses the calendar 0.5-unit flat rule", () => {
+    expect(journalDayPnlTone(1240)).toBe("positive")
+    expect(journalDayPnlTone(-380)).toBe("negative")
+    expect(journalDayPnlTone(0)).toBe("flat")
+    expect(journalDayPnlTone(0.49)).toBe("flat")
+    expect(journalDayPnlTone(-0.49)).toBe("flat")
+    expect(journalDayPnlTone(0.5)).toBe("positive")
+    expect(journalDayPnlTone(-0.5)).toBe("negative")
+  })
+})
+
+describe("formatJournalDayPnl", () => {
+  it("matches Drop's French P&L pill proofs", () => {
+    expect(withRegularSpaces(formatJournalDayPnl(1240, "fr"))).toBe("+1 240 €")
+    expect(withRegularSpaces(formatJournalDayPnl(-380, "fr"))).toBe("−380 €")
+    expect(withRegularSpaces(formatJournalDayPnl(0, "fr"))).toBe("±0 €")
+    expect(formatJournalDayPnl(-380, "fr")).toContain("\u2212")
+    expect(formatJournalDayPnl(0, "fr")).toContain("\u00B1")
+  })
+
+  it("formats English locale currency without decimals", () => {
+    expect(formatJournalDayPnl(1240, "en")).toBe("+$1,240")
+    expect(formatJournalDayPnl(-380, "en")).toBe("−$380")
+    expect(formatJournalDayPnl(0, "en")).toBe("±$0")
   })
 })

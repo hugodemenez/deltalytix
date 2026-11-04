@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Journaling } from "./journaling"
 import { JournalingMobile } from "./journaling-mobile"
+import { JournalExportMenuItems } from "./journal-export-menu-items"
 import { JournalMobileHeader } from "./journal-mobile-header"
 import { Timeline } from "./timeline"
 import { MindsetSummary } from "./mindset-summary"
@@ -11,6 +12,7 @@ import { useI18n } from "@/locales/client"
 import { COMPACT_JOURNAL_MEDIA_QUERY } from "@/lib/journal/compact-journal"
 import { useLayoutMediaQuery } from "@/hooks/use-media-query"
 import { ChevronLeft, ChevronRight, Download } from "lucide-react"
+import { useData } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
 import { InfoBubble } from "@/components/ui/info-bubble"
 import {
@@ -22,7 +24,6 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
@@ -30,7 +31,7 @@ import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard"
 import { toast } from "sonner"
 import { saveMindset, deleteMindset } from "@/server/journal"
 import { addTagsToTradesForDay } from "@/server/trades"
-import { addDays, isToday, format } from "date-fns"
+import { isToday, format } from "date-fns"
 import { useMoodStore } from "@/store/widgets/mood-store"
 import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
 import { useTradesStore } from "@/store/trades-store"
@@ -49,6 +50,7 @@ interface MindsetWidgetProps {
 }
 
 export function MindsetWidget({ size }: MindsetWidgetProps) {
+  const { calendarData } = useData()
   const [pane, setPane] = useState<"journal" | "summary">("journal")
   const [emotionValue, setEmotionValue] = useState(0)
   const [selectedNews, setSelectedNews] = useState<string[]>([])
@@ -248,10 +250,6 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
 
   const handleCancelJournal = (snapshot: string) => {
     setJournalContent(snapshot)
-  }
-
-  const handleShiftDay = (days: number) => {
-    setSelectedDate((current) => addDays(current, days))
   }
 
   const handleDeleteEntry = async (date: Date) => {
@@ -460,9 +458,9 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   }
 
   const selectedDateKey = format(selectedDate, "yyyy-MM-dd")
-  const tradesForSelectedDay = trades.filter((trade) =>
-    tradeMatchesDateKey(trade, selectedDateKey),
-  )
+  const calendarDay = calendarData[selectedDateKey]
+  const dayTradeCount = calendarDay?.tradeNumber ?? 0
+  const dayPnl = calendarDay?.pnl ?? 0
 
   if (isCompact) {
     return (
@@ -470,12 +468,12 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         <CardContent className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3.5">
           <JournalMobileHeader
             date={selectedDate}
-            tradeCount={tradesForSelectedDay.length}
+            tradeCount={dayTradeCount}
+            dayPnl={dayPnl}
             pane={pane}
             isExporting={isExporting}
             onPaneChange={setPane}
-            onPreviousDay={() => handleShiftDay(-1)}
-            onNextDay={() => handleShiftDay(1)}
+            onDateChange={setSelectedDate}
             onExportPdf={() => {
               void handleExportAllPdf()
             }}
@@ -560,28 +558,19 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
                   <Download className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem
-                  disabled={isExporting}
-                  onSelect={() => {
+              <DropdownMenuContent align="end" className="min-w-60">
+                <JournalExportMenuItems
+                  isExporting={isExporting}
+                  onExportPdf={() => {
                     void handleExportAllPdf()
                   }}
-                >
-                  {t("mindset.exportAllPdf")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={isExporting}
-                  onSelect={() => {
+                  onExportDocx={() => {
                     void handleExportAllDocx()
                   }}
-                >
-                  <span>{t("mindset.exportAllDocx")}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {t("mindset.exportAllDocxDescription")}
-                  </span>
-                </DropdownMenuItem>
+                />
               </DropdownMenuContent>
             </DropdownMenu>
+            <div aria-hidden className="mx-1 h-4 w-px bg-border" />
             <div className="flex items-center gap-1.5">
               {(["journal", "summary"] as const).map((step) => (
                 <button

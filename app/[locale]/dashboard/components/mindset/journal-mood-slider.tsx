@@ -40,7 +40,7 @@ export function JournalMoodSlider({
     <div
       data-journal-mood={isDragging ? "dragging" : "idle"}
       className={cn(
-        "flex items-center gap-2.5 rounded-[10px] border border-border bg-muted px-3 py-2.5",
+        "flex items-center gap-2.5 rounded-[10px] border border-border bg-muted px-3 pb-2.5 pt-7",
         isDragging && "border-foreground/20",
         className,
       )}
@@ -48,7 +48,7 @@ export function JournalMoodSlider({
       <span aria-hidden className="text-base leading-none text-muted-foreground">
         ☹
       </span>
-      <div className={cn("relative min-w-0 flex-1", isDragging && "pt-7")}>
+      <div className="relative min-w-0 flex-1">
         <div className="relative flex h-[22px] items-center">
           <div
             aria-hidden
@@ -73,7 +73,7 @@ export function JournalMoodSlider({
                   className="relative flex h-[22px] w-[22px] items-center justify-center"
                 >
                   {isDragging && isCurrent ? (
-                    <span className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
+                    <span className="pointer-events-none absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
                       {t("mindset.emotion.stepBubble", {
                         step,
                         label,
