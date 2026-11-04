@@ -48,7 +48,13 @@ describe("calmer mobile journal layout", () => {
     expect(mobile).not.toMatch(/Sheet|Drawer|Vaul/)
     expect(mobile).toContain("showToolbar={isWriting}")
     expect(mobile).toContain("toolbarVariant=\"compact\"")
-    expect(mobile).toContain("JournalMobileSaveBar")
+    expect(mobile).toContain("commitVisible={isWriting}")
+    expect(mobile).toContain("onCommit")
+    expect(mobile).not.toContain("JournalMobileSaveBar")
+    expect(mobile).not.toContain("pb-28")
+    expect(mobile).not.toContain("onCancel")
+    expect(mobile).not.toContain("mindset.cancel")
+    expect(mobile).not.toContain("mindset.journaling.save")
     expect(mobile).toContain("mindset.journaling.dayPlaceholder")
     expect(mobile).toContain("text-base")
     expect(mobile).not.toContain("text-[15px]")
@@ -180,14 +186,6 @@ describe("calmer mobile journal layout", () => {
       resolve(root, "components/journal-editor/toolbar.tsx"),
       "utf8",
     )
-    const saveBar = readFileSync(
-      resolve(
-        root,
-        "app/[locale]/dashboard/components/mindset/journal-mobile-save-bar.tsx",
-      ),
-      "utf8",
-    )
-
     expect(slider).toContain("bg-muted")
     expect(slider).toContain("text-muted-foreground")
     expect(slider).not.toContain("bg-[#111]")
@@ -201,7 +199,34 @@ describe("calmer mobile journal layout", () => {
     expect(editor).not.toContain("text-[#e5e5e5]")
     expect(toolbar).toContain("border-border")
     expect(toolbar).not.toContain("border-[#222]")
-    expect(saveBar).not.toContain("border-[#2a2a2a]")
-    expect(saveBar).not.toContain("text-[#bdbdbd]")
+  })
+
+  it("uses an in-editor check to save and leaves desktop Enregistrer alone", () => {
+    const mobile = readFileSync(
+      resolve(
+        root,
+        "app/[locale]/dashboard/components/mindset/journaling-mobile.tsx",
+      ),
+      "utf8",
+    )
+    const editor = readFileSync(
+      resolve(root, "components/journal-editor/journal-editor.tsx"),
+      "utf8",
+    )
+    const journaling = readFileSync(
+      resolve(root, "app/[locale]/dashboard/components/mindset/journaling.tsx"),
+      "utf8",
+    )
+
+    expect(editor).toContain('from "lucide-react"')
+    expect(editor).toContain("<Check")
+    expect(editor).toContain(
+      "absolute bottom-[9px] right-[9px] z-10 h-8 w-8 rounded-full bg-primary text-primary-foreground",
+    )
+    expect(editor).toContain("commitVisible && \"pb-11\"")
+    expect(mobile).toContain("commitVisible={isWriting}")
+    expect(mobile).not.toContain("Annuler")
+    expect(mobile).not.toContain("Enregistrer")
+    expect(journaling).toContain("mindset.journaling.save")
   })
 })

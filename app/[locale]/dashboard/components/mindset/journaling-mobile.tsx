@@ -2,17 +2,15 @@
 
 import { DayTagSelector } from "./day-tag-selector"
 import { JournalMoodSlider } from "./journal-mood-slider"
-import { JournalMobileSaveBar } from "./journal-mobile-save-bar"
 import { JournalEditor } from "@/components/journal-editor"
 import { FinancialEvent, Trade } from "@/prisma/generated/prisma/browser"
 import { useI18n } from "@/locales/client"
-import { useRef, useState } from "react"
+import { useState } from "react"
 
 interface JournalingMobileProps {
   content: string
   onChange: (content: string) => void
   onSave: () => Promise<boolean>
-  onCancel: (snapshot: string) => void
   emotionValue: number
   onEmotionChange: (value: number) => void
   date: Date
@@ -27,7 +25,6 @@ export function JournalingMobile({
   content,
   onChange,
   onSave,
-  onCancel,
   emotionValue,
   onEmotionChange,
   date,
@@ -40,19 +37,6 @@ export function JournalingMobile({
   const t = useI18n()
   const [isWriting, setIsWriting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const snapshotRef = useRef(content)
-
-  const handleEditingChange = (editing: boolean) => {
-    if (editing && !isWriting) {
-      snapshotRef.current = content
-    }
-    setIsWriting(editing)
-  }
-
-  const handleCancel = () => {
-    onCancel(snapshotRef.current)
-    setIsWriting(false)
-  }
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -60,6 +44,9 @@ export function JournalingMobile({
       const saved = await onSave()
       if (saved) {
         setIsWriting(false)
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur()
+        }
       }
     } finally {
       setIsSaving(false)
@@ -67,7 +54,7 @@ export function JournalingMobile({
   }
 
   return (
-    <div className={isWriting ? "flex min-h-0 flex-1 flex-col pb-28" : "flex min-h-0 flex-1 flex-col"}>
+    <div className="flex min-h-0 flex-1 flex-col">
       <JournalMoodSlider
         value={emotionValue}
         onChange={onEmotionChange}
@@ -98,20 +85,15 @@ export function JournalingMobile({
           date={date}
           showToolbar={isWriting}
           toolbarVariant="compact"
-          onEditingChange={handleEditingChange}
+          onEditingChange={setIsWriting}
           surfaceClassName="p-3 text-base leading-normal"
-        />
-      </div>
-
-      {isWriting ? (
-        <JournalMobileSaveBar
-          onCancel={handleCancel}
-          onSave={() => {
+          commitVisible={isWriting}
+          commitDisabled={isSaving}
+          onCommit={() => {
             void handleSave()
           }}
-          isSaving={isSaving}
         />
-      ) : null}
+      </div>
     </div>
   )
 }

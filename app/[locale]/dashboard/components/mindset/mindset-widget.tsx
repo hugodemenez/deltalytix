@@ -248,10 +248,6 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     }
   }
 
-  const handleCancelJournal = (snapshot: string) => {
-    setJournalContent(snapshot)
-  }
-
   const handleDeleteEntry = async (date: Date) => {
     try {
       const dateKey = format(date, 'yyyy-MM-dd')
@@ -496,7 +492,6 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
               content={journalContent}
               onChange={handleJournalChange}
               onSave={handleSave}
-              onCancel={handleCancelJournal}
               emotionValue={emotionValue}
               onEmotionChange={handleEmotionChange}
               date={selectedDate}

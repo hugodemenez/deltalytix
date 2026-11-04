@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 import { useCurrentLocale, useI18n } from "@/locales/client"
 import { FinancialEvent } from "@/prisma/generated/prisma/browser"
 import { Button } from "@/components/ui/button"
-import { Sparkles } from "lucide-react"
+import { Check, Sparkles } from "lucide-react"
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
@@ -41,6 +41,9 @@ export interface JournalEditorProps {
   toolbarVariant?: "default" | "compact"
   onEditingChange?: (editing: boolean) => void
   surfaceClassName?: string
+  commitVisible?: boolean
+  commitDisabled?: boolean
+  onCommit?: () => void
 }
 
 function currentBlock(): JournalBlock | "p" | null {
@@ -79,6 +82,9 @@ export function JournalEditor({
   toolbarVariant = "default",
   onEditingChange,
   surfaceClassName,
+  commitVisible = false,
+  commitDisabled = false,
+  onCommit,
 }: JournalEditorProps) {
   const t = useI18n()
   const locale = useCurrentLocale()
@@ -354,6 +360,7 @@ export function JournalEditor({
                 ? "text-base"
                 : "text-lg sm:text-sm",
               surfaceClassName,
+              commitVisible && "pb-11",
             )}
           >
             {placeholder}
@@ -372,6 +379,7 @@ export function JournalEditor({
               ? "text-base leading-normal"
               : "text-lg leading-relaxed sm:text-sm",
             surfaceClassName,
+            commitVisible && "pb-11",
             "[&_h1]:mb-2 [&_h1]:mt-3 [&_h1]:text-3xl [&_h1]:font-bold",
             "[&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-2xl [&_h2]:font-semibold",
             "[&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold",
@@ -410,6 +418,19 @@ export function JournalEditor({
             void insertImageFile(file)
           }}
         />
+        {commitVisible ? (
+          <Button
+            type="button"
+            size="icon-sm"
+            className="absolute bottom-[9px] right-[9px] z-10 h-8 w-8 rounded-full bg-primary text-primary-foreground shadow hover:bg-primary/90"
+            aria-label={t("mindset.journaling.save")}
+            disabled={commitDisabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => onCommit?.()}
+          >
+            <Check className="h-4 w-4" />
+          </Button>
+        ) : null}
       </div>
     </div>
   )
