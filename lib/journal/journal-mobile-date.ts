@@ -22,6 +22,24 @@ export function journalMobileDateLabel(
   )
 }
 
+/** Short day label for the nav Timeline (not a second summary title). */
+export function journalTimelineDateLabel(
+  date: Date,
+  locale: "en" | "fr",
+): string {
+  return format(date, "EEE d MMM", { locale: locale === "fr" ? fr : enUS })
+}
+
+export function journalDayPnlPillClassName(tone: JournalDayPnlTone): string {
+  if (tone === "positive") {
+    return "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400"
+  }
+  if (tone === "negative") {
+    return "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-400"
+  }
+  return "border bg-muted text-muted-foreground"
+}
+
 export function journalMobileDateLine(
   date: Date,
   tradeCount: number,

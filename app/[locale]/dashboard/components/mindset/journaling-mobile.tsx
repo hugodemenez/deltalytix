@@ -20,6 +20,8 @@ interface JournalingMobileProps {
   onNewsSelection: (newsIds: string[]) => void
   trades: Trade[]
   onApplyTagToAll: (tag: string) => Promise<void>
+  showNews?: boolean
+  growEditor?: boolean
 }
 
 export function JournalingMobile({
@@ -34,6 +36,8 @@ export function JournalingMobile({
   onNewsSelection,
   trades,
   onApplyTagToAll,
+  showNews = true,
+  growEditor = false,
 }: JournalingMobileProps) {
   const t = useI18n()
   const [isWriting, setIsWriting] = useState(false)
@@ -59,7 +63,7 @@ export function JournalingMobile({
       <JournalMoodSlider
         value={emotionValue}
         onChange={onEmotionChange}
-        className="mt-3.5 flex-none"
+        className={showNews ? "mt-3.5 flex-none" : "flex-none"}
       />
 
       {isWriting ? null : (
@@ -73,14 +77,19 @@ export function JournalingMobile({
         </div>
       )}
 
-      <div className="mt-3 flex-none">
+      <div
+        className={
+          growEditor ? "mt-3 flex min-h-0 flex-1 flex-col" : "mt-3 flex-none"
+        }
+      >
         <JournalEditor
           content={content}
           onChange={onChange}
           placeholder={t("mindset.journaling.dayPlaceholder")}
           width="100%"
-          height="auto"
-          className="h-auto"
+          height={growEditor ? "100%" : "auto"}
+          className={growEditor ? "min-h-0 flex-1" : "h-auto"}
+          fillHeight={growEditor}
           events={events}
           selectedNews={selectedNews}
           onNewsSelection={onNewsSelection}
@@ -97,7 +106,9 @@ export function JournalingMobile({
         />
       </div>
 
-      <JournalMobileNews events={events} selectedNews={selectedNews} />
+      {showNews ? (
+        <JournalMobileNews events={events} selectedNews={selectedNews} />
+      ) : null}
     </div>
   )
 }

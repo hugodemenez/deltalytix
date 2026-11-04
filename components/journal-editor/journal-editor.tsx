@@ -44,6 +44,7 @@ export interface JournalEditorProps {
   commitVisible?: boolean
   commitDisabled?: boolean
   onCommit?: () => void
+  fillHeight?: boolean
 }
 
 function currentBlock(): JournalBlock | "p" | null {
@@ -85,6 +86,7 @@ export function JournalEditor({
   commitVisible = false,
   commitDisabled = false,
   onCommit,
+  fillHeight = false,
 }: JournalEditorProps) {
   const t = useI18n()
   const locale = useCurrentLocale()
@@ -277,6 +279,7 @@ export function JournalEditor({
     <div
       className={cn(
         "relative flex h-full flex-col overflow-hidden rounded-lg border bg-background",
+        fillHeight && "min-h-0",
         toolbarVariant === "compact" &&
           !isFullscreen &&
           "gap-3 overflow-visible rounded-none border-0 bg-transparent",
@@ -349,7 +352,9 @@ export function JournalEditor({
           "relative min-h-0",
           toolbarVariant === "compact"
             ? cn(
-                "flex-none rounded-[10px] border border-border bg-muted text-foreground",
+                fillHeight
+                  ? "flex min-h-0 flex-1 flex-col rounded-[10px] border border-border bg-muted text-foreground"
+                  : "flex-none rounded-[10px] border border-border bg-muted text-foreground",
                 commitVisible ? "min-h-[220px]" : "min-h-[4.75rem]",
               )
             : "flex-1",

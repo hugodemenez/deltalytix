@@ -178,6 +178,7 @@ export default {
       netPnL: 'Net P&L',
       entryTime: 'Entry Time'
     },
+    timelineTitle: 'Timeline',
     hideTimeline: 'Hide Timeline',
     showTimeline: 'Show Timeline'
   }

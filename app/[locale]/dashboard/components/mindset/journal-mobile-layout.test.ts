@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest"
 const root = process.cwd()
 
 describe("calmer mobile journal layout", () => {
-  it("keeps the compact redesign under 640px and leaves desktop journaling intact", () => {
+  it("keeps the compact redesign under 640px and uses the desktop calm summary at sm+", () => {
     const widget = readFileSync(
       resolve(root, "app/[locale]/dashboard/components/mindset/mindset-widget.tsx"),
       "utf8",
@@ -57,16 +57,33 @@ describe("calmer mobile journal layout", () => {
     expect(compact).toContain("639")
     expect(widget).toContain("COMPACT_JOURNAL_MEDIA_QUERY")
     expect(widget).toContain("JournalingMobile")
-    expect(widget).toContain("<Journaling")
+    expect(widget).not.toContain('from "./journaling"')
+    expect(widget).not.toContain('from "./mindset-summary"')
     expect(widget).toContain("<Timeline")
+    expect(widget).toContain('variant="desktop"')
+    expect(widget).toContain("showNews={false}")
+    expect(widget).toContain("growEditor")
+    expect(widget).toContain('flex-[0_0_58%]')
+    expect(widget).toContain('variant="column"')
     const compactBranch = widget.slice(
       widget.indexOf("if (isCompact)"),
       widget.lastIndexOf("return ("),
     )
+    const desktopBranch = widget.slice(widget.lastIndexOf("return ("))
     expect(compactBranch).toContain("JournalingMobile")
     expect(compactBranch).not.toContain("MindsetSummary")
     expect(compactBranch).not.toContain('pane === "summary"')
-    expect(widget).toContain("<MindsetSummary")
+    expect(compactBranch).not.toContain('variant="desktop"')
+    expect(compactBranch).not.toContain("showNews={false}")
+    expect(compactBranch).not.toContain('flex-[0_0_58%]')
+    expect(desktopBranch).toContain('variant="desktop"')
+    expect(desktopBranch).toContain("showNews={false}")
+    expect(desktopBranch).toContain("growEditor")
+    expect(desktopBranch).toContain('flex-[0_0_58%]')
+    expect(desktopBranch).toContain("JournalMobileNews")
+    expect(desktopBranch).not.toContain("<MindsetSummary")
+    expect(desktopBranch).not.toContain("MMMM d, yyyy")
+    expect(desktopBranch).not.toContain("<Pencil")
     expect(summary).toContain("MMMM d, yyyy")
     expect(summary).toContain("mindset.emotion.title")
     expect(summary).toContain("mindset.journaling.title")
@@ -93,6 +110,8 @@ describe("calmer mobile journal layout", () => {
     expect(mobile).toContain("text-base")
     expect(mobile).not.toContain("text-[15px]")
     expect(mobile).toContain("JournalMobileNews")
+    expect(mobile).toContain("showNews = true")
+    expect(mobile).toContain("growEditor = false")
     expect(mobile).not.toContain("mindset.emotion.title")
     expect(mobile).not.toContain("mindset.journaling.title")
     expect(mobile).not.toContain("Pencil")
@@ -127,6 +146,9 @@ describe("calmer mobile journal layout", () => {
     expect(compactNews).not.toContain("MMMM d, yyyy")
     expect(compactNews).not.toContain("EEE d MMM yyyy")
     expect(compactNews).not.toContain("formattedDate")
+    expect(compactNews).toContain('variant === "column"')
+    expect(compactNews).toContain("bg-gradient-to-t from-background to-transparent")
+    expect(compactNews).not.toMatch(/class(Name)?=["']g["']/)
     expect(journaling).not.toContain("toolbarVariant")
     expect(journaling).not.toContain("surfaceClassName")
 
@@ -139,7 +161,11 @@ describe("calmer mobile journal layout", () => {
     )
     expect(header).toContain("mindset.panes.journal")
     expect(header).toContain("mindset.panes.summary")
+    expect(header).toContain('variant === "desktop"')
+    expect(header).toContain("<Download")
     expect(header).not.toContain("mindset.journaling.title")
+    expect(header).not.toContain("MMMM d, yyyy")
+    expect(header).not.toMatch(/class(Name)?=["']g["']/)
     expect(header).toContain("Popover")
     expect(header).toContain("Calendar")
     expect(header).toContain("weekStartsOn={1}")
@@ -205,8 +231,11 @@ describe("calmer mobile journal layout", () => {
   })
 
   it("uses export menu A on compact and desktop download menus", () => {
-    const widget = readFileSync(
-      resolve(root, "app/[locale]/dashboard/components/mindset/mindset-widget.tsx"),
+    const header = readFileSync(
+      resolve(
+        root,
+        "app/[locale]/dashboard/components/mindset/journal-mobile-header.tsx",
+      ),
       "utf8",
     )
     const exportItems = readFileSync(
@@ -217,10 +246,10 @@ describe("calmer mobile journal layout", () => {
       "utf8",
     )
 
-    expect(widget).toContain("JournalExportMenuItems")
-    expect(widget).toContain('className="min-w-60"')
-    expect(widget).toContain('aria-hidden className="mx-1 h-4 w-px bg-border"')
-    expect(widget).not.toContain("ml-auto text-xs")
+    expect(header).toContain("JournalExportMenuItems")
+    expect(header).toContain('className="min-w-60"')
+    expect(header).toContain("<Download")
+    expect(header).not.toContain("ml-auto text-xs")
     expect(exportItems).toContain("FileText")
     expect(exportItems).toContain("FileType")
     expect(exportItems).toContain("items-start gap-3 py-2.5")
@@ -300,5 +329,27 @@ describe("calmer mobile journal layout", () => {
     expect(mobile).not.toContain("Annuler")
     expect(mobile).not.toContain("Enregistrer")
     expect(journaling).toContain("mindset.journaling.save")
+  })
+
+  it("keeps the desktop Timeline as day+P&L navigation, not a second summary title", () => {
+    const nav = readFileSync(
+      resolve(root, "app/[locale]/dashboard/components/mindset/timeline.tsx"),
+      "utf8",
+    )
+    const widget = readFileSync(
+      resolve(root, "app/[locale]/dashboard/components/mindset/mindset-widget.tsx"),
+      "utf8",
+    )
+
+    expect(nav).toContain("mindset.timelineTitle")
+    expect(nav).toContain("w-[200px]")
+    expect(nav).toContain("journalTimelineDateLabel")
+    expect(nav).toContain("formatJournalDayPnl")
+    expect(nav).toContain("bg-muted font-medium")
+    expect(nav).not.toContain("MMMM d, yyyy")
+    expect(nav).not.toContain("EEEE d MMMM")
+    expect(nav).not.toMatch(/class(Name)?=["']g["']/)
+    expect(widget).toContain("calendarData={calendarData}")
+    expect(widget).toContain("w-[200px]")
   })
 })

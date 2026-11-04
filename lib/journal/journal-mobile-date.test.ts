@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest"
 import {
   formatJournalDayPnl,
   journalCalendarDayModifiers,
+  journalDayPnlPillClassName,
   journalDayPnlTone,
   journalMobileDateLabel,
   journalMobileDateLine,
+  journalTimelineDateLabel,
 } from "./journal-mobile-date"
 
 function withRegularSpaces(value: string): string {
@@ -38,6 +40,26 @@ describe("journalMobileDateLabel", () => {
     expect(journalMobileDateLabel(new Date(2026, 10, 4), "fr")).toBe(
       "Mercredi 4 novembre",
     )
+  })
+})
+
+describe("journalTimelineDateLabel", () => {
+  it("uses the short nav form, not the summary chip", () => {
+    expect(journalTimelineDateLabel(new Date(2026, 10, 4), "fr")).toBe(
+      "mer. 4 nov.",
+    )
+    expect(journalTimelineDateLabel(new Date(2026, 10, 4), "fr")).not.toContain(
+      "Mercredi",
+    )
+  })
+})
+
+describe("journalDayPnlPillClassName", () => {
+  it("never uses a bare .g class (Drop HTML clash with the calendar grid)", () => {
+    expect(journalDayPnlPillClassName("positive")).not.toMatch(/\bg\b/)
+    expect(journalDayPnlPillClassName("positive")).toContain("bg-green-100")
+    expect(journalDayPnlPillClassName("negative")).toContain("bg-rose-100")
+    expect(journalDayPnlPillClassName("flat")).toContain("bg-muted")
   })
 })
 
