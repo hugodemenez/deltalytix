@@ -1,6 +1,7 @@
 "use client"
 
 import { DayTagSelector } from "./day-tag-selector"
+import { JournalMobileNews } from "./journal-mobile-news"
 import { JournalMoodSlider } from "./journal-mood-slider"
 import { JournalEditor } from "@/components/journal-editor"
 import { FinancialEvent, Trade } from "@/prisma/generated/prisma/browser"
@@ -72,13 +73,14 @@ export function JournalingMobile({
         </div>
       )}
 
-      <div className="mt-3 flex min-h-0 flex-1 flex-col">
+      <div className="mt-3">
         <JournalEditor
           content={content}
           onChange={onChange}
           placeholder={t("mindset.journaling.dayPlaceholder")}
           width="100%"
-          height="100%"
+          height="auto"
+          className="h-auto"
           events={events}
           selectedNews={selectedNews}
           onNewsSelection={onNewsSelection}
@@ -94,6 +96,8 @@ export function JournalingMobile({
           }}
         />
       </div>
+
+      <JournalMobileNews events={events} selectedNews={selectedNews} />
     </div>
   )
 }

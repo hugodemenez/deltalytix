@@ -32,12 +32,46 @@ describe("calmer mobile journal layout", () => {
       ),
       "utf8",
     )
+    const compactNews = readFileSync(
+      resolve(
+        root,
+        "app/[locale]/dashboard/components/mindset/journal-mobile-news.tsx",
+      ),
+      "utf8",
+    )
+    const summary = readFileSync(
+      resolve(
+        root,
+        "app/[locale]/dashboard/components/mindset/mindset-summary.tsx",
+      ),
+      "utf8",
+    )
+    const timeline = readFileSync(
+      resolve(
+        root,
+        "app/[locale]/dashboard/components/mindset/hourly-financial-timeline.tsx",
+      ),
+      "utf8",
+    )
 
     expect(compact).toContain("639")
     expect(widget).toContain("COMPACT_JOURNAL_MEDIA_QUERY")
     expect(widget).toContain("JournalingMobile")
     expect(widget).toContain("<Journaling")
     expect(widget).toContain("<Timeline")
+    const compactBranch = widget.slice(
+      widget.indexOf("if (isCompact)"),
+      widget.lastIndexOf("return ("),
+    )
+    expect(compactBranch).toContain("JournalingMobile")
+    expect(compactBranch).not.toContain("MindsetSummary")
+    expect(compactBranch).not.toContain('pane === "summary"')
+    expect(widget).toContain("<MindsetSummary")
+    expect(summary).toContain("MMMM d, yyyy")
+    expect(summary).toContain("mindset.emotion.title")
+    expect(summary).toContain("mindset.journaling.title")
+    expect(summary).toContain("<Pencil")
+    expect(timeline).toContain("EEE d MMM yyyy")
     expect(journaling).toContain("EmotionSelector")
     expect(journaling).toContain("mindset.journaling.save")
     expect(journaling).toContain("mindset.journaling.placeholder")
@@ -58,6 +92,24 @@ describe("calmer mobile journal layout", () => {
     expect(mobile).toContain("mindset.journaling.dayPlaceholder")
     expect(mobile).toContain("text-base")
     expect(mobile).not.toContain("text-[15px]")
+    expect(mobile).toContain("JournalMobileNews")
+    expect(mobile).not.toContain("mindset.emotion.title")
+    expect(mobile).not.toContain("mindset.journaling.title")
+    expect(mobile).not.toContain("Pencil")
+    expect(mobile).not.toContain("MMMM d, yyyy")
+    expect(mobile).not.toContain("EEE d MMM yyyy")
+    expect(compactNews).toContain("mindset.newsImpact.title")
+    expect(compactNews).toContain("mindset.newsImpact.showOnlySelectedNews")
+    expect(compactNews.indexOf("mindset.newsImpact.title")).toBeLessThan(
+      compactNews.indexOf("mindset.newsImpact.showOnlySelectedNews"),
+    )
+    expect(compactNews.indexOf("rounded-[10px] border border-border")).toBeLessThan(
+      compactNews.indexOf("mindset.newsImpact.showOnlySelectedNews"),
+    )
+    expect(compactNews).not.toContain("Pencil")
+    expect(compactNews).not.toContain("MMMM d, yyyy")
+    expect(compactNews).not.toContain("EEE d MMM yyyy")
+    expect(compactNews).not.toContain("formattedDate")
     expect(journaling).not.toContain("toolbarVariant")
     expect(journaling).not.toContain("surfaceClassName")
 

@@ -478,30 +478,20 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
               void handleExportAllDocx()
             }}
           />
-          {pane === "summary" ? (
-            <MindsetSummary
-              date={selectedDate}
-              emotionValue={emotionValue}
-              selectedNews={selectedNews}
-              journalContent={journalContent}
-              onEdit={handleEdit}
-            />
-          ) : (
-            <JournalingMobile
-              key={selectedDateKey}
-              content={journalContent}
-              onChange={handleJournalChange}
-              onSave={handleSave}
-              emotionValue={emotionValue}
-              onEmotionChange={handleEmotionChange}
-              date={selectedDate}
-              events={getEventsForDate(selectedDate)}
-              selectedNews={selectedNews}
-              onNewsSelection={handleNewsSelection}
-              trades={trades}
-              onApplyTagToAll={handleApplyTagToAll}
-            />
-          )}
+          <JournalingMobile
+            key={selectedDateKey}
+            content={journalContent}
+            onChange={handleJournalChange}
+            onSave={handleSave}
+            emotionValue={emotionValue}
+            onEmotionChange={handleEmotionChange}
+            date={selectedDate}
+            events={getEventsForDate(selectedDate)}
+            selectedNews={selectedNews}
+            onNewsSelection={handleNewsSelection}
+            trades={trades}
+            onApplyTagToAll={handleApplyTagToAll}
+          />
         </CardContent>
       </Card>
     )
