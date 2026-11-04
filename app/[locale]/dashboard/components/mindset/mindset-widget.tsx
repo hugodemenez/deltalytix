@@ -470,6 +470,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
             date={selectedDate}
             tradeCount={dayTradeCount}
             dayPnl={dayPnl}
+            calendarData={calendarData}
             pane={pane}
             isExporting={isExporting}
             onPaneChange={setPane}

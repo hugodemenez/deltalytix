@@ -19,6 +19,7 @@ import {
 import { JournalExportMenuItems } from "./journal-export-menu-items"
 import {
   formatJournalDayPnl,
+  journalCalendarDayModifiers,
   journalDayPnlTone,
   journalMobileDateLabel,
 } from "@/lib/journal/journal-mobile-date"
@@ -26,12 +27,13 @@ import { cn } from "@/lib/utils"
 import { useCurrentLocale, useI18n } from "@/locales/client"
 import { enUS, fr } from "date-fns/locale"
 import { CalendarIcon, ChevronDown, MoreHorizontal } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 interface JournalMobileHeaderProps {
   date: Date
   tradeCount: number
   dayPnl: number
+  calendarData: Record<string, { pnl: number; tradeNumber?: number } | undefined>
   pane: "journal" | "summary"
   isExporting: boolean
   onPaneChange: (pane: "journal" | "summary") => void
@@ -44,6 +46,7 @@ export function JournalMobileHeader({
   date,
   tradeCount,
   dayPnl,
+  calendarData,
   pane,
   isExporting,
   onPaneChange,
@@ -57,6 +60,10 @@ export function JournalMobileHeader({
   const [dateOpen, setDateOpen] = useState(false)
   const [month, setMonth] = useState(date)
   const dateLabel = journalMobileDateLabel(date, locale)
+  const { green, red, flat } = useMemo(
+    () => journalCalendarDayModifiers(calendarData),
+    [calendarData],
+  )
 
   return (
     <div>
@@ -144,6 +151,13 @@ export function JournalMobileHeader({
               }}
               locale={dateLocale}
               weekStartsOn={1}
+              modifiers={{ green, red, flat }}
+              modifiersClassNames={{
+                green:
+                  "rounded-md bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 aria-selected:bg-primary aria-selected:text-primary-foreground",
+                red: "rounded-md bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 aria-selected:bg-primary aria-selected:text-primary-foreground",
+                flat: "rounded-md bg-muted text-muted-foreground ring-1 ring-inset ring-border aria-selected:bg-primary aria-selected:text-primary-foreground aria-selected:ring-0",
+              }}
             />
           </PopoverContent>
         </Popover>

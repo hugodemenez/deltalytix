@@ -90,6 +90,26 @@ describe("calmer mobile journal layout", () => {
     expect(header).toContain("hidden font-normal opacity-70 min-[360px]:inline")
     expect(header).toContain("min-w-60")
     expect(header).toContain("JournalExportMenuItems")
+    expect(header).toContain("modifiers={{ green, red, flat }}")
+    expect(header).toContain("modifiersClassNames={{")
+    expect(header).toContain(
+      "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+    )
+    expect(header).toContain(
+      "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+    )
+    expect(header).toContain(
+      "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
+    )
+    expect(header).toContain(
+      "aria-selected:bg-primary aria-selected:text-primary-foreground",
+    )
+    expect(header).not.toContain("JournalCalendarDayButton")
+    expect(header).not.toContain("CalendarDayButton")
+    expect(header).not.toContain("Gain")
+    expect(header).not.toContain("Perte")
+    expect(header).not.toContain("Neutre")
+    expect(header).not.toContain("€")
   })
 
   it("reserves mood-tip space and keeps the tip over the thumb", () => {

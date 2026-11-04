@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   formatJournalDayPnl,
+  journalCalendarDayModifiers,
   journalDayPnlTone,
   journalMobileDateLabel,
   journalMobileDateLine,
@@ -67,3 +68,24 @@ describe("formatJournalDayPnl", () => {
     expect(formatJournalDayPnl(0, "en")).toBe("±$0")
   })
 })
+
+describe("journalCalendarDayModifiers", () => {
+  it("splits trade days by net sign (flat is exactly 0) and skips empty days", () => {
+    const modifiers = journalCalendarDayModifiers({
+      "2026-11-01": { pnl: 1240, tradeNumber: 3 },
+      "2026-11-02": { pnl: -380, tradeNumber: 2 },
+      "2026-11-03": { pnl: 0.2, tradeNumber: 2 },
+      "2026-11-04": { pnl: 99, tradeNumber: 0 },
+      "2026-11-05": { pnl: 0, tradeNumber: 1 },
+      "not-a-date": { pnl: 10, tradeNumber: 1 },
+    })
+
+    expect(modifiers.green).toEqual([
+      new Date(2026, 10, 1),
+      new Date(2026, 10, 3),
+    ])
+    expect(modifiers.red).toEqual([new Date(2026, 10, 2)])
+    expect(modifiers.flat).toEqual([new Date(2026, 10, 5)])
+  })
+})
+
