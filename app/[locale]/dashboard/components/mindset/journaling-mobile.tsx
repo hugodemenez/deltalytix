@@ -59,11 +59,11 @@ export function JournalingMobile({
       <JournalMoodSlider
         value={emotionValue}
         onChange={onEmotionChange}
-        className="mt-3.5"
+        className="mt-3.5 flex-none"
       />
 
       {isWriting ? null : (
-        <div className="mt-3">
+        <div className="mt-3 flex-none">
           <DayTagSelector
             trades={trades}
             date={date}
@@ -73,7 +73,7 @@ export function JournalingMobile({
         </div>
       )}
 
-      <div className="mt-3">
+      <div className="mt-3 flex-none">
         <JournalEditor
           content={content}
           onChange={onChange}

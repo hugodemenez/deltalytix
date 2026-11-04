@@ -11,7 +11,15 @@ export type JournalMobileNewsRow = {
   event?: JournalMobileNewsEvent
 }
 
-const STRUCTURAL_TICKS = ["00:00", "01:00"] as const
+export const JOURNAL_MOBILE_NEWS_LAST_HOUR = 18
+
+export function journalMobileHourTicks(
+  lastHour: number = JOURNAL_MOBILE_NEWS_LAST_HOUR,
+): string[] {
+  return Array.from({ length: lastHour + 1 }, (_, hour) => {
+    return `${String(hour).padStart(2, "0")}:00`
+  })
+}
 
 export function journalMobileNewsRows(
   events: JournalMobileNewsEvent[],
@@ -26,12 +34,12 @@ export function journalMobileNewsRows(
     }))
 
   const occupiedTimes = new Set(eventRows.map((row) => row.time))
-  const ticks: JournalMobileNewsRow[] = STRUCTURAL_TICKS.filter(
-    (time) => !occupiedTimes.has(time),
-  ).map((time) => ({
-    key: `tick-${time}`,
-    time,
-  }))
+  const ticks: JournalMobileNewsRow[] = journalMobileHourTicks()
+    .filter((time) => !occupiedTimes.has(time))
+    .map((time) => ({
+      key: `tick-${time}`,
+      time,
+    }))
 
   return [...ticks, ...eventRows].sort((a, b) => {
     const byTime = a.time.localeCompare(b.time)

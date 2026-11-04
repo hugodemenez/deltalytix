@@ -106,6 +106,23 @@ describe("calmer mobile journal layout", () => {
     expect(compactNews.indexOf("rounded-[10px] border border-border")).toBeLessThan(
       compactNews.indexOf("mindset.newsImpact.showOnlySelectedNews"),
     )
+    expect(compactNews).toContain("overflow-y-auto")
+    expect(compactNews).toContain("overscroll-y-contain")
+    expect(compactNews).toContain("data-journal-news-scroll")
+    expect(compactNews.indexOf("data-journal-news-scroll")).toBeLessThan(
+      compactNews.indexOf("mindset.newsImpact.showOnlySelectedNews"),
+    )
+    expect(compactNews).toContain("flex min-h-0 flex-1 flex-col")
+    expect(compactNews).toContain("flex-none items-start gap-2")
+    expect(compactNews).toContain("flex-none text-sm text-muted-foreground")
+    expect(compactNews).toContain("min-h-0 flex-1 overflow-y-auto")
+    expect(compactBranch).toContain("overflow-hidden")
+    expect(compactBranch).not.toContain("overflow-y-auto")
+    expect(compactBranch).toContain("h-full min-h-0 w-full flex-col overflow-hidden")
+    expect(compactBranch).toContain("flex-none")
+    expect(mobile).toContain("flex min-h-0 flex-1 flex-col")
+    expect(mobile).toContain("mt-3 flex-none")
+    expect(mobile).toContain("mt-3.5 flex-none")
     expect(compactNews).not.toContain("Pencil")
     expect(compactNews).not.toContain("MMMM d, yyyy")
     expect(compactNews).not.toContain("EEE d MMM yyyy")
@@ -244,7 +261,10 @@ describe("calmer mobile journal layout", () => {
     expect(slider).not.toContain("bg-[#2a2a2a]")
     expect(mobile).toContain('surfaceClassName="p-3 text-base leading-normal"')
     expect(editor).toContain(
-      "min-h-[220px] rounded-[10px] border border-border bg-muted text-foreground",
+      "flex-none rounded-[10px] border border-border bg-muted text-foreground",
+    )
+    expect(editor).toContain(
+      'commitVisible ? "min-h-[220px]" : "min-h-[4.75rem]"',
     )
     expect(editor).toContain("text-base leading-normal")
     expect(editor).not.toContain("bg-[#141414]")

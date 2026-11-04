@@ -346,9 +346,13 @@ export function JournalEditor({
       ) : null}
       <div
         className={cn(
-          "relative min-h-0 flex-1",
-          toolbarVariant === "compact" &&
-            "min-h-[220px] rounded-[10px] border border-border bg-muted text-foreground",
+          "relative min-h-0",
+          toolbarVariant === "compact"
+            ? cn(
+                "flex-none rounded-[10px] border border-border bg-muted text-foreground",
+                commitVisible ? "min-h-[220px]" : "min-h-[4.75rem]",
+              )
+            : "flex-1",
         )}
       >
         {isEmpty ? (

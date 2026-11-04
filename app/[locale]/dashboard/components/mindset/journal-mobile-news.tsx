@@ -43,11 +43,14 @@ export function JournalMobileNews({
   }, [events, selectedNews, showOnlySelectedNews, timezone])
 
   return (
-    <div className="mt-4">
-      <p className="text-sm text-muted-foreground">
+    <div className="mt-4 flex min-h-0 flex-1 flex-col">
+      <p className="flex-none text-sm text-muted-foreground">
         {t("mindset.newsImpact.title")}
       </p>
-      <div className="mt-2 overflow-hidden rounded-[10px] border border-border">
+      <div
+        data-journal-news-scroll
+        className="mt-2 min-h-0 flex-1 overflow-y-auto overscroll-y-contain rounded-[10px] border border-border"
+      >
         {rows.map((row) => (
           <div
             key={row.key}
@@ -73,7 +76,7 @@ export function JournalMobileNews({
           </div>
         ))}
       </div>
-      <div className="mt-2 flex items-start gap-2">
+      <div className="mt-2 flex flex-none items-start gap-2">
         <Checkbox
           id={checkboxId}
           className="mt-0.5"
