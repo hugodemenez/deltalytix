@@ -40,8 +40,8 @@ export function JournalMoodSlider({
     <div
       data-journal-mood={isDragging ? "dragging" : "idle"}
       className={cn(
-        "flex items-center gap-2.5 rounded-[10px] border border-[#222] bg-[#111] px-3 py-2.5",
-        isDragging && "border-[#3a3a3a]",
+        "flex items-center gap-2.5 rounded-[10px] border border-border bg-muted px-3 py-2.5",
+        isDragging && "border-foreground/20",
         className,
       )}
     >
@@ -52,11 +52,11 @@ export function JournalMoodSlider({
         <div className="relative flex h-[22px] items-center">
           <div
             aria-hidden
-            className="absolute inset-x-1 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-[#2a2a2a]"
+            className="absolute inset-x-1 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-foreground/20"
           />
           <div
             aria-hidden
-            className="absolute left-1 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-[#93c5fd]"
+            className="absolute left-1 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-blue-300"
             style={{ width: fill === 0 ? 0 : `calc(${fill}% - 8px)` }}
           />
           <div
@@ -73,7 +73,7 @@ export function JournalMoodSlider({
                   className="relative flex h-[22px] w-[22px] items-center justify-center"
                 >
                   {isDragging && isCurrent ? (
-                    <span className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#fafafa] px-2 py-0.5 text-[11px] font-semibold text-black">
+                    <span className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
                       {t("mindset.emotion.stepBubble", {
                         step,
                         label,
@@ -82,12 +82,12 @@ export function JournalMoodSlider({
                   ) : null}
                   <span
                     className={cn(
-                      "rounded-full border-2 border-[#111]",
+                      "rounded-full border-2 border-muted",
                       isCurrent
-                        ? "h-[22px] w-[22px] border-[5px] border-[#93c5fd] bg-[#fafafa]"
+                        ? "h-[22px] w-[22px] border-[5px] border-blue-300 bg-background"
                         : isOn
-                          ? "h-2.5 w-2.5 bg-[#93c5fd]"
-                          : "h-2.5 w-2.5 bg-[#2a2a2a]",
+                          ? "h-2.5 w-2.5 bg-blue-300"
+                          : "h-2.5 w-2.5 bg-foreground/20",
                     )}
                   />
                 </span>
@@ -115,7 +115,7 @@ export function JournalMoodSlider({
       <span aria-hidden className="text-base leading-none text-muted-foreground">
         ☺
       </span>
-      <span className="min-w-[44px] text-right text-xs text-[#bdbdbd]">
+      <span className="min-w-[44px] text-right text-xs text-muted-foreground">
         {label}
       </span>
     </div>

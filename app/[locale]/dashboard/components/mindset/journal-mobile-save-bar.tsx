@@ -26,7 +26,7 @@ export function JournalMobileSaveBar({
       <Button
         type="button"
         variant="outline"
-        className="pointer-events-auto h-11 rounded-[10px] border-[#2a2a2a] bg-transparent px-3.5 text-[#bdbdbd] hover:bg-transparent hover:text-[#bdbdbd]"
+        className="pointer-events-auto h-11 rounded-[10px] px-3.5"
         onClick={onCancel}
         disabled={isSaving}
       >
@@ -34,7 +34,7 @@ export function JournalMobileSaveBar({
       </Button>
       <Button
         type="button"
-        className="pointer-events-auto h-11 flex-1 rounded-[10px] bg-white font-semibold text-black hover:bg-white/90"
+        className="pointer-events-auto h-11 flex-1 rounded-[10px] font-semibold"
         onClick={onSave}
         disabled={isSaving}
       >

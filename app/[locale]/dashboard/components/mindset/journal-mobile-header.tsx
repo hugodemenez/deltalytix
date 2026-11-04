@@ -68,7 +68,7 @@ export function JournalMobileHeader({
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-[#a3a3a3]"
+              className="h-8 w-8 text-muted-foreground"
               aria-label={t("mindset.moreActions")}
             >
               <MoreHorizontal className="h-4 w-4" />
@@ -114,7 +114,7 @@ export function JournalMobileHeader({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <p className="mt-0.5 text-xs text-[#8a8a8a]">{dateLine}</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">{dateLine}</p>
     </div>
   )
 }
@@ -133,7 +133,7 @@ function IconButton({
       type="button"
       variant="ghost"
       size="icon"
-      className="h-8 w-8 text-[#a3a3a3]"
+      className="h-8 w-8 text-muted-foreground"
       aria-label={label}
       onClick={onClick}
     >

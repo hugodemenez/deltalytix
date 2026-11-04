@@ -202,7 +202,7 @@ export function DayTagSelector({
   if (variant === "compact") {
     return (
       <div className="flex items-center justify-between gap-3 text-[13px]">
-        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto text-[#8a8a8a]">
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto text-muted-foreground">
           {tagStats.length === 0 ? (
             <span>{t("mindset.tags.noneForDay")}</span>
           ) : (
@@ -232,7 +232,7 @@ export function DayTagSelector({
         {addTagPopover(
           <button
             type="button"
-            className="shrink-0 text-[13px] text-[#d4d4d4]"
+            className="shrink-0 text-[13px] text-foreground"
             disabled={isApplying !== null}
           >
             {t("mindset.tags.addShort")}

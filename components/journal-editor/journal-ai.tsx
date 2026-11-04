@@ -88,7 +88,7 @@ export function JournalAI({
           disabled={isLoading}
           className={
             compact
-              ? cn("h-8 gap-1 px-2 text-[13px] text-[#bdbdbd]", isLoading && "animate-pulse")
+              ? cn("h-8 gap-1 px-2 text-[13px] text-muted-foreground", isLoading && "animate-pulse")
               : isLoading
                 ? "animate-pulse"
                 : undefined

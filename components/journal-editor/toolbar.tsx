@@ -65,13 +65,13 @@ export function JournalToolbar({
       Boolean(date)
 
     return (
-      <div className="mt-0 flex gap-1 rounded-[10px] border border-[#222] p-1">
+      <div className="mt-0 flex gap-1 rounded-[10px] border border-border bg-muted p-1">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               type="button"
               variant="ghost"
-              className="h-8 flex-1 text-[13px] text-[#bdbdbd]"
+              className="h-8 flex-1 text-[13px] text-muted-foreground"
               title={t("mindset.editor.headingMenu")}
               aria-label={t("mindset.editor.headingMenu")}
               onMouseDown={(event) => event.preventDefault()}
@@ -124,7 +124,7 @@ export function JournalToolbar({
             <Button
               type="button"
               variant="ghost"
-              className="h-8 flex-1 text-[#bdbdbd]"
+              className="h-8 flex-1 text-muted-foreground"
               title={t("mindset.editor.lists")}
               aria-label={t("mindset.editor.lists")}
               onMouseDown={(event) => event.preventDefault()}
@@ -151,7 +151,7 @@ export function JournalToolbar({
         <Button
           type="button"
           variant="ghost"
-          className="h-8 flex-1 text-[#bdbdbd]"
+          className="h-8 flex-1 text-muted-foreground"
           title={t("mindset.editor.image")}
           aria-label={t("mindset.editor.image")}
           onMouseDown={(event) => event.preventDefault()}
@@ -165,7 +165,7 @@ export function JournalToolbar({
         <Button
           type="button"
           variant="ghost"
-          className="h-8 flex-1 text-[#bdbdbd]"
+          className="h-8 flex-1 text-muted-foreground"
           title={
             isFullscreen
               ? t("mindset.editor.exitFullscreen")

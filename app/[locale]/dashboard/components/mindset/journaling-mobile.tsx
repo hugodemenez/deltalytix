@@ -99,7 +99,7 @@ export function JournalingMobile({
           showToolbar={isWriting}
           toolbarVariant="compact"
           onEditingChange={handleEditingChange}
-          surfaceClassName="p-3 text-[15px] leading-normal sm:text-[15px]"
+          surfaceClassName="p-3 text-base leading-normal"
         />
       </div>
 

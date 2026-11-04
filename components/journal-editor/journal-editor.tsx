@@ -323,7 +323,7 @@ export function JournalEditor({
                 size={toolbarVariant === "compact" ? "sm" : "icon-sm"}
                 className={
                   toolbarVariant === "compact"
-                    ? "h-8 gap-1 px-2 text-[13px] text-[#bdbdbd]"
+                    ? "h-8 gap-1 px-2 text-[13px] text-muted-foreground"
                     : undefined
                 }
                 title={t("editor.ai.button")}
@@ -342,18 +342,17 @@ export function JournalEditor({
         className={cn(
           "relative min-h-0 flex-1",
           toolbarVariant === "compact" &&
-            "min-h-[220px] rounded-[10px] border",
-          toolbarVariant === "compact" &&
-            (showToolbar
-              ? "border-[#333] bg-transparent text-[#e5e5e5]"
-              : "border-[#2a2a2a] bg-[#141414]"),
+            "min-h-[220px] rounded-[10px] border border-border bg-muted text-foreground",
         )}
       >
         {isEmpty ? (
           <div
             aria-hidden
             className={cn(
-              "pointer-events-none absolute inset-0 p-2 text-lg text-muted-foreground sm:text-sm",
+              "pointer-events-none absolute inset-0 p-2 text-muted-foreground",
+              toolbarVariant === "compact"
+                ? "text-base"
+                : "text-lg sm:text-sm",
               surfaceClassName,
             )}
           >
@@ -368,7 +367,10 @@ export function JournalEditor({
           contentEditable
           suppressContentEditableWarning
           className={cn(
-            "h-full overflow-y-auto p-2 text-lg leading-relaxed outline-none sm:text-sm",
+            "h-full overflow-y-auto p-2 outline-none",
+            toolbarVariant === "compact"
+              ? "text-base leading-normal"
+              : "text-lg leading-relaxed sm:text-sm",
             surfaceClassName,
             "[&_h1]:mb-2 [&_h1]:mt-3 [&_h1]:text-3xl [&_h1]:font-bold",
             "[&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-2xl [&_h2]:font-semibold",
