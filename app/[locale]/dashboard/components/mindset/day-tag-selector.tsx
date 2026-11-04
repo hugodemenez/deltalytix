@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Plus, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -35,9 +35,15 @@ interface DayTagSelectorProps {
   trades: Trade[]
   date: Date
   onApplyTagToAll: (tag: string) => Promise<void>
+  variant?: "default" | "compact"
 }
 
-export function DayTagSelector({ trades, date, onApplyTagToAll }: DayTagSelectorProps) {
+export function DayTagSelector({
+  trades,
+  date,
+  onApplyTagToAll,
+  variant = "default",
+}: DayTagSelectorProps) {
   const t = useI18n()
   const tags = useUserStore(state => state.tags)
   const setTags = useUserStore(state => state.setTags)
@@ -111,6 +117,130 @@ export function DayTagSelector({ trades, date, onApplyTagToAll }: DayTagSelector
   // Get tag metadata (color, description)
   const getTagMetadata = (tagName: string) => {
     return tags.find(t => t.name.toLowerCase() === tagName.toLowerCase())
+  }
+
+  const addTagPopover = (trigger: ReactNode, side: "right" | "top" = "right") => (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        {trigger}
+      </PopoverTrigger>
+      <PopoverContent className="p-0" side={side} align="end">
+        <Command shouldFilter={false}>
+          <CommandInput 
+            placeholder={t('mindset.tags.search')}
+            value={inputValue}
+            onValueChange={setInputValue}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && inputValue && isApplying === null) {
+                e.preventDefault()
+                handleCreateAndApply(inputValue)
+              }
+            }}
+          />
+          <CommandList className="max-h-[200px] overflow-y-auto">
+            {inputValue.trim() && (
+              <CommandItem
+                value={inputValue.trim()}
+                onSelect={(value) => {
+                  if (isApplying === null) {
+                    handleCreateAndApply(value)
+                  }
+                }}
+              >
+                {t('mindset.tags.createAndApply', { tag: inputValue.trim() })}
+              </CommandItem>
+            )}
+            {tags.length > 0 && (
+              <CommandGroup heading={t('mindset.tags.existing')}>
+                {tags
+                  .filter(tag => {
+                    const tagStat = tagStats.find(ts => ts.tag.toLowerCase() === tag.name.toLowerCase())
+                    return !tagStat || !tagStat.isComplete
+                  })
+                  .filter(tag => {
+                    const input = inputValue.trim().toLowerCase()
+                    return !input || tag.name.toLowerCase().includes(input)
+                  })
+                  .map(tag => (
+                    <CommandItem
+                      key={tag.name}
+                      value={tag.name}
+                      onSelect={() => {
+                        if (isApplying === null) {
+                          handleCreateAndApply(tag.name)
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full shrink-0"
+                          style={{ backgroundColor: tag.color || '#CBD5E1' }}
+                        />
+                        <span>{tag.name}</span>
+                        {tag.description && (
+                          <span className="text-muted-foreground text-xs">
+                            - {tag.description}
+                          </span>
+                        )}
+                      </div>
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            )}
+            <CommandEmpty>{t('mindset.tags.noTags')}</CommandEmpty>
+          </CommandList>
+        </Command>
+        {isApplying !== null && (
+          <div className="absolute right-2 top-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  )
+
+  if (variant === "compact") {
+    return (
+      <div className="flex items-center justify-between gap-3 text-[13px]">
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto text-[#8a8a8a]">
+          {tagStats.length === 0 ? (
+            <span>{t("mindset.tags.noneForDay")}</span>
+          ) : (
+            tagStats.map(({ tag, count, totalTrades, isComplete }) => {
+              const metadata = getTagMetadata(tag)
+              return (
+                <Badge
+                  key={tag}
+                  variant="secondary"
+                  className={cn(
+                    "shrink-0 cursor-pointer",
+                    !isComplete && "opacity-70",
+                  )}
+                  style={{
+                    backgroundColor: metadata?.color || "#CBD5E1",
+                    color: metadata?.color ? getContrastColor(metadata.color) : "inherit",
+                  }}
+                  onClick={() => !isComplete && handleApplyToAll(tag)}
+                >
+                  {tag}
+                  {tradesForDay.length > 0 ? ` (${count}/${totalTrades})` : null}
+                </Badge>
+              )
+            })
+          )}
+        </div>
+        {addTagPopover(
+          <button
+            type="button"
+            className="shrink-0 text-[13px] text-[#d4d4d4]"
+            disabled={isApplying !== null}
+          >
+            {t("mindset.tags.addShort")}
+          </button>,
+          "top",
+        )}
+      </div>
+    )
   }
 
   if (tradesForDay.length === 0) {

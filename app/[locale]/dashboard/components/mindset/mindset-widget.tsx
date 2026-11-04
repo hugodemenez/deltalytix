@@ -3,9 +3,13 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Journaling } from "./journaling"
+import { JournalingMobile } from "./journaling-mobile"
+import { JournalMobileHeader } from "./journal-mobile-header"
 import { Timeline } from "./timeline"
 import { MindsetSummary } from "./mindset-summary"
 import { useI18n } from "@/locales/client"
+import { COMPACT_JOURNAL_MEDIA_QUERY } from "@/lib/journal/compact-journal"
+import { useLayoutMediaQuery } from "@/hooks/use-media-query"
 import { ChevronLeft, ChevronRight, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { InfoBubble } from "@/components/ui/info-bubble"
@@ -26,7 +30,7 @@ import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard"
 import { toast } from "sonner"
 import { saveMindset, deleteMindset } from "@/server/journal"
 import { addTagsToTradesForDay } from "@/server/trades"
-import { isToday, format } from "date-fns"
+import { addDays, isToday, format } from "date-fns"
 import { useMoodStore } from "@/store/widgets/mood-store"
 import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
 import { useTradesStore } from "@/store/trades-store"
@@ -61,12 +65,59 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const locale = useCurrentLocale()
   const t = useI18n()
   const [hasMounted, setHasMounted] = useState(false)
+  const isCompact = useLayoutMediaQuery(COMPACT_JOURNAL_MEDIA_QUERY)
+  const [compactMoodsReady, setCompactMoodsReady] = useState(false)
+  const [compactDateKey, setCompactDateKey] = useState(() =>
+    format(selectedDate, "yyyy-MM-dd"),
+  )
   useEffect(() => {
     setHasMounted(true)
   }, [])
 
+  const findMoodForDate = (date: Date) => {
+    return moods?.find(mood => {
+      if (!mood?.day) return false
+      const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
+      return format(moodDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+    })
+  }
+
+  const applyMoodToForm = (mood: { emotionValue?: number | null; selectedNews?: string[] | null; journalContent?: string | null } | undefined) => {
+    if (mood) {
+      setEmotionValue(mood.emotionValue ?? 50)
+      setSelectedNews(mood.selectedNews ?? [])
+      setJournalContent(mood.journalContent ?? "")
+      setIsEditing(true)
+      return
+    }
+    setEmotionValue(50)
+    setSelectedNews([])
+    setJournalContent("")
+    setIsEditing(true)
+    setPane("journal")
+  }
+
+  if (isCompact) {
+    const nextDateKey = format(selectedDate, "yyyy-MM-dd")
+    if (nextDateKey !== compactDateKey) {
+      setCompactDateKey(nextDateKey)
+      setCompactMoodsReady(false)
+      applyMoodToForm(findMoodForDate(selectedDate))
+    } else if (!compactMoodsReady) {
+      const mood = findMoodForDate(selectedDate)
+      if (mood) {
+        setCompactMoodsReady(true)
+        if (!journalContent) {
+          applyMoodToForm(mood)
+        }
+      } else if (emotionValue === 0) {
+        setEmotionValue(50)
+      }
+    }
+  }
+
   useEffect(() => {
-    if (!moods) {
+    if (!moods || isCompact !== false) {
       return
     }
 
@@ -76,11 +127,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       return format(moodDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
     })
 
-    const mood = moods.find(mood => {
-      if (!mood?.day) return false
-      const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-      return format(moodDate, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
-    })
+    const mood = findMoodForDate(selectedDate)
 
     if (isToday(selectedDate) && hasTodayData) {
       setEmotionValue(mood?.emotionValue ?? 50)
@@ -102,10 +149,40 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     setEmotionValue(0)
     setSelectedNews([])
     setJournalContent("")
-  }, [selectedDate, moods])
+  }, [selectedDate, moods, isCompact])
+
+  const persistMindset = async (overrides?: {
+    emotionValue?: number
+    journalContent?: string
+  }) => {
+    const nextEmotion = overrides?.emotionValue ?? emotionValue
+    const nextJournal = overrides?.journalContent ?? journalContent
+    const dateKey = format(selectedDate, 'yyyy-MM-dd')
+    const savedMood = await saveMindset({
+      emotionValue: nextEmotion,
+      selectedNews,
+      journalContent: nextJournal,
+    }, dateKey)
+
+    const updatedMoodHistory = moods?.filter(mood => {
+      if (!mood?.day) return true
+      const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
+      return format(moodDate, 'yyyy-MM-dd') !== dateKey
+    }) || []
+    setMoods([...updatedMoodHistory, savedMood])
+    return savedMood
+  }
 
   const handleEmotionChange = (value: number) => {
     setEmotionValue(value)
+    if (!isCompact) {
+      return
+    }
+    void persistMindset({ emotionValue: value }).catch(() => {
+      toast.error(t('mindset.saveError'), {
+        description: t('mindset.saveErrorDescription'),
+      })
+    })
   }
 
   const handleNewsSelection = (newsIds: string[]) => {
@@ -150,36 +227,31 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     }
   }
 
-  const handleSave = async () => {
-    // Scroll to summary view after saving
-    setPane("summary")
+  const handleSave = async (): Promise<boolean> => {
+    if (!isCompact) {
+      setPane("summary")
+    }
     try {
-      const dateKey = format(selectedDate, 'yyyy-MM-dd')
-      const savedMood = await saveMindset({
-        emotionValue,
-        selectedNews,
-        journalContent,
-      }, dateKey)
-
-      // Update the moodHistory in context
-      const updatedMoodHistory = moods?.filter(mood => {
-        if (!mood?.day) return true
-        const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-        const selectedDateKey = format(selectedDate, 'yyyy-MM-dd')
-        const moodDateKey = format(moodDate, 'yyyy-MM-dd')
-        return moodDateKey !== selectedDateKey
-      }) || []
-      setMoods([...updatedMoodHistory, savedMood])
+      await persistMindset()
 
       toast.success(t('mindset.saveSuccess'), {
         description: t('mindset.saveSuccessDescription'),
       })
-
+      return true
     } catch (error) {
       toast.error(t('mindset.saveError'), {
         description: t('mindset.saveErrorDescription'),
       })
+      return false
     }
+  }
+
+  const handleCancelJournal = (snapshot: string) => {
+    setJournalContent(snapshot)
+  }
+
+  const handleShiftDay = (days: number) => {
+    setSelectedDate((current) => addDays(current, days))
   }
 
   const handleDeleteEntry = async (date: Date) => {
@@ -383,8 +455,62 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     }
   }
 
-  if (!hasMounted) {
+  if (!hasMounted || isCompact === undefined) {
     return <Skeleton className="h-full min-h-[12rem] w-full rounded-lg" />
+  }
+
+  const selectedDateKey = format(selectedDate, "yyyy-MM-dd")
+  const tradesForSelectedDay = trades.filter((trade) =>
+    tradeMatchesDateKey(trade, selectedDateKey),
+  )
+
+  if (isCompact) {
+    return (
+      <Card className="flex h-full w-full flex-col p-0">
+        <CardContent className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3.5">
+          <JournalMobileHeader
+            date={selectedDate}
+            tradeCount={tradesForSelectedDay.length}
+            pane={pane}
+            isExporting={isExporting}
+            onPaneChange={setPane}
+            onPreviousDay={() => handleShiftDay(-1)}
+            onNextDay={() => handleShiftDay(1)}
+            onExportPdf={() => {
+              void handleExportAllPdf()
+            }}
+            onExportDocx={() => {
+              void handleExportAllDocx()
+            }}
+          />
+          {pane === "summary" ? (
+            <MindsetSummary
+              date={selectedDate}
+              emotionValue={emotionValue}
+              selectedNews={selectedNews}
+              journalContent={journalContent}
+              onEdit={handleEdit}
+            />
+          ) : (
+            <JournalingMobile
+              key={selectedDateKey}
+              content={journalContent}
+              onChange={handleJournalChange}
+              onSave={handleSave}
+              onCancel={handleCancelJournal}
+              emotionValue={emotionValue}
+              onEmotionChange={handleEmotionChange}
+              date={selectedDate}
+              events={getEventsForDate(selectedDate)}
+              selectedNews={selectedNews}
+              onNewsSelection={handleNewsSelection}
+              trades={trades}
+              onApplyTagToAll={handleApplyTagToAll}
+            />
+          )}
+        </CardContent>
+      </Card>
+    )
   }
 
   return (

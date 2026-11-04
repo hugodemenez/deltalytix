@@ -1,7 +1,16 @@
 export default {
   mindset: {
     title: 'Journal de Trading',
+    shortTitle: 'Journal',
     description: 'Suivez votre état d\'esprit et vos émotions en trading',
+    previousDay: 'Jour précédent',
+    nextDay: 'Jour suivant',
+    moreActions: 'Plus d\'actions',
+    about: 'À propos',
+    panes: {
+      journal: 'Journal',
+      summary: 'Résumé',
+    },
     back: 'Retour',
     next: 'Suivant',
     saveSuccess: 'Succès',
@@ -53,7 +62,20 @@ export default {
       sad: 'Négatif',
       neutral: 'Neutre',
       happy: 'Positif',
-      veryHappy: 'Très Positif'
+      veryHappy: 'Très Positif',
+      steps: {
+        frustrated: 'Frustré',
+        tense: 'Tendu',
+        neutral: 'Neutre',
+        confident: 'Confiant',
+        serene: 'Serein',
+      },
+      stepBubble: '{step}/5 · {label}',
+    },
+    header: {
+      noTrades: 'aucun trade',
+      oneTrade: '1 trade',
+      tradeCount: '{count} trades',
     },
     newsImpact: {
       title: 'Impact des news',
@@ -94,6 +116,7 @@ export default {
     journaling: {
       title: 'Journal de Trading',
       placeholder: 'Écrivez vos pensées et réflexions sur votre trading ici...',
+      dayPlaceholder: 'Écrivez vos pensées sur la journée…',
       save: 'Enregistrer',
       editorPlaceholder: 'Commencez à écrire...',
       entrySectionTitle: 'Notes'
@@ -102,7 +125,9 @@ export default {
       title: 'Tags de Session',
       description: 'Cliquez sur un tag pour l\'appliquer à tous les trades de cette journée',
       add: 'Ajouter un tag',
+      addShort: '+ Tag',
       addNew: 'Ajouter',
+      noneForDay: 'Aucun tag pour cette journée',
       search: 'Rechercher des tags...',
       create: 'Créer "{tag}"',
       createAndApply: 'Créer et appliquer "{tag}" à tous les trades',
@@ -126,7 +151,19 @@ export default {
         selectedCount: '{count} sélectionnées',
         noNews: 'Aucune actualité disponible',
         clearSelection: 'Effacer la sélection'
-      }
+      },
+      headingMenu: 'Titres',
+      heading1: 'Titre 1',
+      heading2: 'Titre 2',
+      heading3: 'Titre 3',
+      quote: 'Citation',
+      lists: 'Listes',
+      bulletList: 'Liste à puces',
+      numberedList: 'Liste numérotée',
+      image: 'Image',
+      fullscreen: 'Plein écran',
+      exitFullscreen: 'Quitter le plein écran',
+      aiShort: 'IA',
     },
     tradingStats: {
       title: 'Statistiques de trading',

@@ -1,0 +1,64 @@
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
+import { describe, expect, it } from "vitest"
+
+const root = process.cwd()
+
+describe("calmer mobile journal layout", () => {
+  it("keeps the compact redesign under 640px and leaves desktop journaling intact", () => {
+    const widget = readFileSync(
+      resolve(root, "app/[locale]/dashboard/components/mindset/mindset-widget.tsx"),
+      "utf8",
+    )
+    const journaling = readFileSync(
+      resolve(root, "app/[locale]/dashboard/components/mindset/journaling.tsx"),
+      "utf8",
+    )
+    const compact = readFileSync(
+      resolve(root, "lib/journal/compact-journal.ts"),
+      "utf8",
+    )
+    const slider = readFileSync(
+      resolve(
+        root,
+        "app/[locale]/dashboard/components/mindset/journal-mood-slider.tsx",
+      ),
+      "utf8",
+    )
+    const mobile = readFileSync(
+      resolve(
+        root,
+        "app/[locale]/dashboard/components/mindset/journaling-mobile.tsx",
+      ),
+      "utf8",
+    )
+
+    expect(compact).toContain("639")
+    expect(widget).toContain("COMPACT_JOURNAL_MEDIA_QUERY")
+    expect(widget).toContain("JournalingMobile")
+    expect(widget).toContain("<Journaling")
+    expect(widget).toContain("<Timeline")
+    expect(journaling).toContain("EmotionSelector")
+    expect(journaling).toContain("mindset.journaling.save")
+    expect(journaling).toContain("mindset.journaling.placeholder")
+    expect(slider).toMatch(/min=\{1\}/)
+    expect(slider).toMatch(/max=\{5\}/)
+    expect(slider).toMatch(/step=\{1\}/)
+    expect(slider).not.toMatch(/Sheet|Drawer|Vaul/)
+    expect(mobile).not.toMatch(/Sheet|Drawer|Vaul/)
+    expect(mobile).toContain("showToolbar={isWriting}")
+    expect(mobile).toContain("toolbarVariant=\"compact\"")
+    expect(mobile).toContain("JournalMobileSaveBar")
+
+    const header = readFileSync(
+      resolve(
+        root,
+        "app/[locale]/dashboard/components/mindset/journal-mobile-header.tsx",
+      ),
+      "utf8",
+    )
+    expect(header).toContain("mindset.panes.journal")
+    expect(header).toContain("mindset.panes.summary")
+    expect(header).not.toContain("mindset.journaling.title")
+  })
+})
