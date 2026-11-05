@@ -50,6 +50,7 @@ import type {
 import { serverActor, trustedUserId, type TrustedActor } from "@/lib/api/server-actor"
 import { scopeProtocolAccountIds } from '@/lib/rithmic-protocol/scope-accounts'
 import {
+  type ProtocolSyncLockGuard,
   protocolAccountLockKeys,
   withProtocolSyncLock,
 } from '@/lib/rithmic-protocol/sync-lock'
@@ -801,7 +802,9 @@ export async function getRithmicProtocolTrades(
       )
     }
 
-    const runLockedSync = async (): Promise<RithmicProtocolTradesResult> => {
+    const runLockedSync = async (
+      guard: ProtocolSyncLockGuard,
+    ): Promise<RithmicProtocolTradesResult> => {
     logger.info(
       `Fetching fills for ${resolvedAccountIds.length} accounts (from ${credentials.historyStartDate ?? `${DEFAULT_LOOKBACK_DAYS}d lookback`}, ≤30d windows)`,
     )
@@ -812,6 +815,7 @@ export async function getRithmicProtocolTrades(
     })
     const seen = buildLedgerSeenIndex(storedFills)
 
+    guard.throwIfLost()
     const { rawFills, uniqueUserId, commissionRates, fillStats } =
       await fetchFillsForAccounts({
         gatewayUri: credentials.gatewayUri,
@@ -826,6 +830,7 @@ export async function getRithmicProtocolTrades(
         lookbackDays: DEFAULT_LOOKBACK_DAYS,
         seenIdentityKeys: seen.identityKeys,
       })
+    guard.throwIfLost()
 
     const accountRows = await prisma.account.findMany({
       where: { userId, number: { in: resolvedAccountIds } },
@@ -835,6 +840,7 @@ export async function getRithmicProtocolTrades(
       accountRows.map((account) => [account.number, account.id]),
     )
 
+    guard.throwIfLost()
     const ledgerWrite = await upsertRithmicProtocolFills({
       userId,
       fills: rawFills,
@@ -905,6 +911,7 @@ export async function getRithmicProtocolTrades(
 
     // saveTradesAction links every account number it sees on the trades to this
     // Connection, so accounts that only appear on fills are covered too.
+    guard.throwIfLost()
     const saveResult =
       trades.length > 0
         ? await saveTradesAction(trades, { ...serverActor(userId), connectionId })
@@ -933,6 +940,7 @@ export async function getRithmicProtocolTrades(
       savedCount = saveResult.numberOfTradesAdded
     }
 
+    guard.throwIfLost()
     const phantomsRemoved = await deleteUnannotatedPhantomProtocolTrades({
       userId,
       accountNumbers: resolvedAccountIds,

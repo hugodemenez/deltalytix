@@ -17,6 +17,8 @@ import {
   shouldReplaceStoredFill,
   summarizeFillLedgerNets,
   uncoveredProtocolTrades,
+  duplicateRebuildTradeIds,
+  protocolTradeSetsMatch,
 } from './fill-ledger'
 
 const ACCOUNT = 'LFE050-TEST-LEDGER'
@@ -719,5 +721,47 @@ describe('reattachProtocolTradeAnnotations', () => {
     const result = reattachProtocolTradeAnnotations(derived, existing)
     expect(result.preserved).toBe(0)
     expect(result.unmatched.map((row) => row.id)).toEqual(['orphan-note'])
+  })
+
+  it('reuses the matched id on an unannotated row so analytics can survive', () => {
+    const derived = [
+      {
+        id: 'gen-2',
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        entryDate: '2026-09-30T14:00:00.000+00:00',
+        closeDate: '2026-09-30T14:05:00.000+00:00',
+        entryId: '1001',
+        closeId: '1002',
+        tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+      },
+    ]
+    const existing = [
+      {
+        id: 'legacy-1',
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        entryDate: '2026-09-30T14:00:00.000+00:00',
+        closeDate: '2026-09-30T14:05:00.000+00:00',
+        entryId: '1001',
+        closeId: '1002',
+        tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+      },
+    ]
+    const result = reattachProtocolTradeAnnotations(derived, existing)
+    expect(result.preserved).toBe(0)
+    expect(result.trades[0]?.id).toBe('legacy-1')
+  })
+
+  it('treats a comment change as a drifted trade set', () => {
+    const base = {
+      id: 't1',
+      tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+    }
+    expect(protocolTradeSetsMatch([base], [base])).toBe(true)
+    expect(
+      protocolTradeSetsMatch([base], [{ ...base, comment: 'new note' }]),
+    ).toBe(false)
+    expect(duplicateRebuildTradeIds(['a', 'b', 'a'])).toEqual(['a'])
   })
 })

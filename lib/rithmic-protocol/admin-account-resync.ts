@@ -28,6 +28,7 @@ import {
   mergeFillLedgers,
   partitionIncomingFills,
   prepareRithmicProtocolFills,
+  protocolTradeSetsMatch,
   reattachProtocolTradeAnnotations,
   summarizeFillLedgerNets,
   uncoveredProtocolTrades,
@@ -533,6 +534,16 @@ export async function resyncRithmicProtocolAccount(params: {
           existing,
           uncoveredCount: uncovered.length,
         })
+        if (duplicateIds.length > 0) {
+          warnings.push(
+            `Rebuild would produce duplicate trade ids (${duplicateIds.join(', ')}). Live apply refuses with DUPLICATE_TRADE_IDS.`,
+          )
+        }
+        if (params.allowUnmatchedAnnotations && attached.unmatched.length > 0) {
+          warnings.push(
+            'allowUnmatchedAnnotations keeps unmatched annotated rows alongside rebuilt FIFO trades. proposed.pnl is FIFO-only; kept-row P&L is extra and legs can overlap.',
+          )
+        }
         const deletedPnl = existing
           .filter((row) => swap.toDelete.includes(row.id))
           .reduce((sum, row) => sum + row.pnl, 0)
@@ -640,7 +651,8 @@ export async function resyncRithmicProtocolAccount(params: {
                 !sameIdSet(
                   lockedExisting.map((row) => row.id),
                   existing.map((row) => row.id),
-                )
+                ) ||
+                !protocolTradeSetsMatch(lockedExisting, existing)
               ) {
                 throw new AdminApplyError('CONCURRENT_SYNC')
               }
@@ -774,7 +786,11 @@ export async function resyncRithmicProtocolAccount(params: {
             deleted: { trades: deletedTrades, fills: 0 },
             after: {
               tradeCount: proposed.tradeCount + swap.keepIds.length,
-              pnl: proposed.pnl,
+              pnl:
+                proposed.pnl +
+                existing
+                  .filter((row) => swap.keepIds.includes(row.id))
+                  .reduce((sum, row) => sum + row.pnl, 0),
               fillCount: proposed.fillCount,
               savedCount: createdCount,
               tradesCount: proposed.tradeCount + swap.keepIds.length,

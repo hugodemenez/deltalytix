@@ -192,9 +192,12 @@ export async function upsertRithmicProtocolFills(params: {
     if (params.db) {
       await applyUpdates(db, chunk)
     } else {
-      await prisma.$transaction(async (tx) => {
-        await applyUpdates(tx as unknown as ProtocolStore, chunk)
-      })
+      await prisma.$transaction(
+        async (tx) => {
+          await applyUpdates(tx as unknown as ProtocolStore, chunk)
+        },
+        { timeout: 60_000, maxWait: 15_000 },
+      )
     }
   }
 

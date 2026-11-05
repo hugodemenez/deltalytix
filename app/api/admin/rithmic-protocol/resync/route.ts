@@ -194,11 +194,16 @@ function errorMapping(error: string | undefined): {
         hint: 'Re-authenticate the connection, then retry the preview.',
       }
     case 'EMPTY_UPSTREAM_HISTORY':
-    case 'EMPTY_REBUILD':
       return {
         code: 'conflict',
         message: 'Upstream history was empty; stored trades and fills were left unchanged.',
         hint: 'Do not retry a live rebuild until a dry-run shows a non-empty proposed ledger.',
+      }
+    case 'EMPTY_REBUILD':
+      return {
+        code: 'conflict',
+        message: 'FIFO produced no closed trades from the merged ledger; stored trades were left unchanged.',
+        hint: 'Inspect result.proposed. Do not retry a live rebuild until a dry-run shows closed trades to write.',
       }
     case 'UNMATCHED_ANNOTATIONS':
       return {

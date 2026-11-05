@@ -289,8 +289,11 @@ export function reattachProtocolTradeAnnotations<
     const existingId = resolveRithmicProtocolPersistedId(trade, existing)
     if (!existingId) return trade
     const row = existing.find((item) => item.id === existingId)
-    if (!row || !hasTradeJournalAnnotations(row)) return trade
+    if (!row) return trade
     usedExisting.add(row.id)
+    if (!hasTradeJournalAnnotations(row)) {
+      return { ...trade, id: row.id }
+    }
     const extraTags = (row.tags ?? []).filter(
       (tag) => tag && tag !== RITHMIC_PROTOCOL_TRADE_TAG,
     )
@@ -309,7 +312,54 @@ export function reattachProtocolTradeAnnotations<
   const unmatched = existing.filter(
     (row) => hasTradeJournalAnnotations(row) && !usedExisting.has(row.id),
   )
-  return { trades, preserved: usedExisting.size, unmatched }
+  return {
+    trades,
+    preserved: existing.filter(
+      (row) => usedExisting.has(row.id) && hasTradeJournalAnnotations(row),
+    ).length,
+    unmatched,
+  }
+}
+
+export function protocolTradeJournalFingerprint(
+  row: Pick<
+    AnnotatedProtocolTrade,
+    | 'comment'
+    | 'imageBase64'
+    | 'imageBase64Second'
+    | 'videoUrl'
+    | 'images'
+    | 'groupId'
+    | 'tags'
+  >,
+): string {
+  const extraTags = [...(row.tags ?? [])]
+    .filter((tag) => tag && tag !== RITHMIC_PROTOCOL_TRADE_TAG)
+    .sort()
+  return JSON.stringify({
+    comment: row.comment ?? null,
+    imageBase64: row.imageBase64 ?? null,
+    imageBase64Second: row.imageBase64Second ?? null,
+    videoUrl: row.videoUrl ?? null,
+    images: row.images ?? [],
+    groupId: row.groupId ?? '',
+    extraTags,
+  })
+}
+
+export function protocolTradeSetsMatch(
+  left: Array<{ id: string } & Partial<AnnotatedProtocolTrade>>,
+  right: Array<{ id: string } & Partial<AnnotatedProtocolTrade>>,
+): boolean {
+  if (left.length !== right.length) return false
+  const rightById = new Map(right.map((row) => [row.id, row]))
+  return left.every((row) => {
+    const other = rightById.get(row.id)
+    if (!other) return false
+    return (
+      protocolTradeJournalFingerprint(row) === protocolTradeJournalFingerprint(other)
+    )
+  })
 }
 
 /**

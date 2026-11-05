@@ -529,6 +529,53 @@ describe('admin account resync scoping and safety', () => {
     expect(updateTag).not.toHaveBeenCalled()
   })
 
+  it('aborts with CONCURRENT_SYNC when a journal field changes under the lock', async () => {
+    let annotatedLoads = 0
+    tradeFindMany.mockImplementation(async (args: { select?: { comment?: boolean } }) => {
+      if (args?.select?.comment) {
+        annotatedLoads += 1
+        if (annotatedLoads === 1) return [COVERED_TRADE]
+        return [{ ...COVERED_TRADE, comment: 'added while fetching' }]
+      }
+      return [{ pnl: 10 }]
+    })
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: false,
+    })
+    expect(result.error).toBe('CONCURRENT_SYNC')
+    expect(result.complete).toBe(false)
+    expect(tradeCreateMany).not.toHaveBeenCalled()
+  })
+
+  it('warns that unmatched-annotation override can double-count P&L', async () => {
+    tradeFindMany.mockImplementation(async (args: { select?: { comment?: boolean } }) => {
+      if (args?.select?.comment) {
+        return [
+          {
+            ...COVERED_TRADE,
+            id: 'note-1',
+            entryId: '1002',
+            closeId: '1001',
+            comment: 'keep',
+          },
+        ]
+      }
+      return [{ pnl: 10 }]
+    })
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+      allowUnmatchedAnnotations: true,
+    })
+    expect(result.error).toBeUndefined()
+    expect(result.warnings?.some((warning) => warning.includes('overlap'))).toBe(
+      true,
+    )
+  })
+
   it('aborts with CONCURRENT_SYNC when the locked rows moved', async () => {
     let fillReads = 0
     fillCount.mockImplementation(async () => {
@@ -635,5 +682,14 @@ describe('Mood / journal schema vs trade delete', () => {
     expect(trade).toContain('imageBase64')
     expect(trade).toContain('groupId')
     expect(trade).not.toContain('onDelete: Cascade')
+    expect(trade).not.toContain('TradeAnalytics')
+    const analytics = schema.slice(
+      schema.indexOf('model TradeAnalytics {'),
+      schema.indexOf('model HistoricalData {'),
+    )
+    expect(analytics).toContain('tradeId')
+    expect(analytics).not.toMatch(/\bTrade\b/)
+    expect(analytics).not.toContain('onDelete')
+    expect(analytics).not.toContain('@relation')
   })
 })
