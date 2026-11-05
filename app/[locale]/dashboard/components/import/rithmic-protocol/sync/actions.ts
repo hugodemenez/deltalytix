@@ -48,6 +48,15 @@ import type {
   RithmicProtocolTradesResult,
 } from './rithmic-protocol-types'
 import { serverActor, trustedUserId, type TrustedActor } from "@/lib/api/server-actor"
+import { scopeProtocolAccountIds } from '@/lib/rithmic-protocol/scope-accounts'
+
+export type RithmicProtocolSyncOptions = TrustedActor & {
+  connectionId?: string
+  /** When set, only these trading accounts are fetched and saved. */
+  accountNumbers?: string[]
+  /** Leave Connection.lastSyncedAt untouched (admin rebuilds). */
+  skipConnectionStamp?: boolean
+}
 
 const SERVICE = 'rithmic-protocol'
 /** Fallback lookback when a legacy connection has no `historyStartDate`. */
@@ -680,7 +689,7 @@ export async function updateRithmicProtocolDailySyncTimeAction(
 
 export async function getRithmicProtocolTrades(
   initialTokenJson: string,
-  options?: TrustedActor & { connectionId?: string },
+  options?: RithmicProtocolSyncOptions,
 ): Promise<RithmicProtocolTradesResult> {
   const syncStats = {
     tradingAccounts: 0,
@@ -744,6 +753,15 @@ export async function getRithmicProtocolTrades(
         credentials.username,
       )
     }
+
+    const scoped = scopeProtocolAccountIds(
+      resolvedAccountIds,
+      options?.accountNumbers,
+    )
+    if ('error' in scoped) {
+      return { error: scoped.error, syncStats }
+    }
+    resolvedAccountIds = scoped.accountIds
 
     syncStats.tradingAccounts = resolvedAccountIds.length
     if (resolvedAccountIds.length === 0) {
@@ -867,15 +885,18 @@ export async function getRithmicProtocolTrades(
 
     // Stamped before saving: the fills were fetched, so the connection has synced
     // even when every trade turns out to be a duplicate. Leaving it unstamped made
-    // the daily-sync cron re-run this connection on every tick.
-    await prisma.connection.updateMany({
-      where: {
-        userId,
-        service: SERVICE,
-        externalId: credentials.username,
-      },
-      data: { lastSyncedAt: new Date() },
-    })
+    // the daily-sync cron re-run this connection on every tick. Admin rebuilds
+    // leave the row alone.
+    if (!options?.skipConnectionStamp) {
+      await prisma.connection.updateMany({
+        where: {
+          userId,
+          service: SERVICE,
+          externalId: credentials.username,
+        },
+        data: { lastSyncedAt: new Date() },
+      })
+    }
 
     // saveTradesAction links every account number it sees on the trades to this
     // Connection, so accounts that only appear on fills are covered too.
