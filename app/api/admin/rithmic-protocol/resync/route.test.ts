@@ -38,6 +38,7 @@ describe('POST /api/admin/rithmic-protocol/resync', () => {
     const response = await post({
       userId: 'user-1',
       accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      dryRun: true,
     })
     expect(response.status).toBe(401)
     await expect(response.json()).resolves.toMatchObject({
@@ -51,11 +52,48 @@ describe('POST /api/admin/rithmic-protocol/resync', () => {
     const response = await post({
       userId: 'user-1',
       accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      dryRun: true,
     })
     expect(response.status).toBe(403)
     await expect(response.json()).resolves.toMatchObject({
       error: { code: 'forbidden' },
     })
+    expect(resyncRithmicProtocolAccount).not.toHaveBeenCalled()
+  })
+
+  it('rejects omitted dryRun so a live delete cannot be implied', async () => {
+    authorizeAdminRequest.mockResolvedValue({
+      ok: true,
+      via: 'session',
+      actorUserId: 'admin-1',
+    })
+    const response = await post({
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+    })
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'bad_request', message: 'dryRun is required.' },
+    })
+    expect(resyncRithmicProtocolAccount).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['true', 'true'],
+    [1, 1],
+    ['false', 'false'],
+  ])('rejects non-boolean dryRun (%s)', async (_label, dryRun) => {
+    authorizeAdminRequest.mockResolvedValue({
+      ok: true,
+      via: 'session',
+      actorUserId: 'admin-1',
+    })
+    const response = await post({
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      dryRun,
+    })
+    expect(response.status).toBe(400)
     expect(resyncRithmicProtocolAccount).not.toHaveBeenCalled()
   })
 
@@ -67,10 +105,12 @@ describe('POST /api/admin/rithmic-protocol/resync', () => {
     })
     resyncRithmicProtocolAccount.mockResolvedValue({
       dryRun: true,
+      complete: true,
       userId: 'user-1',
       accountNumber: 'LFE050-I7X0S9B3-TEST001',
       before: { tradeCount: 3, pnl: 12, fillCount: 8 },
       wouldDelete: { tradeCount: 3, pnl: 12, fillCount: 8 },
+      proposed: { tradeCount: 2, pnl: 8, fillCount: 6, openSkipped: 0 },
     })
     const response = await post({
       userId: 'user-1',
@@ -83,6 +123,58 @@ describe('POST /api/admin/rithmic-protocol/resync', () => {
       accountNumber: 'LFE050-I7X0S9B3-TEST001',
       dryRun: true,
       actor: 'admin-1',
+      connectionId: undefined,
+      allowUnmatchedAnnotations: undefined,
     })
+  })
+
+  it('returns a non-2xx body with result after an empty rebuild', async () => {
+    authorizeAdminRequest.mockResolvedValue({
+      ok: true,
+      via: 'cron',
+    })
+    resyncRithmicProtocolAccount.mockResolvedValue({
+      dryRun: false,
+      complete: false,
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      before: { tradeCount: 161, pnl: 825.5, fillCount: 236 },
+      error: 'EMPTY_UPSTREAM_HISTORY',
+    })
+    const response = await post({
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      dryRun: false,
+    })
+    expect(response.status).toBe(409)
+    const body = await response.json()
+    expect(body.error.code).toBe('conflict')
+    expect(body.result.before.fillCount).toBe(236)
+    expect(body.result.deleted).toBeUndefined()
+  })
+
+  it('returns 5xx for fetch failure without implying success', async () => {
+    authorizeAdminRequest.mockResolvedValue({
+      ok: true,
+      via: 'session',
+      actorUserId: 'admin-1',
+    })
+    resyncRithmicProtocolAccount.mockResolvedValue({
+      dryRun: false,
+      complete: false,
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      before: { tradeCount: 3, pnl: 12, fillCount: 8 },
+      error: 'FETCH_FAILED',
+    })
+    const response = await post({
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      dryRun: false,
+    })
+    expect(response.status).toBe(500)
+    const body = await response.json()
+    expect(body.error.code).toBe('internal_error')
+    expect(body.result.error).toBe('FETCH_FAILED')
   })
 })

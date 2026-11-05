@@ -85,4 +85,28 @@ describe('admin allowlist', () => {
     const result = await authorizeAdminRequest(requestWithAuth('Bearer '))
     expect(result).toEqual({ ok: false, status: 401 })
   })
+
+  it('does not treat CRON_SECRET="" as a match', async () => {
+    process.env.CRON_SECRET = ''
+    getUserId.mockRejectedValue(new Error('User not authenticated'))
+    const result = await authorizeAdminRequest(requestWithAuth('Bearer '))
+    expect(result).toEqual({ ok: false, status: 401 })
+  })
+
+  it('does not treat a whitespace-only CRON_SECRET as a match', async () => {
+    process.env.CRON_SECRET = '   '
+    getUserId.mockRejectedValue(new Error('User not authenticated'))
+    const result = await authorizeAdminRequest(
+      requestWithAuth('Bearer    '),
+    )
+    expect(result).toEqual({ ok: false, status: 401 })
+  })
+
+  it('rejects a wrong bearer token even when a secret is set', async () => {
+    getUserId.mockRejectedValue(new Error('User not authenticated'))
+    const result = await authorizeAdminRequest(
+      requestWithAuth('Bearer not-the-secret'),
+    )
+    expect(result).toEqual({ ok: false, status: 401 })
+  })
 })

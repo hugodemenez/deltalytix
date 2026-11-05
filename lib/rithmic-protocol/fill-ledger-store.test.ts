@@ -86,6 +86,6 @@ describe('upsertRithmicProtocolFills', () => {
     expect(inserted[0].identityKey).toBe(fillIdentityKey(novel))
     expect(inserted[0].fillId).toBe('1002')
     expect(inserted[0].source).toBe('history')
-    expect(transaction).toHaveBeenCalledTimes(1)
+    expect(updateMany).toHaveBeenCalledTimes(1)
   })
 })

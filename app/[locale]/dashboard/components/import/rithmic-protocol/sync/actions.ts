@@ -49,6 +49,7 @@ import type {
 } from './rithmic-protocol-types'
 import { serverActor, trustedUserId, type TrustedActor } from "@/lib/api/server-actor"
 import { scopeProtocolAccountIds } from '@/lib/rithmic-protocol/scope-accounts'
+import { withProtocolSyncLock } from '@/lib/rithmic-protocol/sync-lock'
 
 export type RithmicProtocolSyncOptions = TrustedActor & {
   connectionId?: string
@@ -797,6 +798,7 @@ export async function getRithmicProtocolTrades(
       )
     }
 
+    const runLockedSync = async (): Promise<RithmicProtocolTradesResult> => {
     logger.info(
       `Fetching fills for ${resolvedAccountIds.length} accounts (from ${credentials.historyStartDate ?? `${DEFAULT_LOOKBACK_DAYS}d lookback`}, ≤30d windows)`,
     )
@@ -949,6 +951,12 @@ export async function getRithmicProtocolTrades(
       tradesCount: trades.length,
       syncStats,
     }
+    }
+
+    if (connectionId) {
+      return await withProtocolSyncLock(connectionId, runLockedSync)
+    }
+    return await runLockedSync()
   } catch (error) {
     logger.error('getRithmicProtocolTrades failed', error)
     return {

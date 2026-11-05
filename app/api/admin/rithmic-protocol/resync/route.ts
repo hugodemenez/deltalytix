@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { jsonError } from '@/lib/api/json-error'
+import { apiErrorBody, jsonError } from '@/lib/api/json-error'
 import { authorizeAdminRequest } from '@/lib/admin/auth'
-import { resyncRithmicProtocolAccount } from '@/lib/rithmic-protocol/admin-account-resync'
+import {
+  type AdminAccountResyncResult,
+  resyncRithmicProtocolAccount,
+} from '@/lib/rithmic-protocol/admin-account-resync'
 
 export const maxDuration = 300
 
 function readString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function readOptionalString(value: unknown): string | undefined {
+  if (value === undefined) return undefined
   return typeof value === 'string' ? value.trim() : ''
 }
 
@@ -14,8 +22,16 @@ function readString(value: unknown): string {
  *
  * Auth: session user in `ADMIN_USER_ID` / `ALLOWED_ADMIN_USER_ID` /
  * `ADMIN_USER_IDS`, or `Authorization: Bearer $CRON_SECRET`.
+ * `CRON_SECRET` is shared with `/api/cron/daily-sync` and can invoke this
+ * destructive path; keep it restricted to operator scripts. A dedicated
+ * resync secret is not required yet.
  *
- * POST { userId, accountNumber, dryRun?: boolean }
+ * POST { userId, accountNumber, dryRun: boolean, connectionId?: string,
+ *        allowUnmatchedAnnotations?: boolean }
+ *
+ * `dryRun` is required and must be a JSON boolean. Omitted or `"true"`/1
+ * are rejected. `dryRun: true` fetches upstream and reports the proposed
+ * rebuild without writing.
  */
 export async function POST(request: NextRequest) {
   const auth = await authorizeAdminRequest(request)
@@ -40,11 +56,12 @@ export async function POST(request: NextRequest) {
     return jsonError({
       code: 'bad_request',
       message: 'Request body must be JSON.',
-      hint: 'Send { userId, accountNumber, dryRun?: boolean }.',
+      hint: 'Send { userId, accountNumber, dryRun: boolean }.',
     })
   }
 
-  const payload = body && typeof body === 'object' ? (body as Record<string, unknown>) : {}
+  const payload =
+    body && typeof body === 'object' ? (body as Record<string, unknown>) : {}
   const userId = readString(payload.userId)
   const accountNumber = readString(payload.accountNumber)
   if (!userId || !accountNumber) {
@@ -55,24 +72,68 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  const dryRun = payload.dryRun === true
+  if (!('dryRun' in payload)) {
+    return jsonError({
+      code: 'bad_request',
+      message: 'dryRun is required.',
+      hint: 'Pass dryRun: true to preview the rebuild or dryRun: false to apply it.',
+      details: [{ field: 'dryRun', message: 'Missing. A JSON boolean is required.' }],
+    })
+  }
+  if (typeof payload.dryRun !== 'boolean') {
+    return jsonError({
+      code: 'bad_request',
+      message: 'dryRun must be a boolean.',
+      hint: 'Pass dryRun: true or dryRun: false. Strings and numbers are rejected.',
+      details: [{ field: 'dryRun', message: 'Must be a JSON boolean.' }],
+    })
+  }
+
+  if (
+    'allowUnmatchedAnnotations' in payload &&
+    typeof payload.allowUnmatchedAnnotations !== 'boolean'
+  ) {
+    return jsonError({
+      code: 'bad_request',
+      message: 'allowUnmatchedAnnotations must be a boolean when provided.',
+      hint: 'Pass true only to keep annotated trades that no longer match FIFO.',
+      details: [
+        {
+          field: 'allowUnmatchedAnnotations',
+          message: 'Must be a JSON boolean.',
+        },
+      ],
+    })
+  }
+
+  const connectionId = readOptionalString(payload.connectionId)
+  if (connectionId === '') {
+    return jsonError({
+      code: 'bad_request',
+      message: 'connectionId must be a non-empty string when provided.',
+      hint: 'Omit connectionId to use the sole matching connection.',
+      details: [{ field: 'connectionId', message: 'Blank.' }],
+    })
+  }
+
+  const dryRun = payload.dryRun
   try {
     const result = await resyncRithmicProtocolAccount({
       userId,
       accountNumber,
       dryRun,
       actor: auth.via === 'session' ? auth.actorUserId : 'cron',
+      connectionId,
+      allowUnmatchedAnnotations:
+        typeof payload.allowUnmatchedAnnotations === 'boolean'
+          ? payload.allowUnmatchedAnnotations
+          : undefined,
     })
 
-    if (result.error === 'NO_TOKEN_RECONNECT' || result.error === 'ACCOUNT_NOT_ON_CONNECTION') {
-      return jsonError({
-        code: 'not_found',
-        message: 'No Rithmic Protocol connection holds that account for this user.',
-        hint: 'Confirm userId and accountNumber against the Connections page.',
-      })
+    if (!result.error) {
+      return NextResponse.json(result)
     }
-
-    return NextResponse.json(result)
+    return serviceErrorResponse(result)
   } catch (error) {
     console.error('[ADMIN-RESYNC] route failed', error)
     return jsonError({
@@ -80,5 +141,96 @@ export async function POST(request: NextRequest) {
       message: 'Protocol resync failed.',
       hint: 'Retry the request. If it keeps failing, check server logs for [ADMIN-RESYNC].',
     })
+  }
+}
+
+function serviceErrorResponse(result: AdminAccountResyncResult) {
+  const mapping = errorMapping(result.error)
+  const body = apiErrorBody({
+    code: mapping.code,
+    message: mapping.message,
+    hint: mapping.hint,
+  })
+  return NextResponse.json(
+    { ...body, result },
+    {
+      status: body.error.status,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store',
+      },
+    },
+  )
+}
+
+function errorMapping(error: string | undefined): {
+  code:
+    | 'not_found'
+    | 'conflict'
+    | 'unprocessable_entity'
+    | 'internal_error'
+    | 'bad_request'
+  message: string
+  hint: string
+} {
+  switch (error) {
+    case 'NO_TOKEN_RECONNECT':
+    case 'ACCOUNT_NOT_ON_CONNECTION':
+      return {
+        code: 'not_found',
+        message: 'No Rithmic Protocol connection holds that account for this user.',
+        hint: 'Confirm userId and accountNumber against the Connections page.',
+      }
+    case 'AMBIGUOUS_CONNECTION':
+      return {
+        code: 'conflict',
+        message: 'More than one Protocol connection holds that account.',
+        hint: 'Pass connectionId for the credential that should be rebuilt.',
+      }
+    case 'TOKEN_DECRYPT_FAILED':
+      return {
+        code: 'unprocessable_entity',
+        message: 'The stored Protocol credential could not be decrypted.',
+        hint: 'Re-authenticate the connection, then retry the preview.',
+      }
+    case 'EMPTY_UPSTREAM_HISTORY':
+    case 'EMPTY_REBUILD':
+      return {
+        code: 'conflict',
+        message: 'Upstream history was empty; stored trades and fills were left unchanged.',
+        hint: 'Do not retry a live rebuild until a dry-run shows a non-empty proposed ledger.',
+      }
+    case 'UNMATCHED_ANNOTATIONS':
+      return {
+        code: 'conflict',
+        message: 'Annotated trades would not survive the rebuild.',
+        hint: 'Inspect result.proposed.unmatchedAnnotations. Pass allowUnmatchedAnnotations: true only after review.',
+      }
+    case 'CONCURRENT_SYNC':
+      return {
+        code: 'conflict',
+        message: 'The account changed while the rebuild was running.',
+        hint: 'Retry the dry-run, then apply once no ordinary sync is in flight.',
+      }
+    case 'INVALID_STORED_CREDENTIALS':
+      return {
+        code: 'unprocessable_entity',
+        message: 'The stored Protocol credential is incomplete.',
+        hint: 'Re-authenticate the connection, then retry.',
+      }
+    case 'FETCH_FAILED':
+    case 'APPLY_FAILED':
+    case 'SYNC_FAILED':
+      return {
+        code: 'internal_error',
+        message: 'Protocol resync failed before replacing stored trades.',
+        hint: 'Stored data was not deleted. Check [ADMIN-RESYNC] logs and retry a dry-run first.',
+      }
+    default:
+      return {
+        code: 'internal_error',
+        message: 'Protocol resync failed.',
+        hint: 'Retry a dry-run. If it keeps failing, check server logs for [ADMIN-RESYNC].',
+      }
   }
 }

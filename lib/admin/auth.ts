@@ -7,10 +7,23 @@
  * - `ADMIN_USER_IDS` — comma-separated extra ids
  *
  * Cron scripts may also send `Authorization: Bearer $CRON_SECRET` (the same
- * header `/api/cron/daily-sync` already checks). An empty `CRON_SECRET` never
- * matches.
+ * header `/api/cron/daily-sync` already checks). That secret can now invoke
+ * the Protocol account rebuild; treat it as operator-only. An empty or
+ * whitespace-only `CRON_SECRET` never matches.
  */
+import 'server-only'
+import { timingSafeEqual } from 'node:crypto'
 import { getUserId } from '@/server/auth'
+
+function secretsEqual(expected: string, provided: string): boolean {
+  const a = Buffer.from(expected)
+  const b = Buffer.from(provided)
+  if (a.length !== b.length) {
+    timingSafeEqual(a, a)
+    return false
+  }
+  return timingSafeEqual(a, b)
+}
 
 export function adminUserIdsFromEnv(): string[] {
   const ids = [
@@ -27,10 +40,11 @@ export function isAdminUserId(userId: string | null | undefined): boolean {
 }
 
 export function hasCronSecret(request: Request): boolean {
-  const secret = process.env.CRON_SECRET
+  const secret = process.env.CRON_SECRET?.trim()
   if (!secret) return false
   const header = request.headers.get('authorization')
-  return header === `Bearer ${secret}`
+  if (!header?.startsWith('Bearer ')) return false
+  return secretsEqual(secret, header.slice('Bearer '.length))
 }
 
 export type AdminAuthorization =
