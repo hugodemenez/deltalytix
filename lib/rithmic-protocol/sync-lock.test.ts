@@ -29,7 +29,7 @@ import {
 } from './sync-lock'
 
 describe('protocol sync lock URLs and keys', () => {
-  it('detects Supabase transaction pooler URLs', () => {
+  it('refuses transaction-mode poolers and allows session-mode 5432', () => {
     expect(
       isTransactionPoolerUrl(
         'postgresql://user:pass@host:6543/postgres?pgbouncer=true',
@@ -37,15 +37,34 @@ describe('protocol sync lock URLs and keys', () => {
     ).toBe(true)
     expect(
       isTransactionPoolerUrl(
-        'postgresql://user:pass@aws-0-us-east-1.pooler.supabase.com:5432/postgres',
+        'postgresql://user:pass@aws-0-us-east-1.pooler.supabase.com:6543/postgres',
       ),
     ).toBe(true)
     expect(
+      isTransactionPoolerUrl(
+        'postgresql://user:pass@aws-0-us-east-1.pooler.supabase.com:5432/postgres',
+      ),
+    ).toBe(false)
+    expect(
       isTransactionPoolerUrl('postgresql://user:pass@db.supabase.co:5432/postgres'),
     ).toBe(false)
+    expect(
+      isTransactionPoolerUrl(
+        'postgresql://user:pass@aws-0-us-east-1.pooler.supabase.com:5432/postgres?pgbouncer=true',
+      ),
+    ).toBe(true)
   })
 
-  it('prefers DIRECT_URL and refuses a pooler-only env', () => {
+  it('prefers session-mode DIRECT_URL including the 5432 pooler', () => {
+    expect(
+      resolveProtocolLockConnectionString({
+        DATABASE_URL: 'postgresql://user:pass@host:6543/postgres?pgbouncer=true',
+        DIRECT_URL:
+          'postgresql://user:pass@aws-0-us-east-1.pooler.supabase.com:5432/postgres',
+      }),
+    ).toBe(
+      'postgresql://user:pass@aws-0-us-east-1.pooler.supabase.com:5432/postgres',
+    )
     expect(
       resolveProtocolLockConnectionString({
         DATABASE_URL: 'postgresql://user:pass@host:6543/postgres?pgbouncer=true',

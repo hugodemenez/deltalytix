@@ -26,20 +26,22 @@ export type ProtocolSyncLockGuard = {
 }
 
 /**
- * Session advisory locks cannot be held through Supabase's transaction
- * pooler (`pgbouncer=true`, `pooler.supabase.com`, port 6543). Use
- * `DIRECT_URL` (session mode, typically port 5432) for this client.
- * Prisma queries still go through `DATABASE_URL`.
+ * Session advisory locks cannot be held through a transaction-mode
+ * pooler. Refuse `pgbouncer=true` and port 6543 (Supabase transaction
+ * mode). Allow session mode, including `*.pooler.supabase.com:5432` and
+ * direct `db.<ref>:5432`. Prisma queries still go through `DATABASE_URL`.
  */
 export function isTransactionPoolerUrl(url: string): boolean {
   const lower = url.toLowerCase()
-  if (lower.includes('pgbouncer=true')) return true
-  if (lower.includes('pooler.supabase.com')) return true
+  if (/[?&]pgbouncer=true(?:&|$)/.test(lower) || lower.includes('pgbouncer=true')) {
+    return true
+  }
   try {
     const parsed = new URL(url.replace(/^postgres(?:ql)?:/i, 'http:'))
-    if (parsed.port === '6543') return true
+    const port = parsed.port || '5432'
+    if (port === '6543') return true
   } catch {
-    // Malformed URLs are treated as session-capable so a later connect fails closed.
+    if (/:6543(?:[/?]|$)/.test(lower)) return true
   }
   return false
 }
@@ -53,7 +55,7 @@ export function resolveProtocolLockConnectionString(
   if (database && !isTransactionPoolerUrl(database)) return database
   throw new ProtocolSyncLockError(
     'LOCK_UNAVAILABLE',
-    'Protocol sync lock requires a session-capable Postgres URL. Set DIRECT_URL to the direct (non-pgbouncer) connection; the transaction pooler cannot hold session advisory locks.',
+    'Protocol sync lock requires a session-capable Postgres URL. Set DIRECT_URL to session-mode Postgres (port 5432, including *.pooler.supabase.com:5432). Transaction-mode poolers (port 6543 / pgbouncer=true) cannot hold session advisory locks.',
   )
 }
 
@@ -171,11 +173,11 @@ export async function withProtocolSyncLock<T>(
     return await fn(guard)
   } finally {
     await releaseKeys(client, acquired)
-    client.removeListener('error', onError)
     try {
       await client.end()
     } catch (error) {
       console.error('[protocol-sync-lock] client end failed', error)
     }
+    client.removeListener('error', onError)
   }
 }
