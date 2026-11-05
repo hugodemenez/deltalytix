@@ -49,7 +49,10 @@ import type {
 } from './rithmic-protocol-types'
 import { serverActor, trustedUserId, type TrustedActor } from "@/lib/api/server-actor"
 import { scopeProtocolAccountIds } from '@/lib/rithmic-protocol/scope-accounts'
-import { withProtocolSyncLock } from '@/lib/rithmic-protocol/sync-lock'
+import {
+  protocolAccountLockKeys,
+  withProtocolSyncLock,
+} from '@/lib/rithmic-protocol/sync-lock'
 
 export type RithmicProtocolSyncOptions = TrustedActor & {
   connectionId?: string
@@ -953,10 +956,10 @@ export async function getRithmicProtocolTrades(
     }
     }
 
-    if (connectionId) {
-      return await withProtocolSyncLock(connectionId, runLockedSync)
-    }
-    return await runLockedSync()
+    return await withProtocolSyncLock(
+      protocolAccountLockKeys(userId, resolvedAccountIds),
+      runLockedSync,
+    )
   } catch (error) {
     logger.error('getRithmicProtocolTrades failed', error)
     return {
