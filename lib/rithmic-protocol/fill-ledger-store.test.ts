@@ -46,7 +46,19 @@ describe('upsertRithmicProtocolFills', () => {
   beforeEach(() => {
     createMany.mockReset().mockResolvedValue({ count: 1 })
     updateMany.mockReset().mockResolvedValue({ count: 1 })
-    transaction.mockReset().mockImplementation(async (ops: unknown) => ops)
+    transaction.mockReset().mockImplementation(async (arg: unknown) => {
+      if (typeof arg === 'function') {
+        return arg({
+          rithmicProtocolFill: {
+            createMany,
+            updateMany,
+            findMany,
+          },
+          trade: { findMany, deleteMany },
+        })
+      }
+      return arg
+    })
   })
 
   it('inserts novel identities and upgrades replay→history on the same key', async () => {
@@ -87,5 +99,6 @@ describe('upsertRithmicProtocolFills', () => {
     expect(inserted[0].fillId).toBe('1002')
     expect(inserted[0].source).toBe('history')
     expect(updateMany).toHaveBeenCalledTimes(1)
+    expect(transaction).toHaveBeenCalledTimes(1)
   })
 })

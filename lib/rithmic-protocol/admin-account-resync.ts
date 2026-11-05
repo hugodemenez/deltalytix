@@ -10,7 +10,11 @@ import {
   resolveGateway,
 } from '@/lib/rithmic-protocol/systems'
 import { scopeProtocolAccountIds } from './scope-accounts'
-import { withProtocolSyncLock } from './sync-lock'
+import {
+  ProtocolSyncLockError,
+  protocolAccountLockKeys,
+  withProtocolSyncLock,
+} from './sync-lock'
 import {
   loadRithmicProtocolFills,
   upsertRithmicProtocolFills,
@@ -18,9 +22,15 @@ import {
 import {
   type AnnotatedProtocolTrade,
   type FillLedgerNet,
-  deriveTradesFromFillLedger,
+  type RebuildTradeRef,
+  canonicalLedgerFillIds,
+  duplicateRebuildTradeIds,
+  mergeFillLedgers,
+  partitionIncomingFills,
+  prepareRithmicProtocolFills,
   reattachProtocolTradeAnnotations,
   summarizeFillLedgerNets,
+  uncoveredProtocolTrades,
 } from './fill-ledger'
 import { buildTradesFromRithmicFills } from './fills-to-trades'
 import type { RithmicProtocolFill } from './types'
@@ -34,6 +44,7 @@ const ANNOTATION_SELECT = {
   closeDate: true,
   entryId: true,
   closeId: true,
+  pnl: true,
   comment: true,
   tags: true,
   imageBase64: true,
@@ -54,11 +65,22 @@ export type AccountProtocolSnapshot = {
   fillCount: number
 }
 
+export type RebuildTradePreview = RebuildTradeRef & { pnl: number }
+
 export type ProposedRebuildSnapshot = AccountProtocolSnapshot & {
   openSkipped: number
   annotatedPreserved: number
   unmatchedAnnotations: number
   nets: FillLedgerNet[]
+  ledgerRowsAfterMerge: number
+  consolidatedFills: number
+  fillsInserted: number
+  fillsUpdated: number
+  tradesDeleted: number
+  tradesCreated: number
+  tradesKept: number
+  uncoveredTrades: RebuildTradePreview[]
+  unmatchedAnnotatedTrades: RebuildTradePreview[]
 }
 
 export type AdminAccountResyncResult = {
@@ -75,6 +97,7 @@ export type AdminAccountResyncResult = {
     savedCount: number
     tradesCount: number
   }
+  committed?: boolean
   error?: string
   connectionIds?: string[]
 }
@@ -93,6 +116,22 @@ type StoredCredentials = {
 }
 
 type ProtocolDb = typeof prisma
+
+type ExistingProtocolTrade = AnnotatedProtocolTrade & {
+  pnl: number
+  entryDate?: string | null
+  closeDate?: string | null
+}
+
+class AdminApplyError extends Error {
+  constructor(
+    public readonly code: 'CONCURRENT_SYNC' | 'INSERT_MISMATCH',
+    message?: string,
+  ) {
+    super(message ?? code)
+    this.name = 'AdminApplyError'
+  }
+}
 
 function parseAccountIds(tokenJson: string): string[] {
   try {
@@ -148,30 +187,11 @@ export async function summarizeAccountProtocolData(
   }
 }
 
-export async function deleteAccountProtocolTradesAndFills(
-  userId: string,
-  accountNumber: string,
-): Promise<{ trades: number; fills: number }> {
-  const [trades, fills] = await prisma.$transaction([
-    prisma.trade.deleteMany({
-      where: {
-        userId,
-        accountNumber,
-        tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
-      },
-    }),
-    prisma.rithmicProtocolFill.deleteMany({
-      where: { userId, accountNumber },
-    }),
-  ])
-  return { trades: trades.count, fills: fills.count }
-}
-
-async function loadAnnotatedProtocolTrades(
+async function loadExistingProtocolTrades(
   userId: string,
   accountNumber: string,
   db: ProtocolDb = prisma,
-): Promise<AnnotatedProtocolTrade[]> {
+): Promise<ExistingProtocolTrade[]> {
   return db.trade.findMany({
     where: {
       userId,
@@ -179,7 +199,7 @@ async function loadAnnotatedProtocolTrades(
       tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
     },
     select: ANNOTATION_SELECT,
-  }) as Promise<AnnotatedProtocolTrade[]>
+  }) as Promise<ExistingProtocolTrade[]>
 }
 
 async function loadConnectionForAccount(params: {
@@ -274,6 +294,60 @@ function earliestFillClock(fills: RithmicProtocolFill[]): number | null {
   return earliest
 }
 
+function earliestTradeClock(trades: ExistingProtocolTrade[]): number | null {
+  let earliest: number | null = null
+  for (const trade of trades) {
+    for (const value of [trade.entryDate, trade.closeDate]) {
+      if (!value) continue
+      const parsed = Date.parse(value)
+      if (!Number.isFinite(parsed)) continue
+      const clock = Math.floor(parsed / 1000)
+      if (clock <= 0) continue
+      if (earliest == null || clock < earliest) earliest = clock
+    }
+  }
+  return earliest
+}
+
+function tradePreview(row: RebuildTradeRef & { pnl?: number }): RebuildTradePreview {
+  return {
+    id: row.id,
+    instrument: row.instrument,
+    entryId: row.entryId,
+    closeId: row.closeId,
+    pnl: row.pnl ?? 0,
+  }
+}
+
+function sameIdSet(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false
+  const rightSet = new Set(right)
+  return left.every((id) => rightSet.has(id))
+}
+
+export function planProtocolTradeSwap(params: {
+  existing: ExistingProtocolTrade[]
+  rebuiltIds: string[]
+  uncoveredIds: string[]
+  unmatchedIds: string[]
+  allowUnmatchedAnnotations: boolean
+}): {
+  keepIds: string[]
+  toDelete: string[]
+  analyticsDelete: string[]
+} {
+  const rebuiltIds = new Set(params.rebuiltIds)
+  const keepIds = new Set(params.uncoveredIds)
+  if (params.allowUnmatchedAnnotations) {
+    for (const id of params.unmatchedIds) keepIds.add(id)
+  }
+  const toDelete = params.existing
+    .map((row) => row.id)
+    .filter((id) => !keepIds.has(id))
+  const analyticsDelete = toDelete.filter((id) => !rebuiltIds.has(id))
+  return { keepIds: [...keepIds], toDelete, analyticsDelete }
+}
+
 async function invalidateCachesOnSuccess(userId: string): Promise<void> {
   try {
     updateTag(`trades-${userId}`)
@@ -309,9 +383,9 @@ function tradeCreateRow(
  * Fetches Lucid/upstream first and only writes after a non-empty candidate
  * exists. Fill rows are merged (never wholesale-deleted) so a sliding window
  * cannot erase stored history. Protocol trades for this account are replaced
- * in one transaction; journal fields are copied by fill-pair identity.
- * Mood/journal rows are keyed by user+day, not Trade, so they are not
- * cascaded.
+ * in one transaction except uncovered historical rows, which are retained
+ * and refuse a live apply (`UNCOVERED_TRADES`). Journal fields are copied
+ * by fill-pair identity. Mood/journal rows are keyed by user+day, not Trade.
  */
 export async function resyncRithmicProtocolAccount(params: {
   userId: string
@@ -323,14 +397,14 @@ export async function resyncRithmicProtocolAccount(params: {
 }): Promise<AdminAccountResyncResult> {
   const userId = params.userId.trim()
   const accountNumber = params.accountNumber.trim()
-  const before = await summarizeAccountProtocolData(userId, accountNumber)
+  const unlockedBefore = await summarizeAccountProtocolData(userId, accountNumber)
 
-  const base = {
+  const unlockedBase = {
     dryRun: params.dryRun,
     complete: false,
     userId,
     accountNumber,
-    before,
+    before: unlockedBefore,
   }
 
   const connection = await loadConnectionForAccount({
@@ -343,7 +417,7 @@ export async function resyncRithmicProtocolAccount(params: {
       `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} error=${connection.error}`,
     )
     return {
-      ...base,
+      ...unlockedBase,
       error: connection.error,
       connectionIds: connection.connectionIds,
     }
@@ -351,267 +425,445 @@ export async function resyncRithmicProtocolAccount(params: {
 
   const credentials = parseStoredCredentials(connection.storedTokenJson)
   if (!credentials) {
-    return { ...base, error: 'INVALID_STORED_CREDENTIALS' }
+    return { ...unlockedBase, error: 'INVALID_STORED_CREDENTIALS' }
   }
 
   try {
-    return await withProtocolSyncLock(connection.connectionId, async () => {
-      const storedFills = await loadRithmicProtocolFills({
-        userId,
-        accountNumbers: [accountNumber],
-      })
+    return await withProtocolSyncLock(
+      protocolAccountLockKeys(userId, [accountNumber]),
+      async (guard) => {
+        const before = await summarizeAccountProtocolData(userId, accountNumber)
+        const base = {
+          dryRun: params.dryRun,
+          complete: false,
+          userId,
+          accountNumber,
+          before,
+        }
 
-      let incomingFills: RithmicProtocolFill[]
-      try {
-        const fetched = await fetchFillsForAccounts({
-          gatewayUri: credentials.gatewayUri,
-          systemName: credentials.systemName,
-          username: credentials.username,
-          password: credentials.password,
-          fcmId: credentials.fcmId,
-          ibId: credentials.ibId,
-          accountIds: connection.accountIds,
-          accounts: credentials.accounts,
-          historyStartDate: credentials.historyStartDate,
-          lookbackDays: DEFAULT_LOOKBACK_DAYS,
-          seenIdentityKeys: new Set(),
+        const storedFills = await loadRithmicProtocolFills({
+          userId,
+          accountNumbers: [accountNumber],
         })
-        incomingFills = fetched.rawFills.filter(
-          (fill) => fill.accountId === accountNumber,
+
+        let incomingFills: RithmicProtocolFill[]
+        let commissionRates: Map<string, number>
+        try {
+          guard.throwIfLost()
+          const fetched = await fetchFillsForAccounts({
+            gatewayUri: credentials.gatewayUri,
+            systemName: credentials.systemName,
+            username: credentials.username,
+            password: credentials.password,
+            fcmId: credentials.fcmId,
+            ibId: credentials.ibId,
+            accountIds: connection.accountIds,
+            accounts: credentials.accounts,
+            historyStartDate: credentials.historyStartDate,
+            lookbackDays: DEFAULT_LOOKBACK_DAYS,
+            seenIdentityKeys: new Set(),
+          })
+          incomingFills = fetched.rawFills.filter(
+            (fill) => fill.accountId === accountNumber,
+          )
+          commissionRates = fetched.commissionRates
+        } catch (error) {
+          if (error instanceof ProtocolSyncLockError) throw error
+          console.error('[ADMIN-RESYNC] upstream fetch failed', error)
+          return { ...base, error: 'FETCH_FAILED' }
+        }
+
+        const existing = await loadExistingProtocolTrades(userId, accountNumber)
+        const hasStoredData =
+          before.tradeCount > 0 ||
+          before.fillCount > 0 ||
+          storedFills.length > 0 ||
+          existing.length > 0
+
+        if (incomingFills.length === 0 && hasStoredData) {
+          return { ...base, error: 'EMPTY_UPSTREAM_HISTORY' }
+        }
+
+        const merged = mergeFillLedgers(storedFills, incomingFills)
+        const prepared = prepareRithmicProtocolFills(merged)
+        const fillPartition = partitionIncomingFills(incomingFills, storedFills)
+        const ledgerFillIds = canonicalLedgerFillIds(merged)
+        const uncovered = uncoveredProtocolTrades(existing, ledgerFillIds)
+
+        const tickDetails = await prisma.tickDetails.findMany({
+          select: { ticker: true, tickSize: true, tickValue: true },
+        })
+        const tickBySymbol = new Map(
+          tickDetails.map((tick) => [
+            tick.ticker.toUpperCase(),
+            { tickSize: tick.tickSize, tickValue: tick.tickValue },
+          ]),
         )
-      } catch (error) {
-        console.error('[ADMIN-RESYNC] upstream fetch failed', error)
-        return { ...base, error: 'FETCH_FAILED' }
-      }
-
-      if (incomingFills.length === 0 && storedFills.length > 0) {
-        return { ...base, error: 'EMPTY_UPSTREAM_HISTORY' }
-      }
-
-      const prepared = deriveTradesFromFillLedger(storedFills, incomingFills)
-      if (storedFills.length > 0 && prepared.fills.length === 0) {
-        return { ...base, error: 'EMPTY_REBUILD' }
-      }
-
-      const tickDetails = await prisma.tickDetails.findMany({
-        select: { ticker: true, tickSize: true, tickValue: true },
-      })
-      const tickBySymbol = new Map(
-        tickDetails.map((tick) => [
-          tick.ticker.toUpperCase(),
-          { tickSize: tick.tickSize, tickValue: tick.tickValue },
-        ]),
-      )
-      const derived = buildTradesFromRithmicFills(
-        prepared.fills,
-        userId,
-        tickBySymbol,
-      )
-      const existing = await loadAnnotatedProtocolTrades(userId, accountNumber)
-      const withIds = derived.trades.map((trade) => ({
-        ...trade,
-        userId,
-        id: generatePersistedTradeUUID({ ...trade, userId }),
-      }))
-      const attached = reattachProtocolTradeAnnotations(withIds, existing)
-      const nets = summarizeFillLedgerNets(prepared.fills)
-      const warnings = rebuildWarnings(
-        nets,
-        storedFills,
-        incomingFills,
-      )
-      const proposed = proposedSnapshot(
-        attached.trades,
-        prepared.fills.length,
-        derived.openSkipped,
-        attached.preserved,
-        attached.unmatched.length,
-        nets,
-      )
-      if (
-        attached.unmatched.length > 0 &&
-        !params.allowUnmatchedAnnotations &&
-        !params.dryRun
-      ) {
-        return {
-          ...base,
-          wouldDelete: before,
-          proposed,
-          warnings,
-          error: 'UNMATCHED_ANNOTATIONS',
+        const derived = buildTradesFromRithmicFills(
+          prepared.fills,
+          userId,
+          tickBySymbol,
+          commissionRates,
+        )
+        const withIds = derived.trades.map((trade) => ({
+          ...trade,
+          userId,
+          id: generatePersistedTradeUUID({ ...trade, userId }),
+        }))
+        const attached = reattachProtocolTradeAnnotations(withIds, existing)
+        if (existing.length > 0 && attached.trades.length === 0 && uncovered.length === 0) {
+          return { ...base, error: 'EMPTY_REBUILD' }
         }
-      }
 
-      console.log(
-        `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} dryRun=${params.dryRun} ` +
-          `beforeTrades=${before.tradeCount} beforeFills=${before.fillCount} ` +
-          `proposedTrades=${proposed.tradeCount} proposedFills=${proposed.fillCount} ` +
-          `unmatchedAnnotations=${proposed.unmatchedAnnotations}`,
-      )
-
-      if (params.dryRun) {
-        return {
-          ...base,
-          complete: true,
-          wouldDelete: before,
-          proposed,
-          warnings,
+        const duplicateIds = duplicateRebuildTradeIds(
+          attached.trades.map((trade) => trade.id),
+        )
+        const swap = planProtocolTradeSwap({
+          existing,
+          rebuiltIds: attached.trades.map((trade) => trade.id),
+          uncoveredIds: uncovered.map((row) => row.id),
+          unmatchedIds: attached.unmatched.map((row) => row.id),
+          allowUnmatchedAnnotations: Boolean(params.allowUnmatchedAnnotations),
+        })
+        const nets = summarizeFillLedgerNets(prepared.fills)
+        const warnings = rebuildWarnings({
+          nets,
+          storedFills,
+          incomingFills,
+          existing,
+          uncoveredCount: uncovered.length,
+        })
+        const deletedPnl = existing
+          .filter((row) => swap.toDelete.includes(row.id))
+          .reduce((sum, row) => sum + row.pnl, 0)
+        const wouldDelete: AccountProtocolSnapshot = {
+          tradeCount: swap.toDelete.length,
+          pnl: deletedPnl,
+          fillCount: 0,
         }
-      }
+        const proposed = proposedSnapshot({
+          trades: attached.trades,
+          fillCount: merged.length,
+          openSkipped: derived.openSkipped,
+          annotatedPreserved: attached.preserved,
+          unmatchedAnnotations: attached.unmatched.length,
+          nets,
+          ledgerRowsAfterMerge: merged.length,
+          consolidatedFills: prepared.fills.length,
+          fillsInserted: fillPartition.inserts.length,
+          fillsUpdated: fillPartition.updates.length,
+          tradesDeleted: swap.toDelete.length,
+          tradesCreated: attached.trades.length,
+          tradesKept: swap.keepIds.length,
+          uncoveredTrades: uncovered.map(tradePreview),
+          unmatchedAnnotatedTrades: attached.unmatched.map(tradePreview),
+        })
 
-      const unmatchedKeepIds = params.allowUnmatchedAnnotations
-        ? attached.unmatched.map((row) => row.id)
-        : []
+        if (duplicateIds.length > 0 && !params.dryRun) {
+          return {
+            ...base,
+            wouldDelete,
+            proposed,
+            warnings,
+            error: 'DUPLICATE_TRADE_IDS',
+          }
+        }
 
-      let deletedTrades = 0
-      try {
-        await prisma.$transaction(
-          async (tx) => {
-            const current = await summarizeAccountProtocolData(
-              userId,
-              accountNumber,
-              tx as unknown as ProtocolDb,
-            )
-            if (
-              current.fillCount !== before.fillCount ||
-              current.tradeCount !== before.tradeCount
-            ) {
-              throw new Error('CONCURRENT_SYNC')
-            }
+        if (uncovered.length > 0 && !params.dryRun) {
+          return {
+            ...base,
+            wouldDelete,
+            proposed,
+            warnings,
+            error: 'UNCOVERED_TRADES',
+          }
+        }
 
-            const accountRows = await tx.account.findMany({
-              where: { userId, number: accountNumber },
-              select: { id: true, number: true },
-            })
-            const accountIdByNumber = new Map(
-              accountRows.map((account) => [account.number, account.id]),
-            )
+        if (
+          attached.unmatched.length > 0 &&
+          !params.allowUnmatchedAnnotations &&
+          !params.dryRun
+        ) {
+          return {
+            ...base,
+            wouldDelete,
+            proposed,
+            warnings,
+            error: 'UNMATCHED_ANNOTATIONS',
+          }
+        }
 
-            await upsertRithmicProtocolFills({
-              userId,
-              fills: incomingFills,
-              stored: storedFills,
-              accountIdByNumber,
-              connectionId: connection.connectionId,
-              db: tx as unknown as typeof prisma,
-            })
+        console.log(
+          `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} dryRun=${params.dryRun} ` +
+            `beforeTrades=${before.tradeCount} beforeFills=${before.fillCount} ` +
+            `proposedTrades=${proposed.tradeCount} proposedFills=${proposed.fillCount} ` +
+            `uncovered=${proposed.uncoveredTrades.length} unmatchedAnnotations=${proposed.unmatchedAnnotations}`,
+        )
 
-            const existingIds = existing.map((row) => row.id)
-            const toDelete = existingIds.filter(
-              (id) => !unmatchedKeepIds.includes(id),
-            )
-            if (toDelete.length > 0) {
-              const deleted = await tx.trade.deleteMany({
-                where: {
-                  userId,
-                  accountNumber,
-                  tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
-                  id: { in: toDelete },
-                },
-              })
-              deletedTrades = deleted.count
-              await tx.tradeAnalytics.deleteMany({
-                where: { tradeId: { in: toDelete } },
-              })
-            }
+        if (params.dryRun) {
+          return {
+            ...base,
+            complete: true,
+            wouldDelete,
+            proposed,
+            warnings,
+          }
+        }
 
-            const rows = attached.trades.map((trade) =>
-              tradeCreateRow(
-                trade as Trade & AnnotatedProtocolTrade,
+        let deletedTrades = 0
+        let createdCount = 0
+        try {
+          guard.throwIfLost()
+          await prisma.$transaction(
+            async (tx) => {
+              guard.throwIfLost()
+              await tx.$queryRaw`
+                SELECT id FROM "Trade"
+                WHERE "userId" = ${userId}
+                  AND "accountNumber" = ${accountNumber}
+                  AND ${RITHMIC_PROTOCOL_TRADE_TAG} = ANY("tags")
+                FOR UPDATE
+              `
+              const current = await summarizeAccountProtocolData(
                 userId,
-                accountIdByNumber.get(trade.accountNumber ?? accountNumber) ??
-                  null,
-              ),
-            )
-            if (rows.length > 0) {
-              await tx.trade.createMany({
-                data: rows,
-                skipDuplicates: true,
+                accountNumber,
+                tx as unknown as ProtocolDb,
+              )
+              const lockedExisting = await loadExistingProtocolTrades(
+                userId,
+                accountNumber,
+                tx as unknown as ProtocolDb,
+              )
+              if (
+                current.fillCount !== before.fillCount ||
+                current.tradeCount !== before.tradeCount ||
+                !sameIdSet(
+                  lockedExisting.map((row) => row.id),
+                  existing.map((row) => row.id),
+                )
+              ) {
+                throw new AdminApplyError('CONCURRENT_SYNC')
+              }
+
+              const accountRows = await tx.account.findMany({
+                where: { userId, number: accountNumber },
+                select: { id: true, number: true },
               })
-            }
-          },
-          { timeout: 120_000, maxWait: 15_000 },
-        )
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        if (message === 'CONCURRENT_SYNC') {
-          return { ...base, proposed, warnings, error: 'CONCURRENT_SYNC' }
+              const accountIdByNumber = new Map(
+                accountRows.map((account) => [account.number, account.id]),
+              )
+
+              await upsertRithmicProtocolFills({
+                userId,
+                fills: incomingFills,
+                stored: storedFills,
+                accountIdByNumber,
+                connectionId: connection.connectionId,
+                db: tx as unknown as typeof prisma,
+              })
+
+              if (swap.toDelete.length > 0) {
+                const deleted = await tx.trade.deleteMany({
+                  where: {
+                    userId,
+                    accountNumber,
+                    tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
+                    id: { in: swap.toDelete },
+                  },
+                })
+                deletedTrades = deleted.count
+              }
+              if (swap.analyticsDelete.length > 0) {
+                await tx.tradeAnalytics.deleteMany({
+                  where: { tradeId: { in: swap.analyticsDelete } },
+                })
+              }
+
+              const rows = attached.trades.map((trade) =>
+                tradeCreateRow(
+                  trade as Trade & AnnotatedProtocolTrade,
+                  userId,
+                  accountIdByNumber.get(trade.accountNumber ?? accountNumber) ??
+                    null,
+                ),
+              )
+              if (rows.length > 0) {
+                const created = await tx.trade.createMany({
+                  data: rows,
+                  skipDuplicates: true,
+                })
+                createdCount = created.count
+                if (created.count !== rows.length) {
+                  throw new AdminApplyError(
+                    'INSERT_MISMATCH',
+                    `createMany inserted ${created.count} of ${rows.length} rebuilt trades`,
+                  )
+                }
+              }
+            },
+            { timeout: 120_000, maxWait: 15_000 },
+          )
+        } catch (error) {
+          if (error instanceof ProtocolSyncLockError) throw error
+          const code =
+            error instanceof AdminApplyError
+              ? error.code
+              : error instanceof Error && error.message === 'CONCURRENT_SYNC'
+                ? 'CONCURRENT_SYNC'
+                : undefined
+          if (code === 'CONCURRENT_SYNC' || code === 'INSERT_MISMATCH') {
+            return { ...base, proposed, warnings, error: code }
+          }
+          console.error('[ADMIN-RESYNC] apply failed; stored ledger left unchanged', error)
+          return { ...base, proposed, warnings, error: 'APPLY_FAILED' }
         }
-        console.error('[ADMIN-RESYNC] apply failed; stored ledger left unchanged', error)
-        return { ...base, proposed, warnings, error: 'APPLY_FAILED' }
-      }
 
-      await invalidateCachesOnSuccess(userId)
-      const afterSnapshot = await summarizeAccountProtocolData(
-        userId,
-        accountNumber,
-      )
-      const after = {
-        ...afterSnapshot,
-        savedCount: attached.trades.length,
-        tradesCount: attached.trades.length,
-      }
-      console.log(
-        `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} dryRun=false ` +
-          `deletedTrades=${deletedTrades} deletedFills=0 ` +
-          `beforeTrades=${before.tradeCount} afterTrades=${after.tradeCount} ` +
-          `saved=${after.savedCount}`,
-      )
-      return {
-        ...base,
-        complete: true,
-        wouldDelete: before,
-        proposed,
-        warnings,
-        deleted: { trades: deletedTrades, fills: 0 },
-        after,
-      }
-    })
+        try {
+          guard.throwIfLost()
+        } catch {
+          warnings.push(
+            'Advisory lock connection was lost after the rebuild committed.',
+          )
+        }
+
+        try {
+          await invalidateCachesOnSuccess(userId)
+        } catch (error) {
+          console.error('[ADMIN-RESYNC] cache invalidation failed after commit', error)
+          warnings.push('Cache invalidation failed after the rebuild committed.')
+        }
+
+        try {
+          const afterSnapshot = await summarizeAccountProtocolData(
+            userId,
+            accountNumber,
+          )
+          const after = {
+            ...afterSnapshot,
+            savedCount: createdCount,
+            tradesCount: afterSnapshot.tradeCount,
+          }
+          console.log(
+            `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} dryRun=false ` +
+              `deletedTrades=${deletedTrades} deletedFills=0 created=${createdCount} ` +
+              `beforeTrades=${before.tradeCount} afterTrades=${after.tradeCount} ` +
+              `saved=${after.savedCount}`,
+          )
+          return {
+            ...base,
+            complete: true,
+            committed: true,
+            wouldDelete,
+            proposed,
+            warnings,
+            deleted: { trades: deletedTrades, fills: 0 },
+            after,
+          }
+        } catch (error) {
+          console.error('[ADMIN-RESYNC] post-commit read failed', error)
+          return {
+            ...base,
+            complete: true,
+            committed: true,
+            wouldDelete,
+            proposed,
+            warnings: [
+              ...warnings,
+              'Rebuild committed; a follow-up read failed. Stored trades were replaced.',
+            ],
+            deleted: { trades: deletedTrades, fills: 0 },
+            after: {
+              tradeCount: proposed.tradeCount + swap.keepIds.length,
+              pnl: proposed.pnl,
+              fillCount: proposed.fillCount,
+              savedCount: createdCount,
+              tradesCount: proposed.tradeCount + swap.keepIds.length,
+            },
+            error: 'POST_COMMIT_WARNING',
+          }
+        }
+      },
+    )
   } catch (error) {
+    if (error instanceof ProtocolSyncLockError) {
+      return { ...unlockedBase, error: error.code }
+    }
     console.error('[ADMIN-RESYNC] failed before apply', error)
-    return { ...base, error: 'SYNC_FAILED' }
+    return { ...unlockedBase, error: 'SYNC_FAILED' }
   }
 }
 
-function proposedSnapshot(
-  trades: Array<{ pnl: number }>,
-  fillCount: number,
-  openSkipped: number,
-  annotatedPreserved: number,
-  unmatchedAnnotations: number,
-  nets: FillLedgerNet[],
-): ProposedRebuildSnapshot {
+function proposedSnapshot(params: {
+  trades: Array<{ pnl: number }>
+  fillCount: number
+  openSkipped: number
+  annotatedPreserved: number
+  unmatchedAnnotations: number
+  nets: FillLedgerNet[]
+  ledgerRowsAfterMerge: number
+  consolidatedFills: number
+  fillsInserted: number
+  fillsUpdated: number
+  tradesDeleted: number
+  tradesCreated: number
+  tradesKept: number
+  uncoveredTrades: RebuildTradePreview[]
+  unmatchedAnnotatedTrades: RebuildTradePreview[]
+}): ProposedRebuildSnapshot {
   return {
-    tradeCount: trades.length,
-    pnl: trades.reduce((sum, trade) => sum + trade.pnl, 0),
-    fillCount,
-    openSkipped,
-    annotatedPreserved,
-    unmatchedAnnotations,
-    nets,
+    tradeCount: params.trades.length,
+    pnl: params.trades.reduce((sum, trade) => sum + trade.pnl, 0),
+    fillCount: params.fillCount,
+    openSkipped: params.openSkipped,
+    annotatedPreserved: params.annotatedPreserved,
+    unmatchedAnnotations: params.unmatchedAnnotations,
+    nets: params.nets,
+    ledgerRowsAfterMerge: params.ledgerRowsAfterMerge,
+    consolidatedFills: params.consolidatedFills,
+    fillsInserted: params.fillsInserted,
+    fillsUpdated: params.fillsUpdated,
+    tradesDeleted: params.tradesDeleted,
+    tradesCreated: params.tradesCreated,
+    tradesKept: params.tradesKept,
+    uncoveredTrades: params.uncoveredTrades,
+    unmatchedAnnotatedTrades: params.unmatchedAnnotatedTrades,
   }
 }
 
-function rebuildWarnings(
-  nets: FillLedgerNet[],
-  storedFills: RithmicProtocolFill[],
-  incomingFills: RithmicProtocolFill[],
-): string[] {
+function rebuildWarnings(params: {
+  nets: FillLedgerNet[]
+  storedFills: RithmicProtocolFill[]
+  incomingFills: RithmicProtocolFill[]
+  existing: ExistingProtocolTrade[]
+  uncoveredCount: number
+}): string[] {
   const warnings: string[] = []
-  if (nets.length > 0) {
+  if (params.nets.length > 0) {
     warnings.push(
       'Terminal fill net is non-zero. A rebuild from fills alone cannot tell a live position from missing opening history; supply a broker position snapshot before altering fills.',
     )
   }
-  const storedEarliest = earliestFillClock(storedFills)
-  const incomingEarliest = earliestFillClock(incomingFills)
+  if (params.uncoveredCount > 0) {
+    warnings.push(
+      `${params.uncoveredCount} stored protocol trade(s) have legs outside the merged fill ledger. Live apply refuses with UNCOVERED_TRADES so those rows are not deleted.`,
+    )
+  }
+  const storedFillEarliest = earliestFillClock(params.storedFills)
+  const storedTradeEarliest = earliestTradeClock(params.existing)
+  const storedEarliest =
+    storedFillEarliest == null
+      ? storedTradeEarliest
+      : storedTradeEarliest == null
+        ? storedFillEarliest
+        : Math.min(storedFillEarliest, storedTradeEarliest)
+  const incomingEarliest = earliestFillClock(params.incomingFills)
   if (
     storedEarliest != null &&
     incomingEarliest != null &&
     incomingEarliest > storedEarliest
   ) {
     warnings.push(
-      'Upstream history starts later than the stored ledger. Stored fills were kept and merged so the sliding window cannot erase older rows.',
+      'Upstream history starts later than stored fills or trades. Stored fills were kept and merged; uncovered trades are retained and live apply refuses rather than deleting history the window cannot recreate.',
     )
   }
   return warnings

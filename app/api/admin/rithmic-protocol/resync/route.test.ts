@@ -33,7 +33,7 @@ describe('POST /api/admin/rithmic-protocol/resync', () => {
     resyncRithmicProtocolAccount.mockReset()
   })
 
-  it('rejects unauthenticated callers', async () => {
+  it('rejects unauthenticated callers without leaking the cron secret', async () => {
     authorizeAdminRequest.mockResolvedValue({ ok: false, status: 401 })
     const response = await post({
       userId: 'user-1',
@@ -41,9 +41,11 @@ describe('POST /api/admin/rithmic-protocol/resync', () => {
       dryRun: true,
     })
     expect(response.status).toBe(401)
-    await expect(response.json()).resolves.toMatchObject({
+    const body = await response.json()
+    expect(body).toMatchObject({
       error: { code: 'unauthorized' },
     })
+    expect(JSON.stringify(body)).not.toMatch(/CRON_SECRET/)
     expect(resyncRithmicProtocolAccount).not.toHaveBeenCalled()
   })
 
@@ -176,5 +178,59 @@ describe('POST /api/admin/rithmic-protocol/resync', () => {
     const body = await response.json()
     expect(body.error.code).toBe('internal_error')
     expect(body.result.error).toBe('FETCH_FAILED')
+    expect(body.error.hint).toMatch(/was not deleted/)
+  })
+
+  it('returns 409 for uncovered trades without writing a success body', async () => {
+    authorizeAdminRequest.mockResolvedValue({
+      ok: true,
+      via: 'session',
+      actorUserId: 'admin-1',
+    })
+    resyncRithmicProtocolAccount.mockResolvedValue({
+      dryRun: false,
+      complete: false,
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      before: { tradeCount: 2, pnl: 15, fillCount: 2 },
+      error: 'UNCOVERED_TRADES',
+      proposed: { uncoveredTrades: [{ id: 't2', pnl: 5 }] },
+    })
+    const response = await post({
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      dryRun: false,
+    })
+    expect(response.status).toBe(409)
+    const body = await response.json()
+    expect(body.error.code).toBe('conflict')
+    expect(body.result.error).toBe('UNCOVERED_TRADES')
+  })
+
+  it('returns 200 after a committed rebuild even if a follow-up read failed', async () => {
+    authorizeAdminRequest.mockResolvedValue({
+      ok: true,
+      via: 'cron',
+    })
+    resyncRithmicProtocolAccount.mockResolvedValue({
+      dryRun: false,
+      complete: true,
+      committed: true,
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      before: { tradeCount: 1, pnl: 10, fillCount: 2 },
+      deleted: { trades: 1, fills: 0 },
+      error: 'POST_COMMIT_WARNING',
+    })
+    const response = await post({
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      dryRun: false,
+    })
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.error).toBe('POST_COMMIT_WARNING')
+    expect(body.committed).toBe(true)
+    expect(JSON.stringify(body)).not.toMatch(/was not deleted/i)
   })
 })

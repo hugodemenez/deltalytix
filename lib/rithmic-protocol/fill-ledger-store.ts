@@ -156,11 +156,10 @@ export async function upsertRithmicProtocolFills(params: {
     })
   }
 
-  for (let offset = 0; offset < updates.length; offset += UPSERT_CHUNK) {
-    const chunk = updates.slice(offset, offset + UPSERT_CHUNK)
+  const applyUpdates = async (store: ProtocolStore, chunk: RithmicProtocolFill[]) => {
     for (const fill of chunk) {
       const row = toRow(fill)
-      await db.rithmicProtocolFill.updateMany({
+      await store.rithmicProtocolFill.updateMany({
         where: {
           userId: params.userId,
           identityKey: row.identityKey,
@@ -184,6 +183,17 @@ export async function upsertRithmicProtocolFills(params: {
           connectionId: row.connectionId,
           updatedAt: row.updatedAt,
         },
+      })
+    }
+  }
+
+  for (let offset = 0; offset < updates.length; offset += UPSERT_CHUNK) {
+    const chunk = updates.slice(offset, offset + UPSERT_CHUNK)
+    if (params.db) {
+      await applyUpdates(db, chunk)
+    } else {
+      await prisma.$transaction(async (tx) => {
+        await applyUpdates(tx as unknown as ProtocolStore, chunk)
       })
     }
   }

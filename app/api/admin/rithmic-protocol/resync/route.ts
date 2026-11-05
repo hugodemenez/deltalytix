@@ -44,8 +44,8 @@ export async function POST(request: NextRequest) {
           : 'This user is not on the admin allowlist.',
       hint:
         auth.status === 401
-          ? 'Sign in as an allowlisted admin or send Authorization: Bearer $CRON_SECRET.'
-          : 'Set ADMIN_USER_ID / ADMIN_USER_IDS to this user, or use the cron secret.',
+          ? 'Sign in as an allowlisted admin.'
+          : 'This account is not on the admin allowlist.',
     })
   }
 
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
           : undefined,
     })
 
-    if (!result.error) {
+    if (!result.error || result.error === 'POST_COMMIT_WARNING') {
       return NextResponse.json(result)
     }
     return serviceErrorResponse(result)
@@ -204,13 +204,34 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'conflict',
         message: 'Annotated trades would not survive the rebuild.',
-        hint: 'Inspect result.proposed.unmatchedAnnotations. Pass allowUnmatchedAnnotations: true only after review.',
+        hint: 'Inspect result.proposed.unmatchedAnnotatedTrades. Pass allowUnmatchedAnnotations: true only after review.',
+      }
+    case 'UNCOVERED_TRADES':
+      return {
+        code: 'conflict',
+        message: 'Stored trades have fill legs outside the merged ledger.',
+        hint: 'Inspect result.proposed.uncoveredTrades. Those rows are retained; a sliding window cannot recreate them.',
+      }
+    case 'DUPLICATE_TRADE_IDS':
+    case 'INSERT_MISMATCH':
+      return {
+        code: 'conflict',
+        message: 'Rebuilt trade rows did not insert as planned.',
+        hint: 'Stored data was left unchanged. Retry a dry-run; skipDuplicates cannot report a full rebuild.',
       }
     case 'CONCURRENT_SYNC':
       return {
         code: 'conflict',
         message: 'The account changed while the rebuild was running.',
         hint: 'Retry the dry-run, then apply once no ordinary sync is in flight.',
+      }
+    case 'LOCK_TIMEOUT':
+    case 'LOCK_UNAVAILABLE':
+    case 'LOCK_LOST':
+      return {
+        code: 'conflict',
+        message: 'Could not take the protocol sync lock for this account.',
+        hint: 'Confirm DIRECT_URL is session-mode Postgres, then retry. Ordinary sync uses the same account lock.',
       }
     case 'INVALID_STORED_CREDENTIALS':
       return {

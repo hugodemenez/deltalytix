@@ -94,8 +94,9 @@ export function prepareRithmicProtocolFills(
     fills: consolidated,
     stats: {
       received: fills.length,
-      afterDedup: consolidated.length,
-      dropped: deduped.stats.dropped,
+      afterDedup: deduped.fills.length,
+      afterConsolidate: consolidated.length,
+      dropped: { ...deduped.stats.dropped },
     },
   }
 }
@@ -194,6 +195,42 @@ export function partitionIncomingFills(
     skipped += 1
   }
   return { inserts, updates, skipped }
+}
+
+export type RebuildTradeRef = {
+  id: string
+  instrument?: string | null
+  entryId?: string | null
+  closeId?: string | null
+  pnl?: number
+}
+
+/**
+ * Stored protocol trades whose entry or close fill is missing from the
+ * merged ledger. A sliding ShowFillHistory window can leave those legs
+ * out; deleting the row and reporting success would drop history the
+ * rebuild cannot recreate.
+ */
+export function uncoveredProtocolTrades<T extends RebuildTradeRef>(
+  existing: T[],
+  ledgerFillIds: Set<string>,
+): T[] {
+  return existing.filter((row) => {
+    const entryId = canonicalRithmicFillId(row.entryId)
+    const closeId = canonicalRithmicFillId(row.closeId)
+    if (!entryId || !closeId) return true
+    return !ledgerFillIds.has(entryId) || !ledgerFillIds.has(closeId)
+  })
+}
+
+export function duplicateRebuildTradeIds(ids: string[]): string[] {
+  const seen = new Set<string>()
+  const duplicates = new Set<string>()
+  for (const id of ids) {
+    if (seen.has(id)) duplicates.add(id)
+    else seen.add(id)
+  }
+  return [...duplicates]
 }
 
 export function canonicalLedgerFillIds(

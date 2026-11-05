@@ -16,6 +16,7 @@ import {
   reattachProtocolTradeAnnotations,
   shouldReplaceStoredFill,
   summarizeFillLedgerNets,
+  uncoveredProtocolTrades,
 } from './fill-ledger'
 
 const ACCOUNT = 'LFE050-TEST-LEDGER'
@@ -144,6 +145,61 @@ describe('fill ledger upsert / dedupe', () => {
     const prepared = prepareRithmicProtocolFills([history, replayTwin])
     expect(prepared.fills).toHaveLength(1)
     expect(prepared.fills[0].source).toBe('history')
+    expect(prepared.stats.afterDedup).toBe(1)
+    expect(prepared.stats.afterConsolidate).toBe(1)
+  })
+
+  it('keeps afterDedup as the pre-consolidate count', () => {
+    const pieces = markFillSource(
+      [
+        fill({
+          fillId: '1245660',
+          transactionType: 'SELL',
+          fillPrice: 7761,
+          fillSize: 1,
+          ssboe: at('2026-09-30T13:57:21Z'),
+        }),
+        fill({
+          fillId: '1245661',
+          transactionType: 'SELL',
+          fillPrice: 7761,
+          fillSize: 1,
+          ssboe: at('2026-09-30T13:57:21Z'),
+        }),
+      ],
+      'replay',
+    )
+    const prepared = prepareRithmicProtocolFills(pieces)
+    expect(prepared.stats.afterDedup).toBe(2)
+    expect(prepared.stats.afterConsolidate).toBe(1)
+    expect(prepared.fills).toHaveLength(1)
+  })
+})
+
+describe('uncoveredProtocolTrades', () => {
+  it('flags stored trades whose legs are missing from the merged ledger', () => {
+    const uncovered = uncoveredProtocolTrades(
+      [
+        {
+          id: 'covered',
+          entryId: '1001',
+          closeId: '1002',
+          pnl: 1,
+        },
+        {
+          id: 'missing-close',
+          entryId: '1001',
+          closeId: 'y',
+          pnl: 2,
+        },
+        {
+          id: 'no-ids',
+          pnl: 3,
+        },
+      ],
+      canonicalLedgerFillIds([day1Buy, day1Sell]),
+    )
+    expect(uncovered.map((row) => row.id)).toEqual(['missing-close', 'no-ids'])
   })
 })
 

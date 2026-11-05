@@ -5,6 +5,7 @@ export type FillDropReason = 'duplicate_id' | 'duplicate_fields'
 export interface DedupeFillsStats {
   received: number
   afterDedup: number
+  afterConsolidate?: number
   dropped: Partial<Record<FillDropReason, number>>
 }
 
