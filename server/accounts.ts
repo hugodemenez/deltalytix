@@ -648,7 +648,8 @@ function calculateAccountBalance(
  * @returns Array of accounts with computed metrics
  */
 export async function calculateAccountMetricsAction(
-  accounts: Account[]
+  accounts: Account[],
+  timezone?: string
 ): Promise<Account[]> {
   if (accounts.length === 0) {
     return [];
@@ -674,5 +675,5 @@ export async function calculateAccountMetricsAction(
   });
 
   // Delegate to shared utility so both server and client compute identically
-  return computeMetricsForAccounts(accounts, trades as Trade[])
+  return computeMetricsForAccounts(accounts, trades as Trade[], timezone)
 }

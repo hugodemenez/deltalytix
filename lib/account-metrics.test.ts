@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import type { Trade as PrismaTrade } from "@/prisma/generated/prisma/browser"
 import type { Account } from "@/context/data-provider"
 import { computeAccountMetrics, computeMetricsForAccounts } from "./account-metrics"
+import { formatCalendarData } from "./utils"
 
 const ACCOUNT_NUMBER = "LEGENDS-150K"
 
@@ -507,5 +508,66 @@ describe("computeAccountMetrics buffer handling", () => {
     expect(account.metrics?.totalProfit).toBeCloseTo(2_502.8, 5)
     expect(account.metrics?.currentBalance).toBeCloseTo(152_502.8, 5)
     expect(account.balanceToDate).toBeCloseTo(152_502.8, 5)
+  })
+})
+
+describe("computeAccountMetrics timezone", () => {
+  // New York user (EDT, UTC-4). Two trades are in the evening, after 20:00 ET, which is the next day in UTC.
+  const timezone = "America/New_York"
+  const trades = [
+    makeTrade("tue-morning", 600, "2026-10-13T14:00:00.000Z"), // Tue 10:00 ET
+    makeTrade("tue-evening", 500, "2026-10-13T22:30:00.000Z"), // Tue 18:30 ET
+    makeTrade("wed-morning", 400, "2026-10-14T14:00:00.000Z"), // Wed 10:00 ET
+    makeTrade("wed-evening", 100, "2026-10-15T00:30:00.000Z"), // Wed 20:30 ET, Thu in UTC
+  ]
+  const account = makeAccount({ buffer: 0, profitTarget: 3_000, drawdownThreshold: 2_000 })
+
+  it("groups daily P&L and trading days by the user's calendar day", () => {
+    const { metrics, dailyMetrics } = computeAccountMetrics(account, trades, timezone)
+
+    expect(metrics.dailyPnL).toEqual({ "2026-10-13": 1_100, "2026-10-14": 500 })
+    expect(metrics.totalTradingDays).toBe(2)
+    expect(metrics.validTradingDays).toBe(2)
+    expect(dailyMetrics.map((day) => day.pnl)).toEqual([1_100, 500])
+  })
+
+  it("matches the calendar's day buckets for the same trades", () => {
+    const { metrics } = computeAccountMetrics(account, trades, timezone)
+    const calendar = formatCalendarData(trades, [account], timezone)
+    const calendarPnL = Object.fromEntries(
+      Object.entries(calendar).map(([date, day]) => [date, (day as { pnl: number }).pnl])
+    )
+
+    expect(metrics.dailyPnL).toEqual(calendarPnL)
+  })
+
+  it("passes the timezone through computeMetricsForAccounts", () => {
+    const [withMetrics] = computeMetricsForAccounts([account], trades, timezone)
+
+    expect(withMetrics.metrics?.totalTradingDays).toBe(2)
+  })
+
+  it("keeps UTC days when no timezone is given", () => {
+    const { metrics } = computeAccountMetrics(account, trades)
+
+    expect(metrics.dailyPnL).toEqual({ "2026-10-13": 1_100, "2026-10-14": 400, "2026-10-15": 100 })
+    expect(metrics.totalTradingDays).toBe(3)
+  })
+
+  it("falls back to UTC days for an unknown timezone", () => {
+    const { metrics } = computeAccountMetrics(account, trades, "Not/A_Zone")
+
+    expect(metrics.totalTradingDays).toBe(3)
+  })
+
+  it("puts a payout on the user's calendar day", () => {
+    const withPayout = makeAccount({
+      buffer: 0,
+      payouts: [makePayout(300, "2026-10-15T01:00:00.000Z", "PAID")], // Wed 21:00 ET
+    })
+    const { dailyMetrics } = computeAccountMetrics(withPayout, trades, timezone)
+
+    expect(dailyMetrics).toHaveLength(2)
+    expect(dailyMetrics[1].payout?.amount).toBe(300)
   })
 })

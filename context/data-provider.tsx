@@ -501,7 +501,8 @@ export const DataProvider: React.FC<{
             }
 
             const accountsWithMetrics = await calculateAccountMetricsAction(
-              sharedData.groups?.flatMap((group) => group.accounts) || []
+              sharedData.groups?.flatMap((group) => group.accounts) || [],
+              timezone
             );
             setGroups(sharedData.groups || []);
             setAccounts(accountsWithMetrics);
@@ -579,7 +580,8 @@ export const DataProvider: React.FC<{
 
       // Calculate metrics for each account
       const accountsWithMetrics = await calculateAccountMetricsAction(
-        data.accounts || []
+        data.accounts || [],
+        timezone
       );
       setAccounts(accountsWithMetrics);
 
@@ -759,7 +761,8 @@ export const DataProvider: React.FC<{
         }
 
         const accountsWithMetrics = await calculateAccountMetricsAction(
-          data.accounts || []
+          data.accounts || [],
+          timezone
         );
         setAccounts(accountsWithMetrics);
 
@@ -793,6 +796,7 @@ export const DataProvider: React.FC<{
       setTickDetails,
       setIsFirstConnection,
       loadStripeSubscription,
+      timezone,
     ]
   );
 
@@ -1074,7 +1078,8 @@ export const DataProvider: React.FC<{
                 considerBuffer: createdAccount.considerBuffer ?? considerBuffer,
               },
             ],
-            trades
+            trades,
+            timezone
           );
           const accountWithMetrics = preserveAccountConnection(
             accountsWithMetrics[0],
@@ -1116,7 +1121,8 @@ export const DataProvider: React.FC<{
               considerBuffer: updatedAccount.considerBuffer ?? considerBuffer,
             },
           ],
-          trades
+          trades,
+          timezone
         );
         const accountWithMetrics = preserveAccountConnection(
           accountsWithMetrics[0],
@@ -1263,7 +1269,7 @@ export const DataProvider: React.FC<{
         throw error;
       }
     },
-    [supabaseUser?.id, accounts, setAccounts, groups, setGroups, trades]
+    [supabaseUser?.id, accounts, setAccounts, groups, setGroups, trades, timezone]
   );
 
   // Add createGroup function
@@ -1423,7 +1429,8 @@ export const DataProvider: React.FC<{
         if (affectedAccount) {
           const accountsWithMetrics = computeMetricsForAccounts(
             [affectedAccount],
-            trades
+            trades,
+            timezone
           );
           const accountWithMetrics = accountsWithMetrics[0];
 
@@ -1441,7 +1448,7 @@ export const DataProvider: React.FC<{
         throw error;
       }
     },
-    [supabaseUser?.id, isSharedView, accounts, setAccounts, trades]
+    [supabaseUser?.id, isSharedView, accounts, setAccounts, trades, timezone]
   );
 
   // Add deleteAccount function
@@ -1490,7 +1497,8 @@ export const DataProvider: React.FC<{
           if (accountToRecalculate) {
             const accountsWithMetrics = computeMetricsForAccounts(
               [accountToRecalculate],
-              trades
+              trades,
+              timezone
             );
             const accountWithMetrics = accountsWithMetrics[0];
 
@@ -1511,7 +1519,7 @@ export const DataProvider: React.FC<{
         throw error;
       }
     },
-    [supabaseUser?.id, isSharedView, accounts, setAccounts, trades]
+    [supabaseUser?.id, isSharedView, accounts, setAccounts, trades, timezone]
   );
 
   const changeIsFirstConnection = useCallback(
