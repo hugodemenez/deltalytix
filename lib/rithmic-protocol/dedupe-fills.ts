@@ -1,9 +1,6 @@
 import type { RithmicProtocolFill } from './types'
 
-export type FillDropReason =
-  | 'duplicate_id'
-  | 'duplicate_fields'
-  | 'pre_window_covers'
+export type FillDropReason = 'duplicate_id' | 'duplicate_fields'
 
 export interface DedupeFillsStats {
   received: number

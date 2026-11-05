@@ -13,8 +13,9 @@ import {
   partitionIncomingFills,
   phantomProtocolTradeIds,
   prepareRithmicProtocolFills,
+  reattachProtocolTradeAnnotations,
   shouldReplaceStoredFill,
-  trimPreWindowOpeningCovers,
+  summarizeFillLedgerNets,
 } from './fill-ledger'
 
 const ACCOUNT = 'LFE050-TEST-LEDGER'
@@ -249,35 +250,10 @@ describe('gap then fill closes leftover without inventing overnight short', () =
   })
 })
 
-describe('pre-window opening covers (2-contract MESZ6 imbalance)', () => {
-  // Pattern only — no production fill ids. A 2-lot MES long opened before
-  // the ShowFillHistory window; the ledger starts on the covering sells
-  // (328 buys vs 330 sells at scale). FIFO from flat then carries a 2-lot
-  // short and pairs it with later-session buys (multi-day phantom shorts).
-  const preWindowCovers = markFillSource(
-    [
-      fill({
-        fillId: 'cover-1',
-        fillDate: '20260930',
-        transactionType: 'SELL',
-        fillPrice: 7802,
-        fillSize: 1,
-        ssboe: at('2026-09-30T13:50:00Z'),
-      }),
-      fill({
-        fillId: 'cover-2',
-        fillDate: '20260930',
-        transactionType: 'SELL',
-        fillPrice: 7802.25,
-        fillSize: 1,
-        ssboe: at('2026-09-30T13:50:01Z'),
-      }),
-    ],
-    'history',
-  )
-  const sameDayLong = [day1Buy, day1Sell]
-  const nextDayLong = [day3Buy, day3Sell]
-  const imbalanced = [...preWindowCovers, ...sameDayLong, ...nextDayLong]
+describe('prepare does not rewrite fills from a terminal net', () => {
+  // Fills cannot tell a live short from missing opening buys. The old
+  // trimPreWindowOpeningCovers heuristic always chose "missing history"
+  // and rewrote real trades. prepare must leave the stream intact.
 
   function signedNet(rows: RithmicProtocolFill[]) {
     return rows.reduce((sum, row) => {
@@ -286,70 +262,181 @@ describe('pre-window opening covers (2-contract MESZ6 imbalance)', () => {
     }, 0)
   }
 
-  function overnightShorts(
-    trades: Array<{ side: string | null; entryDate: string; closeDate: string }>,
-  ) {
-    return trades.filter(
-      (trade) =>
-        trade.side === 'Short' &&
-        trade.entryDate.slice(0, 10) !== trade.closeDate.slice(0, 10),
+  it('counterexample A: scale-out of a live short keeps P&L and the open lot', () => {
+    const fills = markFillSource(
+      [
+        fill({
+          fillId: 'F1',
+          fillDate: '20260930',
+          transactionType: 'SELL',
+          fillPrice: 100,
+          ssboe: at('2026-09-30T14:00:00Z'),
+        }),
+        fill({
+          fillId: 'F2',
+          fillDate: '20261001',
+          transactionType: 'SELL',
+          fillPrice: 110,
+          ssboe: at('2026-10-01T14:00:00Z'),
+        }),
+        fill({
+          fillId: 'F3',
+          fillDate: '20261002',
+          transactionType: 'BUY',
+          fillPrice: 105,
+          ssboe: at('2026-10-02T14:00:00Z'),
+        }),
+      ],
+      'history',
     )
-  }
-
-  it('raw ledger is two sells heavy and FIFO invents an overnight short', () => {
-    expect(signedNet(imbalanced)).toBe(-2)
+    const prepared = prepareRithmicProtocolFills(fills)
+    expect(prepared.fills.map((row) => row.fillId)).toEqual(['F1', 'F2', 'F3'])
+    expect('pre_window_covers' in prepared.stats.dropped).toBe(false)
     const { trades, openSkipped } = buildTradesFromRithmicFills(
-      imbalanced,
+      prepared.fills,
+      'u1',
+      tickBySymbol,
+    )
+    expect(openSkipped).toBe(1)
+    expect(trades).toHaveLength(1)
+    expect(trades[0].side).toBe('Short')
+    expect(trades[0].entryId).toBe('F1')
+    expect(trades[0].closeId).toBe('F3')
+    expect(Number(trades[0].entryPrice)).toBe(100)
+    expect(Number(trades[0].closePrice)).toBe(105)
+  })
+
+  it('counterexample B: partial cover of a live short is not resized', () => {
+    const fills = markFillSource(
+      [
+        fill({
+          fillId: 'S2',
+          fillDate: '20260930',
+          transactionType: 'SELL',
+          fillPrice: 100,
+          fillSize: 2,
+          ssboe: at('2026-09-30T14:00:00Z'),
+        }),
+        fill({
+          fillId: 'B1',
+          fillDate: '20261001',
+          fillPrice: 95,
+          fillSize: 1,
+          ssboe: at('2026-10-01T14:00:00Z'),
+        }),
+      ],
+      'history',
+    )
+    const prepared = prepareRithmicProtocolFills(fills)
+    expect(prepared.fills[0]?.fillSize).toBe(2)
+    expect(prepared.fills.map((row) => row.fillId)).toEqual(['S2', 'B1'])
+    const { trades, openSkipped } = buildTradesFromRithmicFills(
+      prepared.fills,
+      'u1',
+      tickBySymbol,
+    )
+    expect(openSkipped).toBe(1)
+    expect(trades).toHaveLength(1)
+    expect(trades[0].side).toBe('Short')
+  })
+
+  it('counterexample C: a live long is not turned into an invented overnight short', () => {
+    const fills = markFillSource(
+      [
+        fill({
+          fillId: 'B1',
+          fillDate: '20260930',
+          fillPrice: 100,
+          ssboe: at('2026-09-30T14:00:00Z'),
+        }),
+        fill({
+          fillId: 'S1',
+          fillDate: '20261002',
+          transactionType: 'SELL',
+          fillPrice: 110,
+          ssboe: at('2026-10-02T14:00:00Z'),
+        }),
+        fill({
+          fillId: 'B2',
+          fillDate: '20261004',
+          fillPrice: 105,
+          fillSize: 2,
+          ssboe: at('2026-10-04T14:00:00Z'),
+        }),
+      ],
+      'history',
+    )
+    const prepared = prepareRithmicProtocolFills(fills)
+    expect(prepared.fills.map((row) => row.fillId)).toEqual(['B1', 'S1', 'B2'])
+    const { trades, openSkipped } = buildTradesFromRithmicFills(
+      prepared.fills,
       'u1',
       tickBySymbol,
     )
     expect(openSkipped).toBe(2)
-    expect(overnightShorts(trades).length).toBeGreaterThan(0)
+    expect(trades).toHaveLength(1)
+    expect(trades[0].side).toBe('Long')
+    expect(trades[0].entryId).toBe('B1')
+    expect(trades[0].closeId).toBe('S1')
   })
 
-  it('trims only the leading extra sells, not a later live short', () => {
-    const { fills, trimmed } = trimPreWindowOpeningCovers(imbalanced)
-    expect(trimmed).toEqual([
-      {
-        accountId: ACCOUNT,
-        instrument: 'MES',
-        side: 'S',
-        quantity: 2,
-      },
+  it('counterexample D: a UTC-midnight scalp does not drop the first fill', () => {
+    const fills = markFillSource(
+      [
+        fill({
+          fillId: 'F1',
+          fillDate: '20260930',
+          transactionType: 'SELL',
+          fillPrice: 100,
+          ssboe: at('2026-09-30T14:00:00Z'),
+        }),
+        fill({
+          fillId: 'F2',
+          fillDate: '20260930',
+          fillPrice: 98,
+          ssboe: at('2026-09-30T15:00:00Z'),
+        }),
+        fill({
+          fillId: 'F3',
+          fillDate: '20261001',
+          fillPrice: 99,
+          ssboe: at('2026-10-01T23:59:50Z'),
+        }),
+        fill({
+          fillId: 'F4',
+          fillDate: '20261002',
+          transactionType: 'SELL',
+          fillPrice: 99.5,
+          ssboe: at('2026-10-02T00:00:20Z'),
+        }),
+        fill({
+          fillId: 'F5',
+          fillDate: '20261002',
+          transactionType: 'SELL',
+          fillPrice: 101,
+          ssboe: at('2026-10-02T14:00:00Z'),
+        }),
+      ],
+      'history',
+    )
+    const prepared = prepareRithmicProtocolFills(fills)
+    expect(prepared.fills.map((row) => row.fillId)).toEqual([
+      'F1',
+      'F2',
+      'F3',
+      'F4',
+      'F5',
     ])
-    expect(signedNet(fills)).toBe(0)
-    expect(fills.map((row) => row.fillId)).toEqual([
-      '1001',
-      '1002',
-      '2001',
-      '2002',
-    ])
-  })
-
-  it('prepare + FIFO then delete+resync from the same fills stays same-day', () => {
-    const prepared = prepareRithmicProtocolFills(imbalanced)
-    expect(prepared.stats.dropped.pre_window_covers).toBe(2)
-    const first = buildTradesFromRithmicFills(
+    const { trades, openSkipped } = buildTradesFromRithmicFills(
       prepared.fills,
       'u1',
       tickBySymbol,
     )
-    const again = buildTradesFromRithmicFills(
-      prepared.fills,
-      'u1',
-      tickBySymbol,
-    )
-    expect(first.openSkipped).toBe(0)
-    expect(overnightShorts(first.trades)).toEqual([])
-    expect(overnightCount(first.trades)).toBe(0)
-    expect(first.trades).toHaveLength(2)
-    expect(first.trades.map((trade) => [trade.side, trade.entryId, trade.closeId])).toEqual([
-      ['Short', '1002', '1001'],
-      ['Long', '2001', '2002'],
+    expect(openSkipped).toBe(1)
+    expect(trades.map((trade) => [trade.side, trade.entryId, trade.closeId])).toEqual([
+      ['Short', 'F1', 'F2'],
+      ['Long', 'F3', 'F4'],
     ])
-    expect(again.trades.map((trade) => [trade.entryId, trade.closeId])).toEqual(
-      first.trades.map((trade) => [trade.entryId, trade.closeId]),
-    )
   })
 
   it('does not flatten a genuine open short whose extra sells are at the tail', () => {
@@ -369,16 +456,19 @@ describe('pre-window opening covers (2-contract MESZ6 imbalance)', () => {
       'history',
     )
     expect(signedNet(liveShort)).toBe(-2)
-    const { fills, trimmed } = trimPreWindowOpeningCovers(liveShort)
-    expect(trimmed).toEqual([])
-    expect(fills).toHaveLength(3)
+    const prepared = prepareRithmicProtocolFills(liveShort)
+    expect(prepared.fills).toHaveLength(3)
     const { openSkipped, trades } = buildTradesFromRithmicFills(
-      fills,
+      prepared.fills,
       'u1',
       tickBySymbol,
     )
     expect(openSkipped).toBe(2)
-    expect(overnightShorts(trades)).toEqual([])
+    expect(
+      trades.filter(
+        (trade) => trade.entryDate.slice(0, 10) !== trade.closeDate.slice(0, 10),
+      ),
+    ).toEqual([])
   })
 
   it('leaves a balanced multi-day short hold alone', () => {
@@ -403,7 +493,7 @@ describe('pre-window opening covers (2-contract MESZ6 imbalance)', () => {
       'history',
     )
     const prepared = prepareRithmicProtocolFills(overnightHold)
-    expect(prepared.stats.dropped.pre_window_covers).toBeUndefined()
+    expect('pre_window_covers' in prepared.stats.dropped).toBe(false)
     const { trades, openSkipped } = buildTradesFromRithmicFills(
       prepared.fills,
       'u1',
@@ -413,5 +503,165 @@ describe('pre-window opening covers (2-contract MESZ6 imbalance)', () => {
     expect(trades).toHaveLength(1)
     expect(trades[0].side).toBe('Short')
     expect(overnightCount(trades)).toBe(1)
+  })
+
+  it('reports a 2-sell imbalance but does not drop those sells (rebuild alone cannot fix Jérémie phantoms)', () => {
+    const preWindowCovers = markFillSource(
+      [
+        fill({
+          fillId: 'cover-1',
+          fillDate: '20260930',
+          transactionType: 'SELL',
+          fillPrice: 7802,
+          ssboe: at('2026-09-30T13:50:00Z'),
+        }),
+        fill({
+          fillId: 'cover-2',
+          fillDate: '20260930',
+          transactionType: 'SELL',
+          fillPrice: 7802.25,
+          ssboe: at('2026-09-30T13:50:01Z'),
+        }),
+      ],
+      'history',
+    )
+    const imbalanced = [...preWindowCovers, day1Buy, day1Sell, day3Buy, day3Sell]
+    expect(signedNet(imbalanced)).toBe(-2)
+    const prepared = prepareRithmicProtocolFills(imbalanced)
+    expect(prepared.fills.map((row) => row.fillId)).toEqual(
+      imbalanced.map((row) => row.fillId),
+    )
+    expect(summarizeFillLedgerNets(prepared.fills)).toEqual([
+      {
+        accountId: ACCOUNT,
+        symbol: 'MESZ6',
+        instrument: 'MES',
+        net: -2,
+        fillCount: 6,
+      },
+    ])
+    const { trades, openSkipped } = buildTradesFromRithmicFills(
+      prepared.fills,
+      'u1',
+      tickBySymbol,
+    )
+    expect(openSkipped).toBe(2)
+    expect(
+      trades.some(
+        (trade) =>
+          trade.side === 'Short' &&
+          trade.entryDate.slice(0, 10) !== trade.closeDate.slice(0, 10),
+      ),
+    ).toBe(true)
+  })
+
+  it('reports MESU6 and MESZ6 nets separately so one month cannot trim the other', () => {
+    const fills = markFillSource(
+      [
+        fill({
+          fillId: 'u6-b',
+          symbol: 'MESU6',
+          fillDate: '20260901',
+          ssboe: at('2026-09-01T14:00:00Z'),
+        }),
+        fill({
+          fillId: 'u6-s',
+          symbol: 'MESU6',
+          fillDate: '20260903',
+          transactionType: 'SELL',
+          fillPrice: 7810,
+          ssboe: at('2026-09-03T14:00:00Z'),
+        }),
+        fill({
+          fillId: 'z6-b',
+          symbol: 'MESZ6',
+          fillDate: '20261004',
+          fillPrice: 7805,
+          ssboe: at('2026-10-04T14:00:00Z'),
+        }),
+      ],
+      'history',
+    )
+    expect(summarizeFillLedgerNets(fills)).toEqual([
+      {
+        accountId: ACCOUNT,
+        symbol: 'MESZ6',
+        instrument: 'MES',
+        net: 1,
+        fillCount: 1,
+      },
+    ])
+    const prepared = prepareRithmicProtocolFills(fills)
+    expect(prepared.fills.map((row) => row.fillId)).toEqual(['u6-b', 'u6-s', 'z6-b'])
+  })
+})
+
+describe('reattachProtocolTradeAnnotations', () => {
+  it('copies journal fields onto the matching rebuilt fill pair', () => {
+    const derived = [
+      {
+        id: 'new-id',
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        entryDate: '2026-09-30T14:00:00.000+00:00',
+        closeDate: '2026-09-30T14:05:00.000+00:00',
+        entryId: '1002',
+        closeId: '1001',
+        tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+      },
+    ]
+    const existing = [
+      {
+        id: 'kept-row',
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        entryDate: '2026-09-30T14:00:00.000+00:00',
+        closeDate: '2026-09-30T14:05:00.000+00:00',
+        entryId: '1002',
+        closeId: '1001',
+        tags: [RITHMIC_PROTOCOL_TRADE_TAG, 'setup'],
+        comment: 'keep me',
+      },
+    ]
+    const result = reattachProtocolTradeAnnotations(derived, existing)
+    expect(result.preserved).toBe(1)
+    expect(result.unmatched).toEqual([])
+    expect(result.trades[0]?.id).toBe('kept-row')
+    expect(result.trades[0]?.comment).toBe('keep me')
+    expect(result.trades[0]?.tags).toEqual([
+      RITHMIC_PROTOCOL_TRADE_TAG,
+      'setup',
+    ])
+  })
+
+  it('reports annotated rows that FIFO no longer produces', () => {
+    const derived = [
+      {
+        id: 'new-id',
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        entryDate: '2026-10-02T14:00:00.000+00:00',
+        closeDate: '2026-10-02T14:10:00.000+00:00',
+        entryId: '2001',
+        closeId: '2002',
+        tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+      },
+    ]
+    const existing = [
+      {
+        id: 'orphan-note',
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        entryDate: '2026-09-30T14:00:00.000+00:00',
+        closeDate: '2026-10-02T14:00:00.000+00:00',
+        entryId: '1002',
+        closeId: '2001',
+        tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+        comment: 'phantom I annotated',
+      },
+    ]
+    const result = reattachProtocolTradeAnnotations(derived, existing)
+    expect(result.preserved).toBe(0)
+    expect(result.unmatched.map((row) => row.id)).toEqual(['orphan-note'])
   })
 })
