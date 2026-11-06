@@ -186,6 +186,7 @@ function fetchedFills(
       endYmd: '20261002',
       complete: true,
       windowsFailed: 0,
+      incompleteAccountIds: [],
     },
     fillStats: {
       received: rawFills.length,
@@ -284,6 +285,12 @@ describe('admin account resync scoping and safety', () => {
       positions: [],
       complete: true,
       capturedAtMs: Date.parse('2026-12-01T00:00:00Z'),
+      capturedUntilMs: Date.parse('2026-12-01T00:00:01Z'),
+      evidenceAccountIds: [ACCOUNT],
+      requestedAccountIds: [ACCOUNT, OTHER],
+      noDataAccountIds: [],
+      incompleteAccountIds: [],
+      rejectedAccountIds: [],
     })
   })
 
@@ -451,11 +458,17 @@ describe('admin account resync scoping and safety', () => {
         positions: [{ accountId: ACCOUNT, symbol: 'MESZ6', netQuantity: 2 }],
         complete: true,
         capturedAtMs: Date.parse('2026-12-01T00:00:00Z'),
+        capturedUntilMs: Date.parse('2026-12-01T00:00:01Z'),
+        evidenceAccountIds: [ACCOUNT],
+        requestedAccountIds: [ACCOUNT],
       })
       .mockResolvedValueOnce({
         positions: [],
         complete: true,
         capturedAtMs: Date.parse('2026-12-01T00:00:00Z'),
+        capturedUntilMs: Date.parse('2026-12-01T00:00:01Z'),
+        evidenceAccountIds: [ACCOUNT],
+        requestedAccountIds: [ACCOUNT],
       })
     const preview = await resyncRithmicProtocolAccount({
       userId: USER,
@@ -497,14 +510,12 @@ describe('admin account resync scoping and safety', () => {
     expect(tradeCreateMany).not.toHaveBeenCalled()
   })
 
-  it('live rebuild refuses when FIFO leftover lots do not match P_end', async () => {
-    fetchFillsForAccounts.mockResolvedValueOnce(
+  it('dry-run and live skip the same unpriceable opening-position keys', async () => {
+    fetchFillsForAccounts.mockResolvedValue(
       fetchedFills([
         {
           ...ACCOUNT_FILLS[0],
-          fillId: 'old-buy',
-          ssboe: Date.parse('2026-08-01T14:00:00Z') / 1000,
-          fillDate: '20260801',
+          fillPrice: 0,
         },
       ]),
     )
@@ -513,14 +524,27 @@ describe('admin account resync scoping and safety', () => {
       complete: true,
       capturedAtMs: Date.parse('2026-12-01T00:00:00Z'),
       capturedUntilMs: Date.parse('2026-12-01T00:00:01Z'),
+      evidenceAccountIds: [ACCOUNT],
+      requestedAccountIds: [ACCOUNT],
+    })
+    const preview = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
     })
     const live = await resyncRithmicProtocolAccount({
       userId: USER,
       accountNumber: ACCOUNT,
       dryRun: false,
     })
-    expect(live.error).toBe('END_POSITION_MISMATCH')
-    expect(live.complete).toBe(false)
+    expect(live.error).toBe('OPENING_POSITION_UNKNOWN')
+    expect(preview.warnings?.some((warning) => warning.includes('MESZ6'))).toBe(
+      true,
+    )
+    expect(live.warnings?.some((warning) => warning.includes('MESZ6'))).toBe(
+      true,
+    )
+    expect(preview.proposed?.tradesCreated).toBe(live.proposed?.tradesCreated)
     expect(tradeDeleteMany).not.toHaveBeenCalled()
     expect(tradeCreateMany).not.toHaveBeenCalled()
   })
@@ -547,8 +571,30 @@ describe('admin account resync scoping and safety', () => {
     expect(tradeCreateMany).not.toHaveBeenCalled()
   })
 
-  it('seeds P_0 from a flat broker book so extra sells do not invent shorts', async () => {
+  it('pinned overnight buys keep extra sells from inventing shorts', async () => {
     const jeremieFills = [
+      {
+        accountId: ACCOUNT,
+        symbol: 'MESZ6',
+        transactionType: 'BUY',
+        fillPrice: 7800,
+        fillSize: 1,
+        fillId: 'overnight-1',
+        fillDate: '20260929',
+        ssboe: Date.parse('2026-09-29T20:00:00Z') / 1000,
+        source: 'history',
+      },
+      {
+        accountId: ACCOUNT,
+        symbol: 'MESZ6',
+        transactionType: 'BUY',
+        fillPrice: 7800,
+        fillSize: 1,
+        fillId: 'overnight-2',
+        fillDate: '20260929',
+        ssboe: Date.parse('2026-09-29T20:00:01Z') / 1000,
+        source: 'history',
+      },
       {
         accountId: ACCOUNT,
         symbol: 'MESZ6',
@@ -580,23 +626,15 @@ describe('admin account resync scoping and safety', () => {
       dryRun: true,
     })
     expect(result.error).toBeUndefined()
-    expect(result.proposed?.positionChecks).toEqual([
-      {
-        accountId: ACCOUNT,
-        symbol: 'MESZ6',
-        instrument: 'MES',
-        pEnd: 0,
-        net: -2,
-        p0: 2,
-        fillCount: 4,
-        unpricedCount: 0,
-      },
-    ])
-    expect(result.proposed?.seededOpeningLots).toBe(1)
+    expect(result.proposed?.positionChecks[0]).toMatchObject({
+      accountId: ACCOUNT,
+      symbol: 'MESZ6',
+      pEnd: 0,
+      net: 0,
+      p0: 0,
+    })
+    expect(result.proposed?.seededOpeningLots).toBe(0)
     expect(result.proposed?.openSkipped).toBe(0)
-    expect(
-      result.warnings?.some((warning) => warning.includes('synthetic opening')),
-    ).toBe(true)
   })
 
   it('does not persist FIFO trades closed before historyStartDate', async () => {
@@ -866,6 +904,78 @@ describe('admin account resync scoping and safety', () => {
     expect(result.error).toBe('ACCOUNT_NOT_ON_CONNECTION')
     expect(tradeDeleteMany).not.toHaveBeenCalled()
     expect(fetchFillsForAccounts).not.toHaveBeenCalled()
+  })
+
+  it('P2: pin keeps a stored overnight trade when the weekly close advances', async () => {
+    const overnight = {
+      ...COVERED_TRADE,
+      id: 'overnight-2500',
+      entryDate: '2026-10-01T20:00:00.000Z',
+      closeDate: '2026-10-05T14:00:00.000Z',
+      entryId: 'ov-buy',
+      closeId: 'ov-sell',
+      pnl: 2500,
+    }
+    tradeFindMany.mockResolvedValue([overnight])
+    fillCount.mockResolvedValue(2)
+    fetchFillsForAccounts.mockResolvedValue(
+      fetchedFills(
+        [
+          {
+            accountId: ACCOUNT,
+            symbol: 'MESZ6',
+            transactionType: 'BUY',
+            fillPrice: 7800,
+            fillSize: 1,
+            fillId: 'ov-buy',
+            fillDate: '20261001',
+            ssboe: Date.parse('2026-10-01T20:00:00Z') / 1000,
+            source: 'history',
+          },
+          {
+            accountId: ACCOUNT,
+            symbol: 'MESZ6',
+            transactionType: 'SELL',
+            fillPrice: 8300,
+            fillSize: 1,
+            fillId: 'ov-sell',
+            fillDate: '20261005',
+            ssboe: Date.parse('2026-10-05T14:00:00Z') / 1000,
+            source: 'history',
+          },
+        ],
+        undefined,
+        {
+          requestedStartYmd: '20260901',
+          anchoredStartYmd: '20260901',
+          weeklyCloseIso: '2026-10-02T22:00:00.000Z',
+          endYmd: '20261006',
+          complete: true,
+          windowsFailed: 0,
+        },
+      ),
+    )
+    const preview = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(preview.error).toBeUndefined()
+    const selectCall = tradeFindMany.mock.calls.find((call) => {
+      const arg = call[0] as { select?: { entryId?: boolean; pnl?: boolean } }
+      return arg?.select?.entryId === true && arg?.select?.pnl === true
+    })
+    expect(selectCall?.[0]).toMatchObject({
+      select: {
+        entryId: true,
+        closeId: true,
+        pnl: true,
+      },
+    })
+    expect(preview.proposed?.uncoveredTrades).toEqual([])
+    expect(
+      preview.warnings?.some((warning) => warning.includes('opening-seed')),
+    ).toBe(false)
   })
 
   it('returns AMBIGUOUS_CONNECTION when two connections hold the account', async () => {

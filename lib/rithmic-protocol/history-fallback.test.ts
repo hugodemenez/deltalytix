@@ -77,6 +77,7 @@ describe('fillHistoryWindowsComplete', () => {
         windowThrew: true,
         fallbackRequired: true,
         fallbackSucceeded: true,
+        fallbackFillCount: 4,
         replaySucceeded: true,
       }),
     ).toEqual({ complete: true, windowsFailed: 0 })
@@ -89,6 +90,20 @@ describe('fillHistoryWindowsComplete', () => {
         windowsFetched: 2,
         windowThrew: false,
         replaySucceeded: false,
+      }),
+    ).toEqual({ complete: false, windowsFailed: 1 })
+  })
+
+  it('is incomplete when a thrown window is covered only by an empty fallback', () => {
+    expect(
+      fillHistoryWindowsComplete({
+        windowsPlanned: 2,
+        windowsFetched: 1,
+        windowThrew: true,
+        fallbackRequired: true,
+        fallbackSucceeded: true,
+        fallbackFillCount: 0,
+        replaySucceeded: true,
       }),
     ).toEqual({ complete: false, windowsFailed: 1 })
   })

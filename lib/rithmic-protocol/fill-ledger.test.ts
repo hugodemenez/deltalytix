@@ -10,7 +10,6 @@ import type { RithmicProtocolFill } from './types'
 import {
   buildLedgerSeenIndex,
   canonicalLedgerFillIds,
-  coveringAnnotatedTradeId,
   deriveTradesFromFillLedger,
   dropSeenLedgerFills,
   hasTradeJournalAnnotations,
@@ -851,27 +850,26 @@ describe('reattachProtocolTradeAnnotations', () => {
   })
 })
 
-describe('coveringAnnotatedTradeId', () => {
-  it('returns the annotated leftover so a replacement can rematch instead of skip', () => {
-    const incoming = {
-      id: 'fifo-new',
+describe('annotated leftovers stay in the journal', () => {
+  it('does not list an annotated unmatched row as a phantom', () => {
+    const annotated = {
+      id: 'keep-note',
       accountNumber: ACCOUNT,
       instrument: 'MES',
       entryDate: '2026-09-30T14:00:00.000+00:00',
       closeDate: '2026-10-02T14:00:00.000+00:00',
       entryId: '1002',
       closeId: '2001',
-      side: 'Short',
-      quantity: 1,
-      entryPrice: '7802',
-      closePrice: '7810',
-    }
-    const annotated = {
-      ...incoming,
-      id: 'keep-note',
       comment: 'setup I want to keep',
+      tags: [RITHMIC_PROTOCOL_TRADE_TAG],
     }
-    expect(coveringAnnotatedTradeId(incoming, [annotated])).toBe('keep-note')
+    expect(
+      phantomProtocolTradeIds({
+        existing: [annotated],
+        derived: [],
+        ledgerFillIds: new Set(['1002', '2001']),
+      }),
+    ).toEqual([])
   })
 })
 

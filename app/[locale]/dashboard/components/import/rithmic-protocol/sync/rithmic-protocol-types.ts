@@ -24,6 +24,11 @@ export interface RithmicProtocolStoredCredentials {
    * Sync walks from this date to today in serial ≤30-day ShowFillHistory windows.
    */
   historyStartDate?: string
+  /**
+   * Pinned FIFO window start. Never advances past a stored non-seed entry, so
+   * a rolling weekly close cannot drop an overnight fill already in the journal.
+   */
+  fifoAnchorIso?: string
 }
 
 export interface RithmicProtocolSyncStats {

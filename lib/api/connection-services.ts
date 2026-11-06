@@ -142,6 +142,9 @@ type SyncFail = {
   ok: false
   message: string
   response: NextResponse
+  imported?: number
+  duplicates?: number
+  stats?: unknown
 }
 
 async function syncStoredConnection(
@@ -225,9 +228,14 @@ async function syncStoredConnection(
       }
     }
     if (!rithmicProtocolSyncHttpSuccess(result.syncStatus)) {
+      const imported = result.savedCount ?? 0
+      const total = result.tradesCount ?? imported
       return {
         ok: false,
         message: result.warnings?.[0] || "DEGRADED",
+        imported,
+        duplicates: Math.max(0, total - imported),
+        stats: result.syncStats,
         response: apiError(
           409,
           "sync_degraded",
@@ -332,14 +340,15 @@ async function syncAfterCreate(
 
   const sync = await syncStoredConnection(userId, connection)
   if (!sync.ok) {
-    // Connection was created; return it with a warning rather than failing create.
+    // Connection was created; keep partial-import counts on the 201 body.
     return {
       connection,
       sync: {
         ok: true,
-        imported: 0,
-        duplicates: 0,
+        imported: sync.imported ?? 0,
+        duplicates: sync.duplicates ?? 0,
         warning: sync.message || "Initial sync failed",
+        stats: sync.stats,
       },
     }
   }

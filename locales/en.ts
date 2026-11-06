@@ -2829,7 +2829,7 @@ export default {
       NO_TOKEN_RECONNECT: "This connection is missing credentials. Reconnect.",
       DUPLICATE_TRADES: "These trades are already in your journal.",
       SYNC_DEGRADED:
-        "Position snapshot unavailable — existing trades for some symbols were left unchanged. Partial fills were still saved.",
+        "Some symbols were left unchanged this sync. Trades that could be saved were still imported.",
       SYNC_FAILED: "Trade sync failed. Try again in a few minutes.",
       SAVE_TRADES_FAILED: "Trades were fetched but could not be saved: {detail}",
       ACCOUNT_ID_REQUIRED: "Account identifier is missing.",
@@ -2875,7 +2875,7 @@ export default {
       summary:
         "{fills} fills, {matched} trades matched, {saved} new, {open} open positions",
       degraded:
-        "Position snapshot unavailable — existing trades for some symbols were left unchanged. {fills} fills, {matched} trades matched, {saved} new, {open} open positions",
+        "Some symbols were left unchanged this sync. {fills} fills, {matched} trades matched, {saved} new, {open} open positions",
     },
     multiAccount: {
       empty: "No Rithmic Protocol connections yet. Click Connect to add one.",

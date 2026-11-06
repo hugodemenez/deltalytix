@@ -94,25 +94,6 @@ function parseFillDateParts(fillDate: string): string | null {
   return null
 }
 
-function parseFillTimeIso(fillTime: string): string {
-  const trimmed = fillTime.trim()
-  const clock = /^(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?/.exec(trimmed)
-  if (clock) {
-    const hour = clock[1].padStart(2, '0')
-    const minute = clock[2]
-    const second = (clock[3] ?? '00').padStart(2, '0')
-    return `${hour}:${minute}:${second}`
-  }
-  const digits = trimmed.replace(/\D/g, '')
-  if (digits.length >= 6) {
-    return `${digits.slice(0, 2)}:${digits.slice(2, 4)}:${digits.slice(4, 6)}`
-  }
-  if (digits.length === 4) {
-    return `${digits.slice(0, 2)}:${digits.slice(2, 4)}:00`
-  }
-  return '00:00:00'
-}
-
 export function normalizeFillAccountId(
   accountId: string | null | undefined,
 ): string {
@@ -127,15 +108,10 @@ export function fillTimestampMs(fill: RithmicProtocolFill): number {
   }
   const date = fill.fillDate ? parseFillDateParts(fill.fillDate) : null
   if (!date) return 0
-  // fillDate is the exchange trade date (rolls ~17:00 CT). With a clock,
-  // keep the plant's fillTime. Without one, use Globex session open for that
-  // trade date — UTC midnight would put Sunday-evening fills on the wrong
-  // side of the first weekly-close cutoff.
-  if (fill.fillTime) {
-    const time = parseFillTimeIso(fill.fillTime)
-    const parsed = Date.parse(`${date}T${time}Z`)
-    if (!Number.isNaN(parsed)) return parsed
-  }
+  // fillDate is the exchange trade date (rolls ~17:00 CT). Plants that omit
+  // ssboe may still send a clock; treating that clock as UTC on the trade
+  // date puts Sunday-evening fills a day ahead of Globex reopen. Pin every
+  // date-only / date+time row to session open for that trade date.
   const sessionOpen = globexSessionOpenForTradeDate(date)
   return sessionOpen ? sessionOpen.getTime() : 0
 }

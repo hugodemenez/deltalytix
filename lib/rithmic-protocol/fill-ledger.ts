@@ -6,7 +6,6 @@ import {
   consolidateOrderFills,
   dedupeFillsWithStats,
   fillIdentityKey,
-  filterRithmicProtocolTradesCoveredByStoredRows,
   preferHistoryFills,
   resolveRithmicProtocolPersistedId,
   type DedupeFillsStats,
@@ -415,25 +414,6 @@ export function phantomProtocolTradeIds(params: {
     toDelete.push(row.id)
   }
   return toDelete
-}
-
-/**
- * Annotated leftover whose legs still cover a replacement FIFO trade.
- * Exclude it from save coverage so the replacement is not skipped, then
- * rematch the annotated UUID onto that replacement.
- */
-export function coveringAnnotatedTradeId(
-  incoming: RithmicProtocolStoredLegRow & { id: string },
-  annotatedExisting: Array<RithmicProtocolStoredLegRow & { id: string }>,
-): string | undefined {
-  for (const row of annotatedExisting) {
-    const { skipped } = filterRithmicProtocolTradesCoveredByStoredRows(
-      [incoming],
-      [row],
-    )
-    if (skipped.length > 0) return row.id
-  }
-  return undefined
 }
 
 export function deriveTradesFromFillLedger(

@@ -605,6 +605,7 @@ export async function calculateAccountBalanceAction(
     select: {
       accountNumber: true,
       entryDate: true,
+      entryId: true,
       pnl: true,
       commission: true,
     },
@@ -668,6 +669,7 @@ export async function calculateAccountMetricsAction(
     select: {
       accountNumber: true,
       entryDate: true,
+      entryId: true,
       pnl: true,
       commission: true,
     },

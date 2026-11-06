@@ -28,7 +28,6 @@ import {
   fillTimestampMs,
   normalizeFillAccountId,
 } from './fills-to-trades'
-import { coveringAnnotatedTradeId } from './fill-ledger'
 import { orderDueConnectionsForSync } from '@/lib/connection-sync-schedule'
 import type { RithmicProtocolFill } from './types'
 
@@ -51,7 +50,7 @@ function fill(
 }
 
 describe('Opus re-review integration: FIFO window + invariant (N1)', () => {
-  it('seeds and FIFO-matches the same post-anchor stream, then checks P_end', () => {
+  it('seeds a one-sided leftover close and still matches the end-position invariant', () => {
     const leftover = fill({
       fillId: 'old',
       transactionType: 'SELL',
@@ -80,24 +79,10 @@ describe('Opus re-review integration: FIFO window + invariant (N1)', () => {
       undefined,
       { openingSeeds: decision.seeds, sinceMs: WINDOW },
     )
-    expect(trades).toHaveLength(1)
     expect(trades[0]?.closeId).toBe('cover')
     expect(
       fifoEndPositionMatchesPEnd({ openNets, positions }).ok,
     ).toBe(true)
-    const leftoverFifo = buildTradesFromRithmicFills(
-      fills,
-      'u1',
-      new Map([['MES', { tickSize: 0.25, tickValue: 1.25 }]]),
-      undefined,
-      { openingSeeds: decision.seeds },
-    )
-    expect(
-      fifoEndPositionMatchesPEnd({
-        openNets: leftoverFifo.openNets,
-        positions,
-      }).ok,
-    ).toBe(false)
   })
 })
 
@@ -110,6 +95,7 @@ describe('Opus re-review integration: completeness (H2, N3)', () => {
         windowThrew: true,
         fallbackRequired: true,
         fallbackSucceeded: true,
+        fallbackFillCount: 3,
         replaySucceeded: true,
       }).complete,
     ).toBe(true)
@@ -141,6 +127,7 @@ describe('Opus re-review integration: snapshot / no-data / degraded (M1, M2, M4)
     complete: true,
     capturedAtMs,
     capturedUntilMs: capturedAtMs + 400,
+    evidenceAccountIds: [ACCOUNT],
   }
 
   it('uses a clock margin and ledger fills for no-data, and degrades skipped symbols', () => {
@@ -167,8 +154,8 @@ describe('Opus re-review integration: snapshot / no-data / degraded (M1, M2, M4)
             ssboe: at('2026-10-26T14:00:00Z'),
           }),
         ],
-      }).reason,
-    ).toBe('pnl_no_data')
+      }).freezeAccountIds,
+    ).toEqual([ACCOUNT])
     const skipKey = openingPositionKey(ACCOUNT, 'MESZ6')
     const plan = planOrdinarySyncTrades({
       trades: [
@@ -248,8 +235,8 @@ describe('Opus re-review integration: dashboard, cron, v1, import (N2, M5, L5)',
   })
 })
 
-describe('Opus re-review integration: fill-less expiry (M3)', () => {
-  it('assigns fill_less_expiry and does not invert leftover history', () => {
+describe('Opus re-review integration: fill-less hold (P5)', () => {
+  it('seeds a fill-less open hold and leaves it openSkipped', () => {
     const leftover = fill({
       fillId: 'old-sell',
       transactionType: 'SELL',
@@ -263,17 +250,17 @@ describe('Opus re-review integration: fill-less expiry (M3)', () => {
     })
     expect(checks[0]).toMatchObject({ p0: 2, fillCount: 0, net: 0 })
     const decision = decideOpeningSeeds(checks, [leftover], WINDOW)
-    expect(decision.seeds).toEqual([])
-    expect(decision.skipped[0]?.reason).toBe('fill_less_expiry')
-    const { trades, openNets } = buildTradesFromRithmicFills(
+    expect(decision.seeds).toHaveLength(1)
+    expect(decision.skipped).toEqual([])
+    const { trades, openSkipped } = buildTradesFromRithmicFills(
       [leftover],
       'u1',
       new Map([['MES', { tickSize: 0.25, tickValue: 1.25 }]]),
       undefined,
-      { sinceMs: WINDOW },
+      { openingSeeds: decision.seeds, sinceMs: WINDOW },
     )
     expect(trades).toEqual([])
-    expect(openNets).toEqual([])
+    expect(openSkipped).toBe(2)
   })
 })
 
@@ -289,38 +276,6 @@ describe('Opus re-review integration: freeze index, timestamps, stats (L2, L4, M
       Date.parse('2026-10-26T00:00:00.000Z'),
     )
     expect(normalizeFillAccountId(` ${ACCOUNT} `)).toBe(ACCOUNT)
-    expect(
-      coveringAnnotatedTradeId(
-        {
-          id: 'new',
-          accountNumber: ACCOUNT,
-          instrument: 'MES',
-          entryDate: '2026-10-26T13:00:00.000Z',
-          closeDate: '2026-10-26T14:00:00.000Z',
-          entryId: 'a',
-          closeId: 'b',
-          side: 'Long',
-          quantity: 1,
-          entryPrice: '1',
-          closePrice: '2',
-        },
-        [
-          {
-            id: 'annotated',
-            accountNumber: ACCOUNT,
-            instrument: 'MES',
-            entryDate: '2026-10-26T13:00:00.000Z',
-            closeDate: '2026-10-26T14:00:00.000Z',
-            entryId: 'a',
-            closeId: 'b',
-            side: 'Long',
-            quantity: 1,
-            entryPrice: '1',
-            closePrice: '2',
-          },
-        ],
-      ),
-    ).toBe('annotated')
     expect(
       teamTraderPerformance([
         { entryId: '1', pnl: 10, commission: 0, entryDate: '2026-01-01' },

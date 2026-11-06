@@ -188,3 +188,32 @@ describe('sync over rows rebuilt from a broker export', () => {
     expect(filterRithmicProtocolTradesCoveredByStoredRows(moved, rebuiltRows).kept).toHaveLength(1)
   })
 })
+
+describe('consolidateOrderFills absorbs dropped replay piece ids', () => {
+  it('keeps replay fill ids on the surviving history row', () => {
+    const history = markFillSource(
+      [
+        fill({
+          fillId: '1245663',
+          fillSize: 5,
+          ssboe: at('2026-09-30T13:57:21Z'),
+        }),
+      ],
+      'history',
+    )
+    const replay = markFillSource(
+      [
+        fill({
+          fillId: '1245660',
+          fillSize: 1,
+          ssboe: at('2026-09-30T13:57:21Z'),
+        }),
+      ],
+      'replay',
+    )
+    const merged = consolidateOrderFills([...history, ...replay])
+    expect(merged).toHaveLength(1)
+    expect(merged[0]?.fillId).toBe('1245663')
+    expect(merged[0]?.absorbedFillIds).toContain('1245660')
+  })
+})

@@ -23,6 +23,7 @@ export function fillHistoryWindowsComplete(input: {
   windowThrew: boolean
   fallbackRequired?: boolean
   fallbackSucceeded?: boolean
+  fallbackFillCount?: number
   replaySucceeded?: boolean
 }): { complete: boolean; windowsFailed: number } {
   const windowsFailed = Math.max(0, input.windowsPlanned - input.windowsFetched)
@@ -36,10 +37,11 @@ export function fillHistoryWindowsComplete(input: {
   if (input.fallbackRequired && input.fallbackSucceeded !== true) {
     return failed(true)
   }
-  // A ShowFillHistory throw is covered when order-history fallback succeeded
-  // for the full requested range — do not freeze the connection in that case.
-  if (input.windowThrew && input.fallbackSucceeded !== true) {
-    return failed(true)
+  // A ShowFillHistory throw is covered only when order-history fallback
+  // returned rows. An empty fallback is not a complete ledger.
+  if (input.windowThrew) {
+    if (input.fallbackSucceeded !== true) return failed(true)
+    if ((input.fallbackFillCount ?? 0) <= 0) return failed(true)
   }
   if (
     input.windowsPlanned > 0 &&

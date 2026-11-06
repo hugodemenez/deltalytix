@@ -48,6 +48,7 @@ export async function getEquityChartDataAction(
         commission: t.commission,
         timeInPosition: t.timeInPosition,
         tags: t.tags,
+        entryId: t.entryId,
       })),
       accounts.map((a) => ({
         number: a.number,

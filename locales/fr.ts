@@ -2971,7 +2971,7 @@ export default {
         "Cette connexion n'a pas d'identifiants. Reconnectez-vous.",
       DUPLICATE_TRADES: "Ces trades sont déjà dans votre journal.",
       SYNC_DEGRADED:
-        "Instantané de positions indisponible — les trades existants de certains symboles n'ont pas été modifiés. Les fills partiels ont tout de même été enregistrés.",
+        "Certains symboles n'ont pas été mis à jour lors de cette synchronisation. Les trades qui pouvaient être enregistrés l'ont tout de même été.",
       SYNC_FAILED:
         "La synchronisation a échoué. Réessayez dans quelques minutes.",
       SAVE_TRADES_FAILED:
@@ -3021,7 +3021,7 @@ export default {
       summary:
         "{fills} fills, {matched} trades appariés, {saved} nouveaux, {open} positions ouvertes",
       degraded:
-        "Instantané de positions indisponible — les trades existants de certains symboles n'ont pas été modifiés. {fills} fills, {matched} trades appariés, {saved} nouveaux, {open} positions ouvertes",
+        "Certains symboles n'ont pas été mis à jour lors de cette synchronisation. {fills} fills, {matched} trades appariés, {saved} nouveaux, {open} positions ouvertes",
     },
     multiAccount: {
       empty:

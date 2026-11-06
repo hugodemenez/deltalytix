@@ -8,7 +8,6 @@ import {
   RITHMIC_PROTOCOL_TRADE_TAG,
 } from "@/lib/trade-id-utils"
 import { namespaceUserSuppliedEntryId } from "@/lib/opening-seed"
-import { coveringAnnotatedTradeId } from "@/lib/rithmic-protocol/fill-ledger"
 import {
   filterRithmicProtocolTradesCoveredByStoredRows,
   resolveRithmicProtocolPersistedId,
@@ -137,9 +136,9 @@ async function assignExistingRithmicProtocolIds(
   userId: string,
   trades: Trade[],
   coverageExcludeTradeIds?: ReadonlySet<string>,
-): Promise<{ trades: Trade[]; rematchedIds: string[] }> {
+): Promise<Trade[]> {
   const protocolTrades = trades.filter(isRithmicProtocolPersistedTrade)
-  if (protocolTrades.length === 0) return { trades, rematchedIds: [] }
+  if (protocolTrades.length === 0) return trades
 
   const accountNumbers = [
     ...new Set(
@@ -148,7 +147,7 @@ async function assignExistingRithmicProtocolIds(
         .filter((accountNumber): accountNumber is string => Boolean(accountNumber)),
     ),
   ]
-  if (accountNumbers.length === 0) return { trades, rematchedIds: [] }
+  if (accountNumbers.length === 0) return trades
 
   const existing = await prisma.trade.findMany({
     where: {
@@ -170,7 +169,7 @@ async function assignExistingRithmicProtocolIds(
       closePrice: true,
     },
   })
-  if (existing.length === 0) return { trades, rematchedIds: [] }
+  if (existing.length === 0) return trades
 
   // Rows about to be reaped as overnight phantoms must not cover the
   // replacement FIFO trades or steal their persisted UUID.
@@ -178,40 +177,27 @@ async function assignExistingRithmicProtocolIds(
     coverageExcludeTradeIds && coverageExcludeTradeIds.size > 0
       ? existing.filter((row) => !coverageExcludeTradeIds.has(row.id))
       : existing
-  const excludedRows =
-    coverageExcludeTradeIds && coverageExcludeTradeIds.size > 0
-      ? existing.filter((row) => coverageExcludeTradeIds.has(row.id))
-      : []
-  const rematchedIds: string[] = []
   const assigned = trades.map((trade) => {
     if (!isRithmicProtocolPersistedTrade(trade)) return trade
     const existingId = resolveRithmicProtocolPersistedId(trade, coverageRows)
     if (existingId) return { ...trade, id: existingId }
-    const coveringId = coveringAnnotatedTradeId(trade, excludedRows)
-    if (coveringId) {
-      rematchedIds.push(coveringId)
-      return { ...trade, id: coveringId }
-    }
     return trade
   })
 
   // Stored rows can pair the same contracts differently (rebuilt from a
   // broker export, or saved before split order pieces were merged). Skip a
   // trade whose entry and exit contracts are already stored so the sync does
-  // not insert a second copy next to them.
+  // not insert a second copy next to them. Annotated leftovers stay put.
   const { skipped } = filterRithmicProtocolTradesCoveredByStoredRows(
     assigned.filter(isRithmicProtocolPersistedTrade),
     coverageRows,
   )
-  if (skipped.length === 0) return { trades: assigned, rematchedIds }
+  if (skipped.length === 0) return assigned
   console.log(
     `[saveTrades] Skipped ${skipped.length} ${RITHMIC_PROTOCOL_TRADE_TAG} trade(s) already covered by stored rows`,
   )
   const skippedSet = new Set(skipped)
-  return {
-    trades: assigned.filter((trade) => !skippedSet.has(trade)),
-    rematchedIds,
-  }
+  return assigned.filter((trade) => !skippedSet.has(trade))
 }
 
 export async function saveTradesCore(
@@ -297,41 +283,18 @@ export async function saveTradesCore(
       userId,
       preparedTrades,
     )
-    const { trades: userAssignedTrades, rematchedIds } =
-      await assignExistingRithmicProtocolIds(
-        userId,
-        tradovateAssignedTrades,
-        options.coverageExcludeTradeIds
-          ? new Set(options.coverageExcludeTradeIds)
-          : undefined,
-      )
+    const userAssignedTrades = await assignExistingRithmicProtocolIds(
+      userId,
+      tradovateAssignedTrades,
+      options.coverageExcludeTradeIds
+        ? new Set(options.coverageExcludeTradeIds)
+        : undefined,
+    )
 
     const result = await prisma.trade.createMany({
       data: userAssignedTrades,
       skipDuplicates: true,
     })
-    if (rematchedIds.length > 0) {
-      const rematched = new Set(rematchedIds)
-      for (const trade of userAssignedTrades) {
-        if (!rematched.has(trade.id)) continue
-        await prisma.trade.update({
-          where: { id: trade.id },
-          data: {
-            entryId: trade.entryId,
-            closeId: trade.closeId,
-            entryDate: trade.entryDate,
-            closeDate: trade.closeDate,
-            entryPrice: trade.entryPrice,
-            closePrice: trade.closePrice,
-            quantity: trade.quantity,
-            side: trade.side,
-            pnl: trade.pnl,
-            commission: trade.commission,
-            timeInPosition: trade.timeInPosition,
-          },
-        })
-      }
-    }
 
     const commissionsUpdated = await backfillRithmicProtocolCommissions(
       userId,

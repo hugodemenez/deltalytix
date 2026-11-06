@@ -530,15 +530,33 @@ export function consolidateOrderFills(
     const history = groupFills.filter((fill) => fill.source !== 'replay')
     const replay = groupFills.filter((fill) => fill.source === 'replay')
     const historyClusters = clusterOneSource(history, pieceWindowMs)
-    for (const cluster of historyClusters) out.push(mergeCluster(cluster))
+    const historyMerged = historyClusters.map((cluster) => mergeCluster(cluster))
     for (const cluster of clusterOneSource(replay, pieceWindowMs)) {
-      const coveredByHistory = historyClusters.some(
+      const coveringIndex = historyClusters.findIndex(
         (h) =>
           cluster.startMs <= h.endMs + crossSourceToleranceMs &&
           cluster.endMs >= h.startMs - crossSourceToleranceMs,
       )
-      if (!coveredByHistory) out.push(mergeCluster(cluster))
+      if (coveringIndex >= 0) {
+        const extraIds = cluster.fills.flatMap((fill) =>
+          rithmicFillIdLookupValues(fill.fillId),
+        )
+        const kept = historyMerged[coveringIndex]
+        historyMerged[coveringIndex] = {
+          ...kept,
+          absorbedFillIds: [
+            ...new Set([
+              ...(kept.absorbedFillIds ?? []),
+              ...rithmicFillIdLookupValues(kept.fillId),
+              ...extraIds,
+            ]),
+          ],
+        }
+        continue
+      }
+      out.push(mergeCluster(cluster))
     }
+    out.push(...historyMerged)
   }
 
   // Keep the caller's order stable for FIFO tie-breaks.

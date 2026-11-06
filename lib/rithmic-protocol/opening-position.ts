@@ -5,6 +5,7 @@ import {
   isOpeningSeedCloseTrade,
 } from '@/lib/trade-id-utils'
 import { rithmicFillIdLookupValues } from './dedupe-fills'
+import { globexSessionOpenForTradeDate } from './cme-session'
 import {
   fillSide,
   fillTimestampMs,
@@ -93,6 +94,13 @@ export type CapturedPositionSnapshot = {
   /** End of the PnL sweep (multi-account). Falls back to capturedAtMs. */
   capturedUntilMs?: number
   noDataAccountIds?: string[]
+  /** Accounts that never got a snapshot response (timeout / interrupt). */
+  incompleteAccountIds?: string[]
+  /** Accounts whose plant rejected the snapshot (capability). */
+  rejectedAccountIds?: string[]
+  /** Accounts that sent AccountPnLPositionUpdate (451) — evidence of a book. */
+  evidenceAccountIds?: string[]
+  requestedAccountIds?: string[]
 }
 
 export type OpeningSeedSkipReason =
@@ -100,7 +108,6 @@ export type OpeningSeedSkipReason =
   | 'non_integer_p0'
   | 'unpriceable_close'
   | 'unpriced_fills'
-  | 'fill_less_expiry'
 
 export type OpeningSeedSkip = {
   accountId: string
@@ -112,6 +119,10 @@ export type BracketedSnapshotResult = {
   ok: boolean
   positions: InstrumentPosition[]
   reason?: string
+  /** Freeze these accounts' symbols; the rest of the login can still sync. */
+  freezeAccountIds?: string[]
+  /** Capability rejects — skip and stamp; retrying will not help. */
+  permanentSkipAccountIds?: string[]
 }
 
 function positionNetMap(positions: InstrumentPosition[]): Map<string, number> {
@@ -160,45 +171,78 @@ function snapshotUntilMs(snapshot: CapturedPositionSnapshot): number | undefined
   return snapshotClockMs(snapshot)
 }
 
-function noDataAccountsWithFills(
+function snapshotAccountSet(
   snapshots: CapturedPositionSnapshot[],
-  fills: RithmicProtocolFill[],
-): boolean {
-  const noData = new Set<string>()
+  key:
+    | 'noDataAccountIds'
+    | 'incompleteAccountIds'
+    | 'rejectedAccountIds'
+    | 'evidenceAccountIds'
+    | 'requestedAccountIds',
+): Set<string> {
+  const ids = new Set<string>()
   for (const snapshot of snapshots) {
-    for (const accountId of snapshot.noDataAccountIds ?? []) {
-      if (accountId) noData.add(normalizeFillAccountId(accountId))
+    for (const accountId of snapshot[key] ?? []) {
+      if (accountId) ids.add(normalizeFillAccountId(accountId))
     }
   }
-  if (noData.size === 0) return false
-  return fills.some((fill) => noData.has(normalizeFillAccountId(fill.accountId)))
+  return ids
+}
+
+function accountsWithFills(fills: RithmicProtocolFill[]): Set<string> {
+  const ids = new Set<string>()
+  for (const fill of fills) {
+    const accountId = normalizeFillAccountId(fill.accountId)
+    if (accountId && accountId !== 'unknown') ids.add(accountId)
+  }
+  return ids
 }
 
 /**
- * Snapshot before fills, snapshot after. Either incomplete, a position-map
- * mismatch, missing clocks, plant lag (fills between equal books), PnL
- * no-data on an account that still has fills, or a fill timestamp after
- * the after-snapshot clock means P_0 cannot be trusted — treat as
- * POSITION_SNAPSHOT_UNAVAILABLE.
+ * Snapshot before fills, snapshot after. Clock / plant-lag failures still
+ * fail the whole bracket. Per-account no-data, rejects, and missing 451
+ * evidence freeze only those accounts so one plant miss cannot pin the login.
  */
 export function reconcileBracketedSnapshots(params: {
   before: CapturedPositionSnapshot
   after: CapturedPositionSnapshot
   fills: RithmicProtocolFill[]
 }): BracketedSnapshotResult {
-  if (!params.before.complete) {
-    return {
-      ok: false,
-      positions: [],
-      reason: params.before.reason ?? 'before_incomplete',
+  const freezeAccountIds: string[] = []
+  const permanentSkipAccountIds: string[] = []
+  const pushFreeze = (ids: Iterable<string>, permanent = false) => {
+    for (const id of ids) {
+      if (!id) continue
+      if (permanent) {
+        if (!permanentSkipAccountIds.includes(id)) {
+          permanentSkipAccountIds.push(id)
+        }
+        continue
+      }
+      if (!freezeAccountIds.includes(id)) freezeAccountIds.push(id)
     }
   }
-  if (!params.after.complete) {
-    return {
-      ok: false,
-      positions: [],
-      reason: params.after.reason ?? 'after_incomplete',
+
+  const incomplete = snapshotAccountSet(
+    [params.before, params.after],
+    'incompleteAccountIds',
+  )
+  const rejected = snapshotAccountSet(
+    [params.before, params.after],
+    'rejectedAccountIds',
+  )
+  if (!params.before.complete || !params.after.complete) {
+    if (incomplete.size === 0 && rejected.size === 0) {
+      return {
+        ok: false,
+        positions: [],
+        reason: !params.before.complete
+          ? params.before.reason ?? 'before_incomplete'
+          : params.after.reason ?? 'after_incomplete',
+      }
     }
+    pushFreeze(incomplete)
+    pushFreeze(rejected, true)
   }
   const beforeMs = snapshotClockMs(params.before)
   const afterMs = snapshotUntilMs(params.after)
@@ -208,8 +252,30 @@ export function reconcileBracketedSnapshots(params: {
   if (beforeMs > afterMs) {
     return { ok: false, positions: [], reason: 'snapshot_clock_order' }
   }
-  if (noDataAccountsWithFills([params.before, params.after], params.fills)) {
-    return { ok: false, positions: [], reason: 'pnl_no_data' }
+  const evidence = snapshotAccountSet(
+    [params.before, params.after],
+    'evidenceAccountIds',
+  )
+  const noData = snapshotAccountSet([params.before, params.after], 'noDataAccountIds')
+  const requested = snapshotAccountSet(
+    [params.before, params.after],
+    'requestedAccountIds',
+  )
+  const fillAccounts = accountsWithFills(params.fills)
+  for (const accountId of noData) {
+    if (fillAccounts.has(accountId)) pushFreeze([accountId])
+  }
+  for (const accountId of requested) {
+    if (evidence.has(accountId) || noData.has(accountId)) continue
+    if (rejected.has(accountId)) continue
+    pushFreeze([accountId])
+  }
+  if (
+    params.after.complete &&
+    params.after.positions.length === 0 &&
+    evidence.size === 0
+  ) {
+    return { ok: false, positions: [], reason: 'snapshot_unconfirmed_flat' }
   }
   if (!instrumentPositionMapsEqual(params.before.positions, params.after.positions)) {
     return { ok: false, positions: [], reason: 'snapshot_mismatch' }
@@ -224,17 +290,26 @@ export function reconcileBracketedSnapshots(params: {
     toMsInclusive: afterMs,
   })
   for (const group of between.values()) {
-    // Equal-net round trips still move the book while the PnL plant lags.
-    // Any fill between the clocks means P_0 cannot be trusted.
     if (group.fillCount > 0) {
       return { ok: false, positions: [], reason: 'fills_during_equal_snapshots' }
     }
   }
-  return { ok: true, positions: params.after.positions }
+  const skip = new Set([...freezeAccountIds, ...permanentSkipAccountIds])
+  const positions = params.after.positions.filter(
+    (position) => !skip.has(normalizeFillAccountId(position.accountId)),
+  )
+  return {
+    ok: true,
+    positions,
+    ...(freezeAccountIds.length > 0 ? { freezeAccountIds } : {}),
+    ...(permanentSkipAccountIds.length > 0 ? { permanentSkipAccountIds } : {}),
+  }
 }
 
 export function utcYyyymmddStartMs(ymd: string | undefined): number | undefined {
   if (!ymd) return undefined
+  const sessionOpen = globexSessionOpenForTradeDate(ymd)
+  if (sessionOpen) return sessionOpen.getTime()
   const compact = ymd.replace(/-/g, '')
   if (!/^\d{8}$/.test(compact)) return undefined
   return Date.UTC(
@@ -242,6 +317,54 @@ export function utcYyyymmddStartMs(ymd: string | undefined): number | undefined 
     Number(compact.slice(4, 6)) - 1,
     Number(compact.slice(6, 8)),
   )
+}
+
+/**
+ * FIFO window start for this connection. The stored pin never advances past a
+ * real (non-seed) stored entry, so a rolling weekly close cannot drop the
+ * overnight fill that is already in the journal.
+ */
+export function pinFifoAnchorMs(params: {
+  weeklyCloseMs: number
+  storedAnchorMs?: number
+  storedEntries?: Array<{ entryDate?: string | null; entryId?: string | null }>
+}): number {
+  const candidates: number[] = []
+  if (Number.isFinite(params.weeklyCloseMs) && params.weeklyCloseMs > 0) {
+    candidates.push(params.weeklyCloseMs)
+  }
+  if (
+    params.storedAnchorMs != null &&
+    Number.isFinite(params.storedAnchorMs) &&
+    params.storedAnchorMs > 0
+  ) {
+    candidates.push(params.storedAnchorMs)
+  }
+  for (const trade of params.storedEntries ?? []) {
+    if (isOpeningSeedCloseTrade(trade)) continue
+    const entryMs = Date.parse(trade.entryDate ?? '')
+    if (Number.isFinite(entryMs) && entryMs > 0) candidates.push(entryMs)
+  }
+  return candidates.length > 0 ? Math.min(...candidates) : 0
+}
+
+export function symbolKeysForAccounts(
+  fills: RithmicProtocolFill[],
+  accountIds: Iterable<string>,
+): Set<string> {
+  const accounts = new Set(
+    [...accountIds].map((id) => normalizeFillAccountId(id)).filter(Boolean),
+  )
+  const keys = new Set<string>()
+  if (accounts.size === 0) return keys
+  for (const fill of fills) {
+    const accountId = normalizeFillAccountId(fill.accountId)
+    if (!accounts.has(accountId)) continue
+    const symbol = (fill.symbol || '').trim().toUpperCase()
+    if (!symbol) continue
+    keys.add(positionKey(accountId, symbol))
+  }
+  return keys
 }
 
 export function tradeClosedOnOrAfter(
@@ -266,8 +389,15 @@ export function retainOrdinarySyncRow(
     freezeKeys: Set<string>
     fills: RithmicProtocolFill[] | Map<string, RithmicProtocolFill>
     historyStartMs?: number
+    frozenAccountIds?: Iterable<string>
   },
 ): boolean {
+  const frozenAccounts = new Set(
+    [...(params.frozenAccountIds ?? [])]
+      .map((id) => normalizeFillAccountId(id))
+      .filter(Boolean),
+  )
+  if (frozenAccounts.has(normalizeFillAccountId(row.accountNumber))) return true
   if (tradeTouchesSymbolKeys(row, params.freezeKeys, params.fills)) return true
   return !tradeClosedOnOrAfter(row, params.historyStartMs)
 }
@@ -328,9 +458,18 @@ export function uncertainOpeningSymbolKeys(params: {
     }
     keys.add(positionKey(position.accountId, position.symbol))
   }
+  const evidence = snapshotAccountSet(
+    [params.before, params.after],
+    'evidenceAccountIds',
+  )
+  const noData = snapshotAccountSet([params.before, params.after], 'noDataAccountIds')
+  const hasBook =
+    params.before.positions.length > 0 || params.after.positions.length > 0
   return {
     keys,
-    determined: params.before.complete || params.after.complete,
+    determined:
+      (params.before.complete || params.after.complete) &&
+      (evidence.size > 0 || noData.size > 0 || hasBook),
   }
 }
 
@@ -398,8 +537,12 @@ export function planOrdinarySyncTrades<
   openingStateDetermined?: boolean
   historyStartMs?: number
   fillHistoryComplete?: boolean
-  /** Fill ids already present on stored protocol trades. */
-  persistedFillIds?: Set<string>
+  /** Skip keys that retrying will not fix (capability reject). Still stamp. */
+  permanentSkipKeys?: Set<string>
+  /** Per-account freeze (no-data-with-fills / incomplete). Retrying may help. */
+  frozenAccountIds?: Iterable<string>
+  /** Capability rejects — skip the account and still stamp lastSyncedAt. */
+  permanentSkipAccountIds?: Iterable<string>
 }): OrdinarySyncTradePlan<T> {
   if (params.fillHistoryComplete === false) {
     return {
@@ -440,19 +583,26 @@ export function planOrdinarySyncTrades<
   if (!params.snapshotOk) {
     for (const key of params.uncertainSymbolKeys ?? []) skipKeys.add(key)
   }
+  const frozenAccounts = new Set(
+    [...(params.frozenAccountIds ?? [])]
+      .map((id) => normalizeFillAccountId(id))
+      .filter(Boolean),
+  )
+  const permanentSkipAccounts = new Set(
+    [...(params.permanentSkipAccountIds ?? [])]
+      .map((id) => normalizeFillAccountId(id))
+      .filter(Boolean),
+  )
+  const skippedAccounts = new Set([...frozenAccounts, ...permanentSkipAccounts])
   const fillIndex = indexFillsByCanonicalId(params.fills)
-  const skippedTrades = params.trades.filter((trade) =>
-    tradeTouchesSymbolKeys(trade, skipKeys, fillIndex),
+  const tradeFrozen = (trade: T) =>
+    skippedAccounts.has(normalizeFillAccountId(trade.accountNumber)) ||
+    tradeTouchesSymbolKeys(trade, skipKeys, fillIndex)
+  const skippedTrades = params.trades.filter(tradeFrozen)
+  const unskipped = params.trades.filter((trade) => !tradeFrozen(trade))
+  const persist = unskipped.filter((trade) =>
+    tradeClosedOnOrAfter(trade, params.historyStartMs),
   )
-  const unskipped = params.trades.filter(
-    (trade) => !tradeTouchesSymbolKeys(trade, skipKeys, fillIndex),
-  )
-  const persist = unskipped.filter((trade) => {
-    if (tradeClosedOnOrAfter(trade, params.historyStartMs)) return true
-    // Legacy fills that were frozen past the rolling cutoff still persist
-    // once they have never appeared on a stored row.
-    return tradeHasUnpersistedFillIds(trade, params.persistedFillIds)
-  })
   const preHistoryDropped = unskipped.length - persist.length
   const dropReasons: Record<string, number> = {}
   if (skippedTrades.length > 0) {
@@ -461,8 +611,11 @@ export function planOrdinarySyncTrades<
   if (preHistoryDropped > 0) {
     dropReasons.closed_before_history_start = preHistoryDropped
   }
-  const frozen = skipKeys.size > 0
-  const warnings = frozen
+  const retryKeys = [...skipKeys].filter(
+    (key) => !params.permanentSkipKeys?.has(key),
+  )
+  const frozen = retryKeys.length > 0 || frozenAccounts.size > 0
+  const warnings = skipKeys.size > 0
     ? [
         params.snapshotOk
           ? 'Opening-position symbols were skipped; existing trades for those symbols were left unchanged.'
@@ -481,19 +634,6 @@ export function planOrdinarySyncTrades<
   }
 }
 
-function tradeHasUnpersistedFillIds(
-  trade: { entryId?: string | null; closeId?: string | null },
-  persistedFillIds?: Set<string>,
-): boolean {
-  if (!persistedFillIds) return false
-  for (const rawId of [trade.entryId, trade.closeId]) {
-    for (const id of rithmicFillIdLookupValues(rawId)) {
-      if (id && !persistedFillIds.has(id)) return true
-    }
-  }
-  return false
-}
-
 export function fifoEndPositionMatchesPEnd(params: {
   openNets: FifoOpenNet[]
   positions: InstrumentPosition[]
@@ -508,9 +648,13 @@ export function fifoEndPositionMatchesPEnd(params: {
   const mismatchedKeys: string[] = []
   for (const key of keys) {
     if (params.skippedSymbolKeys?.has(key)) continue
-    if ((expected.get(key) ?? 0) !== (actual.get(key) ?? 0)) {
-      mismatchedKeys.push(key)
-    }
+    const expectedNet = expected.get(key) ?? 0
+    const actualNet = actual.get(key) ?? 0
+    if (expectedNet === actualNet) continue
+    // Fill-less flatten: broker is flat, leftover lots expired. Do not seed
+    // the opposite side (that inverts real round-trips). Leftover ≠ 0 is ok.
+    if (expectedNet === 0) continue
+    mismatchedKeys.push(key)
   }
   return { ok: mismatchedKeys.length === 0, mismatchedKeys }
 }
@@ -654,10 +798,14 @@ export function computeOpeningPositionChecks(params: {
  * A seed with no later close (weekend hold still open) stays as `openSkipped`
  * and never becomes a Trade row.
  *
- * `|P_0| > window gross` is treated as a fill-less termination / reset rather
- * than an opening to seed: skip that symbol instead of inventing the opposite
- * side. A still-open weekend hold with no fills in the window (`gross = 0`)
- * takes the same skip path and does not persist a trade.
+ * A still-open hold (`P_end ≠ 0`, no window fills) is seeded so leftover
+ * lots match the snapshot; the seed stays `openSkipped` and is healthy.
+ * `P_end = 0` with a mixed B/S window is a flatten of completed round-trips:
+ * do not seed the opposite side (B-S-B-S-B inverts real long profits).
+ * One-sided leftover closes of a pre-window hold still seed.
+ *
+ * `|P_0| > window gross` with fills still in the window cannot be priced
+ * and is skipped.
  */
 export function decideOpeningSeeds(
   checks: OpeningPositionCheck[],
@@ -679,6 +827,15 @@ export function decideOpeningSeeds(
       if (windowStartMs > 0 && fillTimestampMs(fill) < windowStartMs) return false
       return true
     })
+    // Broker is flat: seed only a one-sided leftover (closes of a pre-window
+    // hold). Mixed B/S books already contain round-trips; seeding the opposite
+    // side inverts them (B-S-B-S-B).
+    if (check.pEnd === 0) {
+      const sides = new Set(
+        symbolFills.map((fill) => fillSide(fill.transactionType)),
+      )
+      if (sides.size !== 1) continue
+    }
     if (check.unpricedCount > 0) {
       skipped.push({
         accountId: check.accountId,
@@ -692,13 +849,13 @@ export function decideOpeningSeeds(
       (sum, fill) => sum + Math.abs(Number(fill.fillSize) || 0),
       0,
     )
-    if (Math.abs(check.p0) > gross) {
+    if (Math.abs(check.p0) > gross && check.fillCount > 0) {
       skipped.push({
         accountId: check.accountId,
         symbol: check.symbol,
-        reason: check.fillCount === 0 ? 'fill_less_expiry' : 'p0_exceeds_window_gross',
+        reason: 'p0_exceeds_window_gross',
       })
-      if (check.fillCount > 0) error = 'OPENING_POSITION_UNKNOWN'
+      error = 'OPENING_POSITION_UNKNOWN'
       continue
     }
     if (!Number.isFinite(check.p0) || !Number.isInteger(check.p0)) {

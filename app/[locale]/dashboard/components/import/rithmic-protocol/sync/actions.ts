@@ -27,9 +27,7 @@ import {
 import {
   buildLedgerSeenIndex,
   canonicalLedgerFillIds,
-  coveringAnnotatedTradeId,
   deriveTradesFromFillLedger,
-  hasTradeJournalAnnotations,
   mergeFillLedgers,
   phantomProtocolTradeIds,
 } from '@/lib/rithmic-protocol/fill-ledger'
@@ -41,7 +39,6 @@ import {
 } from '@/lib/rithmic-protocol/fill-ledger-store'
 import {
   buildTradesFromRithmicFills,
-  fillIsInFifoWindow,
   type OpeningLotSeed,
 } from '@/lib/rithmic-protocol/fills-to-trades'
 import {
@@ -51,6 +48,7 @@ import {
   indexFillsByCanonicalId,
   isOpeningSeedCloseTrade,
   openingPositionKey,
+  pinFifoAnchorMs,
   planOrdinarySyncTrades,
   reconcileBracketedSnapshots,
   retainOrdinarySyncRow,
@@ -731,7 +729,7 @@ export async function getRithmicProtocolTrades(
     droppedByReason: {} as Record<string, number>,
   }
 
-  let stampAttempt: { userId: string; username: string } | undefined
+  let stampAttempt: { userId: string; connectionId?: string } | undefined
   try {
     const credentials = parseStoredCredentials(initialTokenJson)
     if (!credentials) {
@@ -753,7 +751,7 @@ export async function getRithmicProtocolTrades(
     if (!userId) {
       return { error: 'USER_NOT_AUTHENTICATED', syncStats }
     }
-    stampAttempt = { userId, username: credentials.username }
+    stampAttempt = { userId }
 
     const accountIds =
       credentials.accountIds && credentials.accountIds.length > 0
@@ -818,6 +816,7 @@ export async function getRithmicProtocolTrades(
       })
       connectionId = connection?.id
     }
+    stampAttempt = { userId, connectionId }
     if (connectionId) {
       await upsertAccountsForNumbers(userId, resolvedAccountIds, connectionId)
       // Invalidate now so the links show up even if the fill fetch below fails.
@@ -873,18 +872,11 @@ export async function getRithmicProtocolTrades(
     guard.throwIfLost()
 
     const afterSnapshot = await fetchInstrumentPositions(snapshotRequest)
-    const windowStartMs = fillHistory?.weeklyCloseIso
-      ? Date.parse(fillHistory.weeklyCloseIso)
-      : 0
     const ledgerFills = mergeFillLedgers(storedFills, rawFills)
-    const ledgerWindowFills =
-      Number.isFinite(windowStartMs) && windowStartMs > 0
-        ? ledgerFills.filter((fill) => fillIsInFifoWindow(fill, windowStartMs))
-        : ledgerFills
     const bracket = reconcileBracketedSnapshots({
       before: beforeSnapshot,
       after: afterSnapshot,
-      fills: ledgerWindowFills,
+      fills: ledgerFills,
     })
     guard.throwIfLost()
 
@@ -923,9 +915,60 @@ export async function getRithmicProtocolTrades(
       ]),
     )
 
+    const existingProtocol = await prisma.trade.findMany({
+      where: {
+        userId,
+        accountNumber: { in: resolvedAccountIds },
+        tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
+      },
+      select: {
+        id: true,
+        accountNumber: true,
+        instrument: true,
+        entryDate: true,
+        closeDate: true,
+        entryId: true,
+        closeId: true,
+        comment: true,
+        tags: true,
+        imageBase64: true,
+        imageBase64Second: true,
+        videoUrl: true,
+        images: true,
+        groupId: true,
+      },
+    })
+    const weeklyCloseMs = fillHistory?.weeklyCloseIso
+      ? Date.parse(fillHistory.weeklyCloseIso)
+      : 0
+    const storedAnchorMs = credentials.fifoAnchorIso
+      ? Date.parse(credentials.fifoAnchorIso)
+      : undefined
+    const sinceMs = pinFifoAnchorMs({
+      weeklyCloseMs,
+      storedAnchorMs:
+        storedAnchorMs != null && Number.isFinite(storedAnchorMs)
+          ? storedAnchorMs
+          : undefined,
+      storedEntries: existingProtocol,
+    })
+    if (
+      connectionId &&
+      sinceMs > 0 &&
+      credentials.fifoAnchorIso !== new Date(sinceMs).toISOString()
+    ) {
+      credentials.fifoAnchorIso = new Date(sinceMs).toISOString()
+      await prisma.connection.update({
+        where: { id: connectionId },
+        data: { token: encryptConnectionToken(JSON.stringify(credentials)) },
+      })
+    }
+
     let openingSeeds: OpeningLotSeed[] = []
     const skippedSymbolKeys = new Set<string>()
-    const fillHistoryComplete = fillHistory?.complete === true
+    const incompleteFillAccounts = fillHistory?.incompleteAccountIds ?? []
+    const fillHistoryComplete =
+      fillHistory?.complete === true || incompleteFillAccounts.length > 0
     if (!fillHistoryComplete) {
       logger.warn(
         `ShowFillHistory was incomplete (windowsFailed=${fillHistory?.windowsFailed ?? '?'}); freezing instead of FIFO-starting flat`,
@@ -938,12 +981,12 @@ export async function getRithmicProtocolTrades(
       const checks = computeOpeningPositionChecks({
         fills: prepared.fills,
         positions: bracket.positions,
-        sinceMs: Number.isFinite(windowStartMs) ? windowStartMs : undefined,
+        sinceMs: sinceMs > 0 ? sinceMs : undefined,
       })
       const decision = decideOpeningSeeds(
         checks,
         prepared.fills,
-        Number.isFinite(windowStartMs) ? windowStartMs : 0,
+        sinceMs > 0 ? sinceMs : 0,
       )
       logger.info(
         `positionChecks=${JSON.stringify(
@@ -967,7 +1010,7 @@ export async function getRithmicProtocolTrades(
     }
 
     const fifoOptions = {
-      sinceMs: Number.isFinite(windowStartMs) ? windowStartMs : 0,
+      sinceMs: sinceMs > 0 ? sinceMs : 0,
       ...(fillHistoryComplete && bracket.ok ? { openingSeeds } : {}),
     }
     const { trades, openSkipped, skipped, openNets } = buildTradesFromRithmicFills(
@@ -1000,41 +1043,17 @@ export async function getRithmicProtocolTrades(
       before: beforeSnapshot,
       after: afterSnapshot,
     })
+    const freezeAccountIds = [
+      ...(bracket.freezeAccountIds ?? []),
+      ...incompleteFillAccounts,
+    ]
+    const permanentSkipAccountIds = bracket.permanentSkipAccountIds ?? []
     const freezeKeys = new Set(skippedSymbolKeys)
-    if (!bracket.ok || !fillHistoryComplete) {
+    if (!bracket.ok || fillHistory?.complete !== true) {
       for (const key of uncertain.keys) freezeKeys.add(key)
     }
     const fillIndex = indexFillsByCanonicalId(prepared.fills)
     const historyStartMs = utcYyyymmddStartMs(fillHistory?.requestedStartYmd)
-    const existingProtocol = await prisma.trade.findMany({
-      where: {
-        userId,
-        accountNumber: { in: resolvedAccountIds },
-        tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
-      },
-      select: {
-        id: true,
-        accountNumber: true,
-        instrument: true,
-        entryDate: true,
-        closeDate: true,
-        entryId: true,
-        closeId: true,
-        comment: true,
-        tags: true,
-        imageBase64: true,
-        imageBase64Second: true,
-        videoUrl: true,
-        images: true,
-        groupId: true,
-      },
-    })
-    const persistedFillIds = new Set<string>()
-    for (const row of existingProtocol) {
-      for (const rawId of [row.entryId, row.closeId]) {
-        if (rawId) persistedFillIds.add(rawId)
-      }
-    }
 
     const tradePlan = planOrdinarySyncTrades({
       trades,
@@ -1045,7 +1064,8 @@ export async function getRithmicProtocolTrades(
       openingStateDetermined: uncertain.determined,
       historyStartMs,
       fillHistoryComplete,
-      persistedFillIds,
+      frozenAccountIds: freezeAccountIds,
+      permanentSkipAccountIds,
     })
     for (const [reason, count] of Object.entries(tradePlan.dropReasons)) {
       syncStats.droppedByReason[reason] =
@@ -1085,13 +1105,9 @@ export async function getRithmicProtocolTrades(
     // misses must not look healthy — the cron should retry. Admin rebuilds leave
     // the row alone.
     const now = new Date()
-    if (!options?.skipConnectionStamp) {
-      await prisma.connection.updateMany({
-        where: {
-          userId,
-          service: SERVICE,
-          externalId: credentials.username,
-        },
+    if (!options?.skipConnectionStamp && connectionId) {
+      await prisma.connection.update({
+        where: { id: connectionId },
         data: tradePlan.stampLastSyncedAt
           ? { lastSyncedAt: now, lastSyncAttemptAt: now }
           : { lastSyncAttemptAt: now },
@@ -1116,6 +1132,7 @@ export async function getRithmicProtocolTrades(
         freezeKeys,
         fills: fillIndex,
         historyStartMs,
+        frozenAccountIds: freezeAccountIds,
       })
     const pendingPhantomIds = tradePlan.skipPhantomDelete
       ? []
@@ -1125,19 +1142,7 @@ export async function getRithmicProtocolTrades(
           ledgerFillIds,
           retainIf,
         })
-    const annotatedUnmatched = existingProtocol.filter(
-      (row) =>
-        hasTradeJournalAnnotations(row) &&
-        !pendingPhantomIds.includes(row.id),
-    )
-    const annotatedPhantomIds: string[] = []
-    for (const derived of tradePlan.derivedForPhantoms) {
-      const coveringId = coveringAnnotatedTradeId(derived, annotatedUnmatched)
-      if (coveringId) annotatedPhantomIds.push(coveringId)
-    }
-    const coverageExcludeTradeIds = [
-      ...new Set([...pendingPhantomIds, ...annotatedPhantomIds]),
-    ]
+    const coverageExcludeTradeIds = [...new Set(pendingPhantomIds)]
 
     // saveTradesAction links every account number it sees on the trades to this
     // Connection, so accounts that only appear on fills are covered too.
@@ -1213,14 +1218,12 @@ export async function getRithmicProtocolTrades(
     logger.error('getRithmicProtocolTrades failed', error)
     if (stampAttempt && !options?.skipConnectionStamp) {
       try {
-        await prisma.connection.updateMany({
-          where: {
-            userId: stampAttempt.userId,
-            service: SERVICE,
-            externalId: stampAttempt.username,
-          },
-          data: { lastSyncAttemptAt: new Date() },
-        })
+        if (stampAttempt.connectionId) {
+          await prisma.connection.update({
+            where: { id: stampAttempt.connectionId },
+            data: { lastSyncAttemptAt: new Date() },
+          })
+        }
       } catch (stampError) {
         logger.error('failed to stamp lastSyncAttemptAt after thrown sync', stampError)
       }

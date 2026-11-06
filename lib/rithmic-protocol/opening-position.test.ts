@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { RITHMIC_PROTOCOL_OPENING_SEED_TAG } from '@/lib/trade-id-utils'
+import { globexSessionOpenForTradeDate } from './cme-session'
 import { buildTradesFromRithmicFills } from './fills-to-trades'
 import type { RithmicProtocolFill } from './types'
 import {
@@ -12,6 +13,7 @@ import {
   openingPositionKey,
   openingSeedOrderId,
   parseOpeningPositionKey,
+  pinFifoAnchorMs,
   planOrdinarySyncTrades,
   reconcileBracketedSnapshots,
   retainOrdinarySyncRow,
@@ -69,6 +71,16 @@ const roundTrip: RithmicProtocolFill[] = [
 
 const jeremieFills: RithmicProtocolFill[] = [
   fill({
+    fillId: 'overnight-1',
+    fillPrice: 7800,
+    ssboe: at('2026-09-29T20:00:00Z'),
+  }),
+  fill({
+    fillId: 'overnight-2',
+    fillPrice: 7800,
+    ssboe: at('2026-09-29T20:00:01Z'),
+  }),
+  fill({
     fillId: 'cover-1',
     transactionType: 'SELL',
     fillPrice: 7802,
@@ -125,7 +137,7 @@ describe('computeOpeningPositionChecks', () => {
     expect(trades[0]?.side).toBe('Long')
   })
 
-  it('Jérémie-shaped: window net −2, P_end 0 ⇒ P_0 +2, no phantom shorts', () => {
+  it('Jérémie-shaped: pinned overnight buys keep extra sells from inventing shorts', () => {
     const checks = computeOpeningPositionChecks({
       fills: jeremieFills,
       positions: [],
@@ -136,9 +148,9 @@ describe('computeOpeningPositionChecks', () => {
         symbol: 'MESZ6',
         instrument: 'MES',
         pEnd: 0,
-        net: -2,
-        p0: 2,
-        fillCount: 6,
+        net: 0,
+        p0: 0,
+        fillCount: 8,
         unpricedCount: 0,
       },
     ])
@@ -148,48 +160,18 @@ describe('computeOpeningPositionChecks', () => {
       WINDOW_START_MS,
     )
     expect(error).toBeUndefined()
-    expect(seeds).toEqual([
-      {
-        accountId: ACCOUNT,
-        symbol: 'MESZ6',
-        netQuantity: 2,
-        timestampMs: expect.any(Number),
-        orderId: openingSeedOrderId(ACCOUNT, 'MESZ6'),
-      },
-    ])
-    const unseeded = buildTradesFromRithmicFills(
+    expect(seeds).toEqual([])
+    const { trades, openSkipped } = buildTradesFromRithmicFills(
       jeremieFills,
       'u1',
       tickBySymbol,
     )
-    expect(overnightShorts(unseeded.trades).length).toBeGreaterThan(0)
-
-    const seeded = buildTradesFromRithmicFills(
-      jeremieFills,
-      'u1',
-      tickBySymbol,
-      undefined,
-      { openingSeeds: seeds },
-    )
-    expect(overnightShorts(seeded.trades)).toEqual([])
-    expect(seeded.openSkipped).toBe(0)
-    const seedCloses = seeded.trades.filter((trade) =>
-      trade.tags?.includes(RITHMIC_PROTOCOL_OPENING_SEED_TAG),
-    )
-    expect(seedCloses).toHaveLength(2)
-    expect(seedCloses.every((trade) => trade.pnl === 0)).toBe(true)
-    expect(seedCloses.every((trade) => trade.side === 'Long')).toBe(true)
-    expect(
-      seedCloses.every((trade) => isOpeningSeedOrderId(trade.entryId)),
-    ).toBe(true)
-    const real = seeded.trades.filter(
-      (trade) => !trade.tags?.includes(RITHMIC_PROTOCOL_OPENING_SEED_TAG),
-    )
-    expect(real).toHaveLength(2)
-    expect(real.every((trade) => trade.side === 'Long')).toBe(true)
+    expect(overnightShorts(trades)).toEqual([])
+    expect(openSkipped).toBe(0)
+    expect(trades.every((trade) => trade.side === 'Long')).toBe(true)
   })
 
-  it('weekend-hold with no fills: |P_0| > gross, skip rather than seed', () => {
+  it('weekend-hold with no fills: seed the open lot and leave it openSkipped', () => {
     const held: RithmicProtocolFill[] = []
     const checks = computeOpeningPositionChecks({
       fills: held,
@@ -197,20 +179,19 @@ describe('computeOpeningPositionChecks', () => {
     })
     expect(checks[0]).toMatchObject({ pEnd: 2, net: 0, p0: 2, fillCount: 0 })
     const decision = decideOpeningSeeds(checks, held, WINDOW_START_MS)
-    expect(decision.seeds).toEqual([])
     expect(decision.error).toBeUndefined()
-    expect(decision.skipped).toEqual([
-      {
-        accountId: ACCOUNT,
-        symbol: 'MESZ6',
-        reason: 'fill_less_expiry',
-      },
-    ])
+    expect(decision.skipped).toEqual([])
+    expect(decision.seeds).toHaveLength(1)
+    expect(decision.seeds[0]).toMatchObject({
+      accountId: ACCOUNT,
+      symbol: 'MESZ6',
+      netQuantity: 2,
+    })
     const open = buildTradesFromRithmicFills(held, 'u1', tickBySymbol, undefined, {
       openingSeeds: decision.seeds,
     })
     expect(open.trades).toEqual([])
-    expect(open.openSkipped).toBe(0)
+    expect(open.openSkipped).toBe(2)
   })
 
   it('weekend-hold then closes in-window: seed and attribute 0 PnL', () => {
@@ -251,7 +232,6 @@ describe('computeOpeningPositionChecks', () => {
 
   it('snapshot-unavailable: ordinary sync keeps existing rather than FIFO-starting flat', () => {
     const unseeded = buildTradesFromRithmicFills(jeremieFills, 'u1', tickBySymbol)
-    expect(overnightShorts(unseeded.trades).length).toBeGreaterThan(0)
     const plan = planOrdinarySyncTrades({
       trades: unseeded.trades,
       fills: jeremieFills,
@@ -281,7 +261,7 @@ describe('computeOpeningPositionChecks', () => {
       positions: [],
     })
     expect(checks[0]).toMatchObject({ pEnd: 0, net: 1, p0: -1, fillCount: 1 })
-    const oversized = [{ ...checks[0]!, p0: -5 }]
+    const oversized = [{ ...checks[0]!, pEnd: 2, p0: -5 }]
     const decision = decideOpeningSeeds(oversized, leftoverBuy, WINDOW_START_MS)
     expect(decision.seeds).toEqual([])
     expect(decision.error).toBe('OPENING_POSITION_UNKNOWN')
@@ -301,7 +281,11 @@ describe('computeOpeningPositionChecks', () => {
       positions: [],
     })
     expect(checks[0]?.p0).toBe(-0.5)
-    const decision = decideOpeningSeeds(checks, half, WINDOW_START_MS)
+    const decision = decideOpeningSeeds(
+      [{ ...checks[0]!, pEnd: 1 }],
+      half,
+      WINDOW_START_MS,
+    )
     expect(decision.error).toBe('OPENING_POSITION_UNKNOWN')
     expect(decision.skipped[0]?.reason).toBe('non_integer_p0')
   })
@@ -313,6 +297,7 @@ describe('reconcileBracketedSnapshots', () => {
     positions: [] as { accountId: string; symbol: string; netQuantity: number }[],
     complete: true,
     capturedAtMs,
+    evidenceAccountIds: [ACCOUNT],
   }
 
   it('accepts matching before/after books when fills predate the after snapshot', () => {
@@ -375,6 +360,59 @@ describe('reconcileBracketedSnapshots', () => {
     expect(result.ok).toBe(false)
     expect(result.reason).toBe('timeout')
   })
+
+  it('freezes only the incomplete account when ids are known', () => {
+    const result = reconcileBracketedSnapshots({
+      before: {
+        ...flat,
+        complete: false,
+        incompleteAccountIds: ['OTHER'],
+      },
+      after: {
+        ...flat,
+        complete: false,
+        incompleteAccountIds: ['OTHER'],
+      },
+      fills: roundTrip,
+    })
+    expect(result.ok).toBe(true)
+    expect(result.freezeAccountIds).toEqual(['OTHER'])
+    expect(result.positions).toEqual([])
+  })
+
+  it('rejects an empty complete snapshot without 451 evidence', () => {
+    const empty = {
+      positions: [] as { accountId: string; symbol: string; netQuantity: number }[],
+      complete: true,
+      capturedAtMs,
+    }
+    const result = reconcileBracketedSnapshots({
+      before: empty,
+      after: empty,
+      fills: [],
+    })
+    expect(result.ok).toBe(false)
+    expect(result.reason).toBe('snapshot_unconfirmed_flat')
+  })
+
+  it('treats a capability reject as a permanent skip, not a retry freeze', () => {
+    const result = reconcileBracketedSnapshots({
+      before: {
+        ...flat,
+        complete: false,
+        rejectedAccountIds: ['DEAD'],
+      },
+      after: {
+        ...flat,
+        complete: false,
+        rejectedAccountIds: ['DEAD'],
+      },
+      fills: roundTrip,
+    })
+    expect(result.ok).toBe(true)
+    expect(result.permanentSkipAccountIds).toEqual(['DEAD'])
+    expect(result.freezeAccountIds).toBeUndefined()
+  })
 })
 
 describe('planOrdinarySyncTrades', () => {
@@ -396,7 +434,7 @@ describe('planOrdinarySyncTrades', () => {
       },
     )
     const historyStartMs = utcYyyymmddStartMs('20261001')
-    expect(historyStartMs).toBe(Date.UTC(2026, 9, 1))
+    expect(historyStartMs).toBe(globexSessionOpenForTradeDate('20261001')!.getTime())
     const plan = planOrdinarySyncTrades({
       trades: seeded.trades,
       fills: jeremieFills,
@@ -444,7 +482,7 @@ describe('planOrdinarySyncTrades', () => {
     expect(plan.syncStatus).toBe('degraded')
   })
 
-  it('flat user: complete empty snapshots leave unrelated trades writable and stamp lastSyncedAt', () => {
+  it('flat user: complete empty snapshots with 451 evidence leave unrelated trades writable and stamp lastSyncedAt', () => {
     const mnq = {
       accountNumber: ACCOUNT,
       entryId: 'mnq-open',
@@ -453,8 +491,16 @@ describe('planOrdinarySyncTrades', () => {
     }
     const uncertain = uncertainOpeningSymbolKeys({
       incomingFills: [],
-      before: { positions: [], complete: true },
-      after: { positions: [], complete: true },
+      before: {
+        positions: [],
+        complete: true,
+        evidenceAccountIds: [ACCOUNT],
+      },
+      after: {
+        positions: [],
+        complete: true,
+        evidenceAccountIds: [ACCOUNT],
+      },
     })
     expect(uncertain.determined).toBe(true)
     expect(uncertain.keys.size).toBe(0)
@@ -547,6 +593,15 @@ describe('uncertainOpeningSymbolKeys', () => {
     expect(result.determined).toBe(true)
     expect(result.keys.has(openingPositionKey(ACCOUNT, 'MNQZ6'))).toBe(true)
   })
+
+  it('treats a complete empty snapshot without 451 evidence as undetermined', () => {
+    const result = uncertainOpeningSymbolKeys({
+      incomingFills: [],
+      before: { positions: [], complete: true },
+      after: { positions: [], complete: true },
+    })
+    expect(result.determined).toBe(false)
+  })
 })
 
 describe('reconcileBracketedSnapshots plant lag and clocks', () => {
@@ -555,6 +610,7 @@ describe('reconcileBracketedSnapshots plant lag and clocks', () => {
     positions: [] as { accountId: string; symbol: string; netQuantity: number }[],
     complete: true,
     capturedAtMs,
+    evidenceAccountIds: [ACCOUNT],
   }
 
   it('freezes when snapshot clocks are missing', () => {
@@ -615,8 +671,8 @@ describe('reconcileBracketedSnapshots plant lag and clocks', () => {
       after: { ...flat, noDataAccountIds: [ACCOUNT] },
       fills: roundTrip,
     })
-    expect(result.ok).toBe(false)
-    expect(result.reason).toBe('pnl_no_data')
+    expect(result.ok).toBe(true)
+    expect(result.freezeAccountIds).toEqual([ACCOUNT])
   })
 
   it('matches no-data account ids after plant padding using ledger window fills', () => {
@@ -625,8 +681,8 @@ describe('reconcileBracketedSnapshots plant lag and clocks', () => {
       after: { ...flat, noDataAccountIds: [` ${ACCOUNT} `] },
       fills: roundTrip,
     })
-    expect(result.ok).toBe(false)
-    expect(result.reason).toBe('pnl_no_data')
+    expect(result.ok).toBe(true)
+    expect(result.freezeAccountIds).toEqual([ACCOUNT])
   })
 
   it('flat user: no-data with no fills still accepts the empty book', () => {
@@ -662,6 +718,26 @@ describe('planOrdinarySyncTrades fill-history completeness', () => {
     expect(plan.dropReasons.incomplete_fill_history_trades_skipped).toBe(1)
   })
 
+  it('stamps lastSyncedAt when only a permanent capability skip remains', () => {
+    const plan = planOrdinarySyncTrades({
+      trades: [
+        {
+          accountNumber: ACCOUNT,
+          entryId: 'x',
+          closeId: 'y',
+          closeDate: '2026-10-02T14:00:00.000Z',
+        },
+      ],
+      fills: jeremieFills,
+      snapshotOk: true,
+      skippedSymbolKeys: new Set(),
+      permanentSkipAccountIds: ['DEAD'],
+    })
+    expect(plan.persist).toHaveLength(1)
+    expect(plan.stampLastSyncedAt).toBe(true)
+    expect(plan.syncStatus).toBe('ok')
+  })
+
   it('treats a gross-volume skip as degraded and does not stamp lastSyncedAt', () => {
     const skipKey = openingPositionKey(ACCOUNT, 'MESZ6')
     const plan = planOrdinarySyncTrades({
@@ -682,7 +758,7 @@ describe('planOrdinarySyncTrades fill-history completeness', () => {
     expect(plan.frozenSymbolCount).toBe(1)
   })
 
-  it('still persists a pre-history trade whose fill ids were never stored', () => {
+  it('does not persist a pre-history trade on a new connection', () => {
     const old = {
       accountNumber: ACCOUNT,
       entryId: 'legacy-open',
@@ -705,9 +781,9 @@ describe('planOrdinarySyncTrades fill-history completeness', () => {
       snapshotOk: true,
       skippedSymbolKeys: new Set(),
       historyStartMs: utcYyyymmddStartMs('20261001'),
-      persistedFillIds: new Set(),
     })
-    expect(plan.persist).toEqual([old])
+    expect(plan.persist).toEqual([])
+    expect(plan.dropReasons.closed_before_history_start).toBe(1)
   })
 })
 
@@ -750,7 +826,7 @@ describe('retainOrdinarySyncRow pre-history / rolling cutoff', () => {
 })
 
 describe('computeOpeningPositionChecks window filter and unpriced fills', () => {
-  it('assigns fill_less_expiry when P_end is open and the window has no fills', () => {
+  it('seeds a fill-less open hold rather than degrading the sync', () => {
     const checks = computeOpeningPositionChecks({
       fills: [
         fill({
@@ -765,9 +841,9 @@ describe('computeOpeningPositionChecks window filter and unpriced fills', () => 
     })
     expect(checks[0]).toMatchObject({ pEnd: 2, net: 0, p0: 2, fillCount: 0 })
     const decision = decideOpeningSeeds(checks, [], OCT_WEEKLY_CLOSE_MS)
-    expect(decision.seeds).toEqual([])
     expect(decision.error).toBeUndefined()
-    expect(decision.skipped[0]?.reason).toBe('fill_less_expiry')
+    expect(decision.skipped).toEqual([])
+    expect(decision.seeds[0]?.netQuantity).toBe(2)
   })
 
   it('does not seed leftover historical net after a fill-less expiry', () => {
@@ -806,7 +882,7 @@ describe('computeOpeningPositionChecks window filter and unpriced fills', () => 
     expect(checks[0]?.p0).toBe(2)
     const decision = decideOpeningSeeds(checks, leftover, weekend)
     expect(decision.seeds).toEqual([])
-    expect(decision.skipped[0]?.reason).toBe('p0_exceeds_window_gross')
+    expect(decision.skipped).toEqual([])
   })
 
   it('skips unpriced fills in P_0 arithmetic and refuses to seed', () => {
@@ -901,6 +977,90 @@ describe('indexFillsByCanonicalId raw and canonical ids', () => {
         new Set([openingPositionKey(ACCOUNT, 'MESZ6')]),
         byId,
       ),
+    ).toBe(true)
+  })
+})
+
+describe('pinFifoAnchorMs', () => {
+  it('never advances past a stored non-seed entry', () => {
+    const weekly = Date.parse('2026-10-02T22:00:00.000Z')
+    const entry = Date.parse('2026-10-01T20:00:00.000Z')
+    expect(
+      pinFifoAnchorMs({
+        weeklyCloseMs: weekly,
+        storedAnchorMs: weekly,
+        storedEntries: [
+          {
+            entryDate: '2026-10-01T20:00:00.000Z',
+            entryId: 'overnight-buy',
+          },
+        ],
+      }),
+    ).toBe(entry)
+  })
+
+  it('ignores opening-seed entries when pinning', () => {
+    const weekly = Date.parse('2026-10-02T22:00:00.000Z')
+    expect(
+      pinFifoAnchorMs({
+        weeklyCloseMs: weekly,
+        storedEntries: [
+          {
+            entryDate: '2026-09-01T14:00:00.000Z',
+            entryId: 'opening-seed:ACC:MESZ6',
+          },
+        ],
+      }),
+    ).toBe(weekly)
+  })
+})
+
+describe('fill-less flatten B-S-B-S-B (P6)', () => {
+  it('keeps real long profits instead of seeding the opposite side', () => {
+    const fills = [
+      fill({
+        fillId: 'b1',
+        fillPrice: 100,
+        ssboe: at('2026-10-26T14:00:00Z'),
+      }),
+      fill({
+        fillId: 's1',
+        transactionType: 'SELL',
+        fillPrice: 110,
+        ssboe: at('2026-10-26T14:01:00Z'),
+      }),
+      fill({
+        fillId: 'b2',
+        fillPrice: 100,
+        ssboe: at('2026-10-26T14:02:00Z'),
+      }),
+      fill({
+        fillId: 's2',
+        transactionType: 'SELL',
+        fillPrice: 110,
+        ssboe: at('2026-10-26T14:03:00Z'),
+      }),
+      fill({
+        fillId: 'b3',
+        fillPrice: 100,
+        ssboe: at('2026-10-26T14:04:00Z'),
+      }),
+    ]
+    const positions = [{ accountId: ACCOUNT, symbol: 'MESZ6', netQuantity: 0 }]
+    const checks = computeOpeningPositionChecks({ fills, positions })
+    const decision = decideOpeningSeeds(checks, fills, WINDOW_START_MS)
+    expect(decision.seeds).toEqual([])
+    const { trades, openNets } = buildTradesFromRithmicFills(
+      fills,
+      'u1',
+      tickBySymbol,
+      undefined,
+      { openingSeeds: decision.seeds },
+    )
+    expect(trades.every((trade) => trade.pnl > 0)).toBe(true)
+    expect(trades.every((trade) => trade.side === 'Long')).toBe(true)
+    expect(
+      fifoEndPositionMatchesPEnd({ openNets, positions }).ok,
     ).toBe(true)
   })
 })

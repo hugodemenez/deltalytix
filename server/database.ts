@@ -44,12 +44,13 @@ export async function saveTradesAction(
   console.log('[saveTrades] Saving trades:', data.length)
   // A browser can call this server action directly. Only an in-process
   // `serverActor` may choose the user; anything else falls back to the session.
-  const userId = trustedUserId(options) ?? await getUserId()
+  const actorId = trustedUserId(options)
+  const userId = actorId ?? await getUserId()
   return saveTradesCore(data, {
     userId,
     connectionId: options?.connectionId,
     coverageExcludeTradeIds: options?.coverageExcludeTradeIds,
-    allowOpeningSeedEntryIds: options?.allowOpeningSeedEntryIds,
+    allowOpeningSeedEntryIds: Boolean(actorId && options?.allowOpeningSeedEntryIds),
   })
 }
 

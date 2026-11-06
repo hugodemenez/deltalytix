@@ -672,6 +672,9 @@ export class RithmicProtocolClient {
     capturedAtMs: number
     capturedUntilMs: number
     noDataAccountIds: string[]
+    incompleteAccountIds: string[]
+    rejectedAccountIds: string[]
+    evidenceAccountIds: string[]
   }> {
     const capturedAtMs = Date.now()
     const snapshot = await this.collectPnLPositionSnapshot(params)
@@ -682,6 +685,9 @@ export class RithmicProtocolClient {
       capturedAtMs,
       capturedUntilMs: Date.now(),
       noDataAccountIds: snapshot.noDataAccountIds,
+      incompleteAccountIds: snapshot.incompleteAccountIds,
+      rejectedAccountIds: snapshot.rejectedAccountIds,
+      evidenceAccountIds: snapshot.evidenceAccountIds,
     }
   }
 
@@ -697,12 +703,17 @@ export class RithmicProtocolClient {
     complete: boolean
     reason?: string
     noDataAccountIds: string[]
+    incompleteAccountIds: string[]
+    rejectedAccountIds: string[]
+    evidenceAccountIds: string[]
   }> {
     const balancesByAccountId = new Map<string, RithmicProtocolAccountBalance>()
     const positionsByKey = new Map<string, RithmicProtocolInstrumentPosition>()
     const needed = [...new Set(params.accountIds.map((id) => id.trim()).filter(Boolean))]
     const completed = new Set<string>()
     const noDataAccountIds: string[] = []
+    const incompleteAccountIds: string[] = []
+    const rejectedAccountIds: string[] = []
     const deadline =
       Date.now() + (params.deadlineMs ?? PNL_SNAPSHOT_TOTAL_BUDGET_MS)
     let reason: string | undefined
@@ -826,6 +837,7 @@ export class RithmicProtocolClient {
 
           if (msg.templateId === RithmicTemplateId.REJECT) {
             reason = 'rejected'
+            rejectedAccountIds.push(accountId)
             console.warn(
               `[RITHMIC-PROTOCOL] PnL snapshot rejected for account ${accountId}`,
             )
@@ -848,12 +860,16 @@ export class RithmicProtocolClient {
 
       if (outOfTime) {
         reason = 'timeout'
+        incompleteAccountIds.push(accountId)
         console.warn(
           `[RITHMIC-PROTOCOL] PnL snapshot budget exhausted while waiting on ${accountId}`,
         )
         break
       }
-      if (!accountComplete && !reason) reason = 'incomplete'
+      if (!accountComplete && !rejectedAccountIds.includes(accountId)) {
+        incompleteAccountIds.push(accountId)
+        if (!reason) reason = 'incomplete'
+      }
     }
 
     const complete = needed.length === 0 || needed.every((id) => completed.has(id))
@@ -863,6 +879,9 @@ export class RithmicProtocolClient {
       complete,
       reason: complete ? (noDataAccountIds.length > 0 ? 'no_data' : undefined) : reason ?? 'incomplete',
       noDataAccountIds,
+      incompleteAccountIds,
+      rejectedAccountIds,
+      evidenceAccountIds: [...balancesByAccountId.keys()],
     }
   }
 
@@ -1450,6 +1469,10 @@ export async function fetchInstrumentPositions(params: {
   capturedAtMs: number
   capturedUntilMs?: number
   noDataAccountIds: string[]
+  incompleteAccountIds: string[]
+  rejectedAccountIds: string[]
+  evidenceAccountIds: string[]
+  requestedAccountIds: string[]
   fcmId?: string
   ibId?: string
 }> {
@@ -1462,6 +1485,10 @@ export async function fetchInstrumentPositions(params: {
       capturedAtMs,
       capturedUntilMs: capturedAtMs,
       noDataAccountIds: [],
+      incompleteAccountIds: [],
+      rejectedAccountIds: [],
+      evidenceAccountIds: [],
+      requestedAccountIds: [],
       fcmId: params.fcmId,
       ibId: params.ibId,
     }
@@ -1478,11 +1505,28 @@ export async function fetchInstrumentPositions(params: {
     })
     const fcmId = params.fcmId || login.fcmId
     const ibId = params.ibId || login.ibId
+    const accountMeta = new Map(
+      (params.accounts ?? []).map((account) => [account.accountId, account]),
+    )
+    try {
+      const listed = await client.listAccounts({
+        fcmId,
+        ibId,
+      })
+      for (const account of listed) {
+        accountMeta.set(account.accountId, account)
+      }
+    } catch (error) {
+      console.warn(
+        '[RITHMIC-PROTOCOL] Re-list accounts during PnL snapshot failed; using cached FCM/IB',
+        error instanceof Error ? error.message : error,
+      )
+    }
     const snapshot = await client.getInstrumentPnLSnapshots({
       fcmId,
       ibId,
       accountIds,
-      accounts: params.accounts,
+      accounts: [...accountMeta.values()],
       deadlineMs: params.deadlineMs,
     })
     return {
@@ -1492,6 +1536,10 @@ export async function fetchInstrumentPositions(params: {
       capturedAtMs: snapshot.capturedAtMs,
       capturedUntilMs: snapshot.capturedUntilMs,
       noDataAccountIds: snapshot.noDataAccountIds,
+      incompleteAccountIds: snapshot.incompleteAccountIds,
+      rejectedAccountIds: snapshot.rejectedAccountIds,
+      evidenceAccountIds: snapshot.evidenceAccountIds,
+      requestedAccountIds: accountIds,
       fcmId,
       ibId,
     }
@@ -1506,6 +1554,10 @@ export async function fetchInstrumentPositions(params: {
       capturedAtMs,
       capturedUntilMs: capturedAtMs,
       noDataAccountIds: [],
+      incompleteAccountIds: accountIds,
+      rejectedAccountIds: [],
+      evidenceAccountIds: [],
+      requestedAccountIds: accountIds,
       fcmId: params.fcmId,
       ibId: params.ibId,
     }
@@ -1551,6 +1603,7 @@ export async function fetchFillsForAccounts(params: {
     endYmd: string
     complete: boolean
     windowsFailed: number
+    incompleteAccountIds: string[]
   }
   fillStats: {
     received: number
@@ -1639,7 +1692,9 @@ export async function fetchFillsForAccounts(params: {
     let windowThrew = false
     let fallbackRequired = false
     let fallbackFailed = false
+    let fallbackFillCount = 0
     let replayFailed = false
+    const incompleteAccountIds: string[] = []
     const windowsPlanned = windows.length * accountIds.length
     const pushFills = (batch: RithmicProtocolFill[]) => {
       if (!params.seenIdentityKeys || params.seenIdentityKeys.size === 0) {
@@ -1690,7 +1745,14 @@ export async function fetchFillsForAccounts(params: {
       let historyFills = 0
       let missingWindows = 0
       let usedOrderHistoryFallback = false
-      const pullOrderHistory = async (source: 'history' | 'replay') => {
+      let accountIncomplete = false
+      const markAccountIncomplete = () => {
+        accountIncomplete = true
+      }
+      const pullOrderHistory = async (
+        source: 'history' | 'replay',
+        afterThrow = false,
+      ) => {
         const fallback = await client.getFillsViaOrderHistory({
           fcmId,
           ibId,
@@ -1700,6 +1762,8 @@ export async function fetchFillsForAccounts(params: {
         console.log(
           `[RITHMIC-PROTOCOL] Order-history fallback for ${accountId} (${source}): ${fallback.length} fill(s)`,
         )
+        fallbackFillCount += fallback.length
+        if (afterThrow && fallback.length === 0) markAccountIncomplete()
         pushFills(markFillSource(fallback, source))
       }
       for (const window of windows) {
@@ -1731,14 +1795,17 @@ export async function fetchFillsForAccounts(params: {
             usedOrderHistoryFallback = true
             fallbackRequired = true
             try {
-              await pullOrderHistory(plan.source)
+              await pullOrderHistory(plan.source, true)
             } catch (fallbackError) {
               fallbackFailed = true
+              markAccountIncomplete()
               console.warn(
                 `[RITHMIC-PROTOCOL] Order-history fallback failed for ${accountId}`,
                 fallbackError instanceof Error ? fallbackError.message : fallbackError,
               )
             }
+          } else {
+            markAccountIncomplete()
           }
           break
         }
@@ -1758,6 +1825,7 @@ export async function fetchFillsForAccounts(params: {
           await pullOrderHistory(fallbackPlan.source)
         } catch (error) {
           fallbackFailed = true
+          markAccountIncomplete()
           console.warn(
             `[RITHMIC-PROTOCOL] Order-history fallback failed for ${accountId}`,
             error instanceof Error ? error.message : error,
@@ -1813,8 +1881,11 @@ export async function fetchFillsForAccounts(params: {
           }
         } else {
           replayFailed = true
+          markAccountIncomplete()
         }
       }
+      if (replayFailed && !accountIncomplete) markAccountIncomplete()
+      if (accountIncomplete) incompleteAccountIds.push(accountId)
     }
 
     const prepared = prepareRithmicProtocolFills(fills)
@@ -1824,6 +1895,7 @@ export async function fetchFillsForAccounts(params: {
       windowThrew,
       fallbackRequired,
       fallbackSucceeded: fallbackRequired ? !fallbackFailed : true,
+      fallbackFillCount,
       replaySucceeded: !replayFailed,
     })
     return {
@@ -1838,6 +1910,7 @@ export async function fetchFillsForAccounts(params: {
         endYmd: toYyyymmddString(end),
         complete: historyCompleteness.complete,
         windowsFailed: historyCompleteness.windowsFailed,
+        incompleteAccountIds,
       },
       fillStats: {
         received: prepared.stats.received + skippedAlreadySeen,

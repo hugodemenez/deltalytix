@@ -36,13 +36,14 @@ import {
   summarizeFillLedgerNets,
   uncoveredProtocolTrades,
 } from './fill-ledger'
-import { buildTradesFromRithmicFills, fillTimestampMs } from './fills-to-trades'
+import { buildTradesFromRithmicFills, normalizeFillAccountId } from './fills-to-trades'
 import {
   type OpeningPositionCheck,
   computeOpeningPositionChecks,
   decideOpeningSeeds,
   fifoEndPositionMatchesPEnd,
   openingPositionKey,
+  pinFifoAnchorMs,
   reconcileBracketedSnapshots,
   indexFillsByCanonicalId,
   tradeClosedOnOrAfter,
@@ -90,6 +91,7 @@ export type FillHistoryWindow = {
   endYmd?: string
   complete?: boolean
   windowsFailed?: number
+  incompleteAccountIds?: string[]
 }
 
 export type ProposedRebuildSnapshot = AccountProtocolSnapshot & {
@@ -143,6 +145,7 @@ type StoredCredentials = {
   fcmId?: string
   ibId?: string
   historyStartDate?: string
+  fifoAnchorIso?: string
 }
 
 type ProtocolDb = typeof prisma
@@ -517,7 +520,16 @@ export async function resyncRithmicProtocolAccount(params: {
           )
           commissionRates = fetched.commissionRates
           fillWindow = fetched.fillHistory
-          if (fetched.fillHistory?.complete !== true && !params.dryRun) {
+          const incompleteIds = fetched.fillHistory?.incompleteAccountIds ?? []
+          const thisHistoryIncomplete =
+            fetched.fillHistory?.complete !== true &&
+            (incompleteIds.length === 0 ||
+              incompleteIds.some(
+                (id) =>
+                  normalizeFillAccountId(id) ===
+                  normalizeFillAccountId(accountNumber),
+              ))
+          if (thisHistoryIncomplete && !params.dryRun) {
             return { ...base, error: 'INCOMPLETE_FILL_HISTORY' }
           }
         } catch (error) {
@@ -561,33 +573,40 @@ export async function resyncRithmicProtocolAccount(params: {
           ]),
         )
 
-        const snapshotStatus = bracket.ok ? 'ok' : 'unavailable'
-        const snapshotReason = bracket.ok
-          ? undefined
-          : bracket.reason ?? afterSnapshot.reason ?? beforeSnapshot.reason
+        const thisAccountFrozen = (bracket.freezeAccountIds ?? []).some(
+          (id) => normalizeFillAccountId(id) === normalizeFillAccountId(accountNumber),
+        )
+        const snapshotStatus =
+          bracket.ok && !thisAccountFrozen ? 'ok' : 'unavailable'
+        const snapshotReason = thisAccountFrozen
+          ? 'account_frozen'
+          : bracket.ok
+            ? undefined
+            : bracket.reason ?? afterSnapshot.reason ?? beforeSnapshot.reason
         const scopedPositions = bracket.positions.filter(
           (position) => position.accountId === accountNumber,
         )
+        const weeklyCloseMs = fillWindow?.weeklyCloseIso
+          ? Date.parse(fillWindow.weeklyCloseIso)
+          : NaN
+        const storedAnchorMs = credentials.fifoAnchorIso
+          ? Date.parse(credentials.fifoAnchorIso)
+          : undefined
+        const windowStartMs = pinFifoAnchorMs({
+          weeklyCloseMs: Number.isFinite(weeklyCloseMs) ? weeklyCloseMs : 0,
+          storedAnchorMs:
+            storedAnchorMs != null && Number.isFinite(storedAnchorMs)
+              ? storedAnchorMs
+              : undefined,
+          storedEntries: existing,
+        })
         const positionChecks = bracket.ok
           ? computeOpeningPositionChecks({
               fills: prepared.fills,
               positions: scopedPositions,
-              sinceMs:
-                (fillWindow?.weeklyCloseIso
-                  ? Date.parse(fillWindow.weeklyCloseIso)
-                  : NaN) || undefined,
+              sinceMs: windowStartMs > 0 ? windowStartMs : undefined,
             })
           : []
-        const windowStartMs =
-          (fillWindow?.weeklyCloseIso
-            ? Date.parse(fillWindow.weeklyCloseIso)
-            : NaN) ||
-          prepared.fills.reduce((earliest, fill) => {
-            const ts = fillTimestampMs(fill)
-            if (ts <= 0) return earliest
-            return earliest == null ? ts : Math.min(earliest, ts)
-          }, null as number | null) ||
-          0
         const seedDecision = bracket.ok
           ? decideOpeningSeeds(positionChecks, prepared.fills, windowStartMs)
           : {
@@ -671,6 +690,7 @@ export async function resyncRithmicProtocolAccount(params: {
           skippedOpeningSymbols: seedDecision.skipped,
           openingPositionUnknown: seedDecision.error === 'OPENING_POSITION_UNKNOWN',
           incompleteFillHistory: fillWindow?.complete === false,
+          endPositionMismatchedKeys: endPosition.mismatchedKeys,
         })
         if (duplicateIds.length > 0) {
           warnings.push(
@@ -1072,6 +1092,7 @@ function rebuildWarnings(params: {
   skippedOpeningSymbols: ReturnType<typeof decideOpeningSeeds>['skipped']
   openingPositionUnknown: boolean
   incompleteFillHistory?: boolean
+  endPositionMismatchedKeys?: string[]
 }): string[] {
   const warnings: string[] = []
   if (params.incompleteFillHistory) {
@@ -1089,6 +1110,11 @@ function rebuildWarnings(params: {
       `Skipped seeding ${params.skippedOpeningSymbols
         .map((row) => `${row.symbol} (${row.reason})`)
         .join(', ')}. Existing rows for those symbols are kept.`,
+    )
+  }
+  if (params.endPositionMismatchedKeys && params.endPositionMismatchedKeys.length > 0) {
+    warnings.push(
+      `FIFO open position after the window did not match P_end (${params.endPositionMismatchedKeys.join(', ')}). Live apply refuses with END_POSITION_MISMATCH.`,
     )
   }
   if (params.openingPositionUnknown) {
