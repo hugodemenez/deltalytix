@@ -61,6 +61,7 @@ import { getTradesCache, setTradesCache } from "@/lib/indexeddb/trades-cache";
 import { endOfDay, isValid, parseISO, set, startOfDay } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { calculateStatistics, formatCalendarData } from "@/lib/utils";
+import { withoutOpeningSeedCloses } from "@/lib/opening-seed";
 import { useParams } from "next/navigation";
 import { deleteTagAction } from "@/server/tags";
 import { useRouter } from "next/navigation";
@@ -235,6 +236,8 @@ interface DataContextType {
 
   // Formatted trades and filters
   formattedTrades: PrismaTrade[];
+  /** Includes synthetic opening-seed closes so the journal can show them. */
+  journalTrades: PrismaTrade[];
   instruments: string[];
   setInstruments: React.Dispatch<React.SetStateAction<string[]>>;
   accountNumbers: string[];
@@ -836,7 +839,7 @@ export const DataProvider: React.FC<{
     return () => window.clearTimeout(timer);
   }, [trades, supabaseUser?.id]);
 
-  const formattedTrades = useMemo(() => {
+  const journalTrades = useMemo(() => {
     // Early return if no trades or if trades is not an array
     if (!trades || !Array.isArray(trades) || trades.length === 0)
       return [];
@@ -1011,8 +1014,13 @@ export const DataProvider: React.FC<{
     isLoading,
   ]);
 
+  const formattedTrades = useMemo(
+    () => withoutOpeningSeedCloses(journalTrades),
+    [journalTrades],
+  )
+
   const statistics = useMemo(() => {
-    const stats = calculateStatistics(formattedTrades, accounts, breakevenRange);
+    const stats = calculateStatistics(journalTrades, accounts, breakevenRange);
 
     // Calculate gross profits and gross losses including commissions
     const grossProfits = formattedTrades.reduce((sum, trade) => {
@@ -1020,12 +1028,16 @@ export const DataProvider: React.FC<{
       return totalPnL > 0 ? sum + totalPnL : sum;
     }, 0);
 
+    const analysisFees = formattedTrades.reduce(
+      (sum, trade) => sum + (trade.commission || 0),
+      0,
+    )
     const grossLosses = Math.abs(
       formattedTrades.reduce((sum, trade) => {
         const totalPnL = trade.pnl - trade.commission;
         return totalPnL < 0 ? sum + totalPnL : sum;
       }, 0)
-    );
+    ) + (stats.cumulativeFees - analysisFees);
 
     // Calculate profit factor (handle division by zero)
     const profitFactor =
@@ -1039,11 +1051,11 @@ export const DataProvider: React.FC<{
       ...stats,
       profitFactor,
     };
-  }, [formattedTrades, accounts, breakevenRange]);
+  }, [formattedTrades, journalTrades, accounts, breakevenRange]);
 
   const calendarData = useMemo(
-    () => formatCalendarData(formattedTrades, accounts, timezone),
-    [formattedTrades, accounts, timezone]
+    () => formatCalendarData(journalTrades, accounts, timezone),
+    [journalTrades, accounts, timezone]
   );
 
 
@@ -1658,6 +1670,7 @@ export const DataProvider: React.FC<{
 
     // Formatted trades and filters
     formattedTrades,
+    journalTrades,
     instruments,
     setInstruments,
     accountNumbers,

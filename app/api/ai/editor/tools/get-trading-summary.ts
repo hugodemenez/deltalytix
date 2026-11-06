@@ -1,5 +1,5 @@
 import { groupBy } from "@/lib/utils";
-import { getTradesAction } from "@/server/database";
+import { getAnalyticsTradesAction } from "@/server/database";
 import { Trade } from "@/prisma/generated/prisma/client";
 import { tool } from "ai";
 import { z } from 'zod/v3';
@@ -45,7 +45,7 @@ export const getDayData = tool({
     }),
     execute: async ({ date }) => {
       console.log("Called tool getDayData for day", date)
-        const trades = await getTradesAction();
+        const trades = await getAnalyticsTradesAction();
         const filteredTrades = trades.filter(trade => {
             const tradeDate = new Date(trade.entryDate);
             return isSameDay(tradeDate, new Date(date));

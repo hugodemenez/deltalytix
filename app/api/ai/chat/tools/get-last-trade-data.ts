@@ -1,5 +1,5 @@
 import { parsePositionTime } from "@/lib/utils";
-import { getTradesAction } from "@/server/database";
+import { getAnalyticsTradesAction } from "@/server/database";
 import { tool } from "ai";
 import { z } from 'zod/v3';
 
@@ -19,7 +19,7 @@ export const getLastTradesData = tool({
     }),
     execute: async ({ number, startDate, endDate, accountNumber }) => {
         console.log(`Getting last ${number} trade(s)`)
-        let trades = await getTradesAction();
+        let trades = await getAnalyticsTradesAction();
         if (accountNumber) {
             trades = trades.filter(trade => trade.accountNumber === accountNumber);
         }

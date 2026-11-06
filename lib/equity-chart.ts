@@ -7,7 +7,7 @@ import {
   isValid,
 } from "date-fns";
 import { getTimeRangeKey } from "./time-range";
-import { withoutOpeningSeedCloses } from "@/lib/opening-seed";
+import { isOpeningSeedCloseTrade, withoutOpeningSeedCloses } from "./opening-seed";
 
 // Minimal input types so the lib does not depend on Prisma
 export interface EquityChartTradeInput {
@@ -111,7 +111,7 @@ export function computeEquityChartData(
     .filter((a) => a.groupId === hiddenGroup?.id)
     .map((a) => a.number);
 
-  const filteredTrades = withoutOpeningSeedCloses(trades)
+  const filteredTrades = trades
     .filter((trade) => {
       if (hiddenAccountNumbers.includes(trade.accountNumber)) {
         return false;
@@ -252,7 +252,7 @@ export function computeEquityChartData(
 
   const accountMap = new Map(accounts.map((acc) => [acc.number, acc]));
 
-  const finalFilteredTrades = filteredTrades.filter((trade) => {
+  const windowTrades = filteredTrades.filter((trade) => {
     const isWhitelistedAccount =
       limitedAccountNumbers.includes(trade.accountNumber);
 
@@ -269,8 +269,10 @@ export function computeEquityChartData(
 
     return true;
   });
+  const finalFilteredTrades = withoutOpeningSeedCloses(windowTrades)
+  const seedCloses = windowTrades.filter(isOpeningSeedCloseTrade)
 
-  if (!finalFilteredTrades.length) {
+  if (!finalFilteredTrades.length && !seedCloses.length) {
     return {
       chartData: [],
       accountNumbers: allAccountNumbers,
@@ -278,7 +280,7 @@ export function computeEquityChartData(
     };
   }
 
-  const dates = finalFilteredTrades.map((t) =>
+  const dates = [...finalFilteredTrades, ...seedCloses].map((t) =>
     formatInTimeZone(new Date(t.entryDate), params.timezone, "yyyy-MM-dd")
   );
   const startDate = dates.reduce((min, date) => (date < min ? date : min));
@@ -304,6 +306,19 @@ export function computeEquityChartData(
       dateKey: formatInTimeZone(date, params.timezone, "yyyy-MM-dd"),
       amount: trade.pnl - (trade.commission || 0),
       tradePnL: trade.pnl,
+      tradeCommission: trade.commission || 0,
+      isPayout: false,
+      isReset: false,
+      accountNumber: trade.accountNumber,
+    });
+  });
+  seedCloses.forEach((trade) => {
+    const date = new Date(trade.entryDate);
+    allEvents.push({
+      date,
+      dateKey: formatInTimeZone(date, params.timezone, "yyyy-MM-dd"),
+      amount: -(trade.commission || 0),
+      tradePnL: 0,
       tradeCommission: trade.commission || 0,
       isPayout: false,
       isReset: false,

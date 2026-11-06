@@ -8,8 +8,7 @@ export function isOpeningSeedCloseTrade(trade: {
   entryId?: string | null
   tags?: readonly string[] | null
 }): boolean {
-  if (trade.entryId?.startsWith(OPENING_SEED_ORDER_ID_PREFIX)) return true
-  return Boolean(trade.tags?.includes(RITHMIC_PROTOCOL_OPENING_SEED_TAG))
+  return Boolean(trade.entryId?.startsWith(OPENING_SEED_ORDER_ID_PREFIX))
 }
 
 export function withoutOpeningSeedCloses<
@@ -19,4 +18,28 @@ export function withoutOpeningSeedCloses<
   },
 >(trades: T[]): T[] {
   return trades.filter((trade) => !isOpeningSeedCloseTrade(trade))
+}
+
+export function openingSeedExitCommission<
+  T extends {
+    entryId?: string | null
+    tags?: readonly string[] | null
+    commission?: number | null
+  },
+>(trades: T[]): number {
+  return trades
+    .filter(isOpeningSeedCloseTrade)
+    .reduce((sum, trade) => sum + Number(trade.commission || 0), 0)
+}
+
+/** Real closes keep net PnL; seed closes contribute only the exit fee. */
+export function analysisNetPnl(trade: {
+  entryId?: string | null
+  tags?: readonly string[] | null
+  pnl?: number | null
+  commission?: number | null
+}): number {
+  const commission = Number(trade.commission || 0)
+  if (isOpeningSeedCloseTrade(trade)) return -commission
+  return Number(trade.pnl || 0) - commission
 }

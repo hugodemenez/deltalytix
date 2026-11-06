@@ -6,6 +6,7 @@ import {
   getRecapWeekUtc,
   isEntryInWeek,
 } from "@/lib/weekly-newsletter-window"
+import { isOpeningSeedCloseTrade, withoutOpeningSeedCloses } from "@/lib/opening-seed"
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -111,7 +112,9 @@ export async function computeTradingStats(
   trades: UserData['trades'],
   _language: string
 ): Promise<ComputedStats> {
-  if (trades.length === 0) {
+  const seedCloses = trades.filter(isOpeningSeedCloseTrade)
+  const analysisTrades = withoutOpeningSeedCloses(trades)
+  if (analysisTrades.length === 0 && seedCloses.length === 0) {
     return {
       winLossStats: { wins: 0, losses: 0 },
       dailyPnL: [],
@@ -121,7 +124,7 @@ export async function computeTradingStats(
     }
   }
 
-  const winLossStats = trades.reduce((acc, trade) => {
+  const winLossStats = analysisTrades.reduce((acc, trade) => {
     if (trade.pnl > 0) {
       acc.wins++
     } else {
@@ -130,7 +133,7 @@ export async function computeTradingStats(
     return acc
   }, { wins: 0, losses: 0 })
 
-  const dailyPnL = trades.reduce((acc, trade) => {
+  const dailyPnL = analysisTrades.reduce((acc, trade) => {
     const tradeDate = new Date(trade.entryDate)
     // UTC midnight for date bucketing (UTC v1)
     const dayUtc = new Date(Date.UTC(
@@ -156,6 +159,24 @@ export async function computeTradingStats(
     }
     return acc
   }, [] as { date: Date, pnl: number, weekday: number }[])
+
+  for (const trade of seedCloses) {
+    const tradeDate = new Date(trade.entryDate)
+    const dayUtc = new Date(Date.UTC(
+      tradeDate.getUTCFullYear(),
+      tradeDate.getUTCMonth(),
+      tradeDate.getUTCDate(),
+    ))
+    const utcDay = dayUtc.getUTCDay()
+    const weekday = utcDay === 0 ? 6 : utcDay - 1
+    const existingEntry = dailyPnL.find(entry => entry.date.getTime() === dayUtc.getTime())
+    const fee = Number((0 - trade.commission).toFixed(2))
+    if (existingEntry) {
+      existingEntry.pnl = Number((existingEntry.pnl + fee).toFixed(2))
+    } else {
+      dailyPnL.push({ date: dayUtc, pnl: fee, weekday })
+    }
+  }
 
   // Sort by date
   dailyPnL.sort((a, b) => a.date.getTime() - b.date.getTime())

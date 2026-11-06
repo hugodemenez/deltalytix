@@ -224,14 +224,13 @@ export async function readMetricsSummary(
     side: query.side,
   })
 
-  const trades = withoutOpeningSeedCloses(
-    filterAndSortTradesByEntryDate(
-      (await prisma.trade.findMany({ where })) as Trade[],
-      { from: query.from, to: query.to },
-    ),
+  const loaded = filterAndSortTradesByEntryDate(
+    (await prisma.trade.findMany({ where })) as Trade[],
+    { from: query.from, to: query.to },
   )
-  const stats = calculateStatistics(trades)
-  const tradingDays = calculateTradingDays(trades)
+  const stats = calculateStatistics(loaded)
+  const trades = withoutOpeningSeedCloses(loaded)
+  const tradingDays = calculateTradingDays(loaded)
   const profitFactor = computeProfitFactor(trades)
 
   const wins = trades.filter((trade) => trade.pnl - trade.commission > 0)

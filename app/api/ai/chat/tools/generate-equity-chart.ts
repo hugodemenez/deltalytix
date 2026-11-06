@@ -1,4 +1,5 @@
 import { getTradesAction } from "@/server/database";
+import { analysisNetPnl } from "@/lib/opening-seed";
 import { tool } from "ai";
 import { z } from 'zod/v3';
 import { format, parseISO, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns';
@@ -125,7 +126,7 @@ export const generateEquityChart = tool({
       // Process trades for this date
       relevantTrades.forEach(trade => {
         if (limitedAccountNumbers.includes(trade.accountNumber)) {
-          const netPnL = trade.pnl - (trade.commission || 0);
+          const netPnL = analysisNetPnl(trade);
           accountEquities[trade.accountNumber] += netPnL;
           
           // Mark first activity if not already set

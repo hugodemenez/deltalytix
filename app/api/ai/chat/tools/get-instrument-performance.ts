@@ -1,4 +1,4 @@
-import { getTradesAction } from "@/server/database";
+import { getAnalyticsTradesAction } from "@/server/database";
 import { Trade } from "@/prisma/generated/prisma/client";
 import { tool } from "ai";
 import { z } from 'zod/v3';
@@ -265,7 +265,7 @@ export const getInstrumentPerformance = tool({
   execute: async ({ startDate, endDate, minTrades = 1 }: { startDate?: string, endDate?: string, minTrades?: number }) => {
     console.log(`[getInstrumentPerformance] startDate: ${startDate}, endDate: ${endDate}, minTrades: ${minTrades}`);
     
-    let trades = await getTradesAction();
+    let trades = await getAnalyticsTradesAction();
     
     // Filter trades by date range if provided
     if (startDate || endDate) {

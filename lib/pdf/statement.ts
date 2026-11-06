@@ -4,7 +4,11 @@ import {
   DEFAULT_BREAKEVEN_RANGE,
   classifyTradeOutcome,
 } from "@/types/breakeven"
-import { withoutOpeningSeedCloses } from "@/lib/opening-seed"
+import {
+  analysisNetPnl,
+  isOpeningSeedCloseTrade,
+  withoutOpeningSeedCloses,
+} from "@/lib/opening-seed"
 
 // Slim trade shape the client sends to the PDF route. It mirrors the fields the
 // dashboard's summary and charts actually read, so the server can reproduce the
@@ -79,7 +83,7 @@ export interface StatementChartData {
   distribution: { win: number; breakeven: number; loss: number }
 }
 
-const netPnl = (trade: PdfTrade) => Number(trade.pnl || 0) - Number(trade.commission || 0)
+const netPnl = (trade: PdfTrade) => analysisNetPnl(trade)
 
 function computeTradeDistribution(
   trades: PdfTrade[],
@@ -107,13 +111,13 @@ export function computeSummary(
   trades: PdfTrade[],
   breakevenRange: BreakevenRange = DEFAULT_BREAKEVEN_RANGE,
 ): SummaryMetrics {
-  trades = withoutOpeningSeedCloses(trades)
-  const totalGrossPnl = trades.reduce((sum, t) => sum + Number(t.pnl || 0), 0)
+  const analysisTrades = withoutOpeningSeedCloses(trades)
+  const totalGrossPnl = analysisTrades.reduce((sum, t) => sum + Number(t.pnl || 0), 0)
   const totalNetPnl = trades.reduce((sum, t) => sum + netPnl(t), 0)
-  const { win } = computeTradeDistribution(trades, breakevenRange)
-  const winRate = trades.length > 0 ? (win / trades.length) * 100 : 0
+  const { win } = computeTradeDistribution(analysisTrades, breakevenRange)
+  const winRate = analysisTrades.length > 0 ? (win / analysisTrades.length) * 100 : 0
   return {
-    totalTrades: trades.length,
+    totalTrades: analysisTrades.length,
     winRate,
     totalGrossPnl,
     totalNetPnl,
@@ -134,8 +138,12 @@ function bucketByDay(
     if (Number.isNaN(time)) {
       continue
     }
+    const amount = netPnl(trade)
     const day = formatInTimeZone(new Date(source), timezone, "yyyy-MM-dd")
-    buckets.set(day, (buckets.get(day) ?? 0) + netPnl(trade))
+    if (isOpeningSeedCloseTrade(trade) && amount === 0 && !buckets.has(day)) {
+      continue
+    }
+    buckets.set(day, (buckets.get(day) ?? 0) + amount)
   }
   return buckets
 }
@@ -152,8 +160,12 @@ function bucketByDashboardCalendarDay(
     if (Number.isNaN(time)) {
       continue
     }
+    const amount = netPnl(trade)
     const day = formatInTimeZone(new Date(trade.entryDate), timezone, "yyyy-MM-dd")
-    buckets.set(day, (buckets.get(day) ?? 0) + netPnl(trade))
+    if (isOpeningSeedCloseTrade(trade) && amount === 0 && !buckets.has(day)) {
+      continue
+    }
+    buckets.set(day, (buckets.get(day) ?? 0) + amount)
   }
   return buckets
 }
@@ -163,7 +175,7 @@ export function computeChartData(
   timezone: string,
   breakevenRange: BreakevenRange = DEFAULT_BREAKEVEN_RANGE,
 ): StatementChartData {
-  trades = withoutOpeningSeedCloses(trades)
+  const analysisTrades = withoutOpeningSeedCloses(trades)
   // Equity: cumulative net pnl per day, in chronological order.
   const equityBuckets = bucketByDay(trades, "entryDate", timezone)
   const equityDays = [...equityBuckets.keys()].sort()
@@ -197,7 +209,7 @@ export function computeChartData(
     return { label: weekdayLabels[i], value: count > 0 ? total / count : 0 }
   })
 
-  const distribution = computeTradeDistribution(trades, breakevenRange)
+  const distribution = computeTradeDistribution(analysisTrades, breakevenRange)
 
   return { equity, dailyPnl, weekdayPnl, distribution }
 }

@@ -6,7 +6,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { StatisticsProps } from "@/app/[locale]/dashboard/types/statistics"
 import { Account } from "@/context/data-provider"
 import { BreakevenRange } from "@/types/breakeven"
-import { withoutOpeningSeedCloses } from "@/lib/opening-seed"
+import { isOpeningSeedCloseTrade, openingSeedExitCommission, withoutOpeningSeedCloses } from "@/lib/opening-seed"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -31,10 +31,11 @@ export function parsePositionTime(timeInSeconds: number): string {
 }
 
 export function calculateStatistics(trades: Trade[], accounts: Account[] = [], breakevenRange?: BreakevenRange): StatisticsProps {
+  const seedFees = openingSeedExitCommission(trades)
   trades = withoutOpeningSeedCloses(trades)
   if (!trades.length) {
     return {
-      cumulativeFees: 0,
+      cumulativeFees: seedFees,
       cumulativePnl: 0,
       winningStreak: 0,
       winRate: 0,
@@ -136,6 +137,7 @@ export function calculateStatistics(trades: Trade[], accounts: Account[] = [], b
 
   const averageTimeInSeconds = Math.round(statistics.totalPositionTime / trades.length);
   statistics.averagePositionTime = parsePositionTime(averageTimeInSeconds);
+  statistics.cumulativeFees += seedFees
 
   return statistics;
 }
@@ -145,22 +147,9 @@ export function formatCalendarData(
   accounts: Account[] = [],
   timezone: string,
 ) {
+  const seedCloses = trades.filter(isOpeningSeedCloseTrade)
   trades = withoutOpeningSeedCloses(trades)
-  // // Create a map of accounts for quick lookup
-  // const accountMap = new Map(accounts.map(account => [account.number, account]));
-
-  // // Filter trades based on reset dates for each account
-  // const filteredTrades = trades.filter(trade => {
-  //   const account = accountMap.get(trade.accountNumber);
-  //   if (!account || !account.resetDate) {
-  //     return true; // Include trade if no account found or no reset date
-  //   }
-    
-  //   // Only include trades that occurred after the reset date
-  //   return new Date(trade.entryDate) >= new Date(account.resetDate);
-  // });
-
-  return trades.reduce((acc: any, trade: Trade) => {
+  const calendar = trades.reduce((acc: any, trade: Trade) => {
     const date = formatInTimeZone(
       new Date(trade.entryDate),
       timezone,
@@ -182,6 +171,21 @@ export function formatCalendarData(
     acc[date].trades.push(trade)
     return acc
   }, {})
+
+  for (const trade of seedCloses) {
+    const fee = trade.commission || 0
+    const date = formatInTimeZone(
+      new Date(trade.entryDate),
+      timezone,
+      "yyyy-MM-dd",
+    )
+    if (fee === 0 && !calendar[date]) continue
+    if (!calendar[date]) {
+      calendar[date] = { pnl: 0, tradeNumber: 0, longNumber: 0, shortNumber: 0, trades: [] }
+    }
+    calendar[date].pnl += 0 - fee
+  }
+  return calendar
 }
 
 export function groupBy<T>(array: T[], key: keyof T): { [key: string]: T[] } {
@@ -198,8 +202,9 @@ export function calculateTradingDays(trades: Trade[], minPnlToCountAsDay?: numbe
   validTradingDays: number;
   dailyPnL: { [date: string]: number };
 } {
+  const seedCloses = trades.filter(isOpeningSeedCloseTrade)
   trades = withoutOpeningSeedCloses(trades)
-  if (!trades.length) {
+  if (!trades.length && seedCloses.length === 0) {
     return {
       totalTradingDays: 0,
       validTradingDays: 0,
@@ -221,6 +226,13 @@ export function calculateTradingDays(trades: Trade[], minPnlToCountAsDay?: numbe
     // Calculate net PnL (including commission)
     dailyPnL[dateKey] += trade.pnl - (trade.commission || 0);
   });
+
+  seedCloses.forEach((trade) => {
+    const dateKey = new Date(trade.entryDate).toISOString().split('T')[0]
+    const fee = trade.commission || 0
+    if (fee === 0 && dailyPnL[dateKey] == null) return
+    dailyPnL[dateKey] = (dailyPnL[dateKey] ?? 0) - fee
+  })
 
   const totalTradingDays = Object.keys(dailyPnL).length;
   

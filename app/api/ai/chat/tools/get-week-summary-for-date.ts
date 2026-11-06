@@ -1,5 +1,5 @@
 import { groupBy } from "@/lib/utils";
-import { getTradesAction } from "@/server/database";
+import { getAnalyticsTradesAction } from "@/server/database";
 import { Trade } from "@/prisma/generated/prisma/client";
 import { tool } from "ai";
 import { z } from 'zod/v3';
@@ -54,7 +54,7 @@ export const getWeekSummaryForDate = tool({
             
             console.log(`[getWeekSummaryForDate] Input date: ${date}, Week: ${format(weekStart, 'yyyy-MM-dd')} to ${format(weekEnd, 'yyyy-MM-dd')}`);
             
-            const trades = await getTradesAction();
+            const trades = await getAnalyticsTradesAction();
             const filteredTrades = trades.filter(trade => {
                 const tradeDate = new Date(trade.entryDate);
                 return tradeDate >= weekStart && tradeDate <= weekEnd;

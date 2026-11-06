@@ -528,4 +528,22 @@ describe("computeAccountMetrics buffer handling", () => {
     expect(result.metrics.dailyPnL).toEqual({ "2026-03-02": 100 })
     expect(result.trades.map((trade) => trade.id)).toEqual(["real"])
   })
+
+  it("subtracts opening-seed exit commissions from profit and balance", () => {
+    const trades = [
+      makeTrade("real", 100, "2026-03-02T14:00:00.000Z"),
+      makeTrade("seed", 0, "2026-03-02T14:01:00.000Z", {
+        entryId: "opening-seed:acct-1:ES",
+        tags: ["rithmic-protocol", "rithmic-protocol-opening-seed"],
+        commission: 4.5,
+      }),
+    ]
+    const result = computeAccountMetrics(
+      makeAccount({ buffer: 0, considerBuffer: false }),
+      trades
+    )
+
+    expect(result.metrics.totalProfit).toBe(95.5)
+    expect(result.metrics.currentBalance).toBe(150_095.5)
+  })
 })

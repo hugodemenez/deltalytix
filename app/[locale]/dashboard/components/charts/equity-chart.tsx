@@ -608,7 +608,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     hourFilter,
     tagFilter,
     isSharedView,
-    formattedTrades,
+    journalTrades,
   } = useData();
   const accounts = useUserStore((state) => state.accounts);
   const timezone = useUserStore((state) => state.timezone);
@@ -762,7 +762,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
 
   // Client-side computation for shared view
   const computeClientSideData = React.useCallback(() => {
-    if (!formattedTrades || formattedTrades.length === 0) {
+    if (!journalTrades || journalTrades.length === 0) {
       console.log("[EquityChart] No formatted trades available");
       return {
         chartData: [],
@@ -772,12 +772,12 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
 
     console.log(
       "[EquityChart] Computing client-side data for",
-      formattedTrades.length,
+      journalTrades.length,
       "trades"
     );
 
     // Sort trades by date
-    const sortedTrades = [...formattedTrades].sort(
+    const sortedTrades = [...journalTrades].sort(
       (a, b) =>
         parseISO(a.entryDate).getTime() - parseISO(b.entryDate).getTime()
     );
@@ -844,7 +844,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       chartData,
       accountNumbers: uniqueAccountNumbers,
     };
-  }, [formattedTrades, timezone]);
+  }, [journalTrades, timezone]);
 
   // Client-side computation only for shared/team view (data-provider fetches and stores data when widget is present)
   React.useEffect(() => {

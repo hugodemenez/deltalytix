@@ -5,7 +5,7 @@ import {
   RITHMIC_PROTOCOL_OPENING_SEED_TAG,
 } from '@/lib/opening-seed'
 import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
-import { calculateStatistics, calculateTradingDays } from '@/lib/utils'
+import { calculateStatistics, calculateTradingDays, formatCalendarData } from '@/lib/utils'
 
 function trade(
   overrides: Partial<Trade> & { id: string; pnl: number; entryDate: string },
@@ -56,5 +56,34 @@ describe('opening-seed closes in dashboard aggregates', () => {
     const days = calculateTradingDays(trades)
     expect(days.totalTradingDays).toBe(1)
     expect(days.dailyPnL).toEqual({ '2026-03-02': 50 })
+  })
+
+  it('still counts opening-seed exit commissions in fees and daily net', () => {
+    const trades = [
+      trade({
+        id: 'real',
+        pnl: 50,
+        commission: 2,
+        entryDate: '2026-03-02T15:00:00.000Z',
+      }),
+      trade({
+        id: 'seed',
+        pnl: 0,
+        commission: 4.5,
+        entryDate: '2026-03-02T15:01:00.000Z',
+        entryId: `${OPENING_SEED_ORDER_ID_PREFIX}A1:ES`,
+        tags: [RITHMIC_PROTOCOL_TRADE_TAG, RITHMIC_PROTOCOL_OPENING_SEED_TAG],
+      }),
+    ]
+    const stats = calculateStatistics(trades)
+    expect(stats.nbTrades).toBe(1)
+    expect(stats.cumulativeFees).toBe(6.5)
+
+    const days = calculateTradingDays(trades)
+    expect(days.dailyPnL).toEqual({ '2026-03-02': 43.5 })
+
+    const calendar = formatCalendarData(trades, [], 'UTC')
+    expect(calendar['2026-03-02'].tradeNumber).toBe(1)
+    expect(calendar['2026-03-02'].pnl).toBe(43.5)
   })
 })

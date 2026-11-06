@@ -1,5 +1,5 @@
 import { groupBy } from "@/lib/utils";
-import { getTradesAction } from "@/server/database";
+import { getAnalyticsTradesAction } from "@/server/database";
 import { Trade } from "@/prisma/generated/prisma/client";
 import { tool } from "ai";
 import { z } from 'zod/v3';
@@ -43,7 +43,7 @@ export const getCurrentDayData = tool({
     inputSchema: z.object({}),
     execute: async () => {
       console.log("Called tool getCurrentDayData")
-        const trades = await getTradesAction();
+        const trades = await getAnalyticsTradesAction();
         const filteredTrades = trades.filter(trade => {
             const tradeDate = new Date(trade.entryDate);
             return isToday(tradeDate);

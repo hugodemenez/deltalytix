@@ -302,11 +302,11 @@ function getColumnDefId(columnDef: ColumnDef<ExtendedTrade>): string | undefined
 
 export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps) {
   const t = useI18n();
-  const { formattedTrades, updateTrades, deleteTrades } = useData();
+  const { journalTrades, formattedTrades, updateTrades, deleteTrades } = useData();
   const tags = useUserStore((state) => state.tags);
   const timezone = useUserStore((state) => state.timezone);
   const tickDetails = useTickDetailsStore((state) => state.tickDetails);
-  let contextTrades = formattedTrades;
+  let contextTrades = journalTrades ?? formattedTrades;
 
   if (tradesParam) {
     contextTrades = tradesParam;

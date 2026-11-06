@@ -167,4 +167,22 @@ describe("computeEquityChartData daily PnL", () => {
       Object.values(points).some((point) => point.dailyPnL === 999),
     ).toBe(false)
   });
+
+  it("still charges opening-seed exit commissions on the equity curve", () => {
+    const points = pointsByDate([
+      trade("2026-03-02T15:00:00.000Z", 100, 2),
+      {
+        ...trade("2026-03-02T15:01:00.000Z", 0, 4.5),
+        tags: ["rithmic-protocol-opening-seed"],
+        entryId: "opening-seed:A1:ES",
+      },
+    ]);
+
+    expect(points["2026-03-02"]).toMatchObject({
+      dailyPnL: 100,
+      dailyCommissions: 6.5,
+      netPnL: 93.5,
+      equity: 93.5,
+    });
+  });
 });

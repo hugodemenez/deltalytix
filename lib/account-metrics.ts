@@ -2,7 +2,7 @@
 // These functions can be used on both server and client for consistent results.
 import type { Trade as PrismaTrade } from '@/prisma/generated/prisma/browser'
 import type { Account } from '@/context/data-provider'
-import { withoutOpeningSeedCloses } from '@/lib/opening-seed'
+import { openingSeedExitCommission, withoutOpeningSeedCloses } from '@/lib/opening-seed'
 
 export type AccountMetrics = {
   // Balance and progress
@@ -55,6 +55,9 @@ export function computeAccountMetrics(
   account: Account,
   allTrades: PrismaTrade[]
 ): { balanceToDate: number; metrics: NonNullable<Account['metrics']>; dailyMetrics: NonNullable<Account['dailyMetrics']>; trades: PrismaTrade[]; aboveBuffer: number } {
+  const seedFees = openingSeedExitCommission(
+    allTrades.filter((trade) => trade.accountNumber === account.number),
+  )
   allTrades = withoutOpeningSeedCloses(allTrades)
   const resetDate = toDate(account.resetDate)
   const relevantTrades = allTrades.filter(t => {
@@ -139,7 +142,7 @@ export function computeAccountMetrics(
   }
 
   const dailyPnL: { [date: string]: number } = {}
-  let filteredTradesProfit = 0
+  let filteredTradesProfit = -seedFees
   for (const trade of filteredTrades) {
     const d = toDate(trade.entryDate)!
     const key = d.toISOString().split('T')[0]
@@ -175,6 +178,7 @@ export function computeAccountMetrics(
     // buffer-filling slice, so a trailing floor does not jump on the cross.
     highestBalance = startingBalance + bufferPeakProfit
   } else {
+    runningBalance -= seedFees
     for (const trade of filteredTrades) {
       const pnl = trade.pnl - (trade.commission || 0)
       runningBalance += pnl

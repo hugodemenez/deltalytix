@@ -93,4 +93,30 @@ describe('PDF statement chart data', () => {
       { label: '2026-05-10', value: 100 },
     ])
   })
+
+  it('subtracts opening-seed exit commissions from net PnL on the seed day', () => {
+    const real: PdfTrade = {
+      entryDate: '2026-05-10T12:00:00.000Z',
+      closeDate: null,
+      pnl: 100,
+      commission: 0,
+      accountNumber: 'A1',
+      side: 'long',
+      quantity: 1,
+      instrument: 'ES',
+      timeInPosition: 60,
+    }
+    const seed: PdfTrade = {
+      ...real,
+      pnl: 0,
+      commission: 4.5,
+      entryId: 'opening-seed:A1:ES',
+      tags: [RITHMIC_PROTOCOL_OPENING_SEED_TAG],
+    }
+
+    expect(computeSummary([real, seed]).totalNetPnl).toBe(95.5)
+    expect(computeChartData([real, seed], 'UTC').dailyPnl).toEqual([
+      { label: '2026-05-10', value: 95.5 },
+    ])
+  })
 })
