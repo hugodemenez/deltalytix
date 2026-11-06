@@ -8,6 +8,8 @@ import {
 } from '@/lib/tradovate/identity'
 
 export const RITHMIC_PROTOCOL_TRADE_TAG = 'rithmic-protocol'
+/** Marks a FIFO close against a synthetic pre-window opening lot. */
+export const RITHMIC_PROTOCOL_OPENING_SEED_TAG = 'rithmic-protocol-opening-seed'
 export { TRADOVATE_TRADE_TAG } from '@/lib/tradovate/identity'
 
 /** Same DNS namespace used by `saveTradesAction` since Protocol imports began. */

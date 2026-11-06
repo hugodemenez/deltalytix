@@ -648,6 +648,36 @@ describe('buildTradesFromRithmicFills', () => {
     expect(trades[1].quantity).toBe(1)
     expect(trades[1].pnl).toBeCloseTo(20, 10)
   })
+
+  it('FIFO-matches per exact symbol so MESU6 cannot close MESZ6', () => {
+    const fills: RithmicProtocolFill[] = [
+      {
+        accountId: 'ACC1',
+        symbol: 'MESU6',
+        transactionType: 'BUY',
+        fillPrice: 5000,
+        fillSize: 1,
+        fillId: 'u6',
+        ssboe: 1_700_000_000,
+      },
+      {
+        accountId: 'ACC1',
+        symbol: 'MESZ6',
+        transactionType: 'SELL',
+        fillPrice: 5010,
+        fillSize: 1,
+        fillId: 'z6',
+        ssboe: 1_700_000_600,
+      },
+    ]
+    const { trades, openSkipped } = buildTradesFromRithmicFills(
+      fills,
+      'user-1',
+      new Map([['MES', { tickSize: 0.25, tickValue: 1.25 }]]),
+    )
+    expect(trades).toEqual([])
+    expect(openSkipped).toBe(2)
+  })
 })
 
 describe('fillSide', () => {

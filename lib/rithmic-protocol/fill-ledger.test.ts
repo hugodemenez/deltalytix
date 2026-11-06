@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
+import {
+  RITHMIC_PROTOCOL_OPENING_SEED_TAG,
+  RITHMIC_PROTOCOL_TRADE_TAG,
+} from '@/lib/trade-id-utils'
+import { openingSeedOrderId } from './opening-position'
 import { buildTradesFromRithmicFills } from './fills-to-trades'
 import { fillIdentityKey, markFillSource } from './dedupe-fills'
 import type { RithmicProtocolFill } from './types'
@@ -202,6 +206,36 @@ describe('uncoveredProtocolTrades', () => {
       canonicalLedgerFillIds([day1Buy, day1Sell]),
     )
     expect(uncovered.map((row) => row.id)).toEqual(['missing-close', 'no-ids'])
+  })
+
+  it('treats a synthetic opening-seed entry as covered when the close fill is on the ledger', () => {
+    const uncovered = uncoveredProtocolTrades(
+      [
+        {
+          id: 'seed-close',
+          entryId: openingSeedOrderId(ACCOUNT, 'MESZ6'),
+          closeId: '1002',
+          pnl: 0,
+        },
+        {
+          id: 'seed-missing-close',
+          entryId: openingSeedOrderId(ACCOUNT, 'MESZ6'),
+          closeId: 'nope',
+          pnl: 0,
+        },
+      ],
+      canonicalLedgerFillIds([day1Buy, day1Sell]),
+    )
+    expect(uncovered.map((row) => row.id)).toEqual(['seed-missing-close'])
+  })
+
+  it('does not treat the opening-seed tag as a journal annotation', () => {
+    expect(
+      hasTradeJournalAnnotations({
+        id: 'seed',
+        tags: [RITHMIC_PROTOCOL_TRADE_TAG, RITHMIC_PROTOCOL_OPENING_SEED_TAG],
+      }),
+    ).toBe(false)
   })
 })
 

@@ -4,7 +4,10 @@ import type { Trade } from '@/prisma/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 import { decryptConnectionToken } from '@/lib/connection-token-crypto'
 import { generatePersistedTradeUUID, RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
-import { fetchFillsForAccounts } from '@/lib/rithmic-protocol/client'
+import {
+  fetchFillsForAccounts,
+  fetchInstrumentPositions,
+} from '@/lib/rithmic-protocol/client'
 import {
   gatewayUri as gatewayUriFor,
   resolveGateway,
@@ -33,7 +36,12 @@ import {
   summarizeFillLedgerNets,
   uncoveredProtocolTrades,
 } from './fill-ledger'
-import { buildTradesFromRithmicFills } from './fills-to-trades'
+import { buildTradesFromRithmicFills, fillTimestampMs } from './fills-to-trades'
+import {
+  type OpeningPositionCheck,
+  computeOpeningPositionChecks,
+  decideOpeningSeeds,
+} from './opening-position'
 import type { RithmicProtocolFill } from './types'
 
 const SERVICE = 'rithmic-protocol'
@@ -68,11 +76,23 @@ export type AccountProtocolSnapshot = {
 
 export type RebuildTradePreview = RebuildTradeRef & { pnl: number }
 
+export type FillHistoryWindow = {
+  requestedStartYmd?: string
+  anchoredStartYmd?: string
+  weeklyCloseIso?: string
+  endYmd?: string
+}
+
 export type ProposedRebuildSnapshot = AccountProtocolSnapshot & {
   openSkipped: number
   annotatedPreserved: number
   unmatchedAnnotations: number
   nets: FillLedgerNet[]
+  positionChecks: OpeningPositionCheck[]
+  snapshotStatus: 'ok' | 'unavailable'
+  snapshotReason?: string
+  fillWindow?: FillHistoryWindow
+  seededOpeningLots: number
   ledgerRowsAfterMerge: number
   consolidatedFills: number
   fillsInserted: number
@@ -383,7 +403,11 @@ function tradeCreateRow(
  *
  * Fetches Lucid/upstream first and only writes after a non-empty candidate
  * exists. Fill rows are merged (never wholesale-deleted) so a sliding window
- * cannot erase stored history. Protocol trades for this account are replaced
+ * cannot erase stored history. FIFO is seeded from the broker snapshot
+ * (`P_0 = P_end − net(fills)`); fills are never trimmed from a terminal net.
+ * A live apply refuses when the snapshot is missing
+ * (`POSITION_SNAPSHOT_UNAVAILABLE`) or P_0 cannot be seeded
+ * (`OPENING_POSITION_UNKNOWN`). Protocol trades for this account are replaced
  * in one transaction except uncovered historical rows, which are retained
  * and refuse a live apply (`UNCOVERED_TRADES`). Journal fields are copied
  * by fill-pair identity. Mood/journal rows are keyed by user+day, not Trade.
@@ -449,6 +473,7 @@ export async function resyncRithmicProtocolAccount(params: {
 
         let incomingFills: RithmicProtocolFill[]
         let commissionRates: Map<string, number>
+        let fillWindow: FillHistoryWindow | undefined
         try {
           guard.throwIfLost()
           const fetched = await fetchFillsForAccounts({
@@ -468,6 +493,7 @@ export async function resyncRithmicProtocolAccount(params: {
             (fill) => fill.accountId === accountNumber,
           )
           commissionRates = fetched.commissionRates
+          fillWindow = fetched.fillHistory
         } catch (error) {
           if (error instanceof ProtocolSyncLockError) throw error
           console.error('[ADMIN-RESYNC] upstream fetch failed', error)
@@ -500,11 +526,46 @@ export async function resyncRithmicProtocolAccount(params: {
             { tickSize: tick.tickSize, tickValue: tick.tickValue },
           ]),
         )
+
+        guard.throwIfLost()
+        const snapshot = await fetchInstrumentPositions({
+          gatewayUri: credentials.gatewayUri,
+          systemName: credentials.systemName,
+          username: credentials.username,
+          password: credentials.password,
+          fcmId: credentials.fcmId,
+          ibId: credentials.ibId,
+          accountIds: connection.accountIds,
+        })
+        const snapshotStatus = snapshot.complete ? 'ok' : 'unavailable'
+        const scopedPositions = snapshot.positions.filter(
+          (position) => position.accountId === accountNumber,
+        )
+        const positionChecks = snapshot.complete
+          ? computeOpeningPositionChecks({
+              fills: prepared.fills,
+              positions: scopedPositions,
+            })
+          : []
+        const windowStartMs =
+          (fillWindow?.weeklyCloseIso
+            ? Date.parse(fillWindow.weeklyCloseIso)
+            : NaN) ||
+          prepared.fills.reduce((earliest, fill) => {
+            const ts = fillTimestampMs(fill)
+            if (ts <= 0) return earliest
+            return earliest == null ? ts : Math.min(earliest, ts)
+          }, null as number | null) ||
+          0
+        const seedDecision = snapshot.complete
+          ? decideOpeningSeeds(positionChecks, prepared.fills, windowStartMs)
+          : { seeds: [] as ReturnType<typeof decideOpeningSeeds>['seeds'] }
         const derived = buildTradesFromRithmicFills(
           prepared.fills,
           userId,
           tickBySymbol,
           commissionRates,
+          { openingSeeds: seedDecision.seeds },
         )
         const withIds = derived.trades.map((trade) => ({
           ...trade,
@@ -512,9 +573,6 @@ export async function resyncRithmicProtocolAccount(params: {
           id: generatePersistedTradeUUID({ ...trade, userId }),
         }))
         const attached = reattachProtocolTradeAnnotations(withIds, existing)
-        if (existing.length > 0 && attached.trades.length === 0 && uncovered.length === 0) {
-          return { ...base, error: 'EMPTY_REBUILD' }
-        }
 
         const duplicateIds = duplicateRebuildTradeIds(
           attached.trades.map((trade) => trade.id),
@@ -533,6 +591,11 @@ export async function resyncRithmicProtocolAccount(params: {
           incomingFills,
           existing,
           uncoveredCount: uncovered.length,
+          snapshotStatus,
+          snapshotReason: snapshot.reason,
+          positionChecks,
+          seedCount: seedDecision.seeds.length,
+          openingPositionUnknown: seedDecision.error === 'OPENING_POSITION_UNKNOWN',
         })
         if (duplicateIds.length > 0) {
           warnings.push(
@@ -559,6 +622,11 @@ export async function resyncRithmicProtocolAccount(params: {
           annotatedPreserved: attached.preserved,
           unmatchedAnnotations: attached.unmatched.length,
           nets,
+          positionChecks,
+          snapshotStatus,
+          snapshotReason: snapshot.reason,
+          fillWindow,
+          seededOpeningLots: seedDecision.seeds.length,
           ledgerRowsAfterMerge: merged.length,
           consolidatedFills: prepared.fills.length,
           fillsInserted: fillPartition.inserts.length,
@@ -569,6 +637,47 @@ export async function resyncRithmicProtocolAccount(params: {
           uncoveredTrades: uncovered.map(tradePreview),
           unmatchedAnnotatedTrades: attached.unmatched.map(tradePreview),
         })
+
+        console.log(
+          `[ADMIN-RESYNC] positionChecks=${JSON.stringify(
+            positionChecks.map((row) => ({
+              symbol: row.symbol,
+              pEnd: row.pEnd,
+              net: row.net,
+              p0: row.p0,
+            })),
+          )} snapshot=${snapshotStatus}${snapshot.reason ? `:${snapshot.reason}` : ''} seeds=${seedDecision.seeds.length}`,
+        )
+
+        if (snapshotStatus === 'unavailable' && !params.dryRun) {
+          return {
+            ...base,
+            wouldDelete,
+            proposed,
+            warnings,
+            error: 'POSITION_SNAPSHOT_UNAVAILABLE',
+          }
+        }
+
+        if (seedDecision.error === 'OPENING_POSITION_UNKNOWN' && !params.dryRun) {
+          return {
+            ...base,
+            wouldDelete,
+            proposed,
+            warnings,
+            error: 'OPENING_POSITION_UNKNOWN',
+          }
+        }
+
+        if (existing.length > 0 && attached.trades.length === 0 && uncovered.length === 0) {
+          return {
+            ...base,
+            wouldDelete,
+            proposed,
+            warnings,
+            error: 'EMPTY_REBUILD',
+          }
+        }
 
         if (duplicateIds.length > 0 && !params.dryRun) {
           return {
@@ -608,7 +717,8 @@ export async function resyncRithmicProtocolAccount(params: {
           `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} dryRun=${params.dryRun} ` +
             `beforeTrades=${before.tradeCount} beforeFills=${before.fillCount} ` +
             `proposedTrades=${proposed.tradeCount} proposedFills=${proposed.fillCount} ` +
-            `uncovered=${proposed.uncoveredTrades.length} unmatchedAnnotations=${proposed.unmatchedAnnotations}`,
+            `uncovered=${proposed.uncoveredTrades.length} unmatchedAnnotations=${proposed.unmatchedAnnotations} ` +
+            `snapshot=${snapshotStatus} seeds=${proposed.seededOpeningLots}`,
         )
 
         if (params.dryRun) {
@@ -816,6 +926,11 @@ function proposedSnapshot(params: {
   annotatedPreserved: number
   unmatchedAnnotations: number
   nets: FillLedgerNet[]
+  positionChecks: OpeningPositionCheck[]
+  snapshotStatus: 'ok' | 'unavailable'
+  snapshotReason?: string
+  fillWindow?: FillHistoryWindow
+  seededOpeningLots: number
   ledgerRowsAfterMerge: number
   consolidatedFills: number
   fillsInserted: number
@@ -834,6 +949,11 @@ function proposedSnapshot(params: {
     annotatedPreserved: params.annotatedPreserved,
     unmatchedAnnotations: params.unmatchedAnnotations,
     nets: params.nets,
+    positionChecks: params.positionChecks,
+    snapshotStatus: params.snapshotStatus,
+    snapshotReason: params.snapshotReason,
+    fillWindow: params.fillWindow,
+    seededOpeningLots: params.seededOpeningLots,
     ledgerRowsAfterMerge: params.ledgerRowsAfterMerge,
     consolidatedFills: params.consolidatedFills,
     fillsInserted: params.fillsInserted,
@@ -852,11 +972,41 @@ function rebuildWarnings(params: {
   incomingFills: RithmicProtocolFill[]
   existing: ExistingProtocolTrade[]
   uncoveredCount: number
+  snapshotStatus: 'ok' | 'unavailable'
+  snapshotReason?: string
+  positionChecks: OpeningPositionCheck[]
+  seedCount: number
+  openingPositionUnknown: boolean
 }): string[] {
   const warnings: string[] = []
-  if (params.nets.length > 0) {
+  if (params.snapshotStatus === 'unavailable') {
+    warnings.push(
+      `Broker position snapshot was unavailable${params.snapshotReason ? ` (${params.snapshotReason})` : ''}. Live apply refuses with POSITION_SNAPSHOT_UNAVAILABLE rather than inventing opening lots from fills.`,
+    )
+  }
+  if (params.openingPositionUnknown) {
+    warnings.push(
+      'Opening position P_0 is known but cannot be seeded with a conservative price. Live apply refuses with OPENING_POSITION_UNKNOWN.',
+    )
+  }
+  if (params.snapshotStatus === 'ok' && params.seedCount > 0) {
+    warnings.push(
+      `Seeded ${params.seedCount} synthetic opening lot(s) from P_0 = P_end − net(fills). Closes against those lots are tagged rithmic-protocol-opening-seed with 0 attributed PnL.`,
+    )
+  }
+  if (params.snapshotStatus !== 'ok' && params.nets.length > 0) {
     warnings.push(
       'Terminal fill net is non-zero. A rebuild from fills alone cannot tell a live position from missing opening history; supply a broker position snapshot before altering fills.',
+    )
+  }
+  if (
+    params.snapshotStatus === 'ok' &&
+    params.positionChecks.some((row) => row.p0 !== 0) &&
+    params.seedCount === 0 &&
+    !params.openingPositionUnknown
+  ) {
+    warnings.push(
+      'Broker snapshot shows a non-zero opening position that was not seeded.',
     )
   }
   if (params.uncoveredCount > 0) {

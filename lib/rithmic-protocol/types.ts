@@ -6,6 +6,15 @@ export interface RithmicProtocolAccount {
   currency?: string
 }
 
+/** Per-instrument live net from the Protocol PnL plant snapshot. */
+export interface RithmicProtocolInstrumentPosition {
+  accountId: string
+  symbol: string
+  exchange?: string
+  /** Signed broker net: +long / −short (`InstrumentPnLPositionUpdate.net_quantity`). */
+  netQuantity: number
+}
+
 /** Live account balance / PnL fields from the Protocol PnL plant. */
 export interface RithmicProtocolAccountBalance {
   account_id: string

@@ -217,6 +217,18 @@ function errorMapping(error: string | undefined): {
         message: 'Stored trades have fill legs outside the merged ledger.',
         hint: 'Inspect result.proposed.uncoveredTrades. Those rows are retained; a sliding window cannot recreate them.',
       }
+    case 'POSITION_SNAPSHOT_UNAVAILABLE':
+      return {
+        code: 'conflict',
+        message: 'The broker position snapshot could not be fetched.',
+        hint: 'Retry a dry-run. Ordinary sync warns and continues; a live admin rebuild refuses rather than inventing opening lots.',
+      }
+    case 'OPENING_POSITION_UNKNOWN':
+      return {
+        code: 'conflict',
+        message: 'The opening position is known from the broker snapshot but cannot be priced conservatively.',
+        hint: 'Inspect result.proposed.positionChecks. Fills were not rewritten. Extend history or flatten the account, then retry.',
+      }
     case 'DUPLICATE_TRADE_IDS':
     case 'INSERT_MISMATCH':
       return {

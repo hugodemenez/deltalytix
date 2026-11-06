@@ -7,13 +7,15 @@ TypeScript client for Rithmic's WebSocket + protobuf **R | Protocol API**, used 
 
 - `proto/` — message definitions from RProtocolAPI kit (licensed from Rithmic)
 - `etc/rithmic_ssl_cert_auth_params` — SSL auth params from the kit
-- `client.ts` — system-info probe, ORDER_PLANT login, account list, **Product RMS commission rates**, fill / order-history fetch, **PNL_PLANT live balances**
+- `client.ts` — system-info probe, ORDER_PLANT login, account list, **Product RMS commission rates**, fill / order-history fetch, **PNL_PLANT live balances and per-symbol nets**
 - `commission-rates.ts` — `commission_fill_rate` presence bit 64, index, `rate × fill qty`
+- `cme-session.ts` — CME Globex weekly close (Friday 17:00 America/Chicago) used to anchor ShowFillHistory
+- `opening-position.ts` — `P_0 = P_end − net(fills)` from the PnL plant snapshot; seeds FIFO instead of rewriting fills
 - `fill-ledger.ts` / `fill-ledger-store.ts` — durable fill upsert keyed by identity, then FIFO from the ledger
 - `lookback.ts` — ReplayExecutions window (7d default, 2d fallback)
 - `history-fallback.ts` — order-history when any ShowFillHistory window is empty
 - `fills-to-trades.ts` — FIFO round-trip matching into Deltalytix `Trade` rows
-- `balances.ts` — map `AccountPnLPositionUpdate` → Solde Rithmic balance rows
+- `balances.ts` — map `AccountPnLPositionUpdate` → Solde Rithmic balance rows; `InstrumentPnLPositionUpdate` → per-symbol net
 
 Proto files are loaded from disk at runtime. On Vercel they must be listed in
 `next.config.ts` → `outputFileTracingIncludes` (including Connections server
@@ -26,6 +28,7 @@ Account balances for the accounts table come from the **PnL plant**:
 1. Open `wss://…`, `RequestLogin` with `infra_type = PNL_PLANT` (4).
 2. For each trading account, `RequestPnLPositionSnapshot` (template 402).
 3. Collect `AccountPnLPositionUpdate` (451) rows (`account_balance`, `cash_on_hand`, …) until `ResponsePnLPositionSnapshot` (403).
+   Interleaved `InstrumentPnLPositionUpdate` (450) rows carry `net_quantity` per exact symbol (`P_end`). A completed snapshot that omits a symbol means that symbol is flat.
 
 Server action: `getRithmicProtocolBalancesAction` (uses encrypted Connection credentials).
 This is separate from the classic R | API+ HTTP `/balances` path.
@@ -153,10 +156,23 @@ remote/local, and template traffic — never username/password. Login uses a
 second socket after the system-info probe (the plant closes the probe with
 code 1000).
 
-On connect, the user must choose an **account start date**. Sync walks from that
-date to today with `ShowFillHistory` in **serial ≤30-day windows** (Rithmic guidance).
-`RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS` is only a fallback for legacy connections
-that predate the start-date field.
+On connect, the user must choose an **account start date**. Sync walks from the
+most recent **CME Globex weekly close** (Friday 17:00 America/Chicago) at or
+before that date to today with `ShowFillHistory` in **serial ≤30-day windows**
+(Rithmic guidance). Empty prefix windows mean the plant does not retain that
+far; the broker snapshot then supplies `P_0`. `RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS`
+is only a fallback for legacy connections that predate the start-date field.
+
+After fills land, a **PnL plant position snapshot** (`RequestPnLPositionSnapshot`
+402 / `InstrumentPnLPositionUpdate` 450) gives live net `P_end` per exact
+symbol. Opening inventory is `P_0 = P_end − net(fills)`. When `P_0` is a
+known integer, FIFO is seeded with a synthetic opening lot (never stored as a
+fill). Closes against that lot are tagged `rithmic-protocol-opening-seed` and
+attributed **0 PnL** (closing fill price on both sides) rather than guessing
+the missing entry. A non-integer `P_0` or unpriceable close refuses admin live
+rebuild with `OPENING_POSITION_UNKNOWN`. Snapshot timeout/plant failure warns
+and continues on ordinary sync; admin live rebuild refuses with
+`POSITION_SNAPSHOT_UNAVAILABLE`. Fills are never trimmed from a terminal net.
 
 Fills are **upserted into `RithmicProtocolFill` first** (unique on
 `userId` + `fillIdentityKey`), including split order pieces. FIFO then derives

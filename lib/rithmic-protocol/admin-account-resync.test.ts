@@ -24,6 +24,7 @@ const queryRaw = vi.fn()
 const transaction = vi.fn()
 const decryptConnectionToken = vi.fn()
 const fetchFillsForAccounts = vi.fn()
+const fetchInstrumentPositions = vi.fn()
 const withProtocolSyncLock = vi.fn()
 const updateTag = vi.fn()
 const revalidateTag = vi.fn()
@@ -71,6 +72,8 @@ vi.mock('@/lib/connection-token-crypto', () => ({
 }))
 vi.mock('@/lib/rithmic-protocol/client', () => ({
   fetchFillsForAccounts: (...args: unknown[]) => fetchFillsForAccounts(...args),
+  fetchInstrumentPositions: (...args: unknown[]) =>
+    fetchInstrumentPositions(...args),
 }))
 vi.mock('@/lib/rithmic-protocol/sync-lock', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./sync-lock')>()
@@ -261,6 +264,10 @@ describe('admin account resync scoping and safety', () => {
         },
       ]),
     )
+    fetchInstrumentPositions.mockReset().mockResolvedValue({
+      positions: [],
+      complete: true,
+    })
   })
 
   it('locks by userId+accountNumber even without connectionId', async () => {
@@ -289,6 +296,19 @@ describe('admin account resync scoping and safety', () => {
     expect(result.proposed?.ledgerRowsAfterMerge).toBe(2)
     expect(result.proposed?.tradeCount).toBe(1)
     expect(result.proposed?.uncoveredTrades).toEqual([])
+    expect(result.proposed?.snapshotStatus).toBe('ok')
+    expect(result.proposed?.positionChecks).toEqual([
+      {
+        accountId: ACCOUNT,
+        symbol: 'MESZ6',
+        instrument: 'MES',
+        pEnd: 0,
+        net: 0,
+        p0: 0,
+        fillCount: 2,
+      },
+    ])
+    expect(result.proposed?.seededOpeningLots).toBe(0)
     expect(result.wouldDelete).toEqual({
       tradeCount: 1,
       pnl: 10,
@@ -374,6 +394,10 @@ describe('admin account resync scoping and safety', () => {
         },
       ]),
     )
+    fetchInstrumentPositions.mockResolvedValueOnce({
+      positions: [{ accountId: ACCOUNT, symbol: 'MESZ6', netQuantity: 2 }],
+      complete: true,
+    })
     const result = await resyncRithmicProtocolAccount({
       userId: USER,
       accountNumber: ACCOUNT,
@@ -398,6 +422,91 @@ describe('admin account resync scoping and safety', () => {
     expect(fillDeleteMany).not.toHaveBeenCalled()
     expect(tradeCreateMany).not.toHaveBeenCalled()
     expect(updateTag).not.toHaveBeenCalled()
+    expect(fetchInstrumentPositions).not.toHaveBeenCalled()
+  })
+
+  it('live rebuild refuses when the position snapshot is unavailable', async () => {
+    fetchInstrumentPositions.mockResolvedValueOnce({
+      positions: [],
+      complete: false,
+      reason: 'timeout',
+    })
+    const preview = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(preview.complete).toBe(true)
+    expect(preview.error).toBeUndefined()
+    expect(preview.proposed?.snapshotStatus).toBe('unavailable')
+    expect(preview.warnings?.some((warning) => warning.includes('POSITION_SNAPSHOT_UNAVAILABLE'))).toBe(
+      true,
+    )
+    fetchInstrumentPositions.mockResolvedValueOnce({
+      positions: [],
+      complete: false,
+      reason: 'timeout',
+    })
+    const live = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: false,
+    })
+    expect(live.error).toBe('POSITION_SNAPSHOT_UNAVAILABLE')
+    expect(live.complete).toBe(false)
+    expect(tradeDeleteMany).not.toHaveBeenCalled()
+    expect(tradeCreateMany).not.toHaveBeenCalled()
+  })
+
+  it('seeds P_0 from a flat broker book so extra sells do not invent shorts', async () => {
+    const jeremieFills = [
+      {
+        accountId: ACCOUNT,
+        symbol: 'MESZ6',
+        transactionType: 'SELL',
+        fillPrice: 7802,
+        fillSize: 1,
+        fillId: 'cover-1',
+        fillDate: '20260930',
+        ssboe: Date.parse('2026-09-30T13:50:00Z') / 1000,
+        source: 'history',
+      },
+      {
+        accountId: ACCOUNT,
+        symbol: 'MESZ6',
+        transactionType: 'SELL',
+        fillPrice: 7802.25,
+        fillSize: 1,
+        fillId: 'cover-2',
+        fillDate: '20260930',
+        ssboe: Date.parse('2026-09-30T13:50:01Z') / 1000,
+        source: 'history',
+      },
+      ...ACCOUNT_FILLS,
+    ]
+    fetchFillsForAccounts.mockResolvedValue(fetchedFills(jeremieFills))
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(result.error).toBeUndefined()
+    expect(result.proposed?.positionChecks).toEqual([
+      {
+        accountId: ACCOUNT,
+        symbol: 'MESZ6',
+        instrument: 'MES',
+        pEnd: 0,
+        net: -2,
+        p0: 2,
+        fillCount: 4,
+      },
+    ])
+    expect(result.proposed?.seededOpeningLots).toBe(1)
+    expect(result.proposed?.openSkipped).toBe(0)
+    expect(
+      result.warnings?.some((warning) => warning.includes('synthetic opening')),
+    ).toBe(true)
   })
 
   it('apply merges fills and replaces only this account protocol trades', async () => {

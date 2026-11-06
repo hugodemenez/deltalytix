@@ -181,6 +181,56 @@ describe('POST /api/admin/rithmic-protocol/resync', () => {
     expect(body.error.hint).toMatch(/was not deleted/)
   })
 
+  it('returns 409 when the broker position snapshot is unavailable', async () => {
+    authorizeAdminRequest.mockResolvedValue({
+      ok: true,
+      via: 'session',
+      actorUserId: 'admin-1',
+    })
+    resyncRithmicProtocolAccount.mockResolvedValue({
+      dryRun: false,
+      complete: false,
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      before: { tradeCount: 2, pnl: 15, fillCount: 2 },
+      error: 'POSITION_SNAPSHOT_UNAVAILABLE',
+    })
+    const response = await post({
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      dryRun: false,
+    })
+    expect(response.status).toBe(409)
+    const body = await response.json()
+    expect(body.error.code).toBe('conflict')
+    expect(body.result.error).toBe('POSITION_SNAPSHOT_UNAVAILABLE')
+  })
+
+  it('returns 409 when the opening position cannot be priced', async () => {
+    authorizeAdminRequest.mockResolvedValue({
+      ok: true,
+      via: 'session',
+      actorUserId: 'admin-1',
+    })
+    resyncRithmicProtocolAccount.mockResolvedValue({
+      dryRun: false,
+      complete: false,
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      before: { tradeCount: 2, pnl: 15, fillCount: 2 },
+      error: 'OPENING_POSITION_UNKNOWN',
+    })
+    const response = await post({
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      dryRun: false,
+    })
+    expect(response.status).toBe(409)
+    const body = await response.json()
+    expect(body.error.code).toBe('conflict')
+    expect(body.result.error).toBe('OPENING_POSITION_UNKNOWN')
+  })
+
   it('returns 409 for uncovered trades without writing a success body', async () => {
     authorizeAdminRequest.mockResolvedValue({
       ok: true,

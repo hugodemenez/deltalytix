@@ -2,6 +2,7 @@ import type { Trade } from '@/prisma/generated/prisma/client'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import {
   generateDeterministicTradeId,
+  RITHMIC_PROTOCOL_OPENING_SEED_TAG,
   RITHMIC_PROTOCOL_TRADE_TAG,
 } from '@/lib/trade-id-utils'
 import { formatTimestamp } from '@/lib/date-utils'
@@ -20,6 +21,16 @@ interface OpenLot {
   commission: number
   timestampMs: number
   orderId: string
+  synthetic?: boolean
+}
+
+export type OpeningLotSeed = {
+  accountId: string
+  symbol: string
+  /** Signed: +long / −short, same convention as broker `net_quantity`. */
+  netQuantity: number
+  timestampMs: number
+  orderId: string
 }
 
 interface LotBook {
@@ -27,8 +38,8 @@ interface LotBook {
   shorts: OpenLot[]
 }
 
-function bookKey(accountId: string, instrument: string): string {
-  return `${accountId}|${instrument}`
+function bookKey(accountId: string, symbol: string): string {
+  return `${accountId}|${symbol.trim().toUpperCase()}`
 }
 
 export function normalizeInstrument(symbol: string): string {
@@ -146,22 +157,28 @@ function emitTrade(params: {
   matched: number
   contractSpec: TickSpec
   userId: string
+  conservativeSeedClose?: boolean
 }): Trade {
-  const entryCommission =
-    params.entry.quantity > 0
+  const entryCommission = params.conservativeSeedClose
+    ? 0
+    : params.entry.quantity > 0
       ? (params.entry.commission * params.matched) / params.entry.quantity
       : 0
   const exitCommission =
     params.exit.quantity > 0
       ? (params.exit.commission * params.matched) / params.exit.quantity
       : 0
-  const pnl = lotPnL(
-    params.entry.price,
-    params.exit.price,
-    params.matched,
-    params.contractSpec,
-    params.side,
-  )
+  const closePrice = params.exit.price
+  const entryPrice = params.conservativeSeedClose ? closePrice : params.entry.price
+  const pnl = params.conservativeSeedClose
+    ? 0
+    : lotPnL(
+        entryPrice,
+        closePrice,
+        params.matched,
+        params.contractSpec,
+        params.side,
+      )
   const entryDate = new Date(params.entry.timestampMs)
   const closeDate = new Date(params.exit.timestampMs)
   const tradeData = {
@@ -169,14 +186,17 @@ function emitTrade(params: {
     entryId: params.entry.orderId,
     closeId: params.exit.orderId,
     instrument: params.instrument,
-    entryPrice: params.entry.price.toString(),
-    closePrice: params.exit.price.toString(),
+    entryPrice: entryPrice.toString(),
+    closePrice: closePrice.toString(),
     entryDate: formatTimestamp(entryDate.toISOString()),
     closeDate: formatTimestamp(closeDate.toISOString()),
     quantity: params.matched,
     side: params.side,
     userId: params.userId,
   }
+  const tags = params.conservativeSeedClose
+    ? [RITHMIC_PROTOCOL_TRADE_TAG, RITHMIC_PROTOCOL_OPENING_SEED_TAG]
+    : [RITHMIC_PROTOCOL_TRADE_TAG]
   return createTradeWithDefaults({
     id: generateDeterministicTradeId(tradeData),
     ...tradeData,
@@ -186,7 +206,7 @@ function emitTrade(params: {
       Math.round((closeDate.getTime() - entryDate.getTime()) / 1000),
     ),
     commission: Math.abs(entryCommission + exitCommission),
-    tags: [RITHMIC_PROTOCOL_TRADE_TAG],
+    tags,
   })
 }
 
@@ -218,6 +238,7 @@ function applyFillToBook(
         matched,
         contractSpec,
         userId,
+        conservativeSeedClose: Boolean(open.synthetic),
       }),
     )
     const openShare = open.quantity > 0 ? matched / open.quantity : 1
@@ -249,12 +270,32 @@ export function buildTradesFromRithmicFills(
   userId: string,
   tickBySymbol: Map<string, TickSpec>,
   commissionRates?: Map<string, number>,
+  options?: { openingSeeds?: OpeningLotSeed[] },
 ): { trades: Trade[]; openSkipped: number; skipped: Record<string, number> } {
   const trades: Trade[] = []
   const books = new Map<string, LotBook>()
   const skipped: Record<string, number> = {}
   const bumpSkip = (reason: string) => {
     skipped[reason] = (skipped[reason] ?? 0) + 1
+  }
+
+  for (const seed of options?.openingSeeds ?? []) {
+    if (!seed.netQuantity || !Number.isInteger(seed.netQuantity)) continue
+    const symbol = seed.symbol.trim().toUpperCase()
+    if (!symbol) continue
+    const key = bookKey(seed.accountId, symbol)
+    const book = books.get(key) ?? { longs: [], shorts: [] }
+    const lot: OpenLot = {
+      quantity: Math.abs(seed.netQuantity),
+      price: 0,
+      commission: 0,
+      timestampMs: seed.timestampMs,
+      orderId: seed.orderId,
+      synthetic: true,
+    }
+    if (seed.netQuantity > 0) book.longs.push(lot)
+    else book.shorts.push(lot)
+    books.set(key, book)
   }
 
   const byAccount = new Map<string, RithmicProtocolFill[]>()
@@ -280,7 +321,8 @@ export function buildTradesFromRithmicFills(
     const seenFillIds = new Set<string>()
 
     for (const { fill } of sorted) {
-      const instrument = normalizeInstrument(fill.symbol)
+      const symbol = fill.symbol.trim().toUpperCase()
+      const instrument = normalizeInstrument(symbol)
       const quantity = Math.abs(Number(fill.fillSize))
       const price = Number(fill.fillPrice || fill.avgFillPrice || 0)
       if (!quantity) {
@@ -330,7 +372,7 @@ export function buildTradesFromRithmicFills(
         orderId,
       }
 
-      const key = bookKey(accountId, instrument)
+      const key = bookKey(accountId, symbol)
       const book = books.get(key) ?? { longs: [], shorts: [] }
       trades.push(
         ...applyFillToBook(

@@ -17,6 +17,7 @@ import {
   fetchAccountBalances,
   fetchAvailableSystems,
   fetchFillsForAccounts,
+  fetchInstrumentPositions,
 } from '@/lib/rithmic-protocol/client'
 import type { RithmicProtocolAccountBalance } from '@/lib/rithmic-protocol/types'
 import {
@@ -33,7 +34,14 @@ import {
   loadRithmicProtocolFills,
   upsertRithmicProtocolFills,
 } from '@/lib/rithmic-protocol/fill-ledger-store'
-import { buildTradesFromRithmicFills } from '@/lib/rithmic-protocol/fills-to-trades'
+import {
+  buildTradesFromRithmicFills,
+  type OpeningLotSeed,
+} from '@/lib/rithmic-protocol/fills-to-trades'
+import {
+  computeOpeningPositionChecks,
+  decideOpeningSeeds,
+} from '@/lib/rithmic-protocol/opening-position'
 import {
   gatewayUri as gatewayUriFor,
   getDefaultRithmicProtocolGateway,
@@ -816,7 +824,7 @@ export async function getRithmicProtocolTrades(
     const seen = buildLedgerSeenIndex(storedFills)
 
     guard.throwIfLost()
-    const { rawFills, uniqueUserId, commissionRates, fillStats } =
+    const { rawFills, uniqueUserId, commissionRates, fillStats, fillHistory } =
       await fetchFillsForAccounts({
         gatewayUri: credentials.gatewayUri,
         systemName: credentials.systemName,
@@ -867,11 +875,67 @@ export async function getRithmicProtocolTrades(
       ]),
     )
 
+    let openingSeeds: OpeningLotSeed[] = []
+    try {
+      guard.throwIfLost()
+      const snapshot = await fetchInstrumentPositions({
+        gatewayUri: credentials.gatewayUri,
+        systemName: credentials.systemName,
+        username: credentials.username,
+        password: credentials.password,
+        fcmId: credentials.fcmId,
+        ibId: credentials.ibId,
+        accountIds: resolvedAccountIds,
+      })
+      if (!snapshot.complete) {
+        logger.warn(
+          `PnL position snapshot unavailable (${snapshot.reason ?? 'incomplete'}); FIFO starts flat for this sync`,
+        )
+      } else {
+        const checks = computeOpeningPositionChecks({
+          fills: prepared.fills,
+          positions: snapshot.positions,
+        })
+        const windowStartMs = fillHistory?.weeklyCloseIso
+          ? Date.parse(fillHistory.weeklyCloseIso)
+          : 0
+        const decision = decideOpeningSeeds(
+          checks,
+          prepared.fills,
+          Number.isFinite(windowStartMs) ? windowStartMs : 0,
+        )
+        logger.info(
+          `positionChecks=${JSON.stringify(
+            checks.map((row) => ({
+              symbol: row.symbol,
+              pEnd: row.pEnd,
+              net: row.net,
+              p0: row.p0,
+            })),
+          )} seeds=${decision.seeds.length}`,
+        )
+        if (decision.error) {
+          logger.warn(
+            'OPENING_POSITION_UNKNOWN; FIFO starts flat rather than inventing lots',
+          )
+        } else {
+          openingSeeds = decision.seeds
+        }
+      }
+    } catch (error) {
+      logger.warn(
+        `PnL position snapshot failed; FIFO starts flat for this sync (${
+          error instanceof Error ? error.message : String(error)
+        })`,
+      )
+    }
+
     const { trades, openSkipped, skipped } = buildTradesFromRithmicFills(
       prepared.fills,
       userId,
       tickBySymbol,
       commissionRates,
+      { openingSeeds },
     )
     for (const [reason, count] of Object.entries(skipped)) {
       syncStats.droppedByReason[reason] =

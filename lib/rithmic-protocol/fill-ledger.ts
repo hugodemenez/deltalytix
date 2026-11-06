@@ -1,4 +1,4 @@
-import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
+import { isOpeningSeedOrderId, isProtocolSystemTag } from './opening-position'
 import type { RithmicProtocolFill } from './types'
 import {
   canonicalRithmicFillId,
@@ -216,8 +216,12 @@ export function uncoveredProtocolTrades<T extends RebuildTradeRef>(
   ledgerFillIds: Set<string>,
 ): T[] {
   return existing.filter((row) => {
-    const entryId = canonicalRithmicFillId(row.entryId)
     const closeId = canonicalRithmicFillId(row.closeId)
+    if (isOpeningSeedOrderId(row.entryId)) {
+      if (!closeId) return true
+      return !ledgerFillIds.has(closeId)
+    }
+    const entryId = canonicalRithmicFillId(row.entryId)
     if (!entryId || !closeId) return true
     return !ledgerFillIds.has(entryId) || !ledgerFillIds.has(closeId)
   })
@@ -254,7 +258,7 @@ export function hasTradeJournalAnnotations(
   if ((trade.images?.length ?? 0) > 0) return true
   if (trade.groupId?.trim()) return true
   const extraTags = (trade.tags ?? []).filter(
-    (tag) => tag && tag !== RITHMIC_PROTOCOL_TRADE_TAG,
+    (tag) => tag && !isProtocolSystemTag(tag),
   )
   return extraTags.length > 0
 }
@@ -295,7 +299,7 @@ export function reattachProtocolTradeAnnotations<
       return { ...trade, id: row.id }
     }
     const extraTags = (row.tags ?? []).filter(
-      (tag) => tag && tag !== RITHMIC_PROTOCOL_TRADE_TAG,
+      (tag) => tag && !isProtocolSystemTag(tag),
     )
     return {
       ...trade,
@@ -334,7 +338,7 @@ export function protocolTradeJournalFingerprint(
   >,
 ): string {
   const extraTags = [...(row.tags ?? [])]
-    .filter((tag) => tag && tag !== RITHMIC_PROTOCOL_TRADE_TAG)
+    .filter((tag) => tag && !isProtocolSystemTag(tag))
     .sort()
   return JSON.stringify({
     comment: row.comment ?? null,

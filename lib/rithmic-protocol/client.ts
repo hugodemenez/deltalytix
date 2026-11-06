@@ -16,8 +16,13 @@ import type {
   RithmicProtocolAccountBalance,
   RithmicProtocolConnectResult,
   RithmicProtocolFill,
+  RithmicProtocolInstrumentPosition,
 } from './types'
-import { mapAccountPnLUpdateToBalance } from './balances'
+import {
+  mapAccountPnLUpdateToBalance,
+  mapInstrumentPnLUpdate,
+} from './balances'
+import { planFillHistoryRange } from './cme-session'
 import {
   indexProductRmsCommissionRates,
   mapProductRmsCommissionRow,
@@ -633,16 +638,58 @@ export class RithmicProtocolClient {
     /** Wall-clock budget for the whole sweep, not per account. */
     deadlineMs?: number
   }): Promise<RithmicProtocolAccountBalance[]> {
+    const snapshot = await this.collectPnLPositionSnapshot(params)
+    return snapshot.balances
+  }
+
+  /**
+   * Same 402 snapshot as balances, but keeps InstrumentPnLPositionUpdate (450)
+   * `net_quantity` per exact symbol. `complete` is false when any requested
+   * account timed out, rejected, or never got a snapshot response — callers
+   * must not treat missing symbols as flat in that case.
+   */
+  async getInstrumentPnLSnapshots(params: {
+    fcmId?: string
+    ibId?: string
+    accountIds: string[]
+    deadlineMs?: number
+  }): Promise<{
+    positions: RithmicProtocolInstrumentPosition[]
+    complete: boolean
+    reason?: string
+  }> {
+    const snapshot = await this.collectPnLPositionSnapshot(params)
+    return {
+      positions: snapshot.positions,
+      complete: snapshot.complete,
+      reason: snapshot.reason,
+    }
+  }
+
+  private async collectPnLPositionSnapshot(params: {
+    fcmId?: string
+    ibId?: string
+    accountIds: string[]
+    deadlineMs?: number
+  }): Promise<{
+    balances: RithmicProtocolAccountBalance[]
+    positions: RithmicProtocolInstrumentPosition[]
+    complete: boolean
+    reason?: string
+  }> {
     const balancesByAccountId = new Map<string, RithmicProtocolAccountBalance>()
+    const positionsByKey = new Map<string, RithmicProtocolInstrumentPosition>()
+    const needed = [...new Set(params.accountIds.map((id) => id.trim()).filter(Boolean))]
+    const completed = new Set<string>()
     const deadline =
       Date.now() + (params.deadlineMs ?? PNL_SNAPSHOT_TOTAL_BUDGET_MS)
+    let reason: string | undefined
 
-    for (const accountId of params.accountIds) {
-      if (!accountId?.trim()) continue
-
+    for (const accountId of needed) {
       // Accounts are swept sequentially, so one silent account must not be
       // allowed to burn the budget of every account behind it.
       if (Date.now() >= deadline) {
+        reason = 'timeout'
         console.warn(
           '[RITHMIC-PROTOCOL] PnL snapshot budget exhausted, skipping remaining accounts',
         )
@@ -658,6 +705,7 @@ export class RithmicProtocolClient {
           accountId,
         })
       } catch (error) {
+        reason = 'send_failed'
         console.warn(
           `[RITHMIC-PROTOCOL] PnL snapshot send failed for ${accountId}, returning balances collected so far`,
           error,
@@ -667,6 +715,7 @@ export class RithmicProtocolClient {
 
       let outOfTime = false
       let socketClosed = false
+      let accountComplete = false
       try {
         for (;;) {
           const remaining = deadline - Date.now()
@@ -700,7 +749,23 @@ export class RithmicProtocolClient {
           }
 
           if (msg.templateId === RithmicTemplateId.INSTRUMENT_PNL_POSITION_UPDATE) {
-            // Instrument rows arrive interleaved with account snapshots — ignore.
+            const decoded = decodeMessage<{
+              accountId?: string
+              fcmId?: string
+              ibId?: string
+              symbol?: string
+              exchange?: string
+              netQuantity?: number | string
+              isSnapshot?: boolean
+            }>(this.root!, 'rti.InstrumentPnLPositionUpdate', msg.raw)
+            if (decoded.isSnapshot === false) continue
+            const position = mapInstrumentPnLUpdate(decoded)
+            if (position) {
+              positionsByKey.set(
+                `${position.accountId}|${position.symbol}`,
+                position,
+              )
+            }
             continue
           }
 
@@ -719,11 +784,16 @@ export class RithmicProtocolClient {
               console.warn(
                 `[RITHMIC-PROTOCOL] PnL snapshot failed for ${accountId}: ${rpMessage(decoded.rpCode)}`,
               )
+              reason = 'rp_error'
+              break
             }
+            accountComplete = true
+            completed.add(accountId)
             break
           }
 
           if (msg.templateId === RithmicTemplateId.REJECT) {
+            reason = 'rejected'
             console.warn(
               `[RITHMIC-PROTOCOL] PnL snapshot rejected for account ${accountId}`,
             )
@@ -735,6 +805,7 @@ export class RithmicProtocolClient {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         socketClosed = message.includes('WebSocket closed')
+        reason = socketClosed ? 'socket_closed' : 'interrupted'
         console.warn(
           `[RITHMIC-PROTOCOL] PnL snapshot interrupted for ${accountId}, keeping earlier balances`,
           error,
@@ -744,14 +815,22 @@ export class RithmicProtocolClient {
       }
 
       if (outOfTime) {
+        reason = 'timeout'
         console.warn(
           `[RITHMIC-PROTOCOL] PnL snapshot budget exhausted while waiting on ${accountId}`,
         )
         break
       }
+      if (!accountComplete && !reason) reason = 'incomplete'
     }
 
-    return [...balancesByAccountId.values()]
+    const complete = needed.length === 0 || needed.every((id) => completed.has(id))
+    return {
+      balances: [...balancesByAccountId.values()],
+      positions: [...positionsByKey.values()],
+      complete,
+      reason: complete ? undefined : reason ?? 'incomplete',
+    }
   }
 
   /**
@@ -1314,6 +1393,76 @@ export async function fetchAccountBalances(params: {
   }
 }
 
+/**
+ * Live per-symbol net quantity via the Protocol PnL plant
+ * (InstrumentPnLPositionUpdate.net_quantity). Dedicated PNL_PLANT login —
+ * separate from ORDER_PLANT fill sync.
+ */
+export async function fetchInstrumentPositions(params: {
+  gatewayUri: string
+  systemName: string
+  username: string
+  password: string
+  fcmId?: string
+  ibId?: string
+  accountIds: string[]
+  deadlineMs?: number
+}): Promise<{
+  positions: RithmicProtocolInstrumentPosition[]
+  complete: boolean
+  reason?: string
+  fcmId?: string
+  ibId?: string
+}> {
+  const accountIds = [...new Set(params.accountIds.map((id) => id.trim()).filter(Boolean))]
+  if (accountIds.length === 0) {
+    return {
+      positions: [],
+      complete: true,
+      fcmId: params.fcmId,
+      ibId: params.ibId,
+    }
+  }
+
+  const client = new RithmicProtocolClient()
+  try {
+    await client.connect(params.gatewayUri)
+    const login = await client.login({
+      systemName: params.systemName,
+      username: params.username,
+      password: params.password,
+      infraType: PNL_PLANT,
+    })
+    const fcmId = params.fcmId || login.fcmId
+    const ibId = params.ibId || login.ibId
+    const snapshot = await client.getInstrumentPnLSnapshots({
+      fcmId,
+      ibId,
+      accountIds,
+      deadlineMs: params.deadlineMs,
+    })
+    return {
+      positions: snapshot.positions,
+      complete: snapshot.complete,
+      reason: snapshot.reason,
+      fcmId,
+      ibId,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.warn('[RITHMIC-PROTOCOL] Instrument PnL snapshot unavailable', error)
+    return {
+      positions: [],
+      complete: false,
+      reason: message || 'unavailable',
+      fcmId: params.fcmId,
+      ibId: params.ibId,
+    }
+  } finally {
+    await client.close()
+  }
+}
+
 export async function fetchFillsForAccounts(params: {
   gatewayUri: string
   systemName: string
@@ -1344,6 +1493,12 @@ export async function fetchFillsForAccounts(params: {
   rawFills: RithmicProtocolFill[]
   uniqueUserId?: string
   commissionRates: Map<string, number>
+  fillHistory: {
+    requestedStartYmd: string
+    anchoredStartYmd: string
+    weeklyCloseIso: string
+    endYmd: string
+  }
   fillStats: {
     received: number
     afterDedup: number
@@ -1404,7 +1559,18 @@ export async function fetchFillsForAccounts(params: {
         : [...accountMeta.keys()]
 
     const end = utcCalendarDay(new Date())
-    const start = resolveHistoryStartUtc(params.historyStartDate, params.lookbackDays, end)
+    const requestedStart = resolveHistoryStartUtc(
+      params.historyStartDate,
+      params.lookbackDays,
+      end,
+    )
+    const anchored = planFillHistoryRange(requestedStart)
+    // Plant retention may be shorter than the weekly-close anchor; empty
+    // prefix windows are skipped and the broker snapshot covers P_0.
+    const start =
+      anchored.startUtc.getTime() <= end.getTime()
+        ? anchored.startUtc
+        : requestedStart
     const windows = buildUtcFillHistoryWindowsFromRange(start, end, MAX_FILL_WINDOW_DAYS)
     const startYmdStr = toYyyymmddString(start)
     const lookbackDays = Math.max(
@@ -1431,7 +1597,9 @@ export async function fetchFillsForAccounts(params: {
     }
 
     console.log(
-      `[RITHMIC-PROTOCOL] Fill history range ${startYmdStr}–${toYyyymmddString(end)} (${windows.length} × ≤${MAX_FILL_WINDOW_DAYS}d windows)`,
+      `[RITHMIC-PROTOCOL] Fill history range ${startYmdStr}–${toYyyymmddString(end)} ` +
+        `(requested ${toYyyymmddString(requestedStart)}, CME weekly close ${anchored.weeklyClose.toISOString()}, ` +
+        `${windows.length} × ≤${MAX_FILL_WINDOW_DAYS}d windows)`,
     )
 
     // Accounts and ≤30-day windows are requested serially (await each response fully).
@@ -1587,6 +1755,12 @@ export async function fetchFillsForAccounts(params: {
       rawFills: fills,
       uniqueUserId,
       commissionRates: indexProductRmsCommissionRates(rmsRows),
+      fillHistory: {
+        requestedStartYmd: toYyyymmddString(requestedStart),
+        anchoredStartYmd: startYmdStr,
+        weeklyCloseIso: anchored.weeklyClose.toISOString(),
+        endYmd: toYyyymmddString(end),
+      },
       fillStats: {
         received: prepared.stats.received + skippedAlreadySeen,
         afterDedup: prepared.stats.afterDedup,

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { mapAccountPnLUpdateToBalance } from './balances'
+import {
+  mapAccountPnLUpdateToBalance,
+  mapInstrumentPnLUpdate,
+} from './balances'
 import { PNL_PLANT, RithmicTemplateId } from './templates'
 
 describe('mapAccountPnLUpdateToBalance', () => {
@@ -37,6 +40,34 @@ describe('mapAccountPnLUpdateToBalance', () => {
         accountBalance: '1',
       }),
     ).toBeNull()
+  })
+})
+
+describe('mapInstrumentPnLUpdate', () => {
+  it('keeps a zero net so a flat book is not the same as a missing symbol', () => {
+    expect(
+      mapInstrumentPnLUpdate({
+        accountId: ' LFE050 ',
+        symbol: 'mesz6',
+        exchange: 'CME',
+        netQuantity: 0,
+      }),
+    ).toEqual({
+      accountId: 'LFE050',
+      symbol: 'MESZ6',
+      exchange: 'CME',
+      netQuantity: 0,
+    })
+  })
+
+  it('reads signed net_quantity', () => {
+    expect(
+      mapInstrumentPnLUpdate({
+        accountId: 'A',
+        symbol: 'MNQZ6',
+        netQuantity: -3,
+      })?.netQuantity,
+    ).toBe(-3)
   })
 })
 

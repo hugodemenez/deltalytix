@@ -1,4 +1,7 @@
-import type { RithmicProtocolAccountBalance } from './types'
+import type {
+  RithmicProtocolAccountBalance,
+  RithmicProtocolInstrumentPosition,
+} from './types'
 
 function toOptionalNumber(value: unknown): number | undefined {
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -43,5 +46,37 @@ export function mapAccountPnLUpdateToBalance(
     open_pnl: toOptionalNumber(decoded.openPositionPnl),
     closed_pnl: toOptionalNumber(decoded.closedPositionPnl),
     day_pnl: toOptionalNumber(decoded.dayPnl),
+  }
+}
+
+/** Raw InstrumentPnLPositionUpdate fields (protobufjs camelCase). */
+export type InstrumentPnLPositionUpdateFields = {
+  accountId?: string
+  fcmId?: string
+  ibId?: string
+  symbol?: string
+  exchange?: string
+  netQuantity?: number | string
+  isSnapshot?: boolean
+}
+
+/**
+ * Map a Protocol PnL plant instrument update into a per-symbol net quantity.
+ * Snapshot rows with net 0 are kept so a flat book is distinguishable from
+ * "this symbol never arrived".
+ */
+export function mapInstrumentPnLUpdate(
+  decoded: InstrumentPnLPositionUpdateFields,
+): RithmicProtocolInstrumentPosition | null {
+  const accountId = String(decoded.accountId ?? '').trim()
+  const symbol = String(decoded.symbol ?? '').trim().toUpperCase()
+  if (!accountId || !symbol) return null
+  const netQuantity = Number(decoded.netQuantity ?? 0)
+  if (!Number.isFinite(netQuantity)) return null
+  return {
+    accountId,
+    symbol,
+    exchange: decoded.exchange ? String(decoded.exchange) : undefined,
+    netQuantity,
   }
 }
