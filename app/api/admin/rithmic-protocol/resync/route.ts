@@ -217,6 +217,12 @@ function errorMapping(error: string | undefined): {
         message: 'Stored trades have fill legs outside the merged ledger.',
         hint: 'Inspect result.proposed.uncoveredTrades. Those rows are retained; a sliding window cannot recreate them.',
       }
+    case 'INCOMPLETE_FILL_HISTORY':
+      return {
+        code: 'conflict',
+        message: 'ShowFillHistory did not return every requested window.',
+        hint: 'Retry a dry-run. Ordinary sync freezes existing trades; a live admin rebuild refuses rather than inventing opening lots from a partial ledger.',
+      }
     case 'POSITION_SNAPSHOT_UNAVAILABLE':
       return {
         code: 'conflict',

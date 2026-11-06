@@ -12,6 +12,26 @@ export type RithmicProtocolFillSource = 'history' | 'replay'
  * rows, mark the fallback as `replay` so preferHistoryFills / consolidate
  * still drop twins and split pieces.
  */
+/**
+ * A ShowFillHistory throw (or a window that never returned) is not a complete
+ * ledger. Callers must freeze / refuse rather than invent P_0 from a partial
+ * stream. Empty windows (`rp_code 7`) are complete — they are not failures.
+ */
+export function fillHistoryWindowsComplete(input: {
+  windowsPlanned: number
+  windowsFetched: number
+  windowThrew: boolean
+}): { complete: boolean; windowsFailed: number } {
+  const windowsFailed = Math.max(0, input.windowsPlanned - input.windowsFetched)
+  if (input.windowThrew) {
+    return { complete: false, windowsFailed: Math.max(windowsFailed, 1) }
+  }
+  if (input.windowsPlanned > 0 && input.windowsFetched < input.windowsPlanned) {
+    return { complete: false, windowsFailed }
+  }
+  return { complete: true, windowsFailed: 0 }
+}
+
 export function orderHistoryFallbackPlan(input: {
   historyFillCount: number
   missingWindowCount: number

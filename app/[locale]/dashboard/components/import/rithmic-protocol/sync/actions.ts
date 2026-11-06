@@ -28,7 +28,9 @@ import {
   buildLedgerSeenIndex,
   canonicalLedgerFillIds,
   deriveTradesFromFillLedger,
+  phantomProtocolTradeIds,
 } from '@/lib/rithmic-protocol/fill-ledger'
+import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import {
   deleteUnannotatedPhantomProtocolTrades,
   loadRithmicProtocolFills,
@@ -46,7 +48,7 @@ import {
   openingPositionKey,
   planOrdinarySyncTrades,
   reconcileBracketedSnapshots,
-  tradeTouchesSymbolKeys,
+  retainOrdinarySyncRow,
   uncertainOpeningSymbolKeys,
   utcYyyymmddStartMs,
 } from '@/lib/rithmic-protocol/opening-position'
@@ -839,6 +841,7 @@ export async function getRithmicProtocolTrades(
       fcmId: credentials.fcmId,
       ibId: credentials.ibId,
       accountIds: resolvedAccountIds,
+      accounts: credentials.accounts,
     }
 
     guard.throwIfLost()
@@ -906,7 +909,15 @@ export async function getRithmicProtocolTrades(
 
     let openingSeeds: OpeningLotSeed[] = []
     const skippedSymbolKeys = new Set<string>()
-    if (!bracket.ok) {
+    const fillHistoryComplete = fillHistory?.complete !== false
+    const windowStartMs = fillHistory?.weeklyCloseIso
+      ? Date.parse(fillHistory.weeklyCloseIso)
+      : 0
+    if (!fillHistoryComplete) {
+      logger.warn(
+        `ShowFillHistory was incomplete (windowsFailed=${fillHistory?.windowsFailed ?? '?'}); freezing instead of FIFO-starting flat`,
+      )
+    } else if (!bracket.ok) {
       logger.warn(
         `PnL position snapshot unavailable (${bracket.reason ?? 'incomplete'}); freezing symbols whose opening state is uncertain instead of FIFO-starting flat`,
       )
@@ -914,10 +925,8 @@ export async function getRithmicProtocolTrades(
       const checks = computeOpeningPositionChecks({
         fills: prepared.fills,
         positions: bracket.positions,
+        sinceMs: Number.isFinite(windowStartMs) ? windowStartMs : undefined,
       })
-      const windowStartMs = fillHistory?.weeklyCloseIso
-        ? Date.parse(fillHistory.weeklyCloseIso)
-        : 0
       const decision = decideOpeningSeeds(
         checks,
         prepared.fills,
@@ -949,7 +958,7 @@ export async function getRithmicProtocolTrades(
       userId,
       tickBySymbol,
       commissionRates,
-      bracket.ok ? { openingSeeds } : {},
+      fillHistoryComplete && bracket.ok ? { openingSeeds } : {},
     )
     for (const [reason, count] of Object.entries(skipped)) {
       syncStats.droppedByReason[reason] =
@@ -962,10 +971,11 @@ export async function getRithmicProtocolTrades(
       after: afterSnapshot,
     })
     const freezeKeys = new Set(skippedSymbolKeys)
-    if (!bracket.ok) {
+    if (!bracket.ok || !fillHistoryComplete) {
       for (const key of uncertain.keys) freezeKeys.add(key)
     }
     const fillIndex = indexFillsByCanonicalId(prepared.fills)
+    const historyStartMs = utcYyyymmddStartMs(fillHistory?.requestedStartYmd)
 
     const tradePlan = planOrdinarySyncTrades({
       trades,
@@ -974,7 +984,8 @@ export async function getRithmicProtocolTrades(
       skippedSymbolKeys,
       uncertainSymbolKeys: uncertain.keys,
       openingStateDetermined: uncertain.determined,
-      historyStartMs: utcYyyymmddStartMs(fillHistory?.requestedStartYmd),
+      historyStartMs,
+      fillHistoryComplete,
     })
     for (const [reason, count] of Object.entries(tradePlan.dropReasons)) {
       syncStats.droppedByReason[reason] =
@@ -1013,22 +1024,70 @@ export async function getRithmicProtocolTrades(
     // the daily-sync cron re-run this connection on every tick. Frozen snapshot
     // misses must not look healthy — the cron should retry. Admin rebuilds leave
     // the row alone.
-    if (!options?.skipConnectionStamp && tradePlan.stampLastSyncedAt) {
+    const now = new Date()
+    if (!options?.skipConnectionStamp) {
       await prisma.connection.updateMany({
         where: {
           userId,
           service: SERVICE,
           externalId: credentials.username,
         },
-        data: { lastSyncedAt: new Date() },
+        data: tradePlan.stampLastSyncedAt
+          ? { lastSyncedAt: now, lastSyncAttemptAt: now }
+          : { lastSyncAttemptAt: now },
       })
-    } else if (!tradePlan.stampLastSyncedAt) {
+    }
+    if (!tradePlan.stampLastSyncedAt) {
       logger.warn(
         `sync degraded unique_user_id=${uniqueUserId ?? credentials.uniqueUserId ?? '(none)'} ` +
           `status=${tradePlan.syncStatus} frozenSymbols=${tradePlan.frozenSymbolCount} ` +
           `warnings=${JSON.stringify(tradePlan.warnings)}`,
       )
     }
+
+    const ledgerFillIds = canonicalLedgerFillIds([...storedFills, ...rawFills])
+    const retainIf = (row: {
+      accountNumber?: string | null
+      entryId?: string | null
+      closeId?: string | null
+      closeDate?: string | null
+    }) =>
+      retainOrdinarySyncRow(row, {
+        freezeKeys,
+        fills: fillIndex,
+        historyStartMs,
+      })
+    const existingProtocol = await prisma.trade.findMany({
+      where: {
+        userId,
+        accountNumber: { in: resolvedAccountIds },
+        tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
+      },
+      select: {
+        id: true,
+        accountNumber: true,
+        instrument: true,
+        entryDate: true,
+        closeDate: true,
+        entryId: true,
+        closeId: true,
+        comment: true,
+        tags: true,
+        imageBase64: true,
+        imageBase64Second: true,
+        videoUrl: true,
+        images: true,
+        groupId: true,
+      },
+    })
+    const pendingPhantomIds = tradePlan.skipPhantomDelete
+      ? []
+      : phantomProtocolTradeIds({
+          existing: existingProtocol,
+          derived: tradePlan.derivedForPhantoms,
+          ledgerFillIds,
+          retainIf,
+        })
 
     // saveTradesAction links every account number it sees on the trades to this
     // Connection, so accounts that only appear on fills are covered too.
@@ -1038,6 +1097,7 @@ export async function getRithmicProtocolTrades(
         ? await saveTradesAction(persistTrades, {
             ...serverActor(userId),
             connectionId,
+            coverageExcludeTradeIds: pendingPhantomIds,
           })
         : null
 
@@ -1071,8 +1131,8 @@ export async function getRithmicProtocolTrades(
         userId,
         accountNumbers: resolvedAccountIds,
         derivedTrades: tradePlan.derivedForPhantoms,
-        ledgerFillIds: canonicalLedgerFillIds([...storedFills, ...rawFills]),
-        retainIf: (row) => tradeTouchesSymbolKeys(row, freezeKeys, fillIndex),
+        ledgerFillIds,
+        retainIf,
       })
     }
     if (phantomsRemoved > 0) {

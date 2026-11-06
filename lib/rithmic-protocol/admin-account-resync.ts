@@ -87,6 +87,8 @@ export type FillHistoryWindow = {
   anchoredStartYmd?: string
   weeklyCloseIso?: string
   endYmd?: string
+  complete?: boolean
+  windowsFailed?: number
 }
 
 export type ProposedRebuildSnapshot = AccountProtocolSnapshot & {
@@ -485,6 +487,7 @@ export async function resyncRithmicProtocolAccount(params: {
           fcmId: credentials.fcmId,
           ibId: credentials.ibId,
           accountIds: connection.accountIds,
+          accounts: credentials.accounts,
         }
 
         guard.throwIfLost()
@@ -513,6 +516,9 @@ export async function resyncRithmicProtocolAccount(params: {
           )
           commissionRates = fetched.commissionRates
           fillWindow = fetched.fillHistory
+          if (fetched.fillHistory?.complete === false && !params.dryRun) {
+            return { ...base, error: 'INCOMPLETE_FILL_HISTORY' }
+          }
         } catch (error) {
           if (error instanceof ProtocolSyncLockError) throw error
           console.error('[ADMIN-RESYNC] upstream fetch failed', error)
@@ -565,6 +571,10 @@ export async function resyncRithmicProtocolAccount(params: {
           ? computeOpeningPositionChecks({
               fills: prepared.fills,
               positions: scopedPositions,
+              sinceMs:
+                (fillWindow?.weeklyCloseIso
+                  ? Date.parse(fillWindow.weeklyCloseIso)
+                  : NaN) || undefined,
             })
           : []
         const windowStartMs =
@@ -647,6 +657,7 @@ export async function resyncRithmicProtocolAccount(params: {
           seedCount: seedDecision.seeds.length,
           skippedOpeningSymbols: seedDecision.skipped,
           openingPositionUnknown: seedDecision.error === 'OPENING_POSITION_UNKNOWN',
+          incompleteFillHistory: fillWindow?.complete === false,
         })
         if (duplicateIds.length > 0) {
           warnings.push(
@@ -1034,8 +1045,14 @@ function rebuildWarnings(params: {
   seedCount: number
   skippedOpeningSymbols: ReturnType<typeof decideOpeningSeeds>['skipped']
   openingPositionUnknown: boolean
+  incompleteFillHistory?: boolean
 }): string[] {
   const warnings: string[] = []
+  if (params.incompleteFillHistory) {
+    warnings.push(
+      'ShowFillHistory was incomplete. Live apply refuses with INCOMPLETE_FILL_HISTORY rather than inventing opening lots from a partial ledger.',
+    )
+  }
   if (params.snapshotStatus === 'unavailable') {
     warnings.push(
       `Broker position snapshot was unavailable${params.snapshotReason ? ` (${params.snapshotReason})` : ''}. Live apply refuses with POSITION_SNAPSHOT_UNAVAILABLE rather than inventing opening lots from fills.`,

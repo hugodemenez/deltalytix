@@ -2,7 +2,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { decryptConnectionToken } from '@/lib/connection-token-crypto'
-import { isConnectionSyncDue } from '@/lib/connection-sync-schedule'
+import {
+  isConnectionSyncDue,
+  isDegradedSyncBackoffActive,
+} from '@/lib/connection-sync-schedule'
 import { getDxFeedTrades } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/actions'
 import { getRithmicProtocolTrades } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions'
 import { syncIbkrAccount } from '@/app/[locale]/dashboard/components/import/ibkr/sync/actions'
@@ -11,6 +14,7 @@ import { getIgTrades } from '@/app/[locale]/dashboard/components/import/ig/sync/
 import { invalidateConnectionsPageCache } from '@/app/[locale]/dashboard/connections/data'
 import { serverActor } from "@/lib/api/server-actor"
 import { parseTradovateApiHosts } from '@/lib/tradovate/api-hosts'
+import { rithmicProtocolCronOutcome } from '@/lib/rithmic-protocol/sync-outcome'
 
 export const maxDuration = 300
 
@@ -108,12 +112,12 @@ async function syncConnection(connection: {
       })
     ).error
   } else {
-    error = (
+    return rithmicProtocolCronOutcome(
       await getRithmicProtocolTrades(storedTokenJson, {
         ...serverActor(connection.userId),
         connectionId: connection.id,
-      })
-    ).error
+      }),
+    )
   }
 
   if (!error || error === DUPLICATE_TRADES) return { ok: true }
@@ -164,11 +168,18 @@ export async function GET(request: NextRequest) {
         dailySyncTime: true,
         syncIntervalMinutes: true,
         lastSyncedAt: true,
+        lastSyncAttemptAt: true,
       },
     })
 
-    const due = connections.filter((connection) =>
-      isConnectionSyncDue(connection, connection.lastSyncedAt, now),
+    const due = connections.filter(
+      (connection) =>
+        isConnectionSyncDue(connection, connection.lastSyncedAt, now) &&
+        !isDegradedSyncBackoffActive(
+          connection.lastSyncAttemptAt,
+          connection.lastSyncedAt,
+          now,
+        ),
     )
 
     let synced = 0

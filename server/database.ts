@@ -15,6 +15,7 @@ import {
   type TradeSaveResult as TradeResponse,
 } from '@/lib/trades/save-trades-core'
 import { trustedUserId, type TrustedActor } from '@/lib/api/server-actor'
+import { withoutOpeningSeedCloses } from '@/lib/opening-seed'
 
 export async function revalidateCache(tags: string[]) {
   console.log(`[revalidateCache] Starting cache invalidation for tags:`, tags)
@@ -34,7 +35,10 @@ export async function revalidateCache(tags: string[]) {
 
 export async function saveTradesAction(
   data: Trade[],
-  options?: TrustedActor & { connectionId?: string | null }
+  options?: TrustedActor & {
+    connectionId?: string | null
+    coverageExcludeTradeIds?: readonly string[]
+  }
 ): Promise<TradeResponse> {
   console.log('[saveTrades] Saving trades:', data.length)
   // A browser can call this server action directly. Only an in-process
@@ -43,6 +47,7 @@ export async function saveTradesAction(
   return saveTradesCore(data, {
     userId,
     connectionId: options?.connectionId,
+    coverageExcludeTradeIds: options?.coverageExcludeTradeIds,
   })
 }
 
@@ -76,6 +81,12 @@ function getCachedTrades(userId: string, isSubscribed: boolean, page: number, ch
   )()  // Note the () at the end - we call the cached function immediately
 }
 
+
+export async function getAnalyticsTradesAction(
+  forceRefresh: boolean = false,
+): Promise<Trade[]> {
+  return withoutOpeningSeedCloses(await getTradesAction(forceRefresh))
+}
 
 export async function getTradesAction(forceRefresh: boolean = false): Promise<Trade[]> {
   // Always derive userId from auth — never accept a client-provided userId

@@ -4,7 +4,7 @@ import {
   RITHMIC_PROTOCOL_TRADE_TAG,
   isOpeningSeedCloseTrade,
 } from '@/lib/trade-id-utils'
-import { canonicalRithmicFillId } from './dedupe-fills'
+import { rithmicFillIdLookupValues } from './dedupe-fills'
 import { fillSide, fillTimestampMs, normalizeInstrument } from './fills-to-trades'
 import type { RithmicProtocolFill } from './types'
 
@@ -31,6 +31,7 @@ export type OpeningPositionCheck = {
   /** Opening at the start of that stream: P_end − net(fills). */
   p0: number
   fillCount: number
+  unpricedCount: number
 }
 
 export type OpeningLotSeed = {
@@ -48,11 +49,30 @@ function signedFillSize(fill: RithmicProtocolFill): number {
 }
 
 export function openingPositionKey(accountId: string, symbol: string): string {
-  return `${accountId}|${symbol.trim().toUpperCase()}`
+  return `${encodeURIComponent(accountId)}|${encodeURIComponent(symbol.trim().toUpperCase())}`
+}
+
+export function parseOpeningPositionKey(key: string): {
+  accountId: string
+  symbol: string
+} {
+  const separator = key.indexOf('|')
+  if (separator < 0) {
+    return { accountId: decodeURIComponent(key), symbol: '' }
+  }
+  return {
+    accountId: decodeURIComponent(key.slice(0, separator)),
+    symbol: decodeURIComponent(key.slice(separator + 1)),
+  }
 }
 
 function positionKey(accountId: string, symbol: string): string {
   return openingPositionKey(accountId, symbol)
+}
+
+function hasUsablePrice(fill: RithmicProtocolFill): boolean {
+  const price = Number(fill.fillPrice || fill.avgFillPrice || 0)
+  return Number.isFinite(price) && price !== 0
 }
 
 export type CapturedPositionSnapshot = {
@@ -60,12 +80,15 @@ export type CapturedPositionSnapshot = {
   complete: boolean
   reason?: string
   capturedAtMs?: number
+  noDataAccountIds?: string[]
 }
 
 export type OpeningSeedSkipReason =
   | 'p0_exceeds_window_gross'
   | 'non_integer_p0'
   | 'unpriceable_close'
+  | 'unpriced_fills'
+  | 'fill_less_expiry'
 
 export type OpeningSeedSkip = {
   accountId: string
@@ -114,10 +137,31 @@ export function latestFillTimestampMs(fills: RithmicProtocolFill[]): number {
   return latest
 }
 
+function snapshotClockMs(snapshot: CapturedPositionSnapshot): number | undefined {
+  const ms = snapshot.capturedAtMs
+  return ms != null && Number.isFinite(ms) ? ms : undefined
+}
+
+function noDataAccountsWithFills(
+  snapshots: CapturedPositionSnapshot[],
+  fills: RithmicProtocolFill[],
+): boolean {
+  const noData = new Set<string>()
+  for (const snapshot of snapshots) {
+    for (const accountId of snapshot.noDataAccountIds ?? []) {
+      if (accountId) noData.add(accountId)
+    }
+  }
+  if (noData.size === 0) return false
+  return fills.some((fill) => noData.has(fill.accountId))
+}
+
 /**
  * Snapshot before fills, snapshot after. Either incomplete, a position-map
- * mismatch, or a fill timestamp after the after-snapshot clock means P_0
- * cannot be trusted — treat as POSITION_SNAPSHOT_UNAVAILABLE.
+ * mismatch, missing clocks, plant lag (fills between equal books), PnL
+ * no-data on an account that still has fills, or a fill timestamp after
+ * the after-snapshot clock means P_0 cannot be trusted — treat as
+ * POSITION_SNAPSHOT_UNAVAILABLE.
  */
 export function reconcileBracketedSnapshots(params: {
   before: CapturedPositionSnapshot
@@ -138,14 +182,31 @@ export function reconcileBracketedSnapshots(params: {
       reason: params.after.reason ?? 'after_incomplete',
     }
   }
+  const beforeMs = snapshotClockMs(params.before)
+  const afterMs = snapshotClockMs(params.after)
+  if (beforeMs == null || afterMs == null) {
+    return { ok: false, positions: [], reason: 'snapshot_clock_missing' }
+  }
+  if (beforeMs > afterMs) {
+    return { ok: false, positions: [], reason: 'snapshot_clock_order' }
+  }
+  if (noDataAccountsWithFills([params.before, params.after], params.fills)) {
+    return { ok: false, positions: [], reason: 'pnl_no_data' }
+  }
   if (!instrumentPositionMapsEqual(params.before.positions, params.after.positions)) {
     return { ok: false, positions: [], reason: 'snapshot_mismatch' }
   }
-  const afterMs = params.after.capturedAtMs
-  if (afterMs != null && Number.isFinite(afterMs)) {
-    const latestFill = latestFillTimestampMs(params.fills)
-    if (latestFill > afterMs) {
-      return { ok: false, positions: [], reason: 'fill_after_snapshot' }
+  const latestFill = latestFillTimestampMs(params.fills)
+  if (latestFill > afterMs) {
+    return { ok: false, positions: [], reason: 'fill_after_snapshot' }
+  }
+  const between = fillNetsBySymbol(params.fills, {
+    fromMsExclusive: beforeMs,
+    toMsInclusive: afterMs,
+  })
+  for (const group of between.values()) {
+    if (group.net !== 0) {
+      return { ok: false, positions: [], reason: 'fills_during_equal_snapshots' }
     }
   }
   return { ok: true, positions: params.after.positions }
@@ -172,6 +233,24 @@ export function tradeClosedOnOrAfter(
   return Number.isFinite(close) && close >= startMs
 }
 
+/** Keep frozen symbols and pre-history / rolling-cutoff rows instead of reaping them. */
+export function retainOrdinarySyncRow(
+  row: {
+    accountNumber?: string | null
+    entryId?: string | null
+    closeId?: string | null
+    closeDate?: string | null
+  },
+  params: {
+    freezeKeys: Set<string>
+    fills: RithmicProtocolFill[] | Map<string, RithmicProtocolFill>
+    historyStartMs?: number
+  },
+): boolean {
+  if (tradeTouchesSymbolKeys(row, params.freezeKeys, params.fills)) return true
+  return !tradeClosedOnOrAfter(row, params.historyStartMs)
+}
+
 export function parseOpeningSeedOrderId(
   orderId: string | null | undefined,
 ): { accountId: string; symbol: string } | null {
@@ -190,8 +269,9 @@ export function indexFillsByCanonicalId(
 ): Map<string, RithmicProtocolFill> {
   const map = new Map<string, RithmicProtocolFill>()
   for (const fill of fills) {
-    const id = canonicalRithmicFillId(fill.fillId)
-    if (id) map.set(id, fill)
+    for (const id of rithmicFillIdLookupValues(fill.fillId)) {
+      map.set(id, fill)
+    }
   }
   return map
 }
@@ -244,12 +324,12 @@ export function tradeTouchesSymbolKeys(
   }
   const byId = Array.isArray(fills) ? indexFillsByCanonicalId(fills) : fills
   for (const rawId of [trade.entryId, trade.closeId]) {
-    const id = canonicalRithmicFillId(rawId)
-    if (!id) continue
-    const fill = byId.get(id)
-    if (!fill) continue
-    if (symbolKeys.has(positionKey(fill.accountId || 'unknown', fill.symbol))) {
-      return true
+    for (const id of rithmicFillIdLookupValues(rawId)) {
+      const fill = byId.get(id)
+      if (!fill) continue
+      if (symbolKeys.has(positionKey(fill.accountId || 'unknown', fill.symbol))) {
+        return true
+      }
     }
   }
   return false
@@ -291,7 +371,24 @@ export function planOrdinarySyncTrades<
   uncertainSymbolKeys?: Set<string>
   openingStateDetermined?: boolean
   historyStartMs?: number
+  fillHistoryComplete?: boolean
 }): OrdinarySyncTradePlan<T> {
+  if (params.fillHistoryComplete === false) {
+    return {
+      persist: [],
+      derivedForPhantoms: [],
+      skipPhantomDelete: true,
+      dropReasons: {
+        incomplete_fill_history_trades_skipped: params.trades.length,
+      },
+      stampLastSyncedAt: false,
+      syncStatus: 'degraded',
+      frozenSymbolCount: params.trades.length,
+      warnings: [
+        'Fill history fetch was incomplete; existing trades were left unchanged.',
+      ],
+    }
+  }
   const determined =
     params.snapshotOk || params.openingStateDetermined === true
   if (!params.snapshotOk && !determined) {
@@ -371,12 +468,46 @@ export function isProtocolSystemTag(tag: string | null | undefined): boolean {
 
 function fillNetsBySymbol(
   fills: RithmicProtocolFill[],
-): Map<string, { accountId: string; symbol: string; net: number; fillCount: number }> {
+  range?: { fromMsExclusive?: number; toMsInclusive?: number; sinceMs?: number },
+): Map<
+  string,
+  {
+    accountId: string
+    symbol: string
+    net: number
+    fillCount: number
+    unpricedCount: number
+  }
+> {
   const groups = new Map<
     string,
-    { accountId: string; symbol: string; net: number; fillCount: number }
+    {
+      accountId: string
+      symbol: string
+      net: number
+      fillCount: number
+      unpricedCount: number
+    }
   >()
   for (const fill of fills) {
+    const ts = fillTimestampMs(fill)
+    if (range?.sinceMs != null && Number.isFinite(range.sinceMs) && ts < range.sinceMs) {
+      continue
+    }
+    if (
+      range?.fromMsExclusive != null &&
+      Number.isFinite(range.fromMsExclusive) &&
+      !(ts > range.fromMsExclusive)
+    ) {
+      continue
+    }
+    if (
+      range?.toMsInclusive != null &&
+      Number.isFinite(range.toMsInclusive) &&
+      ts > range.toMsInclusive
+    ) {
+      continue
+    }
     const accountId = fill.accountId || 'unknown'
     const symbol = (fill.symbol || '').trim().toUpperCase()
     if (!symbol) continue
@@ -386,9 +517,15 @@ function fillNetsBySymbol(
       symbol,
       net: 0,
       fillCount: 0,
+      unpricedCount: 0,
+    }
+    group.fillCount += 1
+    if (!hasUsablePrice(fill)) {
+      group.unpricedCount += 1
+      groups.set(key, group)
+      continue
     }
     group.net += signedFillSize(fill)
-    group.fillCount += 1
     groups.set(key, group)
   }
   return groups
@@ -403,8 +540,9 @@ function fillNetsBySymbol(
 export function computeOpeningPositionChecks(params: {
   fills: RithmicProtocolFill[]
   positions: InstrumentPosition[]
+  sinceMs?: number
 }): OpeningPositionCheck[] {
-  const nets = fillNetsBySymbol(params.fills)
+  const nets = fillNetsBySymbol(params.fills, { sinceMs: params.sinceMs })
   const pEndByKey = new Map<string, number>()
   for (const position of params.positions) {
     const accountId = position.accountId.trim()
@@ -416,7 +554,9 @@ export function computeOpeningPositionChecks(params: {
   const keys = new Set([...nets.keys(), ...pEndByKey.keys()])
   const checks: OpeningPositionCheck[] = []
   for (const key of keys) {
-    const [accountId, symbol] = key.split('|')
+    const parsed = parseOpeningPositionKey(key)
+    const accountId = parsed.accountId
+    const symbol = parsed.symbol
     const netRow = nets.get(key)
     const pEnd = pEndByKey.get(key) ?? 0
     const net = netRow?.net ?? 0
@@ -428,6 +568,7 @@ export function computeOpeningPositionChecks(params: {
       net,
       p0: pEnd - net,
       fillCount: netRow?.fillCount ?? 0,
+      unpricedCount: netRow?.unpricedCount ?? 0,
     })
   }
   return checks.sort((a, b) => {
@@ -435,11 +576,6 @@ export function computeOpeningPositionChecks(params: {
     if (byAccount !== 0) return byAccount
     return a.symbol.localeCompare(b.symbol)
   })
-}
-
-function hasUsablePrice(fill: RithmicProtocolFill): boolean {
-  const price = Number(fill.fillPrice || fill.avgFillPrice || 0)
-  return Number.isFinite(price) && price !== 0
 }
 
 /**
@@ -475,6 +611,15 @@ export function decideOpeningSeeds(
         (fill.accountId || 'unknown') === check.accountId &&
         (fill.symbol || '').trim().toUpperCase() === check.symbol,
     )
+    if (check.unpricedCount > 0) {
+      skipped.push({
+        accountId: check.accountId,
+        symbol: check.symbol,
+        reason: 'unpriced_fills',
+      })
+      error = 'OPENING_POSITION_UNKNOWN'
+      continue
+    }
     const gross = symbolFills.reduce(
       (sum, fill) => sum + Math.abs(Number(fill.fillSize) || 0),
       0,

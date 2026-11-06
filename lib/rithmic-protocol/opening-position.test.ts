@@ -5,12 +5,16 @@ import type { RithmicProtocolFill } from './types'
 import {
   computeOpeningPositionChecks,
   decideOpeningSeeds,
+  indexFillsByCanonicalId,
   isOpeningSeedOrderId,
   openingPositionKey,
   openingSeedOrderId,
+  parseOpeningPositionKey,
   planOrdinarySyncTrades,
   reconcileBracketedSnapshots,
+  retainOrdinarySyncRow,
   tradeClosedOnOrAfter,
+  tradeTouchesSymbolKeys,
   uncertainOpeningSymbolKeys,
   utcYyyymmddStartMs,
 } from './opening-position'
@@ -102,6 +106,7 @@ describe('computeOpeningPositionChecks', () => {
         net: 0,
         p0: 0,
         fillCount: 2,
+        unpricedCount: 0,
       },
     ])
     expect(decideOpeningSeeds(checks, roundTrip, WINDOW_START_MS).seeds).toEqual([])
@@ -129,6 +134,7 @@ describe('computeOpeningPositionChecks', () => {
         net: -2,
         p0: 2,
         fillCount: 6,
+        unpricedCount: 0,
       },
     ])
     const { seeds, error } = decideOpeningSeeds(
@@ -521,5 +527,195 @@ describe('uncertainOpeningSymbolKeys', () => {
     })
     expect(result.determined).toBe(true)
     expect(result.keys.has(openingPositionKey(ACCOUNT, 'MNQZ6'))).toBe(true)
+  })
+})
+
+describe('reconcileBracketedSnapshots plant lag and clocks', () => {
+  const capturedAtMs = Date.parse('2026-10-02T18:00:00.000Z')
+  const flat = {
+    positions: [] as { accountId: string; symbol: string; netQuantity: number }[],
+    complete: true,
+    capturedAtMs,
+  }
+
+  it('freezes when snapshot clocks are missing', () => {
+    const result = reconcileBracketedSnapshots({
+      before: { positions: [], complete: true },
+      after: { positions: [], complete: true },
+      fills: [],
+    })
+    expect(result.ok).toBe(false)
+    expect(result.reason).toBe('snapshot_clock_missing')
+  })
+
+  it('freezes equal books when fills between the clocks have a nonzero net', () => {
+    const beforeMs = Date.parse('2026-10-02T17:00:00.000Z')
+    const afterMs = Date.parse('2026-10-02T18:00:00.000Z')
+    const result = reconcileBracketedSnapshots({
+      before: { ...flat, capturedAtMs: beforeMs },
+      after: { ...flat, capturedAtMs: afterMs },
+      fills: [
+        fill({
+          fillId: 'lag-buy',
+          fillSize: 2,
+          ssboe: (beforeMs + 30_000) / 1000,
+        }),
+      ],
+    })
+    expect(result.ok).toBe(false)
+    expect(result.reason).toBe('fills_during_equal_snapshots')
+  })
+
+  it('does not treat PnL no-data as flat when the account still has fills', () => {
+    const result = reconcileBracketedSnapshots({
+      before: { ...flat, noDataAccountIds: [ACCOUNT] },
+      after: { ...flat, noDataAccountIds: [ACCOUNT] },
+      fills: roundTrip,
+    })
+    expect(result.ok).toBe(false)
+    expect(result.reason).toBe('pnl_no_data')
+  })
+
+  it('flat user: no-data with no fills still accepts the empty book', () => {
+    const result = reconcileBracketedSnapshots({
+      before: { ...flat, noDataAccountIds: [ACCOUNT] },
+      after: { ...flat, noDataAccountIds: [ACCOUNT] },
+      fills: [],
+    })
+    expect(result).toEqual({ ok: true, positions: [] })
+  })
+})
+
+describe('planOrdinarySyncTrades fill-history completeness', () => {
+  it('freezes instead of seeding when ShowFillHistory was incomplete', () => {
+    const plan = planOrdinarySyncTrades({
+      trades: [
+        {
+          accountNumber: ACCOUNT,
+          entryId: 'x',
+          closeId: 'y',
+          closeDate: '2026-10-02T14:00:00.000Z',
+        },
+      ],
+      fills: jeremieFills,
+      snapshotOk: true,
+      skippedSymbolKeys: new Set(),
+      fillHistoryComplete: false,
+    })
+    expect(plan.persist).toEqual([])
+    expect(plan.skipPhantomDelete).toBe(true)
+    expect(plan.stampLastSyncedAt).toBe(false)
+    expect(plan.syncStatus).toBe('degraded')
+    expect(plan.dropReasons.incomplete_fill_history_trades_skipped).toBe(1)
+  })
+})
+
+describe('retainOrdinarySyncRow pre-history / rolling cutoff', () => {
+  it('keeps trades closed before the rolling history start', () => {
+    const historyStartMs = utcYyyymmddStartMs('20261001')
+    const old = {
+      accountNumber: ACCOUNT,
+      entryId: 'old-open',
+      closeId: 'old-close',
+      closeDate: '2026-09-15T14:00:00.000Z',
+    }
+    expect(
+      retainOrdinarySyncRow(old, {
+        freezeKeys: new Set(),
+        fills: [],
+        historyStartMs,
+      }),
+    ).toBe(true)
+    expect(tradeClosedOnOrAfter(old, historyStartMs)).toBe(false)
+  })
+
+  it('does not keep in-window unmatched rows', () => {
+    expect(
+      retainOrdinarySyncRow(
+        {
+          accountNumber: ACCOUNT,
+          entryId: 'new-open',
+          closeId: 'new-close',
+          closeDate: '2026-10-02T14:00:00.000Z',
+        },
+        {
+          freezeKeys: new Set(),
+          fills: [],
+          historyStartMs: utcYyyymmddStartMs('20261001'),
+        },
+      ),
+    ).toBe(false)
+  })
+})
+
+describe('computeOpeningPositionChecks window filter and unpriced fills', () => {
+  it('does not seed leftover historical net after a fill-less expiry', () => {
+    const expired = [
+      fill({
+        fillId: 'old-sell',
+        transactionType: 'SELL',
+        fillSize: 2,
+        ssboe: at('2026-09-01T14:00:00Z'),
+      }),
+    ]
+    const weekend = Date.parse('2026-10-23T22:00:00.000Z')
+    const checks = computeOpeningPositionChecks({
+      fills: expired,
+      positions: [],
+      sinceMs: weekend,
+    })
+    expect(checks).toEqual([])
+    expect(decideOpeningSeeds(checks, expired, weekend).seeds).toEqual([])
+  })
+
+  it('skips unpriced fills in P_0 arithmetic and refuses to seed', () => {
+    const unpriced = [
+      fill({
+        fillId: 'no-px',
+        fillPrice: 0,
+        fillSize: 2,
+        ssboe: at('2026-09-30T14:00:00Z'),
+      }),
+    ]
+    const checks = computeOpeningPositionChecks({
+      fills: unpriced,
+      positions: [{ accountId: ACCOUNT, symbol: 'MESZ6', netQuantity: 2 }],
+    })
+    expect(checks[0]?.net).toBe(0)
+    expect(checks[0]?.p0).toBe(2)
+    expect(checks[0]?.unpricedCount).toBe(1)
+    const decision = decideOpeningSeeds(checks, unpriced, WINDOW_START_MS)
+    expect(decision.seeds).toEqual([])
+    expect(decision.skipped[0]?.reason).toBe('unpriced_fills')
+  })
+})
+
+describe('openingPositionKey encoding', () => {
+  it('round-trips account ids that contain the delimiter', () => {
+    const accountId = 'FIRM|DESK-1'
+    const key = openingPositionKey(accountId, 'MESZ6')
+    expect(parseOpeningPositionKey(key)).toEqual({
+      accountId,
+      symbol: 'MESZ6',
+    })
+  })
+})
+
+describe('indexFillsByCanonicalId raw and canonical ids', () => {
+  it('looks up Replay basketId_fillId and the bare history id', () => {
+    const replay = fill({
+      fillId: '239200544_1319858',
+      ssboe: at('2026-09-30T14:00:00Z'),
+    })
+    const byId = indexFillsByCanonicalId([replay])
+    expect(byId.get('239200544_1319858')).toBe(replay)
+    expect(byId.get('1319858')).toBe(replay)
+    expect(
+      tradeTouchesSymbolKeys(
+        { entryId: '239200544_1319858', closeId: 'x' },
+        new Set([openingPositionKey(ACCOUNT, 'MESZ6')]),
+        byId,
+      ),
+    ).toBe(true)
   })
 })

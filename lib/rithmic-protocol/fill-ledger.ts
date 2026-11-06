@@ -2,6 +2,7 @@ import { isOpeningSeedOrderId, isProtocolSystemTag } from './opening-position'
 import type { RithmicProtocolFill } from './types'
 import {
   canonicalRithmicFillId,
+  rithmicFillIdLookupValues,
   consolidateOrderFills,
   dedupeFillsWithStats,
   fillIdentityKey,
@@ -242,8 +243,9 @@ export function canonicalLedgerFillIds(
 ): Set<string> {
   const ids = new Set<string>()
   for (const fill of fills) {
-    const fillId = canonicalRithmicFillId(fill.fillId)
-    if (fillId) ids.add(fillId)
+    for (const fillId of rithmicFillIdLookupValues(fill.fillId)) {
+      ids.add(fillId)
+    }
   }
   return ids
 }

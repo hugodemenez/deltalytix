@@ -171,6 +171,8 @@ function fetchedFills(
     anchoredStartYmd: string
     weeklyCloseIso: string
     endYmd: string
+    complete?: boolean
+    windowsFailed?: number
   },
 ) {
   return {
@@ -314,6 +316,7 @@ describe('admin account resync scoping and safety', () => {
         net: 0,
         p0: 0,
         fillCount: 2,
+        unpricedCount: 0,
       },
     ])
     expect(result.proposed?.seededOpeningLots).toBe(0)
@@ -487,6 +490,28 @@ describe('admin account resync scoping and safety', () => {
     expect(tradeCreateMany).not.toHaveBeenCalled()
   })
 
+  it('live rebuild refuses when ShowFillHistory was incomplete', async () => {
+    fetchFillsForAccounts.mockResolvedValueOnce(
+      fetchedFills(ACCOUNT_FILLS, new Map(), {
+        requestedStartYmd: '20260901',
+        anchoredStartYmd: '20260901',
+        weeklyCloseIso: '2026-09-25T21:00:00.000Z',
+        endYmd: '20261002',
+        complete: false,
+        windowsFailed: 1,
+      }),
+    )
+    const live = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: false,
+    })
+    expect(live.error).toBe('INCOMPLETE_FILL_HISTORY')
+    expect(live.complete).toBe(false)
+    expect(tradeDeleteMany).not.toHaveBeenCalled()
+    expect(tradeCreateMany).not.toHaveBeenCalled()
+  })
+
   it('seeds P_0 from a flat broker book so extra sells do not invent shorts', async () => {
     const jeremieFills = [
       {
@@ -529,6 +554,7 @@ describe('admin account resync scoping and safety', () => {
         net: -2,
         p0: 2,
         fillCount: 4,
+        unpricedCount: 0,
       },
     ])
     expect(result.proposed?.seededOpeningLots).toBe(1)

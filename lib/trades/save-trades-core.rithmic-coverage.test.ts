@@ -101,6 +101,42 @@ describe("saveTradesCore Rithmic coverage guard", () => {
     expect(commissionLookups).toHaveLength(0)
   })
 
+  it("excludes pending-reap rows from coverage so the replacement is inserted", async () => {
+    createMany.mockResolvedValue({ count: 1 })
+    const replacement = {
+      ...syncTrade,
+      quantity: 1,
+      entryId: "1002",
+      closeId: "1001",
+      entryPrice: "7800",
+      closePrice: "7804",
+      entryDate: "2026-09-30T14:00:00.000+00:00",
+      closeDate: "2026-09-30T14:05:00.000+00:00",
+    } as Trade
+    const phantom = {
+      id: "phantom-overnight",
+      accountNumber: ACCOUNT,
+      instrument: "MES",
+      side: "Short",
+      quantity: 1,
+      entryPrice: "7800",
+      closePrice: "7804",
+      entryDate: "2026-09-30T14:00:00.000+00:00",
+      closeDate: "2026-09-30T14:05:00.000+00:00",
+      entryId: "999",
+      closeId: "888",
+    }
+    findMany.mockImplementation(async (args: { where?: { tags?: unknown } }) =>
+      args?.where?.tags ? [phantom] : [],
+    )
+
+    await saveTradesCore([replacement], {
+      userId: "u1",
+      coverageExcludeTradeIds: ["phantom-overnight"],
+    })
+    expect(createMany.mock.calls[0][0].data).toHaveLength(1)
+  })
+
   it("a new trade on the same account is still inserted", async () => {
     createMany.mockResolvedValue({ count: 1 })
     const fresh = {

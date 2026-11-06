@@ -134,6 +134,7 @@ function isRithmicProtocolPersistedTrade(trade: {
 async function assignExistingRithmicProtocolIds(
   userId: string,
   trades: Trade[],
+  coverageExcludeTradeIds?: ReadonlySet<string>,
 ): Promise<Trade[]> {
   const protocolTrades = trades.filter(isRithmicProtocolPersistedTrade)
   if (protocolTrades.length === 0) return trades
@@ -169,9 +170,17 @@ async function assignExistingRithmicProtocolIds(
   })
   if (existing.length === 0) return trades
 
+  // Rows about to be reaped as overnight phantoms must not cover the
+  // replacement FIFO trades or steal their persisted UUID.
+  const coverageRows =
+    coverageExcludeTradeIds && coverageExcludeTradeIds.size > 0
+      ? existing.filter((row) => !coverageExcludeTradeIds.has(row.id))
+      : existing
+  if (coverageRows.length === 0) return trades
+
   const assigned = trades.map((trade) => {
     if (!isRithmicProtocolPersistedTrade(trade)) return trade
-    const existingId = resolveRithmicProtocolPersistedId(trade, existing)
+    const existingId = resolveRithmicProtocolPersistedId(trade, coverageRows)
     return existingId ? { ...trade, id: existingId } : trade
   })
 
@@ -181,7 +190,7 @@ async function assignExistingRithmicProtocolIds(
   // not insert a second copy next to them.
   const { skipped } = filterRithmicProtocolTradesCoveredByStoredRows(
     assigned.filter(isRithmicProtocolPersistedTrade),
-    existing,
+    coverageRows,
   )
   if (skipped.length === 0) return assigned
   console.log(
@@ -193,7 +202,11 @@ async function assignExistingRithmicProtocolIds(
 
 export async function saveTradesCore(
   data: Trade[],
-  options: { userId: string; connectionId?: string | null },
+  options: {
+    userId: string
+    connectionId?: string | null
+    coverageExcludeTradeIds?: readonly string[]
+  },
 ): Promise<TradeSaveResult> {
   const { userId } = options
 
@@ -268,6 +281,9 @@ export async function saveTradesCore(
     const userAssignedTrades = await assignExistingRithmicProtocolIds(
       userId,
       tradovateAssignedTrades,
+      options.coverageExcludeTradeIds
+        ? new Set(options.coverageExcludeTradeIds)
+        : undefined,
     )
 
     const result = await prisma.trade.createMany({

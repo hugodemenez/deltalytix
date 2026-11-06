@@ -35,7 +35,16 @@ import {
 } from './systems'
 import { fillIdentityKey, markFillSource } from './dedupe-fills'
 import { prepareRithmicProtocolFills } from './fill-ledger'
-import { orderHistoryFallbackPlan } from './history-fallback'
+import {
+  fillHistoryWindowsComplete,
+  orderHistoryFallbackPlan,
+} from './history-fallback'
+import {
+  classifyPnLSnapshotRpCode,
+  protocolAccountPlantIds,
+} from './pnl-snapshot-rp'
+
+export { classifyPnLSnapshotRpCode, protocolAccountPlantIds } from './pnl-snapshot-rp'
 import {
   SHOW_FILL_HISTORY_MAX_WINDOW_DAYS,
   replayWindowStartSsboe,
@@ -135,11 +144,6 @@ function rpOk(rpCode: unknown): boolean {
   return String(rpCode[0]) === '0'
 }
 
-/** Snapshot 403: empty rp_code is success (0 is often omitted). */
-function snapshotRpCodeAccepted(rpCode: unknown): boolean {
-  if (!Array.isArray(rpCode) || rpCode.length === 0) return true
-  return rpOk(rpCode) || rpIsNoData(rpCode)
-}
 
 /** Rithmic rp_code `7 no data` — empty history window, not a hard failure. */
 function rpIsNoData(rpCode: unknown): boolean {
@@ -641,6 +645,7 @@ export class RithmicProtocolClient {
     fcmId?: string
     ibId?: string
     accountIds: string[]
+    accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
     /** Wall-clock budget for the whole sweep, not per account. */
     deadlineMs?: number
   }): Promise<RithmicProtocolAccountBalance[]> {
@@ -658,12 +663,14 @@ export class RithmicProtocolClient {
     fcmId?: string
     ibId?: string
     accountIds: string[]
+    accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
     deadlineMs?: number
   }): Promise<{
     positions: RithmicProtocolInstrumentPosition[]
     complete: boolean
     reason?: string
     capturedAtMs: number
+    noDataAccountIds: string[]
   }> {
     const snapshot = await this.collectPnLPositionSnapshot(params)
     return {
@@ -671,6 +678,7 @@ export class RithmicProtocolClient {
       complete: snapshot.complete,
       reason: snapshot.reason,
       capturedAtMs: Date.now(),
+      noDataAccountIds: snapshot.noDataAccountIds,
     }
   }
 
@@ -678,17 +686,20 @@ export class RithmicProtocolClient {
     fcmId?: string
     ibId?: string
     accountIds: string[]
+    accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
     deadlineMs?: number
   }): Promise<{
     balances: RithmicProtocolAccountBalance[]
     positions: RithmicProtocolInstrumentPosition[]
     complete: boolean
     reason?: string
+    noDataAccountIds: string[]
   }> {
     const balancesByAccountId = new Map<string, RithmicProtocolAccountBalance>()
     const positionsByKey = new Map<string, RithmicProtocolInstrumentPosition>()
     const needed = [...new Set(params.accountIds.map((id) => id.trim()).filter(Boolean))]
     const completed = new Set<string>()
+    const noDataAccountIds: string[] = []
     const deadline =
       Date.now() + (params.deadlineMs ?? PNL_SNAPSHOT_TOTAL_BUDGET_MS)
     let reason: string | undefined
@@ -705,11 +716,15 @@ export class RithmicProtocolClient {
       }
 
       try {
+        const plant = protocolAccountPlantIds(accountId, params.accounts, {
+          fcmId: params.fcmId,
+          ibId: params.ibId,
+        })
         await this.send('rti.RequestPnLPositionSnapshot', {
           templateId: RithmicTemplateId.PNL_POSITION_SNAPSHOT_REQUEST,
           userMsg: [`deltalytix-pnl-${accountId}`],
-          fcmId: params.fcmId,
-          ibId: params.ibId,
+          fcmId: plant.fcmId,
+          ibId: plant.ibId,
           accountId,
         })
       } catch (error) {
@@ -789,12 +804,17 @@ export class RithmicProtocolClient {
               'rti.ResponsePnLPositionSnapshot',
               msg.raw,
             )
-            if (!snapshotRpCodeAccepted(decoded.rpCode)) {
+            const classified = classifyPnLSnapshotRpCode(decoded.rpCode)
+            if (classified === 'error') {
               console.warn(
                 `[RITHMIC-PROTOCOL] PnL snapshot failed for ${accountId}: ${rpMessage(decoded.rpCode)}`,
               )
               reason = 'rp_error'
               break
+            }
+            if (classified === 'no_data') {
+              noDataAccountIds.push(accountId)
+              reason = reason ?? 'no_data'
             }
             accountComplete = true
             completed.add(accountId)
@@ -838,7 +858,8 @@ export class RithmicProtocolClient {
       balances: [...balancesByAccountId.values()],
       positions: [...positionsByKey.values()],
       complete,
-      reason: complete ? undefined : reason ?? 'incomplete',
+      reason: complete ? (noDataAccountIds.length > 0 ? 'no_data' : undefined) : reason ?? 'incomplete',
+      noDataAccountIds,
     }
   }
 
@@ -1415,12 +1436,14 @@ export async function fetchInstrumentPositions(params: {
   fcmId?: string
   ibId?: string
   accountIds: string[]
+  accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
   deadlineMs?: number
 }): Promise<{
   positions: RithmicProtocolInstrumentPosition[]
   complete: boolean
   reason?: string
   capturedAtMs: number
+  noDataAccountIds: string[]
   fcmId?: string
   ibId?: string
 }> {
@@ -1430,6 +1453,7 @@ export async function fetchInstrumentPositions(params: {
       positions: [],
       complete: true,
       capturedAtMs: Date.now(),
+      noDataAccountIds: [],
       fcmId: params.fcmId,
       ibId: params.ibId,
     }
@@ -1450,6 +1474,7 @@ export async function fetchInstrumentPositions(params: {
       fcmId,
       ibId,
       accountIds,
+      accounts: params.accounts,
       deadlineMs: params.deadlineMs,
     })
     return {
@@ -1457,6 +1482,7 @@ export async function fetchInstrumentPositions(params: {
       complete: snapshot.complete,
       reason: snapshot.reason,
       capturedAtMs: snapshot.capturedAtMs,
+      noDataAccountIds: snapshot.noDataAccountIds,
       fcmId,
       ibId,
     }
@@ -1468,6 +1494,7 @@ export async function fetchInstrumentPositions(params: {
       complete: false,
       reason: message || 'unavailable',
       capturedAtMs: Date.now(),
+      noDataAccountIds: [],
       fcmId: params.fcmId,
       ibId: params.ibId,
     }
@@ -1511,6 +1538,8 @@ export async function fetchFillsForAccounts(params: {
     anchoredStartYmd: string
     weeklyCloseIso: string
     endYmd: string
+    complete: boolean
+    windowsFailed: number
   }
   fillStats: {
     received: number
@@ -1595,6 +1624,9 @@ export async function fetchFillsForAccounts(params: {
       requestedDays: params.replayLookbackDays,
     })
     let skippedAlreadySeen = 0
+    let windowsFetched = 0
+    let windowThrew = false
+    const windowsPlanned = windows.length * accountIds.length
     const pushFills = (batch: RithmicProtocolFill[]) => {
       if (!params.seenIdentityKeys || params.seenIdentityKeys.size === 0) {
         fills.push(...batch)
@@ -1668,7 +1700,9 @@ export async function fetchFillsForAccounts(params: {
           historyFills += accountFills.length
           if (accountFills.length === 0) missingWindows += 1
           pushFills(markFillSource(accountFills, 'history'))
+          windowsFetched += 1
         } catch (error) {
+          windowThrew = true
           missingWindows += 1
           console.warn(
             `[RITHMIC-PROTOCOL] Fill history failed for ${accountId} (${toYyyymmddString(window.start)}–${toYyyymmddString(window.end)}), falling back to order history`,
@@ -1763,6 +1797,11 @@ export async function fetchFillsForAccounts(params: {
     }
 
     const prepared = prepareRithmicProtocolFills(fills)
+    const historyCompleteness = fillHistoryWindowsComplete({
+      windowsPlanned,
+      windowsFetched,
+      windowThrew,
+    })
     return {
       fills: prepared.fills,
       rawFills: fills,
@@ -1773,6 +1812,8 @@ export async function fetchFillsForAccounts(params: {
         anchoredStartYmd: startYmdStr,
         weeklyCloseIso: anchored.weeklyClose.toISOString(),
         endYmd: toYyyymmddString(end),
+        complete: historyCompleteness.complete,
+        windowsFailed: historyCompleteness.windowsFailed,
       },
       fillStats: {
         received: prepared.stats.received + skippedAlreadySeen,

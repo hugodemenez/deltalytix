@@ -3,6 +3,7 @@ import {
   getRithmicProtocolToken,
   getRithmicProtocolTrades,
 } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions'
+import { rithmicProtocolSyncHttpSuccess } from '@/lib/rithmic-protocol/sync-outcome'
 
 export const maxDuration = 300
 
@@ -45,14 +46,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const degraded = !rithmicProtocolSyncHttpSuccess(syncResult.syncStatus)
     return NextResponse.json({
-      success: true,
+      success: !degraded,
       savedCount: syncResult.savedCount ?? 0,
       tradesCount: syncResult.tradesCount ?? 0,
       syncStats: syncResult.syncStats,
       syncStatus: syncResult.syncStatus ?? 'ok',
       warnings: syncResult.warnings ?? [],
-      message: 'Sync completed',
+      message: degraded ? 'Sync degraded' : 'Sync completed',
     })
   } catch (error) {
     console.error('Error performing Rithmic Protocol sync:', error)
