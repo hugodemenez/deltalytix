@@ -9,6 +9,7 @@ import {
   rithmicFillIdLookupValues,
   rithmicProtocolFillPairKey,
 } from './dedupe-fills'
+import { OPENING_SEED_ORDER_ID_PREFIX } from '@/lib/opening-seed'
 import type { RithmicProtocolFill } from './types'
 
 const tickBySymbol = new Map([['ES', { tickSize: 0.25, tickValue: 12.5 }]])
@@ -100,6 +101,29 @@ describe('rithmic protocol persisted fill identity', () => {
         { id: 'stored-prefixed-uuid', ...prefixedPair },
       ]),
     ).toBe('stored-prefixed-uuid')
+  })
+
+  it('rematches an opening-seed close after the seed clock rolls', () => {
+    const stored = {
+      id: 'annotated-seed',
+      accountNumber: 'A1',
+      instrument: 'MES',
+      entryDate: '2026-10-16T22:00:00.000Z',
+      closeDate: '2026-10-02T14:00:00.000Z',
+      entryId: `${OPENING_SEED_ORDER_ID_PREFIX}A1:MES`,
+      closeId: '1002',
+    }
+    const rolled = {
+      ...stored,
+      id: 'new-hash',
+      entryDate: '2026-10-23T22:00:00.000Z',
+    }
+    expect(resolveRithmicProtocolPersistedId(rolled, [stored])).toBe(
+      'annotated-seed',
+    )
+    expect(rithmicProtocolFillPairKey(stored)).toBe(
+      rithmicProtocolFillPairKey(rolled),
+    )
   })
 
   it('does not rematch a recycled fill pair on another session or symbol', () => {

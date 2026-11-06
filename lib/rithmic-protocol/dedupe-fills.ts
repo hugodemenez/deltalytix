@@ -1,4 +1,9 @@
+import { OPENING_SEED_ORDER_ID_PREFIX } from '@/lib/opening-seed'
 import type { RithmicProtocolFill } from './types'
+
+function isOpeningSeedEntryId(id: string | null | undefined): boolean {
+  return Boolean(id?.startsWith(OPENING_SEED_ORDER_ID_PREFIX))
+}
 
 export type FillDropReason = 'duplicate_id' | 'duplicate_fields'
 
@@ -73,7 +78,9 @@ export function rithmicProtocolFillPairKey(
   return [
     trade.accountNumber ?? '',
     trade.instrument ?? '',
-    trade.entryDate ?? '',
+    // Seed entry clocks roll with the weekly window; identity is the
+    // synthetic lot + closing fill, not that stamp.
+    isOpeningSeedEntryId(trade.entryId) ? '' : (trade.entryDate ?? ''),
     trade.closeDate ?? '',
     entryId,
     closeId,
@@ -115,7 +122,16 @@ export function isSameRithmicProtocolRoundTrip(
   const bEntry = parseIdentityTime(b.entryDate)
   const aClose = parseIdentityTime(a.closeDate)
   const bClose = parseIdentityTime(b.closeDate)
-  if (aEntry == null || bEntry == null || aClose == null || bClose == null) {
+  if (aClose == null || bClose == null) {
+    return false
+  }
+  if (
+    isOpeningSeedEntryId(a.entryId) &&
+    isOpeningSeedEntryId(b.entryId)
+  ) {
+    return Math.abs(aClose - bClose) <= toleranceMs
+  }
+  if (aEntry == null || bEntry == null) {
     return false
   }
   return (
