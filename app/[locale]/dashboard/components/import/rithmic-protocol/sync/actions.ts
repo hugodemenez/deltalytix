@@ -599,6 +599,7 @@ async function fetchRithmicProtocolBalances(
           fcmId: credentials.fcmId,
           ibId: credentials.ibId,
           accountIds,
+          accounts: credentials.accounts,
           deadlineMs: Math.max(0, deadline - Date.now()),
         })
 
@@ -909,7 +910,7 @@ export async function getRithmicProtocolTrades(
 
     let openingSeeds: OpeningLotSeed[] = []
     const skippedSymbolKeys = new Set<string>()
-    const fillHistoryComplete = fillHistory?.complete !== false
+    const fillHistoryComplete = fillHistory?.complete === true
     const windowStartMs = fillHistory?.weeklyCloseIso
       ? Date.parse(fillHistory.weeklyCloseIso)
       : 0

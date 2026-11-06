@@ -516,7 +516,7 @@ export async function resyncRithmicProtocolAccount(params: {
           )
           commissionRates = fetched.commissionRates
           fillWindow = fetched.fillHistory
-          if (fetched.fillHistory?.complete === false && !params.dryRun) {
+          if (fetched.fillHistory?.complete !== true && !params.dryRun) {
             return { ...base, error: 'INCOMPLETE_FILL_HISTORY' }
           }
         } catch (error) {

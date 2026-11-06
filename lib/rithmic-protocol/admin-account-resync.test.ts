@@ -179,7 +179,14 @@ function fetchedFills(
     rawFills,
     fills: [],
     commissionRates,
-    fillHistory,
+    fillHistory: fillHistory ?? {
+      requestedStartYmd: '20260901',
+      anchoredStartYmd: '20260901',
+      weeklyCloseIso: '2026-09-25T22:00:00.000Z',
+      endYmd: '20261002',
+      complete: true,
+      windowsFailed: 0,
+    },
     fillStats: {
       received: rawFills.length,
       afterDedup: rawFills.length,

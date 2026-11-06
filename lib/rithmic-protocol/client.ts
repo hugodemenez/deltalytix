@@ -1388,6 +1388,7 @@ export async function fetchAccountBalances(params: {
   fcmId?: string
   ibId?: string
   accountIds: string[]
+  accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
   /** Wall-clock budget for the snapshot sweep once logged in. */
   deadlineMs?: number
 }): Promise<{
@@ -1415,6 +1416,7 @@ export async function fetchAccountBalances(params: {
       fcmId,
       ibId,
       accountIds,
+      accounts: params.accounts,
       deadlineMs: params.deadlineMs,
     })
     return { balances, fcmId, ibId }
