@@ -16,6 +16,7 @@ import {
   isLocalWeekend,
   RITHMIC_WEEKEND_UNAVAILABLE,
 } from '@/lib/rithmic-weekend'
+import { rithmicProtocolDashboardSyncDisposition } from '@/lib/rithmic-protocol/sync-outcome'
 
 export interface RithmicProtocolSyncAccount {
   id: string
@@ -215,37 +216,34 @@ export function RithmicProtocolSyncContextProvider({
         })
         const payload = (await response.json()) as SyncApiPayload
 
-        if (payload?.message === 'DUPLICATE_TRADES') {
+        const disposition = rithmicProtocolDashboardSyncDisposition(payload)
+        if (disposition === 'duplicate' || disposition === 'degraded' || disposition === 'ok') {
           await loadAccounts()
           await refreshTradesOnly({ force: false })
           syncSummaryToast(
             t as (key: string, params?: Record<string, string | number>) => string,
             payload,
           )
-          return { success: true, message: 'DUPLICATE_TRADES' }
+          if (disposition === 'duplicate') {
+            return { success: true, message: 'DUPLICATE_TRADES' }
+          }
+          if (disposition === 'degraded') {
+            return { success: false, message: 'SYNC_DEGRADED' }
+          }
+          return { success: true, message: 'OK' }
         }
 
-        if (!response.ok || !payload?.success) {
-          const code = payload?.message || 'SYNC_FAILED'
-          toast.error(
-            // Cast keeps next-international's huge key union from exploding here.
-            (t as (key: string, params?: Record<string, string | number>) => string)(
-              `rithmicProtocolSync.errors.${code}`,
-              {
-                reason: String(payload?.errorParams?.reason ?? ''),
-              },
-            ),
-          )
-          return { success: false, message: code }
-        }
-
-        await loadAccounts()
-        await refreshTradesOnly({ force: false })
-        syncSummaryToast(
-          t as (key: string, params?: Record<string, string | number>) => string,
-          payload,
+        const code = payload?.message || 'SYNC_FAILED'
+        toast.error(
+          // Cast keeps next-international's huge key union from exploding here.
+          (t as (key: string, params?: Record<string, string | number>) => string)(
+            `rithmicProtocolSync.errors.${code}`,
+            {
+              reason: String(payload?.errorParams?.reason ?? ''),
+            },
+          ),
         )
-        return { success: true, message: 'OK' }
+        return { success: false, message: code }
       } catch (error) {
         console.error('Rithmic Protocol sync error:', error)
         toast.error(t('rithmicProtocolSync.errors.SYNC_FAILED'))

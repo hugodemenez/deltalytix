@@ -122,6 +122,38 @@ export function isDegradedSyncBackoffActive(
   return now.getTime() - lastSyncAttemptAt.getTime() < backoffMs
 }
 
+export function connectionHasUnstampedFailure(
+  lastSyncAttemptAt: Date | null | undefined,
+  lastSyncedAt: Date,
+): boolean {
+  if (!lastSyncAttemptAt) return false
+  return lastSyncedAt.getTime() < lastSyncAttemptAt.getTime()
+}
+
+/** Healthy connections first so a backed-off failure cannot starve the tick. */
+export function orderDueConnectionsForSync<
+  T extends {
+    lastSyncAttemptAt: Date | null
+    lastSyncedAt: Date
+  },
+>(connections: readonly T[]): T[] {
+  const healthy: T[] = []
+  const failed: T[] = []
+  for (const connection of connections) {
+    if (
+      connectionHasUnstampedFailure(
+        connection.lastSyncAttemptAt,
+        connection.lastSyncedAt,
+      )
+    ) {
+      failed.push(connection)
+    } else {
+      healthy.push(connection)
+    }
+  }
+  return [...healthy, ...failed]
+}
+
 export function isConnectionSyncDue(
   schedule: ConnectionSyncSchedule,
   lastSyncedAt: Date,

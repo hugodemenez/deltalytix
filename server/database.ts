@@ -38,6 +38,7 @@ export async function saveTradesAction(
   options?: TrustedActor & {
     connectionId?: string | null
     coverageExcludeTradeIds?: readonly string[]
+    allowOpeningSeedEntryIds?: boolean
   }
 ): Promise<TradeResponse> {
   console.log('[saveTrades] Saving trades:', data.length)
@@ -48,6 +49,7 @@ export async function saveTradesAction(
     userId,
     connectionId: options?.connectionId,
     coverageExcludeTradeIds: options?.coverageExcludeTradeIds,
+    allowOpeningSeedEntryIds: options?.allowOpeningSeedEntryIds,
   })
 }
 

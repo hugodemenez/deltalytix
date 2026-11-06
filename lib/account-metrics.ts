@@ -2,7 +2,7 @@
 // These functions can be used on both server and client for consistent results.
 import type { Trade as PrismaTrade } from '@/prisma/generated/prisma/browser'
 import type { Account } from '@/context/data-provider'
-import { openingSeedExitCommission, withoutOpeningSeedCloses } from '@/lib/opening-seed'
+import { isOpeningSeedCloseTrade, openingSeedExitCommission, withoutOpeningSeedCloses } from '@/lib/opening-seed'
 
 export type AccountMetrics = {
   // Balance and progress
@@ -55,16 +55,20 @@ export function computeAccountMetrics(
   account: Account,
   allTrades: PrismaTrade[]
 ): { balanceToDate: number; metrics: NonNullable<Account['metrics']>; dailyMetrics: NonNullable<Account['dailyMetrics']>; trades: PrismaTrade[]; aboveBuffer: number } {
-  const seedFees = openingSeedExitCommission(
-    allTrades.filter((trade) => trade.accountNumber === account.number),
-  )
+  const accountTrades = allTrades.filter((trade) => trade.accountNumber === account.number)
+  const seedCloses = accountTrades.filter(isOpeningSeedCloseTrade)
   allTrades = withoutOpeningSeedCloses(allTrades)
   const resetDate = toDate(account.resetDate)
-  const relevantTrades = allTrades.filter(t => {
-    if (t.accountNumber !== account.number) return false
-    const entryDate = toDate(t.entryDate)
+  const inResetWindow = (trade: PrismaTrade) => {
+    const entryDate = toDate(trade.entryDate)
     if (!entryDate) return false
     return !resetDate || entryDate >= resetDate
+  }
+  const relevantSeedCloses = seedCloses.filter(inResetWindow)
+  const seedFees = openingSeedExitCommission(relevantSeedCloses)
+  const relevantTrades = allTrades.filter(t => {
+    if (t.accountNumber !== account.number) return false
+    return inResetWindow(t)
   })
 
   const sortedTrades = [...relevantTrades].sort((a, b) => {
@@ -92,6 +96,7 @@ export function computeAccountMetrics(
 
     type Event =
       | { kind: 'trade'; date: Date; pnl: number; trade: PrismaTrade }
+      | { kind: 'seed_fee'; date: Date; amount: number }
       | { kind: 'payout'; date: Date; amount: number }
 
     const tradeEvents: Event[] = sortedTrades.map(tr => ({
@@ -100,12 +105,17 @@ export function computeAccountMetrics(
       pnl: tr.pnl - (tr.commission || 0),
       trade: tr,
     }))
+    const seedFeeEvents: Event[] = relevantSeedCloses.map(tr => ({
+      kind: 'seed_fee',
+      date: toDate(tr.entryDate)!,
+      amount: Number(tr.commission || 0),
+    }))
     const payoutEvents: Event[] = validPayouts.map(p => ({
       kind: 'payout',
       date: p.date,
       amount: p.amount,
     }))
-    const events: Event[] = [...tradeEvents, ...payoutEvents].sort(
+    const events: Event[] = [...tradeEvents, ...seedFeeEvents, ...payoutEvents].sort(
       (a, b) => a.date.getTime() - b.date.getTime()
     )
 
@@ -116,6 +126,8 @@ export function computeAccountMetrics(
     for (const ev of events) {
       if (ev.kind === 'payout') {
         // Payout reduces accumulated profit; can push us back under buffer
+        accProfit -= ev.amount
+      } else if (ev.kind === 'seed_fee') {
         accProfit -= ev.amount
       } else {
         const next = accProfit + ev.pnl
@@ -149,6 +161,14 @@ export function computeAccountMetrics(
     const pnl = trade.pnl - (trade.commission || 0)
     dailyPnL[key] = (dailyPnL[key] || 0) + pnl
     filteredTradesProfit += pnl
+  }
+  for (const seed of relevantSeedCloses) {
+    const fee = Number(seed.commission || 0)
+    if (!fee) continue
+    const d = toDate(seed.entryDate)
+    if (!d) continue
+    const key = d.toISOString().split('T')[0]
+    dailyPnL[key] = (dailyPnL[key] || 0) - fee
   }
 
   // Headline profit uses profit above the buffer (payouts already netted in accProfit).

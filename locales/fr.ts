@@ -2970,6 +2970,8 @@ export default {
       NO_TOKEN_RECONNECT:
         "Cette connexion n'a pas d'identifiants. Reconnectez-vous.",
       DUPLICATE_TRADES: "Ces trades sont déjà dans votre journal.",
+      SYNC_DEGRADED:
+        "Instantané de positions indisponible — les trades existants de certains symboles n'ont pas été modifiés. Les fills partiels ont tout de même été enregistrés.",
       SYNC_FAILED:
         "La synchronisation a échoué. Réessayez dans quelques minutes.",
       SAVE_TRADES_FAILED:

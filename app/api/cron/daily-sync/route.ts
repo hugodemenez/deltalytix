@@ -5,6 +5,7 @@ import { decryptConnectionToken } from '@/lib/connection-token-crypto'
 import {
   isConnectionSyncDue,
   isDegradedSyncBackoffActive,
+  orderDueConnectionsForSync,
 } from '@/lib/connection-sync-schedule'
 import { getDxFeedTrades } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/actions'
 import { getRithmicProtocolTrades } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions'
@@ -172,14 +173,16 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const due = connections.filter(
-      (connection) =>
-        isConnectionSyncDue(connection, connection.lastSyncedAt, now) &&
-        !isDegradedSyncBackoffActive(
-          connection.lastSyncAttemptAt,
-          connection.lastSyncedAt,
-          now,
-        ),
+    const due = orderDueConnectionsForSync(
+      connections.filter(
+        (connection) =>
+          isConnectionSyncDue(connection, connection.lastSyncedAt, now) &&
+          !isDegradedSyncBackoffActive(
+            connection.lastSyncAttemptAt,
+            connection.lastSyncedAt,
+            now,
+          ),
+      ),
     )
 
     let synced = 0

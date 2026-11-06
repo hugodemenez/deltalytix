@@ -2,6 +2,17 @@
 export const RITHMIC_PROTOCOL_OPENING_SEED_TAG = 'rithmic-protocol-opening-seed'
 /** Synthetic FIFO entry id, never a real plant fill. */
 export const OPENING_SEED_ORDER_ID_PREFIX = 'opening-seed:'
+/** User/import-supplied ids that look like seeds are namespaced so they cannot hide trades. */
+export const USER_ENTRY_ID_NAMESPACE = 'user:'
+
+export function namespaceUserSuppliedEntryId(
+  entryId: string | null | undefined,
+): string | null | undefined {
+  if (!entryId) return entryId
+  if (!entryId.startsWith(OPENING_SEED_ORDER_ID_PREFIX)) return entryId
+  if (entryId.startsWith(USER_ENTRY_ID_NAMESPACE)) return entryId
+  return `${USER_ENTRY_ID_NAMESPACE}${entryId}`
+}
 
 /** Seed-close rows stay in the journal but drop out of win-rate / volume / hold-time. */
 export function isOpeningSeedCloseTrade(trade: {

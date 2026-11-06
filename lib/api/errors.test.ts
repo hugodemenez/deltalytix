@@ -66,6 +66,30 @@ describe("/api/v1 errors", () => {
     expect(error.required_scopes).toEqual(["trades:write"]);
   });
 
+  it("keeps a degraded Rithmic sync on conflict with Retry-After and import details", async () => {
+    const response = apiError(
+      409,
+      "sync_degraded",
+      "Sync degraded",
+      [
+        { field: "savedCount", message: "3" },
+        { field: "syncStatus", message: "degraded" },
+      ],
+      { "Retry-After": "900" },
+    )
+    const { error } = await body(response)
+
+    expect(response.status).toBe(409)
+    expect(response.headers.get("Retry-After")).toBe("900")
+    expect(error.code).toBe("conflict")
+    expect(String(error.hint)).toContain("Retry-After")
+    expect(String(error.hint)).not.toContain("credentials")
+    expect(error.details).toEqual([
+      { field: "savedCount", message: "3" },
+      { field: "syncStatus", message: "degraded" },
+    ])
+  })
+
   it("leaves the OAuth endpoints on the RFC 6749 error shape", async () => {
     const response = oauthError(400, "invalid_grant", "Expired code");
 

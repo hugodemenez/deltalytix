@@ -3,6 +3,7 @@ import { getShared } from "@/server/shared"
 import type { ReactElement } from "react"
 import { OgCtaButton, ogImageCacheHeaders } from "@/lib/og/shared"
 import { getSharedOgCopy } from "@/lib/og/site-metadata"
+import { sharedOgTradeStats } from "@/lib/og/shared-trade-stats"
 
 export const alt = "Shared Trading Performance"
 export const size = {
@@ -21,31 +22,17 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         }
 
         const { params: sharedParams, trades } = sharedData
-
-        // Calculate comprehensive stats
-        const totalTrades = trades.length
-        const totalPnl = trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0)
-        const winningTrades = trades.filter((trade) => (trade.pnl || 0) > 0)
-        const losingTrades = trades.filter((trade) => (trade.pnl || 0) < 0)
-        const winRate = trades.length > 0 ? (winningTrades.length / trades.length) * 100 : 0
-
-        // Calculate average win/loss for risk-reward ratio
-        const avgWin =
-            winningTrades.length > 0
-                ? winningTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0) / winningTrades.length
-                : 0
-        const avgLoss =
-            losingTrades.length > 0
-                ? Math.abs(losingTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0) / losingTrades.length)
-                : 0
-        const riskRewardRatio = avgLoss > 0 ? avgWin / avgLoss : 0
-
-        // Calculate cumulative P&L for the equity chart
-        const cumulativePnl = trades.reduce((acc, trade) => {
-            const lastValue = acc.length > 0 ? acc[acc.length - 1] : 0
-            acc.push(lastValue + (trade.pnl || 0))
-            return acc
-        }, [] as number[])
+        const {
+            totalTrades,
+            totalPnl,
+            winningTrades,
+            losingTrades,
+            winRate,
+            avgWin,
+            avgLoss,
+            riskRewardRatio,
+            cumulativePnl,
+        } = sharedOgTradeStats(trades)
 
         // Find min and max for scaling
         const minPnl = Math.min(0, ...cumulativePnl)

@@ -43,6 +43,8 @@ const HINTS: Record<string, string> = {
     "The file could not be read. Confirm it is a valid CSV or XLSX export from the platform named in `type`.",
   sync_failed:
     "The broker rejected the sync. Re-check the stored credentials, then trigger the sync again.",
+  sync_degraded:
+    "The sync froze some symbols after a partial import. Wait for Retry-After, then trigger the sync again; stored broker logins are still valid.",
   unauthorized:
     "Present a valid OAuth access token or personal access token as `Authorization: Bearer <token>`.",
   unsupported_platform:
@@ -62,17 +64,30 @@ function hintFor(slug: string) {
 
 /** Field-level detail, when the caller passed something shaped like it. */
 function toDetails(details: unknown) {
-  if (!Array.isArray(details)) return undefined
+  if (Array.isArray(details)) {
+    const entries = details.filter(
+      (entry): entry is { field: string; message: string } =>
+        typeof entry === "object" &&
+        entry !== null &&
+        typeof (entry as { field?: unknown }).field === "string" &&
+        typeof (entry as { message?: unknown }).message === "string",
+    )
+    return entries.length ? entries : undefined
+  }
 
-  const entries = details.filter(
-    (entry): entry is { field: string; message: string } =>
-      typeof entry === "object" &&
-      entry !== null &&
-      typeof (entry as { field?: unknown }).field === "string" &&
-      typeof (entry as { message?: unknown }).message === "string",
-  )
+  if (details && typeof details === "object") {
+    const entries = Object.entries(details as Record<string, unknown>)
+      .filter(
+        ([, value]) =>
+          typeof value === "string" ||
+          typeof value === "number" ||
+          typeof value === "boolean",
+      )
+      .map(([field, value]) => ({ field, message: String(value) }))
+    return entries.length ? entries : undefined
+  }
 
-  return entries.length ? entries : undefined
+  return undefined
 }
 
 export function apiError(

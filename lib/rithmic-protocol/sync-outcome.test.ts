@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  RITHMIC_PROTOCOL_SYNC_DEGRADED_CODE,
   rithmicProtocolCronOutcome,
+  rithmicProtocolDashboardSyncDisposition,
+  rithmicProtocolSyncDegradedDetails,
   rithmicProtocolSyncHttpSuccess,
 } from './sync-outcome'
 
@@ -45,5 +48,42 @@ describe('rithmicProtocolCronOutcome', () => {
         error: 'SAVE_TRADES_FAILED',
       }),
     ).toEqual({ ok: false, reason: 'SAVE_TRADES_FAILED' })
+  })
+})
+
+describe('rithmicProtocolDashboardSyncDisposition', () => {
+  it('refreshes a degraded dashboard payload instead of treating it as SYNC_FAILED', () => {
+    expect(
+      rithmicProtocolDashboardSyncDisposition({
+        success: false,
+        message: RITHMIC_PROTOCOL_SYNC_DEGRADED_CODE,
+        syncStatus: 'degraded',
+      }),
+    ).toBe('degraded')
+    expect(
+      rithmicProtocolDashboardSyncDisposition({
+        success: false,
+        message: 'SYNC_FAILED',
+      }),
+    ).toBe('failed')
+  })
+})
+
+describe('rithmicProtocolSyncDegradedDetails', () => {
+  it('keeps partial-import counts for the v1 409 body', () => {
+    expect(
+      rithmicProtocolSyncDegradedDetails({
+        savedCount: 3,
+        tradesCount: 8,
+        syncStatus: 'degraded',
+        syncStats: { fillsAfterDedup: 12, closedTrades: 8, openTradesSkipped: 1 },
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        { field: 'savedCount', message: '3' },
+        { field: 'tradesCount', message: '8' },
+        { field: 'fillsAfterDedup', message: '12' },
+      ]),
+    )
   })
 })

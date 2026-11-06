@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   analysisNetPnl,
   isOpeningSeedCloseTrade,
+  namespaceUserSuppliedEntryId,
   OPENING_SEED_ORDER_ID_PREFIX,
   RITHMIC_PROTOCOL_OPENING_SEED_TAG,
+  USER_ENTRY_ID_NAMESPACE,
   withoutOpeningSeedCloses,
 } from './opening-seed'
 
@@ -36,5 +38,16 @@ describe('opening-seed close helper', () => {
       }),
     ).toBe(-4.5)
     expect(analysisNetPnl({ entryId: '1001', pnl: 80, commission: 2 })).toBe(78)
+  })
+
+  it('namespaces a user-supplied opening-seed prefix so it cannot hide a trade', () => {
+    const spoofed = `${OPENING_SEED_ORDER_ID_PREFIX}acct:ES`
+    expect(namespaceUserSuppliedEntryId(spoofed)).toBe(
+      `${USER_ENTRY_ID_NAMESPACE}${spoofed}`,
+    )
+    expect(isOpeningSeedCloseTrade({ entryId: namespaceUserSuppliedEntryId(spoofed) })).toBe(
+      false,
+    )
+    expect(namespaceUserSuppliedEntryId('1001')).toBe('1001')
   })
 })

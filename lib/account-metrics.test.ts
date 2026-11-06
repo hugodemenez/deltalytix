@@ -546,4 +546,40 @@ describe("computeAccountMetrics buffer handling", () => {
     expect(result.metrics.totalProfit).toBe(95.5)
     expect(result.metrics.currentBalance).toBe(150_095.5)
   })
+
+  it("ignores opening-seed fees from before the account reset", () => {
+    const trades = [
+      makeTrade("seed-old", 0, "2026-02-01T14:00:00.000Z", {
+        entryId: "opening-seed:acct-1:ES",
+        tags: ["rithmic-protocol", "rithmic-protocol-opening-seed"],
+        commission: 40,
+      }),
+      makeTrade("real", 100, "2026-03-02T14:00:00.000Z"),
+    ]
+    const result = computeAccountMetrics(
+      makeAccount({
+        buffer: 0,
+        considerBuffer: false,
+        resetDate: new Date("2026-03-01T00:00:00.000Z"),
+      }),
+      trades
+    )
+    expect(result.metrics.totalProfit).toBe(100)
+    expect(result.metrics.currentBalance).toBe(150_100)
+  })
+
+  it("applies in-window seed fees on the buffer curve", () => {
+    const trades = [
+      makeTrade("pre-buffer", 4_643.6, "2026-03-01T14:00:00.000Z"),
+      makeTrade("seed", 0, "2026-03-01T15:00:00.000Z", {
+        entryId: "opening-seed:acct-1:ES",
+        tags: ["rithmic-protocol", "rithmic-protocol-opening-seed"],
+        commission: 4.5,
+      }),
+      makeTrade("crossing", 2_859.2, "2026-03-02T14:00:00.000Z"),
+    ]
+    const result = computeAccountMetrics(makeAccount(), trades)
+    expect(result.metrics.totalProfit).toBeCloseTo(2_498.3, 5)
+    expect(result.trades.map((trade) => trade.id)).not.toContain("seed")
+  })
 })

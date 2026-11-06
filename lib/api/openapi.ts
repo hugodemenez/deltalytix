@@ -34,6 +34,14 @@ const ERROR_RESPONSES: {
     code: "not_found",
   },
   {
+    name: "Conflict",
+    description:
+      "The resource exists but cannot be updated right now. A Rithmic Protocol " +
+      "sync that froze some symbols returns 409 with Retry-After and partial-import " +
+      "counts in error.details — credentials are still valid.",
+    code: "conflict",
+  },
+  {
     name: "UnprocessableEntity",
     description: "The request was understood but cannot be fulfilled.",
     code: "unprocessable_entity",
@@ -566,7 +574,7 @@ export function buildOpenApiDocument(request?: NextRequest | Request) {
           responses: {
             "200": { description: "Sync completed" },
             ...AUTHED_ERRORS,
-            ...errorRefs("UnprocessableEntity"),
+            ...errorRefs("Conflict", "UnprocessableEntity"),
           },
         },
       },

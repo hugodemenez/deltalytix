@@ -142,6 +142,14 @@ describe("pairOrderFills", () => {
     });
   });
 
+  it("namespaces a self-supplied opening-seed entry id", () => {
+    const { headers, rows } = parseSemicolonCsv(`Symbol;Quantity;Entry DT;Entry Price;Exit DT;Exit Price;ProfitLoss;Entry ID
+MNQ;1;2026-01-06 17:35:22;25629.25;2026-01-06 17:51:31;25746.5;469;opening-seed:acct:MNQ`);
+    const plan = planFromHeaders(headers);
+    const result = executeParsePlan(rows, plan);
+    expect(result.trades[0]?.entryId).toBe("user:opening-seed:acct:MNQ");
+  });
+
   it("executes an orders plan into paired trades", () => {
     const headers = ["Symbol", "Qty", "Side", "Price", "Time"];
     const rows = [

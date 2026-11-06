@@ -5,6 +5,13 @@
  * Never parse a multi-million-row file in one synchronous call from the UI.
  */
 import type { Trade } from "@/prisma/generated/prisma/browser";
+import { namespaceUserSuppliedEntryId } from "@/lib/opening-seed";
+
+function namespacedImportId(id: string | null | undefined): string | undefined {
+  const trimmed = (id ?? "").trim();
+  if (!trimmed) return undefined;
+  return namespaceUserSuppliedEntryId(trimmed) ?? trimmed;
+}
 
 export const PARSE_PLAN_FIELDS = [
   "instrument",
@@ -371,7 +378,7 @@ function parseRow(row: string[], plan: ParsePlan): ParsedRow {
         date: entryDate,
         accountNumber,
         commission,
-        id: cell(row, plan.columns.entryId).trim(),
+        id: namespacedImportId(cell(row, plan.columns.entryId)) ?? "",
       },
     };
   }
@@ -401,8 +408,8 @@ function parseRow(row: string[], plan: ParsePlan): ParsedRow {
       commission,
       timeInPosition,
       accountNumber,
-      entryId: cell(row, plan.columns.entryId).trim() || undefined,
-      closeId: cell(row, plan.columns.closeId).trim() || undefined,
+      entryId: namespacedImportId(cell(row, plan.columns.entryId)),
+      closeId: namespacedImportId(cell(row, plan.columns.closeId)),
     },
   };
 }
@@ -545,8 +552,8 @@ function applyFill(fill: OrderFill, book: LotBook): ExecutedTrade[] {
       pnl,
       commission: open.commission + incoming.commission,
       timeInPosition: secondsBetween(open.date, fill.date),
-      entryId: open.id || undefined,
-      closeId: fill.id || undefined,
+      entryId: namespacedImportId(open.id),
+      closeId: namespacedImportId(fill.id),
     });
 
     incoming.quantity -= matched;

@@ -9,6 +9,7 @@ import {
   isSupportedSyncInterval,
   lastIntervalOccurrence,
   nextIntervalOccurrence,
+  orderDueConnectionsForSync,
   syncScheduleMode,
 } from './connection-sync-schedule'
 
@@ -246,5 +247,23 @@ describe('isDegradedSyncBackoffActive', () => {
         new Date('2026-07-26T12:00:00.000Z'),
       ),
     ).toBe(false)
+  })
+})
+
+describe('orderDueConnectionsForSync', () => {
+  it('runs healthy connections before unstamped failures', () => {
+    const healthy = {
+      id: 'ok',
+      lastSyncedAt: new Date('2026-07-26T12:00:00.000Z'),
+      lastSyncAttemptAt: new Date('2026-07-26T12:00:00.000Z'),
+    }
+    const failed = {
+      id: 'fail',
+      lastSyncedAt: new Date('2026-07-26T08:00:00.000Z'),
+      lastSyncAttemptAt: new Date('2026-07-26T12:00:00.000Z'),
+    }
+    expect(orderDueConnectionsForSync([failed, healthy]).map((row) => row.id)).toEqual(
+      ['ok', 'fail'],
+    )
   })
 })

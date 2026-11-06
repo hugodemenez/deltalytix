@@ -3,7 +3,10 @@ import {
   getRithmicProtocolToken,
   getRithmicProtocolTrades,
 } from '@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions'
-import { rithmicProtocolSyncHttpSuccess } from '@/lib/rithmic-protocol/sync-outcome'
+import {
+  RITHMIC_PROTOCOL_SYNC_DEGRADED_CODE,
+  rithmicProtocolSyncHttpSuccess,
+} from '@/lib/rithmic-protocol/sync-outcome'
 
 export const maxDuration = 300
 
@@ -54,7 +57,7 @@ export async function POST(request: NextRequest) {
       syncStats: syncResult.syncStats,
       syncStatus: syncResult.syncStatus ?? 'ok',
       warnings: syncResult.warnings ?? [],
-      message: degraded ? 'Sync degraded' : 'Sync completed',
+      message: degraded ? RITHMIC_PROTOCOL_SYNC_DEGRADED_CODE : 'OK',
     })
   } catch (error) {
     console.error('Error performing Rithmic Protocol sync:', error)

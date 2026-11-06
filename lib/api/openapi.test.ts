@@ -96,6 +96,20 @@ describe("the published OpenAPI description", () => {
     }
   });
 
+  it("documents a 409 Conflict on connection sync including Retry-After", () => {
+    const doc = document()
+    const responses = doc.paths["/v1/connections/{id}/sync"].post.responses as Record<
+      string,
+      { $ref?: string; description?: string }
+    >
+    expect(responses["409"]).toEqual({
+      $ref: "#/components/responses/Conflict",
+    })
+    expect(String(doc.components.responses.Conflict.description)).toMatch(
+      /Retry-After/,
+    )
+  })
+
   it("documents the streamable HTTP MCP endpoint", () => {
     const doc = document();
 
