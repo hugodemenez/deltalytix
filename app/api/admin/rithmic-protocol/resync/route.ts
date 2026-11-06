@@ -221,7 +221,7 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'conflict',
         message: 'The broker position snapshot could not be fetched.',
-        hint: 'Retry a dry-run. Ordinary sync warns and continues; a live admin rebuild refuses rather than inventing opening lots.',
+        hint: 'Retry a dry-run. Ordinary sync keeps existing trades for that window rather than FIFO-starting flat; a live admin rebuild refuses rather than inventing opening lots.',
       }
     case 'OPENING_POSITION_UNKNOWN':
       return {

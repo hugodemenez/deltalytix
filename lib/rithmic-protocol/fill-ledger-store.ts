@@ -217,6 +217,7 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
     closeId?: string | null
   }>
   ledgerFillIds: Set<string>
+  retainIf?: (row: AnnotatedProtocolTrade) => boolean
   db?: ProtocolStore
 }): Promise<number> {
   if (params.accountNumbers.length === 0) return 0
@@ -249,6 +250,7 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
     existing,
     derived: params.derivedTrades,
     ledgerFillIds: params.ledgerFillIds,
+    retainIf: params.retainIf,
   })
   if (ids.length === 0) return 0
 

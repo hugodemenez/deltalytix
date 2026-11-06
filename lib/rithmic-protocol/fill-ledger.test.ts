@@ -208,6 +208,56 @@ describe('uncoveredProtocolTrades', () => {
     expect(uncovered.map((row) => row.id)).toEqual(['missing-close', 'no-ids'])
   })
 
+  it('reaps a stale seed-close whose close fill is still on the ledger', () => {
+    const seedRow = {
+      id: 'stale-seed',
+      accountNumber: ACCOUNT,
+      instrument: 'MES',
+      entryDate: '2026-09-30T13:49:00.000+00:00',
+      closeDate: '2026-09-30T13:50:00.000+00:00',
+      entryId: openingSeedOrderId(ACCOUNT, 'MESZ6'),
+      closeId: '1002',
+      tags: [RITHMIC_PROTOCOL_TRADE_TAG, RITHMIC_PROTOCOL_OPENING_SEED_TAG],
+    }
+    expect(
+      phantomProtocolTradeIds({
+        existing: [seedRow],
+        derived: [],
+        ledgerFillIds: canonicalLedgerFillIds([day1Buy, day1Sell]),
+      }),
+    ).toEqual(['stale-seed'])
+  })
+
+  it('keeps a seed-close that FIFO still emits', () => {
+    const seedRow = {
+      id: 'live-seed',
+      accountNumber: ACCOUNT,
+      instrument: 'MES',
+      entryDate: '2026-09-30T13:49:00.000+00:00',
+      closeDate: '2026-09-30T13:50:00.000+00:00',
+      entryId: openingSeedOrderId(ACCOUNT, 'MESZ6'),
+      closeId: '1002',
+      tags: [RITHMIC_PROTOCOL_TRADE_TAG, RITHMIC_PROTOCOL_OPENING_SEED_TAG],
+    }
+    expect(
+      phantomProtocolTradeIds({
+        existing: [seedRow],
+        derived: [
+          {
+            id: 'other',
+            accountNumber: ACCOUNT,
+            instrument: 'MES',
+            entryDate: seedRow.entryDate,
+            closeDate: seedRow.closeDate,
+            entryId: seedRow.entryId,
+            closeId: seedRow.closeId,
+          },
+        ],
+        ledgerFillIds: canonicalLedgerFillIds([day1Buy, day1Sell]),
+      }),
+    ).toEqual([])
+  })
+
   it('treats a synthetic opening-seed entry as covered when the close fill is on the ledger', () => {
     const uncovered = uncoveredProtocolTrades(
       [

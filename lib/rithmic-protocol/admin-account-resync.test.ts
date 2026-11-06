@@ -166,11 +166,18 @@ const ACCOUNT_FILLS = [
 function fetchedFills(
   rawFills = ACCOUNT_FILLS,
   commissionRates: Map<string, number> = new Map(),
+  fillHistory?: {
+    requestedStartYmd: string
+    anchoredStartYmd: string
+    weeklyCloseIso: string
+    endYmd: string
+  },
 ) {
   return {
     rawFills,
     fills: [],
     commissionRates,
+    fillHistory,
     fillStats: {
       received: rawFills.length,
       afterDedup: rawFills.length,
@@ -267,6 +274,7 @@ describe('admin account resync scoping and safety', () => {
     fetchInstrumentPositions.mockReset().mockResolvedValue({
       positions: [],
       complete: true,
+      capturedAtMs: Date.parse('2026-12-01T00:00:00Z'),
     })
   })
 
@@ -315,6 +323,7 @@ describe('admin account resync scoping and safety', () => {
       fillCount: 0,
     })
     expect(fetchFillsForAccounts).toHaveBeenCalledTimes(1)
+    expect(fetchInstrumentPositions).toHaveBeenCalledTimes(2)
     expect(tradeDeleteMany).not.toHaveBeenCalled()
     expect(fillDeleteMany).not.toHaveBeenCalled()
     expect(tradeCreateMany).not.toHaveBeenCalled()
@@ -394,9 +403,10 @@ describe('admin account resync scoping and safety', () => {
         },
       ]),
     )
-    fetchInstrumentPositions.mockResolvedValueOnce({
+    fetchInstrumentPositions.mockResolvedValue({
       positions: [{ accountId: ACCOUNT, symbol: 'MESZ6', netQuantity: 2 }],
       complete: true,
+      capturedAtMs: Date.parse('2026-12-01T00:00:00Z'),
     })
     const result = await resyncRithmicProtocolAccount({
       userId: USER,
@@ -422,14 +432,38 @@ describe('admin account resync scoping and safety', () => {
     expect(fillDeleteMany).not.toHaveBeenCalled()
     expect(tradeCreateMany).not.toHaveBeenCalled()
     expect(updateTag).not.toHaveBeenCalled()
-    expect(fetchInstrumentPositions).not.toHaveBeenCalled()
+    expect(fetchInstrumentPositions).toHaveBeenCalledTimes(1)
+  })
+
+  it('live rebuild refuses when before/after snapshots disagree', async () => {
+    fetchInstrumentPositions
+      .mockResolvedValueOnce({
+        positions: [{ accountId: ACCOUNT, symbol: 'MESZ6', netQuantity: 2 }],
+        complete: true,
+        capturedAtMs: Date.parse('2026-12-01T00:00:00Z'),
+      })
+      .mockResolvedValueOnce({
+        positions: [],
+        complete: true,
+        capturedAtMs: Date.parse('2026-12-01T00:00:00Z'),
+      })
+    const preview = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(preview.proposed?.snapshotStatus).toBe('unavailable')
+    expect(preview.proposed?.snapshotReason).toBe('snapshot_mismatch')
+    expect(preview.proposed?.tradeCount).toBe(0)
+    expect(fetchInstrumentPositions).toHaveBeenCalledTimes(2)
   })
 
   it('live rebuild refuses when the position snapshot is unavailable', async () => {
-    fetchInstrumentPositions.mockResolvedValueOnce({
+    fetchInstrumentPositions.mockResolvedValue({
       positions: [],
       complete: false,
       reason: 'timeout',
+      capturedAtMs: Date.parse('2026-12-01T00:00:00Z'),
     })
     const preview = await resyncRithmicProtocolAccount({
       userId: USER,
@@ -442,11 +476,6 @@ describe('admin account resync scoping and safety', () => {
     expect(preview.warnings?.some((warning) => warning.includes('POSITION_SNAPSHOT_UNAVAILABLE'))).toBe(
       true,
     )
-    fetchInstrumentPositions.mockResolvedValueOnce({
-      positions: [],
-      complete: false,
-      reason: 'timeout',
-    })
     const live = await resyncRithmicProtocolAccount({
       userId: USER,
       accountNumber: ACCOUNT,
@@ -507,6 +536,30 @@ describe('admin account resync scoping and safety', () => {
     expect(
       result.warnings?.some((warning) => warning.includes('synthetic opening')),
     ).toBe(true)
+  })
+
+  it('does not persist FIFO trades closed before historyStartDate', async () => {
+    fetchFillsForAccounts.mockResolvedValue(
+      fetchedFills(
+        ACCOUNT_FILLS,
+        new Map(),
+        {
+          requestedStartYmd: '20261001',
+          anchoredStartYmd: '20260926',
+          weeklyCloseIso: '2026-09-25T22:00:00.000Z',
+          endYmd: '20261002',
+        },
+      ),
+    )
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(result.error).toBeUndefined()
+    expect(result.proposed?.tradeCount).toBe(0)
+    expect(result.proposed?.tradesKept).toBeGreaterThan(0)
+    expect(result.wouldDelete?.tradeCount).toBe(0)
   })
 
   it('apply merges fills and replaces only this account protocol trades', async () => {

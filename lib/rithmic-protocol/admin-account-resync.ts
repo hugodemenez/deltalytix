@@ -41,6 +41,11 @@ import {
   type OpeningPositionCheck,
   computeOpeningPositionChecks,
   decideOpeningSeeds,
+  openingPositionKey,
+  reconcileBracketedSnapshots,
+  tradeClosedOnOrAfter,
+  tradeTouchesSymbolKeys,
+  utcYyyymmddStartMs,
 } from './opening-position'
 import type { RithmicProtocolFill } from './types'
 
@@ -471,6 +476,19 @@ export async function resyncRithmicProtocolAccount(params: {
           accountNumbers: [accountNumber],
         })
 
+        const snapshotRequest = {
+          gatewayUri: credentials.gatewayUri,
+          systemName: credentials.systemName,
+          username: credentials.username,
+          password: credentials.password,
+          fcmId: credentials.fcmId,
+          ibId: credentials.ibId,
+          accountIds: connection.accountIds,
+        }
+
+        guard.throwIfLost()
+        const beforeSnapshot = await fetchInstrumentPositions(snapshotRequest)
+
         let incomingFills: RithmicProtocolFill[]
         let commissionRates: Map<string, number>
         let fillWindow: FillHistoryWindow | undefined
@@ -500,6 +518,14 @@ export async function resyncRithmicProtocolAccount(params: {
           return { ...base, error: 'FETCH_FAILED' }
         }
 
+        guard.throwIfLost()
+        const afterSnapshot = await fetchInstrumentPositions(snapshotRequest)
+        const bracket = reconcileBracketedSnapshots({
+          before: beforeSnapshot,
+          after: afterSnapshot,
+          fills: incomingFills,
+        })
+
         const existing = await loadExistingProtocolTrades(userId, accountNumber)
         const hasStoredData =
           before.tradeCount > 0 ||
@@ -527,21 +553,14 @@ export async function resyncRithmicProtocolAccount(params: {
           ]),
         )
 
-        guard.throwIfLost()
-        const snapshot = await fetchInstrumentPositions({
-          gatewayUri: credentials.gatewayUri,
-          systemName: credentials.systemName,
-          username: credentials.username,
-          password: credentials.password,
-          fcmId: credentials.fcmId,
-          ibId: credentials.ibId,
-          accountIds: connection.accountIds,
-        })
-        const snapshotStatus = snapshot.complete ? 'ok' : 'unavailable'
-        const scopedPositions = snapshot.positions.filter(
+        const snapshotStatus = bracket.ok ? 'ok' : 'unavailable'
+        const snapshotReason = bracket.ok
+          ? undefined
+          : bracket.reason ?? afterSnapshot.reason ?? beforeSnapshot.reason
+        const scopedPositions = bracket.positions.filter(
           (position) => position.accountId === accountNumber,
         )
-        const positionChecks = snapshot.complete
+        const positionChecks = bracket.ok
           ? computeOpeningPositionChecks({
               fills: prepared.fills,
               positions: scopedPositions,
@@ -557,30 +576,59 @@ export async function resyncRithmicProtocolAccount(params: {
             return earliest == null ? ts : Math.min(earliest, ts)
           }, null as number | null) ||
           0
-        const seedDecision = snapshot.complete
+        const seedDecision = bracket.ok
           ? decideOpeningSeeds(positionChecks, prepared.fills, windowStartMs)
-          : { seeds: [] as ReturnType<typeof decideOpeningSeeds>['seeds'] }
-        const derived = buildTradesFromRithmicFills(
-          prepared.fills,
-          userId,
-          tickBySymbol,
-          commissionRates,
-          { openingSeeds: seedDecision.seeds },
+          : {
+              seeds: [] as ReturnType<typeof decideOpeningSeeds>['seeds'],
+              skipped: [] as ReturnType<typeof decideOpeningSeeds>['skipped'],
+            }
+        const skippedSymbolKeys = new Set(
+          seedDecision.skipped.map((row) =>
+            openingPositionKey(row.accountId, row.symbol),
+          ),
         )
+        const derived = bracket.ok
+          ? buildTradesFromRithmicFills(
+              prepared.fills,
+              userId,
+              tickBySymbol,
+              commissionRates,
+              { openingSeeds: seedDecision.seeds },
+            )
+          : { trades: [], openSkipped: 0, skipped: {} }
         const withIds = derived.trades.map((trade) => ({
           ...trade,
           userId,
           id: generatePersistedTradeUUID({ ...trade, userId }),
         }))
-        const attached = reattachProtocolTradeAnnotations(withIds, existing)
+        const attached = bracket.ok
+          ? reattachProtocolTradeAnnotations(withIds, existing)
+          : { trades: withIds, preserved: 0, unmatched: [] }
+        const historyStartMs = utcYyyymmddStartMs(fillWindow?.requestedStartYmd)
+        const persistable = attached.trades.filter(
+          (trade) =>
+            tradeClosedOnOrAfter(trade, historyStartMs) &&
+            !tradeTouchesSymbolKeys(trade, skippedSymbolKeys, prepared.fills),
+        )
+        const extraKeepIds = existing
+          .filter(
+            (row) =>
+              !bracket.ok ||
+              !tradeClosedOnOrAfter(row, historyStartMs) ||
+              tradeTouchesSymbolKeys(row, skippedSymbolKeys, prepared.fills),
+          )
+          .map((row) => row.id)
 
         const duplicateIds = duplicateRebuildTradeIds(
-          attached.trades.map((trade) => trade.id),
+          persistable.map((trade) => trade.id),
         )
         const swap = planProtocolTradeSwap({
           existing,
-          rebuiltIds: attached.trades.map((trade) => trade.id),
-          uncoveredIds: uncovered.map((row) => row.id),
+          rebuiltIds: persistable.map((trade) => trade.id),
+          uncoveredIds: [
+            ...uncovered.map((row) => row.id),
+            ...extraKeepIds,
+          ],
           unmatchedIds: attached.unmatched.map((row) => row.id),
           allowUnmatchedAnnotations: Boolean(params.allowUnmatchedAnnotations),
         })
@@ -592,9 +640,10 @@ export async function resyncRithmicProtocolAccount(params: {
           existing,
           uncoveredCount: uncovered.length,
           snapshotStatus,
-          snapshotReason: snapshot.reason,
+          snapshotReason,
           positionChecks,
           seedCount: seedDecision.seeds.length,
+          skippedOpeningSymbols: seedDecision.skipped,
           openingPositionUnknown: seedDecision.error === 'OPENING_POSITION_UNKNOWN',
         })
         if (duplicateIds.length > 0) {
@@ -616,7 +665,7 @@ export async function resyncRithmicProtocolAccount(params: {
           fillCount: 0,
         }
         const proposed = proposedSnapshot({
-          trades: attached.trades,
+          trades: persistable,
           fillCount: merged.length,
           openSkipped: derived.openSkipped,
           annotatedPreserved: attached.preserved,
@@ -624,7 +673,7 @@ export async function resyncRithmicProtocolAccount(params: {
           nets,
           positionChecks,
           snapshotStatus,
-          snapshotReason: snapshot.reason,
+          snapshotReason,
           fillWindow,
           seededOpeningLots: seedDecision.seeds.length,
           ledgerRowsAfterMerge: merged.length,
@@ -632,7 +681,7 @@ export async function resyncRithmicProtocolAccount(params: {
           fillsInserted: fillPartition.inserts.length,
           fillsUpdated: fillPartition.updates.length,
           tradesDeleted: swap.toDelete.length,
-          tradesCreated: attached.trades.length,
+          tradesCreated: persistable.length,
           tradesKept: swap.keepIds.length,
           uncoveredTrades: uncovered.map(tradePreview),
           unmatchedAnnotatedTrades: attached.unmatched.map(tradePreview),
@@ -646,7 +695,7 @@ export async function resyncRithmicProtocolAccount(params: {
               net: row.net,
               p0: row.p0,
             })),
-          )} snapshot=${snapshotStatus}${snapshot.reason ? `:${snapshot.reason}` : ''} seeds=${seedDecision.seeds.length}`,
+          )} snapshot=${snapshotStatus}${snapshotReason ? `:${snapshotReason}` : ''} seeds=${seedDecision.seeds.length}`,
         )
 
         if (snapshotStatus === 'unavailable' && !params.dryRun) {
@@ -669,7 +718,12 @@ export async function resyncRithmicProtocolAccount(params: {
           }
         }
 
-        if (existing.length > 0 && attached.trades.length === 0 && uncovered.length === 0) {
+        if (
+          existing.length > 0 &&
+          persistable.length === 0 &&
+          uncovered.length === 0 &&
+          extraKeepIds.length === 0
+        ) {
           return {
             ...base,
             wouldDelete,
@@ -801,7 +855,7 @@ export async function resyncRithmicProtocolAccount(params: {
                 })
               }
 
-              const rows = attached.trades.map((trade) =>
+              const rows = persistable.map((trade) =>
                 tradeCreateRow(
                   trade as Trade & AnnotatedProtocolTrade,
                   userId,
@@ -976,12 +1030,20 @@ function rebuildWarnings(params: {
   snapshotReason?: string
   positionChecks: OpeningPositionCheck[]
   seedCount: number
+  skippedOpeningSymbols: ReturnType<typeof decideOpeningSeeds>['skipped']
   openingPositionUnknown: boolean
 }): string[] {
   const warnings: string[] = []
   if (params.snapshotStatus === 'unavailable') {
     warnings.push(
       `Broker position snapshot was unavailable${params.snapshotReason ? ` (${params.snapshotReason})` : ''}. Live apply refuses with POSITION_SNAPSHOT_UNAVAILABLE rather than inventing opening lots from fills.`,
+    )
+  }
+  if (params.skippedOpeningSymbols.length > 0) {
+    warnings.push(
+      `Skipped seeding ${params.skippedOpeningSymbols
+        .map((row) => `${row.symbol} (${row.reason})`)
+        .join(', ')}. Existing rows for those symbols are kept.`,
     )
   }
   if (params.openingPositionUnknown) {

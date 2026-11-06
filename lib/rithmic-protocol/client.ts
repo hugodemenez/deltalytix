@@ -135,6 +135,12 @@ function rpOk(rpCode: unknown): boolean {
   return String(rpCode[0]) === '0'
 }
 
+/** Snapshot 403: empty rp_code is success (0 is often omitted). */
+function snapshotRpCodeAccepted(rpCode: unknown): boolean {
+  if (!Array.isArray(rpCode) || rpCode.length === 0) return true
+  return rpOk(rpCode) || rpIsNoData(rpCode)
+}
+
 /** Rithmic rp_code `7 no data` — empty history window, not a hard failure. */
 function rpIsNoData(rpCode: unknown): boolean {
   if (!Array.isArray(rpCode) || rpCode.length === 0) return false
@@ -657,12 +663,14 @@ export class RithmicProtocolClient {
     positions: RithmicProtocolInstrumentPosition[]
     complete: boolean
     reason?: string
+    capturedAtMs: number
   }> {
     const snapshot = await this.collectPnLPositionSnapshot(params)
     return {
       positions: snapshot.positions,
       complete: snapshot.complete,
       reason: snapshot.reason,
+      capturedAtMs: Date.now(),
     }
   }
 
@@ -741,8 +749,11 @@ export class RithmicProtocolClient {
               closedPositionPnl?: string | number
               dayPnl?: string | number
             }>(this.root!, 'rti.AccountPnLPositionUpdate', msg.raw)
-            const balance = mapAccountPnLUpdateToBalance(decoded)
-            if (balance) {
+            const balance = mapAccountPnLUpdateToBalance({
+              ...decoded,
+              accountId: decoded.accountId || accountId,
+            })
+            if (balance && balance.account_id === accountId) {
               balancesByAccountId.set(balance.account_id, balance)
             }
             continue
@@ -759,8 +770,11 @@ export class RithmicProtocolClient {
               isSnapshot?: boolean
             }>(this.root!, 'rti.InstrumentPnLPositionUpdate', msg.raw)
             if (decoded.isSnapshot === false) continue
-            const position = mapInstrumentPnLUpdate(decoded)
-            if (position) {
+            const position = mapInstrumentPnLUpdate({
+              ...decoded,
+              accountId: decoded.accountId || accountId,
+            })
+            if (position && position.accountId === accountId) {
               positionsByKey.set(
                 `${position.accountId}|${position.symbol}`,
                 position,
@@ -775,12 +789,7 @@ export class RithmicProtocolClient {
               'rti.ResponsePnLPositionSnapshot',
               msg.raw,
             )
-            if (
-              Array.isArray(decoded.rpCode) &&
-              decoded.rpCode.length > 0 &&
-              !rpOk(decoded.rpCode) &&
-              !rpIsNoData(decoded.rpCode)
-            ) {
+            if (!snapshotRpCodeAccepted(decoded.rpCode)) {
               console.warn(
                 `[RITHMIC-PROTOCOL] PnL snapshot failed for ${accountId}: ${rpMessage(decoded.rpCode)}`,
               )
@@ -1411,6 +1420,7 @@ export async function fetchInstrumentPositions(params: {
   positions: RithmicProtocolInstrumentPosition[]
   complete: boolean
   reason?: string
+  capturedAtMs: number
   fcmId?: string
   ibId?: string
 }> {
@@ -1419,6 +1429,7 @@ export async function fetchInstrumentPositions(params: {
     return {
       positions: [],
       complete: true,
+      capturedAtMs: Date.now(),
       fcmId: params.fcmId,
       ibId: params.ibId,
     }
@@ -1445,6 +1456,7 @@ export async function fetchInstrumentPositions(params: {
       positions: snapshot.positions,
       complete: snapshot.complete,
       reason: snapshot.reason,
+      capturedAtMs: snapshot.capturedAtMs,
       fcmId,
       ibId,
     }
@@ -1455,6 +1467,7 @@ export async function fetchInstrumentPositions(params: {
       positions: [],
       complete: false,
       reason: message || 'unavailable',
+      capturedAtMs: Date.now(),
       fcmId: params.fcmId,
       ibId: params.ibId,
     }

@@ -41,6 +41,12 @@ import {
 import {
   computeOpeningPositionChecks,
   decideOpeningSeeds,
+  isOpeningSeedCloseTrade,
+  openingPositionKey,
+  planOrdinarySyncTrades,
+  reconcileBracketedSnapshots,
+  tradeTouchesSymbolKeys,
+  utcYyyymmddStartMs,
 } from '@/lib/rithmic-protocol/opening-position'
 import {
   gatewayUri as gatewayUriFor,
@@ -823,6 +829,19 @@ export async function getRithmicProtocolTrades(
     })
     const seen = buildLedgerSeenIndex(storedFills)
 
+    const snapshotRequest = {
+      gatewayUri: credentials.gatewayUri,
+      systemName: credentials.systemName,
+      username: credentials.username,
+      password: credentials.password,
+      fcmId: credentials.fcmId,
+      ibId: credentials.ibId,
+      accountIds: resolvedAccountIds,
+    }
+
+    guard.throwIfLost()
+    const beforeSnapshot = await fetchInstrumentPositions(snapshotRequest)
+
     guard.throwIfLost()
     const { rawFills, uniqueUserId, commissionRates, fillStats, fillHistory } =
       await fetchFillsForAccounts({
@@ -838,6 +857,14 @@ export async function getRithmicProtocolTrades(
         lookbackDays: DEFAULT_LOOKBACK_DAYS,
         seenIdentityKeys: seen.identityKeys,
       })
+    guard.throwIfLost()
+
+    const afterSnapshot = await fetchInstrumentPositions(snapshotRequest)
+    const bracket = reconcileBracketedSnapshots({
+      before: beforeSnapshot,
+      after: afterSnapshot,
+      fills: rawFills,
+    })
     guard.throwIfLost()
 
     const accountRows = await prisma.account.findMany({
@@ -876,74 +903,84 @@ export async function getRithmicProtocolTrades(
     )
 
     let openingSeeds: OpeningLotSeed[] = []
-    try {
-      guard.throwIfLost()
-      const snapshot = await fetchInstrumentPositions({
-        gatewayUri: credentials.gatewayUri,
-        systemName: credentials.systemName,
-        username: credentials.username,
-        password: credentials.password,
-        fcmId: credentials.fcmId,
-        ibId: credentials.ibId,
-        accountIds: resolvedAccountIds,
-      })
-      if (!snapshot.complete) {
-        logger.warn(
-          `PnL position snapshot unavailable (${snapshot.reason ?? 'incomplete'}); FIFO starts flat for this sync`,
-        )
-      } else {
-        const checks = computeOpeningPositionChecks({
-          fills: prepared.fills,
-          positions: snapshot.positions,
-        })
-        const windowStartMs = fillHistory?.weeklyCloseIso
-          ? Date.parse(fillHistory.weeklyCloseIso)
-          : 0
-        const decision = decideOpeningSeeds(
-          checks,
-          prepared.fills,
-          Number.isFinite(windowStartMs) ? windowStartMs : 0,
-        )
-        logger.info(
-          `positionChecks=${JSON.stringify(
-            checks.map((row) => ({
-              symbol: row.symbol,
-              pEnd: row.pEnd,
-              net: row.net,
-              p0: row.p0,
-            })),
-          )} seeds=${decision.seeds.length}`,
-        )
-        if (decision.error) {
-          logger.warn(
-            'OPENING_POSITION_UNKNOWN; FIFO starts flat rather than inventing lots',
-          )
-        } else {
-          openingSeeds = decision.seeds
-        }
-      }
-    } catch (error) {
+    const skippedSymbolKeys = new Set<string>()
+    if (!bracket.ok) {
       logger.warn(
-        `PnL position snapshot failed; FIFO starts flat for this sync (${
-          error instanceof Error ? error.message : String(error)
-        })`,
+        `PnL position snapshot unavailable (${bracket.reason ?? 'incomplete'}); keeping existing trades instead of FIFO-starting flat`,
       )
+    } else {
+      const checks = computeOpeningPositionChecks({
+        fills: prepared.fills,
+        positions: bracket.positions,
+      })
+      const windowStartMs = fillHistory?.weeklyCloseIso
+        ? Date.parse(fillHistory.weeklyCloseIso)
+        : 0
+      const decision = decideOpeningSeeds(
+        checks,
+        prepared.fills,
+        Number.isFinite(windowStartMs) ? windowStartMs : 0,
+      )
+      logger.info(
+        `positionChecks=${JSON.stringify(
+          checks.map((row) => ({
+            symbol: row.symbol,
+            pEnd: row.pEnd,
+            net: row.net,
+            p0: row.p0,
+          })),
+        )} seeds=${decision.seeds.length} skipped=${decision.skipped.length}`,
+      )
+      openingSeeds = decision.seeds
+      for (const skip of decision.skipped) {
+        skippedSymbolKeys.add(openingPositionKey(skip.accountId, skip.symbol))
+      }
+      if (decision.error) {
+        logger.warn(
+          'OPENING_POSITION_UNKNOWN; skipping affected symbols rather than inventing lots',
+        )
+      }
     }
 
-    const { trades, openSkipped, skipped } = buildTradesFromRithmicFills(
-      prepared.fills,
-      userId,
-      tickBySymbol,
-      commissionRates,
-      { openingSeeds },
-    )
+    const { trades, openSkipped, skipped } = bracket.ok
+      ? buildTradesFromRithmicFills(
+          prepared.fills,
+          userId,
+          tickBySymbol,
+          commissionRates,
+          { openingSeeds },
+        )
+      : { trades: [], openSkipped: 0, skipped: {} as Record<string, number> }
     for (const [reason, count] of Object.entries(skipped)) {
       syncStats.droppedByReason[reason] =
         (syncStats.droppedByReason[reason] ?? 0) + count
     }
-    syncStats.closedTrades = trades.length
+
+    const tradePlan = planOrdinarySyncTrades({
+      trades,
+      fills: prepared.fills,
+      snapshotOk: bracket.ok,
+      skippedSymbolKeys,
+      historyStartMs: utcYyyymmddStartMs(fillHistory?.requestedStartYmd),
+    })
+    for (const [reason, count] of Object.entries(tradePlan.dropReasons)) {
+      syncStats.droppedByReason[reason] =
+        (syncStats.droppedByReason[reason] ?? 0) + count
+    }
+
+    const persistTrades = tradePlan.persist
+    const seedCloseCount = persistTrades.filter((trade) =>
+      isOpeningSeedCloseTrade(trade),
+    ).length
+    if (seedCloseCount > 0) {
+      syncStats.droppedByReason.opening_seed_closes_excluded_from_stats =
+        seedCloseCount
+    }
+    syncStats.closedTrades = persistTrades.length - seedCloseCount
     syncStats.openTradesSkipped = openSkipped
-    const commissionZeroCount = trades.filter((trade) => !trade.commission).length
+    const commissionZeroCount = persistTrades.filter(
+      (trade) => !trade.commission,
+    ).length
 
     const logSyncSummary = (saved: number) => {
       syncStats.savedCount = saved
@@ -977,8 +1014,11 @@ export async function getRithmicProtocolTrades(
     // Connection, so accounts that only appear on fills are covered too.
     guard.throwIfLost()
     const saveResult =
-      trades.length > 0
-        ? await saveTradesAction(trades, { ...serverActor(userId), connectionId })
+      persistTrades.length > 0
+        ? await saveTradesAction(persistTrades, {
+            ...serverActor(userId),
+            connectionId,
+          })
         : null
 
     // Invalidate after the save so the trade-derived account links are picked
@@ -1005,12 +1045,17 @@ export async function getRithmicProtocolTrades(
     }
 
     guard.throwIfLost()
-    const phantomsRemoved = await deleteUnannotatedPhantomProtocolTrades({
-      userId,
-      accountNumbers: resolvedAccountIds,
-      derivedTrades: trades,
-      ledgerFillIds: canonicalLedgerFillIds([...storedFills, ...rawFills]),
-    })
+    let phantomsRemoved = 0
+    if (!tradePlan.skipPhantomDelete) {
+      phantomsRemoved = await deleteUnannotatedPhantomProtocolTrades({
+        userId,
+        accountNumbers: resolvedAccountIds,
+        derivedTrades: tradePlan.derivedForPhantoms,
+        ledgerFillIds: canonicalLedgerFillIds([...storedFills, ...rawFills]),
+        retainIf: (row) =>
+          tradeTouchesSymbolKeys(row, skippedSymbolKeys, prepared.fills),
+      })
+    }
     if (phantomsRemoved > 0) {
       syncStats.droppedByReason.phantoms_removed = phantomsRemoved
       logger.info(
@@ -1021,9 +1066,9 @@ export async function getRithmicProtocolTrades(
     logSyncSummary(savedCount)
 
     return {
-      processedTrades: trades,
+      processedTrades: persistTrades,
       savedCount,
-      tradesCount: trades.length,
+      tradesCount: persistTrades.length,
       syncStats,
     }
     }

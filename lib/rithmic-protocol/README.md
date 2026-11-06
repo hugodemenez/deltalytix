@@ -163,16 +163,25 @@ before that date to today with `ShowFillHistory` in **serial ≤30-day windows**
 far; the broker snapshot then supplies `P_0`. `RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS`
 is only a fallback for legacy connections that predate the start-date field.
 
-After fills land, a **PnL plant position snapshot** (`RequestPnLPositionSnapshot`
-402 / `InstrumentPnLPositionUpdate` 450) gives live net `P_end` per exact
-symbol. Opening inventory is `P_0 = P_end − net(fills)`. When `P_0` is a
-known integer, FIFO is seeded with a synthetic opening lot (never stored as a
-fill). Closes against that lot are tagged `rithmic-protocol-opening-seed` and
-attributed **0 PnL** (closing fill price on both sides) rather than guessing
-the missing entry. A non-integer `P_0` or unpriceable close refuses admin live
-rebuild with `OPENING_POSITION_UNKNOWN`. Snapshot timeout/plant failure warns
-and continues on ordinary sync; admin live rebuild refuses with
-`POSITION_SNAPSHOT_UNAVAILABLE`. Fills are never trimmed from a terminal net.
+Fills are **bracketed by two PnL plant snapshots** (`RequestPnLPositionSnapshot`
+402 / `InstrumentPnLPositionUpdate` 450): one before `ShowFillHistory`, one
+after. If either is incomplete, the two books disagree, or a fill timestamp is
+after the second snapshot, `P_end` is treated as unavailable
+(`POSITION_SNAPSHOT_UNAVAILABLE`). Opening inventory is
+`P_0 = P_end − net(fills)` on the agreed book. When `P_0` is a known integer
+and `|P_0|` does not exceed window gross volume, FIFO is seeded with a
+synthetic opening lot (never stored as a fill). Closes against that lot are
+tagged `rithmic-protocol-opening-seed` and attributed **0 PnL** (closing fill
+price on both sides). Those seed-closes stay in the journal but are excluded
+from dashboard win-rate / volume / hold-time. A non-integer `P_0`, unpriceable
+close, or `|P_0| >` window gross refuses admin live rebuild with
+`OPENING_POSITION_UNKNOWN` and skips that symbol on ordinary sync. Snapshot
+failure keeps existing trades on ordinary sync (fills still upsert); admin
+live rebuild refuses with `POSITION_SNAPSHOT_UNAVAILABLE`. Pre-`historyStartDate`
+fills are only used to establish opening state — trades closed before that
+date are not persisted. Fills are never trimmed from a terminal net. Expired
+contracts without a calendar are not detected beyond the `|P_0| > gross`
+guard.
 
 Fills are **upserted into `RithmicProtocolFill` first** (unique on
 `userId` + `fillIdentityKey`), including split order pieces. FIFO then derives

@@ -370,11 +370,16 @@ export function protocolTradeSetsMatch(
  * Protocol trades whose fill pair is no longer produced by FIFO on the
  * ledger, but whose legs are both in the ledger — leftover overnight
  * phantoms from a lossy trades-only snapshot. Annotated rows are kept.
+ *
+ * Synthetic opening-seed entries are not ledger fills; those rows are
+ * phantoms when the close fill is still on the ledger and FIFO no longer
+ * emits the seed-close.
  */
 export function phantomProtocolTradeIds(params: {
   existing: AnnotatedProtocolTrade[]
   derived: Array<{ id: string } & RithmicProtocolFillPairIdentity>
   ledgerFillIds: Set<string>
+  retainIf?: (row: AnnotatedProtocolTrade) => boolean
 }): string[] {
   const matchedExistingIds = new Set<string>()
   for (const incoming of params.derived) {
@@ -389,12 +394,15 @@ export function phantomProtocolTradeIds(params: {
   for (const row of params.existing) {
     if (matchedExistingIds.has(row.id)) continue
     if (hasTradeJournalAnnotations(row)) continue
-    const entryId = canonicalRithmicFillId(row.entryId)
+    if (params.retainIf?.(row)) continue
     const closeId = canonicalRithmicFillId(row.closeId)
-    if (!entryId || !closeId) continue
-    if (!params.ledgerFillIds.has(entryId) || !params.ledgerFillIds.has(closeId)) {
+    if (!closeId || !params.ledgerFillIds.has(closeId)) continue
+    if (isOpeningSeedOrderId(row.entryId)) {
+      toDelete.push(row.id)
       continue
     }
+    const entryId = canonicalRithmicFillId(row.entryId)
+    if (!entryId || !params.ledgerFillIds.has(entryId)) continue
     toDelete.push(row.id)
   }
   return toDelete
