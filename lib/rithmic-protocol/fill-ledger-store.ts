@@ -100,12 +100,26 @@ function fillToRow(
   }
 }
 
+type ProtocolStore = {
+  rithmicProtocolFill: {
+    findMany: typeof prisma.rithmicProtocolFill.findMany
+    createMany: typeof prisma.rithmicProtocolFill.createMany
+    updateMany: typeof prisma.rithmicProtocolFill.updateMany
+  }
+  trade: {
+    findMany: typeof prisma.trade.findMany
+    deleteMany: typeof prisma.trade.deleteMany
+  }
+}
+
 export async function loadRithmicProtocolFills(params: {
   userId: string
   accountNumbers: string[]
+  db?: ProtocolStore
 }): Promise<RithmicProtocolFill[]> {
   if (params.accountNumbers.length === 0) return []
-  const rows = await prisma.rithmicProtocolFill.findMany({
+  const db = params.db ?? prisma
+  const rows = await db.rithmicProtocolFill.findMany({
     where: {
       userId: params.userId,
       accountNumber: { in: params.accountNumbers },
@@ -120,11 +134,13 @@ export async function upsertRithmicProtocolFills(params: {
   stored: RithmicProtocolFill[]
   accountIdByNumber: Map<string, string>
   connectionId?: string | null
+  db?: ProtocolStore
 }): Promise<{ inserted: number; updated: number; skipped: number }> {
   const { inserts, updates, skipped } = partitionIncomingFills(
     params.fills,
     params.stored,
   )
+  const db = params.db ?? prisma
   const toRow = (fill: RithmicProtocolFill) =>
     fillToRow(fill, {
       userId: params.userId,
@@ -134,44 +150,55 @@ export async function upsertRithmicProtocolFills(params: {
 
   for (let offset = 0; offset < inserts.length; offset += UPSERT_CHUNK) {
     const chunk = inserts.slice(offset, offset + UPSERT_CHUNK).map(toRow)
-    await prisma.rithmicProtocolFill.createMany({
+    await db.rithmicProtocolFill.createMany({
       data: chunk,
       skipDuplicates: true,
     })
   }
 
+  const applyUpdates = async (store: ProtocolStore, chunk: RithmicProtocolFill[]) => {
+    for (const fill of chunk) {
+      const row = toRow(fill)
+      await store.rithmicProtocolFill.updateMany({
+        where: {
+          userId: params.userId,
+          identityKey: row.identityKey,
+        },
+        data: {
+          fillId: row.fillId,
+          rawFillId: row.rawFillId,
+          symbol: row.symbol,
+          exchange: row.exchange,
+          transactionType: row.transactionType,
+          fillPrice: row.fillPrice,
+          fillSize: row.fillSize,
+          fillDate: row.fillDate,
+          fillTime: row.fillTime,
+          basketId: row.basketId,
+          sequenceNumber: row.sequenceNumber,
+          ssboe: row.ssboe,
+          usecs: row.usecs,
+          source: row.source,
+          accountId: row.accountId,
+          connectionId: row.connectionId,
+          updatedAt: row.updatedAt,
+        },
+      })
+    }
+  }
+
   for (let offset = 0; offset < updates.length; offset += UPSERT_CHUNK) {
     const chunk = updates.slice(offset, offset + UPSERT_CHUNK)
-    await prisma.$transaction(
-      chunk.map((fill) => {
-        const row = toRow(fill)
-        return prisma.rithmicProtocolFill.updateMany({
-          where: {
-            userId: params.userId,
-            identityKey: row.identityKey,
-          },
-          data: {
-            fillId: row.fillId,
-            rawFillId: row.rawFillId,
-            symbol: row.symbol,
-            exchange: row.exchange,
-            transactionType: row.transactionType,
-            fillPrice: row.fillPrice,
-            fillSize: row.fillSize,
-            fillDate: row.fillDate,
-            fillTime: row.fillTime,
-            basketId: row.basketId,
-            sequenceNumber: row.sequenceNumber,
-            ssboe: row.ssboe,
-            usecs: row.usecs,
-            source: row.source,
-            accountId: row.accountId,
-            connectionId: row.connectionId,
-            updatedAt: row.updatedAt,
-          },
-        })
-      }),
-    )
+    if (params.db) {
+      await applyUpdates(db, chunk)
+    } else {
+      await prisma.$transaction(
+        async (tx) => {
+          await applyUpdates(tx as unknown as ProtocolStore, chunk)
+        },
+        { timeout: 60_000, maxWait: 15_000 },
+      )
+    }
   }
 
   return { inserted: inserts.length, updated: updates.length, skipped }
@@ -190,9 +217,11 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
     closeId?: string | null
   }>
   ledgerFillIds: Set<string>
+  db?: ProtocolStore
 }): Promise<number> {
   if (params.accountNumbers.length === 0) return 0
-  const existing = (await prisma.trade.findMany({
+  const db = params.db ?? prisma
+  const existing = (await db.trade.findMany({
     where: {
       userId: params.userId,
       accountNumber: { in: params.accountNumbers },
@@ -223,12 +252,12 @@ export async function deleteUnannotatedPhantomProtocolTrades(params: {
   })
   if (ids.length === 0) return 0
 
-  const result = await prisma.trade.deleteMany({
-    where: {
-      userId: params.userId,
-      id: { in: ids },
-      tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
-    },
-  })
+  const result = await db.trade.deleteMany({
+      where: {
+        userId: params.userId,
+        id: { in: ids },
+        tags: { has: RITHMIC_PROTOCOL_TRADE_TAG },
+      },
+    })
   return result.count
 }
