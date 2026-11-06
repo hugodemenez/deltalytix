@@ -46,6 +46,38 @@ export function utcCalendarDayAfter(instant: Date): Date {
   )
 }
 
+function compactYmd(value: string): string | null {
+  const compact = value.replace(/-/g, '')
+  return /^\d{8}$/.test(compact) ? compact : null
+}
+
+/**
+ * Globex session open for an exchange trade date: 17:00 America/Chicago on
+ * the previous calendar day (Sunday 17:00 CT for a Monday trade date).
+ *
+ * `fill_date` without `ssboe` is this session date, not UTC midnight. Evening
+ * fills on the first window after weekly close belong at this open, which is
+ * after Friday 17:00 CT — UTC midnight of the trade date is the wrong side of
+ * that first cutoff.
+ */
+export function globexSessionOpenForTradeDate(fillDateYmd: string): Date | null {
+  const compact = compactYmd(fillDateYmd)
+  if (!compact) return null
+  const year = Number(compact.slice(0, 4))
+  const month = Number(compact.slice(4, 6))
+  const day = Number(compact.slice(6, 8))
+  const previous = new Date(Date.UTC(year, month - 1, day) - 24 * 60 * 60 * 1000)
+  const previousYmd = utcYmd(
+    previous.getUTCFullYear(),
+    previous.getUTCMonth(),
+    previous.getUTCDate(),
+  )
+  return fromZonedTime(
+    `${previousYmd}T${String(CME_WEEKLY_CLOSE_HOUR).padStart(2, '0')}:00:00`,
+    CME_GLOBEX_TIMEZONE,
+  )
+}
+
 /**
  * Most recent CME Globex weekly close (Friday 17:00 America/Chicago,
  * DST-aware) at or before `instant`. Friday 17:00:00 exactly counts as

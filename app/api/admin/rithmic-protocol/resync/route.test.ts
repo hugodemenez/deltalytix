@@ -256,6 +256,31 @@ describe('POST /api/admin/rithmic-protocol/resync', () => {
     expect(body.result.error).toBe('OPENING_POSITION_UNKNOWN')
   })
 
+  it('returns 409 when FIFO leftover lots do not match P_end', async () => {
+    authorizeAdminRequest.mockResolvedValue({
+      ok: true,
+      via: 'session',
+      actorUserId: 'admin-1',
+    })
+    resyncRithmicProtocolAccount.mockResolvedValue({
+      dryRun: false,
+      complete: false,
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      before: { tradeCount: 2, pnl: 15, fillCount: 2 },
+      error: 'END_POSITION_MISMATCH',
+    })
+    const response = await post({
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      dryRun: false,
+    })
+    expect(response.status).toBe(409)
+    const body = await response.json()
+    expect(body.error.code).toBe('conflict')
+    expect(body.result.error).toBe('END_POSITION_MISMATCH')
+  })
+
   it('returns 409 for uncovered trades without writing a success body', async () => {
     authorizeAdminRequest.mockResolvedValue({
       ok: true,

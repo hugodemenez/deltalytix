@@ -490,7 +490,12 @@ function mergeCluster(cluster: OrderCluster): RithmicProtocolFill {
     0,
   )
   const fillId = canonicalRithmicFillId(canonical.fillId) ?? canonical.fillId
-  return { ...first, fillId, fillSize: size }
+  const absorbedFillIds = [
+    ...new Set(
+      cluster.fills.flatMap((fill) => rithmicFillIdLookupValues(fill.fillId)),
+    ),
+  ]
+  return { ...first, fillId, fillSize: size, absorbedFillIds }
 }
 
 /**

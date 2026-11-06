@@ -235,6 +235,12 @@ function errorMapping(error: string | undefined): {
         message: 'The opening position is known from the broker snapshot but cannot be priced conservatively.',
         hint: 'Inspect result.proposed.positionChecks. Fills were not rewritten. Extend history or flatten the account, then retry.',
       }
+    case 'END_POSITION_MISMATCH':
+      return {
+        code: 'conflict',
+        message: 'FIFO leftover lots after the window did not match the broker P_end snapshot.',
+        hint: 'Inspect result.proposed.positionChecks. Fills were not rewritten. Retry a dry-run after flattening or extending history.',
+      }
     case 'DUPLICATE_TRADE_IDS':
     case 'INSERT_MISMATCH':
       return {

@@ -10,6 +10,7 @@ import type { RithmicProtocolFill } from './types'
 import {
   buildLedgerSeenIndex,
   canonicalLedgerFillIds,
+  coveringAnnotatedTradeId,
   deriveTradesFromFillLedger,
   dropSeenLedgerFills,
   hasTradeJournalAnnotations,
@@ -847,5 +848,43 @@ describe('reattachProtocolTradeAnnotations', () => {
       protocolTradeSetsMatch([base], [{ ...base, comment: 'new note' }]),
     ).toBe(false)
     expect(duplicateRebuildTradeIds(['a', 'b', 'a'])).toEqual(['a'])
+  })
+})
+
+describe('coveringAnnotatedTradeId', () => {
+  it('returns the annotated leftover so a replacement can rematch instead of skip', () => {
+    const incoming = {
+      id: 'fifo-new',
+      accountNumber: ACCOUNT,
+      instrument: 'MES',
+      entryDate: '2026-09-30T14:00:00.000+00:00',
+      closeDate: '2026-10-02T14:00:00.000+00:00',
+      entryId: '1002',
+      closeId: '2001',
+      side: 'Short',
+      quantity: 1,
+      entryPrice: '7802',
+      closePrice: '7810',
+    }
+    const annotated = {
+      ...incoming,
+      id: 'keep-note',
+      comment: 'setup I want to keep',
+    }
+    expect(coveringAnnotatedTradeId(incoming, [annotated])).toBe('keep-note')
+  })
+})
+
+describe('canonicalLedgerFillIds absorbed pieces', () => {
+  it('includes absorbed raw piece ids in the freeze index', () => {
+    const merged = fill({
+      fillId: '1245663',
+      fillSize: 5,
+      ssboe: at('2026-09-30T14:00:00Z'),
+      absorbedFillIds: ['1245660', '1245661'],
+    })
+    const ids = canonicalLedgerFillIds([merged])
+    expect(ids.has('1245660')).toBe(true)
+    expect(ids.has('1245663')).toBe(true)
   })
 })

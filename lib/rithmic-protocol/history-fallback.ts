@@ -21,12 +21,31 @@ export function fillHistoryWindowsComplete(input: {
   windowsPlanned: number
   windowsFetched: number
   windowThrew: boolean
+  fallbackRequired?: boolean
+  fallbackSucceeded?: boolean
+  replaySucceeded?: boolean
 }): { complete: boolean; windowsFailed: number } {
   const windowsFailed = Math.max(0, input.windowsPlanned - input.windowsFetched)
-  if (input.windowThrew) {
-    return { complete: false, windowsFailed: Math.max(windowsFailed, 1) }
+  const failed = (reasonFailed: boolean) => ({
+    complete: false as const,
+    windowsFailed: Math.max(windowsFailed, reasonFailed ? 1 : windowsFailed),
+  })
+  if (input.replaySucceeded === false) {
+    return failed(true)
   }
-  if (input.windowsPlanned > 0 && input.windowsFetched < input.windowsPlanned) {
+  if (input.fallbackRequired && input.fallbackSucceeded !== true) {
+    return failed(true)
+  }
+  // A ShowFillHistory throw is covered when order-history fallback succeeded
+  // for the full requested range — do not freeze the connection in that case.
+  if (input.windowThrew && input.fallbackSucceeded !== true) {
+    return failed(true)
+  }
+  if (
+    input.windowsPlanned > 0 &&
+    input.windowsFetched < input.windowsPlanned &&
+    input.fallbackSucceeded !== true
+  ) {
     return { complete: false, windowsFailed }
   }
   return { complete: true, windowsFailed: 0 }

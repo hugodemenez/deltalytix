@@ -5,8 +5,17 @@ import {
   isOpeningSeedCloseTrade,
 } from '@/lib/trade-id-utils'
 import { rithmicFillIdLookupValues } from './dedupe-fills'
-import { fillSide, fillTimestampMs, normalizeInstrument } from './fills-to-trades'
+import {
+  fillSide,
+  fillTimestampMs,
+  normalizeFillAccountId,
+  normalizeInstrument,
+  type FifoOpenNet,
+} from './fills-to-trades'
 import type { RithmicProtocolFill } from './types'
+
+/** Plant clocks and multi-account sweeps can lag a couple of seconds. */
+export const SNAPSHOT_CLOCK_MARGIN_MS = 2_500
 
 export {
   OPENING_SEED_ORDER_ID_PREFIX,
@@ -49,7 +58,7 @@ function signedFillSize(fill: RithmicProtocolFill): number {
 }
 
 export function openingPositionKey(accountId: string, symbol: string): string {
-  return `${encodeURIComponent(accountId)}|${encodeURIComponent(symbol.trim().toUpperCase())}`
+  return `${encodeURIComponent(normalizeFillAccountId(accountId))}|${encodeURIComponent(symbol.trim().toUpperCase())}`
 }
 
 export function parseOpeningPositionKey(key: string): {
@@ -79,7 +88,10 @@ export type CapturedPositionSnapshot = {
   positions: InstrumentPosition[]
   complete: boolean
   reason?: string
+  /** Start of the PnL sweep. */
   capturedAtMs?: number
+  /** End of the PnL sweep (multi-account). Falls back to capturedAtMs. */
+  capturedUntilMs?: number
   noDataAccountIds?: string[]
 }
 
@@ -105,7 +117,7 @@ export type BracketedSnapshotResult = {
 function positionNetMap(positions: InstrumentPosition[]): Map<string, number> {
   const map = new Map<string, number>()
   for (const position of positions) {
-    const accountId = position.accountId.trim()
+    const accountId = normalizeFillAccountId(position.accountId)
     const symbol = position.symbol.trim().toUpperCase()
     if (!accountId || !symbol) continue
     const key = positionKey(accountId, symbol)
@@ -142,6 +154,12 @@ function snapshotClockMs(snapshot: CapturedPositionSnapshot): number | undefined
   return ms != null && Number.isFinite(ms) ? ms : undefined
 }
 
+function snapshotUntilMs(snapshot: CapturedPositionSnapshot): number | undefined {
+  const until = snapshot.capturedUntilMs
+  if (until != null && Number.isFinite(until)) return until
+  return snapshotClockMs(snapshot)
+}
+
 function noDataAccountsWithFills(
   snapshots: CapturedPositionSnapshot[],
   fills: RithmicProtocolFill[],
@@ -149,11 +167,11 @@ function noDataAccountsWithFills(
   const noData = new Set<string>()
   for (const snapshot of snapshots) {
     for (const accountId of snapshot.noDataAccountIds ?? []) {
-      if (accountId) noData.add(accountId)
+      if (accountId) noData.add(normalizeFillAccountId(accountId))
     }
   }
   if (noData.size === 0) return false
-  return fills.some((fill) => noData.has(fill.accountId))
+  return fills.some((fill) => noData.has(normalizeFillAccountId(fill.accountId)))
 }
 
 /**
@@ -183,7 +201,7 @@ export function reconcileBracketedSnapshots(params: {
     }
   }
   const beforeMs = snapshotClockMs(params.before)
-  const afterMs = snapshotClockMs(params.after)
+  const afterMs = snapshotUntilMs(params.after)
   if (beforeMs == null || afterMs == null) {
     return { ok: false, positions: [], reason: 'snapshot_clock_missing' }
   }
@@ -196,12 +214,13 @@ export function reconcileBracketedSnapshots(params: {
   if (!instrumentPositionMapsEqual(params.before.positions, params.after.positions)) {
     return { ok: false, positions: [], reason: 'snapshot_mismatch' }
   }
+  const margin = SNAPSHOT_CLOCK_MARGIN_MS
   const latestFill = latestFillTimestampMs(params.fills)
-  if (latestFill > afterMs) {
+  if (latestFill > afterMs + margin) {
     return { ok: false, positions: [], reason: 'fill_after_snapshot' }
   }
   const between = fillNetsBySymbol(params.fills, {
-    fromMsExclusive: beforeMs,
+    fromMsExclusive: beforeMs - margin,
     toMsInclusive: afterMs,
   })
   for (const group of between.values()) {
@@ -274,6 +293,11 @@ export function indexFillsByCanonicalId(
     for (const id of rithmicFillIdLookupValues(fill.fillId)) {
       map.set(id, fill)
     }
+    for (const absorbed of fill.absorbedFillIds ?? []) {
+      for (const id of rithmicFillIdLookupValues(absorbed)) {
+        map.set(id, fill)
+      }
+    }
   }
   return map
 }
@@ -293,7 +317,7 @@ export function uncertainOpeningSymbolKeys(params: {
 }): { keys: Set<string>; determined: boolean } {
   const keys = new Set<string>()
   for (const fill of params.incomingFills) {
-    const accountId = fill.accountId || 'unknown'
+    const accountId = normalizeFillAccountId(fill.accountId)
     const symbol = (fill.symbol || '').trim().toUpperCase()
     if (!symbol) continue
     keys.add(positionKey(accountId, symbol))
@@ -329,7 +353,7 @@ export function tradeTouchesSymbolKeys(
     for (const id of rithmicFillIdLookupValues(rawId)) {
       const fill = byId.get(id)
       if (!fill) continue
-      if (symbolKeys.has(positionKey(fill.accountId || 'unknown', fill.symbol))) {
+      if (symbolKeys.has(positionKey(fill.accountId, fill.symbol))) {
         return true
       }
     }
@@ -374,6 +398,8 @@ export function planOrdinarySyncTrades<
   openingStateDetermined?: boolean
   historyStartMs?: number
   fillHistoryComplete?: boolean
+  /** Fill ids already present on stored protocol trades. */
+  persistedFillIds?: Set<string>
 }): OrdinarySyncTradePlan<T> {
   if (params.fillHistoryComplete === false) {
     return {
@@ -421,21 +447,26 @@ export function planOrdinarySyncTrades<
   const unskipped = params.trades.filter(
     (trade) => !tradeTouchesSymbolKeys(trade, skipKeys, fillIndex),
   )
-  const persist = unskipped.filter((trade) =>
-    tradeClosedOnOrAfter(trade, params.historyStartMs),
-  )
-  const preHistory = unskipped.length - persist.length
+  const persist = unskipped.filter((trade) => {
+    if (tradeClosedOnOrAfter(trade, params.historyStartMs)) return true
+    // Legacy fills that were frozen past the rolling cutoff still persist
+    // once they have never appeared on a stored row.
+    return tradeHasUnpersistedFillIds(trade, params.persistedFillIds)
+  })
+  const preHistoryDropped = unskipped.length - persist.length
   const dropReasons: Record<string, number> = {}
   if (skippedTrades.length > 0) {
     dropReasons.opening_snapshot_symbol_skipped = skippedTrades.length
   }
-  if (preHistory > 0) {
-    dropReasons.closed_before_history_start = preHistory
+  if (preHistoryDropped > 0) {
+    dropReasons.closed_before_history_start = preHistoryDropped
   }
-  const frozen = !params.snapshotOk && skipKeys.size > 0
+  const frozen = skipKeys.size > 0
   const warnings = frozen
     ? [
-        'Broker position snapshot was unavailable; existing trades for those symbols were left unchanged.',
+        params.snapshotOk
+          ? 'Opening-position symbols were skipped; existing trades for those symbols were left unchanged.'
+          : 'Broker position snapshot was unavailable; existing trades for those symbols were left unchanged.',
       ]
     : []
   return {
@@ -448,6 +479,40 @@ export function planOrdinarySyncTrades<
     frozenSymbolCount: skipKeys.size,
     warnings,
   }
+}
+
+function tradeHasUnpersistedFillIds(
+  trade: { entryId?: string | null; closeId?: string | null },
+  persistedFillIds?: Set<string>,
+): boolean {
+  if (!persistedFillIds) return false
+  for (const rawId of [trade.entryId, trade.closeId]) {
+    for (const id of rithmicFillIdLookupValues(rawId)) {
+      if (id && !persistedFillIds.has(id)) return true
+    }
+  }
+  return false
+}
+
+export function fifoEndPositionMatchesPEnd(params: {
+  openNets: FifoOpenNet[]
+  positions: InstrumentPosition[]
+  skippedSymbolKeys?: Set<string>
+}): { ok: boolean; mismatchedKeys: string[] } {
+  const expected = positionNetMap(params.positions)
+  const actual = new Map<string, number>()
+  for (const row of params.openNets) {
+    actual.set(positionKey(row.accountId, row.symbol), row.net)
+  }
+  const keys = new Set([...expected.keys(), ...actual.keys()])
+  const mismatchedKeys: string[] = []
+  for (const key of keys) {
+    if (params.skippedSymbolKeys?.has(key)) continue
+    if ((expected.get(key) ?? 0) !== (actual.get(key) ?? 0)) {
+      mismatchedKeys.push(key)
+    }
+  }
+  return { ok: mismatchedKeys.length === 0, mismatchedKeys }
 }
 
 export function openingSeedOrderId(accountId: string, symbol: string): string {
@@ -510,7 +575,7 @@ function fillNetsBySymbol(
     ) {
       continue
     }
-    const accountId = fill.accountId || 'unknown'
+    const accountId = normalizeFillAccountId(fill.accountId)
     const symbol = (fill.symbol || '').trim().toUpperCase()
     if (!symbol) continue
     const key = positionKey(accountId, symbol)
@@ -547,7 +612,7 @@ export function computeOpeningPositionChecks(params: {
   const nets = fillNetsBySymbol(params.fills, { sinceMs: params.sinceMs })
   const pEndByKey = new Map<string, number>()
   for (const position of params.positions) {
-    const accountId = position.accountId.trim()
+    const accountId = normalizeFillAccountId(position.accountId)
     const symbol = position.symbol.trim().toUpperCase()
     if (!accountId || !symbol) continue
     pEndByKey.set(positionKey(accountId, symbol), position.netQuantity)
@@ -609,7 +674,7 @@ export function decideOpeningSeeds(
   for (const check of checks) {
     if (check.p0 === 0) continue
     const symbolFills = fills.filter((fill) => {
-      if ((fill.accountId || 'unknown') !== check.accountId) return false
+      if (normalizeFillAccountId(fill.accountId) !== check.accountId) return false
       if ((fill.symbol || '').trim().toUpperCase() !== check.symbol) return false
       if (windowStartMs > 0 && fillTimestampMs(fill) < windowStartMs) return false
       return true
@@ -631,7 +696,7 @@ export function decideOpeningSeeds(
       skipped.push({
         accountId: check.accountId,
         symbol: check.symbol,
-        reason: 'p0_exceeds_window_gross',
+        reason: check.fillCount === 0 ? 'fill_less_expiry' : 'p0_exceeds_window_gross',
       })
       if (check.fillCount > 0) error = 'OPENING_POSITION_UNKNOWN'
       continue

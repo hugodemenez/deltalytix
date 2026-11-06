@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   cmeWeeklyCloseAtOrBefore,
+  globexSessionOpenForTradeDate,
   planFillHistoryRange,
   utcCalendarDayAfter,
 } from './cme-session'
@@ -69,5 +70,21 @@ describe('utcCalendarDayAfter', () => {
     expect(
       utcCalendarDayAfter(new Date('2026-10-30T22:00:00.000Z')).toISOString(),
     ).toBe('2026-10-31T00:00:00.000Z')
+  })
+})
+
+describe('globexSessionOpenForTradeDate', () => {
+  it('uses the previous calendar day 17:00 CT, not UTC midnight of the trade date', () => {
+    // Monday 26 Oct 2026 trade date → Sunday 25 Oct 17:00 CDT = 22:00 UTC.
+    const sessionOpen = globexSessionOpenForTradeDate('20261026')
+    expect(sessionOpen?.toISOString()).toBe('2026-10-25T22:00:00.000Z')
+    const utcMidnight = Date.parse('2026-10-26T00:00:00.000Z')
+    const fridayClose = Date.parse('2026-10-23T22:00:00.000Z')
+    // UTC midnight of Monday is after Friday's weekly close, not before it.
+    expect(utcMidnight).toBeGreaterThan(fridayClose)
+    // It is also two hours after Globex reopen (Sunday 17:00 CT). Evening
+    // fills without ssboe belong at session open, not at UTC midnight.
+    expect(sessionOpen?.getTime()).toBeLessThan(utcMidnight)
+    expect(sessionOpen?.getTime()).toBeGreaterThan(fridayClose)
   })
 })

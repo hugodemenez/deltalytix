@@ -6,12 +6,14 @@ import {
   consolidateOrderFills,
   dedupeFillsWithStats,
   fillIdentityKey,
+  filterRithmicProtocolTradesCoveredByStoredRows,
   preferHistoryFills,
   resolveRithmicProtocolPersistedId,
   type DedupeFillsStats,
   type RithmicProtocolFillPairIdentity,
+  type RithmicProtocolStoredLegRow,
 } from './dedupe-fills'
-import { fillSide, normalizeInstrument } from './fills-to-trades'
+import { fillSide, normalizeFillAccountId, normalizeInstrument } from './fills-to-trades'
 
 export type LedgerSeenIndex = {
   identityKeys: Set<string>
@@ -60,7 +62,7 @@ export function summarizeFillLedgerNets(
 ): FillLedgerNet[] {
   const groups = new Map<string, FillLedgerNet>()
   for (const fill of fills) {
-    const accountId = fill.accountId || 'unknown'
+    const accountId = normalizeFillAccountId(fill.accountId)
     const symbol = (fill.symbol || '').trim().toUpperCase()
     const key = `${accountId}|${symbol}`
     const group = groups.get(key) ?? {
@@ -246,6 +248,11 @@ export function canonicalLedgerFillIds(
     for (const fillId of rithmicFillIdLookupValues(fill.fillId)) {
       ids.add(fillId)
     }
+    for (const absorbed of fill.absorbedFillIds ?? []) {
+      for (const fillId of rithmicFillIdLookupValues(absorbed)) {
+        ids.add(fillId)
+      }
+    }
   }
   return ids
 }
@@ -408,6 +415,25 @@ export function phantomProtocolTradeIds(params: {
     toDelete.push(row.id)
   }
   return toDelete
+}
+
+/**
+ * Annotated leftover whose legs still cover a replacement FIFO trade.
+ * Exclude it from save coverage so the replacement is not skipped, then
+ * rematch the annotated UUID onto that replacement.
+ */
+export function coveringAnnotatedTradeId(
+  incoming: RithmicProtocolStoredLegRow & { id: string },
+  annotatedExisting: Array<RithmicProtocolStoredLegRow & { id: string }>,
+): string | undefined {
+  for (const row of annotatedExisting) {
+    const { skipped } = filterRithmicProtocolTradesCoveredByStoredRows(
+      [incoming],
+      [row],
+    )
+    if (skipped.length > 0) return row.id
+  }
+  return undefined
 }
 
 export function deriveTradesFromFillLedger(

@@ -670,14 +670,17 @@ export class RithmicProtocolClient {
     complete: boolean
     reason?: string
     capturedAtMs: number
+    capturedUntilMs: number
     noDataAccountIds: string[]
   }> {
+    const capturedAtMs = Date.now()
     const snapshot = await this.collectPnLPositionSnapshot(params)
     return {
       positions: snapshot.positions,
       complete: snapshot.complete,
       reason: snapshot.reason,
-      capturedAtMs: Date.now(),
+      capturedAtMs,
+      capturedUntilMs: Date.now(),
       noDataAccountIds: snapshot.noDataAccountIds,
     }
   }
@@ -1445,16 +1448,19 @@ export async function fetchInstrumentPositions(params: {
   complete: boolean
   reason?: string
   capturedAtMs: number
+  capturedUntilMs?: number
   noDataAccountIds: string[]
   fcmId?: string
   ibId?: string
 }> {
   const accountIds = [...new Set(params.accountIds.map((id) => id.trim()).filter(Boolean))]
   if (accountIds.length === 0) {
+    const capturedAtMs = Date.now()
     return {
       positions: [],
       complete: true,
-      capturedAtMs: Date.now(),
+      capturedAtMs,
+      capturedUntilMs: capturedAtMs,
       noDataAccountIds: [],
       fcmId: params.fcmId,
       ibId: params.ibId,
@@ -1484,6 +1490,7 @@ export async function fetchInstrumentPositions(params: {
       complete: snapshot.complete,
       reason: snapshot.reason,
       capturedAtMs: snapshot.capturedAtMs,
+      capturedUntilMs: snapshot.capturedUntilMs,
       noDataAccountIds: snapshot.noDataAccountIds,
       fcmId,
       ibId,
@@ -1491,11 +1498,13 @@ export async function fetchInstrumentPositions(params: {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     console.warn('[RITHMIC-PROTOCOL] Instrument PnL snapshot unavailable', error)
+    const capturedAtMs = Date.now()
     return {
       positions: [],
       complete: false,
       reason: message || 'unavailable',
-      capturedAtMs: Date.now(),
+      capturedAtMs,
+      capturedUntilMs: capturedAtMs,
       noDataAccountIds: [],
       fcmId: params.fcmId,
       ibId: params.ibId,
@@ -1628,6 +1637,9 @@ export async function fetchFillsForAccounts(params: {
     let skippedAlreadySeen = 0
     let windowsFetched = 0
     let windowThrew = false
+    let fallbackRequired = false
+    let fallbackFailed = false
+    let replayFailed = false
     const windowsPlanned = windows.length * accountIds.length
     const pushFills = (batch: RithmicProtocolFill[]) => {
       if (!params.seenIdentityKeys || params.seenIdentityKeys.size === 0) {
@@ -1717,9 +1729,11 @@ export async function fetchFillsForAccounts(params: {
           })
           if (plan) {
             usedOrderHistoryFallback = true
+            fallbackRequired = true
             try {
               await pullOrderHistory(plan.source)
             } catch (fallbackError) {
+              fallbackFailed = true
               console.warn(
                 `[RITHMIC-PROTOCOL] Order-history fallback failed for ${accountId}`,
                 fallbackError instanceof Error ? fallbackError.message : fallbackError,
@@ -1739,9 +1753,11 @@ export async function fetchFillsForAccounts(params: {
         alreadyFetched: usedOrderHistoryFallback,
       })
       if (fallbackPlan) {
+        fallbackRequired = true
         try {
           await pullOrderHistory(fallbackPlan.source)
         } catch (error) {
+          fallbackFailed = true
           console.warn(
             `[RITHMIC-PROTOCOL] Order-history fallback failed for ${accountId}`,
             error instanceof Error ? error.message : error,
@@ -1789,11 +1805,14 @@ export async function fetchFillsForAccounts(params: {
           try {
             await pullReplay(replayLookback.fallback)
           } catch (fallbackError) {
+            replayFailed = true
             console.warn(
               `[RITHMIC-PROTOCOL] ReplayExecutions fallback failed for ${accountId} (${replayLookback.fallback}d)`,
               fallbackError instanceof Error ? fallbackError.message : fallbackError,
             )
           }
+        } else {
+          replayFailed = true
         }
       }
     }
@@ -1803,6 +1822,9 @@ export async function fetchFillsForAccounts(params: {
       windowsPlanned,
       windowsFetched,
       windowThrew,
+      fallbackRequired,
+      fallbackSucceeded: fallbackRequired ? !fallbackFailed : true,
+      replaySucceeded: !replayFailed,
     })
     return {
       fills: prepared.fills,

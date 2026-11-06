@@ -497,6 +497,34 @@ describe('admin account resync scoping and safety', () => {
     expect(tradeCreateMany).not.toHaveBeenCalled()
   })
 
+  it('live rebuild refuses when FIFO leftover lots do not match P_end', async () => {
+    fetchFillsForAccounts.mockResolvedValueOnce(
+      fetchedFills([
+        {
+          ...ACCOUNT_FILLS[0],
+          fillId: 'old-buy',
+          ssboe: Date.parse('2026-08-01T14:00:00Z') / 1000,
+          fillDate: '20260801',
+        },
+      ]),
+    )
+    fetchInstrumentPositions.mockResolvedValue({
+      positions: [{ accountId: ACCOUNT, symbol: 'MESZ6', netQuantity: 2 }],
+      complete: true,
+      capturedAtMs: Date.parse('2026-12-01T00:00:00Z'),
+      capturedUntilMs: Date.parse('2026-12-01T00:00:01Z'),
+    })
+    const live = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: false,
+    })
+    expect(live.error).toBe('END_POSITION_MISMATCH')
+    expect(live.complete).toBe(false)
+    expect(tradeDeleteMany).not.toHaveBeenCalled()
+    expect(tradeCreateMany).not.toHaveBeenCalled()
+  })
+
   it('live rebuild refuses when ShowFillHistory was incomplete', async () => {
     fetchFillsForAccounts.mockResolvedValueOnce(
       fetchedFills(ACCOUNT_FILLS, new Map(), {

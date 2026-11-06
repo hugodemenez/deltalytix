@@ -41,6 +41,7 @@ import {
   type OpeningPositionCheck,
   computeOpeningPositionChecks,
   decideOpeningSeeds,
+  fifoEndPositionMatchesPEnd,
   openingPositionKey,
   reconcileBracketedSnapshots,
   indexFillsByCanonicalId,
@@ -604,9 +605,21 @@ export async function resyncRithmicProtocolAccount(params: {
               userId,
               tickBySymbol,
               commissionRates,
-              { openingSeeds: seedDecision.seeds },
+              {
+                openingSeeds: seedDecision.seeds,
+                sinceMs: windowStartMs,
+              },
             )
-          : { trades: [], openSkipped: 0, skipped: {} }
+          : { trades: [], openSkipped: 0, skipped: {}, openNets: [] }
+        const endPosition = bracket.ok
+          ? fifoEndPositionMatchesPEnd({
+              openNets: derived.openNets,
+              positions: scopedPositions,
+            })
+          : { ok: true, mismatchedKeys: [] as string[] }
+        if (!endPosition.ok) {
+          for (const key of endPosition.mismatchedKeys) skippedSymbolKeys.add(key)
+        }
         const withIds = derived.trades.map((trade) => ({
           ...trade,
           userId,
@@ -728,6 +741,19 @@ export async function resyncRithmicProtocolAccount(params: {
             proposed,
             warnings,
             error: 'OPENING_POSITION_UNKNOWN',
+          }
+        }
+
+        if (!endPosition.ok && !params.dryRun) {
+          return {
+            ...base,
+            wouldDelete,
+            proposed,
+            warnings: [
+              ...warnings,
+              `FIFO open position after the window did not match P_end (${endPosition.mismatchedKeys.join(', ')}). Live apply refuses with END_POSITION_MISMATCH.`,
+            ],
+            error: 'END_POSITION_MISMATCH',
           }
         }
 

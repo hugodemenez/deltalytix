@@ -13,7 +13,9 @@ import {
   buildTradesFromRithmicFills,
   fillSide,
   fillTimestampMs,
+  normalizeFillAccountId,
 } from './fills-to-trades'
+import { globexSessionOpenForTradeDate } from './cme-session'
 import type { RithmicProtocolFill } from './types'
 
 const TRADE_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
@@ -677,6 +679,105 @@ describe('buildTradesFromRithmicFills', () => {
     )
     expect(trades).toEqual([])
     expect(openSkipped).toBe(2)
+  })
+})
+
+describe('FIFO window restriction', () => {
+  it('does not let a pre-window fill consume a seed or recreate a phantom', () => {
+    const fills: RithmicProtocolFill[] = [
+      {
+        accountId: 'ACC1',
+        symbol: 'ESH5',
+        transactionType: 'SELL',
+        fillPrice: 5000,
+        fillSize: 1,
+        fillId: 'old-cover',
+        ssboe: 1_600_000_000,
+      },
+      {
+        accountId: 'ACC1',
+        symbol: 'ESH5',
+        transactionType: 'SELL',
+        fillPrice: 5010,
+        fillSize: 1,
+        fillId: 'window-cover',
+        ssboe: 1_700_000_600,
+      },
+    ]
+    const tickBySymbol = new Map([['ES', { tickSize: 0.25, tickValue: 12.5 }]])
+    const windowStart = 1_700_000_000 * 1000
+    const { trades, openNets } = buildTradesFromRithmicFills(
+      fills,
+      'user-1',
+      tickBySymbol,
+      undefined,
+      {
+        sinceMs: windowStart,
+        openingSeeds: [
+          {
+            accountId: 'ACC1',
+            symbol: 'ESH5',
+            netQuantity: 1,
+            timestampMs: windowStart,
+            orderId: 'opening-seed:ACC1:ESH5',
+          },
+        ],
+      },
+    )
+    expect(trades).toHaveLength(1)
+    expect(trades[0]?.entryId).toBe('opening-seed:ACC1:ESH5')
+    expect(trades[0]?.closeId).toBe('window-cover')
+    expect(openNets.filter((row) => row.net !== 0)).toEqual([])
+  })
+})
+
+describe('fillTimestampMs missing ssboe', () => {
+  it('anchors a missing ssboe clock to Globex session open for the trade date', () => {
+    const fill: RithmicProtocolFill = {
+      accountId: 'ACC1',
+      symbol: 'ES',
+      transactionType: 'BUY',
+      fillPrice: 5000,
+      fillSize: 1,
+      fillId: 'eve',
+      fillDate: '20261026',
+    }
+    const sessionOpen = globexSessionOpenForTradeDate('20261026')!
+    expect(fillTimestampMs(fill)).toBe(sessionOpen.getTime())
+    // UTC midnight of the trade date is not session open: during CDT it is
+    // Sunday 19:00 CT, two hours after Globex reopen. The first post-weekend
+    // cutoff is Friday 17:00 CT; session open is the evening-session start.
+    expect(fillTimestampMs(fill)).not.toBe(Date.parse('2026-10-26T00:00:00.000Z'))
+    expect(sessionOpen.getTime()).toBeGreaterThan(
+      Date.parse('2026-10-23T22:00:00.000Z'),
+    )
+  })
+})
+
+describe('normalizeFillAccountId', () => {
+  it('trims plant padding so ledger and snapshot accounts match', () => {
+    expect(normalizeFillAccountId('  ACC1  ')).toBe('ACC1')
+    expect(normalizeFillAccountId('')).toBe('unknown')
+  })
+
+  it('keeps FIFO openNets aligned with encoded opening-position keys', () => {
+    const accountId = 'FIRM|DESK-1'
+    const { openNets } = buildTradesFromRithmicFills(
+      [
+        {
+          accountId: ` ${accountId} `,
+          symbol: 'MESZ6',
+          transactionType: 'BUY',
+          fillPrice: 7800,
+          fillSize: 2,
+          fillId: 'open',
+          ssboe: Date.parse('2026-10-26T14:00:00Z') / 1000,
+        },
+      ],
+      'u1',
+      new Map([['MES', { tickSize: 0.25, tickValue: 1.25 }]]),
+    )
+    expect(openNets).toEqual([{ accountId, symbol: 'MESZ6', net: 2 }])
   })
 })
 

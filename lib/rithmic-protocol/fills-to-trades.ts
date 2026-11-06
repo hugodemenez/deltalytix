@@ -6,6 +6,7 @@ import {
   RITHMIC_PROTOCOL_TRADE_TAG,
 } from '@/lib/trade-id-utils'
 import { formatTimestamp } from '@/lib/date-utils'
+import { globexSessionOpenForTradeDate } from './cme-session'
 import type { RithmicProtocolFill } from './types'
 import { commissionForFillQuantity } from './commission-rates'
 import { canonicalRithmicFillId, fillIdentityKey } from './dedupe-fills'
@@ -39,7 +40,13 @@ interface LotBook {
 }
 
 function bookKey(accountId: string, symbol: string): string {
-  return `${accountId}|${symbol.trim().toUpperCase()}`
+  return `${encodeURIComponent(normalizeFillAccountId(accountId))}|${encodeURIComponent(symbol.trim().toUpperCase())}`
+}
+
+export type FifoOpenNet = {
+  accountId: string
+  symbol: string
+  net: number
 }
 
 export function normalizeInstrument(symbol: string): string {
@@ -106,24 +113,39 @@ function parseFillTimeIso(fillTime: string): string {
   return '00:00:00'
 }
 
+export function normalizeFillAccountId(
+  accountId: string | null | undefined,
+): string {
+  const trimmed = (accountId ?? '').trim()
+  return trimmed || 'unknown'
+}
+
 export function fillTimestampMs(fill: RithmicProtocolFill): number {
   if (typeof fill.ssboe === 'number' && fill.ssboe > 0) {
     const usecs = typeof fill.usecs === 'number' ? fill.usecs : 0
     return fill.ssboe * 1000 + Math.floor(usecs / 1000)
   }
-  // Last resort: fillDate is the exchange session date, not a UTC instant.
-  // Treating it as UTC midnight is a clock of last resort when the plant
-  // omitted ssboe. Do not reinterpret it as Globex close without a session
-  // calendar — weekend CME close is easy to get wrong from this field.
-  if (fill.fillDate) {
-    const date = parseFillDateParts(fill.fillDate)
-    if (date) {
-      const time = fill.fillTime ? parseFillTimeIso(fill.fillTime) : '00:00:00'
-      const parsed = Date.parse(`${date}T${time}Z`)
-      if (!Number.isNaN(parsed)) return parsed
-    }
+  const date = fill.fillDate ? parseFillDateParts(fill.fillDate) : null
+  if (!date) return 0
+  // fillDate is the exchange trade date (rolls ~17:00 CT). With a clock,
+  // keep the plant's fillTime. Without one, use Globex session open for that
+  // trade date — UTC midnight would put Sunday-evening fills on the wrong
+  // side of the first weekly-close cutoff.
+  if (fill.fillTime) {
+    const time = parseFillTimeIso(fill.fillTime)
+    const parsed = Date.parse(`${date}T${time}Z`)
+    if (!Number.isNaN(parsed)) return parsed
   }
-  return 0
+  const sessionOpen = globexSessionOpenForTradeDate(date)
+  return sessionOpen ? sessionOpen.getTime() : 0
+}
+
+export function fillIsInFifoWindow(
+  fill: RithmicProtocolFill,
+  sinceMs?: number,
+): boolean {
+  if (sinceMs == null || !Number.isFinite(sinceMs) || sinceMs <= 0) return true
+  return fillTimestampMs(fill) >= sinceMs
 }
 
 function compareFills(
@@ -274,8 +296,13 @@ export function buildTradesFromRithmicFills(
   userId: string,
   tickBySymbol: Map<string, TickSpec>,
   commissionRates?: Map<string, number>,
-  options?: { openingSeeds?: OpeningLotSeed[] },
-): { trades: Trade[]; openSkipped: number; skipped: Record<string, number> } {
+  options?: { openingSeeds?: OpeningLotSeed[]; sinceMs?: number },
+): {
+  trades: Trade[]
+  openSkipped: number
+  skipped: Record<string, number>
+  openNets: FifoOpenNet[]
+} {
   const trades: Trade[] = []
   const books = new Map<string, LotBook>()
   const skipped: Record<string, number> = {}
@@ -304,6 +331,10 @@ export function buildTradesFromRithmicFills(
 
   const byAccount = new Map<string, RithmicProtocolFill[]>()
   for (const fill of fills) {
+    if (!fillIsInFifoWindow(fill, options?.sinceMs)) {
+      bumpSkip('before_fifo_window')
+      continue
+    }
     if (!fill.symbol) {
       bumpSkip('missing_symbol')
       continue
@@ -312,7 +343,7 @@ export function buildTradesFromRithmicFills(
       bumpSkip('missing_size')
       continue
     }
-    const accountId = fill.accountId || 'unknown'
+    const accountId = normalizeFillAccountId(fill.accountId)
     const list = byAccount.get(accountId) ?? []
     list.push(fill)
     byAccount.set(accountId, list)
@@ -394,10 +425,26 @@ export function buildTradesFromRithmicFills(
   }
 
   let openSkipped = 0
-  for (const book of books.values()) {
-    for (const lot of book.longs) openSkipped += lot.quantity
-    for (const lot of book.shorts) openSkipped += lot.quantity
+  const openNets: FifoOpenNet[] = []
+  for (const [key, book] of books) {
+    let net = 0
+    for (const lot of book.longs) {
+      openSkipped += lot.quantity
+      net += lot.quantity
+    }
+    for (const lot of book.shorts) {
+      openSkipped += lot.quantity
+      net -= lot.quantity
+    }
+    const separator = key.indexOf('|')
+    const accountId = decodeURIComponent(
+      separator < 0 ? key : key.slice(0, separator),
+    )
+    const symbol = decodeURIComponent(
+      separator < 0 ? '' : key.slice(separator + 1),
+    )
+    if (net !== 0) openNets.push({ accountId, symbol, net })
   }
 
-  return { trades, openSkipped, skipped }
+  return { trades, openSkipped, skipped, openNets }
 }

@@ -57,14 +57,40 @@ describe('fillHistoryWindowsComplete', () => {
     ).toEqual({ complete: true, windowsFailed: 0 })
   })
 
-  it('is incomplete when a window threw even if later fallback ran', () => {
+  it('is incomplete when a window threw and fallback did not succeed', () => {
     expect(
       fillHistoryWindowsComplete({
         windowsPlanned: 3,
         windowsFetched: 1,
         windowThrew: true,
+        fallbackRequired: true,
+        fallbackSucceeded: false,
       }),
     ).toEqual({ complete: false, windowsFailed: 2 })
+  })
+
+  it('is complete when a window threw but order-history fallback succeeded', () => {
+    expect(
+      fillHistoryWindowsComplete({
+        windowsPlanned: 3,
+        windowsFetched: 1,
+        windowThrew: true,
+        fallbackRequired: true,
+        fallbackSucceeded: true,
+        replaySucceeded: true,
+      }),
+    ).toEqual({ complete: true, windowsFailed: 0 })
+  })
+
+  it('is incomplete when replay failed even if history windows returned', () => {
+    expect(
+      fillHistoryWindowsComplete({
+        windowsPlanned: 2,
+        windowsFetched: 2,
+        windowThrew: false,
+        replaySucceeded: false,
+      }),
+    ).toEqual({ complete: false, windowsFailed: 1 })
   })
 
   it('treats an empty plan as complete', () => {

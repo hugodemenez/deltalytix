@@ -48,6 +48,11 @@ export interface RithmicProtocolFill {
   usecs?: number
   avgFillPrice?: number
   /**
+   * Fill ids absorbed when split order pieces were merged into this row.
+   * Freeze / ledger lookups must still find the raw pieces.
+   */
+  absorbedFillIds?: string[]
+  /**
    * Where the fill came from. ShowFillHistory (and its order-history
    * fallback) is the settled record; ReplayExecutions only tops up the
    * latest fills history has not published yet.

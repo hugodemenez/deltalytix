@@ -3,8 +3,10 @@ import { RITHMIC_PROTOCOL_OPENING_SEED_TAG } from '@/lib/trade-id-utils'
 import { buildTradesFromRithmicFills } from './fills-to-trades'
 import type { RithmicProtocolFill } from './types'
 import {
+  SNAPSHOT_CLOCK_MARGIN_MS,
   computeOpeningPositionChecks,
   decideOpeningSeeds,
+  fifoEndPositionMatchesPEnd,
   indexFillsByCanonicalId,
   isOpeningSeedOrderId,
   openingPositionKey,
@@ -201,7 +203,7 @@ describe('computeOpeningPositionChecks', () => {
       {
         accountId: ACCOUNT,
         symbol: 'MESZ6',
-        reason: 'p0_exceeds_window_gross',
+        reason: 'fill_less_expiry',
       },
     ])
     const open = buildTradesFromRithmicFills(held, 'u1', tickBySymbol, undefined, {
@@ -342,12 +344,26 @@ describe('reconcileBracketedSnapshots', () => {
       fills: [
         fill({
           fillId: 'late',
-          ssboe: capturedAtMs / 1000 + 1,
+          ssboe: capturedAtMs / 1000 + (SNAPSHOT_CLOCK_MARGIN_MS + 500) / 1000,
         }),
       ],
     })
     expect(result.ok).toBe(false)
     expect(result.reason).toBe('fill_after_snapshot')
+  })
+
+  it('accepts a fill inside the snapshot clock safety margin', () => {
+    const result = reconcileBracketedSnapshots({
+      before: flat,
+      after: { ...flat, capturedUntilMs: capturedAtMs },
+      fills: [
+        fill({
+          fillId: 'skew',
+          ssboe: capturedAtMs / 1000 + 1,
+        }),
+      ],
+    })
+    expect(result.ok).toBe(true)
   })
 
   it('treats an incomplete before snapshot as unavailable', () => {
@@ -424,8 +440,8 @@ describe('planOrdinarySyncTrades', () => {
     expect(plan.dropReasons.opening_snapshot_symbol_skipped).toBe(
       seeded.trades.length,
     )
-    expect(plan.stampLastSyncedAt).toBe(true)
-    expect(plan.syncStatus).toBe('ok')
+    expect(plan.stampLastSyncedAt).toBe(false)
+    expect(plan.syncStatus).toBe('degraded')
   })
 
   it('flat user: complete empty snapshots leave unrelated trades writable and stamp lastSyncedAt', () => {
@@ -603,6 +619,16 @@ describe('reconcileBracketedSnapshots plant lag and clocks', () => {
     expect(result.reason).toBe('pnl_no_data')
   })
 
+  it('matches no-data account ids after plant padding using ledger window fills', () => {
+    const result = reconcileBracketedSnapshots({
+      before: { ...flat, noDataAccountIds: [` ${ACCOUNT} `] },
+      after: { ...flat, noDataAccountIds: [` ${ACCOUNT} `] },
+      fills: roundTrip,
+    })
+    expect(result.ok).toBe(false)
+    expect(result.reason).toBe('pnl_no_data')
+  })
+
   it('flat user: no-data with no fills still accepts the empty book', () => {
     const result = reconcileBracketedSnapshots({
       before: { ...flat, noDataAccountIds: [ACCOUNT] },
@@ -634,6 +660,54 @@ describe('planOrdinarySyncTrades fill-history completeness', () => {
     expect(plan.stampLastSyncedAt).toBe(false)
     expect(plan.syncStatus).toBe('degraded')
     expect(plan.dropReasons.incomplete_fill_history_trades_skipped).toBe(1)
+  })
+
+  it('treats a gross-volume skip as degraded and does not stamp lastSyncedAt', () => {
+    const skipKey = openingPositionKey(ACCOUNT, 'MESZ6')
+    const plan = planOrdinarySyncTrades({
+      trades: [
+        {
+          accountNumber: ACCOUNT,
+          entryId: 'x',
+          closeId: 'y',
+          closeDate: '2026-10-02T14:00:00.000Z',
+        },
+      ],
+      fills: jeremieFills,
+      snapshotOk: true,
+      skippedSymbolKeys: new Set([skipKey]),
+    })
+    expect(plan.stampLastSyncedAt).toBe(false)
+    expect(plan.syncStatus).toBe('degraded')
+    expect(plan.frozenSymbolCount).toBe(1)
+  })
+
+  it('still persists a pre-history trade whose fill ids were never stored', () => {
+    const old = {
+      accountNumber: ACCOUNT,
+      entryId: 'legacy-open',
+      closeId: 'legacy-close',
+      closeDate: '2026-09-15T14:00:00.000Z',
+    }
+    const plan = planOrdinarySyncTrades({
+      trades: [old],
+      fills: [
+        fill({
+          fillId: 'legacy-open',
+          ssboe: at('2026-09-15T13:00:00Z'),
+        }),
+        fill({
+          fillId: 'legacy-close',
+          transactionType: 'SELL',
+          ssboe: at('2026-09-15T14:00:00Z'),
+        }),
+      ],
+      snapshotOk: true,
+      skippedSymbolKeys: new Set(),
+      historyStartMs: utcYyyymmddStartMs('20261001'),
+      persistedFillIds: new Set(),
+    })
+    expect(plan.persist).toEqual([old])
   })
 })
 
@@ -676,6 +750,26 @@ describe('retainOrdinarySyncRow pre-history / rolling cutoff', () => {
 })
 
 describe('computeOpeningPositionChecks window filter and unpriced fills', () => {
+  it('assigns fill_less_expiry when P_end is open and the window has no fills', () => {
+    const checks = computeOpeningPositionChecks({
+      fills: [
+        fill({
+          fillId: 'old-sell',
+          transactionType: 'SELL',
+          fillSize: 2,
+          ssboe: at('2026-09-01T14:00:00Z'),
+        }),
+      ],
+      positions: [{ accountId: ACCOUNT, symbol: 'MESZ6', netQuantity: 2 }],
+      sinceMs: OCT_WEEKLY_CLOSE_MS,
+    })
+    expect(checks[0]).toMatchObject({ pEnd: 2, net: 0, p0: 2, fillCount: 0 })
+    const decision = decideOpeningSeeds(checks, [], OCT_WEEKLY_CLOSE_MS)
+    expect(decision.seeds).toEqual([])
+    expect(decision.error).toBeUndefined()
+    expect(decision.skipped[0]?.reason).toBe('fill_less_expiry')
+  })
+
   it('does not seed leftover historical net after a fill-less expiry', () => {
     const expired = [
       fill({
@@ -748,7 +842,51 @@ describe('openingPositionKey encoding', () => {
   })
 })
 
+describe('fifoEndPositionMatchesPEnd', () => {
+  it('freezes symbols whose leftover FIFO lots do not equal P_end', () => {
+    const mismatch = fifoEndPositionMatchesPEnd({
+      openNets: [{ accountId: ACCOUNT, symbol: 'MESZ6', net: 0 }],
+      positions: [{ accountId: ACCOUNT, symbol: 'MESZ6', netQuantity: 2 }],
+    })
+    expect(mismatch).toEqual({
+      ok: false,
+      mismatchedKeys: [openingPositionKey(ACCOUNT, 'MESZ6')],
+    })
+    const match = fifoEndPositionMatchesPEnd({
+      openNets: [{ accountId: ACCOUNT, symbol: 'MESZ6', net: 2 }],
+      positions: [{ accountId: ACCOUNT, symbol: 'MESZ6', netQuantity: 2 }],
+    })
+    expect(match.ok).toBe(true)
+    const delimited = 'FIRM|DESK-1'
+    expect(
+      fifoEndPositionMatchesPEnd({
+        openNets: [{ accountId: delimited, symbol: 'MESZ6', net: 2 }],
+        positions: [{ accountId: delimited, symbol: 'MESZ6', netQuantity: 2 }],
+      }).ok,
+    ).toBe(true)
+  })
+})
+
 describe('indexFillsByCanonicalId raw and canonical ids', () => {
+  it('indexes absorbed raw piece ids from a merged cluster', () => {
+    const merged = fill({
+      fillId: '1245663',
+      fillSize: 5,
+      ssboe: at('2026-09-30T14:00:00Z'),
+      absorbedFillIds: ['1245660', '1245661', '1245662'],
+    })
+    const byId = indexFillsByCanonicalId([merged])
+    expect(byId.get('1245660')).toBe(merged)
+    expect(byId.get('1245663')).toBe(merged)
+    expect(
+      tradeTouchesSymbolKeys(
+        { entryId: '1245660', closeId: 'x' },
+        new Set([openingPositionKey(ACCOUNT, 'MESZ6')]),
+        byId,
+      ),
+    ).toBe(true)
+  })
+
   it('looks up Replay basketId_fillId and the bare history id', () => {
     const replay = fill({
       fillId: '239200544_1319858',
