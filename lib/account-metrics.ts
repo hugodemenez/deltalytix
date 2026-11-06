@@ -2,6 +2,7 @@
 // These functions can be used on both server and client for consistent results.
 import type { Trade as PrismaTrade } from '@/prisma/generated/prisma/browser'
 import type { Account } from '@/context/data-provider'
+import { withoutOpeningSeedCloses } from '@/lib/trade-id-utils'
 
 export type AccountMetrics = {
   // Balance and progress
@@ -54,6 +55,7 @@ export function computeAccountMetrics(
   account: Account,
   allTrades: PrismaTrade[]
 ): { balanceToDate: number; metrics: NonNullable<Account['metrics']>; dailyMetrics: NonNullable<Account['dailyMetrics']>; trades: PrismaTrade[]; aboveBuffer: number } {
+  allTrades = withoutOpeningSeedCloses(allTrades)
   const resetDate = toDate(account.resetDate)
   const relevantTrades = allTrades.filter(t => {
     if (t.accountNumber !== account.number) return false

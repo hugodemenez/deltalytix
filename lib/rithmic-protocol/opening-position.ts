@@ -185,7 +185,7 @@ export function parseOpeningSeedOrderId(
   }
 }
 
-function fillsByCanonicalId(
+export function indexFillsByCanonicalId(
   fills: RithmicProtocolFill[],
 ): Map<string, RithmicProtocolFill> {
   const map = new Map<string, RithmicProtocolFill>()
@@ -196,6 +196,38 @@ function fillsByCanonicalId(
   return map
 }
 
+export type FillIdIndex = Map<string, RithmicProtocolFill>
+
+/**
+ * Symbols whose P_0 cannot be trusted when the bracketed snapshot fails:
+ * anything in this fill window, plus any nonzero net on either snapshot.
+ * When neither snapshot completed, omitted symbols might still be open —
+ * callers must freeze the whole book rather than guess flat.
+ */
+export function uncertainOpeningSymbolKeys(params: {
+  incomingFills: RithmicProtocolFill[]
+  before: CapturedPositionSnapshot
+  after: CapturedPositionSnapshot
+}): { keys: Set<string>; determined: boolean } {
+  const keys = new Set<string>()
+  for (const fill of params.incomingFills) {
+    const accountId = fill.accountId || 'unknown'
+    const symbol = (fill.symbol || '').trim().toUpperCase()
+    if (!symbol) continue
+    keys.add(positionKey(accountId, symbol))
+  }
+  for (const position of [...params.before.positions, ...params.after.positions]) {
+    if (!Number.isFinite(position.netQuantity) || position.netQuantity === 0) {
+      continue
+    }
+    keys.add(positionKey(position.accountId, position.symbol))
+  }
+  return {
+    keys,
+    determined: params.before.complete || params.after.complete,
+  }
+}
+
 export function tradeTouchesSymbolKeys(
   trade: {
     accountNumber?: string | null
@@ -203,14 +235,14 @@ export function tradeTouchesSymbolKeys(
     closeId?: string | null
   },
   symbolKeys: Set<string>,
-  fills: RithmicProtocolFill[],
+  fills: RithmicProtocolFill[] | FillIdIndex,
 ): boolean {
   if (symbolKeys.size === 0) return false
   const seed = parseOpeningSeedOrderId(trade.entryId)
   if (seed && symbolKeys.has(positionKey(seed.accountId, seed.symbol))) {
     return true
   }
-  const byId = fillsByCanonicalId(fills)
+  const byId = Array.isArray(fills) ? indexFillsByCanonicalId(fills) : fills
   for (const rawId of [trade.entryId, trade.closeId]) {
     const id = canonicalRithmicFillId(rawId)
     if (!id) continue
@@ -228,12 +260,21 @@ export type OrdinarySyncTradePlan<T> = {
   derivedForPhantoms: T[]
   skipPhantomDelete: boolean
   dropReasons: Record<string, number>
+  stampLastSyncedAt: boolean
+  syncStatus: 'ok' | 'degraded'
+  frozenSymbolCount: number
+  warnings: string[]
 }
 
 /**
  * Ordinary sync must not persist or reap trades that depend on a non-flat
  * opening when the broker snapshot is missing. Pre-historyStartDate closes
  * stay in the derived set for phantom matching but are not written.
+ *
+ * When the snapshot is unavailable but we can still name uncertain symbols
+ * (a completed book, or incoming fills / nonzero snapshot rows), only those
+ * symbols freeze. A fully undetermined book freezes everything and must not
+ * stamp lastSyncedAt.
  */
 export function planOrdinarySyncTrades<
   T extends {
@@ -247,9 +288,13 @@ export function planOrdinarySyncTrades<
   fills: RithmicProtocolFill[]
   snapshotOk: boolean
   skippedSymbolKeys: Set<string>
+  uncertainSymbolKeys?: Set<string>
+  openingStateDetermined?: boolean
   historyStartMs?: number
 }): OrdinarySyncTradePlan<T> {
-  if (!params.snapshotOk) {
+  const determined =
+    params.snapshotOk || params.openingStateDetermined === true
+  if (!params.snapshotOk && !determined) {
     return {
       persist: [],
       derivedForPhantoms: [],
@@ -257,15 +302,25 @@ export function planOrdinarySyncTrades<
       dropReasons: {
         snapshot_unavailable_trades_skipped: params.trades.length,
       },
+      stampLastSyncedAt: false,
+      syncStatus: 'degraded',
+      frozenSymbolCount: params.trades.length,
+      warnings: [
+        'Broker position snapshot was unavailable; existing trades were left unchanged.',
+      ],
     }
   }
 
+  const skipKeys = new Set(params.skippedSymbolKeys)
+  if (!params.snapshotOk) {
+    for (const key of params.uncertainSymbolKeys ?? []) skipKeys.add(key)
+  }
+  const fillIndex = indexFillsByCanonicalId(params.fills)
   const skippedTrades = params.trades.filter((trade) =>
-    tradeTouchesSymbolKeys(trade, params.skippedSymbolKeys, params.fills),
+    tradeTouchesSymbolKeys(trade, skipKeys, fillIndex),
   )
   const unskipped = params.trades.filter(
-    (trade) =>
-      !tradeTouchesSymbolKeys(trade, params.skippedSymbolKeys, params.fills),
+    (trade) => !tradeTouchesSymbolKeys(trade, skipKeys, fillIndex),
   )
   const persist = unskipped.filter((trade) =>
     tradeClosedOnOrAfter(trade, params.historyStartMs),
@@ -278,11 +333,21 @@ export function planOrdinarySyncTrades<
   if (preHistory > 0) {
     dropReasons.closed_before_history_start = preHistory
   }
+  const frozen = !params.snapshotOk && skipKeys.size > 0
+  const warnings = frozen
+    ? [
+        'Broker position snapshot was unavailable; existing trades for those symbols were left unchanged.',
+      ]
+    : []
   return {
     persist,
     derivedForPhantoms: unskipped,
     skipPhantomDelete: false,
     dropReasons,
+    stampLastSyncedAt: !frozen,
+    syncStatus: frozen ? 'degraded' : 'ok',
+    frozenSymbolCount: skipKeys.size,
+    warnings,
   }
 }
 

@@ -14,6 +14,7 @@ import {
 import { computeEquityChartData } from "@/lib/equity-chart"
 import { prisma } from "@/lib/prisma"
 import { getConnectionsForUser } from "@/server/connections"
+import { withoutOpeningSeedCloses } from "@/lib/trade-id-utils"
 import { calculateStatistics, calculateTradingDays } from "@/lib/utils"
 import type { Account } from "@/context/data-provider"
 import type { Trade } from "@/prisma/generated/prisma/client"
@@ -223,9 +224,11 @@ export async function readMetricsSummary(
     side: query.side,
   })
 
-  const trades = filterAndSortTradesByEntryDate(
-    (await prisma.trade.findMany({ where })) as Trade[],
-    { from: query.from, to: query.to },
+  const trades = withoutOpeningSeedCloses(
+    filterAndSortTradesByEntryDate(
+      (await prisma.trade.findMany({ where })) as Trade[],
+      { from: query.from, to: query.to },
+    ),
   )
   const stats = calculateStatistics(trades)
   const tradingDays = calculateTradingDays(trades)

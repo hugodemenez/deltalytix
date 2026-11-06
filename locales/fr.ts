@@ -3018,6 +3018,8 @@ export default {
       accountNotFound: "Compte introuvable. Actualisez la liste.",
       summary:
         "{fills} fills, {matched} trades appariés, {saved} nouveaux, {open} positions ouvertes",
+      degraded:
+        "Instantané de positions indisponible — les trades existants de certains symboles n'ont pas été modifiés. {fills} fills, {matched} trades appariés, {saved} nouveaux, {open} positions ouvertes",
     },
     multiAccount: {
       empty:

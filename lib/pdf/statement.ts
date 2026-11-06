@@ -4,6 +4,7 @@ import {
   DEFAULT_BREAKEVEN_RANGE,
   classifyTradeOutcome,
 } from "@/types/breakeven"
+import { withoutOpeningSeedCloses } from "@/lib/trade-id-utils"
 
 // Slim trade shape the client sends to the PDF route. It mirrors the fields the
 // dashboard's summary and charts actually read, so the server can reproduce the
@@ -19,6 +20,8 @@ export interface PdfTrade {
   quantity: number
   instrument: string
   timeInPosition: number
+  entryId?: string | null
+  tags?: string[]
 }
 
 export type PdfLocale = "en" | "fr"
@@ -49,6 +52,10 @@ export function sanitizeTrades(input: unknown): PdfTrade[] {
       quantity: Number(trade.quantity ?? 0),
       instrument: String(trade.instrument ?? ""),
       timeInPosition: Number(trade.timeInPosition ?? 0),
+      entryId: trade.entryId != null ? String(trade.entryId) : null,
+      tags: Array.isArray(trade.tags)
+        ? trade.tags.map((tag) => String(tag))
+        : [],
     }
   })
 }
@@ -100,6 +107,7 @@ export function computeSummary(
   trades: PdfTrade[],
   breakevenRange: BreakevenRange = DEFAULT_BREAKEVEN_RANGE,
 ): SummaryMetrics {
+  trades = withoutOpeningSeedCloses(trades)
   const totalGrossPnl = trades.reduce((sum, t) => sum + Number(t.pnl || 0), 0)
   const totalNetPnl = trades.reduce((sum, t) => sum + netPnl(t), 0)
   const { win } = computeTradeDistribution(trades, breakevenRange)
@@ -155,6 +163,7 @@ export function computeChartData(
   timezone: string,
   breakevenRange: BreakevenRange = DEFAULT_BREAKEVEN_RANGE,
 ): StatementChartData {
+  trades = withoutOpeningSeedCloses(trades)
   // Equity: cumulative net pnl per day, in chronological order.
   const equityBuckets = bucketByDay(trades, "entryDate", timezone)
   const equityDays = [...equityBuckets.keys()].sort()

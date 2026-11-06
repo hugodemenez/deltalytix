@@ -6,16 +6,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { StatisticsProps } from "@/app/[locale]/dashboard/types/statistics"
 import { Account } from "@/context/data-provider"
 import { BreakevenRange } from "@/types/breakeven"
-
-function isOpeningSeedCloseTrade(trade: {
-  entryId?: string | null
-  tags?: readonly string[] | null
-}): boolean {
-  return (
-    Boolean(trade.entryId?.startsWith("opening-seed:")) ||
-    Boolean(trade.tags?.includes("rithmic-protocol-opening-seed"))
-  )
-}
+import { withoutOpeningSeedCloses } from "@/lib/trade-id-utils"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -40,7 +31,7 @@ export function parsePositionTime(timeInSeconds: number): string {
 }
 
 export function calculateStatistics(trades: Trade[], accounts: Account[] = [], breakevenRange?: BreakevenRange): StatisticsProps {
-  trades = trades.filter((trade) => !isOpeningSeedCloseTrade(trade))
+  trades = withoutOpeningSeedCloses(trades)
   if (!trades.length) {
     return {
       cumulativeFees: 0,
@@ -154,7 +145,7 @@ export function formatCalendarData(
   accounts: Account[] = [],
   timezone: string,
 ) {
-  trades = trades.filter((trade) => !isOpeningSeedCloseTrade(trade))
+  trades = withoutOpeningSeedCloses(trades)
   // // Create a map of accounts for quick lookup
   // const accountMap = new Map(accounts.map(account => [account.number, account]));
 
@@ -207,6 +198,7 @@ export function calculateTradingDays(trades: Trade[], minPnlToCountAsDay?: numbe
   validTradingDays: number;
   dailyPnL: { [date: string]: number };
 } {
+  trades = withoutOpeningSeedCloses(trades)
   if (!trades.length) {
     return {
       totalTradingDays: 0,

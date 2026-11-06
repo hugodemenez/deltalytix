@@ -23,6 +23,15 @@ export function isOpeningSeedCloseTrade(trade: {
   return Boolean(trade.tags?.includes(RITHMIC_PROTOCOL_OPENING_SEED_TAG))
 }
 
+export function withoutOpeningSeedCloses<
+  T extends {
+    entryId?: string | null
+    tags?: readonly string[] | null
+  },
+>(trades: T[]): T[] {
+  return trades.filter((trade) => !isOpeningSeedCloseTrade(trade))
+}
+
 /** Same DNS namespace used by `saveTradesAction` since Protocol imports began. */
 const TRADE_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
 

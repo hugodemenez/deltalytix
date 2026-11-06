@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { computeChartData, type PdfTrade } from './statement'
+import { RITHMIC_PROTOCOL_OPENING_SEED_TAG } from '@/lib/trade-id-utils'
+import { computeChartData, computeSummary, type PdfTrade } from './statement'
 
 describe('PDF statement chart data', () => {
   it('buckets daily and weekday P&L like the dashboard calendar widgets', () => {
@@ -64,5 +65,32 @@ describe('PDF statement chart data', () => {
     const chartData = computeChartData(trades, 'UTC', { min: -5, max: 10 })
 
     expect(chartData.distribution).toEqual({ win: 1, breakeven: 1, loss: 1 })
+  })
+
+  it('excludes opening-seed closes from summary and daily PnL', () => {
+    const real: PdfTrade = {
+      entryDate: '2026-05-10T12:00:00.000Z',
+      closeDate: null,
+      pnl: 100,
+      commission: 0,
+      accountNumber: 'A1',
+      side: 'long',
+      quantity: 1,
+      instrument: 'ES',
+      timeInPosition: 60,
+    }
+    const seed: PdfTrade = {
+      ...real,
+      entryDate: '2026-05-11T12:00:00.000Z',
+      pnl: 999,
+      entryId: 'opening-seed:A1:ES',
+      tags: [RITHMIC_PROTOCOL_OPENING_SEED_TAG],
+    }
+
+    expect(computeSummary([real, seed]).totalTrades).toBe(1)
+    expect(computeSummary([real, seed]).totalGrossPnl).toBe(100)
+    expect(computeChartData([real, seed], 'UTC').dailyPnl).toEqual([
+      { label: '2026-05-10', value: 100 },
+    ])
   })
 })

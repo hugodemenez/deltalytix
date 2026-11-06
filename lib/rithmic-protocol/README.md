@@ -173,11 +173,16 @@ and `|P_0|` does not exceed window gross volume, FIFO is seeded with a
 synthetic opening lot (never stored as a fill). Closes against that lot are
 tagged `rithmic-protocol-opening-seed` and attributed **0 PnL** (closing fill
 price on both sides). Those seed-closes stay in the journal but are excluded
-from dashboard win-rate / volume / hold-time. A non-integer `P_0`, unpriceable
+from dashboard win-rate / volume / hold-time, PDF statements, API v1 summaries,
+and MCP metric aggregates. A non-integer `P_0`, unpriceable
 close, or `|P_0| >` window gross refuses admin live rebuild with
 `OPENING_POSITION_UNKNOWN` and skips that symbol on ordinary sync. Snapshot
-failure keeps existing trades on ordinary sync (fills still upsert); admin
-live rebuild refuses with `POSITION_SNAPSHOT_UNAVAILABLE`. Pre-`historyStartDate`
+failure freezes only symbols whose opening state is uncertain (fills in the
+window, or a nonzero net on either snapshot). A completed empty book with no
+fills still stamps `lastSyncedAt`. If neither snapshot completed, ordinary
+sync freezes every write, skips the `lastSyncedAt` stamp, and returns
+`syncStatus: degraded` so the UI and daily-sync cron see an unhealthy run.
+Admin live rebuild refuses with `POSITION_SNAPSHOT_UNAVAILABLE`. Pre-`historyStartDate`
 fills are only used to establish opening state — trades closed before that
 date are not persisted. Fills are never trimmed from a terminal net. Expired
 contracts without a calendar are not detected beyond the `|P_0| > gross`

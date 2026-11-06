@@ -43,6 +43,7 @@ import {
   decideOpeningSeeds,
   openingPositionKey,
   reconcileBracketedSnapshots,
+  indexFillsByCanonicalId,
   tradeClosedOnOrAfter,
   tradeTouchesSymbolKeys,
   utcYyyymmddStartMs,
@@ -605,17 +606,18 @@ export async function resyncRithmicProtocolAccount(params: {
           ? reattachProtocolTradeAnnotations(withIds, existing)
           : { trades: withIds, preserved: 0, unmatched: [] }
         const historyStartMs = utcYyyymmddStartMs(fillWindow?.requestedStartYmd)
+        const fillIndex = indexFillsByCanonicalId(prepared.fills)
         const persistable = attached.trades.filter(
           (trade) =>
             tradeClosedOnOrAfter(trade, historyStartMs) &&
-            !tradeTouchesSymbolKeys(trade, skippedSymbolKeys, prepared.fills),
+            !tradeTouchesSymbolKeys(trade, skippedSymbolKeys, fillIndex),
         )
         const extraKeepIds = existing
           .filter(
             (row) =>
               !bracket.ok ||
               !tradeClosedOnOrAfter(row, historyStartMs) ||
-              tradeTouchesSymbolKeys(row, skippedSymbolKeys, prepared.fills),
+              tradeTouchesSymbolKeys(row, skippedSymbolKeys, fillIndex),
           )
           .map((row) => row.id)
 

@@ -40,6 +40,8 @@ interface SyncApiPayload {
   errorParams?: Record<string, string | number>
   savedCount?: number
   tradesCount?: number
+  syncStatus?: 'ok' | 'degraded'
+  warnings?: string[]
   syncStats?: {
     rawFills?: number
     fillsAfterDedup?: number
@@ -53,15 +55,18 @@ function syncSummaryToast(
   t: (key: string, params?: Record<string, string | number>) => string,
   payload: SyncApiPayload,
 ) {
-  toast.success(
-    t('rithmicProtocolSync.sync.summary', {
-      fills:
-        payload.syncStats?.fillsAfterDedup ?? payload.syncStats?.rawFills ?? 0,
-      matched: payload.syncStats?.closedTrades ?? payload.tradesCount ?? 0,
-      saved: payload.savedCount ?? payload.syncStats?.savedCount ?? 0,
-      open: payload.syncStats?.openTradesSkipped ?? 0,
-    }),
-  )
+  const counts = {
+    fills:
+      payload.syncStats?.fillsAfterDedup ?? payload.syncStats?.rawFills ?? 0,
+    matched: payload.syncStats?.closedTrades ?? payload.tradesCount ?? 0,
+    saved: payload.savedCount ?? payload.syncStats?.savedCount ?? 0,
+    open: payload.syncStats?.openTradesSkipped ?? 0,
+  }
+  if (payload.syncStatus === 'degraded' || (payload.warnings?.length ?? 0) > 0) {
+    toast.warning(t('rithmicProtocolSync.sync.degraded', counts))
+    return
+  }
+  toast.success(t('rithmicProtocolSync.sync.summary', counts))
 }
 
 interface RithmicProtocolSyncContextType {

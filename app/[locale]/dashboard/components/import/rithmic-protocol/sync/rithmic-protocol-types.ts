@@ -44,6 +44,8 @@ export interface RithmicProtocolTradesResult {
   error?: string
   errorParams?: Record<string, string | number>
   syncStats?: RithmicProtocolSyncStats
+  syncStatus?: 'ok' | 'degraded'
+  warnings?: string[]
 }
 
 export type RithmicProtocolActionResult =

@@ -483,6 +483,8 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
             quantity: Number(trade.quantity || 0),
             instrument: trade.instrument,
             timeInPosition: Number(trade.timeInPosition || 0),
+            entryId: trade.entryId ?? null,
+            tags: trade.tags ?? [],
           })),
         }
 

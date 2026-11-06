@@ -508,4 +508,24 @@ describe("computeAccountMetrics buffer handling", () => {
     expect(account.metrics?.currentBalance).toBeCloseTo(152_502.8, 5)
     expect(account.balanceToDate).toBeCloseTo(152_502.8, 5)
   })
+
+  it("excludes opening-seed closes from account metrics and trading days", () => {
+    const trades = [
+      makeTrade("real", 100, "2026-03-02T14:00:00.000Z"),
+      makeTrade("seed", 999, "2026-03-03T14:00:00.000Z", {
+        entryId: "opening-seed:acct-1:ES",
+        tags: ["rithmic-protocol", "rithmic-protocol-opening-seed"],
+      }),
+    ]
+    const result = computeAccountMetrics(
+      makeAccount({ buffer: 0, considerBuffer: false }),
+      trades
+    )
+
+    expect(result.metrics.totalProfit).toBe(100)
+    expect(result.metrics.currentBalance).toBe(150_100)
+    expect(result.metrics.totalTradingDays).toBe(1)
+    expect(result.metrics.dailyPnL).toEqual({ "2026-03-02": 100 })
+    expect(result.trades.map((trade) => trade.id)).toEqual(["real"])
+  })
 })

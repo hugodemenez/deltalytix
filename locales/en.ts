@@ -2872,6 +2872,8 @@ export default {
       accountNotFound: "Account not found. Refresh the list and try again.",
       summary:
         "{fills} fills, {matched} trades matched, {saved} new, {open} open positions",
+      degraded:
+        "Position snapshot unavailable — existing trades for some symbols were left unchanged. {fills} fills, {matched} trades matched, {saved} new, {open} open positions",
     },
     multiAccount: {
       empty: "No Rithmic Protocol connections yet. Click Connect to add one.",

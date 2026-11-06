@@ -11,6 +11,7 @@ import {
   planOrdinarySyncTrades,
   reconcileBracketedSnapshots,
   tradeClosedOnOrAfter,
+  uncertainOpeningSymbolKeys,
   utcYyyymmddStartMs,
 } from './opening-position'
 
@@ -248,6 +249,9 @@ describe('computeOpeningPositionChecks', () => {
     })
     expect(plan.persist).toEqual([])
     expect(plan.skipPhantomDelete).toBe(true)
+    expect(plan.stampLastSyncedAt).toBe(false)
+    expect(plan.syncStatus).toBe('degraded')
+    expect(plan.warnings.length).toBeGreaterThan(0)
     expect(plan.dropReasons.snapshot_unavailable_trades_skipped).toBe(
       unseeded.trades.length,
     )
@@ -411,5 +415,111 @@ describe('planOrdinarySyncTrades', () => {
     expect(plan.dropReasons.opening_snapshot_symbol_skipped).toBe(
       seeded.trades.length,
     )
+    expect(plan.stampLastSyncedAt).toBe(true)
+    expect(plan.syncStatus).toBe('ok')
+  })
+
+  it('flat user: complete empty snapshots leave unrelated trades writable and stamp lastSyncedAt', () => {
+    const mnq = {
+      accountNumber: ACCOUNT,
+      entryId: 'mnq-open',
+      closeId: 'mnq-close',
+      closeDate: '2026-10-02T14:00:00.000Z',
+    }
+    const uncertain = uncertainOpeningSymbolKeys({
+      incomingFills: [],
+      before: { positions: [], complete: true },
+      after: { positions: [], complete: true },
+    })
+    expect(uncertain.determined).toBe(true)
+    expect(uncertain.keys.size).toBe(0)
+    const plan = planOrdinarySyncTrades({
+      trades: [mnq],
+      fills: [],
+      snapshotOk: false,
+      skippedSymbolKeys: new Set(),
+      uncertainSymbolKeys: uncertain.keys,
+      openingStateDetermined: uncertain.determined,
+    })
+    expect(plan.persist).toEqual([mnq])
+    expect(plan.skipPhantomDelete).toBe(false)
+    expect(plan.stampLastSyncedAt).toBe(true)
+    expect(plan.syncStatus).toBe('ok')
+    expect(plan.warnings).toEqual([])
+  })
+
+  it('does not stamp lastSyncedAt when frozen symbols cannot be listed', () => {
+    const plan = planOrdinarySyncTrades({
+      trades: [
+        {
+          accountNumber: ACCOUNT,
+          entryId: 'x',
+          closeId: 'y',
+          closeDate: '2026-10-02T14:00:00.000Z',
+        },
+      ],
+      fills: jeremieFills,
+      snapshotOk: false,
+      skippedSymbolKeys: new Set(),
+      openingStateDetermined: false,
+    })
+    expect(plan.persist).toEqual([])
+    expect(plan.stampLastSyncedAt).toBe(false)
+    expect(plan.syncStatus).toBe('degraded')
+    expect(plan.skipPhantomDelete).toBe(true)
+  })
+
+  it('freezes only fill-window symbols when the snapshot is unavailable but determined', () => {
+    const unseeded = buildTradesFromRithmicFills(jeremieFills, 'u1', tickBySymbol)
+    const mnq = {
+      accountNumber: ACCOUNT,
+      entryId: 'mnq-open',
+      closeId: 'mnq-close',
+      closeDate: '2026-10-02T14:00:00.000Z',
+    }
+    const uncertain = uncertainOpeningSymbolKeys({
+      incomingFills: jeremieFills,
+      before: { positions: [], complete: true },
+      after: { positions: [], complete: true },
+    })
+    expect(uncertain.keys.has(openingPositionKey(ACCOUNT, 'MESZ6'))).toBe(true)
+    const plan = planOrdinarySyncTrades({
+      trades: [...unseeded.trades, mnq],
+      fills: jeremieFills,
+      snapshotOk: false,
+      skippedSymbolKeys: new Set(),
+      uncertainSymbolKeys: uncertain.keys,
+      openingStateDetermined: true,
+    })
+    expect(plan.persist).toEqual([mnq])
+    expect(plan.stampLastSyncedAt).toBe(false)
+    expect(plan.syncStatus).toBe('degraded')
+    expect(plan.skipPhantomDelete).toBe(false)
+    expect(plan.warnings.length).toBeGreaterThan(0)
+  })
+})
+
+describe('uncertainOpeningSymbolKeys', () => {
+  it('treats incomplete snapshots as undetermined even with an empty book', () => {
+    const result = uncertainOpeningSymbolKeys({
+      incomingFills: [],
+      before: { positions: [], complete: false },
+      after: { positions: [], complete: false },
+    })
+    expect(result.determined).toBe(false)
+    expect(result.keys.size).toBe(0)
+  })
+
+  it('includes nonzero snapshot symbols even without fills', () => {
+    const result = uncertainOpeningSymbolKeys({
+      incomingFills: [],
+      before: {
+        positions: [{ accountId: ACCOUNT, symbol: 'MNQZ6', netQuantity: 1 }],
+        complete: true,
+      },
+      after: { positions: [], complete: true },
+    })
+    expect(result.determined).toBe(true)
+    expect(result.keys.has(openingPositionKey(ACCOUNT, 'MNQZ6'))).toBe(true)
   })
 })

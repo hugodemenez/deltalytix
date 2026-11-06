@@ -50,6 +50,8 @@ export async function POST(request: NextRequest) {
       savedCount: syncResult.savedCount ?? 0,
       tradesCount: syncResult.tradesCount ?? 0,
       syncStats: syncResult.syncStats,
+      syncStatus: syncResult.syncStatus ?? 'ok',
+      warnings: syncResult.warnings ?? [],
       message: 'Sync completed',
     })
   } catch (error) {

@@ -146,4 +146,25 @@ describe("computeEquityChartData daily PnL", () => {
       equity: 25,
     });
   });
+
+  it("excludes opening-seed closes from daily PnL", () => {
+    const points = pointsByDate([
+      trade("2026-03-02T15:00:00.000Z", 100, 0),
+      {
+        ...trade("2026-03-03T15:00:00.000Z", 999, 0),
+        tags: ["rithmic-protocol-opening-seed"],
+        entryId: "opening-seed:A1:ES",
+      },
+    ]);
+
+    expect(points["2026-03-02"]).toMatchObject({
+      dailyPnL: 100,
+      netPnL: 100,
+      equity: 100,
+    });
+    expect(points["2026-03-03"]?.dailyPnL ?? 0).toBe(0)
+    expect(
+      Object.values(points).some((point) => point.dailyPnL === 999),
+    ).toBe(false)
+  });
 });

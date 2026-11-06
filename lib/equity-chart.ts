@@ -7,6 +7,7 @@ import {
   isValid,
 } from "date-fns";
 import { getTimeRangeKey } from "./time-range";
+import { withoutOpeningSeedCloses } from "@/lib/trade-id-utils";
 
 // Minimal input types so the lib does not depend on Prisma
 export interface EquityChartTradeInput {
@@ -17,6 +18,7 @@ export interface EquityChartTradeInput {
   commission?: number | null;
   timeInPosition: number;
   tags: string[];
+  entryId?: string | null;
 }
 
 export interface EquityChartPayoutInput {
@@ -109,7 +111,7 @@ export function computeEquityChartData(
     .filter((a) => a.groupId === hiddenGroup?.id)
     .map((a) => a.number);
 
-  const filteredTrades = trades
+  const filteredTrades = withoutOpeningSeedCloses(trades)
     .filter((trade) => {
       if (hiddenAccountNumbers.includes(trade.accountNumber)) {
         return false;
