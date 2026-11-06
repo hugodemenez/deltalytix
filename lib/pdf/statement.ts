@@ -4,7 +4,7 @@ import {
   DEFAULT_BREAKEVEN_RANGE,
   classifyTradeOutcome,
 } from "@/types/breakeven"
-import { withoutOpeningSeedCloses } from "@/lib/trade-id-utils"
+import { withoutOpeningSeedCloses } from "@/lib/opening-seed"
 
 // Slim trade shape the client sends to the PDF route. It mirrors the fields the
 // dashboard's summary and charts actually read, so the server can reproduce the

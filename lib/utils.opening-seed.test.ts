@@ -3,8 +3,8 @@ import type { Trade } from '@/prisma/generated/prisma/browser'
 import {
   OPENING_SEED_ORDER_ID_PREFIX,
   RITHMIC_PROTOCOL_OPENING_SEED_TAG,
-  RITHMIC_PROTOCOL_TRADE_TAG,
-} from '@/lib/trade-id-utils'
+} from '@/lib/opening-seed'
+import { RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import { calculateStatistics, calculateTradingDays } from '@/lib/utils'
 
 function trade(

@@ -2,7 +2,7 @@
 // These functions can be used on both server and client for consistent results.
 import type { Trade as PrismaTrade } from '@/prisma/generated/prisma/browser'
 import type { Account } from '@/context/data-provider'
-import { withoutOpeningSeedCloses } from '@/lib/trade-id-utils'
+import { withoutOpeningSeedCloses } from '@/lib/opening-seed'
 
 export type AccountMetrics = {
   // Balance and progress

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RITHMIC_PROTOCOL_OPENING_SEED_TAG } from '@/lib/trade-id-utils'
+import { RITHMIC_PROTOCOL_OPENING_SEED_TAG } from '@/lib/opening-seed'
 import { computeChartData, computeSummary, type PdfTrade } from './statement'
 
 describe('PDF statement chart data', () => {

@@ -6,7 +6,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { StatisticsProps } from "@/app/[locale]/dashboard/types/statistics"
 import { Account } from "@/context/data-provider"
 import { BreakevenRange } from "@/types/breakeven"
-import { withoutOpeningSeedCloses } from "@/lib/trade-id-utils"
+import { withoutOpeningSeedCloses } from "@/lib/opening-seed"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

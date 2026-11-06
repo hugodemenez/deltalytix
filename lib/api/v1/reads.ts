@@ -14,7 +14,7 @@ import {
 import { computeEquityChartData } from "@/lib/equity-chart"
 import { prisma } from "@/lib/prisma"
 import { getConnectionsForUser } from "@/server/connections"
-import { withoutOpeningSeedCloses } from "@/lib/trade-id-utils"
+import { withoutOpeningSeedCloses } from "@/lib/opening-seed"
 import { calculateStatistics, calculateTradingDays } from "@/lib/utils"
 import type { Account } from "@/context/data-provider"
 import type { Trade } from "@/prisma/generated/prisma/client"

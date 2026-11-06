@@ -2,12 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { v5 as uuidv5 } from 'uuid'
 import {
   generatePersistedTradeUUID,
-  isOpeningSeedCloseTrade,
-  OPENING_SEED_ORDER_ID_PREFIX,
-  RITHMIC_PROTOCOL_OPENING_SEED_TAG,
   RITHMIC_PROTOCOL_TRADE_TAG,
   TRADOVATE_TRADE_TAG,
-  withoutOpeningSeedCloses,
 } from './trade-id-utils'
 import {
   normalizeTradeSide,
@@ -225,23 +221,5 @@ describe('Tradovate cross-source persisted identity', () => {
       ]),
     ).toBe(existingId)
     expect(tradovateFillPairKey(syncLong)).toBe(tradovateFillPairKey(csvLong))
-  })
-})
-
-describe('opening-seed close helper', () => {
-  it('matches the seed prefix or tag and drops those rows from aggregates', () => {
-    const byPrefix = {
-      entryId: `${OPENING_SEED_ORDER_ID_PREFIX}acct:MESZ6`,
-      tags: [RITHMIC_PROTOCOL_TRADE_TAG],
-    }
-    const byTag = {
-      entryId: 'cover-1',
-      tags: [RITHMIC_PROTOCOL_TRADE_TAG, RITHMIC_PROTOCOL_OPENING_SEED_TAG],
-    }
-    const real = { entryId: '1001', tags: [RITHMIC_PROTOCOL_TRADE_TAG] }
-    expect(isOpeningSeedCloseTrade(byPrefix)).toBe(true)
-    expect(isOpeningSeedCloseTrade(byTag)).toBe(true)
-    expect(isOpeningSeedCloseTrade(real)).toBe(false)
-    expect(withoutOpeningSeedCloses([byPrefix, byTag, real])).toEqual([real])
   })
 })

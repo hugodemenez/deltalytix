@@ -7,7 +7,7 @@ import {
   isValid,
 } from "date-fns";
 import { getTimeRangeKey } from "./time-range";
-import { withoutOpeningSeedCloses } from "@/lib/trade-id-utils";
+import { withoutOpeningSeedCloses } from "@/lib/opening-seed";
 
 // Minimal input types so the lib does not depend on Prisma
 export interface EquityChartTradeInput {
