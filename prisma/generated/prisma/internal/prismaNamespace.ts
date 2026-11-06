@@ -3326,6 +3326,7 @@ export const ConnectionScalarFieldEnum = {
   service: 'service',
   externalId: 'externalId',
   lastSyncedAt: 'lastSyncedAt',
+  lastSyncAttemptAt: 'lastSyncAttemptAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   token: 'token',

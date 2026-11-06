@@ -108,6 +108,20 @@ export function syncScheduleMode(
 }
 
 /** Whichever schedule the connection carries, is it due right now? */
+/** Floor between degraded (unstamped) retries so a frozen connection is not due every tick. */
+export const DEGRADED_SYNC_BACKOFF_MS = 15 * 60 * 1000
+
+export function isDegradedSyncBackoffActive(
+  lastSyncAttemptAt: Date | null | undefined,
+  lastSyncedAt: Date,
+  now: Date,
+  backoffMs: number = DEGRADED_SYNC_BACKOFF_MS,
+): boolean {
+  if (!lastSyncAttemptAt) return false
+  if (lastSyncedAt.getTime() >= lastSyncAttemptAt.getTime()) return false
+  return now.getTime() - lastSyncAttemptAt.getTime() < backoffMs
+}
+
 export function isConnectionSyncDue(
   schedule: ConnectionSyncSchedule,
   lastSyncedAt: Date,

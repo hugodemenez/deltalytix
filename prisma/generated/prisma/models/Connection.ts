@@ -40,6 +40,7 @@ export type ConnectionMinAggregateOutputType = {
   service: string | null
   externalId: string | null
   lastSyncedAt: Date | null
+  lastSyncAttemptAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
   token: string | null
@@ -55,6 +56,7 @@ export type ConnectionMaxAggregateOutputType = {
   service: string | null
   externalId: string | null
   lastSyncedAt: Date | null
+  lastSyncAttemptAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
   token: string | null
@@ -70,6 +72,7 @@ export type ConnectionCountAggregateOutputType = {
   service: number
   externalId: number
   lastSyncedAt: number
+  lastSyncAttemptAt: number
   createdAt: number
   updatedAt: number
   token: number
@@ -97,6 +100,7 @@ export type ConnectionMinAggregateInputType = {
   service?: true
   externalId?: true
   lastSyncedAt?: true
+  lastSyncAttemptAt?: true
   createdAt?: true
   updatedAt?: true
   token?: true
@@ -112,6 +116,7 @@ export type ConnectionMaxAggregateInputType = {
   service?: true
   externalId?: true
   lastSyncedAt?: true
+  lastSyncAttemptAt?: true
   createdAt?: true
   updatedAt?: true
   token?: true
@@ -127,6 +132,7 @@ export type ConnectionCountAggregateInputType = {
   service?: true
   externalId?: true
   lastSyncedAt?: true
+  lastSyncAttemptAt?: true
   createdAt?: true
   updatedAt?: true
   token?: true
@@ -231,6 +237,7 @@ export type ConnectionGroupByOutputType = {
   service: string
   externalId: string
   lastSyncedAt: Date
+  lastSyncAttemptAt: Date | null
   createdAt: Date
   updatedAt: Date
   token: string | null
@@ -271,6 +278,7 @@ export type ConnectionWhereInput = {
   service?: Prisma.StringFilter<"Connection"> | string
   externalId?: Prisma.StringFilter<"Connection"> | string
   lastSyncedAt?: Prisma.DateTimeFilter<"Connection"> | Date | string
+  lastSyncAttemptAt?: Prisma.DateTimeNullableFilter<"Connection"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Connection"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Connection"> | Date | string
   token?: Prisma.StringNullableFilter<"Connection"> | string | null
@@ -291,6 +299,7 @@ export type ConnectionOrderByWithRelationInput = {
   service?: Prisma.SortOrder
   externalId?: Prisma.SortOrder
   lastSyncedAt?: Prisma.SortOrder
+  lastSyncAttemptAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   token?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -315,6 +324,7 @@ export type ConnectionWhereUniqueInput = Prisma.AtLeast<{
   service?: Prisma.StringFilter<"Connection"> | string
   externalId?: Prisma.StringFilter<"Connection"> | string
   lastSyncedAt?: Prisma.DateTimeFilter<"Connection"> | Date | string
+  lastSyncAttemptAt?: Prisma.DateTimeNullableFilter<"Connection"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Connection"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Connection"> | Date | string
   token?: Prisma.StringNullableFilter<"Connection"> | string | null
@@ -335,6 +345,7 @@ export type ConnectionOrderByWithAggregationInput = {
   service?: Prisma.SortOrder
   externalId?: Prisma.SortOrder
   lastSyncedAt?: Prisma.SortOrder
+  lastSyncAttemptAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   token?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -360,6 +371,7 @@ export type ConnectionScalarWhereWithAggregatesInput = {
   service?: Prisma.StringWithAggregatesFilter<"Connection"> | string
   externalId?: Prisma.StringWithAggregatesFilter<"Connection"> | string
   lastSyncedAt?: Prisma.DateTimeWithAggregatesFilter<"Connection"> | Date | string
+  lastSyncAttemptAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Connection"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Connection"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Connection"> | Date | string
   token?: Prisma.StringNullableWithAggregatesFilter<"Connection"> | string | null
@@ -376,6 +388,7 @@ export type ConnectionCreateInput = {
   service: string
   externalId: string
   lastSyncedAt: Date | string
+  lastSyncAttemptAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   token?: string | null
@@ -396,6 +409,7 @@ export type ConnectionUncheckedCreateInput = {
   service: string
   externalId: string
   lastSyncedAt: Date | string
+  lastSyncAttemptAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   token?: string | null
@@ -414,6 +428,7 @@ export type ConnectionUpdateInput = {
   service?: Prisma.StringFieldUpdateOperationsInput | string
   externalId?: Prisma.StringFieldUpdateOperationsInput | string
   lastSyncedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSyncAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -434,6 +449,7 @@ export type ConnectionUncheckedUpdateInput = {
   service?: Prisma.StringFieldUpdateOperationsInput | string
   externalId?: Prisma.StringFieldUpdateOperationsInput | string
   lastSyncedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSyncAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -453,6 +469,7 @@ export type ConnectionCreateManyInput = {
   service: string
   externalId: string
   lastSyncedAt: Date | string
+  lastSyncAttemptAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   token?: string | null
@@ -469,6 +486,7 @@ export type ConnectionUpdateManyMutationInput = {
   service?: Prisma.StringFieldUpdateOperationsInput | string
   externalId?: Prisma.StringFieldUpdateOperationsInput | string
   lastSyncedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSyncAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -486,6 +504,7 @@ export type ConnectionUncheckedUpdateManyInput = {
   service?: Prisma.StringFieldUpdateOperationsInput | string
   externalId?: Prisma.StringFieldUpdateOperationsInput | string
   lastSyncedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSyncAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -519,6 +538,7 @@ export type ConnectionCountOrderByAggregateInput = {
   service?: Prisma.SortOrder
   externalId?: Prisma.SortOrder
   lastSyncedAt?: Prisma.SortOrder
+  lastSyncAttemptAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   token?: Prisma.SortOrder
@@ -540,6 +560,7 @@ export type ConnectionMaxOrderByAggregateInput = {
   service?: Prisma.SortOrder
   externalId?: Prisma.SortOrder
   lastSyncedAt?: Prisma.SortOrder
+  lastSyncAttemptAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   token?: Prisma.SortOrder
@@ -555,6 +576,7 @@ export type ConnectionMinOrderByAggregateInput = {
   service?: Prisma.SortOrder
   externalId?: Prisma.SortOrder
   lastSyncedAt?: Prisma.SortOrder
+  lastSyncAttemptAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   token?: Prisma.SortOrder
@@ -660,6 +682,7 @@ export type ConnectionCreateWithoutUserInput = {
   service: string
   externalId: string
   lastSyncedAt: Date | string
+  lastSyncAttemptAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   token?: string | null
@@ -678,6 +701,7 @@ export type ConnectionUncheckedCreateWithoutUserInput = {
   service: string
   externalId: string
   lastSyncedAt: Date | string
+  lastSyncAttemptAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   token?: string | null
@@ -726,6 +750,7 @@ export type ConnectionScalarWhereInput = {
   service?: Prisma.StringFilter<"Connection"> | string
   externalId?: Prisma.StringFilter<"Connection"> | string
   lastSyncedAt?: Prisma.DateTimeFilter<"Connection"> | Date | string
+  lastSyncAttemptAt?: Prisma.DateTimeNullableFilter<"Connection"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Connection"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Connection"> | Date | string
   token?: Prisma.StringNullableFilter<"Connection"> | string | null
@@ -742,6 +767,7 @@ export type ConnectionCreateWithoutAccountsInput = {
   service: string
   externalId: string
   lastSyncedAt: Date | string
+  lastSyncAttemptAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   token?: string | null
@@ -761,6 +787,7 @@ export type ConnectionUncheckedCreateWithoutAccountsInput = {
   service: string
   externalId: string
   lastSyncedAt: Date | string
+  lastSyncAttemptAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   token?: string | null
@@ -794,6 +821,7 @@ export type ConnectionUpdateWithoutAccountsInput = {
   service?: Prisma.StringFieldUpdateOperationsInput | string
   externalId?: Prisma.StringFieldUpdateOperationsInput | string
   lastSyncedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSyncAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -813,6 +841,7 @@ export type ConnectionUncheckedUpdateWithoutAccountsInput = {
   service?: Prisma.StringFieldUpdateOperationsInput | string
   externalId?: Prisma.StringFieldUpdateOperationsInput | string
   lastSyncedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSyncAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -830,6 +859,7 @@ export type ConnectionCreateWithoutRithmicProtocolFillsInput = {
   service: string
   externalId: string
   lastSyncedAt: Date | string
+  lastSyncAttemptAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   token?: string | null
@@ -849,6 +879,7 @@ export type ConnectionUncheckedCreateWithoutRithmicProtocolFillsInput = {
   service: string
   externalId: string
   lastSyncedAt: Date | string
+  lastSyncAttemptAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   token?: string | null
@@ -882,6 +913,7 @@ export type ConnectionUpdateWithoutRithmicProtocolFillsInput = {
   service?: Prisma.StringFieldUpdateOperationsInput | string
   externalId?: Prisma.StringFieldUpdateOperationsInput | string
   lastSyncedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSyncAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -901,6 +933,7 @@ export type ConnectionUncheckedUpdateWithoutRithmicProtocolFillsInput = {
   service?: Prisma.StringFieldUpdateOperationsInput | string
   externalId?: Prisma.StringFieldUpdateOperationsInput | string
   lastSyncedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSyncAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -918,6 +951,7 @@ export type ConnectionCreateManyUserInput = {
   service: string
   externalId: string
   lastSyncedAt: Date | string
+  lastSyncAttemptAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   token?: string | null
@@ -934,6 +968,7 @@ export type ConnectionUpdateWithoutUserInput = {
   service?: Prisma.StringFieldUpdateOperationsInput | string
   externalId?: Prisma.StringFieldUpdateOperationsInput | string
   lastSyncedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSyncAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -952,6 +987,7 @@ export type ConnectionUncheckedUpdateWithoutUserInput = {
   service?: Prisma.StringFieldUpdateOperationsInput | string
   externalId?: Prisma.StringFieldUpdateOperationsInput | string
   lastSyncedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSyncAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -970,6 +1006,7 @@ export type ConnectionUncheckedUpdateManyWithoutUserInput = {
   service?: Prisma.StringFieldUpdateOperationsInput | string
   externalId?: Prisma.StringFieldUpdateOperationsInput | string
   lastSyncedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSyncAttemptAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   token?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1027,6 +1064,7 @@ export type ConnectionSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   service?: boolean
   externalId?: boolean
   lastSyncedAt?: boolean
+  lastSyncAttemptAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   token?: boolean
@@ -1048,6 +1086,7 @@ export type ConnectionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   service?: boolean
   externalId?: boolean
   lastSyncedAt?: boolean
+  lastSyncAttemptAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   token?: boolean
@@ -1066,6 +1105,7 @@ export type ConnectionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   service?: boolean
   externalId?: boolean
   lastSyncedAt?: boolean
+  lastSyncAttemptAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   token?: boolean
@@ -1084,6 +1124,7 @@ export type ConnectionSelectScalar = {
   service?: boolean
   externalId?: boolean
   lastSyncedAt?: boolean
+  lastSyncAttemptAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   token?: boolean
@@ -1095,7 +1136,7 @@ export type ConnectionSelectScalar = {
   apiHosts?: boolean
 }
 
-export type ConnectionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "service" | "externalId" | "lastSyncedAt" | "createdAt" | "updatedAt" | "token" | "tokenExpiresAt" | "dailySyncTime" | "syncIntervalMinutes" | "includedFeeTypes" | "environment" | "apiHosts", ExtArgs["result"]["connection"]>
+export type ConnectionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "service" | "externalId" | "lastSyncedAt" | "lastSyncAttemptAt" | "createdAt" | "updatedAt" | "token" | "tokenExpiresAt" | "dailySyncTime" | "syncIntervalMinutes" | "includedFeeTypes" | "environment" | "apiHosts", ExtArgs["result"]["connection"]>
 export type ConnectionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   accounts?: boolean | Prisma.Connection$accountsArgs<ExtArgs>
@@ -1122,6 +1163,12 @@ export type $ConnectionPayload<ExtArgs extends runtime.Types.Extensions.Internal
     service: string
     externalId: string
     lastSyncedAt: Date
+    /**
+     * *
+     *    * Last time a sync was attempted, including degraded/frozen runs that must
+     *    * not stamp `lastSyncedAt`. Cron uses this to back off unstamped failures.
+     */
+    lastSyncAttemptAt: Date | null
     createdAt: Date
     updatedAt: Date
     token: string | null
@@ -1574,6 +1621,7 @@ export interface ConnectionFieldRefs {
   readonly service: Prisma.FieldRef<"Connection", 'String'>
   readonly externalId: Prisma.FieldRef<"Connection", 'String'>
   readonly lastSyncedAt: Prisma.FieldRef<"Connection", 'DateTime'>
+  readonly lastSyncAttemptAt: Prisma.FieldRef<"Connection", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Connection", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Connection", 'DateTime'>
   readonly token: Prisma.FieldRef<"Connection", 'String'>

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DEGRADED_SYNC_BACKOFF_MS,
   SYNC_INTERVAL_OPTIONS,
   TICK_TOLERANCE_MS,
   isConnectionSyncDue,
+  isDegradedSyncBackoffActive,
   isIntervalSyncDue,
   isSupportedSyncInterval,
   lastIntervalOccurrence,
@@ -209,6 +211,39 @@ describe('isConnectionSyncDue', () => {
         { syncIntervalMinutes: null, dailySyncTime: null },
         new Date('2026-07-01T00:00:00.000Z'),
         new Date('2026-07-26T09:05:00.000Z'),
+      ),
+    ).toBe(false)
+  })
+})
+
+describe('isDegradedSyncBackoffActive', () => {
+  const lastSyncedAt = new Date('2026-07-26T08:00:00.000Z')
+
+  it('does not back off a healthy stamp', () => {
+    const now = new Date('2026-07-26T08:01:00.000Z')
+    expect(
+      isDegradedSyncBackoffActive(now, now, now),
+    ).toBe(false)
+  })
+
+  it('backs off an unstamped degraded attempt until the window elapses', () => {
+    const attempted = new Date('2026-07-26T12:00:00.000Z')
+    const during = new Date(attempted.getTime() + DEGRADED_SYNC_BACKOFF_MS - 1)
+    const after = new Date(attempted.getTime() + DEGRADED_SYNC_BACKOFF_MS + 1)
+    expect(isDegradedSyncBackoffActive(attempted, lastSyncedAt, during)).toBe(
+      true,
+    )
+    expect(isDegradedSyncBackoffActive(attempted, lastSyncedAt, after)).toBe(
+      false,
+    )
+  })
+
+  it('treats a missing attempt clock as not backing off', () => {
+    expect(
+      isDegradedSyncBackoffActive(
+        null,
+        lastSyncedAt,
+        new Date('2026-07-26T12:00:00.000Z'),
       ),
     ).toBe(false)
   })

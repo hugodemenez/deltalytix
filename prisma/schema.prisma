@@ -243,6 +243,11 @@ model Connection {
   service             String
   externalId          String    @map("accountId")
   lastSyncedAt        DateTime
+  /**
+   * Last time a sync was attempted, including degraded/frozen runs that must
+   * not stamp `lastSyncedAt`. Cron uses this to back off unstamped failures.
+   */
+  lastSyncAttemptAt   DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   token               String?
