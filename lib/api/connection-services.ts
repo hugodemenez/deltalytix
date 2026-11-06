@@ -19,6 +19,7 @@ import {
   getRithmicProtocolTrades,
 } from "@/app/[locale]/dashboard/components/import/rithmic-protocol/sync/actions"
 import { serverActor } from "@/lib/api/server-actor"
+import { rithmicProtocolSyncHttpSuccess } from "@/lib/rithmic-protocol/sync-outcome"
 
 /** Broker services that can be created via API v1 (credential POST, no browser OAuth). */
 export const CREATABLE_SERVICES = ["ibkr", "dxfeed", "rithmic-protocol"] as const
@@ -217,6 +218,17 @@ async function syncStoredConnection(
         ok: false,
         message: result.error,
         response: apiError(400, "sync_failed", result.error, result.errorParams),
+      }
+    }
+    if (!rithmicProtocolSyncHttpSuccess(result.syncStatus)) {
+      return {
+        ok: false,
+        message: result.warnings?.[0] || "DEGRADED",
+        response: apiError(
+          409,
+          "sync_failed",
+          result.warnings?.[0] || "Sync degraded",
+        ),
       }
     }
     const imported = result.savedCount ?? 0

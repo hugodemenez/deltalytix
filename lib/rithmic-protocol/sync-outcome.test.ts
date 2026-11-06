@@ -13,6 +13,13 @@ describe('rithmicProtocolSyncHttpSuccess', () => {
     expect(rithmicProtocolSyncHttpSuccess('ok')).toBe(true)
     expect(rithmicProtocolSyncHttpSuccess(undefined)).toBe(true)
   })
+
+  it('is the same gate used by HTTP, cron, and v1 connection sync', () => {
+    expect(rithmicProtocolSyncHttpSuccess('degraded')).toBe(false)
+    expect(
+      rithmicProtocolCronOutcome({ syncStatus: 'degraded' }).ok,
+    ).toBe(false)
+  })
 })
 
 describe('rithmicProtocolCronOutcome', () => {
