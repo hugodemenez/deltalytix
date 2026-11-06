@@ -111,6 +111,10 @@ export function fillTimestampMs(fill: RithmicProtocolFill): number {
     const usecs = typeof fill.usecs === 'number' ? fill.usecs : 0
     return fill.ssboe * 1000 + Math.floor(usecs / 1000)
   }
+  // Last resort: fillDate is the exchange session date, not a UTC instant.
+  // Treating it as UTC midnight is a clock of last resort when the plant
+  // omitted ssboe. Do not reinterpret it as Globex close without a session
+  // calendar — weekend CME close is easy to get wrong from this field.
   if (fill.fillDate) {
     const date = parseFillDateParts(fill.fillDate)
     if (date) {

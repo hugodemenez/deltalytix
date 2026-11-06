@@ -205,7 +205,9 @@ export function reconcileBracketedSnapshots(params: {
     toMsInclusive: afterMs,
   })
   for (const group of between.values()) {
-    if (group.net !== 0) {
+    // Equal-net round trips still move the book while the PnL plant lags.
+    // Any fill between the clocks means P_0 cannot be trusted.
+    if (group.fillCount > 0) {
       return { ok: false, positions: [], reason: 'fills_during_equal_snapshots' }
     }
   }
@@ -606,11 +608,12 @@ export function decideOpeningSeeds(
   let error: 'OPENING_POSITION_UNKNOWN' | undefined
   for (const check of checks) {
     if (check.p0 === 0) continue
-    const symbolFills = fills.filter(
-      (fill) =>
-        (fill.accountId || 'unknown') === check.accountId &&
-        (fill.symbol || '').trim().toUpperCase() === check.symbol,
-    )
+    const symbolFills = fills.filter((fill) => {
+      if ((fill.accountId || 'unknown') !== check.accountId) return false
+      if ((fill.symbol || '').trim().toUpperCase() !== check.symbol) return false
+      if (windowStartMs > 0 && fillTimestampMs(fill) < windowStartMs) return false
+      return true
+    })
     if (check.unpricedCount > 0) {
       skipped.push({
         accountId: check.accountId,
@@ -662,13 +665,15 @@ export function decideOpeningSeeds(
     }, null as number | null)
     const timestampMs =
       firstFillMs != null && firstFillMs > 0
-        ? Math.min(windowStartMs, firstFillMs - 1)
-        : windowStartMs
+        ? firstFillMs - 1
+        : Number.isFinite(windowStartMs)
+          ? windowStartMs
+          : 0
     seeds.push({
       accountId: check.accountId,
       symbol: check.symbol,
       netQuantity: check.p0,
-      timestampMs: Number.isFinite(timestampMs) ? timestampMs : 0,
+      timestampMs,
       orderId: openingSeedOrderId(check.accountId, check.symbol),
     })
   }

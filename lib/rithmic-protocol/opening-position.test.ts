@@ -22,7 +22,10 @@ import {
 const ACCOUNT = 'LFE050-JEREMIE'
 const tickBySymbol = new Map([['MES', { tickSize: 0.25, tickValue: 1.25 }]])
 const at = (iso: string) => Date.parse(iso) / 1000
-const WINDOW_START_MS = Date.parse('2026-10-23T22:00:00.000Z')
+/** Friday 17:00 CT before the September fill fixtures. */
+const WINDOW_START_MS = Date.parse('2026-09-25T22:00:00.000Z')
+/** Later weekly close used for fill-less expiry / October close-in-window. */
+const OCT_WEEKLY_CLOSE_MS = Date.parse('2026-10-23T22:00:00.000Z')
 
 function fill(
   overrides: Partial<RithmicProtocolFill> & { fillId: string; ssboe: number },
@@ -232,7 +235,7 @@ describe('computeOpeningPositionChecks', () => {
         openingSeeds: decideOpeningSeeds(
           afterCloseChecks,
           closeInWindow,
-          WINDOW_START_MS,
+          OCT_WEEKLY_CLOSE_MS,
         ).seeds,
       },
     )
@@ -566,6 +569,30 @@ describe('reconcileBracketedSnapshots plant lag and clocks', () => {
     expect(result.reason).toBe('fills_during_equal_snapshots')
   })
 
+  it('freezes equal books when fills between the clocks net to zero', () => {
+    const beforeMs = Date.parse('2026-10-02T17:00:00.000Z')
+    const afterMs = Date.parse('2026-10-02T18:00:00.000Z')
+    const result = reconcileBracketedSnapshots({
+      before: { ...flat, capturedAtMs: beforeMs },
+      after: { ...flat, capturedAtMs: afterMs },
+      fills: [
+        fill({
+          fillId: 'lag-buy',
+          fillSize: 1,
+          ssboe: (beforeMs + 10_000) / 1000,
+        }),
+        fill({
+          fillId: 'lag-sell',
+          transactionType: 'SELL',
+          fillSize: 1,
+          ssboe: (beforeMs + 20_000) / 1000,
+        }),
+      ],
+    })
+    expect(result.ok).toBe(false)
+    expect(result.reason).toBe('fills_during_equal_snapshots')
+  })
+
   it('does not treat PnL no-data as flat when the account still has fills', () => {
     const result = reconcileBracketedSnapshots({
       before: { ...flat, noDataAccountIds: [ACCOUNT] },
@@ -658,7 +685,7 @@ describe('computeOpeningPositionChecks window filter and unpriced fills', () => 
         ssboe: at('2026-09-01T14:00:00Z'),
       }),
     ]
-    const weekend = Date.parse('2026-10-23T22:00:00.000Z')
+    const weekend = OCT_WEEKLY_CLOSE_MS
     const checks = computeOpeningPositionChecks({
       fills: expired,
       positions: [],
@@ -666,6 +693,26 @@ describe('computeOpeningPositionChecks window filter and unpriced fills', () => 
     })
     expect(checks).toEqual([])
     expect(decideOpeningSeeds(checks, expired, weekend).seeds).toEqual([])
+  })
+
+  it('does not let leftover history inflate window gross and seed an inverted lot', () => {
+    const leftover = [
+      fill({
+        fillId: 'old-sell',
+        transactionType: 'SELL',
+        fillSize: 2,
+        ssboe: at('2026-09-01T14:00:00Z'),
+      }),
+    ]
+    const weekend = OCT_WEEKLY_CLOSE_MS
+    const checks = computeOpeningPositionChecks({
+      fills: leftover,
+      positions: [],
+    })
+    expect(checks[0]?.p0).toBe(2)
+    const decision = decideOpeningSeeds(checks, leftover, weekend)
+    expect(decision.seeds).toEqual([])
+    expect(decision.skipped[0]?.reason).toBe('p0_exceeds_window_gross')
   })
 
   it('skips unpriced fills in P_0 arithmetic and refuses to seed', () => {
