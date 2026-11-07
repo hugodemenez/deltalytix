@@ -4,11 +4,62 @@ import type { Trade } from '@/prisma/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 import { decryptConnectionToken } from '@/lib/connection-token-crypto'
 import { generatePersistedTradeUUID, RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
-import { fetchFillsForAccounts } from '@/lib/rithmic-protocol/client'
+import { canonicalRithmicFillId } from './dedupe-fills'
+import {
+  connectAndListAccounts,
+  fetchInstrumentPositions,
+} from '@/lib/rithmic-protocol/client'
+import {
+  AdminFillFetchError,
+  fetchAdminRebuildFills,
+  resolveOrdinaryHistoryStartUtc,
+  ADMIN_DIAGNOSTIC_LIMIT,
+} from './admin-fill-fetch'
+import {
+  type AdminFillWindowCoverage,
+  coverageReachesAnchor,
+  fifoTieChangesOutcome,
+  fillDateYyyymmdd,
+  fillsInOrdinaryFetchRange,
+  inWindowDerivedTrades,
+  lastFlatYmdBeforeAnchor,
+  ordinarySyncTradesMatchRebuild,
+  residualOpenLots,
+  residualOpenLotsMatch,
+  skippedOrdinaryRangeIsQuiet,
+  storedFillsMissingUpstream,
+  uncoveredTradesByFillIdentity,
+} from './admin-fill-coverage'
+import { commissionRateKey } from './commission-rates'
 import {
   gatewayUri as gatewayUriFor,
   resolveGateway,
 } from '@/lib/rithmic-protocol/systems'
+import {
+  resolveAdminWeekendAnchor,
+  toUtcYyyyMmDd,
+  utcCalendarDayAfter,
+} from './cme-session'
+import {
+  instrumentPositionMapsEqual,
+  snapshotTouchesAccount,
+  type CapturedInstrumentSnapshot,
+} from './instrument-position'
+import {
+  fillFallsInsideSnapshotBracket,
+  snapshotIsFresh,
+} from './instrument-snapshot'
+import {
+  type OpeningPositionCheck,
+  computeOpeningPositionChecks,
+  fillHasUsablePrice,
+  formatOpeningNotFlatReport,
+  groupFillsByExactSymbol,
+  incomingFillTimestampError,
+  isPreAnchorTrade,
+  nonFlatOpeningChecks,
+  windowFillsFrom,
+} from './opening-position'
 import { scopeProtocolAccountIds } from './scope-accounts'
 import {
   ProtocolSyncLockError,
@@ -23,17 +74,21 @@ import {
   type AnnotatedProtocolTrade,
   type FillLedgerNet,
   type RebuildTradeRef,
-  canonicalLedgerFillIds,
   duplicateRebuildTradeIds,
+  deriveTradesFromFillLedger,
   mergeFillLedgers,
   partitionIncomingFills,
+  phantomProtocolTradeIds,
   prepareRithmicProtocolFills,
   protocolTradeSetsMatch,
   reattachProtocolTradeAnnotations,
   summarizeFillLedgerNets,
-  uncoveredProtocolTrades,
 } from './fill-ledger'
-import { buildTradesFromRithmicFills } from './fills-to-trades'
+import {
+  buildTradesFromRithmicFills,
+  fillTimestampMs,
+  normalizeInstrument,
+} from './fills-to-trades'
 import type { RithmicProtocolFill } from './types'
 
 const SERVICE = 'rithmic-protocol'
@@ -45,6 +100,10 @@ const ANNOTATION_SELECT = {
   closeDate: true,
   entryId: true,
   closeId: true,
+  entryPrice: true,
+  closePrice: true,
+  side: true,
+  quantity: true,
   pnl: true,
   comment: true,
   tags: true,
@@ -53,12 +112,21 @@ const ANNOTATION_SELECT = {
   videoUrl: true,
   images: true,
   groupId: true,
+  commission: true,
 } as const
 
-const DEFAULT_LOOKBACK_DAYS = Math.max(
-  1,
-  Number(process.env.RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS ?? '30'),
-)
+const ADMIN_RESYNC_DEADLINE_MS = 240_000
+const ADMIN_TRANSACTION_RESERVE_MS = 30_000
+
+function boundFillDiagnostics(
+  fills: Array<{ fillId?: string; fillDate?: string; symbol?: string | null }>,
+) {
+  return fills.slice(0, ADMIN_DIAGNOSTIC_LIMIT).map((fill) => ({
+    fillId: fill.fillId,
+    fillDate: fill.fillDate,
+    symbol: fill.symbol ?? undefined,
+  }))
+}
 
 export type AccountProtocolSnapshot = {
   tradeCount: number
@@ -68,11 +136,24 @@ export type AccountProtocolSnapshot = {
 
 export type RebuildTradePreview = RebuildTradeRef & { pnl: number }
 
+export type FillHistoryWindow = {
+  weeklyCloseIso: string
+  historyStartYmd: string
+  endYmd: string
+  coverage?: AdminFillWindowCoverage[]
+  coverageReachesAnchor?: boolean
+}
+
 export type ProposedRebuildSnapshot = AccountProtocolSnapshot & {
   openSkipped: number
   annotatedPreserved: number
   unmatchedAnnotations: number
   nets: FillLedgerNet[]
+  positionChecks: OpeningPositionCheck[]
+  snapshotStatus: 'ok'
+  snapshotReason?: string
+  fillWindow?: FillHistoryWindow
+  openingNotFlatReport?: string
   ledgerRowsAfterMerge: number
   consolidatedFills: number
   fillsInserted: number
@@ -100,7 +181,19 @@ export type AdminAccountResyncResult = {
   }
   committed?: boolean
   error?: string
+  wouldRefuse?: boolean
+  wouldRefuseReasons?: string[]
   connectionIds?: string[]
+  diagnostics?: {
+    fills?: Array<{ fillId?: string; fillDate?: string; symbol?: string }>
+    windows?: Array<{
+      startYmd: string
+      endYmd: string
+      historyStatus?: string
+      resolved?: boolean
+    }>
+    positions?: Array<{ symbol: string; netQuantity: number }>
+  }
 }
 
 type StoredCredentials = {
@@ -120,13 +213,18 @@ type ProtocolDb = typeof prisma
 
 type ExistingProtocolTrade = AnnotatedProtocolTrade & {
   pnl: number
+  commission?: number | null
+  quantity?: number | null
+  side?: string | null
   entryDate?: string | null
   closeDate?: string | null
+  entryPrice?: string | number | null
+  closePrice?: string | number | null
 }
 
 class AdminApplyError extends Error {
   constructor(
-    public readonly code: 'CONCURRENT_SYNC' | 'INSERT_MISMATCH',
+    public readonly code: 'CONCURRENT_SYNC' | 'INSERT_MISMATCH' | 'CONNECTION_UNLINKED',
     message?: string,
   ) {
     super(message ?? code)
@@ -332,6 +430,7 @@ export function planProtocolTradeSwap(params: {
   uncoveredIds: string[]
   unmatchedIds: string[]
   allowUnmatchedAnnotations: boolean
+  retainIds?: string[]
 }): {
   keepIds: string[]
   toDelete: string[]
@@ -339,6 +438,7 @@ export function planProtocolTradeSwap(params: {
 } {
   const rebuiltIds = new Set(params.rebuiltIds)
   const keepIds = new Set(params.uncoveredIds)
+  for (const id of params.retainIds ?? []) keepIds.add(id)
   if (params.allowUnmatchedAnnotations) {
     for (const id of params.unmatchedIds) keepIds.add(id)
   }
@@ -347,6 +447,105 @@ export function planProtocolTradeSwap(params: {
     .filter((id) => !keepIds.has(id))
   const analyticsDelete = toDelete.filter((id) => !rebuiltIds.has(id))
   return { keepIds: [...keepIds], toDelete, analyticsDelete }
+}
+
+function snapshotTouchesOptional(
+  snapshot: CapturedInstrumentSnapshot,
+  accountId: string,
+  key: 'malformedAccountIds' | 'lateInstrumentAccountIds',
+): boolean {
+  return (snapshot[key] ?? []).includes(accountId)
+}
+
+function classifyOneSnapshot(
+  snapshot: CapturedInstrumentSnapshot,
+  accountId: string,
+): { ok: false; error: string; reason?: string } | { ok: true } {
+  if (snapshotTouchesAccount(snapshot, accountId, 'rejectedAccountIds')) {
+    return { ok: false, error: 'ACCOUNT_REJECTED', reason: snapshot.reason ?? 'rejected' }
+  }
+  if (snapshotTouchesAccount(snapshot, accountId, 'missingAccountIds')) {
+    return { ok: false, error: 'ACCOUNT_NOT_FOUND', reason: snapshot.reason ?? 'account_not_found' }
+  }
+  if (snapshotTouchesAccount(snapshot, accountId, 'noDataAccountIds')) {
+    return {
+      ok: false,
+      error: 'POSITION_SNAPSHOT_UNAVAILABLE',
+      reason: 'no_data',
+    }
+  }
+  if (snapshotTouchesOptional(snapshot, accountId, 'malformedAccountIds')) {
+    return {
+      ok: false,
+      error: 'POSITION_SNAPSHOT_UNAVAILABLE',
+      reason: 'malformed_position',
+    }
+  }
+  if (snapshotTouchesOptional(snapshot, accountId, 'lateInstrumentAccountIds')) {
+    return {
+      ok: false,
+      error: 'POSITION_SNAPSHOT_UNAVAILABLE',
+      reason: 'late_instrument_update',
+    }
+  }
+  if (!snapshotTouchesAccount(snapshot, accountId, 'evidenceAccountIds')) {
+    return {
+      ok: false,
+      error: 'POSITION_SNAPSHOT_UNAVAILABLE',
+      reason: 'no_evidence',
+    }
+  }
+  if (
+    !snapshot.complete ||
+    snapshotTouchesAccount(snapshot, accountId, 'incompleteAccountIds')
+  ) {
+    return {
+      ok: false,
+      error: 'POSITION_SNAPSHOT_UNAVAILABLE',
+      reason: snapshot.reason ?? 'incomplete',
+    }
+  }
+  return { ok: true }
+}
+
+function classifyAdminSnapshots(params: {
+  before: CapturedInstrumentSnapshot
+  after: CapturedInstrumentSnapshot
+  accountId: string
+  fillTimesMs: number[]
+  nowMs?: number
+}):
+  | { ok: true; positions: CapturedInstrumentSnapshot['positions'] }
+  | { ok: false; error: string; reason?: string } {
+  const { before, after, accountId } = params
+  const first = classifyOneSnapshot(before, accountId)
+  if (!first.ok) return first
+  const second = classifyOneSnapshot(after, accountId)
+  if (!second.ok) return second
+  if (!snapshotIsFresh(after, params.nowMs)) {
+    return { ok: false, error: 'POSITION_SNAPSHOT_STALE', reason: 'stale_after_snapshot' }
+  }
+  if (
+    params.fillTimesMs.some(
+      (fillMs) =>
+        fillFallsInsideSnapshotBracket(fillMs, before) ||
+        fillFallsInsideSnapshotBracket(fillMs, after),
+    )
+  ) {
+    return {
+      ok: false,
+      error: 'POSITION_SNAPSHOT_MOVED',
+      reason: 'fill_during_snapshot',
+    }
+  }
+  if (!instrumentPositionMapsEqual(before.positions, after.positions, accountId)) {
+    return {
+      ok: false,
+      error: 'POSITION_SNAPSHOT_MOVED',
+      reason: 'before_after_mismatch',
+    }
+  }
+  return { ok: true, positions: after.positions }
 }
 
 async function invalidateCachesOnSuccess(userId: string): Promise<void> {
@@ -381,12 +580,12 @@ function tradeCreateRow(
 /**
  * Admin rebuild of one Protocol trading account.
  *
- * Fetches Lucid/upstream first and only writes after a non-empty candidate
- * exists. Fill rows are merged (never wholesale-deleted) so a sliding window
- * cannot erase stored history. Protocol trades for this account are replaced
- * in one transaction except uncovered historical rows, which are retained
- * and refuse a live apply (`UNCOVERED_TRADES`). Journal fields are copied
- * by fill-pair identity. Mood/journal rows are keyed by user+day, not Trade.
+ * Fetches fills from a CME Friday 17:00 CT weekend close (admin-picked,
+ * defaulting to the most recent close before the earliest fill needed) and
+ * reads broker instrument positions before and after that fetch. FIFO runs
+ * only when every exact symbol is flat at the anchor (`P_0 = P_end − net =
+ * 0`). A non-zero P_0 refuses with a per-symbol report — no seed lots.
+ * Pre-anchor trades are never deleted. Ordinary Protocol sync is untouched.
  */
 export async function resyncRithmicProtocolAccount(params: {
   userId: string
@@ -395,6 +594,8 @@ export async function resyncRithmicProtocolAccount(params: {
   actor?: string
   connectionId?: string
   allowUnmatchedAnnotations?: boolean
+  /** YYYY-MM-DD or ISO timestamp; snapped to the Friday 17:00 CT close. */
+  anchorDate?: string
 }): Promise<AdminAccountResyncResult> {
   const userId = params.userId.trim()
   const accountNumber = params.accountNumber.trim()
@@ -426,6 +627,9 @@ export async function resyncRithmicProtocolAccount(params: {
 
   const credentials = parseStoredCredentials(connection.storedTokenJson)
   if (!credentials) {
+    console.log(
+      `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} error=INVALID_STORED_CREDENTIALS`,
+    )
     return { ...unlockedBase, error: 'INVALID_STORED_CREDENTIALS' }
   }
 
@@ -441,55 +645,312 @@ export async function resyncRithmicProtocolAccount(params: {
           accountNumber,
           before,
         }
+        const finish = (result: AdminAccountResyncResult): AdminAccountResyncResult => {
+          console.log(
+            `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} ` +
+              `connection=${connection.connectionId} anchor=${historyStartYmd ?? ''} ` +
+              `dryRun=${params.dryRun} complete=${result.complete} error=${result.error ?? 'ok'} ` +
+              `wouldRefuse=${result.wouldRefuse ?? false} ` +
+              `deleted=${result.deleted?.trades ?? 0} created=${result.after?.savedCount ?? 0}`,
+          )
+          return result
+        }
 
         const storedFills = await loadRithmicProtocolFills({
           userId,
           accountNumbers: [accountNumber],
         })
+        const existing = await loadExistingProtocolTrades(userId, accountNumber)
 
-        let incomingFills: RithmicProtocolFill[]
-        let commissionRates: Map<string, number>
+        let weeklyClose: Date
+        let historyStartYmd = ''
         try {
-          guard.throwIfLost()
-          const fetched = await fetchFillsForAccounts({
+          const earliestStoredFill = earliestFillClock(storedFills)
+          const earliestTrade = earliestTradeClock(existing)
+          const earliestNeededSec =
+            earliestStoredFill == null
+              ? earliestTrade
+              : earliestTrade == null
+                ? earliestStoredFill
+                : Math.min(earliestStoredFill, earliestTrade)
+          const resolved = resolveAdminWeekendAnchor({
+            requestedAnchor: params.anchorDate,
+            earliestNeededMs:
+              earliestNeededSec != null ? earliestNeededSec * 1000 : Date.now(),
+          })
+          weeklyClose = resolved.weeklyClose
+          historyStartYmd = resolved.historyStartYmd
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          if (message.startsWith('INVALID_ANCHOR_DATE')) {
+            return finish({ ...base, error: 'INVALID_ANCHOR_DATE' })
+          }
+          if (message.startsWith('ANCHOR_IN_FUTURE')) {
+            return finish({ ...base, error: 'ANCHOR_IN_FUTURE' })
+          }
+          if (message.startsWith('ANCHOR_TOO_OLD')) {
+            return finish({
+              ...base,
+              error: 'ANCHOR_TOO_OLD',
+              warnings: [
+                'The default weekend close is more than 366 days before now. Pass an explicit later Friday with anchorDate; this rebuild will not walk unbounded history.',
+              ],
+            })
+          }
+          throw error
+        }
+        const deadlineMs = Date.now() + ADMIN_RESYNC_DEADLINE_MS
+        const windowStartMs = weeklyClose.getTime()
+        const fillWindow: FillHistoryWindow = {
+          weeklyCloseIso: weeklyClose.toISOString(),
+          historyStartYmd,
+          endYmd: toUtcYyyyMmDd(utcCalendarDayAfter(new Date())),
+        }
+
+        const snapshotRequest = {
+          gatewayUri: credentials.gatewayUri,
+          systemName: credentials.systemName,
+          username: credentials.username,
+          password: credentials.password,
+          fcmId: credentials.fcmId,
+          ibId: credentials.ibId,
+          accountIds: connection.accountIds,
+          accounts: credentials.accounts,
+        }
+
+        const linkedAccount = await prisma.connection.findFirst({
+          where: {
+            id: connection.connectionId,
+            userId,
+            accounts: { some: { number: accountNumber } },
+          },
+          select: { id: true },
+        })
+        if (!linkedAccount) {
+          return finish({ ...base, error: 'CONNECTION_UNLINKED' })
+        }
+
+        guard.throwIfLost()
+        if (Date.now() >= deadlineMs) {
+          return finish({ ...base, error: 'FILL_FETCH_TIMEOUT' })
+        }
+        try {
+          const listed = await connectAndListAccounts({
             gatewayUri: credentials.gatewayUri,
             systemName: credentials.systemName,
             username: credentials.username,
             password: credentials.password,
-            fcmId: credentials.fcmId,
-            ibId: credentials.ibId,
-            accountIds: connection.accountIds,
-            accounts: credentials.accounts,
-            historyStartDate: credentials.historyStartDate,
-            lookbackDays: DEFAULT_LOOKBACK_DAYS,
-            seenIdentityKeys: new Set(),
+            deadlineMs,
+          })
+          if (listed.fcmId) snapshotRequest.fcmId = listed.fcmId
+          if (listed.ibId) snapshotRequest.ibId = listed.ibId
+          if (listed.accounts.length > 0) {
+            snapshotRequest.accounts = listed.accounts
+            snapshotRequest.accountIds = listed.accounts.map(
+              (account) => account.accountId,
+            )
+          }
+          if (
+            listed.accounts.length > 0 &&
+            !listed.accounts.some((account) => account.accountId === accountNumber)
+          ) {
+            return finish({ ...base, error: 'ACCOUNT_NOT_FOUND' })
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          if (message.toLowerCase().includes('timeout')) {
+            return finish({ ...base, error: 'FILL_FETCH_TIMEOUT' })
+          }
+          return finish({ ...base, error: 'FETCH_FAILED' })
+        }
+
+        guard.throwIfLost()
+        const remainingForSnapshot = deadlineMs - Date.now()
+        if (remainingForSnapshot <= 0) {
+          return finish({ ...base, error: 'FILL_FETCH_TIMEOUT' })
+        }
+        const beforeSnapshot = await fetchInstrumentPositions({
+          ...snapshotRequest,
+          deadlineMs: remainingForSnapshot,
+        })
+        const beforeUsable = classifyOneSnapshot(beforeSnapshot, accountNumber)
+        if (!beforeUsable.ok) {
+          return finish({
+            ...base,
+            error: beforeUsable.error,
+            warnings: [
+              `Broker position snapshot refused (${beforeUsable.error}${beforeUsable.reason ? `: ${beforeUsable.reason}` : ''}).`,
+            ],
+          })
+        }
+
+        let incomingFills: RithmicProtocolFill[]
+        let commissionRates: Map<string, number>
+        let commissionStatus: 'ok' | 'empty' | 'failed' = 'ok'
+        let coverage: AdminFillWindowCoverage[] = []
+        let fetchStartYmd = historyStartYmd
+        let orderHistoryDates: string[] = []
+        const lastFlatYmd = lastFlatYmdBeforeAnchor(storedFills, windowStartMs)
+        try {
+          if (Date.now() >= deadlineMs) {
+            return finish({ ...base, error: 'FILL_FETCH_TIMEOUT' })
+          }
+          guard.throwIfLost()
+          const fetched = await fetchAdminRebuildFills({
+            gatewayUri: credentials.gatewayUri,
+            systemName: credentials.systemName,
+            username: credentials.username,
+            password: credentials.password,
+            fcmId: snapshotRequest.fcmId,
+            ibId: snapshotRequest.ibId,
+            accountId: accountNumber,
+            accounts: snapshotRequest.accounts,
+            historyStartDate: historyStartYmd,
+            ordinaryStartDate: credentials.historyStartDate,
+            lastFlatYmd,
+            occupiedFillDays: storedFills.map((fill) => fillDateYyyymmdd(fill)),
+            deadlineMs: deadlineMs - ADMIN_TRANSACTION_RESERVE_MS,
           })
           incomingFills = fetched.rawFills.filter(
             (fill) => fill.accountId === accountNumber,
           )
           commissionRates = fetched.commissionRates
+          commissionStatus = fetched.commissionStatus
+          coverage = fetched.coverage
+          fetchStartYmd = fetched.fetchStartYmd
+          orderHistoryDates = fetched.orderHistoryDates
+          fillWindow.coverage = coverage
+          fillWindow.coverageReachesAnchor = coverageReachesAnchor({
+            coverage,
+            historyStartYmd,
+          })
+          if (fetched.fcmId) snapshotRequest.fcmId = fetched.fcmId
+          if (fetched.ibId) snapshotRequest.ibId = fetched.ibId
+          if (fetched.listedAccounts.length > 0) {
+            snapshotRequest.accounts = fetched.listedAccounts
+          }
         } catch (error) {
           if (error instanceof ProtocolSyncLockError) throw error
+          if (error instanceof AdminFillFetchError) {
+            return finish({
+              ...base,
+              error: error.code,
+              diagnostics: error.diagnostics,
+            })
+          }
           console.error('[ADMIN-RESYNC] upstream fetch failed', error)
-          return { ...base, error: 'FETCH_FAILED' }
+          return finish({ ...base, error: 'FETCH_FAILED' })
         }
 
-        const existing = await loadExistingProtocolTrades(userId, accountNumber)
-        const hasStoredData =
-          before.tradeCount > 0 ||
-          before.fillCount > 0 ||
-          storedFills.length > 0 ||
-          existing.length > 0
-
-        if (incomingFills.length === 0 && hasStoredData) {
-          return { ...base, error: 'EMPTY_UPSTREAM_HISTORY' }
+        const timestampError = incomingFillTimestampError(
+          incomingFills,
+          historyStartYmd,
+        )
+        if (timestampError) {
+          return finish({ ...base, error: timestampError })
         }
 
-        const merged = mergeFillLedgers(storedFills, incomingFills)
-        const prepared = prepareRithmicProtocolFills(merged)
-        const fillPartition = partitionIncomingFills(incomingFills, storedFills)
-        const ledgerFillIds = canonicalLedgerFillIds(merged)
-        const uncovered = uncoveredProtocolTrades(existing, ledgerFillIds)
+        const windowIncoming = windowFillsFrom(incomingFills, windowStartMs)
+        const inWindowExisting = existing.filter(
+          (row) => !isPreAnchorTrade(row, windowStartMs),
+        )
+        const preAnchorExisting = existing.filter((row) =>
+          isPreAnchorTrade(row, windowStartMs),
+        )
+        const inWindowStoredFills = windowFillsFrom(storedFills, windowStartMs)
+
+        if (windowIncoming.some((fill) => !fillHasUsablePrice(fill))) {
+          return finish({ ...base, error: 'FILLS_MISSING_PRICE' })
+        }
+
+        if (
+          windowIncoming.length === 0 &&
+          (inWindowExisting.length > 0 || inWindowStoredFills.length > 0)
+        ) {
+          return finish({ ...base, error: 'EMPTY_UPSTREAM_HISTORY' })
+        }
+
+        const ordinaryStart = resolveOrdinaryHistoryStartUtc(
+          credentials.historyStartDate,
+        )
+        const ordinaryStartYmd = toUtcYyyyMmDd(ordinaryStart)
+        if (
+          ordinaryStartYmd < fetchStartYmd &&
+          !skippedOrdinaryRangeIsQuiet({
+            ordinaryStartYmd,
+            fetchStartYmd,
+            storedFills,
+            orderHistoryDates,
+            lastFlatYmd,
+          })
+        ) {
+          return finish({
+            ...base,
+            error: 'ORDINARY_RANGE_UNFETCHABLE',
+            diagnostics: {
+              windows: coverage.slice(0, ADMIN_DIAGNOSTIC_LIMIT).map((window) => ({
+                startYmd: window.startYmd,
+                endYmd: window.endYmd,
+                historyStatus: window.historyStatus,
+                resolved: window.resolved,
+              })),
+            },
+          })
+        }
+        const ordinaryEligibleIncoming = fillsInOrdinaryFetchRange(
+          incomingFills,
+          ordinaryStart.getTime(),
+          ordinaryStartYmd,
+        )
+
+        if (Date.now() >= deadlineMs - ADMIN_TRANSACTION_RESERVE_MS) {
+          return finish({ ...base, error: 'FILL_FETCH_TIMEOUT' })
+        }
+        guard.throwIfLost()
+        const afterBrokerSnapshot = await fetchInstrumentPositions({
+          ...snapshotRequest,
+          deadlineMs: Math.max(1, deadlineMs - Date.now() - ADMIN_TRANSACTION_RESERVE_MS),
+        })
+        const bracket = classifyAdminSnapshots({
+          before: beforeSnapshot,
+          after: afterBrokerSnapshot,
+          accountId: accountNumber,
+          fillTimesMs: windowIncoming.map((fill) => fillTimestampMs(fill)),
+        })
+        if (!bracket.ok) {
+          return finish({
+            ...base,
+            error: bracket.error,
+            warnings: [
+              `Broker position snapshot refused (${bracket.error}${bracket.reason ? `: ${bracket.reason}` : ''}).`,
+            ],
+          })
+        }
+        const snapshotStatus = 'ok' as const
+        const snapshotReason = undefined
+
+        const prepared = prepareRithmicProtocolFills(windowIncoming)
+        const merged = mergeFillLedgers(storedFills, windowIncoming)
+        const fillPartition = partitionIncomingFills(windowIncoming, storedFills)
+        const missingStoredFills = storedFillsMissingUpstream(
+          inWindowStoredFills,
+          windowIncoming,
+        )
+        const uncovered = uncoveredTradesByFillIdentity(
+          inWindowExisting,
+          windowIncoming,
+        )
+
+        const scopedPositions = bracket.positions.filter(
+          (position) => position.accountId === accountNumber,
+        )
+        const positionChecks = computeOpeningPositionChecks({
+          fills: prepared.fills,
+          positions: scopedPositions,
+          accountId: accountNumber,
+        })
+        const notFlat = nonFlatOpeningChecks(positionChecks)
+        const openingNotFlatReport = formatOpeningNotFlatReport(positionChecks)
 
         const tickDetails = await prisma.tickDetails.findMany({
           select: { ticker: true, tickSize: true, tickValue: true },
@@ -500,20 +961,101 @@ export async function resyncRithmicProtocolAccount(params: {
             { tickSize: tick.tickSize, tickValue: tick.tickValue },
           ]),
         )
-        const derived = buildTradesFromRithmicFills(
-          prepared.fills,
+        const derivedTrades: ReturnType<typeof buildTradesFromRithmicFills>['trades'] = []
+        let openSkipped = 0
+        let fifoSkipped = false
+        let fifoOpenLotsMismatch = false
+        for (const [, symbolFills] of groupFillsByExactSymbol(prepared.fills)) {
+          const symbol = (symbolFills[0]?.symbol || '').trim().toUpperCase()
+          const derived = buildTradesFromRithmicFills(
+            symbolFills,
+            userId,
+            tickBySymbol,
+            commissionRates,
+          )
+          derivedTrades.push(...derived.trades)
+          openSkipped += derived.openSkipped
+          if (Object.values(derived.skipped).some((count) => count > 0)) {
+            fifoSkipped = true
+          }
+          const pEnd = Math.abs(
+            positionChecks.find((row) => row.symbol === symbol)?.pEnd ?? 0,
+          )
+          if (derived.openSkipped !== pEnd) fifoOpenLotsMismatch = true
+        }
+
+        // Next ordinary sync sees stored plus the in-window upserts, then
+        // every fill in its eligible fetch range — including unstored window
+        // fills between the anchor and historyStartDate / lookback.
+        const ordinaryPrepared = deriveTradesFromFillLedger(
+          mergeFillLedgers(storedFills, windowIncoming),
+          ordinaryEligibleIncoming,
+        )
+        const ordinaryDerived = buildTradesFromRithmicFills(
+          ordinaryPrepared.fills,
           userId,
           tickBySymbol,
           commissionRates,
         )
-        const withIds = derived.trades.map((trade) => ({
+        const ordinaryInWindow = inWindowDerivedTrades(
+          ordinaryDerived.trades,
+          windowStartMs,
+        )
+        const ordinaryOpenLots = residualOpenLots(ordinaryPrepared.fills)
+        const rebuildOpenLots = residualOpenLots(prepared.fills)
+        const ordinaryOpenLotsDiverge = !residualOpenLotsMatch(
+          ordinaryOpenLots,
+          rebuildOpenLots,
+        )
+        const ordinaryDiverges =
+          !ordinarySyncTradesMatchRebuild(ordinaryInWindow, derivedTrades) ||
+          ordinaryOpenLotsDiverge
+        const rebuildInstruments = [
+          ...new Set(
+            prepared.fills
+              .map((fill) => normalizeInstrument(fill.symbol))
+              .filter(Boolean),
+          ),
+        ]
+        const fifoTimestampTie =
+          fifoTieChangesOutcome(ordinaryPrepared.fills, {
+            instruments: rebuildInstruments,
+            windowStartMs,
+          }) ||
+          fifoTieChangesOutcome(prepared.fills, {
+            instruments: rebuildInstruments,
+            windowStartMs,
+          })
+
+        const withIds = derivedTrades.map((trade) => ({
           ...trade,
           userId,
           id: generatePersistedTradeUUID({ ...trade, userId }),
         }))
-        const attached = reattachProtocolTradeAnnotations(withIds, existing)
-        if (existing.length > 0 && attached.trades.length === 0 && uncovered.length === 0) {
-          return { ...base, error: 'EMPTY_REBUILD' }
+        const attached = reattachProtocolTradeAnnotations(withIds, inWindowExisting)
+        let commissionQuantityChanged = false
+        const missingProductRate = attached.trades.some((trade) => {
+          const product = normalizeInstrument(trade.instrument ?? '')
+          return !commissionRates.has(commissionRateKey(accountNumber, product))
+        })
+        if (commissionStatus !== 'ok') {
+          for (const trade of attached.trades) {
+            const stored = inWindowExisting.find((row) => row.id === trade.id)
+            if (stored && stored.quantity != null && stored.quantity !== trade.quantity) {
+              commissionQuantityChanged = true
+              continue
+            }
+            if (stored && typeof stored.commission === 'number') {
+              trade.commission = stored.commission
+            }
+          }
+        }
+        if (
+          inWindowExisting.length > 0 &&
+          attached.trades.length === 0 &&
+          uncovered.length === 0
+        ) {
+          return finish({ ...base, error: 'EMPTY_REBUILD' })
         }
 
         const duplicateIds = duplicateRebuildTradeIds(
@@ -524,24 +1066,86 @@ export async function resyncRithmicProtocolAccount(params: {
           rebuiltIds: attached.trades.map((trade) => trade.id),
           uncoveredIds: uncovered.map((row) => row.id),
           unmatchedIds: attached.unmatched.map((row) => row.id),
-          allowUnmatchedAnnotations: Boolean(params.allowUnmatchedAnnotations),
+          allowUnmatchedAnnotations: false,
+          retainIds: preAnchorExisting.map((row) => row.id),
         })
+        const ordinaryWithIds = ordinaryDerived.trades.map((trade) => ({
+          ...trade,
+          userId,
+          id: generatePersistedTradeUUID({ ...trade, userId }),
+        }))
+        const ledgerFillIds = new Set(
+          ordinaryPrepared.fills
+            .map((fill) => canonicalRithmicFillId(fill.fillId))
+            .filter((id): id is string => Boolean(id)),
+        )
+        const phantomIds = phantomProtocolTradeIds({
+          existing,
+          derived: ordinaryWithIds,
+          ledgerFillIds,
+        })
+        const ordinaryWouldReapKept = phantomIds.some((id) =>
+          swap.keepIds.includes(id),
+        )
         const nets = summarizeFillLedgerNets(prepared.fills)
         const warnings = rebuildWarnings({
           nets,
           storedFills,
-          incomingFills,
+          incomingFills: windowIncoming,
           existing,
           uncoveredCount: uncovered.length,
         })
+        if (notFlat.length > 0) {
+          warnings.push(openingNotFlatReport)
+        }
+        if (fifoOpenLotsMismatch) {
+          warnings.push(
+            'FIFO leftover lots did not match broker P_end per exact symbol. Live apply refuses with FIFO_OPEN_LOTS.',
+          )
+        }
+        if (fifoSkipped) {
+          warnings.push(
+            'FIFO skipped malformed fills. Live apply refuses with FIFO_SKIPPED_FILLS.',
+          )
+        }
+        if (ordinaryDiverges) {
+          warnings.push(
+            ordinaryOpenLotsDiverge
+              ? 'Ordinary-sync residual open lots do not match the rebuild. Live apply refuses with ORDINARY_SYNC_DIVERGENCE. Policy: there is no ledger-repair path; resolve the gap or pick another Friday.'
+              : 'Ordinary-sync FIFO on the proposed merged ledger does not match the rebuild plan. Live apply refuses with ORDINARY_SYNC_DIVERGENCE. Policy: there is no ledger-repair path for doubled split-piece volume or same-identity clock mismatch.',
+          )
+        }
+        if (fifoTimestampTie) {
+          warnings.push(
+            'Reversing same-ms fills in a rebuilt instrument book would change trade fingerprints or residual lots. Live apply refuses with FIFO_TIMESTAMP_TIE. Same-side same-price ties are ignored.',
+          )
+        }
+        if (ordinaryWouldReapKept) {
+          warnings.push(
+            'The next ordinary sync would reap a retained row as a phantom. Live apply refuses with ORDINARY_SYNC_REAP.',
+          )
+        }
+        if (
+          credentials.historyStartDate &&
+          historyStartYmd < credentials.historyStartDate
+        ) {
+          warnings.push(
+            `Rebuild window ${historyStartYmd} starts before the connection historyStartDate ${credentials.historyStartDate}.`,
+          )
+        }
         if (duplicateIds.length > 0) {
           warnings.push(
             `Rebuild would produce duplicate trade ids (${duplicateIds.join(', ')}). Live apply refuses with DUPLICATE_TRADE_IDS.`,
           )
         }
-        if (params.allowUnmatchedAnnotations && attached.unmatched.length > 0) {
+        if (params.allowUnmatchedAnnotations) {
           warnings.push(
-            'allowUnmatchedAnnotations keeps unmatched annotated rows alongside rebuilt FIFO trades. proposed.pnl is FIFO-only; kept-row P&L is extra and legs can overlap.',
+            'allowUnmatchedAnnotations is ignored. Unmatched annotated rows must be resolved before apply.',
+          )
+        }
+        if (commissionStatus !== 'ok') {
+          warnings.push(
+            'COMMISSION_RATES_UNAVAILABLE: Product RMS returned no rates; rematched rows keep stored commission. Policy: plants without rates, and genuine stored zeros with empty RMS, refuse. There is no commission-repair path.',
           )
         }
         const deletedPnl = existing
@@ -555,10 +1159,15 @@ export async function resyncRithmicProtocolAccount(params: {
         const proposed = proposedSnapshot({
           trades: attached.trades,
           fillCount: merged.length,
-          openSkipped: derived.openSkipped,
+          openSkipped,
           annotatedPreserved: attached.preserved,
           unmatchedAnnotations: attached.unmatched.length,
           nets,
+          positionChecks,
+          snapshotStatus,
+          snapshotReason,
+          fillWindow,
+          openingNotFlatReport: openingNotFlatReport || undefined,
           ledgerRowsAfterMerge: merged.length,
           consolidatedFills: prepared.fills.length,
           fillsInserted: fillPartition.inserts.length,
@@ -570,55 +1179,125 @@ export async function resyncRithmicProtocolAccount(params: {
           unmatchedAnnotatedTrades: attached.unmatched.map(tradePreview),
         })
 
-        if (duplicateIds.length > 0 && !params.dryRun) {
-          return {
-            ...base,
-            wouldDelete,
-            proposed,
-            warnings,
-            error: 'DUPLICATE_TRADE_IDS',
-          }
-        }
-
-        if (uncovered.length > 0 && !params.dryRun) {
-          return {
-            ...base,
-            wouldDelete,
-            proposed,
-            warnings,
-            error: 'UNCOVERED_TRADES',
-          }
-        }
-
-        if (
-          attached.unmatched.length > 0 &&
-          !params.allowUnmatchedAnnotations &&
-          !params.dryRun
-        ) {
-          return {
-            ...base,
-            wouldDelete,
-            proposed,
-            warnings,
-            error: 'UNMATCHED_ANNOTATIONS',
-          }
-        }
-
-        console.log(
-          `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} dryRun=${params.dryRun} ` +
-            `beforeTrades=${before.tradeCount} beforeFills=${before.fillCount} ` +
-            `proposedTrades=${proposed.tradeCount} proposedFills=${proposed.fillCount} ` +
-            `uncovered=${proposed.uncoveredTrades.length} unmatchedAnnotations=${proposed.unmatchedAnnotations}`,
+        const ordinaryPrefix = ordinaryEligibleIncoming.filter(
+          (fill) => fillTimestampMs(fill) < windowStartMs,
         )
+        const unstoredOrdinaryPrefix = storedFillsMissingUpstream(
+          ordinaryPrefix,
+          storedFills,
+        )
+        const diagnostics = {
+          fills: boundFillDiagnostics([
+            ...unstoredOrdinaryPrefix,
+            ...missingStoredFills,
+            ...uncovered.flatMap((trade) => [
+              {
+                fillId: trade.entryId ?? undefined,
+                fillDate: trade.entryDate ?? undefined,
+                symbol: trade.instrument,
+              },
+              {
+                fillId: trade.closeId ?? undefined,
+                fillDate: trade.closeDate ?? undefined,
+                symbol: trade.instrument,
+              },
+            ]),
+          ]),
+          windows: coverage.slice(0, ADMIN_DIAGNOSTIC_LIMIT).map((window) => ({
+            startYmd: window.startYmd,
+            endYmd: window.endYmd,
+            historyStatus: window.historyStatus,
+            resolved: window.resolved,
+          })),
+          positions: notFlat.slice(0, ADMIN_DIAGNOSTIC_LIMIT).map((row) => ({
+            symbol: row.symbol,
+            netQuantity: row.p0,
+          })),
+        }
+
+        if (notFlat.length > 0) {
+          return finish({
+            ...base,
+            wouldDelete,
+            proposed,
+            warnings,
+            error: 'OPENING_NOT_FLAT',
+            diagnostics,
+          })
+        }
+        const wouldRefuseReasons: string[] = []
+        if (fifoOpenLotsMismatch) wouldRefuseReasons.push('FIFO_OPEN_LOTS')
+        if (fifoSkipped) wouldRefuseReasons.push('FIFO_SKIPPED_FILLS')
+        if (ordinaryDiverges) wouldRefuseReasons.push('ORDINARY_SYNC_DIVERGENCE')
+        if (fifoTimestampTie) wouldRefuseReasons.push('FIFO_TIMESTAMP_TIE')
+        if (ordinaryWouldReapKept) wouldRefuseReasons.push('ORDINARY_SYNC_REAP')
+        if (duplicateIds.length > 0) wouldRefuseReasons.push('DUPLICATE_TRADE_IDS')
+        if (uncovered.length > 0) wouldRefuseReasons.push('UNCOVERED_TRADES')
+        if (missingStoredFills.length > 0) {
+          wouldRefuseReasons.push('STORED_FILL_MISSING_UPSTREAM')
+        }
+        if (attached.unmatched.length > 0) {
+          wouldRefuseReasons.push('UNMATCHED_ANNOTATIONS')
+        }
+        const newZeroCommission =
+          (commissionStatus !== 'ok' &&
+            attached.trades.some((trade) => !trade.commission)) ||
+          (commissionStatus === 'ok' && missingProductRate) ||
+          commissionQuantityChanged
+        if (newZeroCommission) {
+          wouldRefuseReasons.push('COMMISSION_RATES_UNAVAILABLE')
+        }
+
+        if (wouldRefuseReasons.length > 0) {
+          if (params.dryRun) {
+            return finish({
+              ...base,
+              complete: true,
+              wouldDelete,
+              proposed,
+              warnings,
+              wouldRefuse: true,
+              wouldRefuseReasons,
+              diagnostics,
+            })
+          }
+          return finish({
+            ...base,
+            wouldDelete,
+            proposed,
+            warnings,
+            error: wouldRefuseReasons[0],
+            diagnostics,
+          })
+        }
 
         if (params.dryRun) {
-          return {
+          return finish({
             ...base,
             complete: true,
             wouldDelete,
             proposed,
             warnings,
-          }
+          })
+        }
+
+        if (!snapshotIsFresh(afterBrokerSnapshot)) {
+          return finish({
+            ...base,
+            wouldDelete,
+            proposed,
+            warnings,
+            error: 'POSITION_SNAPSHOT_STALE',
+          })
+        }
+        if (Date.now() + ADMIN_TRANSACTION_RESERVE_MS > deadlineMs) {
+          return finish({
+            ...base,
+            wouldDelete,
+            proposed,
+            warnings,
+            error: 'FILL_FETCH_TIMEOUT',
+          })
         }
 
         let deletedTrades = 0
@@ -657,6 +1336,18 @@ export async function resyncRithmicProtocolAccount(params: {
                 throw new AdminApplyError('CONCURRENT_SYNC')
               }
 
+              const stillLinked = await tx.connection.findFirst({
+                where: {
+                  id: connection.connectionId,
+                  userId,
+                  accounts: { some: { number: accountNumber } },
+                },
+                select: { id: true },
+              })
+              if (!stillLinked) {
+                throw new AdminApplyError('CONNECTION_UNLINKED')
+              }
+
               const accountRows = await tx.account.findMany({
                 where: { userId, number: accountNumber },
                 select: { id: true, number: true },
@@ -667,7 +1358,7 @@ export async function resyncRithmicProtocolAccount(params: {
 
               await upsertRithmicProtocolFills({
                 userId,
-                fills: incomingFills,
+                fills: windowIncoming,
                 stored: storedFills,
                 accountIdByNumber,
                 connectionId: connection.connectionId,
@@ -713,7 +1404,7 @@ export async function resyncRithmicProtocolAccount(params: {
                 }
               }
             },
-            { timeout: 120_000, maxWait: 15_000 },
+            { timeout: ADMIN_TRANSACTION_RESERVE_MS, maxWait: 15_000 },
           )
         } catch (error) {
           if (error instanceof ProtocolSyncLockError) throw error
@@ -723,11 +1414,15 @@ export async function resyncRithmicProtocolAccount(params: {
               : error instanceof Error && error.message === 'CONCURRENT_SYNC'
                 ? 'CONCURRENT_SYNC'
                 : undefined
-          if (code === 'CONCURRENT_SYNC' || code === 'INSERT_MISMATCH') {
-            return { ...base, proposed, warnings, error: code }
+          if (
+            code === 'CONCURRENT_SYNC' ||
+            code === 'INSERT_MISMATCH' ||
+            code === 'CONNECTION_UNLINKED'
+          ) {
+            return finish({ ...base, proposed, warnings, error: code })
           }
           console.error('[ADMIN-RESYNC] apply failed; stored ledger left unchanged', error)
-          return { ...base, proposed, warnings, error: 'APPLY_FAILED' }
+          return finish({ ...base, proposed, warnings, error: 'APPLY_FAILED' })
         }
 
         try {
@@ -755,13 +1450,7 @@ export async function resyncRithmicProtocolAccount(params: {
             savedCount: createdCount,
             tradesCount: afterSnapshot.tradeCount,
           }
-          console.log(
-            `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} dryRun=false ` +
-              `deletedTrades=${deletedTrades} deletedFills=0 created=${createdCount} ` +
-              `beforeTrades=${before.tradeCount} afterTrades=${after.tradeCount} ` +
-              `saved=${after.savedCount}`,
-          )
-          return {
+          return finish({
             ...base,
             complete: true,
             committed: true,
@@ -770,10 +1459,10 @@ export async function resyncRithmicProtocolAccount(params: {
             warnings,
             deleted: { trades: deletedTrades, fills: 0 },
             after,
-          }
+          })
         } catch (error) {
           console.error('[ADMIN-RESYNC] post-commit read failed', error)
-          return {
+          return finish({
             ...base,
             complete: true,
             committed: true,
@@ -796,15 +1485,21 @@ export async function resyncRithmicProtocolAccount(params: {
               tradesCount: proposed.tradeCount + swap.keepIds.length,
             },
             error: 'POST_COMMIT_WARNING',
-          }
+          })
         }
       },
     )
   } catch (error) {
     if (error instanceof ProtocolSyncLockError) {
+      console.log(
+        `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} error=${error.code}`,
+      )
       return { ...unlockedBase, error: error.code }
     }
-    console.error('[ADMIN-RESYNC] failed before apply', error)
+    console.error(
+      `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} error=SYNC_FAILED`,
+      error,
+    )
     return { ...unlockedBase, error: 'SYNC_FAILED' }
   }
 }
@@ -816,6 +1511,11 @@ function proposedSnapshot(params: {
   annotatedPreserved: number
   unmatchedAnnotations: number
   nets: FillLedgerNet[]
+  positionChecks: OpeningPositionCheck[]
+  snapshotStatus: 'ok'
+  snapshotReason?: string
+  fillWindow?: FillHistoryWindow
+  openingNotFlatReport?: string
   ledgerRowsAfterMerge: number
   consolidatedFills: number
   fillsInserted: number
@@ -834,6 +1534,11 @@ function proposedSnapshot(params: {
     annotatedPreserved: params.annotatedPreserved,
     unmatchedAnnotations: params.unmatchedAnnotations,
     nets: params.nets,
+    positionChecks: params.positionChecks,
+    snapshotStatus: params.snapshotStatus,
+    snapshotReason: params.snapshotReason,
+    fillWindow: params.fillWindow,
+    openingNotFlatReport: params.openingNotFlatReport,
     ledgerRowsAfterMerge: params.ledgerRowsAfterMerge,
     consolidatedFills: params.consolidatedFills,
     fillsInserted: params.fillsInserted,
@@ -856,12 +1561,12 @@ function rebuildWarnings(params: {
   const warnings: string[] = []
   if (params.nets.length > 0) {
     warnings.push(
-      'Terminal fill net is non-zero. A rebuild from fills alone cannot tell a live position from missing opening history; supply a broker position snapshot before altering fills.',
+      'Window fill net is non-zero. Broker P_end must match that net so P_0 is 0; a non-zero P_0 refuses with OPENING_NOT_FLAT.',
     )
   }
   if (params.uncoveredCount > 0) {
     warnings.push(
-      `${params.uncoveredCount} stored protocol trade(s) have legs outside the merged fill ledger. Live apply refuses with UNCOVERED_TRADES so those rows are not deleted.`,
+      `${params.uncoveredCount} stored protocol trade(s) have legs that are not in the raw in-window fills (identity includes id, time, side, quantity, and price). Live apply refuses with UNCOVERED_TRADES so those rows are not deleted.`,
     )
   }
   const storedFillEarliest = earliestFillClock(params.storedFills)
@@ -879,7 +1584,7 @@ function rebuildWarnings(params: {
     incomingEarliest > storedEarliest
   ) {
     warnings.push(
-      'Upstream history starts later than stored fills or trades. Stored fills were kept and merged; uncovered trades are retained and live apply refuses rather than deleting history the window cannot recreate.',
+      'Upstream history starts later than stored fills or trades. Pre-anchor rows are retained; in-window uncovered trades refuse live apply rather than deleting history the window cannot recreate.',
     )
   }
   return warnings
