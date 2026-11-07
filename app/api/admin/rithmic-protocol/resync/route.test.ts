@@ -63,21 +63,27 @@ describe('POST /api/admin/rithmic-protocol/resync', () => {
     expect(resyncRithmicProtocolAccount).not.toHaveBeenCalled()
   })
 
-  it('rejects omitted dryRun so a live delete cannot be implied', async () => {
+  it('defaults omitted dryRun to a preview so a live delete cannot be implied', async () => {
     authorizeAdminRequest.mockResolvedValue({
       ok: true,
       via: 'session',
       actorUserId: 'admin-1',
     })
+    resyncRithmicProtocolAccount.mockResolvedValue({
+      dryRun: true,
+      complete: true,
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      before: { tradeCount: 0, pnl: 0, fillCount: 0 },
+    })
     const response = await post({
       userId: 'user-1',
       accountNumber: 'LFE050-I7X0S9B3-TEST001',
     })
-    expect(response.status).toBe(400)
-    await expect(response.json()).resolves.toMatchObject({
-      error: { code: 'bad_request', message: 'dryRun is required.' },
-    })
-    expect(resyncRithmicProtocolAccount).not.toHaveBeenCalled()
+    expect(response.status).toBe(200)
+    expect(resyncRithmicProtocolAccount).toHaveBeenCalledWith(
+      expect.objectContaining({ dryRun: true }),
+    )
   })
 
   it.each([
@@ -127,7 +133,38 @@ describe('POST /api/admin/rithmic-protocol/resync', () => {
       actor: 'admin-1',
       connectionId: undefined,
       allowUnmatchedAnnotations: undefined,
+      anchorDate: undefined,
     })
+  })
+
+  it('maps OPENING_NOT_FLAT to 409 with the proposed P_0 report', async () => {
+    authorizeAdminRequest.mockResolvedValue({
+      ok: true,
+      via: 'session',
+      actorUserId: 'admin-1',
+    })
+    resyncRithmicProtocolAccount.mockResolvedValue({
+      dryRun: true,
+      complete: false,
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      before: { tradeCount: 1, pnl: 10, fillCount: 2 },
+      error: 'OPENING_NOT_FLAT',
+      proposed: {
+        openingNotFlatReport: 'MESZ6: P_0=+2',
+        positionChecks: [{ symbol: 'MESZ6', p0: 2, pEnd: 0, net: -2 }],
+      },
+    })
+    const response = await post({
+      userId: 'user-1',
+      accountNumber: 'LFE050-I7X0S9B3-TEST001',
+      dryRun: true,
+    })
+    expect(response.status).toBe(409)
+    const body = await response.json()
+    expect(body.error.code).toBe('conflict')
+    expect(body.result.error).toBe('OPENING_NOT_FLAT')
+    expect(body.result.proposed.openingNotFlatReport).toContain('P_0=+2')
   })
 
   it('returns a non-2xx body with result after an empty rebuild', async () => {

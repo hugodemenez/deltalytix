@@ -26,12 +26,13 @@ function readOptionalString(value: unknown): string | undefined {
  * destructive path; keep it restricted to operator scripts. A dedicated
  * resync secret is not required yet.
  *
- * POST { userId, accountNumber, dryRun: boolean, connectionId?: string,
- *        allowUnmatchedAnnotations?: boolean }
+ * POST { userId, accountNumber, dryRun?: boolean, connectionId?: string,
+ *        allowUnmatchedAnnotations?: boolean, anchorDate?: string }
  *
- * `dryRun` is required and must be a JSON boolean. Omitted or `"true"`/1
- * are rejected. `dryRun: true` fetches upstream and reports the proposed
- * rebuild without writing.
+ * Dry-run is the default. Omitted `dryRun` previews without writing.
+ * `dryRun: false` is required to apply. Non-boolean values are rejected.
+ * `anchorDate` is a YYYY-MM-DD or ISO timestamp snapped to the CME Friday
+ * 17:00 CT close.
  */
 export async function POST(request: NextRequest) {
   const auth = await authorizeAdminRequest(request)
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
     return jsonError({
       code: 'bad_request',
       message: 'Request body must be JSON.',
-      hint: 'Send { userId, accountNumber, dryRun: boolean }.',
+      hint: 'Send { userId, accountNumber, dryRun?: boolean, anchorDate?: string }.',
     })
   }
 
@@ -72,19 +73,11 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  if (!('dryRun' in payload)) {
+  if ('dryRun' in payload && typeof payload.dryRun !== 'boolean') {
     return jsonError({
       code: 'bad_request',
-      message: 'dryRun is required.',
-      hint: 'Pass dryRun: true to preview the rebuild or dryRun: false to apply it.',
-      details: [{ field: 'dryRun', message: 'Missing. A JSON boolean is required.' }],
-    })
-  }
-  if (typeof payload.dryRun !== 'boolean') {
-    return jsonError({
-      code: 'bad_request',
-      message: 'dryRun must be a boolean.',
-      hint: 'Pass dryRun: true or dryRun: false. Strings and numbers are rejected.',
+      message: 'dryRun must be a boolean when provided.',
+      hint: 'Omit dryRun (defaults to true) or pass dryRun: true / dryRun: false. Strings and numbers are rejected.',
       details: [{ field: 'dryRun', message: 'Must be a JSON boolean.' }],
     })
   }
@@ -116,7 +109,17 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  const dryRun = payload.dryRun
+  const anchorDate = readOptionalString(payload.anchorDate)
+  if (anchorDate === '') {
+    return jsonError({
+      code: 'bad_request',
+      message: 'anchorDate must be a non-empty string when provided.',
+      hint: 'Pass YYYY-MM-DD or an ISO timestamp, or omit it to use the latest Friday 17:00 CT close before the earliest fill.',
+      details: [{ field: 'anchorDate', message: 'Blank.' }],
+    })
+  }
+
+  const dryRun = typeof payload.dryRun === 'boolean' ? payload.dryRun : true
   try {
     const result = await resyncRithmicProtocolAccount({
       userId,
@@ -128,6 +131,7 @@ export async function POST(request: NextRequest) {
         typeof payload.allowUnmatchedAnnotations === 'boolean'
           ? payload.allowUnmatchedAnnotations
           : undefined,
+      anchorDate,
     })
 
     if (!result.error || result.error === 'POST_COMMIT_WARNING') {
@@ -243,6 +247,53 @@ function errorMapping(error: string | undefined): {
         code: 'unprocessable_entity',
         message: 'The stored Protocol credential is incomplete.',
         hint: 'Re-authenticate the connection, then retry.',
+      }
+    case 'OPENING_NOT_FLAT':
+      return {
+        code: 'conflict',
+        message: 'The weekend anchor does not start flat for every symbol.',
+        hint: 'Inspect result.proposed.positionChecks and openingNotFlatReport. Pick an earlier Friday 17:00 CT close. This rebuild never invents opening-seed lots.',
+      }
+    case 'POSITION_SNAPSHOT_UNAVAILABLE':
+    case 'POSITION_SNAPSHOT_MOVED':
+      return {
+        code: 'conflict',
+        message: 'Broker instrument positions could not be trusted for this rebuild.',
+        hint: 'The account must be quiet (before and after snapshots equal) with a complete PnL snapshot. Retry a dry-run once the book is still.',
+      }
+    case 'ACCOUNT_REJECTED':
+    case 'ACCOUNT_NOT_FOUND':
+      return {
+        code: 'conflict',
+        message: 'The broker rejected or did not list this trading account.',
+        hint: 'Confirm the account is live on that Protocol login. A rejected snapshot is never treated as flat.',
+      }
+    case 'FILLS_MISSING_SSBOE':
+    case 'FILLS_MISSING_PRICE':
+      return {
+        code: 'unprocessable_entity',
+        message: 'Upstream fills are missing timestamps or prices.',
+        hint: 'A rebuild refuses fills without ssboe so FIFO cannot fall back to session-open clocks.',
+      }
+    case 'WINDOW_DOES_NOT_REACH_ANCHOR':
+    case 'INCOMPLETE_FILL_HISTORY':
+    case 'FILL_FETCH_TIMEOUT':
+      return {
+        code: 'conflict',
+        message: 'Fill history did not cover the weekend-anchor window.',
+        hint: 'Partial, timed-out, or truncated history is never applied. Retry a dry-run or pick a later anchor the plant can reach.',
+      }
+    case 'FIFO_OPEN_LOTS':
+      return {
+        code: 'conflict',
+        message: 'FIFO leftover lots did not match the broker end position.',
+        hint: 'Inspect result.proposed.positionChecks. Stored trades were left unchanged.',
+      }
+    case 'INVALID_ANCHOR_DATE':
+      return {
+        code: 'bad_request',
+        message: 'anchorDate could not be parsed.',
+        hint: 'Pass YYYY-MM-DD or an ISO timestamp.',
       }
     case 'FETCH_FAILED':
     case 'APPLY_FAILED':
