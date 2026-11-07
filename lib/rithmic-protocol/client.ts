@@ -294,7 +294,10 @@ export class RithmicProtocolClient {
   private sessionOpen = false
   peerAddress: string | undefined
 
-  async connect(gatewayUri: string, options?: { pinAddress?: string }): Promise<void> {
+  async connect(
+    gatewayUri: string,
+    options?: { pinAddress?: string; deadlineMs?: number },
+  ): Promise<void> {
     this.root = await loadRoot()
     const uri = normalizeGatewayUri(gatewayUri)
     this.gatewayUri = uri
@@ -325,6 +328,7 @@ export class RithmicProtocolClient {
       console.log(`[RITHMIC-PROTOCOL] pinning websocket to ${connectUrl} SNI=${servername}`)
     }
 
+    throwIfPastDeadline(options?.deadlineMs)
     await new Promise<void>((resolve, reject) => {
       const socketOptions: RithmicWebSocketOptions = {
         // Rithmic samples disable cert verification for Protocol endpoints.
@@ -336,6 +340,24 @@ export class RithmicProtocolClient {
       }
       const ws = new WebSocket(connectUrl, socketOptions)
       this.ws = ws
+      const waitMs =
+        options?.deadlineMs != null
+          ? remainingMessageWait(options.deadlineMs)
+          : null
+      const timer =
+        waitMs != null
+          ? setTimeout(() => {
+              cleanup()
+              try {
+                ws.terminate()
+              } catch {
+                ws.close()
+              }
+              reject(
+                new Error(`Timed out waiting for Rithmic message after ${waitMs}ms`),
+              )
+            }, waitMs)
+          : null
 
       const onError = (err: Error) => {
         console.warn(
@@ -352,6 +374,7 @@ export class RithmicProtocolClient {
         resolve()
       }
       const cleanup = () => {
+        if (timer) clearTimeout(timer)
         ws.off('open', onOpen)
         ws.off('error', onError)
       }
@@ -1153,6 +1176,8 @@ export class RithmicProtocolClient {
     startDateYyyymmdd: string
     observe?: FillHistoryObserve
     onHistoryDates?: (dates: string[]) => void
+    /** Admin-only: return after listing dates; summaries still filter to start. */
+    datesOnly?: boolean
     deadlineMs?: number
   }): Promise<RithmicProtocolFill[]> {
     await this.send('rti.RequestShowOrderHistoryDates', {
@@ -1185,11 +1210,13 @@ export class RithmicProtocolClient {
       }
     }
 
-    const filtered = dates
-      .map(String)
-      .filter((d) => d.replace(/-/g, '') >= params.startDateYyyymmdd)
-      .sort()
-    params.onHistoryDates?.(filtered)
+    const allDates = dates.map(String).sort()
+    params.onHistoryDates?.(allDates)
+    if (params.datesOnly) return []
+
+    const filtered = allDates.filter(
+      (d) => d.replace(/-/g, '') >= params.startDateYyyymmdd,
+    )
 
     const fills: RithmicProtocolFill[] = []
     for (const date of filtered) {
@@ -1442,7 +1469,10 @@ export async function connectAndListAccounts(params: {
 }): Promise<RithmicProtocolConnectResult> {
   const client = new RithmicProtocolClient()
   try {
-    await client.connect(params.gatewayUri, { pinAddress: params.pinAddress })
+    await client.connect(params.gatewayUri, {
+      pinAddress: params.pinAddress,
+      deadlineMs: params.deadlineMs,
+    })
     const login = await client.login({
       systemName: params.systemName,
       username: params.username,
@@ -1638,12 +1668,13 @@ export async function fetchInstrumentPositions(params: {
 
   const client = new RithmicProtocolClient()
   try {
-    await client.connect(params.gatewayUri)
+    await client.connect(params.gatewayUri, { deadlineMs: params.deadlineMs })
     const login = await client.login({
       systemName: params.systemName,
       username: params.username,
       password: params.password,
       infraType: PNL_PLANT,
+      deadlineMs: params.deadlineMs,
     })
     const fcmId = params.fcmId || login.fcmId
     const ibId = params.ibId || login.ibId

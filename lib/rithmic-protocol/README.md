@@ -206,29 +206,36 @@ unchanged. The rebuild:
   after the fill fetch. Completion requires `rp_code 0` on 403, a 451 whose
   `account_id` matches the target (no fallback), and 451 `net_quantity` equal
   to the summed 450 nets. An omitted 451 net is 0 only when every 450 is
-  flat, `rp_code` is 0, and open/buy/sell quantities corroborate. Offsetting
-  omitted 450s that still sum to 0 are a plant-dependent limit when those
-  corroborating fields are also omitted. No-data, missing evidence,
+  flat, `rp_code` is 0, and `open_position_quantity` corroborates. Offsetting
+  omitted 450s that still sum to 0 are a plant-dependent limit when that
+  field is also omitted. An omitted 451 net after an explicit one is a
+  no-op. No-data, missing evidence,
   malformed `net_quantity`, conflicting 450s, a target 450 after 403
   (including a 400ms settle drain), and a moved or stale book all refuse.
   There are no opening-seed lots.
 - Computes `P_0 = P_end − net(fills)` per exact symbol and refuses unless
   every symbol is flat at the anchor.
 - Treats `ShowFillHistory` `rp_code 7` as uncovered until order-history
-  proves retention (`min(dates) ≤ window start`) or every UTC day in the
-  window has a date or fill. One fallback date or fill does not cover a
-  whole no-data window. Future or no-session windows resolve empty. Quiet
-  historical windows still need that evidence. Truncated (10k) windows
-  refuse. Per-window coverage is on `proposed.fillWindow.coverage`.
-- Persists **only in-window fills**. Fetch also walks ordinary sync's
-  eligible range (`historyStartDate` or the 30-day lookback) so the rebuild
-  can simulate that merge. It refuses `ORDINARY_SYNC_DIVERGENCE` when that
-  simulation disagrees, and `ORDINARY_RANGE_UNFETCHABLE` when the range
-  before the anchor cannot be fetched. Same-millisecond ties refuse only
-  when reversing them in a rebuilt instrument book would change fingerprints
-  or residual lots. A next-sync phantom reap also refuses. Policy: there is
-  no ledger-repair path for doubled split-piece volume, same-identity clock
-  mismatch, or plants without RMS rates.
+  proves retention (`min(unfiltered dates) ≤ window start`) or every weekday
+  in the window has a date or fill. One fallback date or fill does not cover
+  a whole no-data window. Future or no-session windows resolve empty.
+  Windows that end before the first order-history date (or earliest stored
+  fill) resolve quiet when no stored fill falls in them. Truncated (10k)
+  windows refuse. Per-window coverage is on `proposed.fillWindow.coverage`.
+  `coverageReachesAnchor` is informational only.
+- Persists **only in-window fills**. Fetch walks from the later of ordinary
+  start, last-flat before the anchor, and a 366-day cap, never after the
+  weekend close. The ordinary-sync simulation merges stored with in-window
+  upserts, then the eligible fetch range, so unstored fills between the
+  anchor and `historyStartDate` are included. It refuses
+  `ORDINARY_SYNC_DIVERGENCE` when that simulation disagrees, and
+  `ORDINARY_RANGE_UNFETCHABLE` when the skipped ordinary prefix is not
+  proven quiet. Same-millisecond ties refuse only when reversing them after
+  the book's last flat point would change fingerprints or residual lots. A
+  next-sync phantom reap also refuses. Stored replay pieces plus a history
+  rollup of the same execution are one fill, not extra volume. Policy: there
+  is no ledger-repair path for doubled split-piece volume, same-identity
+  clock mismatch, or plants without RMS rates.
 - Defaults to dry-run. Live apply needs `dryRun: false`. Dry-run reports
   `wouldRefuse` / `wouldRefuseReasons` when live would not commit. Pre-anchor
   trades are never deleted.
