@@ -19,6 +19,11 @@ import type {
 } from './types'
 import { mapAccountPnLUpdateToBalance } from './balances'
 import {
+  mapInstrumentPnLUpdate,
+  type CapturedInstrumentSnapshot,
+  type RithmicProtocolInstrumentPosition,
+} from './instrument-position'
+import {
   indexProductRmsCommissionRates,
   mapProductRmsCommissionRow,
   type ProductRmsCommissionRow,
@@ -755,6 +760,194 @@ export class RithmicProtocolClient {
   }
 
   /**
+   * Admin-only: same 402 snapshot as balances, but keeps
+   * InstrumentPnLPositionUpdate (450) `net_quantity` per exact symbol.
+   * Ordinary sync does not call this. Incomplete, rejected, or timed-out
+   * accounts are named so a rebuild can refuse instead of inferring flat.
+   */
+  async getInstrumentPnLSnapshots(params: {
+    fcmId?: string
+    ibId?: string
+    accountIds: string[]
+    accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
+    deadlineMs?: number
+  }): Promise<CapturedInstrumentSnapshot> {
+    const positionsByKey = new Map<string, RithmicProtocolInstrumentPosition>()
+    const needed = [...new Set(params.accountIds.map((id) => id.trim()).filter(Boolean))]
+    const completed = new Set<string>()
+    const noDataAccountIds: string[] = []
+    const incompleteAccountIds: string[] = []
+    const rejectedAccountIds: string[] = []
+    const evidenceAccountIds: string[] = []
+    const capturedAtMs = Date.now()
+    const deadline =
+      Date.now() + (params.deadlineMs ?? PNL_SNAPSHOT_TOTAL_BUDGET_MS)
+    let reason: string | undefined
+
+    for (const accountId of needed) {
+      if (Date.now() >= deadline) {
+        reason = 'timeout'
+        incompleteAccountIds.push(accountId)
+        console.warn(
+          '[RITHMIC-PROTOCOL] Instrument PnL snapshot budget exhausted, skipping remaining accounts',
+        )
+        break
+      }
+
+      const plant = params.accounts?.find((account) => account.accountId === accountId)
+      try {
+        await this.send('rti.RequestPnLPositionSnapshot', {
+          templateId: RithmicTemplateId.PNL_POSITION_SNAPSHOT_REQUEST,
+          userMsg: [`deltalytix-admin-pnl-${accountId}`],
+          fcmId: plant?.fcmId || params.fcmId,
+          ibId: plant?.ibId || params.ibId,
+          accountId,
+        })
+      } catch (error) {
+        reason = 'send_failed'
+        incompleteAccountIds.push(accountId)
+        console.warn(
+          `[RITHMIC-PROTOCOL] Instrument PnL snapshot send failed for ${accountId}`,
+          error,
+        )
+        break
+      }
+
+      let outOfTime = false
+      let socketClosed = false
+      let accountComplete = false
+      try {
+        for (;;) {
+          const remaining = deadline - Date.now()
+          if (remaining <= 0) {
+            outOfTime = true
+            break
+          }
+
+          const msg = await this.nextMessage(
+            Math.min(PNL_SNAPSHOT_MESSAGE_TIMEOUT_MS, remaining),
+          )
+
+          if (msg.templateId === RithmicTemplateId.ACCOUNT_PNL_POSITION_UPDATE) {
+            const decoded = decodeMessage<{ accountId?: string }>(
+              this.root!,
+              'rti.AccountPnLPositionUpdate',
+              msg.raw,
+            )
+            const id = decoded.accountId || accountId
+            if (id && !evidenceAccountIds.includes(id)) {
+              evidenceAccountIds.push(id)
+            }
+            continue
+          }
+
+          if (msg.templateId === RithmicTemplateId.INSTRUMENT_PNL_POSITION_UPDATE) {
+            const decoded = decodeMessage<{
+              accountId?: string
+              fcmId?: string
+              ibId?: string
+              symbol?: string
+              exchange?: string
+              netQuantity?: number | string
+              isSnapshot?: boolean
+            }>(this.root!, 'rti.InstrumentPnLPositionUpdate', msg.raw)
+            const position = mapInstrumentPnLUpdate({
+              ...decoded,
+              accountId: decoded.accountId || accountId,
+            })
+            if (position && position.accountId === accountId) {
+              positionsByKey.set(
+                `${position.accountId}|${position.symbol}`,
+                position,
+              )
+            }
+            continue
+          }
+
+          if (msg.templateId === RithmicTemplateId.PNL_POSITION_SNAPSHOT_RESPONSE) {
+            const decoded = decodeMessage<{ rpCode?: string[] }>(
+              this.root!,
+              'rti.ResponsePnLPositionSnapshot',
+              msg.raw,
+            )
+            if (
+              Array.isArray(decoded.rpCode) &&
+              decoded.rpCode.length > 0 &&
+              !rpOk(decoded.rpCode) &&
+              !rpIsNoData(decoded.rpCode)
+            ) {
+              reason = 'rp_error'
+              incompleteAccountIds.push(accountId)
+              console.warn(
+                `[RITHMIC-PROTOCOL] Instrument PnL snapshot failed for ${accountId}: ${rpMessage(decoded.rpCode)}`,
+              )
+              break
+            }
+            if (rpIsNoData(decoded.rpCode)) {
+              noDataAccountIds.push(accountId)
+            }
+            accountComplete = true
+            completed.add(accountId)
+            break
+          }
+
+          if (msg.templateId === RithmicTemplateId.REJECT) {
+            reason = 'rejected'
+            rejectedAccountIds.push(accountId)
+            console.warn(
+              `[RITHMIC-PROTOCOL] Instrument PnL snapshot rejected for account ${accountId}`,
+            )
+            break
+          }
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        socketClosed = message.includes('WebSocket closed')
+        reason = socketClosed ? 'socket_closed' : 'interrupted'
+        incompleteAccountIds.push(accountId)
+        console.warn(
+          `[RITHMIC-PROTOCOL] Instrument PnL snapshot interrupted for ${accountId}`,
+          error,
+        )
+        if (socketClosed) break
+        continue
+      }
+
+      if (outOfTime) {
+        reason = 'timeout'
+        incompleteAccountIds.push(accountId)
+        console.warn(
+          `[RITHMIC-PROTOCOL] Instrument PnL snapshot budget exhausted while waiting on ${accountId}`,
+        )
+        break
+      }
+      if (
+        !accountComplete &&
+        !rejectedAccountIds.includes(accountId) &&
+        !incompleteAccountIds.includes(accountId)
+      ) {
+        incompleteAccountIds.push(accountId)
+        if (!reason) reason = 'incomplete'
+      }
+    }
+
+    const complete = needed.length > 0 && needed.every((id) => completed.has(id))
+    return {
+      positions: [...positionsByKey.values()],
+      complete,
+      reason: complete ? undefined : reason ?? 'incomplete',
+      capturedAtMs,
+      capturedUntilMs: Date.now(),
+      noDataAccountIds,
+      incompleteAccountIds,
+      rejectedAccountIds,
+      missingAccountIds: [],
+      evidenceAccountIds,
+      requestedAccountIds: needed,
+    }
+  }
+
+  /**
    * Fetch fills via ShowFillHistory (template 3512).
    * Prefer trade_date index (YYYYMMDD ints).
    */
@@ -1309,6 +1502,139 @@ export async function fetchAccountBalances(params: {
       deadlineMs: params.deadlineMs,
     })
     return { balances, fcmId, ibId }
+  } finally {
+    await client.close()
+  }
+}
+
+/**
+ * Admin-only live per-symbol net via the Protocol PnL plant
+ * (InstrumentPnLPositionUpdate.net_quantity). Dedicated PNL_PLANT login —
+ * ordinary sync does not call this.
+ */
+export async function fetchInstrumentPositions(params: {
+  gatewayUri: string
+  systemName: string
+  username: string
+  password: string
+  fcmId?: string
+  ibId?: string
+  accountIds: string[]
+  accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
+  deadlineMs?: number
+}): Promise<CapturedInstrumentSnapshot & { fcmId?: string; ibId?: string }> {
+  const accountIds = [
+    ...new Set(params.accountIds.map((id) => id.trim()).filter(Boolean)),
+  ]
+  const capturedAtMs = Date.now()
+  if (accountIds.length === 0) {
+    return {
+      positions: [],
+      complete: false,
+      reason: 'no_accounts',
+      capturedAtMs,
+      capturedUntilMs: capturedAtMs,
+      noDataAccountIds: [],
+      incompleteAccountIds: [],
+      rejectedAccountIds: [],
+      missingAccountIds: [],
+      evidenceAccountIds: [],
+      requestedAccountIds: [],
+      fcmId: params.fcmId,
+      ibId: params.ibId,
+    }
+  }
+
+  const client = new RithmicProtocolClient()
+  try {
+    await client.connect(params.gatewayUri)
+    const login = await client.login({
+      systemName: params.systemName,
+      username: params.username,
+      password: params.password,
+      infraType: PNL_PLANT,
+    })
+    const fcmId = params.fcmId || login.fcmId
+    const ibId = params.ibId || login.ibId
+    const accountMeta = new Map(
+      (params.accounts ?? []).map((account) => [account.accountId, account]),
+    )
+    let listedIds: string[] = []
+    try {
+      const listed = await client.listAccounts({ fcmId, ibId })
+      listedIds = listed.map((account) => account.accountId)
+      for (const account of listed) {
+        accountMeta.set(account.accountId, account)
+      }
+    } catch (error) {
+      console.warn(
+        '[RITHMIC-PROTOCOL] Re-list accounts during admin PnL snapshot failed',
+        error instanceof Error ? error.message : error,
+      )
+      return {
+        positions: [],
+        complete: false,
+        reason: 'account_list_failed',
+        capturedAtMs,
+        capturedUntilMs: Date.now(),
+        noDataAccountIds: [],
+        incompleteAccountIds: accountIds,
+        rejectedAccountIds: [],
+        missingAccountIds: [],
+        evidenceAccountIds: [],
+        requestedAccountIds: accountIds,
+        fcmId,
+        ibId,
+      }
+    }
+
+    const missingAccountIds = accountIds.filter(
+      (id) => listedIds.length > 0 && !listedIds.includes(id),
+    )
+    if (missingAccountIds.length > 0) {
+      return {
+        positions: [],
+        complete: false,
+        reason: 'account_not_found',
+        capturedAtMs,
+        capturedUntilMs: Date.now(),
+        noDataAccountIds: [],
+        incompleteAccountIds: [],
+        rejectedAccountIds: [],
+        missingAccountIds,
+        evidenceAccountIds: [],
+        requestedAccountIds: accountIds,
+        fcmId,
+        ibId,
+      }
+    }
+
+    const snapshot = await client.getInstrumentPnLSnapshots({
+      fcmId,
+      ibId,
+      accountIds,
+      accounts: [...accountMeta.values()],
+      deadlineMs: params.deadlineMs,
+    })
+    return { ...snapshot, fcmId, ibId }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.warn('[RITHMIC-PROTOCOL] Instrument PnL snapshot unavailable', error)
+    return {
+      positions: [],
+      complete: false,
+      reason: message || 'unavailable',
+      capturedAtMs,
+      capturedUntilMs: Date.now(),
+      noDataAccountIds: [],
+      incompleteAccountIds: accountIds,
+      rejectedAccountIds: [],
+      missingAccountIds: [],
+      evidenceAccountIds: [],
+      requestedAccountIds: accountIds,
+      fcmId: params.fcmId,
+      ibId: params.ibId,
+    }
   } finally {
     await client.close()
   }
