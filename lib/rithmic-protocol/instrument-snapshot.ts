@@ -2,9 +2,10 @@
  * Admin-only 450 / 451 / 403 snapshot reducer. Ordinary sync still ignores
  * instrument rows inside `getAccountPnLSnapshots`.
  *
- * Complete means: 403 with rp_code 0, a matching 451 for the account, no
- * no-data, no malformed 450, and no 450 after 403. A missing 450 is flat
- * only when that 451 evidence exists.
+ * Complete means: 403 with rp_code 0, a 451 whose account_id matches the
+ * target (no fallback), 451 net_quantity equals the summed 450 nets, no
+ * no-data, no malformed 450, no conflicting duplicate 450, and no 450 after
+ * 403. A missing 450 is flat only when 451 net_quantity is explicitly 0.
  */
 import {
   inspectInstrumentPnLUpdate,
@@ -23,8 +24,19 @@ function rpIsNoData(rpCode: unknown): boolean {
   return String(rpCode[0]) === '7'
 }
 
+function parseNetQuantity(value: unknown): number | null {
+  if (typeof value === 'number') {
+    if (!Number.isInteger(value)) return null
+    return value
+  }
+  if (typeof value === 'string' && /^-?\d+$/.test(value.trim())) {
+    return Number(value.trim())
+  }
+  return null
+}
+
 export type InstrumentSnapshotSession = {
-  accountPnL(accountId?: string): void
+  accountPnL(accountId?: string, netQuantity?: number | string): void
   instrumentPnL(decoded: InstrumentPnLPositionUpdateFields): void
   snapshotResponse(rpCode: unknown): void
   reject(): void
@@ -46,38 +58,64 @@ export function createInstrumentSnapshotSession(
   let responseSeen = false
   let responseOk = false
   let reason: string | undefined
+  let accountNet: number | null = null
+  let accountNetSeen = false
 
   const touch = (list: string[], id: string) => {
     if (id && !list.includes(id)) list.push(id)
   }
 
   return {
-    accountPnL(id) {
-      const resolved = (id ?? wanted).trim()
-      if (resolved) touch(evidenceAccountIds, resolved)
+    accountPnL(id, netQuantity) {
+      const resolved = String(id ?? '').trim()
+      if (!resolved || resolved !== wanted) return
+      touch(evidenceAccountIds, resolved)
+      if (netQuantity == null) {
+        touch(malformedAccountIds, resolved)
+        reason = reason ?? 'missing_account_net'
+        return
+      }
+      const parsed = parseNetQuantity(netQuantity)
+      if (parsed == null) {
+        touch(malformedAccountIds, resolved)
+        reason = reason ?? 'invalid_account_net'
+        return
+      }
+      if (accountNetSeen && accountNet !== parsed) {
+        touch(malformedAccountIds, resolved)
+        reason = reason ?? 'conflicting_account_net'
+        return
+      }
+      accountNet = parsed
+      accountNetSeen = true
     },
     instrumentPnL(decoded) {
-      const id = String(decoded.accountId ?? wanted).trim() || wanted
+      const id = String(decoded.accountId ?? '').trim()
       if (responseSeen) {
-        touch(lateInstrumentAccountIds, id)
+        touch(lateInstrumentAccountIds, id || wanted)
         reason = reason ?? 'late_instrument_update'
       }
-      const inspected = inspectInstrumentPnLUpdate({
-        ...decoded,
-        accountId: decoded.accountId || wanted,
-      })
+      if (!id) {
+        touch(malformedAccountIds, wanted)
+        reason = reason ?? 'missing_identity'
+        return
+      }
+      const inspected = inspectInstrumentPnLUpdate(decoded)
       if (inspected.status === 'ignored') return
       if (inspected.status === 'malformed') {
         touch(malformedAccountIds, id)
         reason = reason ?? inspected.reason
         return
       }
-      if (inspected.position.accountId === wanted) {
-        positionsByKey.set(
-          `${inspected.position.accountId}|${inspected.position.symbol}`,
-          inspected.position,
-        )
+      if (inspected.position.accountId !== wanted) return
+      const key = `${inspected.position.accountId}|${inspected.position.symbol}`
+      const existing = positionsByKey.get(key)
+      if (existing && existing.netQuantity !== inspected.position.netQuantity) {
+        touch(malformedAccountIds, id)
+        reason = reason ?? 'conflicting_instrument_net'
+        return
       }
+      positionsByKey.set(key, inspected.position)
     },
     snapshotResponse(rpCode) {
       responseSeen = true
@@ -102,12 +140,19 @@ export function createInstrumentSnapshotSession(
       reason = reason ?? nextReason
     },
     finish(capturedAtMs) {
-      const evidence = evidenceAccountIds.includes(wanted)
+      const evidence = evidenceAccountIds.includes(wanted) && accountNetSeen
       const noData = noDataAccountIds.includes(wanted)
       const rejected = rejectedAccountIds.includes(wanted)
       const malformed = malformedAccountIds.includes(wanted)
       const late = lateInstrumentAccountIds.includes(wanted)
       const incompleteListed = incompleteAccountIds.includes(wanted)
+      const positions = [...positionsByKey.values()]
+      const summed = positions.reduce((sum, row) => sum + row.netQuantity, 0)
+      const netMismatch = evidence && accountNet != null && summed !== accountNet
+      if (netMismatch) {
+        reason = reason ?? 'account_net_mismatch'
+        touch(malformedAccountIds, wanted)
+      }
       const complete =
         Boolean(wanted) &&
         responseOk &&
@@ -116,7 +161,8 @@ export function createInstrumentSnapshotSession(
         !rejected &&
         !malformed &&
         !late &&
-        !incompleteListed
+        !incompleteListed &&
+        !netMismatch
       if (!complete && !reason) {
         if (!responseSeen) reason = 'incomplete'
         else if (!evidence) reason = 'no_evidence'
@@ -125,7 +171,7 @@ export function createInstrumentSnapshotSession(
         touch(incompleteAccountIds, wanted)
       }
       return {
-        positions: [...positionsByKey.values()],
+        positions,
         complete,
         reason: complete ? undefined : reason ?? 'incomplete',
         capturedAtMs,
@@ -138,12 +184,15 @@ export function createInstrumentSnapshotSession(
         requestedAccountIds: wanted ? [wanted] : [],
         malformedAccountIds,
         lateInstrumentAccountIds,
+        accountNetQuantity: accountNetSeen ? accountNet ?? undefined : undefined,
       }
     },
   }
 }
 
 export const MAX_INSTRUMENT_SNAPSHOT_AGE_MS = 30_000
+/** Drain window after 403 so a late 450 is observed and refused, not omitted. */
+export const SNAPSHOT_SETTLE_MS = 400
 
 export function snapshotIsFresh(
   snapshot: Pick<CapturedInstrumentSnapshot, 'capturedUntilMs'>,

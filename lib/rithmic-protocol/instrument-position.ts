@@ -38,8 +38,8 @@ export type InspectInstrumentPnLUpdate =
 
 /**
  * Live (`isSnapshot === false`) 450 pushes are ignored. A missing
- * `isSnapshot` is treated as a snapshot row — that matches the 402
- * request path, where the plant omits the flag on snapshot 450s.
+ * `isSnapshot` is treated as a snapshot row so an omitted flag cannot
+ * drop a 402 response. That default is not proven by a plant capture.
  */
 export function inspectInstrumentPnLUpdate(
   decoded: InstrumentPnLPositionUpdateFields,
@@ -93,6 +93,7 @@ export type CapturedInstrumentSnapshot = {
   requestedAccountIds: string[]
   malformedAccountIds?: string[]
   lateInstrumentAccountIds?: string[]
+  accountNetQuantity?: number
 }
 
 function positionNetMap(

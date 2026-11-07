@@ -19,6 +19,7 @@ const connectionUpdateMany = vi.fn()
 const moodDeleteMany = vi.fn()
 const tickFindMany = vi.fn()
 const accountFindMany = vi.fn()
+const accountFindFirst = vi.fn()
 const connectionFindFirst = vi.fn()
 const tradeAnalyticsDeleteMany = vi.fn()
 const queryRaw = vi.fn()
@@ -61,6 +62,7 @@ vi.mock('@/lib/prisma', () => ({
     },
     account: {
       findMany: (...args: unknown[]) => accountFindMany(...args),
+      findFirst: (...args: unknown[]) => accountFindFirst(...args),
     },
     tradeAnalytics: {
       deleteMany: (...args: unknown[]) => tradeAnalyticsDeleteMany(...args),
@@ -118,6 +120,7 @@ const prismaMock = {
   },
   account: {
     findMany: (...args: unknown[]) => accountFindMany(...args),
+    findFirst: (...args: unknown[]) => accountFindFirst(...args),
   },
   connection: {
     findFirst: (...args: unknown[]) => connectionFindFirst(...args),
@@ -179,15 +182,19 @@ const ACCOUNT_FILLS: RithmicProtocolFill[] = [
 
 function fetchedFills(
   rawFills: RithmicProtocolFill[] = ACCOUNT_FILLS,
-  commissionRates: Map<string, number> = new Map(),
+  commissionRates?: Map<string, number>,
   historyStartYmd = '2026-09-25',
 ) {
+  const rates = commissionRates ?? new Map([[`${ACCOUNT}|MES`, 1]])
   return {
     rawFills,
     fills: [],
-    commissionRates,
+    commissionRates: rates,
     commissionStatus: 'ok' as const,
     listedAccountIds: [ACCOUNT],
+    listedAccounts: [{ accountId: ACCOUNT, fcmId: 'fcm', ibId: 'ib' }],
+    fcmId: 'fcm',
+    ibId: 'ib',
     historyStartYmd,
     windowsFetched: 1,
     coverage: [
@@ -198,6 +205,7 @@ function fetchedFills(
         historyStatus: 'ok' as const,
         fallbackFillCount: 0,
         fallbackStatus: 'skipped' as const,
+        fallbackDates: [] as string[],
         resolved: true,
         source: 'history' as const,
       },
@@ -278,6 +286,7 @@ describe('admin account resync scoping and safety', () => {
     accountFindMany.mockReset().mockResolvedValue([
       { id: 'acct-1', number: ACCOUNT },
     ])
+    accountFindFirst.mockReset().mockResolvedValue({ id: 'acct-1' })
     connectionFindFirst.mockReset().mockResolvedValue({ id: 'conn-1' })
     tradeAnalyticsDeleteMany.mockReset().mockResolvedValue({ count: 0 })
     updateTag.mockReset()
@@ -328,7 +337,7 @@ describe('admin account resync scoping and safety', () => {
               source: 'history',
             },
           ],
-          new Map(),
+          undefined,
           args.historyStartDate ?? '2026-09-25',
         ),
     )
@@ -952,11 +961,9 @@ describe('admin account resync scoping and safety', () => {
       dryRun: false,
       anchorDate: '2026-09-25',
     })
-    expect(result.error).toBeUndefined()
-    expect(result.committed).toBe(true)
-    const inserted = fillCreateMany.mock.calls[0][0].data as Array<{ fillId: string }>
-    expect(inserted.map((row) => row.fillId)).toEqual(['1001', '1002'])
-    expect(inserted.map((row) => row.fillId)).not.toContain('friday-short')
+    expect(result.error).toBe('UNSTORED_PRE_ANCHOR_FILLS')
+    expect(result.committed).toBeUndefined()
+    expect(tradeCreateMany).not.toHaveBeenCalled()
   })
 
   it('FIFO on a flat Jérémie window produces no phantom shorts', async () => {
@@ -966,7 +973,7 @@ describe('admin account resync scoping and safety', () => {
       async (args: { historyStartDate?: string }) =>
         fetchedFills(
           jeremieAdminFills(true),
-          new Map(),
+          undefined,
           args.historyStartDate ?? '2026-09-25',
         ),
     )
@@ -981,6 +988,30 @@ describe('admin account resync scoping and safety', () => {
     expect(result.proposed?.openSkipped).toBe(0)
     expect(result.proposed?.positionChecks?.[0]).toMatchObject({ p0: 0, pEnd: 0, net: 0 })
     expect(result.proposed?.tradesCreated).toBeGreaterThan(0)
+  })
+
+  it('refuses dry-run when the Account row is missing (N18)', async () => {
+    accountFindFirst.mockResolvedValueOnce(null)
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(result.error).toBe('CONNECTION_UNLINKED')
+    expect(fetchAdminRebuildFills).not.toHaveBeenCalled()
+  })
+
+  it('refuses when Product RMS has no rate for a rebuilt product (N10)', async () => {
+    fetchAdminRebuildFills.mockResolvedValueOnce(
+      fetchedFills(ACCOUNT_FILLS, new Map()),
+    )
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(result.wouldRefuse).toBe(true)
+    expect(result.wouldRefuseReasons).toContain('COMMISSION_RATES_UNAVAILABLE')
   })
 })
 

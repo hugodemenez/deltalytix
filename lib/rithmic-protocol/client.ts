@@ -21,7 +21,10 @@ import { mapAccountPnLUpdateToBalance } from './balances'
 import {
   type CapturedInstrumentSnapshot,
 } from './instrument-position'
-import { createInstrumentSnapshotSession } from './instrument-snapshot'
+import {
+  createInstrumentSnapshotSession,
+  SNAPSHOT_SETTLE_MS,
+} from './instrument-snapshot'
 import {
   indexProductRmsCommissionRates,
   mapProductRmsCommissionRow,
@@ -858,12 +861,11 @@ export class RithmicProtocolClient {
 
     const ingest = (msg: InboundMessage) => {
       if (msg.templateId === RithmicTemplateId.ACCOUNT_PNL_POSITION_UPDATE) {
-        const decoded = decodeMessage<{ accountId?: string }>(
-          this.root!,
-          'rti.AccountPnLPositionUpdate',
-          msg.raw,
-        )
-        session.accountPnL(decoded.accountId || accountId)
+        const decoded = decodeMessage<{
+          accountId?: string
+          netQuantity?: number | string
+        }>(this.root!, 'rti.AccountPnLPositionUpdate', msg.raw)
+        session.accountPnL(decoded.accountId, decoded.netQuantity)
         return 'continue' as const
       }
       if (msg.templateId === RithmicTemplateId.INSTRUMENT_PNL_POSITION_UPDATE) {
@@ -876,10 +878,7 @@ export class RithmicProtocolClient {
           netQuantity?: number | string
           isSnapshot?: boolean
         }>(this.root!, 'rti.InstrumentPnLPositionUpdate', msg.raw)
-        session.instrumentPnL({
-          ...decoded,
-          accountId: decoded.accountId || accountId,
-        })
+        session.instrumentPnL(decoded)
         return 'continue' as const
       }
       if (msg.templateId === RithmicTemplateId.PNL_POSITION_SNAPSHOT_RESPONSE) {
@@ -911,6 +910,17 @@ export class RithmicProtocolClient {
         const status = ingest(msg)
         if (status === 'complete') {
           for (const extra of this.takeQueued()) ingest(extra)
+          const settleUntil = Math.min(deadline, Date.now() + SNAPSHOT_SETTLE_MS)
+          while (Date.now() < settleUntil) {
+            try {
+              const extra = await this.nextMessage(
+                Math.max(1, settleUntil - Date.now()),
+              )
+              ingest(extra)
+            } catch {
+              break
+            }
+          }
           break
         }
         if (status === 'reject') break
@@ -1039,6 +1049,7 @@ export class RithmicProtocolClient {
     accountId: string
     startSsboe: number
     finishSsboe: number
+    observe?: FillHistoryObserve
   }): Promise<RithmicProtocolFill[]> {
     await this.send('rti.RequestReplayExecutions', {
       templateId: RithmicTemplateId.REPLAY_EXECUTIONS_REQUEST,
@@ -1055,7 +1066,11 @@ export class RithmicProtocolClient {
       const msg = await this.nextMessage(60_000)
 
       if (msg.templateId === RithmicTemplateId.EXCHANGE_ORDER_NOTIFICATION) {
-        const fill = this.decodeExchangeFill(msg.raw, params.accountId)
+        const fill = this.decodeExchangeFill(
+          msg.raw,
+          params.accountId,
+          params.observe?.onRow,
+        )
         if (fill) fills.push(fill)
         continue
       }
@@ -1100,6 +1115,8 @@ export class RithmicProtocolClient {
     ibId?: string
     accountId: string
     startDateYyyymmdd: string
+    observe?: FillHistoryObserve
+    onHistoryDates?: (dates: string[]) => void
   }): Promise<RithmicProtocolFill[]> {
     await this.send('rti.RequestShowOrderHistoryDates', {
       templateId: RithmicTemplateId.SHOW_ORDER_HISTORY_DATES_REQUEST,
@@ -1134,12 +1151,14 @@ export class RithmicProtocolClient {
       .map(String)
       .filter((d) => d.replace(/-/g, '') >= params.startDateYyyymmdd)
       .sort()
+    params.onHistoryDates?.(filtered)
 
     const fills: RithmicProtocolFill[] = []
     for (const date of filtered) {
       const dayFills = await this.getOrderHistorySummaryFills({
         ...params,
         date: date.replace(/-/g, ''),
+        observe: params.observe,
       })
       fills.push(...dayFills)
     }
@@ -1151,6 +1170,7 @@ export class RithmicProtocolClient {
     ibId?: string
     accountId: string
     date: string
+    observe?: FillHistoryObserve
   }): Promise<RithmicProtocolFill[]> {
     await this.send('rti.RequestShowOrderHistorySummary', {
       templateId: RithmicTemplateId.SHOW_ORDER_HISTORY_SUMMARY_REQUEST,
@@ -1166,7 +1186,11 @@ export class RithmicProtocolClient {
       const msg = await this.nextMessage(60_000)
 
       if (msg.templateId === RithmicTemplateId.EXCHANGE_ORDER_NOTIFICATION) {
-        const fill = this.decodeExchangeFill(msg.raw, params.accountId)
+        const fill = this.decodeExchangeFill(
+          msg.raw,
+          params.accountId,
+          params.observe?.onRow,
+        )
         if (fill) fills.push(fill)
         continue
       }
