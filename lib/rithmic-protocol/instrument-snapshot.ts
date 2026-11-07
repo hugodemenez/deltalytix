@@ -6,9 +6,10 @@
  * target (no fallback), 451 net_quantity equals the summed 450 nets, no
  * no-data, no malformed 450, no conflicting duplicate 450, and no target
  * snapshot 450 after 403. A missing 450 is flat only when 451 net is 0
- * (explicit, or omitted and corroborated by flat 450s plus buy/sell/open
- * qty). Offsetting omitted 450s that still sum to 0 are a plant-dependent
- * limit when those corroborating fields are also omitted.
+ * (explicit, or omitted and corroborated by flat 450s plus
+ * open_position_quantity). Offsetting omitted 450s that still sum to 0 are a
+ * plant-dependent limit when that field is also omitted. An omitted 451 net
+ * after an explicit one is a no-op.
  */
 import {
   inspectInstrumentPnLUpdate,
@@ -87,13 +88,7 @@ export function createInstrumentSnapshotSession(
       const resolved = String(id ?? '').trim()
       if (!resolved || resolved !== wanted) return
       touch(evidenceAccountIds, resolved)
-      const extras = [
-        extra?.openPositionQuantity,
-        extra?.buyQty,
-        extra?.sellQty,
-        extra?.fillBuyQty,
-        extra?.fillSellQty,
-      ]
+      const extras = [extra?.openPositionQuantity]
       for (const value of extras) {
         if (value == null || value === '') continue
         const parsedExtra = parseNetQuantity(value)
@@ -104,6 +99,9 @@ export function createInstrumentSnapshotSession(
         if (parsedExtra !== 0) corroborationZero = false
       }
       if (netQuantity == null) {
+        if (accountNetSeen && !accountNetOmitted && accountNet != null) {
+          return
+        }
         accountNetOmitted = true
         accountNetSeen = true
         return
