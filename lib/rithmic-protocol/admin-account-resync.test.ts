@@ -24,6 +24,8 @@ const queryRaw = vi.fn()
 const transaction = vi.fn()
 const decryptConnectionToken = vi.fn()
 const fetchFillsForAccounts = vi.fn()
+const fetchAdminRebuildFills = vi.fn()
+const fetchInstrumentPositions = vi.fn()
 const withProtocolSyncLock = vi.fn()
 const updateTag = vi.fn()
 const revalidateTag = vi.fn()
@@ -71,7 +73,16 @@ vi.mock('@/lib/connection-token-crypto', () => ({
 }))
 vi.mock('@/lib/rithmic-protocol/client', () => ({
   fetchFillsForAccounts: (...args: unknown[]) => fetchFillsForAccounts(...args),
+  fetchInstrumentPositions: (...args: unknown[]) =>
+    fetchInstrumentPositions(...args),
 }))
+vi.mock('@/lib/rithmic-protocol/admin-fill-fetch', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./admin-fill-fetch')>()
+  return {
+    ...actual,
+    fetchAdminRebuildFills: (...args: unknown[]) => fetchAdminRebuildFills(...args),
+  }
+})
 vi.mock('@/lib/rithmic-protocol/sync-lock', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./sync-lock')>()
   return {
@@ -84,7 +95,9 @@ import {
   planProtocolTradeSwap,
   resyncRithmicProtocolAccount,
 } from './admin-account-resync'
+import { AdminFillFetchError } from './admin-fill-fetch'
 import { ProtocolSyncLockError } from './sync-lock'
+import type { RithmicProtocolFill } from './types'
 
 const USER = 'user-1'
 const ACCOUNT = 'LFE050-I7X0S9B3-TEST001'
@@ -135,7 +148,7 @@ const UNCOVERED_TRADE = {
   closeId: 'y',
 }
 
-const ACCOUNT_FILLS = [
+const ACCOUNT_FILLS: RithmicProtocolFill[] = [
   {
     accountId: ACCOUNT,
     symbol: 'MESZ6',
@@ -161,19 +174,37 @@ const ACCOUNT_FILLS = [
 ]
 
 function fetchedFills(
-  rawFills = ACCOUNT_FILLS,
+  rawFills: RithmicProtocolFill[] = ACCOUNT_FILLS,
   commissionRates: Map<string, number> = new Map(),
 ) {
   return {
     rawFills,
     fills: [],
     commissionRates,
+    listedAccountIds: [ACCOUNT],
+    historyStartYmd: '2026-09-25',
+    windowsFetched: 1,
     fillStats: {
       received: rawFills.length,
       afterDedup: rawFills.length,
       dropped: {},
       skippedAlreadySeen: 0,
     },
+  }
+}
+
+function flatSnapshot(accountId = ACCOUNT) {
+  return {
+    positions: [] as Array<{ accountId: string; symbol: string; netQuantity: number }>,
+    complete: true,
+    capturedAtMs: Date.now(),
+    capturedUntilMs: Date.now(),
+    noDataAccountIds: [],
+    incompleteAccountIds: [],
+    rejectedAccountIds: [],
+    missingAccountIds: [],
+    evidenceAccountIds: [accountId],
+    requestedAccountIds: [accountId],
   }
 }
 
@@ -191,6 +222,19 @@ describe('planProtocolTradeSwap', () => {
     })
     expect(plan.toDelete).toEqual(['kept-row'])
     expect(plan.analyticsDelete).toEqual([])
+    expect(plan.keepIds).toEqual(['t2'])
+  })
+
+  it('never puts retained pre-anchor ids on the delete list', () => {
+    const plan = planProtocolTradeSwap({
+      existing: [COVERED_TRADE, UNCOVERED_TRADE],
+      rebuiltIds: ['t1'],
+      uncoveredIds: [],
+      unmatchedIds: [],
+      allowUnmatchedAnnotations: false,
+      retainIds: ['t2'],
+    })
+    expect(plan.toDelete).toEqual(['t1'])
     expect(plan.keepIds).toEqual(['t2'])
   })
 })
@@ -245,7 +289,8 @@ describe('admin account resync scoping and safety', () => {
         accounts: [{ number: ACCOUNT }, { number: OTHER }],
       },
     ])
-    fetchFillsForAccounts.mockReset().mockResolvedValue(
+    fetchFillsForAccounts.mockReset()
+    fetchAdminRebuildFills.mockReset().mockResolvedValue(
       fetchedFills([
         ...ACCOUNT_FILLS,
         {
@@ -261,6 +306,7 @@ describe('admin account resync scoping and safety', () => {
         },
       ]),
     )
+    fetchInstrumentPositions.mockReset().mockResolvedValue(flatSnapshot())
   })
 
   it('locks by userId+accountNumber even without connectionId', async () => {
@@ -294,7 +340,8 @@ describe('admin account resync scoping and safety', () => {
       pnl: 10,
       fillCount: 0,
     })
-    expect(fetchFillsForAccounts).toHaveBeenCalledTimes(1)
+    expect(fetchAdminRebuildFills).toHaveBeenCalledTimes(1)
+    expect(fetchFillsForAccounts).not.toHaveBeenCalled()
     expect(tradeDeleteMany).not.toHaveBeenCalled()
     expect(fillDeleteMany).not.toHaveBeenCalled()
     expect(tradeCreateMany).not.toHaveBeenCalled()
@@ -351,7 +398,7 @@ describe('admin account resync scoping and safety', () => {
   it('empty upstream history refuses even when the fill table is already empty', async () => {
     fillFindMany.mockResolvedValue([])
     fillCount.mockResolvedValue(0)
-    fetchFillsForAccounts.mockResolvedValueOnce(fetchedFills([]))
+    fetchAdminRebuildFills.mockResolvedValueOnce(fetchedFills([]))
     const result = await resyncRithmicProtocolAccount({
       userId: USER,
       accountNumber: ACCOUNT,
@@ -364,7 +411,11 @@ describe('admin account resync scoping and safety', () => {
   })
 
   it('refuses an empty rebuild when covered trades would all disappear', async () => {
-    fetchFillsForAccounts.mockResolvedValueOnce(
+    fetchInstrumentPositions.mockResolvedValue({
+      ...flatSnapshot(),
+      positions: [{ accountId: ACCOUNT, symbol: 'MESZ6', netQuantity: 2 }],
+    })
+    fetchAdminRebuildFills.mockResolvedValueOnce(
       fetchedFills([
         ACCOUNT_FILLS[0],
         {
@@ -385,7 +436,7 @@ describe('admin account resync scoping and safety', () => {
   })
 
   it('fetch failure leaves stored data in place', async () => {
-    fetchFillsForAccounts.mockRejectedValueOnce(new Error('plant down'))
+    fetchAdminRebuildFills.mockRejectedValueOnce(new Error('plant down'))
     const result = await resyncRithmicProtocolAccount({
       userId: USER,
       accountNumber: ACCOUNT,
@@ -413,11 +464,12 @@ describe('admin account resync scoping and safety', () => {
     expect(result.deleted).toEqual({ trades: 1, fills: 0 })
     expect(result.after?.savedCount).toBe(1)
     expect(fillDeleteMany).not.toHaveBeenCalled()
-    expect(fetchFillsForAccounts).toHaveBeenCalledTimes(1)
-    const fetchArgs = fetchFillsForAccounts.mock.calls[0][0] as {
-      accountIds: string[]
+    expect(fetchAdminRebuildFills).toHaveBeenCalledTimes(1)
+    expect(fetchFillsForAccounts).not.toHaveBeenCalled()
+    const fetchArgs = fetchAdminRebuildFills.mock.calls[0][0] as {
+      accountId: string
     }
-    expect(fetchArgs.accountIds).toEqual([ACCOUNT])
+    expect(fetchArgs.accountId).toBe(ACCOUNT)
     expect(tradeDeleteMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -437,7 +489,7 @@ describe('admin account resync scoping and safety', () => {
   })
 
   it('passes plant commission rates into FIFO like ordinary sync', async () => {
-    fetchFillsForAccounts.mockResolvedValueOnce(
+    fetchAdminRebuildFills.mockResolvedValueOnce(
       fetchedFills(ACCOUNT_FILLS, new Map([[`${ACCOUNT}|MES`, 1.2]])),
     )
     await resyncRithmicProtocolAccount({
@@ -642,7 +694,8 @@ describe('admin account resync scoping and safety', () => {
     })
     expect(result.error).toBe('ACCOUNT_NOT_ON_CONNECTION')
     expect(tradeDeleteMany).not.toHaveBeenCalled()
-    expect(fetchFillsForAccounts).not.toHaveBeenCalled()
+    expect(fetchAdminRebuildFills).not.toHaveBeenCalled()
+    expect(fetchInstrumentPositions).not.toHaveBeenCalled()
   })
 
   it('returns AMBIGUOUS_CONNECTION when two connections hold the account', async () => {
@@ -665,9 +718,192 @@ describe('admin account resync scoping and safety', () => {
     })
     expect(result.error).toBe('AMBIGUOUS_CONNECTION')
     expect(result.connectionIds).toEqual(['conn-1', 'conn-2'])
-    expect(fetchFillsForAccounts).not.toHaveBeenCalled()
+    expect(fetchAdminRebuildFills).not.toHaveBeenCalled()
+  })
+
+  it('never deletes a trade that closed before the weekend anchor', async () => {
+    const preAnchor = {
+      ...UNCOVERED_TRADE,
+      id: 'pre-anchor',
+      entryDate: '2026-06-01T14:00:00.000+00:00',
+      closeDate: '2026-06-01T14:05:00.000+00:00',
+    }
+    tradeFindMany.mockImplementation(async (args: { select?: { comment?: boolean } }) => {
+      if (args?.select?.comment) return [COVERED_TRADE, preAnchor]
+      return [{ pnl: 10 }, { pnl: 5 }]
+    })
+    await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: false,
+      anchorDate: '2026-09-25',
+    })
+    expect(tradeDeleteMany).toHaveBeenCalled()
+    const deletedIds = tradeDeleteMany.mock.calls[0][0].where.id.in as string[]
+    expect(deletedIds).toEqual(['t1'])
+    expect(deletedIds).not.toContain('pre-anchor')
+  })
+
+  it('refuses when the broker rejects the account snapshot (Q2/Q5)', async () => {
+    fetchInstrumentPositions.mockResolvedValue({
+      ...flatSnapshot(),
+      complete: false,
+      reason: 'rejected',
+      rejectedAccountIds: [ACCOUNT],
+      evidenceAccountIds: [],
+    })
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(result.error).toBe('ACCOUNT_REJECTED')
+    expect(result.complete).toBe(false)
+    expect(tradeDeleteMany).not.toHaveBeenCalled()
+  })
+
+  it('refuses when before and after snapshots disagree', async () => {
+    fetchInstrumentPositions
+      .mockResolvedValueOnce({
+        ...flatSnapshot(),
+        positions: [{ accountId: ACCOUNT, symbol: 'MESZ6', netQuantity: 2 }],
+      })
+      .mockResolvedValueOnce({
+        ...flatSnapshot(),
+        positions: [{ accountId: ACCOUNT, symbol: 'MESZ6', netQuantity: 0 }],
+      })
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: false,
+    })
+    expect(result.error).toBe('POSITION_SNAPSHOT_MOVED')
+    expect(tradeDeleteMany).not.toHaveBeenCalled()
+  })
+
+  it('refuses an incomplete snapshot instead of inferring flat', async () => {
+    fetchInstrumentPositions.mockResolvedValue({
+      ...flatSnapshot(),
+      complete: false,
+      reason: 'timeout',
+      incompleteAccountIds: [ACCOUNT],
+    })
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(result.error).toBe('POSITION_SNAPSHOT_UNAVAILABLE')
+  })
+
+  it('refuses fills that lack ssboe (Q11)', async () => {
+    fetchAdminRebuildFills.mockResolvedValueOnce(
+      fetchedFills([
+        (() => {
+          const { ssboe: _ssboe, ...rest } = ACCOUNT_FILLS[0]
+          return { ...rest, fillTime: '14:00:00' } as RithmicProtocolFill
+        })(),
+        ACCOUNT_FILLS[1],
+      ]),
+    )
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(result.error).toBe('FILLS_MISSING_SSBOE')
+    expect(tradeDeleteMany).not.toHaveBeenCalled()
+  })
+
+  it("refuses Jérémie's 328-buy / 330-sell book at an anchor where P_0 is +2", async () => {
+    const fills = jeremieAdminFills(false)
+    fetchAdminRebuildFills.mockResolvedValue(fetchedFills(fills))
+    const preview = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    const live = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: false,
+    })
+    expect(preview.error).toBe('OPENING_NOT_FLAT')
+    expect(live.error).toBe('OPENING_NOT_FLAT')
+    expect(preview.proposed?.positionChecks).toEqual(live.proposed?.positionChecks)
+    expect(preview.wouldDelete).toEqual(live.wouldDelete)
+    expect(preview.proposed?.positionChecks?.[0]).toMatchObject({
+      symbol: 'MESZ6',
+      pEnd: 0,
+      net: -2,
+      p0: 2,
+      buyLots: 328,
+      sellLots: 330,
+    })
+    expect(preview.proposed?.openingNotFlatReport).toContain('P_0=+2')
+    expect(tradeDeleteMany).not.toHaveBeenCalled()
+  })
+
+  it('does not swallow a partial fill-history failure (Q6)', async () => {
+    fetchAdminRebuildFills.mockRejectedValueOnce(
+      new AdminFillFetchError('INCOMPLETE_FILL_HISTORY', 'replay failed'),
+    )
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: false,
+    })
+    expect(result.error).toBe('INCOMPLETE_FILL_HISTORY')
+    expect(tradeDeleteMany).not.toHaveBeenCalled()
+  })
+
+  it('FIFO on a flat Jérémie window produces no phantom shorts', async () => {
+    fetchAdminRebuildFills.mockResolvedValue(fetchedFills(jeremieAdminFills(true)))
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(result.error).toBeUndefined()
+    expect(result.proposed?.openSkipped).toBe(0)
+    expect(result.proposed?.positionChecks?.[0]).toMatchObject({ p0: 0, pEnd: 0, net: 0 })
+    expect(result.proposed?.tradesCreated).toBeGreaterThan(0)
   })
 })
+
+function jeremieAdminFills(includeOpeningBuys: boolean) {
+  const fills: RithmicProtocolFill[] = []
+  let seq = 1
+  let ssboe = Date.parse('2026-09-30T14:00:00.000Z') / 1000
+  const next = () => {
+    ssboe += 1
+    return ssboe
+  }
+  const push = (side: 'BUY' | 'SELL', price: number) => {
+    fills.push({
+      accountId: ACCOUNT,
+      symbol: 'MESZ6',
+      transactionType: side,
+      fillPrice: price,
+      fillSize: 1,
+      fillId: `${side}-${seq++}`,
+      fillDate: '20260930',
+      ssboe: next(),
+      source: 'history',
+    })
+  }
+  if (includeOpeningBuys) {
+    push('BUY', 5800)
+    push('BUY', 5800)
+  }
+  for (let i = 0; i < 328; i += 1) {
+    push('BUY', 5800)
+    push('SELL', 5801)
+  }
+  push('SELL', 5799)
+  push('SELL', 5798)
+  return fills
+}
 
 describe('Mood / journal schema vs trade delete', () => {
   it('Mood has no Trade foreign key so rebuild cannot cascade journal rows', () => {
