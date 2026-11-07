@@ -83,6 +83,35 @@ describe('resolveAdminWeekendAnchor', () => {
       }),
     ).toThrow(/INVALID_ANCHOR_DATE/)
   })
+
+  it('rejects a loose Date.parse string', () => {
+    expect(() =>
+      resolveAdminWeekendAnchor({
+        requestedAnchor: 'October 23, 2026',
+        earliestNeededMs: Date.now(),
+      }),
+    ).toThrow(/INVALID_ANCHOR_DATE/)
+  })
+
+  it('rejects a future Friday close', () => {
+    expect(() =>
+      resolveAdminWeekendAnchor({
+        requestedAnchor: '2026-10-30',
+        earliestNeededMs: Date.now(),
+        nowMs: Date.parse('2026-10-29T00:00:00.000Z'),
+      }),
+    ).toThrow(/ANCHOR_IN_FUTURE/)
+  })
+
+  it('rejects an unbounded old anchor', () => {
+    expect(() =>
+      resolveAdminWeekendAnchor({
+        requestedAnchor: '2020-01-03',
+        earliestNeededMs: Date.now(),
+        nowMs: Date.parse('2026-11-07T00:00:00.000Z'),
+      }),
+    ).toThrow(/ANCHOR_TOO_OLD/)
+  })
 })
 
 describe('utcCalendarDayAfter', () => {

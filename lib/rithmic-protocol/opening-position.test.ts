@@ -5,6 +5,7 @@ import {
   computeOpeningPositionChecks,
   formatOpeningNotFlatReport,
   groupFillsByExactSymbol,
+  incomingFillTimestampError,
   isPreAnchorTrade,
   nonFlatOpeningChecks,
 } from './opening-position'
@@ -152,7 +153,7 @@ describe("Jérémie's Lucid book (328 buys, 330 sells, P_end = 0)", () => {
     const fills = jeremieWindowFills(true)
     const grouped = groupFillsByExactSymbol(fills)
     const derived = buildTradesFromRithmicFills(
-      grouped.get(SYMBOL) ?? [],
+      grouped.get(`${ACCOUNT}|${SYMBOL}`) ?? [],
       'user-1',
       TICK,
     )
@@ -217,5 +218,45 @@ describe('isPreAnchorTrade', () => {
     expect(isPreAnchorTrade({ entryDate: null, closeDate: null }, fridayClose)).toBe(
       true,
     )
+  })
+})
+
+describe('incomingFillTimestampError', () => {
+  it('refuses timestamp 0 before the window filter', () => {
+    expect(
+      incomingFillTimestampError(
+        [
+          {
+            accountId: ACCOUNT,
+            symbol: SYMBOL,
+            transactionType: 'BUY',
+            fillPrice: 1,
+            fillSize: 1,
+            fillId: 'ghost',
+          },
+        ],
+        '2026-10-30',
+      ),
+    ).toBe('FILLS_MISSING_TIMESTAMP')
+  })
+
+  it('refuses a no-ssboe fill dated on or after the anchor', () => {
+    expect(
+      incomingFillTimestampError(
+        [
+          {
+            accountId: ACCOUNT,
+            symbol: SYMBOL,
+            transactionType: 'BUY',
+            fillPrice: 1,
+            fillSize: 1,
+            fillId: 'late',
+            fillDate: '20261030',
+            fillTime: '18:00:00',
+          },
+        ],
+        '2026-10-30',
+      ),
+    ).toBe('FILLS_MISSING_SSBOE')
   })
 })

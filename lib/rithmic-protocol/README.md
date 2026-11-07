@@ -192,6 +192,35 @@ login-level ids.
 Do **not** expire open lots at the Globex/CME session roll. Real multi-day
 holds stay open until a matching fill arrives on the ledger.
 
+## Admin weekend-anchor rebuild
+
+`POST /api/admin/rithmic-protocol/resync` rebuilds **one** Protocol account.
+Ordinary sync (`actions.ts`, fill-ledger persistence, FIFO grouping) is
+unchanged. The rebuild:
+
+- Walks fills from a CME Friday 17:00 America/Chicago close (admin-picked
+  `anchorDate`, defaulting to the latest close before the earliest stored
+  fill/trade). History ends at UTC day+1 so evening Globex trade dates are
+  included.
+- Reads instrument positions (`InstrumentPnLPositionUpdate` / 450) before and
+  after the fill fetch. Completion requires `rp_code 0` on 403 **and** a
+  matching 451 for the account. No-data, missing evidence, malformed
+  `net_quantity`, 450-after-403, and a moved book all refuse. There are no
+  opening-seed lots.
+- Computes `P_0 = P_end − net(fills)` per exact symbol and refuses unless
+  every symbol is flat at the anchor.
+- Treats `ShowFillHistory` `rp_code 7` as uncovered until an admin-only
+  order-history fallback resolves the window. Truncated (10k) windows refuse.
+  Per-window coverage is returned on `proposed.fillWindow.coverage`.
+- Persists **only in-window fills**. Dry-run and live both run ordinary-sync
+  FIFO (`deriveTradesFromFillLedger` then one `buildTradesFromRithmicFills`)
+  on the proposed merged ledger and refuse `ORDINARY_SYNC_DIVERGENCE` if the
+  in-window trades differ. The next ordinary sync therefore cannot recreate
+  phantom shorts from a Friday prefix the rebuild itself wrote.
+- Defaults to dry-run. Live apply needs `dryRun: false`. Dry-run reports
+  `wouldRefuse` / `wouldRefuseReasons` when live would not commit. Pre-anchor
+  trades are never deleted.
+
 Protocol API has a **separate conformance** process from R | API+. Conformance is
 approved, so production connect points are live; Rithmic Test remains available for
 local/dev work. Hosts are never typed by hand in the UI — users pick a connect point
