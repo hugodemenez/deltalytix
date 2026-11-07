@@ -10,6 +10,7 @@ import {
   parseUtcYyyyMmDd,
   toUtcYyyyMmDd,
   toUtcYyyymmdd,
+  utcCalendarDay,
   utcCalendarDayAfter,
 } from './cme-session'
 import {
@@ -29,6 +30,18 @@ import {
 } from './admin-fill-coverage'
 import type { RithmicProtocolFill } from './types'
 
+export const ADMIN_DIAGNOSTIC_LIMIT = 20
+
+export type AdminFetchDiagnostics = {
+  fills?: Array<{ fillId?: string; fillDate?: string; symbol?: string }>
+  windows?: Array<{
+    startYmd: string
+    endYmd: string
+    historyStatus: string
+    resolved: boolean
+  }>
+}
+
 export class AdminFillFetchError extends Error {
   constructor(
     public readonly code:
@@ -40,10 +53,30 @@ export class AdminFillFetchError extends Error {
       | 'FILLS_DROPPED'
       | 'FILLS_UNKNOWN_SIDE',
     message: string,
+    public readonly diagnostics?: AdminFetchDiagnostics,
   ) {
     super(message)
     this.name = 'AdminFillFetchError'
   }
+}
+
+/** Same start as ordinary `fetchFillsForAccounts` (historyStartDate or lookback). */
+export function resolveOrdinaryHistoryStartUtc(
+  historyStartDate: string | undefined,
+  now = new Date(),
+): Date {
+  const end = utcCalendarDay(now)
+  if (historyStartDate) {
+    const parsed = parseUtcYyyyMmDd(historyStartDate)
+    if (parsed && parsed.getTime() <= end.getTime()) return parsed
+  }
+  const days = Math.max(
+    1,
+    Number(process.env.RITHMIC_PROTOCOL_HISTORY_LOOKBACK_DAYS ?? '30'),
+  )
+  const start = new Date(end)
+  start.setUTCDate(start.getUTCDate() - (days - 1))
+  return start
 }
 
 function classifyFetchError(error: unknown): AdminFillFetchError {
@@ -75,6 +108,7 @@ export type AdminRebuildFillResult = {
   fcmId?: string
   ibId?: string
   historyStartYmd: string
+  ordinaryStartYmd: string
   windowsFetched: number
   coverage: AdminFillWindowCoverage[]
   droppedRows: Array<{ reason: AdminFillDropReason }>
@@ -96,16 +130,21 @@ export async function fetchAdminRebuildFills(params: {
   accountId: string
   accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
   historyStartDate: string
+  ordinaryStartDate?: string
   deadlineMs?: number
 }): Promise<AdminRebuildFillResult> {
-  const start = parseUtcYyyyMmDd(params.historyStartDate)
-  if (!start) {
+  const anchorStart = parseUtcYyyyMmDd(params.historyStartDate)
+  if (!anchorStart) {
     throw new AdminFillFetchError(
       'FETCH_FAILED',
       `Invalid historyStartDate ${params.historyStartDate}`,
     )
   }
+  const ordinaryStart = resolveOrdinaryHistoryStartUtc(params.ordinaryStartDate)
+  const start =
+    ordinaryStart.getTime() < anchorStart.getTime() ? ordinaryStart : anchorStart
   const end = utcCalendarDayAfter(new Date())
+  const todayYmd = toUtcYyyyMmDd(utcCalendarDay(new Date()))
   const windows = buildUtcFillHistoryWindows(
     start,
     end,
@@ -116,22 +155,28 @@ export async function fetchAdminRebuildFills(params: {
   const rmsRows: ProductRmsCommissionRow[] = []
   const droppedRows: Array<{ reason: AdminFillDropReason }> = []
   try {
+    assertDeadline(params.deadlineMs)
     await client.connect(params.gatewayUri)
+    assertDeadline(params.deadlineMs)
     const login = await client.login({
       systemName: params.systemName,
       username: params.username,
       password: params.password,
+      deadlineMs: params.deadlineMs,
     })
-    const info = await client.loginInfo()
+    assertDeadline(params.deadlineMs)
+    const info = await client.loginInfo({ deadlineMs: params.deadlineMs })
     const loginFcmId = params.fcmId || info.fcmId || login.fcmId
     const loginIbId = params.ibId || info.ibId || login.ibId
 
     let listed: Array<{ accountId: string; fcmId?: string; ibId?: string }> = []
     try {
+      assertDeadline(params.deadlineMs)
       listed = await client.listAccounts({
         fcmId: loginFcmId,
         ibId: loginIbId,
         userType: info.userType,
+        deadlineMs: params.deadlineMs,
       })
     } catch (error) {
       throw classifyFetchError(error)
@@ -158,10 +203,12 @@ export async function fetchAdminRebuildFills(params: {
 
     let commissionStatus: AdminRebuildFillResult['commissionStatus'] = 'ok'
     try {
+      assertDeadline(params.deadlineMs)
       const productRms = await client.getProductRmsInfo({
         fcmId,
         ibId,
         accountId: params.accountId,
+        deadlineMs: params.deadlineMs,
       })
       rmsRows.push(...productRms)
       if (productRms.length === 0) commissionStatus = 'empty'
@@ -204,6 +251,7 @@ export async function fetchAdminRebuildFills(params: {
           startDateYyyymmdd: toYyyymmddNumber(window.start),
           endDateYyyymmdd: toYyyymmddNumber(window.end),
           observe,
+          deadlineMs: params.deadlineMs,
         })
         windowFills.push(...markFillSource(accountFills, 'history'))
         historyFillCount += accountFills.length
@@ -251,6 +299,7 @@ export async function fetchAdminRebuildFills(params: {
           onHistoryDates: (dates) => {
             fallbackDates = dates
           },
+          deadlineMs: params.deadlineMs,
         })
         const marked = markFillSource(fallback, fallbackPlan.source)
         fills.push(...marked)
@@ -265,7 +314,11 @@ export async function fetchAdminRebuildFills(params: {
           window.fallbackFillCount = assigned.length
           window.fallbackStatus = 'ok'
           window.fallbackDates = fallbackDates
-          const resolved = windowResolvedAfterFallback(window)
+          const resolved = windowResolvedAfterFallback({
+            ...window,
+            fallbackFillDays: assigned.map((fill) => fillDateYyyymmdd(fill)),
+            todayYmd,
+          })
           window.resolved = resolved.resolved
           window.source = resolved.source
         }
@@ -273,14 +326,14 @@ export async function fetchAdminRebuildFills(params: {
         for (const window of coverage) {
           window.fallbackStatus = 'failed'
           window.fallbackDates = fallbackDates
-          const resolved = windowResolvedAfterFallback(window)
+          const resolved = windowResolvedAfterFallback({ ...window, todayYmd })
           window.resolved = resolved.resolved
           window.source = resolved.source
         }
       }
     } else {
       for (const window of coverage) {
-        const resolved = windowResolvedAfterFallback(window)
+        const resolved = windowResolvedAfterFallback({ ...window, todayYmd })
         window.resolved = resolved.resolved
         window.source = resolved.source
       }
@@ -291,6 +344,14 @@ export async function fetchAdminRebuildFills(params: {
       throw new AdminFillFetchError(
         'INCOMPLETE_FILL_HISTORY',
         `${unresolved.length} fill-history window(s) were unresolved after order-history fallback`,
+        {
+          windows: unresolved.slice(0, ADMIN_DIAGNOSTIC_LIMIT).map((window) => ({
+            startYmd: window.startYmd,
+            endYmd: window.endYmd,
+            historyStatus: window.historyStatus,
+            resolved: window.resolved,
+          })),
+        },
       )
     }
 
@@ -310,6 +371,7 @@ export async function fetchAdminRebuildFills(params: {
         startSsboe: replayWindowStartSsboe(finishSsboe, days),
         finishSsboe,
         observe: { onRow: observeRow },
+        deadlineMs: params.deadlineMs,
       })
     }
     try {
@@ -347,6 +409,13 @@ export async function fetchAdminRebuildFills(params: {
       throw new AdminFillFetchError(
         'FILLS_DROPPED',
         `${droppedOther.length} fill row(s) were dropped for missing symbol, price, or size`,
+        {
+          fills: fills.slice(0, ADMIN_DIAGNOSTIC_LIMIT).map((fill) => ({
+            fillId: fill.fillId,
+            fillDate: fill.fillDate,
+            symbol: fill.symbol,
+          })),
+        },
       )
     }
 
@@ -359,6 +428,7 @@ export async function fetchAdminRebuildFills(params: {
       fcmId,
       ibId,
       historyStartYmd: params.historyStartDate,
+      ordinaryStartYmd: toUtcYyyyMmDd(ordinaryStart),
       windowsFetched: windows.length,
       coverage,
       droppedRows,
