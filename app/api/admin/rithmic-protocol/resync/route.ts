@@ -31,8 +31,8 @@ function readOptionalString(value: unknown): string | undefined {
  *
  * Dry-run is the default. Omitted `dryRun` previews without writing.
  * `dryRun: false` is required to apply. Non-boolean values are rejected.
- * `anchorDate` is a YYYY-MM-DD or ISO timestamp snapped to the CME Friday
- * 17:00 CT close.
+ * `anchorDate` is a YYYY-MM-DD or strict ISO timestamp snapped to the CME
+ * Friday 17:00 CT close. Future and >366-day-old anchors refuse.
  */
 export async function POST(request: NextRequest) {
   const auth = await authorizeAdminRequest(request)
@@ -219,7 +219,7 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'conflict',
         message: 'Stored trades have fill legs outside the merged ledger.',
-        hint: 'Inspect result.proposed.uncoveredTrades. Those rows are retained; a sliding window cannot recreate them.',
+        hint: 'Inspect result.proposed.uncoveredTrades. Coverage uses fill identity and time, not a bare fill id.',
       }
     case 'DUPLICATE_TRADE_IDS':
     case 'INSERT_MISMATCH':
@@ -252,14 +252,15 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'conflict',
         message: 'The weekend anchor does not start flat for every symbol.',
-        hint: 'Inspect result.proposed.positionChecks and openingNotFlatReport. Pick an earlier Friday 17:00 CT close. This rebuild never invents opening-seed lots.',
+        hint: 'Inspect result.proposed.positionChecks and openingNotFlatReport. A non-zero P_0 can be a carried position, a missing window, an expiry, or a reset. This rebuild never invents opening-seed lots.',
       }
     case 'POSITION_SNAPSHOT_UNAVAILABLE':
     case 'POSITION_SNAPSHOT_MOVED':
+    case 'POSITION_SNAPSHOT_STALE':
       return {
         code: 'conflict',
         message: 'Broker instrument positions could not be trusted for this rebuild.',
-        hint: 'The account must be quiet (before and after snapshots equal) with a complete PnL snapshot. Retry a dry-run once the book is still.',
+        hint: 'The account must be quiet (before and after snapshots equal) with a complete PnL snapshot that includes 451 evidence. No-data and malformed instrument rows refuse. Retry a dry-run once the book is still.',
       }
     case 'ACCOUNT_REJECTED':
     case 'ACCOUNT_NOT_FOUND':
@@ -269,31 +270,62 @@ function errorMapping(error: string | undefined): {
         hint: 'Confirm the account is live on that Protocol login. A rejected snapshot is never treated as flat.',
       }
     case 'FILLS_MISSING_SSBOE':
+    case 'FILLS_MISSING_TIMESTAMP':
     case 'FILLS_MISSING_PRICE':
+    case 'FILLS_DROPPED':
+    case 'FILLS_UNKNOWN_SIDE':
       return {
         code: 'unprocessable_entity',
-        message: 'Upstream fills are missing timestamps or prices.',
-        hint: 'A rebuild refuses fills without ssboe so FIFO cannot fall back to session-open clocks.',
+        message: 'Upstream fills are missing timestamps, prices, or a known side.',
+        hint: 'A rebuild refuses fills without ssboe so FIFO cannot fall back to session-open clocks, and dropped plant rows never pass silently.',
       }
     case 'WINDOW_DOES_NOT_REACH_ANCHOR':
     case 'INCOMPLETE_FILL_HISTORY':
     case 'FILL_FETCH_TIMEOUT':
+    case 'HISTORY_TRUNCATED':
       return {
         code: 'conflict',
         message: 'Fill history did not cover the weekend-anchor window.',
-        hint: 'Partial, timed-out, or truncated history is never applied. Retry a dry-run or pick a later anchor the plant can reach.',
+        hint: 'Partial, timed-out, truncated, or unresolved rp_code 7 windows are never applied. Inspect result.proposed.fillWindow.coverage.',
       }
     case 'FIFO_OPEN_LOTS':
+    case 'FIFO_SKIPPED_FILLS':
       return {
         code: 'conflict',
         message: 'FIFO leftover lots did not match the broker end position.',
         hint: 'Inspect result.proposed.positionChecks. Stored trades were left unchanged.',
       }
+    case 'ORDINARY_SYNC_DIVERGENCE':
+      return {
+        code: 'conflict',
+        message: 'The next ordinary sync would not reproduce this rebuild.',
+        hint: 'The rebuild persists only in-window fills. Ordinary-sync FIFO on the proposed merged ledger must match the plan. Pick an earlier anchor if the stored prefix is not flat.',
+      }
+    case 'STORED_FILL_MISSING_UPSTREAM':
+      return {
+        code: 'conflict',
+        message: 'A stored in-window fill was not present in upstream history.',
+        hint: 'Coverage uses fill identity (id, time, quantity, price), not a bare fill id.',
+      }
+    case 'COMMISSION_RATES_UNAVAILABLE':
+      return {
+        code: 'conflict',
+        message: 'Product RMS commission rates were missing; the rebuild will not write silent zero commissions.',
+        hint: 'Retry when RMS is available, or review stored commissions on rematched rows.',
+      }
+    case 'CONNECTION_UNLINKED':
+      return {
+        code: 'conflict',
+        message: 'The Protocol connection was unlinked while the rebuild was running.',
+        hint: 'Stored data was left unchanged. Re-link the account and retry a dry-run.',
+      }
     case 'INVALID_ANCHOR_DATE':
+    case 'ANCHOR_IN_FUTURE':
+    case 'ANCHOR_TOO_OLD':
       return {
         code: 'bad_request',
-        message: 'anchorDate could not be parsed.',
-        hint: 'Pass YYYY-MM-DD or an ISO timestamp.',
+        message: 'anchorDate is not a past, bounded weekend close.',
+        hint: 'Pass YYYY-MM-DD or a strict ISO timestamp within the last 366 days.',
       }
     case 'FETCH_FAILED':
     case 'APPLY_FAILED':

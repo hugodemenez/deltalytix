@@ -7,6 +7,10 @@ import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
  */
 export const CME_GLOBEX_TIMEZONE = 'America/Chicago'
 export const CME_WEEKLY_CLOSE_HOUR = 17
+/** Admin rebuild will not walk ShowFillHistory further back than this. */
+export const MAX_ADMIN_ANCHOR_LOOKBACK_DAYS = 366
+const STRICT_ISO_INSTANT =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/
 
 function utcYmd(year: number, monthIndex: number, day: number): string {
   const date = new Date(Date.UTC(year, monthIndex, day))
@@ -109,10 +113,19 @@ export function endOfChicagoDay(ymd: string): Date | null {
  * timestamp. Default: the most recent Friday 17:00 CT close at or before
  * `earliestNeededMs`.
  */
+function parseStrictIsoInstant(value: string): Date | null {
+  if (!STRICT_ISO_INSTANT.test(value.trim())) return null
+  const parsed = Date.parse(value)
+  if (!Number.isFinite(parsed)) return null
+  return new Date(parsed)
+}
+
 export function resolveAdminWeekendAnchor(params: {
   requestedAnchor?: string
   earliestNeededMs: number
+  nowMs?: number
 }): { weeklyClose: Date; historyStartYmd: string } {
+  const nowMs = params.nowMs ?? Date.now()
   const requested = params.requestedAnchor?.trim()
   let instant: Date
   if (requested) {
@@ -124,19 +137,27 @@ export function resolveAdminWeekendAnchor(params: {
       }
       instant = end
     } else {
-      const parsed = Date.parse(requested)
-      if (!Number.isFinite(parsed)) {
+      const parsed = parseStrictIsoInstant(requested)
+      if (!parsed) {
         throw new Error(`INVALID_ANCHOR_DATE:${requested}`)
       }
-      instant = new Date(parsed)
+      instant = parsed
     }
   } else {
     const earliest = Number.isFinite(params.earliestNeededMs)
       ? params.earliestNeededMs
-      : Date.now()
+      : nowMs
     instant = new Date(earliest)
   }
   const weeklyClose = cmeWeeklyCloseAtOrBefore(instant)
+  if (weeklyClose.getTime() > nowMs) {
+    throw new Error(`ANCHOR_IN_FUTURE:${weeklyClose.toISOString()}`)
+  }
+  const ageDays =
+    (nowMs - weeklyClose.getTime()) / (24 * 60 * 60 * 1000)
+  if (ageDays > MAX_ADMIN_ANCHOR_LOOKBACK_DAYS) {
+    throw new Error(`ANCHOR_TOO_OLD:${toUtcYyyyMmDd(weeklyClose)}`)
+  }
   return {
     weeklyClose,
     historyStartYmd: toUtcYyyyMmDd(weeklyClose),

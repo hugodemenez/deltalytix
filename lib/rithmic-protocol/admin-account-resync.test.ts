@@ -19,6 +19,7 @@ const connectionUpdateMany = vi.fn()
 const moodDeleteMany = vi.fn()
 const tickFindMany = vi.fn()
 const accountFindMany = vi.fn()
+const connectionFindFirst = vi.fn()
 const tradeAnalyticsDeleteMany = vi.fn()
 const queryRaw = vi.fn()
 const transaction = vi.fn()
@@ -118,6 +119,9 @@ const prismaMock = {
   account: {
     findMany: (...args: unknown[]) => accountFindMany(...args),
   },
+  connection: {
+    findFirst: (...args: unknown[]) => connectionFindFirst(...args),
+  },
   tradeAnalytics: {
     deleteMany: (...args: unknown[]) => tradeAnalyticsDeleteMany(...args),
   },
@@ -176,14 +180,30 @@ const ACCOUNT_FILLS: RithmicProtocolFill[] = [
 function fetchedFills(
   rawFills: RithmicProtocolFill[] = ACCOUNT_FILLS,
   commissionRates: Map<string, number> = new Map(),
+  historyStartYmd = '2026-09-25',
 ) {
   return {
     rawFills,
     fills: [],
     commissionRates,
+    commissionStatus: 'ok' as const,
     listedAccountIds: [ACCOUNT],
-    historyStartYmd: '2026-09-25',
+    historyStartYmd,
     windowsFetched: 1,
+    coverage: [
+      {
+        startYmd: historyStartYmd,
+        endYmd: '2026-11-08',
+        historyFillCount: rawFills.length,
+        historyStatus: 'ok' as const,
+        fallbackFillCount: 0,
+        fallbackStatus: 'skipped' as const,
+        resolved: true,
+        source: 'history' as const,
+      },
+    ],
+    droppedRows: [],
+    replayFillCount: 0,
     fillStats: {
       received: rawFills.length,
       afterDedup: rawFills.length,
@@ -258,6 +278,7 @@ describe('admin account resync scoping and safety', () => {
     accountFindMany.mockReset().mockResolvedValue([
       { id: 'acct-1', number: ACCOUNT },
     ])
+    connectionFindFirst.mockReset().mockResolvedValue({ id: 'conn-1' })
     tradeAnalyticsDeleteMany.mockReset().mockResolvedValue({ count: 0 })
     updateTag.mockReset()
     revalidateTag.mockReset()
@@ -290,21 +311,26 @@ describe('admin account resync scoping and safety', () => {
       },
     ])
     fetchFillsForAccounts.mockReset()
-    fetchAdminRebuildFills.mockReset().mockResolvedValue(
-      fetchedFills([
-        ...ACCOUNT_FILLS,
-        {
-          accountId: OTHER,
-          symbol: 'MESZ6',
-          transactionType: 'BUY',
-          fillPrice: 1,
-          fillSize: 1,
-          fillId: 'foreign',
-          fillDate: '20260930',
-          ssboe: Date.parse('2026-09-30T14:00:00Z') / 1000,
-          source: 'history',
-        },
-      ]),
+    fetchAdminRebuildFills.mockReset().mockImplementation(
+      async (args: { historyStartDate?: string }) =>
+        fetchedFills(
+          [
+            ...ACCOUNT_FILLS,
+            {
+              accountId: OTHER,
+              symbol: 'MESZ6',
+              transactionType: 'BUY',
+              fillPrice: 1,
+              fillSize: 1,
+              fillId: 'foreign',
+              fillDate: '20260930',
+              ssboe: Date.parse('2026-09-30T14:00:00Z') / 1000,
+              source: 'history',
+            },
+          ],
+          new Map(),
+          args.historyStartDate ?? '2026-09-25',
+        ),
     )
     fetchInstrumentPositions.mockReset().mockResolvedValue(flatSnapshot())
   })
@@ -375,6 +401,8 @@ describe('admin account resync scoping and safety', () => {
       dryRun: true,
     })
     expect(preview.complete).toBe(true)
+    expect(preview.wouldRefuse).toBe(true)
+    expect(preview.wouldRefuseReasons).toContain('UNCOVERED_TRADES')
     expect(preview.proposed?.uncoveredTrades.map((row) => row.id)).toEqual(['t2'])
     expect(preview.warnings?.some((warning) => warning.includes('UNCOVERED_TRADES'))).toBe(
       true,
@@ -601,7 +629,7 @@ describe('admin account resync scoping and safety', () => {
     expect(tradeCreateMany).not.toHaveBeenCalled()
   })
 
-  it('warns that unmatched-annotation override can double-count P&L', async () => {
+  it('ignores allowUnmatchedAnnotations and would-refuse unmatched rows', async () => {
     tradeFindMany.mockImplementation(async (args: { select?: { comment?: boolean } }) => {
       if (args?.select?.comment) {
         return [
@@ -622,8 +650,9 @@ describe('admin account resync scoping and safety', () => {
       dryRun: true,
       allowUnmatchedAnnotations: true,
     })
-    expect(result.error).toBeUndefined()
-    expect(result.warnings?.some((warning) => warning.includes('overlap'))).toBe(
+    expect(result.wouldRefuse).toBe(true)
+    expect(result.wouldRefuseReasons).toContain('UNMATCHED_ANNOTATIONS')
+    expect(result.warnings?.some((warning) => warning.includes('ignored'))).toBe(
       true,
     )
   })
@@ -857,14 +886,98 @@ describe('admin account resync scoping and safety', () => {
     expect(tradeDeleteMany).not.toHaveBeenCalled()
   })
 
-  it('FIFO on a flat Jérémie window produces no phantom shorts', async () => {
-    fetchAdminRebuildFills.mockResolvedValue(fetchedFills(jeremieAdminFills(true)))
+  it('refuses a no-data snapshot instead of inferring flat (H3)', async () => {
+    fetchInstrumentPositions.mockResolvedValue({
+      ...flatSnapshot(),
+      complete: false,
+      reason: 'no_data',
+      noDataAccountIds: [ACCOUNT],
+      evidenceAccountIds: [ACCOUNT],
+    })
     const result = await resyncRithmicProtocolAccount({
       userId: USER,
       accountNumber: ACCOUNT,
       dryRun: true,
     })
+    expect(result.error).toBe('POSITION_SNAPSHOT_UNAVAILABLE')
+    expect(fetchAdminRebuildFills).not.toHaveBeenCalled()
+  })
+
+  it('refuses timestamp-0 fills before the window filter (M2)', async () => {
+    fetchAdminRebuildFills.mockResolvedValueOnce(
+      fetchedFills([
+        {
+          accountId: ACCOUNT,
+          symbol: 'MESZ6',
+          transactionType: 'BUY',
+          fillPrice: 7800,
+          fillSize: 1,
+          fillId: 'ghost',
+          source: 'history',
+        } as RithmicProtocolFill,
+        ACCOUNT_FILLS[1],
+      ]),
+    )
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(result.error).toBe('FILLS_MISSING_TIMESTAMP')
+  })
+
+  it('persists only in-window fills so the next ordinary sync cannot replay Friday prefix shorts (H1)', async () => {
+    const fridayPrefix: RithmicProtocolFill = {
+      accountId: ACCOUNT,
+      symbol: 'MESZ6',
+      transactionType: 'SELL',
+      fillPrice: 5810,
+      fillSize: 1,
+      fillId: 'friday-short',
+      fillDate: '20260925',
+      ssboe: Date.parse('2026-09-25T15:00:00Z') / 1000,
+      source: 'history',
+    }
+    fetchAdminRebuildFills.mockImplementation(
+      async (args: { historyStartDate?: string }) =>
+        fetchedFills(
+          [fridayPrefix, ...ACCOUNT_FILLS],
+          new Map(),
+          args.historyStartDate ?? '2026-09-25',
+        ),
+    )
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: false,
+      anchorDate: '2026-09-25',
+    })
     expect(result.error).toBeUndefined()
+    expect(result.committed).toBe(true)
+    const inserted = fillCreateMany.mock.calls[0][0].data as Array<{ fillId: string }>
+    expect(inserted.map((row) => row.fillId)).toEqual(['1001', '1002'])
+    expect(inserted.map((row) => row.fillId)).not.toContain('friday-short')
+  })
+
+  it('FIFO on a flat Jérémie window produces no phantom shorts', async () => {
+    tradeFindMany.mockResolvedValue([])
+    fillCount.mockResolvedValue(0)
+    fetchAdminRebuildFills.mockImplementation(
+      async (args: { historyStartDate?: string }) =>
+        fetchedFills(
+          jeremieAdminFills(true),
+          new Map(),
+          args.historyStartDate ?? '2026-09-25',
+        ),
+    )
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+      anchorDate: '2026-09-25',
+    })
+    expect(result.error).toBeUndefined()
+    expect(result.wouldRefuse).toBeFalsy()
     expect(result.proposed?.openSkipped).toBe(0)
     expect(result.proposed?.positionChecks?.[0]).toMatchObject({ p0: 0, pEnd: 0, net: 0 })
     expect(result.proposed?.tradesCreated).toBeGreaterThan(0)

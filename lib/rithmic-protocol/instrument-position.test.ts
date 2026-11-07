@@ -40,6 +40,17 @@ describe('mapInstrumentPnLUpdate', () => {
       mapInstrumentPnLUpdate({ symbol: 'MESZ6', netQuantity: 1 }),
     ).toBeNull()
   })
+
+  it('rejects a non-integer net quantity', () => {
+    expect(
+      mapInstrumentPnLUpdate({
+        accountId: 'LFE050',
+        symbol: 'MESZ6',
+        netQuantity: 2.5,
+        isSnapshot: true,
+      }),
+    ).toBeNull()
+  })
 })
 
 describe('instrumentPositionMapsEqual', () => {
