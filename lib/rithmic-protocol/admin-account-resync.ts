@@ -7,22 +7,37 @@ import { generatePersistedTradeUUID, RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/tr
 import { fetchInstrumentPositions } from '@/lib/rithmic-protocol/client'
 import { AdminFillFetchError, fetchAdminRebuildFills } from './admin-fill-fetch'
 import {
+  type AdminFillWindowCoverage,
+  inWindowDerivedTrades,
+  ordinarySyncTradesMatchRebuild,
+  storedFillsMissingUpstream,
+  uncoveredTradesByFillIdentity,
+} from './admin-fill-coverage'
+import {
   gatewayUri as gatewayUriFor,
   resolveGateway,
 } from '@/lib/rithmic-protocol/systems'
-import { resolveAdminWeekendAnchor, toUtcYyyyMmDd } from './cme-session'
+import {
+  resolveAdminWeekendAnchor,
+  toUtcYyyyMmDd,
+  utcCalendarDayAfter,
+} from './cme-session'
 import {
   instrumentPositionMapsEqual,
   snapshotTouchesAccount,
   type CapturedInstrumentSnapshot,
 } from './instrument-position'
 import {
+  fillFallsInsideSnapshotBracket,
+  snapshotIsFresh,
+} from './instrument-snapshot'
+import {
   type OpeningPositionCheck,
   computeOpeningPositionChecks,
-  fillHasSsboe,
   fillHasUsablePrice,
   formatOpeningNotFlatReport,
   groupFillsByExactSymbol,
+  incomingFillTimestampError,
   isPreAnchorTrade,
   nonFlatOpeningChecks,
   windowFillsFrom,
@@ -41,17 +56,16 @@ import {
   type AnnotatedProtocolTrade,
   type FillLedgerNet,
   type RebuildTradeRef,
-  canonicalLedgerFillIds,
   duplicateRebuildTradeIds,
+  deriveTradesFromFillLedger,
   mergeFillLedgers,
   partitionIncomingFills,
   prepareRithmicProtocolFills,
   protocolTradeSetsMatch,
   reattachProtocolTradeAnnotations,
   summarizeFillLedgerNets,
-  uncoveredProtocolTrades,
 } from './fill-ledger'
-import { buildTradesFromRithmicFills } from './fills-to-trades'
+import { buildTradesFromRithmicFills, fillTimestampMs } from './fills-to-trades'
 import type { RithmicProtocolFill } from './types'
 
 const SERVICE = 'rithmic-protocol'
@@ -71,7 +85,10 @@ const ANNOTATION_SELECT = {
   videoUrl: true,
   images: true,
   groupId: true,
+  commission: true,
 } as const
+
+const ADMIN_RESYNC_DEADLINE_MS = 240_000
 
 export type AccountProtocolSnapshot = {
   tradeCount: number
@@ -85,6 +102,8 @@ export type FillHistoryWindow = {
   weeklyCloseIso: string
   historyStartYmd: string
   endYmd: string
+  coverage?: AdminFillWindowCoverage[]
+  coverageReachesAnchor?: boolean
 }
 
 export type ProposedRebuildSnapshot = AccountProtocolSnapshot & {
@@ -93,7 +112,7 @@ export type ProposedRebuildSnapshot = AccountProtocolSnapshot & {
   unmatchedAnnotations: number
   nets: FillLedgerNet[]
   positionChecks: OpeningPositionCheck[]
-  snapshotStatus: 'ok' | 'unavailable'
+  snapshotStatus: 'ok'
   snapshotReason?: string
   fillWindow?: FillHistoryWindow
   openingNotFlatReport?: string
@@ -124,6 +143,8 @@ export type AdminAccountResyncResult = {
   }
   committed?: boolean
   error?: string
+  wouldRefuse?: boolean
+  wouldRefuseReasons?: string[]
   connectionIds?: string[]
 }
 
@@ -144,13 +165,14 @@ type ProtocolDb = typeof prisma
 
 type ExistingProtocolTrade = AnnotatedProtocolTrade & {
   pnl: number
+  commission?: number | null
   entryDate?: string | null
   closeDate?: string | null
 }
 
 class AdminApplyError extends Error {
   constructor(
-    public readonly code: 'CONCURRENT_SYNC' | 'INSERT_MISMATCH',
+    public readonly code: 'CONCURRENT_SYNC' | 'INSERT_MISMATCH' | 'CONNECTION_UNLINKED',
     message?: string,
   ) {
     super(message ?? code)
@@ -375,44 +397,93 @@ export function planProtocolTradeSwap(params: {
   return { keepIds: [...keepIds], toDelete, analyticsDelete }
 }
 
+function snapshotTouchesOptional(
+  snapshot: CapturedInstrumentSnapshot,
+  accountId: string,
+  key: 'malformedAccountIds' | 'lateInstrumentAccountIds',
+): boolean {
+  return (snapshot[key] ?? []).includes(accountId)
+}
+
+function classifyOneSnapshot(
+  snapshot: CapturedInstrumentSnapshot,
+  accountId: string,
+): { ok: false; error: string; reason?: string } | { ok: true } {
+  if (snapshotTouchesAccount(snapshot, accountId, 'rejectedAccountIds')) {
+    return { ok: false, error: 'ACCOUNT_REJECTED', reason: snapshot.reason ?? 'rejected' }
+  }
+  if (snapshotTouchesAccount(snapshot, accountId, 'missingAccountIds')) {
+    return { ok: false, error: 'ACCOUNT_NOT_FOUND', reason: snapshot.reason ?? 'account_not_found' }
+  }
+  if (snapshotTouchesAccount(snapshot, accountId, 'noDataAccountIds')) {
+    return {
+      ok: false,
+      error: 'POSITION_SNAPSHOT_UNAVAILABLE',
+      reason: 'no_data',
+    }
+  }
+  if (snapshotTouchesOptional(snapshot, accountId, 'malformedAccountIds')) {
+    return {
+      ok: false,
+      error: 'POSITION_SNAPSHOT_UNAVAILABLE',
+      reason: 'malformed_position',
+    }
+  }
+  if (snapshotTouchesOptional(snapshot, accountId, 'lateInstrumentAccountIds')) {
+    return {
+      ok: false,
+      error: 'POSITION_SNAPSHOT_UNAVAILABLE',
+      reason: 'late_instrument_update',
+    }
+  }
+  if (!snapshotTouchesAccount(snapshot, accountId, 'evidenceAccountIds')) {
+    return {
+      ok: false,
+      error: 'POSITION_SNAPSHOT_UNAVAILABLE',
+      reason: 'no_evidence',
+    }
+  }
+  if (
+    !snapshot.complete ||
+    snapshotTouchesAccount(snapshot, accountId, 'incompleteAccountIds')
+  ) {
+    return {
+      ok: false,
+      error: 'POSITION_SNAPSHOT_UNAVAILABLE',
+      reason: snapshot.reason ?? 'incomplete',
+    }
+  }
+  return { ok: true }
+}
+
 function classifyAdminSnapshots(params: {
   before: CapturedInstrumentSnapshot
   after: CapturedInstrumentSnapshot
   accountId: string
+  fillTimesMs: number[]
+  nowMs?: number
 }):
   | { ok: true; positions: CapturedInstrumentSnapshot['positions'] }
   | { ok: false; error: string; reason?: string } {
   const { before, after, accountId } = params
+  const first = classifyOneSnapshot(before, accountId)
+  if (!first.ok) return first
+  const second = classifyOneSnapshot(after, accountId)
+  if (!second.ok) return second
+  if (!snapshotIsFresh(after, params.nowMs)) {
+    return { ok: false, error: 'POSITION_SNAPSHOT_STALE', reason: 'stale_after_snapshot' }
+  }
   if (
-    snapshotTouchesAccount(before, accountId, 'rejectedAccountIds') ||
-    snapshotTouchesAccount(after, accountId, 'rejectedAccountIds')
+    params.fillTimesMs.some(
+      (fillMs) =>
+        fillFallsInsideSnapshotBracket(fillMs, before) ||
+        fillFallsInsideSnapshotBracket(fillMs, after),
+    )
   ) {
     return {
       ok: false,
-      error: 'ACCOUNT_REJECTED',
-      reason: after.reason ?? before.reason ?? 'rejected',
-    }
-  }
-  if (
-    snapshotTouchesAccount(before, accountId, 'missingAccountIds') ||
-    snapshotTouchesAccount(after, accountId, 'missingAccountIds')
-  ) {
-    return {
-      ok: false,
-      error: 'ACCOUNT_NOT_FOUND',
-      reason: after.reason ?? before.reason ?? 'account_not_found',
-    }
-  }
-  const incomplete =
-    !before.complete ||
-    !after.complete ||
-    snapshotTouchesAccount(before, accountId, 'incompleteAccountIds') ||
-    snapshotTouchesAccount(after, accountId, 'incompleteAccountIds')
-  if (incomplete) {
-    return {
-      ok: false,
-      error: 'POSITION_SNAPSHOT_UNAVAILABLE',
-      reason: after.reason ?? before.reason ?? 'incomplete',
+      error: 'POSITION_SNAPSHOT_MOVED',
+      reason: 'fill_during_snapshot',
     }
   }
   if (!instrumentPositionMapsEqual(before.positions, after.positions, accountId)) {
@@ -504,6 +575,9 @@ export async function resyncRithmicProtocolAccount(params: {
 
   const credentials = parseStoredCredentials(connection.storedTokenJson)
   if (!credentials) {
+    console.log(
+      `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} error=INVALID_STORED_CREDENTIALS`,
+    )
     return { ...unlockedBase, error: 'INVALID_STORED_CREDENTIALS' }
   }
 
@@ -518,6 +592,14 @@ export async function resyncRithmicProtocolAccount(params: {
           userId,
           accountNumber,
           before,
+        }
+        const finish = (result: AdminAccountResyncResult): AdminAccountResyncResult => {
+          console.log(
+            `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} ` +
+              `dryRun=${params.dryRun} complete=${result.complete} error=${result.error ?? 'ok'} ` +
+              `wouldRefuse=${result.wouldRefuse ?? false}`,
+          )
+          return result
         }
 
         const storedFills = await loadRithmicProtocolFills({
@@ -547,15 +629,22 @@ export async function resyncRithmicProtocolAccount(params: {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
           if (message.startsWith('INVALID_ANCHOR_DATE')) {
-            return { ...base, error: 'INVALID_ANCHOR_DATE' }
+            return finish({ ...base, error: 'INVALID_ANCHOR_DATE' })
+          }
+          if (message.startsWith('ANCHOR_IN_FUTURE')) {
+            return finish({ ...base, error: 'ANCHOR_IN_FUTURE' })
+          }
+          if (message.startsWith('ANCHOR_TOO_OLD')) {
+            return finish({ ...base, error: 'ANCHOR_TOO_OLD' })
           }
           throw error
         }
+        const deadlineMs = Date.now() + ADMIN_RESYNC_DEADLINE_MS
         const windowStartMs = weeklyClose.getTime()
         const fillWindow: FillHistoryWindow = {
           weeklyCloseIso: weeklyClose.toISOString(),
           historyStartYmd,
-          endYmd: toUtcYyyyMmDd(new Date()),
+          endYmd: toUtcYyyyMmDd(utcCalendarDayAfter(new Date())),
         }
 
         const snapshotRequest = {
@@ -571,10 +660,25 @@ export async function resyncRithmicProtocolAccount(params: {
 
         guard.throwIfLost()
         const beforeSnapshot = await fetchInstrumentPositions(snapshotRequest)
+        const beforeUsable = classifyOneSnapshot(beforeSnapshot, accountNumber)
+        if (!beforeUsable.ok) {
+          return finish({
+            ...base,
+            error: beforeUsable.error,
+            warnings: [
+              `Broker position snapshot refused (${beforeUsable.error}${beforeUsable.reason ? `: ${beforeUsable.reason}` : ''}).`,
+            ],
+          })
+        }
 
         let incomingFills: RithmicProtocolFill[]
         let commissionRates: Map<string, number>
+        let commissionStatus: 'ok' | 'empty' | 'failed' = 'ok'
+        let coverage: AdminFillWindowCoverage[] = []
         try {
+          if (Date.now() >= deadlineMs) {
+            return finish({ ...base, error: 'FILL_FETCH_TIMEOUT' })
+          }
           guard.throwIfLost()
           const fetched = await fetchAdminRebuildFills({
             gatewayUri: credentials.gatewayUri,
@@ -591,24 +695,26 @@ export async function resyncRithmicProtocolAccount(params: {
             (fill) => fill.accountId === accountNumber,
           )
           commissionRates = fetched.commissionRates
+          commissionStatus = fetched.commissionStatus
+          coverage = fetched.coverage
+          fillWindow.coverage = coverage
+          fillWindow.coverageReachesAnchor = coverage[0]?.resolved === true
         } catch (error) {
           if (error instanceof ProtocolSyncLockError) throw error
           if (error instanceof AdminFillFetchError) {
-            return { ...base, error: error.code }
+            return finish({ ...base, error: error.code })
           }
           console.error('[ADMIN-RESYNC] upstream fetch failed', error)
-          return { ...base, error: 'FETCH_FAILED' }
+          return finish({ ...base, error: 'FETCH_FAILED' })
         }
 
-        guard.throwIfLost()
-        const afterBrokerSnapshot = await fetchInstrumentPositions(snapshotRequest)
-        const bracket = classifyAdminSnapshots({
-          before: beforeSnapshot,
-          after: afterBrokerSnapshot,
-          accountId: accountNumber,
-        })
-        const snapshotStatus = bracket.ok ? 'ok' : 'unavailable'
-        const snapshotReason = bracket.ok ? undefined : bracket.reason
+        const timestampError = incomingFillTimestampError(
+          incomingFills,
+          historyStartYmd,
+        )
+        if (timestampError) {
+          return finish({ ...base, error: timestampError })
+        }
 
         const windowIncoming = windowFillsFrom(incomingFills, windowStartMs)
         const inWindowExisting = existing.filter(
@@ -619,45 +725,59 @@ export async function resyncRithmicProtocolAccount(params: {
         )
         const inWindowStoredFills = windowFillsFrom(storedFills, windowStartMs)
 
-        if (windowIncoming.some((fill) => !fillHasSsboe(fill))) {
-          return { ...base, error: 'FILLS_MISSING_SSBOE' }
-        }
         if (windowIncoming.some((fill) => !fillHasUsablePrice(fill))) {
-          return { ...base, error: 'FILLS_MISSING_PRICE' }
+          return finish({ ...base, error: 'FILLS_MISSING_PRICE' })
         }
 
         if (
           windowIncoming.length === 0 &&
           (inWindowExisting.length > 0 || inWindowStoredFills.length > 0)
         ) {
-          return { ...base, error: 'EMPTY_UPSTREAM_HISTORY' }
+          return finish({ ...base, error: 'EMPTY_UPSTREAM_HISTORY' })
         }
 
-        const incomingEarliest = earliestFillClock(windowIncoming)
-        const storedWindowEarliest = earliestFillClock(inWindowStoredFills)
         if (
-          storedWindowEarliest != null &&
-          incomingEarliest != null &&
-          incomingEarliest > storedWindowEarliest
+          coverage.length === 0 ||
+          coverage[0]?.startYmd !== historyStartYmd ||
+          coverage[0]?.resolved !== true
         ) {
-          return { ...base, error: 'WINDOW_DOES_NOT_REACH_ANCHOR' }
+          return finish({ ...base, error: 'WINDOW_DOES_NOT_REACH_ANCHOR' })
         }
 
+        if (Date.now() >= deadlineMs) {
+          return finish({ ...base, error: 'FILL_FETCH_TIMEOUT' })
+        }
+        guard.throwIfLost()
+        const afterBrokerSnapshot = await fetchInstrumentPositions(snapshotRequest)
+        const bracket = classifyAdminSnapshots({
+          before: beforeSnapshot,
+          after: afterBrokerSnapshot,
+          accountId: accountNumber,
+          fillTimesMs: windowIncoming.map((fill) => fillTimestampMs(fill)),
+        })
         if (!bracket.ok) {
-          return {
+          return finish({
             ...base,
             error: bracket.error,
             warnings: [
-              `Broker position snapshot refused (${bracket.error}${snapshotReason ? `: ${snapshotReason}` : ''}).`,
+              `Broker position snapshot refused (${bracket.error}${bracket.reason ? `: ${bracket.reason}` : ''}).`,
             ],
-          }
+          })
         }
+        const snapshotStatus = 'ok' as const
+        const snapshotReason = undefined
 
         const prepared = prepareRithmicProtocolFills(windowIncoming)
-        const merged = mergeFillLedgers(storedFills, incomingFills)
-        const fillPartition = partitionIncomingFills(incomingFills, storedFills)
-        const ledgerFillIds = canonicalLedgerFillIds(prepared.fills)
-        const uncovered = uncoveredProtocolTrades(inWindowExisting, ledgerFillIds)
+        const merged = mergeFillLedgers(storedFills, windowIncoming)
+        const fillPartition = partitionIncomingFills(windowIncoming, storedFills)
+        const missingStoredFills = storedFillsMissingUpstream(
+          inWindowStoredFills,
+          windowIncoming,
+        )
+        const uncovered = uncoveredTradesByFillIdentity(
+          inWindowExisting,
+          windowIncoming,
+        )
 
         const scopedPositions = bracket.positions.filter(
           (position) => position.accountId === accountNumber,
@@ -681,7 +801,10 @@ export async function resyncRithmicProtocolAccount(params: {
         )
         const derivedTrades: ReturnType<typeof buildTradesFromRithmicFills>['trades'] = []
         let openSkipped = 0
+        let fifoSkipped = false
+        let fifoOpenLotsMismatch = false
         for (const [, symbolFills] of groupFillsByExactSymbol(prepared.fills)) {
+          const symbol = (symbolFills[0]?.symbol || '').trim().toUpperCase()
           const derived = buildTradesFromRithmicFills(
             symbolFills,
             userId,
@@ -690,19 +813,54 @@ export async function resyncRithmicProtocolAccount(params: {
           )
           derivedTrades.push(...derived.trades)
           openSkipped += derived.openSkipped
+          if (Object.values(derived.skipped).some((count) => count > 0)) {
+            fifoSkipped = true
+          }
+          const pEnd = Math.abs(
+            positionChecks.find((row) => row.symbol === symbol)?.pEnd ?? 0,
+          )
+          if (derived.openSkipped !== pEnd) fifoOpenLotsMismatch = true
         }
+
+        const ordinaryPrepared = deriveTradesFromFillLedger(
+          storedFills,
+          windowIncoming,
+        )
+        const ordinaryDerived = buildTradesFromRithmicFills(
+          ordinaryPrepared.fills,
+          userId,
+          tickBySymbol,
+          commissionRates,
+        )
+        const ordinaryInWindow = inWindowDerivedTrades(
+          ordinaryDerived.trades,
+          windowStartMs,
+        )
+        const ordinaryDiverges = !ordinarySyncTradesMatchRebuild(
+          ordinaryInWindow,
+          derivedTrades,
+        )
+
         const withIds = derivedTrades.map((trade) => ({
           ...trade,
           userId,
           id: generatePersistedTradeUUID({ ...trade, userId }),
         }))
         const attached = reattachProtocolTradeAnnotations(withIds, inWindowExisting)
+        if (commissionStatus !== 'ok') {
+          for (const trade of attached.trades) {
+            const stored = inWindowExisting.find((row) => row.id === trade.id)
+            if (stored && typeof stored.commission === 'number') {
+              trade.commission = stored.commission
+            }
+          }
+        }
         if (
           inWindowExisting.length > 0 &&
           attached.trades.length === 0 &&
           uncovered.length === 0
         ) {
-          return { ...base, error: 'EMPTY_REBUILD' }
+          return finish({ ...base, error: 'EMPTY_REBUILD' })
         }
 
         const duplicateIds = duplicateRebuildTradeIds(
@@ -713,7 +871,7 @@ export async function resyncRithmicProtocolAccount(params: {
           rebuiltIds: attached.trades.map((trade) => trade.id),
           uncoveredIds: uncovered.map((row) => row.id),
           unmatchedIds: attached.unmatched.map((row) => row.id),
-          allowUnmatchedAnnotations: Boolean(params.allowUnmatchedAnnotations),
+          allowUnmatchedAnnotations: false,
           retainIds: preAnchorExisting.map((row) => row.id),
         })
         const nets = summarizeFillLedgerNets(prepared.fills)
@@ -727,13 +885,19 @@ export async function resyncRithmicProtocolAccount(params: {
         if (notFlat.length > 0) {
           warnings.push(openingNotFlatReport)
         }
-        const expectedOpenLots = positionChecks.reduce(
-          (sum, row) => sum + Math.abs(row.pEnd),
-          0,
-        )
-        if (notFlat.length === 0 && openSkipped !== expectedOpenLots) {
+        if (fifoOpenLotsMismatch) {
           warnings.push(
-            `FIFO open lots (${openSkipped}) did not match broker P_end (${expectedOpenLots}). Live apply refuses with FIFO_OPEN_LOTS.`,
+            'FIFO leftover lots did not match broker P_end per exact symbol. Live apply refuses with FIFO_OPEN_LOTS.',
+          )
+        }
+        if (fifoSkipped) {
+          warnings.push(
+            'FIFO skipped malformed fills. Live apply refuses with FIFO_SKIPPED_FILLS.',
+          )
+        }
+        if (ordinaryDiverges) {
+          warnings.push(
+            'Ordinary-sync FIFO on the proposed merged ledger does not match the rebuild plan. Live apply refuses with ORDINARY_SYNC_DIVERGENCE.',
           )
         }
         if (duplicateIds.length > 0) {
@@ -741,9 +905,14 @@ export async function resyncRithmicProtocolAccount(params: {
             `Rebuild would produce duplicate trade ids (${duplicateIds.join(', ')}). Live apply refuses with DUPLICATE_TRADE_IDS.`,
           )
         }
-        if (params.allowUnmatchedAnnotations && attached.unmatched.length > 0) {
+        if (params.allowUnmatchedAnnotations) {
           warnings.push(
-            'allowUnmatchedAnnotations keeps unmatched annotated rows alongside rebuilt FIFO trades. proposed.pnl is FIFO-only; kept-row P&L is extra and legs can overlap.',
+            'allowUnmatchedAnnotations is ignored. Unmatched annotated rows must be resolved before apply.',
+          )
+        }
+        if (commissionStatus !== 'ok') {
+          warnings.push(
+            'COMMISSION_RATES_UNAVAILABLE: Product RMS returned no rates; rematched rows keep stored commission.',
           )
         }
         const deletedPnl = existing
@@ -778,74 +947,62 @@ export async function resyncRithmicProtocolAccount(params: {
         })
 
         if (notFlat.length > 0) {
-          return {
+          return finish({
             ...base,
             wouldDelete,
             proposed,
             warnings,
             error: 'OPENING_NOT_FLAT',
-          }
+          })
         }
-        if (notFlat.length === 0 && openSkipped !== expectedOpenLots) {
-          return {
+        const wouldRefuseReasons: string[] = []
+        if (fifoOpenLotsMismatch) wouldRefuseReasons.push('FIFO_OPEN_LOTS')
+        if (fifoSkipped) wouldRefuseReasons.push('FIFO_SKIPPED_FILLS')
+        if (ordinaryDiverges) wouldRefuseReasons.push('ORDINARY_SYNC_DIVERGENCE')
+        if (duplicateIds.length > 0) wouldRefuseReasons.push('DUPLICATE_TRADE_IDS')
+        if (uncovered.length > 0) wouldRefuseReasons.push('UNCOVERED_TRADES')
+        if (missingStoredFills.length > 0) {
+          wouldRefuseReasons.push('STORED_FILL_MISSING_UPSTREAM')
+        }
+        if (attached.unmatched.length > 0) {
+          wouldRefuseReasons.push('UNMATCHED_ANNOTATIONS')
+        }
+        const newZeroCommission =
+          commissionStatus !== 'ok' &&
+          attached.trades.some((trade) => !trade.commission)
+        if (newZeroCommission) {
+          wouldRefuseReasons.push('COMMISSION_RATES_UNAVAILABLE')
+        }
+
+        if (wouldRefuseReasons.length > 0) {
+          if (params.dryRun) {
+            return finish({
+              ...base,
+              complete: true,
+              wouldDelete,
+              proposed,
+              warnings,
+              wouldRefuse: true,
+              wouldRefuseReasons,
+            })
+          }
+          return finish({
             ...base,
             wouldDelete,
             proposed,
             warnings,
-            error: 'FIFO_OPEN_LOTS',
-          }
+            error: wouldRefuseReasons[0],
+          })
         }
-
-        if (duplicateIds.length > 0 && !params.dryRun) {
-          return {
-            ...base,
-            wouldDelete,
-            proposed,
-            warnings,
-            error: 'DUPLICATE_TRADE_IDS',
-          }
-        }
-
-        if (uncovered.length > 0 && !params.dryRun) {
-          return {
-            ...base,
-            wouldDelete,
-            proposed,
-            warnings,
-            error: 'UNCOVERED_TRADES',
-          }
-        }
-
-        if (
-          attached.unmatched.length > 0 &&
-          !params.allowUnmatchedAnnotations &&
-          !params.dryRun
-        ) {
-          return {
-            ...base,
-            wouldDelete,
-            proposed,
-            warnings,
-            error: 'UNMATCHED_ANNOTATIONS',
-          }
-        }
-
-        console.log(
-          `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} dryRun=${params.dryRun} ` +
-            `beforeTrades=${before.tradeCount} beforeFills=${before.fillCount} ` +
-            `proposedTrades=${proposed.tradeCount} proposedFills=${proposed.fillCount} ` +
-            `uncovered=${proposed.uncoveredTrades.length} unmatchedAnnotations=${proposed.unmatchedAnnotations} ` +
-            `anchor=${fillWindow.weeklyCloseIso} snapshot=${snapshotStatus}`,
-        )
 
         if (params.dryRun) {
-          return {
+          return finish({
             ...base,
             complete: true,
             wouldDelete,
             proposed,
             warnings,
-          }
+          })
         }
 
         let deletedTrades = 0
@@ -884,6 +1041,18 @@ export async function resyncRithmicProtocolAccount(params: {
                 throw new AdminApplyError('CONCURRENT_SYNC')
               }
 
+              const stillLinked = await tx.connection.findFirst({
+                where: {
+                  id: connection.connectionId,
+                  userId,
+                  accounts: { some: { number: accountNumber } },
+                },
+                select: { id: true },
+              })
+              if (!stillLinked) {
+                throw new AdminApplyError('CONNECTION_UNLINKED')
+              }
+
               const accountRows = await tx.account.findMany({
                 where: { userId, number: accountNumber },
                 select: { id: true, number: true },
@@ -894,7 +1063,7 @@ export async function resyncRithmicProtocolAccount(params: {
 
               await upsertRithmicProtocolFills({
                 userId,
-                fills: incomingFills,
+                fills: windowIncoming,
                 stored: storedFills,
                 accountIdByNumber,
                 connectionId: connection.connectionId,
@@ -950,11 +1119,15 @@ export async function resyncRithmicProtocolAccount(params: {
               : error instanceof Error && error.message === 'CONCURRENT_SYNC'
                 ? 'CONCURRENT_SYNC'
                 : undefined
-          if (code === 'CONCURRENT_SYNC' || code === 'INSERT_MISMATCH') {
-            return { ...base, proposed, warnings, error: code }
+          if (
+            code === 'CONCURRENT_SYNC' ||
+            code === 'INSERT_MISMATCH' ||
+            code === 'CONNECTION_UNLINKED'
+          ) {
+            return finish({ ...base, proposed, warnings, error: code })
           }
           console.error('[ADMIN-RESYNC] apply failed; stored ledger left unchanged', error)
-          return { ...base, proposed, warnings, error: 'APPLY_FAILED' }
+          return finish({ ...base, proposed, warnings, error: 'APPLY_FAILED' })
         }
 
         try {
@@ -982,13 +1155,7 @@ export async function resyncRithmicProtocolAccount(params: {
             savedCount: createdCount,
             tradesCount: afterSnapshot.tradeCount,
           }
-          console.log(
-            `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} dryRun=false ` +
-              `deletedTrades=${deletedTrades} deletedFills=0 created=${createdCount} ` +
-              `beforeTrades=${before.tradeCount} afterTrades=${after.tradeCount} ` +
-              `saved=${after.savedCount}`,
-          )
-          return {
+          return finish({
             ...base,
             complete: true,
             committed: true,
@@ -997,10 +1164,10 @@ export async function resyncRithmicProtocolAccount(params: {
             warnings,
             deleted: { trades: deletedTrades, fills: 0 },
             after,
-          }
+          })
         } catch (error) {
           console.error('[ADMIN-RESYNC] post-commit read failed', error)
-          return {
+          return finish({
             ...base,
             complete: true,
             committed: true,
@@ -1023,12 +1190,15 @@ export async function resyncRithmicProtocolAccount(params: {
               tradesCount: proposed.tradeCount + swap.keepIds.length,
             },
             error: 'POST_COMMIT_WARNING',
-          }
+          })
         }
       },
     )
   } catch (error) {
     if (error instanceof ProtocolSyncLockError) {
+      console.log(
+        `[ADMIN-RESYNC] actor=${params.actor ?? 'unknown'} userId=${userId} account=${accountNumber} error=${error.code}`,
+      )
       return { ...unlockedBase, error: error.code }
     }
     console.error('[ADMIN-RESYNC] failed before apply', error)
@@ -1044,7 +1214,7 @@ function proposedSnapshot(params: {
   unmatchedAnnotations: number
   nets: FillLedgerNet[]
   positionChecks: OpeningPositionCheck[]
-  snapshotStatus: 'ok' | 'unavailable'
+  snapshotStatus: 'ok'
   snapshotReason?: string
   fillWindow?: FillHistoryWindow
   openingNotFlatReport?: string
@@ -1098,7 +1268,7 @@ function rebuildWarnings(params: {
   }
   if (params.uncoveredCount > 0) {
     warnings.push(
-      `${params.uncoveredCount} stored protocol trade(s) have legs outside the merged fill ledger. Live apply refuses with UNCOVERED_TRADES so those rows are not deleted.`,
+      `${params.uncoveredCount} stored protocol trade(s) have legs that are not in the raw in-window fills (identity includes time, quantity, and price). Live apply refuses with UNCOVERED_TRADES so those rows are not deleted.`,
     )
   }
   const storedFillEarliest = earliestFillClock(params.storedFills)
@@ -1116,7 +1286,7 @@ function rebuildWarnings(params: {
     incomingEarliest > storedEarliest
   ) {
     warnings.push(
-      'Upstream history starts later than stored fills or trades. Stored fills were kept and merged; uncovered trades are retained and live apply refuses rather than deleting history the window cannot recreate.',
+      'Upstream history starts later than stored fills or trades. Pre-anchor rows are retained; in-window uncovered trades refuse live apply rather than deleting history the window cannot recreate.',
     )
   }
   return warnings

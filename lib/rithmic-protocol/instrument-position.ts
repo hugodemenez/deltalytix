@@ -21,15 +21,51 @@ export type InstrumentPnLPositionUpdateFields = {
 }
 
 function toInteger(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return Math.trunc(value)
+  if (typeof value === 'number') {
+    if (!Number.isInteger(value)) return null
+    return value
   }
-  if (typeof value === 'string' && value.trim().length > 0) {
-    const parsed = Number(value)
-    if (!Number.isFinite(parsed)) return null
-    return Math.trunc(parsed)
+  if (typeof value === 'string' && /^-?\d+$/.test(value.trim())) {
+    return Number(value.trim())
   }
   return null
+}
+
+export type InspectInstrumentPnLUpdate =
+  | { status: 'ignored' }
+  | { status: 'ok'; position: RithmicProtocolInstrumentPosition }
+  | { status: 'malformed'; reason: 'invalid_net_quantity' | 'missing_identity' }
+
+/**
+ * Live (`isSnapshot === false`) 450 pushes are ignored. A missing
+ * `isSnapshot` is treated as a snapshot row — that matches the 402
+ * request path, where the plant omits the flag on snapshot 450s.
+ */
+export function inspectInstrumentPnLUpdate(
+  decoded: InstrumentPnLPositionUpdateFields,
+): InspectInstrumentPnLUpdate {
+  if (decoded.isSnapshot === false) return { status: 'ignored' }
+  const accountId = String(decoded.accountId ?? '').trim()
+  const symbol = String(decoded.symbol ?? '').trim().toUpperCase()
+  if (!accountId || !symbol) {
+    return { status: 'malformed', reason: 'missing_identity' }
+  }
+  if (decoded.netQuantity == null) {
+    return { status: 'malformed', reason: 'invalid_net_quantity' }
+  }
+  const netQuantity = toInteger(decoded.netQuantity)
+  if (netQuantity == null) {
+    return { status: 'malformed', reason: 'invalid_net_quantity' }
+  }
+  return {
+    status: 'ok',
+    position: {
+      accountId,
+      symbol,
+      exchange: decoded.exchange,
+      netQuantity,
+    },
+  }
 }
 
 /**
@@ -39,18 +75,8 @@ function toInteger(value: unknown): number | null {
 export function mapInstrumentPnLUpdate(
   decoded: InstrumentPnLPositionUpdateFields,
 ): RithmicProtocolInstrumentPosition | null {
-  if (decoded.isSnapshot === false) return null
-  const accountId = String(decoded.accountId ?? '').trim()
-  const symbol = String(decoded.symbol ?? '').trim().toUpperCase()
-  if (!accountId || !symbol) return null
-  const netQuantity = toInteger(decoded.netQuantity)
-  if (netQuantity == null) return null
-  return {
-    accountId,
-    symbol,
-    exchange: decoded.exchange,
-    netQuantity,
-  }
+  const inspected = inspectInstrumentPnLUpdate(decoded)
+  return inspected.status === 'ok' ? inspected.position : null
 }
 
 export type CapturedInstrumentSnapshot = {
@@ -65,6 +91,8 @@ export type CapturedInstrumentSnapshot = {
   missingAccountIds: string[]
   evidenceAccountIds: string[]
   requestedAccountIds: string[]
+  malformedAccountIds?: string[]
+  lateInstrumentAccountIds?: string[]
 }
 
 function positionNetMap(

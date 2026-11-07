@@ -20,6 +20,21 @@ export function exactSymbolKey(accountId: string, symbol: string): string {
   return `${accountId.trim()}|${symbol.trim().toUpperCase()}`
 }
 
+export function groupFillsByExactSymbol(
+  fills: RithmicProtocolFill[],
+): Map<string, RithmicProtocolFill[]> {
+  const groups = new Map<string, RithmicProtocolFill[]>()
+  for (const fill of fills) {
+    const symbol = (fill.symbol || '').trim().toUpperCase()
+    if (!symbol) continue
+    const key = exactSymbolKey(fill.accountId, symbol)
+    const list = groups.get(key) ?? []
+    list.push(fill)
+    groups.set(key, list)
+  }
+  return groups
+}
+
 export function signedFillSize(fill: RithmicProtocolFill): number {
   const quantity = Math.abs(Number(fill.fillSize) || 0)
   return fillSide(fill.transactionType) === 'B' ? quantity : -quantity
@@ -113,7 +128,8 @@ export function formatOpeningNotFlatReport(
       `${row.symbol}: P_0=${signed(row.p0)} (P_end=${signed(row.pEnd)}, window net=${signed(row.net)}, ${row.buyLots} buy lots / ${row.sellLots} sell lots)`,
   )
   return (
-    `Start is not flat at this weekend anchor. Pick an earlier Friday 17:00 CT close. ` +
+    `Start is not flat at this weekend anchor (carried lots, a missing window, an expiry, or a reset). ` +
+    `Try an earlier Friday 17:00 CT close only when the missing opening fills are still retrievable. ` +
     lines.join('; ')
   )
 }
@@ -131,25 +147,46 @@ export function fillHasUsablePrice(fill: RithmicProtocolFill): boolean {
   return Number.isFinite(price) && price !== 0
 }
 
+export function fillHasKnownTimestamp(fill: RithmicProtocolFill): boolean {
+  return fillTimestampMs(fill) > 0
+}
+
+function fillDateYmd(fill: RithmicProtocolFill): string | null {
+  if (fill.fillDate) {
+    const compact = fill.fillDate.replace(/-/g, '')
+    if (/^\d{8}$/.test(compact)) {
+      return `${compact.slice(0, 4)}-${compact.slice(4, 6)}-${compact.slice(6, 8)}`
+    }
+  }
+  const ms = fillTimestampMs(fill)
+  if (ms <= 0) return null
+  const at = new Date(ms)
+  return `${at.getUTCFullYear()}-${String(at.getUTCMonth() + 1).padStart(2, '0')}-${String(at.getUTCDate()).padStart(2, '0')}`
+}
+
+/**
+ * Validate every incoming fill before the weekend-window filter. Timestamp 0
+ * and any no-ssboe row dated on or after the anchor's UTC date refuse.
+ */
+export function incomingFillTimestampError(
+  fills: RithmicProtocolFill[],
+  historyStartYmd: string,
+): 'FILLS_MISSING_TIMESTAMP' | 'FILLS_MISSING_SSBOE' | null {
+  for (const fill of fills) {
+    if (!fillHasKnownTimestamp(fill)) return 'FILLS_MISSING_TIMESTAMP'
+    if (!fillHasSsboe(fill)) {
+      const day = fillDateYmd(fill)
+      if (!day || day >= historyStartYmd) return 'FILLS_MISSING_SSBOE'
+    }
+  }
+  return null
+}
+
 export function windowFillsFrom(
   fills: RithmicProtocolFill[],
   windowStartMs: number,
 ): RithmicProtocolFill[] {
   return fills.filter((fill) => fillTimestampMs(fill) >= windowStartMs)
-}
-
-export function groupFillsByExactSymbol(
-  fills: RithmicProtocolFill[],
-): Map<string, RithmicProtocolFill[]> {
-  const groups = new Map<string, RithmicProtocolFill[]>()
-  for (const fill of fills) {
-    const symbol = (fill.symbol || '').trim().toUpperCase()
-    if (!symbol) continue
-    const list = groups.get(symbol) ?? []
-    list.push(fill)
-    groups.set(symbol, list)
-  }
-  return groups
 }
 
 export function parseTradeClockMs(value: string | null | undefined): number | null {
