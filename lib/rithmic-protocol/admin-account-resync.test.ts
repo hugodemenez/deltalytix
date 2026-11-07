@@ -204,6 +204,8 @@ function fetchedFills(
     ibId: 'ib',
     historyStartYmd,
     ordinaryStartYmd: '2026-09-01',
+    fetchStartYmd: historyStartYmd,
+    orderHistoryDates: [] as string[],
     windowsFetched: 1,
     coverage: [
       {
@@ -490,6 +492,17 @@ describe('admin account resync scoping and safety', () => {
     expect(result.wouldRefuse).toBe(true)
     expect(result.wouldRefuseReasons).toContain('UNCOVERED_TRADES')
     expect(tradeDeleteMany).not.toHaveBeenCalled()
+  })
+
+  it('maps connectAndListAccounts errors to FETCH_FAILED, not ACCOUNT_NOT_FOUND', async () => {
+    connectAndListAccounts.mockRejectedValueOnce(new Error('websocket down'))
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(result.error).toBe('FETCH_FAILED')
+    expect(fetchAdminRebuildFills).not.toHaveBeenCalled()
   })
 
   it('fetch failure leaves stored data in place', async () => {
@@ -1021,6 +1034,28 @@ describe('admin account resync scoping and safety', () => {
     })
     expect(result.error).toBeUndefined()
     expect(result.wouldRefuse).toBeFalsy()
+    expect(result.complete).toBe(true)
+  })
+
+  it('does not refuse ORDINARY_SYNC_DIVERGENCE when the anchor is before historyStartDate (F8)', async () => {
+    decryptConnectionToken.mockReturnValue(
+      JSON.stringify({
+        username: 'trader',
+        password: 'secret',
+        systemName: 'Rithmic',
+        gatewayUri: 'wss://rprotocol.rithmic.com:443',
+        accountIds: [ACCOUNT, OTHER],
+        historyStartDate: '2026-10-01',
+      }),
+    )
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+      anchorDate: '2026-09-25',
+    })
+    expect(result.error).toBeUndefined()
+    expect(result.wouldRefuseReasons ?? []).not.toContain('ORDINARY_SYNC_DIVERGENCE')
     expect(result.complete).toBe(true)
   })
 

@@ -17,14 +17,16 @@ import {
 } from './admin-fill-fetch'
 import {
   type AdminFillWindowCoverage,
-  coverageIncludesYmd,
   coverageReachesAnchor,
   fifoTieChangesOutcome,
+  fillDateYyyymmdd,
   fillsInOrdinaryFetchRange,
   inWindowDerivedTrades,
+  lastFlatYmdBeforeAnchor,
   ordinarySyncTradesMatchRebuild,
   residualOpenLots,
   residualOpenLotsMatch,
+  skippedOrdinaryRangeIsQuiet,
   storedFillsMissingUpstream,
   uncoveredTradesByFillIdentity,
 } from './admin-fill-coverage'
@@ -760,7 +762,7 @@ export async function resyncRithmicProtocolAccount(params: {
           if (message.toLowerCase().includes('timeout')) {
             return finish({ ...base, error: 'FILL_FETCH_TIMEOUT' })
           }
-          return finish({ ...base, error: 'ACCOUNT_NOT_FOUND' })
+          return finish({ ...base, error: 'FETCH_FAILED' })
         }
 
         guard.throwIfLost()
@@ -787,6 +789,9 @@ export async function resyncRithmicProtocolAccount(params: {
         let commissionRates: Map<string, number>
         let commissionStatus: 'ok' | 'empty' | 'failed' = 'ok'
         let coverage: AdminFillWindowCoverage[] = []
+        let fetchStartYmd = historyStartYmd
+        let orderHistoryDates: string[] = []
+        const lastFlatYmd = lastFlatYmdBeforeAnchor(storedFills, windowStartMs)
         try {
           if (Date.now() >= deadlineMs) {
             return finish({ ...base, error: 'FILL_FETCH_TIMEOUT' })
@@ -803,6 +808,8 @@ export async function resyncRithmicProtocolAccount(params: {
             accounts: snapshotRequest.accounts,
             historyStartDate: historyStartYmd,
             ordinaryStartDate: credentials.historyStartDate,
+            lastFlatYmd,
+            occupiedFillDays: storedFills.map((fill) => fillDateYyyymmdd(fill)),
             deadlineMs: deadlineMs - ADMIN_TRANSACTION_RESERVE_MS,
           })
           incomingFills = fetched.rawFills.filter(
@@ -811,6 +818,8 @@ export async function resyncRithmicProtocolAccount(params: {
           commissionRates = fetched.commissionRates
           commissionStatus = fetched.commissionStatus
           coverage = fetched.coverage
+          fetchStartYmd = fetched.fetchStartYmd
+          orderHistoryDates = fetched.orderHistoryDates
           fillWindow.coverage = coverage
           fillWindow.coverageReachesAnchor = coverageReachesAnchor({
             coverage,
@@ -867,8 +876,14 @@ export async function resyncRithmicProtocolAccount(params: {
         )
         const ordinaryStartYmd = toUtcYyyyMmDd(ordinaryStart)
         if (
-          ordinaryStart.getTime() < windowStartMs &&
-          !coverageIncludesYmd({ coverage, ymd: ordinaryStartYmd })
+          ordinaryStartYmd < fetchStartYmd &&
+          !skippedOrdinaryRangeIsQuiet({
+            ordinaryStartYmd,
+            fetchStartYmd,
+            storedFills,
+            orderHistoryDates,
+            lastFlatYmd,
+          })
         ) {
           return finish({
             ...base,
@@ -970,10 +985,11 @@ export async function resyncRithmicProtocolAccount(params: {
           if (derived.openSkipped !== pEnd) fifoOpenLotsMismatch = true
         }
 
-        // Ordinary sync would merge the stored ledger with every fill in its
-        // eligible fetch range, not just the rebuild window.
+        // Next ordinary sync sees stored plus the in-window upserts, then
+        // every fill in its eligible fetch range — including unstored window
+        // fills between the anchor and historyStartDate / lookback.
         const ordinaryPrepared = deriveTradesFromFillLedger(
-          storedFills,
+          mergeFillLedgers(storedFills, windowIncoming),
           ordinaryEligibleIncoming,
         )
         const ordinaryDerived = buildTradesFromRithmicFills(
@@ -1005,9 +1021,11 @@ export async function resyncRithmicProtocolAccount(params: {
         const fifoTimestampTie =
           fifoTieChangesOutcome(ordinaryPrepared.fills, {
             instruments: rebuildInstruments,
+            windowStartMs,
           }) ||
           fifoTieChangesOutcome(prepared.fills, {
             instruments: rebuildInstruments,
+            windowStartMs,
           })
 
         const withIds = derivedTrades.map((trade) => ({
@@ -1058,7 +1076,7 @@ export async function resyncRithmicProtocolAccount(params: {
           id: generatePersistedTradeUUID({ ...trade, userId }),
         }))
         const ledgerFillIds = new Set(
-          merged
+          ordinaryPrepared.fills
             .map((fill) => canonicalRithmicFillId(fill.fillId))
             .filter((id): id is string => Boolean(id)),
         )

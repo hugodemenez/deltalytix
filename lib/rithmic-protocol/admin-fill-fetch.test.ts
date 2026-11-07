@@ -27,7 +27,11 @@ vi.mock('./client', () => ({
   },
 }))
 
-import { AdminFillFetchError, fetchAdminRebuildFills } from './admin-fill-fetch'
+import {
+  AdminFillFetchError,
+  fetchAdminRebuildFills,
+  resolveAdminFetchStartUtc,
+} from './admin-fill-fetch'
 
 const BASE = {
   gatewayUri: 'wss://example.test',
@@ -176,5 +180,60 @@ describe('fetchAdminRebuildFills', () => {
     expect(result.commissionStatus).toBe('empty')
     expect(result.commissionRates.size).toBe(0)
     expect(result.coverage.every((window) => window.resolved)).toBe(true)
+  })
+
+  it('lists dropped fill identities on FILLS_DROPPED', async () => {
+    getFillHistory.mockImplementationOnce(
+      async (params: {
+        observe?: {
+          onRow?: (info: unknown) => void
+          onComplete?: (info: unknown) => void
+        }
+      }) => {
+        params.observe?.onRow?.({
+          decoded: {
+            symbol: 'MESZ6',
+            fillId: 'drop-1',
+            fillDate: '20261030',
+            fillSize: 1,
+          },
+          mapped: null,
+        })
+        params.observe?.onComplete?.({
+          rpCode: ['0'],
+          noData: false,
+          ok: true,
+          fillCount: 0,
+          rowAttempts: 1,
+          hitCap: false,
+        })
+        return []
+      },
+    )
+    await expect(fetchAdminRebuildFills(BASE)).rejects.toMatchObject({
+      code: 'FILLS_DROPPED',
+      diagnostics: {
+        fills: [{ fillId: 'drop-1', fillDate: '20261030', symbol: 'MESZ6' }],
+      },
+    })
+  })
+
+  it('narrows fetch start to last-flat and the 366-day cap (F9)', () => {
+    const anchor = new Date(Date.UTC(2026, 8, 25))
+    const ordinary = new Date(Date.UTC(2013, 0, 1))
+    const now = new Date(Date.UTC(2026, 10, 7))
+    const lastFlat = resolveAdminFetchStartUtc({
+      anchorStart: anchor,
+      ordinaryStart: ordinary,
+      lastFlatYmd: '2026-09-20',
+      now,
+    })
+    expect(lastFlat.toISOString().slice(0, 10)).toBe('2026-09-20')
+    const capped = resolveAdminFetchStartUtc({
+      anchorStart: anchor,
+      ordinaryStart: ordinary,
+      now,
+    })
+    expect(capped.toISOString().slice(0, 10)).toBe('2025-11-07')
   })
 })

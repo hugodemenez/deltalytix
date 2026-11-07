@@ -260,7 +260,7 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'conflict',
         message: 'Broker instrument positions could not be trusted for this rebuild.',
-        hint: 'The account must be quiet with a complete PnL snapshot: explicit matching 451 account_id and net_quantity equal to the 450 sum. An omitted 451 net is 0 only when every 450 is flat, rp_code is 0, and open/buy/sell qty corroborate. A 400ms settle after 403 still refuses a late target 450.',
+        hint: 'The account must be quiet with a complete PnL snapshot: explicit matching 451 account_id and net_quantity equal to the 450 sum. An omitted 451 net is 0 only when every 450 is flat, rp_code is 0, and open_position_quantity corroborates. A later omitted net does not override an explicit one. A 400ms settle after 403 still refuses a late target 450.',
       }
     case 'ACCOUNT_REJECTED':
     case 'ACCOUNT_NOT_FOUND':
@@ -287,7 +287,7 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'conflict',
         message: 'Fill history did not cover the weekend-anchor window.',
-        hint: 'Partial, timed-out, truncated, or unresolved rp_code 7 windows are never applied. Quiet historical windows need order-history retention to the window start or per-day evidence. Future / no-session windows resolve empty. If the ordinary-sync fetch range before the anchor cannot be simulated, inspect result.diagnostics.windows.',
+        hint: 'Partial, timed-out, truncated, or unresolved rp_code 7 windows are never applied. Quiet historical windows need unfiltered order-history retention, weekday evidence, or to end before first plant activity with no stored fills. Fetch starts at last-flat / 366-day cap, not 2013. If the skipped ordinary prefix is not proven quiet, inspect result.diagnostics.windows.',
       }
     case 'FIFO_OPEN_LOTS':
     case 'FIFO_SKIPPED_FILLS':
@@ -308,7 +308,7 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'conflict',
         message: 'A stored in-window fill was not present in upstream history.',
-        hint: 'Coverage uses fill identity (id, time, quantity, price), not a bare fill id.',
+        hint: 'Coverage collapses history vs replay the way ordinary FIFO does, then matches identity and split pieces. A history rollup covers its stored replay pieces; those are not extra volume.',
       }
     case 'COMMISSION_RATES_UNAVAILABLE':
       return {

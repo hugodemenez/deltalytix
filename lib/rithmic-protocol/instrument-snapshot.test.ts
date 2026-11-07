@@ -153,15 +153,20 @@ describe('createInstrumentSnapshotSession 450/451/403', () => {
     expect(snapshot.reason).toBe('conflicting_instrument_net')
   })
 
-  it('treats an omitted 451 net as 0 only when 450s and extras are flat (F4)', () => {
+  it('treats an omitted 451 net as 0 only when 450s and open_position_quantity are flat (F4)', () => {
     const ok = createInstrumentSnapshotSession(ACCOUNT)
     ok.accountPnL(ACCOUNT, undefined, {
       openPositionQuantity: 0,
-      buyQty: 0,
-      sellQty: 0,
+      buyQty: 12,
+      sellQty: 12,
     })
     ok.snapshotResponse(['0'])
     expect(ok.finish(1).complete).toBe(true)
+
+    const open = createInstrumentSnapshotSession(ACCOUNT)
+    open.accountPnL(ACCOUNT, undefined, { openPositionQuantity: 1 })
+    open.snapshotResponse(['0'])
+    expect(open.finish(1).complete).toBe(false)
 
     const missing = createInstrumentSnapshotSession(ACCOUNT)
     missing.accountPnL(ACCOUNT, undefined)
@@ -175,6 +180,22 @@ describe('createInstrumentSnapshotSession 450/451/403', () => {
     const refused = missing.finish(1)
     expect(refused.complete).toBe(false)
     expect(refused.reason).toBe('missing_account_net')
+  })
+
+  it('does not let an omitted 451 net override an earlier explicit net (W5)', () => {
+    const session = createInstrumentSnapshotSession(ACCOUNT)
+    session.accountPnL(ACCOUNT, 2)
+    session.instrumentPnL({
+      accountId: ACCOUNT,
+      symbol: 'MESZ6',
+      netQuantity: 2,
+      isSnapshot: true,
+    })
+    session.accountPnL(ACCOUNT, undefined, { openPositionQuantity: 0 })
+    session.snapshotResponse(['0'])
+    const snapshot = session.finish(1)
+    expect(snapshot.complete).toBe(true)
+    expect(snapshot.positions[0]?.netQuantity).toBe(2)
   })
 
   it('does not mark ignored or foreign 450s as late after 403 (F6)', () => {

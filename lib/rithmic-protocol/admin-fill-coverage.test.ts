@@ -3,6 +3,9 @@ import {
   coverageIncludesYmd,
   fifoTieChangesOutcome,
   fillsInOrdinaryFetchRange,
+  lastFlatPointBefore,
+  lastFlatYmdBeforeAnchor,
+  skippedOrdinaryRangeIsQuiet,
   inWindowDerivedTrades,
   isFillHistoryControlRow,
   knownFillSide,
@@ -137,6 +140,54 @@ describe('stored fill and trade coverage identity', () => {
     ).toEqual([])
   })
 
+  it('does not add Replay pieces and a history rollup of the same Lucid execution (F7)', () => {
+    const ssboe = Date.parse('2026-10-20T14:00:00Z') / 1000
+    const replayA = fill({
+      fillId: '1163440',
+      fillSize: 2,
+      source: 'replay',
+      ssboe,
+    })
+    const replayB = fill({
+      fillId: '1163441',
+      fillSize: 3,
+      source: 'replay',
+      ssboe: ssboe + 1,
+    })
+    const history = fill({
+      fillId: '1163441',
+      fillSize: 5,
+      source: 'history',
+      ssboe,
+    })
+    expect(
+      storedFillsMissingUpstream([replayA, replayB, history], [history]),
+    ).toEqual([])
+    expect(storedFillsMissingUpstream([replayA, replayB], [history])).toEqual([])
+    expect(
+      storedFillsMissingUpstream([replayA, replayB, history], [replayA, replayB, history]),
+    ).toEqual([])
+    expect(
+      storedFillsMissingUpstream(
+        [
+          fill({
+            fillId: '1163440',
+            fillSize: 2,
+            source: 'replay',
+            ssboe,
+          }),
+          fill({
+            fillId: '1163441',
+            fillSize: 3,
+            source: 'replay',
+            ssboe: ssboe + 5,
+          }),
+        ],
+        [history],
+      ),
+    ).toEqual([])
+  })
+
   it('uncoveredTradesByFillIdentity uses raw fills, not consolidated ids', () => {
     const existing = [
       {
@@ -237,6 +288,40 @@ describe('windowResolvedAfterFallback', () => {
         fallbackFillCount: 0,
       }),
     ).toEqual({ resolved: true, source: 'history' })
+    expect(
+      windowResolvedAfterFallback({
+        historyStatus: 'no_data',
+        historyFillCount: 0,
+        fallbackStatus: 'ok',
+        fallbackFillCount: 0,
+        fallbackDates: ['20261020'],
+        startYmd: '2026-09-01',
+        endYmd: '2026-09-30',
+      }),
+    ).toEqual({ resolved: true, source: 'history' })
+    expect(
+      windowResolvedAfterFallback({
+        historyStatus: 'no_data',
+        historyFillCount: 0,
+        fallbackStatus: 'ok',
+        fallbackFillCount: 0,
+        fallbackDates: ['20261020'],
+        occupiedFillDays: ['20260915'],
+        startYmd: '2026-09-01',
+        endYmd: '2026-09-30',
+      }),
+    ).toEqual({ resolved: false, source: 'unresolved' })
+    expect(
+      windowResolvedAfterFallback({
+        historyStatus: 'no_data',
+        historyFillCount: 0,
+        fallbackStatus: 'ok',
+        fallbackFillCount: 0,
+        fallbackDates: ['20261102'],
+        startYmd: '2026-10-31',
+        endYmd: '2026-11-02',
+      }),
+    ).toEqual({ resolved: true, source: 'order_history' })
   })
 
   it('requires the first resolved window to start at the anchor date (N3)', () => {
@@ -546,6 +631,33 @@ describe('fifoTieChangesOutcome (F1)', () => {
     ).toBe(true)
   })
 
+  it('ignores a pre-anchor multi-price sweep once the book is flat (F1)', () => {
+    const sweep = Date.parse('2026-01-15T15:00:00Z') / 1000
+    const windowStartMs = Date.parse('2026-09-25T22:00:00Z')
+    const laterBuy = Date.parse('2026-10-20T14:00:00Z') / 1000
+    const laterSell = Date.parse('2026-10-20T14:00:01Z') / 1000
+    const fills = [
+      fill({ fillId: 'old-b', fillPrice: 5800, ssboe: sweep }),
+      fill({
+        fillId: 'old-s',
+        transactionType: 'SELL',
+        fillPrice: 5801,
+        ssboe: sweep,
+      }),
+      fill({ fillId: 'win-b', ssboe: laterBuy }),
+      fill({
+        fillId: 'win-s',
+        transactionType: 'SELL',
+        fillPrice: 5801,
+        ssboe: laterSell,
+      }),
+    ]
+    expect(fifoTieChangesOutcome(fills)).toBe(true)
+    expect(fifoTieChangesOutcome(fills, { windowStartMs })).toBe(false)
+    expect(lastFlatPointBefore(fills, windowStartMs).flatAtBoundary).toBe(true)
+    expect(lastFlatYmdBeforeAnchor(fills, windowStartMs)).toBe('2026-01-15')
+  })
+
   it('does not scan a book that is not being rebuilt', () => {
     const ms = Date.parse('2026-11-02T15:00:00Z') / 1000
     expect(
@@ -568,6 +680,46 @@ describe('fifoTieChangesOutcome (F1)', () => {
         { instruments: ['MES'] },
       ),
     ).toBe(false)
+  })
+})
+
+describe('skippedOrdinaryRangeIsQuiet (F9)', () => {
+  it('fails closed without dates or last-flat on an empty ledger', () => {
+    expect(
+      skippedOrdinaryRangeIsQuiet({
+        ordinaryStartYmd: '2026-09-01',
+        fetchStartYmd: '2026-09-25',
+        storedFills: [],
+      }),
+    ).toBe(false)
+  })
+
+  it('treats a prefix before the first order date as quiet', () => {
+    expect(
+      skippedOrdinaryRangeIsQuiet({
+        ordinaryStartYmd: '2013-01-01',
+        fetchStartYmd: '2026-09-25',
+        storedFills: [],
+        orderHistoryDates: ['20260925'],
+      }),
+    ).toBe(true)
+  })
+
+  it('accepts a last-flat skip when stored fills flattened at the fetch start', () => {
+    expect(
+      skippedOrdinaryRangeIsQuiet({
+        ordinaryStartYmd: '2013-01-01',
+        fetchStartYmd: '2026-01-15',
+        storedFills: [
+          fill({
+            fillId: 'old',
+            fillDate: '20260114',
+            ssboe: Date.parse('2026-01-14T15:00:00Z') / 1000,
+          }),
+        ],
+        lastFlatYmd: '2026-01-15',
+      }),
+    ).toBe(true)
   })
 })
 

@@ -4,6 +4,7 @@ import {
   fillIdentityKey,
   rithmicFillIdLookupValues,
 } from './dedupe-fills'
+import { prepareRithmicProtocolFills } from './fill-ledger'
 import { fillSide, fillTimestampMs, normalizeInstrument } from './fills-to-trades'
 import { parseTradeClockMs } from './opening-position'
 import type { RithmicProtocolFill } from './types'
@@ -102,6 +103,7 @@ export function observeMappedFillRow(
     rpCode?: unknown
     symbol?: string
     fillId?: string
+    fillDate?: string
     fillPrice?: number
     avgFillPrice?: number
     price?: number
@@ -294,24 +296,6 @@ function consumeLegFromPool(
   return false
 }
 
-function storedFillMatchesUpstream(
-  stored: RithmicProtocolFill,
-  upstream: RithmicProtocolFill,
-): boolean {
-  if (fillIdentityKey(stored) === fillIdentityKey(upstream)) return true
-  return (
-    sameBookFingerprint(stored, upstream) &&
-    isLegacySplitPiece({
-      storedFillId: stored.fillId,
-      storedTimeMs: fillTimestampMs(stored),
-      storedSide: knownFillSide(stored.transactionType),
-      storedPrice: Number(stored.fillPrice || stored.avgFillPrice || 0),
-      storedQty: Number(stored.fillSize || 0),
-      upstream,
-    })
-  )
-}
-
 /** Stored in-window fill is present upstream, including history rollups of split pieces. */
 export function upstreamCoversStoredFill(
   stored: RithmicProtocolFill,
@@ -320,24 +304,76 @@ export function upstreamCoversStoredFill(
   return storedFillsMissingUpstream([stored], upstreamRaw).length === 0
 }
 
+/**
+ * Compare stored vs upstream after the same plant-side collapse ordinary
+ * FIFO uses, then two-pass: exact identity first, then legacy split pieces.
+ * A history rollup may cover both its stored identity and its stored replay
+ * pieces — those are alternative representations, not extra volume.
+ */
 export function storedFillsMissingUpstream(
   storedWindow: RithmicProtocolFill[],
   upstreamRaw: RithmicProtocolFill[],
 ): RithmicProtocolFill[] {
-  const pool = makeFillQtyPool(upstreamRaw)
-  const missing: RithmicProtocolFill[] = []
-  for (const stored of storedWindow) {
+  const storedPrepared = prepareRithmicProtocolFills(storedWindow).fills
+  const upstreamPrepared = prepareRithmicProtocolFills(upstreamRaw).fills
+  const pool = makeFillQtyPool(upstreamPrepared)
+  const identityConsumed = new Set<FillQtyPool>()
+  const unmatched: RithmicProtocolFill[] = []
+  for (const stored of storedPrepared) {
     const qty = fillQty(stored)
-    const slot = pool.find(
-      (entry) => entry.remaining >= qty && storedFillMatchesUpstream(stored, entry.fill),
-    )
-    if (!slot || !(qty > 0)) {
-      missing.push(stored)
+    if (!(qty > 0)) {
+      unmatched.push(stored)
       continue
     }
-    slot.remaining -= qty
+    const identity = pool.find(
+      (entry) =>
+        entry.remaining >= qty &&
+        fillIdentityKey(entry.fill) === fillIdentityKey(stored),
+    )
+    if (identity) {
+      identity.remaining -= qty
+      identityConsumed.add(identity)
+      continue
+    }
+    unmatched.push(stored)
   }
-  return missing
+  const stillMissing: RithmicProtocolFill[] = []
+  for (const stored of unmatched) {
+    const qty = fillQty(stored)
+    const split = pool.find(
+      (entry) =>
+        entry.remaining >= qty &&
+        sameBookFingerprint(stored, entry.fill) &&
+        isLegacySplitPiece({
+          storedFillId: stored.fillId,
+          storedTimeMs: fillTimestampMs(stored),
+          storedSide: knownFillSide(stored.transactionType),
+          storedPrice: Number(stored.fillPrice || stored.avgFillPrice || 0),
+          storedQty: qty,
+          upstream: entry.fill,
+        }),
+    )
+    if (split) {
+      split.remaining -= qty
+      continue
+    }
+    const alias = [...identityConsumed].find(
+      (entry) =>
+        fillQty(entry.fill) >= qty &&
+        sameBookFingerprint(stored, entry.fill) &&
+        isLegacySplitPiece({
+          storedFillId: stored.fillId,
+          storedTimeMs: fillTimestampMs(stored),
+          storedSide: knownFillSide(stored.transactionType),
+          storedPrice: Number(stored.fillPrice || stored.avgFillPrice || 0),
+          storedQty: qty,
+          upstream: entry.fill,
+        }),
+    )
+    if (alias) continue
+    stillMissing.push(stored)
+  }
+  return stillMissing
 }
 
 export function unstoredPreAnchorFills(
@@ -507,6 +543,33 @@ export function retentionReachesWindowStart(
   return normalized.every((day) => /^\d{8}$/.test(day)) && Math.min(...normalized.map(Number)) <= Number(start)
 }
 
+function isUtcWeekend(ymd: string): boolean {
+  const [year, month, day] = ymd.split('-').map(Number)
+  if (!year || !month || !day) return false
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+  return weekday === 0 || weekday === 6
+}
+
+function hyphenYmdFromYyyymmdd(day: string): string {
+  return `${day.slice(0, 4)}-${day.slice(4, 6)}-${day.slice(6, 8)}`
+}
+
+function earliestActivityYmd(days: string[] | undefined): string | null {
+  const normalized = ymdList(days).filter((day) => /^\d{8}$/.test(day))
+  if (normalized.length === 0) return null
+  return hyphenYmdFromYyyymmdd(String(Math.min(...normalized.map(Number))).padStart(8, '0'))
+}
+
+function windowContainsOccupiedDay(
+  startYmd: string,
+  endYmd: string,
+  occupiedFillDays: string[] | undefined,
+): boolean {
+  return ymdList(occupiedFillDays).some((day) =>
+    yyyymmddInInclusiveRange(day, startYmd, endYmd),
+  )
+}
+
 function everyWindowDayHasEvidence(
   startYmd: string,
   endYmd: string,
@@ -515,7 +578,9 @@ function everyWindowDayHasEvidence(
 ): boolean {
   const covered = new Set([...ymdList(dates), ...ymdList(fillDays)])
   if (covered.size === 0) return false
-  return eachYmdInclusive(startYmd, endYmd).every((day) => covered.has(ymdToYyyymmdd(day)))
+  return eachYmdInclusive(startYmd, endYmd).every(
+    (day) => isUtcWeekend(day) || covered.has(ymdToYyyymmdd(day)),
+  )
 }
 
 export function windowResolvedAfterFallback(window: {
@@ -525,6 +590,7 @@ export function windowResolvedAfterFallback(window: {
   fallbackFillCount: number
   fallbackDates?: string[]
   fallbackFillDays?: string[]
+  occupiedFillDays?: string[]
   startYmd?: string
   endYmd?: string
   todayYmd?: string
@@ -536,13 +602,32 @@ export function windowResolvedAfterFallback(window: {
     return { resolved: true, source: 'history' }
   }
   // Future / not-yet-started UTC days have no session: treat as empty.
-  // Quiet historical no-data windows still need retention or per-day evidence.
+  // Quiet historical no-data windows still need retention, per-day evidence,
+  // or proof they end before first plant activity with no stored fills.
   if (
     window.startYmd &&
     window.todayYmd &&
     window.startYmd > window.todayYmd
   ) {
     return { resolved: true, source: 'history' }
+  }
+  if (window.startYmd && window.endYmd) {
+    const earliest = earliestActivityYmd([
+      ...(window.fallbackDates ?? []),
+      ...(window.fallbackFillDays ?? []),
+      ...(window.occupiedFillDays ?? []),
+    ])
+    if (
+      earliest &&
+      window.endYmd < earliest &&
+      !windowContainsOccupiedDay(
+        window.startYmd,
+        window.endYmd,
+        window.occupiedFillDays,
+      )
+    ) {
+      return { resolved: true, source: 'history' }
+    }
   }
   if (window.fallbackStatus !== 'ok' || !window.startYmd || !window.endYmd) {
     return { resolved: false, source: 'unresolved' }
@@ -577,6 +662,11 @@ export function coverageIncludesYmd(params: {
   )
 }
 
+/**
+ * Informational only: whether any resolved coverage window contains the
+ * weekend-anchor calendar day. Fetch start may be later than the ordinary
+ * lookback, so this is not a refusal gate.
+ */
 export function coverageReachesAnchor(params: {
   coverage: AdminFillWindowCoverage[]
   historyStartYmd: string
@@ -585,6 +675,40 @@ export function coverageReachesAnchor(params: {
     coverage: params.coverage,
     ymd: params.historyStartYmd,
   })
+}
+
+/**
+ * Ordinary-range days skipped by last-flat / 366-day fetch narrowing.
+ * Quiet when the plant has no order dates in the skip, or when stored FIFO
+ * already went flat at/after the fetch start (pre-flat fills stay on the
+ * ledger). Empty dates and an empty ledger fail closed.
+ */
+export function skippedOrdinaryRangeIsQuiet(params: {
+  ordinaryStartYmd: string
+  fetchStartYmd: string
+  storedFills: RithmicProtocolFill[]
+  orderHistoryDates?: string[]
+  lastFlatYmd?: string
+}): boolean {
+  const start = ymdToYyyymmdd(params.ordinaryStartYmd)
+  const fetchStart = ymdToYyyymmdd(params.fetchStartYmd)
+  if (!/^\d{8}$/.test(start) || !/^\d{8}$/.test(fetchStart) || start >= fetchStart) {
+    return true
+  }
+  const occupiedInSkip = params.storedFills.some((fill) => {
+    const day = fillDayKey(fill)
+    return Boolean(day) && day >= start && day < fetchStart
+  })
+  const dates = ymdList(params.orderHistoryDates)
+  const firstActivity = dates.length > 0 ? Math.min(...dates.map(Number)) : null
+  if (!occupiedInSkip && firstActivity != null && firstActivity >= Number(fetchStart)) {
+    return true
+  }
+  const lastFlat = params.lastFlatYmd ? ymdToYyyymmdd(params.lastFlatYmd) : ''
+  if (occupiedInSkip && /^\d{8}$/.test(lastFlat) && lastFlat >= fetchStart) {
+    return true
+  }
+  return false
 }
 
 export type OrdinarySyncTradeRef = {
@@ -760,40 +884,144 @@ function fifoOutcomeFingerprint(fills: RithmicProtocolFill[]): string {
   return [...closed.sort(), ...lots.map(lotFingerprint).sort()].join('~')
 }
 
+export type LastFlatPoint = {
+  lastFlatMs: number
+  flatAtBoundary: boolean
+}
+
+/**
+ * Last time this instrument book had no residual lots before `beforeMs`.
+ * Vacuous (no pre-window fills) and currently-flat books report the boundary.
+ */
+export function lastFlatPointBefore(
+  fills: RithmicProtocolFill[],
+  beforeMs: number,
+  instrument?: string,
+): LastFlatPoint {
+  type Lot = { quantity: number }
+  const books = new Map<string, { longs: Lot[]; shorts: Lot[] }>()
+  const scoped = fills
+    .map((fill, index) => ({ fill, index }))
+    .filter(({ fill }) => {
+      if (
+        instrument &&
+        normalizeInstrument(fill.symbol) !== instrument
+      ) {
+        return false
+      }
+      const ms = fillTimestampMs(fill)
+      return ms > 0 && ms < beforeMs
+    })
+    .sort((a, b) => {
+      const byTime = fillTimestampMs(a.fill) - fillTimestampMs(b.fill)
+      if (byTime !== 0) return byTime
+      return a.index - b.index
+    })
+  if (scoped.length === 0) {
+    return { lastFlatMs: beforeMs, flatAtBoundary: true }
+  }
+  let lastFlatMs = 0
+  let everLots = false
+  const bookEmpty = () =>
+    [...books.values()].every(
+      (book) => book.longs.length === 0 && book.shorts.length === 0,
+    )
+  for (const { fill } of scoped) {
+    const side = knownFillSide(fill.transactionType) ?? fillSide(fill.transactionType)
+    const symbol = normalizeInstrument(fill.symbol)
+    const quantity = Math.abs(Number(fill.fillSize) || 0)
+    const price = Number(fill.fillPrice || fill.avgFillPrice || 0)
+    if (!symbol || !quantity || !price) continue
+    const key = `${fill.accountId}|${symbol}`
+    const book = books.get(key) ?? { longs: [], shorts: [] }
+    const incoming = { quantity }
+    const opposite = side === 'B' ? book.shorts : book.longs
+    const same = side === 'B' ? book.longs : book.shorts
+    while (incoming.quantity > 0 && opposite.length > 0) {
+      const open = opposite[0]
+      const matched = Math.min(incoming.quantity, open.quantity)
+      open.quantity -= matched
+      incoming.quantity -= matched
+      if (open.quantity <= 0) opposite.shift()
+    }
+    if (incoming.quantity > 0) same.push(incoming)
+    books.set(key, book)
+    if (bookEmpty()) lastFlatMs = fillTimestampMs(fill)
+    else everLots = true
+  }
+  if (!everLots) return { lastFlatMs: beforeMs, flatAtBoundary: true }
+  if (bookEmpty()) {
+    return { lastFlatMs: lastFlatMs || beforeMs, flatAtBoundary: true }
+  }
+  return { lastFlatMs, flatAtBoundary: false }
+}
+
+/** Earliest last-flat calendar day across books, when every book is flat at the boundary. */
+export function lastFlatYmdBeforeAnchor(
+  fills: RithmicProtocolFill[],
+  beforeMs: number,
+): string | undefined {
+  const instruments = new Set(
+    fills.map((fill) => normalizeInstrument(fill.symbol)).filter(Boolean),
+  )
+  if (instruments.size === 0) return undefined
+  let minMs = Number.POSITIVE_INFINITY
+  for (const instrument of instruments) {
+    const point = lastFlatPointBefore(fills, beforeMs, instrument)
+    if (!point.flatAtBoundary) return undefined
+    if (point.lastFlatMs > 0 && point.lastFlatMs < beforeMs) {
+      minMs = Math.min(minMs, point.lastFlatMs)
+    }
+  }
+  if (!Number.isFinite(minMs)) return undefined
+  const at = new Date(minMs)
+  return `${at.getUTCFullYear()}-${String(at.getUTCMonth() + 1).padStart(2, '0')}-${String(at.getUTCDate()).padStart(2, '0')}`
+}
+
 /**
  * Refuse timestamp ties only when reversing same-ms fills in a rebuilt
  * instrument book would change closed pairs or residual lots. Same-side
- * same-price ties are harmless.
+ * same-price ties are harmless. `windowStartMs` scopes each book from its
+ * last flat point before the anchor (or the anchor when it is flat there).
  */
 export function fifoTieChangesOutcome(
   fills: RithmicProtocolFill[],
-  options?: { fromMs?: number; instruments?: Iterable<string> },
+  options?: {
+    fromMs?: number
+    windowStartMs?: number
+    instruments?: Iterable<string>
+  },
 ): boolean {
   const allowed = options?.instruments
     ? new Set(
         [...options.instruments].map((value) => value.trim().toUpperCase()).filter(Boolean),
       )
     : null
-  const scoped = fills.filter((fill) => {
-    const instrument = normalizeInstrument(fill.symbol)
-    if (!instrument) return false
-    if (allowed && !allowed.has(instrument)) return false
-    const ms = fillTimestampMs(fill)
-    if (ms <= 0) return false
-    if (options?.fromMs != null && ms < options.fromMs) return false
-    return true
-  })
   const books = new Map<string, RithmicProtocolFill[]>()
-  for (const fill of scoped) {
-    const key = `${fill.accountId}|${normalizeInstrument(fill.symbol)}`
+  for (const fill of fills) {
+    const instrument = normalizeInstrument(fill.symbol)
+    if (!instrument) continue
+    if (allowed && !allowed.has(instrument)) continue
+    const ms = fillTimestampMs(fill)
+    if (ms <= 0) continue
+    const key = `${fill.accountId}|${instrument}`
     const book = books.get(key) ?? []
     book.push(fill)
     books.set(key, book)
   }
   for (const book of books.values()) {
-    if (!bookHasMaterialTimestampTie(book)) continue
-    const forward = sortFillsForFifo(book, false)
-    const reversed = sortFillsForFifo(book, true)
+    let fromMs = options?.fromMs
+    if (options?.windowStartMs != null) {
+      const point = lastFlatPointBefore(book, options.windowStartMs)
+      fromMs = point.flatAtBoundary ? options.windowStartMs : point.lastFlatMs
+    }
+    const scoped =
+      fromMs != null
+        ? book.filter((fill) => fillTimestampMs(fill) >= fromMs)
+        : book
+    if (!bookHasMaterialTimestampTie(scoped)) continue
+    const forward = sortFillsForFifo(scoped, false)
+    const reversed = sortFillsForFifo(scoped, true)
     if (fifoOutcomeFingerprint(forward) !== fifoOutcomeFingerprint(reversed)) {
       return true
     }
