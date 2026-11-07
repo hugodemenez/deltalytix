@@ -23,6 +23,7 @@ import {
   type AdminFillWindowCoverage,
   fillDateYyyymmdd,
   observeMappedFillRow,
+  observeRawFill,
   windowResolvedAfterFallback,
   yyyymmddInInclusiveRange,
 } from './admin-fill-coverage'
@@ -59,11 +60,20 @@ function toYyyymmddNumber(d: Date): number {
   return Number(toUtcYyyymmdd(d))
 }
 
+function assertDeadline(deadlineMs?: number): void {
+  if (deadlineMs != null && Date.now() >= deadlineMs) {
+    throw new AdminFillFetchError('FILL_FETCH_TIMEOUT', 'Admin fill fetch exceeded its deadline')
+  }
+}
+
 export type AdminRebuildFillResult = {
   rawFills: RithmicProtocolFill[]
   commissionRates: Map<string, number>
   commissionStatus: 'ok' | 'empty' | 'failed'
   listedAccountIds: string[]
+  listedAccounts: Array<{ accountId: string; fcmId?: string; ibId?: string }>
+  fcmId?: string
+  ibId?: string
   historyStartYmd: string
   windowsFetched: number
   coverage: AdminFillWindowCoverage[]
@@ -86,6 +96,7 @@ export async function fetchAdminRebuildFills(params: {
   accountId: string
   accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
   historyStartDate: string
+  deadlineMs?: number
 }): Promise<AdminRebuildFillResult> {
   const start = parseUtcYyyyMmDd(params.historyStartDate)
   if (!start) {
@@ -158,11 +169,19 @@ export async function fetchAdminRebuildFills(params: {
       commissionStatus = 'failed'
     }
 
+    const observeRow: FillHistoryObserve['onRow'] = ({ decoded, mapped }) => {
+      const observation = observeMappedFillRow(decoded, mapped != null)
+      if (!observation.accepted && observation.reason) {
+        droppedRows.push({ reason: observation.reason })
+      }
+    }
+
     const coverage: AdminFillWindowCoverage[] = []
     let historyFillCount = 0
     let missingWindowCount = 0
 
     for (const window of windows) {
+      assertDeadline(params.deadlineMs)
       const startYmd = toUtcYyyyMmDd(window.start)
       const endYmd = toUtcYyyyMmDd(window.end)
       const windowFills: RithmicProtocolFill[] = []
@@ -170,12 +189,7 @@ export async function fetchAdminRebuildFills(params: {
         status: 'ok' as AdminFillWindowCoverage['historyStatus'],
       }
       const observe: FillHistoryObserve = {
-        onRow: ({ decoded, mapped }) => {
-          const observation = observeMappedFillRow(decoded, mapped != null)
-          if (!observation.accepted && observation.reason) {
-            droppedRows.push({ reason: observation.reason })
-          }
-        },
+        onRow: observeRow,
         onComplete: (info) => {
           if (info.hitCap) history.status = 'capped'
           else if (info.noData) history.status = 'no_data'
@@ -212,8 +226,9 @@ export async function fetchAdminRebuildFills(params: {
         historyStatus: history.status,
         fallbackFillCount: 0,
         fallbackStatus: 'skipped',
-        resolved: history.status === 'ok' && windowFills.length > 0,
-        source: windowFills.length > 0 ? 'history' : 'unresolved',
+        fallbackDates: [],
+        resolved: false,
+        source: 'unresolved',
       })
       fills.push(...windowFills)
     }
@@ -223,13 +238,19 @@ export async function fetchAdminRebuildFills(params: {
       missingWindowCount,
       alreadyFetched: false,
     })
+    let fallbackDates: string[] = []
     if (fallbackPlan) {
+      assertDeadline(params.deadlineMs)
       try {
         const fallback = await client.getFillsViaOrderHistory({
           fcmId,
           ibId,
           accountId: params.accountId,
           startDateYyyymmdd: toUtcYyyymmdd(start),
+          observe: { onRow: observeRow },
+          onHistoryDates: (dates) => {
+            fallbackDates = dates
+          },
         })
         const marked = markFillSource(fallback, fallbackPlan.source)
         fills.push(...marked)
@@ -243,21 +264,18 @@ export async function fetchAdminRebuildFills(params: {
           )
           window.fallbackFillCount = assigned.length
           window.fallbackStatus = 'ok'
+          window.fallbackDates = fallbackDates
           const resolved = windowResolvedAfterFallback(window)
           window.resolved = resolved.resolved
           window.source = resolved.source
         }
       } catch {
         for (const window of coverage) {
-          if (window.historyStatus === 'ok' && window.historyFillCount > 0) {
-            window.fallbackStatus = 'skipped'
-            window.resolved = true
-            window.source = 'history'
-            continue
-          }
           window.fallbackStatus = 'failed'
-          window.resolved = false
-          window.source = 'unresolved'
+          window.fallbackDates = fallbackDates
+          const resolved = windowResolvedAfterFallback(window)
+          window.resolved = resolved.resolved
+          window.source = resolved.source
         }
       }
     } else {
@@ -276,6 +294,47 @@ export async function fetchAdminRebuildFills(params: {
       )
     }
 
+    const lookbackDays = Math.max(
+      1,
+      Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1,
+    )
+    const replayLookback = resolveReplayLookbackDays({ syncRangeDays: lookbackDays })
+    const finishSsboe = Math.floor(Date.now() / 1000) + 60
+    let replayFillCount = 0
+    const runReplay = (days: number) => {
+      assertDeadline(params.deadlineMs)
+      return client.replayExecutions({
+        fcmId,
+        ibId,
+        accountId: params.accountId,
+        startSsboe: replayWindowStartSsboe(finishSsboe, days),
+        finishSsboe,
+        observe: { onRow: observeRow },
+      })
+    }
+    try {
+      const replayed = await runReplay(replayLookback.primary)
+      replayFillCount = replayed.length
+      fills.push(...markFillSource(replayed, 'replay'))
+    } catch {
+      try {
+        const replayed = await runReplay(replayLookback.fallback)
+        replayFillCount = replayed.length
+        fills.push(...markFillSource(replayed, 'replay'))
+      } catch (error) {
+        throw new AdminFillFetchError(
+          'INCOMPLETE_FILL_HISTORY',
+          error instanceof Error ? error.message : 'Replay executions failed',
+        )
+      }
+    }
+
+    for (const fill of fills) {
+      const observation = observeRawFill(fill)
+      if (!observation.accepted && observation.reason) {
+        droppedRows.push({ reason: observation.reason })
+      }
+    }
     const droppedUnknown = droppedRows.filter((row) => row.reason === 'unknown_side')
     const droppedOther = droppedRows.filter((row) => row.reason !== 'unknown_side')
     if (droppedUnknown.length > 0) {
@@ -291,47 +350,14 @@ export async function fetchAdminRebuildFills(params: {
       )
     }
 
-    const lookbackDays = Math.max(
-      1,
-      Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1,
-    )
-    const replayLookback = resolveReplayLookbackDays({ syncRangeDays: lookbackDays })
-    const finishSsboe = Math.floor(Date.now() / 1000) + 60
-    let replayFillCount = 0
-    try {
-      const replayed = await client.replayExecutions({
-        fcmId,
-        ibId,
-        accountId: params.accountId,
-        startSsboe: replayWindowStartSsboe(finishSsboe, replayLookback.primary),
-        finishSsboe,
-      })
-      replayFillCount = replayed.length
-      fills.push(...markFillSource(replayed, 'replay'))
-    } catch {
-      try {
-        const replayed = await client.replayExecutions({
-          fcmId,
-          ibId,
-          accountId: params.accountId,
-          startSsboe: replayWindowStartSsboe(finishSsboe, replayLookback.fallback),
-          finishSsboe,
-        })
-        replayFillCount = replayed.length
-        fills.push(...markFillSource(replayed, 'replay'))
-      } catch (error) {
-        throw new AdminFillFetchError(
-          'INCOMPLETE_FILL_HISTORY',
-          error instanceof Error ? error.message : 'Replay executions failed',
-        )
-      }
-    }
-
     return {
       rawFills: fills,
       commissionRates: indexProductRmsCommissionRates(rmsRows),
       commissionStatus,
       listedAccountIds,
+      listedAccounts: listed,
+      fcmId,
+      ibId,
       historyStartYmd: params.historyStartDate,
       windowsFetched: windows.length,
       coverage,

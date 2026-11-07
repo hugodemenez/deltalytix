@@ -156,6 +156,8 @@ export function resolveAdminWeekendAnchor(params: {
   const ageDays =
     (nowMs - weeklyClose.getTime()) / (24 * 60 * 60 * 1000)
   if (ageDays > MAX_ADMIN_ANCHOR_LOOKBACK_DAYS) {
+    // Policy: refuse unbounded walks. Pass a later explicit Friday; this
+    // rebuild will not start from a stored row older than 366 days.
     throw new Error(`ANCHOR_TOO_OLD:${toUtcYyyyMmDd(weeklyClose)}`)
   }
   return {

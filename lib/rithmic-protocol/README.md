@@ -203,20 +203,25 @@ unchanged. The rebuild:
   fill/trade). History ends at UTC day+1 so evening Globex trade dates are
   included.
 - Reads instrument positions (`InstrumentPnLPositionUpdate` / 450) before and
-  after the fill fetch. Completion requires `rp_code 0` on 403 **and** a
-  matching 451 for the account. No-data, missing evidence, malformed
-  `net_quantity`, 450-after-403, and a moved book all refuse. There are no
-  opening-seed lots.
+  after the fill fetch. Completion requires `rp_code 0` on 403, a 451 whose
+  `account_id` matches the target (no fallback), and 451 `net_quantity` equal
+  to the summed 450 nets. Missing 450s are flat only when that 451 net is 0.
+  No-data, missing evidence, malformed `net_quantity`, conflicting 450s, a
+  450 after 403 (including a 400ms settle drain), and a moved or stale book
+  all refuse. There are no opening-seed lots.
 - Computes `P_0 = P_end − net(fills)` per exact symbol and refuses unless
   every symbol is flat at the anchor.
-- Treats `ShowFillHistory` `rp_code 7` as uncovered until an admin-only
-  order-history fallback resolves the window. Truncated (10k) windows refuse.
-  Per-window coverage is returned on `proposed.fillWindow.coverage`.
-- Persists **only in-window fills**. Dry-run and live both run ordinary-sync
-  FIFO (`deriveTradesFromFillLedger` then one `buildTradesFromRithmicFills`)
-  on the proposed merged ledger and refuse `ORDINARY_SYNC_DIVERGENCE` if the
-  in-window trades differ. The next ordinary sync therefore cannot recreate
-  phantom shorts from a Friday prefix the rebuild itself wrote.
+- Treats `ShowFillHistory` `rp_code 7` as uncovered until order-history
+  returns fills or dates for that window. An empty fallback does not resolve
+  it. Truncated (10k) windows refuse. Per-window coverage is on
+  `proposed.fillWindow.coverage`; the first window must actually start at the
+  anchor date.
+- Persists **only in-window fills**. Upstream pre-anchor fills that ordinary
+  sync would fetch and that are not already on the ledger refuse
+  `UNSTORED_PRE_ANCHOR_FILLS`. Dry-run and live both run ordinary-sync FIFO
+  (closed pairs and residual lots) and refuse `ORDINARY_SYNC_DIVERGENCE` on
+  mismatch. Timestamp ties and a next-sync phantom reap also refuse. There is
+  no ledger-repair path for doubled split-piece volume.
 - Defaults to dry-run. Live apply needs `dryRun: false`. Dry-run reports
   `wouldRefuse` / `wouldRefuseReasons` when live would not commit. Pre-anchor
   trades are never deleted.
