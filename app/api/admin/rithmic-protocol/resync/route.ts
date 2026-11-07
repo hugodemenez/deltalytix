@@ -219,7 +219,7 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'conflict',
         message: 'Stored trades have fill legs outside the in-window fills.',
-        hint: 'Inspect result.proposed.uncoveredTrades. Coverage uses fill identity, time, side, quantity, and price.',
+        hint: 'Inspect result.proposed.uncoveredTrades. Coverage consumes fill quantity as a multiset and checks id, time, side, quantity, and price on every path, including direct-id matches.',
       }
     case 'DUPLICATE_TRADE_IDS':
     case 'INSERT_MISMATCH':
@@ -260,7 +260,7 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'conflict',
         message: 'Broker instrument positions could not be trusted for this rebuild.',
-        hint: 'The account must be quiet with a complete PnL snapshot: explicit matching 451 account_id and net_quantity equal to the 450 sum. Missing 450s are flat only when 451 net is 0. A 400ms settle after 403 still refuses a late 450.',
+        hint: 'The account must be quiet with a complete PnL snapshot: explicit matching 451 account_id and net_quantity equal to the 450 sum. An omitted 451 net is 0 only when every 450 is flat, rp_code is 0, and open/buy/sell qty corroborate. A 400ms settle after 403 still refuses a late target 450.',
       }
     case 'ACCOUNT_REJECTED':
     case 'ACCOUNT_NOT_FOUND':
@@ -283,10 +283,11 @@ function errorMapping(error: string | undefined): {
     case 'INCOMPLETE_FILL_HISTORY':
     case 'FILL_FETCH_TIMEOUT':
     case 'HISTORY_TRUNCATED':
+    case 'ORDINARY_RANGE_UNFETCHABLE':
       return {
         code: 'conflict',
         message: 'Fill history did not cover the weekend-anchor window.',
-        hint: 'Partial, timed-out, truncated, or unresolved rp_code 7 windows are never applied. Inspect result.proposed.fillWindow.coverage.',
+        hint: 'Partial, timed-out, truncated, or unresolved rp_code 7 windows are never applied. Quiet historical windows need order-history retention to the window start or per-day evidence. Future / no-session windows resolve empty. If the ordinary-sync fetch range before the anchor cannot be simulated, inspect result.diagnostics.windows.',
       }
     case 'FIFO_OPEN_LOTS':
     case 'FIFO_SKIPPED_FILLS':
@@ -296,13 +297,12 @@ function errorMapping(error: string | undefined): {
         hint: 'Inspect result.proposed.positionChecks. Stored trades were left unchanged.',
       }
     case 'ORDINARY_SYNC_DIVERGENCE':
-    case 'UNSTORED_PRE_ANCHOR_FILLS':
     case 'ORDINARY_SYNC_REAP':
     case 'FIFO_TIMESTAMP_TIE':
       return {
         code: 'conflict',
         message: 'The next ordinary sync would not reproduce this rebuild.',
-        hint: 'The rebuild persists only in-window fills. Unstored pre-anchor fills in the fetch range, residual open lots, timestamp ties, or a phantom reap all refuse. Pass an earlier Friday only when those fills are already on the ledger.',
+        hint: 'The rebuild persists only in-window fills and simulates ordinary sync over its eligible fetch range. Divergence, a phantom reap, or a same-ms tie that would change fingerprints or residual lots all refuse. There is no ledger-repair path. Inspect result.diagnostics.',
       }
     case 'STORED_FILL_MISSING_UPSTREAM':
       return {
@@ -319,8 +319,8 @@ function errorMapping(error: string | undefined): {
     case 'CONNECTION_UNLINKED':
       return {
         code: 'conflict',
-        message: 'The Protocol connection was unlinked while the rebuild was running.',
-        hint: 'Stored data was left unchanged. Re-link the account and retry a dry-run.',
+        message: 'The Protocol connection is not linked to this account.',
+        hint: 'Dry-run and live both require the Account row to belong to this connection. Stored data was left unchanged. Re-link the account and retry a dry-run.',
       }
     case 'INVALID_ANCHOR_DATE':
     case 'ANCHOR_IN_FUTURE':

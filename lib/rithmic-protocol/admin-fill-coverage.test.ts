@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  coverageIncludesYmd,
+  fifoTieChangesOutcome,
+  fillsInOrdinaryFetchRange,
   inWindowDerivedTrades,
   isFillHistoryControlRow,
   knownFillSide,
@@ -194,6 +197,40 @@ describe('windowResolvedAfterFallback', () => {
     ).toEqual({ resolved: true, source: 'order_history' })
     expect(
       windowResolvedAfterFallback({
+        historyStatus: 'no_data',
+        historyFillCount: 0,
+        fallbackStatus: 'ok',
+        fallbackFillCount: 1,
+        fallbackDates: ['20261020'],
+        fallbackFillDays: ['20261020'],
+        startYmd: '2026-10-09',
+        endYmd: '2026-11-07',
+      }),
+    ).toEqual({ resolved: false, source: 'unresolved' })
+    expect(
+      windowResolvedAfterFallback({
+        historyStatus: 'no_data',
+        historyFillCount: 0,
+        fallbackStatus: 'ok',
+        fallbackFillCount: 0,
+        fallbackDates: ['20261009', '20261107'],
+        startYmd: '2026-10-09',
+        endYmd: '2026-11-07',
+      }),
+    ).toEqual({ resolved: true, source: 'order_history' })
+    expect(
+      windowResolvedAfterFallback({
+        historyStatus: 'no_data',
+        historyFillCount: 0,
+        fallbackStatus: 'skipped',
+        fallbackFillCount: 0,
+        startYmd: '2026-11-08',
+        endYmd: '2026-11-08',
+        todayYmd: '2026-11-07',
+      }),
+    ).toEqual({ resolved: true, source: 'history' })
+    expect(
+      windowResolvedAfterFallback({
         historyStatus: 'ok',
         historyFillCount: 0,
         fallbackStatus: 'skipped',
@@ -308,7 +345,7 @@ describe('evening-session and split identity', () => {
     ).toBe(false)
   })
 
-  it('lists unstored pre-anchor fills ordinary sync would import (N2)', () => {
+  it('lists unstored pre-anchor fills regardless of ordinary range (helper only)', () => {
     const friday = fill({
       fillId: 's1',
       transactionType: 'SELL',
@@ -406,5 +443,167 @@ describe('ordinary sync vs rebuild fingerprints', () => {
     const polluted = deriveTradesFromFillLedger([...fridayPrefix, ...monday], [])
     const undone = buildTradesFromRithmicFills(polluted.fills, 'user-1', TICK)
     expect(undone.trades.some((trade) => trade.side === 'Short')).toBe(true)
+  })
+})
+
+describe('split-piece quantity consumption (W3)', () => {
+  it('does not let one upstream fill cover two stored trades', () => {
+    const upstream = [
+      fill({ fillId: '1003', fillSize: 1, fillPrice: 5800 }),
+      fill({
+        fillId: '1007',
+        transactionType: 'SELL',
+        fillSize: 1,
+        fillPrice: 5802,
+        ssboe: Date.parse('2026-10-20T14:00:05Z') / 1000,
+      }),
+    ]
+    const trades = [
+      {
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        side: 'Long',
+        quantity: 1,
+        entryPrice: 5800,
+        closePrice: 5802,
+        entryId: '1001',
+        closeId: '1005',
+        entryDate: '2026-10-20T14:00:00.000Z',
+        closeDate: '2026-10-20T14:00:05.000Z',
+      },
+      {
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        side: 'Long',
+        quantity: 1,
+        entryPrice: 5800,
+        closePrice: 5802,
+        entryId: '1003',
+        closeId: '1007',
+        entryDate: '2026-10-20T14:00:00.000Z',
+        closeDate: '2026-10-20T14:00:05.000Z',
+      },
+    ]
+    expect(uncoveredTradesByFillIdentity(trades, upstream)).toHaveLength(1)
+  })
+
+  it('rejects a direct-id match with the wrong side or price', () => {
+    expect(
+      protocolTradeCoveredByRawFills(
+        {
+          accountNumber: ACCOUNT,
+          instrument: 'MES',
+          side: 'Long',
+          quantity: 1,
+          entryPrice: 5800,
+          closePrice: 5801,
+          entryId: '1001',
+          closeId: '1002',
+          entryDate: '2026-10-20T14:00:00.000Z',
+          closeDate: '2026-10-20T14:00:01.000Z',
+        },
+        [
+          fill({
+            fillId: '1001',
+            transactionType: 'SELL',
+            fillPrice: 5800,
+          }),
+          fill({
+            fillId: '1002',
+            transactionType: 'SELL',
+            fillPrice: 5801,
+            ssboe: Date.parse('2026-10-20T14:00:01Z') / 1000,
+          }),
+        ],
+      ),
+    ).toBe(false)
+  })
+})
+
+describe('fifoTieChangesOutcome (F1)', () => {
+  it('ignores same-side same-price ties', () => {
+    const ms = Date.parse('2026-11-02T15:00:00Z') / 1000
+    expect(
+      fifoTieChangesOutcome([
+        fill({ fillId: 'a', fillPrice: 5800, ssboe: ms }),
+        fill({ fillId: 'b', fillPrice: 5800, ssboe: ms }),
+      ]),
+    ).toBe(false)
+  })
+
+  it('refuses when reversing a buy/sell tie changes residual lots', () => {
+    const ms = Date.parse('2026-11-02T15:00:00Z') / 1000
+    expect(
+      fifoTieChangesOutcome([
+        fill({ fillId: 'b1', fillPrice: 5800, ssboe: ms }),
+        fill({
+          fillId: 's1',
+          transactionType: 'SELL',
+          fillPrice: 5801,
+          ssboe: ms,
+        }),
+      ]),
+    ).toBe(true)
+  })
+
+  it('does not scan a book that is not being rebuilt', () => {
+    const ms = Date.parse('2026-11-02T15:00:00Z') / 1000
+    expect(
+      fifoTieChangesOutcome(
+        [
+          fill({
+            fillId: 'nq-b',
+            symbol: 'NQZ6',
+            fillPrice: 16000,
+            ssboe: ms,
+          }),
+          fill({
+            fillId: 'nq-s',
+            symbol: 'NQZ6',
+            transactionType: 'SELL',
+            fillPrice: 16001,
+            ssboe: ms,
+          }),
+        ],
+        { instruments: ['MES'] },
+      ),
+    ).toBe(false)
+  })
+})
+
+describe('fillsInOrdinaryFetchRange (F2)', () => {
+  it('keeps fills on or after the ordinary start day', () => {
+    const rows = fillsInOrdinaryFetchRange(
+      [
+        fill({ fillId: 'old', fillDate: '20260801', ssboe: Date.parse('2026-08-01T15:00:00Z') / 1000 }),
+        fill({ fillId: 'in', fillDate: '20260901', ssboe: Date.parse('2026-09-01T15:00:00Z') / 1000 }),
+      ],
+      Date.parse('2026-09-01T00:00:00Z'),
+      '2026-09-01',
+    )
+    expect(rows.map((row) => row.fillId)).toEqual(['in'])
+  })
+})
+
+describe('coverageIncludesYmd', () => {
+  it('ignores unresolved windows', () => {
+    expect(
+      coverageIncludesYmd({
+        coverage: [
+          {
+            startYmd: '2026-09-01',
+            endYmd: '2026-09-30',
+            historyFillCount: 0,
+            historyStatus: 'no_data',
+            fallbackFillCount: 0,
+            fallbackStatus: 'skipped',
+            fallbackDates: [],
+            resolved: false,
+            source: 'unresolved',
+          },
+        ],
+        ymd: '2026-09-01',
+      }),
+    ).toBe(false)
   })
 })
