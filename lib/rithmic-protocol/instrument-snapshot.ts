@@ -4,8 +4,11 @@
  *
  * Complete means: 403 with rp_code 0, a 451 whose account_id matches the
  * target (no fallback), 451 net_quantity equals the summed 450 nets, no
- * no-data, no malformed 450, no conflicting duplicate 450, and no 450 after
- * 403. A missing 450 is flat only when 451 net_quantity is explicitly 0.
+ * no-data, no malformed 450, no conflicting duplicate 450, and no target
+ * snapshot 450 after 403. A missing 450 is flat only when 451 net is 0
+ * (explicit, or omitted and corroborated by flat 450s plus buy/sell/open
+ * qty). Offsetting omitted 450s that still sum to 0 are a plant-dependent
+ * limit when those corroborating fields are also omitted.
  */
 import {
   inspectInstrumentPnLUpdate,
@@ -35,8 +38,20 @@ function parseNetQuantity(value: unknown): number | null {
   return null
 }
 
+export type AccountPnLCorroboration = {
+  openPositionQuantity?: number | string
+  buyQty?: number | string
+  sellQty?: number | string
+  fillBuyQty?: number | string
+  fillSellQty?: number | string
+}
+
 export type InstrumentSnapshotSession = {
-  accountPnL(accountId?: string, netQuantity?: number | string): void
+  accountPnL(
+    accountId?: string,
+    netQuantity?: number | string,
+    extra?: AccountPnLCorroboration,
+  ): void
   instrumentPnL(decoded: InstrumentPnLPositionUpdateFields): void
   snapshotResponse(rpCode: unknown): void
   reject(): void
@@ -60,19 +75,37 @@ export function createInstrumentSnapshotSession(
   let reason: string | undefined
   let accountNet: number | null = null
   let accountNetSeen = false
+  let accountNetOmitted = false
+  let corroborationZero = true
 
   const touch = (list: string[], id: string) => {
     if (id && !list.includes(id)) list.push(id)
   }
 
   return {
-    accountPnL(id, netQuantity) {
+    accountPnL(id, netQuantity, extra) {
       const resolved = String(id ?? '').trim()
       if (!resolved || resolved !== wanted) return
       touch(evidenceAccountIds, resolved)
+      const extras = [
+        extra?.openPositionQuantity,
+        extra?.buyQty,
+        extra?.sellQty,
+        extra?.fillBuyQty,
+        extra?.fillSellQty,
+      ]
+      for (const value of extras) {
+        if (value == null || value === '') continue
+        const parsedExtra = parseNetQuantity(value)
+        if (parsedExtra == null) {
+          corroborationZero = false
+          continue
+        }
+        if (parsedExtra !== 0) corroborationZero = false
+      }
       if (netQuantity == null) {
-        touch(malformedAccountIds, resolved)
-        reason = reason ?? 'missing_account_net'
+        accountNetOmitted = true
+        accountNetSeen = true
         return
       }
       const parsed = parseNetQuantity(netQuantity)
@@ -81,37 +114,38 @@ export function createInstrumentSnapshotSession(
         reason = reason ?? 'invalid_account_net'
         return
       }
-      if (accountNetSeen && accountNet !== parsed) {
+      if (accountNetSeen && !accountNetOmitted && accountNet !== parsed) {
         touch(malformedAccountIds, resolved)
         reason = reason ?? 'conflicting_account_net'
         return
       }
       accountNet = parsed
       accountNetSeen = true
+      accountNetOmitted = false
     },
     instrumentPnL(decoded) {
-      const id = String(decoded.accountId ?? '').trim()
-      if (responseSeen) {
-        touch(lateInstrumentAccountIds, id || wanted)
-        reason = reason ?? 'late_instrument_update'
-      }
-      if (!id) {
-        touch(malformedAccountIds, wanted)
-        reason = reason ?? 'missing_identity'
-        return
-      }
       const inspected = inspectInstrumentPnLUpdate(decoded)
       if (inspected.status === 'ignored') return
       if (inspected.status === 'malformed') {
-        touch(malformedAccountIds, id)
+        const id = String(decoded.accountId ?? '').trim()
+        if (id && id !== wanted) return
+        if (id === wanted && responseSeen) {
+          touch(lateInstrumentAccountIds, wanted)
+          reason = reason ?? 'late_instrument_update'
+        }
+        touch(malformedAccountIds, wanted)
         reason = reason ?? inspected.reason
         return
       }
       if (inspected.position.accountId !== wanted) return
+      if (responseSeen) {
+        touch(lateInstrumentAccountIds, wanted)
+        reason = reason ?? 'late_instrument_update'
+      }
       const key = `${inspected.position.accountId}|${inspected.position.symbol}`
       const existing = positionsByKey.get(key)
       if (existing && existing.netQuantity !== inspected.position.netQuantity) {
-        touch(malformedAccountIds, id)
+        touch(malformedAccountIds, wanted)
         reason = reason ?? 'conflicting_instrument_net'
         return
       }
@@ -140,14 +174,23 @@ export function createInstrumentSnapshotSession(
       reason = reason ?? nextReason
     },
     finish(capturedAtMs) {
+      const positions = [...positionsByKey.values()]
+      const summed = positions.reduce((sum, row) => sum + row.netQuantity, 0)
+      if (accountNetOmitted) {
+        const allFlat = positions.every((row) => row.netQuantity === 0)
+        if (responseOk && allFlat && corroborationZero) {
+          accountNet = 0
+        } else {
+          touch(malformedAccountIds, wanted)
+          reason = reason ?? 'missing_account_net'
+        }
+      }
       const evidence = evidenceAccountIds.includes(wanted) && accountNetSeen
       const noData = noDataAccountIds.includes(wanted)
       const rejected = rejectedAccountIds.includes(wanted)
       const malformed = malformedAccountIds.includes(wanted)
       const late = lateInstrumentAccountIds.includes(wanted)
       const incompleteListed = incompleteAccountIds.includes(wanted)
-      const positions = [...positionsByKey.values()]
-      const summed = positions.reduce((sum, row) => sum + row.netQuantity, 0)
       const netMismatch = evidence && accountNet != null && summed !== accountNet
       if (netMismatch) {
         reason = reason ?? 'account_net_mismatch'

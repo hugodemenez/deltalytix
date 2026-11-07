@@ -28,6 +28,7 @@ const decryptConnectionToken = vi.fn()
 const fetchFillsForAccounts = vi.fn()
 const fetchAdminRebuildFills = vi.fn()
 const fetchInstrumentPositions = vi.fn()
+const connectAndListAccounts = vi.fn()
 const withProtocolSyncLock = vi.fn()
 const updateTag = vi.fn()
 const revalidateTag = vi.fn()
@@ -52,6 +53,7 @@ vi.mock('@/lib/prisma', () => ({
     },
     connection: {
       findMany: (...args: unknown[]) => connectionFindMany(...args),
+      findFirst: (...args: unknown[]) => connectionFindFirst(...args),
       updateMany: (...args: unknown[]) => connectionUpdateMany(...args),
     },
     mood: {
@@ -78,6 +80,7 @@ vi.mock('@/lib/rithmic-protocol/client', () => ({
   fetchFillsForAccounts: (...args: unknown[]) => fetchFillsForAccounts(...args),
   fetchInstrumentPositions: (...args: unknown[]) =>
     fetchInstrumentPositions(...args),
+  connectAndListAccounts: (...args: unknown[]) => connectAndListAccounts(...args),
 }))
 vi.mock('@/lib/rithmic-protocol/admin-fill-fetch', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./admin-fill-fetch')>()
@@ -137,6 +140,10 @@ const COVERED_TRADE = {
   tags: [RITHMIC_PROTOCOL_TRADE_TAG],
   accountNumber: ACCOUNT,
   instrument: 'MES',
+  side: 'Long',
+  quantity: 1,
+  entryPrice: 7800,
+  closePrice: 7801,
   entryDate: '2026-09-30T14:00:00.000+00:00',
   closeDate: '2026-09-30T14:05:00.000+00:00',
   entryId: '1001',
@@ -183,7 +190,7 @@ const ACCOUNT_FILLS: RithmicProtocolFill[] = [
 function fetchedFills(
   rawFills: RithmicProtocolFill[] = ACCOUNT_FILLS,
   commissionRates?: Map<string, number>,
-  historyStartYmd = '2026-09-25',
+  historyStartYmd = '2026-09-01',
 ) {
   const rates = commissionRates ?? new Map([[`${ACCOUNT}|MES`, 1]])
   return {
@@ -196,6 +203,7 @@ function fetchedFills(
     fcmId: 'fcm',
     ibId: 'ib',
     historyStartYmd,
+    ordinaryStartYmd: '2026-09-01',
     windowsFetched: 1,
     coverage: [
       {
@@ -310,8 +318,14 @@ describe('admin account resync scoping and safety', () => {
         systemName: 'Rithmic',
         gatewayUri: 'wss://rprotocol.rithmic.com:443',
         accountIds: [ACCOUNT, OTHER],
+        historyStartDate: '2026-09-01',
       }),
     )
+    connectAndListAccounts.mockReset().mockResolvedValue({
+      accounts: [{ accountId: ACCOUNT, fcmId: 'fcm', ibId: 'ib' }],
+      fcmId: 'fcm',
+      ibId: 'ib',
+    })
     connectionFindMany.mockReset().mockResolvedValue([
       {
         id: 'conn-1',
@@ -321,7 +335,7 @@ describe('admin account resync scoping and safety', () => {
     ])
     fetchFillsForAccounts.mockReset()
     fetchAdminRebuildFills.mockReset().mockImplementation(
-      async (args: { historyStartDate?: string }) =>
+      async (args: { historyStartDate?: string; ordinaryStartDate?: string }) =>
         fetchedFills(
           [
             ...ACCOUNT_FILLS,
@@ -338,7 +352,9 @@ describe('admin account resync scoping and safety', () => {
             },
           ],
           undefined,
-          args.historyStartDate ?? '2026-09-25',
+          args.ordinaryStartDate && args.historyStartDate
+            ? [args.ordinaryStartDate, args.historyStartDate].sort()[0]
+            : args.historyStartDate ?? '2026-09-01',
         ),
     )
     fetchInstrumentPositions.mockReset().mockResolvedValue(flatSnapshot())
@@ -376,6 +392,10 @@ describe('admin account resync scoping and safety', () => {
       fillCount: 0,
     })
     expect(fetchAdminRebuildFills).toHaveBeenCalledTimes(1)
+    expect(fetchAdminRebuildFills).toHaveBeenCalledWith(
+      expect.objectContaining({ ordinaryStartDate: '2026-09-01' }),
+    )
+    expect(connectAndListAccounts).toHaveBeenCalled()
     expect(fetchFillsForAccounts).not.toHaveBeenCalled()
     expect(tradeDeleteMany).not.toHaveBeenCalled()
     expect(fillDeleteMany).not.toHaveBeenCalled()
@@ -447,7 +467,7 @@ describe('admin account resync scoping and safety', () => {
     expect(fillDeleteMany).not.toHaveBeenCalled()
   })
 
-  it('refuses an empty rebuild when covered trades would all disappear', async () => {
+  it('refuses when stored closed trades are not covered by upstream fill quantity (W3)', async () => {
     fetchInstrumentPositions.mockResolvedValue({
       ...flatSnapshot(),
       positions: [{ accountId: ACCOUNT, symbol: 'MESZ6', netQuantity: 2 }],
@@ -465,10 +485,10 @@ describe('admin account resync scoping and safety', () => {
     const result = await resyncRithmicProtocolAccount({
       userId: USER,
       accountNumber: ACCOUNT,
-      dryRun: false,
+      dryRun: true,
     })
-    expect(result.error).toBe('EMPTY_REBUILD')
-    expect(result.complete).toBe(false)
+    expect(result.wouldRefuse).toBe(true)
+    expect(result.wouldRefuseReasons).toContain('UNCOVERED_TRADES')
     expect(tradeDeleteMany).not.toHaveBeenCalled()
   })
 
@@ -645,8 +665,8 @@ describe('admin account resync scoping and safety', () => {
           {
             ...COVERED_TRADE,
             id: 'note-1',
-            entryId: '1002',
-            closeId: '1001',
+            entryDate: '2026-09-30T10:00:00.000+00:00',
+            closeDate: '2026-09-30T10:05:00.000+00:00',
             comment: 'keep',
           },
         ]
@@ -690,8 +710,8 @@ describe('admin account resync scoping and safety', () => {
           {
             ...COVERED_TRADE,
             id: 'note-1',
-            entryId: '1002',
-            closeId: '1001',
+            entryDate: '2026-09-30T10:00:00.000+00:00',
+            closeDate: '2026-09-30T10:05:00.000+00:00',
             comment: 'keep',
           },
         ]
@@ -935,7 +955,7 @@ describe('admin account resync scoping and safety', () => {
     expect(result.error).toBe('FILLS_MISSING_TIMESTAMP')
   })
 
-  it('persists only in-window fills so the next ordinary sync cannot replay Friday prefix shorts (H1)', async () => {
+  it('refuses when an ordinary-range prefix would change FIFO vs the rebuild (F2+W1)', async () => {
     const fridayPrefix: RithmicProtocolFill = {
       accountId: ACCOUNT,
       symbol: 'MESZ6',
@@ -948,11 +968,13 @@ describe('admin account resync scoping and safety', () => {
       source: 'history',
     }
     fetchAdminRebuildFills.mockImplementation(
-      async (args: { historyStartDate?: string }) =>
+      async (args: { historyStartDate?: string; ordinaryStartDate?: string }) =>
         fetchedFills(
           [fridayPrefix, ...ACCOUNT_FILLS],
-          new Map(),
-          args.historyStartDate ?? '2026-09-25',
+          undefined,
+          args.ordinaryStartDate && args.historyStartDate
+            ? [args.ordinaryStartDate, args.historyStartDate].sort()[0]
+            : args.historyStartDate ?? '2026-09-01',
         ),
     )
     const result = await resyncRithmicProtocolAccount({
@@ -961,21 +983,66 @@ describe('admin account resync scoping and safety', () => {
       dryRun: false,
       anchorDate: '2026-09-25',
     })
-    expect(result.error).toBe('UNSTORED_PRE_ANCHOR_FILLS')
+    expect(result.error).toBe('ORDINARY_SYNC_DIVERGENCE')
+    expect(result.diagnostics?.fills?.some((row) => row.fillId === 'friday-short')).toBe(
+      true,
+    )
     expect(result.committed).toBeUndefined()
     expect(tradeCreateMany).not.toHaveBeenCalled()
+  })
+
+  it('does not refuse a prefix outside ordinary fetch range (F2)', async () => {
+    const tooOld: RithmicProtocolFill = {
+      accountId: ACCOUNT,
+      symbol: 'MESZ6',
+      transactionType: 'SELL',
+      fillPrice: 5810,
+      fillSize: 1,
+      fillId: 'august-short',
+      fillDate: '20260801',
+      ssboe: Date.parse('2026-08-01T15:00:00Z') / 1000,
+      source: 'history',
+    }
+    fetchAdminRebuildFills.mockImplementation(
+      async (args: { historyStartDate?: string; ordinaryStartDate?: string }) =>
+        fetchedFills(
+          [tooOld, ...ACCOUNT_FILLS],
+          undefined,
+          args.ordinaryStartDate && args.historyStartDate
+            ? [args.ordinaryStartDate, args.historyStartDate].sort()[0]
+            : args.historyStartDate ?? '2026-09-01',
+        ),
+    )
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+      anchorDate: '2026-09-25',
+    })
+    expect(result.error).toBeUndefined()
+    expect(result.wouldRefuse).toBeFalsy()
+    expect(result.complete).toBe(true)
+  })
+
+  it('refuses when the ordinary-eligible range before the anchor is unfetchable (W1)', async () => {
+    fetchAdminRebuildFills.mockImplementation(async () =>
+      fetchedFills(ACCOUNT_FILLS, undefined, '2026-09-25'),
+    )
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+      anchorDate: '2026-09-25',
+    })
+    expect(result.error).toBe('ORDINARY_RANGE_UNFETCHABLE')
+    expect(result.diagnostics?.windows?.[0]?.startYmd).toBe('2026-09-25')
   })
 
   it('FIFO on a flat Jérémie window produces no phantom shorts', async () => {
     tradeFindMany.mockResolvedValue([])
     fillCount.mockResolvedValue(0)
-    fetchAdminRebuildFills.mockImplementation(
-      async (args: { historyStartDate?: string }) =>
-        fetchedFills(
-          jeremieAdminFills(true),
-          undefined,
-          args.historyStartDate ?? '2026-09-25',
-        ),
+    fetchAdminRebuildFills.mockImplementation(async () =>
+      fetchedFills(jeremieAdminFills(true)),
     )
     const result = await resyncRithmicProtocolAccount({
       userId: USER,
@@ -990,8 +1057,8 @@ describe('admin account resync scoping and safety', () => {
     expect(result.proposed?.tradesCreated).toBeGreaterThan(0)
   })
 
-  it('refuses dry-run when the Account row is missing (N18)', async () => {
-    accountFindFirst.mockResolvedValueOnce(null)
+  it('refuses dry-run when the connection is not linked to the account (L-b)', async () => {
+    connectionFindFirst.mockResolvedValueOnce(null)
     const result = await resyncRithmicProtocolAccount({
       userId: USER,
       accountNumber: ACCOUNT,

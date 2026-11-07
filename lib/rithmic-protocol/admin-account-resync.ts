@@ -5,19 +5,28 @@ import { prisma } from '@/lib/prisma'
 import { decryptConnectionToken } from '@/lib/connection-token-crypto'
 import { generatePersistedTradeUUID, RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import { canonicalRithmicFillId } from './dedupe-fills'
-import { fetchInstrumentPositions } from '@/lib/rithmic-protocol/client'
-import { AdminFillFetchError, fetchAdminRebuildFills } from './admin-fill-fetch'
+import {
+  connectAndListAccounts,
+  fetchInstrumentPositions,
+} from '@/lib/rithmic-protocol/client'
+import {
+  AdminFillFetchError,
+  fetchAdminRebuildFills,
+  resolveOrdinaryHistoryStartUtc,
+  ADMIN_DIAGNOSTIC_LIMIT,
+} from './admin-fill-fetch'
 import {
   type AdminFillWindowCoverage,
+  coverageIncludesYmd,
   coverageReachesAnchor,
-  fifoTimestampTieExists,
+  fifoTieChangesOutcome,
+  fillsInOrdinaryFetchRange,
   inWindowDerivedTrades,
   ordinarySyncTradesMatchRebuild,
   residualOpenLots,
   residualOpenLotsMatch,
   storedFillsMissingUpstream,
   uncoveredTradesByFillIdentity,
-  unstoredPreAnchorFills,
 } from './admin-fill-coverage'
 import { commissionRateKey } from './commission-rates'
 import {
@@ -107,6 +116,16 @@ const ANNOTATION_SELECT = {
 const ADMIN_RESYNC_DEADLINE_MS = 240_000
 const ADMIN_TRANSACTION_RESERVE_MS = 30_000
 
+function boundFillDiagnostics(
+  fills: Array<{ fillId?: string; fillDate?: string; symbol?: string | null }>,
+) {
+  return fills.slice(0, ADMIN_DIAGNOSTIC_LIMIT).map((fill) => ({
+    fillId: fill.fillId,
+    fillDate: fill.fillDate,
+    symbol: fill.symbol ?? undefined,
+  }))
+}
+
 export type AccountProtocolSnapshot = {
   tradeCount: number
   pnl: number
@@ -163,6 +182,16 @@ export type AdminAccountResyncResult = {
   wouldRefuse?: boolean
   wouldRefuseReasons?: string[]
   connectionIds?: string[]
+  diagnostics?: {
+    fills?: Array<{ fillId?: string; fillDate?: string; symbol?: string }>
+    windows?: Array<{
+      startYmd: string
+      endYmd: string
+      historyStatus?: string
+      resolved?: boolean
+    }>
+    positions?: Array<{ symbol: string; netQuantity: number }>
+  }
 }
 
 type StoredCredentials = {
@@ -687,12 +716,50 @@ export async function resyncRithmicProtocolAccount(params: {
           accounts: credentials.accounts,
         }
 
-        const linkedAccount = await prisma.account.findFirst({
-          where: { userId, number: accountNumber },
+        const linkedAccount = await prisma.connection.findFirst({
+          where: {
+            id: connection.connectionId,
+            userId,
+            accounts: { some: { number: accountNumber } },
+          },
           select: { id: true },
         })
         if (!linkedAccount) {
           return finish({ ...base, error: 'CONNECTION_UNLINKED' })
+        }
+
+        guard.throwIfLost()
+        if (Date.now() >= deadlineMs) {
+          return finish({ ...base, error: 'FILL_FETCH_TIMEOUT' })
+        }
+        try {
+          const listed = await connectAndListAccounts({
+            gatewayUri: credentials.gatewayUri,
+            systemName: credentials.systemName,
+            username: credentials.username,
+            password: credentials.password,
+            deadlineMs,
+          })
+          if (listed.fcmId) snapshotRequest.fcmId = listed.fcmId
+          if (listed.ibId) snapshotRequest.ibId = listed.ibId
+          if (listed.accounts.length > 0) {
+            snapshotRequest.accounts = listed.accounts
+            snapshotRequest.accountIds = listed.accounts.map(
+              (account) => account.accountId,
+            )
+          }
+          if (
+            listed.accounts.length > 0 &&
+            !listed.accounts.some((account) => account.accountId === accountNumber)
+          ) {
+            return finish({ ...base, error: 'ACCOUNT_NOT_FOUND' })
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          if (message.toLowerCase().includes('timeout')) {
+            return finish({ ...base, error: 'FILL_FETCH_TIMEOUT' })
+          }
+          return finish({ ...base, error: 'ACCOUNT_NOT_FOUND' })
         }
 
         guard.throwIfLost()
@@ -729,11 +796,12 @@ export async function resyncRithmicProtocolAccount(params: {
             systemName: credentials.systemName,
             username: credentials.username,
             password: credentials.password,
-            fcmId: credentials.fcmId,
-            ibId: credentials.ibId,
+            fcmId: snapshotRequest.fcmId,
+            ibId: snapshotRequest.ibId,
             accountId: accountNumber,
-            accounts: credentials.accounts,
+            accounts: snapshotRequest.accounts,
             historyStartDate: historyStartYmd,
+            ordinaryStartDate: credentials.historyStartDate,
             deadlineMs: deadlineMs - ADMIN_TRANSACTION_RESERVE_MS,
           })
           incomingFills = fetched.rawFills.filter(
@@ -755,7 +823,11 @@ export async function resyncRithmicProtocolAccount(params: {
         } catch (error) {
           if (error instanceof ProtocolSyncLockError) throw error
           if (error instanceof AdminFillFetchError) {
-            return finish({ ...base, error: error.code })
+            return finish({
+              ...base,
+              error: error.code,
+              diagnostics: error.diagnostics,
+            })
           }
           console.error('[ADMIN-RESYNC] upstream fetch failed', error)
           return finish({ ...base, error: 'FETCH_FAILED' })
@@ -789,23 +861,32 @@ export async function resyncRithmicProtocolAccount(params: {
           return finish({ ...base, error: 'EMPTY_UPSTREAM_HISTORY' })
         }
 
-        if (
-          !coverageReachesAnchor({
-            coverage,
-            historyStartYmd,
-          })
-        ) {
-          return finish({ ...base, error: 'WINDOW_DOES_NOT_REACH_ANCHOR' })
-        }
-
-        const unstoredPrefix = unstoredPreAnchorFills(
-          incomingFills,
-          storedFills,
-          windowStartMs,
+        const ordinaryStart = resolveOrdinaryHistoryStartUtc(
+          credentials.historyStartDate,
         )
-        if (unstoredPrefix.length > 0) {
-          return finish({ ...base, error: 'UNSTORED_PRE_ANCHOR_FILLS' })
+        const ordinaryStartYmd = toUtcYyyyMmDd(ordinaryStart)
+        if (
+          ordinaryStart.getTime() < windowStartMs &&
+          !coverageIncludesYmd({ coverage, ymd: ordinaryStartYmd })
+        ) {
+          return finish({
+            ...base,
+            error: 'ORDINARY_RANGE_UNFETCHABLE',
+            diagnostics: {
+              windows: coverage.slice(0, ADMIN_DIAGNOSTIC_LIMIT).map((window) => ({
+                startYmd: window.startYmd,
+                endYmd: window.endYmd,
+                historyStatus: window.historyStatus,
+                resolved: window.resolved,
+              })),
+            },
+          })
         }
+        const ordinaryEligibleIncoming = fillsInOrdinaryFetchRange(
+          incomingFills,
+          ordinaryStart.getTime(),
+          ordinaryStartYmd,
+        )
 
         if (Date.now() >= deadlineMs - ADMIN_TRANSACTION_RESERVE_MS) {
           return finish({ ...base, error: 'FILL_FETCH_TIMEOUT' })
@@ -888,9 +969,11 @@ export async function resyncRithmicProtocolAccount(params: {
           if (derived.openSkipped !== pEnd) fifoOpenLotsMismatch = true
         }
 
+        // Ordinary sync would merge the stored ledger with every fill in its
+        // eligible fetch range, not just the rebuild window.
         const ordinaryPrepared = deriveTradesFromFillLedger(
           storedFills,
-          windowIncoming,
+          ordinaryEligibleIncoming,
         )
         const ordinaryDerived = buildTradesFromRithmicFills(
           ordinaryPrepared.fills,
@@ -911,9 +994,20 @@ export async function resyncRithmicProtocolAccount(params: {
         const ordinaryDiverges =
           !ordinarySyncTradesMatchRebuild(ordinaryInWindow, derivedTrades) ||
           ordinaryOpenLotsDiverge
+        const rebuildInstruments = [
+          ...new Set(
+            prepared.fills
+              .map((fill) => normalizeInstrument(fill.symbol))
+              .filter(Boolean),
+          ),
+        ]
         const fifoTimestampTie =
-          fifoTimestampTieExists(ordinaryPrepared.fills) ||
-          fifoTimestampTieExists(prepared.fills)
+          fifoTieChangesOutcome(ordinaryPrepared.fills, {
+            instruments: rebuildInstruments,
+          }) ||
+          fifoTieChangesOutcome(prepared.fills, {
+            instruments: rebuildInstruments,
+          })
 
         const withIds = derivedTrades.map((trade) => ({
           ...trade,
@@ -999,13 +1093,13 @@ export async function resyncRithmicProtocolAccount(params: {
         if (ordinaryDiverges) {
           warnings.push(
             ordinaryOpenLotsDiverge
-              ? 'Ordinary-sync residual open lots do not match the rebuild. Live apply refuses with ORDINARY_SYNC_DIVERGENCE.'
-              : 'Ordinary-sync FIFO on the proposed merged ledger does not match the rebuild plan. Live apply refuses with ORDINARY_SYNC_DIVERGENCE.',
+              ? 'Ordinary-sync residual open lots do not match the rebuild. Live apply refuses with ORDINARY_SYNC_DIVERGENCE. Policy: there is no ledger-repair path; resolve the gap or pick another Friday.'
+              : 'Ordinary-sync FIFO on the proposed merged ledger does not match the rebuild plan. Live apply refuses with ORDINARY_SYNC_DIVERGENCE. Policy: there is no ledger-repair path for doubled split-piece volume or same-identity clock mismatch.',
           )
         }
         if (fifoTimestampTie) {
           warnings.push(
-            'FIFO input has timestamp ties; ordinary load order is not deterministic. Live apply refuses with FIFO_TIMESTAMP_TIE.',
+            'Reversing same-ms fills in a rebuilt instrument book would change trade fingerprints or residual lots. Live apply refuses with FIFO_TIMESTAMP_TIE. Same-side same-price ties are ignored.',
           )
         }
         if (ordinaryWouldReapKept) {
@@ -1033,7 +1127,7 @@ export async function resyncRithmicProtocolAccount(params: {
         }
         if (commissionStatus !== 'ok') {
           warnings.push(
-            'COMMISSION_RATES_UNAVAILABLE: Product RMS returned no rates; rematched rows keep stored commission.',
+            'COMMISSION_RATES_UNAVAILABLE: Product RMS returned no rates; rematched rows keep stored commission. Policy: plants without rates, and genuine stored zeros with empty RMS, refuse. There is no commission-repair path.',
           )
         }
         const deletedPnl = existing
@@ -1067,6 +1161,42 @@ export async function resyncRithmicProtocolAccount(params: {
           unmatchedAnnotatedTrades: attached.unmatched.map(tradePreview),
         })
 
+        const ordinaryPrefix = ordinaryEligibleIncoming.filter(
+          (fill) => fillTimestampMs(fill) < windowStartMs,
+        )
+        const unstoredOrdinaryPrefix = storedFillsMissingUpstream(
+          ordinaryPrefix,
+          storedFills,
+        )
+        const diagnostics = {
+          fills: boundFillDiagnostics([
+            ...unstoredOrdinaryPrefix,
+            ...missingStoredFills,
+            ...uncovered.flatMap((trade) => [
+              {
+                fillId: trade.entryId ?? undefined,
+                fillDate: trade.entryDate ?? undefined,
+                symbol: trade.instrument,
+              },
+              {
+                fillId: trade.closeId ?? undefined,
+                fillDate: trade.closeDate ?? undefined,
+                symbol: trade.instrument,
+              },
+            ]),
+          ]),
+          windows: coverage.slice(0, ADMIN_DIAGNOSTIC_LIMIT).map((window) => ({
+            startYmd: window.startYmd,
+            endYmd: window.endYmd,
+            historyStatus: window.historyStatus,
+            resolved: window.resolved,
+          })),
+          positions: notFlat.slice(0, ADMIN_DIAGNOSTIC_LIMIT).map((row) => ({
+            symbol: row.symbol,
+            netQuantity: row.p0,
+          })),
+        }
+
         if (notFlat.length > 0) {
           return finish({
             ...base,
@@ -1074,6 +1204,7 @@ export async function resyncRithmicProtocolAccount(params: {
             proposed,
             warnings,
             error: 'OPENING_NOT_FLAT',
+            diagnostics,
           })
         }
         const wouldRefuseReasons: string[] = []
@@ -1109,6 +1240,7 @@ export async function resyncRithmicProtocolAccount(params: {
               warnings,
               wouldRefuse: true,
               wouldRefuseReasons,
+              diagnostics,
             })
           }
           return finish({
@@ -1117,6 +1249,7 @@ export async function resyncRithmicProtocolAccount(params: {
             proposed,
             warnings,
             error: wouldRefuseReasons[0],
+            diagnostics,
           })
         }
 
@@ -1253,7 +1386,7 @@ export async function resyncRithmicProtocolAccount(params: {
                 }
               }
             },
-            { timeout: 120_000, maxWait: 15_000 },
+            { timeout: ADMIN_TRANSACTION_RESERVE_MS, maxWait: 15_000 },
           )
         } catch (error) {
           if (error instanceof ProtocolSyncLockError) throw error

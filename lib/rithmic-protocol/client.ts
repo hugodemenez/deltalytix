@@ -148,6 +148,23 @@ function rpMessage(rpCode: unknown): string {
   return rpCode.map(String).join(' ')
 }
 
+function remainingMessageWait(deadlineMs: number | undefined, fallbackMs = 60_000): number {
+  if (deadlineMs == null) return fallbackMs
+  return Math.max(1, Math.min(fallbackMs, deadlineMs - Date.now()))
+}
+
+function throwIfPastDeadline(deadlineMs: number | undefined): void {
+  if (deadlineMs != null && Date.now() >= deadlineMs) {
+    throw new Error('Timed out waiting for Rithmic message after 0ms')
+  }
+}
+
+function messageWaitMs(deadlineMs: number | undefined, fallbackMs = 30_000): number {
+  throwIfPastDeadline(deadlineMs)
+  if (deadlineMs == null) return fallbackMs
+  return remainingMessageWait(deadlineMs, fallbackMs)
+}
+
 /** Strip BOM / CR so GitHub secrets and pasted env values match the UI. */
 export function sanitizeRithmicSecret(value: string): string {
   return value.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '').trim()
@@ -448,6 +465,7 @@ export class RithmicProtocolClient {
     password: string
     /** Defaults to ORDER_PLANT. Use PNL_PLANT for live account balances. */
     infraType?: number
+    deadlineMs?: number
   }): Promise<{ fcmId?: string; ibId?: string; uniqueUserId?: string }> {
     const user = sanitizeRithmicSecret(params.username)
     const password = sanitizeRithmicSecret(params.password)
@@ -470,7 +488,7 @@ export class RithmicProtocolClient {
 
     let msg: InboundMessage
     try {
-      msg = await this.nextMessage()
+      msg = await this.nextMessage(messageWaitMs(params.deadlineMs))
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error)
       const hint = process.env.GITHUB_ACTIONS
@@ -508,7 +526,7 @@ export class RithmicProtocolClient {
     }
   }
 
-  async loginInfo(): Promise<{
+  async loginInfo(params?: { deadlineMs?: number }): Promise<{
     fcmId?: string
     ibId?: string
     userType?: number
@@ -517,7 +535,7 @@ export class RithmicProtocolClient {
       templateId: RithmicTemplateId.LOGIN_INFO_REQUEST,
       userMsg: ['deltalytix-login-info'],
     })
-    const msg = await this.nextMessage()
+    const msg = await this.nextMessage(messageWaitMs(params?.deadlineMs))
     if (msg.templateId !== RithmicTemplateId.LOGIN_INFO_RESPONSE) {
       throw new Error(`Unexpected login info template ${msg.templateId}`)
     }
@@ -541,6 +559,7 @@ export class RithmicProtocolClient {
     fcmId?: string
     ibId?: string
     userType?: number
+    deadlineMs?: number
   }): Promise<RithmicProtocolAccount[]> {
     const requestUserType = params.userType ?? 3
     await this.send('rti.RequestAccountList', {
@@ -554,7 +573,7 @@ export class RithmicProtocolClient {
     const accounts: RithmicProtocolAccount[] = []
     let responseCount = 0
     for (;;) {
-      const msg = await this.nextMessage()
+      const msg = await this.nextMessage(messageWaitMs(params.deadlineMs))
       if (msg.templateId === RithmicTemplateId.ACCOUNT_LIST_RESPONSE) {
         responseCount += 1
         const decoded = decodeMessage<{
@@ -607,6 +626,7 @@ export class RithmicProtocolClient {
     fcmId?: string
     ibId?: string
     accountId: string
+    deadlineMs?: number
   }): Promise<ProductRmsCommissionRow[]> {
     await this.send('rti.RequestProductRmsInfo', {
       templateId: RithmicTemplateId.PRODUCT_RMS_INFO_REQUEST,
@@ -618,7 +638,7 @@ export class RithmicProtocolClient {
 
     const rows: ProductRmsCommissionRow[] = []
     for (;;) {
-      const msg = await this.nextMessage()
+      const msg = await this.nextMessage(messageWaitMs(params.deadlineMs))
       if (msg.templateId === RithmicTemplateId.PRODUCT_RMS_INFO_RESPONSE) {
         const decoded = decodeMessage<{
           rpCode?: string[]
@@ -864,8 +884,19 @@ export class RithmicProtocolClient {
         const decoded = decodeMessage<{
           accountId?: string
           netQuantity?: number | string
+          openPositionQuantity?: number | string
+          buyQty?: number | string
+          sellQty?: number | string
+          fillBuyQty?: number | string
+          fillSellQty?: number | string
         }>(this.root!, 'rti.AccountPnLPositionUpdate', msg.raw)
-        session.accountPnL(decoded.accountId, decoded.netQuantity)
+        session.accountPnL(decoded.accountId, decoded.netQuantity, {
+          openPositionQuantity: decoded.openPositionQuantity,
+          buyQty: decoded.buyQty,
+          sellQty: decoded.sellQty,
+          fillBuyQty: decoded.fillBuyQty,
+          fillSellQty: decoded.fillSellQty,
+        })
         return 'continue' as const
       }
       if (msg.templateId === RithmicTemplateId.INSTRUMENT_PNL_POSITION_UPDATE) {
@@ -951,6 +982,8 @@ export class RithmicProtocolClient {
     endDateYyyymmdd: number
     maxRecords?: number
     observe?: FillHistoryObserve
+    /** Admin-only remaining budget. Ordinary callers omit this (60s/message). */
+    deadlineMs?: number
   }): Promise<RithmicProtocolFill[]> {
     const maxRecordCount = Math.min(params.maxRecords ?? 10_000, 10_000)
     await this.send('rti.RequestShowFillHistory', {
@@ -980,7 +1013,8 @@ export class RithmicProtocolClient {
     }
 
     for (;;) {
-      const msg = await this.nextMessage(60_000)
+      throwIfPastDeadline(params.deadlineMs)
+      const msg = await this.nextMessage(remainingMessageWait(params.deadlineMs))
 
       if (msg.templateId === RithmicTemplateId.SHOW_FILL_HISTORY_RESPONSE) {
         const decoded = decodeMessage<ShowFillHistoryRow & {
@@ -1050,6 +1084,7 @@ export class RithmicProtocolClient {
     startSsboe: number
     finishSsboe: number
     observe?: FillHistoryObserve
+    deadlineMs?: number
   }): Promise<RithmicProtocolFill[]> {
     await this.send('rti.RequestReplayExecutions', {
       templateId: RithmicTemplateId.REPLAY_EXECUTIONS_REQUEST,
@@ -1063,7 +1098,8 @@ export class RithmicProtocolClient {
 
     const fills: RithmicProtocolFill[] = []
     for (;;) {
-      const msg = await this.nextMessage(60_000)
+      throwIfPastDeadline(params.deadlineMs)
+      const msg = await this.nextMessage(remainingMessageWait(params.deadlineMs))
 
       if (msg.templateId === RithmicTemplateId.EXCHANGE_ORDER_NOTIFICATION) {
         const fill = this.decodeExchangeFill(
@@ -1117,6 +1153,7 @@ export class RithmicProtocolClient {
     startDateYyyymmdd: string
     observe?: FillHistoryObserve
     onHistoryDates?: (dates: string[]) => void
+    deadlineMs?: number
   }): Promise<RithmicProtocolFill[]> {
     await this.send('rti.RequestShowOrderHistoryDates', {
       templateId: RithmicTemplateId.SHOW_ORDER_HISTORY_DATES_REQUEST,
@@ -1125,7 +1162,8 @@ export class RithmicProtocolClient {
 
     const dates: string[] = []
     for (;;) {
-      const msg = await this.nextMessage()
+      throwIfPastDeadline(params.deadlineMs)
+      const msg = await this.nextMessage(remainingMessageWait(params.deadlineMs, 30_000))
       if (msg.templateId !== RithmicTemplateId.SHOW_ORDER_HISTORY_DATES_RESPONSE) {
         continue
       }
@@ -1159,6 +1197,7 @@ export class RithmicProtocolClient {
         ...params,
         date: date.replace(/-/g, ''),
         observe: params.observe,
+        deadlineMs: params.deadlineMs,
       })
       fills.push(...dayFills)
     }
@@ -1171,6 +1210,7 @@ export class RithmicProtocolClient {
     accountId: string
     date: string
     observe?: FillHistoryObserve
+    deadlineMs?: number
   }): Promise<RithmicProtocolFill[]> {
     await this.send('rti.RequestShowOrderHistorySummary', {
       templateId: RithmicTemplateId.SHOW_ORDER_HISTORY_SUMMARY_REQUEST,
@@ -1183,7 +1223,8 @@ export class RithmicProtocolClient {
 
     const fills: RithmicProtocolFill[] = []
     for (;;) {
-      const msg = await this.nextMessage(60_000)
+      throwIfPastDeadline(params.deadlineMs)
+      const msg = await this.nextMessage(remainingMessageWait(params.deadlineMs))
 
       if (msg.templateId === RithmicTemplateId.EXCHANGE_ORDER_NOTIFICATION) {
         const fill = this.decodeExchangeFill(
@@ -1397,16 +1438,23 @@ export async function connectAndListAccounts(params: {
   username: string
   password: string
   pinAddress?: string
+  deadlineMs?: number
 }): Promise<RithmicProtocolConnectResult> {
   const client = new RithmicProtocolClient()
   try {
     await client.connect(params.gatewayUri, { pinAddress: params.pinAddress })
-    const login = await client.login(params)
-    const info = await client.loginInfo()
+    const login = await client.login({
+      systemName: params.systemName,
+      username: params.username,
+      password: params.password,
+      deadlineMs: params.deadlineMs,
+    })
+    const info = await client.loginInfo({ deadlineMs: params.deadlineMs })
     const accounts = await client.listAccounts({
       fcmId: info.fcmId || login.fcmId,
       ibId: info.ibId || login.ibId,
       userType: info.userType,
+      deadlineMs: params.deadlineMs,
     })
     return {
       accounts,

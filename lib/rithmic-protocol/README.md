@@ -205,23 +205,30 @@ unchanged. The rebuild:
 - Reads instrument positions (`InstrumentPnLPositionUpdate` / 450) before and
   after the fill fetch. Completion requires `rp_code 0` on 403, a 451 whose
   `account_id` matches the target (no fallback), and 451 `net_quantity` equal
-  to the summed 450 nets. Missing 450s are flat only when that 451 net is 0.
-  No-data, missing evidence, malformed `net_quantity`, conflicting 450s, a
-  450 after 403 (including a 400ms settle drain), and a moved or stale book
-  all refuse. There are no opening-seed lots.
+  to the summed 450 nets. An omitted 451 net is 0 only when every 450 is
+  flat, `rp_code` is 0, and open/buy/sell quantities corroborate. Offsetting
+  omitted 450s that still sum to 0 are a plant-dependent limit when those
+  corroborating fields are also omitted. No-data, missing evidence,
+  malformed `net_quantity`, conflicting 450s, a target 450 after 403
+  (including a 400ms settle drain), and a moved or stale book all refuse.
+  There are no opening-seed lots.
 - Computes `P_0 = P_end − net(fills)` per exact symbol and refuses unless
   every symbol is flat at the anchor.
 - Treats `ShowFillHistory` `rp_code 7` as uncovered until order-history
-  returns fills or dates for that window. An empty fallback does not resolve
-  it. Truncated (10k) windows refuse. Per-window coverage is on
-  `proposed.fillWindow.coverage`; the first window must actually start at the
-  anchor date.
-- Persists **only in-window fills**. Upstream pre-anchor fills that ordinary
-  sync would fetch and that are not already on the ledger refuse
-  `UNSTORED_PRE_ANCHOR_FILLS`. Dry-run and live both run ordinary-sync FIFO
-  (closed pairs and residual lots) and refuse `ORDINARY_SYNC_DIVERGENCE` on
-  mismatch. Timestamp ties and a next-sync phantom reap also refuse. There is
-  no ledger-repair path for doubled split-piece volume.
+  proves retention (`min(dates) ≤ window start`) or every UTC day in the
+  window has a date or fill. One fallback date or fill does not cover a
+  whole no-data window. Future or no-session windows resolve empty. Quiet
+  historical windows still need that evidence. Truncated (10k) windows
+  refuse. Per-window coverage is on `proposed.fillWindow.coverage`.
+- Persists **only in-window fills**. Fetch also walks ordinary sync's
+  eligible range (`historyStartDate` or the 30-day lookback) so the rebuild
+  can simulate that merge. It refuses `ORDINARY_SYNC_DIVERGENCE` when that
+  simulation disagrees, and `ORDINARY_RANGE_UNFETCHABLE` when the range
+  before the anchor cannot be fetched. Same-millisecond ties refuse only
+  when reversing them in a rebuilt instrument book would change fingerprints
+  or residual lots. A next-sync phantom reap also refuses. Policy: there is
+  no ledger-repair path for doubled split-piece volume, same-identity clock
+  mismatch, or plants without RMS rates.
 - Defaults to dry-run. Live apply needs `dryRun: false`. Dry-run reports
   `wouldRefuse` / `wouldRefuseReasons` when live would not commit. Pre-anchor
   trades are never deleted.
