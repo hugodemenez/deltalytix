@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import {
   inWindowDerivedTrades,
+  isFillHistoryControlRow,
+  knownFillSide,
   ordinarySyncTradesMatchRebuild,
   observeMappedFillRow,
   protocolTradeCoveredByRawFills,
+  residualOpenLots,
+  residualOpenLotsMatch,
   storedFillsMissingUpstream,
   uncoveredTradesByFillIdentity,
+  unstoredPreAnchorFills,
+  coverageReachesAnchor,
   windowResolvedAfterFallback,
 } from './admin-fill-coverage'
 import { deriveTradesFromFillLedger, prepareRithmicProtocolFills } from './fill-ledger'
@@ -44,6 +50,28 @@ describe('observeMappedFillRow', () => {
       ),
     ).toEqual({ accepted: false, reason: 'unknown_side' })
   })
+
+  it('ignores terminator and rp_code 7 messages with no fill fields (N1)', () => {
+    expect(
+      isFillHistoryControlRow({ rpCode: ['0'] }),
+    ).toBe(true)
+    expect(
+      observeMappedFillRow({ rpCode: ['7'] }, false),
+    ).toEqual({ accepted: true })
+    expect(
+      observeMappedFillRow({ rpCode: ['0'] }, false),
+    ).toEqual({ accepted: true })
+  })
+
+  it('accepts exchange SS enum 3 as a sell (N20)', () => {
+    expect(knownFillSide('3')).toBe('S')
+    expect(
+      observeMappedFillRow(
+        { symbol: 'MESZ6', fillPrice: 1, fillSize: 1, transactionType: 3 },
+        true,
+      ),
+    ).toEqual({ accepted: true })
+  })
 })
 
 describe('stored fill and trade coverage identity', () => {
@@ -78,6 +106,10 @@ describe('stored fill and trade coverage identity', () => {
     const storedTrade = {
       accountNumber: ACCOUNT,
       instrument: 'MES',
+      side: 'Long',
+      quantity: 1,
+      entryPrice: 5800,
+      closePrice: 5800,
       entryId: '1245660',
       closeId: '1245669',
       entryDate: '2026-10-20T14:00:00.000Z',
@@ -112,6 +144,10 @@ describe('stored fill and trade coverage identity', () => {
         closeId: '1245669',
         entryDate: '2026-10-20T14:00:00.000Z',
         closeDate: '2026-10-20T14:00:01.000Z',
+        side: 'Long',
+        quantity: 1,
+        entryPrice: 5800,
+        closePrice: 5800,
       },
     ]
     expect(
@@ -144,7 +180,166 @@ describe('windowResolvedAfterFallback', () => {
         fallbackStatus: 'ok',
         fallbackFillCount: 0,
       }),
+    ).toEqual({ resolved: false, source: 'unresolved' })
+    expect(
+      windowResolvedAfterFallback({
+        historyStatus: 'no_data',
+        historyFillCount: 0,
+        fallbackStatus: 'ok',
+        fallbackFillCount: 0,
+        fallbackDates: ['20261030'],
+        startYmd: '2026-10-30',
+        endYmd: '2026-11-08',
+      }),
+    ).toEqual({ resolved: true, source: 'order_history' })
+    expect(
+      windowResolvedAfterFallback({
+        historyStatus: 'ok',
+        historyFillCount: 0,
+        fallbackStatus: 'skipped',
+        fallbackFillCount: 0,
+      }),
     ).toEqual({ resolved: true, source: 'history' })
+  })
+
+  it('requires the first resolved window to start at the anchor date (N3)', () => {
+    expect(
+      coverageReachesAnchor({
+        coverage: [
+          {
+            startYmd: '2026-10-30',
+            endYmd: '2026-11-08',
+            historyFillCount: 0,
+            historyStatus: 'ok',
+            fallbackFillCount: 0,
+            fallbackStatus: 'skipped',
+            fallbackDates: [],
+            resolved: true,
+            source: 'history',
+          },
+        ],
+        historyStartYmd: '2026-10-30',
+      }),
+    ).toBe(true)
+    expect(
+      coverageReachesAnchor({
+        coverage: [
+          {
+            startYmd: '2026-11-02',
+            endYmd: '2026-11-08',
+            historyFillCount: 1,
+            historyStatus: 'ok',
+            fallbackFillCount: 0,
+            fallbackStatus: 'skipped',
+            fallbackDates: [],
+            resolved: true,
+            source: 'history',
+          },
+        ],
+        historyStartYmd: '2026-10-30',
+      }),
+    ).toBe(false)
+  })
+})
+
+describe('evening-session and split identity', () => {
+  it('covers an evening UTC day that disagrees with fill_date (N5)', () => {
+    expect(
+      protocolTradeCoveredByRawFills(
+        {
+          accountNumber: ACCOUNT,
+          instrument: 'MES',
+          side: 'Long',
+          quantity: 1,
+          entryPrice: 5800,
+          closePrice: 5801,
+          entryId: 'e1',
+          closeId: 'e2',
+          entryDate: '2026-11-02T23:30:00.000Z',
+          closeDate: '2026-11-02T23:31:00.000Z',
+        },
+        [
+          fill({
+            fillId: 'e1',
+            fillDate: '20261103',
+            ssboe: Date.parse('2026-11-02T23:30:00Z') / 1000,
+          }),
+          fill({
+            fillId: 'e2',
+            transactionType: 'SELL',
+            fillPrice: 5801,
+            fillDate: '20261103',
+            ssboe: Date.parse('2026-11-02T23:31:00Z') / 1000,
+          }),
+        ],
+      ),
+    ).toBe(true)
+  })
+
+  it('does not cover a split piece with the wrong side or price (N6)', () => {
+    expect(
+      protocolTradeCoveredByRawFills(
+        {
+          accountNumber: ACCOUNT,
+          instrument: 'MES',
+          side: 'Long',
+          quantity: 1,
+          entryPrice: 5800,
+          closePrice: 5805,
+          entryId: '1001',
+          closeId: '1002',
+          entryDate: '2026-10-20T14:00:00.000Z',
+          closeDate: '2026-10-20T14:00:01.000Z',
+        },
+        [
+          fill({
+            fillId: '1003',
+            transactionType: 'SELL',
+            fillPrice: 5801,
+            ssboe: Date.parse('2026-10-20T14:00:00Z') / 1000,
+          }),
+          fill({
+            fillId: '1004',
+            fillPrice: 5799,
+            ssboe: Date.parse('2026-10-20T14:00:01Z') / 1000,
+          }),
+        ],
+      ),
+    ).toBe(false)
+  })
+
+  it('lists unstored pre-anchor fills ordinary sync would import (N2)', () => {
+    const friday = fill({
+      fillId: 's1',
+      transactionType: 'SELL',
+      ssboe: Date.parse('2026-10-30T15:00:00Z') / 1000,
+      fillDate: '20261030',
+    })
+    const monday = fill({
+      fillId: 'b3',
+      ssboe: Date.parse('2026-11-02T15:00:00Z') / 1000,
+      fillDate: '20261102',
+    })
+    expect(
+      unstoredPreAnchorFills(
+        [friday, monday],
+        [],
+        Date.parse('2026-10-30T22:00:00Z'),
+      ).map((row) => row.fillId),
+    ).toEqual(['s1'])
+  })
+
+  it('compares residual open lots by identity (N8)', () => {
+    const open = [
+      fill({ fillId: 'b0', ssboe: Date.parse('2026-10-29T15:00:00Z') / 1000 }),
+      fill({ fillId: 'b1', ssboe: Date.parse('2026-11-02T15:00:00Z') / 1000 }),
+    ]
+    const windowOnly = [
+      fill({ fillId: 'b1', ssboe: Date.parse('2026-11-02T15:00:00Z') / 1000 }),
+    ]
+    expect(
+      residualOpenLotsMatch(residualOpenLots(open), residualOpenLots(windowOnly)),
+    ).toBe(false)
   })
 })
 

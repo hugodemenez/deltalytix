@@ -145,6 +145,31 @@ describe('fetchAdminRebuildFills', () => {
     expect(getFillsViaOrderHistory).toHaveBeenCalled()
   })
 
+  it('refuses rp_code 7 when order-history returns no dates or fills (N3)', async () => {
+    getFillHistory.mockImplementation(
+      async (params: { observe?: { onComplete?: (info: unknown) => void } }) => {
+        params.observe?.onComplete?.({
+          rpCode: ['7'],
+          noData: true,
+          ok: false,
+          fillCount: 0,
+          rowAttempts: 0,
+          hitCap: false,
+        })
+        return []
+      },
+    )
+    getFillsViaOrderHistory.mockImplementation(
+      async (params: { onHistoryDates?: (dates: string[]) => void }) => {
+        params.onHistoryDates?.([])
+        return []
+      },
+    )
+    await expect(fetchAdminRebuildFills(BASE)).rejects.toMatchObject({
+      code: 'INCOMPLETE_FILL_HISTORY',
+    })
+  })
+
   it('reports RMS empty without inventing rates (M4)', async () => {
     getProductRmsInfo.mockResolvedValueOnce([])
     const result = await fetchAdminRebuildFills(BASE)

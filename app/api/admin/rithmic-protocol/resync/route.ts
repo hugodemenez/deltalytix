@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     return jsonError({
       code: 'bad_request',
       message: 'allowUnmatchedAnnotations must be a boolean when provided.',
-      hint: 'Pass true only to keep annotated trades that no longer match FIFO.',
+      hint: 'This flag is ignored. Unmatched annotated rows always refuse.',
       details: [
         {
           field: 'allowUnmatchedAnnotations',
@@ -207,19 +207,19 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'conflict',
         message: 'FIFO produced no closed trades from the merged ledger; stored trades were left unchanged.',
-        hint: 'Inspect result.proposed. Do not retry a live rebuild until a dry-run shows closed trades to write.',
+        hint: 'Inspect result.proposed. FIFO ran on in-window fills only. Do not retry a live rebuild until a dry-run shows closed trades to write.',
       }
     case 'UNMATCHED_ANNOTATIONS':
       return {
         code: 'conflict',
         message: 'Annotated trades would not survive the rebuild.',
-        hint: 'Inspect result.proposed.unmatchedAnnotatedTrades. Pass allowUnmatchedAnnotations: true only after review.',
+        hint: 'Inspect result.proposed.unmatchedAnnotatedTrades. Unmatched annotated rows must be resolved; the override is ignored.',
       }
     case 'UNCOVERED_TRADES':
       return {
         code: 'conflict',
-        message: 'Stored trades have fill legs outside the merged ledger.',
-        hint: 'Inspect result.proposed.uncoveredTrades. Coverage uses fill identity and time, not a bare fill id.',
+        message: 'Stored trades have fill legs outside the in-window fills.',
+        hint: 'Inspect result.proposed.uncoveredTrades. Coverage uses fill identity, time, side, quantity, and price.',
       }
     case 'DUPLICATE_TRADE_IDS':
     case 'INSERT_MISMATCH':
@@ -260,7 +260,7 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'conflict',
         message: 'Broker instrument positions could not be trusted for this rebuild.',
-        hint: 'The account must be quiet (before and after snapshots equal) with a complete PnL snapshot that includes 451 evidence. No-data and malformed instrument rows refuse. Retry a dry-run once the book is still.',
+        hint: 'The account must be quiet with a complete PnL snapshot: explicit matching 451 account_id and net_quantity equal to the 450 sum. Missing 450s are flat only when 451 net is 0. A 400ms settle after 403 still refuses a late 450.',
       }
     case 'ACCOUNT_REJECTED':
     case 'ACCOUNT_NOT_FOUND':
@@ -296,10 +296,13 @@ function errorMapping(error: string | undefined): {
         hint: 'Inspect result.proposed.positionChecks. Stored trades were left unchanged.',
       }
     case 'ORDINARY_SYNC_DIVERGENCE':
+    case 'UNSTORED_PRE_ANCHOR_FILLS':
+    case 'ORDINARY_SYNC_REAP':
+    case 'FIFO_TIMESTAMP_TIE':
       return {
         code: 'conflict',
         message: 'The next ordinary sync would not reproduce this rebuild.',
-        hint: 'The rebuild persists only in-window fills. Ordinary-sync FIFO on the proposed merged ledger must match the plan. Pick an earlier anchor if the stored prefix is not flat.',
+        hint: 'The rebuild persists only in-window fills. Unstored pre-anchor fills in the fetch range, residual open lots, timestamp ties, or a phantom reap all refuse. Pass an earlier Friday only when those fills are already on the ledger.',
       }
     case 'STORED_FILL_MISSING_UPSTREAM':
       return {
@@ -325,7 +328,7 @@ function errorMapping(error: string | undefined): {
       return {
         code: 'bad_request',
         message: 'anchorDate is not a past, bounded weekend close.',
-        hint: 'Pass YYYY-MM-DD or a strict ISO timestamp within the last 366 days.',
+        hint: 'Pass YYYY-MM-DD or a strict ISO timestamp within the last 366 days. A stored row older than that cannot be the default anchor; choose a later Friday explicitly.',
       }
     case 'FETCH_FAILED':
     case 'APPLY_FAILED':
