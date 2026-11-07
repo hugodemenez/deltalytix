@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 import { useCurrentLocale, useI18n } from "@/locales/client"
 import { FinancialEvent } from "@/prisma/generated/prisma/browser"
 import { Button } from "@/components/ui/button"
-import { Sparkles } from "lucide-react"
+import { Check, Sparkles } from "lucide-react"
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
@@ -37,6 +37,14 @@ export interface JournalEditorProps {
   onNewsSelection?: (newsIds: string[]) => void
   onEmbedNews?: (newsIds: string[], action: "add" | "remove") => void
   date?: Date
+  showToolbar?: boolean
+  toolbarVariant?: "default" | "compact"
+  onEditingChange?: (editing: boolean) => void
+  surfaceClassName?: string
+  commitVisible?: boolean
+  commitDisabled?: boolean
+  onCommit?: () => void
+  fillHeight?: boolean
 }
 
 function currentBlock(): JournalBlock | "p" | null {
@@ -71,6 +79,14 @@ export function JournalEditor({
   onNewsSelection,
   onEmbedNews,
   date,
+  showToolbar = true,
+  toolbarVariant = "default",
+  onEditingChange,
+  surfaceClassName,
+  commitVisible = false,
+  commitDisabled = false,
+  onCommit,
+  fillHeight = false,
 }: JournalEditorProps) {
   const t = useI18n()
   const locale = useCurrentLocale()
@@ -263,6 +279,10 @@ export function JournalEditor({
     <div
       className={cn(
         "relative flex h-full flex-col overflow-hidden rounded-lg border bg-background",
+        fillHeight && "min-h-0",
+        toolbarVariant === "compact" &&
+          !isFullscreen &&
+          "gap-3 overflow-visible rounded-none border-0 bg-transparent",
         isFullscreen && "fixed inset-0 z-50 rounded-none",
         className,
       )}
@@ -281,47 +301,76 @@ export function JournalEditor({
           event.target.value = ""
         }}
       />
-      <JournalToolbar
-        activeBlock={activeBlock}
-        isFullscreen={isFullscreen}
-        events={events}
-        selectedNews={selectedNews}
-        onNewsSelection={onNewsSelection}
-        onEmbedNews={onEmbedNews || handleEmbedNews}
-        date={date}
-        onToggleBlock={handleToggleBlock}
-        onInsertImage={() => fileInputRef.current?.click()}
-        aiMenu={
-          aiReady ? (
-            <JournalAI
-              getTargetText={() => {
-                const selection = window.getSelection()?.toString().trim() ?? ""
-                return selection || editorRef.current?.innerText.trim() || ""
-              }}
-              onInsert={(text) => insertHtml(escapeJournalText(text))}
-              date={date}
-              locale={locale}
-            />
-          ) : (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              title="AI actions"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => setAiReady(true)}
-            >
-              <Sparkles />
-            </Button>
-          )
-        }
-        onToggleFullscreen={() => setIsFullscreen((open) => !open)}
-      />
-      <div className="relative min-h-0 flex-1">
+      {showToolbar ? (
+        <JournalToolbar
+          activeBlock={activeBlock}
+          isFullscreen={isFullscreen}
+          events={events}
+          selectedNews={selectedNews}
+          onNewsSelection={onNewsSelection}
+          onEmbedNews={onEmbedNews || handleEmbedNews}
+          date={date}
+          variant={toolbarVariant}
+          onToggleBlock={handleToggleBlock}
+          onInsertImage={() => fileInputRef.current?.click()}
+          aiMenu={
+            aiReady ? (
+              <JournalAI
+                getTargetText={() => {
+                  const selection = window.getSelection()?.toString().trim() ?? ""
+                  return selection || editorRef.current?.innerText.trim() || ""
+                }}
+                onInsert={(text) => insertHtml(escapeJournalText(text))}
+                date={date}
+                locale={locale}
+                compact={toolbarVariant === "compact"}
+              />
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size={toolbarVariant === "compact" ? "sm" : "icon-sm"}
+                className={
+                  toolbarVariant === "compact"
+                    ? "h-8 gap-1 px-2 text-[13px] text-muted-foreground"
+                    : undefined
+                }
+                title={t("editor.ai.button")}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => setAiReady(true)}
+              >
+                <Sparkles className="h-4 w-4" />
+                {toolbarVariant === "compact" ? t("mindset.editor.aiShort") : null}
+              </Button>
+            )
+          }
+          onToggleFullscreen={() => setIsFullscreen((open) => !open)}
+        />
+      ) : null}
+      <div
+        className={cn(
+          "relative min-h-0",
+          toolbarVariant === "compact"
+            ? cn(
+                fillHeight
+                  ? "flex min-h-0 flex-1 flex-col rounded-[10px] border border-border bg-muted text-foreground"
+                  : "flex-none rounded-[10px] border border-border bg-muted text-foreground",
+                commitVisible ? "min-h-[220px]" : "min-h-[4.75rem]",
+              )
+            : "flex-1",
+        )}
+      >
         {isEmpty ? (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 p-2 text-lg text-muted-foreground sm:text-sm"
+            className={cn(
+              "pointer-events-none absolute inset-0 p-2 text-muted-foreground",
+              toolbarVariant === "compact"
+                ? "text-base"
+                : "text-lg sm:text-sm",
+              surfaceClassName,
+              commitVisible && "pb-11",
+            )}
           >
             {placeholder}
           </div>
@@ -334,7 +383,12 @@ export function JournalEditor({
           contentEditable
           suppressContentEditableWarning
           className={cn(
-            "h-full overflow-y-auto p-2 text-lg leading-relaxed outline-none sm:text-sm",
+            "h-full overflow-y-auto p-2 outline-none",
+            toolbarVariant === "compact"
+              ? "text-base leading-normal"
+              : "text-lg leading-relaxed sm:text-sm",
+            surfaceClassName,
+            commitVisible && "pb-11",
             "[&_h1]:mb-2 [&_h1]:mt-3 [&_h1]:text-3xl [&_h1]:font-bold",
             "[&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-2xl [&_h2]:font-semibold",
             "[&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold",
@@ -342,6 +396,7 @@ export function JournalEditor({
             "[&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic",
             "[&_img]:my-4 [&_img]:max-w-full [&_img]:rounded-lg [&_img]:outline [&_img]:outline-1 [&_img]:outline-black/10 dark:[&_img]:outline-white/10",
           )}
+          onFocus={() => onEditingChange?.(true)}
           onInput={emitChange}
           onPaste={(event) => {
             const image = [...(event.clipboardData?.items ?? [])].find((item) =>
@@ -372,6 +427,19 @@ export function JournalEditor({
             void insertImageFile(file)
           }}
         />
+        {commitVisible ? (
+          <Button
+            type="button"
+            size="icon-sm"
+            className="absolute bottom-[9px] right-[9px] z-10 h-8 w-8 rounded-full bg-primary text-primary-foreground shadow hover:bg-primary/90"
+            aria-label={t("mindset.journaling.save")}
+            disabled={commitDisabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => onCommit?.()}
+          >
+            <Check className="h-4 w-4" />
+          </Button>
+        ) : null}
       </div>
     </div>
   )

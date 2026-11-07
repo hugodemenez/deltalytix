@@ -2,7 +2,14 @@
 
 import { NewsSubMenu } from "@/components/ai-elements/news-sub-menu"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/locales/client"
 import { FinancialEvent } from "@/prisma/generated/prisma/browser"
 import {
   Heading1,
@@ -31,6 +38,7 @@ interface JournalToolbarProps {
   onInsertImage: () => void
   aiMenu?: ReactNode
   onToggleFullscreen: () => void
+  variant?: "default" | "compact"
 }
 
 export function JournalToolbar({
@@ -45,7 +53,140 @@ export function JournalToolbar({
   onInsertImage,
   aiMenu,
   onToggleFullscreen,
+  variant = "default",
 }: JournalToolbarProps) {
+  const t = useI18n()
+
+  if (variant === "compact") {
+    const hasNews =
+      Boolean(events?.length) &&
+      Boolean(onNewsSelection) &&
+      Boolean(onEmbedNews) &&
+      Boolean(date)
+
+    return (
+      <div className="mt-0 flex gap-1 rounded-[10px] border border-border bg-muted p-1">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-8 flex-1 text-[13px] text-muted-foreground"
+              title={t("mindset.editor.headingMenu")}
+              aria-label={t("mindset.editor.headingMenu")}
+              onMouseDown={(event) => event.preventDefault()}
+            >
+              H
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem
+              onMouseDown={(event) => event.preventDefault()}
+              onSelect={() => onToggleBlock("h1")}
+            >
+              {t("mindset.editor.heading1")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onMouseDown={(event) => event.preventDefault()}
+              onSelect={() => onToggleBlock("h2")}
+            >
+              {t("mindset.editor.heading2")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onMouseDown={(event) => event.preventDefault()}
+              onSelect={() => onToggleBlock("h3")}
+            >
+              {t("mindset.editor.heading3")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onMouseDown={(event) => event.preventDefault()}
+              onSelect={() => onToggleBlock("blockquote")}
+            >
+              {t("mindset.editor.quote")}
+            </DropdownMenuItem>
+            {hasNews ? (
+              <div className="px-1 py-1">
+                <NewsSubMenu
+                  events={events!}
+                  selectedNews={selectedNews || []}
+                  onNewsSelection={onNewsSelection!}
+                  onEmbedNews={onEmbedNews!}
+                  date={date!}
+                  className="w-full"
+                />
+              </div>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-8 flex-1 text-muted-foreground"
+              title={t("mindset.editor.lists")}
+              aria-label={t("mindset.editor.lists")}
+              onMouseDown={(event) => event.preventDefault()}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem
+              onMouseDown={(event) => event.preventDefault()}
+              onSelect={() => onToggleBlock("ul")}
+            >
+              {t("mindset.editor.bulletList")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onMouseDown={(event) => event.preventDefault()}
+              onSelect={() => onToggleBlock("ol")}
+            >
+              {t("mindset.editor.numberedList")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-8 flex-1 text-muted-foreground"
+          title={t("mindset.editor.image")}
+          aria-label={t("mindset.editor.image")}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={onInsertImage}
+        >
+          <ImageIcon className="h-4 w-4" />
+        </Button>
+
+        <div className="flex flex-1 items-center justify-center">{aiMenu}</div>
+
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-8 flex-1 text-muted-foreground"
+          title={
+            isFullscreen
+              ? t("mindset.editor.exitFullscreen")
+              : t("mindset.editor.fullscreen")
+          }
+          aria-label={
+            isFullscreen
+              ? t("mindset.editor.exitFullscreen")
+              : t("mindset.editor.fullscreen")
+          }
+          onClick={onToggleFullscreen}
+        >
+          {isFullscreen ? (
+            <Minimize2 className="h-4 w-4" />
+          ) : (
+            <Maximize2 className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+    )
+  }
 
   const formatButtons: Array<{
     id: JournalBlock

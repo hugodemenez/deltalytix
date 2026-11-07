@@ -1,26 +1,23 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Journaling } from "./journaling"
+import { Card, CardContent } from "@/components/ui/card"
+import { JournalingMobile } from "./journaling-mobile"
+import { JournalMobileHeader } from "./journal-mobile-header"
+import { JournalMobileNews } from "./journal-mobile-news"
 import { Timeline } from "./timeline"
-import { MindsetSummary } from "./mindset-summary"
 import { useI18n } from "@/locales/client"
-import { ChevronLeft, ChevronRight, Download } from "lucide-react"
+import { COMPACT_JOURNAL_MEDIA_QUERY } from "@/lib/journal/compact-journal"
+import { useLayoutMediaQuery } from "@/hooks/use-media-query"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { useData } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
-import { InfoBubble } from "@/components/ui/info-bubble"
 import {
   Tooltip as UITooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard"
 import { toast } from "sonner"
@@ -45,12 +42,12 @@ interface MindsetWidgetProps {
 }
 
 export function MindsetWidget({ size }: MindsetWidgetProps) {
+  const { calendarData } = useData()
   const [pane, setPane] = useState<"journal" | "summary">("journal")
   const [emotionValue, setEmotionValue] = useState(0)
   const [selectedNews, setSelectedNews] = useState<string[]>([])
   const [journalContent, setJournalContent] = useState("")
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [isEditing, setIsEditing] = useState(true)
   const [isTimelineVisible, setIsTimelineVisible] = useState(true)
   const [isExporting, setIsExporting] = useState(false)
   const moods = useMoodStore(state => state.moods)
@@ -61,12 +58,57 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const locale = useCurrentLocale()
   const t = useI18n()
   const [hasMounted, setHasMounted] = useState(false)
+  const isCompact = useLayoutMediaQuery(COMPACT_JOURNAL_MEDIA_QUERY)
+  const [compactMoodsReady, setCompactMoodsReady] = useState(false)
+  const [compactDateKey, setCompactDateKey] = useState(() =>
+    format(selectedDate, "yyyy-MM-dd"),
+  )
   useEffect(() => {
     setHasMounted(true)
   }, [])
 
+  const findMoodForDate = (date: Date) => {
+    return moods?.find(mood => {
+      if (!mood?.day) return false
+      const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
+      return format(moodDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+    })
+  }
+
+  const applyMoodToForm = (mood: { emotionValue?: number | null; selectedNews?: string[] | null; journalContent?: string | null } | undefined) => {
+    if (mood) {
+      setEmotionValue(mood.emotionValue ?? 50)
+      setSelectedNews(mood.selectedNews ?? [])
+      setJournalContent(mood.journalContent ?? "")
+      return
+    }
+    setEmotionValue(50)
+    setSelectedNews([])
+    setJournalContent("")
+    setPane("journal")
+  }
+
+  if (isCompact) {
+    const nextDateKey = format(selectedDate, "yyyy-MM-dd")
+    if (nextDateKey !== compactDateKey) {
+      setCompactDateKey(nextDateKey)
+      setCompactMoodsReady(false)
+      applyMoodToForm(findMoodForDate(selectedDate))
+    } else if (!compactMoodsReady) {
+      const mood = findMoodForDate(selectedDate)
+      if (mood) {
+        setCompactMoodsReady(true)
+        if (!journalContent) {
+          applyMoodToForm(mood)
+        }
+      } else if (emotionValue === 0) {
+        setEmotionValue(50)
+      }
+    }
+  }
+
   useEffect(() => {
-    if (!moods) {
+    if (!moods || isCompact !== false) {
       return
     }
 
@@ -76,17 +118,12 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       return format(moodDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
     })
 
-    const mood = moods.find(mood => {
-      if (!mood?.day) return false
-      const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-      return format(moodDate, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
-    })
+    const mood = findMoodForDate(selectedDate)
 
     if (isToday(selectedDate) && hasTodayData) {
       setEmotionValue(mood?.emotionValue ?? 50)
       setSelectedNews(mood?.selectedNews ?? [])
       setJournalContent(mood?.journalContent ?? "")
-      setIsEditing(true)
       setPane("summary")
       return
     }
@@ -99,13 +136,40 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       return
     }
 
-    setEmotionValue(0)
+    setEmotionValue(50)
     setSelectedNews([])
     setJournalContent("")
-  }, [selectedDate, moods])
+  }, [selectedDate, moods, isCompact])
+
+  const persistMindset = async (overrides?: {
+    emotionValue?: number
+    journalContent?: string
+  }) => {
+    const nextEmotion = overrides?.emotionValue ?? emotionValue
+    const nextJournal = overrides?.journalContent ?? journalContent
+    const dateKey = format(selectedDate, 'yyyy-MM-dd')
+    const savedMood = await saveMindset({
+      emotionValue: nextEmotion,
+      selectedNews,
+      journalContent: nextJournal,
+    }, dateKey)
+
+    const updatedMoodHistory = moods?.filter(mood => {
+      if (!mood?.day) return true
+      const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
+      return format(moodDate, 'yyyy-MM-dd') !== dateKey
+    }) || []
+    setMoods([...updatedMoodHistory, savedMood])
+    return savedMood
+  }
 
   const handleEmotionChange = (value: number) => {
     setEmotionValue(value)
+    void persistMindset({ emotionValue: value }).catch(() => {
+      toast.error(t('mindset.saveError'), {
+        description: t('mindset.saveErrorDescription'),
+      })
+    })
   }
 
   const handleNewsSelection = (newsIds: string[]) => {
@@ -150,35 +214,19 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     }
   }
 
-  const handleSave = async () => {
-    // Scroll to summary view after saving
-    setPane("summary")
+  const handleSave = async (): Promise<boolean> => {
     try {
-      const dateKey = format(selectedDate, 'yyyy-MM-dd')
-      const savedMood = await saveMindset({
-        emotionValue,
-        selectedNews,
-        journalContent,
-      }, dateKey)
-
-      // Update the moodHistory in context
-      const updatedMoodHistory = moods?.filter(mood => {
-        if (!mood?.day) return true
-        const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-        const selectedDateKey = format(selectedDate, 'yyyy-MM-dd')
-        const moodDateKey = format(moodDate, 'yyyy-MM-dd')
-        return moodDateKey !== selectedDateKey
-      }) || []
-      setMoods([...updatedMoodHistory, savedMood])
+      await persistMindset()
 
       toast.success(t('mindset.saveSuccess'), {
         description: t('mindset.saveSuccessDescription'),
       })
-
+      return true
     } catch (error) {
       toast.error(t('mindset.saveError'), {
         description: t('mindset.saveErrorDescription'),
       })
+      return false
     }
   }
 
@@ -200,7 +248,6 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         setEmotionValue(50)
         setSelectedNews([])
         setJournalContent("")
-        setIsEditing(true)
         setPane("journal")
       }
     } catch (error) {
@@ -222,14 +269,12 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       setEmotionValue(moodForDate.emotionValue ?? 50)
       setSelectedNews(moodForDate.selectedNews ?? [])
       setJournalContent(moodForDate.journalContent ?? " ")
-      setIsEditing(true)
       setPane("summary")
     } else {
       // If no data exists, reset the form
       setEmotionValue(50)
       setSelectedNews([])
       setJournalContent("")
-      setIsEditing(true)
       setPane("journal")
     }
   }
@@ -251,11 +296,6 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         return false
       }
     })
-  }
-
-  const handleEdit = (_section?: 'emotion' | 'journal' | 'news') => {
-    setIsEditing(true)
-    setPane("journal")
   }
 
   const toggleTimeline = () => {
@@ -383,138 +423,100 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     }
   }
 
-  if (!hasMounted) {
+  if (!hasMounted || isCompact === undefined) {
     return <Skeleton className="h-full min-h-[12rem] w-full rounded-lg" />
   }
 
+  const selectedDateKey = format(selectedDate, "yyyy-MM-dd")
+  const calendarDay = calendarData[selectedDateKey]
+  const dayTradeCount = calendarDay?.tradeNumber ?? 0
+  const dayPnl = calendarDay?.pnl ?? 0
+  const selectedEvents = getEventsForDate(selectedDate)
+
+  if (isCompact) {
+    return (
+      <Card className="flex h-full min-h-0 w-full flex-col overflow-hidden p-0">
+        <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-3.5">
+          <div className="flex-none">
+            <JournalMobileHeader
+              date={selectedDate}
+              tradeCount={dayTradeCount}
+              dayPnl={dayPnl}
+              calendarData={calendarData}
+              pane={pane}
+              isExporting={isExporting}
+              onPaneChange={setPane}
+              onDateChange={setSelectedDate}
+              onExportPdf={() => {
+                void handleExportAllPdf()
+              }}
+              onExportDocx={() => {
+                void handleExportAllDocx()
+              }}
+            />
+          </div>
+          <JournalingMobile
+            key={selectedDateKey}
+            content={journalContent}
+            onChange={handleJournalChange}
+            onSave={handleSave}
+            emotionValue={emotionValue}
+            onEmotionChange={handleEmotionChange}
+            date={selectedDate}
+            events={selectedEvents}
+            selectedNews={selectedNews}
+            onNewsSelection={handleNewsSelection}
+            trades={trades}
+            onApplyTagToAll={handleApplyTagToAll}
+          />
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
-    <Card className="flex flex-col p-0 h-full w-full">
-      <CardHeader 
+    <Card className="relative flex h-full min-h-0 w-full flex-col overflow-hidden p-0">
+      <div
         className={cn(
-          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === 'small' ? "p-2 h-10" : "p-3 sm:p-4 h-14"
+          "flex-none",
+          size === "small" ? "px-3 pt-3" : "px-4 pt-4 sm:px-5 sm:pt-5",
         )}
       >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-1.5">
-            <CardTitle 
-              className={cn(
-                "line-clamp-1",
-                size === 'small' ? "text-sm" : "text-base"
-              )}
-            >
-              {t('mindset.title')}
-            </CardTitle>
-            <InfoBubble
-              side="top"
-              iconClassName={size === 'small' ? 'size-3.5' : 'size-4'}
-            >
-              <p>{t('mindset.description')}</p>
-            </InfoBubble>
-          </div>
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  disabled={isExporting}
-                  className="h-6 w-6"
-                  title={
-                    isExporting
-                      ? t("share.exportPdfInProgress")
-                      : t("mindset.exportMenu")
-                  }
-                  aria-label={
-                    isExporting
-                      ? t("share.exportPdfInProgress")
-                      : t("mindset.exportMenu")
-                  }
-                >
-                  <Download className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem
-                  disabled={isExporting}
-                  onSelect={() => {
-                    void handleExportAllPdf()
-                  }}
-                >
-                  {t("mindset.exportAllPdf")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={isExporting}
-                  onSelect={() => {
-                    void handleExportAllDocx()
-                  }}
-                >
-                  <span>{t("mindset.exportAllDocx")}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {t("mindset.exportAllDocxDescription")}
-                  </span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <div className="flex items-center gap-1.5">
-              {(["journal", "summary"] as const).map((step) => (
-                <button
-                  key={step}
-                  type="button"
-                  onClick={() => setPane(step)}
-                  aria-label={
-                    step === "journal"
-                      ? t("mindset.journaling.title")
-                      : t("mindset.title")
-                  }
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full transition-colors",
-                    pane === step ? "bg-primary" : "bg-muted"
-                  )}
-                />
-              ))}
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setPane("journal")}
-                disabled={pane === "journal"}
-                className="h-6 w-6"
-              >
-                <ChevronLeft className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setPane("summary")}
-                disabled={pane === "summary"}
-                className="h-6 w-6"
-              >
-                <ChevronRight className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-1 overflow-hidden p-0 flex flex-row relative">
-        {/* Timeline with animation */}
-        <div 
+        <JournalMobileHeader
+          variant="desktop"
+          date={selectedDate}
+          tradeCount={dayTradeCount}
+          dayPnl={dayPnl}
+          calendarData={calendarData}
+          pane={pane}
+          isExporting={isExporting}
+          onPaneChange={setPane}
+          onDateChange={handleDateSelect}
+          onExportPdf={() => {
+            void handleExportAllPdf()
+          }}
+          onExportDocx={() => {
+            void handleExportAllDocx()
+          }}
+        />
+      </div>
+      <CardContent className="relative mt-4 flex min-h-0 flex-1 flex-row overflow-hidden p-0">
+        <div
           className={cn(
-            "relative transition-[width] duration-300 ease-out-quart motion-reduce:transition-none",
-            isTimelineVisible ? "w-auto" : "w-0 overflow-hidden"
+            "relative flex-none transition-[width] duration-300 ease-out-quart motion-reduce:transition-none",
+            isTimelineVisible ? "w-[200px]" : "w-0 overflow-hidden",
           )}
         >
-          <Timeline 
-            className="shrink-0"
+          <Timeline
+            className="h-full w-[200px] shrink-0"
             selectedDate={selectedDate}
             onSelectDate={handleDateSelect}
             moodHistory={moods}
             onDeleteEntry={handleDeleteEntry}
+            calendarData={calendarData}
           />
-          
-          {/* Hide/Show Button - positioned at right edge of timeline */}
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10">
+
+          <div className="absolute right-0 top-1/2 z-10 -translate-y-1/2">
             <TooltipProvider>
               <UITooltip>
                 <TooltipTrigger asChild>
@@ -522,7 +524,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
                     variant="secondary"
                     size="icon"
                     onClick={toggleTimeline}
-                    className="h-8 w-4 rounded-r-none rounded-l-md border-r-0"
+                    className="h-8 w-4 rounded-l-md rounded-r-none border-r-0"
                   >
                     {isTimelineVisible ? (
                       <ChevronLeft className="h-3 w-3" />
@@ -532,16 +534,19 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="left">
-                  <p>{isTimelineVisible ? t('mindset.hideTimeline') : t('mindset.showTimeline')}</p>
+                  <p>
+                    {isTimelineVisible
+                      ? t("mindset.hideTimeline")
+                      : t("mindset.showTimeline")}
+                  </p>
                 </TooltipContent>
               </UITooltip>
             </TooltipProvider>
           </div>
         </div>
-        
-        {/* Show Button when timeline is collapsed */}
-        {!isTimelineVisible && (
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10">
+
+        {!isTimelineVisible ? (
+          <div className="absolute left-0 top-1/2 z-10 -translate-y-1/2">
             <TooltipProvider>
               <UITooltip>
                 <TooltipTrigger asChild>
@@ -555,37 +560,44 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                  <p>{t('mindset.showTimeline')}</p>
+                  <p>{t("mindset.showTimeline")}</p>
                 </TooltipContent>
               </UITooltip>
             </TooltipProvider>
           </div>
-        )}
+        ) : null}
 
-        <div className="flex h-full min-w-0 flex-1 flex-col p-4">
-          {pane === "journal" ? (
-            <Journaling
+        <div
+          className={cn(
+            "flex min-h-0 min-w-0 flex-1 gap-6 overflow-hidden",
+            size === "small" ? "px-3 pb-3" : "px-4 pb-4 sm:px-5 sm:pb-5",
+          )}
+        >
+          <div className="flex min-h-0 min-w-0 flex-[0_0_58%] flex-col">
+            <JournalingMobile
+              key={selectedDateKey}
               content={journalContent}
               onChange={handleJournalChange}
               onSave={handleSave}
               emotionValue={emotionValue}
               onEmotionChange={handleEmotionChange}
               date={selectedDate}
-              events={getEventsForDate(selectedDate)}
+              events={selectedEvents}
               selectedNews={selectedNews}
               onNewsSelection={handleNewsSelection}
               trades={trades}
               onApplyTagToAll={handleApplyTagToAll}
+              showNews={false}
+              growEditor
             />
-          ) : (
-            <MindsetSummary
-              date={selectedDate}
-              emotionValue={emotionValue}
+          </div>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col border-l border-border pl-6">
+            <JournalMobileNews
+              variant="column"
+              events={selectedEvents}
               selectedNews={selectedNews}
-              journalContent={journalContent}
-              onEdit={handleEdit}
             />
-          )}
+          </div>
         </div>
       </CardContent>
     </Card>

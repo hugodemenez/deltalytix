@@ -1,7 +1,16 @@
 export default {
   mindset: {
     title: 'Trading Journal',
+    shortTitle: 'Journal',
     description: 'Track your trading mindset and emotions',
+    previousDay: 'Previous day',
+    nextDay: 'Next day',
+    moreActions: 'More actions',
+    about: 'About',
+    panes: {
+      journal: 'Journal',
+      summary: 'Summary',
+    },
     back: 'Back',
     next: 'Next',
     saveSuccess: 'Success',
@@ -53,7 +62,20 @@ export default {
       sad: 'Negative',
       neutral: 'Neutral',
       happy: 'Positive',
-      veryHappy: 'Very Positive'
+      veryHappy: 'Very Positive',
+      steps: {
+        frustrated: 'Frustrated',
+        tense: 'Tense',
+        neutral: 'Neutral',
+        confident: 'Confident',
+        serene: 'Serene',
+      },
+      stepBubble: '{step}/5 · {label}',
+    },
+    header: {
+      noTrades: 'no trades',
+      oneTrade: '1 trade',
+      tradeCount: '{count} trades',
     },
     newsImpact: {
       title: 'News Impact',
@@ -94,6 +116,7 @@ export default {
     journaling: {
       title: 'Trading Journal',
       placeholder: 'Write your trading thoughts and reflections here...',
+      dayPlaceholder: 'Write your thoughts about the day…',
       save: 'Save Entry',
       editorPlaceholder: 'Start writing...',
       entrySectionTitle: 'Notes'
@@ -102,7 +125,9 @@ export default {
       title: 'Session Tags',
       description: 'Click on a tag to apply it to all trades for this day',
       add: 'Add Tag',
+      addShort: '+ Tag',
       addNew: 'Add New',
+      noneForDay: 'No tags for this day',
       search: 'Search tags...',
       create: 'Create "{tag}"',
       createAndApply: 'Create and apply "{tag}" to all trades',
@@ -126,7 +151,19 @@ export default {
         selectedCount: '{count} selected',
         noNews: 'No news available',
         clearSelection: 'Clear selection'
-      }
+      },
+      headingMenu: 'Headings',
+      heading1: 'Heading 1',
+      heading2: 'Heading 2',
+      heading3: 'Heading 3',
+      quote: 'Quote',
+      lists: 'Lists',
+      bulletList: 'Bullet list',
+      numberedList: 'Numbered list',
+      image: 'Image',
+      fullscreen: 'Full screen',
+      exitFullscreen: 'Exit full screen',
+      aiShort: 'AI',
     },
     tradingStats: {
       title: 'Trading Statistics',
@@ -141,6 +178,7 @@ export default {
       netPnL: 'Net P&L',
       entryTime: 'Entry Time'
     },
+    timelineTitle: 'Timeline',
     hideTimeline: 'Hide Timeline',
     showTimeline: 'Show Timeline'
   }

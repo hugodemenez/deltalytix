@@ -8,6 +8,12 @@ import { useCurrentLocale } from "@/locales/client"
 import { Button } from "@/components/ui/button"
 import { Calendar, Trash2, Plus } from "lucide-react"
 import {
+  formatJournalDayPnl,
+  journalDayPnlPillClassName,
+  journalDayPnlTone,
+  journalTimelineDateLabel,
+} from "@/lib/journal/journal-mobile-date"
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -32,23 +38,16 @@ interface TimelineProps {
   moodHistory: Array<{ day: Date; emotionValue: number }>
   className?: string
   onDeleteEntry?: (date: Date) => Promise<void>
+  calendarData?: Record<string, { pnl: number; tradeNumber?: number } | undefined>
 }
 
-export function Timeline({ onSelectDate, selectedDate, moodHistory, className, onDeleteEntry }: TimelineProps) {
+export function Timeline({ onSelectDate, selectedDate, moodHistory, className, onDeleteEntry, calendarData }: TimelineProps) {
   const t = useI18n()
   const locale = useCurrentLocale()
   const dateLocale = locale === 'fr' ? fr : enUS
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [entryToDelete, setEntryToDelete] = useState<Date | null>(null)
   const [datePickerOpen, setDatePickerOpen] = useState(false)
-
-  const getEmotionColor = (value: number) => {
-    if (value < 20) return 'bg-red-500'
-    if (value < 40) return 'bg-orange-500'
-    if (value < 60) return 'bg-yellow-500'
-    if (value < 80) return 'bg-green-500'
-    return 'bg-emerald-500'
-  }
 
   const handleDeleteClick = (e: React.MouseEvent, date: Date) => {
     e.stopPropagation()
@@ -97,9 +96,12 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
     <>
       <div className={cn(
         "h-full border-r overflow-hidden flex flex-col",
-        "w-[180px] sm:w-[200px] md:w-[220px]",
+        "w-[200px]",
         className
       )}>
+        <p className="flex-none px-3 pb-1 pt-3 text-xs text-muted-foreground">
+          {t("mindset.timelineTitle")}
+        </p>
         <div className="flex-1 overflow-y-auto">
           <div className="space-y-1 p-2">
             {/* Always show Today entry if no entry exists for today */}
@@ -108,20 +110,19 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full justify-start gap-2 h-auto p-2",
-                    "hover:bg-accent/50 transition-colors border-l-2 border-dashed border-muted-foreground/30",
-                    isToday(selectedDate) && "bg-accent"
+                    "w-full justify-between gap-2 h-auto p-2",
+                    "hover:bg-accent/50 transition-colors",
+                    isToday(selectedDate) && "bg-muted"
                   )}
                   onClick={handleTodayClick}
                 >
-                  <div className="flex flex-col items-center justify-center gap-1 min-w-10">
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
-                  </div>
-                  <div className="flex-1 text-left min-w-0 flex items-center">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      {t('mindset.today')}
-                    </p>
-                  </div>
+                  <p className="min-w-0 truncate text-left text-sm font-medium text-muted-foreground">
+                    {t('mindset.today')}
+                  </p>
+                  <TimelineDayPnl
+                    day={calendarData?.[format(new Date(), "yyyy-MM-dd")]}
+                    locale={locale}
+                  />
                 </Button>
               </div>
             )}
@@ -149,24 +150,21 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
                     <Button
                       variant="ghost"
                       className={cn(
-                        "w-full justify-start gap-2 h-auto p-2",
+                        "w-full justify-between gap-2 h-auto p-2",
                         "hover:bg-accent/50 transition-colors",
-                        isSelected && "bg-accent",
-                        isCurrentDay && "border-l-2 border-primary"
+                        isSelected && "bg-muted font-medium",
                       )}
                       onClick={() => onSelectDate(moodDate)}
                     >
-                      <div className="flex flex-col items-center justify-center gap-1 min-w-10">
-                        <div className={cn(
-                          "w-2 h-2 rounded-full transition-colors",
-                          getEmotionColor(mood.emotionValue)
-                        )} />
-                      </div>
-                      <div className="flex-1 text-left min-w-0 flex items-center">
-                        <p className="text-sm font-medium truncate">
-                          {isCurrentDay ? t('mindset.today') : `${format(moodDate, 'EEE', { locale: dateLocale }).slice(0, 3)} ${format(moodDate, 'd', { locale: dateLocale })} ${format(moodDate, 'MMM', { locale: dateLocale }).slice(0, 3)}`}
-                        </p>
-                      </div>
+                      <p className="min-w-0 truncate text-left text-sm">
+                        {isCurrentDay
+                          ? t("mindset.today")
+                          : journalTimelineDateLabel(moodDate, locale)}
+                      </p>
+                      <TimelineDayPnl
+                        day={calendarData?.[format(moodDate, "yyyy-MM-dd")]}
+                        locale={locale}
+                      />
                     </Button>
                     <Button
                       variant="ghost"
@@ -237,5 +235,31 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
         </AlertDialogContent>
       </AlertDialog>
     </>
+  )
+}
+
+function TimelineDayPnl({
+  day,
+  locale,
+}: {
+  day: { pnl: number; tradeNumber?: number } | undefined
+  locale: "en" | "fr"
+}) {
+  if (!day || (day.tradeNumber ?? 0) < 1) {
+    return (
+      <span className="shrink-0 text-[11px] text-muted-foreground">—</span>
+    )
+  }
+
+  const tone = journalDayPnlTone(day.pnl)
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-full px-1.5 py-px text-[11px] font-medium tabular-nums",
+        journalDayPnlPillClassName(tone),
+      )}
+    >
+      {formatJournalDayPnl(day.pnl, locale)}
+    </span>
   )
 } 
