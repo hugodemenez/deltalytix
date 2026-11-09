@@ -19,8 +19,13 @@ describe("checkout_started server capture", () => {
   });
 
   it("auto-applies checkout promos through the shared date-gated helper", () => {
-    expect(source).toMatch(/resolveCheckoutAutoPromoCode/);
+    expect(source).toMatch(/resolveCheckoutAutoPromo\(/);
+    expect(source).toMatch(/lookupKey: price\.lookup_key \?\? lookup_key/);
     expect(source).toMatch(/unitAmount: price\.unit_amount/);
+    expect(source).toMatch(/auto_promotion_code: autoPromo\.promotionCode/);
+    expect(source).toMatch(/auto_promo_campaign: autoPromo\.campaign/);
+    expect(source).toMatch(/auto_promo_discount_stripped/);
+    expect(source).toMatch(/discountStripped/);
     expect(source).not.toMatch(/resolveBackToWorkPromoCode/);
     expect(source).not.toMatch(/resolveBlackFridayPromoCode/);
   });

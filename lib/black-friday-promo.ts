@@ -7,25 +7,23 @@ import {
 /**
  * Black Friday / Cyber Week auto-apply for new Plus Checkout Sessions.
  *
- * Stripe promotion codes have an end time and no start time, so eligibility
- * is date-gated here in Europe/Paris. Outside these windows this module
- * returns undefined and Checkout keeps the existing Back-to-Work behavior.
+ * Stripe promotion codes have an end time and no start time, so auto-apply
+ * is date-gated here in Europe/Paris. While either phase below is active,
+ * Checkout uses only the matching Black Friday promotion id. An empty env
+ * var means no auto-apply for that plan. Back-to-Work is not used during
+ * either phase. Outside both windows, Checkout keeps the existing
+ * Back-to-Work behavior. This module does not set an end date for it.
  *
  * Windows are inclusive of the start instant and of the whole end second
  * (through 23:59:59.999). They abut and do not overlap:
- * - Lifetime: 2026-11-27 00:00:00 through 2026-11-29 23:59:59
- * - Three plans: 2026-11-30 00:00:00 through 2026-12-13 23:59:59
+ * - Lifetime: 2026-11-27 00:00:00 through 2026-11-30 23:59:59.
+ *   Current list is $300 / €300 on plus_lifetime_usd / plus_lifetime_eur.
+ *   The sale is $200 / €200 off that list (final price $200 / 200 €).
+ * - Three plans: 2026-12-01 00:00:00 through 2026-12-14 23:59:59.
+ *   Monthly $5 / €5, quarterly $15 / €15, yearly $50 / €50.
  *
  * Unsuffixed env keys are USD promotion_code ids. EUR uses `*_EUR`.
- * Live ids are set on Vercel (beta and production), not committed as values:
- * - STRIPE_BF_LIFETIME_PROMO=promo_1UZzmpCgu8zCkThC8l3jgcMp (BFLIFE, plus_lifetime_usd)
- * - STRIPE_BF_LIFETIME_PROMO_EUR=promo_1UZzmrCgu8zCkThCqQytAso5 (BFLIFEEUR, plus_lifetime_eur)
- * - STRIPE_BF_MONTHLY_PROMO=promo_1UZzmnCgu8zCkThC9P2Hf3q9 (BF5)
- * - STRIPE_BF_MONTHLY_PROMO_EUR=promo_1UZzmmCgu8zCkThCTsJYK5Nc (BF5EUR)
- * - STRIPE_BF_QUARTERLY_PROMO=promo_1UZzmoCgu8zCkThCy4qNy9Gx (BF15)
- * - STRIPE_BF_QUARTERLY_PROMO_EUR=promo_1UZzmpCgu8zCkThCrZFhFx0w (BF15EUR)
- * - STRIPE_BF_YEARLY_PROMO=promo_1UZzmnCgu8zCkThCXtkr8KBm (BF50)
- * - STRIPE_BF_YEARLY_PROMO_EUR=promo_1UZzmpCgu8zCkThCs6pkaWg2 (BF50EUR)
+ * Set the ids on Vercel. Do not commit them.
  */
 export const BLACK_FRIDAY_PROMO_TIMEZONE = "Europe/Paris";
 
@@ -88,12 +86,12 @@ const ENV_BY_PERIOD_AND_CURRENCY: Record<
 
 const LIFETIME_WINDOW = {
   start: "2026-11-27T00:00:00",
-  end: "2026-11-29T23:59:59",
+  end: "2026-11-30T23:59:59",
 } as const;
 
 const PLANS_WINDOW = {
-  start: "2026-11-30T00:00:00",
-  end: "2026-12-13T23:59:59",
+  start: "2026-12-01T00:00:00",
+  end: "2026-12-14T23:59:59",
 } as const;
 
 const SECOND_MS = 1000;
@@ -261,17 +259,42 @@ export function resolveBlackFridayPromoCode(
   return trimmedEnvValue(env, blackFridayPromoEnvKey(parsed.period, currency));
 }
 
+export type CheckoutAutoPromoCampaign = "bf_lifetime" | "bf_plans" | "btw";
+
+export type CheckoutAutoPromo = {
+  promotionCode: string;
+  campaign: CheckoutAutoPromoCampaign;
+};
+
 /**
- * Checkout auto-apply: Black Friday / Cyber Week when its window matches,
- * otherwise the existing Back-to-Work promotion. One code at most.
+ * Checkout auto-apply. During either Black Friday phase this is the Black
+ * Friday code or nothing. Outside both windows it is the Back-to-Work code
+ * or nothing. One code at most.
  */
+export function resolveCheckoutAutoPromo(
+  input: BlackFridayPromoInput,
+  env: BlackFridayPromoEnv = process.env,
+  now: Date = new Date(),
+): CheckoutAutoPromo | undefined {
+  const phase = blackFridayPromoPhase(now);
+  if (phase) {
+    const promotionCode = resolveBlackFridayPromoCode(input, env, now);
+    if (!promotionCode) return undefined;
+    return {
+      promotionCode,
+      campaign: phase === "lifetime" ? "bf_lifetime" : "bf_plans",
+    };
+  }
+
+  const promotionCode = resolveBackToWorkPromoCode(input, env);
+  if (!promotionCode) return undefined;
+  return { promotionCode, campaign: "btw" };
+}
+
 export function resolveCheckoutAutoPromoCode(
   input: BlackFridayPromoInput,
   env: BlackFridayPromoEnv = process.env,
   now: Date = new Date(),
 ): string | undefined {
-  return (
-    resolveBlackFridayPromoCode(input, env, now) ??
-    resolveBackToWorkPromoCode(input, env)
-  );
+  return resolveCheckoutAutoPromo(input, env, now)?.promotionCode;
 }

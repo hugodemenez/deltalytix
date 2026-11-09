@@ -188,8 +188,7 @@ function stripeErrorMessage(error: unknown): string {
 
 /**
  * Stripe rejects a Checkout Session when the promotion code coupon currency
- * does not match the line-item price currency. Detect that so callers can
- * retry without auto-applied discounts instead of 500ing.
+ * does not match the line-item price currency.
  */
 export function isStripePromoCurrencyMismatch(error: unknown): boolean {
   const message = stripeErrorMessage(error).toLowerCase();
@@ -200,31 +199,106 @@ export function isStripePromoCurrencyMismatch(error: unknown): boolean {
   );
 }
 
+function stripeErrorField(error: unknown, field: string): string {
+  if (typeof error !== "object" || !error || !(field in error)) return "";
+  const value = (error as Record<string, unknown>)[field];
+  return typeof value === "string" ? value : "";
+}
+
 /**
- * Retry helper for Checkout Session create. On a promo/line-item currency
- * mismatch, strip `discounts` and re-enable typed codes. Other errors rethrow.
+ * True when Stripe rejected the auto-applied discount and Checkout should
+ * retry without it. Covers a `discounts` param on StripeInvalidRequestError
+ * (expired, inactive, first-time-only, and the rest) and the currency
+ * mismatch message. Customer, price, and other invalid requests stay false.
+ */
+export function isStripePromoDiscountRejection(error: unknown): boolean {
+  if (isStripePromoCurrencyMismatch(error)) return true;
+
+  const type = stripeErrorField(error, "type");
+  const rawType = stripeErrorField(error, "rawType");
+  const isInvalidRequest =
+    type === "StripeInvalidRequestError" ||
+    type === "invalid_request_error" ||
+    rawType === "invalid_request_error";
+  if (!isInvalidRequest) return false;
+
+  const param = stripeErrorField(error, "param");
+  if (param.startsWith("discounts")) return true;
+
+  const message = stripeErrorMessage(error).toLowerCase();
+  const code = stripeErrorField(error, "code").toLowerCase();
+  return (
+    message.includes("promotion code") ||
+    message.includes("promotion_code") ||
+    code.includes("promotion_code")
+  );
+}
+
+function promotionCodeFromSessionConfig(
+  sessionConfig: Record<string, unknown>,
+): string | undefined {
+  const discounts = sessionConfig.discounts;
+  if (!Array.isArray(discounts)) return undefined;
+  const first = discounts[0];
+  if (!first || typeof first !== "object" || !("promotion_code" in first)) {
+    return undefined;
+  }
+  const id = (first as { promotion_code?: unknown }).promotion_code;
+  return typeof id === "string" ? id : undefined;
+}
+
+function metadataWithDiscountStripped(
+  metadata: unknown,
+): Record<string, unknown> {
+  const base =
+    metadata && typeof metadata === "object" && !Array.isArray(metadata)
+      ? { ...(metadata as Record<string, unknown>) }
+      : {};
+  base.auto_promo_discount_stripped = "true";
+  return base;
+}
+
+export type CheckoutSessionWithPromoResult<TSession> = {
+  session: TSession;
+  /** True when the successful session was created after Stripe rejected the discount. */
+  discountStripped: boolean;
+};
+
+/**
+ * Retry helper for Checkout Session create. When Stripe rejects the
+ * auto-applied promotion, strip `discounts` and re-enable typed codes.
+ * Unrelated Stripe failures rethrow.
  */
 export async function createCheckoutSessionWithPromoFallback<TSession>(
   create: (params: Record<string, unknown>) => Promise<TSession>,
   sessionConfig: Record<string, unknown>,
-): Promise<TSession> {
+): Promise<CheckoutSessionWithPromoResult<TSession>> {
   try {
-    return await create(sessionConfig);
+    return {
+      session: await create(sessionConfig),
+      discountStripped: false,
+    };
   } catch (error) {
-    if (!sessionConfig.discounts || !isStripePromoCurrencyMismatch(error)) {
+    if (!sessionConfig.discounts || !isStripePromoDiscountRejection(error)) {
       throw error;
     }
 
-    console.warn(
-      "[back-to-work-promo] Stripe rejected auto-applied promotion for currency mismatch; retrying checkout without discounts",
+    const promotionCode = promotionCodeFromSessionConfig(sessionConfig);
+    console.error(
+      "[checkout-promo] Stripe rejected auto-applied promotion; retrying checkout without the discount",
+      promotionCode ?? "",
       stripeErrorMessage(error),
     );
 
     const { discounts: _discounts, ...withoutDiscounts } = sessionConfig;
-    return create({
-      ...withoutDiscounts,
-      ...stripeCheckoutPromoParams(undefined),
-    });
+    return {
+      session: await create({
+        ...withoutDiscounts,
+        ...stripeCheckoutPromoParams(undefined),
+        metadata: metadataWithDiscountStripped(sessionConfig.metadata),
+      }),
+      discountStripped: true,
+    };
   }
 }
 

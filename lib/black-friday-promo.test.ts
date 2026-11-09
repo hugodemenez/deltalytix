@@ -7,6 +7,7 @@ import {
   blackFridayPromoEnvKey,
   blackFridayPromoPhase,
   resolveBlackFridayPromoCode,
+  resolveCheckoutAutoPromo,
   resolveCheckoutAutoPromoCode,
   type BlackFridayPromoEnv,
   type BlackFridayPromoInput,
@@ -21,17 +22,6 @@ const env: BlackFridayPromoEnv = {
   STRIPE_BF_QUARTERLY_PROMO_EUR: "bf15-eur",
   STRIPE_BF_YEARLY_PROMO: "bf50-usd",
   STRIPE_BF_YEARLY_PROMO_EUR: "bf50-eur",
-};
-
-const liveEnv: BlackFridayPromoEnv = {
-  STRIPE_BF_LIFETIME_PROMO: "promo_1UZzmpCgu8zCkThC8l3jgcMp",
-  STRIPE_BF_LIFETIME_PROMO_EUR: "promo_1UZzmrCgu8zCkThCqQytAso5",
-  STRIPE_BF_MONTHLY_PROMO: "promo_1UZzmnCgu8zCkThC9P2Hf3q9",
-  STRIPE_BF_MONTHLY_PROMO_EUR: "promo_1UZzmmCgu8zCkThCTsJYK5Nc",
-  STRIPE_BF_QUARTERLY_PROMO: "promo_1UZzmoCgu8zCkThCy4qNy9Gx",
-  STRIPE_BF_QUARTERLY_PROMO_EUR: "promo_1UZzmpCgu8zCkThCrZFhFx0w",
-  STRIPE_BF_YEARLY_PROMO: "promo_1UZzmnCgu8zCkThCXtkr8KBm",
-  STRIPE_BF_YEARLY_PROMO_EUR: "promo_1UZzmpCgu8zCkThCs6pkaWg2",
 };
 
 const btwEnv: BlackFridayPromoEnv = {
@@ -122,37 +112,42 @@ const duringLifetime = paris("2026-11-28T12:00:00");
 const duringPlans = paris("2026-12-06T15:30:00");
 const beforeLifetime = paris("2026-11-26T23:59:59");
 const lifetimeStart = paris("2026-11-27T00:00:00");
-const lifetimeEnd = paris("2026-11-29T23:59:59");
-const plansStart = paris("2026-11-30T00:00:00");
-const plansEnd = paris("2026-12-13T23:59:59");
-const afterPlans = paris("2026-12-14T00:00:00");
+const lifetimeEnd = paris("2026-11-30T23:59:59");
+const plansStart = paris("2026-12-01T00:00:00");
+const plansEnd = paris("2026-12-14T23:59:59");
+const afterPlans = paris("2026-12-15T00:00:00");
 
 describe("black friday paris windows", () => {
   it("anchors the sale to Europe/Paris (CET, UTC+1) rather than UTC midnight", () => {
     expect(paris("2026-11-27T00:00:00").toISOString()).toBe(
       "2026-11-26T23:00:00.000Z",
     );
-    expect(paris("2026-11-29T23:59:59").toISOString()).toBe(
-      "2026-11-29T22:59:59.000Z",
+    expect(paris("2026-11-30T23:59:59").toISOString()).toBe(
+      "2026-11-30T22:59:59.000Z",
     );
-    expect(paris("2026-12-13T23:59:59").toISOString()).toBe(
-      "2026-12-13T22:59:59.000Z",
+    expect(paris("2026-12-01T00:00:00").toISOString()).toBe(
+      "2026-11-30T23:00:00.000Z",
     );
-    expect(paris("2026-12-14T00:00:00").toISOString()).toBe(
-      "2026-12-13T23:00:00.000Z",
+    expect(paris("2026-12-14T23:59:59").toISOString()).toBe(
+      "2026-12-14T22:59:59.000Z",
+    );
+    expect(paris("2026-12-15T00:00:00").toISOString()).toBe(
+      "2026-12-14T23:00:00.000Z",
     );
   });
 
   it("keeps the two windows inclusive and adjacent", () => {
     expect(blackFridayPromoPhase(paris("2026-11-27T00:00:00", -1))).toBeUndefined();
     expect(blackFridayPromoPhase(lifetimeStart)).toBe("lifetime");
+    expect(blackFridayPromoPhase(paris("2026-11-29T12:00:00"))).toBe("lifetime");
+    expect(blackFridayPromoPhase(paris("2026-11-30T12:00:00"))).toBe("lifetime");
     expect(blackFridayPromoPhase(lifetimeEnd)).toBe("lifetime");
-    expect(blackFridayPromoPhase(paris("2026-11-29T23:59:59", 999))).toBe(
+    expect(blackFridayPromoPhase(paris("2026-11-30T23:59:59", 999))).toBe(
       "lifetime",
     );
     expect(blackFridayPromoPhase(plansStart)).toBe("plans");
     expect(blackFridayPromoPhase(plansEnd)).toBe("plans");
-    expect(blackFridayPromoPhase(paris("2026-12-13T23:59:59", 999))).toBe("plans");
+    expect(blackFridayPromoPhase(paris("2026-12-14T23:59:59", 999))).toBe("plans");
     expect(blackFridayPromoPhase(afterPlans)).toBeUndefined();
     expect(blackFridayPromoPhase(beforeLifetime)).toBeUndefined();
   });
@@ -189,7 +184,7 @@ describe("resolveBlackFridayPromoCode", () => {
   });
 
   it("auto-applies only current $300 / €300 Lifetime prices at the lifetime window edges", () => {
-    for (const now of [lifetimeStart, duringLifetime, lifetimeEnd, paris("2026-11-29T23:59:59", 999)]) {
+    for (const now of [lifetimeStart, duringLifetime, paris("2026-11-30T18:00:00"), lifetimeEnd, paris("2026-11-30T23:59:59", 999)]) {
       expect(resolveBlackFridayPromoCode(lifetimeUsd, env, now)).toBe("bf-life-usd");
       expect(resolveBlackFridayPromoCode(lifetimeEur, env, now)).toBe("bf-life-eur");
       expect(resolveBlackFridayPromoCode(monthlyUsd, env, now)).toBeUndefined();
@@ -271,8 +266,8 @@ describe("resolveBlackFridayPromoCode", () => {
     ).toBeUndefined();
   });
 
-  it("switches to subscription codes at 2026-11-30 00:00:00 Paris and stops after 2026-12-13 23:59:59", () => {
-    for (const now of [plansStart, duringPlans, plansEnd, paris("2026-12-13T23:59:59", 999)]) {
+  it("switches to subscription codes at 2026-12-01 00:00:00 Paris and stops after 2026-12-14 23:59:59", () => {
+    for (const now of [plansStart, duringPlans, plansEnd, paris("2026-12-14T23:59:59", 999)]) {
       expect(resolveBlackFridayPromoCode(monthlyUsd, env, now)).toBe("bf5-usd");
       expect(resolveBlackFridayPromoCode(monthlyEur, env, now)).toBe("bf5-eur");
       expect(resolveBlackFridayPromoCode(quarterlyUsd, env, now)).toBe("bf15-usd");
@@ -287,7 +282,7 @@ describe("resolveBlackFridayPromoCode", () => {
     expect(resolveBlackFridayPromoCode(yearlyEur, env, afterPlans)).toBeUndefined();
     expect(resolveBlackFridayPromoCode(lifetimeUsd, env, afterPlans)).toBeUndefined();
     expect(
-      resolveBlackFridayPromoCode(monthlyUsd, env, paris("2026-12-14T00:00:00", 1)),
+      resolveBlackFridayPromoCode(monthlyUsd, env, paris("2026-12-15T00:00:00", 1)),
     ).toBeUndefined();
   });
 
@@ -355,29 +350,7 @@ describe("resolveBlackFridayPromoCode", () => {
     ).toBe("bf15-usd");
   });
 
-  it("resolves the live EUR promo ids and does not fall back to USD when EUR is unset", () => {
-    expect(resolveBlackFridayPromoCode(lifetimeEur, liveEnv, duringLifetime)).toBe(
-      "promo_1UZzmrCgu8zCkThCqQytAso5",
-    );
-    expect(resolveBlackFridayPromoCode(lifetimeUsd, liveEnv, duringLifetime)).toBe(
-      "promo_1UZzmpCgu8zCkThC8l3jgcMp",
-    );
-    expect(resolveBlackFridayPromoCode(monthlyEur, liveEnv, duringPlans)).toBe(
-      "promo_1UZzmmCgu8zCkThCTsJYK5Nc",
-    );
-    expect(resolveBlackFridayPromoCode(quarterlyEur, liveEnv, duringPlans)).toBe(
-      "promo_1UZzmpCgu8zCkThCrZFhFx0w",
-    );
-    expect(resolveBlackFridayPromoCode(yearlyEur, liveEnv, duringPlans)).toBe(
-      "promo_1UZzmpCgu8zCkThCs6pkaWg2",
-    );
-    expect(resolveBlackFridayPromoCode(monthlyUsd, liveEnv, duringPlans)).toBe(
-      "promo_1UZzmnCgu8zCkThC9P2Hf3q9",
-    );
-    expect(resolveBlackFridayPromoCode(yearlyUsd, liveEnv, duringPlans)).toBe(
-      "promo_1UZzmnCgu8zCkThCXtkr8KBm",
-    );
-
+  it("does not fall back to a USD promo id when the EUR env var is unset", () => {
     const usdOnly: BlackFridayPromoEnv = {
       STRIPE_BF_LIFETIME_PROMO: "bf-life-usd",
       STRIPE_BF_MONTHLY_PROMO: "bf5-usd",
@@ -519,40 +492,106 @@ describe("resolveBlackFridayPromoCode", () => {
 describe("resolveCheckoutAutoPromoCode", () => {
   const both = { ...env, ...btwEnv };
 
-  it("prefers the Black Friday code during its window and leaves Back-to-Work outside it", () => {
+  it("uses Black Friday during either phase and never Back-to-Work", () => {
     expect(resolveCheckoutAutoPromoCode(monthlyUsd, both, duringPlans)).toBe(
       "bf5-usd",
     );
     expect(resolveCheckoutAutoPromoCode(quarterlyEur, both, duringPlans)).toBe(
       "bf15-eur",
     );
+    expect(resolveCheckoutAutoPromoCode(lifetimeUsd, both, duringLifetime)).toBe(
+      "bf-life-usd",
+    );
+    expect(resolveCheckoutAutoPromoCode(lifetimeUsd, both, lifetimeEnd)).toBe(
+      "bf-life-usd",
+    );
+    expect(
+      resolveCheckoutAutoPromoCode(monthlyUsd, both, duringLifetime),
+    ).toBeUndefined();
+    expect(
+      resolveCheckoutAutoPromoCode(monthlyEur, both, lifetimeStart),
+    ).toBeUndefined();
+    expect(
+      resolveCheckoutAutoPromoCode(yearlyUsd, both, paris("2026-11-30T18:00:00")),
+    ).toBeUndefined();
+    expect(resolveCheckoutAutoPromoCode(lifetimeEur, both, duringPlans)).toBeUndefined();
+    expect(resolveCheckoutAutoPromoCode(lifetimeUsd, both, plansStart)).toBeUndefined();
+  });
+
+  it("does not substitute Back-to-Work when the matching Black Friday env var is empty", () => {
+    expect(resolveCheckoutAutoPromoCode(monthlyUsd, btwEnv, duringPlans)).toBeUndefined();
+    expect(
+      resolveCheckoutAutoPromoCode(lifetimeUsd, btwEnv, duringLifetime),
+    ).toBeUndefined();
+    expect(
+      resolveCheckoutAutoPromoCode(
+        quarterlyEur,
+        { ...both, STRIPE_BF_QUARTERLY_PROMO_EUR: "  " },
+        duringPlans,
+      ),
+    ).toBeUndefined();
+    expect(
+      resolveCheckoutAutoPromoCode(
+        monthlyEur,
+        { ...btwEnv, STRIPE_BF_MONTHLY_PROMO: "bf5-usd" },
+        duringPlans,
+      ),
+    ).toBeUndefined();
+  });
+
+  it("keeps Back-to-Work outside both windows", () => {
     expect(resolveCheckoutAutoPromoCode(monthlyEur, both, afterPlans)).toBe(
       "work-monthly-eur",
     );
     expect(resolveCheckoutAutoPromoCode(yearlyUsd, both, beforeLifetime)).toBe(
       "work-yearly-usd",
     );
-  });
-
-  it("keeps Back-to-Work on subscriptions during the Lifetime-only window", () => {
-    expect(resolveCheckoutAutoPromoCode(monthlyUsd, both, duringLifetime)).toBe(
-      "work-monthly-usd",
-    );
-    expect(resolveCheckoutAutoPromoCode(lifetimeUsd, both, duringLifetime)).toBe(
-      "bf-life-usd",
-    );
-    expect(resolveCheckoutAutoPromoCode(lifetimeEur, both, duringPlans)).toBeUndefined();
-  });
-
-  it("does not invent a Black Friday code when the matching env var is unset", () => {
-    expect(resolveCheckoutAutoPromoCode(monthlyUsd, btwEnv, duringPlans)).toBe(
-      "work-monthly-usd",
-    );
-    expect(
-      resolveCheckoutAutoPromoCode(lifetimeUsd, btwEnv, duringLifetime),
-    ).toBeUndefined();
     expect(
       resolveCheckoutAutoPromoCode(monthlyUsd, env, afterPlans),
     ).toBeUndefined();
+    expect(
+      resolveCheckoutAutoPromoCode(lifetimeUsd, both, beforeLifetime),
+    ).toBeUndefined();
+    expect(
+      resolveCheckoutAutoPromoCode(lifetimeUsd, both, afterPlans),
+    ).toBeUndefined();
+  });
+
+  it("does not hand an inconsistent price a Back-to-Work code during the sale", () => {
+    expect(
+      resolveCheckoutAutoPromoCode(
+        {
+          lookupKey: "plus_yearly_usd",
+          currency: "usd",
+          interval: "year",
+          intervalCount: 3,
+          priceType: "recurring",
+        },
+        both,
+        duringPlans,
+      ),
+    ).toBeUndefined();
+  });
+
+  it("records bf_lifetime, bf_plans, or btw", () => {
+    expect(resolveCheckoutAutoPromo(lifetimeUsd, both, duringLifetime)).toEqual({
+      promotionCode: "bf-life-usd",
+      campaign: "bf_lifetime",
+    });
+    expect(
+      resolveCheckoutAutoPromo(lifetimeEur, both, paris("2026-11-30T23:59:59", 999)),
+    ).toEqual({
+      promotionCode: "bf-life-eur",
+      campaign: "bf_lifetime",
+    });
+    expect(resolveCheckoutAutoPromo(monthlyEur, both, duringPlans)).toEqual({
+      promotionCode: "bf5-eur",
+      campaign: "bf_plans",
+    });
+    expect(resolveCheckoutAutoPromo(yearlyUsd, both, beforeLifetime)).toEqual({
+      promotionCode: "work-yearly-usd",
+      campaign: "btw",
+    });
+    expect(resolveCheckoutAutoPromo(monthlyUsd, both, duringLifetime)).toBeUndefined();
   });
 });

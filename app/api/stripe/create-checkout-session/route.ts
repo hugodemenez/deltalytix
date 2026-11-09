@@ -22,7 +22,7 @@ import {
   createCheckoutSessionWithPromoFallback,
   stripeCheckoutPromoParams,
 } from "@/lib/back-to-work-promo";
-import { resolveCheckoutAutoPromoCode } from "@/lib/black-friday-promo";
+import { resolveCheckoutAutoPromo } from "@/lib/black-friday-promo";
 
 // This endpoint renders no page of ours — it redirects straight to Stripe — so
 // a signup marker arriving here would never reach the Google tag. Forward it to
@@ -152,6 +152,15 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
     const visitorCountry = await readRequestCountry();
     const attribution = await readAttributionFromCookies();
     const attributionMeta = attributionToStripeMetadata(attribution);
+    const autoPromo = resolveCheckoutAutoPromo({
+        lookupKey: price.lookup_key ?? lookup_key,
+        interval: price.recurring?.interval,
+        intervalCount: price.recurring?.interval_count,
+        currency: price.currency,
+        isLifetime: isLifetimePlan,
+        priceType: price.type,
+        unitAmount: price.unit_amount,
+    });
     const sessionConfig: any = {
         customer: customerId,
         metadata: {
@@ -160,6 +169,13 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
             ...(visitorCountry && { visitor_country: visitorCountry }),
             ...(referral && { referral_code: referral }),
             ...(promo_code && { promo_code: promo_code }),
+            ...(autoPromo
+                ? {
+                    auto_promotion_code: autoPromo.promotionCode,
+                    auto_promo_campaign: autoPromo.campaign,
+                    auto_promo_discount_stripped: 'false',
+                }
+                : {}),
             ...attributionMeta,
             ...(analyticsConsent
                 ? { analytics_consent: 'granted' }
@@ -182,21 +198,12 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         // Abandoning checkout does not undo the registration, so the marker
         // rides the cancel path too.
         cancel_url: buildReturnUrl(websiteURL, 'pricing', { canceled: 'true' }, signupSuccess),
-        // promo_code query/form field stays metadata-only. Auto-apply uses
-        // the env-var helper only — Stripe forbids combining discounts with
-        // allow_promotion_codes. Black Friday is date-gated; outside its
-        // Paris windows this falls back to Back-to-Work.
-        ...stripeCheckoutPromoParams(
-            resolveCheckoutAutoPromoCode({
-                lookupKey: lookup_key,
-                interval: price.recurring?.interval,
-                intervalCount: price.recurring?.interval_count,
-                currency: price.currency,
-                isLifetime: isLifetimePlan,
-                priceType: price.type,
-                unitAmount: price.unit_amount,
-            }),
-        ),
+        // promo_code query/form field stays metadata-only. Auto-apply is
+        // resolved once above. During a Black Friday phase that result is
+        // the only discount. Back-to-Work applies only outside both Paris
+        // windows. Stripe forbids combining discounts with
+        // allow_promotion_codes.
+        ...stripeCheckoutPromoParams(autoPromo?.promotionCode),
     };
 
     if (isLifetimePlan) {
@@ -215,9 +222,9 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         }
     }
 
-    // Auto-apply is currency-specific. If Stripe still rejects the promo
-    // (e.g. EUR price vs USD coupon), retry without discounts instead of 500.
-    const session = await createCheckoutSessionWithPromoFallback(
+    // If Stripe rejects the auto-applied promotion, retry without the
+    // discount instead of failing checkout.
+    const { session, discountStripped } = await createCheckoutSessionWithPromoFallback(
         (params) =>
             stripe.checkout.sessions.create(
                 params as Parameters<typeof stripe.checkout.sessions.create>[0],
@@ -242,6 +249,13 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
             currency: (session.currency || price.currency || 'eur').toLowerCase(),
             ...(amount !== null ? { amount, revenue: amount } : {}),
             ...(promo_code ? { promo_code } : {}),
+            ...(autoPromo
+                ? {
+                    auto_promotion_code: autoPromo.promotionCode,
+                    auto_promo_campaign: autoPromo.campaign,
+                    auto_promo_discount_stripped: discountStripped,
+                }
+                : {}),
             is_lifetime: isLifetimePlan,
             has_referral: Boolean(referral),
             has_promo_code: Boolean(promo_code),
