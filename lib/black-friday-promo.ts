@@ -18,9 +18,10 @@ import {
  * (through 23:59:59.999). They abut and do not overlap:
  * - Lifetime: 2026-11-27 00:00:00 through 2026-11-30 23:59:59.
  *   Current list is $300 / €300 on plus_lifetime_usd / plus_lifetime_eur.
- *   The sale is $200 / €200 off that list (final price $200 / 200 €).
+ *   The sale is $100 / €100 off the $300 / €300 list (final price $200 / 200 €).
  * - Three plans: 2026-12-01 00:00:00 through 2026-12-14 23:59:59.
- *   Monthly $5 / €5, quarterly $15 / €15, yearly $50 / €50.
+ *   Final sale prices: monthly $5 / €5, quarterly $15 / €15, yearly $50 / €50
+ *   ($14.99 / $30 / $70 off the $19.99 / $45 / $120 list).
  *
  * Unsuffixed env keys are USD promotion_code ids. EUR uses `*_EUR`.
  * Set the ids on Vercel. Do not commit them.
