@@ -17,4 +17,11 @@ describe("checkout_started server capture", () => {
     expect(source).toMatch(/promo_code/);
     expect(source).toMatch(/amount/);
   });
+
+  it("auto-applies checkout promos through the shared date-gated helper", () => {
+    expect(source).toMatch(/resolveCheckoutAutoPromoCode/);
+    expect(source).toMatch(/unitAmount: price\.unit_amount/);
+    expect(source).not.toMatch(/resolveBackToWorkPromoCode/);
+    expect(source).not.toMatch(/resolveBlackFridayPromoCode/);
+  });
 });
