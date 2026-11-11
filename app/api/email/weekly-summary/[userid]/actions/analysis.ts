@@ -61,10 +61,10 @@ export async function generateTradingAnalysis(
     logWeeklyFallback({ finishReason, usage })
     return defaultAnalysis
   } catch (error) {
-    const details = error as { finishReason?: unknown; usage?: unknown }
+    const details = error as { finishReason?: unknown; usage?: unknown } | null
     logWeeklyFallback({
-      finishReason: details.finishReason,
-      usage: details.usage,
+      finishReason: details?.finishReason,
+      usage: details?.usage,
       error,
     })
     return defaultAnalysis

@@ -557,7 +557,6 @@ export default {
   "analysis.recommendations": "Recommandations",
   "analysis.aiSummary": "Résumé IA",
   "analysis.clearCache": "Vider le cache d'analyse",
-  "editor.ai.error": "L’IA n’a pas pu terminer cette action. Réessayez.",
   "analysis.errorGeneric":
     "Une erreur s'est produite lors de la génération de l'analyse",
   "analysis.regenerate": "Régénérer l'analyse",
@@ -3466,6 +3465,7 @@ export default {
         "Veuillez écrire au moins 10 caractères pour utiliser l’IA",
       unavailable:
         "L’IA est indisponible. Demandez à un administrateur de configurer le modèle de l’éditeur, puis réessayez.",
+      error: "L’IA n’a pas pu terminer cette action. Réessayez.",
     },
   },
 } as const;

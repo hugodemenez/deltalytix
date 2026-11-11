@@ -1,47 +1,37 @@
 /** Error code returned by AI routes when no usable OpenAI key is configured. */
 export const AI_UNAVAILABLE_ERROR = "AI_UNAVAILABLE";
 
-const PLACEHOLDER_KEYS = new Set([
-  "dummy",
-  "placeholder",
-  "your_openai_api_key_here",
-]);
+const PLACEHOLDER_KEYS = {
+  openai: ["dummy", "placeholder", "your_openai_api_key_here"],
+  gateway: [
+    "dummy",
+    "placeholder",
+    "your_ai_gateway_api_key",
+    "your_gateway_api_key_here",
+  ],
+} as const;
+
+export type PlaceholderApiKeyKind = keyof typeof PLACEHOLDER_KEYS;
 
 /**
- * Self-host / VPS setups ship `OPENAI_API_KEY=dummy` so the app can boot
- * without a real key. Treat that (and other placeholders) as unavailable
- * instead of sending requests that fail mid-stream.
+ * Self-host / VPS setups ship placeholder keys so the app can boot.
+ * Treat those as unavailable instead of sending requests that fail mid-stream.
+ * `openai` and `gateway` use different sample strings.
  */
-export function isPlaceholderOpenAiApiKey(
+export function isPlaceholderApiKey(
   apiKey: string | undefined | null,
+  kind: PlaceholderApiKeyKind = "openai",
 ): boolean {
   if (typeof apiKey !== "string") return true;
   const normalized = apiKey.trim().toLowerCase();
   if (!normalized) return true;
-  return PLACEHOLDER_KEYS.has(normalized);
-}
-
-const GATEWAY_PLACEHOLDER_KEYS = new Set([
-  "dummy",
-  "placeholder",
-  "your_ai_gateway_api_key",
-  "your_gateway_api_key_here",
-]);
-
-/** Placeholder values for `AI_GATEWAY_API_KEY`. Not the OpenAI key list. */
-export function isPlaceholderGatewayApiKey(
-  apiKey: string | undefined | null,
-): boolean {
-  if (typeof apiKey !== "string") return true;
-  const normalized = apiKey.trim().toLowerCase();
-  if (!normalized) return true;
-  return GATEWAY_PLACEHOLDER_KEYS.has(normalized);
+  return (PLACEHOLDER_KEYS[kind] as readonly string[]).includes(normalized);
 }
 
 export function getOpenAiAvailabilityError(
   apiKey: string | undefined | null = process.env.OPENAI_API_KEY,
 ): { error: typeof AI_UNAVAILABLE_ERROR } | null {
-  if (isPlaceholderOpenAiApiKey(apiKey)) {
+  if (isPlaceholderApiKey(apiKey, "openai")) {
     return { error: AI_UNAVAILABLE_ERROR };
   }
   return null;

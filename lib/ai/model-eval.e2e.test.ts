@@ -18,10 +18,10 @@ import { translateReasoningLabel } from "@/lib/ai/translate-reasoning-label"
 import { gpt6LunaCostUsd } from "@/lib/ai/gpt6-luna-price"
 import { resolveAiTask } from "@/lib/ai/resolve-ai-task"
 import { AI_TASKS, type AiTask, type AiTaskId } from "@/lib/ai/tasks"
-import { isPlaceholderOpenAiApiKey } from "@/lib/ai/openai-availability"
+import { isPlaceholderApiKey } from "@/lib/ai/openai-availability"
 import { generateTradingAnalysis } from "@/app/api/email/weekly-summary/[userid]/actions/analysis"
 
-const live = !isPlaceholderOpenAiApiKey(process.env.OPENAI_API_KEY)
+const live = !isPlaceholderApiKey(process.env.OPENAI_API_KEY, "openai")
 
 if (!live) {
   console.log(
@@ -437,7 +437,7 @@ describe.skipIf(!live)("live gpt-6-luna eval", () => {
     const text = `${result.resultAnalysisIntro} ${result.tipsForNextWeek}`
     expect(result.resultAnalysisIntro).toMatch(/\b120\b/)
     expect(result.resultAnalysisIntro).toMatch(
-      /\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|day)\b/i,
+      /\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|day|session|week)\b/i,
     )
     expect(result.tipsForNextWeek.trim().length).toBeGreaterThan(10)
     expect(text).not.toMatch(

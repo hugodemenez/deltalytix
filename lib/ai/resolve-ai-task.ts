@@ -6,7 +6,7 @@ import type { LanguageModel } from "ai"
 import {
   AI_UNAVAILABLE_ERROR,
   getOpenAiAvailabilityError,
-  isPlaceholderGatewayApiKey,
+  isPlaceholderApiKey,
 } from "@/lib/ai/openai-availability"
 import { warnIfRetiredModelOverride } from "@/lib/ai/openai-generation"
 import {
@@ -115,7 +115,7 @@ function readOverride(task: AiTask): string | undefined {
 function gatewayAuthAvailable(): boolean {
   const key = process.env.AI_GATEWAY_API_KEY
   if (typeof key === "string" && key.trim()) {
-    return !isPlaceholderGatewayApiKey(key)
+    return !isPlaceholderApiKey(key, "gateway")
   }
   try {
     return getVercelOidcTokenSync().trim().length > 0
