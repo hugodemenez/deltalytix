@@ -1,6 +1,6 @@
-import { ToolLoopAgent, stepCountIs } from "ai";
+import { ToolLoopAgent, isStepCount } from "ai";
 import { z } from "zod";
-import { TOOL_AGENT_MODEL, warnIfRetiredModelOverride } from "@/lib/ai/openai-generation";
+import { cheapestOpenAi, warnIfRetiredModelOverride } from "@/lib/ai/openai-generation";
 import { askForEmailForm } from "@/app/api/ai/support/tools/ask-for-email-form";
 import {
   grepCodebaseTool,
@@ -14,11 +14,11 @@ import {
 } from "@/app/api/ai/support/schema";
 
 /**
- * Tool-loop search needs a model that reliably chains calls; nano tends to
- * answer from memory instead of searching. Override per environment if needed.
+ * gpt-6-luna at effort none. A higher model is an env override, used only
+ * when the live eval shows this model drops the tool chain.
  */
 warnIfRetiredModelOverride("SUPPORT_AGENT_MODEL", process.env.SUPPORT_AGENT_MODEL);
-const SUPPORT_AGENT_MODEL = process.env.SUPPORT_AGENT_MODEL ?? TOOL_AGENT_MODEL;
+const supportModel = cheapestOpenAi(process.env.SUPPORT_AGENT_MODEL);
 
 export type { SupportAgentLocale };
 
@@ -65,20 +65,15 @@ ${SUPPORT_AGENT_INSTRUCTIONS}`;
 }
 
 export const supportAgent = new ToolLoopAgent<SupportAgentCallOptions>({
-  model: SUPPORT_AGENT_MODEL,
+  model: supportModel.model,
+  reasoning: supportModel.reasoning,
   instructions: SUPPORT_AGENT_INSTRUCTIONS,
   callOptionsSchema: supportAgentCallOptionsSchema,
   prepareCall: ({ options, ...settings }) => ({
     ...settings,
     instructions: buildSupportAgentInstructions(options.locale),
   }),
-  stopWhen: stepCountIs(16),
-  providerOptions: {
-    openai: {
-      reasoningEffort: "low",
-      reasoningSummary: "auto",
-    },
-  },
+  stopWhen: isStepCount(16),
   tools: {
     searchCodebase: searchCodebaseTool,
     grepCodebase: grepCodebaseTool,
@@ -87,5 +82,3 @@ export const supportAgent = new ToolLoopAgent<SupportAgentCallOptions>({
     askForEmailForm,
   },
 });
-
-export { SUPPORT_AGENT_MODEL };

@@ -1,5 +1,6 @@
-import { streamText, stepCountIs, convertToModelMessages } from "ai";
-import { TOOL_AGENT_MODEL } from "@/lib/ai/openai-generation";
+import { streamText, isStepCount, convertToModelMessages } from "ai";
+import { cheapestOpenAi } from "@/lib/ai/openai-generation";
+import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
 import { getFinancialNews } from "./tools/get-financial-news";
@@ -20,6 +21,10 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
+      const availabilityError = getOpenAiAvailabilityError();
+      if (availabilityError) {
+        return Response.json(availabilityError, { status: 503 });
+      }
       const { messages, username, locale, timezone } = await req.json();
       console.log('[Chat Route] Received messages:', JSON.stringify(messages, null, 2));
       
@@ -56,13 +61,13 @@ export async function POST(req: NextRequest) {
     });
 
     const result = streamText({
-      model: TOOL_AGENT_MODEL,
+      ...cheapestOpenAi(),
       messages: convertedMessages,
-      system: systemPrompt,
+      instructions: systemPrompt,
 
-      stopWhen: stepCountIs(10),
+      stopWhen: isStepCount(10),
       
-      onStepFinish: (step) => {
+      onStepEnd: (step) => {
         console.log('[Chat Route] Step finished:', JSON.stringify({
           finishReason: step.finishReason,
           hasText: !!step.text,
@@ -94,7 +99,7 @@ export async function POST(req: NextRequest) {
         console.error('[Chat Route] Stream error:', error);
       },
       
-      onFinish: (result) => {
+      onEnd: (result) => {
         console.log('[Chat Route] Stream finished:', JSON.stringify({
           finishReason: result.finishReason,
           hasText: !!result.text,

@@ -13,9 +13,9 @@ const tuesday = new Date("2026-09-01T00:00:00.000Z")
 const wednesday = new Date("2026-09-02T00:00:00.000Z")
 
 describe("WEEKLY_ANALYSIS_MODEL", () => {
-  it("defaults to GPT-5.6 Luna on the AI Gateway (Luna High)", () => {
-    expect(WEEKLY_ANALYSIS_MODEL).toBe("openai/gpt-5.6-luna")
-    expect(WEEKLY_ANALYSIS_REASONING_EFFORT).toBe("high")
+  it("defaults to gpt-6-luna at the lowest effort", () => {
+    expect(WEEKLY_ANALYSIS_MODEL).toBe("gpt-6-luna")
+    expect(WEEKLY_ANALYSIS_REASONING_EFFORT).toBe("none")
   })
 })
 

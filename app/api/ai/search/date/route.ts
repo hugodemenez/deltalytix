@@ -1,5 +1,6 @@
 import { generateText, Output } from "ai";
-import { GPT6_LUNA_GATEWAY_MODEL, gatewayReasoning } from "@/lib/ai/openai-generation";
+import { cheapestOpenAi } from "@/lib/ai/openai-generation";
+import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
 
@@ -19,6 +20,10 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const availabilityError = getOpenAiAvailabilityError();
+    if (availabilityError) {
+      return Response.json(availabilityError, { status: 503 });
+    }
     const body = await req.json();
     const { query, locale = "en", timezone } = requestSchema.parse(body);
 
@@ -41,8 +46,8 @@ export async function POST(req: NextRequest) {
     });
 
     const { output } = await generateText({
-      model: GPT6_LUNA_GATEWAY_MODEL,
-      providerOptions: gatewayReasoning("medium"),
+      ...cheapestOpenAi(),
+      temperature: 0,
       output: Output.object({ schema: dateRangeSchema }),
       prompt: `You are an expert at parsing natural language date queries into date ranges or weekday filters.
 

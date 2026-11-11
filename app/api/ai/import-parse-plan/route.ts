@@ -1,5 +1,5 @@
-import { generateObject } from "ai";
-import { GPT6_LUNA_GATEWAY_MODEL, gatewayReasoning } from "@/lib/ai/openai-generation";
+import { generateText, Output } from "ai";
+import { cheapestOpenAi } from "@/lib/ai/openai-generation";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
 import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
@@ -25,10 +25,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { headers, rows } = requestSchema.parse(body);
 
-    const result = await generateObject({
-      model: GPT6_LUNA_GATEWAY_MODEL,
-      schema: importParsePlanSchema,
-      providerOptions: gatewayReasoning("medium"),
+    const { output } = await generateText({
+      ...cheapestOpenAi(),
+      output: Output.object({ schema: importParsePlanSchema }),
+      temperature: 0,
       prompt: `You write a parse plan for a trading CSV. Map each database field to an exact header name from the file, or null if it is not present.
 
 Decide kind:
@@ -47,7 +47,7 @@ ${rows
 Use the header text exactly as given. Do not invent headers.`,
     });
 
-    return Response.json(result.object);
+    return Response.json(output);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return new Response(JSON.stringify({ error: error.errors }), {

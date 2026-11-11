@@ -6,7 +6,11 @@
  * Sep 6 2026 1-day weeks (Gregoire, Corentin) failed that way.
  */
 
-import { warnIfRetiredModelOverride } from "@/lib/ai/openai-generation"
+import {
+  CHEAPEST_OPENAI_MODEL_ID,
+  CHEAPEST_REASONING,
+  warnIfRetiredModelOverride,
+} from "@/lib/ai/openai-generation"
 
 warnIfRetiredModelOverride(
   "WEEKLY_ANALYSIS_MODEL",
@@ -14,10 +18,10 @@ warnIfRetiredModelOverride(
 )
 
 export const WEEKLY_ANALYSIS_MODEL =
-  process.env.WEEKLY_ANALYSIS_MODEL ?? "openai/gpt-5.6-luna"
+  process.env.WEEKLY_ANALYSIS_MODEL ?? CHEAPEST_OPENAI_MODEL_ID
 
-/** Cursor "Luna High" = GPT-5.6 Luna with high reasoning via AI Gateway. */
-export const WEEKLY_ANALYSIS_REASONING_EFFORT = "high" as const
+/** Lowest effort. A live eval is what justifies raising this. */
+export const WEEKLY_ANALYSIS_REASONING_EFFORT = CHEAPEST_REASONING
 
 export type DailyPnL = {
   date: Date

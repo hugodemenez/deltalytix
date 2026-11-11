@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const streamObject = vi.hoisted(() => vi.fn())
+const streamText = vi.hoisted(() => vi.fn())
 
 vi.mock("ai", () => ({
-  streamObject,
+  streamText,
+  Output: { object: (options: unknown) => options },
 }))
 
 import { generateTradingAnalysis } from "./analysis"
@@ -18,12 +19,12 @@ async function* objectStream(
 
 describe("generateTradingAnalysis", () => {
   beforeEach(() => {
-    streamObject.mockReset()
+    streamText.mockReset()
   })
 
-  it("calls GPT-5.6 Luna High with the week-shape prompt", async () => {
-    streamObject.mockReturnValue({
-      partialObjectStream: objectStream([
+  it("calls gpt-6-luna at effort none with the week-shape prompt", async () => {
+    streamText.mockReturnValue({
+      partialOutputStream: objectStream([
         {
           intro: "One session this week, +$120 on Monday.",
           tips: "Open the calendar and tag that session in the journal.",
@@ -41,10 +42,10 @@ describe("generateTradingAnalysis", () => {
     )
     expect(result.tipsForNextWeek).toContain("calendar")
 
-    expect(streamObject).toHaveBeenCalledOnce()
-    const call = streamObject.mock.calls[0]?.[0]
-    expect(call.model).toBe("openai/gpt-5.6-luna")
-    expect(call.providerOptions?.openai?.reasoningEffort).toBe("high")
+    expect(streamText).toHaveBeenCalledOnce()
+    const call = streamText.mock.calls[0]?.[0]
+    expect(call.model.modelId).toBe("gpt-6-luna")
+    expect(call.reasoning).toBe("none")
     expect(call.prompt).toContain("Trading days this week: 1")
     expect(call.prompt).toContain("single-day")
     expect(call.prompt).toContain("$120")
@@ -55,7 +56,7 @@ describe("generateTradingAnalysis", () => {
 
   it("skips the model on an empty series", async () => {
     const result = await generateTradingAnalysis([], "fr")
-    expect(streamObject).not.toHaveBeenCalled()
+    expect(streamText).not.toHaveBeenCalled()
     expect(result.resultAnalysisIntro).toContain("statistiques")
   })
 })

@@ -1,7 +1,7 @@
 import { generateText } from "ai";
 import enFaq from "@/locales/en/faq";
 import frFaq from "@/locales/fr/faq";
-import { GPT6_LUNA_GATEWAY_MODEL, warnIfRetiredModelOverride } from "@/lib/ai/openai-generation";
+import { cheapestOpenAi, warnIfRetiredModelOverride } from "@/lib/ai/openai-generation";
 
 export const LANDING_FAQ_LOCALES = ["en", "fr"] as const;
 export type LandingFaqLocale = (typeof LANDING_FAQ_LOCALES)[number];
@@ -11,8 +11,6 @@ export type LandingFaqSource = (typeof LANDING_FAQ_SOURCES)[number];
 
 export const LANDING_FAQ_QUESTION_MAX_LENGTH = 400;
 warnIfRetiredModelOverride("LANDING_FAQ_MODEL", process.env.LANDING_FAQ_MODEL);
-export const LANDING_FAQ_MODEL =
-  process.env.LANDING_FAQ_MODEL ?? GPT6_LUNA_GATEWAY_MODEL;
 
 const FAQ_KNOWLEDGE_ITEMS = [1, 2, 3, 4, 5, 6] as const;
 
@@ -408,14 +406,9 @@ async function generateLandingFaqAnswer(args: {
 
   try {
     const { text } = await args.generate({
-      model: LANDING_FAQ_MODEL,
+      ...cheapestOpenAi(process.env.LANDING_FAQ_MODEL),
       maxOutputTokens: 280,
-      providerOptions: {
-        openai: {
-          reasoningEffort: "none",
-        },
-      },
-      system: knowledgePrompt(args.locale),
+      instructions: knowledgePrompt(args.locale),
       prompt: args.question.trim(),
     });
 

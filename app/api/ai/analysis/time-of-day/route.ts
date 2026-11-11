@@ -1,7 +1,8 @@
 import { streamText } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
-import { gpt6LunaModel, lunaReasoning } from "@/lib/ai/openai-generation";
+import { cheapestOpenAi } from "@/lib/ai/openai-generation";
+import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 
 // Analysis Tools
 import { generateAnalysisComponent } from "../accounts/generate-analysis-component";
@@ -76,6 +77,10 @@ You are analyzing performance based on time patterns and trading sessions in the
 
 export async function POST(req: NextRequest) {
   try {
+    const availabilityError = getOpenAiAvailabilityError();
+    if (availabilityError) {
+      return Response.json(availabilityError, { status: 503 });
+    }
     const { username, locale, timezone } = await req.json();
     
     // Add debugging to see what locale is being received
@@ -86,9 +91,8 @@ export async function POST(req: NextRequest) {
     console.log('Validated data:', validatedData);
 
     const result = streamText({
-      model: gpt6LunaModel(),
-      ...lunaReasoning("none"),
-      system: getTimeOfDayAnalysisPrompt(validatedData.locale, validatedData.timezone),
+      ...cheapestOpenAi(),
+      instructions: getTimeOfDayAnalysisPrompt(validatedData.locale, validatedData.timezone),
       tools: {
         generateAnalysisComponent,
         getTimeOfDayPerformance,

@@ -1,8 +1,7 @@
-import { generateObject } from "ai"
-import { z } from "zod/v3"
+import { generateText, Output } from "ai"
 import { tradeSchema } from "@/app/api/ai/format-trades/schema"
 import { mappingSchema } from "@/app/api/ai/mappings/schema"
-import { gpt6LunaModel, samplingWithReasoningNone } from "@/lib/ai/openai-generation"
+import { cheapestOpenAi } from "@/lib/ai/openai-generation"
 import { createTradeWithDefaults } from "@/lib/trade-factory"
 import type { Trade } from "@/prisma/generated/prisma/client"
 
@@ -71,11 +70,11 @@ export async function aiNormalizeTrades(params: {
   if (objects.length === 0) return []
 
   const sample = objects.slice(0, 5)
-  const { object: mapping } = await generateObject({
-    model: gpt6LunaModel(),
-    schema: mappingSchema,
+  const { output: mapping } = await generateText({
+    ...cheapestOpenAi(),
+    output: Output.object({ schema: mappingSchema }),
+    temperature: 0.1,
     prompt: mappingPrompt(headers, sample),
-    ...samplingWithReasoningNone(0.1),
   })
 
   const batchSize = 50
@@ -90,10 +89,10 @@ export async function aiNormalizeTrades(params: {
   const formatBatch = async (batch: Record<string, string>[]) => {
     const rows = batch.map((obj) => headers.map((h) => obj[h] ?? ""))
 
-    const { object } = await generateObject({
-      model: gpt6LunaModel(),
-      schema: z.array(tradeSchema),
-      system: formatSystemPrompt,
+    const { output } = await generateText({
+      ...cheapestOpenAi(),
+      output: Output.array({ element: tradeSchema }),
+      instructions: formatSystemPrompt,
       prompt: `
 Format the following ${rows.length} trades data.
 Headers: ${headers.join(", ")}
@@ -102,10 +101,10 @@ Forced accountNumber: ${accountNumber}
 Rows:
 ${rows.map((row) => row.join(", ")).join("\n")}
 `,
-      ...samplingWithReasoningNone(0.1),
+      temperature: 0.1,
     })
 
-    return object.map(
+    return output.map(
       (trade) =>
         createTradeWithDefaults({
           ...trade,

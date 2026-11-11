@@ -1,7 +1,7 @@
-import { streamText, convertToModelMessages, stepCountIs } from "ai";
+import { streamText, convertToModelMessages, isStepCount } from "ai";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
-import { gpt6LunaModel, samplingWithReasoningNone } from "@/lib/ai/openai-generation";
+import { openAiModel } from "@/lib/ai/openai-generation";
 import { getCurrentDayData } from "./tools/get-current-day-data";
 import { ActionSchema } from "./schema";
 import { getDayData } from "./tools/get-trading-summary";
@@ -20,10 +20,8 @@ const getModelForAction = (action: EditorAction) => {
     case "suggest_question":
     case "trades_summary":
     default:
-      // GPT-4o and GPT-4o mini both map to gpt-6-luna, the documented
-      // efficient replacement. Question generation stays on this model
-      // rather than a larger GPT-6 tier.
-      return gpt6LunaModel();
+      // gpt-6-luna at effort none. Web search stays on Perplexity.
+      return openAiModel();
   }
 };
 
@@ -121,15 +119,15 @@ export async function POST(req: NextRequest) {
     const sampling =
       validatedAction === "explain"
         ? { temperature }
-        : samplingWithReasoningNone(temperature);
+        : { temperature, reasoning: "none" as const };
 
     const result = streamText({
       model,
       prompt,
-      system: systemPrompt,
+      instructions: systemPrompt,
       ...sampling,
       tools,
-      stopWhen: stepCountIs(5),
+      stopWhen: isStepCount(5),
     });
 
     return result.toUIMessageStreamResponse();

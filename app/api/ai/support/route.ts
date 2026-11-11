@@ -1,6 +1,7 @@
 import { createAgentUIStreamResponse, type UIMessage } from "ai";
 import { hasUnsupportedFileUrls } from "@/lib/ai/convert-file-ui-parts";
 import { supportAgent } from "@/lib/ai/support-agent";
+import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 import {
   hasUserMessage,
   stripInitialAssistantGreeting,
@@ -25,6 +26,11 @@ export async function POST(req: Request) {
           headers: { "Content-Type": "application/json" },
         },
       );
+    }
+
+    const availabilityError = getOpenAiAvailabilityError();
+    if (availabilityError) {
+      return Response.json(availabilityError, { status: 503 });
     }
 
     const { locale } = parsed.data;
@@ -59,7 +65,7 @@ export async function POST(req: Request) {
       uiMessages: messages as UIMessage[],
       options: { locale },
       sendReasoning: true,
-      onStepFinish: (step) => {
+      onStepEnd: (step) => {
         console.log(
           "[Support Agent] Step finished:",
           JSON.stringify(

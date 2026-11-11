@@ -1,5 +1,6 @@
-import { convertToModelMessages, streamText, UIMessage, stepCountIs } from "ai";
-import { GPT6_LUNA_GATEWAY_MODEL, gatewayReasoning } from "@/lib/ai/openai-generation";
+import { convertToModelMessages, streamText, UIMessage, isStepCount } from "ai";
+import { cheapestOpenAi } from "@/lib/ai/openai-generation";
+import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
 
@@ -76,6 +77,11 @@ You are analyzing performance across different trading accounts. Your primary ta
 
 export async function POST(req: NextRequest) {
   try {
+    const availabilityError = getOpenAiAvailabilityError();
+    if (availabilityError) {
+      return Response.json(availabilityError, { status: 503 });
+    }
+
     const {
       messages,
       username,
@@ -109,9 +115,8 @@ export async function POST(req: NextRequest) {
     const modelMessages = await convertToModelMessages(messages);
 
     const result = streamText({
-      model: GPT6_LUNA_GATEWAY_MODEL,
-      providerOptions: gatewayReasoning("none"),
-      system: getAccountAnalysisPrompt(
+      ...cheapestOpenAi(),
+      instructions: getAccountAnalysisPrompt(
         validatedData.locale,
         validatedData.username,
         validatedData.timezone,
@@ -122,8 +127,8 @@ export async function POST(req: NextRequest) {
         generateAnalysisComponent,
       },
       messages: modelMessages,
-      stopWhen: stepCountIs(10),
-      onStepFinish: (step) => {
+      stopWhen: isStepCount(10),
+      onStepEnd: (step) => {
         console.log("Step finished:", step.usage);
       },
     });

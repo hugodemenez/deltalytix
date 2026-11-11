@@ -1,5 +1,5 @@
-import { streamObject } from "ai";
-import { gpt6LunaModel, samplingWithReasoningNone } from "@/lib/ai/openai-generation";
+import { Output, streamText } from "ai";
+import { cheapestOpenAi } from "@/lib/ai/openai-generation";
 import { NextRequest } from "next/server";
 import { tradeSchema } from "./schema";
 import { z } from 'zod/v3';
@@ -26,11 +26,11 @@ export async function POST(req: NextRequest) {
     const { headers, rows } = requestSchema.parse(body);
 console.log(headers, rows);
 
-    const result = streamObject({
-      model: gpt6LunaModel(),
-      schema: tradeSchema,
-      output: 'array',
-      system:`
+    const result = streamText({
+      ...cheapestOpenAi(),
+      output: Output.array({ element: tradeSchema }),
+      temperature: 0.1,
+      instructions:`
       You are a trading expert.
       You are given a list of trade data and you need to format it according to the schema.
       Rules for formatting:
@@ -109,7 +109,6 @@ console.log(headers, rows);
       Rows:
       ${rows.map((row: string[]) => row.join(", ")).join("\n")}
     `,
-    ...samplingWithReasoningNone(0.1),
   });
 
   return result.toTextStreamResponse();

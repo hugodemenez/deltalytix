@@ -1,7 +1,8 @@
 import { streamText } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
-import { gpt6LunaModel, lunaReasoning } from "@/lib/ai/openai-generation";
+import { cheapestOpenAi } from "@/lib/ai/openai-generation";
+import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 
 // Analysis Tools
 import { generateAnalysisComponent } from "../accounts/generate-analysis-component";
@@ -71,6 +72,10 @@ You are analyzing performance across different trading instruments. Your primary
 
 export async function POST(req: NextRequest) {
   try {
+    const availabilityError = getOpenAiAvailabilityError();
+    if (availabilityError) {
+      return Response.json(availabilityError, { status: 503 });
+    }
     const { username, locale, timezone } = await req.json();
     
     // Add debugging to see what locale is being received
@@ -81,9 +86,8 @@ export async function POST(req: NextRequest) {
     console.log('Validated data:', validatedData);
 
     const result = streamText({
-      model: gpt6LunaModel(),
-      ...lunaReasoning("none"),
-      system: getInstrumentAnalysisPrompt(validatedData.locale),
+      ...cheapestOpenAi(),
+      instructions: getInstrumentAnalysisPrompt(validatedData.locale),
       tools: {
         generateAnalysisComponent,
         getInstrumentPerformance,

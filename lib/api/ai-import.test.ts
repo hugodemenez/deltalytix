@@ -91,7 +91,7 @@ describe("aiNormalizeTrades", () => {
       const text =
         captured.length === 1
           ? JSON.stringify(MAPPING)
-          : JSON.stringify([MODEL_TRADE])
+          : JSON.stringify({ elements: [MODEL_TRADE] })
       return new Response(JSON.stringify(responsesMessage(text)), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -127,12 +127,16 @@ describe("aiNormalizeTrades", () => {
       captured[1]?.body.text as {
         format?: {
           schema?: {
-            type?: string
-            items?: { properties?: Record<string, { type?: string }> }
+            properties?: {
+              elements?: {
+                type?: string
+                items?: { properties?: Record<string, { type?: string }> }
+              }
+            }
           }
         }
       }
-    ).format?.schema
+    ).format?.schema?.properties?.elements
     expect(tradeItems?.type).toBe("array")
     expect(tradeItems?.items?.properties?.pnl?.type).toBe("number")
     expect(tradeItems?.items?.properties?.quantity?.type).toBe("number")

@@ -2,7 +2,7 @@
 
 import { generateText, Output } from "ai"
 import { z } from 'zod';
-import { GPT6_LUNA_GATEWAY_MODEL, gatewayReasoning } from "@/lib/ai/openai-generation"
+import { cheapestOpenAi } from "@/lib/ai/openai-generation"
 
 const newsletterSchema = z.object({
   subject: z.string().describe("Un titre accrocheur en français de maximum 4 mots"),
@@ -20,8 +20,8 @@ interface GenerateNewsletterProps {
 export async function generateNewsletterContent({ youtubeUrl, description }: GenerateNewsletterProps) {
   try {
     const { output } = await generateText({
-      model: GPT6_LUNA_GATEWAY_MODEL,
-      providerOptions: gatewayReasoning("medium"),
+      ...cheapestOpenAi(),
+      temperature: 0.3,
       output: Output.object({ schema: newsletterSchema }),
       prompt: `Bonjour, tu vas écrire la newsletter technique pour Deltalytix sur notre dernière mise à jour : ${description}.
 

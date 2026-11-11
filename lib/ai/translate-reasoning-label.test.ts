@@ -32,8 +32,8 @@ describe("translateReasoningLabel", () => {
 
     expect(generateText).toHaveBeenCalledOnce();
     const call = generateText.mock.calls[0]?.[0];
-    expect(call.model).toBe("openai/gpt-6-luna");
-    expect(call.providerOptions?.openai?.reasoningEffort).toBe("none");
+    expect(call.model.modelId).toBe("gpt-6-luna");
+    expect(call.reasoning).toBe("none");
     expect(call.prompt).toContain("French");
     expect(call.prompt).toContain("Searching documentation");
   });
