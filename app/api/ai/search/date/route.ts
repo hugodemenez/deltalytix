@@ -1,5 +1,5 @@
-import { openai } from "@ai-sdk/openai";
 import { generateText, Output } from "ai";
+import { GPT5_MINI_SUCCESSOR, samplingWithReasoningNone } from "@/lib/ai/openai-generation";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
 
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     });
 
     const { output } = await generateText({
-      model: 'openai/gpt-5-mini',
+      model: GPT5_MINI_SUCCESSOR,
       output: Output.object({ schema: dateRangeSchema }),
       prompt: `You are an expert at parsing natural language date queries into date ranges or weekday filters.
 
@@ -104,7 +104,7 @@ EXAMPLES:
 QUERY TO PARSE: "${query}"
 
 Return the appropriate filter type (date range OR weekday).`,
-      temperature: 0.1,
+      ...samplingWithReasoningNone(0.1),
     });
 
     return new Response(JSON.stringify(output), {

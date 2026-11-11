@@ -1,7 +1,7 @@
 import { streamText, convertToModelMessages, stepCountIs } from "ai";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
-import { openai } from "@ai-sdk/openai";
+import { gpt6LunaModel, samplingWithReasoningNone } from "@/lib/ai/openai-generation";
 import { getCurrentDayData } from "./tools/get-current-day-data";
 import { ActionSchema } from "./schema";
 import { getDayData } from "./tools/get-trading-summary";
@@ -17,16 +17,13 @@ const getModelForAction = (action: EditorAction) => {
       // Access latest news with up to date data
       return "perplexity/sonar";
     case "improve":
-      // Fast, cost-effective model for simple edits
-      return openai("gpt-4o-mini");
     case "suggest_question":
-      // More capable model for question generation
-      return openai("gpt-4o");
     case "trades_summary":
-      // More capable model for summarizing trades
-      return openai("gpt-4o-mini");
     default:
-      return openai("gpt-4o-mini");
+      // GPT-4o and GPT-4o mini both map to gpt-6-luna, the documented
+      // efficient replacement. Question generation stays on this model
+      // rather than a larger GPT-6 tier.
+      return gpt6LunaModel();
   }
 };
 
@@ -120,11 +117,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Stream the response
+    const temperature = validatedAction === "suggest_question" ? 0.7 : 0.3;
+    const sampling =
+      validatedAction === "explain"
+        ? { temperature }
+        : samplingWithReasoningNone(temperature);
+
     const result = streamText({
       model,
       prompt,
       system: systemPrompt,
-      temperature: validatedAction === "suggest_question" ? 0.7 : 0.3,
+      ...sampling,
       tools,
       stopWhen: stepCountIs(5),
     });

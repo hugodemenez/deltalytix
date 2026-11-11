@@ -1,5 +1,5 @@
-import { openai } from "@ai-sdk/openai";
 import { Output, streamObject, streamText } from "ai";
+import { GPT5_MINI_SUCCESSOR } from "@/lib/ai/openai-generation";
 import { NextRequest } from "next/server";
 import { mappingSchema } from "./schema";
 
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     }
 
     const result = streamText({
-      model: "openai/gpt-5-mini",
+      model: GPT5_MINI_SUCCESSOR,
       output: Output.object({schema:mappingSchema}),
       onFinish: (result) => {
         console.log("=== AI RESPONSE ===");

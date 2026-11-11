@@ -1,6 +1,7 @@
 import { generateText } from "ai";
 import enFaq from "@/locales/en/faq";
 import frFaq from "@/locales/fr/faq";
+import { GPT5_NANO_SUCCESSOR } from "@/lib/ai/openai-generation";
 
 export const LANDING_FAQ_LOCALES = ["en", "fr"] as const;
 export type LandingFaqLocale = (typeof LANDING_FAQ_LOCALES)[number];
@@ -10,7 +11,7 @@ export type LandingFaqSource = (typeof LANDING_FAQ_SOURCES)[number];
 
 export const LANDING_FAQ_QUESTION_MAX_LENGTH = 400;
 export const LANDING_FAQ_MODEL =
-  process.env.LANDING_FAQ_MODEL ?? "openai/gpt-5-nano";
+  process.env.LANDING_FAQ_MODEL ?? GPT5_NANO_SUCCESSOR;
 
 const FAQ_KNOWLEDGE_ITEMS = [1, 2, 3, 4, 5, 6] as const;
 

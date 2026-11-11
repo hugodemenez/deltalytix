@@ -1,4 +1,5 @@
 import { generateObject } from "ai";
+import { GPT5_MINI_SUCCESSOR, samplingWithReasoningNone } from "@/lib/ai/openai-generation";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
 import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
@@ -25,9 +26,9 @@ export async function POST(req: NextRequest) {
     const { headers, rows } = requestSchema.parse(body);
 
     const result = await generateObject({
-      model: "openai/gpt-5-mini",
+      model: GPT5_MINI_SUCCESSOR,
       schema: importParsePlanSchema,
-      temperature: 0,
+      ...samplingWithReasoningNone(0),
       prompt: `You write a parse plan for a trading CSV. Map each database field to an exact header name from the file, or null if it is not present.
 
 Decide kind:

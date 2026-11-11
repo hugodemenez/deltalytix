@@ -1,4 +1,5 @@
 import { convertToModelMessages, streamText, UIMessage, stepCountIs } from "ai";
+import { gpt6LunaModel, openaiReasoningNone } from "@/lib/ai/openai-generation";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
 
@@ -108,7 +109,8 @@ export async function POST(req: NextRequest) {
     const modelMessages = await convertToModelMessages(messages);
 
     const result = streamText({
-      model: "openai/gpt-4o-mini",
+      model: gpt6LunaModel(),
+      providerOptions: openaiReasoningNone,
       system: getAccountAnalysisPrompt(
         validatedData.locale,
         validatedData.username,

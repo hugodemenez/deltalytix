@@ -1,8 +1,8 @@
 import { generateObject } from "ai"
-import { openai } from "@ai-sdk/openai"
 import { z } from "zod/v3"
 import { tradeSchema } from "@/app/api/ai/format-trades/schema"
 import { mappingSchema } from "@/app/api/ai/mappings/schema"
+import { gpt6LunaModel, samplingWithReasoningNone } from "@/lib/ai/openai-generation"
 import { createTradeWithDefaults } from "@/lib/trade-factory"
 import type { Trade } from "@/prisma/generated/prisma/client"
 
@@ -72,10 +72,10 @@ export async function aiNormalizeTrades(params: {
 
   const sample = objects.slice(0, 5)
   const { object: mapping } = await generateObject({
-    model: openai("gpt-4o-mini"),
+    model: gpt6LunaModel(),
     schema: mappingSchema,
     prompt: mappingPrompt(headers, sample),
-    temperature: 0.1,
+    ...samplingWithReasoningNone(0.1),
   })
 
   const batchSize = 50
@@ -91,7 +91,7 @@ export async function aiNormalizeTrades(params: {
     const rows = batch.map((obj) => headers.map((h) => obj[h] ?? ""))
 
     const { object } = await generateObject({
-      model: openai("gpt-4o-mini-2024-07-18"),
+      model: gpt6LunaModel(),
       schema: z.array(tradeSchema),
       system: formatSystemPrompt,
       prompt: `
@@ -102,7 +102,7 @@ Forced accountNumber: ${accountNumber}
 Rows:
 ${rows.map((row) => row.join(", ")).join("\n")}
 `,
-      temperature: 0.1,
+      ...samplingWithReasoningNone(0.1),
     })
 
     return object.map(

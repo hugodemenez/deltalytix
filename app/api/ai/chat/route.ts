@@ -1,4 +1,5 @@
 import { streamText, stepCountIs, convertToModelMessages } from "ai";
+import { GPT5_MINI_SUCCESSOR } from "@/lib/ai/openai-generation";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
 import { getFinancialNews } from "./tools/get-financial-news";
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
     });
 
     const result = streamText({
-      model: 'openai/gpt-5-mini',
+      model: GPT5_MINI_SUCCESSOR,
       messages: convertedMessages,
       system: systemPrompt,
 

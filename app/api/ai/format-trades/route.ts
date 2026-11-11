@@ -1,5 +1,5 @@
-import { openai } from "@ai-sdk/openai";
 import { streamObject } from "ai";
+import { gpt6LunaModel, samplingWithReasoningNone } from "@/lib/ai/openai-generation";
 import { NextRequest } from "next/server";
 import { tradeSchema } from "./schema";
 import { z } from 'zod/v3';
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 console.log(headers, rows);
 
     const result = streamObject({
-      model: openai("gpt-4o-mini-2024-07-18"),
+      model: gpt6LunaModel(),
       schema: tradeSchema,
       output: 'array',
       system:`
@@ -109,7 +109,7 @@ console.log(headers, rows);
       Rows:
       ${rows.map((row: string[]) => row.join(", ")).join("\n")}
     `,
-    temperature: 0.1,
+    ...samplingWithReasoningNone(0.1),
   });
 
   return result.toTextStreamResponse();

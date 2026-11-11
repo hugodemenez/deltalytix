@@ -1,7 +1,7 @@
 import { streamText } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
-import { openai } from "@ai-sdk/openai";
+import { gpt6LunaModel, openaiReasoningNone } from "@/lib/ai/openai-generation";
 
 // Analysis Tools
 import { generateAnalysisComponent } from "../accounts/generate-analysis-component";
@@ -82,7 +82,8 @@ export async function POST(req: NextRequest) {
     console.log('Validated data:', validatedData);
 
     const result = streamText({
-      model: openai("gpt-4o-mini"),
+      model: gpt6LunaModel(),
+      providerOptions: openaiReasoningNone,
       system: getGlobalAnalysisPrompt(validatedData.locale),
       tools: {
         generateAnalysisComponent,
