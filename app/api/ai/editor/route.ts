@@ -2,11 +2,7 @@ import { streamText, isStepCount } from "ai";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
 import { aiUiStreamResponse } from "@/lib/ai/http-stream";
-import {
-  getOpenAiAvailabilityError,
-  isPlaceholderOpenAiApiKey,
-} from "@/lib/ai/openai-availability";
-import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
+import { assertAiTaskConfigured, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import type { AiTaskId } from "@/lib/ai/tasks";
 import { getCurrentDayData } from "./tools/get-current-day-data";
 import { ActionSchema } from "./schema";
@@ -30,14 +26,7 @@ function editorTaskId(action: EditorAction): AiTaskId {
 }
 
 function editorUnavailable(action: EditorAction) {
-  if (action === "explain") {
-    // Explain uses the gateway model on the editor-explain task, not OpenAI.
-    if (isPlaceholderOpenAiApiKey(process.env.AI_GATEWAY_API_KEY)) {
-      return { error: "AI_UNAVAILABLE" as const };
-    }
-    return null;
-  }
-  return getOpenAiAvailabilityError();
+  return assertAiTaskConfigured(editorTaskId(action));
 }
 
 // System prompts based on action type

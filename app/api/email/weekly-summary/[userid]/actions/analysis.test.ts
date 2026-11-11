@@ -38,12 +38,40 @@ describe("generateTradingAnalysis", () => {
     expect(call.model.modelId).toBe("gpt-6-luna")
     expect(call.reasoning).toBe("high")
     expect(call.temperature).toBeUndefined()
+    expect(call.maxOutputTokens).toBe(4000)
+    expect(call.providerOptions).toEqual({
+      openai: { reasoningSummary: null },
+    })
     expect(call.prompt).toContain("Trading days this week: 1")
     expect(call.prompt).toContain("single-day")
     expect(call.prompt).toContain("$120")
     expect(call.prompt).toContain("US dollars")
     expect(call.prompt).not.toContain("€")
     expect(call.prompt).not.toContain("gpt-4.1-nano")
+  })
+
+  it("logs finish reason and usage when the model returns no intro", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {})
+    generateText.mockResolvedValue({
+      output: { intro: "", tips: "" },
+      finishReason: "length",
+      usage: { inputTokens: 12, outputTokens: 4000 },
+    })
+
+    const result = await generateTradingAnalysis(
+      [{ date: new Date("2026-08-31T00:00:00.000Z"), pnl: 120 }],
+      "en",
+    )
+
+    expect(result.resultAnalysisIntro).toContain("statistics")
+    expect(error).toHaveBeenCalledWith(
+      "Weekly recap fell back to the default blurb",
+      {
+        finishReason: "length",
+        usage: { inputTokens: 12, outputTokens: 4000 },
+      },
+    )
+    error.mockRestore()
   })
 
   it("skips the model on an empty series", async () => {

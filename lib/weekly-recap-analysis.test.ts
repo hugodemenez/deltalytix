@@ -16,6 +16,8 @@ describe("weekly-recap task", () => {
     const task = aiTask("weekly-recap")
     expect(task.modelId).toBe("gpt-6-luna")
     expect(task.reasoning).toBe("high")
+    expect(task.reasoningSummary).toBeNull()
+    expect(task.maxOutputTokens).toBeGreaterThanOrEqual(4000)
     expect(task.temperature).toBeUndefined()
   })
 })

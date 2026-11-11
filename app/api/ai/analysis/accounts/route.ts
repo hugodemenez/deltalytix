@@ -2,7 +2,7 @@ import { convertToModelMessages, streamText, UIMessage, isStepCount } from "ai";
 import { omitSystemMessages } from "@/lib/ai/client-messages";
 import { aiUiStreamResponse } from "@/lib/ai/http-stream";
 import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
-import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
+import { assertAiTaskConfigured } from "@/lib/ai/resolve-ai-task";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
 
@@ -79,7 +79,7 @@ You are analyzing performance across different trading accounts. Your primary ta
 
 export async function POST(req: NextRequest) {
   try {
-    const availabilityError = getOpenAiAvailabilityError();
+    const availabilityError = assertAiTaskConfigured("analysis-accounts");
     if (availabilityError) {
       return Response.json(availabilityError, { status: 503 });
     }

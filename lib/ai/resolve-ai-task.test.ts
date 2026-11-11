@@ -1,13 +1,20 @@
-import { afterEach, describe, expect, it } from "vitest"
-import { resolveAiTask } from "./resolve-ai-task"
-import { AI_TASKS, type AiTask, type AiTaskEnv, type AiTaskId } from "./tasks"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import {
+  assertAiTaskConfigured,
+  resolveAiTask,
+  resolveTransport,
+} from "./resolve-ai-task"
+import { AI_TASKS, type AiTask, type AiTaskId } from "./tasks"
 
-const ENV_KEYS: AiTaskEnv[] = [
+const ENV_KEYS = [
   "SUPPORT_AGENT_MODEL",
   "LANDING_FAQ_MODEL",
   "REASONING_LABEL_TRANSLATE_MODEL",
   "WEEKLY_ANALYSIS_MODEL",
-]
+  "OPENAI_API_KEY",
+  "AI_GATEWAY_API_KEY",
+  "VERCEL_OIDC_TOKEN",
+] as const
 
 const previous = Object.fromEntries(
   ENV_KEYS.map((key) => [key, process.env[key]]),
@@ -25,6 +32,19 @@ function modelIdOf(model: { modelId?: string } | string): string {
   return typeof model === "string" ? model : (model.modelId ?? "")
 }
 
+describe("resolveTransport", () => {
+  it("follows the registry provider when there is no override", () => {
+    expect(resolveTransport("openai", "perplexity/sonar", false)).toBe("openai")
+    expect(resolveTransport("gateway", "gpt-6-luna", false)).toBe("gateway")
+  })
+
+  it("routes an override by its prefix", () => {
+    expect(resolveTransport("openai", "gpt-6-luna", true)).toBe("openai")
+    expect(resolveTransport("gateway", "openai/gpt-6-luna", true)).toBe("openai")
+    expect(resolveTransport("openai", "perplexity/sonar", true)).toBe("gateway")
+  })
+})
+
 describe("resolveAiTask", () => {
   it("resolves every task onto its registry default", () => {
     for (const key of ENV_KEYS) delete process.env[key]
@@ -32,12 +52,20 @@ describe("resolveAiTask", () => {
       const task: AiTask = AI_TASKS[id]
       const resolved = resolveAiTask(id)
       expect(modelIdOf(resolved.model)).toBe(task.modelId)
-      expect(resolved.reasoning).toBe(
-        task.provider === "gateway" ? undefined : task.reasoning,
-      )
-      expect(resolved.temperature).toBe(task.temperature)
+      expect(typeof resolved.model === "string").toBe(task.provider === "gateway")
+      expect(resolved.reasoning).toBe(task.reasoning)
+      const temperature =
+        task.temperature != null && (task.reasoning == null || task.reasoning === "none")
+          ? task.temperature
+          : undefined
+      expect(resolved.temperature).toBe(temperature)
       expect(resolved.maxOutputTokens).toBe(task.maxOutputTokens)
-      if (task.reasoning && task.reasoning !== "none" && task.reasoningSummary) {
+      if (
+        task.provider === "openai" &&
+        task.reasoning &&
+        task.reasoning !== "none" &&
+        task.reasoningSummary !== undefined
+      ) {
         expect(resolved.providerOptions).toEqual({
           openai: { reasoningSummary: task.reasoningSummary },
         })
@@ -58,12 +86,49 @@ describe("resolveAiTask", () => {
     })
   })
 
-  it("passes a non-OpenAI override through as a gateway model id", () => {
+  it("keeps effort on a non-OpenAI gateway override and warns once", () => {
     process.env.WEEKLY_ANALYSIS_MODEL = "perplexity/sonar"
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     const resolved = resolveAiTask("weekly-recap")
     expect(resolved.model).toBe("perplexity/sonar")
-    expect(resolved.reasoning).toBeUndefined()
+    expect(resolved.reasoning).toBe("high")
     expect(resolved.providerOptions).toBeUndefined()
-    expect(resolved.maxOutputTokens).toBe(400)
+    expect(resolved.maxOutputTokens).toBe(4000)
+    expect(warn).toHaveBeenCalledOnce()
+    expect(String(warn.mock.calls[0]?.[0])).toContain("perplexity/sonar")
+    resolveAiTask("weekly-recap")
+    expect(warn).toHaveBeenCalledOnce()
+    warn.mockRestore()
+  })
+})
+
+describe("assertAiTaskConfigured", () => {
+  it("requires an OpenAI key for a direct task and ignores a gateway key", () => {
+    process.env.OPENAI_API_KEY = "dummy"
+    process.env.AI_GATEWAY_API_KEY = "gw-live"
+    expect(assertAiTaskConfigured("support")).toEqual({ error: "AI_UNAVAILABLE" })
+    process.env.OPENAI_API_KEY = "sk-live"
+    expect(assertAiTaskConfigured("support")).toBeNull()
+  })
+
+  it("requires gateway auth for a gateway task, including Vercel OIDC when the key is unset", () => {
+    delete process.env.AI_GATEWAY_API_KEY
+    delete process.env.VERCEL_OIDC_TOKEN
+    process.env.OPENAI_API_KEY = "sk-live"
+    expect(assertAiTaskConfigured("editor-explain")).toEqual({ error: "AI_UNAVAILABLE" })
+    process.env.VERCEL_OIDC_TOKEN = "oidc-token"
+    expect(assertAiTaskConfigured("editor-explain")).toBeNull()
+    process.env.AI_GATEWAY_API_KEY = "dummy"
+    expect(assertAiTaskConfigured("editor-explain")).toEqual({ error: "AI_UNAVAILABLE" })
+  })
+
+  it("follows a gateway override instead of OPENAI_API_KEY", () => {
+    process.env.OPENAI_API_KEY = "dummy"
+    process.env.LANDING_FAQ_MODEL = "perplexity/sonar"
+    delete process.env.AI_GATEWAY_API_KEY
+    delete process.env.VERCEL_OIDC_TOKEN
+    expect(assertAiTaskConfigured("landing-faq")).toEqual({ error: "AI_UNAVAILABLE" })
+    process.env.AI_GATEWAY_API_KEY = "gw-live"
+    expect(assertAiTaskConfigured("landing-faq")).toBeNull()
   })
 })

@@ -131,7 +131,7 @@ describe("serialized OpenAI Responses requests", () => {
     )
 
     const { output } = await generateText({
-      ...resolveAiTask("format-trades"),
+      ...resolveAiTask("import-format"),
       output: Output.array({ element: tradeSchema }),
       prompt: "synthetic trades",
     })
@@ -214,7 +214,7 @@ describe("serialized OpenAI Responses requests", () => {
     })
 
     const result = streamText({
-      ...resolveAiTask("format-trades"),
+      ...resolveAiTask("import-format"),
       prompt: "Summarize the synthetic day.",
       stopWhen: isStepCount(2),
       tools: {

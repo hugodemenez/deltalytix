@@ -1,6 +1,6 @@
 import { generateText, Output } from "ai";
 import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
-import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
+import { assertAiTaskConfigured } from "@/lib/ai/resolve-ai-task";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
 
@@ -20,7 +20,7 @@ const requestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const availabilityError = getOpenAiAvailabilityError();
+    const availabilityError = assertAiTaskConfigured("date-search");
     if (availabilityError) {
       return Response.json(availabilityError, { status: 503 });
     }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { generateText, Output } from "ai"
+import { formatNameBatchError } from "@/lib/ai/format-name-batch"
 import { resolveAiTask } from "@/lib/ai/resolve-ai-task"
 import { z } from "zod"
 
@@ -28,6 +29,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { batchSize = 10, forceUpdate = false, emails: targetEmails }: { batchSize?: number, forceUpdate?: boolean, emails?: string[] } = body
+    const requestedCount =
+      Array.isArray(targetEmails) && targetEmails.length > 0
+        ? targetEmails.length
+        : batchSize
+    const tooMany = formatNameBatchError(requestedCount)
+    if (tooMany) {
+      return NextResponse.json(tooMany, { status: 400 })
+    }
 
     // Determine target subscribers
     let subscribers

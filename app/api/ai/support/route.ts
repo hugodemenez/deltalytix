@@ -1,7 +1,7 @@
 import { createAgentUIStreamResponse, type UIMessage } from "ai";
 import { hasUnsupportedFileUrls } from "@/lib/ai/convert-file-ui-parts";
 import { supportAgent } from "@/lib/ai/support-agent";
-import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
+import { assertAiTaskConfigured } from "@/lib/ai/resolve-ai-task";
 import {
   hasUserMessage,
   stripInitialAssistantGreeting,
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const availabilityError = getOpenAiAvailabilityError();
+    const availabilityError = assertAiTaskConfigured("support");
     if (availabilityError) {
       return Response.json(availabilityError, { status: 503 });
     }
@@ -62,6 +62,8 @@ export async function POST(req: Request) {
 
     return createAgentUIStreamResponse({
       agent: supportAgent,
+      // Role "system" never reaches here: supportChatRequestSchema only allows
+      // user and assistant, and schema.test.ts rejects a client system message.
       uiMessages: messages as UIMessage[],
       options: { locale },
       sendReasoning: true,

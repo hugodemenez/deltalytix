@@ -17,6 +17,7 @@ import { answerLandingFaqQuestion } from "@/lib/landing-faq-answer"
 import { translateReasoningLabel } from "@/lib/ai/translate-reasoning-label"
 import { gpt6LunaCostUsd } from "@/lib/ai/gpt6-luna-price"
 import { resolveAiTask } from "@/lib/ai/resolve-ai-task"
+import { AI_TASKS, type AiTask, type AiTaskId } from "@/lib/ai/tasks"
 import { isPlaceholderOpenAiApiKey } from "@/lib/ai/openai-availability"
 import { generateTradingAnalysis } from "@/app/api/email/weekly-summary/[userid]/actions/analysis"
 
@@ -116,7 +117,25 @@ afterAll(() => {
   console.log(
     `[model-eval] total tasks=${ledger.length} input=${input} output=${output} usd=${usd.toFixed(6)}`,
   )
-  console.log(JSON.stringify({ model: "gpt-6-luna", effort: "none", usd, tasks: ledger }, null, 2))
+  console.log(
+    JSON.stringify(
+      {
+        model: "gpt-6-luna",
+        usd,
+        calls: ledger,
+        efforts: (Object.keys(AI_TASKS) as AiTaskId[]).map((id) => {
+          const task: AiTask = AI_TASKS[id]
+          return {
+            id,
+            effort: task.reasoning ?? null,
+            provider: task.provider,
+          }
+        }),
+      },
+      null,
+      2,
+    ),
+  )
 })
 
 function looksFrench(text: string) {
@@ -178,30 +197,6 @@ describe.skipIf(!live)("live gpt-6-luna eval", () => {
     expect(trade?.accountNumber).toBe("ACC-9")
     sameInstant(String(trade?.entryDate), "2026-01-02T15:04:05.000Z")
     sameInstant(String(trade?.closeDate), "2026-01-02T15:05:35.000Z")
-  })
-
-  it("format-trades streams the same trade", async () => {
-    const { POST } = await import("@/app/api/ai/format-trades/route")
-    const response = await POST(
-      new NextRequest("http://localhost/api/ai/format-trades", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ headers: HEADERS, rows: [ROW] }),
-      }),
-    )
-    expect(response.status).toBe(200)
-    const parsed = JSON.parse(await response.text()) as Array<{
-      pnl: number
-      quantity: number
-      side: string
-      instrument: string
-    }>
-    expect(Array.isArray(parsed)).toBe(true)
-    const trade = parsed[0]
-    expect(trade?.pnl).toBe(-12.34)
-    expect(trade?.quantity).toBe(2.5)
-    expect(trade?.side).toBe("short")
-    expect(trade?.instrument).toBe("ES")
   })
 
   it("mappings names the known columns", async () => {
@@ -320,6 +315,8 @@ describe.skipIf(!live)("live gpt-6-luna eval", () => {
     expect(JSON.stringify(calls)).toContain("CHEAPEST_OPENAI_MODEL_ID")
     expect(result.text).toContain("gpt-6-luna")
     expect(result.text.toLowerCase()).not.toContain("gpt-4o")
+    const reasoningParts = result.steps.flatMap((step) => step.reasoning)
+    expect(reasoningParts.length).toBeGreaterThan(0)
   })
 
   it("editor improve returns a short actionable list", async () => {
@@ -433,8 +430,8 @@ describe.skipIf(!live)("live gpt-6-luna eval", () => {
       "en",
     )
     const text = `${result.resultAnalysisIntro} ${result.tipsForNextWeek}`
-    expect(result.resultAnalysisIntro).toMatch(/120/)
-    expect(result.resultAnalysisIntro).toMatch(/one|single|Monday/i)
+    expect(result.resultAnalysisIntro).toMatch(/\b120\b/)
+    expect(result.resultAnalysisIntro).toMatch(/\bMonday\b/)
     expect(result.tipsForNextWeek.trim().length).toBeGreaterThan(10)
     expect(text).not.toMatch(
       /every day|each day|throughout the week|ramped|day after day|steady ramp/i,

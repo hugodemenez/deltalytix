@@ -37,7 +37,7 @@ export async function generateTradingAnalysis(
       return defaultAnalysis
     }
 
-    const { output } = await generateText({
+    const { output, finishReason, usage } = await generateText({
       ...resolveAiTask("weekly-recap"),
       output: Output.object({ schema: analysisSchema }),
       prompt: buildWeeklyAnalysisPrompt(sortedTrades, language),
@@ -50,6 +50,10 @@ export async function generateTradingAnalysis(
       }
     }
 
+    console.error("Weekly recap fell back to the default blurb", {
+      finishReason,
+      usage,
+    })
     return defaultAnalysis
   } catch (error) {
     console.error('Error generating analysis:', error)

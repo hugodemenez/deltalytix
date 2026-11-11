@@ -1,3 +1,4 @@
+import { ANALYSIS_ACCOUNTS_MODEL_LABEL } from "@/lib/ai/model-label"
 import { CHEAPEST_OPENAI_MODEL_ID } from "@/lib/ai/openai-generation"
 
 /**
@@ -36,7 +37,6 @@ export const AI_REASONING_EFFORTS = [
 export type AiReasoningEffort = (typeof AI_REASONING_EFFORTS)[number]
 
 export type AiTaskId =
-  | "format-trades"
   | "import-format"
   | "import-mapping"
   | "mappings"
@@ -72,7 +72,7 @@ export type AiTask = {
   reasoning?: AiReasoningEffort
   temperature?: number
   maxOutputTokens?: number
-  reasoningSummary?: "auto" | "detailed"
+  reasoningSummary?: "auto" | "detailed" | null
   env?: AiTaskEnv
   why: string
 }
@@ -80,21 +80,13 @@ export type AiTask = {
 const luna = CHEAPEST_OPENAI_MODEL_ID
 
 export const AI_TASKS = {
-  "format-trades": {
-    id: "format-trades",
-    modelId: luna,
-    provider: "openai",
-    reasoning: "none",
-    temperature: 0.1,
-    why: "CSV rows become trades. Effort none keeps temperature for stable numbers, and the batch can be up to 100 rows so there is no output cap.",
-  },
   "import-format": {
     id: "import-format",
     modelId: luna,
     provider: "openai",
     reasoning: "none",
     temperature: 0.1,
-    why: "Same trade extraction as format-trades, in-process. Effort none plus temperature 0.1. Uncapped so a 50-row batch is not cut off.",
+    why: "CSV rows become trades inside the import path. Effort none keeps temperature for stable numbers. Uncapped so a 50-row batch is not cut off. The old /api/ai/format-trades HTTP route had no caller and was removed.",
   },
   "import-mapping": {
     id: "import-mapping",
@@ -139,7 +131,7 @@ export const AI_TASKS = {
     reasoning: "none",
     temperature: 0,
     maxOutputTokens: 2000,
-    why: "Infer names from a small email batch. The cap fits the default batch without leaving the call unbounded.",
+    why: "Infer names from at most 20 emails. The route rejects a larger batch with 400 so this 2000-token cap cannot truncate the JSON into a 500.",
   },
   newsletter: {
     id: "newsletter",
@@ -242,10 +234,10 @@ export const AI_TASKS = {
   },
   "analysis-accounts": {
     id: "analysis-accounts",
-    modelId: luna,
+    modelId: ANALYSIS_ACCOUNTS_MODEL_LABEL,
     provider: "openai",
     reasoning: "none",
-    why: "Account chat plus tools. Effort none. The accounts page label reads this model id.",
+    why: "Account chat plus tools. Effort none. The accounts page label is ANALYSIS_ACCOUNTS_MODEL_LABEL, not this module.",
   },
   "analysis-component": {
     id: "analysis-component",
@@ -259,9 +251,10 @@ export const AI_TASKS = {
     modelId: luna,
     provider: "openai",
     reasoning: "high",
-    maxOutputTokens: 400,
+    reasoningSummary: null,
+    maxOutputTokens: 4000,
     env: "WEEKLY_ANALYSIS_MODEL",
-    why: "One sentence plus ~18 words, but effort high: the Sep 6 2026 one-day recap invented a multi-day ramp without reasoning. No temperature. The cap fits the schema without room for a long essay.",
+    why: "One sentence plus ~18 words, but effort high: the Sep 6 2026 one-day recap invented a ramp without reasoning. Reasoning tokens count toward max output, so the cap is 4000 rather than a few hundred. reasoningSummary is null so the provider does not also emit a detailed summary into that budget. No temperature.",
   },
 } satisfies Record<AiTaskId, AiTask>
 

@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n, useCurrentLocale } from "@/locales/client";
 import { useChat } from "@ai-sdk/react";
-import { aiTask } from "@/lib/ai/tasks";
+import { ANALYSIS_ACCOUNTS_MODEL_LABEL } from "@/lib/ai/model-label";
 import {
   Activity,
   AlertCircle,
@@ -654,7 +654,7 @@ export function AccountsAnalysis({ onStatusChange }: AccountsAnalysisProps) {
                         ).toLocaleString()}
                       </div>
                       <div>
-                        {t("analysis.model")}: {aiTask("analysis-accounts").modelId}
+                        {t("analysis.model")}: {ANALYSIS_ACCOUNTS_MODEL_LABEL}
                       </div>
                     </div>
                   </div>

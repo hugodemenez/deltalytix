@@ -1,8 +1,7 @@
 import { generateText } from "ai";
 import enFaq from "@/locales/en/faq";
 import frFaq from "@/locales/fr/faq";
-import { isPlaceholderOpenAiApiKey } from "@/lib/ai/openai-availability";
-import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
+import { assertAiTaskConfigured, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 
 export const LANDING_FAQ_LOCALES = ["en", "fr"] as const;
 export type LandingFaqLocale = (typeof LANDING_FAQ_LOCALES)[number];
@@ -286,10 +285,8 @@ export function isLandingFaqLocale(value: string): value is LandingFaqLocale {
   return value === "en" || value === "fr";
 }
 
-export function isLandingFaqAiConfigured(
-  apiKey = process.env.OPENAI_API_KEY,
-): boolean {
-  return !isPlaceholderOpenAiApiKey(apiKey);
+export function isLandingFaqAiConfigured(): boolean {
+  return assertAiTaskConfigured("landing-faq") == null;
 }
 
 export function normalizeLandingFaqText(value: string): string {
