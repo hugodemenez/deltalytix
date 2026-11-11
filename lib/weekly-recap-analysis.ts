@@ -6,6 +6,13 @@
  * Sep 6 2026 1-day weeks (Gregoire, Corentin) failed that way.
  */
 
+import { warnIfRetiredModelOverride } from "@/lib/ai/openai-generation"
+
+warnIfRetiredModelOverride(
+  "WEEKLY_ANALYSIS_MODEL",
+  process.env.WEEKLY_ANALYSIS_MODEL,
+)
+
 export const WEEKLY_ANALYSIS_MODEL =
   process.env.WEEKLY_ANALYSIS_MODEL ?? "openai/gpt-5.6-luna"
 

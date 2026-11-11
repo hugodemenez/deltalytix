@@ -1,7 +1,7 @@
 import { streamText } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
-import { gpt6LunaModel, openaiReasoningNone } from "@/lib/ai/openai-generation";
+import { gpt6LunaModel, lunaReasoning } from "@/lib/ai/openai-generation";
 
 // Analysis Tools
 import { generateAnalysisComponent } from "../accounts/generate-analysis-component";
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
 
     const result = streamText({
       model: gpt6LunaModel(),
-      providerOptions: openaiReasoningNone,
+      ...lunaReasoning("none"),
       system: getGlobalAnalysisPrompt(validatedData.locale),
       tools: {
         generateAnalysisComponent,

@@ -1,15 +1,25 @@
-import { generateObject, generateText, streamText, tool } from "ai"
+/**
+ * Synthetic Responses fixtures shaped for @ai-sdk/openai 3.0.70.
+ * They check the serialized request and the SDK parser. They are not
+ * recordings of gpt-6-luna and they are not a model-quality eval.
+ */
+import { generateObject, generateText, stepCountIs, streamText, tool } from "ai"
 import { openai } from "@ai-sdk/openai"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod/v3"
 import { tradeSchema } from "@/app/api/ai/format-trades/schema"
 import {
-  GPT5_MINI_SUCCESSOR,
+  GPT6_LUNA_GATEWAY_MODEL,
   GPT6_LUNA_MODEL_ID,
+  TOOL_AGENT_MODEL,
   createGpt6LunaCompatibleFetch,
   ensureGpt6LunaCompatibleRequestBody,
+  gatewayReasoning,
   gpt6LunaModel,
+  lunaReasoning,
+  retiredOpenAiGenerationModel,
   samplingWithReasoningNone,
+  warnIfRetiredModelOverride,
 } from "./openai-generation"
 
 const SYNTHETIC_TRADE = {
@@ -132,13 +142,15 @@ describe("ensureGpt6LunaCompatibleRequestBody", () => {
     expect(next.reasoning).toEqual({ effort: "none" })
   })
 
-  it("does not override an effort the provider already serialized", () => {
-    const body = {
+  it("keeps a serialized non-none effort and drops the incompatible temperature", () => {
+    const next = ensureGpt6LunaCompatibleRequestBody({
       model: GPT6_LUNA_MODEL_ID,
       temperature: 0.1,
       reasoning: { effort: "low" },
-    }
-    expect(ensureGpt6LunaCompatibleRequestBody(body)).toBe(body)
+    }) as { temperature?: number; reasoning: { effort: string } }
+
+    expect(next.reasoning).toEqual({ effort: "low" })
+    expect(next.temperature).toBeUndefined()
   })
 
   it("leaves other models, including weekly-recap luna, unchanged", () => {
@@ -147,6 +159,34 @@ describe("ensureGpt6LunaCompatibleRequestBody", () => {
       temperature: 0.2,
     }
     expect(ensureGpt6LunaCompatibleRequestBody(body)).toBe(body)
+  })
+
+  it("does not rewrite an unpublished dated snapshot id", () => {
+    const body = {
+      model: "gpt-6-luna-2026-11-11",
+      temperature: 0.1,
+    }
+    expect(ensureGpt6LunaCompatibleRequestBody(body)).toBe(body)
+  })
+
+  it("does not invent effort none when the body has no sampling parameter", () => {
+    const body = { model: GPT6_LUNA_MODEL_ID, input: "analysis" }
+    expect(ensureGpt6LunaCompatibleRequestBody(body)).toBe(body)
+  })
+
+  it("strips sampling parameters when a non-none effort is already on the body", () => {
+    const next = ensureGpt6LunaCompatibleRequestBody({
+      model: GPT6_LUNA_MODEL_ID,
+      temperature: 0.4,
+      top_p: 0.9,
+      top_logprobs: 3,
+      reasoning: { effort: "medium" },
+    }) as Record<string, unknown>
+
+    expect(next.temperature).toBeUndefined()
+    expect(next.top_p).toBeUndefined()
+    expect(next.top_logprobs).toBeUndefined()
+    expect(next.reasoning).toEqual({ effort: "medium" })
   })
 })
 
@@ -208,7 +248,7 @@ describe("serialized OpenAI Responses requests", () => {
     expect(object[0]?.quantity).toBe(2.5)
   })
 
-  it("streams text with tools and does not send temperature beside a non-none effort", async () => {
+  it("streams text and tools with temperature 0.3 and reasoning effort none", async () => {
     const captured = installFetch(() =>
       sseResponse(textStreamEvents("ES short, pnl -12.34, quantity 2.5.")),
     )
@@ -245,7 +285,7 @@ describe("serialized OpenAI Responses requests", () => {
     const result = streamText({
       model: gpt6LunaModel(),
       prompt: "synthetic analysis",
-      providerOptions: samplingWithReasoningNone(0).providerOptions,
+      ...lunaReasoning("none"),
       tools: {
         getOverallPerformanceMetrics: tool({
           description: "Synthetic metrics tool.",
@@ -258,6 +298,107 @@ describe("serialized OpenAI Responses requests", () => {
     expect(captured[0]?.body.temperature).toBeUndefined()
     expect(captured[0]?.body.top_p).toBeUndefined()
     expect(captured[0]?.body.reasoning).toEqual({ effort: "none" })
+  })
+
+  it.each(["low", "medium"] as const)(
+    "forceReasoning %s strips temperature and topP and keeps that effort",
+    async (effort) => {
+      const captured = installFetch(() => jsonResponse(responsesMessage("ok")))
+
+      await generateText({
+        model: gpt6LunaModel(),
+        prompt: "synthetic",
+        temperature: 0.7,
+        topP: 0.9,
+        ...lunaReasoning(effort),
+      })
+
+      expect(captured[0]?.body.reasoning).toEqual({ effort })
+      expect(captured[0]?.body.temperature).toBeUndefined()
+      expect(captured[0]?.body.top_p).toBeUndefined()
+    },
+  )
+
+  it("bare reasoningEffort low is dropped by 3.0.70 and is not rewritten to none", async () => {
+    const captured = installFetch(() => jsonResponse(responsesMessage("ok")))
+
+    await generateText({
+      model: gpt6LunaModel(),
+      prompt: "synthetic",
+      providerOptions: { openai: { reasoningEffort: "low" } },
+    })
+
+    expect(captured[0]?.body.reasoning).toBeUndefined()
+    expect(captured[0]?.body.temperature).toBeUndefined()
+  })
+
+  it("replays a synthetic tool result into a second request with the same sampling", async () => {
+    let calls = 0
+    const captured = installFetch(() => {
+      calls += 1
+      if (calls === 1) {
+        return sseResponse([
+          {
+            type: "response.output_item.added",
+            output_index: 0,
+            item: {
+              type: "function_call",
+              id: "fc_synthetic",
+              call_id: "call_synthetic",
+              name: "getDayData",
+              arguments: "{\"date\":\"2026-01-02\"}",
+            },
+          },
+          {
+            type: "response.output_item.done",
+            output_index: 0,
+            item: {
+              type: "function_call",
+              id: "fc_synthetic",
+              call_id: "call_synthetic",
+              name: "getDayData",
+              arguments: "{\"date\":\"2026-01-02\"}",
+              status: "completed",
+            },
+          },
+          {
+            type: "response.completed",
+            response: {
+              usage: {
+                input_tokens: 8,
+                output_tokens: 9,
+                output_tokens_details: { reasoning_tokens: 0 },
+              },
+            },
+          },
+        ])
+      }
+      return sseResponse(textStreamEvents("Follow-up after the synthetic tool."))
+    })
+
+    const result = streamText({
+      model: gpt6LunaModel(),
+      prompt: "Summarize the synthetic day.",
+      ...samplingWithReasoningNone(0.1),
+      stopWhen: stepCountIs(2),
+      tools: {
+        getDayData: tool({
+          description: "Synthetic day data.",
+          inputSchema: z.object({ date: z.string() }),
+          execute: async () => ({ pnl: -12.34, quantity: 2.5 }),
+        }),
+      },
+    })
+
+    await expect(result.text).resolves.toBe("Follow-up after the synthetic tool.")
+    expect(captured).toHaveLength(2)
+    for (const request of captured) {
+      expect(request.body.model).toBe(GPT6_LUNA_MODEL_ID)
+      expect(request.body.temperature).toBe(0.1)
+      expect(request.body.reasoning).toEqual({ effort: "none" })
+    }
+    expect(JSON.stringify(captured[1]?.body.input)).toContain("call_synthetic")
+    expect(JSON.stringify(captured[1]?.body.input)).toContain("-12.34")
   })
 })
 
@@ -292,8 +433,8 @@ describe("createGpt6LunaCompatibleFetch", () => {
   })
 })
 
-describe("gateway sampling for gpt-5.6 successors", () => {
-  it("sends temperature together with reasoning effort none", async () => {
+describe("gateway request bodies", () => {
+  async function captureGateway(run: () => Promise<unknown>) {
     const originalGatewayKey = process.env.AI_GATEWAY_API_KEY
     process.env.AI_GATEWAY_API_KEY = "gw-test-not-a-real-key"
     const captured: Array<{ url: string; headers: Headers; body: Record<string, unknown> }> = []
@@ -304,11 +445,13 @@ describe("gateway sampling for gpt-5.6 successors", () => {
           : input instanceof URL
             ? input.toString()
             : input.url
-      const headers = new Headers(init?.headers)
-      const body = JSON.parse(String(init?.body)) as Record<string, unknown>
-      captured.push({ url, headers, body })
+      captured.push({
+        url,
+        headers: new Headers(init?.headers),
+        body: JSON.parse(String(init?.body)) as Record<string, unknown>,
+      })
       return jsonResponse({
-        content: [{ type: "text", text: "{\"ok\":true}" }],
+        content: [{ type: "text", text: "ok" }],
         finishReason: { unified: "stop", raw: "stop" },
         usage: {
           inputTokens: { total: 3, noCache: 3, cacheRead: 0, cacheWrite: 0 },
@@ -316,25 +459,83 @@ describe("gateway sampling for gpt-5.6 successors", () => {
         },
       })
     }) as typeof fetch
-
     try {
-      await generateText({
-        model: GPT5_MINI_SUCCESSOR,
-        prompt: "synthetic parse plan",
-        ...samplingWithReasoningNone(0),
-      }).catch(() => undefined)
+      await run().catch(() => undefined)
     } finally {
       if (originalGatewayKey === undefined) delete process.env.AI_GATEWAY_API_KEY
       else process.env.AI_GATEWAY_API_KEY = originalGatewayKey
     }
+    return captured
+  }
 
-    expect(captured.length).toBeGreaterThan(0)
+  it("sends lightweight one-shots as gateway gpt-6-luna at medium with no temperature", async () => {
+    const captured = await captureGateway(() =>
+      generateText({
+        model: GPT6_LUNA_GATEWAY_MODEL,
+        prompt: "synthetic parse plan",
+        providerOptions: gatewayReasoning("medium"),
+      }),
+    )
+
     expect(captured[0]?.url).toContain("ai-gateway.vercel.sh")
-    expect(captured[0]?.headers.get("ai-language-model-id")).toBe(GPT5_MINI_SUCCESSOR)
-    expect(captured[0]?.body.temperature).toBe(0)
-    expect(
-      (captured[0]?.body.providerOptions as { openai?: { reasoningEffort?: string } })
-        .openai?.reasoningEffort,
-    ).toBe("none")
+    expect(captured[0]?.headers.get("ai-language-model-id")).toBe(GPT6_LUNA_GATEWAY_MODEL)
+    expect(captured[0]?.body.temperature).toBeUndefined()
+    expect(captured[0]?.body.providerOptions).toEqual(gatewayReasoning("medium"))
+    expect(JSON.stringify(captured[0]?.body.providerOptions)).not.toContain("forceReasoning")
+  })
+
+  it("sends the tool-agent model without a sampling temperature", async () => {
+    const captured = await captureGateway(() =>
+      generateText({
+        model: TOOL_AGENT_MODEL,
+        prompt: "synthetic support question",
+        providerOptions: gatewayReasoning("low"),
+      }),
+    )
+
+    expect(captured[0]?.headers.get("ai-language-model-id")).toBe(TOOL_AGENT_MODEL)
+    expect(captured[0]?.body.temperature).toBeUndefined()
+    expect(captured[0]?.body.providerOptions).toEqual(gatewayReasoning("low"))
+  })
+
+  it("forwards temperature on a gateway gpt-6-luna body instead of repairing it", async () => {
+    const captured = await captureGateway(() =>
+      generateText({
+        model: GPT6_LUNA_GATEWAY_MODEL,
+        prompt: "do not use this combination in app code",
+        temperature: 0.1,
+        providerOptions: gatewayReasoning("none"),
+      }),
+    )
+
+    expect(captured[0]?.body.temperature).toBe(0.1)
+    expect(captured[0]?.body.providerOptions).toEqual(gatewayReasoning("none"))
+  })
+})
+
+describe("retired OpenAI generation ids", () => {
+  it("matches only the published shutdown ids", () => {
+    expect(retiredOpenAiGenerationModel("openai/gpt-5-mini")).toBe("gpt-5-mini")
+    expect(retiredOpenAiGenerationModel("gpt-4o-mini-2024-07-18")).toBe(
+      "gpt-4o-mini-2024-07-18",
+    )
+    expect(retiredOpenAiGenerationModel("gpt-5-nano-2025-08-07")).toBe(
+      "gpt-5-nano-2025-08-07",
+    )
+    expect(retiredOpenAiGenerationModel("gpt-6-luna")).toBeNull()
+    expect(retiredOpenAiGenerationModel("openai/gpt-5.6-terra")).toBeNull()
+    expect(retiredOpenAiGenerationModel("gpt-4o-transcribe")).toBeNull()
+    expect(retiredOpenAiGenerationModel("whisper-1")).toBeNull()
+  })
+
+  it("warns once when an override names a retired id", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+    warnIfRetiredModelOverride("SUPPORT_AGENT_MODEL", "openai/gpt-5-mini")
+    warnIfRetiredModelOverride("SUPPORT_AGENT_MODEL", "openai/gpt-5-mini")
+    warnIfRetiredModelOverride("LANDING_FAQ_MODEL", "gpt-6-luna")
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(String(warn.mock.calls[0]?.[0])).toContain("SUPPORT_AGENT_MODEL")
+    expect(String(warn.mock.calls[0]?.[0])).toContain("gpt-5-mini")
+    warn.mockRestore()
   })
 })

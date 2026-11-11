@@ -58,7 +58,7 @@ The support page sends the current UI `locale` (`en` | `fr`) with every request.
 
 OpenAI reasoning summaries are still often English over the API. For `/fr`, the
 UI translates the locked first-line title through
-`POST /api/ai/support/translate-label` (`openai/gpt-5.6-luna`, reasoning off) and
+`POST /api/ai/support/translate-label` (`openai/gpt-6-luna`, reasoning off) and
 keeps a shimmer skeleton until that title is ready.
 
 ## Request flow
@@ -71,6 +71,6 @@ file URLs, then streams `supportAgent` via `createAgentUIStreamResponse` with
 ## Environment
 
 - `AI_GATEWAY_API_KEY` — required for the agent to run (Vercel AI Gateway).
-- `SUPPORT_AGENT_MODEL` — optional model override.
+- `SUPPORT_AGENT_MODEL` — optional model override. A value on the published OpenAI shutdown list logs a warning at startup. The default stays `openai/gpt-5.6-terra`.
 - `RESEND_API_KEY`, `SUPPORT_EMAIL` / `SUPPORT_TEAM_EMAIL` — support email delivery.
 - `SUPPORT_SEARCH_DEBUG=0` — silence search debug logging in development.

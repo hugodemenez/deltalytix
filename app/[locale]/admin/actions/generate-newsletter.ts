@@ -2,7 +2,7 @@
 
 import { generateText, Output } from "ai"
 import { z } from 'zod';
-import { GPT5_MINI_SUCCESSOR, samplingWithReasoningNone } from "@/lib/ai/openai-generation"
+import { GPT6_LUNA_GATEWAY_MODEL, gatewayReasoning } from "@/lib/ai/openai-generation"
 
 const newsletterSchema = z.object({
   subject: z.string().describe("Un titre accrocheur en français de maximum 4 mots"),
@@ -20,7 +20,8 @@ interface GenerateNewsletterProps {
 export async function generateNewsletterContent({ youtubeUrl, description }: GenerateNewsletterProps) {
   try {
     const { output } = await generateText({
-      model: GPT5_MINI_SUCCESSOR,
+      model: GPT6_LUNA_GATEWAY_MODEL,
+      providerOptions: gatewayReasoning("medium"),
       output: Output.object({ schema: newsletterSchema }),
       prompt: `Bonjour, tu vas écrire la newsletter technique pour Deltalytix sur notre dernière mise à jour : ${description}.
 
@@ -49,7 +50,6 @@ Instructions générales :
 - Terminologie spécifique au trading de futures.
 
 Merci de respecter ces consignes.`,
-      ...samplingWithReasoningNone(0.7),
     })
 
 

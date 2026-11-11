@@ -1,6 +1,6 @@
 import { ToolLoopAgent, stepCountIs } from "ai";
 import { z } from "zod";
-import { GPT5_MINI_SUCCESSOR } from "@/lib/ai/openai-generation";
+import { TOOL_AGENT_MODEL, warnIfRetiredModelOverride } from "@/lib/ai/openai-generation";
 import { askForEmailForm } from "@/app/api/ai/support/tools/ask-for-email-form";
 import {
   grepCodebaseTool,
@@ -17,7 +17,8 @@ import {
  * Tool-loop search needs a model that reliably chains calls; nano tends to
  * answer from memory instead of searching. Override per environment if needed.
  */
-const SUPPORT_AGENT_MODEL = process.env.SUPPORT_AGENT_MODEL ?? GPT5_MINI_SUCCESSOR;
+warnIfRetiredModelOverride("SUPPORT_AGENT_MODEL", process.env.SUPPORT_AGENT_MODEL);
+const SUPPORT_AGENT_MODEL = process.env.SUPPORT_AGENT_MODEL ?? TOOL_AGENT_MODEL;
 
 export type { SupportAgentLocale };
 

@@ -1,5 +1,5 @@
 import { Output, streamObject, streamText } from "ai";
-import { GPT5_MINI_SUCCESSOR } from "@/lib/ai/openai-generation";
+import { GPT6_LUNA_GATEWAY_MODEL, gatewayReasoning } from "@/lib/ai/openai-generation";
 import { NextRequest } from "next/server";
 import { mappingSchema } from "./schema";
 
@@ -23,7 +23,8 @@ export async function POST(req: NextRequest) {
     }
 
     const result = streamText({
-      model: GPT5_MINI_SUCCESSOR,
+      model: GPT6_LUNA_GATEWAY_MODEL,
+      providerOptions: gatewayReasoning("medium"),
       output: Output.object({schema:mappingSchema}),
       onFinish: (result) => {
         console.log("=== AI RESPONSE ===");

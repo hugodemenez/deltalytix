@@ -1,5 +1,5 @@
 import { convertToModelMessages, streamText, UIMessage, stepCountIs } from "ai";
-import { gpt6LunaModel, openaiReasoningNone } from "@/lib/ai/openai-generation";
+import { GPT6_LUNA_GATEWAY_MODEL, gatewayReasoning } from "@/lib/ai/openai-generation";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
 
@@ -109,8 +109,8 @@ export async function POST(req: NextRequest) {
     const modelMessages = await convertToModelMessages(messages);
 
     const result = streamText({
-      model: gpt6LunaModel(),
-      providerOptions: openaiReasoningNone,
+      model: GPT6_LUNA_GATEWAY_MODEL,
+      providerOptions: gatewayReasoning("none"),
       system: getAccountAnalysisPrompt(
         validatedData.locale,
         validatedData.username,

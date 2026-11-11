@@ -652,7 +652,7 @@ export function AccountsAnalysis({ onStatusChange }: AccountsAnalysisProps) {
                             ?.generatedAt || new Date(),
                         ).toLocaleString()}
                       </div>
-                      <div>{t("analysis.model")}: GPT-4o</div>
+                      <div>{t("analysis.model")}: gpt-6-luna</div>
                     </div>
                   </div>
                 </>

@@ -1,5 +1,5 @@
 import { generateText, Output } from "ai";
-import { GPT5_MINI_SUCCESSOR, samplingWithReasoningNone } from "@/lib/ai/openai-generation";
+import { GPT6_LUNA_GATEWAY_MODEL, gatewayReasoning } from "@/lib/ai/openai-generation";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
 
@@ -41,7 +41,8 @@ export async function POST(req: NextRequest) {
     });
 
     const { output } = await generateText({
-      model: GPT5_MINI_SUCCESSOR,
+      model: GPT6_LUNA_GATEWAY_MODEL,
+      providerOptions: gatewayReasoning("medium"),
       output: Output.object({ schema: dateRangeSchema }),
       prompt: `You are an expert at parsing natural language date queries into date ranges or weekday filters.
 
@@ -104,7 +105,6 @@ EXAMPLES:
 QUERY TO PARSE: "${query}"
 
 Return the appropriate filter type (date range OR weekday).`,
-      ...samplingWithReasoningNone(0.1),
     });
 
     return new Response(JSON.stringify(output), {

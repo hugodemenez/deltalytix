@@ -1,13 +1,17 @@
 import { generateText } from "ai";
 import type { SupportAgentLocale } from "@/app/api/ai/support/schema";
-import { GPT5_NANO_SUCCESSOR } from "@/lib/ai/openai-generation";
+import { GPT6_LUNA_GATEWAY_MODEL, warnIfRetiredModelOverride } from "@/lib/ai/openai-generation";
 
 /**
  * Cheap, high-throughput model for short instruction tasks (title translation).
  * Disable reasoning — latency matters more than depth here.
  */
+warnIfRetiredModelOverride(
+  "REASONING_LABEL_TRANSLATE_MODEL",
+  process.env.REASONING_LABEL_TRANSLATE_MODEL,
+);
 export const REASONING_LABEL_TRANSLATE_MODEL =
-  process.env.REASONING_LABEL_TRANSLATE_MODEL ?? GPT5_NANO_SUCCESSOR;
+  process.env.REASONING_LABEL_TRANSLATE_MODEL ?? GPT6_LUNA_GATEWAY_MODEL;
 
 const LOCALE_LANGUAGE: Record<SupportAgentLocale, string> = {
   en: "English",

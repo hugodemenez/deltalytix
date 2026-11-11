@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { generateText, Output } from "ai"
-import { GPT5_MINI_SUCCESSOR, samplingWithReasoningNone } from "@/lib/ai/openai-generation"
+import { GPT6_LUNA_GATEWAY_MODEL, gatewayReasoning } from "@/lib/ai/openai-generation"
 import { z } from "zod"
 
 const adapter = new PrismaPg({
@@ -80,7 +80,8 @@ export async function POST(req: NextRequest) {
 
     // Use AI to infer names from emails
     const { output } = await generateText({
-      model: GPT5_MINI_SUCCESSOR,
+      model: GPT6_LUNA_GATEWAY_MODEL,
+      providerOptions: gatewayReasoning("medium"),
       output: Output.object({ schema: nameInferenceSchema }),
       prompt: `You are an expert at inferring names from email addresses. Analyze the following email addresses and try to extract first and last names where possible.
 
@@ -99,7 +100,6 @@ Return the inferred names with confidence levels:
 - "high": Clear name pattern (e.g., "john.doe@company.com")
 - "medium": Likely name but some uncertainty (e.g., "j.smith@domain.com") 
 - "low": Possible name but high uncertainty (e.g., "jsmith123@email.com")`,
-      ...samplingWithReasoningNone(0.3), // Lower temperature for more consistent results
     })
 
     // Process the AI results and update database

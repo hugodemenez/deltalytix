@@ -20,7 +20,7 @@ describe("translateReasoningLabel", () => {
     expect(generateText).not.toHaveBeenCalled();
   });
 
-  it("asks the nano-tier successor to translate into French", async () => {
+  it("asks gpt-6-luna to translate into French", async () => {
     generateText.mockResolvedValue({ text: "Recherche dans la documentation" });
 
     await expect(
@@ -32,7 +32,7 @@ describe("translateReasoningLabel", () => {
 
     expect(generateText).toHaveBeenCalledOnce();
     const call = generateText.mock.calls[0]?.[0];
-    expect(call.model).toBe("openai/gpt-5.6-luna");
+    expect(call.model).toBe("openai/gpt-6-luna");
     expect(call.providerOptions?.openai?.reasoningEffort).toBe("none");
     expect(call.prompt).toContain("French");
     expect(call.prompt).toContain("Searching documentation");
