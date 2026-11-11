@@ -1,7 +1,6 @@
 import { Output, streamText } from "ai";
 import { aiTextStreamResponse } from "@/lib/ai/http-stream";
-import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
-import { assertAiTaskConfigured } from "@/lib/ai/resolve-ai-task";
+import { aiTaskUnavailableResponse, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { NextRequest } from "next/server";
 import { mappingSchema } from "./schema";
 
@@ -10,7 +9,7 @@ export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
-    const availabilityError = assertAiTaskConfigured("mappings");
+    const availabilityError = aiTaskUnavailableResponse("mappings");
     if (availabilityError) {
       return Response.json(availabilityError, { status: 503 });
     }

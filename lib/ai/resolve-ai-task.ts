@@ -1,11 +1,12 @@
 import "server-only"
 
 import { openai } from "@ai-sdk/openai"
+import { getVercelOidcTokenSync } from "@vercel/oidc"
 import type { LanguageModel } from "ai"
 import {
   AI_UNAVAILABLE_ERROR,
   getOpenAiAvailabilityError,
-  isPlaceholderOpenAiApiKey,
+  isPlaceholderGatewayApiKey,
 } from "@/lib/ai/openai-availability"
 import { warnIfRetiredModelOverride } from "@/lib/ai/openai-generation"
 import {
@@ -58,12 +59,14 @@ export function aiTaskTransport(id: AiTaskId): AiTransport {
 }
 
 /**
- * 503 guard for a task. OpenAI tasks need `OPENAI_API_KEY`. Gateway tasks need
- * `AI_GATEWAY_API_KEY`, or `VERCEL_OIDC_TOKEN` when that key is unset. A
- * non-empty placeholder key does not fall through to OIDC, because the
- * gateway SDK will send it and will not replace it.
+ * Payload for a 503 when the task's provider has no usable credential.
+ * OpenAI tasks need `OPENAI_API_KEY`. Gateway tasks need `AI_GATEWAY_API_KEY`,
+ * or a Vercel OIDC token when that key is unset. The token check uses
+ * `getVercelOidcTokenSync`, which reads `x-vercel-oidc-token` before
+ * `VERCEL_OIDC_TOKEN`. A non-empty placeholder gateway key does not fall
+ * through to OIDC, because the gateway SDK sends it and will not replace it.
  */
-export function assertAiTaskConfigured(
+export function aiTaskUnavailableResponse(
   id: AiTaskId,
 ): { error: typeof AI_UNAVAILABLE_ERROR } | null {
   if (aiTaskTransport(id) === "gateway") {
@@ -112,10 +115,13 @@ function readOverride(task: AiTask): string | undefined {
 function gatewayAuthAvailable(): boolean {
   const key = process.env.AI_GATEWAY_API_KEY
   if (typeof key === "string" && key.trim()) {
-    return !isPlaceholderOpenAiApiKey(key)
+    return !isPlaceholderGatewayApiKey(key)
   }
-  const oidc = process.env.VERCEL_OIDC_TOKEN
-  return typeof oidc === "string" && oidc.trim().length > 0
+  try {
+    return getVercelOidcTokenSync().trim().length > 0
+  } catch {
+    return false
+  }
 }
 
 const warnedGatewayReasoning = new Set<string>()

@@ -2,8 +2,7 @@ import { streamText } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
 import { aiTextStreamResponse } from "@/lib/ai/http-stream";
-import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
-import { assertAiTaskConfigured } from "@/lib/ai/resolve-ai-task";
+import { aiTaskUnavailableResponse, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 
 // Analysis Tools
 import { generateAnalysisComponent } from "../accounts/generate-analysis-component";
@@ -73,7 +72,7 @@ You are analyzing performance across different trading instruments. Your primary
 
 export async function POST(req: NextRequest) {
   try {
-    const availabilityError = assertAiTaskConfigured("analysis-instrument");
+    const availabilityError = aiTaskUnavailableResponse("analysis-instrument");
     if (availabilityError) {
       return Response.json(availabilityError, { status: 503 });
     }

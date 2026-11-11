@@ -1,5 +1,5 @@
 import { generateText, Output } from "ai"
-import { tradeSchema } from "@/app/api/ai/format-trades/schema"
+import { tradeSchema } from "@/lib/ai/trade-schema"
 import { mappingSchema } from "@/app/api/ai/mappings/schema"
 import { resolveAiTask } from "@/lib/ai/resolve-ai-task"
 import { createTradeWithDefaults } from "@/lib/trade-factory"

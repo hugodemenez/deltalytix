@@ -1,7 +1,7 @@
 import { createAgentUIStreamResponse, type UIMessage } from "ai";
 import { hasUnsupportedFileUrls } from "@/lib/ai/convert-file-ui-parts";
 import { supportAgent } from "@/lib/ai/support-agent";
-import { assertAiTaskConfigured } from "@/lib/ai/resolve-ai-task";
+import { aiTaskUnavailableResponse } from "@/lib/ai/resolve-ai-task";
 import {
   hasUserMessage,
   stripInitialAssistantGreeting,
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const availabilityError = assertAiTaskConfigured("support");
+    const availabilityError = aiTaskUnavailableResponse("support");
     if (availabilityError) {
       return Response.json(availabilityError, { status: 503 });
     }

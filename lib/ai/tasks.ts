@@ -1,4 +1,3 @@
-import { ANALYSIS_ACCOUNTS_MODEL_LABEL } from "@/lib/ai/model-label"
 import { CHEAPEST_OPENAI_MODEL_ID } from "@/lib/ai/openai-generation"
 
 /**
@@ -234,10 +233,10 @@ export const AI_TASKS = {
   },
   "analysis-accounts": {
     id: "analysis-accounts",
-    modelId: ANALYSIS_ACCOUNTS_MODEL_LABEL,
+    modelId: luna,
     provider: "openai",
     reasoning: "none",
-    why: "Account chat plus tools. Effort none. The accounts page label is ANALYSIS_ACCOUNTS_MODEL_LABEL, not this module.",
+    why: "Account chat plus tools. Effort none. The accounts page label re-exports CHEAPEST_OPENAI_MODEL_ID.",
   },
   "analysis-component": {
     id: "analysis-component",

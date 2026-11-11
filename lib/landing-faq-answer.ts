@@ -1,7 +1,7 @@
 import { generateText } from "ai";
 import enFaq from "@/locales/en/faq";
 import frFaq from "@/locales/fr/faq";
-import { assertAiTaskConfigured, resolveAiTask } from "@/lib/ai/resolve-ai-task";
+import { aiTaskUnavailableResponse, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 
 export const LANDING_FAQ_LOCALES = ["en", "fr"] as const;
 export type LandingFaqLocale = (typeof LANDING_FAQ_LOCALES)[number];
@@ -286,7 +286,7 @@ export function isLandingFaqLocale(value: string): value is LandingFaqLocale {
 }
 
 export function isLandingFaqAiConfigured(): boolean {
-  return assertAiTaskConfigured("landing-faq") == null;
+  return aiTaskUnavailableResponse("landing-faq") == null;
 }
 
 export function normalizeLandingFaqText(value: string): string {

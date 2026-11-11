@@ -7,7 +7,7 @@
 import { generateText, isStepCount, Output, streamText, tool } from "ai"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod/v3"
-import { tradeSchema } from "@/app/api/ai/format-trades/schema"
+import { tradeSchema } from "@/lib/ai/trade-schema"
 import { resolveAiTask } from "./resolve-ai-task"
 import {
   CHEAPEST_OPENAI_MODEL_ID,

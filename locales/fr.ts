@@ -557,6 +557,7 @@ export default {
   "analysis.recommendations": "Recommandations",
   "analysis.aiSummary": "Résumé IA",
   "analysis.clearCache": "Vider le cache d'analyse",
+  "editor.ai.error": "L’IA n’a pas pu terminer cette action. Réessayez.",
   "analysis.errorGeneric":
     "Une erreur s'est produite lors de la génération de l'analyse",
   "analysis.regenerate": "Régénérer l'analyse",

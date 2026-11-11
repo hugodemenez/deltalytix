@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { ANALYSIS_ACCOUNTS_MODEL_LABEL } from "./model-label"
+import { CHEAPEST_OPENAI_MODEL_ID } from "./openai-generation"
 import {
-  assertAiTaskConfigured,
+  aiTaskUnavailableResponse,
   resolveAiTask,
   resolveTransport,
 } from "./resolve-ai-task"
@@ -102,24 +104,43 @@ describe("resolveAiTask", () => {
   })
 })
 
-describe("assertAiTaskConfigured", () => {
+describe("aiTaskUnavailableResponse", () => {
   it("requires an OpenAI key for a direct task and ignores a gateway key", () => {
     process.env.OPENAI_API_KEY = "dummy"
     process.env.AI_GATEWAY_API_KEY = "gw-live"
-    expect(assertAiTaskConfigured("support")).toEqual({ error: "AI_UNAVAILABLE" })
+    expect(aiTaskUnavailableResponse("support")).toEqual({ error: "AI_UNAVAILABLE" })
     process.env.OPENAI_API_KEY = "sk-live"
-    expect(assertAiTaskConfigured("support")).toBeNull()
+    expect(aiTaskUnavailableResponse("support")).toBeNull()
   })
 
   it("requires gateway auth for a gateway task, including Vercel OIDC when the key is unset", () => {
     delete process.env.AI_GATEWAY_API_KEY
     delete process.env.VERCEL_OIDC_TOKEN
     process.env.OPENAI_API_KEY = "sk-live"
-    expect(assertAiTaskConfigured("editor-explain")).toEqual({ error: "AI_UNAVAILABLE" })
+    expect(aiTaskUnavailableResponse("editor-explain")).toEqual({ error: "AI_UNAVAILABLE" })
     process.env.VERCEL_OIDC_TOKEN = "oidc-token"
-    expect(assertAiTaskConfigured("editor-explain")).toBeNull()
+    expect(aiTaskUnavailableResponse("editor-explain")).toBeNull()
     process.env.AI_GATEWAY_API_KEY = "dummy"
-    expect(assertAiTaskConfigured("editor-explain")).toEqual({ error: "AI_UNAVAILABLE" })
+    expect(aiTaskUnavailableResponse("editor-explain")).toEqual({ error: "AI_UNAVAILABLE" })
+  })
+
+  it("accepts the request OIDC header that @vercel/oidc reads before the env var", () => {
+    delete process.env.AI_GATEWAY_API_KEY
+    delete process.env.VERCEL_OIDC_TOKEN
+    const symbol = Symbol.for("@vercel/request-context")
+    const previous = (globalThis as Record<symbol, unknown>)[symbol]
+    ;(globalThis as Record<symbol, unknown>)[symbol] = {
+      get: () => ({ headers: { "x-vercel-oidc-token": "header-token" } }),
+    }
+    try {
+      expect(aiTaskUnavailableResponse("editor-explain")).toBeNull()
+    } finally {
+      if (previous === undefined) {
+        delete (globalThis as Record<symbol, unknown>)[symbol]
+      } else {
+        ;(globalThis as Record<symbol, unknown>)[symbol] = previous
+      }
+    }
   })
 
   it("follows a gateway override instead of OPENAI_API_KEY", () => {
@@ -127,8 +148,15 @@ describe("assertAiTaskConfigured", () => {
     process.env.LANDING_FAQ_MODEL = "perplexity/sonar"
     delete process.env.AI_GATEWAY_API_KEY
     delete process.env.VERCEL_OIDC_TOKEN
-    expect(assertAiTaskConfigured("landing-faq")).toEqual({ error: "AI_UNAVAILABLE" })
+    expect(aiTaskUnavailableResponse("landing-faq")).toEqual({ error: "AI_UNAVAILABLE" })
     process.env.AI_GATEWAY_API_KEY = "gw-live"
-    expect(assertAiTaskConfigured("landing-faq")).toBeNull()
+    expect(aiTaskUnavailableResponse("landing-faq")).toBeNull()
+  })
+})
+
+describe("analysis accounts model id", () => {
+  it("uses the shared cheapest model id the client label re-exports", () => {
+    expect(AI_TASKS["analysis-accounts"].modelId).toBe(CHEAPEST_OPENAI_MODEL_ID)
+    expect(ANALYSIS_ACCOUNTS_MODEL_LABEL).toBe(CHEAPEST_OPENAI_MODEL_ID)
   })
 })

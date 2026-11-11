@@ -43,11 +43,8 @@ export function JournalAI({
       const message = error instanceof Error ? error.message : String(error)
       const status = (error as { status?: number; statusCode?: number }).status
         ?? (error as { statusCode?: number }).statusCode
-      const unavailable =
-        status === 503 || message.includes("AI_UNAVAILABLE") || /\b503\b/.test(message)
-      toast.error(
-        unavailable ? t("editor.ai.unavailable") : t("editor.ai.minCharsError"),
-      )
+      const unavailable = status === 503 || message.includes("AI_UNAVAILABLE")
+      toast.error(unavailable ? t("editor.ai.unavailable") : t("editor.ai.error"))
       lastCompletionRef.current = ""
     },
     experimental_throttle: 50,

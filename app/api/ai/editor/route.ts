@@ -2,7 +2,7 @@ import { streamText, isStepCount } from "ai";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
 import { aiUiStreamResponse } from "@/lib/ai/http-stream";
-import { assertAiTaskConfigured, resolveAiTask } from "@/lib/ai/resolve-ai-task";
+import { aiTaskUnavailableResponse, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import type { AiTaskId } from "@/lib/ai/tasks";
 import { getCurrentDayData } from "./tools/get-current-day-data";
 import { ActionSchema } from "./schema";
@@ -26,7 +26,7 @@ function editorTaskId(action: EditorAction): AiTaskId {
 }
 
 function editorUnavailable(action: EditorAction) {
-  return assertAiTaskConfigured(editorTaskId(action));
+  return aiTaskUnavailableResponse(editorTaskId(action));
 }
 
 // System prompts based on action type

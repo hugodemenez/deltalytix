@@ -76,7 +76,7 @@ file URLs, then streams `supportAgent` via `createAgentUIStreamResponse` with
 ## Environment
 
 - `OPENAI_API_KEY` — required when the resolved support model uses the direct OpenAI provider (the default, and any bare or `openai/<id>` override).
-- `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN` — required when `SUPPORT_AGENT_MODEL` is a non-OpenAI gateway id. `assertAiTaskConfigured("support")` checks the resolved provider, so a gateway override does not 503 just because `OPENAI_API_KEY` is unset. An empty gateway key falls through to the OIDC token. A non-empty placeholder key does not, because the gateway SDK sends it and does not replace it.
+- `AI_GATEWAY_API_KEY` or a Vercel OIDC token — required when `SUPPORT_AGENT_MODEL` is a non-OpenAI gateway id. `aiTaskUnavailableResponse("support")` checks the resolved provider, so a gateway override does not 503 just because `OPENAI_API_KEY` is unset. An empty gateway key falls through to `@vercel/oidc`, which reads `x-vercel-oidc-token` before `VERCEL_OIDC_TOKEN`. A non-empty placeholder key does not, because the gateway SDK sends it and does not replace it.
 - `SUPPORT_AGENT_MODEL` — optional override. A bare id or `openai/<id>` uses the direct OpenAI provider and keeps effort `low` plus the reasoning summary. Any other `provider/model` (for example `perplexity/sonar`) is a gateway model. The task's effort is still sent. A non-OpenAI gateway provider may ignore it; that case logs one warning and does not attach the OpenAI reasoning summary. A value on the published shutdown list logs a warning at startup.
 - `RESEND_API_KEY`, `SUPPORT_EMAIL` / `SUPPORT_TEAM_EMAIL` — support email delivery.
 - `SUPPORT_SEARCH_DEBUG=0` — silence search debug logging in development.

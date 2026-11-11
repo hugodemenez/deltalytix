@@ -550,6 +550,7 @@ export default {
   "analysis.aiSummary": "AI Summary",
   "analysis.clearCache": "Clear cached analysis data",
   "analysis.errorGeneric": "An error occurred while generating analysis",
+  "editor.ai.error": "AI could not complete that action. Try again.",
   "analysis.regenerate": "Regenerate analysis",
   "analysis.rateLimit": "Rate limited - please wait",
   "analysis.accountPerformance": "Account Performance",

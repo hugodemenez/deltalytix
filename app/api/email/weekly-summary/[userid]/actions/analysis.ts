@@ -18,6 +18,14 @@ interface AnalysisResult {
   tipsForNextWeek: string
 }
 
+function logWeeklyFallback(details: {
+  finishReason?: unknown
+  usage?: unknown
+  error?: unknown
+}) {
+  console.error("Weekly recap fell back to the default blurb", details)
+}
+
 export async function generateTradingAnalysis(
   dailyPnL: DailyPnL[],
   language: 'fr' | 'en'
@@ -50,13 +58,15 @@ export async function generateTradingAnalysis(
       }
     }
 
-    console.error("Weekly recap fell back to the default blurb", {
-      finishReason,
-      usage,
-    })
+    logWeeklyFallback({ finishReason, usage })
     return defaultAnalysis
   } catch (error) {
-    console.error('Error generating analysis:', error)
+    const details = error as { finishReason?: unknown; usage?: unknown }
+    logWeeklyFallback({
+      finishReason: details.finishReason,
+      usage: details.usage,
+      error,
+    })
     return defaultAnalysis
   }
 }

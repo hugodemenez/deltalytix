@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   AI_UNAVAILABLE_ERROR,
   getOpenAiAvailabilityError,
+  isPlaceholderGatewayApiKey,
   isPlaceholderOpenAiApiKey,
   parseFormatTradesApiError,
 } from "./openai-availability";
@@ -24,6 +25,15 @@ describe("isPlaceholderOpenAiApiKey", () => {
   it("accepts a configured key", () => {
     expect(isPlaceholderOpenAiApiKey("sk-proj-abc123")).toBe(false);
     expect(isPlaceholderOpenAiApiKey("gateway-key")).toBe(false);
+  });
+});
+
+describe("isPlaceholderGatewayApiKey", () => {
+  it("uses gateway placeholders and leaves the OpenAI sample string alone", () => {
+    expect(isPlaceholderGatewayApiKey("dummy")).toBe(true);
+    expect(isPlaceholderGatewayApiKey("your_ai_gateway_api_key")).toBe(true);
+    expect(isPlaceholderGatewayApiKey("your_openai_api_key_here")).toBe(false);
+    expect(isPlaceholderGatewayApiKey("gw-live")).toBe(false);
   });
 });
 

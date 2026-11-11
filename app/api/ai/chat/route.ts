@@ -1,8 +1,7 @@
 import { streamText, isStepCount, convertToModelMessages } from "ai";
 import { omitSystemMessages } from "@/lib/ai/client-messages";
 import { aiUiStreamResponse } from "@/lib/ai/http-stream";
-import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
-import { assertAiTaskConfigured } from "@/lib/ai/resolve-ai-task";
+import { aiTaskUnavailableResponse, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
 import { getFinancialNews } from "./tools/get-financial-news";
@@ -23,7 +22,7 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-      const availabilityError = assertAiTaskConfigured("chat");
+      const availabilityError = aiTaskUnavailableResponse("chat");
       if (availabilityError) {
         return Response.json(availabilityError, { status: 503 });
       }

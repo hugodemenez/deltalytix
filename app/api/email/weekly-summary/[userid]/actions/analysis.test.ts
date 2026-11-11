@@ -74,6 +74,31 @@ describe("generateTradingAnalysis", () => {
     error.mockRestore()
   })
 
+  it("logs finish reason and usage when the model throws unparseable output", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {})
+    const thrown = Object.assign(new Error("could not parse"), {
+      finishReason: "length",
+      usage: { inputTokens: 4, outputTokens: 4000 },
+    })
+    generateText.mockRejectedValue(thrown)
+
+    const result = await generateTradingAnalysis(
+      [{ date: new Date("2026-08-31T00:00:00.000Z"), pnl: 120 }],
+      "en",
+    )
+
+    expect(result.resultAnalysisIntro).toContain("statistics")
+    expect(error).toHaveBeenCalledWith(
+      "Weekly recap fell back to the default blurb",
+      {
+        finishReason: "length",
+        usage: { inputTokens: 4, outputTokens: 4000 },
+        error: thrown,
+      },
+    )
+    error.mockRestore()
+  })
+
   it("skips the model on an empty series", async () => {
     const result = await generateTradingAnalysis([], "fr")
     expect(generateText).not.toHaveBeenCalled()

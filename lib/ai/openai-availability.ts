@@ -21,6 +21,23 @@ export function isPlaceholderOpenAiApiKey(
   return PLACEHOLDER_KEYS.has(normalized);
 }
 
+const GATEWAY_PLACEHOLDER_KEYS = new Set([
+  "dummy",
+  "placeholder",
+  "your_ai_gateway_api_key",
+  "your_gateway_api_key_here",
+]);
+
+/** Placeholder values for `AI_GATEWAY_API_KEY`. Not the OpenAI key list. */
+export function isPlaceholderGatewayApiKey(
+  apiKey: string | undefined | null,
+): boolean {
+  if (typeof apiKey !== "string") return true;
+  const normalized = apiKey.trim().toLowerCase();
+  if (!normalized) return true;
+  return GATEWAY_PLACEHOLDER_KEYS.has(normalized);
+}
+
 export function getOpenAiAvailabilityError(
   apiKey: string | undefined | null = process.env.OPENAI_API_KEY,
 ): { error: typeof AI_UNAVAILABLE_ERROR } | null {
