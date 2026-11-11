@@ -1,5 +1,5 @@
 import { generateText, Output } from "ai";
-import { cheapestOpenAi } from "@/lib/ai/openai-generation";
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
 import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
@@ -26,9 +26,8 @@ export async function POST(req: NextRequest) {
     const { headers, rows } = requestSchema.parse(body);
 
     const { output } = await generateText({
-      ...cheapestOpenAi(),
+      ...resolveAiTask("import-parse-plan"),
       output: Output.object({ schema: importParsePlanSchema }),
-      temperature: 0,
       prompt: `You write a parse plan for a trading CSV. Map each database field to an exact header name from the file, or null if it is not present.
 
 Decide kind:

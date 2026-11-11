@@ -116,6 +116,9 @@ describe("isLandingFaqAiConfigured", () => {
   it("treats a missing or dummy key as unavailable", () => {
     expect(isLandingFaqAiConfigured(undefined)).toBe(false);
     expect(isLandingFaqAiConfigured("dummy")).toBe(false);
+    expect(isLandingFaqAiConfigured("placeholder")).toBe(false);
+    expect(isLandingFaqAiConfigured("your_openai_api_key_here")).toBe(false);
+    expect(isLandingFaqAiConfigured("  ")).toBe(false);
     expect(isLandingFaqAiConfigured("sk-live-key")).toBe(true);
   });
 });

@@ -1,7 +1,6 @@
-import { openai } from "@ai-sdk/openai"
-
 /**
- * OpenAI generation models used by Deltalytix.
+ * Shared OpenAI generation facts. Per-task model, effort, temperature, and
+ * token caps live in `lib/ai/tasks.ts` and are applied by `resolveAiTask`.
  *
  * Sources (checked 2026-11-11):
  * - https://developers.openai.com/api/docs/deprecations
@@ -25,39 +24,13 @@ import { openai } from "@ai-sdk/openai"
  * `@ai-sdk/openai` 4 treats gpt-6-luna as a reasoning model whose sampling
  * mode is `reasoning-effort-none`: temperature stays on the request when
  * effort is `none`, and is stripped otherwise. The top-level AI SDK 7
- * `reasoning` option is what the provider serializes. No fetch rewrite and
- * no `forceReasoning` flag.
+ * `reasoning` option is what the provider serializes.
  *
- * Every OpenAI generation call uses this model at effort `none` (the lowest
- * published effort, and the only one that can be combined with temperature).
- * A live eval (`bun run test:e2e:models`) is how a task moves up a tier.
- * `perplexity/sonar` stays a gateway string for the editor's web-search
- * action. `whisper-1` is a transcription model and is not selected here.
+ * `whisper-1` is a transcription model and is not selected here.
  */
 
 /** Official direct Responses id. The model page lists this snapshot only. */
 export const CHEAPEST_OPENAI_MODEL_ID = "gpt-6-luna"
-
-/** Lowest published effort. Valid together with temperature on gpt-6-luna. */
-export const CHEAPEST_REASONING = "none" as const
-
-/**
- * Official gpt-6-luna text prices, USD per 1M tokens.
- * https://developers.openai.com/api/docs/models/gpt-6-luna
- */
-export const GPT6_LUNA_PRICE_PER_MILLION = {
-  input: 0.1,
-  cachedInput: 0.01,
-  output: 0.5,
-} as const
-
-export type OpenAiReasoningEffort =
-  | "none"
-  | "low"
-  | "medium"
-  | "high"
-  | "xhigh"
-  | "max"
 
 const RETIRED_OPENAI_GENERATION_MODELS = new Set([
   "gpt-4o",
@@ -97,39 +70,4 @@ export function warnIfRetiredModelOverride(
     `${envName} names retired OpenAI generation model ${retired}. ` +
       "That id is on the published shutdown list.",
   )
-}
-
-/** Direct OpenAI model. An `openai/` prefix is stripped so env overrides can use either form. */
-export function openAiModel(modelId?: string) {
-  const raw = modelId?.trim() || CHEAPEST_OPENAI_MODEL_ID
-  return openai(raw.replace(/^openai\//, ""))
-}
-
-/** Cheapest model and lowest effort. Add `temperature` only beside effort `none`. */
-export function cheapestOpenAi(modelId?: string) {
-  return {
-    model: openAiModel(modelId),
-    reasoning: CHEAPEST_REASONING,
-  }
-}
-
-type TokenUsage = {
-  inputTokens?: number
-  outputTokens?: number
-  inputTokenDetails?: {
-    cacheReadTokens?: number
-    noCacheTokens?: number
-  }
-}
-
-/** USD for one gpt-6-luna call. Cached input is billed at the cached rate. */
-export function gpt6LunaCostUsd(usage: TokenUsage | undefined): number {
-  if (!usage) return 0
-  const input = usage.inputTokens ?? 0
-  const cached = Math.min(usage.inputTokenDetails?.cacheReadTokens ?? 0, input)
-  const uncached = Math.max(0, input - cached)
-  const output = usage.outputTokens ?? 0
-  const { input: inputPrice, cachedInput, output: outputPrice } =
-    GPT6_LUNA_PRICE_PER_MILLION
-  return (uncached * inputPrice + cached * cachedInput + output * outputPrice) / 1_000_000
 }

@@ -1,7 +1,7 @@
 import { generateText, Output } from "ai"
 import { tradeSchema } from "@/app/api/ai/format-trades/schema"
 import { mappingSchema } from "@/app/api/ai/mappings/schema"
-import { cheapestOpenAi } from "@/lib/ai/openai-generation"
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task"
 import { createTradeWithDefaults } from "@/lib/trade-factory"
 import type { Trade } from "@/prisma/generated/prisma/client"
 
@@ -71,9 +71,8 @@ export async function aiNormalizeTrades(params: {
 
   const sample = objects.slice(0, 5)
   const { output: mapping } = await generateText({
-    ...cheapestOpenAi(),
+    ...resolveAiTask("import-mapping"),
     output: Output.object({ schema: mappingSchema }),
-    temperature: 0.1,
     prompt: mappingPrompt(headers, sample),
   })
 
@@ -90,7 +89,7 @@ export async function aiNormalizeTrades(params: {
     const rows = batch.map((obj) => headers.map((h) => obj[h] ?? ""))
 
     const { output } = await generateText({
-      ...cheapestOpenAi(),
+      ...resolveAiTask("import-format"),
       output: Output.array({ element: tradeSchema }),
       instructions: formatSystemPrompt,
       prompt: `
@@ -101,7 +100,6 @@ Forced accountNumber: ${accountNumber}
 Rows:
 ${rows.map((row) => row.join(", ")).join("\n")}
 `,
-      temperature: 0.1,
     })
 
     return output.map(

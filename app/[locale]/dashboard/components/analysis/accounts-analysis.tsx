@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n, useCurrentLocale } from "@/locales/client";
 import { useChat } from "@ai-sdk/react";
+import { aiTask } from "@/lib/ai/tasks";
 import {
   Activity,
   AlertCircle,
@@ -652,7 +653,9 @@ export function AccountsAnalysis({ onStatusChange }: AccountsAnalysisProps) {
                             ?.generatedAt || new Date(),
                         ).toLocaleString()}
                       </div>
-                      <div>{t("analysis.model")}: gpt-6-luna</div>
+                      <div>
+                        {t("analysis.model")}: {aiTask("analysis-accounts").modelId}
+                      </div>
                     </div>
                   </div>
                 </>

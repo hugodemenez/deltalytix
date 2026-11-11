@@ -1,7 +1,8 @@
 import { generateText } from "ai";
 import enFaq from "@/locales/en/faq";
 import frFaq from "@/locales/fr/faq";
-import { cheapestOpenAi, warnIfRetiredModelOverride } from "@/lib/ai/openai-generation";
+import { isPlaceholderOpenAiApiKey } from "@/lib/ai/openai-availability";
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
 
 export const LANDING_FAQ_LOCALES = ["en", "fr"] as const;
 export type LandingFaqLocale = (typeof LANDING_FAQ_LOCALES)[number];
@@ -10,8 +11,6 @@ export const LANDING_FAQ_SOURCES = ["faq", "ai", "fallback"] as const;
 export type LandingFaqSource = (typeof LANDING_FAQ_SOURCES)[number];
 
 export const LANDING_FAQ_QUESTION_MAX_LENGTH = 400;
-warnIfRetiredModelOverride("LANDING_FAQ_MODEL", process.env.LANDING_FAQ_MODEL);
-
 const FAQ_KNOWLEDGE_ITEMS = [1, 2, 3, 4, 5, 6] as const;
 
 type FaqCopy = {
@@ -290,8 +289,7 @@ export function isLandingFaqLocale(value: string): value is LandingFaqLocale {
 export function isLandingFaqAiConfigured(
   apiKey = process.env.OPENAI_API_KEY,
 ): boolean {
-  const key = apiKey?.trim();
-  return Boolean(key && key !== "dummy");
+  return !isPlaceholderOpenAiApiKey(apiKey);
 }
 
 export function normalizeLandingFaqText(value: string): string {
@@ -406,8 +404,7 @@ async function generateLandingFaqAnswer(args: {
 
   try {
     const { text } = await args.generate({
-      ...cheapestOpenAi(process.env.LANDING_FAQ_MODEL),
-      maxOutputTokens: 280,
+      ...resolveAiTask("landing-faq"),
       instructions: knowledgePrompt(args.locale),
       prompt: args.question.trim(),
     });

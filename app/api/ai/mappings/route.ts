@@ -1,5 +1,6 @@
 import { Output, streamText } from "ai";
-import { cheapestOpenAi } from "@/lib/ai/openai-generation";
+import { aiTextStreamResponse } from "@/lib/ai/http-stream";
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 import { NextRequest } from "next/server";
 import { mappingSchema } from "./schema";
@@ -28,8 +29,7 @@ export async function POST(req: NextRequest) {
     }
 
     const result = streamText({
-      ...cheapestOpenAi(),
-      temperature: 0,
+      ...resolveAiTask("mappings"),
       output: Output.object({schema:mappingSchema}),
       onEnd: (result) => {
         console.log("=== AI RESPONSE ===");
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
           .join("\n"),
     });
 
-    return result.toTextStreamResponse();
+    return aiTextStreamResponse(result);
   } catch (error) {
     console.error("Error in mappings route:", error);
     return new Response(

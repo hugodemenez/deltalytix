@@ -1,5 +1,7 @@
 import { streamText, isStepCount, convertToModelMessages } from "ai";
-import { cheapestOpenAi } from "@/lib/ai/openai-generation";
+import { omitSystemMessages } from "@/lib/ai/client-messages";
+import { aiUiStreamResponse } from "@/lib/ai/http-stream";
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
@@ -48,7 +50,9 @@ export async function POST(req: NextRequest) {
     const userMessages = messages.filter((msg: any) => msg.role === 'user');
     const isFirstMessage = userMessages.length === 1;
 
-    const convertedMessages = await convertToModelMessages(messages);
+    const convertedMessages = await convertToModelMessages(
+      omitSystemMessages(Array.isArray(messages) ? messages : []),
+    );
     const systemPrompt = buildSystemPrompt({
       locale,
       username,
@@ -61,7 +65,7 @@ export async function POST(req: NextRequest) {
     });
 
     const result = streamText({
-      ...cheapestOpenAi(),
+      ...resolveAiTask("chat"),
       messages: convertedMessages,
       instructions: systemPrompt,
 
@@ -109,7 +113,7 @@ export async function POST(req: NextRequest) {
         }, null, 2));
       }
     });
-    return result.toUIMessageStreamResponse({
+    return aiUiStreamResponse(result, {
       onError: (error) => {
         console.error('[Chat Route] UI Stream error:', error);
         return 'An error occurred during the chat response';

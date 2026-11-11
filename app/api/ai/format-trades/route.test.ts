@@ -91,7 +91,11 @@ describe("POST /api/ai/format-trades", () => {
     ).format
     expect(format?.type).toBe("json_schema")
     expect(format?.schema?.properties?.elements).toBeTruthy()
-    expect(streamed).toContain("-12.34")
-    expect(streamed).toContain("2.5")
+    const parsed = JSON.parse(streamed) as Array<{ pnl: number; quantity: number }>
+    expect(Array.isArray(parsed)).toBe(true)
+    expect(parsed).toHaveLength(1)
+    expect(parsed[0]?.pnl).toBe(-12.34)
+    expect(parsed[0]?.quantity).toBe(2.5)
+    expect(streamed).not.toContain('"elements"')
   })
 })

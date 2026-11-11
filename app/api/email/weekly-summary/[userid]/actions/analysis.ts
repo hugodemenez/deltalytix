@@ -1,10 +1,9 @@
 'use server'
 
-import { Output, streamText } from "ai"
-import { cheapestOpenAi } from "@/lib/ai/openai-generation"
+import { generateText, Output } from "ai"
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task"
 import { z } from 'zod/v3';
 import {
-  WEEKLY_ANALYSIS_MODEL,
   buildWeeklyAnalysisPrompt,
   type DailyPnL,
 } from "@/lib/weekly-recap-analysis"
@@ -38,22 +37,16 @@ export async function generateTradingAnalysis(
       return defaultAnalysis
     }
 
-    const { partialOutputStream } = streamText({
-      ...cheapestOpenAi(WEEKLY_ANALYSIS_MODEL),
+    const { output } = await generateText({
+      ...resolveAiTask("weekly-recap"),
       output: Output.object({ schema: analysisSchema }),
       prompt: buildWeeklyAnalysisPrompt(sortedTrades, language),
     })
 
-    const content = { intro: "", tips: "" }
-    for await (const partialObject of partialOutputStream) {
-      if (partialObject.intro) content.intro = partialObject.intro
-      if (partialObject.tips) content.tips = partialObject.tips
-    }
-
-    if (content.intro && content.tips) {
+    if (output?.intro && output?.tips) {
       return {
-        resultAnalysisIntro: content.intro,
-        tipsForNextWeek: content.tips
+        resultAnalysisIntro: output.intro,
+        tipsForNextWeek: output.tips
       }
     }
 

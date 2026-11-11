@@ -1,7 +1,8 @@
 import { streamText } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
-import { cheapestOpenAi } from "@/lib/ai/openai-generation";
+import { aiTextStreamResponse } from "@/lib/ai/http-stream";
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 
 // Analysis Tools
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
     console.log('Validated data:', validatedData);
 
     const result = streamText({
-      ...cheapestOpenAi(),
+      ...resolveAiTask("analysis-time-of-day"),
       instructions: getTimeOfDayAnalysisPrompt(validatedData.locale, validatedData.timezone),
       tools: {
         generateAnalysisComponent,
@@ -109,7 +110,7 @@ export async function POST(req: NextRequest) {
       ]
     });
 
-    return result.toTextStreamResponse();
+    return aiTextStreamResponse(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return new Response(JSON.stringify({ error: error.errors }), {

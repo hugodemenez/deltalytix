@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { generateText, Output } from "ai"
-import { cheapestOpenAi } from "@/lib/ai/openai-generation"
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task"
 import { z } from "zod"
 
 const adapter = new PrismaPg({
@@ -80,8 +80,7 @@ export async function POST(req: NextRequest) {
 
     // Use AI to infer names from emails
     const { output } = await generateText({
-      ...cheapestOpenAi(),
-      temperature: 0,
+      ...resolveAiTask("format-name"),
       output: Output.object({ schema: nameInferenceSchema }),
       prompt: `You are an expert at inferring names from email addresses. Analyze the following email addresses and try to extract first and last names where possible.
 

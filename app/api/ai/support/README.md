@@ -48,9 +48,12 @@ strips the corpus back off those children.
 
 ## Agent
 
-`lib/ai/support-agent.ts` — a `ToolLoopAgent`. Model defaults to direct
-`gpt-6-luna` at reasoning effort `none` (override with `SUPPORT_AGENT_MODEL`,
-an OpenAI model id). Instructions tell the model to investigate with
+`lib/ai/support-agent.ts` — a `ToolLoopAgent`. The `support` task in
+`lib/ai/tasks.ts` defaults to direct `gpt-6-luna` at reasoning effort `low`
+with an OpenAI reasoning summary (`auto`). Effort `none` produces no summary,
+and the support page thought-process rows plus the French title translator
+both read that summary, so `sendReasoning: true` on the route stays
+meaningful. Instructions tell the model to investigate with
 `grepCodebase(scope=source)` → `readCodebaseFile` before answering behavioural
 questions, and not to invent features from memory.
 
@@ -59,8 +62,9 @@ The support page sends the current UI `locale` (`en` | `fr`) with every request.
 
 OpenAI reasoning summaries are still often English over the API. For `/fr`, the
 UI translates the locked first-line title through
-`POST /api/ai/support/translate-label` (`gpt-6-luna`, reasoning off) and
-keeps a shimmer skeleton until that title is ready.
+`POST /api/ai/support/translate-label` (the `reasoning-label` task:
+`gpt-6-luna`, effort `none`, 80 output tokens) and keeps a shimmer skeleton
+until that title is ready.
 
 ## Request flow
 
@@ -71,7 +75,7 @@ file URLs, then streams `supportAgent` via `createAgentUIStreamResponse` with
 
 ## Environment
 
-- `OPENAI_API_KEY` — required for the agent (`gpt-6-luna` is called directly).
-- `SUPPORT_AGENT_MODEL` — optional OpenAI model id. A value on the published shutdown list logs a warning at startup. The default is `gpt-6-luna` at effort `none`.
+- `OPENAI_API_KEY` — required for the default agent (`gpt-6-luna` is called directly).
+- `SUPPORT_AGENT_MODEL` — optional override. A bare id or `openai/<id>` uses the direct OpenAI provider and keeps effort `low` plus the reasoning summary. Any other `provider/model` (for example `perplexity/sonar`) is passed through as an AI Gateway model and does not get OpenAI reasoning options. A value on the published shutdown list logs a warning at startup.
 - `RESEND_API_KEY`, `SUPPORT_EMAIL` / `SUPPORT_TEAM_EMAIL` — support email delivery.
 - `SUPPORT_SEARCH_DEBUG=0` — silence search debug logging in development.

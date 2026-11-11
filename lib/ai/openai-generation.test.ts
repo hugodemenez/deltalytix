@@ -8,11 +8,9 @@ import { generateText, isStepCount, Output, streamText, tool } from "ai"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod/v3"
 import { tradeSchema } from "@/app/api/ai/format-trades/schema"
+import { resolveAiTask } from "./resolve-ai-task"
 import {
   CHEAPEST_OPENAI_MODEL_ID,
-  CHEAPEST_REASONING,
-  cheapestOpenAi,
-  gpt6LunaCostUsd,
   retiredOpenAiGenerationModel,
   warnIfRetiredModelOverride,
 } from "./openai-generation"
@@ -126,19 +124,6 @@ function sseResponse(events: unknown[]) {
   })
 }
 
-describe("cheapest OpenAI call", () => {
-  it("selects gpt-6-luna at effort none and does not set forceReasoning", () => {
-    const call = cheapestOpenAi()
-    expect(call.reasoning).toBe("none")
-    expect(call.model.modelId).toBe(CHEAPEST_OPENAI_MODEL_ID)
-    expect(call).not.toHaveProperty("providerOptions")
-  })
-
-  it("strips an openai/ prefix from an override", () => {
-    expect(cheapestOpenAi("openai/gpt-5.6-luna").model.modelId).toBe("gpt-5.6-luna")
-  })
-})
-
 describe("serialized OpenAI Responses requests", () => {
   it("sends temperature together with reasoning effort none for gpt-6-luna", async () => {
     const captured = installFetch(() =>
@@ -146,9 +131,8 @@ describe("serialized OpenAI Responses requests", () => {
     )
 
     const { output } = await generateText({
-      ...cheapestOpenAi(),
+      ...resolveAiTask("format-trades"),
       output: Output.array({ element: tradeSchema }),
-      temperature: 0.1,
       prompt: "synthetic trades",
     })
 
@@ -163,15 +147,25 @@ describe("serialized OpenAI Responses requests", () => {
   it("omits temperature when effort is not none", async () => {
     const captured = installFetch(() => jsonResponse(responsesMessage("{\"ok\":true}")))
 
+    delete process.env.SUPPORT_AGENT_MODEL
+    const support = resolveAiTask("support")
+    expect(support.reasoning).toBe("low")
+    expect(support.temperature).toBeUndefined()
+    expect(support.providerOptions).toEqual({
+      openai: { reasoningSummary: "auto" },
+    })
+
     await generateText({
-      model: cheapestOpenAi().model,
-      reasoning: "low",
+      ...support,
       temperature: 0.4,
       output: Output.object({ schema: z.object({ ok: z.boolean() }) }),
       prompt: "synthetic",
     })
 
-    expect(captured[0]?.body.reasoning).toMatchObject({ effort: "low" })
+    expect(captured[0]?.body.reasoning).toMatchObject({
+      effort: "low",
+      summary: "auto",
+    })
     expect(captured[0]?.body.temperature).toBeUndefined()
   })
 
@@ -220,9 +214,8 @@ describe("serialized OpenAI Responses requests", () => {
     })
 
     const result = streamText({
-      ...cheapestOpenAi(),
+      ...resolveAiTask("format-trades"),
       prompt: "Summarize the synthetic day.",
-      temperature: 0.1,
       stopWhen: isStepCount(2),
       tools: {
         getDayData: tool({
@@ -265,25 +258,5 @@ describe("retired OpenAI generation ids", () => {
     warnIfRetiredModelOverride("LANDING_FAQ_MODEL", "gpt-6-luna")
     expect(warn).toHaveBeenCalledOnce()
     expect(String(warn.mock.calls[0]?.[0])).toContain("SUPPORT_AGENT_MODEL")
-  })
-})
-
-describe("gpt6LunaCostUsd", () => {
-  it("prices uncached input at $0.10 and output at $0.50 per million", () => {
-    expect(gpt6LunaCostUsd({ inputTokens: 1_000_000, outputTokens: 1_000_000 })).toBeCloseTo(0.6)
-  })
-
-  it("prices cached input at $0.01 per million", () => {
-    expect(
-      gpt6LunaCostUsd({
-        inputTokens: 1_000_000,
-        outputTokens: 0,
-        inputTokenDetails: { cacheReadTokens: 1_000_000 },
-      }),
-    ).toBeCloseTo(0.01)
-  })
-
-  it("uses the cheapest reasoning constant", () => {
-    expect(CHEAPEST_REASONING).toBe("none")
   })
 })

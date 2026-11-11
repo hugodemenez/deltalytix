@@ -1,5 +1,5 @@
 import { generateText, Output } from "ai";
-import { cheapestOpenAi } from "@/lib/ai/openai-generation";
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
@@ -46,8 +46,7 @@ export async function POST(req: NextRequest) {
     });
 
     const { output } = await generateText({
-      ...cheapestOpenAi(),
-      temperature: 0,
+      ...resolveAiTask("date-search"),
       output: Output.object({ schema: dateRangeSchema }),
       prompt: `You are an expert at parsing natural language date queries into date ranges or weekday filters.
 

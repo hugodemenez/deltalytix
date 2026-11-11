@@ -1,11 +1,34 @@
-import { Output, streamText } from "ai";
-import { cheapestOpenAi } from "@/lib/ai/openai-generation";
+import { createTextStreamResponse, Output, streamText } from "ai";
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { NextRequest } from "next/server";
 import { tradeSchema } from "./schema";
 import { z } from 'zod/v3';
 import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 
 export const maxDuration = 30;
+
+function bareJsonArrayStream(
+  elements: AsyncIterable<unknown>,
+): ReadableStream<string> {
+  return new ReadableStream<string>({
+    async start(controller) {
+      controller.enqueue("[");
+      let started = false;
+      try {
+        for await (const element of elements) {
+          controller.enqueue(
+            `${started ? "," : ""}${JSON.stringify(element)}`,
+          );
+          started = true;
+        }
+        controller.enqueue("]");
+        controller.close();
+      } catch (error) {
+        controller.error(error);
+      }
+    },
+  });
+}
 
 const requestSchema = z.object({
   headers: z.array(z.string()),
@@ -27,9 +50,8 @@ export async function POST(req: NextRequest) {
 console.log(headers, rows);
 
     const result = streamText({
-      ...cheapestOpenAi(),
+      ...resolveAiTask("format-trades"),
       output: Output.array({ element: tradeSchema }),
-      temperature: 0.1,
       instructions:`
       You are a trading expert.
       You are given a list of trade data and you need to format it according to the schema.
@@ -111,7 +133,12 @@ console.log(headers, rows);
     `,
   });
 
-  return result.toTextStreamResponse();
+  // Output.array asks the model for {"elements":[...]}. Clients and
+  // evaluateFormatTradesBatchResult expect a bare JSON array, which is what
+  // streamObject used to emit. Stream completed elements as that array.
+  return createTextStreamResponse({
+    stream: bareJsonArrayStream(result.elementStream),
+  });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return new Response(JSON.stringify({ error: error.errors }), {

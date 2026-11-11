@@ -1,7 +1,8 @@
 import { streamText } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
-import { cheapestOpenAi } from "@/lib/ai/openai-generation";
+import { aiUiStreamResponse } from "@/lib/ai/http-stream";
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 
 // Analysis Tools
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
     console.log('Validated data:', validatedData);
 
     const result = streamText({
-      ...cheapestOpenAi(),
+      ...resolveAiTask("analysis-global"),
       instructions: getGlobalAnalysisPrompt(validatedData.locale),
       tools: {
         generateAnalysisComponent,
@@ -106,7 +107,7 @@ export async function POST(req: NextRequest) {
       ]
     });
 
-    return result.toUIMessageStreamResponse();
+    return aiUiStreamResponse(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return new Response(JSON.stringify({ error: error.errors }), {

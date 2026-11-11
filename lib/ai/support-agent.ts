@@ -1,6 +1,6 @@
 import { ToolLoopAgent, isStepCount } from "ai";
 import { z } from "zod";
-import { cheapestOpenAi, warnIfRetiredModelOverride } from "@/lib/ai/openai-generation";
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { askForEmailForm } from "@/app/api/ai/support/tools/ask-for-email-form";
 import {
   grepCodebaseTool,
@@ -14,11 +14,12 @@ import {
 } from "@/app/api/ai/support/schema";
 
 /**
- * gpt-6-luna at effort none. A higher model is an env override, used only
- * when the live eval shows this model drops the tool chain.
+ * gpt-6-luna at effort low with a reasoning summary. The support page renders
+ * those summaries, and the French title translator reads the first line.
+ * SUPPORT_AGENT_MODEL can still name another model (including a non-OpenAI
+ * gateway id). See resolveAiTask.
  */
-warnIfRetiredModelOverride("SUPPORT_AGENT_MODEL", process.env.SUPPORT_AGENT_MODEL);
-const supportModel = cheapestOpenAi(process.env.SUPPORT_AGENT_MODEL);
+const supportModel = resolveAiTask("support");
 
 export type { SupportAgentLocale };
 
@@ -66,7 +67,10 @@ ${SUPPORT_AGENT_INSTRUCTIONS}`;
 
 export const supportAgent = new ToolLoopAgent<SupportAgentCallOptions>({
   model: supportModel.model,
-  reasoning: supportModel.reasoning,
+  ...(supportModel.reasoning ? { reasoning: supportModel.reasoning } : {}),
+  ...(supportModel.providerOptions
+    ? { providerOptions: supportModel.providerOptions }
+    : {}),
   instructions: SUPPORT_AGENT_INSTRUCTIONS,
   callOptionsSchema: supportAgentCallOptionsSchema,
   prepareCall: ({ options, ...settings }) => ({

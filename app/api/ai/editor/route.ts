@@ -1,7 +1,13 @@
-import { streamText, convertToModelMessages, isStepCount } from "ai";
+import { streamText, isStepCount } from "ai";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
-import { openAiModel } from "@/lib/ai/openai-generation";
+import { aiUiStreamResponse } from "@/lib/ai/http-stream";
+import {
+  getOpenAiAvailabilityError,
+  isPlaceholderOpenAiApiKey,
+} from "@/lib/ai/openai-availability";
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
+import type { AiTaskId } from "@/lib/ai/tasks";
 import { getCurrentDayData } from "./tools/get-current-day-data";
 import { ActionSchema } from "./schema";
 import { getDayData } from "./tools/get-trading-summary";
@@ -10,20 +16,29 @@ export const maxDuration = 90;
 
 type EditorAction = z.infer<typeof ActionSchema>;
 
-// Model selection based on action type
-const getModelForAction = (action: EditorAction) => {
+function editorTaskId(action: EditorAction): AiTaskId {
   switch (action) {
     case "explain":
-      // Access latest news with up to date data
-      return "perplexity/sonar";
-    case "improve":
+      return "editor-explain";
     case "suggest_question":
+      return "editor-suggest-question";
+    case "improve":
     case "trades_summary":
     default:
-      // gpt-6-luna at effort none. Web search stays on Perplexity.
-      return openAiModel();
+      return "editor-journal";
   }
-};
+}
+
+function editorUnavailable(action: EditorAction) {
+  if (action === "explain") {
+    // Explain uses the gateway model on the editor-explain task, not OpenAI.
+    if (isPlaceholderOpenAiApiKey(process.env.AI_GATEWAY_API_KEY)) {
+      return { error: "AI_UNAVAILABLE" as const };
+    }
+    return null;
+  }
+  return getOpenAiAvailabilityError();
+}
 
 // System prompts based on action type
 const getSystemPrompt = (
@@ -83,15 +98,6 @@ TASK: ONLY BASED ON TOOL RESULT for date ${date}: Summarize the trader's trading
   }
 };
 
-const getTools = (action: EditorAction) => {
-  switch (action) {
-    case "suggest_question":
-      return { getCurrentDayData };
-    case "trades_summary":
-      return { getDayData };
-  }
-};
-
 export async function POST(req: NextRequest) {
   console.log("POST request received");
   try {
@@ -100,9 +106,11 @@ export async function POST(req: NextRequest) {
 
     // Validate action
     const validatedAction = ActionSchema.parse(action);
+    const unavailable = editorUnavailable(validatedAction);
+    if (unavailable) {
+      return Response.json(unavailable, { status: 503 });
+    }
 
-    // Select model and system prompt based on action
-    const model = getModelForAction(validatedAction);
     const systemPrompt = getSystemPrompt(validatedAction, locale, date);
     // Dynamically build tools based on criteria
     const tools: Record<string, any> = {};
@@ -114,23 +122,15 @@ export async function POST(req: NextRequest) {
       tools.getDayData = getDayData;
     }
 
-    // Stream the response
-    const temperature = validatedAction === "suggest_question" ? 0.7 : 0.3;
-    const sampling =
-      validatedAction === "explain"
-        ? { temperature }
-        : { temperature, reasoning: "none" as const };
-
     const result = streamText({
-      model,
+      ...resolveAiTask(editorTaskId(validatedAction)),
       prompt,
       instructions: systemPrompt,
-      ...sampling,
       tools,
       stopWhen: isStepCount(5),
     });
 
-    return result.toUIMessageStreamResponse();
+    return aiUiStreamResponse(result);
   } catch (error) {
     // Handle validation errors
     if (error instanceof z.ZodError) {

@@ -27,7 +27,6 @@
     "analyze:function-traces": "node scripts/analyze-function-traces.mjs"
   },
   "dependencies": {
-    "@ai-sdk/gateway": "4.0.143",
     "@ai-sdk/openai": "4.0.115",
     "@ai-sdk/react": "4.0.174",
     "@calcom/embed-react": "^1.5.3",

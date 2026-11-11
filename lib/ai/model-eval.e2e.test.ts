@@ -15,7 +15,8 @@ import { z } from "zod/v3"
 import { aiNormalizeTrades } from "@/lib/api/ai-import"
 import { answerLandingFaqQuestion } from "@/lib/landing-faq-answer"
 import { translateReasoningLabel } from "@/lib/ai/translate-reasoning-label"
-import { cheapestOpenAi, gpt6LunaCostUsd } from "@/lib/ai/openai-generation"
+import { gpt6LunaCostUsd } from "@/lib/ai/gpt6-luna-price"
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task"
 import { isPlaceholderOpenAiApiKey } from "@/lib/ai/openai-availability"
 import { generateTradingAnalysis } from "@/app/api/email/weekly-summary/[userid]/actions/analysis"
 
@@ -189,10 +190,14 @@ describe.skipIf(!live)("live gpt-6-luna eval", () => {
       }),
     )
     expect(response.status).toBe(200)
-    const parsed = JSON.parse(await response.text()) as
-      | Array<{ pnl: number; quantity: number; side: string; instrument: string }>
-      | { elements?: Array<{ pnl: number; quantity: number; side: string; instrument: string }> }
-    const trade = Array.isArray(parsed) ? parsed[0] : parsed.elements?.[0]
+    const parsed = JSON.parse(await response.text()) as Array<{
+      pnl: number
+      quantity: number
+      side: string
+      instrument: string
+    }>
+    expect(Array.isArray(parsed)).toBe(true)
+    const trade = parsed[0]
     expect(trade?.pnl).toBe(-12.34)
     expect(trade?.quantity).toBe(2.5)
     expect(trade?.side).toBe("short")
@@ -283,7 +288,7 @@ describe.skipIf(!live)("live gpt-6-luna eval", () => {
 
   it("chat tool chain calls getDayData and answers with its numbers", async () => {
     const result = await generateText({
-      ...cheapestOpenAi(),
+      ...resolveAiTask("chat"),
       temperature: 0,
       stopWhen: isStepCount(3),
       prompt:
@@ -310,9 +315,11 @@ describe.skipIf(!live)("live gpt-6-luna eval", () => {
         "What exact string is assigned to CHEAPEST_OPENAI_MODEL_ID in lib/ai/openai-generation.ts? Use grepCodebase, then readCodebaseFile if needed. Reply with only the model id.",
       options: { locale: "en" },
     })
-    const names = result.steps.flatMap((step) => step.toolCalls.map((call) => call.toolName))
-    expect(names.some((name) => name === "grepCodebase" || name === "readCodebaseFile")).toBe(true)
+    const calls = result.steps.flatMap((step) => step.toolCalls)
+    expect(calls.some((call) => call.toolName === "grepCodebase")).toBe(true)
+    expect(JSON.stringify(calls)).toContain("CHEAPEST_OPENAI_MODEL_ID")
     expect(result.text).toContain("gpt-6-luna")
+    expect(result.text.toLowerCase()).not.toContain("gpt-4o")
   })
 
   it("editor improve returns a short actionable list", async () => {
@@ -329,8 +336,10 @@ describe.skipIf(!live)("live gpt-6-luna eval", () => {
       }),
     )
     expect(response.status).toBe(200)
-    const text = await response.text()
+    const text = uiMessageText(await response.text())
     expect(text.length).toBeGreaterThan(40)
+    expect(text.toLowerCase()).toMatch(/revenge/)
+    expect(text.toLowerCase()).toMatch(/size|position/)
     expect(text).toMatch(/[-•*]|\d\./)
   })
 
@@ -424,7 +433,28 @@ describe.skipIf(!live)("live gpt-6-luna eval", () => {
       "en",
     )
     const text = `${result.resultAnalysisIntro} ${result.tipsForNextWeek}`
-    expect(text).toMatch(/120|one|single|Monday/i)
-    expect(text).not.toMatch(/every day|each day|throughout the week|ramped|day after day/i)
+    expect(result.resultAnalysisIntro).toMatch(/120/)
+    expect(result.resultAnalysisIntro).toMatch(/one|single|Monday/i)
+    expect(result.tipsForNextWeek.trim().length).toBeGreaterThan(10)
+    expect(text).not.toMatch(
+      /every day|each day|throughout the week|ramped|day after day|steady ramp/i,
+    )
   })
 })
+
+function uiMessageText(raw: string): string {
+  const parts: string[] = []
+  for (const line of raw.split("\n")) {
+    const payload = line.startsWith("data:") ? line.slice(5).trim() : ""
+    if (!payload || payload === "[DONE]") continue
+    try {
+      const json = JSON.parse(payload) as { type?: string; delta?: string; text?: string }
+      if (json.type === "text-delta" && typeof json.delta === "string") {
+        parts.push(json.delta)
+      }
+    } catch {
+      // Stream framing that is not a text part.
+    }
+  }
+  return parts.join("")
+}

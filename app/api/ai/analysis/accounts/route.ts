@@ -1,5 +1,7 @@
 import { convertToModelMessages, streamText, UIMessage, isStepCount } from "ai";
-import { cheapestOpenAi } from "@/lib/ai/openai-generation";
+import { omitSystemMessages } from "@/lib/ai/client-messages";
+import { aiUiStreamResponse } from "@/lib/ai/http-stream";
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { getOpenAiAvailabilityError } from "@/lib/ai/openai-availability";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
@@ -112,10 +114,12 @@ export async function POST(req: NextRequest) {
       currentTime,
     });
     console.log("Validated data:", validatedData);
-    const modelMessages = await convertToModelMessages(messages);
+    const modelMessages = await convertToModelMessages(
+      omitSystemMessages(messages),
+    );
 
     const result = streamText({
-      ...cheapestOpenAi(),
+      ...resolveAiTask("analysis-accounts"),
       instructions: getAccountAnalysisPrompt(
         validatedData.locale,
         validatedData.username,
@@ -133,7 +137,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return result.toUIMessageStreamResponse();
+    return aiUiStreamResponse(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return new Response(JSON.stringify({ error: error.errors }), {
