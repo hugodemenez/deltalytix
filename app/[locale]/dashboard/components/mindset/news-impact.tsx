@@ -31,17 +31,22 @@ export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date
   const t = useI18n()
   const financialEvents = useFinancialEventsStore(state => state.events)
   const locale = useCurrentLocale()
-  useEnsureFinancialEvents(journalDayEventWindow(date), locale)
+  const { status: eventsStatus, retry: retryEvents } = useEnsureFinancialEvents(
+    journalDayEventWindow(date),
+    locale,
+  )
 
-  // Filter events for the selected date
+  // Settle the list only after the range is loaded. Loading and error stay
+  // out of this effect so an empty filter is not stored as "no news".
   useEffect(() => {
+    if (eventsStatus === "loading" || eventsStatus === "error") return
     const dateEvents = financialEvents.filter(event => {
       const eventDate = new Date(event.date)
       return eventDate.toDateString() === date.toDateString() && event.lang === locale
     })
     setEvents(dateEvents)
     setIsLoading(false)
-  }, [date, financialEvents, locale])
+  }, [date, financialEvents, locale, eventsStatus])
 
   const toggleNews = (eventId: string) => {
     const newSelectedNews = selectedNews.includes(eventId)
@@ -96,7 +101,13 @@ export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date
       </div>
 
       <div className="flex-1 min-h-0">
-        {isLoading ? (
+        {eventsStatus === "error" ? (
+          <div className="flex h-full items-center justify-center rounded-lg border">
+            <Button type="button" variant="outline" onClick={retryEvents}>
+              {t("common.retry")}
+            </Button>
+          </div>
+        ) : isLoading || eventsStatus === "loading" ? (
           <div className="border rounded-lg h-full">
             <div className="p-2 border-b">
               <Skeleton className="h-6 w-full" />

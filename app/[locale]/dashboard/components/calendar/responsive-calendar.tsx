@@ -355,13 +355,14 @@ export default function ResponsiveCalendarPnl({ calendarData }: CalendarPnlProps
   const WEEKDAYS = weekStartsOnMonday ? WEEKDAYS_MONDAY_START : WEEKDAYS_SUNDAY_START
   const [currentDate, setCurrentDate] = useState(() => toUserZonedTime(new Date(), timezone))
   const [isLoading, setIsLoading] = useState(false)
-  const [monthEvents, setMonthEvents] = useState<FinancialEvent[]>([])
+  const { status: eventsStatus } = useEnsureFinancialEvents(
+    calendarMonthEventWindow(currentDate, timezone),
+    locale,
+  )
 
   useEffect(() => {
     setCurrentDate(toUserZonedTime(new Date(), timezone))
   }, [timezone])
-
-  useEnsureFinancialEvents(calendarMonthEventWindow(currentDate, timezone), locale)
 
   const calendarDays = useMemo(
     () => getCalendarGridDays(currentDate, weekStartsOnMonday),
@@ -386,16 +387,14 @@ export default function ResponsiveCalendarPnl({ calendarData }: CalendarPnlProps
   const selectedCountries = useNewsFilterStore((s) => s.selectedCountries)
   const setSelectedCountries = useNewsFilterStore((s) => s.setSelectedCountries)
 
-  // Update monthEvents when currentDate or financialEvents change
-  useEffect(() => {
+  // Rows already in the store stay visible. An empty list while the range is
+  // still loading is not a settled "no news" result (`aria-busy` on the card).
+  const monthEvents = useMemo(() => {
     const { startUtc, endUtc } = zonedMonthInterval(currentDate, timezone)
-
-    const filteredEvents = userFinancialEvents.filter(event => {
+    return userFinancialEvents.filter(event => {
       const eventDate = new Date(event.date)
       return eventDate >= startUtc && eventDate <= endUtc && event.lang === locale
     })
-
-    setMonthEvents(filteredEvents)
   }, [currentDate, userFinancialEvents, locale, timezone])
 
   const handlePrevMonth = React.useCallback(() => {
@@ -554,7 +553,7 @@ export default function ResponsiveCalendarPnl({ calendarData }: CalendarPnlProps
   }, [])
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col" aria-busy={eventsStatus === "loading"}>
       <CardHeader
         className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 border-b shrink-0 p-2 sm:p-4 min-h-[56px]"
       >
