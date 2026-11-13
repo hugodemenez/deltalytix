@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Journaling } from "./journaling"
 import { Timeline } from "./timeline"
@@ -29,6 +29,8 @@ import { addTagsToTradesForDay } from "@/server/trades"
 import { isToday, format } from "date-fns"
 import { useMoodStore } from "@/store/widgets/mood-store"
 import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
+import { localDayFinancialEventWindow } from "@/lib/financial-events/date-window"
+import { useEnsureFinancialEvents } from "@/lib/financial-events/use-ensure-financial-events"
 import { useTradesStore } from "@/store/trades-store"
 import { useCurrentLocale } from "@/locales/client"
 import { tradeMatchesDateKey } from "@/lib/trades/trade-matches-date"
@@ -50,6 +52,11 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const [selectedNews, setSelectedNews] = useState<string[]>([])
   const [journalContent, setJournalContent] = useState("")
   const [selectedDate, setSelectedDate] = useState(new Date())
+  const journalEventWindow = useMemo(
+    () => localDayFinancialEventWindow(selectedDate),
+    [selectedDate],
+  )
+  useEnsureFinancialEvents(journalEventWindow)
   const [isEditing, setIsEditing] = useState(true)
   const [isTimelineVisible, setIsTimelineVisible] = useState(true)
   const [isExporting, setIsExporting] = useState(false)

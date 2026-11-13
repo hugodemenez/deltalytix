@@ -34,6 +34,7 @@ import {
   uncoveredProtocolTrades,
 } from './fill-ledger'
 import { buildTradesFromRithmicFills } from './fills-to-trades'
+import { createManyTradesInChunks } from '@/lib/trades/create-many-trades'
 import type { RithmicProtocolFill } from './types'
 
 const SERVICE = 'rithmic-protocol'
@@ -700,10 +701,10 @@ export async function resyncRithmicProtocolAccount(params: {
                 ),
               )
               if (rows.length > 0) {
-                const created = await tx.trade.createMany({
-                  data: rows,
-                  skipDuplicates: true,
-                })
+                const created = await createManyTradesInChunks(
+                  (chunk) => tx.trade.createMany(chunk),
+                  { data: rows, skipDuplicates: true },
+                )
                 createdCount = created.count
                 if (created.count !== rows.length) {
                   throw new AdminApplyError(

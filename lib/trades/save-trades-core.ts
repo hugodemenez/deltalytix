@@ -18,6 +18,7 @@ import {
 } from "@/lib/tradovate/identity"
 import { isDuplicateTradesOnlySave } from "@/lib/trades/save-trades-outcome"
 import { normalizeTradeDates } from "@/lib/trades/normalize-trade-date"
+import { createManyTradesInChunks } from "@/lib/trades/create-many-trades"
 
 export type TradeError =
   | "DUPLICATE_TRADES"
@@ -270,10 +271,16 @@ export async function saveTradesCore(
       tradovateAssignedTrades,
     )
 
-    const result = await prisma.trade.createMany({
-      data: userAssignedTrades,
-      skipDuplicates: true,
-    })
+    // One transaction, same as the previous single INSERT: a failed chunk
+    // rolls back the rows already written in this save.
+    const result = await prisma.$transaction(
+      (tx) =>
+        createManyTradesInChunks(
+          (chunk) => tx.trade.createMany(chunk),
+          { data: userAssignedTrades, skipDuplicates: true },
+        ),
+      { timeout: 120_000, maxWait: 15_000 },
+    )
 
     const commissionsUpdated = await backfillRithmicProtocolCommissions(
       userId,

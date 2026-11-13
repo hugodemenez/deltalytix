@@ -2,7 +2,11 @@
 
 import { PrismaClient, FinancialEvent } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { format } from 'date-fns'
+import {
+  explicitFinancialEventWindow,
+  financialEventWhere,
+  type FinancialEventDateWindow,
+} from '@/lib/financial-events/date-window'
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -10,33 +14,44 @@ const adapter = new PrismaPg({
 
 const prisma = new PrismaClient({ adapter })
 
+async function findFinancialEvents(
+  locale: string | undefined,
+  window: FinancialEventDateWindow,
+  order: 'asc' | 'desc',
+): Promise<FinancialEvent[]> {
+  return prisma.financialEvent.findMany({
+    where: financialEventWhere(locale, window),
+    orderBy: { date: order },
+  })
+}
+
 /**
- * Retrieves financial events for a given month.
- * First attempts to fetch from local database, if no events found,
- * triggers a sync with external API.
- * 
- * Events are ordered by date ascending and filtered to the month containing the input date.
- * 
- * @param date - Target date (defaults to current date). Used to fetch events for the entire month containing this date
- * @param locale - Language locale (defaults to 'fr'). Used to filter events by language
- * @returns Promise<FinancialEvent[]> - Array of financial events for the month
+ * Financial events for one language inside `window` (inclusive).
+ * Callers pass the range the UI or tool will actually show.
  */
-export async function getFinancialEvents(locale: string|undefined = undefined): Promise<FinancialEvent[]> {
+export async function getFinancialEvents(
+  locale: string | undefined,
+  window: FinancialEventDateWindow,
+): Promise<FinancialEvent[]> {
   try {
-
-    const where = locale ? {
-      lang: locale
-    } : {}
-    const events = await prisma.financialEvent.findMany({
-      where,
-      orderBy: {
-        date: 'desc'
-      }
-    })
-
-    return events
+    return await findFinancialEvents(locale, window, 'desc')
   } catch (error) {
     console.error('Error fetching financial events:', error)
     return []
   }
-} 
+}
+
+/**
+ * Calendar month navigation and journal day changes. Bounds are inclusive ISO
+ * timestamps. Database errors propagate so the client does not treat a failed
+ * read as an empty range.
+ */
+export async function getFinancialEventsInWindow(
+  locale: string,
+  startIso: string,
+  endIso: string,
+): Promise<FinancialEvent[]> {
+  const window = explicitFinancialEventWindow(startIso, endIso)
+  if (!window || !locale) return []
+  return findFinancialEvents(locale, window, 'asc')
+}
