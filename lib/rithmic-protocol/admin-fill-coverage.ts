@@ -274,6 +274,16 @@ function fillMatchesLeg(
   })
 }
 
+function isNumericSplitNeighbor(
+  storedFillId: string | null | undefined,
+  upstreamFillId: string | null | undefined,
+): boolean {
+  const storedNum = numericFillId(storedFillId)
+  const upNum = numericFillId(upstreamFillId)
+  if (storedNum == null || upNum == null) return false
+  return Math.abs(upNum - storedNum) <= 20
+}
+
 function consumeLegFromPool(
   pool: FillQtyPool[],
   params: {
@@ -292,6 +302,41 @@ function consumeLegFromPool(
     if (!fillMatchesLeg(slot.fill, params)) continue
     slot.remaining -= params.quantity
     return true
+  }
+  const storedIds = new Set(rithmicFillIdLookupValues(params.fillId))
+  if (storedIds.size === 0) return false
+  const storedMs = parseTradeClockMs(params.date) ?? 0
+  const pieces = pool.filter((slot) => {
+    if (!(slot.remaining > 0)) return false
+    if (params.accountNumber && slot.fill.accountId !== params.accountNumber) {
+      return false
+    }
+    const instrument = normalizeInstrument(params.instrument ?? '')
+    if (instrument && normalizeInstrument(slot.fill.symbol) !== instrument) {
+      return false
+    }
+    if (knownFillSide(slot.fill.transactionType) !== params.side) return false
+    const fillPrice = Number(slot.fill.fillPrice || slot.fill.avgFillPrice || 0)
+    if (fillPrice !== params.price) return false
+    const fillMs = fillTimestampMs(slot.fill)
+    const fillIds = rithmicFillIdLookupValues(slot.fill.fillId)
+    const idMatch = fillIds.some((id) => storedIds.has(id))
+    const neighbor = isNumericSplitNeighbor(params.fillId, slot.fill.fillId)
+    if (!idMatch && !neighbor) return false
+    return timestampsWithin(storedMs, fillMs, SPLIT_PIECE_WINDOW_MS)
+  })
+  const hasStoredId = pieces.some((slot) =>
+    rithmicFillIdLookupValues(slot.fill.fillId).some((id) => storedIds.has(id)),
+  )
+  if (!hasStoredId) return false
+  const total = pieces.reduce((sum, slot) => sum + slot.remaining, 0)
+  if (total < params.quantity) return false
+  let need = params.quantity
+  for (const slot of pieces) {
+    const take = Math.min(slot.remaining, need)
+    slot.remaining -= take
+    need -= take
+    if (need <= 0) return true
   }
   return false
 }
@@ -611,26 +656,23 @@ export function windowResolvedAfterFallback(window: {
   ) {
     return { resolved: true, source: 'history' }
   }
-  if (window.startYmd && window.endYmd) {
-    const earliest = earliestActivityYmd([
-      ...(window.fallbackDates ?? []),
-      ...(window.fallbackFillDays ?? []),
-      ...(window.occupiedFillDays ?? []),
-    ])
-    if (
-      earliest &&
-      window.endYmd < earliest &&
-      !windowContainsOccupiedDay(
-        window.startYmd,
-        window.endYmd,
-        window.occupiedFillDays,
-      )
-    ) {
-      return { resolved: true, source: 'history' }
-    }
-  }
   if (window.fallbackStatus !== 'ok' || !window.startYmd || !window.endYmd) {
     return { resolved: false, source: 'unresolved' }
+  }
+  const earliest = earliestActivityYmd([
+    ...(window.fallbackDates ?? []),
+    ...(window.fallbackFillDays ?? []),
+  ])
+  if (
+    earliest &&
+    window.endYmd < earliest &&
+    !windowContainsOccupiedDay(
+      window.startYmd,
+      window.endYmd,
+      window.occupiedFillDays,
+    )
+  ) {
+    return { resolved: true, source: 'history' }
   }
   if (retentionReachesWindowStart(window.fallbackDates, window.startYmd)) {
     return { resolved: true, source: 'order_history' }

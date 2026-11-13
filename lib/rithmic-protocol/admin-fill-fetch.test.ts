@@ -128,6 +128,14 @@ describe('fetchAdminRebuildFills', () => {
     })
   })
 
+  it('refuses when the datesOnly order-history listing fails', async () => {
+    getFillsViaOrderHistory.mockRejectedValueOnce(new Error('dates listing down'))
+    await expect(fetchAdminRebuildFills(BASE)).rejects.toMatchObject({
+      code: 'FETCH_FAILED',
+    })
+    expect(getFillHistory).not.toHaveBeenCalled()
+  })
+
   it('runs order-history fallback for rp_code 7 and refuses if the window stays unresolved (H2)', async () => {
     getFillHistory.mockImplementation(
       async (params: { observe?: { onComplete?: (info: unknown) => void } }) => {
@@ -142,7 +150,18 @@ describe('fetchAdminRebuildFills', () => {
         return []
       },
     )
-    getFillsViaOrderHistory.mockRejectedValueOnce(new Error('fallback down'))
+    getFillsViaOrderHistory.mockImplementation(
+      async (params: {
+        datesOnly?: boolean
+        onHistoryDates?: (dates: string[]) => void
+      }) => {
+        if (params.datesOnly) {
+          params.onHistoryDates?.(['20261030'])
+          return []
+        }
+        throw new Error('fallback down')
+      },
+    )
     await expect(fetchAdminRebuildFills(BASE)).rejects.toMatchObject({
       code: 'INCOMPLETE_FILL_HISTORY',
     })

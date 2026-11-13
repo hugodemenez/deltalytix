@@ -188,6 +188,47 @@ describe('stored fill and trade coverage identity', () => {
     ).toEqual([])
   })
 
+  it('covers a consolidated stored trade with summed upstream split pieces', () => {
+    const ssboe = Date.parse('2026-10-20T14:00:00Z') / 1000
+    const storedTrade = {
+      accountNumber: ACCOUNT,
+      instrument: 'MES',
+      side: 'Long',
+      quantity: 5,
+      entryPrice: 5800,
+      closePrice: 5801,
+      entryId: '1163441',
+      closeId: '1163450',
+      entryDate: '2026-10-20T14:00:00.000Z',
+      closeDate: '2026-10-20T14:00:02.000Z',
+    }
+    const pieces = [
+      fill({ fillId: '1163440', fillSize: 2, ssboe }),
+      fill({ fillId: '1163441', fillSize: 3, ssboe: ssboe + 1 }),
+      fill({
+        fillId: '1163450',
+        transactionType: 'SELL',
+        fillSize: 5,
+        fillPrice: 5801,
+        ssboe: ssboe + 2,
+      }),
+    ]
+    expect(protocolTradeCoveredByRawFills(storedTrade, pieces)).toBe(true)
+    expect(uncoveredTradesByFillIdentity([storedTrade], pieces)).toEqual([])
+    expect(
+      protocolTradeCoveredByRawFills(storedTrade, [
+        fill({ fillId: '1163440', fillSize: 2, ssboe }),
+        fill({
+          fillId: '1163450',
+          transactionType: 'SELL',
+          fillSize: 5,
+          fillPrice: 5801,
+          ssboe: ssboe + 2,
+        }),
+      ]),
+    ).toBe(false)
+  })
+
   it('uncoveredTradesByFillIdentity uses raw fills, not consolidated ids', () => {
     const existing = [
       {
@@ -322,6 +363,29 @@ describe('windowResolvedAfterFallback', () => {
         endYmd: '2026-11-02',
       }),
     ).toEqual({ resolved: true, source: 'order_history' })
+    expect(
+      windowResolvedAfterFallback({
+        historyStatus: 'no_data',
+        historyFillCount: 0,
+        fallbackStatus: 'failed',
+        fallbackFillCount: 0,
+        fallbackDates: [],
+        occupiedFillDays: ['20261020'],
+        startYmd: '2026-09-01',
+        endYmd: '2026-09-30',
+      }),
+    ).toEqual({ resolved: false, source: 'unresolved' })
+    expect(
+      windowResolvedAfterFallback({
+        historyStatus: 'no_data',
+        historyFillCount: 0,
+        fallbackStatus: 'skipped',
+        fallbackFillCount: 0,
+        occupiedFillDays: ['20261020'],
+        startYmd: '2026-09-01',
+        endYmd: '2026-09-30',
+      }),
+    ).toEqual({ resolved: false, source: 'unresolved' })
   })
 
   it('requires the first resolved window to start at the anchor date (N3)', () => {

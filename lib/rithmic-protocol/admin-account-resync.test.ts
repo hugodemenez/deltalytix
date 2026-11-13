@@ -374,6 +374,47 @@ describe('admin account resync scoping and safety', () => {
     )
   })
 
+  it('passes an absolute snapshot deadline so a normal dry run gets past the snapshot', async () => {
+    const before = Date.now()
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(result.error).toBeUndefined()
+    expect(result.complete).toBe(true)
+    expect(result.error).not.toBe('FILL_FETCH_TIMEOUT')
+    expect(result.error).not.toBe('POSITION_SNAPSHOT_UNAVAILABLE')
+    expect(fetchInstrumentPositions).toHaveBeenCalled()
+    const snapshotDeadline = (
+      fetchInstrumentPositions.mock.calls[0][0] as { deadlineMs: number }
+    ).deadlineMs
+    expect(snapshotDeadline).toBeGreaterThan(1_000_000_000_000)
+    expect(snapshotDeadline).toBeGreaterThan(before)
+  })
+
+  it('scopes broker snapshots to the target account when the login lists several', async () => {
+    connectAndListAccounts.mockResolvedValueOnce({
+      accounts: [
+        { accountId: ACCOUNT, fcmId: 'fcm', ibId: 'ib' },
+        { accountId: OTHER, fcmId: 'fcm', ibId: 'ib' },
+      ],
+      fcmId: 'fcm',
+      ibId: 'ib',
+    })
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+    })
+    expect(result.error).toBeUndefined()
+    expect(result.complete).toBe(true)
+    expect(fetchInstrumentPositions).toHaveBeenCalled()
+    for (const [request] of fetchInstrumentPositions.mock.calls) {
+      expect((request as { accountIds: string[] }).accountIds).toEqual([ACCOUNT])
+    }
+  })
+
   it('dryRun fetches a proposed rebuild and does not write', async () => {
     const result = await resyncRithmicProtocolAccount({
       userId: USER,

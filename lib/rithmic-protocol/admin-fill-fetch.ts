@@ -280,8 +280,8 @@ export async function fetchAdminRebuildFills(params: {
         },
         deadlineMs: params.deadlineMs,
       })
-    } catch {
-      orderHistoryDates = []
+    } catch (error) {
+      throw classifyFetchError(error)
     }
 
     const firstOrder = [...orderHistoryDates]
