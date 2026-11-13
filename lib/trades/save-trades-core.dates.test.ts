@@ -11,16 +11,6 @@ vi.mock("@/lib/prisma", () => ({
       findFirst: (...args: unknown[]) => findFirst(...args),
       findMany: (...args: unknown[]) => findMany(...args),
     },
-    $transaction: (
-      fn: (tx: {
-        trade: { createMany: (...args: unknown[]) => unknown }
-      }) => Promise<unknown>,
-    ) =>
-      fn({
-        trade: {
-          createMany: (...args: unknown[]) => createMany(...args),
-        },
-      }),
   },
 }))
 vi.mock("next/cache", () => ({ revalidateTag: vi.fn(), updateTag: vi.fn() }))

@@ -3,6 +3,17 @@ import type { FinancialEvent } from "@/prisma/generated/prisma/browser"
 /** First attempt plus two retries. A failed window is never marked loaded. */
 export const FINANCIAL_EVENT_LOAD_ATTEMPTS = 3
 
+const FINANCIAL_EVENT_RETRY_BACKOFF_MS = 1_000
+
+/**
+ * Delay before attempt `attempts` (the number already recorded). The first
+ * fetch is immediate. The next two wait 1s, then 2s.
+ */
+export function financialEventRetryDelayMs(attempts: number): number {
+  if (attempts <= 0) return 0
+  return FINANCIAL_EVENT_RETRY_BACKOFF_MS * 2 ** (attempts - 1)
+}
+
 export function financialEventLoadKey(
   lang: string,
   startMs: number,

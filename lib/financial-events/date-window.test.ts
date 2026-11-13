@@ -5,6 +5,7 @@ import { toUserZonedTime } from "@/lib/calendar-timezone"
 import {
   assertFinancialEventWindow,
   calendarMonthFinancialEventWindow,
+  clampFinancialEventWindowToCap,
   dashboardFinancialEventWindow,
   explicitFinancialEventWindow,
   FINANCIAL_EVENT_MAX_WINDOW_MS,
@@ -45,6 +46,24 @@ describe("dashboardFinancialEventWindow", () => {
       )
       expect(window.start.getTime()).toBeLessThanOrEqual(month.start.getTime())
       expect(window.end.getTime()).toBeGreaterThanOrEqual(month.end.getTime())
+    }
+  })
+
+  it("does not cover the previous or next calendar month", () => {
+    const now = new Date("2026-11-13T12:00:00.000Z")
+    const window = dashboardFinancialEventWindow(now)
+
+    for (const timezone of ZONES) {
+      const zoned = toUserZonedTime(now, timezone)
+      const previous = new Date(zoned.getFullYear(), zoned.getMonth() - 1, 15)
+      const next = new Date(zoned.getFullYear(), zoned.getMonth() + 1, 15)
+      for (const monthDate of [previous, next]) {
+        const month = calendarMonthFinancialEventWindow(monthDate, timezone)
+        const covered =
+          window.start.getTime() <= month.start.getTime() &&
+          window.end.getTime() >= month.end.getTime()
+        expect(covered).toBe(false)
+      }
     }
   })
 })
@@ -170,6 +189,27 @@ describe("assertFinancialEventWindow", () => {
         end: new Date("2200-01-01T00:00:00.000Z"),
       }),
     ).toThrow(FinancialEventWindowTooWideError)
+  })
+
+  it("clamps a wide range to the 62 days ending at the requested end", () => {
+    const end = new Date("2026-06-01T00:00:00.000Z")
+    const wide = {
+      start: new Date("2020-01-01T00:00:00.000Z"),
+      end,
+    }
+    const clamped = clampFinancialEventWindowToCap(wide)
+    expect(clamped.clamped).toBe(true)
+    expect(clamped.window.end).toEqual(end)
+    expect(clamped.window.end.getTime() - clamped.window.start.getTime()).toBe(
+      FINANCIAL_EVENT_MAX_WINDOW_MS,
+    )
+    expect(() => assertFinancialEventWindow(clamped.window)).not.toThrow()
+
+    const month = calendarMonthFinancialEventWindow(
+      toUserZonedTime(new Date("2026-03-15T18:00:00.000Z"), "America/New_York"),
+      "America/New_York",
+    )
+    expect(clampFinancialEventWindowToCap(month)).toEqual({ window: month, clamped: false })
   })
 
   it("does not apply to the dashboard bootstrap, which can run past 62 days", () => {

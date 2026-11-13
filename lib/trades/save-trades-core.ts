@@ -278,14 +278,22 @@ export async function saveTradesCore(
     // each chunk is safe to retry. A single statement needs no interactive
     // transaction. Larger imports commit per chunk: one 120s transaction would
     // fail the whole import on timeout and hold row locks for the duration.
+    // A later chunk can fail after earlier chunks are committed. That count
+    // has to come back so the cache is dropped and the UI shows the rows.
     const insert = { data: userAssignedTrades, skipDuplicates: true as const }
+    let committed = 0
     const result =
       userAssignedTrades.length <= TRADE_CREATE_MANY_CHUNK_SIZE
         ? await prisma.trade.createMany(insert)
-        : await createManyTradesInChunks(
-            (chunk) => prisma.trade.createMany(chunk),
-            insert,
-          )
+        : await createManyTradesInChunks(async (chunk) => {
+            try {
+              const chunkResult = await prisma.trade.createMany(chunk)
+              committed += chunkResult.count
+              return chunkResult
+            } catch (error) {
+              throw new TradeInsertPartialError(committed, error)
+            }
+          }, insert)
 
     const commissionsUpdated = await backfillRithmicProtocolCommissions(
       userId,
@@ -348,12 +356,30 @@ export async function saveTradesCore(
       trades: result.count > 0 ? userAssignedTrades : undefined,
     }
   } catch (error) {
+    const committed = error instanceof TradeInsertPartialError ? error.committed : 0
     console.error("[saveTradesCore] Database error:", error)
+    if (committed > 0) {
+      try {
+        await invalidateTradeCaches(userId)
+      } catch (cacheError) {
+        console.error("[saveTradesCore] Cache invalidation after partial insert failed:", cacheError)
+      }
+    }
     return {
       error: "DATABASE_ERROR",
-      numberOfTradesAdded: 0,
+      numberOfTradesAdded: committed,
       details: error instanceof Error ? error.message : String(error),
     }
+  }
+}
+
+class TradeInsertPartialError extends Error {
+  readonly committed: number
+
+  constructor(committed: number, cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause))
+    this.name = "TradeInsertPartialError"
+    this.committed = committed
   }
 }
 

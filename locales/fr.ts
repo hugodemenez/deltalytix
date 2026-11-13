@@ -1158,6 +1158,7 @@ export default {
   "widgets.shared.unavailableHint":
     "Demandez au propriétaire du tableau de bord de mettre à jour sa disposition si vous vous attendiez à le voir ici.",
   "calendar.week": "Semaine",
+  "calendar.newsLoadRetry": "Actualités indisponibles. Réessayer",
   "calendar.weekdays.sun": "Dim",
   "calendar.weekdays.mon": "Lun",
   "calendar.weekdays.tue": "Mar",

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const createMany = vi.fn()
 const findFirst = vi.fn()
 const findMany = vi.fn()
-const transaction = vi.fn()
+const updateTag = vi.fn()
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -12,10 +12,12 @@ vi.mock("@/lib/prisma", () => ({
       findFirst: (...args: unknown[]) => findFirst(...args),
       findMany: (...args: unknown[]) => findMany(...args),
     },
-    $transaction: (...args: unknown[]) => transaction(...args),
   },
 }))
-vi.mock("next/cache", () => ({ revalidateTag: vi.fn(), updateTag: vi.fn() }))
+vi.mock("next/cache", () => ({
+  revalidateTag: vi.fn(),
+  updateTag: (...args: unknown[]) => updateTag(...args),
+}))
 vi.mock("@/lib/posthog-server", () => ({ capturePostHogEvent: vi.fn() }))
 vi.mock("@/server/connections", () => ({
   upsertAccountsForNumbers: vi.fn(async () => new Map()),
@@ -59,7 +61,7 @@ describe("saveTradesCore chunk commits", () => {
     createMany.mockReset()
     findFirst.mockReset().mockResolvedValue(null)
     findMany.mockReset().mockResolvedValue([])
-    transaction.mockReset()
+    updateTag.mockReset()
   })
 
   it("uses one createMany and no interactive transaction at the chunk size", async () => {
@@ -71,7 +73,26 @@ describe("saveTradesCore chunk commits", () => {
     expect(createMany).toHaveBeenCalledTimes(1)
     expect(createMany.mock.calls[0][0].data).toHaveLength(2)
     expect(createMany.mock.calls[0][0].skipDuplicates).toBe(true)
-    expect(transaction).not.toHaveBeenCalled()
+  })
+
+  it("commits more than one chunk and reports the summed count", async () => {
+    const count = TRADE_CREATE_MANY_CHUNK_SIZE + 1
+    createMany.mockImplementation(async (args: { data: unknown[] }) => ({
+      count: args.data.length,
+    }))
+
+    const result = await saveTradesCore(
+      Array.from({ length: count }, (_, index) => trade(index)),
+      { userId: "u1" },
+    )
+
+    expect(result.error).toBe(false)
+    expect(result.numberOfTradesAdded).toBe(count)
+    expect(createMany).toHaveBeenCalledTimes(2)
+    expect(createMany.mock.calls[0][0].data).toHaveLength(TRADE_CREATE_MANY_CHUNK_SIZE)
+    expect(createMany.mock.calls[1][0].data).toHaveLength(1)
+    expect(updateTag).toHaveBeenCalledWith("trades-u1")
+    expect(updateTag).toHaveBeenCalledWith("user-data-u1")
   })
 
   it("keeps the first chunk when the second chunk fails", async () => {
@@ -86,12 +107,14 @@ describe("saveTradesCore chunk commits", () => {
     )
 
     expect(result.error).toBe("DATABASE_ERROR")
-    expect(result.numberOfTradesAdded).toBe(0)
+    expect(result.numberOfTradesAdded).toBe(TRADE_CREATE_MANY_CHUNK_SIZE)
+    expect(result.details).toBe("disk full")
     expect(createMany).toHaveBeenCalledTimes(2)
     expect(createMany.mock.calls[0][0].data).toHaveLength(TRADE_CREATE_MANY_CHUNK_SIZE)
     expect(createMany.mock.calls[1][0].data).toHaveLength(1)
     expect(createMany.mock.calls[0][0].skipDuplicates).toBe(true)
     expect(createMany.mock.calls[1][0].skipDuplicates).toBe(true)
-    expect(transaction).not.toHaveBeenCalled()
+    expect(updateTag).toHaveBeenCalledWith("trades-u1")
+    expect(updateTag).toHaveBeenCalledWith("user-data-u1")
   })
 })

@@ -31,6 +31,7 @@ import { useMoodStore } from "@/store/widgets/mood-store"
 import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
 import { localDayFinancialEventWindow } from "@/lib/financial-events/date-window"
 import { useEnsureFinancialEvents } from "@/lib/financial-events/use-ensure-financial-events"
+import { FinancialEventLoadRetry } from "@/lib/financial-events/financial-event-load-retry"
 import { useTradesStore } from "@/store/trades-store"
 import { useCurrentLocale } from "@/locales/client"
 import { tradeMatchesDateKey } from "@/lib/trades/trade-matches-date"
@@ -570,6 +571,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         )}
 
         <div className="flex h-full min-w-0 flex-1 flex-col p-4">
+          <FinancialEventLoadRetry window={journalEventWindow} lang={locale} />
           {pane === "journal" ? (
             <Journaling
               content={journalContent}

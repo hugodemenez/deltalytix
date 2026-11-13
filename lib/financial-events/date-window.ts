@@ -163,6 +163,28 @@ export function assertFinancialEventWindow(window: FinancialEventDateWindow): vo
 }
 
 /**
+ * Keep the requested end and pull the start forward so the span is the cap.
+ * The AI news tool uses this so a year-long question still returns the latest
+ * 62 days, with a notice, instead of an empty list.
+ */
+export function clampFinancialEventWindowToCap(window: FinancialEventDateWindow): {
+  window: FinancialEventDateWindow
+  clamped: boolean
+} {
+  const spanMs = window.end.getTime() - window.start.getTime()
+  if (spanMs <= FINANCIAL_EVENT_MAX_WINDOW_MS) {
+    return { window, clamped: false }
+  }
+  return {
+    window: {
+      start: new Date(window.end.getTime() - FINANCIAL_EVENT_MAX_WINDOW_MS),
+      end: window.end,
+    },
+    clamped: true,
+  }
+}
+
+/**
  * Identity that survives the investing cron. That job deletes the window and
  * inserts again, and Prisma assigns a new `id` (`@default(uuid())`). The
  * unique key is still title + date + lang + timezone.

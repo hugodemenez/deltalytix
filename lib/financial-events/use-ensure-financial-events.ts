@@ -10,20 +10,27 @@ import {
 } from "@/lib/financial-events/date-window"
 import {
   financialEventLoadKey,
+  financialEventRetryDelayMs,
   performFinancialEventLoad,
   shouldLoadFinancialEvents,
 } from "@/lib/financial-events/ensure-load"
 
-const inflight = new Set<string>()
+const inflight = new Map<string, object>()
+
+export function resetFinancialEventLoadInflightForTests(): void {
+  inflight.clear()
+}
 
 /**
  * Load `window` into the financial-events store once the dashboard bootstrap
  * has recorded the range it already fetched. Shared views never initialize
  * the store, so they stay event-free, matching the previous payload.
  *
- * A failed fetch increments `loadErrors` and does not mark the range loaded,
- * so the effect runs again until the attempt cap. `retryFinancialEventLoad`
- * resets that cap.
+ * A failed fetch increments `loadErrors` and does not mark the range loaded.
+ * The in-flight key is dropped before that store update: the effect re-runs
+ * from the attempt count, and leaving the key set made the retry return
+ * immediately. Later attempts wait on `financialEventRetryDelayMs`.
+ * `retryFinancialEventLoad` resets the cap after it is exhausted.
  */
 export function useEnsureFinancialEvents(
   window: FinancialEventDateWindow | null,
@@ -54,29 +61,46 @@ export function useEnsureFinancialEvents(
     })
     if (decision !== "load") return
     if (inflight.has(loadKey)) return
-    inflight.add(loadKey)
+
+    const token = {}
+    inflight.set(loadKey, token)
+    let started = false
+    let cancelled = false
     const range = {
       start: new Date(startMs),
       end: new Date(endMs),
       lang: locale,
     }
-    performFinancialEventLoad({
-      fetchWindow: () =>
-        getFinancialEventsInWindow(
-          locale,
-          range.start.toISOString(),
-          range.end.toISOString(),
-        ),
-      merge: (events) => {
-        mergeEvents(events, range)
-        clearLoadError(loadKey)
-      },
-      fail: (message) => {
-        noteLoadFailure(loadKey, range, message)
-      },
-    }).finally(() => {
-      inflight.delete(loadKey)
-    })
+    const release = () => {
+      if (inflight.get(loadKey) === token) inflight.delete(loadKey)
+    }
+    const timer = setTimeout(() => {
+      started = true
+      void performFinancialEventLoad({
+        fetchWindow: () =>
+          getFinancialEventsInWindow(
+            locale,
+            range.start.toISOString(),
+            range.end.toISOString(),
+          ),
+        merge: (events) => {
+          if (cancelled) return
+          mergeEvents(events, range)
+          clearLoadError(loadKey)
+        },
+        fail: (message) => {
+          release()
+          if (cancelled) return
+          noteLoadFailure(loadKey, range, message)
+        },
+      }).finally(release)
+    }, financialEventRetryDelayMs(attempts))
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+      if (!started) release()
+    }
   }, [
     initialized,
     startMs,

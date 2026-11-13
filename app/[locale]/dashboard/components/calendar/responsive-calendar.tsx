@@ -32,6 +32,7 @@ import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
 import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
 import { calendarMonthFinancialEventWindow } from "@/lib/financial-events/date-window"
 import { useEnsureFinancialEvents } from "@/lib/financial-events/use-ensure-financial-events"
+import { FinancialEventLoadRetry } from "@/lib/financial-events/financial-event-load-retry"
 import { useUserStore } from "@/store/user-store"
 import { Account } from "@/context/data-provider"
 import { HIDDEN_GROUP_NAME } from "../filters/account-group-board"
@@ -613,6 +614,7 @@ export default function ResponsiveCalendarPnl({ calendarData }: CalendarPnlProps
           selectedCountries={selectedCountries}
           onSelectedCountriesChange={setSelectedCountries}
         />
+        <FinancialEventLoadRetry window={calendarEventWindow} lang={locale} />
       </CardHeader>
       <CardContent className="flex-1 min-h-0 p-1 sm:p-4">
         {viewMode === 'daily' ? (
