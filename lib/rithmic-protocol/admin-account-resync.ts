@@ -746,10 +746,8 @@ export async function resyncRithmicProtocolAccount(params: {
           if (listed.ibId) snapshotRequest.ibId = listed.ibId
           if (listed.accounts.length > 0) {
             snapshotRequest.accounts = listed.accounts
-            snapshotRequest.accountIds = listed.accounts.map(
-              (account) => account.accountId,
-            )
           }
+          snapshotRequest.accountIds = [accountNumber]
           if (
             listed.accounts.length > 0 &&
             !listed.accounts.some((account) => account.accountId === accountNumber)
@@ -765,13 +763,12 @@ export async function resyncRithmicProtocolAccount(params: {
         }
 
         guard.throwIfLost()
-        const remainingForSnapshot = deadlineMs - Date.now()
-        if (remainingForSnapshot <= 0) {
+        if (Date.now() >= deadlineMs) {
           return finish({ ...base, error: 'FILL_FETCH_TIMEOUT' })
         }
         const beforeSnapshot = await fetchInstrumentPositions({
           ...snapshotRequest,
-          deadlineMs: remainingForSnapshot,
+          deadlineMs,
         })
         const beforeUsable = classifyOneSnapshot(beforeSnapshot, accountNumber)
         if (!beforeUsable.ok) {
@@ -909,7 +906,7 @@ export async function resyncRithmicProtocolAccount(params: {
         guard.throwIfLost()
         const afterBrokerSnapshot = await fetchInstrumentPositions({
           ...snapshotRequest,
-          deadlineMs: Math.max(1, deadlineMs - Date.now() - ADMIN_TRANSACTION_RESERVE_MS),
+          deadlineMs: deadlineMs - ADMIN_TRANSACTION_RESERVE_MS,
         })
         const bracket = classifyAdminSnapshots({
           before: beforeSnapshot,

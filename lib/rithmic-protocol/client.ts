@@ -849,12 +849,12 @@ export class RithmicProtocolClient {
     ibId?: string
     accountIds: string[]
     accounts?: Array<{ accountId: string; fcmId?: string; ibId?: string }>
+    /** Absolute wall-clock deadline (Date.now() comparison), not a duration. */
     deadlineMs?: number
   }): Promise<CapturedInstrumentSnapshot> {
     const needed = [...new Set(params.accountIds.map((id) => id.trim()).filter(Boolean))]
     const capturedAtMs = Date.now()
-    const deadline =
-      Date.now() + (params.deadlineMs ?? PNL_SNAPSHOT_TOTAL_BUDGET_MS)
+    const deadline = params.deadlineMs ?? Date.now() + PNL_SNAPSHOT_TOTAL_BUDGET_MS
     const empty: CapturedInstrumentSnapshot = {
       positions: [],
       complete: false,
