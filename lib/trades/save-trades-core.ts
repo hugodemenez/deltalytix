@@ -18,7 +18,10 @@ import {
 } from "@/lib/tradovate/identity"
 import { isDuplicateTradesOnlySave } from "@/lib/trades/save-trades-outcome"
 import { normalizeTradeDates } from "@/lib/trades/normalize-trade-date"
-import { createManyTradesInChunks } from "@/lib/trades/create-many-trades"
+import {
+  createManyTradesInChunks,
+  TRADE_CREATE_MANY_CHUNK_SIZE,
+} from "@/lib/trades/create-many-trades"
 
 export type TradeError =
   | "DUPLICATE_TRADES"
@@ -271,16 +274,18 @@ export async function saveTradesCore(
       tradovateAssignedTrades,
     )
 
-    // One transaction, same as the previous single INSERT: a failed chunk
-    // rolls back the rows already written in this save.
-    const result = await prisma.$transaction(
-      (tx) =>
-        createManyTradesInChunks(
-          (chunk) => tx.trade.createMany(chunk),
-          { data: userAssignedTrades, skipDuplicates: true },
-        ),
-      { timeout: 120_000, maxWait: 15_000 },
-    )
+    // Ids are deterministic and skipDuplicates is ON CONFLICT DO NOTHING, so
+    // each chunk is safe to retry. A single statement needs no interactive
+    // transaction. Larger imports commit per chunk: one 120s transaction would
+    // fail the whole import on timeout and hold row locks for the duration.
+    const insert = { data: userAssignedTrades, skipDuplicates: true as const }
+    const result =
+      userAssignedTrades.length <= TRADE_CREATE_MANY_CHUNK_SIZE
+        ? await prisma.trade.createMany(insert)
+        : await createManyTradesInChunks(
+            (chunk) => prisma.trade.createMany(chunk),
+            insert,
+          )
 
     const commissionsUpdated = await backfillRithmicProtocolCommissions(
       userId,

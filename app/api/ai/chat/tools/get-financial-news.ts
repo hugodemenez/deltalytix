@@ -1,5 +1,8 @@
-import { explicitFinancialEventWindow } from '@/lib/financial-events/date-window';
-import { getFinancialEvents } from '@/server/financial-events';
+import {
+  explicitFinancialEventWindow,
+  FinancialEventWindowTooWideError,
+} from '@/lib/financial-events/date-window';
+import { loadFinancialEvents } from '@/lib/financial-events/load';
 import { tool, type Tool } from 'ai';
 import { z } from 'zod/v3';
 
@@ -15,11 +18,16 @@ export const getFinancialNews = tool({
     const end = new Date(endDate);
     const window = explicitFinancialEventWindow(start, end);
     if (!window) return [];
-    const events = await getFinancialEvents(locale, window);
-    const filteredEvents = events.filter(event => {
-      const eventDate = new Date(event.date);
-      return eventDate >= start && eventDate <= end;
-    });
-    return filteredEvents;
+    try {
+      const events = await loadFinancialEvents(locale, window, 'desc');
+      return events.filter(event => {
+        const eventDate = new Date(event.date);
+        return eventDate >= start && eventDate <= end;
+      });
+    } catch (error) {
+      if (error instanceof FinancialEventWindowTooWideError) return [];
+      console.error('Error fetching financial events:', error);
+      return [];
+    }
   },
 })

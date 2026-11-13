@@ -16,12 +16,14 @@ type CreateManyArgs<T> = {
  * The caller owns the transaction. `createMany` is that caller's
  * `prisma.trade.createMany` or `tx.trade.createMany` — this helper does not
  * open its own. A failure in a later chunk rolls back earlier chunks only
- * when the caller already wrapped the call.
+ * when the caller already wrapped the call. `saveTradesCore` does not: trade
+ * ids are deterministic and `skipDuplicates` makes a committed chunk a no-op
+ * on retry.
  *
- * `skipDuplicates` is forwarded on every chunk. Within one transaction a row
- * inserted by an earlier chunk is visible to the next, so duplicates that
- * used to be collapsed by a single `INSERT ... ON CONFLICT DO NOTHING` still
- * collapse, and the returned `count` is the sum of the chunk counts.
+ * `skipDuplicates` is forwarded on every chunk. When the caller is inside a
+ * transaction, a row inserted by an earlier chunk is visible to the next, so
+ * duplicates that used to be collapsed by a single `INSERT ... ON CONFLICT DO
+ * NOTHING` still collapse. The returned `count` is the sum of the chunk counts.
  * An empty `data` array still performs one `createMany`, matching the
  * previous single-call behavior.
  */

@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest"
+import { endOfWeek, startOfWeek } from "date-fns"
+import { fromZonedTime } from "date-fns-tz"
 import { toUserZonedTime } from "@/lib/calendar-timezone"
 import {
+  assertFinancialEventWindow,
   calendarMonthFinancialEventWindow,
   dashboardFinancialEventWindow,
   explicitFinancialEventWindow,
+  FINANCIAL_EVENT_MAX_WINDOW_MS,
+  FINANCIAL_EVENT_TZ_PAD_MS,
+  FinancialEventWindowTooWideError,
+  financialEventIdentity,
   financialEventRangeCovers,
   financialEventWhere,
   financialEventWindowDays,
@@ -116,6 +123,86 @@ describe("financialEventWhere", () => {
     expect(financialEventWhere(undefined, window)).toEqual({
       date: { gte: window.start, lte: window.end },
     })
+  })
+})
+
+describe("assertFinancialEventWindow", () => {
+  it("accepts a calendar month, a local day, and a week that crosses a month", () => {
+    const now = new Date("2026-03-01T12:00:00.000Z")
+    for (const timezone of ZONES) {
+      const month = calendarMonthFinancialEventWindow(
+        toUserZonedTime(now, timezone),
+        timezone,
+      )
+      expect(() => assertFinancialEventWindow(month)).not.toThrow()
+      expect(financialEventWindowDays(month)).toBeLessThanOrEqual(62)
+    }
+
+    const day = localDayFinancialEventWindow(new Date(2026, 2, 31, 18, 0, 0))
+    expect(() => assertFinancialEventWindow(day)).not.toThrow()
+
+    const zoned = toUserZonedTime(new Date("2026-03-31T15:00:00.000Z"), "America/New_York")
+    const week = {
+      start: new Date(
+        fromZonedTime(startOfWeek(zoned, { weekStartsOn: 0 }), "America/New_York").getTime() -
+          FINANCIAL_EVENT_TZ_PAD_MS,
+      ),
+      end: new Date(
+        fromZonedTime(endOfWeek(zoned, { weekStartsOn: 0 }), "America/New_York").getTime() +
+          FINANCIAL_EVENT_TZ_PAD_MS,
+      ),
+    }
+    expect(week.start.getUTCMonth()).not.toBe(week.end.getUTCMonth())
+    expect(() => assertFinancialEventWindow(week)).not.toThrow()
+    expect(financialEventWindowDays(week)).toBeLessThanOrEqual(62)
+  })
+
+  it("accepts exactly 62 days and rejects a 1900-2200 scan", () => {
+    const start = new Date("2026-01-01T00:00:00.000Z")
+    const atCap = new Date(start.getTime() + FINANCIAL_EVENT_MAX_WINDOW_MS)
+    expect(() => assertFinancialEventWindow({ start, end: atCap })).not.toThrow()
+    expect(() =>
+      assertFinancialEventWindow({ start, end: new Date(atCap.getTime() + 1) }),
+    ).toThrow(FinancialEventWindowTooWideError)
+    expect(() =>
+      assertFinancialEventWindow({
+        start: new Date("1900-01-01T00:00:00.000Z"),
+        end: new Date("2200-01-01T00:00:00.000Z"),
+      }),
+    ).toThrow(FinancialEventWindowTooWideError)
+  })
+
+  it("does not apply to the dashboard bootstrap, which can run past 62 days", () => {
+    const window = dashboardFinancialEventWindow(new Date("2026-01-01T00:30:00.000Z"))
+    expect(financialEventWindowDays(window)).toBeGreaterThan(62)
+    expect(() => assertFinancialEventWindow(window)).toThrow(FinancialEventWindowTooWideError)
+  })
+})
+
+describe("financialEventIdentity", () => {
+  it("ignores the cron-assigned id and keeps title, date, lang, and timezone", () => {
+    const date = new Date("2026-03-13T13:30:00.000Z")
+    const first = financialEventIdentity({
+      lang: "en",
+      timezone: "UTC",
+      title: "CPI",
+      date,
+    })
+    const rewritten = financialEventIdentity({
+      lang: "en",
+      timezone: "UTC",
+      title: "CPI",
+      date: date.toISOString(),
+    })
+    expect(first).toBe(rewritten)
+    expect(
+      financialEventIdentity({
+        lang: "fr",
+        timezone: "UTC",
+        title: "CPI",
+        date,
+      }),
+    ).not.toBe(first)
   })
 })
 

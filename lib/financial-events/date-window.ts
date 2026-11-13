@@ -132,3 +132,47 @@ export function financialEventRangeCovers(
 export function financialEventWindowDays(window: FinancialEventDateWindow): number {
   return (window.end.getTime() - window.start.getTime()) / DAY_MS
 }
+
+/**
+ * Widest span the client-callable read and the AI news tool may query.
+ * A calendar month is ~31 days, a week that crosses a month is 7 days, and
+ * timezone padding is 14h on each side. 62 days covers those. The dashboard
+ * bootstrap can be a few hours over this near a month boundary; that query
+ * stays on the authenticated `getUserData` path and is not this action.
+ */
+export const FINANCIAL_EVENT_MAX_WINDOW_MS = 62 * DAY_MS
+
+export class FinancialEventWindowTooWideError extends Error {
+  readonly spanMs: number
+
+  constructor(spanMs: number) {
+    super(
+      `FinancialEvent window spans ${spanMs}ms, which is over the ${FINANCIAL_EVENT_MAX_WINDOW_MS}ms cap`,
+    )
+    this.name = "FinancialEventWindowTooWideError"
+    this.spanMs = spanMs
+  }
+}
+
+/** Reject a window that would reread the language partition. */
+export function assertFinancialEventWindow(window: FinancialEventDateWindow): void {
+  const spanMs = window.end.getTime() - window.start.getTime()
+  if (spanMs > FINANCIAL_EVENT_MAX_WINDOW_MS) {
+    throw new FinancialEventWindowTooWideError(spanMs)
+  }
+}
+
+/**
+ * Identity that survives the investing cron. That job deletes the window and
+ * inserts again, and Prisma assigns a new `id` (`@default(uuid())`). The
+ * unique key is still title + date + lang + timezone.
+ */
+export function financialEventIdentity(event: {
+  lang: string
+  timezone: string
+  title: string
+  date: Date | string
+}): string {
+  const date = event.date instanceof Date ? event.date : new Date(event.date)
+  return `${event.lang}\0${event.timezone}\0${date.toISOString()}\0${event.title}`
+}
