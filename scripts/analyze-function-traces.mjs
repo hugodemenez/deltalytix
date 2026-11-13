@@ -140,16 +140,33 @@ async function main() {
   if (translate?.sharpMusl || journal?.sharpMusl) {
     failures.push("a watched route still traces sharp linuxmusl binaries");
   }
-  if ((translate?.bytes ?? 0) > 230 * 1024 * 1024) {
+  // Vercel packages the NFT emitted by `next build`. These routes should stay
+  // near the other api/ai functions (single-digit or low tens of MB). 80MB
+  // still leaves headroom under the 250MB cap if the snapshot leaks onto the
+  // title translator, and fails the old ~249MB corpus-import trace.
+  const supportRouteCeiling = 80 * 1024 * 1024;
+  if ((translate?.bytes ?? 0) > supportRouteCeiling) {
     failures.push(
-      `translate-label trace is still ${(translate.bytes / 1024 / 1024).toFixed(2)} MB (need headroom under Vercel's 250 MB uncompressed cap)`,
+      `translate-label trace is still ${(translate.bytes / 1024 / 1024).toFixed(2)} MB (ceiling 80 MB; Vercel fails at 250 MB uncompressed)`,
     );
   }
-  if ((pick(SUPPORT_CHAT)?.bytes ?? 0) > 230 * 1024 * 1024) {
+  if ((pick(SUPPORT_CHAT)?.bytes ?? 0) > supportRouteCeiling) {
     const support = pick(SUPPORT_CHAT);
     failures.push(
-      `support chat trace is still ${(support.bytes / 1024 / 1024).toFixed(2)} MB (need headroom under Vercel's 250 MB uncompressed cap)`,
+      `support chat trace is still ${(support.bytes / 1024 / 1024).toFixed(2)} MB (ceiling 80 MB; Vercel fails at 250 MB uncompressed)`,
     );
+  }
+  for (const fragment of [TRANSLATE_LABEL, SUPPORT_CHAT]) {
+    const row = pick(fragment);
+    if (!row) continue;
+    const nftPath = path.join(serverDir, `${fragment}.js.nft.json`);
+    const traced = JSON.parse(await readFile(nftPath, "utf8"));
+    const joined = (traced.files || []).join("\n");
+    if (joined.includes("/next/dist/compiled/next-server/app-page.runtime.dev.js")) {
+      failures.push(
+        `${fragment} still traces next-server dev runtimes (support corpus source leak)`,
+      );
+    }
   }
   if (!journal) {
     failures.push("journal-docx route trace is missing");

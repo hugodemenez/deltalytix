@@ -96,27 +96,28 @@ export function shouldLogSearchDebug(): boolean {
 }
 
 /**
- * Glob patterns for `outputFileTracingIncludes` — the corpus is read from disk
- * at runtime, so it has to survive into the serverless bundle.
+ * Production corpus snapshot. `scripts/build-support-corpus.ts` writes this
+ * during `prebuild`. The support route reads it instead of walking the repo.
+ *
+ * Do not trace `app/`, `lib/`, or `components/` source into the function.
+ * Turbopack follows imports in included `.ts` files, so those globs pulled
+ * TypeScript, pdf-lib, Playwright, and every `next-server` runtime into
+ * `/api/ai/support` and `/api/ai/support/translate-label` (~249MB). Vercel
+ * packages that trace during `next build`. A JSON snapshot has no imports.
  */
-export const SUPPORT_SEARCH_TRACE_INCLUDES: readonly string[] = CORPUS_ROOTS.flatMap(
-  (root) =>
-    path.extname(root.path)
-      ? [`./${root.path}`]
-      : root.extensions.map((extension) => `./${root.path}/**/*${extension}`),
-);
+export const SUPPORT_CORPUS_SNAPSHOT = "lib/ai/support-corpus.generated.json";
+
+/** Glob patterns for `outputFileTracingIncludes` on the support chat route. */
+export const SUPPORT_SEARCH_TRACE_INCLUDES = [`./${SUPPORT_CORPUS_SNAPSHOT}`] as const;
 
 /**
- * Nested routes under `/api/ai/support` that must **not** inherit the corpus.
+ * Nested routes under `/api/ai/support` that must not inherit the snapshot.
  *
- * Next.js matches `outputFileTracingIncludes` keys with picomatch
- * `{ contains: true }`, so `/api/ai/support` also matches
- * `/api/ai/support/translate-label`. That route only translates a title; if it
- * also receives ~12MB of app/lib/components source it is the function that
- * tips Vercel's 250MB uncompressed limit.
- *
- * `/api/ai/support/*` matches those children and does not match the parent
- * chat route, which still needs the corpus.
+ * Next.js matches include keys with picomatch `{ contains: true }`, so
+ * `/api/ai/support` also matches `/api/ai/support/translate-label`. Turbopack
+ * on Next 16.3 does not reliably apply `outputFileTracingExcludes`; the
+ * snapshot is small enough that a leak still fits under the 250MB cap. The
+ * exclude stays for the webpack/self-host tracer.
  */
 export const SUPPORT_SEARCH_TRACE_NESTED_EXCLUDE_ROUTE = "/api/ai/support/*";
 
@@ -134,10 +135,42 @@ function toSearchablePath(relativePath: string): string {
   return relativePath.toLowerCase().replace(/[\\/_.-]+/g, " ");
 }
 
-async function loadFile(
+export type CorpusSourceFile = {
+  path: string;
+  kind: CorpusKind;
+  content: string;
+};
+
+function normalizeCorpusPath(relativePath: string): string {
+  return relativePath.split(path.sep).join("/");
+}
+
+export function indexCorpusSource(source: CorpusSourceFile): IndexedFile {
+  const content = source.content;
+  const relativePath = normalizeCorpusPath(source.path);
+  return {
+    path: relativePath,
+    kind: source.kind,
+    title: extractTitle(relativePath, content),
+    content,
+    lowerContent: content.toLowerCase(),
+    lines: content.split("\n"),
+    searchablePath: toSearchablePath(relativePath),
+  };
+}
+
+export function parseCorpusSnapshot(raw: string): IndexedFile[] {
+  const parsed: unknown = JSON.parse(raw);
+  if (!Array.isArray(parsed)) {
+    throw new Error("Support corpus snapshot is not an array");
+  }
+  return parsed.map((entry) => indexCorpusSource(entry as CorpusSourceFile));
+}
+
+async function readCorpusFile(
   relativePath: string,
   kind: CorpusKind,
-): Promise<IndexedFile | null> {
+): Promise<CorpusSourceFile | null> {
   let content: string;
   try {
     const fileStat = await stat(repoPath(relativePath));
@@ -148,17 +181,13 @@ async function loadFile(
   }
 
   return {
-    path: relativePath,
+    path: normalizeCorpusPath(relativePath),
     kind,
-    title: extractTitle(relativePath, content),
     content,
-    lowerContent: content.toLowerCase(),
-    lines: content.split("\n"),
-    searchablePath: toSearchablePath(relativePath),
   };
 }
 
-async function walkRoot(root: CorpusRoot, collected: IndexedFile[]): Promise<void> {
+async function walkRoot(root: CorpusRoot, collected: CorpusSourceFile[]): Promise<void> {
   async function walk(relativeDir: string): Promise<void> {
     let entries: Dirent[];
     try {
@@ -168,7 +197,7 @@ async function walkRoot(root: CorpusRoot, collected: IndexedFile[]): Promise<voi
     }
 
     const nested: Promise<void>[] = [];
-    const files: Promise<IndexedFile | null>[] = [];
+    const files: Promise<CorpusSourceFile | null>[] = [];
 
     for (const entry of entries) {
       const relativePath = path.join(relativeDir, entry.name);
@@ -182,7 +211,7 @@ async function walkRoot(root: CorpusRoot, collected: IndexedFile[]): Promise<voi
       if (!root.extensions.some((extension) => entry.name.endsWith(extension))) continue;
       if (IGNORED_FILE_PATTERN.test(entry.name)) continue;
 
-      files.push(loadFile(relativePath, root.kind));
+      files.push(readCorpusFile(relativePath, root.kind));
     }
 
     for (const file of await Promise.all(files)) {
@@ -193,7 +222,7 @@ async function walkRoot(root: CorpusRoot, collected: IndexedFile[]): Promise<voi
   }
 
   if (path.extname(root.path)) {
-    const file = await loadFile(root.path, root.kind);
+    const file = await readCorpusFile(root.path, root.kind);
     if (file) collected.push(file);
     return;
   }
@@ -204,18 +233,42 @@ async function walkRoot(root: CorpusRoot, collected: IndexedFile[]): Promise<voi
 let cachedCorpus: { loadedAt: number; files: IndexedFile[] } | null = null;
 let inflightLoad: Promise<IndexedFile[]> | null = null;
 
-async function buildCorpus(): Promise<IndexedFile[]> {
-  const started = Date.now();
-  const files: IndexedFile[] = [];
-
+/** Same walk the snapshot generator uses. Development reads this directly. */
+export async function collectCorpusSources(): Promise<CorpusSourceFile[]> {
+  const files: CorpusSourceFile[] = [];
   await Promise.all(CORPUS_ROOTS.map((root) => walkRoot(root, files)));
   files.sort((left, right) => left.path.localeCompare(right.path));
+  return files;
+}
+
+async function readProductionSnapshot(): Promise<IndexedFile[]> {
+  const snapshotPath = repoPath(SUPPORT_CORPUS_SNAPSHOT);
+  try {
+    return parseCorpusSnapshot(await readFile(snapshotPath, "utf8"));
+  } catch (error) {
+    console.error(
+      "[codebaseIndex] Missing support corpus snapshot. Run `bun run prebuild` before the production build.",
+      { snapshotPath, error },
+    );
+    return [];
+  }
+}
+
+async function buildCorpus(): Promise<IndexedFile[]> {
+  const started = Date.now();
+  // Production lambdas only contain the snapshot. Walking the repo there
+  // traces every imported module (TypeScript, pdf-lib, next-server, …).
+  const files =
+    process.env.NODE_ENV === "production"
+      ? await readProductionSnapshot()
+      : (await collectCorpusSources()).map(indexCorpusSource);
 
   if (shouldLogSearchDebug()) {
     console.log("[codebaseIndex] Corpus built", {
       files: files.length,
       ms: Date.now() - started,
       cwd: repoPath(),
+      source: process.env.NODE_ENV === "production" ? "snapshot" : "disk",
     });
   }
 
