@@ -30,6 +30,8 @@ import WeeklyCalendarPnl from "./weekly-calendar"
 import { CalendarMonthYearPicker } from "./calendar-month-year-picker"
 import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
 import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
+import { calendarMonthEventWindow } from "@/lib/financial-events/date-window"
+import { useEnsureFinancialEvents } from "@/lib/financial-events/use-ensure-financial-events"
 import { useUserStore } from "@/store/user-store"
 import { Account } from "@/context/data-provider"
 import { HIDDEN_GROUP_NAME } from "../filters/account-group-board"
@@ -358,6 +360,8 @@ export default function ResponsiveCalendarPnl({ calendarData }: CalendarPnlProps
   useEffect(() => {
     setCurrentDate(toUserZonedTime(new Date(), timezone))
   }, [timezone])
+
+  useEnsureFinancialEvents(calendarMonthEventWindow(currentDate, timezone), locale)
 
   const calendarDays = useMemo(
     () => getCalendarGridDays(currentDate, weekStartsOnMonday),

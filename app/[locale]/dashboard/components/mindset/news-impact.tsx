@@ -13,6 +13,8 @@ import { ImportanceFilter } from "@/app/[locale]/dashboard/components/importance
 import { useNewsFilterStore } from "@/store/filters/news-filter-store"
 import { CountryFilter } from "@/components/country-filter"
 import { useFinancialEventsStore } from "../../../../../store/widgets/financial-events-store"
+import { journalDayEventWindow } from "@/lib/financial-events/date-window"
+import { useEnsureFinancialEvents } from "@/lib/financial-events/use-ensure-financial-events"
 
 interface NewsImpactProps {
   onNext: () => void
@@ -29,6 +31,7 @@ export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date
   const t = useI18n()
   const financialEvents = useFinancialEventsStore(state => state.events)
   const locale = useCurrentLocale()
+  useEnsureFinancialEvents(journalDayEventWindow(date), locale)
 
   // Filter events for the selected date
   useEffect(() => {

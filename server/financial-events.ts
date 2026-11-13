@@ -1,42 +1,56 @@
 'use server'
 
-import { PrismaClient, FinancialEvent } from '@/prisma/generated/prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
-import { format } from 'date-fns'
+import type { FinancialEvent } from '@/prisma/generated/prisma/client'
+import {
+  parseFinancialEventRange,
+  type FinancialEventDateWindow,
+} from '@/lib/financial-events/date-window'
+import { findFinancialEvents } from '@/lib/financial-events/query'
 
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = new PrismaClient({ adapter })
+function resolveWindow(
+  range: { from: string | Date; to: string | Date } | undefined,
+): FinancialEventDateWindow | null {
+  return parseFinancialEventRange(range)
+}
 
 /**
- * Retrieves financial events for a given month.
- * First attempts to fetch from local database, if no events found,
- * triggers a sync with external API.
- * 
- * Events are ordered by date ascending and filtered to the month containing the input date.
- * 
- * @param date - Target date (defaults to current date). Used to fetch events for the entire month containing this date
- * @param locale - Language locale (defaults to 'fr'). Used to filter events by language
- * @returns Promise<FinancialEvent[]> - Array of financial events for the month
+ * Financial events for `locale` inside `range`.
+ * Without a range, the read is the dashboard window around now — never the full table.
+ * Invalid or inverted bounds return no rows, same as filtering them out in memory.
+ * Ordered by date descending.
  */
-export async function getFinancialEvents(locale: string|undefined = undefined): Promise<FinancialEvent[]> {
+export async function getFinancialEvents(
+  locale: string | undefined = undefined,
+  range?: { from: string | Date; to: string | Date },
+): Promise<FinancialEvent[]> {
   try {
-
-    const where = locale ? {
-      lang: locale
-    } : {}
-    const events = await prisma.financialEvent.findMany({
-      where,
-      orderBy: {
-        date: 'desc'
-      }
+    const window = resolveWindow(range)
+    if (!window) return []
+    return await findFinancialEvents({
+      lang: locale,
+      window,
+      orderByDateDesc: true,
     })
-
-    return events
   } catch (error) {
     console.error('Error fetching financial events:', error)
     return []
   }
-} 
+}
+
+/**
+ * Same date window as {@link getFinancialEvents}, but a database error rejects
+ * so the client can retry instead of treating the month as empty.
+ */
+export async function getFinancialEventsInRange(
+  locale: string,
+  fromIso: string,
+  toIso: string,
+): Promise<FinancialEvent[]> {
+  const window = resolveWindow({ from: fromIso, to: toIso })
+  if (!window) return []
+  return findFinancialEvents({
+    lang: locale,
+    window,
+    orderByDateDesc: true,
+  })
+}
