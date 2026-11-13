@@ -1,4 +1,4 @@
-import type { Dirent } from "node:fs";
+import { existsSync, type Dirent } from "node:fs";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
@@ -73,6 +73,12 @@ const IGNORED_FILE_PATTERN = /(\.d\.ts|\.test\.tsx?|\.spec\.tsx?)$/i;
 /** Skip anything too large to be useful as a support answer. */
 const MAX_FILE_BYTES = 400_000;
 
+/**
+ * Floor for the generated snapshot. The live corpus is well above this.
+ * An empty or near-empty walk means the generator read the wrong tree.
+ */
+export const MIN_SUPPORT_CORPUS_FILES = 100;
+
 const CACHE_TTL_MS = process.env.NODE_ENV === "production" ? Number.POSITIVE_INFINITY : 15_000;
 
 export type IndexedFile = {
@@ -87,8 +93,42 @@ export type IndexedFile = {
   searchablePath: string;
 };
 
-function repoPath(...segments: string[]): string {
-  return path.join(/*turbopackIgnore: true*/ process.cwd(), ...segments);
+function joinUnderRoot(root: string, ...segments: string[]): string {
+  return path.join(/*turbopackIgnore: true*/ root, ...segments);
+}
+
+/**
+ * Repo root for corpus reads. `SUPPORT_CORPUS_ROOT` is the test override.
+ * Otherwise walk up from the start directory until `package.json` and
+ * `next.config.ts` sit together. The dynamic join is ignored by Turbopack
+ * so this lookup does not trace the source tree into the function.
+ */
+export function resolveRepoRoot(startDir?: string): string {
+  const override = process.env.SUPPORT_CORPUS_ROOT?.trim();
+  if (override) return path.resolve(override);
+
+  let dir = path.resolve(/*turbopackIgnore: true*/ startDir ?? process.cwd());
+  const filesystemRoot = path.parse(dir).root;
+  while (true) {
+    if (
+      existsSync(joinUnderRoot(dir, "package.json")) &&
+      existsSync(joinUnderRoot(dir, "next.config.ts"))
+    ) {
+      return dir;
+    }
+    if (dir === filesystemRoot) break;
+    dir = path.dirname(dir);
+  }
+
+  return path.resolve(/*turbopackIgnore: true*/ startDir ?? process.cwd());
+}
+
+/**
+ * UTF-8 byte order. `localeCompare` follows the runtime's ICU collation, which
+ * is not the same in every Bun and Node build.
+ */
+export function compareCorpusPaths(left: string, right: string): number {
+  return Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"));
 }
 
 export function shouldLogSearchDebug(): boolean {
@@ -97,7 +137,9 @@ export function shouldLogSearchDebug(): boolean {
 
 /**
  * Production corpus snapshot. `scripts/build-support-corpus.ts` writes this
- * during `prebuild`. The support route reads it instead of walking the repo.
+ * from the repo root during `prebuild` and again from `scripts/vercel-build.sh`.
+ * The support route reads it instead of walking the repo. An empty or missing
+ * snapshot is not cached.
  *
  * Do not trace `app/`, `lib/`, or `components/` source into the function.
  * Turbopack follows imports in included `.ts` files, so those globs pulled
@@ -168,14 +210,16 @@ export function parseCorpusSnapshot(raw: string): IndexedFile[] {
 }
 
 async function readCorpusFile(
+  root: string,
   relativePath: string,
   kind: CorpusKind,
 ): Promise<CorpusSourceFile | null> {
   let content: string;
   try {
-    const fileStat = await stat(repoPath(relativePath));
+    const absolutePath = joinUnderRoot(root, relativePath);
+    const fileStat = await stat(absolutePath);
     if (!fileStat.isFile() || fileStat.size > MAX_FILE_BYTES) return null;
-    content = await readFile(repoPath(relativePath), "utf8");
+    content = await readFile(absolutePath, "utf8");
   } catch {
     return null;
   }
@@ -187,11 +231,15 @@ async function readCorpusFile(
   };
 }
 
-async function walkRoot(root: CorpusRoot, collected: CorpusSourceFile[]): Promise<void> {
+async function walkRoot(
+  repoRoot: string,
+  root: CorpusRoot,
+  collected: CorpusSourceFile[],
+): Promise<void> {
   async function walk(relativeDir: string): Promise<void> {
     let entries: Dirent[];
     try {
-      entries = await readdir(repoPath(relativeDir), { withFileTypes: true });
+      entries = await readdir(joinUnderRoot(repoRoot, relativeDir), { withFileTypes: true });
     } catch {
       return;
     }
@@ -211,7 +259,7 @@ async function walkRoot(root: CorpusRoot, collected: CorpusSourceFile[]): Promis
       if (!root.extensions.some((extension) => entry.name.endsWith(extension))) continue;
       if (IGNORED_FILE_PATTERN.test(entry.name)) continue;
 
-      files.push(readCorpusFile(relativePath, root.kind));
+      files.push(readCorpusFile(repoRoot, relativePath, root.kind));
     }
 
     for (const file of await Promise.all(files)) {
@@ -222,7 +270,7 @@ async function walkRoot(root: CorpusRoot, collected: CorpusSourceFile[]): Promis
   }
 
   if (path.extname(root.path)) {
-    const file = await readCorpusFile(root.path, root.kind);
+    const file = await readCorpusFile(repoRoot, root.path, root.kind);
     if (file) collected.push(file);
     return;
   }
@@ -234,20 +282,38 @@ let cachedCorpus: { loadedAt: number; files: IndexedFile[] } | null = null;
 let inflightLoad: Promise<IndexedFile[]> | null = null;
 
 /** Same walk the snapshot generator uses. Development reads this directly. */
-export async function collectCorpusSources(): Promise<CorpusSourceFile[]> {
+export async function collectCorpusSources(repoRoot = resolveRepoRoot()): Promise<CorpusSourceFile[]> {
   const files: CorpusSourceFile[] = [];
-  await Promise.all(CORPUS_ROOTS.map((root) => walkRoot(root, files)));
-  files.sort((left, right) => left.path.localeCompare(right.path));
+  await Promise.all(CORPUS_ROOTS.map((root) => walkRoot(repoRoot, root, files)));
+  files.sort((left, right) => compareCorpusPaths(left.path, right.path));
   return files;
 }
 
-async function readProductionSnapshot(): Promise<IndexedFile[]> {
-  const snapshotPath = repoPath(SUPPORT_CORPUS_SNAPSHOT);
+async function readProductionSnapshot(repoRoot: string): Promise<IndexedFile[]> {
+  const snapshotPath = joinUnderRoot(repoRoot, SUPPORT_CORPUS_SNAPSHOT);
+  let raw: string;
   try {
-    return parseCorpusSnapshot(await readFile(snapshotPath, "utf8"));
+    raw = await readFile(snapshotPath, "utf8");
   } catch (error) {
     console.error(
-      "[codebaseIndex] Missing support corpus snapshot. Run `bun run prebuild` before the production build.",
+      "[codebaseIndex] Support corpus snapshot is missing or unreadable. Production search has no corpus until the snapshot is present.",
+      { snapshotPath, error },
+    );
+    return [];
+  }
+
+  try {
+    const files = parseCorpusSnapshot(raw);
+    if (files.length === 0) {
+      console.error(
+        "[codebaseIndex] Support corpus snapshot is empty. Production search has no corpus.",
+        { snapshotPath },
+      );
+    }
+    return files;
+  } catch (error) {
+    console.error(
+      "[codebaseIndex] Support corpus snapshot is invalid. Production search has no corpus until the snapshot is rewritten.",
       { snapshotPath, error },
     );
     return [];
@@ -256,26 +322,28 @@ async function readProductionSnapshot(): Promise<IndexedFile[]> {
 
 async function buildCorpus(): Promise<IndexedFile[]> {
   const started = Date.now();
+  const repoRoot = resolveRepoRoot();
   // Production lambdas only contain the snapshot. Walking the repo there
   // traces every imported module (TypeScript, pdf-lib, next-server, …).
   const files =
     process.env.NODE_ENV === "production"
-      ? await readProductionSnapshot()
-      : (await collectCorpusSources()).map(indexCorpusSource);
+      ? await readProductionSnapshot(repoRoot)
+      : (await collectCorpusSources(repoRoot)).map(indexCorpusSource);
 
   if (shouldLogSearchDebug()) {
     console.log("[codebaseIndex] Corpus built", {
       files: files.length,
       ms: Date.now() - started,
-      cwd: repoPath(),
+      repoRoot,
       source: process.env.NODE_ENV === "production" ? "snapshot" : "disk",
     });
   }
 
   if (files.length === 0) {
-    console.warn("[codebaseIndex] Corpus is empty — is the working directory the repo root?", {
-      cwd: repoPath(),
-    });
+    console.error(
+      "[codebaseIndex] Support corpus is empty. The result is not cached.",
+      { repoRoot, source: process.env.NODE_ENV === "production" ? "snapshot" : "disk" },
+    );
   }
 
   return files;
@@ -288,7 +356,11 @@ export async function getCorpus(): Promise<IndexedFile[]> {
 
   inflightLoad ??= buildCorpus()
     .then((files) => {
-      cachedCorpus = { loadedAt: Date.now(), files };
+      // A missing, empty, or invalid snapshot must not stick for the life of
+      // the production process. The next call reads the file again.
+      if (files.length > 0) {
+        cachedCorpus = { loadedAt: Date.now(), files };
+      }
       return files;
     })
     .finally(() => {

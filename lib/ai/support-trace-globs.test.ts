@@ -4,10 +4,12 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import picomatch from "next/dist/compiled/picomatch/index.js";
 import {
+  MIN_SUPPORT_CORPUS_FILES,
   SUPPORT_CORPUS_SNAPSHOT,
   SUPPORT_SEARCH_TRACE_INCLUDES,
   SUPPORT_SEARCH_TRACE_NESTED_EXCLUDE_ROUTE,
   collectCorpusSources,
+  compareCorpusPaths,
   indexCorpusSource,
   parseCorpusSnapshot,
 } from "./codebase-index";
@@ -66,7 +68,11 @@ describe("support corpus tracing globs", () => {
   });
 
   it("round-trips the live corpus through the snapshot JSON", async () => {
-    const sources = await collectCorpusSources();
+    const sources = await collectCorpusSources(repoRoot);
+    expect(sources.length).toBeGreaterThanOrEqual(MIN_SUPPORT_CORPUS_FILES);
+    const paths = sources.map((file) => file.path);
+    const sorted = [...paths].sort((left, right) => compareCorpusPaths(left, right));
+    expect(paths).toEqual(sorted);
     const direct = sources.map(indexCorpusSource);
     const viaJson = parseCorpusSnapshot(JSON.stringify(sources));
     expect(viaJson.map((file) => file.path)).toEqual(direct.map((file) => file.path));

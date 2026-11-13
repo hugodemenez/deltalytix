@@ -18,6 +18,7 @@ const MB = 1024 * 1024;
 const TRANSLATE_LABEL = "app/api/ai/support/translate-label/route";
 const JOURNAL_DOCX = "app/api/journal-docx/route";
 const SUPPORT_CHAT = "app/api/ai/support/route";
+const SUPPORT_CORPUS_SNAPSHOT = "lib/ai/support-corpus.generated.json";
 
 async function collectNftFiles(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -167,9 +168,22 @@ async function main() {
         `${fragment} still traces next-server dev runtimes (support corpus source leak)`,
       );
     }
+    if (
+      fragment === SUPPORT_CHAT &&
+      !joined.replaceAll("\\", "/").includes(SUPPORT_CORPUS_SNAPSHOT)
+    ) {
+      failures.push(
+        `${fragment} trace is missing ${SUPPORT_CORPUS_SNAPSHOT} (production support search would be empty)`,
+      );
+    }
   }
   if (!journal) {
     failures.push("journal-docx route trace is missing");
+  }
+  if (!pick(SUPPORT_CHAT)) {
+    failures.push(
+      `support chat route trace is missing (${SUPPORT_CORPUS_SNAPSHOT} cannot be verified)`,
+    );
   }
 
   if (failures.length > 0) {

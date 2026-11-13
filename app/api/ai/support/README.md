@@ -40,7 +40,14 @@ Tools (`tools/search-codebase.ts`):
 
 Development walks the repo on disk. Production reads
 `lib/ai/support-corpus.generated.json`, written by `scripts/build-support-corpus.ts`
-during `prebuild`, and `SUPPORT_SEARCH_TRACE_INCLUDES` traces only that file.
+from the repo root (not the process working directory) during `prebuild` and
+explicitly from `scripts/vercel-build.sh` before `bun run build`. The generator
+exits non-zero when the walk is below the minimum file count, and it logs
+`[support-corpus] N files, X MB`. A missing, empty, or invalid snapshot is not
+cached. `SUPPORT_SEARCH_TRACE_INCLUDES` traces only that file, and
+`scripts/analyze-function-traces.mjs` (run at the end of `bun run build`) fails
+the build if the support function trace does not contain it. The Docker image
+generates the same file and copies it into the runtime workdir.
 Tracing `app/**` or `lib/**` source makes Turbopack follow imports in those
 files (TypeScript, pdf-lib, Playwright, every `next-server` runtime) and puts
 ~249MB into both `/api/ai/support` and `/api/ai/support/translate-label`.
