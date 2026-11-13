@@ -20,23 +20,28 @@
   "schedules": {
     "investing": {
       "schedule": "0 5 * * 1",
-      "function": "app/api/cron/investing/route"
+      "timezone": "UTC",
+      "function": "api/cron/investing"
     },
     "renewal-notice": {
       "schedule": "0 9 * * *",
-      "function": "app/api/cron/renewal-notice/route"
+      "timezone": "UTC",
+      "function": "api/cron/renewal-notice"
     },
     "renew-tradovate-token": {
       "schedule": "*/10 * * * *",
-      "function": "app/api/cron/renew-tradovate-token/route"
+      "timezone": "UTC",
+      "function": "api/cron/renew-tradovate-token"
     },
     "daily-sync": {
       "schedule": "*/5 * * * *",
-      "function": "app/api/cron/daily-sync/route"
+      "timezone": "UTC",
+      "function": "api/cron/daily-sync"
     },
     "weekly-recap": {
       "schedule": "0 7 * * 0",
-      "function": "app/api/cron/route"
+      "timezone": "UTC",
+      "function": "api/cron"
     }
   }
 }

@@ -32,6 +32,13 @@ function scheduleRequest(name = 'daily-sync') {
   })
 }
 
+function vercelProduction() {
+  process.env.VERCEL = '1'
+  process.env.VERCEL_ENV = 'production'
+  process.env.VERCEL_TARGET_ENV = 'production'
+  delete process.env.ALLOW_SCHEDULED_JOBS
+}
+
 describe('handlePrivateSchedule', () => {
   const previous = {
     VERCEL: process.env.VERCEL,
@@ -70,7 +77,19 @@ describe('handlePrivateSchedule', () => {
     expect(run).not.toHaveBeenCalled()
   })
 
-  it('runs the job for a valid schedule dispatch', async () => {
+  it('refuses a forged CloudEvent off Vercel (S1)', async () => {
+    delete process.env.VERCEL
+    delete process.env.VERCEL_ENV
+    delete process.env.VERCEL_TARGET_ENV
+    const run = vi.fn()
+    const POST = handlePrivateSchedule(run)
+    const response = await POST(scheduleRequest())
+    expect(response.status).toBe(403)
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('runs the job for a valid schedule dispatch on Vercel production', async () => {
+    vercelProduction()
     const run = vi.fn()
     const POST = handlePrivateSchedule(run)
     const response = await POST(scheduleRequest())

@@ -14,6 +14,8 @@ import {
 import { tradovateFetch } from '@/lib/tradovate/fetch';
 import { handlePrivateSchedule } from '@/lib/cron/handle-private-schedule';
 
+export const maxDuration = 30
+
 /**
  * Keeps Tradovate access tokens alive. Scheduled syncing itself lives in
  * /api/cron/daily-sync, which drives every service off the same schedule maths

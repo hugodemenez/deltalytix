@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { scheduledWorkAllowed } from './scheduled-environment'
+import {
+  isVercelScheduleHost,
+  scheduledWorkAllowed,
+} from './scheduled-environment'
 
 describe('scheduledWorkAllowed', () => {
   const previous = {
@@ -7,6 +10,8 @@ describe('scheduledWorkAllowed', () => {
     VERCEL_ENV: process.env.VERCEL_ENV,
     VERCEL_TARGET_ENV: process.env.VERCEL_TARGET_ENV,
     ALLOW_SCHEDULED_JOBS: process.env.ALLOW_SCHEDULED_JOBS,
+    DATABASE_URL: process.env.DATABASE_URL,
+    PRODUCTION_DATABASE_URL: process.env.PRODUCTION_DATABASE_URL,
   }
 
   afterEach(() => {
@@ -16,8 +21,9 @@ describe('scheduledWorkAllowed', () => {
     }
   })
 
-  it('allows local runs without VERCEL', () => {
-    expect(scheduledWorkAllowed({})).toBe(true)
+  it('refuses local runs without VERCEL (S1)', () => {
+    expect(isVercelScheduleHost({})).toBe(false)
+    expect(scheduledWorkAllowed({})).toBe(false)
   })
 
   it('allows vercel dev', () => {
@@ -46,12 +52,20 @@ describe('scheduledWorkAllowed', () => {
     ).toBe(false)
   })
 
-  it('refuses the custom beta environment', () => {
+  it('refuses the custom beta environment even with ALLOW_SCHEDULED_JOBS (S3)', () => {
     expect(
       scheduledWorkAllowed({
         VERCEL: '1',
         VERCEL_ENV: 'preview',
         VERCEL_TARGET_ENV: 'beta',
+      }),
+    ).toBe(false)
+    expect(
+      scheduledWorkAllowed({
+        VERCEL: '1',
+        VERCEL_ENV: 'preview',
+        VERCEL_TARGET_ENV: 'beta',
+        ALLOW_SCHEDULED_JOBS: '1',
       }),
     ).toBe(false)
   })
@@ -61,9 +75,23 @@ describe('scheduledWorkAllowed', () => {
       scheduledWorkAllowed({
         VERCEL: '1',
         VERCEL_ENV: 'preview',
-        VERCEL_TARGET_ENV: 'beta',
+        VERCEL_TARGET_ENV: 'preview',
         ALLOW_SCHEDULED_JOBS: '1',
       }),
     ).toBe(true)
+  })
+
+  it('refuses a non-prod env whose DATABASE_URL matches production (S3)', () => {
+    const prod = 'postgresql://user:pass@prod-host:5432/app'
+    expect(
+      scheduledWorkAllowed({
+        VERCEL: '1',
+        VERCEL_ENV: 'preview',
+        VERCEL_TARGET_ENV: 'preview',
+        ALLOW_SCHEDULED_JOBS: '1',
+        DATABASE_URL: prod,
+        PRODUCTION_DATABASE_URL: prod,
+      }),
+    ).toBe(false)
   })
 })
