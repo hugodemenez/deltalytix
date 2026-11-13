@@ -8,6 +8,7 @@ import { PrismaPg } from "@prisma/adapter-pg"
 import pg from "pg"
 
 import { PrismaClient } from "../prisma/generated/prisma/client"
+import { createManyInChunks } from "../lib/trades/create-many-chunks"
 import { API_SCOPES } from "../lib/api/scopes"
 import { formatDateToTimestamp } from "../lib/date-utils"
 
@@ -225,7 +226,14 @@ async function main() {
       ...trade,
       accountId: account.id,
     }))
-    await prisma.trade.createMany({ data: trades })
+    await prisma.$transaction(
+      (tx) =>
+        createManyInChunks({
+          rows: trades,
+          createMany: (args) => tx.trade.createMany(args),
+        }),
+      { timeout: 120_000, maxWait: 15_000 },
+    )
 
     await prisma.payout.deleteMany({ where: { accountId: account.id } })
     await prisma.payout.createMany({
