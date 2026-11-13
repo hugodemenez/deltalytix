@@ -3275,6 +3275,8 @@ export default {
       accept: "Accept suggestion",
       dismiss: "Dismiss suggestion",
       minCharsError: "Please write at least 10 characters to use AI",
+      unavailable: "AI is unavailable. Ask your administrator to configure the editor model, then try again.",
+      error: "AI could not complete that action. Try again.",
     },
   },
 } as const;

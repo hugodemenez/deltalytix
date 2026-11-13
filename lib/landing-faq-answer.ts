@@ -1,6 +1,7 @@
 import { generateText } from "ai";
 import enFaq from "@/locales/en/faq";
 import frFaq from "@/locales/fr/faq";
+import { aiTaskUnavailableResponse, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 
 export const LANDING_FAQ_LOCALES = ["en", "fr"] as const;
 export type LandingFaqLocale = (typeof LANDING_FAQ_LOCALES)[number];
@@ -9,9 +10,6 @@ export const LANDING_FAQ_SOURCES = ["faq", "ai", "fallback"] as const;
 export type LandingFaqSource = (typeof LANDING_FAQ_SOURCES)[number];
 
 export const LANDING_FAQ_QUESTION_MAX_LENGTH = 400;
-export const LANDING_FAQ_MODEL =
-  process.env.LANDING_FAQ_MODEL ?? "openai/gpt-5-nano";
-
 const FAQ_KNOWLEDGE_ITEMS = [1, 2, 3, 4, 5, 6] as const;
 
 type FaqCopy = {
@@ -287,11 +285,8 @@ export function isLandingFaqLocale(value: string): value is LandingFaqLocale {
   return value === "en" || value === "fr";
 }
 
-export function isLandingFaqAiConfigured(
-  apiKey = process.env.OPENAI_API_KEY,
-): boolean {
-  const key = apiKey?.trim();
-  return Boolean(key && key !== "dummy");
+export function isLandingFaqAiConfigured(): boolean {
+  return aiTaskUnavailableResponse("landing-faq") == null;
 }
 
 export function normalizeLandingFaqText(value: string): string {
@@ -406,14 +401,8 @@ async function generateLandingFaqAnswer(args: {
 
   try {
     const { text } = await args.generate({
-      model: LANDING_FAQ_MODEL,
-      maxOutputTokens: 280,
-      providerOptions: {
-        openai: {
-          reasoningEffort: "none",
-        },
-      },
-      system: knowledgePrompt(args.locale),
+      ...resolveAiTask("landing-faq"),
+      instructions: knowledgePrompt(args.locale),
       prompt: args.question.trim(),
     });
 

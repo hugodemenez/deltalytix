@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
-import { openai } from "@ai-sdk/openai"
 import { generateText, Output } from "ai"
+import { formatNameBatchError } from "@/lib/ai/format-name-batch"
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task"
 import { z } from "zod"
 
 const adapter = new PrismaPg({
@@ -28,6 +29,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { batchSize = 10, forceUpdate = false, emails: targetEmails }: { batchSize?: number, forceUpdate?: boolean, emails?: string[] } = body
+    const requestedCount =
+      Array.isArray(targetEmails) && targetEmails.length > 0
+        ? targetEmails.length
+        : batchSize
+    const tooMany = formatNameBatchError(requestedCount)
+    if (tooMany) {
+      return NextResponse.json(tooMany, { status: 400 })
+    }
 
     // Determine target subscribers
     let subscribers
@@ -80,7 +89,7 @@ export async function POST(req: NextRequest) {
 
     // Use AI to infer names from emails
     const { output } = await generateText({
-      model: 'openai/gpt-5-mini',
+      ...resolveAiTask("format-name"),
       output: Output.object({ schema: nameInferenceSchema }),
       prompt: `You are an expert at inferring names from email addresses. Analyze the following email addresses and try to extract first and last names where possible.
 
@@ -99,7 +108,6 @@ Return the inferred names with confidence levels:
 - "high": Clear name pattern (e.g., "john.doe@company.com")
 - "medium": Likely name but some uncertainty (e.g., "j.smith@domain.com") 
 - "low": Possible name but high uncertainty (e.g., "jsmith123@email.com")`,
-      temperature: 0.3, // Lower temperature for more consistent results
     })
 
     // Process the AI results and update database

@@ -1,5 +1,6 @@
-import { openai } from "@ai-sdk/openai";
-import { Output, streamObject, streamText } from "ai";
+import { Output, streamText } from "ai";
+import { aiTextStreamResponse } from "@/lib/ai/http-stream";
+import { aiTaskUnavailableResponse, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { NextRequest } from "next/server";
 import { mappingSchema } from "./schema";
 
@@ -8,6 +9,10 @@ export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
+    const availabilityError = aiTaskUnavailableResponse("mappings");
+    if (availabilityError) {
+      return Response.json(availabilityError, { status: 503 });
+    }
     const body = await req.json();
     const { fieldColumns, firstRows } =
       typeof body === "string" ? JSON.parse(body) : body;
@@ -23,9 +28,9 @@ export async function POST(req: NextRequest) {
     }
 
     const result = streamText({
-      model: "openai/gpt-5-mini",
+      ...resolveAiTask("mappings"),
       output: Output.object({schema:mappingSchema}),
-      onFinish: (result) => {
+      onEnd: (result) => {
         console.log("=== AI RESPONSE ===");
         console.log(
           "AI Mapping Result:",
@@ -84,7 +89,7 @@ export async function POST(req: NextRequest) {
           .join("\n"),
     });
 
-    return result.toTextStreamResponse();
+    return aiTextStreamResponse(result);
   } catch (error) {
     console.error("Error in mappings route:", error);
     return new Response(

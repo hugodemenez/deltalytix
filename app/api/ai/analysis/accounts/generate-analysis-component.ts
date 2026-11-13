@@ -1,7 +1,7 @@
 import { Output, tool } from "ai";
 import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
 import { z } from 'zod/v3';
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { AccountAnalysisSchema, type AccountAnalysis } from './get-account-performance';
 
 // Define the simplified schema for the structured analysis output (4 parts only)
@@ -82,7 +82,7 @@ Please provide a comprehensive structured analysis that would be valuable for a 
     try {
       // Generate structured AI analysis using generateText
       const { output } = await generateText({
-        model: 'openai/gpt-5-mini',
+        ...resolveAiTask("analysis-component"),
         output: Output.object({ schema: AnalysisOutputSchema }),
         prompt: analysisPrompt,
       });

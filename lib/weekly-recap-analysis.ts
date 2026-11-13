@@ -3,14 +3,10 @@
  *
  * Production callers pass only the recap week's daily PnL (Mon–Sun UTC).
  * The model must not invent a multi-day ramp from a single session —
- * Sep 6 2026 1-day weeks (Gregoire, Corentin) failed that way.
+ * Sep 6 2026 1-day weeks (Gregoire, Corentin) failed that way when the model
+ * answered without reasoning. The `weekly-recap` task is gpt-6-luna at
+ * effort high for that reason (`lib/ai/tasks.ts`).
  */
-
-export const WEEKLY_ANALYSIS_MODEL =
-  process.env.WEEKLY_ANALYSIS_MODEL ?? "openai/gpt-5.6-luna"
-
-/** Cursor "Luna High" = GPT-5.6 Luna with high reasoning via AI Gateway. */
-export const WEEKLY_ANALYSIS_REASONING_EFFORT = "high" as const
 
 export type DailyPnL = {
   date: Date

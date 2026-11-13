@@ -1,4 +1,7 @@
-import { convertToModelMessages, streamText, UIMessage, stepCountIs } from "ai";
+import { convertToModelMessages, streamText, UIMessage, isStepCount } from "ai";
+import { omitSystemMessages } from "@/lib/ai/client-messages";
+import { aiUiStreamResponse } from "@/lib/ai/http-stream";
+import { aiTaskUnavailableResponse, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
 
@@ -75,6 +78,11 @@ You are analyzing performance across different trading accounts. Your primary ta
 
 export async function POST(req: NextRequest) {
   try {
+    const availabilityError = aiTaskUnavailableResponse("analysis-accounts");
+    if (availabilityError) {
+      return Response.json(availabilityError, { status: 503 });
+    }
+
     const {
       messages,
       username,
@@ -105,11 +113,13 @@ export async function POST(req: NextRequest) {
       currentTime,
     });
     console.log("Validated data:", validatedData);
-    const modelMessages = await convertToModelMessages(messages);
+    const modelMessages = await convertToModelMessages(
+      omitSystemMessages(messages),
+    );
 
     const result = streamText({
-      model: "openai/gpt-4o-mini",
-      system: getAccountAnalysisPrompt(
+      ...resolveAiTask("analysis-accounts"),
+      instructions: getAccountAnalysisPrompt(
         validatedData.locale,
         validatedData.username,
         validatedData.timezone,
@@ -120,13 +130,13 @@ export async function POST(req: NextRequest) {
         generateAnalysisComponent,
       },
       messages: modelMessages,
-      stopWhen: stepCountIs(10),
-      onStepFinish: (step) => {
+      stopWhen: isStepCount(10),
+      onStepEnd: (step) => {
         console.log("Step finished:", step.usage);
       },
     });
 
-    return result.toUIMessageStreamResponse();
+    return aiUiStreamResponse(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return new Response(JSON.stringify({ error: error.errors }), {

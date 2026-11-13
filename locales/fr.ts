@@ -3463,6 +3463,9 @@ export default {
       dismiss: "Ignorer la suggestion",
       minCharsError:
         "Veuillez écrire au moins 10 caractères pour utiliser l’IA",
+      unavailable:
+        "L’IA est indisponible. Demandez à un administrateur de configurer le modèle de l’éditeur, puis réessayez.",
+      error: "L’IA n’a pas pu terminer cette action. Réessayez.",
     },
   },
 } as const;
