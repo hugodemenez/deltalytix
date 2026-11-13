@@ -393,6 +393,7 @@ export async function fetchAdminRebuildFills(params: {
         })
         const marked = markFillSource(fallback, fallbackPlan.source)
         fills.push(...marked)
+        const allFillDays = fills.map((fill) => fillDateYyyymmdd(fill))
         for (const window of coverage) {
           const assigned = marked.filter((fill) =>
             yyyymmddInInclusiveRange(
@@ -407,6 +408,7 @@ export async function fetchAdminRebuildFills(params: {
           const resolved = windowResolvedAfterFallback({
             ...window,
             fallbackFillDays: assigned.map((fill) => fillDateYyyymmdd(fill)),
+            allFillDays,
             occupiedFillDays: params.occupiedFillDays,
             todayYmd,
           })
@@ -414,11 +416,13 @@ export async function fetchAdminRebuildFills(params: {
           window.source = resolved.source
         }
       } catch {
+        const allFillDays = fills.map((fill) => fillDateYyyymmdd(fill))
         for (const window of coverage) {
           window.fallbackStatus = 'failed'
           window.fallbackDates = fallbackDates
           const resolved = windowResolvedAfterFallback({
             ...window,
+            allFillDays,
             occupiedFillDays: params.occupiedFillDays,
             todayYmd,
           })
@@ -427,10 +431,12 @@ export async function fetchAdminRebuildFills(params: {
         }
       }
     } else {
+      const allFillDays = fills.map((fill) => fillDateYyyymmdd(fill))
       for (const window of coverage) {
         const resolved = windowResolvedAfterFallback({
           ...window,
           fallbackDates,
+          allFillDays,
           occupiedFillDays: params.occupiedFillDays,
           todayYmd,
         })

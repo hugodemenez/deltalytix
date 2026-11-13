@@ -388,6 +388,54 @@ describe('windowResolvedAfterFallback', () => {
     ).toEqual({ resolved: false, source: 'unresolved' })
   })
 
+  it('does not treat a prefix as quiet when stored fills started earlier (A1)', () => {
+    expect(
+      windowResolvedAfterFallback({
+        historyStatus: 'no_data',
+        historyFillCount: 0,
+        fallbackStatus: 'ok',
+        fallbackFillCount: 0,
+        fallbackDates: ['20261020'],
+        occupiedFillDays: ['20260801'],
+        startYmd: '2026-09-01',
+        endYmd: '2026-09-30',
+      }),
+    ).toEqual({ resolved: false, source: 'unresolved' })
+  })
+
+  it('does not treat a middle window as quiet when another window already had fills (A1)', () => {
+    expect(
+      windowResolvedAfterFallback({
+        historyStatus: 'no_data',
+        historyFillCount: 0,
+        fallbackStatus: 'ok',
+        fallbackFillCount: 0,
+        fallbackDates: ['20261101'],
+        fallbackFillDays: [],
+        allFillDays: ['20260915'],
+        startYmd: '2026-10-01',
+        endYmd: '2026-10-31',
+      }),
+    ).toEqual({ resolved: false, source: 'unresolved' })
+  })
+
+  it('still treats a true prefix as quiet when other-window fills are after it (A1)', () => {
+    expect(
+      windowResolvedAfterFallback({
+        historyStatus: 'no_data',
+        historyFillCount: 0,
+        fallbackStatus: 'ok',
+        fallbackFillCount: 0,
+        fallbackDates: ['20261020'],
+        fallbackFillDays: [],
+        allFillDays: ['20261020'],
+        occupiedFillDays: ['20261020'],
+        startYmd: '2026-09-01',
+        endYmd: '2026-09-30',
+      }),
+    ).toEqual({ resolved: true, source: 'history' })
+  })
+
   it('requires the first resolved window to start at the anchor date (N3)', () => {
     expect(
       coverageReachesAnchor({
@@ -636,6 +684,133 @@ describe('split-piece quantity consumption (W3)', () => {
     expect(uncoveredTradesByFillIdentity(trades, upstream)).toHaveLength(1)
   })
 
+  it('allocates one upstream fill across scale-out stored trades by qty (B1)', () => {
+    const ssboe = Date.parse('2026-10-20T14:00:00Z') / 1000
+    const closeSsboe = ssboe + 2
+    const trades = [
+      {
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        side: 'Long',
+        quantity: 2,
+        entryPrice: 5800,
+        closePrice: 5801,
+        entryId: '1163441',
+        closeId: '1163450',
+        entryDate: '2026-10-20T14:00:00.000Z',
+        closeDate: '2026-10-20T14:00:02.000Z',
+      },
+      {
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        side: 'Long',
+        quantity: 3,
+        entryPrice: 5800,
+        closePrice: 5801,
+        entryId: '1163441',
+        closeId: '1163450',
+        entryDate: '2026-10-20T14:00:00.000Z',
+        closeDate: '2026-10-20T14:00:02.000Z',
+      },
+    ]
+    const upstream = [
+      fill({ fillId: '1163441', fillSize: 5, ssboe }),
+      fill({
+        fillId: '1163450',
+        transactionType: 'SELL',
+        fillSize: 5,
+        fillPrice: 5801,
+        ssboe: closeSsboe,
+      }),
+    ]
+    expect(uncoveredTradesByFillIdentity(trades, upstream)).toEqual([])
+  })
+
+  it('allocates split pieces across scale-in stored trades that share the rollup id (B1)', () => {
+    const ssboe = Date.parse('2026-10-20T14:00:00Z') / 1000
+    const closeSsboe = ssboe + 2
+    const trades = [
+      {
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        side: 'Long',
+        quantity: 3,
+        entryPrice: 5800,
+        closePrice: 5801,
+        entryId: '1163441',
+        closeId: '1163450',
+        entryDate: '2026-10-20T14:00:00.000Z',
+        closeDate: '2026-10-20T14:00:02.000Z',
+      },
+      {
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        side: 'Long',
+        quantity: 2,
+        entryPrice: 5800,
+        closePrice: 5801,
+        entryId: '1163441',
+        closeId: '1163450',
+        entryDate: '2026-10-20T14:00:00.000Z',
+        closeDate: '2026-10-20T14:00:02.000Z',
+      },
+    ]
+    const upstream = [
+      fill({ fillId: '1163440', fillSize: 2, ssboe }),
+      fill({ fillId: '1163441', fillSize: 3, ssboe: ssboe + 1 }),
+      fill({
+        fillId: '1163450',
+        transactionType: 'SELL',
+        fillSize: 5,
+        fillPrice: 5801,
+        ssboe: closeSsboe,
+      }),
+    ]
+    expect(uncoveredTradesByFillIdentity(trades, upstream)).toEqual([])
+  })
+
+  it('still refuses when stored scale-in qty exceeds upstream lineage qty (B1)', () => {
+    const ssboe = Date.parse('2026-10-20T14:00:00Z') / 1000
+    const trades = [
+      {
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        side: 'Long',
+        quantity: 3,
+        entryPrice: 5800,
+        closePrice: 5801,
+        entryId: '1163441',
+        closeId: '1163450',
+        entryDate: '2026-10-20T14:00:00.000Z',
+        closeDate: '2026-10-20T14:00:02.000Z',
+      },
+      {
+        accountNumber: ACCOUNT,
+        instrument: 'MES',
+        side: 'Long',
+        quantity: 3,
+        entryPrice: 5800,
+        closePrice: 5801,
+        entryId: '1163441',
+        closeId: '1163450',
+        entryDate: '2026-10-20T14:00:00.000Z',
+        closeDate: '2026-10-20T14:00:02.000Z',
+      },
+    ]
+    const upstream = [
+      fill({ fillId: '1163440', fillSize: 2, ssboe }),
+      fill({ fillId: '1163441', fillSize: 3, ssboe: ssboe + 1 }),
+      fill({
+        fillId: '1163450',
+        transactionType: 'SELL',
+        fillSize: 5,
+        fillPrice: 5801,
+        ssboe: ssboe + 2,
+      }),
+    ]
+    expect(uncoveredTradesByFillIdentity(trades, upstream)).toHaveLength(1)
+  })
+
   it('rejects a direct-id match with the wrong side or price', () => {
     expect(
       protocolTradeCoveredByRawFills(
@@ -779,6 +954,23 @@ describe('skippedOrdinaryRangeIsQuiet (F9)', () => {
             fillId: 'old',
             fillDate: '20260114',
             ssboe: Date.parse('2026-01-14T15:00:00Z') / 1000,
+          }),
+        ],
+        lastFlatYmd: '2026-01-15',
+      }),
+    ).toBe(true)
+  })
+
+  it('accepts a last-flat skip when the flattening fill sits on fetch start (F-LF)', () => {
+    expect(
+      skippedOrdinaryRangeIsQuiet({
+        ordinaryStartYmd: '2013-01-01',
+        fetchStartYmd: '2026-01-15',
+        storedFills: [
+          fill({
+            fillId: 'on-start',
+            fillDate: '20260115',
+            ssboe: Date.parse('2026-01-15T15:00:00Z') / 1000,
           }),
         ],
         lastFlatYmd: '2026-01-15',

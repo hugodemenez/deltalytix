@@ -297,46 +297,64 @@ function consumeLegFromPool(
   },
 ): boolean {
   if (!(params.quantity > 0)) return false
-  for (const slot of pool) {
-    if (slot.remaining < params.quantity) continue
-    if (!fillMatchesLeg(slot.fill, params)) continue
-    slot.remaining -= params.quantity
-    return true
-  }
   const storedIds = new Set(rithmicFillIdLookupValues(params.fillId))
   if (storedIds.size === 0) return false
   const storedMs = parseTradeClockMs(params.date) ?? 0
-  const pieces = pool.filter((slot) => {
-    if (!(slot.remaining > 0)) return false
+  const instrument = normalizeInstrument(params.instrument ?? '')
+
+  const slotIdMatch = (slot: FillQtyPool): boolean =>
+    rithmicFillIdLookupValues(slot.fill.fillId).some((id) => storedIds.has(id))
+
+  const sameBook = (slot: FillQtyPool): boolean => {
     if (params.accountNumber && slot.fill.accountId !== params.accountNumber) {
       return false
     }
-    const instrument = normalizeInstrument(params.instrument ?? '')
     if (instrument && normalizeInstrument(slot.fill.symbol) !== instrument) {
       return false
     }
     if (knownFillSide(slot.fill.transactionType) !== params.side) return false
     const fillPrice = Number(slot.fill.fillPrice || slot.fill.avgFillPrice || 0)
-    if (fillPrice !== params.price) return false
+    return fillPrice === params.price
+  }
+
+  const sameTimeLineage = (slot: FillQtyPool): boolean => {
     const fillMs = fillTimestampMs(slot.fill)
-    const fillIds = rithmicFillIdLookupValues(slot.fill.fillId)
-    const idMatch = fillIds.some((id) => storedIds.has(id))
-    const neighbor = isNumericSplitNeighbor(params.fillId, slot.fill.fillId)
-    if (!idMatch && !neighbor) return false
-    return timestampsWithin(storedMs, fillMs, SPLIT_PIECE_WINDOW_MS)
-  })
-  const hasStoredId = pieces.some((slot) =>
-    rithmicFillIdLookupValues(slot.fill.fillId).some((id) => storedIds.has(id)),
-  )
-  if (!hasStoredId) return false
-  const total = pieces.reduce((sum, slot) => sum + slot.remaining, 0)
-  if (total < params.quantity) return false
-  let need = params.quantity
-  for (const slot of pieces) {
-    const take = Math.min(slot.remaining, need)
-    slot.remaining -= take
-    need -= take
-    if (need <= 0) return true
+    if (timestampsWithin(storedMs, fillMs, SPLIT_PIECE_WINDOW_MS)) return true
+    if (!slotIdMatch(slot)) return false
+    const fillDay = fillDayKey(slot.fill)
+    const tradeDay = tradeDayKey(params.date)
+    return Boolean(fillDay && tradeDay && fillDay === tradeDay)
+  }
+
+  const inLineage = (slot: FillQtyPool): boolean => {
+    if (!sameBook(slot) || !sameTimeLineage(slot)) return false
+    return slotIdMatch(slot) || isNumericSplitNeighbor(params.fillId, slot.fill.fillId)
+  }
+
+  // Exact stored id may already be depleted by a sibling scale-in/out trade.
+  // Lineage identity still holds against the original pool.
+  const lineageHasStoredId = pool.some((slot) => sameBook(slot) && sameTimeLineage(slot) && slotIdMatch(slot))
+  const live = pool.filter((slot) => slot.remaining > 0 && inLineage(slot))
+  const liveSum = live.reduce((sum, slot) => sum + slot.remaining, 0)
+  if (lineageHasStoredId && liveSum >= params.quantity) {
+    const ordered = [...live].sort(
+      (left, right) => Number(slotIdMatch(right)) - Number(slotIdMatch(left)),
+    )
+    let need = params.quantity
+    for (const slot of ordered) {
+      const take = Math.min(slot.remaining, need)
+      slot.remaining -= take
+      need -= take
+      if (need <= 0) return true
+    }
+    return false
+  }
+
+  for (const slot of pool) {
+    if (slot.remaining < params.quantity) continue
+    if (!fillMatchesLeg(slot.fill, params)) continue
+    slot.remaining -= params.quantity
+    return true
   }
   return false
 }
@@ -635,6 +653,8 @@ export function windowResolvedAfterFallback(window: {
   fallbackFillCount: number
   fallbackDates?: string[]
   fallbackFillDays?: string[]
+  /** Fill calendar days from every fetched window (history + fallback). */
+  allFillDays?: string[]
   occupiedFillDays?: string[]
   startYmd?: string
   endYmd?: string
@@ -662,6 +682,8 @@ export function windowResolvedAfterFallback(window: {
   const earliest = earliestActivityYmd([
     ...(window.fallbackDates ?? []),
     ...(window.fallbackFillDays ?? []),
+    ...(window.allFillDays ?? []),
+    ...(window.occupiedFillDays ?? []),
   ])
   if (
     earliest &&
@@ -670,7 +692,8 @@ export function windowResolvedAfterFallback(window: {
       window.startYmd,
       window.endYmd,
       window.occupiedFillDays,
-    )
+    ) &&
+    !windowContainsOccupiedDay(window.startYmd, window.endYmd, window.allFillDays)
   ) {
     return { resolved: true, source: 'history' }
   }
@@ -747,7 +770,9 @@ export function skippedOrdinaryRangeIsQuiet(params: {
     return true
   }
   const lastFlat = params.lastFlatYmd ? ymdToYyyymmdd(params.lastFlatYmd) : ''
-  if (occupiedInSkip && /^\d{8}$/.test(lastFlat) && lastFlat >= fetchStart) {
+  // Last-flat at/after fetch start proves the skipped prefix is quiet even
+  // when the flattening fill sits on the fetch-start day (not in the skip).
+  if (/^\d{8}$/.test(lastFlat) && lastFlat >= fetchStart) {
     return true
   }
   return false
