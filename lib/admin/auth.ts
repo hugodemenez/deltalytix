@@ -6,24 +6,11 @@
  * - `ALLOWED_ADMIN_USER_ID` — weekly-recap target fallback
  * - `ADMIN_USER_IDS` — comma-separated extra ids
  *
- * Cron scripts may also send `Authorization: Bearer $CRON_SECRET` (the same
- * header `/api/cron/daily-sync` already checks). That secret can now invoke
- * the Protocol account rebuild; treat it as operator-only. An empty or
- * whitespace-only `CRON_SECRET` never matches.
+ * Only an authenticated allowlisted session is accepted. A leftover
+ * `Authorization: Bearer $CRON_SECRET` header is not a credential.
  */
 import 'server-only'
-import { timingSafeEqual } from 'node:crypto'
 import { getUserId } from '@/server/auth'
-
-function secretsEqual(expected: string, provided: string): boolean {
-  const a = Buffer.from(expected)
-  const b = Buffer.from(provided)
-  if (a.length !== b.length) {
-    timingSafeEqual(a, a)
-    return false
-  }
-  return timingSafeEqual(a, b)
-}
 
 export function adminUserIdsFromEnv(): string[] {
   const ids = [
@@ -39,25 +26,14 @@ export function isAdminUserId(userId: string | null | undefined): boolean {
   return adminUserIdsFromEnv().includes(userId)
 }
 
-export function hasCronSecret(request: Request): boolean {
-  const secret = process.env.CRON_SECRET?.trim()
-  if (!secret) return false
-  const header = request.headers.get('authorization')
-  if (!header?.startsWith('Bearer ')) return false
-  return secretsEqual(secret, header.slice('Bearer '.length))
-}
-
 export type AdminAuthorization =
-  | { ok: true; via: 'session' | 'cron'; actorUserId?: string }
+  | { ok: true; via: 'session'; actorUserId: string }
   | { ok: false; status: 401 | 403 }
 
 export async function authorizeAdminRequest(
   request: Request,
 ): Promise<AdminAuthorization> {
-  if (hasCronSecret(request)) {
-    return { ok: true, via: 'cron' }
-  }
-
+  void request
   let userId: string | null = null
   try {
     userId = await getUserId()

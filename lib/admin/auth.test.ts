@@ -48,7 +48,7 @@ describe('admin allowlist', () => {
     expect(isAdminUserId('user-other')).toBe(false)
   })
 
-  it('rejects a missing session without a cron secret', async () => {
+  it('rejects a missing session', async () => {
     getUserId.mockRejectedValue(new Error('User not authenticated'))
     const result = await authorizeAdminRequest(requestWithAuth())
     expect(result).toEqual({ ok: false, status: 401 })
@@ -70,43 +70,20 @@ describe('admin allowlist', () => {
     })
   })
 
-  it('accepts the existing cron secret header without a session', async () => {
+  it('rejects the old CRON_SECRET bearer without a session', async () => {
     getUserId.mockRejectedValue(new Error('User not authenticated'))
     const result = await authorizeAdminRequest(
       requestWithAuth('Bearer cron-secret'),
     )
-    expect(result).toEqual({ ok: true, via: 'cron' })
-    expect(getUserId).not.toHaveBeenCalled()
-  })
-
-  it('does not treat an empty CRON_SECRET as a match', async () => {
-    delete process.env.CRON_SECRET
-    getUserId.mockRejectedValue(new Error('User not authenticated'))
-    const result = await authorizeAdminRequest(requestWithAuth('Bearer '))
     expect(result).toEqual({ ok: false, status: 401 })
+    expect(getUserId).toHaveBeenCalled()
   })
 
-  it('does not treat CRON_SECRET="" as a match', async () => {
-    process.env.CRON_SECRET = ''
-    getUserId.mockRejectedValue(new Error('User not authenticated'))
-    const result = await authorizeAdminRequest(requestWithAuth('Bearer '))
-    expect(result).toEqual({ ok: false, status: 401 })
-  })
-
-  it('does not treat a whitespace-only CRON_SECRET as a match', async () => {
-    process.env.CRON_SECRET = '   '
-    getUserId.mockRejectedValue(new Error('User not authenticated'))
+  it('still requires an allowlisted session when CRON_SECRET is set', async () => {
+    getUserId.mockResolvedValue('user-other')
     const result = await authorizeAdminRequest(
-      requestWithAuth('Bearer    '),
+      requestWithAuth('Bearer cron-secret'),
     )
-    expect(result).toEqual({ ok: false, status: 401 })
-  })
-
-  it('rejects a wrong bearer token even when a secret is set', async () => {
-    getUserId.mockRejectedValue(new Error('User not authenticated'))
-    const result = await authorizeAdminRequest(
-      requestWithAuth('Bearer not-the-secret'),
-    )
-    expect(result).toEqual({ ok: false, status: 401 })
+    expect(result).toEqual({ ok: false, status: 403 })
   })
 })

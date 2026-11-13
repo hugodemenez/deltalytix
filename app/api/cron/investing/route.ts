@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { handlePrivateSchedule } from '@/lib/cron/handle-private-schedule'
 import { prisma } from '@/lib/prisma'
 import {
   fetchInvestingEvents,
@@ -14,9 +14,8 @@ import { upsertFinancialEvents } from '@/lib/financial-events-store'
  * from datacenter IPs, so the cron fetches it through Jina Reader and parses
  * the returned markdown. Optional JINA_API_KEY raises rate limits.
  *
- * Not CRON_SECRET-gated today (unlike other cron handlers). Vercel only
- * schedules crons on production; the HTTP endpoint can still be invoked on
- * preview for verification.
+ * Private Vercel Schedule (`investing`). Always persists to the deployment's
+ * database, matching the former `/api/cron/investing?db=true` cron.
  */
 export const maxDuration = 60
 
@@ -100,71 +99,22 @@ async function replaceEventsInWindow(events: MappedFinancialEvent[]) {
   return upsertFinancialEvents(events)
 }
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const langParam = searchParams.get('lang')
-    const shouldStoreInDb = searchParams.get('db') === 'true'
-    const debug = searchParams.get('debug') === '1'
-
-    const langs: CronLang[] =
-      langParam === 'en' || langParam === 'fr' ? [langParam] : ['en', 'fr']
-
-    console.log(
-      `Fetching Investing.com calendars via Jina for langs=${langs.join(',')}`,
-    )
-
-    const { events, diagnostics } = await fetchInvestingEvents(langs)
-
-    if (events.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'No events found',
-          source: 'investing',
-          langs,
-          ...(debug ? { diagnostics } : {}),
-        },
-        { status: 404 },
-      )
-    }
-
-    if (shouldStoreInDb) {
-      console.log(`Storing ${events.length} Investing.com events...`)
-      const storedCount = await replaceEventsInWindow(events)
-
-      return NextResponse.json({
-        success: true,
-        source: 'investing',
-        langs,
-        count: events.length,
-        storedCount,
-        ...(debug
-          ? {
-              diagnostics,
-              events: events.slice(0, 5),
-            }
-          : {}),
-      })
-    }
-
-    return NextResponse.json({
-      success: true,
-      source: 'investing',
-      langs,
-      events,
-      count: events.length,
-      ...(debug ? { diagnostics } : {}),
-    })
-  } catch (error) {
-    console.error('Error in GET route:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch events from Investing.com',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 },
-    )
+async function runInvestingCalendarSync() {
+  const langs: CronLang[] = ['en', 'fr']
+  console.log(
+    `Fetching Investing.com calendars via Jina for langs=${langs.join(',')}`,
+  )
+  const { events } = await fetchInvestingEvents(langs)
+  if (events.length === 0) {
+    throw new Error('No Investing.com events found')
   }
+  console.log(`Storing ${events.length} Investing.com events...`)
+  const storedCount = await replaceEventsInWindow(events)
+  console.info(
+    `[schedule investing] stored ${storedCount} rows from ${events.length} events`,
+  )
 }
+
+export const POST = handlePrivateSchedule(async () => {
+  await runInvestingCalendarSync()
+})

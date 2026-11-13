@@ -1,24 +1,42 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/investing?db=true",
-      "schedule": "0 5 * * 1"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app/api/cron/investing/route.ts": {
+      "experimentalTriggers": [{ "type": "schedule/v1beta" }]
     },
-    {
-      "path": "/api/cron/renewal-notice",
-      "schedule": "0 9 * * *"
+    "app/api/cron/renewal-notice/route.ts": {
+      "experimentalTriggers": [{ "type": "schedule/v1beta" }]
     },
-    {
-      "path": "/api/cron/renew-tradovate-token",
-      "schedule": "*/10 * * * *"
+    "app/api/cron/renew-tradovate-token/route.ts": {
+      "experimentalTriggers": [{ "type": "schedule/v1beta" }]
     },
-    {
-      "path": "/api/cron/daily-sync",
-      "schedule": "*/5 * * * *"
+    "app/api/cron/daily-sync/route.ts": {
+      "experimentalTriggers": [{ "type": "schedule/v1beta" }]
     },
-    {
-      "path": "/api/cron",
-      "schedule": "0 7 * * 0"
+    "app/api/cron/route.ts": {
+      "experimentalTriggers": [{ "type": "schedule/v1beta" }]
     }
-  ]
+  },
+  "schedules": {
+    "investing": {
+      "schedule": "0 5 * * 1",
+      "function": "app/api/cron/investing/route"
+    },
+    "renewal-notice": {
+      "schedule": "0 9 * * *",
+      "function": "app/api/cron/renewal-notice/route"
+    },
+    "renew-tradovate-token": {
+      "schedule": "*/10 * * * *",
+      "function": "app/api/cron/renew-tradovate-token/route"
+    },
+    "daily-sync": {
+      "schedule": "*/5 * * * *",
+      "function": "app/api/cron/daily-sync/route"
+    },
+    "weekly-recap": {
+      "schedule": "0 7 * * 0",
+      "function": "app/api/cron/route"
+    }
+  }
 }

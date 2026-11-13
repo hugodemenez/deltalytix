@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server"
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { Resend } from 'resend'
-import { headers } from 'next/headers'
+import { handlePrivateSchedule } from '@/lib/cron/handle-private-schedule'
 import {
   buildWeeklyRecapEmail,
   type WeeklyRecapEmailData,
@@ -31,22 +30,12 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 // default duration is not enough once the subscriber list grows.
 export const maxDuration = 300
 
-// Weekly performance recap. Vercel cron: path `/api/cron`, schedule `0 7 * * 0`.
-// Sunday 08:00 Lisbon. Summer WEST UTC+1 → 07:00 UTC (`0 7 * * 0`).
-// Winter WET UTC+0 → would need 08:00 UTC. Vercel cron objects only allow path + schedule.
+// Weekly performance recap. Schedule `weekly-recap`: `0 7 * * 0` UTC.
+// Sunday 08:00 Lisbon. Summer WEST UTC+1 → 07:00 UTC.
+// Winter WET UTC+0 → would need 08:00 UTC. Kept on UTC to match the old cron.
 // Covers the Mon–Sun week ending that same Sunday — see `getRecapWeekUtc`.
-export async function GET(req: Request) {
+async function runWeeklyRecap() {
   try {
-    // Verify that this is a legitimate Vercel cron job request
-    const headersList = await headers()
-    const authHeader = headersList.get('authorization')
-    
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
 
     // Get all users with newsletter enabled
     const usersWithNewsletter = await prisma.newsletter.findMany({
@@ -67,10 +56,8 @@ export async function GET(req: Request) {
     })
 
     if (users.length === 0) {
-      return NextResponse.json(
-        { message: 'No users found' },
-        { status: 200 }
-      )
+      console.info('[schedule weekly-recap] no newsletter subscribers')
+      return
     }
 
     // Build subscribers in chunks of 100 (LLM/DB concurrency), then send
@@ -194,23 +181,12 @@ export async function GET(req: Request) {
 
     const summary = `Weekly emails processed: ${successCount} successful, ${errorCount} failed, ${skippedCount} skipped (green-week gate), ${duplicateCount} already sent`
     console.log(summary)
-
-    return NextResponse.json({
-      success: true,
-      message: summary,
-      stats: {
-        success: successCount,
-        failed: errorCount,
-        skipped: skippedCount,
-        duplicate: duplicateCount,
-      }
-    })
-
   } catch (error) {
     console.error('Cron job error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    throw error
   }
 }
+
+export const POST = handlePrivateSchedule(async () => {
+  await runWeeklyRecap()
+})
