@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { billingLookupKey } from "./billing-plan-catalog";
 import {
   activeBackToWorkIntervals,
@@ -11,6 +11,7 @@ import {
   formatBackToWorkOfferUntil,
   isBackToWorkOfferActive,
   isStripePromoCurrencyMismatch,
+  isStripePromoDiscountRejection,
   resolveBackToWorkPromoCode,
   stripeCheckoutPromoParams,
   type BackToWorkPromoEnv,
@@ -372,17 +373,86 @@ describe("isStripePromoCurrencyMismatch", () => {
   });
 });
 
+function stripeInvalidRequest(message: string, param: string, code?: string) {
+  return {
+    type: "StripeInvalidRequestError",
+    rawType: "invalid_request_error",
+    param,
+    code,
+    message,
+  };
+}
+
+describe("isStripePromoDiscountRejection", () => {
+  it("treats expired, inactive, and first-time-only promotion errors as retryable", () => {
+    expect(
+      isStripePromoDiscountRejection(
+        stripeInvalidRequest(
+          "This promotion code has expired.",
+          "discounts[0][promotion_code]",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      isStripePromoDiscountRejection(
+        stripeInvalidRequest(
+          "This promotion code is inactive.",
+          "discounts[0][promotion_code]",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      isStripePromoDiscountRejection(
+        stripeInvalidRequest(
+          "This promotion code is restricted to first-time customers.",
+          "discounts[0][promotion_code]",
+          "promotion_code_customer_not_first_time",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps the currency mismatch retryable and ignores unrelated invalid requests", () => {
+    expect(
+      isStripePromoDiscountRejection(
+        new Error(
+          "The promotion code default currency (usd) does not match the line item currency (eur).",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      isStripePromoDiscountRejection(
+        stripeInvalidRequest("No such customer: cus_x", "customer"),
+      ),
+    ).toBe(false);
+    expect(
+      isStripePromoDiscountRejection(
+        stripeInvalidRequest("No such price: price_missing", "line_items[0][price]"),
+      ),
+    ).toBe(false);
+    expect(isStripePromoDiscountRejection(new Error("card_declined"))).toBe(false);
+  });
+});
+
 describe("createCheckoutSessionWithPromoFallback", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("returns the first session when create succeeds", async () => {
     const create = async () => ({ id: "cs_ok" });
     await expect(
       createCheckoutSessionWithPromoFallback(create, {
         discounts: [{ promotion_code: "test-monthly-promo" }],
       }),
-    ).resolves.toEqual({ id: "cs_ok" });
+    ).resolves.toEqual({
+      session: { id: "cs_ok" },
+      discountStripped: false,
+    });
   });
 
   it("retries without discounts on a promo currency mismatch", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const calls: Record<string, unknown>[] = [];
     const create = async (params: Record<string, unknown>) => {
       calls.push(params);
@@ -397,19 +467,87 @@ describe("createCheckoutSessionWithPromoFallback", () => {
     await expect(
       createCheckoutSessionWithPromoFallback(create, {
         mode: "subscription",
+        metadata: { plan: "plus_monthly_eur" },
         discounts: [{ promotion_code: "test-monthly-promo" }],
       }),
-    ).resolves.toEqual({ id: "cs_fallback" });
+    ).resolves.toEqual({
+      session: { id: "cs_fallback" },
+      discountStripped: true,
+    });
 
     expect(calls).toHaveLength(2);
     expect(calls[1]).toEqual({
       mode: "subscription",
+      metadata: {
+        plan: "plus_monthly_eur",
+        auto_promo_discount_stripped: "true",
+      },
       allow_promotion_codes: true,
     });
     expect(calls[1]).not.toHaveProperty("discounts");
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining("rejected auto-applied promotion"),
+      "test-monthly-promo",
+      expect.stringContaining("does not match"),
+    );
   });
 
-  it("rethrows non-mismatch Stripe errors", async () => {
+  it.each([
+    ["expired", "This promotion code has expired."],
+    ["inactive", "This promotion code is inactive."],
+    [
+      "first-time-only",
+      "This promotion code is restricted to first-time customers.",
+    ],
+  ])("retries without the discount when Stripe says the code is %s", async (_label, message) => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const calls: Record<string, unknown>[] = [];
+    const create = async (params: Record<string, unknown>) => {
+      calls.push(params);
+      if (params.discounts) {
+        throw stripeInvalidRequest(message, "discounts[0][promotion_code]");
+      }
+      return { id: "cs_retry" };
+    };
+
+    await expect(
+      createCheckoutSessionWithPromoFallback(create, {
+        mode: "payment",
+        discounts: [{ promotion_code: "promo_rejected" }],
+      }),
+    ).resolves.toEqual({
+      session: { id: "cs_retry" },
+      discountStripped: true,
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toMatchObject({
+      mode: "payment",
+      allow_promotion_codes: true,
+      metadata: { auto_promo_discount_stripped: "true" },
+    });
+    expect(calls[1]).not.toHaveProperty("discounts");
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining("rejected auto-applied promotion"),
+      "promo_rejected",
+      message,
+    );
+  });
+
+  it("rethrows customer and price errors", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    const create = async () => {
+      throw stripeInvalidRequest("No such price: price_missing", "line_items[0][price]");
+    };
+    await expect(
+      createCheckoutSessionWithPromoFallback(create, {
+        discounts: [{ promotion_code: "test-monthly-promo" }],
+      }),
+    ).rejects.toMatchObject({ message: "No such price: price_missing" });
+    expect(errorLog).not.toHaveBeenCalled();
+  });
+
+  it("rethrows a plain missing-price error", async () => {
     const create = async () => {
       throw new Error("No such price: price_missing");
     };
