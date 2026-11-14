@@ -1,6 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js"
-import { z } from "zod"
 import { hasRequiredScopes } from "@/lib/api/scopes"
 import type { AuthenticatedApiRequest } from "@/lib/api/auth"
 import { decodeCursor, encodeCursor } from "@/lib/api/pagination"
@@ -19,6 +18,7 @@ import {
   MCP_TOOLS,
   type McpToolName,
 } from "@/lib/mcp/catalog"
+import { MCP_TOOL_INPUT_SCHEMAS } from "@/lib/mcp/tool-input-schemas"
 import { buildMcpServerInfo } from "@/lib/mcp/server-info"
 
 const annotations = {
@@ -73,49 +73,6 @@ function pageSeries<T>(
   }
 }
 
-const tradeFilters = {
-  accountNumber: z
-    .string()
-    .optional()
-    .describe("Account number to keep. Omit to include every account the token can read."),
-  instrument: z.string().optional().describe("Instrument symbol, for example ES or NQ."),
-  side: z
-    .string()
-    .optional()
-    .describe("Trade side. Use long or short. Omit to include both."),
-  from: z
-    .string()
-    .optional()
-    .describe("Inclusive ISO 8601 lower bound on entryDate. A date (YYYY-MM-DD) starts at 00:00:00Z."),
-  to: z
-    .string()
-    .optional()
-    .describe("Inclusive ISO 8601 upper bound on entryDate. A date (YYYY-MM-DD) runs through the end of that UTC day."),
-}
-
-const seriesFilters = {
-  from: tradeFilters.from,
-  to: tradeFilters.to,
-  accountNumbers: z
-    .array(z.string())
-    .max(50)
-    .optional()
-    .describe("Account numbers to include. Omit for the combined series."),
-  limit: z
-    .number()
-    .int()
-    .min(1)
-    .max(MCP_SERIES_MAX_LIMIT)
-    .optional()
-    .describe(
-      `Maximum points to return. Defaults to ${MCP_SERIES_DEFAULT_LIMIT}. Cannot exceed ${MCP_SERIES_MAX_LIMIT}.`,
-    ),
-  cursor: z
-    .string()
-    .optional()
-    .describe("Pagination cursor from the previous response's nextCursor."),
-}
-
 function definition(name: McpToolName) {
   const tool = MCP_TOOLS.find((entry) => entry.name === name)
   if (!tool) throw new Error(`Unknown MCP tool ${name}`)
@@ -136,7 +93,7 @@ export function createDeltalytixMcpServer(
     {
       title: profile.title,
       description: profile.description,
-      inputSchema: z.object({}).strict(),
+      inputSchema: MCP_TOOL_INPUT_SCHEMAS.get_profile,
       annotations: { ...annotations, title: profile.title },
     },
     async () => {
@@ -156,16 +113,7 @@ export function createDeltalytixMcpServer(
     {
       title: accounts.title,
       description: accounts.description,
-      inputSchema: z
-        .object({
-          includeMetrics: z
-            .boolean()
-            .optional()
-            .describe(
-              "When true, attach balance, drawdown, consistency, and progress for each account.",
-            ),
-        })
-        .strict(),
+      inputSchema: MCP_TOOL_INPUT_SCHEMAS.list_accounts,
       annotations: { ...annotations, title: accounts.title },
     },
     async ({ includeMetrics }) => {
@@ -183,22 +131,7 @@ export function createDeltalytixMcpServer(
     {
       title: trades.title,
       description: trades.description,
-      inputSchema: z
-        .object({
-          ...tradeFilters,
-          limit: z
-            .number()
-            .int()
-            .min(1)
-            .max(500)
-            .optional()
-            .describe("Page size. Defaults to 100. Cannot exceed 500."),
-          cursor: z
-            .string()
-            .optional()
-            .describe("Pagination cursor from the previous response's nextCursor."),
-        })
-        .strict(),
+      inputSchema: MCP_TOOL_INPUT_SCHEMAS.list_trades,
       annotations: { ...annotations, title: trades.title },
     },
     async (args) => {
@@ -224,7 +157,7 @@ export function createDeltalytixMcpServer(
     {
       title: summary.title,
       description: summary.description,
-      inputSchema: z.object(tradeFilters).strict(),
+      inputSchema: MCP_TOOL_INPUT_SCHEMAS.get_metrics_summary,
       annotations: { ...annotations, title: summary.title },
     },
     async (args) => {
@@ -248,7 +181,7 @@ export function createDeltalytixMcpServer(
     {
       title: accountMetrics.title,
       description: accountMetrics.description,
-      inputSchema: z.object({}).strict(),
+      inputSchema: MCP_TOOL_INPUT_SCHEMAS.get_account_metrics,
       annotations: { ...annotations, title: accountMetrics.title },
     },
     async () => {
@@ -264,15 +197,7 @@ export function createDeltalytixMcpServer(
     {
       title: equity.title,
       description: equity.description,
-      inputSchema: z
-        .object({
-          ...seriesFilters,
-          showIndividual: z
-            .boolean()
-            .optional()
-            .describe("When true, include a series per account (at most 8)."),
-        })
-        .strict(),
+      inputSchema: MCP_TOOL_INPUT_SCHEMAS.get_equity_curve,
       annotations: { ...annotations, title: equity.title },
     },
     async (args) => {
@@ -303,7 +228,7 @@ export function createDeltalytixMcpServer(
     {
       title: daily.title,
       description: daily.description,
-      inputSchema: z.object(seriesFilters).strict(),
+      inputSchema: MCP_TOOL_INPUT_SCHEMAS.get_daily_pnl,
       annotations: { ...annotations, title: daily.title },
     },
     async (args) => {
@@ -340,7 +265,7 @@ export function createDeltalytixMcpServer(
     {
       title: connections.title,
       description: connections.description,
-      inputSchema: z.object({}).strict(),
+      inputSchema: MCP_TOOL_INPUT_SCHEMAS.list_connections,
       annotations: { ...annotations, title: connections.title },
     },
     async () => {

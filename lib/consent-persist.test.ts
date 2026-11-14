@@ -58,11 +58,48 @@ describe("persistConsentSettings", () => {
     expect(posthog.stopSessionRecording).not.toHaveBeenCalled();
   });
 
-  it("persists a CCPA-style analytics opt-out", () => {
+  it("persists a CCPA-style analytics opt-out and denies Google ads consent", () => {
+    const setItem = vi.mocked(localStorage.setItem);
+
     persistAnalyticsOptOut();
 
     expect(posthog.opt_out_capturing).toHaveBeenCalledOnce();
     expect(posthog.stopSessionRecording).toHaveBeenCalledOnce();
+    expect(setItem).toHaveBeenCalled();
+    const saved = JSON.parse(String(setItem.mock.calls.at(-1)?.[1]));
+    expect(saved).toMatchObject({
+      analytics_storage: false,
+      ad_storage: false,
+      ad_user_data: false,
+      ad_personalization: false,
+    });
+    expect(window.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: CONSENT_UPDATED_EVENT }),
+    );
+  });
+
+  it("overrides a stored ad_storage:true on analytics opt-out", () => {
+    const getItem = vi.mocked(localStorage.getItem);
+    getItem.mockReturnValue(
+      JSON.stringify({
+        ...DEFAULT_CONSENT_SETTINGS,
+        analytics_storage: true,
+        ad_storage: true,
+        ad_user_data: true,
+        ad_personalization: true,
+      }),
+    );
+    const setItem = vi.mocked(localStorage.setItem);
+
+    persistAnalyticsOptOut();
+
+    const saved = JSON.parse(String(setItem.mock.calls.at(-1)?.[1]));
+    expect(saved).toMatchObject({
+      analytics_storage: false,
+      ad_storage: false,
+      ad_user_data: false,
+      ad_personalization: false,
+    });
   });
 
   it("stops replay immediately when Product use is saved off", () => {

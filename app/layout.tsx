@@ -1,9 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
+import { ConsentGatedVercelAnalytics } from "@/components/consent-gated-vercel-analytics";
 import { ScrollLockFix } from "@/components/scroll-lock-fix";
 import { getSiteOrigin, siteUrl } from "@/lib/site-url";
 import { getSiteMetadataCopy } from "@/lib/og/site-metadata";
@@ -369,8 +368,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <GoogleAdsConversions />
         </Suspense>
-        <SpeedInsights />
-        <Analytics />
+        <ConsentGatedVercelAnalytics />
         {children}
       </body>
     </html>

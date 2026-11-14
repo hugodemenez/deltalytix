@@ -1,57 +1,18 @@
 'use server'
 
-import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 import { prisma } from '@/lib/prisma'
 import { createClient, signOut } from '@/server/auth'
-import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
-import { stripe } from '@/server/stripe'
-
-async function cancelStripeForEmail(email: string): Promise<void> {
-  if (isLocalDashboardAuthBypassEnabled()) return
-
-  try {
-    const customers = await stripe.customers.list({ email, limit: 10 })
-    for (const customer of customers.data) {
-      const subscriptions = await stripe.subscriptions.list({
-        customer: customer.id,
-        status: 'all',
-        limit: 100,
-      })
-      for (const subscription of subscriptions.data) {
-        if (subscription.status !== 'canceled') {
-          await stripe.subscriptions.cancel(subscription.id)
-        }
-      }
-      await stripe.customers.del(customer.id)
-    }
-  } catch (error) {
-    console.error('[delete-account] Stripe cleanup failed:', error)
-  }
-}
-
-async function deleteSupabaseAuthUser(authUserId: string): Promise<void> {
-  if (isLocalDashboardAuthBypassEnabled()) return
-
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_KEY
-  if (!url || !serviceKey) {
-    throw new Error('Unable to delete the auth user')
-  }
-
-  const admin = createSupabaseAdmin(url, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-  const { error } = await admin.auth.admin.deleteUser(authUserId)
-  if (error) {
-    throw new Error(error.message)
-  }
-}
+import { cancelStripeForEmail } from '@/server/account-deletion/stripe'
+import { deleteUserTradeImageObjects } from '@/server/account-deletion/storage'
+import { deleteUserTradeRelatedRows } from '@/server/account-deletion/trade-rows'
+import { deleteSupabaseAuthUser } from '@/server/account-deletion/supabase-auth'
+import type { DeleteAccountResult } from '@/server/account-deletion/types'
 
 /**
  * Wipe the signed-in user's account. Server-side only; no admin path.
- * Trades have no User FK, so they are deleted explicitly before the user row.
+ * Order: database first, then storage files, then Stripe, then auth user.
  */
-export async function deleteCurrentUserAccount(): Promise<void> {
+export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -70,25 +31,21 @@ export async function deleteCurrentUserAccount(): Promise<void> {
   const userIds = Array.from(
     new Set(
       [prismaUser?.id, prismaUser?.auth_user_id, user.id].filter(
-        (id): id is string => Boolean(id)
-      )
-    )
+        (id): id is string => Boolean(id),
+      ),
+    ),
   )
   const emails = Array.from(
     new Set(
       [email, prismaUser?.email]
         .filter((value): value is string => Boolean(value))
-        .map((value) => value.trim())
-    )
+        .map((value) => value.trim()),
+    ),
   )
-
-  for (const userEmail of emails) {
-    await cancelStripeForEmail(userEmail)
-  }
 
   await prisma.$transaction(async (tx) => {
     if (userIds.length > 0) {
-      await tx.trade.deleteMany({ where: { userId: { in: userIds } } })
+      await deleteUserTradeRelatedRows(tx, userIds)
       await tx.shared.deleteMany({ where: { userId: { in: userIds } } })
 
       const otherTeams = await tx.team.findMany({
@@ -158,6 +115,29 @@ export async function deleteCurrentUserAccount(): Promise<void> {
     }
   })
 
+  const storage = await deleteUserTradeImageObjects(userIds)
+  let stripeError: string | undefined
+  for (const userEmail of emails) {
+    const stripeResult = await cancelStripeForEmail(userEmail)
+    if (!stripeResult.ok) {
+      stripeError = stripeResult.error ?? 'Stripe cleanup failed'
+    }
+  }
+
   await deleteSupabaseAuthUser(user.id)
   await signOut()
+
+  const partial = Boolean(storage.error || stripeError)
+  if (partial) {
+    console.error('[delete-account] partial success', {
+      storageError: storage.error,
+      stripeError,
+    })
+  }
+
+  return {
+    status: partial ? 'partial' : 'complete',
+    storageError: storage.error,
+    stripeError,
+  }
 }
