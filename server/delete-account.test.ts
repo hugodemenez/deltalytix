@@ -6,7 +6,8 @@ const findFirst = vi.fn()
 const transaction = vi.fn()
 const deleteUserTradeRelatedRows = vi.fn()
 const deleteUserTradeImageObjects = vi.fn()
-const cancelStripeForEmail = vi.fn()
+const listStripeCustomerIdsForEmails = vi.fn()
+const cancelStripeCustomersByIds = vi.fn()
 const deleteSupabaseAuthUser = vi.fn()
 const recordPendingAccountCleanup = vi.fn()
 
@@ -32,7 +33,8 @@ vi.mock('@/server/account-deletion/storage', () => ({
 }))
 
 vi.mock('@/server/account-deletion/stripe', () => ({
-  cancelStripeForEmail,
+  listStripeCustomerIdsForEmails,
+  cancelStripeCustomersByIds,
 }))
 
 vi.mock('@/server/account-deletion/supabase-auth', () => ({
@@ -74,10 +76,17 @@ describe('deleteCurrentUserAccount', () => {
     })
     deleteUserTradeRelatedRows.mockResolvedValue(undefined)
     deleteUserTradeImageObjects.mockResolvedValue({ removed: 0 })
-    cancelStripeForEmail.mockResolvedValue({ ok: true, customerIds: [] })
+    listStripeCustomerIdsForEmails.mockResolvedValue({
+      ok: true,
+      customerIds: ['cus_1'],
+    })
+    cancelStripeCustomersByIds.mockResolvedValue({
+      ok: true,
+      customerIds: ['cus_1'],
+    })
     deleteSupabaseAuthUser.mockResolvedValue(undefined)
     recordPendingAccountCleanup.mockResolvedValue({ id: 'pending-1' })
-    signOut.mockResolvedValue(undefined)
+    signOut.mockResolvedValue({ error: null })
   })
 
   it('throws Unauthorized before any delete when there is no session user', async () => {
@@ -85,15 +94,39 @@ describe('deleteCurrentUserAccount', () => {
     const { deleteCurrentUserAccount } = await import('./delete-account')
 
     await expect(deleteCurrentUserAccount()).rejects.toThrow('Unauthorized')
+    expect(listStripeCustomerIdsForEmails).not.toHaveBeenCalled()
     expect(transaction).not.toHaveBeenCalled()
     expect(deleteUserTradeImageObjects).not.toHaveBeenCalled()
-    expect(cancelStripeForEmail).not.toHaveBeenCalled()
+    expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
     expect(deleteSupabaseAuthUser).not.toHaveBeenCalled()
     expect(signOut).not.toHaveBeenCalled()
   })
 
-  it('runs cleanup in order: DB, storage, Stripe, then auth', async () => {
+  it('aborts before DB wipe when Stripe customer lookup fails', async () => {
+    listStripeCustomerIdsForEmails.mockResolvedValue({
+      ok: false,
+      error: 'stripe list failed',
+      customerIds: [],
+    })
+
+    const { deleteCurrentUserAccount } = await import('./delete-account')
+    await expect(deleteCurrentUserAccount()).rejects.toThrow(
+      'ACCOUNT_DELETION_STRIPE_PRECHECK_FAILED',
+    )
+    expect(transaction).not.toHaveBeenCalled()
+    expect(deleteUserTradeImageObjects).not.toHaveBeenCalled()
+    expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
+    expect(deleteSupabaseAuthUser).not.toHaveBeenCalled()
+    expect(recordPendingAccountCleanup).not.toHaveBeenCalled()
+    expect(signOut).not.toHaveBeenCalled()
+  })
+
+  it('runs cleanup in order: Stripe precheck, DB, storage, Stripe cancel, then auth', async () => {
     const order: string[] = []
+    listStripeCustomerIdsForEmails.mockImplementation(async () => {
+      order.push('stripe-precheck')
+      return { ok: true, customerIds: ['cus_1'] }
+    })
     transaction.mockImplementation(async (fn: (tx: unknown) => Promise<void>) => {
       order.push('db')
       await fn(mockTx())
@@ -102,8 +135,8 @@ describe('deleteCurrentUserAccount', () => {
       order.push('storage')
       return { removed: 2 }
     })
-    cancelStripeForEmail.mockImplementation(async () => {
-      order.push('stripe')
+    cancelStripeCustomersByIds.mockImplementation(async () => {
+      order.push('stripe-cancel')
       return { ok: true, customerIds: ['cus_1'] }
     })
     deleteSupabaseAuthUser.mockImplementation(async () => {
@@ -114,7 +147,13 @@ describe('deleteCurrentUserAccount', () => {
     const result = await deleteCurrentUserAccount()
 
     expect(result).toEqual({ status: 'complete' })
-    expect(order).toEqual(['db', 'storage', 'stripe', 'auth'])
+    expect(order).toEqual([
+      'stripe-precheck',
+      'db',
+      'storage',
+      'stripe-cancel',
+      'auth',
+    ])
     expect(signOut).toHaveBeenCalledTimes(1)
     expect(recordPendingAccountCleanup).not.toHaveBeenCalled()
     expect(transaction.mock.calls[0]?.[1]).toEqual({
@@ -139,17 +178,18 @@ describe('deleteCurrentUserAccount', () => {
         formerUserId: 'db-1',
         storageFailed: true,
         stripeFailed: false,
+        stripeCustomerIds: ['cus_1'],
       }),
     )
     expect(deleteSupabaseAuthUser).toHaveBeenCalledWith('auth-1')
     expect(signOut).toHaveBeenCalledTimes(1)
   })
 
-  it('returns partial and queues Stripe failure after deleting the auth user', async () => {
-    cancelStripeForEmail.mockResolvedValue({
+  it('returns partial and queues Stripe failure with known customer ids', async () => {
+    cancelStripeCustomersByIds.mockResolvedValue({
       ok: false,
       error: 'stripe boom',
-      customerIds: ['cus_x'],
+      customerIds: ['cus_1'],
     })
 
     const { deleteCurrentUserAccount } = await import('./delete-account')
@@ -160,7 +200,7 @@ describe('deleteCurrentUserAccount', () => {
       expect.objectContaining({
         storageFailed: false,
         stripeFailed: true,
-        stripeCustomerIds: ['cus_x'],
+        stripeCustomerIds: ['cus_1'],
       }),
     )
     expect(deleteSupabaseAuthUser).toHaveBeenCalledWith('auth-1')
@@ -171,10 +211,10 @@ describe('deleteCurrentUserAccount', () => {
       removed: 1,
       error: 'remove failed',
     })
-    cancelStripeForEmail.mockResolvedValue({
+    cancelStripeCustomersByIds.mockResolvedValue({
       ok: false,
       error: 'stripe boom',
-      customerIds: ['cus_y'],
+      customerIds: ['cus_1'],
     })
 
     const { deleteCurrentUserAccount } = await import('./delete-account')
@@ -185,10 +225,56 @@ describe('deleteCurrentUserAccount', () => {
       expect.objectContaining({
         storageFailed: true,
         stripeFailed: true,
-        stripeCustomerIds: ['cus_y'],
+        stripeCustomerIds: ['cus_1'],
       }),
     )
     expect(deleteSupabaseAuthUser).toHaveBeenCalledWith('auth-1')
+  })
+
+  it('logs ids (no email) when the queue write throws', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    deleteUserTradeImageObjects.mockResolvedValue({
+      removed: 0,
+      error: 'list failed',
+    })
+    recordPendingAccountCleanup.mockRejectedValue(new Error('db write failed'))
+
+    const { deleteCurrentUserAccount } = await import('./delete-account')
+    const result = await deleteCurrentUserAccount()
+
+    expect(result).toEqual({ status: 'partial' })
+    expect(deleteSupabaseAuthUser).toHaveBeenCalledWith('auth-1')
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[delete-account] Failed to queue PendingAccountCleanup',
+      expect.objectContaining({
+        formerUserId: 'db-1',
+        authUserId: 'auth-1',
+        storagePrefixes: expect.arrayContaining(['db-1', 'auth-1']),
+        stripeCustomerIds: ['cus_1'],
+        failureKind: 'STORAGE',
+      }),
+    )
+    const logged = errorSpy.mock.calls.find(
+      (call) =>
+        call[0] === '[delete-account] Failed to queue PendingAccountCleanup',
+    )
+    expect(JSON.stringify(logged)).not.toMatch(/user@example\.com/)
+    errorSpy.mockRestore()
+  })
+
+  it('logs signOut errors without failing the deletion', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    signOut.mockResolvedValue({ error: { message: 'sign out boom' } })
+
+    const { deleteCurrentUserAccount } = await import('./delete-account')
+    await expect(deleteCurrentUserAccount()).resolves.toEqual({
+      status: 'complete',
+    })
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[delete-account] signOut failed:',
+      'sign out boom',
+    )
+    errorSpy.mockRestore()
   })
 
   it('propagates transaction rejection before storage or auth work', async () => {
@@ -197,7 +283,7 @@ describe('deleteCurrentUserAccount', () => {
     const { deleteCurrentUserAccount } = await import('./delete-account')
     await expect(deleteCurrentUserAccount()).rejects.toThrow('tx timeout')
     expect(deleteUserTradeImageObjects).not.toHaveBeenCalled()
-    expect(cancelStripeForEmail).not.toHaveBeenCalled()
+    expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
     expect(deleteSupabaseAuthUser).not.toHaveBeenCalled()
     expect(recordPendingAccountCleanup).not.toHaveBeenCalled()
   })
@@ -208,7 +294,20 @@ describe('deleteCurrentUserAccount', () => {
     const { deleteCurrentUserAccount } = await import('./delete-account')
     await expect(deleteCurrentUserAccount()).rejects.toThrow('auth delete failed')
     expect(deleteUserTradeImageObjects).toHaveBeenCalled()
-    expect(cancelStripeForEmail).toHaveBeenCalled()
+    expect(cancelStripeCustomersByIds).toHaveBeenCalled()
     expect(signOut).not.toHaveBeenCalled()
+  })
+
+  it('skips Stripe cancel when precheck found no customers', async () => {
+    listStripeCustomerIdsForEmails.mockResolvedValue({
+      ok: true,
+      customerIds: [],
+    })
+
+    const { deleteCurrentUserAccount } = await import('./delete-account')
+    await expect(deleteCurrentUserAccount()).resolves.toEqual({
+      status: 'complete',
+    })
+    expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
   })
 })

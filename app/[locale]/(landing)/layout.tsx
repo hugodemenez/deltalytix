@@ -67,8 +67,10 @@ export default async function RootLayout(
         <ThemeProvider>
           <Toaster />
           <Navbar />
-          <AccountDeletedNotice />
-          <div className="pt-nav-content">{children}</div>
+          <div className="pt-nav-content">
+            <AccountDeletedNotice />
+            {children}
+          </div>
           <Footer />
         </ThemeProvider>
       </div>

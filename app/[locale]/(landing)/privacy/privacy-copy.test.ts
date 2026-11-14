@@ -75,7 +75,10 @@ describe("privacy OpenAI / Apps checklist copy", () => {
     expect(en.privacy.intro.controller).not.toMatch(/to be confirmed/i);
     expect(en.privacy.retention.tradesJournal).toMatch(/while your account exists/i);
     expect(en.privacy.retention.tradesJournal).toMatch(/delete your account/i);
-    expect(en.privacy.retention.tradesJournal).toMatch(/attempt/i);
+    expect(en.privacy.retention.tradesJournal).toMatch(/before wiping|abort and delete nothing/i);
+    expect(en.privacy.retention.tradesJournal).toMatch(/pending-cleanup record/i);
+    expect(en.privacy.retention.tradesJournal).toMatch(/no email/i);
+    expect(en.privacy.retention.tradesJournal).toMatch(/30 days/i);
     expect(en.privacy.retention.tradesJournal).toMatch(/file storage/i);
     expect(en.privacy.retention.tokens).toMatch(/revoke/i);
     expect(en.privacy.retention.billing).toMatch(/Stripe/);
@@ -123,7 +126,10 @@ describe("privacy OpenAI / Apps checklist copy", () => {
     expect(fr.privacy.intro.controller).not.toMatch(/à confirmer/i);
     expect(fr.privacy.retention.tradesJournal).toMatch(/tant que votre compte existe/i);
     expect(fr.privacy.retention.tradesJournal).toMatch(/supprimez votre compte/i);
-    expect(fr.privacy.retention.tradesJournal).toMatch(/tentons|supprimer le client Stripe/i);
+    expect(fr.privacy.retention.tradesJournal).toMatch(/avant d'effacer|ne supprimons rien/i);
+    expect(fr.privacy.retention.tradesJournal).toMatch(/nettoyage en attente/i);
+    expect(fr.privacy.retention.tradesJournal).toMatch(/pas d'e-mail/i);
+    expect(fr.privacy.retention.tradesJournal).toMatch(/30 jours/i);
     expect(fr.privacy.retention.tokens).toMatch(/révocation|révoqu/i);
     expect(fr.privacy.retention.billing).toMatch(/Stripe/);
     expect(fr.privacy.retention.logs).toMatch(/ne conservons pas/i);

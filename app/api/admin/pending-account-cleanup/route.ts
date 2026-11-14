@@ -2,9 +2,13 @@ import { jsonError } from '@/lib/api/json-error'
 import { authorizeAdminRequest } from '@/lib/admin/auth'
 import { retryPendingAccountCleanups } from '@/server/account-deletion/pending-cleanup'
 
+export const maxDuration = 60
+
 /**
  * Admin-only retry for PendingAccountCleanup rows.
  * Auth: admin session or `Authorization: Bearer $CRON_SECRET`.
+ * There is no Bun CLI for this path (server-only modules); operators use this
+ * route. Who runs it and when is an ops decision (Hugo).
  *
  * Body (optional JSON): `{ "id"?: string, "dryRun"?: boolean }`
  */

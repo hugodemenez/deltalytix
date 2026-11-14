@@ -483,10 +483,8 @@ export default {
   "dashboard.settings.deleteAccount.cancel": "Annuler",
   "dashboard.settings.deleteAccount.error":
     "Impossible de supprimer le compte. Réessayez.",
-  "dashboard.settings.deleteAccount.complete":
-    "Votre compte a été supprimé.",
-  "dashboard.settings.deleteAccount.partial":
-    "Votre compte a été supprimé. Un nettoyage de fichiers ou de facturation est encore en attente et sera terminé. Si vous avez été facturé, contactez contact@deltalytix.app.",
+  "dashboard.settings.deleteAccount.stripePrecheckError":
+    "Nous n'avons pas pu vérifier le nettoyage de facturation avant de supprimer votre compte. Rien n'a été supprimé. Réessayez, ou contactez contact@deltalytix.app.",
   "dashboard.settings.weeklyRecap.error":
     "Impossible de mettre à jour le récap hebdomadaire.",
   "dashboard.settings.tradingPreferences": "Préférences de trading",

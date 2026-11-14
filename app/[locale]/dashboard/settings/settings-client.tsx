@@ -39,6 +39,7 @@ import {
   setWeeklyRecapPreference,
 } from '@/server/weekly-recap-preference'
 import { deleteCurrentUserAccount } from '@/server/delete-account'
+import { isAccountDeletionStripePrecheckError } from '@/lib/account-deletion-errors'
 import { accountDeletedHomeHref } from '@/lib/account-deleted-notice'
 import {
   ConsentPrivacyControls,
@@ -271,7 +272,11 @@ export default function SettingsPage({
       router.push(accountDeletedHomeHref(locale, result.status))
     } catch (error) {
       setDeleting(false)
-      toast.error(t('dashboard.settings.deleteAccount.error'))
+      toast.error(
+        isAccountDeletionStripePrecheckError(error)
+          ? t('dashboard.settings.deleteAccount.stripePrecheckError')
+          : t('dashboard.settings.deleteAccount.error'),
+      )
     }
   }
 
