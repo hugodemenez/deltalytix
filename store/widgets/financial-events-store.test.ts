@@ -92,4 +92,51 @@ describe("financial events store", () => {
     }, "db down")
     expect(useFinancialEventsStore.getState().loadErrors["en:1:2"]?.attempts).toBe(2)
   })
+
+  it("keeps an adjacent month when setEvents refreshes the bootstrap window", () => {
+    const february = {
+      start: new Date("2026-02-01T05:00:00.000Z"),
+      end: new Date("2026-03-01T04:59:59.999Z"),
+      lang: "en",
+    }
+    const februaryEvent = event({
+      id: "feb",
+      title: "Jobs",
+      date: new Date("2026-02-10T13:30:00.000Z"),
+    })
+    const store = useFinancialEventsStore.getState()
+    store.setEvents([februaryEvent], february)
+    store.setEvents([event({ id: "march-bootstrap" })], march)
+
+    const after = useFinancialEventsStore.getState()
+    expect(after.events.map((item) => item.id).sort()).toEqual(["feb", "march-bootstrap"])
+    expect(after.loadedRanges).toEqual([
+      { startMs: march.start.getTime(), endMs: march.end.getTime(), lang: "en" },
+      { startMs: february.start.getTime(), endMs: february.end.getTime(), lang: "en" },
+    ])
+  })
+
+  it("clears a covered loadError when mergeEvents loads the wider window", () => {
+    const day = {
+      start: new Date("2026-03-13T00:00:00.000Z"),
+      end: new Date("2026-03-13T23:59:59.999Z"),
+      lang: "en",
+    }
+    const key = `en:${day.start.getTime()}:${day.end.getTime()}`
+    const store = useFinancialEventsStore.getState()
+    store.setEvents([], {
+      start: new Date("2026-01-01T00:00:00.000Z"),
+      end: new Date("2026-01-31T23:59:59.999Z"),
+      lang: "en",
+    })
+    store.noteLoadFailure(key, day, "db down")
+    store.noteLoadFailure(key, day, "db down")
+    store.noteLoadFailure(key, day, "db down")
+    expect(useFinancialEventsStore.getState().loadErrors[key]?.attempts).toBe(3)
+
+    useFinancialEventsStore.getState().mergeEvents([event({ id: "march" })], march)
+
+    expect(useFinancialEventsStore.getState().loadErrors[key]).toBeUndefined()
+    expect(useFinancialEventsStore.getState().events.map((item) => item.id)).toEqual(["march"])
+  })
 })

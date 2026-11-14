@@ -81,6 +81,21 @@ function rangesDisjoint(
   return existing.endMs < next.startMs || existing.startMs > next.endMs
 }
 
+function loadErrorsNotCoveredBy(
+  errors: Record<string, FinancialEventLoadError>,
+  loaded: LoadedFinancialEventRange,
+): Record<string, FinancialEventLoadError> {
+  const loadErrors: Record<string, FinancialEventLoadError> = {}
+  for (const [key, error] of Object.entries(errors)) {
+    const covered =
+      error.lang === loaded.lang &&
+      loaded.startMs <= error.startMs &&
+      loaded.endMs >= error.endMs
+    if (!covered) loadErrors[key] = error
+  }
+  return loadErrors
+}
+
 export const useFinancialEventsStore = create<FinancialEventsStore>()((set, get) => ({
   events: [],
   loadedRanges: [],
@@ -95,19 +110,11 @@ export const useFinancialEventsStore = create<FinancialEventsStore>()((set, get)
       const keptRanges = state.loadedRanges.filter((existing) =>
         rangesDisjoint(existing, loaded),
       )
-      const loadErrors: Record<string, FinancialEventLoadError> = {}
-      for (const [key, error] of Object.entries(state.loadErrors)) {
-        const covered =
-          error.lang === loaded.lang &&
-          loaded.startMs <= error.startMs &&
-          loaded.endMs >= error.endMs
-        if (!covered) loadErrors[key] = error
-      }
       return {
         events: mergeFinancialEvents(keptEvents, events),
         loadedRanges: [loaded, ...keptRanges],
         initialized: true,
-        loadErrors,
+        loadErrors: loadErrorsNotCoveredBy(state.loadErrors, loaded),
       }
     }),
 
@@ -119,6 +126,7 @@ export const useFinancialEventsStore = create<FinancialEventsStore>()((set, get)
         loadedRanges: financialEventRangeCovers(state.loadedRanges, loaded)
           ? state.loadedRanges
           : [...state.loadedRanges, loaded],
+        loadErrors: loadErrorsNotCoveredBy(state.loadErrors, loaded),
       }
     }),
 

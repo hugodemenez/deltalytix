@@ -75,6 +75,21 @@ describe("saveTradesCore chunk commits", () => {
     expect(createMany.mock.calls[0][0].skipDuplicates).toBe(true)
   })
 
+  it("uses one createMany at exactly the chunk size", async () => {
+    createMany.mockResolvedValue({ count: TRADE_CREATE_MANY_CHUNK_SIZE })
+    const result = await saveTradesCore(
+      Array.from({ length: TRADE_CREATE_MANY_CHUNK_SIZE }, (_, index) => trade(index)),
+      { userId: "u1" },
+    )
+
+    expect(result.error).toBe(false)
+    expect(result.numberOfTradesAdded).toBe(TRADE_CREATE_MANY_CHUNK_SIZE)
+    expect(createMany).toHaveBeenCalledTimes(1)
+    expect(createMany.mock.calls[0][0].data).toHaveLength(TRADE_CREATE_MANY_CHUNK_SIZE)
+    expect(createMany.mock.calls[0][0].skipDuplicates).toBe(true)
+    expect(updateTag).toHaveBeenCalledWith("trades-u1")
+  })
+
   it("commits more than one chunk and reports the summed count", async () => {
     const count = TRADE_CREATE_MANY_CHUNK_SIZE + 1
     createMany.mockImplementation(async (args: { data: unknown[] }) => ({

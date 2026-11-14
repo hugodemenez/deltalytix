@@ -226,6 +226,10 @@ export async function saveTradesCore(
   }
   const normalizedDates = dateCheck.trades
 
+  // Declared outside the try so a throw after createMany (commission backfill,
+  // cache tags, analytics) still reports the rows that already committed and
+  // clears the user cache.
+  let committed = 0
   try {
     const hadExistingTrades = Boolean(
       await prisma.trade.findFirst({
@@ -281,7 +285,6 @@ export async function saveTradesCore(
     // A later chunk can fail after earlier chunks are committed. That count
     // has to come back so the cache is dropped and the UI shows the rows.
     const insert = { data: userAssignedTrades, skipDuplicates: true as const }
-    let committed = 0
     const result =
       userAssignedTrades.length <= TRADE_CREATE_MANY_CHUNK_SIZE
         ? await prisma.trade.createMany(insert)
@@ -294,6 +297,7 @@ export async function saveTradesCore(
               throw new TradeInsertPartialError(committed, error)
             }
           }, insert)
+    committed = result.count
 
     const commissionsUpdated = await backfillRithmicProtocolCommissions(
       userId,
@@ -356,9 +360,10 @@ export async function saveTradesCore(
       trades: result.count > 0 ? userAssignedTrades : undefined,
     }
   } catch (error) {
-    const committed = error instanceof TradeInsertPartialError ? error.committed : 0
+    const inserted =
+      error instanceof TradeInsertPartialError ? error.committed : committed
     console.error("[saveTradesCore] Database error:", error)
-    if (committed > 0) {
+    if (inserted > 0) {
       try {
         await invalidateTradeCaches(userId)
       } catch (cacheError) {
@@ -367,7 +372,7 @@ export async function saveTradesCore(
     }
     return {
       error: "DATABASE_ERROR",
-      numberOfTradesAdded: committed,
+      numberOfTradesAdded: inserted,
       details: error instanceof Error ? error.message : String(error),
     }
   }

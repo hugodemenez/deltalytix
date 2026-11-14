@@ -11,7 +11,8 @@ const WIDE_RANGE_NOTICE =
   'The requested range is wider than 62 days. Only the 62 days ending at the requested end were loaded.';
 
 export const getFinancialNews = tool({
-  description: 'Get the news for a given date range',
+  description:
+    'Get the news for a given date range. Ranges wider than 62 days are clamped to the 62 days ending at the requested end, with a notice.',
   inputSchema: z.object({
     locale: z.string().describe('User locale from the conversation'),
     startDate: z.string().describe('Date string in format 2025-01-14T14:33:01.000Z'),

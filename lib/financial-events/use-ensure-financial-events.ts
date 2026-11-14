@@ -31,6 +31,11 @@ export function resetFinancialEventLoadInflightForTests(): void {
  * from the attempt count, and leaving the key set made the retry return
  * immediately. Later attempts wait on `financialEventRetryDelayMs`.
  * `retryFinancialEventLoad` resets the cap after it is exhausted.
+ *
+ * A started fetch always merges or records the failure. Cleanup only cancels
+ * a timer that has not fired. Dropping a completed response when
+ * `loadedRanges` changes (refresh, another widget, paging) left the month
+ * empty with no retry.
  */
 export function useEnsureFinancialEvents(
   window: FinancialEventDateWindow | null,
@@ -65,7 +70,6 @@ export function useEnsureFinancialEvents(
     const token = {}
     inflight.set(loadKey, token)
     let started = false
-    let cancelled = false
     const range = {
       start: new Date(startMs),
       end: new Date(endMs),
@@ -84,20 +88,17 @@ export function useEnsureFinancialEvents(
             range.end.toISOString(),
           ),
         merge: (events) => {
-          if (cancelled) return
           mergeEvents(events, range)
           clearLoadError(loadKey)
         },
         fail: (message) => {
           release()
-          if (cancelled) return
           noteLoadFailure(loadKey, range, message)
         },
       }).finally(release)
     }, financialEventRetryDelayMs(attempts))
 
     return () => {
-      cancelled = true
       clearTimeout(timer)
       if (!started) release()
     }

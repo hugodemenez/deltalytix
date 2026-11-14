@@ -19,11 +19,20 @@
 -- index either.
 --
 -- CREATE INDEX IF NOT EXISTS turns a pre-built index into a catalog no-op.
--- The optional off-peak statements are in the PR body; they are not run here.
--- After that pre-step, confirm pg_index.indisvalid is true for both indexes.
--- An INVALID index (a failed CONCURRENTLY build) makes the next deploy fail
--- until it is dropped and rebuilt. That check and the rebuild SQL are in the
--- PR body.
+-- The CONCURRENTLY pre-step is the default runbook step in the PR body; it is
+-- not run here. An INVALID index with the same name makes this migration a
+-- silent no-op (NOTICE) and Prisma records it as applied; the deploy does not
+-- fail. Before merging, check:
+--
+--   SELECT indexrelid::regclass, indisvalid
+--   FROM pg_index
+--   WHERE indexrelid::regclass::text IN (
+--     '"Trade_userId_accountNumber_entryDate_idx"',
+--     '"FinancialEvent_lang_date_idx"'
+--   );
+--
+-- If either is invalid, DROP INDEX CONCURRENTLY it and rebuild. That check and
+-- the rebuild SQL are in the PR body.
 --
 -- Recovery when deploy fails: the build exits non-zero, Prisma records this
 -- migration as failed, and the next `prisma migrate deploy` stops with P3009

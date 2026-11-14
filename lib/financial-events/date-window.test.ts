@@ -25,6 +25,7 @@ const ZONES = [
   "Europe/Paris",
   "Asia/Tokyo",
   "Pacific/Kiritimati",
+  "Etc/GMT+12",
 ] as const
 
 describe("dashboardFinancialEventWindow", () => {
