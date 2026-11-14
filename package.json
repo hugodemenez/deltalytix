@@ -8,8 +8,8 @@
   "scripts": {
     "predev": "bunx prisma generate",
     "dev": "next dev",
-    "prebuild": "node --experimental-strip-types scripts/generate-routes.ts && bunx prisma generate",
-    "build": "next build && node scripts/prune-function-traces.mjs",
+    "prebuild": "node --experimental-strip-types scripts/generate-routes.ts && bun scripts/build-support-corpus.ts && bunx prisma generate",
+    "build": "next build && node scripts/prune-function-traces.mjs && node scripts/analyze-function-traces.mjs",
     "vercel-build": "bash scripts/vercel-build.sh",
     "start": "next start",
     "lint": "eslint",

@@ -68,7 +68,11 @@ ENV DATABASE_URL=$DATABASE_URL \
 # Disable telemetry in production image builds and runtime.
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Generate the support-search snapshot from the repo root before Next traces it.
+# `bun run build` runs it again via prebuild and fails if the support function
+# trace does not contain the snapshot.
 RUN --mount=type=cache,id=deltalytix-next-cache,target=/app/.next/cache \
+    bun scripts/build-support-corpus.ts && \
     bun run build
 
 # Production image, copy all the files and run next
@@ -88,6 +92,10 @@ COPY --from=builder /app/config ./config
 COPY --from=builder /app/content ./content
 COPY --from=builder /app/locales ./locales
 COPY --from=builder /app/README.md /app/SELF_HOSTING.md /app/AGENTS.md ./
+# Production support search reads this file from the process working directory.
+# Standalone tracing also copies it when the support route's NFT includes it;
+# this copy keeps the self-host image working if that layout changes.
+COPY --from=builder --chown=nextjs:nodejs /app/lib/ai/support-corpus.generated.json ./lib/ai/support-corpus.generated.json
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
