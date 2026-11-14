@@ -104,7 +104,13 @@ describe('prisma-journal-encryption include decrypt', () => {
     process.env.JOURNAL_ENCRYPTION_KEY = '0'.repeat(64)
     const foreign = encryptJournalField('other-key')
     process.env.JOURNAL_ENCRYPTION_KEY = 'e'.repeat(64)
-    const included = {
+    const included: {
+      trades: Array<{
+        id: string
+        comment: string | null
+        commentUndecryptable?: boolean
+      }>
+    } = {
       trades: [
         { id: 'ok', comment: encryptJournalField('good') },
         { id: 'bad', comment: foreign },
@@ -185,7 +191,13 @@ describe('prisma-journal-encryption without a key', () => {
     const cipher = encryptJournalField('daily recap')
     delete process.env.JOURNAL_ENCRYPTION_KEY
     delete process.env.ENCRYPTION_KEY
-    const included = { trades: [{ id: 't1', comment: cipher }] }
+    const included: {
+      trades: Array<{
+        id: string
+        comment: string | null
+        commentUndecryptable?: boolean
+      }>
+    } = { trades: [{ id: 't1', comment: cipher }] }
     expect(() => decryptResultTree(included)).not.toThrow()
     expect(included.trades[0].comment).toBeNull()
     expect(included.trades[0].commentUndecryptable).toBe(true)

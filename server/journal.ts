@@ -88,7 +88,7 @@ export async function saveMindset(
         data: {
           emotionValue: data.emotionValue,
           selectedNews: data.selectedNews,
-          ...(journalWrite.omit
+          ...('omit' in journalWrite
             ? {}
             : { journalContent: encryptJournalField(journalWrite.value) }),
           mood: getMoodLabel(data.emotionValue),
@@ -339,7 +339,7 @@ export async function saveJournal(
         journalEdited: true,
         incoming: journalContent,
       })
-      if (journalWrite.omit) {
+      if ('omit' in journalWrite) {
         return withDecryptedMoodFields(existingMood)
       }
       const updatedMood = await prisma.mood.update({
