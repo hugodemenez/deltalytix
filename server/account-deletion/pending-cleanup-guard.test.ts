@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
 
-const { findFirst } = vi.hoisted(() => ({
+const { findFirst, supabaseAuthUserExists } = vi.hoisted(() => ({
   findFirst: vi.fn(),
+  supabaseAuthUserExists: vi.fn(),
 }))
 
 vi.mock('@/lib/prisma', () => ({
@@ -12,7 +13,15 @@ vi.mock('@/lib/prisma', () => ({
   },
 }))
 
-import { findUnresolvedPendingCleanupForAuthId } from './pending-cleanup-guard'
+vi.mock('@/server/account-deletion/supabase-auth', () => ({
+  supabaseAuthUserExists: (...args: unknown[]) =>
+    supabaseAuthUserExists(...args),
+}))
+
+import {
+  accountDeletedStatusForPendingCleanupRefusal,
+  findUnresolvedPendingCleanupForAuthId,
+} from './pending-cleanup-guard'
 
 describe('findUnresolvedPendingCleanupForAuthId (ensureUserRecord refusal)', () => {
   beforeEach(() => {
@@ -42,5 +51,26 @@ describe('findUnresolvedPendingCleanupForAuthId (ensureUserRecord refusal)', () 
     await expect(
       findUnresolvedPendingCleanupForAuthId('auth-1'),
     ).resolves.toBeNull()
+  })
+})
+
+describe('accountDeletedStatusForPendingCleanupRefusal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns partial_unrecorded when the auth user still exists', async () => {
+    supabaseAuthUserExists.mockResolvedValue(true)
+    await expect(
+      accountDeletedStatusForPendingCleanupRefusal('auth-1'),
+    ).resolves.toBe('partial_unrecorded')
+    expect(supabaseAuthUserExists).toHaveBeenCalledWith('auth-1')
+  })
+
+  it('returns partial when the auth user is already gone', async () => {
+    supabaseAuthUserExists.mockResolvedValue(false)
+    await expect(
+      accountDeletedStatusForPendingCleanupRefusal('auth-1'),
+    ).resolves.toBe('partial')
   })
 })

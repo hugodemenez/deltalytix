@@ -23,8 +23,12 @@ import {
 import { readAttributionFromCookies } from '@/lib/attribution-server'
 import { getRequestOrigin } from '@/lib/site-url'
 import { resolveAuthEmailLocale } from '@/lib/auth-email-locale'
-import { findUnresolvedPendingCleanupForAuthId } from '@/server/account-deletion/pending-cleanup-guard'
+import {
+  accountDeletedStatusForPendingCleanupRefusal,
+  findUnresolvedPendingCleanupForAuthId,
+} from '@/server/account-deletion/pending-cleanup-guard'
 import { accountDeletedHomeHref } from '@/lib/account-deleted-notice'
+import { shouldRefuseOrphanUserRecreation } from '@/server/account-deletion/supabase-auth'
 
 export async function getWebsiteURL() {
   // Reuse the shared trusted-host allowlist (*.deltalytix.app, *.vercel.app,
@@ -537,6 +541,8 @@ async function ensureUserRecord(user: AuthenticatedIdentity, locale?: string) {
         '[ensureUserInDatabase] ERROR: unresolved PendingAccountCleanup for auth id',
         { authUserId: user.id, pendingId: pendingCleanup.id },
       );
+      const noticeStatus =
+        await accountDeletedStatusForPendingCleanupRefusal(user.id);
       // Sign out without the redirecting helper first, then land on the notice.
       const pendingClient = await createClient();
       const { error: pendingSignOutError } = await pendingClient.auth.signOut();
@@ -544,8 +550,22 @@ async function ensureUserRecord(user: AuthenticatedIdentity, locale?: string) {
         await pendingClient.auth.signOut({ scope: 'local' });
       }
       redirect(
-        accountDeletedHomeHref(resolveAuthEmailLocale(locale), 'partial'),
+        accountDeletedHomeHref(resolveAuthEmailLocale(locale), noticeStatus),
       );
+    }
+
+    // Stale session after a complete auth deletion must not recreate an orphan User.
+    if (await shouldRefuseOrphanUserRecreation(user.id)) {
+      console.log(
+        '[ensureUserInDatabase] ERROR: auth user missing; refusing orphan User create',
+        { authUserId: user.id },
+      );
+      const staleClient = await createClient();
+      const { error: staleSignOutError } = await staleClient.auth.signOut();
+      if (staleSignOutError) {
+        await staleClient.auth.signOut({ scope: 'local' });
+      }
+      throw new Error('Authentication session is no longer valid');
     }
 
     // Create new user if no existing user found

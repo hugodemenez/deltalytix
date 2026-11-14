@@ -49,6 +49,18 @@ export async function supabaseAuthUserExists(
 }
 
 /**
+ * True when ensureUserRecord must not create a User for a stale session
+ * whose auth row was already deleted. Skipped under local dashboard bypass
+ * (where supabaseAuthUserExists always returns false).
+ */
+export async function shouldRefuseOrphanUserRecreation(
+  authUserId: string,
+): Promise<boolean> {
+  if (isLocalDashboardAuthBypassEnabled()) return false
+  return !(await supabaseAuthUserExists(authUserId))
+}
+
+/**
  * Direct lookup of auth.users by lower(email) via the app DB connection.
  * Returns tri-state so callers can keep queue rows when the lookup is unknown.
  */
