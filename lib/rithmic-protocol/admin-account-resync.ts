@@ -2,6 +2,7 @@ import 'server-only'
 import { revalidateTag, updateTag } from 'next/cache'
 import type { Trade } from '@/prisma/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
+import { createManyInChunks } from '@/lib/trades/create-many-chunks'
 import { decryptConnectionToken } from '@/lib/connection-token-crypto'
 import { generatePersistedTradeUUID, RITHMIC_PROTOCOL_TRADE_TAG } from '@/lib/trade-id-utils'
 import { fetchFillsForAccounts } from '@/lib/rithmic-protocol/client'
@@ -700,9 +701,10 @@ export async function resyncRithmicProtocolAccount(params: {
                 ),
               )
               if (rows.length > 0) {
-                const created = await tx.trade.createMany({
-                  data: rows,
+                const created = await createManyInChunks({
+                  rows,
                   skipDuplicates: true,
+                  createMany: (args) => tx.trade.createMany(args),
                 })
                 createdCount = created.count
                 if (created.count !== rows.length) {

@@ -29,6 +29,8 @@ import { addTagsToTradesForDay } from "@/server/trades"
 import { isToday, format } from "date-fns"
 import { useMoodStore } from "@/store/widgets/mood-store"
 import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
+import { journalDayEventWindow } from "@/lib/financial-events/date-window"
+import { useEnsureFinancialEvents } from "@/lib/financial-events/use-ensure-financial-events"
 import { useTradesStore } from "@/store/trades-store"
 import { useCurrentLocale } from "@/locales/client"
 import { tradeMatchesDateKey } from "@/lib/trades/trade-matches-date"
@@ -60,6 +62,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const setTrades = useTradesStore(state => state.setTrades)
   const locale = useCurrentLocale()
   const t = useI18n()
+  useEnsureFinancialEvents(journalDayEventWindow(selectedDate), locale)
   const [hasMounted, setHasMounted] = useState(false)
   useEffect(() => {
     setHasMounted(true)

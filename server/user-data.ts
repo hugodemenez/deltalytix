@@ -10,6 +10,10 @@ import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
 import { ensureLocalDashboardUserInDatabase } from '@/server/local-dashboard-bootstrap'
 import { Account, Group } from '@/context/data-provider'
 import { revalidateTag, unstable_cache } from 'next/cache'
+import {
+  dashboardFinancialEventWindow,
+  financialEventWhere,
+} from '@/lib/financial-events/date-window'
 
 export type SharedDataResponse = {
   trades: Trade[]
@@ -79,10 +83,18 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
   accounts: Account[];
   groups: Group[];
   financialEvents: FinancialEvent[];
+  /** Inclusive bounds of `financialEvents`, so the client can fetch other months. */
+  financialEventsWindow: { from: string; to: string };
   moodHistory: Mood[];
 }> {
   const userId = await getUserId()
   const locale = await getCurrentLocale()
+  const financialEventsWindow = dashboardFinancialEventWindow()
+  const financialEventsWhere = financialEventWhere(locale, financialEventsWindow)
+  const financialEventsWindowJson = {
+    from: financialEventsWindow.from.toISOString(),
+    to: financialEventsWindow.to.toISOString(),
+  }
 
   // If forceRefresh is true, bypass cache and fetch directly
   if (forceRefresh) {
@@ -120,7 +132,7 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
         where: { userId: userId }
       }),
       prisma.financialEvent.findMany({
-        where: { lang: locale }
+        where: financialEventsWhere
       }),
       prisma.mood.findMany({
         where: { userId: userId }
@@ -137,6 +149,7 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
       accounts,
       groups,
       financialEvents,
+      financialEventsWindow: financialEventsWindowJson,
       moodHistory
     }
   }
@@ -193,7 +206,7 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
       where: { userId: userId }
     }),
     prisma.financialEvent.findMany({
-      where: { lang: locale }
+      where: financialEventsWhere
     }),
     prisma.mood.findMany({
       where: { userId: userId }
@@ -208,6 +221,7 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
     accounts,
     groups,
     financialEvents,
+    financialEventsWindow: financialEventsWindowJson,
     moodHistory
   }
 }

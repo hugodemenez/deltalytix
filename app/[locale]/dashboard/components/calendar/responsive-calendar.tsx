@@ -30,6 +30,8 @@ import WeeklyCalendarPnl from "./weekly-calendar"
 import { CalendarMonthYearPicker } from "./calendar-month-year-picker"
 import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
 import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
+import { calendarMonthEventWindow } from "@/lib/financial-events/date-window"
+import { useEnsureFinancialEvents } from "@/lib/financial-events/use-ensure-financial-events"
 import { useUserStore } from "@/store/user-store"
 import { Account } from "@/context/data-provider"
 import { HIDDEN_GROUP_NAME } from "../filters/account-group-board"
@@ -353,7 +355,10 @@ export default function ResponsiveCalendarPnl({ calendarData }: CalendarPnlProps
   const WEEKDAYS = weekStartsOnMonday ? WEEKDAYS_MONDAY_START : WEEKDAYS_SUNDAY_START
   const [currentDate, setCurrentDate] = useState(() => toUserZonedTime(new Date(), timezone))
   const [isLoading, setIsLoading] = useState(false)
-  const [monthEvents, setMonthEvents] = useState<FinancialEvent[]>([])
+  const { status: eventsStatus } = useEnsureFinancialEvents(
+    calendarMonthEventWindow(currentDate, timezone),
+    locale,
+  )
 
   useEffect(() => {
     setCurrentDate(toUserZonedTime(new Date(), timezone))
@@ -382,16 +387,14 @@ export default function ResponsiveCalendarPnl({ calendarData }: CalendarPnlProps
   const selectedCountries = useNewsFilterStore((s) => s.selectedCountries)
   const setSelectedCountries = useNewsFilterStore((s) => s.setSelectedCountries)
 
-  // Update monthEvents when currentDate or financialEvents change
-  useEffect(() => {
+  // Rows already in the store stay visible. An empty list while the range is
+  // still loading is not a settled "no news" result (`aria-busy` on the card).
+  const monthEvents = useMemo(() => {
     const { startUtc, endUtc } = zonedMonthInterval(currentDate, timezone)
-
-    const filteredEvents = userFinancialEvents.filter(event => {
+    return userFinancialEvents.filter(event => {
       const eventDate = new Date(event.date)
       return eventDate >= startUtc && eventDate <= endUtc && event.lang === locale
     })
-
-    setMonthEvents(filteredEvents)
   }, [currentDate, userFinancialEvents, locale, timezone])
 
   const handlePrevMonth = React.useCallback(() => {
@@ -550,7 +553,7 @@ export default function ResponsiveCalendarPnl({ calendarData }: CalendarPnlProps
   }, [])
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col" aria-busy={eventsStatus === "loading"}>
       <CardHeader
         className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 border-b shrink-0 p-2 sm:p-4 min-h-[56px]"
       >

@@ -10,7 +10,10 @@ export const getFinancialNews = tool({
     endDate: z.string().describe('Date string in format 2025-01-14T14:33:01.000Z')
   }),
   execute: async ({ locale, startDate, endDate }: { locale: string, startDate: string, endDate: string }) => {
-    const events = await getFinancialEvents(locale);
+    const events = await getFinancialEvents(locale, {
+      from: startDate,
+      to: endDate,
+    });
     const start = new Date(startDate);
     const end = new Date(endDate);
     const filteredEvents = events.filter(event => {

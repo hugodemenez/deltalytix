@@ -36,13 +36,31 @@ function listedTables(sql: string): string[] {
   return [...arrayBody!.matchAll(/'([A-Za-z]+)'/g)].map((match) => match[1])
 }
 
+/** Tables that enable RLS in their own migration instead of an ARRAY list. */
+function inlineEnabledTables(root: string): string[] {
+  const names: string[] = []
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const sql = readFileSync(path.join(root, entry.name, "migration.sql"), "utf8")
+    for (const match of sql.matchAll(
+      /ALTER TABLE\s+"public"\."([A-Za-z0-9_]+)"\s+ENABLE ROW LEVEL SECURITY/g,
+    )) {
+      names.push(match[1])
+    }
+  }
+  return names
+}
+
 describe("enable public row level security migrations", () => {
   const tables = prismaPublicTableNames(schema)
 
   it("lists every public table from schema.prisma exactly once", () => {
     expect(tables.length).toBeGreaterThan(0)
     expect(rlsMigrations.map((m) => m.name)).toContain(path.basename(dir))
-    const listed = rlsMigrations.flatMap((m) => listedTables(m.sql))
+    const listed = [
+      ...rlsMigrations.flatMap((m) => listedTables(m.sql)),
+      ...inlineEnabledTables(migrationsDir),
+    ]
     expect(listed.sort((a, b) => a.localeCompare(b))).toEqual(tables)
   })
 

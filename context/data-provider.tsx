@@ -588,7 +588,10 @@ export const DataProvider: React.FC<{
       setTags(data.tags);
       setGroups(data.groups);
       setMoods(data.moodHistory);
-      setEvents(data.financialEvents);
+      setEvents(data.financialEvents, {
+        from: new Date(data.financialEventsWindow.from),
+        to: new Date(data.financialEventsWindow.to),
+      });
       setTickDetails(data.tickDetails);
       setIsFirstConnection(data.userData?.isFirstConnection || false);
 
@@ -768,7 +771,10 @@ export const DataProvider: React.FC<{
         setTags(data.tags);
         setGroups(data.groups);
         setMoods(data.moodHistory);
-        setEvents(data.financialEvents);
+        setEvents(data.financialEvents, {
+          from: new Date(data.financialEventsWindow.from),
+          to: new Date(data.financialEventsWindow.to),
+        });
         setTickDetails(data.tickDetails);
         setIsFirstConnection(data.userData?.isFirstConnection || false);
 

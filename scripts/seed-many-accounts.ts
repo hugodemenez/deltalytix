@@ -19,6 +19,7 @@ import { PrismaPg } from "@prisma/adapter-pg"
 import pg from "pg"
 
 import { PrismaClient } from "../prisma/generated/prisma/client"
+import { createManyInChunks } from "../lib/trades/create-many-chunks"
 
 const LOCAL_USER_ID = process.env.LOCAL_DASHBOARD_USER_ID || "local-dashboard-user"
 const LOCAL_USER_EMAIL =
@@ -211,7 +212,14 @@ async function main() {
         tradeDayCount,
       )
       if (trades.length > 0) {
-        await prisma.trade.createMany({ data: trades })
+        await prisma.$transaction(
+          (tx) =>
+            createManyInChunks({
+              rows: trades,
+              createMany: (args) => tx.trade.createMany(args),
+            }),
+          { timeout: 120_000, maxWait: 15_000 },
+        )
         totalTrades += trades.length
       }
     }

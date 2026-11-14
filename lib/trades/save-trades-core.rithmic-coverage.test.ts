@@ -12,7 +12,22 @@ vi.mock("@/lib/prisma", () => ({
       findMany: (...args: unknown[]) => findMany(...args),
       updateMany: vi.fn(),
     },
-    $transaction: vi.fn(),
+    $transaction: async (
+      arg:
+        | ((tx: {
+            trade: { createMany: (...args: unknown[]) => unknown }
+          }) => Promise<unknown>)
+        | Promise<unknown>[],
+    ) => {
+      if (typeof arg === "function") {
+        return arg({
+          trade: {
+            createMany: (...args: unknown[]) => createMany(...args),
+          },
+        })
+      }
+      return Promise.all(arg)
+    },
   },
 }))
 vi.mock("next/cache", () => ({ revalidateTag: vi.fn(), updateTag: vi.fn() }))
