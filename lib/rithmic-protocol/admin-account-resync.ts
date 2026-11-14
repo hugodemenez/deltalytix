@@ -36,8 +36,10 @@ import {
   resolveGateway,
 } from '@/lib/rithmic-protocol/systems'
 import {
+  MAX_ADMIN_ANCHOR_LOOKBACK_DAYS,
   resolveAdminWeekendAnchor,
   toUtcYyyyMmDd,
+  utcCalendarDay,
   utcCalendarDayAfter,
 } from './cme-session'
 import {
@@ -787,7 +789,15 @@ export async function resyncRithmicProtocolAccount(params: {
         let coverage: AdminFillWindowCoverage[] = []
         let fetchStartYmd = historyStartYmd
         let orderHistoryDates: string[] = []
-        const lastFlatYmd = lastFlatYmdBeforeAnchor(storedFills, windowStartMs)
+        const lookbackCap = utcCalendarDay(new Date())
+        lookbackCap.setUTCDate(
+          lookbackCap.getUTCDate() - (MAX_ADMIN_ANCHOR_LOOKBACK_DAYS - 1),
+        )
+        const lastFlatYmd = lastFlatYmdBeforeAnchor(storedFills, windowStartMs, {
+          // Abandoned books last traded before the 366-day cap must not pull
+          // the min last-flat below the fetch start (F-LF).
+          relevantFromYmd: toUtcYyyyMmDd(lookbackCap),
+        })
         try {
           if (Date.now() >= deadlineMs) {
             return finish({ ...base, error: 'FILL_FETCH_TIMEOUT' })

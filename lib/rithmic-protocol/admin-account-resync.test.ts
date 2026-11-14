@@ -1114,6 +1114,144 @@ describe('admin account resync scoping and safety', () => {
     expect(result.diagnostics?.windows?.[0]?.startYmd).toBe('2026-09-25')
   })
 
+  it('passes a defined lastFlatYmd for a raw rollup-plus-replay ledger (F-LF)', async () => {
+    decryptConnectionToken.mockReturnValue(
+      JSON.stringify({
+        username: 'trader',
+        password: 'secret',
+        systemName: 'Rithmic',
+        gatewayUri: 'wss://rprotocol.rithmic.com:443',
+        accountIds: [ACCOUNT],
+        historyStartDate: '2024-01-01',
+      }),
+    )
+    const ssboe = Date.parse('2026-09-20T14:00:00Z') / 1000
+    const storedRows = [
+      {
+        accountNumber: ACCOUNT,
+        accountId: 'acct-1',
+        identityKey: 'r1',
+        fillId: '1163440',
+        rawFillId: null,
+        symbol: 'MESZ6',
+        exchange: null,
+        transactionType: 'BUY',
+        fillPrice: 5800,
+        fillSize: 2,
+        fillDate: '20260920',
+        fillTime: null,
+        basketId: null,
+        sequenceNumber: null,
+        ssboe,
+        usecs: null,
+        source: 'replay',
+      },
+      {
+        accountNumber: ACCOUNT,
+        accountId: 'acct-1',
+        identityKey: 'r2',
+        fillId: '1163441',
+        rawFillId: null,
+        symbol: 'MESZ6',
+        exchange: null,
+        transactionType: 'BUY',
+        fillPrice: 5800,
+        fillSize: 3,
+        fillDate: '20260920',
+        fillTime: null,
+        basketId: null,
+        sequenceNumber: null,
+        ssboe: ssboe + 1,
+        usecs: null,
+        source: 'replay',
+      },
+      {
+        accountNumber: ACCOUNT,
+        accountId: 'acct-1',
+        identityKey: 'h1',
+        fillId: '1163441',
+        rawFillId: null,
+        symbol: 'MESZ6',
+        exchange: null,
+        transactionType: 'BUY',
+        fillPrice: 5800,
+        fillSize: 5,
+        fillDate: '20260920',
+        fillTime: null,
+        basketId: null,
+        sequenceNumber: null,
+        ssboe,
+        usecs: null,
+        source: 'history',
+      },
+      {
+        accountNumber: ACCOUNT,
+        accountId: 'acct-1',
+        identityKey: 's1',
+        fillId: '1163450',
+        rawFillId: null,
+        symbol: 'MESZ6',
+        exchange: null,
+        transactionType: 'SELL',
+        fillPrice: 5801,
+        fillSize: 5,
+        fillDate: '20260920',
+        fillTime: null,
+        basketId: null,
+        sequenceNumber: null,
+        ssboe: ssboe + 2,
+        usecs: null,
+        source: 'history',
+      },
+    ]
+    fillFindMany.mockResolvedValue(storedRows)
+    fillCount.mockResolvedValue(storedRows.length)
+    tradeFindMany.mockResolvedValue([])
+    fetchAdminRebuildFills.mockImplementation(async (args: { lastFlatYmd?: string }) => {
+      expect(args.lastFlatYmd).toBe('2026-09-20')
+      return {
+        ...fetchedFills(
+          [
+            {
+              accountId: ACCOUNT,
+              symbol: 'MESZ6',
+              transactionType: 'BUY',
+              fillPrice: 5800,
+              fillSize: 5,
+              fillId: '1163441',
+              fillDate: '20260920',
+              ssboe,
+              source: 'history',
+            },
+            {
+              accountId: ACCOUNT,
+              symbol: 'MESZ6',
+              transactionType: 'SELL',
+              fillPrice: 5801,
+              fillSize: 5,
+              fillId: '1163450',
+              fillDate: '20260920',
+              ssboe: ssboe + 2,
+              source: 'history',
+            },
+          ],
+          undefined,
+          '2026-09-20',
+        ),
+        ordinaryStartYmd: '2024-01-01',
+        orderHistoryDates: ['20260920'],
+      }
+    })
+    const result = await resyncRithmicProtocolAccount({
+      userId: USER,
+      accountNumber: ACCOUNT,
+      dryRun: true,
+      anchorDate: '2026-09-25',
+    })
+    expect(result.error).not.toBe('ORDINARY_RANGE_UNFETCHABLE')
+    expect(fetchAdminRebuildFills).toHaveBeenCalled()
+  })
+
   it('FIFO on a flat Jérémie window produces no phantom shorts', async () => {
     tradeFindMany.mockResolvedValue([])
     fillCount.mockResolvedValue(0)

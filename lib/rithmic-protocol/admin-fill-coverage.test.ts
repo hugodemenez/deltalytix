@@ -769,6 +769,43 @@ describe('split-piece quantity consumption (W3)', () => {
     expect(uncoveredTradesByFillIdentity(trades, upstream)).toEqual([])
   })
 
+  it('covers a split exit Y-1×1 + Y×2 shared by three 1-lot entries (Case 2)', () => {
+    const entrySsboe = Date.parse('2026-10-20T14:00:00Z') / 1000
+    const exitSsboe = entrySsboe + 5
+    const trades = [1, 2, 3].map((n) => ({
+      accountNumber: ACCOUNT,
+      instrument: 'MES',
+      side: 'Long' as const,
+      quantity: 1,
+      entryPrice: 5800,
+      closePrice: 5802,
+      entryId: `200${n}`,
+      closeId: '2010',
+      entryDate: '2026-10-20T14:00:00.000Z',
+      closeDate: '2026-10-20T14:00:05.000Z',
+    }))
+    const upstream = [
+      fill({ fillId: '2001', fillSize: 1, ssboe: entrySsboe }),
+      fill({ fillId: '2002', fillSize: 1, ssboe: entrySsboe + 1 }),
+      fill({ fillId: '2003', fillSize: 1, ssboe: entrySsboe + 2 }),
+      fill({
+        fillId: '2009',
+        transactionType: 'SELL',
+        fillSize: 1,
+        fillPrice: 5802,
+        ssboe: exitSsboe,
+      }),
+      fill({
+        fillId: '2010',
+        transactionType: 'SELL',
+        fillSize: 2,
+        fillPrice: 5802,
+        ssboe: exitSsboe,
+      }),
+    ]
+    expect(uncoveredTradesByFillIdentity(trades, upstream)).toEqual([])
+  })
+
   it('still refuses when stored scale-in qty exceeds upstream lineage qty (B1)', () => {
     const ssboe = Date.parse('2026-10-20T14:00:00Z') / 1000
     const trades = [
@@ -976,6 +1013,77 @@ describe('skippedOrdinaryRangeIsQuiet (F9)', () => {
         lastFlatYmd: '2026-01-15',
       }),
     ).toBe(true)
+  })
+})
+
+describe('lastFlatYmdBeforeAnchor (F-LF)', () => {
+  it('flattens a raw rollup-plus-replay ledger after prep', () => {
+    const ssboe = Date.parse('2026-09-20T14:00:00Z') / 1000
+    const closeSsboe = ssboe + 2
+    const beforeMs = Date.parse('2026-09-25T22:00:00Z')
+    const raw = [
+      fill({ fillId: '1163440', fillSize: 2, source: 'replay', ssboe }),
+      fill({
+        fillId: '1163441',
+        fillSize: 3,
+        source: 'replay',
+        ssboe: ssboe + 1,
+      }),
+      fill({ fillId: '1163441', fillSize: 5, source: 'history', ssboe }),
+      fill({
+        fillId: '1163450',
+        transactionType: 'SELL',
+        fillSize: 5,
+        fillPrice: 5801,
+        ssboe: closeSsboe,
+      }),
+    ]
+    expect(lastFlatYmdBeforeAnchor(raw, beforeMs)).toBe('2026-09-20')
+  })
+
+  it('ignores an abandoned instrument last traded before the lookback floor', () => {
+    const beforeMs = Date.parse('2026-09-25T22:00:00Z')
+    const abandoned = [
+      fill({
+        fillId: 'old-b',
+        symbol: 'MESZ5',
+        fillDate: '20250115',
+        ssboe: Date.parse('2025-01-15T15:00:00Z') / 1000,
+      }),
+      fill({
+        fillId: 'old-s',
+        symbol: 'MESZ5',
+        transactionType: 'SELL',
+        fillPrice: 5801,
+        fillDate: '20250115',
+        ssboe: Date.parse('2025-01-15T15:05:00Z') / 1000,
+      }),
+    ]
+    const recent = [
+      fill({
+        fillId: 'nq-b',
+        symbol: 'NQZ6',
+        fillPrice: 16000,
+        fillDate: '20260920',
+        ssboe: Date.parse('2026-09-20T15:00:00Z') / 1000,
+      }),
+      fill({
+        fillId: 'nq-s',
+        symbol: 'NQZ6',
+        transactionType: 'SELL',
+        fillPrice: 16001,
+        fillDate: '20260920',
+        ssboe: Date.parse('2026-09-20T15:05:00Z') / 1000,
+      }),
+    ]
+    expect(lastFlatYmdBeforeAnchor([...abandoned, ...recent], beforeMs)).toBe(
+      '2025-01-15',
+    )
+    expect(
+      lastFlatYmdBeforeAnchor([...abandoned, ...recent], beforeMs, {
+        relevantFromYmd: '2025-11-07',
+      }),
+    ).toBe('2026-09-20')
   })
 })
 

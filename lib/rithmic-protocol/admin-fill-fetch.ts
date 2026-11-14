@@ -445,22 +445,6 @@ export async function fetchAdminRebuildFills(params: {
       }
     }
 
-    const unresolved = coverage.filter((window) => !window.resolved)
-    if (unresolved.length > 0) {
-      throw new AdminFillFetchError(
-        'INCOMPLETE_FILL_HISTORY',
-        `${unresolved.length} fill-history window(s) were unresolved after order-history fallback`,
-        {
-          windows: unresolved.slice(0, ADMIN_DIAGNOSTIC_LIMIT).map((window) => ({
-            startYmd: window.startYmd,
-            endYmd: window.endYmd,
-            historyStatus: window.historyStatus,
-            resolved: window.resolved,
-          })),
-        },
-      )
-    }
-
     const lookbackDays = Math.max(
       1,
       Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1,
@@ -495,6 +479,34 @@ export async function fetchAdminRebuildFills(params: {
           error instanceof Error ? error.message : 'Replay executions failed',
         )
       }
+    }
+
+    // Re-resolve after replay so quiet-window earliest sees every fill day (A-L1).
+    const allFillDays = fills.map((fill) => fillDateYyyymmdd(fill))
+    for (const window of coverage) {
+      const resolved = windowResolvedAfterFallback({
+        ...window,
+        allFillDays,
+        occupiedFillDays: params.occupiedFillDays,
+        todayYmd,
+      })
+      window.resolved = resolved.resolved
+      window.source = resolved.source
+    }
+    const unresolved = coverage.filter((window) => !window.resolved)
+    if (unresolved.length > 0) {
+      throw new AdminFillFetchError(
+        'INCOMPLETE_FILL_HISTORY',
+        `${unresolved.length} fill-history window(s) were unresolved after order-history fallback`,
+        {
+          windows: unresolved.slice(0, ADMIN_DIAGNOSTIC_LIMIT).map((window) => ({
+            startYmd: window.startYmd,
+            endYmd: window.endYmd,
+            historyStatus: window.historyStatus,
+            resolved: window.resolved,
+          })),
+        },
+      )
     }
 
     for (const fill of fills) {
