@@ -85,13 +85,27 @@ describe('POST /api/admin/pending-account-cleanup', () => {
       actorUserId: null,
     })
     retryPendingAccountCleanups.mockResolvedValue([
-      { id: 'row-1', ok: true, purgedResolved: 0 },
+      {
+        id: 'row-1',
+        ok: false,
+        dryRun: true,
+        storageError: 'dry-run; no changes applied',
+        stripeError: 'dry-run; no changes applied',
+      },
     ])
 
     const response = await post({ id: 'row-1', dryRun: true })
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
-      results: [{ id: 'row-1', ok: true, purgedResolved: 0 }],
+      results: [
+        {
+          id: 'row-1',
+          ok: false,
+          dryRun: true,
+          storageError: 'dry-run; no changes applied',
+          stripeError: 'dry-run; no changes applied',
+        },
+      ],
     })
     expect(retryPendingAccountCleanups).toHaveBeenCalledWith({
       id: 'row-1',
@@ -99,3 +113,4 @@ describe('POST /api/admin/pending-account-cleanup', () => {
     })
   })
 })
+

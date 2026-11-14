@@ -8,7 +8,8 @@ export const maxDuration = 60
  * Admin-only retry for PendingAccountCleanup rows.
  * Auth: admin session or `Authorization: Bearer $CRON_SECRET`.
  * There is no Bun CLI for this path (server-only modules); operators use this
- * route. Who runs it and when is an ops decision (Hugo).
+ * route. Who runs it and when is an ops decision (Hugo). Dry-run reports
+ * candidates without deleting queue rows or touching storage/Stripe.
  *
  * Body (optional JSON): `{ "id"?: string, "dryRun"?: boolean }`
  */

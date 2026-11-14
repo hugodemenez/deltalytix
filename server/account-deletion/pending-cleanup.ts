@@ -6,6 +6,7 @@ import { cancelStripeCustomersByIds } from '@/server/account-deletion/stripe'
 import { deleteUserTradeImageObjects } from '@/server/account-deletion/storage'
 import { supabaseAuthUserExists } from '@/server/account-deletion/supabase-auth'
 import { failureKindFromFlags } from '@/server/account-deletion/failure-kind'
+import { isUuid } from '@/server/account-deletion/id-format'
 
 export type RecordPendingCleanupInput = {
   formerUserId?: string | null
@@ -17,8 +18,6 @@ export type RecordPendingCleanupInput = {
 }
 
 export { failureKindFromFlags } from '@/server/account-deletion/failure-kind'
-
-const RESOLVED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
 
 /** Persist a durable cleanup task after the user row is gone. */
 export async function recordPendingAccountCleanup(
@@ -64,36 +63,52 @@ export type RetryPendingCleanupResult = {
   ok: boolean
   storageError?: string
   stripeError?: string
-  purgedResolved?: number
+  dryRun?: boolean
 }
 
-async function prefixIsReoccupied(prefix: string): Promise<boolean> {
+async function userRowExistsForId(id: string): Promise<boolean> {
   const user = await prisma.user.findFirst({
     where: {
-      OR: [{ id: prefix }, { auth_user_id: prefix }],
+      OR: [{ id }, { auth_user_id: id }],
     },
     select: { id: true },
   })
-  if (user) return true
+  return Boolean(user)
+}
+
+/**
+ * Storage prefixes: always refuse if a User row reuses the id.
+ * Supabase auth lookup only for UUID prefixes (legacy cuid prefixes skip it
+ * so retries can finish when no User row exists).
+ */
+export async function prefixIsReoccupied(prefix: string): Promise<boolean> {
+  if (await userRowExistsForId(prefix)) return true
+  if (!isUuid(prefix)) return false
   return supabaseAuthUserExists(prefix)
+}
+
+async function accountIsLiveAgain(
+  authUserId: string,
+  formerUserId?: string | null,
+): Promise<boolean> {
+  if (await userRowExistsForId(authUserId)) return true
+  if (formerUserId && (await userRowExistsForId(formerUserId))) return true
+  if (isUuid(authUserId) && (await supabaseAuthUserExists(authUserId))) {
+    return true
+  }
+  return false
 }
 
 /**
  * Retry unresolved PendingAccountCleanup rows (storage + Stripe only).
- * Marks resolvedAt when work succeeds. Never resolves STRIPE work with an
- * empty customer id list. Purges rows resolved more than 30 days ago.
+ * Deletes the queue row when work succeeds (no resolved retention).
+ * Never resolves STRIPE work with an empty customer id list.
+ * Dry-run performs no deletes or purges and reports non-ok.
  */
 export async function retryPendingAccountCleanups(options?: {
   id?: string
   dryRun?: boolean
 }): Promise<RetryPendingCleanupResult[]> {
-  const cutoff = new Date(Date.now() - RESOLVED_RETENTION_MS)
-  const purged = await prisma.pendingAccountCleanup.deleteMany({
-    where: {
-      resolvedAt: { not: null, lt: cutoff },
-    },
-  })
-
   const rows = await prisma.pendingAccountCleanup.findMany({
     where: {
       resolvedAt: null,
@@ -102,23 +117,27 @@ export async function retryPendingAccountCleanups(options?: {
     orderBy: { createdAt: 'asc' },
   })
 
+  if (options?.dryRun) {
+    return rows.map((row) => ({
+      id: row.id,
+      ok: false,
+      dryRun: true,
+      storageError: 'dry-run; no changes applied',
+      stripeError: 'dry-run; no changes applied',
+    }))
+  }
+
   if (isLocalDashboardAuthBypassEnabled()) {
     return rows.map((row) => ({
       id: row.id,
       ok: false,
       storageError: 'refusing cleanup under LOCAL_DASHBOARD_AUTH_BYPASS',
       stripeError: 'refusing cleanup under LOCAL_DASHBOARD_AUTH_BYPASS',
-      purgedResolved: purged.count,
     }))
   }
 
   const results: RetryPendingCleanupResult[] = []
   for (const row of rows) {
-    if (options?.dryRun) {
-      results.push({ id: row.id, ok: true, purgedResolved: purged.count })
-      continue
-    }
-
     let storageError: string | undefined
     let stripeError: string | undefined
 
@@ -147,6 +166,9 @@ export async function retryPendingAccountCleanups(options?: {
       if (row.stripeCustomerIds.length === 0) {
         stripeError =
           'missing Stripe customer ids; refusing to mark STRIPE cleanup resolved'
+      } else if (await accountIsLiveAgain(row.authUserId, row.formerUserId)) {
+        stripeError =
+          'refusing Stripe cancel; auth or User record is live again'
       } else {
         const stripe = await cancelStripeCustomersByIds(row.stripeCustomerIds)
         if (!stripe.ok) stripeError = stripe.error
@@ -155,9 +177,8 @@ export async function retryPendingAccountCleanups(options?: {
 
     const ok = !storageError && !stripeError
     if (ok) {
-      await prisma.pendingAccountCleanup.update({
+      await prisma.pendingAccountCleanup.delete({
         where: { id: row.id },
-        data: { resolvedAt: new Date() },
       })
     }
 
@@ -166,7 +187,6 @@ export async function retryPendingAccountCleanups(options?: {
       ok,
       storageError,
       stripeError,
-      purgedResolved: purged.count,
     })
   }
   return results

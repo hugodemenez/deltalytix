@@ -1,31 +1,44 @@
 import 'server-only'
 
 import { isLocalDashboardAuthBypassEnabled } from '@/lib/local-dashboard-auth'
-import { stripe } from '@/server/stripe'
 
 export type StripeCleanupResult = {
   ok: boolean
   error?: string
   customerIds: string[]
+  skipped?: boolean
+}
+
+/** True when a real Stripe secret is present (not local bypass placeholder). */
+export function isStripeSecretConfigured(): boolean {
+  return Boolean(process.env.STRIPE_SECRET_KEY?.trim())
 }
 
 /**
  * Resolve Stripe customer ids for the given emails before any DB wipe.
- * Fail closed: any list/API error returns ok:false (caller must abort deletion).
+ * Fail closed when Stripe is configured and the API errors.
+ * When Stripe is not configured, skip (ok with empty ids).
  */
 export async function listStripeCustomerIdsForEmails(
   emails: string[],
 ): Promise<StripeCleanupResult> {
   if (isLocalDashboardAuthBypassEnabled()) {
-    return { ok: true, customerIds: [] }
+    return { ok: true, customerIds: [], skipped: true }
+  }
+  if (!isStripeSecretConfigured()) {
+    return { ok: true, customerIds: [], skipped: true }
   }
   if (emails.length === 0) return { ok: true, customerIds: [] }
 
+  const { stripe } = await import('@/server/stripe')
   const customerIds: string[] = []
   try {
     for (const email of emails) {
-      const customers = await stripe.customers.list({ email, limit: 10 })
-      for (const customer of customers.data) {
+      // Auto-paginate: do not stop at the first page (limit is page size only).
+      for await (const customer of stripe.customers.list({
+        email,
+        limit: 100,
+      })) {
         customerIds.push(customer.id)
         // Probe subscriptions so we fail closed if billing access is broken
         // before wiping the app user row.
@@ -41,7 +54,11 @@ export async function listStripeCustomerIdsForEmails(
     const message =
       error instanceof Error ? error.message : 'Stripe customer lookup failed'
     console.error('[delete-account] Stripe customer lookup failed:', message)
-    return { ok: false, error: message, customerIds: Array.from(new Set(customerIds)) }
+    return {
+      ok: false,
+      error: message,
+      customerIds: Array.from(new Set(customerIds)),
+    }
   }
 }
 
@@ -56,16 +73,19 @@ export async function cancelStripeCustomersByIds(
       error: 'refusing Stripe cancel under LOCAL_DASHBOARD_AUTH_BYPASS',
     }
   }
+  if (!isStripeSecretConfigured()) {
+    return { ok: true, customerIds, skipped: true }
+  }
   if (customerIds.length === 0) return { ok: true, customerIds: [] }
 
+  const { stripe } = await import('@/server/stripe')
   try {
     for (const customerId of customerIds) {
-      const subscriptions = await stripe.subscriptions.list({
+      for await (const subscription of stripe.subscriptions.list({
         customer: customerId,
         status: 'all',
         limit: 100,
-      })
-      for (const subscription of subscriptions.data) {
+      })) {
         if (subscription.status !== 'canceled') {
           await stripe.subscriptions.cancel(subscription.id)
         }

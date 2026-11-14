@@ -10,9 +10,8 @@ import { deleteUserTradeImageObjects } from '@/server/account-deletion/storage'
 import { deleteUserTradeRelatedRows } from '@/server/account-deletion/trade-rows'
 import { deleteSupabaseAuthUser } from '@/server/account-deletion/supabase-auth'
 import { recordPendingAccountCleanup } from '@/server/account-deletion/pending-cleanup'
-import { AccountDeletionAbortError } from '@/lib/account-deletion-errors'
 import { failureKindFromFlags } from '@/server/account-deletion/failure-kind'
-import type { DeleteAccountResult } from '@/server/account-deletion/types'
+import type { DeleteAccountResult } from '@/lib/account-deletion-result'
 
 /**
  * Wipe the signed-in user's account. Server-side only; no admin path.
@@ -50,10 +49,11 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
     ),
   )
 
-  // Fail closed: resolve Stripe customer ids before deleting anything.
+  // Fail closed when Stripe is configured and lookup fails. Structured result
+  // (not a thrown message) so production clients still see the localised copy.
   const stripeLookup = await listStripeCustomerIdsForEmails(emails)
   if (!stripeLookup.ok) {
-    throw new AccountDeletionAbortError()
+    return { status: 'blocked', reason: 'billing_check_failed' }
   }
   const stripeCustomerIds = stripeLookup.customerIds
 
@@ -143,6 +143,7 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
 
   const storageFailed = Boolean(storage.error)
   const stripeFailed = Boolean(stripeError)
+  let queueWriteFailed = false
   if (storageFailed || stripeFailed) {
     try {
       const pending = await recordPendingAccountCleanup({
@@ -162,6 +163,7 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
         },
       )
     } catch (queueError) {
+      queueWriteFailed = true
       console.error('[delete-account] Failed to queue PendingAccountCleanup', {
         formerUserId: prismaUser?.id ?? null,
         authUserId: user.id,
@@ -174,14 +176,27 @@ export async function deleteCurrentUserAccount(): Promise<DeleteAccountResult> {
     }
   }
 
-  await deleteSupabaseAuthUser(user.id)
+  // Keep auth if the durable queue write failed so operators can still act.
+  if (!queueWriteFailed) {
+    await deleteSupabaseAuthUser(user.id)
+  }
 
   const { error: signOutError } = await supabase.auth.signOut()
   if (signOutError) {
     console.error('[delete-account] signOut failed:', signOutError.message)
+    const { error: localSignOutError } = await supabase.auth.signOut({
+      scope: 'local',
+    })
+    if (localSignOutError) {
+      console.error(
+        '[delete-account] local signOut failed:',
+        localSignOutError.message,
+      )
+    }
   }
 
   return {
-    status: storageFailed || stripeFailed ? 'partial' : 'complete',
+    status:
+      storageFailed || stripeFailed || queueWriteFailed ? 'partial' : 'complete',
   }
 }

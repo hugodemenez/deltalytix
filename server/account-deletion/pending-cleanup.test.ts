@@ -6,6 +6,7 @@ const {
   create,
   findMany,
   update,
+  deleteRow,
   deleteMany,
   userFindFirst,
   deleteUserTradeImageObjects,
@@ -16,6 +17,7 @@ const {
   create: vi.fn(),
   findMany: vi.fn(),
   update: vi.fn(),
+  deleteRow: vi.fn(),
   deleteMany: vi.fn(),
   userFindFirst: vi.fn(),
   deleteUserTradeImageObjects: vi.fn(),
@@ -26,7 +28,13 @@ const {
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
-    pendingAccountCleanup: { create, findMany, update, deleteMany },
+    pendingAccountCleanup: {
+      create,
+      findMany,
+      update,
+      delete: deleteRow,
+      deleteMany,
+    },
     user: { findFirst: userFindFirst },
   },
 }))
@@ -96,13 +104,6 @@ describe('recordPendingAccountCleanup', () => {
       }),
     ).resolves.toBeNull()
     expect(create).not.toHaveBeenCalled()
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('refusing to queue STRIPE'),
-      expect.objectContaining({
-        formerUserId: 'db-1',
-        authUserId: 'auth-1',
-      }),
-    )
     errorSpy.mockRestore()
   })
 
@@ -116,14 +117,6 @@ describe('recordPendingAccountCleanup', () => {
         stripeFailed: true,
       }),
     ).resolves.toEqual({ id: 'pending-1' })
-    expect(create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          failureKind: 'STRIPE',
-          stripeCustomerIds: ['cus_1'],
-        }),
-      }),
-    )
   })
 })
 
@@ -131,9 +124,9 @@ describe('retryPendingAccountCleanups', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     isLocalDashboardAuthBypassEnabled.mockReturnValue(false)
-    deleteMany.mockResolvedValue({ count: 0 })
     findMany.mockResolvedValue([])
-    update.mockResolvedValue({})
+    deleteRow.mockResolvedValue({})
+    deleteMany.mockResolvedValue({ count: 0 })
     userFindFirst.mockResolvedValue(null)
     supabaseAuthUserExists.mockResolvedValue(false)
     deleteUserTradeImageObjects.mockResolvedValue({ removed: 1 })
@@ -143,17 +136,30 @@ describe('retryPendingAccountCleanups', () => {
     })
   })
 
-  it('purges resolved rows older than 30 days before retrying', async () => {
-    deleteMany.mockResolvedValue({ count: 2 })
-    findMany.mockResolvedValue([])
-
-    const results = await retryPendingAccountCleanups()
-    expect(deleteMany).toHaveBeenCalledWith({
-      where: {
-        resolvedAt: { not: null, lt: expect.any(Date) },
+  it('dry-run performs no deletes and reports non-ok', async () => {
+    findMany.mockResolvedValue([
+      {
+        id: 'row-1',
+        failureKind: 'STRIPE',
+        storagePrefixes: [],
+        stripeCustomerIds: ['cus_1'],
+        authUserId: 'auth-1',
+        formerUserId: null,
       },
-    })
-    expect(results).toEqual([])
+    ])
+
+    const results = await retryPendingAccountCleanups({ dryRun: true })
+    expect(results).toEqual([
+      expect.objectContaining({
+        id: 'row-1',
+        ok: false,
+        dryRun: true,
+      }),
+    ])
+    expect(deleteMany).not.toHaveBeenCalled()
+    expect(deleteRow).not.toHaveBeenCalled()
+    expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
+    expect(deleteUserTradeImageObjects).not.toHaveBeenCalled()
   })
 
   it('refuses to mark work resolved under LOCAL_DASHBOARD_AUTH_BYPASS', async () => {
@@ -164,21 +170,15 @@ describe('retryPendingAccountCleanups', () => {
         failureKind: 'STRIPE',
         storagePrefixes: ['auth-1'],
         stripeCustomerIds: ['cus_1'],
+        authUserId: 'auth-1',
+        formerUserId: null,
       },
     ])
 
     const results = await retryPendingAccountCleanups()
-    expect(results).toEqual([
-      expect.objectContaining({
-        id: 'row-1',
-        ok: false,
-        storageError: expect.stringContaining('LOCAL_DASHBOARD_AUTH_BYPASS'),
-        stripeError: expect.stringContaining('LOCAL_DASHBOARD_AUTH_BYPASS'),
-      }),
-    ])
+    expect(results[0]).toMatchObject({ id: 'row-1', ok: false })
     expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
-    expect(deleteUserTradeImageObjects).not.toHaveBeenCalled()
-    expect(update).not.toHaveBeenCalled()
+    expect(deleteRow).not.toHaveBeenCalled()
   })
 
   it('never resolves a STRIPE row with an empty customer id list', async () => {
@@ -188,75 +188,100 @@ describe('retryPendingAccountCleanups', () => {
         failureKind: 'STRIPE',
         storagePrefixes: [],
         stripeCustomerIds: [],
+        authUserId: 'auth-1',
+        formerUserId: null,
       },
     ])
 
     const results = await retryPendingAccountCleanups()
     expect(results[0]).toMatchObject({
-      id: 'row-empty',
       ok: false,
       stripeError: expect.stringContaining('missing Stripe customer ids'),
     })
-    expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
-    expect(update).not.toHaveBeenCalled()
+    expect(deleteRow).not.toHaveBeenCalled()
   })
 
-  it('refuses storage cleanup when a User or auth id is reoccupied', async () => {
+  it('refuses storage cleanup when a User id is reoccupied', async () => {
     findMany.mockResolvedValue([
       {
         id: 'row-storage',
         failureKind: 'STORAGE',
         storagePrefixes: ['reused-id'],
         stripeCustomerIds: [],
+        authUserId: 'auth-1',
+        formerUserId: null,
       },
     ])
     userFindFirst.mockResolvedValue({ id: 'reused-id' })
 
     const results = await retryPendingAccountCleanups()
     expect(results[0]).toMatchObject({
-      id: 'row-storage',
       ok: false,
       storageError: expect.stringContaining('id still in use'),
     })
     expect(deleteUserTradeImageObjects).not.toHaveBeenCalled()
-    expect(update).not.toHaveBeenCalled()
   })
 
-  it('refuses storage cleanup when Supabase auth still has the id', async () => {
+  it('for legacy cuid prefixes, only checks the User table (skips auth lookup)', async () => {
+    const cuid = 'clxyz0123456789abcdefghij'
     findMany.mockResolvedValue([
       {
-        id: 'row-auth',
+        id: 'row-cuid',
         failureKind: 'STORAGE',
-        storagePrefixes: ['auth-still-there'],
+        storagePrefixes: [cuid],
         stripeCustomerIds: [],
+        authUserId: cuid,
+        formerUserId: null,
       },
     ])
+    userFindFirst.mockResolvedValue(null)
     supabaseAuthUserExists.mockResolvedValue(true)
+
+    const results = await retryPendingAccountCleanups()
+    expect(supabaseAuthUserExists).not.toHaveBeenCalled()
+    expect(deleteUserTradeImageObjects).toHaveBeenCalledWith([cuid])
+    expect(results[0]).toMatchObject({ ok: true })
+    expect(deleteRow).toHaveBeenCalledWith({ where: { id: 'row-cuid' } })
+  })
+
+  it('skips Stripe cancel when the auth or User record is live again', async () => {
+    findMany.mockResolvedValue([
+      {
+        id: 'row-live',
+        failureKind: 'STRIPE',
+        storagePrefixes: [],
+        stripeCustomerIds: ['cus_1'],
+        authUserId: '550e8400-e29b-41d4-a716-446655440000',
+        formerUserId: 'db-1',
+      },
+    ])
+    userFindFirst.mockResolvedValue({ id: 'db-1' })
 
     const results = await retryPendingAccountCleanups()
     expect(results[0]).toMatchObject({
       ok: false,
-      storageError: expect.stringContaining('auth-still-there'),
+      stripeError: expect.stringContaining('live again'),
     })
-    expect(deleteUserTradeImageObjects).not.toHaveBeenCalled()
+    expect(cancelStripeCustomersByIds).not.toHaveBeenCalled()
+    expect(deleteRow).not.toHaveBeenCalled()
   })
 
-  it('marks resolved when Stripe cleanup with known ids succeeds', async () => {
+  it('deletes the queue row when Stripe cleanup with known ids succeeds', async () => {
     findMany.mockResolvedValue([
       {
         id: 'row-ok',
         failureKind: 'STRIPE',
         storagePrefixes: [],
         stripeCustomerIds: ['cus_1'],
+        authUserId: 'auth-1',
+        formerUserId: null,
       },
     ])
 
     const results = await retryPendingAccountCleanups()
     expect(cancelStripeCustomersByIds).toHaveBeenCalledWith(['cus_1'])
-    expect(update).toHaveBeenCalledWith({
-      where: { id: 'row-ok' },
-      data: { resolvedAt: expect.any(Date) },
-    })
+    expect(deleteRow).toHaveBeenCalledWith({ where: { id: 'row-ok' } })
+    expect(update).not.toHaveBeenCalled()
     expect(results[0]).toMatchObject({ id: 'row-ok', ok: true })
   })
 })

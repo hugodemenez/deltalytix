@@ -32,8 +32,13 @@ jobs:
             'app/[locale]/(landing)/privacy/privacy-copy.test.ts' \
             'lib/consent-persist.test.ts' \
             'lib/account-deleted-notice.test.ts' \
+            'lib/account-deletion-result.test.ts' \
             'components/google-tag.test.ts' \
+            'components/account-deleted-notice.test.tsx' \
             'server/account-deletion/trade-rows.test.ts' \
             'server/account-deletion/storage.test.ts' \
+            'server/account-deletion/id-format.test.ts' \
             'server/account-deletion/pending-cleanup.test.ts' \
-            'server/delete-account.test.ts'
+            'server/account-deletion/stripe.test.ts' \
+            'server/delete-account.test.ts' \
+            'app/api/admin/pending-account-cleanup/route.test.ts'
