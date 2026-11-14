@@ -39,6 +39,7 @@ model Trade {
   @@index([accountId])
   @@index([groupId])
   @@index([userId, entryDate(sort: Desc)])
+  @@index([userId, accountNumber, entryDate(sort: Desc)], map: "Trade_userId_accountNumber_entryDate_idx")
   @@index([entryDate])
   @@schema("public")
 }
@@ -560,6 +561,7 @@ model FinancialEvent {
 
   @@unique([title, date, lang, timezone])
   @@index([date])
+  @@index([lang, date], map: "FinancialEvent_lang_date_idx")
   @@schema("public")
 }
 

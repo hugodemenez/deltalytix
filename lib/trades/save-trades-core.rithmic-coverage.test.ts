@@ -12,7 +12,6 @@ vi.mock("@/lib/prisma", () => ({
       findMany: (...args: unknown[]) => findMany(...args),
       updateMany: vi.fn(),
     },
-    $transaction: vi.fn(),
   },
 }))
 vi.mock("next/cache", () => ({ revalidateTag: vi.fn(), updateTag: vi.fn() }))

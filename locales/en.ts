@@ -1178,6 +1178,7 @@ export default {
   "widgets.tags.confirmDelete": "Delete",
   "widgets.tags.deleting": "Deleting...",
   "calendar.week": "Week",
+  "calendar.newsLoadRetry": "Couldn't load news. Retry",
   "calendar.weekdays.sun": "Sun",
   "calendar.weekdays.mon": "Mon",
   "calendar.weekdays.tue": "Tue",

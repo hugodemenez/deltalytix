@@ -10,6 +10,7 @@ import pg from "pg"
 import { PrismaClient } from "../prisma/generated/prisma/client"
 import { API_SCOPES } from "../lib/api/scopes"
 import { formatDateToTimestamp } from "../lib/date-utils"
+import { createManyTradesInChunks } from "../lib/trades/create-many-trades"
 
 const SEED_OAUTH_CLIENT_ID = "dltx_app_seed_demo_connections"
 const SEED_OAUTH_APP_NAME = "Seed Chart Companion"
@@ -225,7 +226,10 @@ async function main() {
       ...trade,
       accountId: account.id,
     }))
-    await prisma.trade.createMany({ data: trades })
+    await createManyTradesInChunks(
+      (chunk) => prisma.trade.createMany(chunk),
+      { data: trades },
+    )
 
     await prisma.payout.deleteMany({ where: { accountId: account.id } })
     await prisma.payout.createMany({
