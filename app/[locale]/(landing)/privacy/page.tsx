@@ -17,6 +17,7 @@ export default function PrivacyPolicy() {
       <section className="mb-6">
         <h2 className="mb-3 text-2xl font-semibold">{t("privacy.intro.title")}</h2>
         <p>{t("privacy.intro.content")}</p>
+        <p className="mt-2">{t("privacy.intro.controller")}</p>
       </section>
 
       <section className="mb-6">
@@ -32,6 +33,10 @@ export default function PrivacyPolicy() {
           <li>{t("privacy.collect.tokens")}</li>
           <li>{t("privacy.collect.aiChat")}</li>
           <li>{t("privacy.collect.aiFeatures")}</li>
+          <li>{t("privacy.collect.community")}</li>
+          <li>{t("privacy.collect.shares")}</li>
+          <li>{t("privacy.collect.teams")}</li>
+          <li>{t("privacy.collect.newsletter")}</li>
           <li>{t("privacy.collect.technical")}</li>
         </ul>
       </section>
@@ -45,10 +50,12 @@ export default function PrivacyPolicy() {
           <li>{t("privacy.use.features")}</li>
           <li>{t("privacy.use.support")}</li>
           <li>{t("privacy.use.billing")}</li>
+          <li>{t("privacy.use.newsletter")}</li>
           <li>{t("privacy.use.ai")}</li>
           <li>{t("privacy.use.connectors")}</li>
           <li>{t("privacy.use.improve")}</li>
           <li>{t("privacy.use.monitor")}</li>
+          <li>{t("privacy.use.advertising")}</li>
           <li>{t("privacy.use.security")}</li>
         </ul>
       </section>
@@ -62,7 +69,15 @@ export default function PrivacyPolicy() {
           <li>{t("privacy.processors.posthog")}</li>
           <li>{t("privacy.processors.resend")}</li>
           <li>{t("privacy.processors.vercel")}</li>
+          <li>{t("privacy.processors.google")}</li>
+          <li>{t("privacy.processors.googleSignIn")}</li>
           <li>{t("privacy.processors.aiProviders")}</li>
+          <li>{t("privacy.processors.brokers")}</li>
+          <li>{t("privacy.processors.databento")}</li>
+          <li>{t("privacy.processors.calcom")}</li>
+          <li>{t("privacy.processors.teams")}</li>
+          <li>{t("privacy.processors.publicShares")}</li>
+          <li>{t("privacy.processors.community")}</li>
           <li>{t("privacy.processors.authorizedApps")}</li>
         </ul>
         <p className="mt-2">{t("privacy.processors.noSale")}</p>
@@ -129,6 +144,7 @@ export default function PrivacyPolicy() {
         <p className="mt-2">{t("privacy.analytics.afterConsent")}</p>
         <p className="mt-2">{t("privacy.analytics.otherRegions")}</p>
         <p className="mt-2">{t("privacy.analytics.conversions")}</p>
+        <p className="mt-2">{t("privacy.analytics.vercel")}</p>
         <p className="mt-4">
           <AnalyticsOptOutLink
             label={t("privacy.analytics.optOut")}
@@ -139,9 +155,19 @@ export default function PrivacyPolicy() {
       </section>
 
       <section className="mb-6">
+        <h2 className="mb-3 text-2xl font-semibold">{t("privacy.security.title")}</h2>
+        <p>{t("privacy.security.content")}</p>
+      </section>
+
+      <section className="mb-6">
         <h2 className="mb-3 text-2xl font-semibold">{t("privacy.legal.title")}</h2>
         <p>{t("privacy.legal.basis")}</p>
         <p className="mt-2">{t("privacy.legal.transfers")}</p>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="mb-3 text-2xl font-semibold">{t("privacy.children.title")}</h2>
+        <p>{t("privacy.children.content")}</p>
       </section>
 
       <section className="mb-6">

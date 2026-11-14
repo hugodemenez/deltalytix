@@ -27,8 +27,7 @@ export async function POST(req: NextRequest) {
         return Response.json(availabilityError, { status: 503 });
       }
       const { messages, username, locale, timezone } = await req.json();
-      console.log('[Chat Route] Received messages:', JSON.stringify(messages, null, 2));
-      
+
       // Check if messages is valid
       if (!messages || !Array.isArray(messages) || messages.length === 0) {
         console.error('[Chat Route] Invalid messages array:', messages);

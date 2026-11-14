@@ -43,7 +43,6 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
     return msg
   })
 
-  console.log('Messages', JSON.stringify(textOnlyMessages))
   // Try to find existing mood entry for today
   const existingMood = await prisma.mood.findFirst({
     where: {
@@ -84,7 +83,6 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
 }
 
 export async function loadChat(): Promise<UIMessage[]> {
-  console.log('Loading chat')
   const userId = await getUserId()
   
   // Check if user exists before proceeding
