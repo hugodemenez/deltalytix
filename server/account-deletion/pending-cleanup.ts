@@ -3,6 +3,7 @@ import 'server-only'
 import { prisma } from '@/lib/prisma'
 import { cancelStripeCustomersByIds } from '@/server/account-deletion/stripe'
 import { deleteUserTradeImageObjects } from '@/server/account-deletion/storage'
+import { failureKindFromFlags } from '@/server/account-deletion/failure-kind'
 
 export type RecordPendingCleanupInput = {
   formerUserId?: string | null
@@ -13,16 +14,7 @@ export type RecordPendingCleanupInput = {
   stripeFailed: boolean
 }
 
-export type PendingAccountCleanupFailureKind = 'STORAGE' | 'STRIPE' | 'BOTH'
-
-export function failureKindFromFlags(
-  storageFailed: boolean,
-  stripeFailed: boolean,
-): PendingAccountCleanupFailureKind {
-  if (storageFailed && stripeFailed) return 'BOTH'
-  if (storageFailed) return 'STORAGE'
-  return 'STRIPE'
-}
+export { failureKindFromFlags } from '@/server/account-deletion/failure-kind'
 
 /** Persist a durable cleanup task after the user row is gone. */
 export async function recordPendingAccountCleanup(
