@@ -510,8 +510,13 @@ describe('admin account resync scoping and safety', () => {
       accountNumber: ACCOUNT,
       dryRun: false,
     })
-    const created = tradeCreateMany.mock.calls[0][0].data as Array<{ id: string }>
+    const created = tradeCreateMany.mock.calls[0][0].data as Array<{
+      id: string
+      comment: string | null
+    }>
     expect(created[0]?.id).toBe('kept-row')
+    expect(created[0]?.comment?.startsWith('jrn:v1:')).toBe(true)
+    expect(created[0]?.comment).not.toContain('keep')
     expect(tradeAnalyticsDeleteMany).not.toHaveBeenCalled()
   })
 

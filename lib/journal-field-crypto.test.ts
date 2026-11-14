@@ -117,6 +117,28 @@ describe('journal-field-crypto', () => {
     expect(() => encryptJournalField('secret')).toThrow(/JOURNAL_ENCRYPTION_KEY/)
   })
 
+  it('does not require a key for import-time helpers or empty values', () => {
+    delete process.env.JOURNAL_ENCRYPTION_KEY
+    delete process.env.ENCRYPTION_KEY
+    delete process.env.JOURNAL_ENCRYPTION_PREVIOUS_KEY
+    expect(hasJournalEncryptionKey()).toBe(false)
+    expect(isEncryptedJournalField('plain')).toBe(false)
+    expect(isValidJournalCiphertext('jrn:v1:not-ciphertext')).toBe(false)
+    expect(encryptJournalField(null)).toBeNull()
+    expect(encryptJournalField('')).toBe('')
+    expect(encryptJournalConversation(null)).toBeNull()
+    expect(decryptJournalFieldSafe('jrn:v1:AAAAAAAAAAAAAAAA:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB')).toBeNull()
+  })
+
+  it('treats an invalid JOURNAL_ENCRYPTION_KEY as missing until encrypt is called', () => {
+    process.env.VERCEL_ENV = 'production'
+    process.env.JOURNAL_ENCRYPTION_KEY = 'too-short'
+    delete process.env.ENCRYPTION_KEY
+    expect(hasJournalEncryptionKey()).toBe(false)
+    expect(encryptJournalField(null)).toBeNull()
+    expect(() => encryptJournalField('secret')).toThrow(/JOURNAL_ENCRYPTION_KEY/)
+  })
+
   it('throws when decrypting ciphertext with the wrong key', () => {
     process.env.JOURNAL_ENCRYPTION_KEY = '1'.repeat(64)
     const encrypted = encryptJournalField('classified')

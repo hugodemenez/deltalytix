@@ -81,6 +81,12 @@ export async function getUserData(userId: string): Promise<UserData> {
         lt: rangeEnd.toISOString(),
       },
     },
+    select: {
+      id: true,
+      pnl: true,
+      commission: true,
+      entryDate: true,
+    },
   })
 
   const weekTrades = trades.filter((trade) => isEntryInWeek(trade.entryDate, week))

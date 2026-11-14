@@ -35,6 +35,7 @@ import {
 } from './fill-ledger'
 import { buildTradesFromRithmicFills } from './fills-to-trades'
 import { createManyTradesInChunks } from '@/lib/trades/create-many-trades'
+import { encryptJournalField } from '@/lib/journal-field-crypto'
 import type { RithmicProtocolFill } from './types'
 
 const SERVICE = 'rithmic-protocol'
@@ -369,7 +370,7 @@ function tradeCreateRow(
     ...trade,
     userId,
     accountId,
-    comment: trade.comment ?? null,
+    comment: encryptJournalField(trade.comment ?? null),
     imageBase64: trade.imageBase64 ?? null,
     imageBase64Second: trade.imageBase64Second ?? null,
     videoUrl: trade.videoUrl ?? null,

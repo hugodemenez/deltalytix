@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { encryptJournalField } from './journal-field-crypto'
-import { decryptResultTree, encryptWritePayload } from './prisma-journal-encryption'
+import {
+  decryptResultTree,
+  encryptWriteArgs,
+  encryptWritePayload,
+  withJournalFieldEncryption,
+} from './prisma-journal-encryption'
 
 describe('prisma-journal-encryption nested writes', () => {
   it('encrypts { set } updates', () => {
@@ -36,6 +41,23 @@ describe('prisma-journal-encryption nested writes', () => {
     expect(String(data.trades.upsert.create.comment)).not.toContain('scale out')
     expect(String(data.trades.upsert.update.comment.set)).not.toContain('scale out later')
     expect(data.trades.upsert.where.id).toBe('t1')
+  })
+
+  it('encrypts comments on a Trade.createMany payload', () => {
+    process.env.JOURNAL_ENCRYPTION_KEY = 'c'.repeat(64)
+    const args = {
+      data: [
+        { id: 't1', comment: 'note-one', pnl: 10 },
+        { id: 't2', comment: 'note-two', pnl: -4 },
+      ],
+      skipDuplicates: true,
+    }
+    encryptWriteArgs(args)
+    expect(args.data[0].comment.startsWith('jrn:v1:')).toBe(true)
+    expect(args.data[1].comment.startsWith('jrn:v1:')).toBe(true)
+    expect(args.data[0].comment).not.toContain('note-one')
+    expect(args.data[1].comment).not.toContain('note-two')
+    expect(args.skipDuplicates).toBe(true)
   })
 
   it('does not encrypt where filters', () => {
@@ -91,5 +113,65 @@ describe('prisma-journal-encryption include decrypt', () => {
     decryptResultTree(included)
     expect(included.trades[0].comment).toBe('good')
     expect(included.trades[1].comment).toBeNull()
+  })
+})
+
+describe('prisma-journal-encryption without a key', () => {
+  it('does not throw wrapping a client or walking unrelated payloads', () => {
+    delete process.env.JOURNAL_ENCRYPTION_KEY
+    delete process.env.ENCRYPTION_KEY
+    delete process.env.JOURNAL_ENCRYPTION_PREVIOUS_KEY
+
+    const stub = {
+      $extends() {
+        return this
+      },
+    }
+    expect(() =>
+      withJournalFieldEncryption(stub as never),
+    ).not.toThrow()
+
+    const accountWrite = {
+      data: {
+        number: 'DEMO-001',
+        startingBalance: 50_000,
+        nested: { tags: ['plan-followed'] },
+      },
+    }
+    expect(() => encryptWriteArgs(accountWrite)).not.toThrow()
+    expect(accountWrite.data.number).toBe('DEMO-001')
+
+    const createManyTrades = {
+      data: [
+        { id: 't1', pnl: 10, commission: 1.25, comment: null },
+        { id: 't2', pnl: -4, commission: 0 },
+      ],
+    }
+    expect(() => encryptWritePayload(createManyTrades)).not.toThrow()
+
+    const result = {
+      trades: [{ id: 't1', pnl: 10, commission: 1.25 }],
+      count: 1,
+    }
+    expect(() => decryptResultTree(result)).not.toThrow()
+    expect(result.trades[0].pnl).toBe(10)
+  })
+
+  it('still throws when a journal field is actually encrypted without a key', () => {
+    delete process.env.JOURNAL_ENCRYPTION_KEY
+    delete process.env.ENCRYPTION_KEY
+    expect(() => encryptWritePayload({ comment: 'held too long' })).toThrow(
+      /JOURNAL_ENCRYPTION_KEY/,
+    )
+  })
+
+  it('nulls ciphertext on read when the key is missing instead of throwing', () => {
+    process.env.JOURNAL_ENCRYPTION_KEY = 'a'.repeat(64)
+    const cipher = encryptJournalField('daily recap')
+    delete process.env.JOURNAL_ENCRYPTION_KEY
+    delete process.env.ENCRYPTION_KEY
+    const included = { trades: [{ id: 't1', comment: cipher }] }
+    expect(() => decryptResultTree(included)).not.toThrow()
+    expect(included.trades[0].comment).toBeNull()
   })
 })
