@@ -8,7 +8,9 @@ import { getUserId } from "@/server/auth"
 import {
   decryptJournalConversation,
   encryptJournalConversation,
+  rowHasUnreadConversation,
 } from "@/lib/journal-field-crypto"
+import { conversationWrite } from "@/lib/journal-field-write-guard"
 
 export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
   const userId = await getUserId()
@@ -62,7 +64,10 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
   revalidateTag(`user-data-${userId}`, { expire: 0 })
 
   if (existingMood) {
-    // Update existing mood entry
+    conversationWrite({
+      existingUndecryptable: rowHasUnreadConversation(existingMood),
+      incoming: textOnlyMessages,
+    })
     const updatedMood = await prisma.mood.update({
       where: {
         id: existingMood.id,
@@ -123,6 +128,11 @@ export async function loadChat(): Promise<UIMessage[]> {
     },
   })
 
+  if (mood && rowHasUnreadConversation(mood)) {
+    throw new Error(
+      "Refusing to load unread mood.conversation. The stored transcript could not be decrypted; it was not empty.",
+    )
+  }
   const conversation = decryptJournalConversation(mood?.conversation)
   if (!conversation) return []
   if (Array.isArray(conversation)) return conversation as UIMessage[]

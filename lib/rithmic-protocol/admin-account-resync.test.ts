@@ -32,8 +32,8 @@ vi.mock('next/cache', () => ({
   updateTag: (...args: unknown[]) => updateTag(...args),
   revalidateTag: (...args: unknown[]) => revalidateTag(...args),
 }))
-vi.mock('@/lib/prisma', () => ({
-  prisma: {
+vi.mock('@/lib/prisma', () => {
+  const client = {
     trade: {
       findMany: (...args: unknown[]) => tradeFindMany(...args),
       deleteMany: (...args: unknown[]) => tradeDeleteMany(...args),
@@ -64,8 +64,9 @@ vi.mock('@/lib/prisma', () => ({
     },
     $transaction: (...args: unknown[]) => transaction(...args),
     $queryRaw: (...args: unknown[]) => queryRaw(...args),
-  },
-}))
+  }
+  return { prisma: client, prismaBase: client }
+})
 vi.mock('@/lib/connection-token-crypto', () => ({
   decryptConnectionToken: (...args: unknown[]) => decryptConnectionToken(...args),
 }))
@@ -515,8 +516,7 @@ describe('admin account resync scoping and safety', () => {
       comment: string | null
     }>
     expect(created[0]?.id).toBe('kept-row')
-    expect(created[0]?.comment?.startsWith('jrn:v1:')).toBe(true)
-    expect(created[0]?.comment).not.toContain('keep')
+    expect(created[0]?.comment).toBe('keep')
     expect(tradeAnalyticsDeleteMany).not.toHaveBeenCalled()
   })
 

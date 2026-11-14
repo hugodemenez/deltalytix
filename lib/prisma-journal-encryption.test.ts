@@ -112,7 +112,9 @@ describe('prisma-journal-encryption include decrypt', () => {
     }
     decryptResultTree(included)
     expect(included.trades[0].comment).toBe('good')
+    expect(included.trades[0].commentUndecryptable).toBe(false)
     expect(included.trades[1].comment).toBeNull()
+    expect(included.trades[1].commentUndecryptable).toBe(true)
   })
 })
 
@@ -158,6 +160,7 @@ describe('prisma-journal-encryption without a key', () => {
   })
 
   it('still throws when a journal field is actually encrypted without a key', () => {
+    process.env.JOURNAL_ENCRYPTION_WRITE = '1'
     delete process.env.JOURNAL_ENCRYPTION_KEY
     delete process.env.ENCRYPTION_KEY
     expect(() => encryptWritePayload({ comment: 'held too long' })).toThrow(
@@ -165,7 +168,19 @@ describe('prisma-journal-encryption without a key', () => {
     )
   })
 
+  it('does not encrypt writes when JOURNAL_ENCRYPTION_WRITE is off', () => {
+    const previous = process.env.JOURNAL_ENCRYPTION_WRITE
+    delete process.env.JOURNAL_ENCRYPTION_WRITE
+    process.env.JOURNAL_ENCRYPTION_KEY = 'a'.repeat(64)
+    const data = { comment: 'held too long' }
+    encryptWritePayload(data)
+    expect(data.comment).toBe('held too long')
+    if (previous === undefined) delete process.env.JOURNAL_ENCRYPTION_WRITE
+    else process.env.JOURNAL_ENCRYPTION_WRITE = previous
+  })
+
   it('nulls ciphertext on read when the key is missing instead of throwing', () => {
+    process.env.JOURNAL_ENCRYPTION_WRITE = '1'
     process.env.JOURNAL_ENCRYPTION_KEY = 'a'.repeat(64)
     const cipher = encryptJournalField('daily recap')
     delete process.env.JOURNAL_ENCRYPTION_KEY
@@ -173,5 +188,6 @@ describe('prisma-journal-encryption without a key', () => {
     const included = { trades: [{ id: 't1', comment: cipher }] }
     expect(() => decryptResultTree(included)).not.toThrow()
     expect(included.trades[0].comment).toBeNull()
+    expect(included.trades[0].commentUndecryptable).toBe(true)
   })
 })

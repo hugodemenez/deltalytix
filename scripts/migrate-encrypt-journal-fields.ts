@@ -11,29 +11,39 @@
  *   - Trade.comment
  *
  * Prerequisites:
- *   - JOURNAL_ENCRYPTION_KEY (32-byte hex or base64). Production/preview
- *     refuse ENCRYPTION_KEY fallback and committed placeholders.
+ *   - JOURNAL_ENCRYPTION_KEY must be an exact 32-byte hex or base64 key.
+ *     ENCRYPTION_KEY fallback and placeholders are never accepted here.
+ *   - If any jrn:v1 row already exists, this script decrypts one before
+ *     writing. A wrong key aborts.
  *   - DATABASE_URL / DIRECT_URL pointing at the target DB
  *
  * Usage:
  *   bun run migrate:encrypt-journal-fields
  *   bun run migrate:encrypt-journal-fields -- --dry-run
+ *   bun run migrate:encrypt-journal-fields -- --rekey
  */
 import { loadEnvLocal } from '@/lib/load-env-local.node'
 import { PrismaClient, type Prisma } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import {
+  JOURNAL_FIELD_ENC_PREFIX,
+  assertBackfillCanDecryptSamples,
+  decryptJournalConversation,
+  decryptJournalField,
   encryptJournalConversation,
   encryptJournalField,
-  hasJournalEncryptionKey,
   isPrismaJsonNullInput,
   isValidJournalCiphertext,
+  requireExact32ByteJournalKey,
+  shouldRekeyStoredField,
 } from '@/lib/journal-field-crypto'
 
 loadEnvLocal()
 
 const dryRun = process.argv.includes('--dry-run')
+const rekey = process.argv.includes('--rekey')
 const PAGE_SIZE = 500
+const encryptOpts = { force: true } as const
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -105,12 +115,29 @@ async function migrateMoods() {
       const where: Prisma.MoodWhereInput = { id: row.id }
 
       if (row.journalContent && !isValidJournalCiphertext(row.journalContent)) {
-        data.journalContent = encryptJournalField(row.journalContent)
+        data.journalContent = encryptJournalField(row.journalContent, encryptOpts)
+        where.journalContent = row.journalContent
+      } else if (rekey && shouldRekeyStoredField(row.journalContent)) {
+        data.journalContent = encryptJournalField(
+          decryptJournalField(row.journalContent),
+          encryptOpts,
+        )
         where.journalContent = row.journalContent
       }
 
+      const conversationCipher =
+        typeof row.conversation === 'string' ? row.conversation : null
       if (conversationNeedsEncrypt(row.conversation)) {
-        const encrypted = encryptJournalConversation(row.conversation)
+        const encrypted = encryptJournalConversation(row.conversation, encryptOpts)
+        if (typeof encrypted === 'string') {
+          data.conversation = encrypted
+          where.conversation = {
+            equals: row.conversation as Prisma.InputJsonValue,
+          }
+        }
+      } else if (rekey && shouldRekeyStoredField(conversationCipher)) {
+        const decrypted = decryptJournalConversation(row.conversation)
+        const encrypted = encryptJournalConversation(decrypted, encryptOpts)
         if (typeof encrypted === 'string') {
           data.conversation = encrypted
           where.conversation = {
@@ -179,11 +206,33 @@ async function migrateTradeComments() {
         return
       }
       if (isValidJournalCiphertext(row.comment)) {
+        if (rekey && shouldRekeyStoredField(row.comment)) {
+          const encrypted = encryptJournalField(
+            decryptJournalField(row.comment),
+            encryptOpts,
+          )
+          migrated += 1
+          if (dryRun) return
+          try {
+            const result = await prisma.trade.updateMany({
+              where: { id: row.id, comment: row.comment },
+              data: { comment: encrypted },
+            })
+            if (result.count === 0) concurrentSkip += 1
+          } catch (error) {
+            failed += 1
+            console.error('[migrate-encrypt-journal-fields] trade rekey failed', {
+              id: row.id,
+              message: safeErrorMessage(error),
+            })
+          }
+          return
+        }
         alreadyEncrypted += 1
         return
       }
 
-      const encrypted = encryptJournalField(row.comment)
+      const encrypted = encryptJournalField(row.comment, encryptOpts)
       if (!encrypted) {
         skippedEmpty += 1
         return
@@ -221,14 +270,25 @@ async function migrateTradeComments() {
 }
 
 async function main() {
-  if (!hasJournalEncryptionKey()) {
-    throw new Error(
-      'JOURNAL_ENCRYPTION_KEY is missing, a placeholder, or not a 32-byte hex/base64 key. Generate with: openssl rand -hex 32',
-    )
-  }
+  requireExact32ByteJournalKey()
+
+  const [moodSample, tradeSample] = await Promise.all([
+    prisma.mood.findFirst({
+      where: { journalContent: { startsWith: JOURNAL_FIELD_ENC_PREFIX } },
+      select: { journalContent: true },
+    }),
+    prisma.trade.findFirst({
+      where: { comment: { startsWith: JOURNAL_FIELD_ENC_PREFIX } },
+      select: { comment: true },
+    }),
+  ])
+  assertBackfillCanDecryptSamples([
+    moodSample?.journalContent,
+    tradeSample?.comment,
+  ])
 
   console.log(
-    `[migrate-encrypt-journal-fields] Starting${dryRun ? ' (dry-run)' : ''}…`,
+    `[migrate-encrypt-journal-fields] Starting${dryRun ? ' (dry-run)' : ''}${rekey ? ' (rekey)' : ''}…`,
   )
   console.log(
     `[migrate-encrypt-journal-fields] Target database host: ${databaseHost(process.env.DATABASE_URL)}`,

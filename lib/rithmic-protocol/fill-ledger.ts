@@ -25,6 +25,7 @@ export type FillLedgerPartition = {
 export type AnnotatedProtocolTrade = RithmicProtocolFillPairIdentity & {
   id: string
   comment?: string | null
+  commentUndecryptable?: boolean
   tags?: string[] | null
   imageBase64?: string | null
   imageBase64Second?: string | null
@@ -247,6 +248,7 @@ export function canonicalLedgerFillIds(
 export function hasTradeJournalAnnotations(
   trade: AnnotatedProtocolTrade,
 ): boolean {
+  if (trade.commentUndecryptable) return true
   if (trade.comment?.trim()) return true
   if (trade.imageBase64) return true
   if (trade.imageBase64Second) return true

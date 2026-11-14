@@ -158,4 +158,20 @@ describe("saveTradesCore chunk commits", () => {
       expect(row.comment).not.toContain("held too long")
     }
   })
+
+  it("leaves comments plaintext when JOURNAL_ENCRYPTION_WRITE is off", async () => {
+    const previous = process.env.JOURNAL_ENCRYPTION_WRITE
+    delete process.env.JOURNAL_ENCRYPTION_WRITE
+    createMany.mockResolvedValue({ count: 1 })
+    try {
+      await saveTradesCore(
+        [{ ...trade(0), comment: "held too long 0" }],
+        { userId: "u1" },
+      )
+      expect(createMany.mock.calls[0][0].data[0].comment).toBe("held too long 0")
+    } finally {
+      if (previous === undefined) delete process.env.JOURNAL_ENCRYPTION_WRITE
+      else process.env.JOURNAL_ENCRYPTION_WRITE = previous
+    }
+  })
 })

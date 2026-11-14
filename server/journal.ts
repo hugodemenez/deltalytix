@@ -9,6 +9,12 @@ import {
   encryptJournalField,
   withDecryptedMoodFields,
 } from '@/lib/journal-field-crypto';
+import {
+  conversationWrite,
+  existingMoodConversationIsUnread,
+  existingMoodJournalIsUnread,
+  mindsetJournalContentWrite,
+} from '@/lib/journal-field-write-guard';
 
 function parseStoredConversation(value: unknown) {
   if (value == null) return null
@@ -24,7 +30,8 @@ export type Conversation = {
 export type MindsetData = {
   emotionValue: number;
   selectedNews: string[];
-  journalContent: string;
+  journalContent?: string;
+  journalEdited?: boolean;
 };
 
 export async function saveMindset(
@@ -71,13 +78,19 @@ export async function saveMindset(
     })
 
     if (existingMood) {
-      // Update existing mood
+      const journalWrite = mindsetJournalContentWrite({
+        existingUndecryptable: existingMoodJournalIsUnread(existingMood),
+        journalEdited: data.journalEdited === true,
+        incoming: data.journalContent,
+      })
       const updatedMood = await prisma.mood.update({
         where: { id: existingMood.id },
         data: {
           emotionValue: data.emotionValue,
           selectedNews: data.selectedNews,
-          journalContent: encryptJournalField(data.journalContent),
+          ...(journalWrite.omit
+            ? {}
+            : { journalContent: encryptJournalField(journalWrite.value) }),
           mood: getMoodLabel(data.emotionValue),
           updatedAt: now,
         },
@@ -93,7 +106,7 @@ export async function saveMindset(
         day: today,
         emotionValue: data.emotionValue,
         selectedNews: data.selectedNews,
-        journalContent: encryptJournalField(data.journalContent),
+        journalContent: encryptJournalField(data.journalContent ?? ''),
         mood: getMoodLabel(data.emotionValue),
       },
     })
@@ -140,7 +153,12 @@ export async function saveMood(
     })
 
     if (existingMood) {
-      // Update existing mood
+      if (conversation) {
+        conversationWrite({
+          existingUndecryptable: existingMoodConversationIsUnread(existingMood),
+          incoming: conversation,
+        })
+      }
       const updatedMood = await prisma.mood.update({
         where: { id: existingMood.id },
         data: {
@@ -316,11 +334,18 @@ export async function saveJournal(
     })
 
     if (existingMood) {
-      // Update existing mood with only journal content
+      const journalWrite = mindsetJournalContentWrite({
+        existingUndecryptable: existingMoodJournalIsUnread(existingMood),
+        journalEdited: true,
+        incoming: journalContent,
+      })
+      if (journalWrite.omit) {
+        return withDecryptedMoodFields(existingMood)
+      }
       const updatedMood = await prisma.mood.update({
         where: { id: existingMood.id },
         data: {
-          journalContent: encryptJournalField(journalContent),
+          journalContent: encryptJournalField(journalWrite.value),
           updatedAt: now,
         },
       })

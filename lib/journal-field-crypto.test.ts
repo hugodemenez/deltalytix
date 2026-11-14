@@ -2,14 +2,20 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { Prisma } from '@/prisma/generated/prisma/client'
 import {
   JOURNAL_FIELD_ENC_PREFIX,
+  assertBackfillCanDecryptSamples,
   decryptJournalConversation,
   decryptJournalField,
+  decryptJournalFieldResult,
   decryptJournalFieldSafe,
   encryptJournalConversation,
   encryptJournalField,
+  hasExact32ByteJournalKey,
   hasJournalEncryptionKey,
   isEncryptedJournalField,
+  isJournalEncryptionWriteEnabled,
   isValidJournalCiphertext,
+  requireExact32ByteJournalKey,
+  shouldRekeyStoredField,
   withDecryptedMoodFields,
   withDecryptedTradeComment,
 } from './journal-field-crypto'
@@ -18,6 +24,7 @@ const ORIGINAL_JOURNAL_KEY = process.env.JOURNAL_ENCRYPTION_KEY
 const ORIGINAL_ENCRYPTION_KEY = process.env.ENCRYPTION_KEY
 const ORIGINAL_PREVIOUS_KEY = process.env.JOURNAL_ENCRYPTION_PREVIOUS_KEY
 const ORIGINAL_VERCEL_ENV = process.env.VERCEL_ENV
+const ORIGINAL_WRITE = process.env.JOURNAL_ENCRYPTION_WRITE
 
 afterEach(() => {
   if (ORIGINAL_JOURNAL_KEY === undefined) {
@@ -39,6 +46,11 @@ afterEach(() => {
     delete process.env.VERCEL_ENV
   } else {
     process.env.VERCEL_ENV = ORIGINAL_VERCEL_ENV
+  }
+  if (ORIGINAL_WRITE === undefined) {
+    delete process.env.JOURNAL_ENCRYPTION_WRITE
+  } else {
+    process.env.JOURNAL_ENCRYPTION_WRITE = ORIGINAL_WRITE
   }
 })
 
@@ -161,6 +173,8 @@ describe('journal-field-crypto', () => {
       id: 'mood-9',
       journalContent: null,
       conversation: null,
+      journalContentUndecryptable: true,
+      conversationUndecryptable: true,
     })
   })
 
@@ -229,12 +243,93 @@ describe('journal-field-crypto', () => {
       id: 'mood-1',
       journalContent: 'daily recap',
       conversation: JSON.stringify([{ role: 'user', content: 'hi' }]),
+      journalContentUndecryptable: false,
+      conversationUndecryptable: false,
     })
 
     const trade = withDecryptedTradeComment({
       id: 't1',
       comment: encryptJournalField('scale out'),
     })
-    expect(trade).toEqual({ id: 't1', comment: 'scale out' })
+    expect(trade).toEqual({
+      id: 't1',
+      comment: 'scale out',
+      commentUndecryptable: false,
+    })
+  })
+
+  it('leaves plaintext on write when JOURNAL_ENCRYPTION_WRITE is off', () => {
+    process.env.JOURNAL_ENCRYPTION_KEY = 'a'.repeat(64)
+    delete process.env.JOURNAL_ENCRYPTION_WRITE
+    expect(isJournalEncryptionWriteEnabled()).toBe(false)
+    expect(encryptJournalField('plain note')).toBe('plain note')
+    expect(encryptJournalConversation([{ role: 'user', content: 'hi' }])).toEqual([
+      { role: 'user', content: 'hi' },
+    ])
+  })
+
+  it('dual-reads mixed plaintext and ciphertext', () => {
+    process.env.JOURNAL_ENCRYPTION_WRITE = '1'
+    process.env.JOURNAL_ENCRYPTION_KEY = 'a'.repeat(64)
+    const cipher = encryptJournalField('secret note')
+    expect(decryptJournalField(cipher)).toBe('secret note')
+    expect(decryptJournalField('legacy plaintext')).toBe('legacy plaintext')
+    expect(decryptJournalFieldResult('legacy plaintext')).toEqual({
+      ok: true,
+      value: 'legacy plaintext',
+      key: 'plaintext',
+    })
+  })
+
+  it('throws in strict mode when encrypting an empty string without a key', () => {
+    process.env.VERCEL_ENV = 'production'
+    process.env.JOURNAL_ENCRYPTION_WRITE = '1'
+    delete process.env.JOURNAL_ENCRYPTION_KEY
+    delete process.env.ENCRYPTION_KEY
+    expect(() => encryptJournalField('')).toThrow(/JOURNAL_ENCRYPTION_KEY/)
+  })
+
+  it('throws in strict mode when JOURNAL_ENCRYPTION_PREVIOUS_KEY is invalid', () => {
+    process.env.VERCEL_ENV = 'production'
+    process.env.JOURNAL_ENCRYPTION_WRITE = '1'
+    process.env.JOURNAL_ENCRYPTION_KEY = 'a'.repeat(64)
+    process.env.JOURNAL_ENCRYPTION_PREVIOUS_KEY = 'too-short'
+    const cipher = encryptJournalField('note')
+    expect(() => decryptJournalField(cipher)).toThrow(/JOURNAL_ENCRYPTION_PREVIOUS_KEY/)
+  })
+
+  it('requires an exact 32-byte key for the backfill even outside Vercel', () => {
+    delete process.env.VERCEL_ENV
+    delete process.env.JOURNAL_ENCRYPTION_KEY
+    process.env.ENCRYPTION_KEY = 'f'.repeat(64)
+    expect(hasExact32ByteJournalKey()).toBe(false)
+    expect(() => requireExact32ByteJournalKey()).toThrow(/backfill/)
+
+    process.env.JOURNAL_ENCRYPTION_KEY =
+      '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+    expect(() => requireExact32ByteJournalKey()).toThrow(/backfill/)
+
+    process.env.JOURNAL_ENCRYPTION_KEY = 'a'.repeat(64)
+    expect(requireExact32ByteJournalKey()).toHaveLength(32)
+  })
+
+  it('refuses to backfill when an existing ciphertext cannot be decrypted', () => {
+    process.env.JOURNAL_ENCRYPTION_KEY = 'a'.repeat(64)
+    const cipher = encryptJournalField('keep me')
+    process.env.JOURNAL_ENCRYPTION_KEY = 'b'.repeat(64)
+    expect(() => assertBackfillCanDecryptSamples([cipher])).toThrow(/existing jrn:v1/)
+    assertBackfillCanDecryptSamples(['legacy plaintext', null])
+  })
+
+  it('rekeys only ciphertext that still decrypts with the previous key', () => {
+    process.env.JOURNAL_ENCRYPTION_WRITE = '1'
+    process.env.JOURNAL_ENCRYPTION_KEY = '3'.repeat(64)
+    const oldCipher = encryptJournalField('rotate me')
+    process.env.JOURNAL_ENCRYPTION_PREVIOUS_KEY = '3'.repeat(64)
+    process.env.JOURNAL_ENCRYPTION_KEY = '4'.repeat(64)
+    const newCipher = encryptJournalField('already new')
+    expect(shouldRekeyStoredField(oldCipher)).toBe(true)
+    expect(shouldRekeyStoredField(newCipher)).toBe(false)
+    expect(shouldRekeyStoredField('legacy')).toBe(false)
   })
 })
