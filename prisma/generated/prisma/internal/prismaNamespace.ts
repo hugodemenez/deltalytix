@@ -391,6 +391,7 @@ export const ModelName = {
   TeamSubscription: 'TeamSubscription',
   Notification: 'Notification',
   User: 'User',
+  PendingAccountCleanup: 'PendingAccountCleanup',
   OAuthApp: 'OAuthApp',
   OAuthAuthorizationCode: 'OAuthAuthorizationCode',
   OAuthAccessToken: 'OAuthAccessToken',
@@ -435,7 +436,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "trade" | "tickDetails" | "subscription" | "businessSubscription" | "teamSubscription" | "notification" | "user" | "oAuthApp" | "oAuthAuthorizationCode" | "oAuthAccessToken" | "oAuthRegistrationAttempt" | "connection" | "team" | "teamInvitation" | "teamManager" | "business" | "businessManager" | "businessInvitation" | "group" | "account" | "payout" | "dashboardLayout" | "subscriptionFeedback" | "mood" | "shared" | "referral" | "financialEvent" | "tag" | "newsletter" | "post" | "comment" | "vote" | "rithmicProtocolFill" | "order" | "tradeAnalytics" | "historicalData"
+    modelProps: "trade" | "tickDetails" | "subscription" | "businessSubscription" | "teamSubscription" | "notification" | "user" | "pendingAccountCleanup" | "oAuthApp" | "oAuthAuthorizationCode" | "oAuthAccessToken" | "oAuthRegistrationAttempt" | "connection" | "team" | "teamInvitation" | "teamManager" | "business" | "businessManager" | "businessInvitation" | "group" | "account" | "payout" | "dashboardLayout" | "subscriptionFeedback" | "mood" | "shared" | "referral" | "financialEvent" | "tag" | "newsletter" | "post" | "comment" | "vote" | "rithmicProtocolFill" | "order" | "tradeAnalytics" | "historicalData"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -954,6 +955,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.UserCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.UserCountAggregateOutputType> | number
+        }
+      }
+    }
+    PendingAccountCleanup: {
+      payload: Prisma.$PendingAccountCleanupPayload<ExtArgs>
+      fields: Prisma.PendingAccountCleanupFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PendingAccountCleanupFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PendingAccountCleanupPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PendingAccountCleanupFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PendingAccountCleanupPayload>
+        }
+        findFirst: {
+          args: Prisma.PendingAccountCleanupFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PendingAccountCleanupPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PendingAccountCleanupFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PendingAccountCleanupPayload>
+        }
+        findMany: {
+          args: Prisma.PendingAccountCleanupFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PendingAccountCleanupPayload>[]
+        }
+        create: {
+          args: Prisma.PendingAccountCleanupCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PendingAccountCleanupPayload>
+        }
+        createMany: {
+          args: Prisma.PendingAccountCleanupCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PendingAccountCleanupCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PendingAccountCleanupPayload>[]
+        }
+        delete: {
+          args: Prisma.PendingAccountCleanupDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PendingAccountCleanupPayload>
+        }
+        update: {
+          args: Prisma.PendingAccountCleanupUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PendingAccountCleanupPayload>
+        }
+        deleteMany: {
+          args: Prisma.PendingAccountCleanupDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PendingAccountCleanupUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PendingAccountCleanupUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PendingAccountCleanupPayload>[]
+        }
+        upsert: {
+          args: Prisma.PendingAccountCleanupUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PendingAccountCleanupPayload>
+        }
+        aggregate: {
+          args: Prisma.PendingAccountCleanupAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePendingAccountCleanup>
+        }
+        groupBy: {
+          args: Prisma.PendingAccountCleanupGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PendingAccountCleanupGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PendingAccountCleanupCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PendingAccountCleanupCountAggregateOutputType> | number
         }
       }
     }
@@ -3255,6 +3330,20 @@ export const UserScalarFieldEnum = {
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
+export const PendingAccountCleanupScalarFieldEnum = {
+  id: 'id',
+  formerUserId: 'formerUserId',
+  authUserId: 'authUserId',
+  storagePrefixes: 'storagePrefixes',
+  stripeCustomerIds: 'stripeCustomerIds',
+  failureKind: 'failureKind',
+  createdAt: 'createdAt',
+  resolvedAt: 'resolvedAt'
+} as const
+
+export type PendingAccountCleanupScalarFieldEnum = (typeof PendingAccountCleanupScalarFieldEnum)[keyof typeof PendingAccountCleanupScalarFieldEnum]
+
+
 export const OAuthAppScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -3829,6 +3918,20 @@ export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel,
 
 
 /**
+ * Reference to a field of type 'PendingAccountCleanupFailure'
+ */
+export type EnumPendingAccountCleanupFailureFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PendingAccountCleanupFailure'>
+    
+
+
+/**
+ * Reference to a field of type 'PendingAccountCleanupFailure[]'
+ */
+export type ListEnumPendingAccountCleanupFailureFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PendingAccountCleanupFailure[]'>
+    
+
+
+/**
  * Reference to a field of type 'Int'
  */
 export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
@@ -4042,6 +4145,7 @@ export type GlobalOmitConfig = {
   teamSubscription?: Prisma.TeamSubscriptionOmit
   notification?: Prisma.NotificationOmit
   user?: Prisma.UserOmit
+  pendingAccountCleanup?: Prisma.PendingAccountCleanupOmit
   oAuthApp?: Prisma.OAuthAppOmit
   oAuthAuthorizationCode?: Prisma.OAuthAuthorizationCodeOmit
   oAuthAccessToken?: Prisma.OAuthAccessTokenOmit

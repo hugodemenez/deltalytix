@@ -28,8 +28,6 @@ export const generateAnalysisComponent = tool({
     username?: string;
     accountData: AccountAnalysis;
   }) => {
-    console.log(`[generateAnalysisComponent] Generating structured AI analysis for accounts analysis for ${username} in ${locale}`);
-    
     // Generate timestamp
     const now = new Date().toISOString();
     

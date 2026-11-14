@@ -53,3 +53,12 @@ export const PromoType = {
 } as const
 
 export type PromoType = (typeof PromoType)[keyof typeof PromoType]
+
+
+export const PendingAccountCleanupFailure = {
+  STORAGE: 'STORAGE',
+  STRIPE: 'STRIPE',
+  BOTH: 'BOTH'
+} as const
+
+export type PendingAccountCleanupFailure = (typeof PendingAccountCleanupFailure)[keyof typeof PendingAccountCleanupFailure]

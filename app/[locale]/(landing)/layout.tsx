@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/context/theme-provider";
 import { I18nProviderClient } from "@/locales/landing-client";
 import { ConsentBanner } from "@/components/consent-banner";
 import { ConsentRuntime } from "@/components/consent-runtime";
+import { AccountDeletedNotice } from "@/components/account-deleted-notice";
 import { cacheLife } from "next/cache";
 
 import { Metadata } from "next";
@@ -66,6 +67,7 @@ export default async function RootLayout(
         <ThemeProvider>
           <Toaster />
           <Navbar />
+          <AccountDeletedNotice />
           <div className="pt-nav-content">{children}</div>
           <Footer />
         </ThemeProvider>
