@@ -1,7 +1,9 @@
-import { streamText, convertToModelMessages, stepCountIs } from "ai";
+import { streamText, isStepCount } from "ai";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
-import { openai } from "@ai-sdk/openai";
+import { aiUiStreamResponse } from "@/lib/ai/http-stream";
+import { aiTaskUnavailableResponse, resolveAiTask } from "@/lib/ai/resolve-ai-task";
+import type { AiTaskId } from "@/lib/ai/tasks";
 import { getCurrentDayData } from "./tools/get-current-day-data";
 import { ActionSchema } from "./schema";
 import { getDayData } from "./tools/get-trading-summary";
@@ -10,25 +12,22 @@ export const maxDuration = 90;
 
 type EditorAction = z.infer<typeof ActionSchema>;
 
-// Model selection based on action type
-const getModelForAction = (action: EditorAction) => {
+function editorTaskId(action: EditorAction): AiTaskId {
   switch (action) {
     case "explain":
-      // Access latest news with up to date data
-      return "perplexity/sonar";
-    case "improve":
-      // Fast, cost-effective model for simple edits
-      return openai("gpt-4o-mini");
+      return "editor-explain";
     case "suggest_question":
-      // More capable model for question generation
-      return openai("gpt-4o");
+      return "editor-suggest-question";
+    case "improve":
     case "trades_summary":
-      // More capable model for summarizing trades
-      return openai("gpt-4o-mini");
     default:
-      return openai("gpt-4o-mini");
+      return "editor-journal";
   }
-};
+}
+
+function editorUnavailable(action: EditorAction) {
+  return aiTaskUnavailableResponse(editorTaskId(action));
+}
 
 // System prompts based on action type
 const getSystemPrompt = (
@@ -88,15 +87,6 @@ TASK: ONLY BASED ON TOOL RESULT for date ${date}: Summarize the trader's trading
   }
 };
 
-const getTools = (action: EditorAction) => {
-  switch (action) {
-    case "suggest_question":
-      return { getCurrentDayData };
-    case "trades_summary":
-      return { getDayData };
-  }
-};
-
 export async function POST(req: NextRequest) {
   console.log("POST request received");
   try {
@@ -105,9 +95,11 @@ export async function POST(req: NextRequest) {
 
     // Validate action
     const validatedAction = ActionSchema.parse(action);
+    const unavailable = editorUnavailable(validatedAction);
+    if (unavailable) {
+      return Response.json(unavailable, { status: 503 });
+    }
 
-    // Select model and system prompt based on action
-    const model = getModelForAction(validatedAction);
     const systemPrompt = getSystemPrompt(validatedAction, locale, date);
     // Dynamically build tools based on criteria
     const tools: Record<string, any> = {};
@@ -119,17 +111,15 @@ export async function POST(req: NextRequest) {
       tools.getDayData = getDayData;
     }
 
-    // Stream the response
     const result = streamText({
-      model,
+      ...resolveAiTask(editorTaskId(validatedAction)),
       prompt,
-      system: systemPrompt,
-      temperature: validatedAction === "suggest_question" ? 0.7 : 0.3,
+      instructions: systemPrompt,
       tools,
-      stopWhen: stepCountIs(5),
+      stopWhen: isStepCount(5),
     });
 
-    return result.toUIMessageStreamResponse();
+    return aiUiStreamResponse(result);
   } catch (error) {
     // Handle validation errors
     if (error instanceof z.ZodError) {

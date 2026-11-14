@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import enFaq from "@/locales/en/faq";
 import frFaq from "@/locales/fr/faq";
 import {
@@ -113,9 +113,36 @@ describe("answerLandingFaqQuestion", () => {
 });
 
 describe("isLandingFaqAiConfigured", () => {
-  it("treats a missing or dummy key as unavailable", () => {
-    expect(isLandingFaqAiConfigured(undefined)).toBe(false);
-    expect(isLandingFaqAiConfigured("dummy")).toBe(false);
-    expect(isLandingFaqAiConfigured("sk-live-key")).toBe(true);
+  const previous = {
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    LANDING_FAQ_MODEL: process.env.LANDING_FAQ_MODEL,
+    AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
+    VERCEL_OIDC_TOKEN: process.env.VERCEL_OIDC_TOKEN,
+  };
+
+  afterEach(() => {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
+
+  it("follows the resolved provider", () => {
+    delete process.env.LANDING_FAQ_MODEL;
+    delete process.env.AI_GATEWAY_API_KEY;
+    for (const key of ["dummy", "placeholder", "your_openai_api_key_here", "  "]) {
+      process.env.OPENAI_API_KEY = key;
+      expect(isLandingFaqAiConfigured()).toBe(false);
+    }
+    delete process.env.OPENAI_API_KEY;
+    expect(isLandingFaqAiConfigured()).toBe(false);
+    process.env.OPENAI_API_KEY = "sk-live-key";
+    expect(isLandingFaqAiConfigured()).toBe(true);
+
+    process.env.OPENAI_API_KEY = "dummy";
+    process.env.LANDING_FAQ_MODEL = "perplexity/sonar";
+    expect(isLandingFaqAiConfigured()).toBe(false);
+    process.env.AI_GATEWAY_API_KEY = "gw-live";
+    expect(isLandingFaqAiConfigured()).toBe(true);
   });
 });

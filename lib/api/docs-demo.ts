@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { prisma } from "@/lib/prisma"
+import { createManyTradesInChunks } from "@/lib/trades/create-many-trades"
 import { formatDateToTimestamp } from "@/lib/date-utils"
 import {
   accessTokenExpiresAt,
@@ -191,9 +192,10 @@ async function ensureDocsDemoDataset() {
     where: { userId: user.id, accountNumber: DOCS_DEMO_ACCOUNT_NUMBER },
   })
   if (tradeCount === 0) {
-    await prisma.trade.createMany({
-      data: sampleTrades(user.id, account.id),
-    })
+    await createManyTradesInChunks(
+      (chunk) => prisma.trade.createMany(chunk),
+      { data: sampleTrades(user.id, account.id) },
+    )
   }
 
   return user

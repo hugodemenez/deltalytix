@@ -1,7 +1,8 @@
 import { streamText } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
-import { openai } from "@ai-sdk/openai";
+import { aiUiStreamResponse } from "@/lib/ai/http-stream";
+import { aiTaskUnavailableResponse, resolveAiTask } from "@/lib/ai/resolve-ai-task";
 
 // Analysis Tools
 import { generateAnalysisComponent } from "../accounts/generate-analysis-component";
@@ -72,6 +73,10 @@ You are analyzing overall trading performance across all accounts and instrument
 
 export async function POST(req: NextRequest) {
   try {
+    const availabilityError = aiTaskUnavailableResponse("analysis-global");
+    if (availabilityError) {
+      return Response.json(availabilityError, { status: 503 });
+    }
     const { username, locale, timezone } = await req.json();
     
     // Add debugging to see what locale is being received
@@ -82,8 +87,8 @@ export async function POST(req: NextRequest) {
     console.log('Validated data:', validatedData);
 
     const result = streamText({
-      model: openai("gpt-4o-mini"),
-      system: getGlobalAnalysisPrompt(validatedData.locale),
+      ...resolveAiTask("analysis-global"),
+      instructions: getGlobalAnalysisPrompt(validatedData.locale),
       tools: {
         generateAnalysisComponent,
         getOverallPerformanceMetrics,
@@ -101,7 +106,7 @@ export async function POST(req: NextRequest) {
       ]
     });
 
-    return result.toUIMessageStreamResponse();
+    return aiUiStreamResponse(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return new Response(JSON.stringify({ error: error.errors }), {

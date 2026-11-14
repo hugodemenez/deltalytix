@@ -1,8 +1,7 @@
-import { generateObject } from "ai"
-import { openai } from "@ai-sdk/openai"
-import { z } from "zod/v3"
-import { tradeSchema } from "@/app/api/ai/format-trades/schema"
+import { generateText, Output } from "ai"
+import { tradeSchema } from "@/lib/ai/trade-schema"
 import { mappingSchema } from "@/app/api/ai/mappings/schema"
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task"
 import { createTradeWithDefaults } from "@/lib/trade-factory"
 import type { Trade } from "@/prisma/generated/prisma/client"
 
@@ -71,11 +70,10 @@ export async function aiNormalizeTrades(params: {
   if (objects.length === 0) return []
 
   const sample = objects.slice(0, 5)
-  const { object: mapping } = await generateObject({
-    model: openai("gpt-4o-mini"),
-    schema: mappingSchema,
+  const { output: mapping } = await generateText({
+    ...resolveAiTask("import-mapping"),
+    output: Output.object({ schema: mappingSchema }),
     prompt: mappingPrompt(headers, sample),
-    temperature: 0.1,
   })
 
   const batchSize = 50
@@ -90,10 +88,10 @@ export async function aiNormalizeTrades(params: {
   const formatBatch = async (batch: Record<string, string>[]) => {
     const rows = batch.map((obj) => headers.map((h) => obj[h] ?? ""))
 
-    const { object } = await generateObject({
-      model: openai("gpt-4o-mini-2024-07-18"),
-      schema: z.array(tradeSchema),
-      system: formatSystemPrompt,
+    const { output } = await generateText({
+      ...resolveAiTask("import-format"),
+      output: Output.array({ element: tradeSchema }),
+      instructions: formatSystemPrompt,
       prompt: `
 Format the following ${rows.length} trades data.
 Headers: ${headers.join(", ")}
@@ -102,10 +100,9 @@ Forced accountNumber: ${accountNumber}
 Rows:
 ${rows.map((row) => row.join(", ")).join("\n")}
 `,
-      temperature: 0.1,
     })
 
-    return object.map(
+    return output.map(
       (trade) =>
         createTradeWithDefaults({
           ...trade,

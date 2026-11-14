@@ -10,6 +10,7 @@ import {
   type DedupeFillsStats,
   type RithmicProtocolFillPairIdentity,
 } from './dedupe-fills'
+import { fillSide, normalizeInstrument } from './fills-to-trades'
 
 export type LedgerSeenIndex = {
   identityKeys: Set<string>
@@ -32,20 +33,69 @@ export type AnnotatedProtocolTrade = RithmicProtocolFillPairIdentity & {
   groupId?: string | null
 }
 
+export type FillLedgerNet = {
+  accountId: string
+  symbol: string
+  instrument: string
+  net: number
+  fillCount: number
+}
+
+function signedFillSize(fill: RithmicProtocolFill): number {
+  const quantity = Math.abs(Number(fill.fillSize) || 0)
+  return fillSide(fill.transactionType) === 'B' ? quantity : -quantity
+}
+
+/**
+ * Report per-contract net from fills. Does not rewrite the ledger.
+ *
+ * A non-zero net is ambiguous: a live position, a mid-window start, a
+ * liquidation without a closing fill, and a mid-stream gap all look the same
+ * from fills alone. Callers may flag the instrument; they must not drop or
+ * resize fills without an explicit broker position snapshot.
+ */
+export function summarizeFillLedgerNets(
+  fills: RithmicProtocolFill[],
+): FillLedgerNet[] {
+  const groups = new Map<string, FillLedgerNet>()
+  for (const fill of fills) {
+    const accountId = fill.accountId || 'unknown'
+    const symbol = (fill.symbol || '').trim().toUpperCase()
+    const key = `${accountId}|${symbol}`
+    const group = groups.get(key) ?? {
+      accountId,
+      symbol,
+      instrument: normalizeInstrument(symbol),
+      net: 0,
+      fillCount: 0,
+    }
+    group.net += signedFillSize(fill)
+    group.fillCount += 1
+    groups.set(key, group)
+  }
+  return [...groups.values()].filter((group) => group.net !== 0)
+}
+
 /**
  * Run the plant-side collapse that FIFO expects: prefer settled history over
  * Replay twins, drop exact re-deliveries, then merge split order pieces.
+ *
+ * Do not infer missing opening buys/sells from a terminal net. Fills cannot
+ * tell a live short/long from a sliding-window start; rewriting them flips
+ * P&L and hides open positions.
  */
 export function prepareRithmicProtocolFills(
   fills: RithmicProtocolFill[],
 ): { fills: RithmicProtocolFill[]; stats: DedupeFillsStats } {
   const preferred = preferHistoryFills(fills)
   const deduped = dedupeFillsWithStats(preferred)
+  const consolidated = consolidateOrderFills(deduped.fills)
   return {
-    fills: consolidateOrderFills(deduped.fills),
+    fills: consolidated,
     stats: {
       received: fills.length,
-      afterDedup: deduped.stats.afterDedup,
+      afterDedup: deduped.fills.length,
+      afterConsolidate: consolidated.length,
       dropped: { ...deduped.stats.dropped },
     },
   }
@@ -147,6 +197,42 @@ export function partitionIncomingFills(
   return { inserts, updates, skipped }
 }
 
+export type RebuildTradeRef = {
+  id: string
+  instrument?: string | null
+  entryId?: string | null
+  closeId?: string | null
+  pnl?: number
+}
+
+/**
+ * Stored protocol trades whose entry or close fill is missing from the
+ * merged ledger. A sliding ShowFillHistory window can leave those legs
+ * out; deleting the row and reporting success would drop history the
+ * rebuild cannot recreate.
+ */
+export function uncoveredProtocolTrades<T extends RebuildTradeRef>(
+  existing: T[],
+  ledgerFillIds: Set<string>,
+): T[] {
+  return existing.filter((row) => {
+    const entryId = canonicalRithmicFillId(row.entryId)
+    const closeId = canonicalRithmicFillId(row.closeId)
+    if (!entryId || !closeId) return true
+    return !ledgerFillIds.has(entryId) || !ledgerFillIds.has(closeId)
+  })
+}
+
+export function duplicateRebuildTradeIds(ids: string[]): string[] {
+  const seen = new Set<string>()
+  const duplicates = new Set<string>()
+  for (const id of ids) {
+    if (seen.has(id)) duplicates.add(id)
+    else seen.add(id)
+  }
+  return [...duplicates]
+}
+
 export function canonicalLedgerFillIds(
   fills: RithmicProtocolFill[],
 ): Set<string> {
@@ -171,6 +257,109 @@ export function hasTradeJournalAnnotations(
     (tag) => tag && tag !== RITHMIC_PROTOCOL_TRADE_TAG,
   )
   return extraTags.length > 0
+}
+
+export type ReattachedProtocolTrades<
+  T extends RithmicProtocolFillPairIdentity & {
+    id: string
+    tags?: string[] | null
+  },
+> = {
+  trades: Array<T & Partial<AnnotatedProtocolTrade>>
+  preserved: number
+  unmatched: AnnotatedProtocolTrade[]
+}
+
+/**
+ * Copy journal fields onto rebuilt protocol trades matched by fill-pair
+ * identity. Unmatched annotated rows are returned so a rebuild can refuse
+ * instead of dropping notes.
+ */
+export function reattachProtocolTradeAnnotations<
+  T extends RithmicProtocolFillPairIdentity & {
+    id: string
+    tags?: string[] | null
+  },
+>(
+  derived: T[],
+  existing: AnnotatedProtocolTrade[],
+): ReattachedProtocolTrades<T> {
+  const usedExisting = new Set<string>()
+  const trades: Array<T & Partial<AnnotatedProtocolTrade>> = derived.map((trade) => {
+    const existingId = resolveRithmicProtocolPersistedId(trade, existing)
+    if (!existingId) return trade
+    const row = existing.find((item) => item.id === existingId)
+    if (!row) return trade
+    usedExisting.add(row.id)
+    if (!hasTradeJournalAnnotations(row)) {
+      return { ...trade, id: row.id }
+    }
+    const extraTags = (row.tags ?? []).filter(
+      (tag) => tag && tag !== RITHMIC_PROTOCOL_TRADE_TAG,
+    )
+    return {
+      ...trade,
+      id: row.id,
+      comment: row.comment,
+      imageBase64: row.imageBase64,
+      imageBase64Second: row.imageBase64Second,
+      videoUrl: row.videoUrl,
+      images: row.images,
+      groupId: row.groupId,
+      tags: [...new Set([...(trade.tags ?? []), ...extraTags])],
+    }
+  })
+  const unmatched = existing.filter(
+    (row) => hasTradeJournalAnnotations(row) && !usedExisting.has(row.id),
+  )
+  return {
+    trades,
+    preserved: existing.filter(
+      (row) => usedExisting.has(row.id) && hasTradeJournalAnnotations(row),
+    ).length,
+    unmatched,
+  }
+}
+
+export function protocolTradeJournalFingerprint(
+  row: Pick<
+    AnnotatedProtocolTrade,
+    | 'comment'
+    | 'imageBase64'
+    | 'imageBase64Second'
+    | 'videoUrl'
+    | 'images'
+    | 'groupId'
+    | 'tags'
+  >,
+): string {
+  const extraTags = [...(row.tags ?? [])]
+    .filter((tag) => tag && tag !== RITHMIC_PROTOCOL_TRADE_TAG)
+    .sort()
+  return JSON.stringify({
+    comment: row.comment ?? null,
+    imageBase64: row.imageBase64 ?? null,
+    imageBase64Second: row.imageBase64Second ?? null,
+    videoUrl: row.videoUrl ?? null,
+    images: row.images ?? [],
+    groupId: row.groupId ?? '',
+    extraTags,
+  })
+}
+
+export function protocolTradeSetsMatch(
+  left: Array<{ id: string } & Partial<AnnotatedProtocolTrade>>,
+  right: Array<{ id: string } & Partial<AnnotatedProtocolTrade>>,
+): boolean {
+  if (left.length !== right.length) return false
+  const rightById = new Map(right.map((row) => [row.id, row]))
+  return left.every((row) => {
+    const other = rightById.get(row.id)
+    if (!other) return false
+    return (
+      protocolTradeJournalFingerprint(row) === protocolTradeJournalFingerprint(other)
+    )
+  })
 }
 
 /**

@@ -1,5 +1,6 @@
-import { ToolLoopAgent, stepCountIs } from "ai";
+import { ToolLoopAgent, isStepCount } from "ai";
 import { z } from "zod";
+import { resolveAiTask } from "@/lib/ai/resolve-ai-task";
 import { askForEmailForm } from "@/app/api/ai/support/tools/ask-for-email-form";
 import {
   grepCodebaseTool,
@@ -13,10 +14,12 @@ import {
 } from "@/app/api/ai/support/schema";
 
 /**
- * Tool-loop search needs a model that reliably chains calls; nano tends to
- * answer from memory instead of searching. Override per environment if needed.
+ * gpt-6-luna at effort low with a reasoning summary. The support page renders
+ * those summaries, and the French title translator reads the first line.
+ * SUPPORT_AGENT_MODEL can still name another model (including a non-OpenAI
+ * gateway id). See resolveAiTask.
  */
-const SUPPORT_AGENT_MODEL = process.env.SUPPORT_AGENT_MODEL ?? "openai/gpt-5-mini";
+const supportModel = resolveAiTask("support");
 
 export type { SupportAgentLocale };
 
@@ -63,20 +66,18 @@ ${SUPPORT_AGENT_INSTRUCTIONS}`;
 }
 
 export const supportAgent = new ToolLoopAgent<SupportAgentCallOptions>({
-  model: SUPPORT_AGENT_MODEL,
+  model: supportModel.model,
+  ...(supportModel.reasoning ? { reasoning: supportModel.reasoning } : {}),
+  ...(supportModel.providerOptions
+    ? { providerOptions: supportModel.providerOptions }
+    : {}),
   instructions: SUPPORT_AGENT_INSTRUCTIONS,
   callOptionsSchema: supportAgentCallOptionsSchema,
   prepareCall: ({ options, ...settings }) => ({
     ...settings,
     instructions: buildSupportAgentInstructions(options.locale),
   }),
-  stopWhen: stepCountIs(16),
-  providerOptions: {
-    openai: {
-      reasoningEffort: "low",
-      reasoningSummary: "auto",
-    },
-  },
+  stopWhen: isStepCount(16),
   tools: {
     searchCodebase: searchCodebaseTool,
     grepCodebase: grepCodebaseTool,
@@ -85,5 +86,3 @@ export const supportAgent = new ToolLoopAgent<SupportAgentCallOptions>({
     askForEmailForm,
   },
 });
-
-export { SUPPORT_AGENT_MODEL };

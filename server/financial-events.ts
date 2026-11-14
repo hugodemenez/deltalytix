@@ -1,42 +1,26 @@
 'use server'
 
-import { PrismaClient, FinancialEvent } from '@/prisma/generated/prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
-import { format } from 'date-fns'
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = new PrismaClient({ adapter })
+import {
+  explicitFinancialEventWindow,
+} from '@/lib/financial-events/date-window'
+import { loadFinancialEvents } from '@/lib/financial-events/load'
+import type { FinancialEvent } from '@/prisma/generated/prisma/client'
+import { getUserId } from '@/server/auth'
 
 /**
- * Retrieves financial events for a given month.
- * First attempts to fetch from local database, if no events found,
- * triggers a sync with external API.
- * 
- * Events are ordered by date ascending and filtered to the month containing the input date.
- * 
- * @param date - Target date (defaults to current date). Used to fetch events for the entire month containing this date
- * @param locale - Language locale (defaults to 'fr'). Used to filter events by language
- * @returns Promise<FinancialEvent[]> - Array of financial events for the month
+ * Calendar month navigation and journal day changes. This file is a server
+ * action, so the function is client-callable: require a signed-in user and
+ * refuse windows wider than the UI cap. Bounds are inclusive ISO timestamps.
+ * Database errors and over-wide windows throw so the client does not treat a
+ * failed read as an empty range.
  */
-export async function getFinancialEvents(locale: string|undefined = undefined): Promise<FinancialEvent[]> {
-  try {
-
-    const where = locale ? {
-      lang: locale
-    } : {}
-    const events = await prisma.financialEvent.findMany({
-      where,
-      orderBy: {
-        date: 'desc'
-      }
-    })
-
-    return events
-  } catch (error) {
-    console.error('Error fetching financial events:', error)
-    return []
-  }
-} 
+export async function getFinancialEventsInWindow(
+  locale: string,
+  startIso: string,
+  endIso: string,
+): Promise<FinancialEvent[]> {
+  await getUserId()
+  const window = explicitFinancialEventWindow(startIso, endIso)
+  if (!window || !locale) return []
+  return loadFinancialEvents(locale, window, 'asc')
+}

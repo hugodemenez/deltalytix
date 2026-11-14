@@ -18,6 +18,10 @@ import {
 } from "@/lib/tradovate/identity"
 import { isDuplicateTradesOnlySave } from "@/lib/trades/save-trades-outcome"
 import { normalizeTradeDates } from "@/lib/trades/normalize-trade-date"
+import {
+  createManyTradesInChunks,
+  TRADE_CREATE_MANY_CHUNK_SIZE,
+} from "@/lib/trades/create-many-trades"
 
 export type TradeError =
   | "DUPLICATE_TRADES"
@@ -222,6 +226,10 @@ export async function saveTradesCore(
   }
   const normalizedDates = dateCheck.trades
 
+  // Declared outside the try so a throw after createMany (commission backfill,
+  // cache tags, analytics) still reports the rows that already committed and
+  // clears the user cache.
+  let committed = 0
   try {
     const hadExistingTrades = Boolean(
       await prisma.trade.findFirst({
@@ -270,10 +278,26 @@ export async function saveTradesCore(
       tradovateAssignedTrades,
     )
 
-    const result = await prisma.trade.createMany({
-      data: userAssignedTrades,
-      skipDuplicates: true,
-    })
+    // Ids are deterministic and skipDuplicates is ON CONFLICT DO NOTHING, so
+    // each chunk is safe to retry. A single statement needs no interactive
+    // transaction. Larger imports commit per chunk: one 120s transaction would
+    // fail the whole import on timeout and hold row locks for the duration.
+    // A later chunk can fail after earlier chunks are committed. That count
+    // has to come back so the cache is dropped and the UI shows the rows.
+    const insert = { data: userAssignedTrades, skipDuplicates: true as const }
+    const result =
+      userAssignedTrades.length <= TRADE_CREATE_MANY_CHUNK_SIZE
+        ? await prisma.trade.createMany(insert)
+        : await createManyTradesInChunks(async (chunk) => {
+            try {
+              const chunkResult = await prisma.trade.createMany(chunk)
+              committed += chunkResult.count
+              return chunkResult
+            } catch (error) {
+              throw new TradeInsertPartialError(committed, error)
+            }
+          }, insert)
+    committed = result.count
 
     const commissionsUpdated = await backfillRithmicProtocolCommissions(
       userId,
@@ -336,12 +360,31 @@ export async function saveTradesCore(
       trades: result.count > 0 ? userAssignedTrades : undefined,
     }
   } catch (error) {
+    const inserted =
+      error instanceof TradeInsertPartialError ? error.committed : committed
     console.error("[saveTradesCore] Database error:", error)
+    if (inserted > 0) {
+      try {
+        await invalidateTradeCaches(userId)
+      } catch (cacheError) {
+        console.error("[saveTradesCore] Cache invalidation after partial insert failed:", cacheError)
+      }
+    }
     return {
       error: "DATABASE_ERROR",
-      numberOfTradesAdded: 0,
+      numberOfTradesAdded: inserted,
       details: error instanceof Error ? error.message : String(error),
     }
+  }
+}
+
+class TradeInsertPartialError extends Error {
+  readonly committed: number
+
+  constructor(committed: number, cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause))
+    this.name = "TradeInsertPartialError"
+    this.committed = committed
   }
 }
 

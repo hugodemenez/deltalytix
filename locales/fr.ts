@@ -1158,6 +1158,7 @@ export default {
   "widgets.shared.unavailableHint":
     "Demandez au propriétaire du tableau de bord de mettre à jour sa disposition si vous vous attendiez à le voir ici.",
   "calendar.week": "Semaine",
+  "calendar.newsLoadRetry": "Actualités indisponibles. Réessayer",
   "calendar.weekdays.sun": "Dim",
   "calendar.weekdays.mon": "Lun",
   "calendar.weekdays.tue": "Mar",
@@ -3463,6 +3464,9 @@ export default {
       dismiss: "Ignorer la suggestion",
       minCharsError:
         "Veuillez écrire au moins 10 caractères pour utiliser l’IA",
+      unavailable:
+        "L’IA est indisponible. Demandez à un administrateur de configurer le modèle de l’éditeur, puis réessayez.",
+      error: "L’IA n’a pas pu terminer cette action. Réessayez.",
     },
   },
 } as const;

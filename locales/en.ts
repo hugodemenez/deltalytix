@@ -1178,6 +1178,7 @@ export default {
   "widgets.tags.confirmDelete": "Delete",
   "widgets.tags.deleting": "Deleting...",
   "calendar.week": "Week",
+  "calendar.newsLoadRetry": "Couldn't load news. Retry",
   "calendar.weekdays.sun": "Sun",
   "calendar.weekdays.mon": "Mon",
   "calendar.weekdays.tue": "Tue",
@@ -3275,6 +3276,8 @@ export default {
       accept: "Accept suggestion",
       dismiss: "Dismiss suggestion",
       minCharsError: "Please write at least 10 characters to use AI",
+      unavailable: "AI is unavailable. Ask your administrator to configure the editor model, then try again.",
+      error: "AI could not complete that action. Try again.",
     },
   },
 } as const;

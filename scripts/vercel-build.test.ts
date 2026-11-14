@@ -20,22 +20,23 @@ function plan(commitRef: string | undefined): string {
 }
 
 describe("vercel-build migrate gate", () => {
-  it("always generates the Prisma client and runs next build", () => {
+  it("always generates the Prisma client, the support snapshot, and next build", () => {
     const out = plan("cursor/preview-c4fb");
     const lines = out.trim().split("\n");
     expect(lines[0]).toBe("prisma generate");
+    expect(lines).toContain("support corpus snapshot");
     expect(lines.at(-1)).toBe("next build");
   });
 
   it("runs migrate deploy on beta", () => {
     expect(plan("beta")).toBe(
-      "prisma generate\nprisma migrate deploy\nnext build\n",
+      "prisma generate\nprisma migrate deploy\nsupport corpus snapshot\nnext build\n",
     );
   });
 
   it("runs migrate deploy on main", () => {
     expect(plan("main")).toBe(
-      "prisma generate\nprisma migrate deploy\nnext build\n",
+      "prisma generate\nprisma migrate deploy\nsupport corpus snapshot\nnext build\n",
     );
   });
 
@@ -46,13 +47,13 @@ describe("vercel-build migrate gate", () => {
 
   it("skips migrate deploy on Preview feature branches", () => {
     expect(plan("cursor/vercel-prisma-migrate-hook-c4fb")).toBe(
-      "prisma generate\nskip prisma migrate deploy\nnext build\n",
+      "prisma generate\nskip prisma migrate deploy\nsupport corpus snapshot\nnext build\n",
     );
   });
 
   it("skips migrate deploy when the git ref is unset (local builds)", () => {
     expect(plan(undefined)).toBe(
-      "prisma generate\nskip prisma migrate deploy\nnext build\n",
+      "prisma generate\nskip prisma migrate deploy\nsupport corpus snapshot\nnext build\n",
     );
   });
 });
